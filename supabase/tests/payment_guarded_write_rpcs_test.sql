@@ -47,6 +47,7 @@ CREATE TEMP TABLE payment_guard_ctx (
   owner_id uuid NOT NULL,
   intent_order_id bigint,
   stale_order_id bigint,
+  legacy_momo_order_id bigint,
   legacy_vietqr_order_id bigint,
   legacy_vietqr_payment_id bigint,
   protected_payment_id bigint,
@@ -94,6 +95,7 @@ DECLARE
   v_momo_completed_order bigint;
   v_momo_mismatch_order bigint;
   v_stale_order bigint;
+  v_legacy_momo_order bigint;
   v_legacy_vietqr_order bigint;
   v_menu_category bigint;
   v_menu_item bigint;
@@ -173,6 +175,11 @@ BEGIN
     ),
     (
       v_ctx.tenant_id, v_ctx.branch_id,
+      'PGR-LEGACY-MOMO-' || replace(gen_random_uuid()::text, '-', ''),
+      'takeaway', 45000, 45000, v_ctx.cashier_id, 'new', 'unpaid'
+    ),
+    (
+      v_ctx.tenant_id, v_ctx.branch_id,
       'PGR-LEGACY-VIETQR-' || replace(gen_random_uuid()::text, '-', ''),
       'takeaway', 45000, 45000, v_ctx.cashier_id, 'new', 'unpaid'
     );
@@ -197,6 +204,9 @@ BEGIN
   ORDER BY id DESC LIMIT 1;
   SELECT id INTO v_stale_order
   FROM public.orders WHERE order_number LIKE 'PGR-STALE-TOTAL-%'
+  ORDER BY id DESC LIMIT 1;
+  SELECT id INTO v_legacy_momo_order
+  FROM public.orders WHERE order_number LIKE 'PGR-LEGACY-MOMO-%'
   ORDER BY id DESC LIMIT 1;
   SELECT id INTO v_legacy_vietqr_order
   FROM public.orders WHERE order_number LIKE 'PGR-LEGACY-VIETQR-%'
@@ -235,6 +245,10 @@ BEGIN
     ),
     (
       v_ctx.tenant_id, v_stale_order, v_menu_item, 'PGR stale line',
+      1, 45000, 45000, 0
+    ),
+    (
+      v_ctx.tenant_id, v_legacy_momo_order, v_menu_item, 'PGR legacy MoMo line',
       1, 45000, 45000, 0
     ),
     (
@@ -458,6 +472,7 @@ BEGIN
   UPDATE payment_guard_ctx
   SET intent_order_id = v_intent_order,
       stale_order_id = v_stale_order,
+      legacy_momo_order_id = v_legacy_momo_order,
       legacy_vietqr_order_id = v_legacy_vietqr_order,
       legacy_vietqr_payment_id = v_ctx.legacy_vietqr_payment_id,
       protected_payment_id = v_ctx.protected_payment_id,
@@ -477,31 +492,51 @@ DO $$
 BEGIN
   IF to_regprocedure(
     'public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,text)'
-  ) IS NOT NULL
-    OR to_regprocedure(
-      'public.persist_pending_payment_provider_data(bigint,bigint,bigint,uuid,text,jsonb)'
-    ) IS NOT NULL
-    OR to_regprocedure(
-      'public.finalize_momo_failed_payment(bigint,bigint)'
-    ) IS NOT NULL
+  ) IS NULL
   THEN
-    RAISE EXCEPTION 'stale payment RPC signature remains';
+    RAISE EXCEPTION 'legacy create_payment signature was removed before rollout completed';
+  END IF;
+
+  IF NOT has_function_privilege(
+    'authenticated',
+    'public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,text)',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'anon',
+    'public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,text)',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'service_role',
+    'public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,text)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'legacy create_payment compatibility ACL mismatch';
+  END IF;
+
+  IF has_table_privilege('anon', 'public.payments', 'INSERT')
+    OR has_table_privilege('anon', 'public.payments', 'UPDATE')
+    OR has_table_privilege('anon', 'public.payments', 'DELETE')
+    OR has_table_privilege('authenticated', 'public.payments', 'INSERT')
+    OR NOT has_table_privilege('authenticated', 'public.payments', 'UPDATE')
+    OR has_table_privilege('authenticated', 'public.payments', 'DELETE')
+  THEN
+    RAISE EXCEPTION 'payment direct DML compatibility ACL mismatch';
   END IF;
 
   IF has_function_privilege(
     'authenticated',
-    'public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)',
+    'public.create_remote_payment_intent(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)',
     'EXECUTE'
   ) OR has_function_privilege(
     'anon',
-    'public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)',
+    'public.create_remote_payment_intent(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)',
     'EXECUTE'
   ) OR NOT has_function_privilege(
     'service_role',
-    'public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)',
+    'public.create_remote_payment_intent(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)',
     'EXECUTE'
   ) THEN
-    RAISE EXCEPTION 'create_payment ACL mismatch';
+    RAISE EXCEPTION 'create_remote_payment_intent ACL mismatch';
   END IF;
 
   IF has_function_privilege(
@@ -621,6 +656,11 @@ SELECT set_config(
   true
 );
 SELECT set_config(
+  'test.legacy_momo_order_id',
+  (SELECT legacy_momo_order_id::text FROM payment_guard_ctx),
+  true
+);
+SELECT set_config(
   'test.stale_payment_code',
   (
     SELECT payment_code
@@ -719,10 +759,12 @@ DO $$
 DECLARE
   v_payload jsonb;
   v_protected_order_id bigint;
+  v_legacy_result jsonb;
+  v_legacy_payment_id bigint;
   v_error_message text;
 BEGIN
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       current_setting('test.tenant_id')::bigint,
       current_setting('test.branch_id')::bigint,
       current_setting('test.intent_order_id')::bigint,
@@ -735,10 +777,177 @@ BEGIN
         'qrData', 'authenticated-direct'
       )
     );
-    RAISE EXCEPTION 'authenticated create_payment unexpectedly succeeded';
+    RAISE EXCEPTION 'authenticated create_remote_payment_intent unexpectedly succeeded';
   EXCEPTION WHEN insufficient_privilege THEN
     NULL;
   END;
+
+  BEGIN
+    PERFORM public.create_payment(
+      current_setting('test.tenant_id')::bigint,
+      current_setting('test.branch_id')::bigint,
+      current_setting('test.legacy_momo_order_id')::bigint,
+      'momo',
+      45000,
+      current_setting('test.cashier_id')::uuid,
+      'PGR-LEGACY-MOMO',
+      'completed'
+    );
+    RAISE EXCEPTION 'legacy remote completion unexpectedly succeeded';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.payments
+    WHERE order_id = current_setting('test.legacy_momo_order_id')::bigint
+  ) OR EXISTS (
+    SELECT 1
+    FROM public.orders
+    WHERE id = current_setting('test.legacy_momo_order_id')::bigint
+      AND payment_status <> 'unpaid'
+  ) THEN
+    RAISE EXCEPTION 'legacy remote completion rejection mutated money state';
+  END IF;
+
+  BEGIN
+    PERFORM public.create_payment(
+      current_setting('test.tenant_id')::bigint,
+      current_setting('test.branch_id')::bigint,
+      current_setting('test.stale_order_id')::bigint,
+      'momo',
+      46000,
+      current_setting('test.cashier_id')::uuid,
+      'PGR-LEGACY-STALE-TOTAL',
+      'pending'
+    );
+    RAISE EXCEPTION 'legacy stale-total payment unexpectedly succeeded';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+    IF v_error_message NOT LIKE 'amount_mismatch_recomputed:%' THEN
+      RAISE EXCEPTION 'unexpected legacy stale-total error: %', v_error_message;
+    END IF;
+  END;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.payments
+    WHERE order_id = current_setting('test.stale_order_id')::bigint
+  ) THEN
+    RAISE EXCEPTION 'legacy stale-total rejection created a payment';
+  END IF;
+
+  v_legacy_result := public.create_payment(
+    current_setting('test.tenant_id')::bigint,
+    current_setting('test.branch_id')::bigint,
+    current_setting('test.legacy_momo_order_id')::bigint,
+    'momo',
+    45000,
+    current_setting('test.cashier_id')::uuid,
+    'PGR-LEGACY-MOMO',
+    'pending'
+  );
+  v_legacy_payment_id := (v_legacy_result ->> 'payment_id')::bigint;
+
+  UPDATE public.payments
+  SET provider_ref = 'PGR-LEGACY-MOMO',
+      provider_data = jsonb_build_object(
+        'providerRef', 'PGR-LEGACY-MOMO',
+        'momoOrderId', 'PGR-LEGACY-MOMO',
+        'requestId', 'PGR-LEGACY-REQUEST',
+        'qrCodeUrl', 'PGR-LEGACY-QR'
+      )
+  WHERE id = v_legacy_payment_id;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.payments
+    WHERE id = v_legacy_payment_id
+      AND status = 'pending'
+      AND paid_at IS NULL
+      AND provider_data ->> 'providerRef' = 'PGR-LEGACY-MOMO'
+  ) THEN
+    RAISE EXCEPTION 'legacy pending provider metadata compatibility failed';
+  END IF;
+
+  BEGIN
+    PERFORM public.create_payment(
+      current_setting('test.tenant_id')::bigint,
+      current_setting('test.branch_id')::bigint,
+      current_setting('test.legacy_momo_order_id')::bigint,
+      'momo',
+      45000,
+      current_setting('test.cashier_id')::uuid,
+      'PGR-LEGACY-MOMO-ROTATED',
+      'pending'
+    );
+    RAISE EXCEPTION 'legacy provider-ref rotation unexpectedly succeeded';
+  EXCEPTION
+    WHEN unique_violation THEN
+      RAISE EXCEPTION 'legacy provider-ref conflict leaked a 23505 retry signal';
+    WHEN check_violation THEN
+      GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+      IF v_error_message IS DISTINCT FROM 'payment_pending_conflict' THEN
+        RAISE EXCEPTION 'unexpected legacy provider-ref error: %', v_error_message;
+      END IF;
+  END;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.payments
+    WHERE id = v_legacy_payment_id
+      AND provider_ref = 'PGR-LEGACY-MOMO'
+      AND provider_data ->> 'providerRef' = 'PGR-LEGACY-MOMO'
+      AND provider_data ->> 'qrCodeUrl' = 'PGR-LEGACY-QR'
+  ) THEN
+    RAISE EXCEPTION 'legacy provider-ref conflict replaced canonical evidence';
+  END IF;
+
+  BEGIN
+    UPDATE public.payments
+    SET status = 'completed',
+        paid_at = now(),
+        provider_data = '{"forged":true}'::jsonb
+    WHERE id = v_legacy_payment_id;
+    RAISE EXCEPTION 'direct pending payment completion unexpectedly succeeded';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+
+  BEGIN
+    UPDATE public.payments
+    SET provider_data = '{"forged":true}'::jsonb
+    WHERE id = current_setting('test.completed_payment_id')::bigint;
+    RAISE EXCEPTION 'completed provider evidence overwrite unexpectedly succeeded';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+
+  BEGIN
+    UPDATE public.payments
+    SET provider_data = provider_data || jsonb_build_object(
+      'bankWebhookReview',
+      jsonb_build_object(
+        'status', 'reviewing',
+        'reviewedAt', now()::text,
+        'reviewedBy', current_setting('test.cashier_id')
+      )
+    )
+    WHERE id = current_setting('test.completed_payment_id')::bigint;
+    RAISE EXCEPTION 'cashier direct bank review unexpectedly succeeded';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.payments
+    WHERE id = current_setting('test.completed_payment_id')::bigint
+      AND provider_data = '{"existing":"keep"}'::jsonb
+  ) THEN
+    RAISE EXCEPTION 'completed provider evidence changed after rejected overwrite';
+  END IF;
 
   SELECT payload INTO v_payload
   FROM public.webhook_events
@@ -853,6 +1062,13 @@ END;
 $$;
 RESET ROLE;
 
+DELETE FROM public.payments
+WHERE order_id = current_setting('test.legacy_momo_order_id')::bigint;
+UPDATE public.orders
+SET payment_method = NULL,
+    updated_at = now()
+WHERE id = current_setting('test.legacy_momo_order_id')::bigint;
+
 SET LOCAL ROLE service_role;
 SELECT set_config('request.jwt.claim.sub', '', true);
 SELECT set_config('request.jwt.claim.role', 'service_role', true);
@@ -877,7 +1093,7 @@ DECLARE
   v_protected_order_id bigint;
 BEGIN
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id,
       v_branch_id,
       current_setting('test.intent_order_id')::bigint,
@@ -893,7 +1109,7 @@ BEGIN
   END;
 
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id,
       v_branch_id,
       current_setting('test.stale_order_id')::bigint,
@@ -923,7 +1139,7 @@ BEGIN
   END IF;
 
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id + 999,
       v_branch_id,
       current_setting('test.intent_order_id')::bigint,
@@ -939,7 +1155,7 @@ BEGIN
   END;
 
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id,
       current_setting('test.other_branch_id')::bigint,
       (
@@ -963,7 +1179,7 @@ BEGIN
   WHERE id = current_setting('test.protected_payment_id')::bigint;
 
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id,
       v_branch_id,
       v_protected_order_id,
@@ -988,7 +1204,7 @@ BEGIN
   END;
 
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id,
       v_branch_id,
       current_setting('test.intent_order_id')::bigint,
@@ -1004,7 +1220,7 @@ BEGIN
   END;
 
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id,
       v_branch_id,
       current_setting('test.intent_order_id')::bigint,
@@ -1023,7 +1239,7 @@ BEGIN
     NULL;
   END;
 
-  v_result := public.create_payment(
+  v_result := public.create_remote_payment_intent(
     v_tenant_id,
     v_branch_id,
     current_setting('test.intent_order_id')::bigint,
@@ -1042,7 +1258,7 @@ BEGIN
     RAISE EXCEPTION 'remote intent result invalid: %', v_result;
   END IF;
 
-  v_result := public.create_payment(
+  v_result := public.create_remote_payment_intent(
     v_tenant_id,
     v_branch_id,
     current_setting('test.intent_order_id')::bigint,
@@ -1062,7 +1278,7 @@ BEGIN
   END IF;
 
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id,
       v_branch_id,
       current_setting('test.intent_order_id')::bigint,
@@ -1072,7 +1288,7 @@ BEGIN
       v_provider_ref,
       jsonb_build_object('providerRef', v_provider_ref)
     );
-    RAISE EXCEPTION 'cash create_payment attack unexpectedly succeeded';
+    RAISE EXCEPTION 'cash create_remote_payment_intent attack unexpectedly succeeded';
   EXCEPTION WHEN invalid_parameter_value THEN
     NULL;
   END;
@@ -1112,7 +1328,7 @@ BEGIN
   );
 
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id,
       v_branch_id,
       v_momo_order_id,
@@ -1140,7 +1356,7 @@ BEGIN
     'qrCodeUrl', 'QR-ATOMIC',
     'qrData', 'QR-ATOMIC'
   );
-  v_result := public.create_payment(
+  v_result := public.create_remote_payment_intent(
     v_tenant_id,
     v_branch_id,
     v_momo_order_id,
@@ -1152,7 +1368,7 @@ BEGIN
   );
   v_momo_payment_id := (v_result ->> 'payment_id')::bigint;
 
-  v_result := public.create_payment(
+  v_result := public.create_remote_payment_intent(
     v_tenant_id,
     v_branch_id,
     v_momo_order_id,
@@ -1185,7 +1401,7 @@ BEGIN
   SET is_active = false
   WHERE id = v_cashier_id;
   BEGIN
-    PERFORM public.create_payment(
+    PERFORM public.create_remote_payment_intent(
       v_tenant_id,
       v_branch_id,
       v_momo_order_id,
@@ -1260,6 +1476,36 @@ SELECT set_config(
   )::text,
   true
 );
+
+UPDATE public.payments
+SET provider_data = provider_data || jsonb_build_object(
+  'bankWebhookReview',
+  jsonb_build_object(
+    'status', 'reviewing',
+    'reviewedAt', now()::text,
+    'reviewedBy', current_setting('test.owner_id')
+  )
+)
+WHERE id = current_setting('test.completed_payment_id')::bigint;
+
+DO $$
+DECLARE
+  v_provider_data jsonb;
+BEGIN
+  SELECT provider_data INTO v_provider_data
+  FROM public.payments
+  WHERE id = current_setting('test.completed_payment_id')::bigint;
+
+  IF v_provider_data ->> 'existing' IS DISTINCT FROM 'keep'
+    OR v_provider_data #>> '{bankWebhookReview,status}'
+      IS DISTINCT FROM 'reviewing'
+    OR v_provider_data #>> '{bankWebhookReview,reviewedBy}'
+      IS DISTINCT FROM current_setting('test.owner_id')
+  THEN
+    RAISE EXCEPTION 'legacy Owner review compatibility failed: %', v_provider_data;
+  END IF;
+END;
+$$;
 
 SELECT public.review_completed_vietqr_bank_webhook(
   current_setting('test.completed_payment_id')::bigint,

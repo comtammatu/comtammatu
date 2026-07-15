@@ -340,7 +340,200 @@ BEGIN
 END;
 $$;
 
-DROP FUNCTION IF EXISTS public.create_payment(
+CREATE OR REPLACE FUNCTION public.create_payment(
+  p_tenant_id bigint,
+  p_branch_id bigint,
+  p_order_id bigint,
+  p_method text,
+  p_amount numeric,
+  p_created_by uuid,
+  p_provider_ref text DEFAULT NULL,
+  p_status text DEFAULT 'pending'
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_order public.orders%ROWTYPE;
+  v_payment public.payments%ROWTYPE;
+  v_provider_ref text := NULLIF(btrim(p_provider_ref), '');
+  v_line_subtotal numeric(15,2) := 0;
+  v_recomputed_total numeric(15,2) := 0;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
+  IF p_tenant_id IS DISTINCT FROM public.auth_tenant_id()
+    OR p_created_by IS DISTINCT FROM auth.uid()
+  THEN
+    RAISE EXCEPTION 'scope_mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_method NOT IN ('momo', 'vietqr') THEN
+    RAISE EXCEPTION 'legacy_remote_payment_only' USING ERRCODE = '22023';
+  END IF;
+
+  IF COALESCE(p_status, 'pending') <> 'pending' THEN
+    RAISE EXCEPTION 'remote_payment_requires_provider_settlement'
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF v_provider_ref IS NULL THEN
+    RAISE EXCEPTION 'remote_payment_provider_ref_required'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT public.has_permission(p_branch_id, 'pos:use') THEN
+    RAISE EXCEPTION 'permission denied: pos:use' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(p_order_id);
+
+  SELECT order_row.*
+  INTO v_order
+  FROM public.orders order_row
+  WHERE order_row.id = p_order_id
+    AND order_row.tenant_id = p_tenant_id
+    AND order_row.branch_id = p_branch_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'order_not_found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_order.payment_status = 'paid' THEN
+    RAISE EXCEPTION 'order_already_paid' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF p_amount IS NULL OR p_amount <= 0 THEN
+    RAISE EXCEPTION 'amount_mismatch' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT COALESCE(
+    SUM(order_item.quantity::numeric * order_item.unit_price),
+    0
+  )::numeric(15,2)
+  INTO v_line_subtotal
+  FROM public.order_items order_item
+  WHERE order_item.order_id = v_order.id
+    AND order_item.tenant_id = v_order.tenant_id
+    AND order_item.status <> 'cancelled';
+
+  v_recomputed_total := ROUND(
+    v_line_subtotal
+    + COALESCE(v_order.tax_amount, 0)
+    + COALESCE(v_order.service_charge, 0)
+    - COALESCE(v_order.discount_amount, 0),
+    2
+  );
+
+  IF ABS(p_amount - v_recomputed_total) > 1
+    OR ABS(v_order.total_amount - v_recomputed_total) > 1
+  THEN
+    RAISE EXCEPTION 'amount_mismatch_recomputed: stored=% expected=% recomputed=%',
+      v_order.total_amount,
+      p_amount,
+      v_recomputed_total
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF p_amount <> v_order.total_amount THEN
+    RAISE EXCEPTION 'amount_mismatch' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_method = 'vietqr' THEN
+    IF NULLIF(btrim(v_order.payment_code), '') IS NULL THEN
+      RAISE EXCEPTION 'order_payment_code_required' USING ERRCODE = '23514';
+    END IF;
+    IF lower(v_provider_ref)
+      IS DISTINCT FROM lower(btrim(v_order.payment_code))
+    THEN
+      RAISE EXCEPTION 'vietqr_provider_ref_mismatch'
+        USING ERRCODE = '23514';
+    END IF;
+    v_provider_ref := btrim(v_order.payment_code);
+  END IF;
+
+  SELECT payment.*
+  INTO v_payment
+  FROM public.payments payment
+  WHERE payment.tenant_id = p_tenant_id
+    AND payment.branch_id = p_branch_id
+    AND payment.order_id = p_order_id
+    AND payment.status <> 'failed'
+  ORDER BY payment.id DESC
+  LIMIT 1
+  FOR UPDATE;
+
+  IF FOUND THEN
+    IF v_payment.status <> 'pending'
+      OR v_payment.method IS DISTINCT FROM p_method
+      OR v_payment.amount IS DISTINCT FROM p_amount
+      OR (
+        NULLIF(btrim(v_payment.provider_ref), '') IS NOT NULL
+        AND lower(btrim(v_payment.provider_ref)) IS DISTINCT FROM lower(v_provider_ref)
+    )
+    THEN
+      RAISE EXCEPTION 'payment_pending_conflict' USING ERRCODE = '23514';
+    END IF;
+
+    UPDATE public.payments payment
+    SET provider_ref = COALESCE(payment.provider_ref, v_provider_ref),
+        updated_at = now()
+    WHERE payment.id = v_payment.id;
+
+    RETURN jsonb_build_object(
+      'payment_id', v_payment.id,
+      'status', 'pending',
+      'idempotent', true
+    );
+  END IF;
+
+  INSERT INTO public.payments (
+    tenant_id,
+    branch_id,
+    order_id,
+    method,
+    amount,
+    status,
+    provider_ref,
+    provider_data,
+    paid_at,
+    created_by
+  ) VALUES (
+    p_tenant_id,
+    p_branch_id,
+    p_order_id,
+    p_method,
+    p_amount,
+    'pending',
+    v_provider_ref,
+    NULL,
+    NULL,
+    p_created_by
+  )
+  RETURNING * INTO v_payment;
+
+  UPDATE public.orders
+  SET payment_method = p_method,
+      updated_at = now()
+  WHERE id = p_order_id
+    AND tenant_id = p_tenant_id
+    AND branch_id = p_branch_id;
+
+  RETURN jsonb_build_object(
+    'payment_id', v_payment.id,
+    'status', 'pending',
+    'idempotent', false
+  );
+EXCEPTION WHEN unique_violation THEN
+  RAISE EXCEPTION 'payment_pending_conflict' USING ERRCODE = '23514';
+END;
+$$;
+
+COMMENT ON FUNCTION public.create_payment(
   bigint,
   bigint,
   bigint,
@@ -349,24 +542,114 @@ DROP FUNCTION IF EXISTS public.create_payment(
   uuid,
   text,
   text
-);
+) IS 'Temporary DB-first compatibility boundary for authenticated clients: creates pending MoMo or VietQR intents only; provider evidence must complete settlement through guarded RPCs.';
 
-DROP FUNCTION IF EXISTS public.persist_pending_payment_provider_data(
+REVOKE ALL ON FUNCTION public.create_payment(
+  bigint,
+  bigint,
   bigint,
   text,
-  jsonb
-);
-
-DROP FUNCTION IF EXISTS public.persist_pending_payment_provider_data(
-  bigint,
-  bigint,
-  bigint,
+  numeric,
   uuid,
   text,
-  jsonb
-);
+  text
+) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.create_payment(
+  bigint,
+  bigint,
+  bigint,
+  text,
+  numeric,
+  uuid,
+  text,
+  text
+) TO authenticated;
 
-CREATE OR REPLACE FUNCTION public.create_payment(
+CREATE OR REPLACE FUNCTION private.guard_authenticated_payment_update()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  v_review jsonb;
+BEGIN
+  IF current_user NOT IN ('anon', 'authenticated') THEN
+    RETURN NEW;
+  END IF;
+
+  IF auth.uid() IS NULL
+    OR OLD.tenant_id IS DISTINCT FROM public.auth_tenant_id()
+  THEN
+    RAISE EXCEPTION 'payment_direct_update_forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  IF OLD.status = 'pending'
+    AND NEW.status = 'pending'
+    AND OLD.method IN ('momo', 'vietqr')
+    AND NEW.method IS NOT DISTINCT FROM OLD.method
+    AND NULLIF(btrim(OLD.provider_ref), '') IS NOT NULL
+    AND NEW.provider_ref IS NOT DISTINCT FROM OLD.provider_ref
+    AND jsonb_typeof(NEW.provider_data) = 'object'
+    AND NULLIF(btrim(NEW.provider_data ->> 'providerRef'), '')
+      IS NOT DISTINCT FROM NULLIF(btrim(OLD.provider_ref), '')
+    AND NOT (NEW.provider_data ?| ARRAY[
+      'bankWebhookReview',
+      'source',
+      'invoicePayload',
+      'momoFailure'
+    ])
+    AND (
+      OLD.method <> 'momo'
+      OR (
+        NULLIF(btrim(NEW.provider_data ->> 'qrCodeUrl'), '') IS NOT NULL
+        AND NULLIF(btrim(NEW.provider_data ->> 'requestId'), '') IS NOT NULL
+        AND NULLIF(btrim(NEW.provider_data ->> 'momoOrderId'), '')
+          IS NOT DISTINCT FROM NULLIF(btrim(OLD.provider_ref), '')
+      )
+    )
+    AND to_jsonb(NEW) - 'provider_data' - 'updated_at'
+      = to_jsonb(OLD) - 'provider_data' - 'updated_at'
+  THEN
+    RETURN NEW;
+  END IF;
+
+  v_review := NEW.provider_data -> 'bankWebhookReview';
+  IF OLD.status = 'completed'
+    AND NEW.status = 'completed'
+    AND OLD.method = 'vietqr'
+    AND NEW.method = 'vietqr'
+    AND public.auth_role() = 'owner'
+    AND jsonb_typeof(NEW.provider_data) = 'object'
+    AND COALESCE(NEW.provider_data, '{}'::jsonb) - 'bankWebhookReview'
+      = COALESCE(OLD.provider_data, '{}'::jsonb) - 'bankWebhookReview'
+    AND jsonb_typeof(v_review) = 'object'
+    AND v_review ->> 'status' IN ('reviewing', 'resolved', 'ignored')
+    AND NULLIF(v_review ->> 'reviewedAt', '') IS NOT NULL
+    AND v_review ->> 'reviewedBy' = auth.uid()::text
+    AND to_jsonb(NEW) - 'provider_data' - 'updated_at'
+      = to_jsonb(OLD) - 'provider_data' - 'updated_at'
+  THEN
+    RETURN NEW;
+  END IF;
+
+  RAISE EXCEPTION 'payment_direct_update_forbidden' USING ERRCODE = '42501';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.guard_authenticated_payment_update()
+  FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_guard_authenticated_payment_update
+  ON public.payments;
+CREATE TRIGGER trg_guard_authenticated_payment_update
+BEFORE UPDATE ON public.payments
+FOR EACH ROW
+EXECUTE FUNCTION private.guard_authenticated_payment_update();
+
+REVOKE INSERT, UPDATE, DELETE ON TABLE public.payments FROM PUBLIC, anon;
+REVOKE INSERT, DELETE ON TABLE public.payments FROM authenticated;
+
+CREATE OR REPLACE FUNCTION public.create_remote_payment_intent(
   p_tenant_id bigint,
   p_branch_id bigint,
   p_order_id bigint,
@@ -668,7 +951,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.create_payment(
+COMMENT ON FUNCTION public.create_remote_payment_intent(
   bigint,
   bigint,
   bigint,
@@ -679,7 +962,7 @@ COMMENT ON FUNCTION public.create_payment(
   jsonb
 ) IS 'Service-only atomic creation or reuse of a pending VietQR or MoMo intent with trusted provider metadata and an explicitly authorized POS actor.';
 
-REVOKE ALL ON FUNCTION public.create_payment(
+REVOKE ALL ON FUNCTION public.create_remote_payment_intent(
   bigint,
   bigint,
   bigint,
@@ -689,7 +972,7 @@ REVOKE ALL ON FUNCTION public.create_payment(
   text,
   jsonb
 ) FROM PUBLIC, anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.create_payment(
+GRANT EXECUTE ON FUNCTION public.create_remote_payment_intent(
   bigint,
   bigint,
   bigint,
@@ -797,11 +1080,6 @@ GRANT EXECUTE ON FUNCTION public.review_completed_vietqr_bank_webhook(
   bigint,
   text
 ) TO authenticated;
-
-DROP FUNCTION IF EXISTS public.finalize_momo_failed_payment(
-  bigint,
-  bigint
-);
 
 CREATE OR REPLACE FUNCTION public.record_momo_pending_result(
   p_event_id bigint,

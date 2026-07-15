@@ -10,6 +10,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Input } from "@comtammatu/ui/components/input";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
+import { cn } from "@comtammatu/ui";
 import {
   Sheet,
   SheetContent,
@@ -27,9 +28,11 @@ import { messages } from "@lib/messages";
 import {
   isSepayExpenseAllocationBalanced,
   isSepayRefundAllocationBalanced,
+  nextSepayExpenseSelection,
   type SepayRefundMatchOption,
   type SepaySupplierPaymentMatch,
 } from "../_lib/sepay-bank-transaction-model";
+import { isExpenseVisibleForBankMatch } from "../_lib/expense-categories";
 import type {
   ExpenseMatchOption,
   SepayRefundSearchCursor,
@@ -195,6 +198,13 @@ export function MatchExpenseCell({
     });
   };
 
+  const matchedPersistedIntent = expenseOptions.find(
+    (expense) =>
+      expenseIds.includes(expense.id) &&
+      expense.transfer_content != null &&
+      expense.matchedEventIds.includes(eventId),
+  );
+
   if (paymentId != null) {
     return (
       <Badge variant="outline" className="text-success font-normal">
@@ -207,16 +217,19 @@ export function MatchExpenseCell({
     return (
       <div className="flex flex-col gap-1">
         {supplierPaymentMatches.map((match) => (
-          <Badge
+          <Button
             key={match.id}
             asChild
             variant="outline"
+            size="touch"
             className="w-fit text-success font-normal"
           >
             <Link href={supplierInvoiceHref(match.invoiceId)}>
-              {copy.matchedSupplierPayment(match.id)}
+              {copy.openSupplierInvoice(
+                match.invoiceNumber ?? `#${match.invoiceId}`,
+              )}
             </Link>
-          </Badge>
+          </Button>
         ))}
         <span className="truncate text-xs text-muted-foreground">
           {copy.matchedSupplierPaymentDetail(
@@ -227,7 +240,7 @@ export function MatchExpenseCell({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="touch"
           disabled={isPending}
           onClick={() => handleSupplierPaymentMatch([])}
         >
@@ -252,7 +265,7 @@ export function MatchExpenseCell({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="touch"
           disabled={isPending}
           onClick={() => handleRefundMatch([])}
         >
@@ -279,10 +292,37 @@ export function MatchExpenseCell({
     return <span className="text-muted-foreground">—</span>;
   }
 
+  if (matchedPersistedIntent) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <Badge variant="outline" className="text-success font-normal">
+          {copy.matchedTransferIntent}
+        </Badge>
+        <span className="text-xs text-muted-foreground">
+          {copy.matchedTransferIntentDetail}
+        </span>
+      </div>
+    );
+  }
+
   const selectedSet = new Set(selectedIds);
-  const availableExpenses = [...expenseOptions].sort(
-    (left, right) =>
-      Math.abs(left.amount - amount) - Math.abs(right.amount - amount),
+  const availableExpenses = expenseOptions
+    .filter((expense) => isExpenseVisibleForBankMatch(expense, eventId))
+    .sort(
+      (left, right) =>
+        Math.abs(left.amount - amount) - Math.abs(right.amount - amount),
+    );
+  const persistedIntentIds = new Set(
+    availableExpenses
+      .filter(
+        (expense) =>
+          expense.transfer_content != null &&
+          expense.matchedEventIds.length === 0,
+      )
+      .map((expense) => expense.id),
+  );
+  const selectedPersistedIntentId = selectedIds.find((id) =>
+    persistedIntentIds.has(id),
   );
   const selectedExpenses = expenseOptions.filter((exp) =>
     selectedSet.has(exp.id),
@@ -324,11 +364,9 @@ export function MatchExpenseCell({
         ? copy.supplierPaymentSuggestion
         : copy.matchExpensePlaceholder;
 
-  const toggleExpense = (id: number) => {
+  const toggleExpense = (expense: ExpenseMatchOption) => {
     setSelectedIds((current) =>
-      current.includes(id)
-        ? current.filter((selectedId) => selectedId !== id)
-        : [...current, id],
+      nextSepayExpenseSelection(current, expense.id, persistedIntentIds),
     );
   };
 
@@ -375,8 +413,8 @@ export function MatchExpenseCell({
       <SheetTrigger asChild>
         <Button
           variant="outline"
-          size="sm"
-          className="w-full max-w-64 justify-between gap-2 text-xs"
+          size="touch"
+          className="w-full max-w-64 justify-between gap-2"
         >
           <span className="truncate">{triggerLabel}</span>
           <IconChevronRight className="size-3.5 shrink-0" aria-hidden />
@@ -414,10 +452,10 @@ export function MatchExpenseCell({
             <p className="text-xs font-medium text-muted-foreground">
               {copy.matchPurposeTitle}
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-3">
               <Button
                 type="button"
-                size="sm"
+                size="touch"
                 variant={purpose === "refund" ? "default" : "outline"}
                 disabled={expenseIds.length > 0}
                 onClick={() => selectPurpose("refund")}
@@ -426,7 +464,7 @@ export function MatchExpenseCell({
               </Button>
               <Button
                 type="button"
-                size="sm"
+                size="touch"
                 variant={purpose === "expense" ? "default" : "outline"}
                 onClick={() => selectPurpose("expense")}
               >
@@ -434,7 +472,7 @@ export function MatchExpenseCell({
               </Button>
               <Button
                 type="button"
-                size="sm"
+                size="touch"
                 variant={purpose === "supplier" ? "default" : "outline"}
                 disabled={
                   expenseIds.length > 0 || supplierPaymentMatches.length === 0
@@ -447,7 +485,7 @@ export function MatchExpenseCell({
           </div>
           {purpose === "supplier" && supplierPaymentMatches.length > 0 ? (
             <NoteCallout label={copy.supplierPaymentSuggestion}>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span className="truncate text-xs text-muted-foreground">
                   {copy.matchedSupplierPaymentDetail(
                     supplierPaymentMatches[0]?.supplierName ?? "—",
@@ -456,7 +494,8 @@ export function MatchExpenseCell({
                 </span>
                 <Button
                   type="button"
-                  size="sm"
+                  size="touch"
+                  className="w-full sm:w-auto"
                   disabled={isPending}
                   onClick={() =>
                     handleSupplierPaymentMatch(
@@ -501,7 +540,7 @@ export function MatchExpenseCell({
                 </p>
               ) : null}
               <form
-                className="flex gap-2"
+                className="flex flex-col gap-2 min-[360px]:flex-row"
                 onSubmit={(event) => {
                   event.preventDefault();
                   loadRefundOptions({ append: false, query: refundQuery });
@@ -521,8 +560,9 @@ export function MatchExpenseCell({
                 />
                 <Button
                   type="submit"
-                  size="sm"
+                  size="touch"
                   variant="outline"
+                  className="w-full min-[360px]:w-auto"
                   disabled={isRefundSearchPending}
                 >
                   {isRefundSearchPending
@@ -550,6 +590,7 @@ export function MatchExpenseCell({
                         className="flex cursor-pointer items-center gap-2 rounded-md hover:bg-muted/30"
                       >
                         <Checkbox
+                          size="touch"
                           id={checkboxId}
                           checked={selectedRefundSet.has(refund.id)}
                           onCheckedChange={() => toggleRefund(refund)}
@@ -587,11 +628,11 @@ export function MatchExpenseCell({
                   ) : null}
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
+                  size="touch"
                   onClick={() =>
                     loadRefundOptions({
                       append: true,
@@ -599,15 +640,19 @@ export function MatchExpenseCell({
                     })
                   }
                   disabled={isRefundSearchPending || refundNextCursor == null}
-                  className={refundNextCursor == null ? "invisible" : undefined}
+                  className={cn(
+                    "w-full sm:w-auto",
+                    refundNextCursor == null && "invisible",
+                  )}
                 >
                   {copy.refundLoadMore}
                 </Button>
-                <div className="flex justify-end gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
+                    size="touch"
+                    className="w-full sm:w-auto"
                     onClick={() => setSelectedRefundsById({})}
                     disabled={isPending || selectedRefundIds.length === 0}
                   >
@@ -615,7 +660,8 @@ export function MatchExpenseCell({
                   </Button>
                   <Button
                     type="button"
-                    size="sm"
+                    size="touch"
+                    className="w-full sm:w-auto"
                     onClick={() => handleRefundMatch(selectedRefundIds)}
                     disabled={
                       isPending ||
@@ -673,22 +719,40 @@ export function MatchExpenseCell({
                   {copy.expenseAllocationMismatch}
                 </p>
               ) : null}
+              {persistedIntentIds.size > 0 ? (
+                <NoteCallout label={copy.transferIntentLabel}>
+                  {selectedPersistedIntentId != null
+                    ? copy.transferIntentSelectionHint
+                    : copy.transferIntentExclusiveHint}
+                </NoteCallout>
+              ) : null}
               <div>
                 <div className="flex flex-col gap-1 pr-1">
                   {availableExpenses.map((exp) => {
                     const checked = selectedSet.has(exp.id);
                     const checkboxId = `sepay-${eventId}-expense-${exp.id}`;
+                    const hasTransferIntent = exp.transfer_content != null;
+                    const blockedBySelectedIntent =
+                      selectedPersistedIntentId != null &&
+                      selectedPersistedIntentId !== exp.id;
                     return (
                       <label
                         key={exp.id}
                         htmlFor={checkboxId}
-                        className="flex cursor-pointer items-center gap-2 rounded-md hover:bg-muted/30"
+                        aria-disabled={blockedBySelectedIntent || isPending}
+                        className={cn(
+                          "flex items-center gap-2 rounded-md",
+                          blockedBySelectedIntent || isPending
+                            ? "cursor-not-allowed opacity-60"
+                            : "cursor-pointer hover:bg-muted/30",
+                        )}
                       >
                         <Checkbox
+                          size="touch"
                           id={checkboxId}
                           checked={checked}
-                          onCheckedChange={() => toggleExpense(exp.id)}
-                          disabled={isPending}
+                          onCheckedChange={() => toggleExpense(exp)}
+                          disabled={isPending || blockedBySelectedIntent}
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm">
@@ -697,6 +761,14 @@ export function MatchExpenseCell({
                           <span className="block text-xs text-muted-foreground">
                             {formatVNBusinessDate(exp.expense_date)}
                           </span>
+                          {hasTransferIntent ? (
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              {copy.transferIntentLabel}:{" "}
+                              <code className="break-all font-mono text-xs text-foreground">
+                                {exp.transfer_content}
+                              </code>
+                            </span>
+                          ) : null}
                         </span>
                         <span className="font-mono text-xs font-medium text-warning">
                           -{formatVND(exp.amount)}
@@ -711,15 +783,22 @@ export function MatchExpenseCell({
                   ) : null}
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-2 border-t">
-                <div className="flex items-center gap-2">
-                  <Button asChild type="button" variant="ghost" size="sm">
+              <div className="flex flex-col items-stretch gap-2 border-t pt-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                  <Button
+                    asChild
+                    type="button"
+                    variant="ghost"
+                    size="touch"
+                    className="w-full sm:w-auto"
+                  >
                     <Link href="/finance/expenses">{copy.openExpenses}</Link>
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
+                    size="touch"
+                    className="w-full sm:w-auto"
                     onClick={() => setSelectedIds([])}
                     disabled={isPending || selectedIds.length === 0}
                   >
@@ -728,7 +807,8 @@ export function MatchExpenseCell({
                 </div>
                 <Button
                   type="button"
-                  size="sm"
+                  size="touch"
+                  className="w-full sm:w-auto"
                   onClick={handleSave}
                   disabled={isPending || !hasChanges || !allocationBalanced}
                 >

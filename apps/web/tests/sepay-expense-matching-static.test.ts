@@ -22,6 +22,9 @@ const hardeningMigration = read(
 const transferIntentMigration = read(
   "supabase/migrations/20260715123314_expense_transfer_intent_lifecycle.sql",
 );
+const expensePaymentStateMigration = read(
+  "supabase/migrations/20260716100000_close_expense_payment_state_machine.sql",
+);
 const adjudicationStart = hardeningMigration.indexOf("DO $$");
 const adjudicationEnd = hardeningMigration.indexOf(
   "DO $$",
@@ -204,10 +207,10 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(cell, /copy\.selectedExpenseAmount/);
   assert.match(cell, /copy\.expenseMatchDelta/);
   assert.match(cell, /href="\/finance\/expenses"/);
-  assert.match(financeMessages, /matchExpensePlaceholder: "Gắn Chi vận hành"/);
+  assert.match(financeMessages, /matchExpensePlaceholder: "Khớp Chi vận hành"/);
   assert.match(financeMessages, /openExpenses: "Mở Chi vận hành"/);
   assert.match(financeMessages, /matchedExpenseCount/);
-  assert.doesNotMatch(cell, /matchedEventId/);
+  assert.doesNotMatch(cell, /\bmatchedEventId\b/);
   assert.match(actions, /matchedEventIds/);
   assert.match(loader, /bank_transaction_expense_matches/);
   assert.match(table, /amount=\{tx\.amount\}/);
@@ -219,10 +222,9 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(table, /ReviewStatusSelect/);
   assert.match(actions, /parsed\.data\.category === "bank_deposit"/);
   assert.match(expenseClient, /group !== "materials" && group !== "transfer"/);
-  assert.match(
-    expenseClient,
-    /row\.category !== "bank_deposit" &&[\s\S]*row\.transfer_content == null &&[\s\S]*row\.matchedEventIds\.length === 0/,
-  );
+  assert.match(expenseClient, /getExpenseRowActions/);
+  assert.match(expenseClient, /paymentState === "transfer_matched"/);
+  assert.match(expenseClient, /<RowActionsMenu/);
   assert.doesNotMatch(page, /UnmatchedMoneyInTable/);
   assert.doesNotMatch(page, /MissingBankWebhookPaymentsTable/);
 });
@@ -253,14 +255,17 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
     /match_sepay_transaction_expenses\([\s\S]*UPDATE public\.webhook_events[\s\S]*processing_status = 'processed'/,
   );
   assert.match(actions, /\.rpc\([\s\S]*"create_expense_transfer_intent"/);
+  assert.match(actions, /\.rpc\([\s\S]*"transition_expense_payment"/);
+  assert.match(actions, /\.rpc\("cancel_expense"/);
+  assert.doesNotMatch(actions, /\.from\("expenses"\)[\s\S]*?\.delete\(\)/);
   assert.match(actions, /transfer_content/);
   assert.match(
     actions,
-    /\.or\("payment_method\.eq\.transfer,transfer_content\.not\.is\.null"\)/,
+    /payment_method\.eq\.unpaid,payment_method\.eq\.transfer,transfer_content\.not\.is\.null/,
   );
   assert.match(expenseClient, /copy\.transferInstruction\.copy/);
   assert.match(expenseClient, /<AppDialog/);
-  assert.match(expenseClient, /size="icon-touch"/);
+  assert.match(expenseClient, /triggerSize="icon-touch"/);
   assert.match(expenseClient, /font-mono text-lg font-semibold tabular-nums/);
   assert.match(expenseClient, /row\.transfer_content == null/);
   assert.match(
@@ -269,7 +274,28 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
   );
   assert.match(financeMessages, /Nội dung chuyển khoản/);
   assert.match(databaseTypes, /create_expense_transfer_intent:/);
+  assert.match(
+    databaseTypes,
+    /transition_expense_payment:\s*\{[\s\S]*?Args: \{ p_expense_id: number; p_target_method: string \}[\s\S]*?Returns: \{[\s\S]*?expense_id: number[\s\S]*?paid_at: string \| null[\s\S]*?payment_method: string[\s\S]*?transfer_content: string \| null[\s\S]*?\}\[\][\s\S]*?\}/,
+  );
+  assert.match(databaseTypes, /cancel_expense:/);
   assert.match(databaseTypes, /match_sepay_transfer_intent_event:/);
+  assert.match(
+    expensePaymentStateMigration,
+    /CREATE OR REPLACE FUNCTION public\.transition_expense_payment/,
+  );
+  assert.match(
+    expensePaymentStateMigration,
+    /CREATE OR REPLACE FUNCTION public\.cancel_expense/,
+  );
+  assert.match(
+    expensePaymentStateMigration,
+    /REVOKE UPDATE ON TABLE public\.expenses FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    expensePaymentStateMigration,
+    /SELECT expense\.\*[\s\S]*FOR UPDATE;[\s\S]*public\.match_sepay_transaction_expenses/,
+  );
   assert.doesNotMatch(sepayWebhookRoute, /UntypedRpcClient/);
 
   const persistedIntentResolver = sepayWebhookRoute.indexOf(
@@ -315,7 +341,7 @@ test("SePay expense matching handles unapplied migration schema errors", () => {
 test("SePay expense loaders never return partial reconciliation evidence", () => {
   assert.match(
     actions,
-    /if \(matchErr && !isExpenseMatchSchemaMissing\(matchErr\.code\)\) \{[\s\S]*?throw new Error\("Unable to load bank transaction expense matches"\)/,
+    /if \(matchErr\) \{[\s\S]*?if \(isExpenseMatchSchemaMissing\(matchErr\.code\)\) \{[\s\S]*?break;[\s\S]*?throw new Error\("Unable to load bank transaction expense matches"\)/,
   );
   assert.match(
     actions,

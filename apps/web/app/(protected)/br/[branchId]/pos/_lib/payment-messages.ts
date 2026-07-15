@@ -113,18 +113,18 @@ export const confirmCashPaymentRpcFallback: RpcErrorFallback = {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Mappings for `supabase.rpc("create_payment", ...)` failures.
+ * Mappings for `supabase.rpc("create_remote_payment_intent", ...)` failures.
  *
  * Order (most-specific → most-general):
  *
- * 1. `already_paid` — `create_payment`-specific. Different copy from the
+ * 1. `already_paid` — payment-intent-specific. Different copy from the
  *    pre-RPC `order.payment_status === "paid"` guard inside the handler
  *    (both say "Đơn hàng đã thanh toán." — kept identical so cashier sees
  *    the same toast regardless of which check fired first).
  * 2. `amount_mismatch_recomputed` BEFORE `amount_mismatch` — substring
  *    shadow. The longer sentinel ("đơn đã thay đổi so với dữ liệu món…")
  *    is the shared payment vocabulary; the shorter `amount_mismatch`
- *    is the `create_payment` RPC's own check ("Số tiền không khớp.").
+ *    is the payment-intent RPC's own check ("Số tiền không khớp.").
  * 3. Shared payment vocabulary — inlined so the mapping table is the
  *    single source of truth.
  *

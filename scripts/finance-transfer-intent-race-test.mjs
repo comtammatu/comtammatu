@@ -135,6 +135,38 @@ function serviceMatchSql(eventId, applicationName, lockKey = null) {
   `;
 }
 
+function ownerCancelSql({
+  expenseId,
+  ownerId,
+  tenantId,
+  applicationName,
+  lockKey = null,
+}) {
+  return `
+    BEGIN;
+    SET LOCAL application_name = ${sqlLiteral(applicationName)};
+    SET LOCAL statement_timeout = '15s';
+    SELECT set_config('request.jwt.claim.sub', ${sqlLiteral(ownerId)}, true);
+    SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+    SELECT set_config(
+      'request.jwt.claims',
+      jsonb_build_object(
+        'sub', ${sqlLiteral(ownerId)},
+        'role', 'authenticated',
+        'app_metadata', jsonb_build_object('tenant_id', ${tenantId})
+      )::text,
+      true
+    );
+    SELECT public.cancel_expense(${expenseId});
+    ${
+      lockKey === null
+        ? ""
+        : `SELECT pg_advisory_xact_lock(${lockKey});\nSELECT pg_sleep(5);`
+    }
+    COMMIT;
+  `;
+}
+
 async function runRace({
   holderEventId,
   contenderEventId,
@@ -182,15 +214,70 @@ async function runRace({
   }
 }
 
+async function runCancelRace({ fixture, cancelWins, lockKey }) {
+  const holderApplicationName = `expense-cancel-holder-${lockKey}`;
+  const contenderApplicationName = `expense-cancel-contender-${lockKey}`;
+  const cancelSql = ownerCancelSql({
+    expenseId: fixture.expenseId,
+    ownerId: fixture.ownerId,
+    tenantId: fixture.tenantId,
+    applicationName: cancelWins
+      ? holderApplicationName
+      : contenderApplicationName,
+    lockKey: cancelWins ? lockKey : null,
+  });
+  const matchSql = serviceMatchSql(
+    fixture.eventId,
+    cancelWins ? contenderApplicationName : holderApplicationName,
+    cancelWins ? null : lockKey,
+  );
+  const holder = startPsql(cancelWins ? cancelSql : matchSql);
+  let contender;
+  let completions;
+  try {
+    await waitForAdvisoryLock(lockKey);
+    contender = startPsql(cancelWins ? matchSql : cancelSql);
+    completions = [
+      waitForCompletion(holder, "cancel race holder"),
+      waitForCompletion(contender, "cancel race contender"),
+    ];
+    await waitForBlockedSession(contenderApplicationName);
+  } catch (error) {
+    holder.child.kill("SIGKILL");
+    contender?.child.kill("SIGKILL");
+    if (completions) await Promise.allSettled(completions);
+    throw error;
+  }
+
+  const [holderResult, contenderResult] = await Promise.all(completions);
+  assertSuccess(holderResult, "cancel race holder");
+  if (cancelWins) {
+    assertSuccess(contenderResult, "match after cancel");
+  } else if (
+    contenderResult.status === 0 ||
+    !contenderResult.stderr.includes("expense_already_matched")
+  ) {
+    throw new Error(
+      `cancel after match did not fail closed\n${contenderResult.stdout.trim()}\n${contenderResult.stderr.trim()}`,
+    );
+  }
+}
+
 const suffix = randomUUID().replaceAll("-", "");
 const setup = runPsql(`
   BEGIN;
   CREATE TEMP TABLE transfer_intent_race_fixture (
+    owner_id uuid NOT NULL,
+    tenant_id bigint NOT NULL,
     same_expense_id bigint NOT NULL,
     same_event_id bigint NOT NULL,
     conflict_expense_id bigint NOT NULL,
     conflict_event_a_id bigint NOT NULL,
-    conflict_event_b_id bigint NOT NULL
+    conflict_event_b_id bigint NOT NULL,
+    match_wins_expense_id bigint NOT NULL,
+    match_wins_event_id bigint NOT NULL,
+    cancel_wins_expense_id bigint NOT NULL,
+    cancel_wins_event_id bigint NOT NULL
   ) ON COMMIT DROP;
 
   DO $$
@@ -205,6 +292,12 @@ const setup = runPsql(`
     v_conflict_content text;
     v_conflict_event_a_id bigint;
     v_conflict_event_b_id bigint;
+    v_match_wins_expense_id bigint;
+    v_match_wins_content text;
+    v_match_wins_event_id bigint;
+    v_cancel_wins_expense_id bigint;
+    v_cancel_wins_content text;
+    v_cancel_wins_event_id bigint;
   BEGIN
     SELECT profile.id, profile.tenant_id
     INTO v_owner, v_tenant_id
@@ -331,22 +424,102 @@ const setup = runPsql(`
     )
     RETURNING id INTO v_conflict_event_b_id;
 
+    SELECT result.expense_id, result.transfer_content
+    INTO v_match_wins_expense_id, v_match_wins_content
+    FROM public.create_expense_transfer_intent(
+      v_branch_id,
+      '2099-12-31'::date,
+      'utilities',
+      100003,
+      'Race match wins',
+      NULL
+    ) result;
+
+    INSERT INTO public.webhook_events (
+      tenant_id,
+      provider,
+      request_id,
+      signature_valid,
+      payload,
+      processing_status,
+      created_at
+    ) VALUES (
+      v_tenant_id,
+      'sepay',
+      ${sqlLiteral(`match-wins-${suffix}`)},
+      true,
+      jsonb_build_object(
+        'transferType', 'out',
+        'transferAmount', 100003,
+        'content', 'BANK ' || v_match_wins_content || ' DONE'
+      ),
+      'received',
+      '2099-12-31 12:00:03+07'::timestamptz
+    )
+    RETURNING id INTO v_match_wins_event_id;
+
+    SELECT result.expense_id, result.transfer_content
+    INTO v_cancel_wins_expense_id, v_cancel_wins_content
+    FROM public.create_expense_transfer_intent(
+      v_branch_id,
+      '2099-12-31'::date,
+      'utilities',
+      100004,
+      'Race cancel wins',
+      NULL
+    ) result;
+
+    INSERT INTO public.webhook_events (
+      tenant_id,
+      provider,
+      request_id,
+      signature_valid,
+      payload,
+      processing_status,
+      created_at
+    ) VALUES (
+      v_tenant_id,
+      'sepay',
+      ${sqlLiteral(`cancel-wins-${suffix}`)},
+      true,
+      jsonb_build_object(
+        'transferType', 'out',
+        'transferAmount', 100004,
+        'content', 'BANK ' || v_cancel_wins_content || ' DONE'
+      ),
+      'received',
+      '2099-12-31 12:00:04+07'::timestamptz
+    )
+    RETURNING id INTO v_cancel_wins_event_id;
+
     INSERT INTO transfer_intent_race_fixture VALUES (
+      v_owner,
+      v_tenant_id,
       v_same_expense_id,
       v_same_event_id,
       v_conflict_expense_id,
       v_conflict_event_a_id,
-      v_conflict_event_b_id
+      v_conflict_event_b_id,
+      v_match_wins_expense_id,
+      v_match_wins_event_id,
+      v_cancel_wins_expense_id,
+      v_cancel_wins_event_id
     );
   END;
   $$;
 
   SELECT json_build_object(
+    'ownerId', owner_id,
+    'tenantId', tenant_id,
     'sameExpenseId', same_expense_id,
     'sameEventId', same_event_id,
     'conflictExpenseId', conflict_expense_id,
     'conflictEventAId', conflict_event_a_id,
-    'conflictEventBId', conflict_event_b_id
+    'conflictEventBId', conflict_event_b_id,
+    'matchWinsExpenseId', match_wins_expense_id,
+    'matchWinsEventId', match_wins_event_id,
+    'cancelWinsExpenseId', cancel_wins_expense_id,
+    'cancelWinsEventId', cancel_wins_event_id
   )
   FROM transfer_intent_race_fixture;
   COMMIT;
@@ -374,6 +547,28 @@ await runRace({
   contenderShouldFail: true,
 });
 
+await runCancelRace({
+  fixture: {
+    ownerId: fixture.ownerId,
+    tenantId: fixture.tenantId,
+    expenseId: fixture.matchWinsExpenseId,
+    eventId: fixture.matchWinsEventId,
+  },
+  cancelWins: false,
+  lockKey: 1_500_000_000 + Math.floor(Math.random() * 100_000_000),
+});
+
+await runCancelRace({
+  fixture: {
+    ownerId: fixture.ownerId,
+    tenantId: fixture.tenantId,
+    expenseId: fixture.cancelWinsExpenseId,
+    eventId: fixture.cancelWinsEventId,
+  },
+  cancelWins: true,
+  lockKey: 1_700_000_000 + Math.floor(Math.random() * 100_000_000),
+});
+
 const invariant = runPsql(`
   SELECT json_build_object(
     'sameMatchCount', (
@@ -399,6 +594,33 @@ const invariant = runPsql(`
         ${fixture.conflictEventBId}
       )
         AND processing_status = 'processed'
+    ),
+    'matchWinsExpenseExists', EXISTS (
+      SELECT 1
+      FROM public.expenses
+      WHERE id = ${fixture.matchWinsExpenseId}
+    ),
+    'matchWinsMatchCount', (
+      SELECT count(*)
+      FROM public.bank_transaction_expense_matches
+      WHERE expense_id = ${fixture.matchWinsExpenseId}
+    ),
+    'cancelWinsExpenseExists', EXISTS (
+      SELECT 1
+      FROM public.expenses
+      WHERE id = ${fixture.cancelWinsExpenseId}
+    ),
+    'cancelWinsMatchCount', (
+      SELECT count(*)
+      FROM public.bank_transaction_expense_matches
+      WHERE expense_id = ${fixture.cancelWinsExpenseId}
+    ),
+    'cancelWinsAuditCount', (
+      SELECT count(*)
+      FROM public.audit_logs
+      WHERE entity_type = 'expense'
+        AND entity_id = ${fixture.cancelWinsExpenseId}
+        AND action = 'cancel'
     )
   );
 `);
@@ -408,7 +630,12 @@ if (
   state.sameMatchCount !== 1 ||
   state.conflictMatchCount !== 1 ||
   state.sameProcessed !== true ||
-  state.conflictProcessedCount !== 1
+  state.conflictProcessedCount !== 1 ||
+  state.matchWinsExpenseExists !== true ||
+  state.matchWinsMatchCount !== 1 ||
+  state.cancelWinsExpenseExists !== false ||
+  state.cancelWinsMatchCount !== 0 ||
+  state.cancelWinsAuditCount !== 1
 ) {
   throw new Error(`race invariant failed: ${JSON.stringify(state)}`);
 }

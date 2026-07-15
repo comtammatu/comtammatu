@@ -34,13 +34,16 @@ export default async function BankTransactionsPage({
   };
   const resolved = resolveFinanceRange(params);
   const range = { start: resolved.start, end: resolved.end };
-  const [authState, transactions, expenseOptionsRes, paymentWebhookSummary] =
-    await Promise.all([
-      loadAuthState(),
-      fetchSepayBankTransactions(range),
-      fetchExpenseMatchOptions(),
-      fetchSepayPaymentWebhookSummary(range),
-    ]);
+  const [authState, transactions, paymentWebhookSummary] = await Promise.all([
+    loadAuthState(),
+    fetchSepayBankTransactions(range),
+    fetchSepayPaymentWebhookSummary(range),
+  ]);
+  const expenseOptionsRes = await fetchExpenseMatchOptions({
+    includeExpenseIds: Array.from(
+      new Set(transactions.flatMap((transaction) => transaction.expenseIds)),
+    ),
+  });
 
   if (!expenseOptionsRes.success || !expenseOptionsRes.data) {
     throw new Error("Unable to load expense match options");

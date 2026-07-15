@@ -217,6 +217,7 @@ const supplierInvoiceCursorSchema = z.object({
 
 const fetchSupplierInvoicesPaginatedSchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
+  invoiceId: z.coerce.number().int().positive().optional(),
   before: supplierInvoiceCursorSchema.optional(),
   pageSize: z.coerce
     .number()
@@ -249,7 +250,7 @@ export async function fetchSupplierInvoicesPage(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const { branchId, before, pageSize } = parsed.data;
+  const { branchId, invoiceId, before, pageSize } = parsed.data;
 
   let query = supabase
     .from("supplier_invoices")
@@ -258,6 +259,10 @@ export async function fetchSupplierInvoicesPage(
 
   if (branchId != null) {
     query = query.eq("goods_received_notes.branch_id", branchId);
+  }
+
+  if (invoiceId != null) {
+    query = query.eq("id", invoiceId);
   }
 
   if (before) {
@@ -276,7 +281,10 @@ export async function fetchSupplierInvoicesPage(
     .limit(pageSize + 1);
 
   if (error) {
-    return { success: false, error: messages.inventory.supplierInvoices.loadFailed };
+    return {
+      success: false,
+      error: messages.inventory.supplierInvoices.loadFailed,
+    };
   }
 
   const fetched = (data ?? []) as unknown as Array<{

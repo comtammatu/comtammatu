@@ -176,6 +176,59 @@ test("supplier invoice payment visibility is explicitly Owner-only", () => {
   }
 });
 
+test("finance supplier invoice deep links load the exact scoped invoice", () => {
+  const financePage = readWeb(
+    "app/(protected)/finance/supplier-invoices/page.tsx",
+  );
+  const actionSource = readWeb(
+    "app/(protected)/inventory/supplier-invoice-actions.ts",
+  );
+  const clientSource = readWeb(
+    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+  );
+
+  assert.match(financePage, /requestedInvoiceId/);
+  assert.match(
+    financePage,
+    /fetchSupplierInvoicesPage\(\{[\s\S]*invoiceId: requestedInvoiceId[\s\S]*pageSize: 1/,
+  );
+  assert.match(
+    financePage,
+    /requestedInvoiceId != null && requestedInvoiceRow == null[\s\S]*return renderMissingInvoice\(\)/,
+  );
+  assert.match(
+    financePage,
+    /rawInvoiceId != null && requestedInvoiceId == null[\s\S]*return renderMissingInvoice\(\)/,
+  );
+  assert.match(financePage, /Number\.isSafeInteger\(parsedInvoiceId\)/);
+  assert.match(financePage, /parsedInvoiceId > 0/);
+  assert.match(financePage, /mode="no-data"[\s\S]*copy\.notFoundTitle/);
+  assert.match(
+    financePage,
+    /requestedInvoiceRes\?\.success === false[\s\S]*mode="error"/,
+  );
+  assert.match(
+    actionSource,
+    /invoiceId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/,
+  );
+  assert.match(actionSource, /query = query\.eq\("id", invoiceId\)/);
+  assert.match(actionSource, /\.eq\("tenant_id", claims\.tenant_id\)/);
+  assert.match(
+    actionSource,
+    /\.eq\("goods_received_notes\.branch_id", branchId\)/,
+  );
+  assert.match(
+    clientSource,
+    /fetchSupplierInvoicesPage\(\{[\s\S]*invoiceId: nextSelectedId,[\s\S]*pageSize: 1/,
+  );
+  assert.match(
+    clientSource,
+    /nextRows = \[[\s\S]*exactRow,[\s\S]*nextRows\.filter\(\(invoice\) => invoice\.id !== exactRow\.id\)/,
+  );
+  assert.match(clientSource, /isInvoiceDeepLink && "order-2 xl:order-1"/);
+  assert.match(clientSource, /isInvoiceDeepLink && "order-1 xl:order-2"/);
+});
+
 test("supplier invoice client groups payable review by supplier and PO", () => {
   const actionSource = readWeb(
     "app/(protected)/inventory/supplier-invoice-actions.ts",
@@ -307,13 +360,14 @@ test("AP aging uses effective balance after supplier credit", () => {
   );
   assert.match(migration, /public\.auth_is_owner\(auth\.uid\(\)\)/);
 
-  const reportAction = readWeb(
-    "app/(protected)/inventory/report-actions.ts",
-  );
+  const reportAction = readWeb("app/(protected)/inventory/report-actions.ts");
   const reportPage = readWeb("app/(protected)/inventory/reports/page.tsx");
   assert.match(reportAction, /MODULE_ACL\.finance\.allowedRoles/);
   assert.match(reportAction, /PERMISSION_KEYS\.FINANCE_VIEW/);
-  assert.match(reportPage, /showSupplierPayables = claims\.user_role === "owner"/);
+  assert.match(
+    reportPage,
+    /showSupplierPayables = claims\.user_role === "owner"/,
+  );
 });
 
 test("supplier returns are unique per active GRN", () => {

@@ -4,8 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import {
+  Banknote as IconBanknote,
   Copy as IconCopy,
+  Landmark as IconLandmark,
   Plus as IconPlus,
+  RotateCcw as IconRotateCcw,
   Trash2 as IconTrash,
 } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
@@ -24,6 +27,10 @@ import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { KpiCard } from "@/components/kpi/kpi-card";
+import {
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
 import { AppSection, KpiRow } from "@/components/surface";
 import {
@@ -43,7 +50,6 @@ import { messages } from "@lib/messages";
 import { FilterBar } from "../components/filter-bar";
 import {
   EXPENSE_CATEGORIES_BY_GROUP,
-  EXPENSE_CATEGORY_GROUP,
   EXPENSE_CATEGORY_GROUPS,
   EXPENSE_PAYMENT_METHODS,
   classifyExpensePaymentState,
@@ -54,6 +60,7 @@ import type { FinanceParams } from "../_lib/finance-params";
 import {
   createExpense,
   deleteExpense,
+  transitionExpensePayment,
   type ExpenseRow,
 } from "../expense-actions";
 
@@ -69,7 +76,6 @@ interface Props {
   branches: Branch[];
   rows: ExpenseRow[];
   totalAmount: number;
-  actualFoodCost: number;
   resolvedStart: string;
   resolvedEnd: string;
   todayBusinessDate: string;
@@ -77,7 +83,7 @@ interface Props {
 }
 
 const expenseFormSchema = z.object({
-  expenseDate: z.string().min(1, { error: "Chọn ngày chi" }),
+  expenseDate: z.string().min(1, { error: "Chọn ngày phát sinh" }),
   branchId: z.string(),
   category: z.string().min(1, { error: "Chọn khoản mục" }),
   amount: z
@@ -105,7 +111,7 @@ const CATEGORY_GROUPS = EXPENSE_FORM_CATEGORY_GROUPS.map((group) => ({
 
 const METHOD_OPTIONS = EXPENSE_PAYMENT_METHODS.map((value) => ({
   value,
-  label: copy.paymentMethodLabels[value],
+  label: copy.paymentChoiceLabels[value],
 }));
 
 function expenseDetail(row: ExpenseRow): string {
@@ -137,7 +143,6 @@ export function ExpensesClient({
   branches,
   rows,
   totalAmount,
-  actualFoodCost,
   resolvedStart,
   resolvedEnd,
   todayBusinessDate,
@@ -148,7 +153,7 @@ export function ExpensesClient({
   const [transferInstruction, setTransferInstruction] = useState<string | null>(
     null,
   );
-  const [isDeleting, startDelete] = useTransition();
+  const [isMutating, startMutation] = useTransition();
 
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
   const branchLabel = (branchId: number | null) =>
@@ -160,27 +165,6 @@ export function ExpensesClient({
     { value: TENANT_LEVEL_BRANCH_VALUE, label: copy.form.branchTenantLevel },
     ...branches.map((b) => ({ value: String(b.id), label: b.name })),
   ];
-
-  // "Giá vốn món" (materials group) is read-only from actual consumption, not
-  // manual expense rows — it mirrors the finance cockpit and stays out of the
-  // expense total / operating expense to avoid double-counting against gross profit.
-  const materialsGroup = EXPENSE_CATEGORY_GROUP.cogs_manual;
-  const groupSummary = EXPENSE_CATEGORY_GROUPS.map((group) => {
-    const fromConsumption = group === materialsGroup;
-    const groupRows = rows.filter(
-      (r) => EXPENSE_CATEGORY_GROUP[r.category as ExpenseCategory] === group,
-    );
-    return {
-      group,
-      label: copy.categoryGroupLabels[group],
-      total: fromConsumption
-        ? actualFoodCost
-        : groupRows.reduce((sum, r) => sum + r.amount, 0),
-      hint: fromConsumption
-        ? copy.foodCostReadonlyHint
-        : copy.totalHint(String(groupRows.length)),
-    };
-  });
 
   const defaultValues: ExpenseFormValues = {
     expenseDate: todayBusinessDate,
@@ -242,7 +226,7 @@ export function ExpensesClient({
       variant: "destructive",
     });
     if (!ok) return;
-    startDelete(async () => {
+    startMutation(async () => {
       const result = await deleteExpense({ expenseId: row.id });
       if (result.success) {
         toast.success(copy.table.deleteSuccess);
@@ -251,6 +235,132 @@ export function ExpensesClient({
         toast.error(result.error ?? copy.table.deleteFailed);
       }
     });
+  }
+
+  function runPaymentTransition(
+    row: ExpenseRow,
+    targetMethod: ExpensePaymentMethod,
+  ) {
+    startMutation(async () => {
+      const result = await transitionExpensePayment({
+        expenseId: row.id,
+        targetMethod,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? copy.actions.updateFailed);
+        return;
+      }
+
+      if (targetMethod === "transfer") {
+        const transferContent = result.data?.transferContent;
+        if (!transferContent) {
+          toast.error(copy.transferInstruction.createFailed);
+          return;
+        }
+        setTransferInstruction(transferContent);
+        toast.success(copy.transferInstruction.created);
+      } else if (targetMethod === "cash") {
+        toast.success(copy.actions.cashSuccess);
+      } else {
+        toast.success(copy.actions.cancelTransferSuccess);
+      }
+      router.refresh();
+    });
+  }
+
+  async function onPayCash(row: ExpenseRow) {
+    const ok = await confirm({
+      title: copy.actions.cashTitle,
+      description: copy.actions.cashConfirm(formatVND(row.amount)),
+      confirmText: copy.actions.cashCta,
+      cancelText: copy.actions.keepUnpaid,
+    });
+    if (ok) runPaymentTransition(row, "cash");
+  }
+
+  async function onCancelTransfer(row: ExpenseRow) {
+    const ok = await confirm({
+      title: copy.actions.cancelTransferTitle,
+      description: copy.actions.cancelTransferConfirm(
+        row.transfer_content ?? "—",
+      ),
+      confirmText: copy.actions.cancelTransferCta,
+      cancelText: copy.actions.keepTransfer,
+    });
+    if (ok) runPaymentTransition(row, "unpaid");
+  }
+
+  function getExpenseRowActions(row: ExpenseRow): RowActionItem[] {
+    const paymentState = classifyExpensePaymentState(row);
+    if (
+      paymentState === "transfer_matched" ||
+      row.category === "bank_deposit"
+    ) {
+      return [];
+    }
+
+    if (paymentState === "unpaid") {
+      return [
+        {
+          key: "cash",
+          label: copy.actions.cash,
+          icon: <IconBanknote className="size-4" />,
+          onSelect: () => void onPayCash(row),
+          disabled: isMutating,
+        },
+        {
+          key: "transfer",
+          label: copy.actions.createTransfer,
+          icon: <IconLandmark className="size-4" />,
+          onSelect: () => runPaymentTransition(row, "transfer"),
+          disabled: isMutating,
+        },
+        ...(canDeleteExpense(row)
+          ? [
+              {
+                key: "delete",
+                label: copy.table.delete,
+                icon: <IconTrash className="size-4" />,
+                onSelect: () => void onDelete(row),
+                disabled: isMutating,
+                destructive: true,
+                separatorBefore: true,
+              } satisfies RowActionItem,
+            ]
+          : []),
+      ];
+    }
+
+    if (row.transfer_content) {
+      return [
+        {
+          key: "copy",
+          label: copy.transferInstruction.copy,
+          icon: <IconCopy className="size-4" />,
+          onSelect: () => void copyTransferContent(row.transfer_content!),
+        },
+        {
+          key: "cancel-transfer",
+          label: copy.actions.cancelTransfer,
+          icon: <IconRotateCcw className="size-4" />,
+          onSelect: () => void onCancelTransfer(row),
+          disabled: isMutating,
+        },
+      ];
+    }
+
+    return canDeleteExpense(row)
+      ? [
+          {
+            key: "delete",
+            label: copy.table.delete,
+            icon: <IconTrash className="size-4" />,
+            onSelect: () => void onDelete(row),
+            disabled: isMutating,
+            destructive: true,
+          },
+        ]
+      : [];
   }
 
   const columns: DataTableColumn<ExpenseRow>[] = [
@@ -311,26 +421,13 @@ export function ExpensesClient({
             header: "",
             className: "w-12",
             render: (row: ExpenseRow) => {
-              const transferContent = row.transfer_content;
-              return transferContent ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => void copyTransferContent(transferContent)}
-                  aria-label={copy.transferInstruction.copy}
-                >
-                  <IconCopy className="size-4" />
-                </Button>
-              ) : canDeleteExpense(row) ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete(row)}
-                  disabled={isDeleting}
-                  aria-label={copy.table.delete}
-                >
-                  <IconTrash className="size-4 text-destructive" />
-                </Button>
+              const items = getExpenseRowActions(row);
+              return items.length > 0 ? (
+                <RowActionsMenu
+                  items={items}
+                  label={copy.table.actions}
+                  triggerSize="icon-sm"
+                />
               ) : null;
             },
           } satisfies DataTableColumn<ExpenseRow>,
@@ -356,21 +453,13 @@ export function ExpensesClient({
         </div>
       ) : null}
 
-      <KpiRow density="compact" className="sm:grid-cols-3">
+      <KpiRow density="compact">
         <KpiCard
           label={copy.totalLabel}
           value={formatVND(totalAmount)}
           hint={`${copy.totalHint(String(rows.length))} · ${formatVNBusinessDate(resolvedStart)} → ${formatVNBusinessDate(resolvedEnd)}`}
           tone="primary"
         />
-        {groupSummary.map((g) => (
-          <KpiCard
-            key={g.group}
-            label={g.label}
-            value={formatVND(g.total)}
-            hint={g.hint}
-          />
-        ))}
       </KpiRow>
 
       <AppSection contentFlush contentScroll>
@@ -383,7 +472,7 @@ export function ExpensesClient({
           emptyDescription={copy.empty.description}
           mobileCardRender={(row) => {
             const detail = expenseDetail(row);
-            const transferContent = row.transfer_content;
+            const actionItems = getExpenseRowActions(row);
             return (
               <Item variant="outline">
                 <ItemHeader>
@@ -398,30 +487,13 @@ export function ExpensesClient({
                       {branchLabel(row.branch_id)}
                     </ItemDescription>
                   </ItemContent>
-                  {canManageExpenses && transferContent ? (
+                  {canManageExpenses && actionItems.length > 0 ? (
                     <ItemActions>
-                      <Button
-                        variant="ghost"
-                        size="icon-touch"
-                        onClick={() =>
-                          void copyTransferContent(transferContent)
-                        }
-                        aria-label={copy.transferInstruction.copy}
-                      >
-                        <IconCopy className="size-4" />
-                      </Button>
-                    </ItemActions>
-                  ) : canManageExpenses && canDeleteExpense(row) ? (
-                    <ItemActions>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(row)}
-                        disabled={isDeleting}
-                        aria-label={copy.table.delete}
-                      >
-                        <IconTrash className="size-4 text-destructive" />
-                      </Button>
+                      <RowActionsMenu
+                        items={actionItems}
+                        label={copy.table.actions}
+                        triggerSize="icon-touch"
+                      />
                     </ItemActions>
                   ) : null}
                 </ItemHeader>
@@ -489,6 +561,11 @@ export function ExpensesClient({
                 label={copy.form.method}
                 options={METHOD_OPTIONS}
                 placeholder={copy.form.methodPlaceholder}
+                description={
+                  copy.form.methodHints[
+                    form.watch("paymentMethod") as ExpensePaymentMethod
+                  ]
+                }
                 required
               />
               <TextField

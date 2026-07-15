@@ -94,6 +94,25 @@ export function isSepayExpenseAllocationBalanced(
   );
 }
 
+export function nextSepayExpenseSelection(
+  currentIds: readonly number[],
+  expenseId: number,
+  persistedIntentIds: ReadonlySet<number>,
+): number[] {
+  if (currentIds.includes(expenseId)) {
+    return currentIds.filter((id) => id !== expenseId);
+  }
+
+  if (
+    persistedIntentIds.has(expenseId) ||
+    currentIds.some((id) => persistedIntentIds.has(id))
+  ) {
+    return [expenseId];
+  }
+
+  return [...currentIds, expenseId];
+}
+
 export function isSepayRefundAllocationBalanced(
   transactionAmount: number,
   selectedRefundAmount: number,

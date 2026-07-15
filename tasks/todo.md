@@ -114,14 +114,19 @@ merge, and Preview creation until the Owner confirms the exact hourly cost.
   metadata commits. A signed provider result owns settlement; a terminal result
   is immutable; cash cannot replace pending MoMo; a final MoMo failure releases
   the order for another payment.
-- **Senior Dev:** Make `create_payment` service-only and atomic, serialize MoMo
-  webhook writes in event -> order advisory -> payment order, keep exact signed
-  payload evidence, remove the split metadata RPC, and retain RPC-only payment
-  mutation from the web app.
-- **QA/QC:** Prove stale signatures and browser grants absent, actor/branch ACL,
-  amount recomputation, incomplete metadata rollback, idempotent canonical
-  replay, pending/success/failure category defense, no terminal downgrade, no
-  deadlock, and complete fixture/session cleanup.
+- **Senior Dev:** Add service-only `create_remote_payment_intent`, route the new
+  runtime through it, and preserve authenticated legacy
+  `create_payment(..., p_status)` only as a pending-only DB-first compatibility
+  wrapper. Serialize MoMo webhook writes in event -> order advisory -> payment
+  order, keep exact signed payload evidence, and restrict direct payment updates
+  to the old runtime's validated pending-provider metadata fill and Owner-only
+  completed-VietQR `bankWebhookReview` update.
+- **QA/QC:** Prove the new RPC is denied to browser roles, the legacy signature
+  cannot settle remote payments, direct payment INSERT/DELETE are absent, direct
+  UPDATE rejects every shape except validated pending-provider metadata and the
+  exact Owner completed-VietQR review marker, and actor/branch ACL, amount
+  recomputation, idempotency, terminal immutability, deadlock freedom, and
+  fixture/session cleanup remain intact.
 
 - [x] **P0-D1a — atomic provider intent.** Store provider reference and metadata
       in the same service-only transaction after rechecking the active POS actor
@@ -139,20 +144,37 @@ merge, and Preview creation until the Owner confirms the exact hourly cost.
 - [ ] **P0-D1f — Preview proof.** Create and meter a Preview only after the Owner
       confirms the quoted `$0.01344/hour`; run migration preflight, deploy, and
       phone/tablet/payment smoke there.
-- [ ] **P0-D2 — direct-DML revoke.** Land as a separate migration/PR after D1
-      Preview proof so grant revocation is isolated and independently reversible.
+- [ ] **P0-D2 — payment-table UPDATE revoke.** After the new runtime is deployed
+      and proven, revoke the remaining authenticated `UPDATE` grant that exists
+      only for the two guarded DB-first compatibility paths: pending provider
+      metadata fill and Owner completed-VietQR review. Direct payment
+      INSERT/DELETE are already revoked in D1.
 
-Attestation: the service-only payment-intent and MoMo settlement RPCs are
-written and applied only to the isolated local Supabase stack. Targeted SQL,
-focused provider/static tests, the eight-scenario concurrency harness, typecheck,
-T3 lint, build, full tests, and diff hygiene are green. The harness proves both
-same-event and separate-event pending/success/failure races, order-first lock
-inversion, pending-MoMo versus cash containment, atomic metadata, and zero
-residual fixtures. Independent review found the pending-MoMo cash-conversion P1;
-the canonical cash RPC now fails closed while the signed settlement remains
-authoritative. Stale signatures and browser grants remain absent from the live
-local catalog. Preview and Production remain untouched; merge is outside this
-slice.
+Attestation: the service-only remote-payment intent and MoMo settlement RPCs are
+written and applied only to the isolated local Supabase stack. The local catalog
+intentionally contains both `create_remote_payment_intent` and the authenticated
+legacy `create_payment(..., p_status)` signature; the latter is a temporary
+pending-only wrapper and cannot complete cash, MoMo, or VietQR. Browser roles
+cannot call the new RPC or directly INSERT/DELETE payments. Authenticated UPDATE
+remains only for the trigger-validated pending-provider metadata and Owner
+completed-VietQR review shapes required by the deployed runtime, and is scheduled
+for P0-D2 revocation after cutover. The cash RPC fails closed while signed
+provider settlement remains authoritative.
+Preview and Production remain untouched; merge is outside this slice.
+
+## Expense Payment State Closure (2026-07-16)
+
+- [x] Add Owner-only atomic `transition_expense_payment` and `cancel_expense`
+      RPCs with idempotent state transitions and audit evidence.
+- [x] Revoke authenticated direct `UPDATE` on `expenses`; retain rolling
+      compatibility DELETE only with trigger-owned audit and matched-evidence
+      protection.
+- [x] Make cash movement use `paid_at`, while the Chi vận hành ledger continues
+      to use the incurred business date.
+- [x] Preserve exact SePay intent matching, exact supplier-invoice deep links,
+      and fail-closed financial loading across long reporting periods.
+- [ ] Prove the current migration wave on Supabase Preview and run phone/tablet
+      Finance smoke before changing PR #297 from Draft.
 
 ## POS Item Customizer Mobile Scroll (2026-07-11)
 

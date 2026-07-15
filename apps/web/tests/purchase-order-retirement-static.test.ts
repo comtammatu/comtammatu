@@ -87,7 +87,7 @@ test("historical PO references render as text and never reopen a retired route",
   assert.match(grnDetail, /<span className="font-mono">\{grn\.poCode\}<\/span>/);
   assert.match(
     supplierInvoices,
-    /<span className="font-mono">\{selectedInvoice\.poCode\}<\/span>/,
+    /<span className="font-mono">\s*\{selectedInvoice\.poCode\}\s*<\/span>/,
   );
   for (const source of [grnList, grnDetail, supplierInvoices, dashboard]) {
     assert.doesNotMatch(source, /\/inventory\/purchase-orders|stock\/purchase-orders/);

@@ -705,7 +705,15 @@ test("SePay bank reconciliation reads supplier AP payments without turning them 
   assert.match(table, /supplierPaymentMatchConfirmed=/);
   assert.match(cell, /supplierInvoiceHref/);
   assert.match(cell, /\/finance\/supplier-invoices\?invoiceId=/);
-  assert.match(cell, /matchedSupplierPayment/);
+  assert.match(
+    cell,
+    /openSupplierInvoice\([\s\S]*match\.invoiceNumber \?\? `#\$\{match\.invoiceId\}`/,
+  );
+  assert.match(
+    cell,
+    /<Button[\s\S]*asChild[\s\S]*size="touch"[\s\S]*supplierInvoiceHref/,
+  );
+  assert.doesNotMatch(cell, /sm:h-7|sm:min-h-7/);
   assert.match(cell, /matchSepayTransactionWithSupplierPayments/);
   assert.match(action, /match_sepay_transaction_supplier_payments/);
   assert.match(migration, /ADD COLUMN webhook_event_id bigint/);

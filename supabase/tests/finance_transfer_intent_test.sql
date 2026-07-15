@@ -187,6 +187,38 @@ BEGIN
       'public.match_sepay_transfer_intent_event(bigint)',
       'EXECUTE'
     )
+    OR has_function_privilege(
+      'anon',
+      'public.transition_expense_payment(bigint,text)',
+      'EXECUTE'
+    )
+    OR has_function_privilege(
+      'service_role',
+      'public.transition_expense_payment(bigint,text)',
+      'EXECUTE'
+    )
+    OR NOT has_function_privilege(
+      'authenticated',
+      'public.transition_expense_payment(bigint,text)',
+      'EXECUTE'
+    )
+    OR has_function_privilege(
+      'anon',
+      'public.cancel_expense(bigint)',
+      'EXECUTE'
+    )
+    OR has_function_privilege(
+      'service_role',
+      'public.cancel_expense(bigint)',
+      'EXECUTE'
+    )
+    OR NOT has_function_privilege(
+      'authenticated',
+      'public.cancel_expense(bigint)',
+      'EXECUTE'
+    )
+    OR has_table_privilege('anon', 'public.expenses', 'UPDATE')
+    OR has_table_privilege('authenticated', 'public.expenses', 'UPDATE')
   THEN
     RAISE EXCEPTION 'finance_transfer_intent_acl_invalid';
   END IF;
@@ -728,6 +760,507 @@ BEGIN
   END;
   IF NOT v_rejected THEN
     RAISE EXCEPTION 'finance_transfer_intent_matched_delete_not_blocked';
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_owner::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_owner::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object('tenant_id', v_tenant_id)
+    )::text,
+    true
+  );
+
+  v_rejected := false;
+  BEGIN
+    PERFORM *
+    FROM public.transition_expense_payment(v_expense_id, 'unpaid');
+  EXCEPTION
+    WHEN SQLSTATE '23505' THEN
+      v_rejected := true;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'finance_transfer_intent_matched_transition_accepted';
+  END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.cancel_expense(v_expense_id);
+  EXCEPTION
+    WHEN SQLSTATE '23505' THEN
+      v_rejected := true;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'finance_transfer_intent_matched_cancel_accepted';
+  END IF;
+END;
+$$;
+
+DO $$
+DECLARE
+  v_owner uuid;
+  v_non_owner uuid;
+  v_tenant_id bigint;
+  v_branch_id bigint;
+  v_state_expense_id bigint;
+  v_pending_cancel_id bigint;
+  v_compat_delete_id bigint;
+  v_boundary_expense_id bigint;
+  v_transfer_content text;
+  v_replay_content text;
+  v_paid_at timestamptz;
+  v_replay_paid_at timestamptz;
+  v_audit_count integer;
+  v_rejected boolean;
+  v_june_before numeric;
+  v_june_after numeric;
+  v_july_before numeric;
+  v_july_after numeric;
+  v_since_before numeric;
+  v_since_after numeric;
+BEGIN
+  SELECT profile.id, profile.tenant_id
+  INTO v_owner, v_tenant_id
+  FROM public.profiles profile
+  JOIN public.positions position
+    ON position.id = profile.position_id
+   AND position.tenant_id = profile.tenant_id
+  WHERE position.code = 'owner'
+    AND COALESCE(profile.is_active, true)
+  ORDER BY profile.id
+  LIMIT 1;
+
+  SELECT profile.id
+  INTO v_non_owner
+  FROM public.profiles profile
+  JOIN public.positions position
+    ON position.id = profile.position_id
+   AND position.tenant_id = profile.tenant_id
+  WHERE profile.tenant_id = v_tenant_id
+    AND position.code <> 'owner'
+    AND COALESCE(profile.is_active, true)
+  ORDER BY profile.id
+  LIMIT 1;
+
+  SELECT branch.id
+  INTO v_branch_id
+  FROM public.branches branch
+  WHERE branch.tenant_id = v_tenant_id
+  ORDER BY branch.id
+  LIMIT 1;
+
+  PERFORM set_config('request.jwt.claim.sub', v_owner::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_owner::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object('tenant_id', v_tenant_id)
+    )::text,
+    true
+  );
+
+  INSERT INTO public.expenses (
+    tenant_id,
+    branch_id,
+    expense_date,
+    category,
+    amount,
+    payment_method,
+    paid_at,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    current_date,
+    'utilities',
+    481000,
+    'unpaid',
+    NULL,
+    v_owner
+  )
+  RETURNING id INTO v_state_expense_id;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM *
+    FROM public.transition_expense_payment(v_state_expense_id, NULL);
+  EXCEPTION
+    WHEN SQLSTATE '22023' THEN
+      v_rejected := true;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'expense_payment_null_target_accepted';
+  END IF;
+
+  SELECT result.transfer_content
+  INTO v_transfer_content
+  FROM public.transition_expense_payment(
+    v_state_expense_id,
+    'transfer'
+  ) result;
+
+  IF v_transfer_content IS NULL OR NOT EXISTS (
+    SELECT 1
+    FROM public.expenses expense
+    WHERE expense.id = v_state_expense_id
+      AND expense.payment_method = 'unpaid'
+      AND expense.paid_at IS NULL
+      AND expense.transfer_content = v_transfer_content
+  ) THEN
+    RAISE EXCEPTION 'expense_payment_transfer_transition_invalid';
+  END IF;
+
+  SELECT count(*)::integer
+  INTO v_audit_count
+  FROM public.audit_logs audit
+  WHERE audit.entity_type = 'expense'
+    AND audit.entity_id = v_state_expense_id
+    AND audit.action = 'update';
+
+  IF v_audit_count <> 1 THEN
+    RAISE EXCEPTION 'expense_payment_transfer_audit_invalid:%', v_audit_count;
+  END IF;
+
+  SELECT result.transfer_content
+  INTO v_replay_content
+  FROM public.transition_expense_payment(
+    v_state_expense_id,
+    'transfer'
+  ) result;
+
+  SELECT count(*)::integer
+  INTO v_audit_count
+  FROM public.audit_logs audit
+  WHERE audit.entity_type = 'expense'
+    AND audit.entity_id = v_state_expense_id
+    AND audit.action = 'update';
+
+  IF v_replay_content IS DISTINCT FROM v_transfer_content
+    OR v_audit_count <> 1
+  THEN
+    RAISE EXCEPTION 'expense_payment_transfer_replay_not_idempotent';
+  END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM *
+    FROM public.transition_expense_payment(v_state_expense_id, 'cash');
+  EXCEPTION
+    WHEN SQLSTATE '23514' THEN
+      v_rejected := true;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'expense_payment_pending_transfer_cash_accepted';
+  END IF;
+
+  PERFORM *
+  FROM public.transition_expense_payment(v_state_expense_id, 'unpaid');
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.expenses expense
+    WHERE expense.id = v_state_expense_id
+      AND expense.payment_method = 'unpaid'
+      AND expense.paid_at IS NULL
+      AND expense.transfer_content IS NULL
+  ) THEN
+    RAISE EXCEPTION 'expense_payment_transfer_cancel_invalid';
+  END IF;
+
+  SELECT result.paid_at
+  INTO v_paid_at
+  FROM public.transition_expense_payment(v_state_expense_id, 'cash') result;
+
+  IF v_paid_at IS NULL OR NOT EXISTS (
+    SELECT 1
+    FROM public.expenses expense
+    WHERE expense.id = v_state_expense_id
+      AND expense.payment_method = 'cash'
+      AND expense.paid_at = v_paid_at
+      AND expense.transfer_content IS NULL
+  ) THEN
+    RAISE EXCEPTION 'expense_payment_cash_transition_invalid';
+  END IF;
+
+  SELECT result.paid_at
+  INTO v_replay_paid_at
+  FROM public.transition_expense_payment(v_state_expense_id, 'cash') result;
+
+  SELECT count(*)::integer
+  INTO v_audit_count
+  FROM public.audit_logs audit
+  WHERE audit.entity_type = 'expense'
+    AND audit.entity_id = v_state_expense_id
+    AND audit.action = 'update';
+
+  IF v_replay_paid_at IS DISTINCT FROM v_paid_at OR v_audit_count <> 3 THEN
+    RAISE EXCEPTION 'expense_payment_cash_replay_not_idempotent:%',
+      v_audit_count;
+  END IF;
+
+  PERFORM public.cancel_expense(v_state_expense_id);
+
+  IF EXISTS (
+    SELECT 1 FROM public.expenses WHERE id = v_state_expense_id
+  ) OR (
+    SELECT count(*)
+    FROM public.audit_logs audit
+    WHERE audit.entity_type = 'expense'
+      AND audit.entity_id = v_state_expense_id
+      AND audit.action = 'cancel'
+      AND audit.old_data->>'payment_method' = 'cash'
+  ) <> 1 THEN
+    RAISE EXCEPTION 'expense_cancel_atomic_audit_invalid';
+  END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.cancel_expense(v_state_expense_id);
+  EXCEPTION
+    WHEN SQLSTATE 'P0002' THEN
+      v_rejected := true;
+  END;
+  IF NOT v_rejected OR (
+    SELECT count(*)
+    FROM public.audit_logs audit
+    WHERE audit.entity_type = 'expense'
+      AND audit.entity_id = v_state_expense_id
+      AND audit.action = 'cancel'
+  ) <> 1 THEN
+    RAISE EXCEPTION 'expense_cancel_replay_invalid';
+  END IF;
+
+  INSERT INTO public.expenses (
+    tenant_id,
+    branch_id,
+    expense_date,
+    category,
+    amount,
+    payment_method,
+    paid_at,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    current_date,
+    'other',
+    483000,
+    'unpaid',
+    NULL,
+    v_owner
+  )
+  RETURNING id INTO v_compat_delete_id;
+
+  PERFORM set_config(
+    'test.transfer_intent_compat_delete_id',
+    v_compat_delete_id::text,
+    true
+  );
+
+  INSERT INTO public.expenses (
+    tenant_id,
+    branch_id,
+    expense_date,
+    category,
+    amount,
+    payment_method,
+    paid_at,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    current_date,
+    'repair',
+    482000,
+    'unpaid',
+    NULL,
+    v_owner
+  )
+  RETURNING id INTO v_pending_cancel_id;
+
+  SELECT result.transfer_content
+  INTO v_transfer_content
+  FROM public.transition_expense_payment(
+    v_pending_cancel_id,
+    'transfer'
+  ) result;
+
+  PERFORM set_config('request.jwt.claim.sub', v_non_owner::text, true);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_non_owner::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object('tenant_id', v_tenant_id)
+    )::text,
+    true
+  );
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.cancel_expense(v_pending_cancel_id);
+  EXCEPTION
+    WHEN SQLSTATE '42501' THEN
+      v_rejected := true;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'expense_cancel_non_owner_accepted';
+  END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM *
+    FROM public.transition_expense_payment(v_pending_cancel_id, 'unpaid');
+  EXCEPTION
+    WHEN SQLSTATE '42501' THEN
+      v_rejected := true;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'expense_payment_transition_non_owner_accepted';
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_owner::text, true);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_owner::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object('tenant_id', v_tenant_id)
+    )::text,
+    true
+  );
+
+  PERFORM public.cancel_expense(v_pending_cancel_id);
+
+  IF EXISTS (
+    SELECT 1 FROM public.expenses WHERE id = v_pending_cancel_id
+  ) OR NOT EXISTS (
+    SELECT 1
+    FROM public.audit_logs audit
+    WHERE audit.entity_type = 'expense'
+      AND audit.entity_id = v_pending_cancel_id
+      AND audit.action = 'cancel'
+      AND audit.old_data->>'transfer_content' = v_transfer_content
+  ) THEN
+    RAISE EXCEPTION 'expense_pending_transfer_cancel_invalid';
+  END IF;
+
+  SELECT (public.get_operating_cash_movement_for_period(
+    DATE '2026-06-30',
+    DATE '2026-06-30',
+    v_branch_id
+  )->>'cash_expenses')::numeric
+  INTO v_june_before;
+  SELECT (public.get_operating_cash_movement_for_period(
+    DATE '2026-07-01',
+    DATE '2026-07-01',
+    v_branch_id
+  )->>'cash_expenses')::numeric
+  INTO v_july_before;
+  SELECT (public.get_cash_ledger_movement_since(
+    TIMESTAMPTZ '2026-06-30 17:00:00+00'
+  )->>'cash_expenses')::numeric
+  INTO v_since_before;
+
+  INSERT INTO public.expenses (
+    tenant_id,
+    branch_id,
+    expense_date,
+    category,
+    amount,
+    payment_method,
+    paid_at,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    DATE '2026-06-30',
+    'utilities',
+    912345,
+    'cash',
+    TIMESTAMPTZ '2026-06-30 17:00:00+00',
+    v_owner
+  )
+  RETURNING id INTO v_boundary_expense_id;
+
+  SELECT (public.get_operating_cash_movement_for_period(
+    DATE '2026-06-30',
+    DATE '2026-06-30',
+    v_branch_id
+  )->>'cash_expenses')::numeric
+  INTO v_june_after;
+  SELECT (public.get_operating_cash_movement_for_period(
+    DATE '2026-07-01',
+    DATE '2026-07-01',
+    v_branch_id
+  )->>'cash_expenses')::numeric
+  INTO v_july_after;
+  SELECT (public.get_cash_ledger_movement_since(
+    TIMESTAMPTZ '2026-06-30 17:00:00+00'
+  )->>'cash_expenses')::numeric
+  INTO v_since_after;
+
+  IF v_june_after - v_june_before <> 0
+    OR v_july_after - v_july_before <> 912345
+    OR v_since_after - v_since_before <> 912345
+  THEN
+    RAISE EXCEPTION 'expense_cash_paid_at_boundary_invalid:%,%,%',
+      v_june_after - v_june_before,
+      v_july_after - v_july_before,
+      v_since_after - v_since_before;
+  END IF;
+
+  PERFORM public.cancel_expense(v_boundary_expense_id);
+END;
+$$;
+
+SELECT set_config(
+  'request.jwt.claim.sub',
+  current_setting('test.transfer_intent_owner'),
+  true
+);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT set_config(
+  'request.jwt.claims',
+  jsonb_build_object(
+    'sub', current_setting('test.transfer_intent_owner'),
+    'role', 'authenticated',
+    'app_metadata', jsonb_build_object(
+      'tenant_id', current_setting('test.transfer_intent_tenant')::bigint,
+      'branch_id', current_setting('test.transfer_intent_branch')::bigint
+    )
+  )::text,
+  true
+);
+
+SET LOCAL ROLE authenticated;
+DELETE FROM public.expenses
+WHERE id = current_setting('test.transfer_intent_compat_delete_id')::bigint;
+RESET ROLE;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.expenses
+    WHERE id = current_setting('test.transfer_intent_compat_delete_id')::bigint
+  ) OR (
+    SELECT count(*)
+    FROM public.audit_logs audit
+    WHERE audit.entity_type = 'expense'
+      AND audit.entity_id =
+        current_setting('test.transfer_intent_compat_delete_id')::bigint
+      AND audit.action = 'delete'
+      AND audit.old_data->>'payment_method' = 'unpaid'
+      AND audit.user_id =
+        current_setting('test.transfer_intent_owner')::uuid
+  ) <> 1 THEN
+    RAISE EXCEPTION 'expense_compatibility_delete_audit_invalid';
   END IF;
 END;
 $$;

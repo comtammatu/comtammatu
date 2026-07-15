@@ -22,6 +22,7 @@ const reviewActions = read(
 const paymentSchemas = read(
   "apps/web/app/(protected)/br/[branchId]/pos/_lib/payment-schemas.ts",
 );
+const databaseTypes = read("packages/database/src/types/database.types.ts");
 const momoWebhook = read("apps/web/app/api/webhooks/momo/route.ts");
 
 function sourceFiles(root: string): string[] {
@@ -33,7 +34,7 @@ function sourceFiles(root: string): string[] {
 }
 
 test("payment intent RPC cannot bypass cash or provider settlement", () => {
-  assert.match(migration, /FUNCTION public\.create_payment/);
+  assert.match(migration, /FUNCTION public\.create_remote_payment_intent/);
   assert.match(migration, /p_method NOT IN \('momo', 'vietqr'\)/);
   assert.match(migration, /auth\.role\(\) IS DISTINCT FROM 'service_role'/);
   assert.match(migration, /p_method = 'vietqr'/);
@@ -66,7 +67,7 @@ test("payment intent RPC cannot bypass cash or provider settlement", () => {
 test("pending intent and provider metadata share one guarded write boundary", () => {
   assert.match(
     migration,
-    /FUNCTION public\.create_payment\([\s\S]*p_provider_data jsonb/,
+    /FUNCTION public\.create_remote_payment_intent\([\s\S]*p_provider_data jsonb/,
   );
   assert.match(migration, /SECURITY DEFINER[\s\S]*SET search_path = ''/);
   assert.match(migration, /FOR UPDATE/);
@@ -87,12 +88,93 @@ test("pending intent and provider metadata share one guarded write boundary", ()
   assert.doesNotMatch(paymentActions, /persist_pending_payment_provider_data/);
   assert.match(
     paymentActions,
-    /createServiceClient\(\)\.rpc\([\s\S]*"create_payment"/,
+    /createServiceClient\(\)\.rpc\([\s\S]*"create_remote_payment_intent"/,
   );
   assert.match(paymentActions, /p_provider_data: buildStoredProviderData/);
   assert.match(
     paymentActions,
     /pending\.method === "momo" && !pending\.qr_data/,
+  );
+});
+
+test("payment intent migration preserves the production RPC during DB-first rollout", () => {
+  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const legacyWrapperStart = migration.indexOf(
+    "CREATE OR REPLACE FUNCTION public.create_payment(",
+  );
+  const legacyWrapperEnd = migration.indexOf(
+    "COMMENT ON FUNCTION public.create_payment(",
+    legacyWrapperStart,
+  );
+  const legacyWrapper = migration.slice(legacyWrapperStart, legacyWrapperEnd);
+
+  assert.match(
+    baseline,
+    /FUNCTION public\.create_payment\(p_tenant_id bigint[\s\S]*p_status text/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /DROP FUNCTION IF EXISTS public\.create_payment/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /DROP FUNCTION IF EXISTS public\.persist_pending_payment_provider_data/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /DROP FUNCTION IF EXISTS public\.finalize_momo_failed_payment/,
+  );
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.create_payment\([\s\S]*legacy_remote_payment_only[\s\S]*remote_payment_requires_provider_settlement/,
+  );
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.create_payment\([\s\S]*TO authenticated/,
+  );
+  assert.match(
+    legacyWrapper,
+    /SUM\(order_item\.quantity::numeric \* order_item\.unit_price\)/,
+  );
+  assert.match(legacyWrapper, /amount_mismatch_recomputed/);
+  assert.match(
+    databaseTypes,
+    /create_payment:\s*\{\s*Args:\s*\{[^}]*p_status\?: string[^}]*\}/,
+  );
+  assert.match(
+    databaseTypes,
+    /create_remote_payment_intent:\s*\{\s*Args:\s*\{[^}]*p_provider_data: Json[^}]*\}/,
+  );
+});
+
+test("DB-first payment compatibility permits only pending provider metadata fill", () => {
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION private\.guard_authenticated_payment_update/,
+  );
+  assert.match(migration, /current_user NOT IN \('anon', 'authenticated'\)/);
+  assert.match(migration, /public\.auth_role\(\) = 'owner'/);
+  assert.doesNotMatch(migration, /public\.auth_is_owner\(auth\.uid\(\)\)/);
+  assert.match(
+    migration,
+    /OLD\.status = 'pending'[\s\S]*NEW\.status = 'pending'[\s\S]*to_jsonb\(NEW\) - 'provider_data' - 'updated_at'/,
+  );
+  assert.match(migration, /RAISE EXCEPTION 'payment_direct_update_forbidden'/);
+  assert.match(
+    migration,
+    /REVOKE INSERT, UPDATE, DELETE ON TABLE public\.payments FROM PUBLIC, anon/,
+  );
+  assert.match(
+    migration,
+    /REVOKE INSERT, DELETE ON TABLE public\.payments FROM authenticated/,
+  );
+  assert.match(
+    migration,
+    /RAISE EXCEPTION 'payment_pending_conflict' USING ERRCODE = '23514'/,
+  );
+  assert.match(
+    migration,
+    /EXCEPTION WHEN unique_violation THEN[\s\S]*payment_pending_conflict[\s\S]*23514/,
   );
 });
 
@@ -110,8 +192,14 @@ test("cash cannot replace a pending MoMo intent", () => {
 
   assert.ok(start >= 0 && end > start, "cash RPC replacement should exist");
   assert.match(cashRpc, /SELECT id, status, method, provider_ref/);
-  assert.ok(guard >= 0 && guard < conversion, "MoMo guard must precede conversion");
-  assert.match(paymentMessages, /pending_momo_payment_requires_provider_resolution/);
+  assert.ok(
+    guard >= 0 && guard < conversion,
+    "MoMo guard must precede conversion",
+  );
+  assert.match(
+    paymentMessages,
+    /pending_momo_payment_requires_provider_resolution/,
+  );
   assert.match(paymentMessages, /kiểm tra giao dịch MoMo/);
 });
 

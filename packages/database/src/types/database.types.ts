@@ -9350,6 +9350,7 @@ export type Database = {
       }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
+      cancel_expense: { Args: { p_expense_id: number }; Returns: Json }
       cancel_leave_request: {
         Args: { p_request_id: number }
         Returns: undefined
@@ -9592,6 +9593,19 @@ export type Database = {
         Returns: Json
       }
       create_payment: {
+        Args: {
+          p_amount: number
+          p_branch_id: number
+          p_created_by: string
+          p_method: string
+          p_order_id: number
+          p_provider_ref?: string
+          p_status?: string
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
+      create_remote_payment_intent: {
         Args: {
           p_amount: number
           p_branch_id: number
@@ -10056,7 +10070,7 @@ export type Database = {
           order_id: number
           order_number: string
           order_type: string
-          paid_at: string
+          paid_at: string | null
           paid_hour: number
           payment_method: string
           subtotal: number
@@ -11089,6 +11103,15 @@ export type Database = {
           p_order_id: number
         }
         Returns: Json
+      }
+      transition_expense_payment: {
+        Args: { p_expense_id: number; p_target_method: string }
+        Returns: {
+          expense_id: number
+          paid_at: string | null
+          payment_method: string
+          transfer_content: string | null
+        }[]
       }
       transition_order_item_status: {
         Args: {

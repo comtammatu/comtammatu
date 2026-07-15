@@ -311,18 +311,19 @@ async function runBlockedRace(label, firstBody, secondBody) {
 async function main() {
   const readiness = psql(`
     SELECT current_database() || '|' || current_user || '|' ||
-      (to_regprocedure('public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)') IS NOT NULL)::text || '|' ||
+      (to_regprocedure('public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,text)') IS NOT NULL)::text || '|' ||
+      (to_regprocedure('public.create_remote_payment_intent(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)') IS NOT NULL)::text || '|' ||
       (to_regprocedure('public.record_momo_pending_result(bigint,bigint,jsonb)') IS NOT NULL)::text || '|' ||
       (to_regprocedure('public.finalize_momo_successful_payment(bigint,bigint,jsonb)') IS NOT NULL)::text || '|' ||
       (to_regprocedure('public.finalize_momo_failed_payment(bigint,bigint,jsonb)') IS NOT NULL)::text || '|' ||
       (position('FOR UPDATE NOWAIT' IN pg_get_functiondef(
-        to_regprocedure('public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)')
+        to_regprocedure('public.create_remote_payment_intent(bigint,bigint,bigint,text,numeric,uuid,text,jsonb)')
       )) > 0)::text || '|' ||
       (position('pending_momo_payment_requires_provider_resolution' IN pg_get_functiondef(
         to_regprocedure('public.confirm_cash_payment(bigint,numeric)')
       )) > 0)::text;
   `);
-  if (readiness !== "postgres|postgres|true|true|true|true|true|true") {
+  if (readiness !== "postgres|postgres|true|true|true|true|true|true|true") {
     throw new Error(
       `Local database is not ready for guarded-payment races: ${readiness}`,
     );
@@ -429,7 +430,7 @@ async function main() {
           ) AS source(suffix, provider_ref, initial_request)
             ON order_row.order_number = '${FIXTURE_PREFIX}-' || source.suffix
         LOOP
-          PERFORM public.create_payment(
+          PERFORM public.create_remote_payment_intent(
             fixture.tenant_id,
             fixture.branch_id,
             fixture.order_id,
@@ -612,7 +613,7 @@ async function main() {
       "atomic_create_first",
       `
         ${serviceSettings()}
-        SELECT public.create_payment(
+        SELECT public.create_remote_payment_intent(
           ${tenantId}, ${branchId}, ${createFirstOrderId}, 'momo', 0,
           '${CASHIER_ID}'::uuid, '${providerRefs.createFirst}',
           '${JSON.stringify(createFirstMetadata)}'::jsonb
@@ -655,12 +656,12 @@ async function main() {
         ${serviceSettings()}
         DO $race$
         BEGIN
-          PERFORM public.create_payment(
+          PERFORM public.create_remote_payment_intent(
             ${tenantId}, ${branchId}, ${completionFirstOrderId}, 'momo', 0,
             '${CASHIER_ID}'::uuid, '${providerRefs.completionFirst}',
             '${JSON.stringify(completionFirstMetadata)}'::jsonb
           );
-          RAISE EXCEPTION 'create_payment unexpectedly succeeded after completion';
+          RAISE EXCEPTION 'create_remote_payment_intent unexpectedly succeeded after completion';
         EXCEPTION WHEN SQLSTATE 'P0001' THEN
           IF SQLERRM IS DISTINCT FROM 'order_already_paid' THEN
             RAISE;
@@ -1167,12 +1168,12 @@ async function main() {
       `
         DO $race$
         BEGIN
-          PERFORM public.create_payment(
+          PERFORM public.create_remote_payment_intent(
             ${tenantId}, ${branchId}, ${inversionOrderId}, 'momo', 0,
             '${CASHIER_ID}'::uuid, '${providerRefs.orderFirstInversion}',
             '${JSON.stringify(orderFirstInversionMetadata)}'::jsonb
           );
-          RAISE EXCEPTION 'create_payment unexpectedly waited through the row lock';
+          RAISE EXCEPTION 'create_remote_payment_intent unexpectedly waited through the row lock';
         EXCEPTION WHEN SQLSTATE '55P03' THEN
           NULL;
         END
@@ -1204,7 +1205,7 @@ async function main() {
       `),
     );
     output.push(
-      `order-first-inversion: ${inversionEdge}; ${inversionState}; create_payment=55P03`,
+      `order-first-inversion: ${inversionEdge}; ${inversionState}; create_remote_payment_intent=55P03`,
     );
   } finally {
     await closeSessions();

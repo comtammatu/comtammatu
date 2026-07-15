@@ -473,6 +473,7 @@ export function SupplierInvoicesClient({
   const grnIdParam = searchParams.get("grnId");
   const preselectInvoiceId = invoiceIdParam ? Number(invoiceIdParam) : null;
   const preselectGrnId = grnIdParam ? Number(grnIdParam) : null;
+  const isInvoiceDeepLink = preselectInvoiceId != null;
 
   const [rows, setRows] = useState(invoices);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -662,13 +663,38 @@ export function SupplierInvoicesClient({
       showOnlyOverdue);
 
   async function reloadInvoices(nextSelectedId?: number | null) {
-    const again = await fetchSupplierInvoicesPage({ branchId });
+    const [again, exactSelected] = await Promise.all([
+      fetchSupplierInvoicesPage({ branchId }),
+      typeof nextSelectedId === "number"
+        ? fetchSupplierInvoicesPage({
+            branchId,
+            invoiceId: nextSelectedId,
+            pageSize: 1,
+          })
+        : Promise.resolve(null),
+    ]);
     if (!again.success || !again.data) return;
 
     const { items, hasMore: more, nextCursor: cursor } = again.data;
-    const nextRows = (items as Array<Record<string, unknown>>).map(
+    let nextRows = (items as Array<Record<string, unknown>>).map(
       mapSupplierInvoiceRow,
     );
+
+    if (typeof nextSelectedId === "number") {
+      const exactItem = (
+        exactSelected?.success ? exactSelected.data?.items[0] : undefined
+      ) as Record<string, unknown> | undefined;
+      if (!exactItem || Number(exactItem.id) !== nextSelectedId) {
+        toast.error(exactSelected?.error ?? copy.loadFailed);
+        return;
+      }
+
+      const exactRow = mapSupplierInvoiceRow(exactItem);
+      nextRows = [
+        exactRow,
+        ...nextRows.filter((invoice) => invoice.id !== exactRow.id),
+      ];
+    }
 
     setRows(nextRows);
     // Fresh first page — restore keyset state from the paginated result,
@@ -1113,7 +1139,12 @@ export function SupplierInvoicesClient({
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        <div className="flex min-w-0 flex-col gap-4">
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-4",
+            isInvoiceDeepLink && "order-2 xl:order-1",
+          )}
+        >
           <AppToolbar
             search={
               <InputGroup className="min-w-0 flex-1">
@@ -1243,6 +1274,7 @@ export function SupplierInvoicesClient({
         <AppSection
           title={detailTitle}
           headerHint={detailSubtitle ?? undefined}
+          className={cn(isInvoiceDeepLink && "order-1 xl:order-2")}
         >
           {selectedInvoice ? (
             <div className="flex flex-col gap-4">
@@ -1253,7 +1285,7 @@ export function SupplierInvoicesClient({
                 {canPaySupplier && selectedOutstandingAmount > 0 ? (
                   <Button
                     type="button"
-                    size="sm"
+                    size="touch"
                     onClick={openSupplierPaymentDialog}
                     disabled={isPending}
                   >
@@ -1262,7 +1294,7 @@ export function SupplierInvoicesClient({
                 ) : null}
                 <Button
                   type="button"
-                  size="sm"
+                  size="touch"
                   variant="outline"
                   onClick={handleRecomputeMatching}
                   disabled={isPending}
@@ -1388,9 +1420,10 @@ export function SupplierInvoicesClient({
                   {
                     term: copy.linkedPo,
                     description:
-                      selectedInvoice.poCode &&
-                      selectedInvoice.poId != null ? (
-                        <span className="font-mono">{selectedInvoice.poCode}</span>
+                      selectedInvoice.poCode && selectedInvoice.poId != null ? (
+                        <span className="font-mono">
+                          {selectedInvoice.poCode}
+                        </span>
                       ) : (
                         copy.notLinked
                       ),

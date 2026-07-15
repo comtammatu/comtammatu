@@ -1,10 +1,10 @@
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString } from "@comtammatu/shared/time";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import { fetchAccessibleBranches } from "../actions";
-import { fetchActualFoodCostTotal, fetchExpenses } from "../expense-actions";
+import { fetchExpenses } from "../expense-actions";
 import {
   parseFinanceParams,
   resolveFinanceRange,
@@ -23,33 +23,44 @@ export default async function ExpensesPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
-  const [branchesRes, expensesRes, foodCostRes, canManageExpenses] =
-    await Promise.all([
-      fetchAccessibleBranches(),
-      fetchExpenses({
-        startDate: resolved.start,
-        endDate: resolved.end,
-        ...(params.branch != null ? { branchId: params.branch } : {}),
-      }),
-      fetchActualFoodCostTotal({
-        startDate: resolved.start,
-        endDate: resolved.end,
-        ...(params.branch != null ? { branchId: params.branch } : {}),
-      }),
-      currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_EXPENSE_CREATE),
-    ]);
+  const [branchesRes, expensesRes, canManageExpenses] = await Promise.all([
+    fetchAccessibleBranches(),
+    fetchExpenses({
+      startDate: resolved.start,
+      endDate: resolved.end,
+      ...(params.branch != null ? { branchId: params.branch } : {}),
+    }),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_EXPENSE_CREATE),
+  ]);
 
-  const branches = (branchesRes.success ? (branchesRes.data ?? []) : []) as {
+  if (!branchesRes.success || !expensesRes.success) {
+    return (
+      <AppPage width="wide" density="compact">
+        <AppPageHeader
+          eyebrow={copy.page.eyebrow}
+          title={copy.page.title}
+          description={copy.page.description}
+          meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
+        />
+        <AppEmptyState
+          mode="error"
+          title={copy.loadErrorTitle}
+          description={copy.loadErrorDescription}
+        />
+      </AppPage>
+    );
+  }
+
+  const branches = (branchesRes.data ?? []) as {
     id: number;
     name: string;
   }[];
-  const rows = expensesRes.success ? (expensesRes.data ?? []) : [];
+  const rows = expensesRes.data ?? [];
   const totalAmount = rows.reduce(
     (sum, row) =>
       isOperatingExpenseCategory(row.category) ? sum + row.amount : sum,
     0,
   );
-  const actualFoodCost = foodCostRes.success ? (foodCostRes.data ?? 0) : 0;
   const todayBusinessDate = getVNDateString();
 
   return (
@@ -65,7 +76,6 @@ export default async function ExpensesPage({
         branches={branches}
         rows={rows}
         totalAmount={totalAmount}
-        actualFoodCost={actualFoodCost}
         resolvedStart={resolved.start}
         resolvedEnd={resolved.end}
         todayBusinessDate={todayBusinessDate}

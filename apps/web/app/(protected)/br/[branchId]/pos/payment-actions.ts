@@ -813,7 +813,7 @@ export const createPayment = withActionPositional(
     // Create only a pending remote intent; provider-specific settlement remains
     // the sole boundary allowed to complete the payment and order.
     const { data, error: rpcError } = await createServiceClient().rpc(
-      "create_payment",
+      "create_remote_payment_intent",
       {
         p_tenant_id: claims.tenant_id,
         p_branch_id: branchId,

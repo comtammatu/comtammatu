@@ -278,13 +278,14 @@ export const finance = {
       eyebrow: "Tài chính",
       title: "Chi vận hành",
       description:
-        "Sổ chi gom 2 nhóm: Chi vận hành (thuê mặt bằng, điện nước, gas, lương, sửa chữa) và Chi nguyên liệu (giá vốn món, công nợ mua nguyên liệu).",
+        "Chi vận hành được ghi nhận theo ngày phát sinh, kể cả khoản chưa trả. Dòng tiền chỉ thay đổi khi đã trả.",
     },
     add: "Thêm khoản chi",
     totalLabel: "Tổng chi vận hành trong kỳ",
     totalHint: (count: string) => `${count} khoản đã ghi`,
-    foodCostReadonlyHint:
-      "Tiêu hao thực tế từ kho · không tính vào chi vận hành",
+    loadErrorTitle: "Không thể tải sổ Chi vận hành",
+    loadErrorDescription:
+      "Chưa thể xác nhận số liệu Chi vận hành trong kỳ này. Hãy tải lại trước khi tiếp tục đối soát.",
     tenantLevel: "Toàn quán",
     empty: {
       title: "Chưa có khoản chi trong kỳ",
@@ -293,14 +294,21 @@ export const finance = {
     },
     form: {
       title: "Thêm khoản chi vận hành",
-      date: "Ngày chi",
+      date: "Ngày phát sinh",
       branch: "Chi nhánh",
       branchTenantLevel: "Toàn quán (không theo chi nhánh)",
       category: "Khoản mục",
       categoryPlaceholder: "Chọn khoản mục",
       amount: "Số tiền",
-      method: "Phương thức",
+      method: "Ghi nhận thanh toán",
       methodPlaceholder: "Chọn phương thức",
+      methodHints: {
+        cash: "Ghi nhận toàn bộ khoản chi đã trả bằng tiền mặt.",
+        transfer:
+          "Tạo nội dung chuyển khoản; chỉ đánh dấu đã trả sau khi SePay khớp giao dịch.",
+        unpaid:
+          "Lưu khoản chi phát sinh để trả sau. Chưa làm giảm tiền mặt hoặc số dư ngân hàng.",
+      },
       vendor: "Nơi chi",
       vendorPlaceholder: "Tùy chọn",
       note: "Ghi chú",
@@ -311,14 +319,33 @@ export const finance = {
     transferInstruction: {
       title: "Nội dung chuyển khoản",
       description:
-        "Dùng đúng nội dung này khi chuyển khoản. SePay sẽ tự đối soát khoản chi sau khi ngân hàng ghi nhận giao dịch.",
+        "Chuyển đúng số tiền của khoản chi trong một giao dịch và dùng nguyên nội dung dưới đây. SePay sẽ tự khớp sau khi ngân hàng ghi nhận.",
       codeLabel: "Nội dung cần nhập",
       detail: (content: string) => `Nội dung CK: ${content}`,
       copy: "Sao chép nội dung",
       copied: "Đã sao chép nội dung chuyển khoản",
       copyFailed: "Không thể sao chép. Hãy chọn và sao chép thủ công.",
-      close: "Đã hiểu",
-      created: "Đã tạo khoản chi chờ chuyển khoản",
+      close: "Để sau",
+      created: "Đã tạo nội dung chuyển khoản",
+      createFailed: "Không thể tạo nội dung chuyển khoản.",
+    },
+    actions: {
+      cash: "Ghi nhận đã trả tiền mặt",
+      cashTitle: "Xác nhận đã trả tiền mặt?",
+      cashConfirm: (amount: string) =>
+        `Toàn bộ khoản chi ${amount} sẽ được ghi nhận đã trả bằng tiền mặt vào lúc này.`,
+      cashCta: "Đã trả tiền mặt",
+      keepUnpaid: "Chưa",
+      cashSuccess: "Đã ghi nhận trả tiền mặt",
+      createTransfer: "Tạo nội dung chuyển khoản",
+      cancelTransfer: "Bỏ nội dung chuyển khoản",
+      cancelTransferTitle: "Bỏ nội dung chuyển khoản?",
+      cancelTransferConfirm: (content: string) =>
+        `Nội dung ${content} sẽ không còn được dùng để tự khớp SePay. Việc này không hủy giao dịch ngân hàng; chỉ tiếp tục nếu chưa chuyển tiền.`,
+      cancelTransferCta: "Bỏ nội dung",
+      keepTransfer: "Giữ nội dung",
+      cancelTransferSuccess: "Đã bỏ nội dung và đưa khoản chi về Chưa trả",
+      updateFailed: "Không thể cập nhật thanh toán khoản chi.",
     },
     table: {
       date: "Ngày",
@@ -328,6 +355,7 @@ export const finance = {
       paymentState: "Trạng thái",
       amount: "Số tiền",
       detail: "Nội dung",
+      actions: "Thao tác khoản chi",
       delete: "Xóa",
       deleteTitle: "Xóa khoản chi?",
       deleteConfirm: (amount: string) =>
@@ -358,7 +386,12 @@ export const finance = {
     paymentMethodLabels: {
       cash: "Tiền mặt",
       transfer: "Chuyển khoản",
-      unpaid: "Chưa chi (ghi nợ)",
+      unpaid: "Chưa trả",
+    },
+    paymentChoiceLabels: {
+      cash: "Đã trả tiền mặt",
+      transfer: "Tạo nội dung chuyển khoản",
+      unpaid: "Chưa trả",
     },
   },
   supplierInvoicesPage: {
@@ -369,6 +402,12 @@ export const finance = {
     noAccessTitle: "Không có quyền xem hóa đơn NCC",
     noAccessDescription:
       "Cần quyền xem đơn mua hàng và NCC để mở hàng đợi phải trả NCC.",
+    loadErrorTitle: "Không thể tải hóa đơn NCC",
+    loadErrorDescription:
+      "Chưa thể xác nhận hóa đơn hoặc công nợ đang chọn. Hãy tải lại trước khi ghi nhận thanh toán.",
+    notFoundTitle: "Không tìm thấy hóa đơn NCC",
+    notFoundDescription:
+      "Hóa đơn không tồn tại hoặc không thuộc phạm vi chi nhánh đang xem.",
   },
   cash: {
     onHandTitle: "Tiền mặt toàn quán",
@@ -552,7 +591,7 @@ export const finance = {
     matchedCashDeposit: "Nộp tiền mặt vào tài khoản",
     internalCashMovement: "Luân chuyển nội bộ",
     matchedExpense: (id: number | string) => `Chi vận hành #${id}`,
-    matchedSupplierPayment: (id: number | string) => `Trả NCC #${id}`,
+    openSupplierInvoice: (invoice: string) => `Mở hóa đơn ${invoice}`,
     matchedSupplierPaymentDetail: (supplier: string, invoice: string) =>
       `${supplier} · ${invoice}`,
     matchedRefund: (order: string) => `Hoàn tiền ${order}`,
@@ -575,7 +614,7 @@ export const finance = {
     refundMatchCleared: "Đã bỏ khớp khoản hoàn tiền",
     refundMatchError: "Không thể khớp khoản hoàn tiền",
     supplierPaymentSuggestion: "Gợi ý khoản trả NCC",
-    matchSheetTitle: "Gắn chứng từ cho giao dịch",
+    matchSheetTitle: "Khớp chứng từ cho giao dịch",
     matchSheetDescription:
       "Kiểm tra bằng chứng ngân hàng trước khi chọn chứng từ tương ứng.",
     bankEvidenceTitle: "Bằng chứng ngân hàng",
@@ -588,18 +627,25 @@ export const finance = {
     supplierPaymentMatchSuccess: "Đã khớp khoản trả NCC",
     supplierPaymentMatchCleared: "Đã bỏ khớp khoản trả NCC",
     supplierPaymentMatchError: "Không thể khớp khoản trả NCC",
-    matchExpensePlaceholder: "Gắn Chi vận hành",
-    matchExpenseTitle: "Gắn khoản Chi vận hành",
-    matchedExpenseCount: (count: string) => `Đã gắn ${count} khoản chi`,
+    matchExpensePlaceholder: "Khớp Chi vận hành",
+    matchExpenseTitle: "Khớp khoản Chi vận hành",
+    matchedExpenseCount: (count: string) => `Đã khớp ${count} khoản chi`,
     bankTransactionAmount: "Sao kê",
     selectedExpenseAmount: "Khoản chi đã chọn",
     expenseMatchDelta: "Lệch",
     expenseAllocationMismatch:
       "Tổng chi đã chọn phải bằng số tiền trên sao kê.",
-    noUnmatchedExpenses: "Không có chi chuyển khoản chưa khớp",
+    noUnmatchedExpenses: "Không có khoản chi chưa trả để khớp",
     openExpenses: "Mở Chi vận hành",
     clearExpenseMatch: "Bỏ khớp",
-    saveExpenseMatch: "Lưu gán",
+    saveExpenseMatch: "Xác nhận khớp",
+    matchedTransferIntent: "Đã khớp Chi vận hành",
+    matchedTransferIntentDetail: "Tự động khớp bằng nội dung chuyển khoản",
+    transferIntentLabel: "Nội dung chuyển khoản",
+    transferIntentExclusiveHint:
+      "Khoản có nội dung chuyển khoản được khớp riêng. Chọn khoản này nếu sao kê dùng đúng nội dung và số tiền.",
+    transferIntentSelectionHint:
+      "Đã chọn khoản có nội dung chuyển khoản. Bỏ chọn khoản này nếu cần chia giao dịch cho nhiều khoản.",
     matchAction: "Khớp",
     unmatched: "Chưa khớp",
     matchSuccess: "Đã khớp thành công",

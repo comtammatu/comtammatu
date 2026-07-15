@@ -28,7 +28,7 @@ test("bank fund pulls SePay in and out with the right sign", () => {
     "supabase/migrations/20260714031027_20260713160248_persist_sepay_refund_match.sql",
   );
   const periodMigration = read(
-    "supabase/migrations/20260714031029_20260713172622_add_period_cash_ledger_movement.sql",
+    "supabase/migrations/20260716100000_close_expense_payment_state_machine.sql",
   );
   const page = read("apps/web/app/(protected)/finance/page.tsx");
 
@@ -116,8 +116,13 @@ test("bank fund pulls SePay in and out with the right sign", () => {
   );
   assert.match(
     periodMigration,
-    /expense\.payment_method = 'cash'[\s\S]*expense\.paid_at IS NOT NULL[\s\S]*expense\.category IN \([\s\S]*'rent'[\s\S]*'utilities'[\s\S]*'gas_fuel'[\s\S]*'salary'[\s\S]*'supplies'[\s\S]*'repair'[\s\S]*'marketing'[\s\S]*'fees_tax'[\s\S]*'other'[\s\S]*supplier_payment\.payment_method = 'cash'/,
+    /expense\.payment_method = 'cash'[\s\S]*expense\.paid_at >= v_start_at[\s\S]*expense\.paid_at < v_end_at[\s\S]*expense\.category IN \([\s\S]*'rent'[\s\S]*'utilities'[\s\S]*'gas_fuel'[\s\S]*'salary'[\s\S]*'supplies'[\s\S]*'repair'[\s\S]*'marketing'[\s\S]*'fees_tax'[\s\S]*'other'[\s\S]*supplier_payment\.payment_method = 'cash'/,
     "period cash-out must include only cash expenses and cash supplier payments",
+  );
+  assert.match(
+    periodMigration,
+    /CREATE OR REPLACE FUNCTION public\.get_cash_ledger_movement_since[\s\S]*expense\.paid_at >= p_since/,
+    "running cash must recognize expense settlement by paid_at",
   );
   assert.doesNotMatch(
     periodMigration,

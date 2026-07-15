@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { isSepayExpenseAllocationBalanced } from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
+import {
+  isSepayExpenseAllocationBalanced,
+  nextSepayExpenseSelection,
+} from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
@@ -12,6 +15,23 @@ test("expense allocation must conserve the bank transaction amount", () => {
   assert.equal(isSepayExpenseAllocationBalanced(1_000_000, 1_000_000, 2), true);
   assert.equal(isSepayExpenseAllocationBalanced(1_000_000, 900_000, 1), false);
   assert.equal(isSepayExpenseAllocationBalanced(1_000_000, 0, 0), true);
+});
+
+test("a persisted transfer instruction is always selected alone", () => {
+  const persistedIntentIds = new Set([20]);
+  assert.deepEqual(
+    nextSepayExpenseSelection([10, 11], 20, persistedIntentIds),
+    [20],
+  );
+  assert.deepEqual(
+    nextSepayExpenseSelection([20], 10, persistedIntentIds),
+    [10],
+  );
+  assert.deepEqual(
+    nextSepayExpenseSelection([10], 11, persistedIntentIds),
+    [10, 11],
+  );
+  assert.deepEqual(nextSepayExpenseSelection([20], 20, persistedIntentIds), []);
 });
 
 test("UI and RPC both reject non-zero expense allocation delta", () => {
