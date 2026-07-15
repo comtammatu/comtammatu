@@ -40,6 +40,7 @@ const cell = read(
   "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
 );
 const financeMessages = read("apps/web/lib/messages/finance.ts");
+const databaseTypes = read("packages/database/src/types/database.types.ts");
 const loader = read(
   "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
 );
@@ -220,7 +221,7 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(expenseClient, /group !== "materials" && group !== "transfer"/);
   assert.match(
     expenseClient,
-    /row\.category !== "bank_deposit" && row\.matchedEventIds\.length === 0/,
+    /row\.category !== "bank_deposit" &&[\s\S]*row\.transfer_content == null &&[\s\S]*row\.matchedEventIds\.length === 0/,
   );
   assert.doesNotMatch(page, /UnmatchedMoneyInTable/);
   assert.doesNotMatch(page, /MissingBankWebhookPaymentsTable/);
@@ -251,6 +252,25 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
     transferIntentMigration,
     /match_sepay_transaction_expenses\([\s\S]*UPDATE public\.webhook_events[\s\S]*processing_status = 'processed'/,
   );
+  assert.match(actions, /\.rpc\([\s\S]*"create_expense_transfer_intent"/);
+  assert.match(actions, /transfer_content/);
+  assert.match(
+    actions,
+    /\.or\("payment_method\.eq\.transfer,transfer_content\.not\.is\.null"\)/,
+  );
+  assert.match(expenseClient, /copy\.transferInstruction\.copy/);
+  assert.match(expenseClient, /<AppDialog/);
+  assert.match(expenseClient, /size="icon-touch"/);
+  assert.match(expenseClient, /font-mono text-lg font-semibold tabular-nums/);
+  assert.match(expenseClient, /row\.transfer_content == null/);
+  assert.match(
+    expenseClient,
+    /return row\.transfer_content \? "transfer" : row\.payment_method/,
+  );
+  assert.match(financeMessages, /Nội dung chuyển khoản/);
+  assert.match(databaseTypes, /create_expense_transfer_intent:/);
+  assert.match(databaseTypes, /match_sepay_transfer_intent_event:/);
+  assert.doesNotMatch(sepayWebhookRoute, /UntypedRpcClient/);
 
   const persistedIntentResolver = sepayWebhookRoute.indexOf(
     '"match_sepay_transfer_intent_event"',
@@ -262,7 +282,7 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
   assert.ok(mutableSettingsFallback > persistedIntentResolver);
   assert.match(
     sepayWebhookRoute,
-    /missingTransferIntentResolverCodes = new Set\(\["PGRST202", "42883"\]\)/,
+    /missingTransferIntentResolverCodes = new Set\(\["PGRST202"\]\)/,
   );
   assert.match(
     sepayWebhookRoute,

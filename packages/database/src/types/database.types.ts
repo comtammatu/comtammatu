@@ -1468,6 +1468,7 @@ export type Database = {
           paid_at: string | null
           payment_method: string
           tenant_id: number
+          transfer_content: string | null
           updated_at: string
           vendor_name: string | null
         }
@@ -1483,6 +1484,7 @@ export type Database = {
           paid_at?: string | null
           payment_method?: string
           tenant_id: number
+          transfer_content?: string | null
           updated_at?: string
           vendor_name?: string | null
         }
@@ -1498,6 +1500,7 @@ export type Database = {
           paid_at?: string | null
           payment_method?: string
           tenant_id?: number
+          transfer_content?: string | null
           updated_at?: string
           vendor_name?: string | null
         }
@@ -9532,6 +9535,20 @@ export type Database = {
         Returns: Json
       }
       count_unread_notifications: { Args: never; Returns: number }
+      create_expense_transfer_intent: {
+        Args: {
+          p_amount: number
+          p_branch_id: number | null
+          p_category: string
+          p_expense_date: string
+          p_note?: string
+          p_vendor_name?: string
+        }
+        Returns: {
+          expense_id: number
+          transfer_content: string
+        }[]
+      }
       create_expiry_writeoff: {
         Args: {
           p_branch_id: number
@@ -10389,6 +10406,10 @@ export type Database = {
       }
       match_sepay_transaction_supplier_payments: {
         Args: { p_event_id: number; p_supplier_payment_ids: number[] }
+        Returns: Json
+      }
+      match_sepay_transfer_intent_event: {
+        Args: { p_event_id: number }
         Returns: Json
       }
       materialize_print_document: {

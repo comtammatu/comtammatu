@@ -12,6 +12,7 @@ import {
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
   isOpenSepayBankWebhookReview,
+  isSepayPaymentConflictReviewCode,
   isSepayTransactionInDateRange,
   mapSepayWebhookRow,
   readSepayBankWebhookReview,
@@ -54,6 +55,7 @@ function row(
   processingStatus = "processed",
   errorCode: string | null = null,
   orderId: number | null = null,
+  orderNumber: string | null = null,
 ): SepayWebhookRow {
   return {
     id,
@@ -64,6 +66,7 @@ function row(
     order_id: orderId,
     payment_id: paymentId,
     expense_id: expenseId,
+    orders: orderNumber ? { order_number: orderNumber } : null,
     payload,
   };
 }
@@ -134,6 +137,29 @@ test("SePay bank transaction maps incoming and outgoing webhook payloads", () =>
     )?.expenseIds,
     [42],
   );
+});
+
+test("SePay conflict evidence maps the operational order number", () => {
+  const conflict = tx(
+    row(
+      3,
+      {
+        transferType: "in",
+        transferAmount: "150000",
+        content: "MATU DH 321",
+      },
+      undefined,
+      null,
+      null,
+      "processed",
+      "payment_state_conflict_needs_review",
+      321,
+      "MT-20260715-0321",
+    ),
+  );
+
+  assert.equal(conflict.orderId, 321);
+  assert.equal(conflict.orderNumber, "MT-20260715-0321");
 });
 
 test("SePay Data API pagination reads every deterministic range", async () => {
@@ -529,18 +555,40 @@ test("signed SePay business mismatches stay reviewable without exposing conflict
   assert.equal(classifySepayReconciliationState(recoverable), "needs_review");
   assert.equal(classifySepayUnmatchedMoneyIn(recoverable), "missing_reference");
   assert.equal(canManuallyLinkSepayPayment(recoverable), true);
+  assert.equal(
+    isSepayPaymentConflictReviewCode(recoverable.errorCode),
+    false,
+  );
 
   assert.equal(
     classifySepayReconciliationState(paymentConflict),
     "needs_review",
   );
   assert.equal(canManuallyLinkSepayPayment(paymentConflict), false);
+  assert.equal(
+    isSepayPaymentConflictReviewCode(paymentConflict.errorCode),
+    true,
+  );
+  assert.equal(
+    isSepayPaymentConflictReviewCode(
+      "payment_state_conflict_needs_review",
+    ),
+    true,
+  );
+  assert.equal(
+    isSepayPaymentConflictReviewCode("overpayment_needs_review"),
+    true,
+  );
 
   assert.equal(
     classifySepayReconciliationState(technicalFailure),
     "webhook_error",
   );
   assert.equal(canManuallyLinkSepayPayment(technicalFailure), false);
+  assert.equal(
+    isSepayPaymentConflictReviewCode(technicalFailure.errorCode),
+    false,
+  );
 });
 
 test("SePay money-in manual link stays guarded by RPC", () => {
@@ -697,6 +745,46 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /mobileBreakpoint=\{1024\}/);
   assert.match(table, /formatVNDateTime/);
   assert.match(table, /resolveSepayTransactionInstant/);
+  assert.match(table, /isSepayPaymentConflictReviewCode\(tx\.errorCode\)/);
+  assert.match(
+    table,
+    /\? hasPaymentConflictDetail\s*\?\s*null\s*:\s*reasonLabel\(classifySepayUnmatchedMoneyIn\(tx\)\)/,
+  );
+  assert.match(table, /const conflictOrder[\s\S]*row\.tx\.orderNumber/);
+  assert.match(
+    table,
+    /href=\{`\/orders\?orderId=\$\{String\(conflictOrder\.id\)\}`\}/,
+  );
+  assert.match(table, /conflictOrder\.number/);
+  assert.doesNotMatch(
+    table,
+    /conflictOrder[\s\S]{0,300}formatOrderId\(conflictOrder/,
+  );
+  assert.match(table, /copy\.unmatchedMoneyInTable\.conflictOrder/);
+  assert.match(messages, /conflictOrder: "Đơn liên quan"/);
+  assert.match(messages, /openConflictOrder: "Mở đơn"/);
+
+  const loader = read(
+    "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
+  );
+  const ordersActions = read("apps/web/app/(protected)/orders/actions.ts");
+  const ordersPage = read("apps/web/app/(protected)/orders/page.tsx");
+  const ordersBody = read(
+    "apps/web/app/(protected)/orders/orders-page-body.tsx",
+  );
+  const ordersClient = read(
+    "apps/web/app/(protected)/orders/orders-client.tsx",
+  );
+  assert.match(
+    loader,
+    /orders!webhook_events_order_id_fkey\(order_number\)/,
+  );
+  assert.match(ordersActions, /orderId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/);
+  assert.match(ordersActions, /query = query\.eq\("id", parsed\.data\.orderId\)/);
+  assert.match(ordersPage, /fetchOrders\(\{[\s\S]*orderId: requestedOrderId/);
+  assert.match(ordersPage, /initialSelectedOrder == null\) notFound\(\)/);
+  assert.match(ordersBody, /initialSelectedOrder=\{initialSelectedOrder\}/);
+  assert.match(ordersClient, /useState<OrderRow \| null>\([\s\S]*initialSelectedOrder/);
   assert.doesNotMatch(table, /\.replace\("T", " "\)\.slice/);
   assert.match(table, /return state === "needs_review"/);
   assert.match(table, /evidence=\{\{/);

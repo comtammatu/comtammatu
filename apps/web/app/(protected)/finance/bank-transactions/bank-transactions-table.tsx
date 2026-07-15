@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowDownLeft as IconMoneyIn,
@@ -32,6 +33,7 @@ import {
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
   isOpenSepayBankWebhookReview,
+  isSepayPaymentConflictReviewCode,
   resolveSepayTransactionInstant,
   type SepayBankWebhookReviewStatus,
   type SepayBankTransaction,
@@ -209,9 +211,14 @@ function MissingWebhookStatusCell({
 
 function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
   const state = classifySepayReconciliationState(tx);
+  const hasPaymentConflictDetail =
+    tx.transferType === "in" &&
+    isSepayPaymentConflictReviewCode(tx.errorCode);
   const detail =
     tx.transferType === "in" && state !== "matched"
-      ? reasonLabel(classifySepayUnmatchedMoneyIn(tx))
+      ? hasPaymentConflictDetail
+        ? null
+        : reasonLabel(classifySepayUnmatchedMoneyIn(tx))
       : state !== "matched"
         ? copy.reconciliation.unmatchedMoneyOut
         : null;
@@ -280,6 +287,12 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
     );
   }
 
+  const conflictOrder =
+    isSepayPaymentConflictReviewCode(row.tx.errorCode) &&
+    row.tx.orderId != null
+      ? { id: row.tx.orderId, number: row.tx.orderNumber }
+      : null;
+
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex min-w-0 items-center gap-2">
@@ -294,6 +307,18 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
         <span>
           {copy.account}: {row.tx.accountNumber ?? "—"}
         </span>
+        {conflictOrder ? (
+          <span>
+            {copy.unmatchedMoneyInTable.conflictOrder}:{" "}
+            <Link
+              href={`/orders?orderId=${String(conflictOrder.id)}`}
+              className="font-mono font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {conflictOrder.number ??
+                copy.unmatchedMoneyInTable.openConflictOrder}
+            </Link>
+          </span>
+        ) : null}
       </div>
     </div>
   );

@@ -10,7 +10,10 @@ import { ORDER_VI } from "@comtammatu/shared/messages";
 import { ORDERS_COPY } from "./orders-copy";
 
 interface OrdersPageContentProps {
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{
+    branchId?: string | string[];
+    orderId?: string | string[];
+  }>;
   routeBranchId?: number;
   embedded?: boolean;
 }
@@ -22,6 +25,13 @@ export async function OrdersPageContent({
 }: OrdersPageContentProps) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
+  const rawOrderId = Array.isArray(params.orderId)
+    ? params.orderId[0]
+    : params.orderId;
+  const requestedOrderId =
+    typeof rawOrderId === "string" && /^\d+$/.test(rawOrderId)
+      ? Number(rawOrderId)
+      : null;
 
   // Scope resolution only applies to embedded (routeBranchId) callers: the
   // engine always resolves a concrete default branch, which would narrow the
@@ -38,9 +48,15 @@ export async function OrdersPageContent({
     branchFilter = scope.selectedBranchId ?? undefined;
   }
 
-  const [ordersResult, refundsResult] = await Promise.all([
+  const [ordersResult, refundsResult, selectedOrderResult] = await Promise.all([
     fetchOrders(branchFilter != null ? { branchId: branchFilter } : undefined),
     fetchRefunds(),
+    requestedOrderId != null
+      ? fetchOrders({
+          orderId: requestedOrderId,
+          ...(branchFilter != null ? { branchId: branchFilter } : {}),
+        })
+      : Promise.resolve(null),
   ]);
 
   if (!ordersResult.success || !ordersResult.data) {
@@ -59,6 +75,11 @@ export async function OrdersPageContent({
   const refunds = refundsResult.success
     ? (refundsResult.data?.refunds ?? [])
     : [];
+  const initialSelectedOrder =
+    selectedOrderResult?.success === true
+      ? (selectedOrderResult.data?.orders[0] ?? null)
+      : null;
+  if (requestedOrderId != null && initialSelectedOrder == null) notFound();
 
   const isManagerOrAbove = claims.user_role === "owner";
   const canApproveRefund = claims.user_role === "owner";
@@ -71,6 +92,7 @@ export async function OrdersPageContent({
       showBranchFilter={isManagerOrAbove}
       refunds={refunds}
       canApproveRefund={canApproveRefund}
+      initialSelectedOrder={initialSelectedOrder}
       embedded={embedded}
     />
   );
@@ -79,7 +101,10 @@ export async function OrdersPageContent({
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{
+    branchId?: string | string[];
+    orderId?: string | string[];
+  }>;
 }) {
   return <OrdersPageContent searchParams={searchParams} />;
 }

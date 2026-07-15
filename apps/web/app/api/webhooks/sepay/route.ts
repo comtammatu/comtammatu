@@ -207,7 +207,7 @@ const transferIntentRpcResultSchema = z.discriminatedUnion("matched", [
     .passthrough(),
 ]);
 
-const missingTransferIntentResolverCodes = new Set(["PGRST202", "42883"]);
+const missingTransferIntentResolverCodes = new Set(["PGRST202"]);
 const terminalTransferIntentResolverCodes = new Set(["23505", "23514"]);
 
 type SepayPayload = z.infer<typeof sepayPayloadSchema>;
@@ -216,18 +216,6 @@ type WebhookEventClaim =
   | { status: "claimed"; id: number }
   | { status: "already_final" }
   | { status: "error" };
-
-type UntypedQueryResponse<T> = {
-  data: T | null;
-  error: { code?: string | null; message?: string | null } | null;
-};
-
-type UntypedRpcClient = {
-  rpc<T>(
-    name: string,
-    args: Record<string, unknown>,
-  ): Promise<UntypedQueryResponse<T>>;
-};
 
 function payloadToJson(payload: SepayPayload): Json {
   return JSON.parse(JSON.stringify(payload)) as Json;
@@ -560,9 +548,8 @@ export async function POST(request: Request) {
   const bankCommand = extractBankContentCommand(payload, bankContentSettings);
 
   if (payload.transferType === "out") {
-    const untyped = supabase as unknown as UntypedRpcClient;
     const { data: rawTransferIntentData, error: transferIntentError } =
-      await untyped.rpc<unknown>("match_sepay_transfer_intent_event", {
+      await supabase.rpc("match_sepay_transfer_intent_event", {
         p_event_id: webhookEventId,
       });
 
@@ -651,9 +638,7 @@ export async function POST(request: Request) {
     await markWebhookEvent(supabase, webhookEventId, {
       processing_status: bankCommand ? "failed" : "ignored",
       http_status: 200,
-      error_code: bankCommand
-        ? "bank_content_wrong_transfer_type"
-        : null,
+      error_code: bankCommand ? "bank_content_wrong_transfer_type" : null,
     });
     return sepayAcceptedResponse();
   }
@@ -668,9 +653,8 @@ export async function POST(request: Request) {
   }
 
   if (bankCommand?.kind === "cash_deposit") {
-    const untyped = supabase as unknown as UntypedRpcClient;
     const { data: rawCashDepositData, error: cashDepositError } =
-      await untyped.rpc("record_sepay_cash_deposit_as_system", {
+      await supabase.rpc("record_sepay_cash_deposit_as_system", {
         p_event_id: webhookEventId,
       });
 
@@ -709,8 +693,7 @@ export async function POST(request: Request) {
       : null;
   const paymentCode = extractPaymentCode(payload, codeRe) ?? commandPaymentCode;
 
-  const untyped = supabase as unknown as UntypedRpcClient;
-  const { data: rawRpcData, error: rpcError } = await untyped.rpc(
+  const { data: rawRpcData, error: rpcError } = await supabase.rpc(
     "reconcile_sepay_order_evidence",
     { p_event_id: webhookEventId, p_payment_code: paymentCode ?? "" },
   );

@@ -77,6 +77,8 @@ interface RefundMatchRow {
 
 const SEPAY_WEBHOOK_SELECT =
   "id, request_id, created_at, processing_status, error_code, order_id, payment_id, expense_id, payload" as const;
+const SEPAY_BANK_WEBHOOK_SELECT =
+  `${SEPAY_WEBHOOK_SELECT}, orders!webhook_events_order_id_fkey(order_number)` as const;
 
 const SEPAY_DATA_API_PAGE_SIZE = 1000;
 const SEPAY_DATA_API_IN_CHUNK_SIZE = 200;
@@ -150,7 +152,7 @@ async function fetchSepayWebhookRows(
     async (from, to) => {
       const query = supabase
         .from("webhook_events")
-        .select(SEPAY_WEBHOOK_SELECT)
+        .select(SEPAY_BANK_WEBHOOK_SELECT)
         .eq("tenant_id", tenantId)
         .in("provider", ["sepay", "manual"])
         .eq("signature_valid", true);

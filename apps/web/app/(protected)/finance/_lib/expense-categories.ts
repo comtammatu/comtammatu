@@ -89,8 +89,15 @@ export type ExpensePaymentState = (typeof EXPENSE_PAYMENT_STATES)[number];
 export function classifyExpensePaymentState(expense: {
   payment_method: string;
   paid_at: string | null;
+  transfer_content?: string | null;
   matchedEventIds?: readonly number[];
 }): ExpensePaymentState {
+  if (expense.transfer_content) {
+    return (expense.matchedEventIds?.length ?? 0) > 0
+      ? "transfer_matched"
+      : "transfer_needs_match";
+  }
+
   if (expense.payment_method === "unpaid" || expense.paid_at == null) {
     return "unpaid";
   }

@@ -19,6 +19,7 @@ const ALLOWED_ROLES: StaffRole[] = [
 /* ─── Schema ─── */
 
 const fetchOrdersSchema = z.object({
+  orderId: z.coerce.number().int().positive().optional(),
   status: z.string().optional(),
   branchId: z.coerce.number().int().positive().optional(),
   dateFrom: z.string().date().optional(),
@@ -85,6 +86,7 @@ export interface OrderRow {
 }
 
 export type FetchOrdersFilters = {
+  orderId?: number;
   status?: string;
   branchId?: number;
   dateFrom?: string;
@@ -196,6 +198,10 @@ export async function fetchOrders(
     )
     .order("created_at", { ascending: false })
     .limit(50);
+
+  if (parsed.data.orderId) {
+    query = query.eq("id", parsed.data.orderId);
+  }
 
   if (parsed.data.status) {
     query = query.eq("status", parsed.data.status);

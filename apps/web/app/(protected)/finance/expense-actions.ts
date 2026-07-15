@@ -34,6 +34,7 @@ export interface ExpenseRow {
   amount: number;
   payment_method: string;
   paid_at: string | null;
+  transfer_content: string | null;
   vendor_name: string | null;
   note: string | null;
   created_at: string;
@@ -41,6 +42,11 @@ export interface ExpenseRow {
 }
 
 export type ExpenseMatchOption = ExpenseRow;
+
+export interface CreateExpenseResult {
+  id: number;
+  transferContent?: string;
+}
 
 export interface SepayRefundSearchCursor {
   approvedAt: string;
@@ -89,7 +95,7 @@ const createExpenseSchema = z.object({
 
 export async function createExpense(
   input: z.infer<typeof createExpenseSchema>,
-): Promise<ActionResult> {
+): Promise<ActionResult<CreateExpenseResult>> {
   const parsed = createExpenseSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -127,43 +133,80 @@ export async function createExpense(
     return { success: false, error: "Không có quyền cho chi nhánh này." };
   }
 
-  const paidAt =
-    parsed.data.paymentMethod === "unpaid" ? null : new Date().toISOString();
+  let expenseId: number;
+  let transferContent: string | undefined;
 
-  const { data, error } = await supabase
-    .from("expenses")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: branchId,
-      expense_date: parsed.data.expenseDate,
-      category: parsed.data.category,
-      amount: parsed.data.amount,
-      payment_method: parsed.data.paymentMethod,
-      paid_at: paidAt,
-      vendor_name: parsed.data.vendorName ?? null,
-      note: parsed.data.note ?? null,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
+  if (parsed.data.paymentMethod === "transfer") {
+    const { data, error } = await supabase.rpc(
+      "create_expense_transfer_intent",
+      {
+        p_branch_id: branchId,
+        p_expense_date: parsed.data.expenseDate,
+        p_category: parsed.data.category,
+        p_amount: parsed.data.amount,
+        p_vendor_name: parsed.data.vendorName || undefined,
+        p_note: parsed.data.note || undefined,
+      },
+    );
+    const created = data?.[0];
 
-  if (error || !data) {
-    return { success: false, error: "Không thể lưu chi phí." };
+    if (error || !created) {
+      console.error(
+        "[finance:expense-transfer-intent] failed to create intent",
+        error?.code,
+      );
+      return {
+        success: false,
+        error: "Không thể tạo nội dung chuyển khoản.",
+      };
+    }
+
+    expenseId = created.expense_id;
+    transferContent = created.transfer_content;
+  } else {
+    const paidAt =
+      parsed.data.paymentMethod === "unpaid" ? null : new Date().toISOString();
+    const { data, error } = await supabase
+      .from("expenses")
+      .insert({
+        tenant_id: claims.tenant_id,
+        branch_id: branchId,
+        expense_date: parsed.data.expenseDate,
+        category: parsed.data.category,
+        amount: parsed.data.amount,
+        payment_method: parsed.data.paymentMethod,
+        paid_at: paidAt,
+        vendor_name: parsed.data.vendorName ?? null,
+        note: parsed.data.note ?? null,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: "Không thể lưu chi phí." };
+    }
+
+    expenseId = data.id;
   }
 
   await logAudit(supabase, {
     action: "create",
     entityType: "expense",
-    entityId: data.id,
+    entityId: expenseId,
     newData: {
       branch_id: branchId,
       category: parsed.data.category,
       amount: parsed.data.amount,
-      payment_method: parsed.data.paymentMethod,
+      payment_method: transferContent ? "unpaid" : parsed.data.paymentMethod,
+      transfer_content: transferContent ?? null,
     },
   });
 
-  return { success: true, data: { id: data.id } };
+  return {
+    success: true,
+    data: { id: expenseId, ...(transferContent ? { transferContent } : {}) },
+  };
 }
 
 const deleteExpenseSchema = z.object({
@@ -221,7 +264,7 @@ export async function fetchExpenses(params: {
   let query = supabase
     .from("expenses")
     .select(
-      "id, branch_id, expense_date, category, amount, payment_method, paid_at, vendor_name, note, created_at",
+      "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
     )
     .eq("tenant_id", claims.tenant_id)
     .gte("expense_date", params.startDate)
@@ -247,6 +290,7 @@ export async function fetchExpenses(params: {
     amount: Number(r.amount),
     payment_method: r.payment_method,
     paid_at: r.paid_at,
+    transfer_content: r.transfer_content,
     vendor_name: r.vendor_name,
     note: r.note,
     created_at: r.created_at,
@@ -752,10 +796,10 @@ export async function fetchExpenseMatchOptions(): Promise<
   const { data, error } = await supabase
     .from("expenses")
     .select(
-      "id, branch_id, expense_date, category, amount, payment_method, paid_at, vendor_name, note, created_at",
+      "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
     )
     .eq("tenant_id", claims.tenant_id)
-    .eq("payment_method", "transfer")
+    .or("payment_method.eq.transfer,transfer_content.not.is.null")
     .order("expense_date", { ascending: false })
     .order("id", { ascending: false })
     .limit(150);
@@ -774,6 +818,7 @@ export async function fetchExpenseMatchOptions(): Promise<
       amount: Number(r.amount),
       payment_method: r.payment_method,
       paid_at: r.paid_at,
+      transfer_content: r.transfer_content,
       vendor_name: r.vendor_name,
       note: r.note,
       created_at: r.created_at,

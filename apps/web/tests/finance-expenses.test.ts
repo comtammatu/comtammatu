@@ -10,6 +10,24 @@ test("expense payment state separates paid, unpaid, and bank-matched transfer ro
     classifyExpensePaymentState({
       payment_method: "unpaid",
       paid_at: null,
+      transfer_content: "MATU CHI 123",
+      matchedEventIds: [],
+    }),
+    "transfer_needs_match",
+  );
+  assert.equal(
+    classifyExpensePaymentState({
+      payment_method: "transfer",
+      paid_at: "2026-07-09T01:00:00.000Z",
+      transfer_content: "MATU CHI 123",
+      matchedEventIds: [123],
+    }),
+    "transfer_matched",
+  );
+  assert.equal(
+    classifyExpensePaymentState({
+      payment_method: "unpaid",
+      paid_at: null,
       matchedEventIds: [],
     }),
     "unpaid",

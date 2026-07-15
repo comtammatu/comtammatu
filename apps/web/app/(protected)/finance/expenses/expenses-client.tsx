@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import { Plus as IconPlus, Trash2 as IconTrash } from "lucide-react";
+import {
+  Copy as IconCopy,
+  Plus as IconPlus,
+  Trash2 as IconTrash,
+} from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
@@ -27,6 +31,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import {
+  AppDialog,
   BusinessDateField,
   FormDialog,
   MoneyVndField,
@@ -104,11 +109,27 @@ const METHOD_OPTIONS = EXPENSE_PAYMENT_METHODS.map((value) => ({
 }));
 
 function expenseDetail(row: ExpenseRow): string {
-  return [row.vendor_name, row.note].filter(Boolean).join(" · ");
+  return [
+    row.vendor_name,
+    row.note,
+    row.transfer_content
+      ? copy.transferInstruction.detail(row.transfer_content)
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function expensePaymentMethod(row: ExpenseRow): string {
+  return row.transfer_content ? "transfer" : row.payment_method;
 }
 
 function canDeleteExpense(row: ExpenseRow): boolean {
-  return row.category !== "bank_deposit" && row.matchedEventIds.length === 0;
+  return (
+    row.category !== "bank_deposit" &&
+    row.transfer_content == null &&
+    row.matchedEventIds.length === 0
+  );
 }
 
 export function ExpensesClient({
@@ -124,6 +145,9 @@ export function ExpensesClient({
 }: Props) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [transferInstruction, setTransferInstruction] = useState<string | null>(
+    null,
+  );
   const [isDeleting, startDelete] = useTransition();
 
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
@@ -190,6 +214,25 @@ export function ExpensesClient({
     return result;
   }
 
+  function onCreateSuccess(result: ActionResult) {
+    const data = result.data as { transferContent?: string } | undefined;
+    if (data?.transferContent) {
+      setTransferInstruction(data.transferContent);
+      toast.success(copy.transferInstruction.created);
+    } else {
+      toast.success(copy.form.success);
+    }
+  }
+
+  async function copyTransferContent(content: string) {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success(copy.transferInstruction.copied);
+    } catch {
+      toast.error(copy.transferInstruction.copyFailed);
+    }
+  }
+
   async function onDelete(row: ExpenseRow) {
     const ok = await confirm({
       title: copy.table.deleteTitle,
@@ -235,8 +278,8 @@ export function ExpensesClient({
       header: copy.table.method,
       render: (row) =>
         (copy.paymentMethodLabels as Record<string, string>)[
-          row.payment_method
-        ] ?? row.payment_method,
+          expensePaymentMethod(row)
+        ] ?? expensePaymentMethod(row),
     },
     {
       key: "payment_state",
@@ -267,8 +310,18 @@ export function ExpensesClient({
             key: "actions",
             header: "",
             className: "w-12",
-            render: (row: ExpenseRow) =>
-              canDeleteExpense(row) ? (
+            render: (row: ExpenseRow) => {
+              const transferContent = row.transfer_content;
+              return transferContent ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => void copyTransferContent(transferContent)}
+                  aria-label={copy.transferInstruction.copy}
+                >
+                  <IconCopy className="size-4" />
+                </Button>
+              ) : canDeleteExpense(row) ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -278,7 +331,8 @@ export function ExpensesClient({
                 >
                   <IconTrash className="size-4 text-destructive" />
                 </Button>
-              ) : null,
+              ) : null;
+            },
           } satisfies DataTableColumn<ExpenseRow>,
         ]
       : []),
@@ -329,6 +383,7 @@ export function ExpensesClient({
           emptyDescription={copy.empty.description}
           mobileCardRender={(row) => {
             const detail = expenseDetail(row);
+            const transferContent = row.transfer_content;
             return (
               <Item variant="outline">
                 <ItemHeader>
@@ -343,7 +398,20 @@ export function ExpensesClient({
                       {branchLabel(row.branch_id)}
                     </ItemDescription>
                   </ItemContent>
-                  {canManageExpenses && canDeleteExpense(row) ? (
+                  {canManageExpenses && transferContent ? (
+                    <ItemActions>
+                      <Button
+                        variant="ghost"
+                        size="icon-touch"
+                        onClick={() =>
+                          void copyTransferContent(transferContent)
+                        }
+                        aria-label={copy.transferInstruction.copy}
+                      >
+                        <IconCopy className="size-4" />
+                      </Button>
+                    </ItemActions>
+                  ) : canManageExpenses && canDeleteExpense(row) ? (
                     <ItemActions>
                       <Button
                         variant="ghost"
@@ -383,7 +451,7 @@ export function ExpensesClient({
           schema={expenseFormSchema}
           defaultValues={defaultValues}
           onSubmit={onSubmit}
-          successMessage={copy.form.success}
+          onSuccess={onCreateSuccess}
           submitLabel={copy.form.submit}
         >
           {(form) => (
@@ -439,6 +507,41 @@ export function ExpensesClient({
           )}
         </FormDialog>
       ) : null}
+
+      <AppDialog
+        open={transferInstruction != null}
+        onOpenChange={(open) => {
+          if (!open) setTransferInstruction(null);
+        }}
+        title={copy.transferInstruction.title}
+        description={copy.transferInstruction.description}
+        footer={
+          <Button
+            variant="outline"
+            onClick={() => setTransferInstruction(null)}
+          >
+            {copy.transferInstruction.close}
+          </Button>
+        }
+      >
+        {transferInstruction ? (
+          <Item variant="muted" className="flex-col items-stretch gap-3 p-4">
+            <p className="text-sm font-medium text-muted-foreground">
+              {copy.transferInstruction.codeLabel}
+            </p>
+            <code className="block break-all font-mono text-lg font-semibold tabular-nums tracking-wide">
+              {transferInstruction}
+            </code>
+            <Button
+              className="w-full"
+              onClick={() => void copyTransferContent(transferInstruction)}
+            >
+              <IconCopy data-icon="inline-start" />
+              {copy.transferInstruction.copy}
+            </Button>
+          </Item>
+        ) : null}
+      </AppDialog>
     </>
   );
 }

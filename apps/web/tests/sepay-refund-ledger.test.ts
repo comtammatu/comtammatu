@@ -22,6 +22,7 @@ function moneyOut(): SepayBankTransaction {
     processingStatus: "ignored",
     errorCode: "transfer_type_out",
     orderId: null,
+    orderNumber: null,
     paymentId: null,
     expenseId: null,
     expenseIds: [],

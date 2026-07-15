@@ -20,6 +20,10 @@ export interface SepayWebhookRow {
   order_id: number | null;
   payment_id: number | null;
   expense_id: number | null;
+  orders?:
+    | { order_number?: string | null }
+    | Array<{ order_number?: string | null }>
+    | null;
   payload: unknown;
 }
 
@@ -50,6 +54,7 @@ export interface SepayBankTransaction {
   processingStatus: string;
   errorCode: string | null;
   orderId: number | null;
+  orderNumber: string | null;
   paymentId: number | null;
   expenseId: number | null;
   expenseIds: number[];
@@ -129,10 +134,16 @@ function includesErrorCode(
   return errorCode != null && values.some((value) => value === errorCode);
 }
 
+export function isSepayPaymentConflictReviewCode(
+  errorCode: string | null,
+): boolean {
+  return includesErrorCode(SEPAY_PAYMENT_CONFLICT_REVIEW_CODES, errorCode);
+}
+
 export function isSepayBusinessReviewCode(errorCode: string | null): boolean {
   return (
     includesErrorCode(SEPAY_RECOVERABLE_PAYMENT_REVIEW_CODES, errorCode) ||
-    includesErrorCode(SEPAY_PAYMENT_CONFLICT_REVIEW_CODES, errorCode)
+    isSepayPaymentConflictReviewCode(errorCode)
   );
 }
 
@@ -383,6 +394,8 @@ export function mapSepayWebhookRow(
   const amount = rawAmount != null ? Math.abs(rawAmount) : null;
   if (!transferType || amount == null || amount <= 0) return null;
 
+  const order = Array.isArray(row.orders) ? row.orders[0] : row.orders;
+
   return {
     eventId: row.id,
     requestId: row.request_id,
@@ -390,6 +403,8 @@ export function mapSepayWebhookRow(
     processingStatus: row.processing_status,
     errorCode: row.error_code,
     orderId: row.order_id,
+    orderNumber:
+      typeof order?.order_number === "string" ? order.order_number : null,
     paymentId: row.payment_id,
     expenseId: row.expense_id,
     expenseIds: row.expense_id != null ? [row.expense_id] : [],

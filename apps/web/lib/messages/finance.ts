@@ -308,6 +308,18 @@ export const finance = {
       submit: "Lưu khoản chi",
       success: "Đã lưu khoản chi",
     },
+    transferInstruction: {
+      title: "Nội dung chuyển khoản",
+      description:
+        "Dùng đúng nội dung này khi chuyển khoản. SePay sẽ tự đối soát khoản chi sau khi ngân hàng ghi nhận giao dịch.",
+      codeLabel: "Nội dung cần nhập",
+      detail: (content: string) => `Nội dung CK: ${content}`,
+      copy: "Sao chép nội dung",
+      copied: "Đã sao chép nội dung chuyển khoản",
+      copyFailed: "Không thể sao chép. Hãy chọn và sao chép thủ công.",
+      close: "Đã hiểu",
+      created: "Đã tạo khoản chi chờ chuyển khoản",
+    },
     table: {
       date: "Ngày",
       branch: "Chi nhánh",
@@ -478,6 +490,8 @@ export const finance = {
         overpayment_needs_review: "Có dấu hiệu thu trùng",
       },
       technicalError: "Webhook không xử lý được",
+      conflictOrder: "Đơn liên quan",
+      openConflictOrder: "Mở đơn",
       linkInputLabel: "Payment ID cần gắn",
       linkInputPlaceholder: "Payment ID",
       linkAction: "Gắn",

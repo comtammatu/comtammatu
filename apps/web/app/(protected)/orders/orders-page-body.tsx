@@ -19,6 +19,7 @@ interface OrdersPageBodyProps {
   showBranchFilter: boolean;
   refunds: RefundRow[];
   canApproveRefund: boolean;
+  initialSelectedOrder?: OrderRow | null;
   embedded?: boolean;
 }
 
@@ -29,6 +30,7 @@ export function OrdersPageBody({
   showBranchFilter,
   refunds,
   canApproveRefund,
+  initialSelectedOrder = null,
   embedded = false,
 }: OrdersPageBodyProps) {
   const pendingRefundCount = refunds.filter(
@@ -52,6 +54,7 @@ export function OrdersPageBody({
           initialSummary={summary}
           branches={branches}
           showBranchFilter={showBranchFilter}
+          initialSelectedOrder={initialSelectedOrder}
         />
       </TabsContent>
       <TabsContent value="refunds" className="flex flex-col gap-4">
