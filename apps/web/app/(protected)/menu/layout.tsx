@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
-import { OfficeModuleShell } from "@/components/office-module-shell";
+import { AdminDashboardModuleShell } from "@/components/admin-dashboard-module-shell";
 
 export default async function MenuLayout({
   children,
@@ -10,7 +10,7 @@ export default async function MenuLayout({
   const { session, claims } = await loadAuthState();
 
   return (
-    <OfficeModuleShell
+    <AdminDashboardModuleShell
       module="menu"
       user={{
         name:
@@ -22,6 +22,6 @@ export default async function MenuLayout({
       branchId={claims.branch_id}
     >
       {children}
-    </OfficeModuleShell>
+    </AdminDashboardModuleShell>
   );
 }

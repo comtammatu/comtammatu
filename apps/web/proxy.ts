@@ -4,9 +4,8 @@ import {
   buildAccessDeniedPath,
   canAccess,
   extractClaimsFromAccessToken,
-  isAdminRoutePath,
+  isAdminDashboardRoutePath,
   isPublicAppPath,
-  PERMISSION_KEYS,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
   type BlockedStateReasonCode,
@@ -105,9 +104,7 @@ function redirectToDefaultLanding(
   sessionResponse: NextResponse,
   claims: JwtClaims,
 ): NextResponse {
-  const branchHubContext = resolveBranchHubContextFromHeaders(
-    request.headers,
-  );
+  const branchHubContext = resolveBranchHubContextFromHeaders(request.headers);
   const url = new URL(
     resolvePostLoginRedirect(claims, null, branchHubContext),
     request.nextUrl.origin,
@@ -179,8 +176,8 @@ export async function proxy(request: NextRequest) {
   }
 
   // Authenticated — verify claims + module ACL. Blocked operational routes go
-  // to `/access-denied`; disallowed Admin routes go to the role's default
-  // landing page. Proxy is the single gate: layouts and pages downstream MUST
+  // to `/access-denied`; disallowed Admin Dashboard routes go to the role's
+  // default landing page. Proxy is the single gate: layouts and pages downstream MUST
   // NOT re-check these invariants.
   //
   // Claims were decoded above from the JWT access_token, NOT from
@@ -191,14 +188,24 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  // Module ACL: each route resolves to a ModuleKey, and the user's role
-  // must be in that module's allowedRoles. Admin routes that fail ACL
-  // redirect to the role's default landing page; non-admin routes redirect
-  // to /access-denied.
+  // Admin Dashboard is an owner-only route surface. Capability keys such as
+  // inventory and orders remain shared with Branch-native routes, so this
+  // surface gate must run before the per-module capability gate below.
+  if (
+    isAdminDashboardRoutePath(pathname) &&
+    !canAccess(claims.user_role, "admin_dashboard")
+  ) {
+    return redirectToDefaultLanding(request, response, claims);
+  }
+
+  // Module ACL: each route resolves to a ModuleKey, and the user's role must
+  // be in that module's allowedRoles. Admin Dashboard routes that fail ACL
+  // redirect to the role's default landing page; other routes redirect to
+  // /access-denied.
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
     if (!canAccess(claims.user_role, moduleKey)) {
-      if (isAdminRoutePath(pathname)) {
+      if (isAdminDashboardRoutePath(pathname)) {
         return redirectToDefaultLanding(request, response, claims);
       }
 
@@ -207,20 +214,6 @@ export async function proxy(request: NextRequest) {
         response,
         "insufficient-permission",
       );
-    }
-
-    if (moduleKey === "inventory_procurement" && claims.user_role !== "owner") {
-      const { data: canReadProcurement, error } = await supabase.rpc(
-        "has_permission_any",
-        { p_key: PERMISSION_KEYS.PROCUREMENT_READ },
-      );
-      if (error || canReadProcurement !== true) {
-        return redirectToAccessDenied(
-          request,
-          response,
-          "insufficient-permission",
-        );
-      }
     }
 
     const pathMatch = pathname.match(/^\/br\/(\d+)(?:\/|$)/);
@@ -327,9 +320,9 @@ export async function proxy(request: NextRequest) {
         }
       }
     }
-  } else if (isAdminRoutePath(pathname)) {
-    // Admin route with no module mapping — redirect to default landing
-    // to avoid serving admin pages without ACL enforcement.
+  } else if (isAdminDashboardRoutePath(pathname)) {
+    // Admin Dashboard route with no module mapping — redirect to default
+    // landing to avoid serving management pages without ACL enforcement.
     return redirectToDefaultLanding(request, response, claims);
   }
 

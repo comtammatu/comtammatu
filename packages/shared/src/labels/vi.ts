@@ -3,6 +3,7 @@ export type SiteKind = "branch" | "central_supply" | "central_kitchen";
 export type InventoryLocationLabelLength = "short" | "long";
 
 export type ModuleLabelKey =
+  | "admin_dashboard"
   | "menu"
   | "inventory"
   | "inventory_procurement"
@@ -32,6 +33,7 @@ type SiteLike = {
 };
 
 export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
+  admin_dashboard: "Admin Dashboard",
   menu: "Thực đơn",
   inventory: "Kho hàng",
   inventory_procurement: "Kho hàng — NCC & công thức",
@@ -59,8 +61,8 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
 
 export const NAV_GROUP_LABELS_VI = {
   operations: "Điều hành",
-  foundation: "Quản lý",
-  workspaces: "Công việc",
+  adminOperations: "Điều hành toàn hệ thống",
+  foundation: "Nền tảng & thiết lập",
   branchManagement: "Quản lý chi nhánh",
   branchOperations: "Theo chi nhánh",
 } as const;
@@ -92,9 +94,10 @@ export const APP_COPY_VI = {
   refresh: "Làm mới",
   noAreaData: "Không có dữ liệu khu vực",
   noScopedBranches: "Không có nơi làm việc trong phạm vi",
-  officePlaneTitle: "Văn phòng",
-  officePlaneDescription: "Tài chính và công việc bàn giấy",
-  officePlaneCta: "Mở Văn phòng",
+  adminDashboardTitle: "Admin Dashboard",
+  adminDashboardDescription:
+    "Điều hành, kiểm soát và thiết lập toàn hệ thống dành cho Owner",
+  adminDashboardCta: "Mở Admin Dashboard",
 } as const;
 
 const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
@@ -412,7 +415,7 @@ export const PAYMENT_METHOD_LABELS_FULL_VI = {
   unknown: "Khác",
 } as const;
 
-/** orders.status (DB orders_status_check) — full back-office vocabulary.
+/** orders.status (DB orders_status_check) — full Admin Dashboard vocabulary.
  * POS cashier view intentionally collapses these states
  * (apps/web pos/_lib/order-status-display.ts). */
 export const ORDER_STATUS_LABELS_VI = {

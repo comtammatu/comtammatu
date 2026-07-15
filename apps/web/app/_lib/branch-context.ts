@@ -170,7 +170,7 @@ export interface ListScopeResolution extends BranchScope {
  * surfaces (D058 W3b). Embedded callers pass the validated `routeBranchId`
  * from the URL segment; it always wins, and a mismatch against the
  * resolved scope means the branch is not allowed for this user — the
- * caller must `notFound()`. Office callers pass the raw `?branchId=` query
+ * caller must `notFound()`. Admin Dashboard callers pass the raw `?branchId=` query
  * value instead; it survives ONLY as a display filter/default — never as
  * write authority. Writes MUST re-derive their own scope from
  * claims/RLS/RPC permission checks, not from this resolution.

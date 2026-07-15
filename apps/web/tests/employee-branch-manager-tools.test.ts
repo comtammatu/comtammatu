@@ -88,9 +88,10 @@ test("Branch Manager self-attendance is only clock in and clock out", () => {
   );
   assert.match(
     employeeClockPageSource,
-    /managerHr: "\/hr"[\s\S]*state\.managerAttendanceOnly \? routes\.managerHr : routes\.tasks/,
-    "Branch Manager clock page should link back to HR management by default instead of tasks",
+    /routes: EmployeeClockRoutes[\s\S]*state\.managerAttendanceOnly \? routes\.managerHr : routes\.tasks/,
+    "Branch Manager clock page should require its owning surface to provide the management route",
   );
+  assert.doesNotMatch(employeeClockPageSource, /DEFAULT_CLOCK_ROUTES|"\/hr"/);
 });
 
 test("Staff checkout request stays single tap while manager direct checkout confirms", () => {

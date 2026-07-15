@@ -5,11 +5,11 @@ import {
   type BranchHubContext,
 } from "./branch-hub";
 import {
+  isAdminDashboardRoutePath,
   isRunnerPublicDisplayPath,
   resolveModuleFromPath,
 } from "./route-resolution";
 import type { JwtClaims, StaffRole } from "./types";
-import { ADMIN_ROLES } from "./types";
 
 export { getDefaultRedirect } from "./branch-hub";
 
@@ -155,6 +155,13 @@ export function resolvePostLoginRedirect(
     return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
   }
 
+  if (
+    isAdminDashboardRoutePath(targetUrl.pathname) &&
+    !canAccess(claims.user_role, "admin_dashboard")
+  ) {
+    return fallback;
+  }
+
   const moduleKey = resolveModuleFromPath(targetUrl.pathname);
 
   // Non-module paths fall back to the role's default landing page.
@@ -170,7 +177,10 @@ export function resolvePostLoginRedirect(
   const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
   if (routeBranchId != null) {
-    const allowCrossBranchBranchSurface = claims.user_role === "owner";
+    const allowCrossBranchBranchSurface = canAccess(
+      claims.user_role,
+      "admin_dashboard",
+    );
 
     if (!allowCrossBranchBranchSurface && claims.branch_id !== routeBranchId) {
       return fallback;
@@ -178,9 +188,4 @@ export function resolvePostLoginRedirect(
   }
 
   return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
-}
-
-/** Check if a role is admin-level */
-export function isAdminRole(role: StaffRole): boolean {
-  return ADMIN_ROLES.includes(role);
 }

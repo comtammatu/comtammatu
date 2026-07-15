@@ -102,7 +102,7 @@ export function GrnListClient({
   canCreate,
   draftsLoadFailed = false,
   grnsLoadFailed = false,
-  withinOfficeTabs = false,
+  withinAdminDashboardTabs = false,
 }: {
   grns: GrnRow[];
   basePath?: string;
@@ -110,7 +110,7 @@ export function GrnListClient({
   canCreate: boolean;
   draftsLoadFailed?: boolean;
   grnsLoadFailed?: boolean;
-  withinOfficeTabs?: boolean;
+  withinAdminDashboardTabs?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<GrnListStatusFilter>("all");
@@ -268,7 +268,7 @@ export function GrnListClient({
             {filtered.length}/{grns.length}
           </Badge>
         }
-        actions={withinOfficeTabs ? desktopActions : null}
+        actions={withinAdminDashboardTabs ? desktopActions : null}
       />
 
       <DataTable
@@ -348,8 +348,10 @@ export function GrnListClient({
     <GrnDraftsTab drafts={drafts ?? []} basePath={basePath} />
   );
 
-  const draftSectionWithinOfficeTabs =
-    withinOfficeTabs && drafts && (drafts.length > 0 || draftsLoadFailed) ? (
+  const draftSectionWithinAdminDashboardTabs =
+    withinAdminDashboardTabs &&
+    drafts &&
+    (drafts.length > 0 || draftsLoadFailed) ? (
       <AppSection
         title={INVENTORY_VI.draft}
         badge={
@@ -362,9 +364,9 @@ export function GrnListClient({
       </AppSection>
     ) : null;
 
-  const officeBody = withinOfficeTabs ? (
+  const adminDashboardBody = withinAdminDashboardTabs ? (
     <>
-      {draftSectionWithinOfficeTabs}
+      {draftSectionWithinAdminDashboardTabs}
       {listBody}
     </>
   ) : drafts ? (
@@ -385,8 +387,10 @@ export function GrnListClient({
     listBody
   );
 
-  if (withinOfficeTabs) {
-    return <div className="flex w-full flex-col gap-3">{officeBody}</div>;
+  if (withinAdminDashboardTabs) {
+    return (
+      <div className="flex w-full flex-col gap-3">{adminDashboardBody}</div>
+    );
   }
 
   return (
@@ -396,7 +400,7 @@ export function GrnListClient({
         title={tNav("grn", "navigation")}
         actions={desktopActions}
       />
-      {officeBody}
+      {adminDashboardBody}
     </AppPage>
   );
 }

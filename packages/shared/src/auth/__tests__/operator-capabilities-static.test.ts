@@ -125,7 +125,7 @@ test("resolveOperatorTiles -> retired supplier returns stay out of the branch ti
   );
 });
 
-test("resolveOperatorTiles -> operator hub does not duplicate office workspace links", () => {
+test("resolveOperatorTiles -> operator hub does not duplicate Admin Dashboard links", () => {
   const groups = resolveOperatorTiles("owner", 3);
   const groupIds = groups.map((group) => String(group.id));
   const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));

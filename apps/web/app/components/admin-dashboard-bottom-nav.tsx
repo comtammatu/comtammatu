@@ -49,12 +49,12 @@ function selectBottomNavItems(
 }
 
 /**
- * Mobile bottom navbar for the back-office workspace. Bar destinations are the
+ * Mobile bottom navbar for Admin Dashboard. Bar destinations are the
  * active module's deep nav (tier-2); the leading "Mô-đun" tab opens the single
  * sidebar drawer for cross-module switching plus the active module sub-tabs.
  * Must render inside `SidebarProvider` (AppShell does this).
  */
-export function WorkspaceBottomNav({
+export function AdminDashboardBottomNav({
   tier1,
   tier2,
 }: {
@@ -86,7 +86,7 @@ export function WorkspaceBottomNav({
           onClick={toggleSidebar}
           className={cn(BOTTOM_NAV_ITEM_CLASS, "min-w-16")}
         >
-          <IconLayoutGrid data-icon="inline-start" />
+          <IconLayoutGrid data-icon="inline-start" aria-hidden="true" />
           <span>{copy.modules}</span>
         </Button>
       }
