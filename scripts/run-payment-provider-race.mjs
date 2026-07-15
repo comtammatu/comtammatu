@@ -336,6 +336,7 @@ async function main() {
     separateSuccessFirst: `${FIXTURE_PREFIX}-SEPARATE-SUCCESS-FIRST-REF`,
     separateFailureFirst: `${FIXTURE_PREFIX}-SEPARATE-FAILURE-FIRST-REF`,
     momoCashRace: `${FIXTURE_PREFIX}-MOMO-CASH-RACE-REF`,
+    exactCashWaits: `${FIXTURE_PREFIX}-EXACT-CASH-WAITS-REF`,
     orderFirstInversion: `${FIXTURE_PREFIX}-ORDER-FIRST-INVERSION-REF`,
   };
   const initialRequests = {
@@ -346,6 +347,7 @@ async function main() {
     separateSuccessFirst: `INIT-${FIXTURE_PREFIX}-SEPARATE-SUCCESS-FIRST`,
     separateFailureFirst: `INIT-${FIXTURE_PREFIX}-SEPARATE-FAILURE-FIRST`,
     momoCashRace: `INIT-${FIXTURE_PREFIX}-MOMO-CASH-RACE`,
+    exactCashWaits: `INIT-${FIXTURE_PREFIX}-EXACT-CASH-WAITS`,
   };
   const eventRequests = {
     samePendingFirst: `${FIXTURE_PREFIX}-SAME-PENDING-FIRST`,
@@ -355,6 +357,7 @@ async function main() {
     separateFailureFirstSuccess: `${FIXTURE_PREFIX}-SEPARATE-FAILURE-FIRST-SUCCESS`,
     separateFailureFirstFailure: `${FIXTURE_PREFIX}-SEPARATE-FAILURE-FIRST-FAILURE`,
     momoCashRace: `${FIXTURE_PREFIX}-MOMO-CASH-RACE`,
+    exactCashWaits: `${FIXTURE_PREFIX}-EXACT-CASH-WAITS`,
   };
   const output = [];
   let cleanupState;
@@ -383,6 +386,7 @@ async function main() {
           ('SEPARATE-SUCCESS-FIRST'),
           ('SEPARATE-FAILURE-FIRST'),
           ('MOMO-CASH-RACE'),
+          ('EXACT-CASH-WAITS'),
           ('ORDER-FIRST-INVERSION')
       )
       INSERT INTO public.orders (
@@ -420,7 +424,8 @@ async function main() {
             ('SAME-SUCCESS-FIRST', '${providerRefs.sameSuccessFirst}', '${initialRequests.sameSuccessFirst}'),
             ('SEPARATE-SUCCESS-FIRST', '${providerRefs.separateSuccessFirst}', '${initialRequests.separateSuccessFirst}'),
             ('SEPARATE-FAILURE-FIRST', '${providerRefs.separateFailureFirst}', '${initialRequests.separateFailureFirst}'),
-            ('MOMO-CASH-RACE', '${providerRefs.momoCashRace}', '${initialRequests.momoCashRace}')
+            ('MOMO-CASH-RACE', '${providerRefs.momoCashRace}', '${initialRequests.momoCashRace}'),
+            ('EXACT-CASH-WAITS', '${providerRefs.exactCashWaits}', '${initialRequests.exactCashWaits}')
           ) AS source(suffix, provider_ref, initial_request)
             ON order_row.order_number = '${FIXTURE_PREFIX}-' || source.suffix
         LOOP
@@ -464,7 +469,8 @@ async function main() {
         ('SEPARATE-SUCCESS-FIRST', '${eventRequests.separateSuccessFirstFailure}'),
         ('SEPARATE-FAILURE-FIRST', '${eventRequests.separateFailureFirstSuccess}'),
         ('SEPARATE-FAILURE-FIRST', '${eventRequests.separateFailureFirstFailure}'),
-        ('MOMO-CASH-RACE', '${eventRequests.momoCashRace}')
+        ('MOMO-CASH-RACE', '${eventRequests.momoCashRace}'),
+        ('EXACT-CASH-WAITS', '${eventRequests.exactCashWaits}')
       ) AS source(suffix, request_id)
         ON order_row.order_number = '${FIXTURE_PREFIX}-' || source.suffix;
       COMMIT;
@@ -536,6 +542,9 @@ async function main() {
     const momoCashOrderId = orderId("MOMO-CASH-RACE");
     const momoCashPaymentId = paymentId("MOMO-CASH-RACE");
     const momoCashEventId = eventId("MOMO-CASH-RACE");
+    const exactCashWaitsOrderId = orderId("EXACT-CASH-WAITS");
+    const exactCashWaitsPaymentId = paymentId("EXACT-CASH-WAITS");
+    const exactCashWaitsEventId = eventId("EXACT-CASH-WAITS");
     const inversionOrderId = orderId("ORDER-FIRST-INVERSION");
     const fixtureIds = [
       tenantId,
@@ -557,6 +566,9 @@ async function main() {
       momoCashOrderId,
       momoCashPaymentId,
       momoCashEventId,
+      exactCashWaitsOrderId,
+      exactCashWaitsPaymentId,
+      exactCashWaitsEventId,
       inversionOrderId,
     ];
     if (fixtureIds.some((value) => !Number.isSafeInteger(value))) {
@@ -579,7 +591,7 @@ async function main() {
       WHERE order_row.order_number LIKE '${FIXTURE_PREFIX}-%'
         AND payment.method = 'momo';
     `);
-    if (metadataCoverage !== "7|7") {
+    if (metadataCoverage !== "8|8") {
       throw new Error(
         `Atomic create metadata coverage mismatch: ${metadataCoverage}`,
       );
@@ -973,6 +985,136 @@ async function main() {
     );
     output.push(
       `pending-momo-vs-cash: ${momoCashEdge}; cash=55P03/pending_momo_payment_requires_provider_resolution; ${momoCashState}`,
+    );
+
+    const exactCashWaitsPayload = momoPayload(
+      eventRequests.exactCashWaits,
+      providerRefs.exactCashWaits,
+      0,
+      "provider success while cash waits",
+    );
+    const exactMomoSettler = openSession(
+      `payrace_${RUN_ID}_exact_cash_waits_momo_settle`,
+    );
+    const exactCashWaiter = openSession(
+      `payrace_${RUN_ID}_exact_cash_waits_cash_confirm`,
+    );
+    send(
+      exactMomoSettler,
+      `
+        BEGIN;
+        SET LOCAL statement_timeout = '15s';
+        ${serviceSettings()}
+        SELECT 1
+        FROM public.webhook_events
+        WHERE id = ${exactCashWaitsEventId}
+        FOR UPDATE;
+        SELECT pg_advisory_xact_lock(${exactCashWaitsOrderId});
+        \\echo __EXACT_CASH_WAITS_MOMO_PREFIX_LOCKED__
+      `,
+    );
+    await waitFor(exactMomoSettler, "__EXACT_CASH_WAITS_MOMO_PREFIX_LOCKED__");
+    send(
+      exactCashWaiter,
+      `
+        BEGIN;
+        SET LOCAL statement_timeout = '15s';
+        ${authSettings(tenantId, branchId)}
+        DO $race$
+        DECLARE
+          v_result jsonb;
+        BEGIN
+          v_result := public.confirm_cash_payment(${exactCashWaitsOrderId}, 0);
+          IF v_result ->> 'status' IS DISTINCT FROM 'already_completed'
+            OR (v_result ->> 'payment_id')::bigint IS DISTINCT FROM
+              ${exactCashWaitsPaymentId}
+            OR (v_result ->> 'idempotent')::boolean IS DISTINCT FROM true
+          THEN
+            RAISE EXCEPTION 'unexpected exact cash replay result: %', v_result;
+          END IF;
+        END
+        $race$;
+        COMMIT;
+        \\echo __EXACT_CASH_WAITS_CASH_COMMITTED__
+      `,
+    );
+    const exactCashWaitsEdge = await waitForBlock(
+      exactCashWaiter.name,
+      exactMomoSettler.name,
+    );
+    const exactCashWaitsLockState = assertState(
+      "exact-cash-waits-lock",
+      psql(`
+        WITH blocked AS (
+          SELECT activity.pid, activity.wait_event_type, activity.wait_event
+          FROM pg_stat_activity activity
+          WHERE activity.application_name = '${exactCashWaiter.name}'
+        )
+        SELECT (
+          blocked.wait_event_type = 'Lock'
+          AND lower(blocked.wait_event) = 'advisory'
+          AND EXISTS (
+            SELECT 1
+            FROM pg_locks pending_lock
+            WHERE pending_lock.pid = blocked.pid
+              AND pending_lock.locktype = 'advisory'
+              AND pending_lock.granted = false
+          )
+        )::text || '|' || blocked.wait_event_type || '|' ||
+          blocked.wait_event || '|' ||
+          (SELECT count(*)
+           FROM pg_locks pending_lock
+           WHERE pending_lock.pid = blocked.pid
+             AND pending_lock.locktype = 'advisory'
+             AND pending_lock.granted = false)::text
+        FROM blocked;
+      `),
+    );
+    send(
+      exactMomoSettler,
+      `
+        SELECT public.finalize_momo_successful_payment(
+          ${exactCashWaitsEventId}, ${exactCashWaitsPaymentId},
+          '${JSON.stringify(exactCashWaitsPayload)}'::jsonb
+        );
+        COMMIT;
+        \\echo __EXACT_CASH_WAITS_MOMO_COMMITTED__
+      `,
+    );
+    await Promise.all([
+      waitFor(exactMomoSettler, "__EXACT_CASH_WAITS_MOMO_COMMITTED__"),
+      waitFor(exactCashWaiter, "__EXACT_CASH_WAITS_CASH_COMMITTED__"),
+    ]);
+    const exactCashWaitsState = assertState(
+      "exact-cash-waits",
+      psql(`
+        SELECT (
+          payment.status = 'completed'
+          AND payment.method = 'momo'
+          AND order_row.payment_status = 'paid'
+          AND order_row.payment_method = 'momo'
+          AND event.processing_status = 'processed'
+          AND event.http_status = 204
+          AND event.error_code IS NULL
+          AND event.payment_id = payment.id
+          AND event.payload = '${JSON.stringify(exactCashWaitsPayload)}'::jsonb
+          AND payment.provider_data @> '${JSON.stringify(exactCashWaitsPayload)}'::jsonb
+          AND (
+            SELECT count(*)
+            FROM public.payments active_payment
+            WHERE active_payment.order_id = order_row.id
+              AND active_payment.status <> 'failed'
+          ) = 1
+        )::text || '|' || payment.status || '|' || payment.method || '|' ||
+          event.processing_status
+        FROM public.payments payment
+        JOIN public.orders order_row ON order_row.id = payment.order_id
+        JOIN public.webhook_events event ON event.id = ${exactCashWaitsEventId}
+        WHERE payment.id = ${exactCashWaitsPaymentId};
+      `),
+    );
+    output.push(
+      `exact-cash-waits-on-advisory: ${exactCashWaitsEdge}; ${exactCashWaitsLockState}; cash=already_completed; ${exactCashWaitsState}`,
     );
 
     const orderFirstInversionMetadata = momoMetadata(

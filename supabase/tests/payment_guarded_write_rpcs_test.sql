@@ -3,6 +3,42 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+DO $$
+DECLARE
+  v_definition text := pg_get_functiondef(
+    'public.confirm_cash_payment(bigint,numeric)'::regprocedure
+  );
+  v_advisory_position integer;
+  v_order_lock_position integer;
+BEGIN
+  v_advisory_position := strpos(
+    v_definition,
+    'PERFORM pg_advisory_xact_lock(p_order_id);'
+  );
+  v_order_lock_position := strpos(v_definition, 'FOR UPDATE');
+
+  IF v_advisory_position = 0
+    OR v_order_lock_position = 0
+    OR v_advisory_position > v_order_lock_position
+  THEN
+    RAISE EXCEPTION 'confirm_cash_payment_lock_order_regressed';
+  END IF;
+
+  IF strpos(
+      v_definition,
+      'v_print_warning := ''receipt_enqueue_failed'';'
+    ) = 0
+    OR strpos(v_definition, 'v_print_warning := SQLERRM;') > 0
+    OR strpos(
+      v_definition,
+      'RAISE LOG ''[confirm_cash_payment] receipt enqueue skipped'
+    ) = 0
+  THEN
+    RAISE EXCEPTION 'confirm_cash_payment_print_warning_contract_regressed';
+  END IF;
+END;
+$$;
+
 CREATE TEMP TABLE payment_guard_ctx (
   tenant_id bigint NOT NULL,
   branch_id bigint NOT NULL,
@@ -1786,6 +1822,79 @@ BEGIN
     ) IS DISTINCT FROM 'ignored'
   THEN
     RAISE EXCEPTION 'late failure downgraded refunded evidence';
+  END IF;
+END;
+$$;
+RESET ROLE;
+
+DO $$
+DECLARE
+  v_order_id bigint;
+BEGIN
+  INSERT INTO public.orders (
+    tenant_id, branch_id, order_number, order_type, subtotal, total_amount,
+    created_by, status, payment_status
+  ) VALUES (
+    current_setting('test.tenant_id')::bigint,
+    current_setting('test.branch_id')::bigint,
+    'PGR-PRINT-WARNING-' || replace(gen_random_uuid()::text, '-', ''),
+    'takeaway',
+    0,
+    0,
+    current_setting('test.cashier_id')::uuid,
+    'new',
+    'unpaid'
+  ) RETURNING id INTO v_order_id;
+
+  PERFORM set_config('test.print_warning_order_id', v_order_id::text, true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enqueue_receipt_print(
+  p_order_id bigint,
+  p_cash_received numeric DEFAULT NULL,
+  p_cash_change numeric DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  RAISE EXCEPTION 'test-sensitive-printer-detail';
+END;
+$$;
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', current_setting('test.cashier_id'), true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT set_config(
+  'request.jwt.claims',
+  jsonb_build_object(
+    'sub', current_setting('test.cashier_id'),
+    'role', 'authenticated',
+    'app_metadata', jsonb_build_object(
+      'tenant_id', current_setting('test.tenant_id')::bigint,
+      'branch_id', current_setting('test.branch_id')::bigint
+    )
+  )::text,
+  true
+);
+
+DO $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  v_result := public.confirm_cash_payment(
+    current_setting('test.print_warning_order_id')::bigint,
+    0
+  );
+
+  IF v_result ->> 'status' IS DISTINCT FROM 'completed'
+    OR v_result ->> 'print_warning' IS DISTINCT FROM 'receipt_enqueue_failed'
+    OR v_result ->> 'print_job_id' IS NOT NULL
+    OR v_result::text LIKE '%test-sensitive-printer-detail%'
+  THEN
+    RAISE EXCEPTION 'unsafe receipt warning response: %', v_result;
   END IF;
 END;
 $$;

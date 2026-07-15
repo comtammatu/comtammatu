@@ -25,6 +25,8 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
+  PERFORM pg_advisory_xact_lock(p_order_id);
+
   SELECT * INTO v_order
   FROM public.orders
   WHERE id = p_order_id
@@ -176,9 +178,9 @@ BEGIN
       v_cash_change
     );
   EXCEPTION WHEN OTHERS THEN
-    v_print_warning := SQLERRM;
-    v_receipt_res := jsonb_build_object('error', SQLERRM);
-    RAISE NOTICE '[confirm_cash_payment] receipt enqueue skipped for order %: %',
+    v_print_warning := 'receipt_enqueue_failed';
+    v_receipt_res := '{}'::jsonb;
+    RAISE LOG '[confirm_cash_payment] receipt enqueue skipped for order %: %',
       p_order_id, SQLERRM;
   END;
 

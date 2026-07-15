@@ -122,7 +122,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node scripts/supabase-e2e-bringup.mjs
-      - run: node scripts/run-db-tests.mjs payment_guarded_write_rpcs_test.sql finance_transfer_intent_test.sql
+      - run: >-
+          node scripts/run-db-tests.mjs
+          supplier_payment_idempotency_test.sql
+          sepay_payment_conflict_backfill_test.sql
+          sepay_payment_conflict_quarantine_test.sql
+          payment_guarded_write_rpcs_test.sql
+          finance_transfer_intent_test.sql
       - run: pnpm test:db:payment-race
         timeout-minutes: 5
         env:
