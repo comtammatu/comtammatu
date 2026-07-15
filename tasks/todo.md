@@ -126,6 +126,11 @@ Synthesis
 - [x] **A4 — contracts and verification.** Update the decision, Design System,
       role-route matrix, static regressions, full gates, and responsive browser
       evidence before delivery.
+- [x] **A5 — notification deep-link containment.** Resolve notification action
+      URLs at hydration so legacy Admin paths reach the recipient's authorized
+      Branch workflow, retain Owner access, and fail closed for unknown,
+      unsafe, unscoped, or cross-branch targets. Accept both purchase-order URL
+      forms used by current main and the queued PR #284 migration.
 
 ### T3 attestation
 
@@ -135,6 +140,9 @@ Synthesis
   70 web static tests. Runtime browser suite passed 11/11 with Manager and
   Cashier Admin-family rejection, Branch-native Orders parity, Owner launcher,
   and Branch shell checks across phone, tablet portrait/landscape, and desktop.
+- Notification deep-link regressions passed 4/4. The final resolver also passed
+  monorepo typecheck (7/7), T3 lint (7/7), production build (2/2), and the full
+  repository test suite with no failures.
 - No database migration, generated database type change, production write, or
   deployment occurred. Finance/SePay behavior, KPI invention, route moves, and
   PR #284 remain intentionally outside this slice.
