@@ -7,6 +7,7 @@ import {
   attachSupplierPaymentMatches,
   buildSepayPaymentWebhookSummary,
   buildSepayReconciliationSummary,
+  canManuallyLinkSepayPayment,
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
   isSepayTransactionInDateRange,
@@ -19,6 +20,7 @@ import {
   type SepaySupplierPaymentMatch,
   type SepayWebhookRow,
 } from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
+import { fetchSepayDataApiRows } from "../app/(protected)/finance/_lib/sepay-bank-transactions";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
@@ -129,6 +131,24 @@ test("SePay bank transaction maps incoming and outgoing webhook payloads", () =>
     )?.expenseIds,
     [42],
   );
+});
+
+test("SePay Data API pagination reads every deterministic range", async () => {
+  const rows = Array.from({ length: 2005 }, (_, index) => ({ id: index + 1 }));
+  const requestedRanges: Array<[number, number]> = [];
+
+  const result = await fetchSepayDataApiRows(async (from, to) => {
+    requestedRanges.push([from, to]);
+    return { data: rows.slice(from, to + 1), error: null };
+  });
+
+  assert.equal(result.error, null);
+  assert.equal(result.data?.length, 2005);
+  assert.deepEqual(requestedRanges, [
+    [0, 999],
+    [1000, 1999],
+    [2000, 2999],
+  ]);
 });
 
 test("SePay bank movement sums plus and minus from opening date", () => {
@@ -429,6 +449,63 @@ test("SePay unmatched money-in classifier explains why no order is attached", ()
   );
 });
 
+test("signed SePay business mismatches stay reviewable without exposing conflict linking", () => {
+  const recoverable = tx(
+    row(
+      4,
+      { transferType: "in", transferAmount: 30000 },
+      "2026-07-01T01:00:00.000Z",
+      null,
+      null,
+      "processed",
+      "missing_payment_code_needs_review",
+    ),
+  );
+  const paymentConflict = tx(
+    row(
+      5,
+      {
+        transferType: "in",
+        transferAmount: 30000,
+        content: "DHABC123",
+      },
+      "2026-07-01T01:00:00.000Z",
+      null,
+      null,
+      "processed",
+      "payment_method_conflict_needs_review",
+      105,
+    ),
+  );
+  const technicalFailure = tx(
+    row(
+      6,
+      { transferType: "in", transferAmount: 30000 },
+      "2026-07-01T01:00:00.000Z",
+      null,
+      null,
+      "failed",
+      "invalid_amount",
+    ),
+  );
+
+  assert.equal(classifySepayReconciliationState(recoverable), "needs_review");
+  assert.equal(classifySepayUnmatchedMoneyIn(recoverable), "missing_reference");
+  assert.equal(canManuallyLinkSepayPayment(recoverable), true);
+
+  assert.equal(
+    classifySepayReconciliationState(paymentConflict),
+    "needs_review",
+  );
+  assert.equal(canManuallyLinkSepayPayment(paymentConflict), false);
+
+  assert.equal(
+    classifySepayReconciliationState(technicalFailure),
+    "webhook_error",
+  );
+  assert.equal(canManuallyLinkSepayPayment(technicalFailure), false);
+});
+
 test("SePay money-in manual link stays guarded by RPC", () => {
   const migration = read(
     "supabase/migrations/20260709064834_link_sepay_transaction_to_payment.sql",
@@ -454,6 +531,70 @@ test("SePay money-in manual link stays guarded by RPC", () => {
   assert.match(action, /link_sepay_transaction_to_payment/);
   assert.match(table, /LinkPaymentCell/);
   assert.match(table, /linkSepayTransactionToPayment/);
+});
+
+test("SePay conflict hardening gates automatic settlement and Owner recovery", () => {
+  const migration = read(
+    "supabase/migrations/20260715135031_harden_sepay_payment_conflicts.sql",
+  );
+
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.reconcile_sepay_order_evidence/,
+  );
+  assert.match(migration, /PERFORM pg_advisory_xact_lock\(v_order_id\)/);
+  assert.match(migration, /payment_method_conflict_needs_review/);
+  assert.match(migration, /payment_state_conflict_needs_review/);
+  assert.match(migration, /overpayment_needs_review/);
+  assert.match(migration, /prior_event\.payment_id IS NOT NULL/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.confirm_sepay_payment\([\s\S]*service_role/,
+  );
+  assert.match(migration, /NOT public\.auth_is_owner\(v_user_id\)/);
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.link_sepay_transaction_to_payment\(bigint, bigint\)[\s\S]*TO authenticated/,
+  );
+  assert.match(
+    migration,
+    /WHEN 'missing_payment_code' THEN 'missing_payment_code_needs_review'/,
+  );
+  assert.doesNotMatch(migration, /corrected_from_cash/);
+});
+
+test("SePay reconciliation reads a complete pilot window without exposing review codes", () => {
+  const loader = read(
+    "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
+  );
+  const table = read(
+    "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
+  );
+  const messages = read("apps/web/lib/messages/finance.ts");
+
+  assert.match(loader, /SEPAY_DATA_API_PAGE_SIZE = 1000/);
+  assert.match(loader, /SEPAY_DATA_API_IN_CHUNK_SIZE = 200/);
+  assert.match(loader, /fetchSepayChunkedDataApiRows/);
+  assert.match(
+    loader,
+    /\.order\("created_at", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)[\s\S]*\.range\(from, to\)/,
+  );
+  assert.match(
+    loader,
+    /\.order\("paid_at", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)[\s\S]*\.range\(from, to\)/,
+  );
+  assert.match(
+    loader,
+    /\.order\("payment_date", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)[\s\S]*\.range\(from, to\)/,
+  );
+  assert.doesNotMatch(
+    loader,
+    /SEPAY_(?:TRANSACTION_LIST|PAYMENT_WEBHOOK_CHECK)_LIMIT/,
+  );
+  assert.doesNotMatch(table, /return tx\.errorCode/);
+  assert.doesNotMatch(table, /return tx\.processingStatus/);
+  assert.match(messages, /payment_method_conflict_needs_review/);
+  assert.match(messages, /overpayment_needs_review/);
 });
 
 test("SePay bank reconciliation reads supplier AP payments without turning them into expenses", () => {

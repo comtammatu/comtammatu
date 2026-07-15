@@ -1,11 +1,58 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 const REPO = process.cwd();
 const TESTS_DIR = join(REPO, "supabase", "tests");
 const DB_PORT = process.env["E2E_DB_PORT"] || "55432";
+const RELATIVE_INCLUDE = /^\s*\\ir\s+(.+?)\s*$/;
+
+function expandRelativeIncludes(filePath, stack = []) {
+  const resolvedFile = resolve(filePath);
+  if (stack.includes(resolvedFile)) {
+    throw new Error(
+      `Circular SQL include: ${[...stack, resolvedFile].join(" -> ")}`,
+    );
+  }
+
+  const nextStack = [...stack, resolvedFile];
+  const expanded = readFileSync(resolvedFile, "utf8")
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = line.match(RELATIVE_INCLUDE);
+      if (!match) return line;
+
+      let includeTarget = match[1]?.trim();
+      if (!includeTarget) {
+        throw new Error(`Empty SQL include in ${resolvedFile}`);
+      }
+
+      const quote = includeTarget[0];
+      if ((quote === '"' || quote === "'") && includeTarget.at(-1) === quote) {
+        includeTarget = includeTarget.slice(1, -1);
+      }
+
+      const includePath = resolve(dirname(resolvedFile), includeTarget);
+      const repoRelativePath = relative(REPO, includePath);
+      if (
+        repoRelativePath === ".." ||
+        repoRelativePath.startsWith(`..${sep}`) ||
+        isAbsolute(repoRelativePath)
+      ) {
+        throw new Error(`SQL include escapes the repository: ${includeTarget}`);
+      }
+
+      return expandRelativeIncludes(includePath, nextStack);
+    })
+    .join("\n");
+
+  if (/^\s*\\i(?:r)?\b/m.test(expanded)) {
+    throw new Error(`Unsupported SQL include directive in ${resolvedFile}`);
+  }
+
+  return expanded;
+}
 
 function getDatabaseContainer() {
   const result = spawnSync("docker", ["ps", "--format", "{{.Names}} {{.Ports}}"], { encoding: "utf8" });
@@ -24,7 +71,7 @@ function getDatabaseContainer() {
 
 function run() {
   process.stdout.write("Scanning for database SQL tests...\n");
-  
+
   let files;
   try {
     files = readdirSync(TESTS_DIR).filter(f => f.endsWith(".sql")).sort();
@@ -55,7 +102,15 @@ function run() {
     process.stdout.write(`Running: ${file}\n`);
     process.stdout.write(`--------------------------------------------------\n`);
 
-    const sqlContent = readFileSync(filePath, "utf8");
+    let sqlContent;
+    try {
+      sqlContent = expandRelativeIncludes(filePath);
+    } catch (err) {
+      process.stderr.write(`Failed to prepare ${file}: ${err.message}\n`);
+      failedTests.push(file);
+      continue;
+    }
+
     const result = spawnSync(
       "docker",
       ["exec", "-i", containerName, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1"],
@@ -65,8 +120,8 @@ function run() {
         timeout: 300000
       }
     );
-    
-    // In stderr và stdout
+
+    // Print both streams so database failures keep their original context.
     if (result.stdout && result.stdout.trim()) {
       process.stdout.write(`${result.stdout.trim()}\n`);
     }
@@ -88,7 +143,7 @@ function run() {
   process.stdout.write(`Total tests: ${files.length}\n`);
   process.stdout.write(`Passed:      ${files.length - failedTests.length}\n`);
   process.stdout.write(`Failed:      ${failedTests.length}\n`);
-  
+
   if (failedTests.length > 0) {
     process.stdout.write(`\nFailed tests list:\n`);
     for (const test of failedTests) {

@@ -9,6 +9,69 @@
 > checkout with `git status` and re-check production state for any migration or
 > runtime claim.
 
+## SePay Completed-Payment Conflict Guard (2026-07-15)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + workflow +
+orchestration; external skill = Supabase; runtime tools = refreshed Production
+catalog/ledger reads, a clean `origin/main` worktree, focused TypeScript and SQL
+tests, Preview rehearsal, and full repository gates. Skipped = Production DDL,
+payment-wide immutability, supplier-payment idempotency, Finance redesign,
+conflict adjudication UI, and merging any part of PR #284 wholesale.
+
+- **PM:** Stop SePay from changing a completed cash, MoMo, or other payment.
+  Preserve automatic settlement only for an unpaid order with no active payment
+  or an exact pending VietQR intent. Every valid unmatched bank event must remain
+  visible and recoverable by the Owner.
+- **BA:** `payments` remains the collected-payment truth and `webhook_events`
+  remains bank evidence. A completed non-VietQR payment plus signed SePay money-in
+  is a conflict, not a correction. A distinct second transfer for an already
+  evidenced VietQR payment is an overpayment review item; replay of the same
+  bank request remains idempotent.
+- **Senior Dev:** Add one forward migration from current `main`. Serialize on the
+  order, classify before the legacy confirmation function, revoke direct
+  `service_role` execution of that unsafe lower-level function, Owner-gate the
+  manual-link RPC in SQL, and reclassify only the known signed business failures.
+  Update only the webhook result schema and Finance classifier needed to surface
+  those rows. Add no new table or generalized workflow abstraction.
+- **QA/QC:** Prove unpaid and pending VietQR success; completed cash/MoMo remain
+  byte-for-byte financially unchanged; distinct duplicate transfer is
+  quarantined; missing-code and not-found evidence is recoverable; invalid
+  signature/amount remains fail-closed; replay does not duplicate; Owner succeeds
+  and Branch/non-user callers receive `42501`; receipt failure stays fail-soft
+  and SePay does not issue HĐĐT inline.
+
+Synthesis: the prior “cash correction” behavior is explicitly rejected because
+it destroys the distinction between POS payment truth and bank evidence. This
+slice contains the live data-integrity fault and restores an Owner recovery path;
+it does not decide the final conflict outcome or broaden direct payment mutation.
+
+- [x] **F1 — runtime proof.** Confirm the deployed function bodies, privileges,
+      migration ledger, deployment commit, and affected event counts read-only.
+- [x] **F2 — forward containment.** Write the migration and narrow runtime
+      adapters/tests without touching Production.
+- [x] **F3a — local verification.** Run focused SQL/TypeScript tests, repository
+      gates, local RPC transport checks, and the T3 review matrix.
+- [ ] **F3b — Preview rehearsal.** Apply after supplier-payment idempotency on an
+      isolated source Preview and replay the two-session conflict matrix.
+- [x] **F4 — draft delivery.** Review evidence is prepared for the
+      Owner-authorized commit, push, and Draft PR. Merge and Production DDL
+      remain explicitly out of scope.
+
+Local attestation: both SePay SQL acceptance tests pass with rollback, including
+the pre-migration backfill rehearsal (`UPDATE 2`), fresh unpaid-order path, and
+Owner denial when attempting to link quarantined cash or MoMo conflicts;
+focused TypeScript is 17/17. The Finance period loaders page every 1,000-row Data
+API window with stable tie-breakers, and chunk downstream ID filters instead of
+silently truncating long periods. The table displays mapped operator copy instead
+of raw review codes. Read-only
+Production counts prove the former 100-row window hid 54 of 68 review candidates
+and 46 of 62 completed VietQR payments missing bank evidence. Typecheck, T3 lint,
+build, and the full web suite are green. The canonical SQL runner now expands
+relative migration includes fail-closed. Its three remaining failures are
+unrelated local-fixture drift; paid Preview rehearsal remains the open F3b gate.
+
 ## Branch Hub Shell Slice From PR #284 (2026-07-15)
 
 Skill plan: repo rules = engineering + skills + UI + workflow + orchestration;
