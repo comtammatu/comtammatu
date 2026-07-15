@@ -261,6 +261,12 @@ test("Finance cockpit branch filter also scopes supplier payable risk", () => {
 
   assert.match(cockpit, /branchId: number \| null/);
   assert.match(cockpit, /goods_received_notes!inner/);
+  assert.match(cockpit, /credit_applied_amount/);
+  assert.match(
+    cockpit,
+    /toNumber\(row\.total_amount\) -[\s\S]*toNumber\(row\.paid_amount\) -[\s\S]*toNumber\(row\.credit_applied_amount\)/,
+  );
+  assert.match(cockpit, /if \(outstanding <= 0\) return acc/);
   assert.match(
     cockpit,
     /query = query\.eq\("goods_received_notes\.branch_id", branchId\)/,

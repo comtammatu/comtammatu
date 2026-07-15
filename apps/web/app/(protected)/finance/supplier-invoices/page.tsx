@@ -1,5 +1,6 @@
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import {
@@ -21,10 +22,13 @@ export default async function FinanceSupplierInvoicesPage({
   }>;
 }) {
   const copy = messages.finance.supplierInvoicesPage;
-  const [canReadProcurement, canPaySupplier] = await Promise.all([
+  const [authState, canReadProcurement, hasPayPermission] = await Promise.all([
+    loadAuthState(),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
     currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
   ]);
+  const canPaySupplier =
+    authState.claims.user_role === "owner" && hasPayPermission;
 
   if (!canReadProcurement) {
     return (

@@ -7791,6 +7791,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: number
+          idempotency_key: string | null
+          idempotency_result_status: string | null
           payment_date: string
           payment_method: string
           reference_note: string | null
@@ -7804,6 +7806,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
+          idempotency_key?: string | null
+          idempotency_result_status?: string | null
           payment_date?: string
           payment_method: string
           reference_note?: string | null
@@ -7817,6 +7821,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
+          idempotency_key?: string | null
+          idempotency_result_status?: string | null
           payment_date?: string
           payment_method?: string
           reference_note?: string | null
@@ -10588,6 +10594,17 @@ export type Database = {
       }
       record_sepay_cash_deposit_as_system: {
         Args: { p_event_id: number }
+        Returns: Json
+      }
+      record_supplier_payment: {
+        Args: {
+          p_amount: number
+          p_idempotency_key: string
+          p_payment_method: string
+          p_reference_note?: string
+          p_supplier_invoice_id: number
+          p_tenant_id: number
+        }
         Returns: Json
       }
       recreate_grn_at_receiving_site: {
