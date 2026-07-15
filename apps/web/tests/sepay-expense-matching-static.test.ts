@@ -280,6 +280,10 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
     sepayWebhookRoute,
     /transfer intent match failed[\s\S]*return NextResponse\.json\(\{ success: false \}, \{ status: 500 \}\)/,
   );
+  assert.match(
+    sepayWebhookRoute,
+    /const terminalEventMarked = await markWebhookEvent[\s\S]*if \(!terminalEventMarked\)[\s\S]*status: 500/,
+  );
 });
 
 test("SePay expense matching handles unapplied migration schema errors", () => {

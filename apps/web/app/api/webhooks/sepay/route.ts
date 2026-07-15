@@ -437,6 +437,7 @@ async function markWebhookEvent(
       error.code,
     );
   }
+  return !error;
 }
 
 async function claimWebhookEvent(
@@ -578,11 +579,18 @@ export async function POST(request: Request) {
           errorCode,
         );
         if (terminalTransferIntentResolverCodes.has(errorCode)) {
-          await markWebhookEvent(supabase, webhookEventId, {
-            processing_status: "failed",
-            http_status: 200,
-            error_code: errorCode,
-          });
+          const terminalEventMarked = await markWebhookEvent(
+            supabase,
+            webhookEventId,
+            {
+              processing_status: "failed",
+              http_status: 200,
+              error_code: errorCode,
+            },
+          );
+          if (!terminalEventMarked) {
+            return NextResponse.json({ success: false }, { status: 500 });
+          }
           return sepayAcceptedResponse();
         }
         return NextResponse.json({ success: false }, { status: 500 });
