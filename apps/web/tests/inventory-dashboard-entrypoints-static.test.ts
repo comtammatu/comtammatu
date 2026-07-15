@@ -32,6 +32,10 @@ test("inventory dashboard keeps the four owner entrypoint groups visible", () =>
     source,
     /<Link href=\{withBranch\(action\.href\)\}>\s*\{action\.label\}\s*<\/Link>/,
   );
+  assert.match(
+    source,
+    /flowCards\.length === 4\s*\?\s*"lg:grid-cols-2 xl:grid-cols-2"\s*:\s*"xl:grid-cols-3"/,
+  );
 
   assert.match(messageSource, /mainFlowsTitle: "Điểm vào vận hành chính"/);
   assert.match(messageSource, /controlFlowTitle: "1\. Kiểm soát tồn"/);
