@@ -25,6 +25,7 @@ questions:
 | PBAC permission grants        | `permission_keys`, `staff_permissions`, `role_templates`                        | Whether a user can perform an action, with branch/tenant scope and validity window     | Navigation, default home, HR display labels                              |
 | Server action / RPC gate      | `withAction`, `withFormAction`, direct RPC checks                               | Zod input validation, action-level roles + permission checks, atomic mutation boundary | Replacing RLS                                                            |
 | RLS                           | Postgres policies + `has_permission()` / `has_permission_any()`                 | Final row-level enforcement for PostgREST/Data API access                             | UI affordances, route taxonomy, staff management semantics               |
+| Private Branch Realtime topic | Realtime RLS + `can_read_branch_ops(branch_id)`                                      | Active Owner tenant scope or active non-Owner assigned-branch subscription scope       | Granting business actions or widening scope through `staff_permissions`   |
 
 Vocabulary rule: `position_code` is the HR position; `user_role` /
 `access_bucket` is the compatibility route bucket; `permission_key` is the PBAC
@@ -50,6 +51,7 @@ explicitly derives a bucket from it.
 | `supabase/migrations/00000000000000_baseline.sql`     | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
 | `supabase/migrations/00000000000000_baseline.sql`     | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
 | `supabase/migrations/00000000000000_baseline.sql`     | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
+| `supabase/migrations/*branch_ops_realtime_scope.sql`  | Active profile/branch authorization for private `branch:{id}:ops` topics                       | Realtime scope gate       |
 | `apps/web/app/(protected)/hr/staff/[id]/permissions/` | HR UI for grant/revoke + audit (page + client + actions)                                       | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                    | Server helper `currentUserHasPermission()`                                                    | App-side permission reads |
 
@@ -94,6 +96,15 @@ Two DB-side gates exist; pick the right one:
   - `admin_update_profile` raises the same exception if a manager passes a role that does not resolve to a position for the tenant.
   - Deleting a position with active profiles raises `foreign_key_violation` (SQLSTATE 23503). Admins must reassign profiles before deleting.
 - **Owner identity has three separate meanings.** `tenants.representative` is a free-text legal-document name (TEXT, not UUID), `positions.code='owner'` is the current runtime owner-bypass / JWT role source, and `tenants.owner_user_id UUID NOT NULL` is the canonical owner auth identity column. Do not wire `representative` into auth. Do not add a dual-source `has_permission()` branch unless ADR 0005 is superseded by a new owner-gated decision.
+- **Private Branch Realtime follows live assignment, not PBAC breadth.**
+  `can_read_branch_ops(branch_id)` requires an active profile and active target
+  branch in the caller's tenant. An active Owner may subscribe across active
+  tenant branches; every non-Owner may subscribe only to `profiles.branch_id`.
+  A branch-scoped or tenant-wide `staff_permissions` row must never widen this
+  transport audience. Supabase caches Realtime authorization for the connection,
+  so a profile or branch deactivation is enforced when the channel next
+  authorizes, receives a refreshed JWT, or reconnects; this function is not a
+  targeted socket-disconnect mechanism.
 
 ## Auth — Position vs Permission
 

@@ -10,8 +10,6 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
-SELECT plan(1);
-
 DO $$
 DECLARE
   v_template_missing INTEGER;
@@ -107,10 +105,9 @@ BEGIN
       v_tenant_wide_grants;
   END IF;
 
+  RAISE NOTICE
+    'TEST PASSED: branch_manager KDS permissions are branch-scoped and active';
 END;
 $$;
-
-SELECT ok(TRUE, 'branch_manager KDS permissions are branch-scoped and active');
-SELECT * FROM finish();
 
 ROLLBACK;

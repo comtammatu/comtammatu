@@ -9,6 +9,38 @@
 > checkout with `git status` and re-check production state for any migration or
 > runtime claim.
 
+## Branch Realtime Active-Scope Authorization (2026-07-16)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + workflow +
+orchestration; external skills = Supabase + Ponytail debt review; runtime tools
+= production catalog/aggregate reads, Supabase Local migration replay, SQL
+behavior tests, and full repository gates. Skipped = UI changes, broad PBAC
+redesign, production apply, and unrelated runtime-control work from PR #284.
+
+- **PM:** On the next channel authorization, refreshed JWT, or reconnect,
+  disabled staff and disabled branches must be denied private Branch operations
+  events. Active Owners may follow every active branch in the tenant; active
+  non-Owners may follow only their assigned active branch. This slice does not
+  claim targeted eviction of an already-authorized socket.
+- **BA:** `staff_permissions` grants authorize business actions but never widen
+  the private Branch Realtime topic. Anonymous callers remain denied and the
+  function execution grants stay explicit.
+- **Senior Dev:** Add one forward migration that replaces only
+  `can_read_branch_ops(bigint)`; do not edit the baseline, published migration
+  history, or copy the broader runtime-control migration from PR #284.
+- **QA/QC:** Lock the function definition and grants with a static test; exercise
+  Owner, own-branch, cross-branch, inactive-profile, inactive-branch, and
+  anonymous behavior in a rollback-only SQL test; replay the full active chain
+  before full repository verification.
+
+- [x] Add the focused forward migration and durable auth contract.
+- [x] Add static and executable SQL regression coverage, wired into CI; repair
+  the three dormant SQL tests exposed when the runner becomes blocking.
+- [x] Pass focused tests, migration replay, full gates, and T3 review.
+- [ ] Publish the replacement PR before closing superseded PR #284.
+
 ## Branch Hub Shell Slice From PR #284 (2026-07-15)
 
 Skill plan: repo rules = engineering + skills + UI + workflow + orchestration;
