@@ -27,6 +27,7 @@ import {
 import { messages } from "@lib/messages";
 import {
   SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
+  canManuallyLinkSepayPayment,
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
   isOpenSepayBankWebhookReview,
@@ -161,8 +162,16 @@ function reasonLabel(reason: SepayUnmatchedMoneyInReason): string {
 }
 
 function reasonDetail(tx: SepayBankTransaction): string {
-  if (tx.errorCode) return tx.errorCode;
-  if (tx.processingStatus === "failed") return tx.processingStatus;
+  if (tx.errorCode) {
+    const labels = copy.unmatchedMoneyInTable.errorCodeLabels as Record<
+      string,
+      string
+    >;
+    return labels[tx.errorCode] ?? copy.unmatchedMoneyInTable.technicalError;
+  }
+  if (tx.processingStatus === "failed") {
+    return copy.unmatchedMoneyInTable.technicalError;
+  }
   return optionalReferenceCode(tx);
 }
 
@@ -207,7 +216,7 @@ function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
         <span className="text-xs text-muted-foreground">{detail}</span>
       ) : null}
       {tx.transferType === "in" && state !== "matched" ? (
-        <span className="font-mono text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {reasonDetail(tx)}
         </span>
       ) : null}
@@ -321,7 +330,11 @@ function LinkPaymentCell({
   const table = copy.unmatchedMoneyInTable;
   const reason = classifySepayUnmatchedMoneyIn(tx);
 
-  if (!canLinkPayments || reason === "webhook_error") {
+  if (
+    !canLinkPayments ||
+    reason === "webhook_error" ||
+    !canManuallyLinkSepayPayment(tx)
+  ) {
     return (
       <span className="text-muted-foreground">{table.linkUnavailable}</span>
     );

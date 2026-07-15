@@ -463,6 +463,17 @@ export const finance = {
         missing_reference: "Thiếu mã",
         unmatched_reference: "Không khớp đơn",
       },
+      errorCodeLabels: {
+        missing_payment_code_needs_review: "Thiếu mã thanh toán",
+        order_not_found_needs_review: "Không tìm thấy đơn",
+        ambiguous_payment_code_needs_review: "Mã khớp nhiều đơn",
+        amount_mismatch_needs_review: "Số tiền không khớp",
+        payment_method_conflict_needs_review:
+          "Đơn đã thu bằng phương thức khác",
+        payment_state_conflict_needs_review: "Trạng thái thanh toán xung đột",
+        overpayment_needs_review: "Có dấu hiệu thu trùng",
+      },
+      technicalError: "Webhook không xử lý được",
       linkInputLabel: "Payment ID cần gắn",
       linkInputPlaceholder: "Payment ID",
       linkAction: "Gắn",

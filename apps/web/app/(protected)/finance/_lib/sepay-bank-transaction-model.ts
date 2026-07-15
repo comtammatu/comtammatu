@@ -105,6 +105,56 @@ export type SepayReconciliationState =
   | "needs_review"
   | "webhook_error";
 
+const SEPAY_RECOVERABLE_PAYMENT_REVIEW_CODES = [
+  "missing_payment_code_needs_review",
+  "order_not_found_needs_review",
+  "ambiguous_payment_code_needs_review",
+  "amount_mismatch_needs_review",
+] as const;
+
+const SEPAY_PAYMENT_CONFLICT_REVIEW_CODES = [
+  "payment_method_conflict_needs_review",
+  "payment_state_conflict_needs_review",
+  "overpayment_needs_review",
+] as const;
+
+function includesErrorCode(
+  values: readonly string[],
+  errorCode: string | null,
+): boolean {
+  return errorCode != null && values.some((value) => value === errorCode);
+}
+
+export function isSepayBusinessReviewCode(errorCode: string | null): boolean {
+  return (
+    includesErrorCode(SEPAY_RECOVERABLE_PAYMENT_REVIEW_CODES, errorCode) ||
+    includesErrorCode(SEPAY_PAYMENT_CONFLICT_REVIEW_CODES, errorCode)
+  );
+}
+
+export function canManuallyLinkSepayPayment(
+  transaction: Pick<
+    SepayBankTransaction,
+    | "errorCode"
+    | "expenseIds"
+    | "paymentId"
+    | "processingStatus"
+    | "transferType"
+  >,
+): boolean {
+  return (
+    transaction.transferType === "in" &&
+    transaction.processingStatus === "processed" &&
+    transaction.paymentId == null &&
+    transaction.expenseIds.length === 0 &&
+    (transaction.errorCode == null ||
+      includesErrorCode(
+        SEPAY_RECOVERABLE_PAYMENT_REVIEW_CODES,
+        transaction.errorCode,
+      ))
+  );
+}
+
 export const SEPAY_BANK_WEBHOOK_REVIEW_VALUES = [
   "reviewing",
   "resolved",
@@ -189,16 +239,13 @@ export function readSepayBankWebhookReview(
 export function classifySepayUnmatchedMoneyIn(
   transaction: Pick<
     SepayBankTransaction,
-    | "code"
-    | "content"
-    | "errorCode"
-    | "processingStatus"
-    | "referenceCode"
+    "code" | "content" | "errorCode" | "processingStatus" | "referenceCode"
   >,
 ): SepayUnmatchedMoneyInReason {
   if (
     transaction.processingStatus === "failed" ||
-    transaction.errorCode != null
+    (transaction.errorCode != null &&
+      !isSepayBusinessReviewCode(transaction.errorCode))
   ) {
     return "webhook_error";
   }
@@ -231,7 +278,8 @@ export function classifySepayReconciliationState(
   if (
     transaction.processingStatus === "failed" ||
     (transaction.errorCode != null &&
-      !isUnclassifiedMoneyOutStatus(transaction))
+      !isUnclassifiedMoneyOutStatus(transaction) &&
+      !isSepayBusinessReviewCode(transaction.errorCode))
   ) {
     return "webhook_error";
   }
