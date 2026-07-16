@@ -199,6 +199,11 @@ $$;
 COMMENT ON FUNCTION public.confirm_cash_payment(bigint, numeric) IS
   'Atomically completes cash payment while preserving an existing pending MoMo intent for provider settlement.';
 
+REVOKE ALL ON FUNCTION public.confirm_cash_payment(bigint, numeric)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.confirm_cash_payment(bigint, numeric)
+  TO authenticated, service_role;
+
 CREATE OR REPLACE FUNCTION public.cancel_pending_payment(
   p_payment_id bigint,
   p_tenant_id bigint,

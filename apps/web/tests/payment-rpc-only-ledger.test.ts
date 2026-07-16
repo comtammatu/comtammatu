@@ -201,6 +201,14 @@ test("cash cannot replace a pending MoMo intent", () => {
     /pending_momo_payment_requires_provider_resolution/,
   );
   assert.match(paymentMessages, /kiểm tra giao dịch MoMo/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.confirm_cash_payment\(bigint, numeric\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role;/,
+  );
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.confirm_cash_payment\(bigint, numeric\)[\s\S]*TO authenticated, service_role;/,
+  );
 });
 
 test("Owner bank review is atomic and cannot overwrite provider evidence", () => {

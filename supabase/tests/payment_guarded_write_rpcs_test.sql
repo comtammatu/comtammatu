@@ -490,6 +490,22 @@ $$;
 
 DO $$
 BEGIN
+  IF has_function_privilege(
+    'anon',
+    'public.confirm_cash_payment(bigint,numeric)',
+    'EXECUTE'
+  ) OR NOT has_function_privilege(
+    'authenticated',
+    'public.confirm_cash_payment(bigint,numeric)',
+    'EXECUTE'
+  ) OR NOT has_function_privilege(
+    'service_role',
+    'public.confirm_cash_payment(bigint,numeric)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'confirm_cash_payment ACL mismatch';
+  END IF;
+
   IF to_regprocedure(
     'public.create_payment(bigint,bigint,bigint,text,numeric,uuid,text,text)'
   ) IS NULL
