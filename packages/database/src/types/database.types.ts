@@ -9539,7 +9539,7 @@ export type Database = {
       create_expense_transfer_intent: {
         Args: {
           p_amount: number
-          p_branch_id: number | null
+          p_branch_id: number
           p_category: string
           p_expense_date: string
           p_note?: string
@@ -9605,19 +9605,6 @@ export type Database = {
         }
         Returns: Json
       }
-      create_remote_payment_intent: {
-        Args: {
-          p_amount: number
-          p_branch_id: number
-          p_created_by: string
-          p_method: string
-          p_order_id: number
-          p_provider_data: Json
-          p_provider_ref: string
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
       create_production_order: {
         Args: {
           p_branch_id: number
@@ -9672,6 +9659,19 @@ export type Database = {
           p_payment_id: number
           p_payout_method: string
           p_reason: string
+        }
+        Returns: Json
+      }
+      create_remote_payment_intent: {
+        Args: {
+          p_amount: number
+          p_branch_id: number
+          p_created_by: string
+          p_method: string
+          p_order_id: number
+          p_provider_data: Json
+          p_provider_ref: string
+          p_tenant_id: number
         }
         Returns: Json
       }
@@ -10070,7 +10070,7 @@ export type Database = {
           order_id: number
           order_number: string
           order_type: string
-          paid_at: string | null
+          paid_at: string
           paid_hour: number
           payment_method: string
           subtotal: number
@@ -11108,9 +11108,9 @@ export type Database = {
         Args: { p_expense_id: number; p_target_method: string }
         Returns: {
           expense_id: number
-          paid_at: string | null
+          paid_at: string
           payment_method: string
-          transfer_content: string | null
+          transfer_content: string
         }[]
       }
       transition_order_item_status: {

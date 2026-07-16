@@ -40,7 +40,47 @@ redesign, production apply, and unrelated runtime-control work from PR #284.
   the three dormant SQL tests exposed when the runner becomes blocking.
 - [x] Pass focused tests, migration replay, full gates, and T3 review.
 - [x] Publish replacement PR #298, then close PR #284 without merge as a
-  superseded merge unit.
+      superseded merge unit.
+
+## MoMo Finance Reporting Contract Closure (2026-07-16)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + database + workflow + orchestration;
+external skills = Supabase + Supabase Postgres best practices; runtime tools =
+Production catalog reads, fresh local replay, generated types, focused SQL and
+TypeScript tests, and full repository gates. Production remains read-only until
+the Owner applies the final forward migration.
+
+- **PM:** Restoring MoMo settlement must also restore truthful Finance method
+  breakdowns. Total collected and the cash/VietQR/MoMo split must not disagree.
+- **BA:** `payments.amount` remains the money source. `momo_revenue` is separate
+  in the daily view and three revenue RPCs; cashier `qr_revenue` remains the
+  existing combined VietQR + MoMo export bucket.
+- **Senior Dev:** Add one forward migration after the already-applied provider
+  constraint migration. Recreate only the materialized view, three revenue RPCs,
+  and cashier RPC body; preserve current scope checks and explicit ACLs. Keep
+  generated types pure and handle PostgreSQL input-nullability metadata limits
+  at the application boundary.
+- **QA/QC:** Prove cash 10 + VietQR 20 + MoMo 30 gives total 60 and exact method
+  splits in the view and all revenue RPCs, while cashier QR/MoMo is 50. Require
+  fresh replay, no `PUBLIC`/`anon` execute, typecheck, full gates, Preview
+  rehearsal, Production apply/postcheck, and a no-diff Production typegen before
+  PR #297 can leave Draft.
+
+- [x] Independently verify the seven Production migrations, their ledgers,
+      SePay/MoMo data invariants, triggers, constraints, ACLs, and advisor counts.
+- [x] Classify the advisor delta as intentional: five guarded authenticated
+      definers added and two prior warnings removed, net `+3 WARN`.
+- [x] Add the forward reporting migration, generated-type normalization, and
+      focused static/SQL regression coverage. Fresh replay and focused gates are
+      green.
+- [x] Apply the corrected migration to the approved PR #297 Preview and prove
+      catalog, `search_path`, functional totals, ACLs, indexes, and advisor
+      stability. The exact-source replay passed after review hardening; the
+      rollback acceptance left no business data behind.
+- [ ] Apply the same migration to Production, rerun `db:types` with no diff,
+      complete full gates, then change PR #297 from Draft and merge.
 
 ## SePay Completed-Payment Conflict Guard (2026-07-15)
 

@@ -261,6 +261,10 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
   assert.match(actions, /transfer_content/);
   assert.match(
     actions,
+    /targetMethod === "transfer" && !updated\.transfer_content[\s\S]*Không thể tạo nội dung chuyển khoản/,
+  );
+  assert.match(
+    actions,
     /payment_method\.eq\.unpaid,payment_method\.eq\.transfer,transfer_content\.not\.is\.null/,
   );
   assert.match(expenseClient, /copy\.transferInstruction\.copy/);
@@ -276,7 +280,15 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
   assert.match(databaseTypes, /create_expense_transfer_intent:/);
   assert.match(
     databaseTypes,
-    /transition_expense_payment:\s*\{[\s\S]*?Args: \{ p_expense_id: number; p_target_method: string \}[\s\S]*?Returns: \{[\s\S]*?expense_id: number[\s\S]*?paid_at: string \| null[\s\S]*?payment_method: string[\s\S]*?transfer_content: string \| null[\s\S]*?\}\[\][\s\S]*?\}/,
+    /transition_expense_payment:\s*\{[\s\S]*?Args: \{ p_expense_id: number; p_target_method: string \}/,
+  );
+  assert.match(
+    expensePaymentStateMigration,
+    /p_target_method = 'unpaid'[\s\S]*v_expense\.paid_at IS NULL[\s\S]*v_expense\.transfer_content IS NULL/,
+  );
+  assert.match(
+    expensePaymentStateMigration,
+    /paid_at = CASE[\s\S]*ELSE NULL[\s\S]*transfer_content = CASE[\s\S]*ELSE NULL/,
   );
   assert.match(databaseTypes, /cancel_expense:/);
   assert.match(databaseTypes, /match_sepay_transfer_intent_event:/);

@@ -145,7 +145,8 @@ export async function createExpense(
     const { data, error } = await supabase.rpc(
       "create_expense_transfer_intent",
       {
-        p_branch_id: branchId,
+        // PostgreSQL accepts NULL here; generated RPC args cannot encode input nullability.
+        p_branch_id: branchId as number,
         p_expense_date: parsed.data.expenseDate,
         p_category: parsed.data.category,
         p_amount: parsed.data.amount,
