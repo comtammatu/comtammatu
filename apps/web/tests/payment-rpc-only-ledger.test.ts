@@ -10,6 +10,9 @@ const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 const migration = read(
   "supabase/migrations/20260715170000_add_guarded_payment_write_rpcs.sql",
 );
+const providerConstraintMigration = read(
+  "supabase/migrations/20260716113000_restore_momo_payment_provider_contract.sql",
+);
 const paymentActions = read(
   "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
 );
@@ -145,6 +148,23 @@ test("payment intent migration preserves the production RPC during DB-first roll
     databaseTypes,
     /create_remote_payment_intent:\s*\{\s*Args:\s*\{[^}]*p_provider_data: Json[^}]*\}/,
   );
+});
+
+test("incremental production schema admits MoMo payment evidence", () => {
+  assert.match(
+    providerConstraintMigration,
+    /ADD CONSTRAINT payments_method_check\s+CHECK \(method = ANY \(ARRAY\[\s*'cash'::text,\s*'vietqr'::text,\s*'momo'::text\s*\]\)\)\s+NOT VALID;[\s\S]*?VALIDATE CONSTRAINT payments_method_check/,
+  );
+  assert.match(
+    providerConstraintMigration,
+    /ADD CONSTRAINT webhook_events_provider_check\s+CHECK \(provider = ANY \(ARRAY\[\s*'momo'::text,\s*'vietqr'::text,\s*'vnpay'::text,\s*'sepay'::text\s*\]\)\)\s+NOT VALID;[\s\S]*?VALIDATE CONSTRAINT webhook_events_provider_check/,
+  );
+  assert.equal(providerConstraintMigration.match(/NOT VALID/g)?.length, 2);
+  assert.equal(
+    providerConstraintMigration.match(/VALIDATE CONSTRAINT/g)?.length,
+    2,
+  );
+  assert.doesNotMatch(providerConstraintMigration, /self_order_payment_requests/);
 });
 
 test("DB-first payment compatibility permits only pending provider metadata fill", () => {
