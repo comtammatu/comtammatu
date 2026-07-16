@@ -1,5 +1,7 @@
-export const VIETQR_BANK_APP_CATALOG_URL =
-  "https://api.vietqr.io/v2/android-app-deeplinks";
+export const VIETQR_BANK_APP_CATALOG_URLS = {
+  android: "https://api.vietqr.io/v2/android-app-deeplinks",
+  ios: "https://api.vietqr.io/v2/ios-app-deeplinks",
+} as const;
 
 export interface VietQrBankApp {
   id: string;
@@ -8,13 +10,35 @@ export interface VietQrBankApp {
 }
 
 const APP_ID_PATTERN = /^[a-z0-9_-]{1,32}$/i;
-const BANK_APP_LOGO_HOST = "play-lh.googleusercontent.com";
+const BANK_APP_LOGO_HOSTS = new Set([
+  "play-lh.googleusercontent.com",
+  "is1-ssl.mzstatic.com",
+  "is2-ssl.mzstatic.com",
+  "is3-ssl.mzstatic.com",
+  "is4-ssl.mzstatic.com",
+  "is5-ssl.mzstatic.com",
+]);
+
+export function getVietQrBankAppCatalogUrl({
+  userAgent,
+  platform = "",
+  maxTouchPoints = 0,
+}: {
+  userAgent: string;
+  platform?: string;
+  maxTouchPoints?: number;
+}): string {
+  const isIos =
+    /iP(?:hone|ad|od)/i.test(userAgent) ||
+    (platform === "MacIntel" && maxTouchPoints > 1);
+  return VIETQR_BANK_APP_CATALOG_URLS[isIos ? "ios" : "android"];
+}
 
 function parseBankAppLogoUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname === BANK_APP_LOGO_HOST
+    return url.protocol === "https:" && BANK_APP_LOGO_HOSTS.has(url.hostname)
       ? url.toString()
       : null;
   } catch {

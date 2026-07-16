@@ -34,8 +34,8 @@ import { AppSection } from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
 import {
   buildVietQrBankAppUrl,
+  getVietQrBankAppCatalogUrl,
   parseVietQrBankApps,
-  VIETQR_BANK_APP_CATALOG_URL,
   type VietQrBankApp,
 } from "@lib/self-order/bank-app-link";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
@@ -112,7 +112,7 @@ function BankAppLauncher({
     const controller = new AbortController();
     setLoadFailed(false);
 
-    void fetch(VIETQR_BANK_APP_CATALOG_URL, {
+    void fetch(getVietQrBankAppCatalogUrl(navigator), {
       cache: "force-cache",
       signal: controller.signal,
     })

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   buildVietQrBankAppUrl,
+  getVietQrBankAppCatalogUrl,
   parseVietQrBankApps,
 } from "../lib/self-order/bank-app-link";
 
@@ -50,7 +51,7 @@ test("public QR surfaces use the shared web QR renderer", () => {
   assert.match(selfOrderPayment, /BankAppLauncher/);
   assert.match(
     selfOrderPayment,
-    /VIETQR_BANK_APP_CATALOG_URL[\s\S]*parseVietQrBankApps/,
+    /getVietQrBankAppCatalogUrl[\s\S]*parseVietQrBankApps/,
   );
   assert.match(selfOrderPayment, /apps\.map\(\(app\)/);
   assert.doesNotMatch(selfOrderPayment, /AUTOFILL_BANK_APPS/);
@@ -73,6 +74,11 @@ test("bank app catalog keeps safe unique apps for testing", () => {
           appName: "Vietcombank",
           appLogo: "https://example.com/untrusted-logo",
         },
+        {
+          appId: "icb",
+          appName: "VietinBank iPay",
+          appLogo: "https://is4-ssl.mzstatic.com/icb-logo",
+        },
       ],
     }),
     [
@@ -82,7 +88,31 @@ test("bank app catalog keeps safe unique apps for testing", () => {
         logoUrl: "https://play-lh.googleusercontent.com/mb-logo",
       },
       { id: "vcb", name: "Vietcombank", logoUrl: null },
+      {
+        id: "icb",
+        name: "VietinBank iPay",
+        logoUrl: "https://is4-ssl.mzstatic.com/icb-logo",
+      },
     ],
+  );
+});
+
+test("bank app catalog follows the customer device platform", () => {
+  assert.equal(
+    getVietQrBankAppCatalogUrl({ userAgent: "Mozilla/5.0 (iPhone)" }),
+    "https://api.vietqr.io/v2/ios-app-deeplinks",
+  );
+  assert.equal(
+    getVietQrBankAppCatalogUrl({ userAgent: "Mozilla/5.0 (Linux; Android 16)" }),
+    "https://api.vietqr.io/v2/android-app-deeplinks",
+  );
+  assert.equal(
+    getVietQrBankAppCatalogUrl({
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)",
+      platform: "MacIntel",
+      maxTouchPoints: 5,
+    }),
+    "https://api.vietqr.io/v2/ios-app-deeplinks",
   );
 });
 
@@ -93,6 +123,7 @@ test("bank app catalog hosts remain allowed by CSP", () => {
     config,
     /img-src[^\n]+https:\/\/play-lh\.googleusercontent\.com/,
   );
+  assert.match(config, /img-src[^\n]+https:\/\/\*\.mzstatic\.com/);
 });
 
 test("MB Bank link receives the exact VietQR payload", () => {
