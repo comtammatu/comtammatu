@@ -26,6 +26,7 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { Search as IconSearch } from "lucide-react";
+import { FORM_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState, AppToolbar } from "../surface";
 import { TableEmptyStateRow } from "../table-empty-state-row";
 import { DataTablePagination } from "./data-table-pagination";
@@ -44,7 +45,6 @@ export interface DataTableColumn<T> {
    * mutations keyed by position). Render-only consumers ignore it.
    */
   render: (row: T, index: number) => ReactNode;
-  hideOnMobile?: boolean;
 }
 
 export interface DataTableFooterCell {
@@ -272,7 +272,11 @@ export function DataTable<T>({
           <TableRow>
             {columns.map((col) => (
               <TableHead key={col.key} className={col.className}>
-                {col.header}
+                {col.header === "" ? (
+                  <span className="sr-only">{FORM_VI.action}</span>
+                ) : (
+                  col.header
+                )}
               </TableHead>
             ))}
           </TableRow>

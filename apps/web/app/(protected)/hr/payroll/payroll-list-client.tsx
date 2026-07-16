@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatDecimal, formatVND } from "@comtammatu/shared/format";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Input } from "@comtammatu/ui/components/input";
@@ -48,6 +49,14 @@ import {
 
 const copy = messages.hr.payroll.live;
 const ALL_BRANCHES = "all";
+const ALL_SALARY_STATUSES = "all";
+const CALCULABLE_SALARY_STATUS = "calculable";
+const MISSING_SALARY_STATUS = "missing";
+
+type SalaryStatusFilter =
+  | typeof ALL_SALARY_STATUSES
+  | typeof CALCULABLE_SALARY_STATUS
+  | typeof MISSING_SALARY_STATUS;
 
 const adjustmentSchema = z.object({
   kind: z.enum([
@@ -86,6 +95,7 @@ function adjustmentLabel(adjustment: PayrollAdjustment): string {
 }
 
 function adjustmentSummary(entry: PayrollPreviewEntry): string {
+  if (!canCalculate(entry)) return "—";
   const finalized = entry.finalized;
   const additions =
     (finalized?.bonus ?? entry.bonus) +
@@ -128,6 +138,18 @@ function netValue(entry: PayrollPreviewEntry): number {
   return entry.finalized?.netSalary ?? entry.expectedNet;
 }
 
+function canCalculate(entry: PayrollPreviewEntry): boolean {
+  return entry.finalized != null || entry.salarySource !== "missing";
+}
+
+function decimalCell(value: number): string {
+  return formatDecimal(value, 1);
+}
+
+function moneyCell(entry: PayrollPreviewEntry, value: number): string {
+  return canCalculate(entry) ? formatVND(value) : "—";
+}
+
 export function PayrollListClient({
   preview,
   branches,
@@ -136,10 +158,13 @@ export function PayrollListClient({
 }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState(query);
-  const [standardDays, setStandardDays] = useState(String(preview.standardDays));
-  const [selectedEntry, setSelectedEntry] = useState<PayrollPreviewEntry | null>(
-    null,
+  const [salaryStatus, setSalaryStatus] =
+    useState<SalaryStatusFilter>(ALL_SALARY_STATUSES);
+  const [standardDays, setStandardDays] = useState(
+    String(preview.standardDays),
   );
+  const [selectedEntry, setSelectedEntry] =
+    useState<PayrollPreviewEntry | null>(null);
   const [editingAdjustment, setEditingAdjustment] =
     useState<PayrollAdjustment | null>(null);
   const [isSnapshotting, startSnapshot] = useTransition();
@@ -152,16 +177,35 @@ export function PayrollListClient({
 
   const rows = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase("vi-VN");
-    if (!normalized) return preview.entries;
-    return preview.entries.filter((entry) =>
-      [entry.employeeName, entry.employeeCode, entry.branchName, entry.positionLabel]
-        .filter(Boolean)
-        .some((value) => value!.toLocaleLowerCase("vi-VN").includes(normalized)),
-    );
-  }, [preview.entries, search]);
+    return preview.entries.filter((entry) => {
+      const matchesStatus =
+        salaryStatus === ALL_SALARY_STATUSES ||
+        (salaryStatus === CALCULABLE_SALARY_STATUS && canCalculate(entry)) ||
+        (salaryStatus === MISSING_SALARY_STATUS && !canCalculate(entry));
+      const matchesSearch =
+        !normalized ||
+        [
+          entry.employeeName,
+          entry.employeeCode,
+          entry.branchName,
+          entry.positionLabel,
+        ]
+          .filter(Boolean)
+          .some((value) =>
+            value!.toLocaleLowerCase("vi-VN").includes(normalized),
+          );
+      return matchesStatus && matchesSearch;
+    });
+  }, [preview.entries, salaryStatus, search]);
 
-  const totalNet = rows.reduce((total, entry) => total + netValue(entry), 0);
-  const isLocked = preview.snapshot?.status === "approved" || preview.snapshot?.status === "paid";
+  const calculableRows = rows.filter(canCalculate);
+  const totalNet = calculableRows.reduce(
+    (total, entry) => total + netValue(entry),
+    0,
+  );
+  const isLocked =
+    preview.snapshot?.status === "approved" ||
+    preview.snapshot?.status === "paid";
   const netHeader = isLocked ? copy.table.finalizedNet : copy.table.net;
 
   const adjustmentDefaults: AdjustmentFormValues = {
@@ -173,19 +217,23 @@ export function PayrollListClient({
   function replaceFilters(nextValues: {
     month?: string;
     branchId?: number | null;
-    query?: string;
     standardDays?: string;
   }) {
     const params = new URLSearchParams();
-    params.set("month", nextValues.month ?? monthValue(preview.year, preview.month));
+    params.set(
+      "month",
+      nextValues.month ?? monthValue(preview.year, preview.month),
+    );
     params.set(
       "standardDays",
       nextValues.standardDays ?? String(preview.standardDays),
     );
     const branchId =
-      nextValues.branchId === undefined ? selectedBranchId : nextValues.branchId;
+      nextValues.branchId === undefined
+        ? selectedBranchId
+        : nextValues.branchId;
     if (branchId != null) params.set("branch", String(branchId));
-    const nextQuery = nextValues.query ?? query;
+    const nextQuery = search;
     if (nextQuery.trim()) params.set("q", nextQuery.trim());
     router.replace(`/hr/payroll?${params.toString()}`);
   }
@@ -232,7 +280,9 @@ export function PayrollListClient({
       variant: "destructive",
     });
     if (!approved) return;
-    const result = await removePayrollAdjustment({ adjustmentId: adjustment.id });
+    const result = await removePayrollAdjustment({
+      adjustmentId: adjustment.id,
+    });
     if (result.success) {
       toast.success(copy.adjustmentDeleted);
       setEditingAdjustment(null);
@@ -281,10 +331,25 @@ export function PayrollListClient({
       ),
     },
     {
-      key: "work",
-      header: copy.table.work,
-      className: "min-w-44 font-mono text-right text-sm tabular-nums",
-      render: workSummary,
+      key: "working-days",
+      header: copy.table.workingDays,
+      className: "w-20 text-right font-mono text-sm tabular-nums",
+      render: (entry) =>
+        decimalCell(entry.finalized?.workingDays ?? entry.workingDays),
+    },
+    {
+      key: "paid-leave-days",
+      header: copy.table.paidLeaveDays,
+      className: "w-20 text-right font-mono text-sm tabular-nums",
+      render: (entry) =>
+        decimalCell(entry.finalized?.paidLeaveDays ?? entry.paidLeaveDays),
+    },
+    {
+      key: "unpaid-leave-days",
+      header: copy.table.unpaidLeaveDays,
+      className: "min-w-24 text-right font-mono text-sm tabular-nums",
+      render: (entry) =>
+        decimalCell(entry.finalized?.unpaidLeaveDays ?? entry.unpaidLeaveDays),
     },
     {
       key: "adjustments",
@@ -295,33 +360,72 @@ export function PayrollListClient({
     {
       key: "gross",
       header: copy.table.gross,
-      className: "text-right font-mono text-sm tabular-nums",
-      render: (entry) => formatVND(grossValue(entry)),
+      className: "min-w-32 text-right font-mono text-sm tabular-nums",
+      render: (entry) => moneyCell(entry, grossValue(entry)),
     },
     {
       key: "deductions",
       header: copy.table.deductions,
-      className: "text-right font-mono text-sm tabular-nums",
-      render: (entry) => formatVND(deductionValue(entry)),
+      className: "min-w-32 text-right font-mono text-sm tabular-nums",
+      render: (entry) => moneyCell(entry, deductionValue(entry)),
     },
     {
       key: "net",
       header: netHeader,
-      className: "text-right font-mono text-sm font-semibold tabular-nums",
-      render: (entry) => formatVND(netValue(entry)),
+      className:
+        "min-w-32 text-right font-mono text-sm font-semibold tabular-nums",
+      render: (entry) => moneyCell(entry, netValue(entry)),
     },
     {
-      key: "actions",
-      header: copy.table.actions,
-      className: "w-24 text-right",
-      render: (entry) =>
-        !isLocked ? (
-          <Button variant="ghost" size="sm" onClick={() => openAdjustment(entry)}>
-            <IconPencil data-icon="inline-start" />
-            {copy.adjustment}
-          </Button>
-        ) : null,
+      key: "status",
+      header: copy.table.status,
+      className: "min-w-32",
+      render: (entry) => (
+        <Badge
+          variant={
+            !canCalculate(entry)
+              ? "destructive"
+              : isLocked
+                ? "secondary"
+                : "success"
+          }
+        >
+          {!canCalculate(entry)
+            ? copy.table.missingSalary
+            : isLocked
+              ? copy.table.finalized
+              : copy.table.calculable}
+        </Badge>
+      ),
     },
+    ...(!isLocked
+      ? [
+          {
+            key: "actions",
+            header: copy.table.actions,
+            className: "w-32 text-right",
+            render: (entry: PayrollPreviewEntry) =>
+              canCalculate(entry) ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openAdjustment(entry)}
+                >
+                  <IconPencil data-icon="inline-start" />
+                  {copy.adjustment}
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push("/hr")}
+                >
+                  {copy.missingSalaryAction}
+                </Button>
+              ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -333,7 +437,6 @@ export function PayrollListClient({
             onChange={(event) => {
               const value = event.target.value;
               setSearch(value);
-              replaceFilters({ query: value });
             }}
             placeholder={copy.search}
             aria-label={copy.search}
@@ -344,11 +447,17 @@ export function PayrollListClient({
             <Input
               type="month"
               value={monthValue(preview.year, preview.month)}
-              onChange={(event) => replaceFilters({ month: event.target.value })}
+              onChange={(event) =>
+                replaceFilters({ month: event.target.value })
+              }
               aria-label={copy.month}
             />
             <Select
-              value={selectedBranchId != null ? String(selectedBranchId) : ALL_BRANCHES}
+              value={
+                selectedBranchId != null
+                  ? String(selectedBranchId)
+                  : ALL_BRANCHES
+              }
               onValueChange={(value) =>
                 replaceFilters({
                   branchId: value === ALL_BRANCHES ? null : Number(value),
@@ -365,6 +474,30 @@ export function PayrollListClient({
                     {branch.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={salaryStatus}
+              onValueChange={(value) =>
+                setSalaryStatus(value as SalaryStatusFilter)
+              }
+            >
+              <SelectTrigger
+                className="min-w-40"
+                aria-label={copy.salaryStatus}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_SALARY_STATUSES}>
+                  {copy.salaryStatusAll}
+                </SelectItem>
+                <SelectItem value={CALCULABLE_SALARY_STATUS}>
+                  {copy.salaryStatusCalculable}
+                </SelectItem>
+                <SelectItem value={MISSING_SALARY_STATUS}>
+                  {copy.salaryStatusMissing}
+                </SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -385,11 +518,6 @@ export function PayrollListClient({
           <Button
             onClick={() => void confirmSnapshot()}
             disabled={!preview.canSnapshot || isSnapshotting}
-            title={
-              selectedBranchId != null
-                ? copy.snapshotAllBranchesRequired
-                : undefined
-            }
           >
             {isSnapshotting ? copy.snapshotting : copy.snapshot}
           </Button>
@@ -404,8 +532,12 @@ export function PayrollListClient({
             preview.missingSalaryEmployeeIds.length,
           )}
         >
-          <Button variant="outline" size="sm" onClick={() => router.push("/hr")}>
-            {copy.missingSalaryAction}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSalaryStatus(MISSING_SALARY_STATUS)}
+          >
+            {copy.missingSalaryListAction}
           </Button>
         </AppSection>
       ) : null}
@@ -428,63 +560,104 @@ export function PayrollListClient({
           data={rows}
           getRowKey={(entry) => entry.employeeId}
           emptyTitle={copy.table.empty}
-          desktopFooterRows={[
-            {
-              key: "total",
-              cells: [
-                {
-                  key: "label",
-                  content: copy.table.total(rows.length),
-                  colSpan: 5,
-                  className: "font-medium",
-                },
-                {
-                  key: "net",
-                  content: formatVND(totalNet),
-                  className: "text-right font-mono font-semibold tabular-nums",
-                },
-                { key: "actions", content: "" },
-              ],
-            },
-          ]}
+          pageSize={25}
+          desktopFooterRows={
+            calculableRows.length > 0
+              ? [
+                  {
+                    key: "total",
+                    cells: [
+                      {
+                        key: "label",
+                        content: copy.table.total(calculableRows.length),
+                        colSpan: 7,
+                        className: "font-medium",
+                      },
+                      {
+                        key: "net",
+                        content: formatVND(totalNet),
+                        className:
+                          "text-right font-mono font-semibold tabular-nums",
+                      },
+                      { key: "status", content: "" },
+                      ...(!isLocked ? [{ key: "actions", content: "" }] : []),
+                    ],
+                  },
+                ]
+              : undefined
+          }
           mobileFooter={
-            <Item variant="muted">
-              <ItemContent>
-                <ItemTitle>{copy.table.total(rows.length)}</ItemTitle>
-              </ItemContent>
-              <span className="font-mono font-semibold tabular-nums">
-                {formatVND(totalNet)}
-              </span>
-            </Item>
+            calculableRows.length > 0 ? (
+              <Item variant="muted">
+                <ItemContent>
+                  <ItemTitle>
+                    {copy.table.total(calculableRows.length)}
+                  </ItemTitle>
+                </ItemContent>
+                <span className="font-mono font-semibold tabular-nums">
+                  {formatVND(totalNet)}
+                </span>
+              </Item>
+            ) : null
           }
           mobileCardRender={(entry) => (
             <Item variant="outline">
               <ItemContent>
                 <ItemTitle>{entry.employeeName}</ItemTitle>
+                <ItemDescription>{workSummary(entry)}</ItemDescription>
                 <ItemDescription>
-                  {workSummary(entry)}
+                  {copy.table.adjustments}: {adjustmentSummary(entry)}
                 </ItemDescription>
                 <ItemDescription>
-                  {copy.mobile.deductions}: {formatVND(deductionValue(entry))}
+                  {copy.table.gross}: {moneyCell(entry, grossValue(entry))}
+                </ItemDescription>
+                <ItemDescription>
+                  {copy.mobile.deductions}:{" "}
+                  {moneyCell(entry, deductionValue(entry))}
                 </ItemDescription>
               </ItemContent>
               <ItemActions className="items-end gap-2">
                 {!isLocked ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openAdjustment(entry)}
-                  >
-                    <IconPencil data-icon="inline-start" />
-                    {copy.adjustment}
-                  </Button>
+                  canCalculate(entry) ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openAdjustment(entry)}
+                    >
+                      <IconPencil data-icon="inline-start" />
+                      {copy.adjustment}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push("/hr")}
+                    >
+                      {copy.missingSalaryAction}
+                    </Button>
+                  )
                 ) : null}
                 <span className="flex flex-col items-end gap-1">
+                  <Badge
+                    variant={
+                      !canCalculate(entry)
+                        ? "destructive"
+                        : isLocked
+                          ? "secondary"
+                          : "success"
+                    }
+                  >
+                    {!canCalculate(entry)
+                      ? copy.table.missingSalary
+                      : isLocked
+                        ? copy.table.finalized
+                        : copy.table.calculable}
+                  </Badge>
                   <span className="text-2xs text-muted-foreground">
                     {netHeader}
                   </span>
                   <span className="font-mono text-sm font-semibold tabular-nums">
-                    {formatVND(netValue(entry))}
+                    {moneyCell(entry, netValue(entry))}
                   </span>
                 </span>
               </ItemActions>
@@ -522,7 +695,10 @@ export function PayrollListClient({
                 label={copy.adjustmentFields.kind}
                 options={(
                   Object.keys(copy.adjustmentKinds) as PayrollAdjustmentKind[]
-                ).map((kind) => ({ value: kind, label: copy.adjustmentKinds[kind] }))}
+                ).map((kind) => ({
+                  value: kind,
+                  label: copy.adjustmentKinds[kind],
+                }))}
                 required
               />
               <MoneyVndField

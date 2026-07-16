@@ -66,9 +66,7 @@ interface PayrollContext {
   claims: { tenant_id: number };
 }
 
-export type PayrollAdjustmentKind = z.infer<
-  typeof payrollAdjustmentKindSchema
->;
+export type PayrollAdjustmentKind = z.infer<typeof payrollAdjustmentKindSchema>;
 
 export interface PayrollAdjustment {
   id: number;
@@ -156,6 +154,34 @@ function numberValue(value: number | null | undefined): number {
   return Number(value ?? 0);
 }
 
+function comparePayrollPreviewEntries(
+  left: PayrollPreviewEntry,
+  right: PayrollPreviewEntry,
+): number {
+  const sourceOrder =
+    Number(left.salarySource === "missing") -
+    Number(right.salarySource === "missing");
+  if (sourceOrder !== 0) return sourceOrder;
+
+  const branchOrder = (left.branchName ?? "").localeCompare(
+    right.branchName ?? "",
+    "vi-VN",
+  );
+  if (branchOrder !== 0) return branchOrder;
+
+  const employeeOrder = left.employeeName.localeCompare(
+    right.employeeName,
+    "vi-VN",
+  );
+  if (employeeOrder !== 0) return employeeOrder;
+
+  const codeOrder = (left.employeeCode ?? "").localeCompare(
+    right.employeeCode ?? "",
+    "vi-VN",
+  );
+  return codeOrder !== 0 ? codeOrder : left.employeeId - right.employeeId;
+}
+
 function emptyAdjustmentTotals() {
   return {
     taxableAllowances: 0,
@@ -171,7 +197,10 @@ function mapPayrollRpcError(
   fallback: string,
 ): string {
   const message = error.message?.toLowerCase() ?? "";
-  if (error.code === "42501" || message.includes("missing payroll permission")) {
+  if (
+    error.code === "42501" ||
+    message.includes("missing payroll permission")
+  ) {
     return payrollActionCopy.forbidden;
   }
   if (error.code === "P0002" || message.includes("not found")) {
@@ -216,78 +245,95 @@ async function buildPayrollPreview(
       "[hr/payroll-actions:buildPayrollPreview] employees query failed",
       employeesError.code,
     );
-    return { success: false, error: payrollActionCopy.calculate.employeesLoadFailed };
+    return {
+      success: false,
+      error: payrollActionCopy.calculate.employeesLoadFailed,
+    };
   }
 
   const employeeRows = employees ?? [];
   const employeeIds = employeeRows.map((employee) => employee.id);
-  const [contractsResult, attendanceResult, leaveResult, adjustmentsResult, periodResult] =
-    await Promise.all([
-      supabase
-        .from("employment_contracts")
-        .select(
-          "employee_id, gross_salary, insurance_base_salary, start_date, end_date",
-        )
+  const [
+    contractsResult,
+    attendanceResult,
+    leaveResult,
+    adjustmentsResult,
+    periodResult,
+  ] = await Promise.all([
+    supabase
+      .from("employment_contracts")
+      .select(
+        "employee_id, gross_salary, insurance_base_salary, start_date, end_date",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "active")
+      .in("employee_id", employeeIds)
+      .lte("start_date", endDate)
+      .or(`end_date.is.null,end_date.gte.${startDate}`),
+    (() => {
+      let query = supabase
+        .from("attendance_records")
+        .select("employee_id, date, check_out")
         .eq("tenant_id", claims.tenant_id)
-        .eq("status", "active")
         .in("employee_id", employeeIds)
-        .lte("start_date", endDate)
-        .or(`end_date.is.null,end_date.gte.${startDate}`),
-      (() => {
-        let query = supabase
-          .from("attendance_records")
-          .select("employee_id, date, check_out")
-          .eq("tenant_id", claims.tenant_id)
-          .in("employee_id", employeeIds)
-          .gte("date", startDate)
-          .lte("date", endDate);
-        if (input.branchId != null) query = query.eq("branch_id", input.branchId);
-        return query;
-      })(),
-      supabase
-        .from("leave_requests")
-        .select("employee_id, start_date, end_date, leave_type")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("status", "approved")
-        .in("employee_id", employeeIds)
-        .lte("start_date", endDate)
-        .gte("end_date", `${input.year}-01-01`),
-      supabase
-        .from("payroll_adjustments")
-        .select("id, employee_id, kind, amount, note")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("effective_month", startDate)
-        .in("employee_id", employeeIds)
-        .order("id"),
-      supabase
-        .from("payroll_periods")
-        .select("id, status, approved_at, paid_at")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("period_year", input.year)
-        .eq("period_month", input.month)
-        .maybeSingle(),
-    ]);
+        .gte("date", startDate)
+        .lte("date", endDate);
+      if (input.branchId != null) query = query.eq("branch_id", input.branchId);
+      return query;
+    })(),
+    supabase
+      .from("leave_requests")
+      .select("employee_id, start_date, end_date, leave_type")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "approved")
+      .in("employee_id", employeeIds)
+      .lte("start_date", endDate)
+      .gte("end_date", `${input.year}-01-01`),
+    supabase
+      .from("payroll_adjustments")
+      .select("id, employee_id, kind, amount, note")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("effective_month", startDate)
+      .in("employee_id", employeeIds)
+      .order("id"),
+    supabase
+      .from("payroll_periods")
+      .select("id, status, approved_at, paid_at")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("period_year", input.year)
+      .eq("period_month", input.month)
+      .maybeSingle(),
+  ]);
 
   if (contractsResult.error) {
     console.error(
       "[hr/payroll-actions:buildPayrollPreview] contracts query failed",
       contractsResult.error.code,
     );
-    return { success: false, error: payrollActionCopy.calculate.contractsLoadFailed };
+    return {
+      success: false,
+      error: payrollActionCopy.calculate.contractsLoadFailed,
+    };
   }
   if (attendanceResult.error) {
     console.error(
       "[hr/payroll-actions:buildPayrollPreview] attendance query failed",
       attendanceResult.error.code,
     );
-    return { success: false, error: payrollActionCopy.calculate.attendanceLoadFailed };
+    return {
+      success: false,
+      error: payrollActionCopy.calculate.attendanceLoadFailed,
+    };
   }
   if (leaveResult.error) {
     console.error(
       "[hr/payroll-actions:buildPayrollPreview] leave query failed",
       leaveResult.error.code,
     );
-    return { success: false, error: payrollActionCopy.calculate.leaveLoadFailed };
+    return {
+      success: false,
+      error: payrollActionCopy.calculate.leaveLoadFailed,
+    };
   }
   if (adjustmentsResult.error) {
     console.error(
@@ -312,16 +358,18 @@ async function buildPayrollPreview(
         paidAt: periodResult.data.paid_at,
       }
     : null;
-  const snapshotLocked = snapshot?.status === "approved" || snapshot?.status === "paid";
+  const snapshotLocked =
+    snapshot?.status === "approved" || snapshot?.status === "paid";
   const finalizedByEmployee = new Map<number, PayrollFinalizedEntry>();
   if (snapshotLocked && snapshot) {
-    const { data: finalizedEntries, error: finalizedEntriesError } = await supabase
-      .from("payroll_entries")
-      .select(
-        "employee_id, working_days, paid_leave_days, unpaid_leave_days, payable_days, allowances, tax_exempt_allowances, bonus, total_insurance_employee, pit_tax, advance_deduction, other_deductions, gross_total, net_salary",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("payroll_period_id", snapshot.id);
+    const { data: finalizedEntries, error: finalizedEntriesError } =
+      await supabase
+        .from("payroll_entries")
+        .select(
+          "employee_id, working_days, paid_leave_days, unpaid_leave_days, payable_days, allowances, tax_exempt_allowances, bonus, total_insurance_employee, pit_tax, advance_deduction, other_deductions, gross_total, net_salary",
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("payroll_period_id", snapshot.id);
     if (finalizedEntriesError) {
       console.error(
         "[hr/payroll-actions:buildPayrollPreview] finalized entries query failed",
@@ -376,7 +424,11 @@ async function buildPayrollPreview(
   }));
   const leaveByEmployee = new Map<
     number,
-    { annualLeaveDays: number; unpaidLeaveDays: number; annualLeaves: LeaveRange[] }
+    {
+      annualLeaveDays: number;
+      unpaidLeaveDays: number;
+      annualLeaves: LeaveRange[];
+    }
   >();
   for (const leave of leaveRanges) {
     const current = leaveByEmployee.get(leave.employeeId) ?? {
@@ -415,114 +467,123 @@ async function buildPayrollPreview(
     ? employeeRows.filter((employee) => finalizedByEmployee.has(employee.id))
     : employeeRows.filter((employee) => employee.is_active);
 
-  const entries = employeesForPreview.map((employee) => {
-    const contract = contractByEmployee.get(employee.id);
-    const monthlySalary = numberValue(contract?.gross_salary ?? employee.base_salary);
-    const salarySource = contract
-      ? "contract"
-      : monthlySalary > 0
-        ? "employee"
-        : "missing";
-    const insuranceBaseSalary = numberValue(
-      contract?.insurance_base_salary ?? employee.insurance_base_salary,
-    );
-    const workdays = workdaysByEmployee.get(employee.id) ?? 0;
-    const leave = leaveByEmployee.get(employee.id) ?? {
-      annualLeaveDays: 0,
-      unpaidLeaveDays: 0,
-      annualLeaves: [],
-    };
-    const annualSplit = splitAnnualLeaveByQuota({
-      entitlementDays: countAnnualLeaveAccruedThroughMonth(
-        employee.start_date,
-        input.year,
-        input.month,
-      ),
-      usedBeforePeriodDays: calculateAnnualLeaveUsedThroughMonth({
-        leaves: leave.annualLeaves,
-        employeeStartDate: employee.start_date,
-        year: input.year,
-        throughMonth: input.month - 1,
-      }),
-      annualLeaveDaysInPeriod: leave.annualLeaveDays,
-    });
-    const paidLeaveDays = annualSplit.paidLeaveDays;
-    const unpaidLeaveDays = leave.unpaidLeaveDays + annualSplit.overflowLeaveDays;
-    const payableDays = calculatePayableDays({
-      workingDays: workdays,
-      paidLeaveDays,
-      standardDays: input.standardDays,
-    });
-    const proratedSalary = Math.round(
-      (monthlySalary * payableDays) / input.standardDays,
-    );
-    const adjustments = adjustmentsByEmployee.get(employee.id) ?? [];
-    const adjustmentTotals = adjustments.reduce((total, adjustment) => {
-      if (adjustment.kind === "bonus") total.bonus += adjustment.amount;
-      if (adjustment.kind === "taxable_allowance") {
-        total.taxableAllowances += adjustment.amount;
-      }
-      if (adjustment.kind === "tax_exempt_allowance") {
-        total.taxExemptAllowances += adjustment.amount;
-      }
-      if (adjustment.kind === "advance") total.advanceDeduction += adjustment.amount;
-      if (adjustment.kind === "deduction") total.otherDeductions += adjustment.amount;
-      return total;
-    }, emptyAdjustmentTotals());
-    const grossTotal =
-      proratedSalary + adjustmentTotals.taxableAllowances + adjustmentTotals.bonus;
-    const calculation = calculatePayrollEntry({
-      grossTotal,
-      insuranceBaseSalary,
-      taxExemptAllowances: adjustmentTotals.taxExemptAllowances,
-      dependentCount: employee.dependents_count ?? 0,
-      charityDeduction: 0,
-      advanceDeduction: adjustmentTotals.advanceDeduction,
-      otherDeductions: adjustmentTotals.otherDeductions,
-      effectiveDate: endDate,
-    });
-    const profile = employee.profiles;
+  const entries = employeesForPreview
+    .map((employee) => {
+      const contract = contractByEmployee.get(employee.id);
+      const monthlySalary = numberValue(
+        contract?.gross_salary ?? employee.base_salary,
+      );
+      const salarySource = contract
+        ? "contract"
+        : monthlySalary > 0
+          ? "employee"
+          : "missing";
+      const insuranceBaseSalary = numberValue(
+        contract?.insurance_base_salary ?? employee.insurance_base_salary,
+      );
+      const workdays = workdaysByEmployee.get(employee.id) ?? 0;
+      const leave = leaveByEmployee.get(employee.id) ?? {
+        annualLeaveDays: 0,
+        unpaidLeaveDays: 0,
+        annualLeaves: [],
+      };
+      const annualSplit = splitAnnualLeaveByQuota({
+        entitlementDays: countAnnualLeaveAccruedThroughMonth(
+          employee.start_date,
+          input.year,
+          input.month,
+        ),
+        usedBeforePeriodDays: calculateAnnualLeaveUsedThroughMonth({
+          leaves: leave.annualLeaves,
+          employeeStartDate: employee.start_date,
+          year: input.year,
+          throughMonth: input.month - 1,
+        }),
+        annualLeaveDaysInPeriod: leave.annualLeaveDays,
+      });
+      const paidLeaveDays = annualSplit.paidLeaveDays;
+      const unpaidLeaveDays =
+        leave.unpaidLeaveDays + annualSplit.overflowLeaveDays;
+      const payableDays = calculatePayableDays({
+        workingDays: workdays,
+        paidLeaveDays,
+        standardDays: input.standardDays,
+      });
+      const proratedSalary = Math.round(
+        (monthlySalary * payableDays) / input.standardDays,
+      );
+      const adjustments = adjustmentsByEmployee.get(employee.id) ?? [];
+      const adjustmentTotals = adjustments.reduce((total, adjustment) => {
+        if (adjustment.kind === "bonus") total.bonus += adjustment.amount;
+        if (adjustment.kind === "taxable_allowance") {
+          total.taxableAllowances += adjustment.amount;
+        }
+        if (adjustment.kind === "tax_exempt_allowance") {
+          total.taxExemptAllowances += adjustment.amount;
+        }
+        if (adjustment.kind === "advance")
+          total.advanceDeduction += adjustment.amount;
+        if (adjustment.kind === "deduction")
+          total.otherDeductions += adjustment.amount;
+        return total;
+      }, emptyAdjustmentTotals());
+      const grossTotal =
+        proratedSalary +
+        adjustmentTotals.taxableAllowances +
+        adjustmentTotals.bonus;
+      const calculation = calculatePayrollEntry({
+        grossTotal,
+        insuranceBaseSalary,
+        taxExemptAllowances: adjustmentTotals.taxExemptAllowances,
+        dependentCount: employee.dependents_count ?? 0,
+        charityDeduction: 0,
+        advanceDeduction: adjustmentTotals.advanceDeduction,
+        otherDeductions: adjustmentTotals.otherDeductions,
+        effectiveDate: endDate,
+      });
+      const profile = employee.profiles;
 
-    return {
-      employeeId: employee.id,
-      employeeCode: employee.employee_code,
-      employeeName: profile?.full_name ?? "—",
-      branchId: profile?.branch_id ?? null,
-      branchName: profile?.branches?.name ?? null,
-      positionLabel: profile?.positions?.label_vi ?? null,
-      salarySource,
-      monthlySalary,
-      workingDays: workdays,
-      paidLeaveDays,
-      unpaidLeaveDays,
-      payableDays,
-      standardDays: input.standardDays,
-      proratedSalary,
-      taxableAllowances: adjustmentTotals.taxableAllowances,
-      taxExemptAllowances: adjustmentTotals.taxExemptAllowances,
-      bonus: adjustmentTotals.bonus,
-      advanceDeduction: adjustmentTotals.advanceDeduction,
-      otherDeductions: adjustmentTotals.otherDeductions,
-      grossTotal,
-      bhxhEmployee: calculation.bhxhEmployee,
-      bhytEmployee: calculation.bhytEmployee,
-      bhtnEmployee: calculation.bhtnEmployee,
-      totalInsuranceEmployee: calculation.totalInsuranceEmployee,
-      bhxhEmployer: calculation.bhxhEmployer,
-      bhytEmployer: calculation.bhytEmployer,
-      bhtnEmployer: calculation.bhtnEmployer,
-      totalInsuranceEmployer: calculation.totalInsuranceEmployer,
-      personalDeduction: calculation.personalDeduction,
-      dependentDeduction: calculation.dependentDeduction,
-      taxableIncome: calculation.taxableIncome,
-      pitTax: calculation.pitTax,
-      expectedNet: calculation.netSalary,
-      insuranceBase: calculation.insuranceBase,
-      dependentsCount: employee.dependents_count ?? 0,
-      adjustments,
-      finalized: finalizedByEmployee.get(employee.id) ?? null,
-    } satisfies PayrollPreviewEntry;
-  });
+      return {
+        employeeId: employee.id,
+        employeeCode: employee.employee_code,
+        employeeName: profile?.full_name ?? "—",
+        branchId: profile?.branch_id ?? null,
+        branchName: profile?.branches?.name ?? null,
+        positionLabel: profile?.positions?.label_vi ?? null,
+        salarySource,
+        monthlySalary,
+        workingDays: workdays,
+        paidLeaveDays,
+        unpaidLeaveDays,
+        payableDays,
+        standardDays: input.standardDays,
+        proratedSalary,
+        taxableAllowances: adjustmentTotals.taxableAllowances,
+        taxExemptAllowances: adjustmentTotals.taxExemptAllowances,
+        bonus: adjustmentTotals.bonus,
+        advanceDeduction: adjustmentTotals.advanceDeduction,
+        otherDeductions: adjustmentTotals.otherDeductions,
+        grossTotal,
+        bhxhEmployee: calculation.bhxhEmployee,
+        bhytEmployee: calculation.bhytEmployee,
+        bhtnEmployee: calculation.bhtnEmployee,
+        totalInsuranceEmployee: calculation.totalInsuranceEmployee,
+        bhxhEmployer: calculation.bhxhEmployer,
+        bhytEmployer: calculation.bhytEmployer,
+        bhtnEmployer: calculation.bhtnEmployer,
+        totalInsuranceEmployer: calculation.totalInsuranceEmployer,
+        personalDeduction: calculation.personalDeduction,
+        dependentDeduction: calculation.dependentDeduction,
+        taxableIncome: calculation.taxableIncome,
+        pitTax: calculation.pitTax,
+        expectedNet: calculation.netSalary,
+        insuranceBase: calculation.insuranceBase,
+        dependentsCount: employee.dependents_count ?? 0,
+        adjustments,
+        finalized: finalizedByEmployee.get(employee.id) ?? null,
+      } satisfies PayrollPreviewEntry;
+    })
+    .sort(comparePayrollPreviewEntries);
 
   const missingSalaryEmployeeIds = snapshotLocked
     ? []
@@ -611,7 +672,10 @@ export const removePayrollAdjustment = withAction(
       );
       return {
         success: false,
-        error: mapPayrollRpcError(error, payrollActionCopy.adjustmentDeleteFailed),
+        error: mapPayrollRpcError(
+          error,
+          payrollActionCopy.adjustmentDeleteFailed,
+        ),
       };
     }
 
@@ -652,7 +716,8 @@ export const snapshotPayrollPreview = withAction(
       return {
         success: false,
         error:
-          preview.snapshot?.status === "approved" || preview.snapshot?.status === "paid"
+          preview.snapshot?.status === "approved" ||
+          preview.snapshot?.status === "paid"
             ? payrollActionCopy.snapshotPaymentOwnedByFinance
             : payrollActionCopy.snapshotUnavailable,
       };
@@ -755,7 +820,9 @@ export async function fetchPayrollPeriods(): Promise<ActionResult> {
 
   const { data, error } = await context.supabase
     .from("payroll_periods")
-    .select("id, period_month, period_year, standard_days, status, approved_at, paid_at")
+    .select(
+      "id, period_month, period_year, standard_days, status, approved_at, paid_at",
+    )
     .eq("tenant_id", context.claims.tenant_id)
     .order("period_year", { ascending: false })
     .order("period_month", { ascending: false })
@@ -779,7 +846,9 @@ export const fetchPayrollPeriod = withAction(
   async (data, { supabase, claims }) => {
     const { data: period, error } = await supabase
       .from("payroll_periods")
-      .select("id, period_month, period_year, standard_days, status, approved_at, paid_at")
+      .select(
+        "id, period_month, period_year, standard_days, status, approved_at, paid_at",
+      )
       .eq("id", data.periodId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();

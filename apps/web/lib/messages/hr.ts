@@ -75,7 +75,9 @@ export const hr = {
         "Nhân viên vẫn có thể thêm dòng ngoài danh sách khi báo cáo ca.",
       addIngredients: "Chọn nguyên liệu",
       addIngredientsConfirm: (count: number) =>
-        count > 0 ? `Thêm ${formatCount(count)} nguyên liệu` : "Thêm nguyên liệu",
+        count > 0
+          ? `Thêm ${formatCount(count)} nguyên liệu`
+          : "Thêm nguyên liệu",
       ingredientSearch: "Tìm nguyên liệu...",
       removeIngredient: "Bỏ nguyên liệu",
       empty: "Chưa có việc nào cho vị trí này.",
@@ -202,14 +204,14 @@ export const hr = {
           "Không thể tải hợp đồng lao động. Tính lương bị hủy.",
         attendanceLoadFailed:
           "Không thể tải dữ liệu chấm công. Tính lương bị hủy.",
-        leaveLoadFailed:
-          "Không thể tải dữ liệu nghỉ phép. Tính lương bị hủy.",
+        leaveLoadFailed: "Không thể tải dữ liệu nghỉ phép. Tính lương bị hủy.",
       },
       entriesLoadFailed: "Không thể tải bảng lương.",
       branchesLoadFailed: "Không thể tải danh sách chi nhánh.",
       adjustmentsLoadFailed: "Không thể tải các khoản điều chỉnh lương.",
       adjustmentNotFound: "Không tìm thấy dữ liệu lương cần thao tác.",
-      snapshotLocked: "Bảng lương tháng này đã chốt, không thể sửa dữ liệu nguồn.",
+      snapshotLocked:
+        "Bảng lương tháng này đã chốt, không thể sửa dữ liệu nguồn.",
       snapshotMissingSalary:
         "Còn nhân viên thiếu nguồn lương; bổ sung hồ sơ hoặc HĐLĐ trước khi chốt.",
       snapshotUnavailable: "Chưa có dữ liệu lương hợp lệ để chốt.",
@@ -222,7 +224,7 @@ export const hr = {
     live: {
       title: "Lương",
       description:
-        "Đối soát ngày công, phép, điều chỉnh và lương dự kiến theo dữ liệu hiện tại; chỉ tạo snapshot khi chốt.",
+        "Tính lương dự kiến theo ngày công, phép, điều chỉnh và dữ liệu hiện tại; chỉ snapshot khi chốt.",
       loadFailedTitle: "Không thể tải bảng lương",
       loadFailedDescription:
         "Dữ liệu lương chưa sẵn sàng. Hãy tải lại hoặc kiểm tra quyền truy cập.",
@@ -233,6 +235,10 @@ export const hr = {
       allBranches: "Tất cả chi nhánh",
       standardDays: "Ngày công chuẩn",
       search: "Tìm nhân viên",
+      salaryStatus: "Trạng thái dữ liệu",
+      salaryStatusAll: "Tất cả",
+      salaryStatusCalculable: "Tính được",
+      salaryStatusMissing: "Thiếu nguồn lương",
       snapshot: "Chốt bảng lương",
       snapshotting: "Đang chốt",
       snapshotConfirmDescription:
@@ -248,6 +254,7 @@ export const hr = {
       missingSalaryDescription: (count: number) =>
         `${formatCount(count)} nhân viên chưa có lương ở hồ sơ hoặc HĐLĐ; bổ sung trước khi chốt.`,
       missingSalaryAction: "Mở hồ sơ nhân sự",
+      missingSalaryListAction: "Xem trong bảng",
       adjustment: "Điều chỉnh",
       adjustmentTitle: (employeeName: string) =>
         `Điều chỉnh lương · ${employeeName}`,
@@ -257,7 +264,8 @@ export const hr = {
       adjustmentSaved: "Đã lưu điều chỉnh lương",
       adjustmentDeleted: "Đã xoá điều chỉnh lương",
       adjustmentDeleteTitle: "Xóa khoản điều chỉnh?",
-      adjustmentDeleteDescription: "Khoản này sẽ không còn được tính trong lương live.",
+      adjustmentDeleteDescription:
+        "Khoản này sẽ không còn được tính trong lương live.",
       adjustmentDelete: "Xóa khoản",
       adjustmentKinds: {
         bonus: "Thưởng bổ sung",
@@ -277,12 +285,18 @@ export const hr = {
       adjustmentTargetMissing: "Không tìm thấy nhân viên cần điều chỉnh.",
       table: {
         employee: "Nhân viên",
-        work: "Công / phép",
+        workingDays: "Công",
+        paidLeaveDays: "Phép",
+        unpaidLeaveDays: "Không lương",
         adjustments: "Điều chỉnh",
         gross: "Lương gộp",
         deductions: "BHXH + TNCN",
         net: "Lương dự kiến",
         finalizedNet: "Thực lĩnh đã chốt",
+        status: "Trạng thái",
+        calculable: "Tính được",
+        missingSalary: "Thiếu nguồn lương",
+        finalized: "Đã chốt",
         actions: "Thao tác",
         total: (count: number) => `Tổng ${formatCount(count)} nhân viên`,
         empty: "Không có nhân viên phù hợp bộ lọc.",

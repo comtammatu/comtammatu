@@ -31,7 +31,16 @@ test("row callbacks receive the absolute index across pages", () => {
 });
 
 test("page derives clamped so a shrinking filter result cannot strand the view", () => {
-  assert.match(source, /Math\.min\(currentPage \?\? internalPage, totalPages\)/);
+  assert.match(
+    source,
+    /Math\.min\(currentPage \?\? internalPage, totalPages\)/,
+  );
+});
+
+test("blank action headers retain an accessible table heading", () => {
+  assert.match(source, /col\.header === ""/);
+  assert.match(source, /FORM_VI\.action/);
+  assert.doesNotMatch(source, /hideOnMobile/);
 });
 
 test("growth lists opted in", () => {

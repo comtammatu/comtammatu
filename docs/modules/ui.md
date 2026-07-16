@@ -127,6 +127,14 @@ Không dùng local `className="p-0"` hoặc `className="overflow-x-auto"` trên
 - `AppSection` cho card-backed section.
 - `AppToolbar` cho filter/action toolbar.
 - `AppEmptyState` cho empty/no-result/no-access/error state.
+- `Table` trong `packages/ui` chỉ là semantic desktop primitive; route không
+  compose trực tiếp trừ document/line-sheet adapter đã được quy định.
+- `DataTable` là responsive table adapter duy nhất: một row model, desktop
+  columns và `mobileCardRender` cùng trường/trạng thái/action. `DataTablePagination`
+  và `TableEmptyStateRow` là chi tiết nội bộ của adapter, route không import trực tiếp.
+- `AppToolbar` đứng trước `DataTable` khi filter, sort, branch, kỳ hoặc action
+  là URL/server state của trang. Inline toolbar của `DataTable` chỉ dành cho
+  state local của chính bảng; không dựng hai toolbar cho cùng một control.
 - `AppLinkCard` cho navigation/action card.
 - `KpiRow` cho grid responsive (1/2/3 cột) bọc các `KpiCard` chỉ khi đó là
   metric/stat-value.

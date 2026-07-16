@@ -502,6 +502,46 @@ by the `responsive-double-render` ratchet and migrate to `DataTable` per
 route family. Mobile and desktop MUST expose the same fields, status colors,
 and actions for the same row. Route-local data-table suites are not allowed.
 
+### Table component system (one hierarchy, no V2)
+
+`Table` is a semantic desktop primitive; `DataTable` is the only shared
+responsive data-table adapter. They are one system, not alternatives. Do not
+add `DataTableV2`, `DesktopTable`, `MobileTable`, or a module-specific table
+wrapper that recreates the same responsibilities.
+
+| Layer                                                                                    | Owner                                                          | Responsibility                                                                              | Direct route use                                    |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `Table`, `TableHeader`, `TableBody`, `TableFooter`, `TableRow`, `TableHead`, `TableCell` | `packages/ui/src/components/table.tsx`                         | Semantic desktop table markup and base density                                              | No, except a documented document/line-sheet adapter |
+| `DataTable`                                                                              | `apps/web/app/components/data-table/data-table.tsx`            | One row model rendered as a desktop table and, when supplied, the matching mobile card list | Yes                                                 |
+| `DataTablePagination`                                                                    | `apps/web/app/components/data-table/data-table-pagination.tsx` | Page controls for `DataTable`; never imported by a route                                    | No                                                  |
+| `TableEmptyStateRow`                                                                     | `apps/web/app/components/table-empty-state-row.tsx`            | Empty/no-result treatment inside the desktop table                                          | No                                                  |
+| `AppToolbar`                                                                             | `apps/web/app/components/surface.tsx`                          | Page-level query controls and page actions                                                  | Yes, as the sibling before `DataTable`              |
+
+`DataTable` has composition recipes, not a runtime `variant` prop:
+
+| Recipe                   | Composition                                                                                                                                                            | Required boundary                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Management LIST          | `AppToolbar` → `DataTable` with `mobileCardRender`                                                                                                                     | Route/loader owns URL query, business ordering, server filtering, and cursor pagination for unbounded data |
+| Document lines           | `DataTable` with `render(row, index)`, `mobileCardRender`, and `desktopFooterRows` / `mobileFooter`                                                                    | Document controller owns line mutation by index; finite document lines do not need list pagination         |
+| Report breakdown         | `DataTable`, optionally with read-only footer totals                                                                                                                   | Report query owns period/branch and ordering; totals never replace row-level values                        |
+| Local inline table       | `DataTable` may use its inline search/filter/action slots only when the state is local to that one table and there is no page-level `AppToolbar` for the same controls | Do not duplicate a page toolbar inside the table                                                           |
+| Branch-native touch list | `Item` / `ItemGroup`, not `DataTable`, where a named Branch exception requires one phone/tablet information architecture                                               | Shares loader, model, status vocabulary, and mutation authority with the Admin Dashboard counterpart       |
+
+Each `DataTableColumn` is an operational field, not layout filler: it has a
+stable non-empty header (an action column uses visually hidden `Thao tác`), a
+stable key, and one responsibility. Identity and labels align left; money,
+counts, dates, and codes align right where appropriate with `font-mono`
+`tabular-nums`; workflow state stays in its own status column. Do not merge
+separately filterable or auditable values into a prose cell. `DataTable` does
+not invent a generic sort: the route loader supplies the business order before
+rendering, such as urgency → branch → display name for an exception queue.
+
+`mobileCardRender` exposes the same row fields, status meaning, and actions as
+the desktop columns. `mobileBreakpoint` changes presentation only; it never
+changes authority, data scope, sorting, or available actions. `hideOnMobile`
+is not a supported column contract because mobile cards are explicit row
+presentations rather than a hidden-column desktop table.
+
 Branch runtime has one explicit presentation-plane exception: a declared
 Branch-native touch `LIST` under `/br/[branchId]/*` may use `Item`/`ItemGroup`
 at every supported phone/tablet width when the corresponding Admin Dashboard route owns
