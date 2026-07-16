@@ -1,32 +1,85 @@
 import Link from "next/link";
-import { fetchPayrollPeriods } from "../payroll-actions";
-import { AppPage, AppPageHeader } from "@/components/surface";
-import { PayrollListClient } from "./payroll-list-client";
-import type { PayrollPeriodRow } from "./_types";
+import { getVNMonthYear } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
+import { fetchPayrollBranches, fetchPayrollPreview } from "../payroll-actions";
+import { PayrollListClient } from "./payroll-list-client";
 
-export default async function PayrollPage() {
-  const result = await fetchPayrollPeriods();
+type SearchParams = {
+  month?: string;
+  branch?: string;
+  q?: string;
+  standardDays?: string;
+};
+
+function parseMonth(value: string | undefined) {
+  const fallback = getVNMonthYear();
+  const matched = value?.match(/^(\d{4})-(\d{2})$/);
+  if (!matched) return fallback;
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return fallback;
+  }
+  return { year, month };
+}
+
+function parseStandardDays(value: string | undefined): number {
+  const days = Number(value ?? 26);
+  return Number.isFinite(days) && days > 0 && days <= 31 ? days : 26;
+}
+
+function parseBranchId(value: string | undefined): number | null {
+  const branchId = Number(value);
+  return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
+}
+
+export default async function PayrollPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const { month, year } = parseMonth(params.month);
+  const branchId = parseBranchId(params.branch);
+  const standardDays = parseStandardDays(params.standardDays);
   const copy = messages.hr.payroll;
-  const periods = result.success
-    ? ((result.data ?? []) as PayrollPeriodRow[])
-    : [];
+  const [previewResult, branchesResult] = await Promise.all([
+    fetchPayrollPreview({ month, year, standardDays, branchId }),
+    fetchPayrollBranches(),
+  ]);
 
   return (
-    <AppPage width="wide">
+    <AppPage width="xwide">
       <AppPageHeader
         eyebrow={copy.eyebrow}
-        title={copy.list.title}
-        description={copy.list.description}
-        badge={{ children: copy.supportBadge, variant: "secondary" }}
+        title={copy.live.title}
+        description={copy.live.description}
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/hr">{copy.backToHr}</Link>
           </Button>
         }
       />
-      <PayrollListClient initialPeriods={periods} />
+      {previewResult.success && previewResult.data ? (
+        <PayrollListClient
+          preview={previewResult.data}
+          branches={branchesResult.success ? (branchesResult.data ?? []) : []}
+          query={params.q ?? ""}
+          selectedBranchId={branchId}
+        />
+      ) : (
+        <AppSection
+          tone="warning"
+          title={copy.live.loadFailedTitle}
+          description={copy.live.loadFailedDescription}
+        >
+          <Button asChild variant="outline" size="sm">
+            <Link href="/hr/payroll">{copy.live.retry}</Link>
+          </Button>
+        </AppSection>
+      )}
     </AppPage>
   );
 }

@@ -11,6 +11,10 @@ const hrClientSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/hr-client.tsx"),
   "utf8",
 );
+const attendancePageSource = readFileSync(
+  join(process.cwd(), "app/(protected)/hr/attendance/page.tsx"),
+  "utf8",
+);
 const hrMessagesSource = readFileSync(
   join(process.cwd(), "lib/messages/hr.ts"),
   "utf8",
@@ -28,21 +32,21 @@ const leaveRequestActionsSource = readFileSync(
   "utf8",
 );
 
-test("HR attendance is a manager read surface for clock in and clock out", () => {
-  assert.match(
+test("HR attendance is a dedicated owner surface for clock in and clock out", () => {
+  assert.doesNotMatch(
     hrPageSource,
-    /isBranchManager=\{isBranchManager\}/,
-    "HR page should pass the role flag to the client that owns the page header",
+    /AttendanceTable|LeaveRequestsTable|AppPageTabs/,
+    "the employee landing must not combine attendance, leave and payroll tabs",
   );
   assert.match(
     hrClientSource,
-    /isBranchManager[\s\S]{0,40}branchManagerTitle[\s\S]{0,40}ownerTitle/,
-    "HR client should read its role-specific title from the HR message dictionary",
+    /title=\{workspaceCopy\.ownerTitle\}/,
+    "the employee landing should use the owner HR workspace title",
   );
   assert.match(
-    hrMessagesSource,
-    /branchManagerTitle:\s*"Ngày công"/,
-    "Branch Manager HR page should read as workday management",
+    attendancePageSource,
+    /<AttendanceTable branches=\{branches\} \/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
+    "day-work and leave review should share their dedicated route",
   );
   assert.match(
     hrMessagesSource,
@@ -55,29 +59,9 @@ test("HR attendance is a manager read surface for clock in and clock out", () =>
     "HR attendance tab should use Ngày công wording",
   );
   assert.match(
-    hrClientSource,
-    /value: "attendance",\s*label: copy\.tabs\.attendance/,
-    "HR attendance tab should read from the HR message dictionary",
-  );
-  assert.match(
-    hrClientSource,
-    /value: "setup",\s*label: copy\.tabs\.setup/,
-    "HR setup should group shift and checklist configuration",
-  );
-  assert.doesNotMatch(
-    hrClientSource,
-    /value="leave"/,
-    "Leave requests should sit inside the day-work flow instead of a separate top-level tab",
-  );
-  assert.match(
-    hrClientSource,
-    /<TabsContent value="attendance"[\s\S]*<AttendanceTable branches=\{branches\} \/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
-    "Day-work tab should group attendance and leave review together",
-  );
-  assert.match(
     attendanceTableSource,
-    /<Button[\s\S]*attendanceCopy\.clockView[\s\S]*<\/Button>/,
-    "Attendance detail view should focus on clock-in and clock-out",
+    /<AppToolbar[\s\S]*<ToggleGroup[\s\S]*attendanceCopy\.summaryView[\s\S]*attendanceCopy\.clockView/,
+    "attendance filters and view selection must use the shared toolbar and button group",
   );
   assert.match(
     attendanceTableSource,

@@ -101,14 +101,16 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 ## D026: HRM redesign — trục Người · Ngày công · Lương (2026-06-15)
 
-**Decision:**
+**Decision (amended — HR-1, 2026-07-16):**
 
-1. `standard_days` = số công chuẩn CỐ ĐỊNH owner nhập theo tháng + clamp `working/standard ≤ 1`.
+1. `standard_days` = số công chuẩn owner chọn cho tháng đang xem (mặc định 26) + clamp `working/standard ≤ 1`. Đây là tham số preview, **không** là một kỳ lương cần tạo trước; giá trị được snapshot khi chốt bảng lương.
 2. Việc trong ca: cấu hình theo vị trí — chi tiết thuộc D052 (đã thay mô hình template/override cũ).
 3. Lương qua HĐLĐ active trong kỳ khi có, fallback `employees.base_salary` cho dữ liệu HKD cũ.
 4. Ca làm: GIỮ (D027), đặt ở "Thiết lập".
+5. Lương live chỉ đọc các nguồn vận hành hiện tại: ca đã checkout, đơn nghỉ đã duyệt, HĐLĐ/hồ sơ nhân viên và điều chỉnh lương có nguồn. `payroll_entries` chỉ là snapshot bất biến sau khi chốt, không là nguồn tính lại.
+6. HR chỉ **chốt nghĩa vụ lương**. Thanh toán tiền mặt/chuyển khoản và bằng chứng đối soát thuộc Finance `expenses` (category `salary`); HR không được đánh dấu `paid`.
 
-**IA:** `/hr` = 3 trục **Người · Ngày công · Lương**; Ca + Việc trong ca → "Thiết lập"; `defaultTab` động (owner→Người, BM→Ngày công). D012 vẫn áp: KHÔNG rostering/auto-late/auto-absent/số dư phép/duyệt nhiều tầng. Canonical chi tiết payroll: `docs/ref/labor-contracts.md`, `docs/ref/payroll-pit.md`.
+**IA:** Owner Admin Dashboard tách theo job, không nhồi ba workflow vào tab root: `/hr` = **Nhân viên**; `/hr/attendance` = **Ngày công & nghỉ phép** (oversight); `/hr/payroll` = **Lương** (live workspace); `/hr/setup` = **Thiết lập** (ca + việc trong ca); `/hr/staff` = **Tài khoản & quyền**. Branch Manager duyệt đơn tại `/br/[branchId]/shift/leave-approvals`, không thao tác từ HR Admin. D012 vẫn áp: KHÔNG rostering/auto-late/auto-absent/số dư phép/duyệt nhiều tầng. Canonical chi tiết payroll: `docs/ref/labor-contracts.md`, `docs/ref/payroll-pit.md`.
 
 ## D027: Chấm công theo CA (per-shift), không theo ngày (2026-06-15)
 

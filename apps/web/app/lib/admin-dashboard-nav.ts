@@ -116,6 +116,11 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
       label: APP_COPY_VI.hrWorkspace,
       icon: IconBriefcase,
     },
+    {
+      href: "/hr/attendance",
+      label: messages.hr.client.tabs.attendance,
+      icon: IconClipboardList,
+    },
   ];
   if (canAccess(role, "hr_payroll")) {
     peopleItems.push({
@@ -124,6 +129,11 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
       icon: IconWallet,
     });
   }
+  peopleItems.push({
+    href: "/hr/setup",
+    label: messages.hr.client.tabs.setup,
+    icon: IconSettings,
+  });
   groups.push({ title: APP_COPY_VI.hrWorkspace, items: peopleItems });
 
   if (canAccess(role, "staff")) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pencil as IconPencil, Users as IconUsers } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { StatusBadge } from "@/components/status-badge";
@@ -26,6 +26,7 @@ import {
   FORM_VI,
   STAFF_VI,
 } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 
 interface EmployeeTableProps {
   employees: EmployeeRow[];
@@ -41,6 +42,21 @@ export function EmployeeTable({
   canManage,
 }: EmployeeTableProps) {
   const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
+  const [search, setSearch] = useState("");
+  const filteredEmployees = useMemo(() => {
+    const normalized = search.trim().toLocaleLowerCase("vi-VN");
+    if (!normalized) return employees;
+    return employees.filter((employee) =>
+      [
+        employee.profiles?.full_name,
+        employee.employee_code,
+        employee.profiles?.branches?.name,
+        employee.profiles?.positions?.label_vi,
+      ]
+        .filter(Boolean)
+        .some((value) => value!.toLocaleLowerCase("vi-VN").includes(normalized)),
+    );
+  }, [employees, search]);
 
   function renderStatus(employee: EmployeeRow) {
     return (
@@ -63,7 +79,7 @@ export function EmployeeTable({
     return (
       <div className="flex min-w-40 flex-col gap-1">
         <span className="font-mono text-sm tabular-nums">
-          {salary > 0 ? formatVND(salary) : "—"}
+          {salary > 0 ? formatVND(salary) : "Chưa có lương"}
         </span>
         <div className="flex flex-wrap gap-1.5">
           <Badge
@@ -72,7 +88,7 @@ export function EmployeeTable({
             {hasActiveContract(employee) ? "Có HĐ" : "Thiếu HĐ"}
           </Badge>
           <Badge variant={insuranceBase > 0 ? "secondary" : "outline"}>
-            {insuranceBase > 0 ? "Có BH" : "BH 0"}
+            {insuranceBase > 0 ? "Có mức BH" : "Chưa có mức BH"}
           </Badge>
         </div>
       </div>
@@ -156,9 +172,13 @@ export function EmployeeTable({
     <>
       <DataTable
         columns={columns}
-        data={employees}
+        data={filteredEmployees}
         getRowKey={(employee) => employee.id}
-        emptyTitle="Chưa có hồ sơ nhân viên nào"
+        searchable
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={messages.hr.client.employeeSearch}
+        emptyTitle={messages.hr.client.employeeEmpty}
         emptyIcon={<IconUsers />}
         mobileCardRender={(employee) => (
           <Item variant="outline">
