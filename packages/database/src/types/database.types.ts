@@ -6063,6 +6063,48 @@ export type Database = {
         }
         Relationships: []
       }
+      self_order_request_operations: {
+        Row: {
+          cart_payload: Json
+          client_op_id: string
+          created_at: string
+          customer_note: string | null
+          request_id: number
+          tenant_id: number
+        }
+        Insert: {
+          cart_payload: Json
+          client_op_id: string
+          created_at?: string
+          customer_note?: string | null
+          request_id: number
+          tenant_id: number
+        }
+        Update: {
+          cart_payload?: Json
+          client_op_id?: string
+          created_at?: string
+          customer_note?: string | null
+          request_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "self_order_request_operations_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "self_order_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_request_operations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       self_order_requests: {
         Row: {
           branch_id: number
