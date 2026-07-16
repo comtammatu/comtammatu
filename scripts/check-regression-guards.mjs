@@ -41,24 +41,24 @@ const GUARDS = [
   {
     rule: "PAYROLL-CALCULATE-MUST-BE-ATOMIC-RPC",
     expect: "present",
-    pattern: /\.rpc\(\s*["']upsert_payroll_calculation["']/,
+    pattern: /\.rpc\(\s*["']snapshot_payroll_calculation["']/,
     paths: ["apps/web/app/(protected)/hr/payroll-actions.ts"],
     reason:
-      "calculatePayroll persists entries + period status via one atomic RPC, never two separate PostgREST writes",
+      "payroll snapshot persists entries + period status through one atomic RPC",
   },
   {
     rule: "PAYROLL-CALCULATE-MUST-BE-ATOMIC-RPC",
     expect: "absent",
-    pattern: /\.update\(\s*\{\s*status:\s*["']calculated["']/,
+    pattern:
+      /\.from\(\s*["']payroll_(?:entries|periods)["']\s*\)\s*\.(?:insert|update|delete)\s*\(/,
     paths: ["apps/web/app/(protected)/hr/payroll-actions.ts"],
     reason:
-      "the calculated-status flip is folded into upsert_payroll_calculation; a separate status='calculated' update reintroduces the entries/status divergence (approve/pay use 'approved'/'paid', not matched)",
+      "direct payroll entry or period writes from the action would split the snapshot transaction",
   },
   {
     rule: "PAYROLL-PRORATION-CAP-AT-STANDARD",
     expect: "present",
-    pattern:
-      /calculatePayableDays\(\{\s*workingDays,\s*paidLeaveDays,\s*standardDays,\s*\}\)/,
+    pattern: /calculatePayableDays\(\s*\{/,
     paths: ["apps/web/app/(protected)/hr/payroll-actions.ts"],
     reason:
       "proration uses payable days, where completed workdays plus paid annual leave are capped at standard_days before base salary is prorated",

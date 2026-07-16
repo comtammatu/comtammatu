@@ -131,11 +131,37 @@ NLĐ nộp Mẫu 02/ĐK-TNCN cho HR. HR lưu hồ sơ và cập nhật vào hệ
 3. Tính các khoản phụ cấp và thưởng
 4. Tính BHXH/BHYT/BHTN phần NLĐ đóng (10.5%)
 5. Tính thuế TNCN theo biểu lũy tiến
-6. Lương thực lĩnh = Gross - BHXH/BHYT/BHTN - Thuế TNCN - Khấu trừ khác
-7. Duyệt bảng lương → Thanh toán
+6. Dự kiến thực lĩnh = Gross - BHXH/BHYT/BHTN - Thuế TNCN - Khấu trừ khác
+7. Chốt bảng lương → Finance thanh toán và lưu evidence
 ```
 
-### 4.2 Database — bảng `payroll_periods` và `payroll_entries`
+### 4.2 Hợp đồng dữ liệu lương live và snapshot
+
+`/hr/payroll` là workspace xem **lương live** theo tháng; owner chọn tháng,
+chi nhánh, tìm nhân viên và `standard_days` (mặc định 26). Không có bước tạo
+`payroll_period` trước khi xem hoặc tính lại.
+
+| Dữ liệu hiển thị | Nguồn live | Quy tắc |
+| --- | --- | --- |
+| Công làm | `attendance_records` có `check_out` | Theo D027: ca đã kết thúc quy đổi ngày công; không tự suy diễn ca vắng. |
+| Phép có lương / nghỉ không lương | `leave_requests` đã `approved` | Phép năm được tách theo entitlement hiện hành; các ngày vượt quyền lợi và loại nghỉ khác là không lương. |
+| Lương tháng / mức đóng BH | HĐLĐ active trong kỳ, fallback `employees` | Không có nguồn lương thì hàng được gắn trạng thái thiếu dữ liệu, không được im lặng coi là 0 hợp lệ. |
+| Thưởng, phụ cấp, tạm ứng, khấu trừ | `payroll_adjustments` theo nhân viên-tháng | Mỗi điều chỉnh có loại, số tiền dương, ghi chú và người tạo; đây là nguồn live duy nhất cho các khoản nhập bổ sung. |
+| Dự kiến thực lĩnh | Các nguồn trên + engine version-aware | Tính tại thời điểm mở/lọc workspace, không ghi `payroll_entries`. |
+
+`standard_days` chỉ là tham số của preview. Khi owner bấm **Chốt bảng lương**,
+hệ thống trong một transaction tạo hoặc cập nhật snapshot của đúng tháng, lưu
+toàn bộ dòng vào `payroll_entries`, gắn người/thời điểm chốt và khóa nguồn
+snapshot đó. UI sau chốt dùng nhãn **Thực lĩnh đã chốt**; trước chốt dùng
+**Dự kiến thực lĩnh**. Chốt lại chỉ được phép khi snapshot còn ở trạng thái có
+thể sửa theo state machine; không được thay đổi snapshot đã giao cho Finance.
+
+**Ranh giới Finance:** chốt bảng lương không đồng nghĩa với đã trả tiền.
+Khoản chi lương, phương thức tiền mặt/chuyển khoản và evidence đối soát nằm ở
+Finance `expenses` với category `salary`. HR không tự cập nhật
+`payroll_periods.status = 'paid'`.
+
+### 4.3 Database — bảng `payroll_periods` và `payroll_entries`
 
 ```sql
 CREATE TABLE payroll_periods (
@@ -219,7 +245,7 @@ CREATE TABLE payroll_entries (
 );
 ```
 
-### 4.3 Nhất quán `insurance_base` giữa 3 bảng
+### 4.4 Nhất quán `insurance_base` giữa 3 bảng
 
 Trường `insurance_base` trong `payroll_entries` là **immutable snapshot** của mức lương đóng BH tại thời điểm tính lương. Source of truth nằm ở `employment_contracts.insurance_base_salary`.
 

@@ -112,6 +112,8 @@ export const hr = {
     payrollDescription:
       "Mở bảng lương để đối soát ngày công, lương gộp và thực lĩnh trước khi chốt.",
     openPayroll: "Mở đối soát lương",
+    employeeSearch: "Tìm tên, mã, chi nhánh hoặc chức danh",
+    employeeEmpty: "Chưa có hồ sơ nhân viên phù hợp.",
     employeeCount: (count: number) => `${formatCount(count)} nhân viên`,
     readinessSummary: (params: {
       active: number;
@@ -189,29 +191,13 @@ export const hr = {
   },
   payroll: {
     eyebrow: "Nhân sự",
-    supportBadge: "Hỗ trợ",
     backToHr: "Về nhân sự",
-    backToPayroll: "Về bảng lương",
     server: {
       forbidden: "Không có quyền",
       periodLoadFailed: "Không thể tải kỳ lương.",
-      periodExists: (month: number, year: number) =>
-        `Kỳ lương ${month}/${year} đã tồn tại.`,
-      createPeriodFailed: "Không thể tạo kỳ lương.",
       periodNotFound: "Kỳ lương không tồn tại.",
-      standardDaysEditableOnly:
-        "Chỉ có thể sửa ngày công chuẩn cho kỳ nháp hoặc đã tính.",
       calculate: {
-        forbidden: "Không có quyền tính lương.",
-        periodNotFound: "Kỳ lương không tồn tại.",
-        locked: "Chỉ có thể tính lương cho kỳ nháp hoặc đã tính.",
-        invalidEntries: "Dữ liệu bảng lương không hợp lệ.",
-        fallback: "Không thể tính lương. Vui lòng thử lại.",
-        missingStandardDays: "Kỳ lương không có ngày công chuẩn.",
         employeesLoadFailed: "Không thể tải danh sách nhân viên.",
-        noActiveEmployees: "Không có nhân viên đang làm việc trong kỳ này.",
-        noEligibleEmployees:
-          "Không có nhân viên đang làm việc có lương cơ bản hoặc hợp đồng trong kỳ này.",
         contractsLoadFailed:
           "Không thể tải hợp đồng lao động. Tính lương bị hủy.",
         attendanceLoadFailed:
@@ -220,118 +206,92 @@ export const hr = {
           "Không thể tải dữ liệu nghỉ phép. Tính lương bị hủy.",
       },
       entriesLoadFailed: "Không thể tải bảng lương.",
-      approveFailed: "Không thể duyệt bảng lương.",
-      markPaidFailed: "Không thể đánh dấu đã thanh toán.",
+      branchesLoadFailed: "Không thể tải danh sách chi nhánh.",
+      adjustmentsLoadFailed: "Không thể tải các khoản điều chỉnh lương.",
+      adjustmentNotFound: "Không tìm thấy dữ liệu lương cần thao tác.",
+      snapshotLocked: "Bảng lương tháng này đã chốt, không thể sửa dữ liệu nguồn.",
+      snapshotMissingSalary:
+        "Còn nhân viên thiếu nguồn lương; bổ sung hồ sơ hoặc HĐLĐ trước khi chốt.",
+      snapshotUnavailable: "Chưa có dữ liệu lương hợp lệ để chốt.",
+      snapshotPaymentOwnedByFinance:
+        "Bảng lương tháng này đã chốt. Thanh toán và chứng từ thuộc Finance.",
+      adjustmentSaveFailed: "Không thể lưu điều chỉnh lương.",
+      adjustmentDeleteFailed: "Không thể xóa điều chỉnh lương.",
+      snapshotFailed: "Không thể chốt bảng lương.",
     },
-    list: {
-      title: "Đối soát lương",
+    live: {
+      title: "Lương",
       description:
-        "Theo dõi kỳ lương đã tính khi cần đối soát hoặc chốt dữ liệu.",
-      count: (count: number) => `${formatCount(count)} kỳ lương`,
-      summaryOpen: "Đang xử lý",
-      summaryOpenHint: "Nháp hoặc đã tính, còn chỉnh được",
-      summaryApproved: "Đã duyệt",
-      summaryApprovedHint: "Chờ đánh dấu thanh toán",
-      summaryPaid: "Đã trả",
-      createCurrentMonth: "Tạo kỳ lương tháng này",
-      createTitle: "Tạo kỳ lương",
-      createDescription:
-        "Owner nhập ngày công chuẩn trước khi tính lương; các khoản phép năm, BHXH và TNCN được snapshot khi bấm tính.",
-      periodsTitle: "Lịch sử kỳ lương",
-      periodsDescription:
-        "Mở từng kỳ để đối soát công, phép năm, HĐLĐ/BHXH, thuế và thực lĩnh.",
-      createdToast: "Đã tạo kỳ lương",
-      standardDays: "Ngày công chuẩn",
-      standardDaysShort: "Chuẩn",
-      period: "Kỳ",
-      status: "Trạng thái",
-      approvedAt: "Duyệt lúc",
-      paidAt: "Trả lúc",
-      empty: "Chưa có kỳ lương nào",
-      details: "Chi tiết",
+        "Đối soát ngày công, phép, điều chỉnh và lương dự kiến theo dữ liệu hiện tại; chỉ tạo snapshot khi chốt.",
+      loadFailedTitle: "Không thể tải bảng lương",
+      loadFailedDescription:
+        "Dữ liệu lương chưa sẵn sàng. Hãy tải lại hoặc kiểm tra quyền truy cập.",
+      retry: "Tải lại bảng lương",
       periodName: (month: number, year: number) => `Tháng ${month}/${year}`,
-    },
-    detail: {
-      invalidTitle: "ID không hợp lệ",
-      invalidDescription:
-        "Không thể mở chi tiết bảng lương vì mã kỳ lương không đúng.",
-      title: "Đối soát kỳ lương",
-      description: (periodId: string) => `Kỳ lương #${periodId}`,
+      month: "Tháng lương",
+      branch: "Chi nhánh",
+      allBranches: "Tất cả chi nhánh",
       standardDays: "Ngày công chuẩn",
-      controlTitle: "Chốt kỳ lương",
-      controlDescription:
-        "Tính lại khi ngày công, phép năm, HĐLĐ hoặc mức đóng BH thay đổi trước lúc duyệt.",
-      entriesTitle: "Bảng đối soát nhân viên",
-      entriesDescription:
-        "Mỗi dòng là snapshot lương, phép năm, BHXH, thuế và thực lĩnh của một nhân viên.",
-      tabs: {
-        overview: "Tổng quan",
-        entries: "Nhân viên",
-        history: "Lịch sử",
+      search: "Tìm nhân viên",
+      snapshot: "Chốt bảng lương",
+      snapshotting: "Đang chốt",
+      snapshotConfirmDescription:
+        "Bảng lương sẽ được snapshot và khóa. Finance sẽ xử lý thanh toán, không thao tác tại đây.",
+      cancel: "Hủy",
+      snapshotDescription:
+        "Sau khi chốt, bảng lương được khóa. Finance ghi nhận thanh toán và chứng từ riêng.",
+      snapshotAllBranchesRequired:
+        "Chỉ có thể chốt khi đang xem tất cả chi nhánh để snapshot đủ bảng lương của tenant.",
+      snapshotLocked: "Đã chốt",
+      snapshotOpen: "Đang tính live",
+      missingSalaryTitle: "Còn nhân viên thiếu nguồn lương",
+      missingSalaryDescription: (count: number) =>
+        `${formatCount(count)} nhân viên chưa có lương ở hồ sơ hoặc HĐLĐ; bổ sung trước khi chốt.`,
+      missingSalaryAction: "Mở hồ sơ nhân sự",
+      adjustment: "Điều chỉnh",
+      adjustmentTitle: (employeeName: string) =>
+        `Điều chỉnh lương · ${employeeName}`,
+      adjustmentDescription:
+        "Khoản điều chỉnh được tính ngay vào bảng lương tháng đang chọn và không sửa được sau khi chốt.",
+      adjustmentSave: "Lưu điều chỉnh",
+      adjustmentSaved: "Đã lưu điều chỉnh lương",
+      adjustmentDeleted: "Đã xoá điều chỉnh lương",
+      adjustmentDeleteTitle: "Xóa khoản điều chỉnh?",
+      adjustmentDeleteDescription: "Khoản này sẽ không còn được tính trong lương live.",
+      adjustmentDelete: "Xóa khoản",
+      adjustmentKinds: {
+        bonus: "Thưởng bổ sung",
+        taxable_allowance: "Phụ cấp chịu thuế",
+        tax_exempt_allowance: "Phụ cấp miễn thuế",
+        advance: "Tạm ứng",
+        deduction: "Khấu trừ khác",
       },
-      actions: {
-        calculate: "Tính lương",
-        approve: "Duyệt",
-        pay: "Thanh toán",
-        saveStandardDays: "Lưu ngày chuẩn",
+      adjustmentFields: {
+        kind: "Loại điều chỉnh",
+        amount: "Số tiền",
+        amountRequired: "Nhập số tiền",
+        amountPositive: "Số tiền phải lớn hơn 0",
+        note: "Ghi chú",
+        notePlaceholder: "Ví dụ: thưởng hiệu suất tháng",
       },
-      toast: {
-        calculated: (employeeCount: number) =>
-          `Đã tính lương cho ${employeeCount} nhân viên`,
-        approved: "Đã duyệt bảng lương",
-        paid: "Đã đánh dấu thanh toán",
-        standardDaysSaved: "Đã cập nhật ngày công chuẩn",
-      },
-      summary: {
-        gross: "Lương gộp",
-        employeeInsurance: "BH NLĐ",
-        paidLeaveDays: "Phép năm có lương",
-        payableDays: "Ngày tính lương",
-        pit: "Thuế TNCN",
-        net: "Thực lĩnh",
-        employerInsurance: "BH NSDLĐ",
-        headcount: "Số NV tính lương",
-      },
+      adjustmentTargetMissing: "Không tìm thấy nhân viên cần điều chỉnh.",
       table: {
-        workingDays: "Ngày công",
-        paidLeaveDays: "Phép năm",
-        unpaidLeaveDays: "Nghỉ không lương",
-        payableDays: "Ngày tính lương",
+        employee: "Nhân viên",
+        work: "Công / phép",
+        adjustments: "Điều chỉnh",
         gross: "Lương gộp",
-        insuranceBase: "Lương đóng BH",
-        employeeInsurance: "BH NLĐ",
-        employerInsurance: "BH NSDLĐ",
-        deductions: "Giảm trừ",
-        taxableIncome: "TNTT",
-        pit: "Thuế TNCN",
-        net: "Thực lĩnh",
-        empty: 'Chưa có dữ liệu. Nhấn "Tính lương" để bắt đầu.',
-        total: (count: number) => `Tổng (${formatCount(count)} NV)`,
+        deductions: "BHXH + TNCN",
+        net: "Lương dự kiến",
+        finalizedNet: "Thực lĩnh đã chốt",
+        actions: "Thao tác",
+        total: (count: number) => `Tổng ${formatCount(count)} nhân viên`,
+        empty: "Không có nhân viên phù hợp bộ lọc.",
       },
-      csv: {
-        export: "Xuất CSV",
-        filename: (month: number, year: number) =>
-          `bang-luong-${year}-${String(month).padStart(2, "0")}.csv`,
-        columns: {
-          employeeCode: "Mã nhân viên",
-          employeeName: "Họ tên",
-          period: "Kỳ lương",
-          gross: "Lương gộp",
-          insuranceBase: "Lương đóng BH",
-          bhxh: "BHXH (8%)",
-          bhyt: "BHYT (1,5%)",
-          bhtn: "BHTN (1%)",
-          taxableIncome: "Thu nhập tính thuế",
-          pit: "Thuế TNCN",
-          net: "Thực lĩnh",
-        },
+      mobile: {
+        work: (working: number, paidLeave: number, unpaidLeave: number) =>
+          `Công ${formatDecimal(working, 1)} · phép ${formatDecimal(paidLeave, 1)} · không lương ${formatDecimal(unpaidLeave, 1)}`,
+        deductions: "Khấu trừ",
       },
-    },
-    statusLabels: {
-      draft: "Nháp",
-      calculated: "Đã tính",
-      approved: "Đã duyệt",
-      paid: "Đã trả",
     },
   },
 } as const;

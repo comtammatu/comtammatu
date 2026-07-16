@@ -177,31 +177,21 @@ test("Branch staff runtime exposes leave request self-service from Schedule", ()
   );
 });
 
-test("HRM exposes branch-scoped leave approval tab", () => {
-  const hrClient = read("apps/web/app/(protected)/hr/hr-client.tsx");
+test("HR attendance route exposes branch-scoped leave approvals", () => {
+  const attendancePage = read("apps/web/app/(protected)/hr/attendance/page.tsx");
   const table = read("apps/web/app/(protected)/hr/leave-requests-table.tsx");
   const actions = read("apps/web/app/(protected)/hr/leave-request-actions.ts");
   const messages = read("apps/web/lib/messages/hr.ts");
 
   for (const expected of ["LeaveRequestsTable", "copy.tabs.attendance"]) {
-    assert.ok(hrClient.includes(expected), `expected HR client ${expected}`);
+    assert.ok(
+      attendancePage.includes(expected),
+      `expected HR attendance route ${expected}`,
+    );
   }
-  // HR tabs migrated from raw TabsTrigger to AppPageTabs items; the
-  // attendance tab is declared as an items entry with its content body.
-  assert.match(
-    hrClient,
-    /value:\s*"attendance",\s*label:\s*copy\.tabs\.attendance/,
-    "attendance tab must be declared in the AppPageTabs items list",
-  );
-  assert.match(
-    hrClient,
-    /<TabsContent value="attendance"/,
-    "attendance tab must render its content body",
-  );
   assert.ok(
-    !/value:\s*"leave"/.test(hrClient) &&
-      !hrClient.includes('TabsContent value="leave"'),
-    "leave approval must stay inside HR attendance flow, not add a separate Employee-style HR tab",
+    !attendancePage.includes("LeaveRequestClient"),
+    "owner attendance must review requests, not render the employee self-service form",
   );
 
   for (const expected of [

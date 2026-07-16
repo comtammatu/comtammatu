@@ -112,7 +112,9 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
   const positionTasksActionSrc = read(
     "apps/web/app/(protected)/hr/position-tasks-actions.ts",
   );
-  const hrClientSrc = read("apps/web/app/(protected)/hr/hr-client.tsx");
+  const hrSetupClientSrc = read(
+    "apps/web/app/(protected)/hr/setup/setup-client.tsx",
+  );
   const branchSettingsPageSrc = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   );
@@ -160,10 +162,8 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     "HR position-task actions must save tasks through the JSON RPC",
   );
   assert.ok(
-    /value:\s*"setup",\s*label:\s*copy\.tabs\.setup/.test(hrClientSrc) &&
-      hrClientSrc.includes('<TabsContent value="setup"') &&
-      hrClientSrc.includes("PositionTasksClient"),
-    "HR UI must expose the per-position task editor",
+    hrSetupClientSrc.includes("PositionTasksClient"),
+    "HR setup route must expose the per-position task editor",
   );
   assert.ok(
     !branchSettingsPageSrc.includes("AttendanceSettingsCard") &&
@@ -243,7 +243,9 @@ test("HRM consumption history stays available but no longer gates Employee check
   const documentCorrectionSrc = read(
     "apps/web/app/(protected)/inventory/document-correction-actions.ts",
   );
-  const hrClientSrc = read("apps/web/app/(protected)/hr/hr-client.tsx");
+  const hrSetupClientSrc = read(
+    "apps/web/app/(protected)/hr/setup/setup-client.tsx",
+  );
   const positionTasksActionsSrc = read(
     "apps/web/app/(protected)/hr/position-tasks-actions.ts",
   );
@@ -346,9 +348,9 @@ test("HRM consumption history stays available but no longer gates Employee check
       "shift_checklist_consumption_default_items",
     ) &&
       positionTasksActionsSrc.includes("position_task_id") &&
-      hrClientSrc.includes("PositionTasksClient") &&
+      hrSetupClientSrc.includes("PositionTasksClient") &&
       positionTasksClientSrc.includes("IngredientPicker"),
-    "HR setup must expose default ingredients for consumption position tasks",
+    "HR setup route must expose default ingredients for consumption position tasks",
   );
 });
 

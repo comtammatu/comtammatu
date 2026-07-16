@@ -3981,6 +3981,60 @@ export type Database = {
           },
         ]
       }
+      payroll_adjustments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          effective_month: string
+          employee_id: number
+          id: number
+          kind: string
+          note: string | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by: string
+          effective_month: string
+          employee_id: number
+          id?: never
+          kind: string
+          note?: string | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          effective_month?: string
+          employee_id?: number
+          id?: never
+          kind?: string
+          note?: string | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_adjustments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_entries: {
         Row: {
           advance_deduction: number
@@ -9787,6 +9841,10 @@ export type Database = {
       }
       current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      delete_payroll_adjustment: {
+        Args: { p_adjustment_id: number }
+        Returns: undefined
+      }
       edit_pending_order_item: {
         Args: {
           p_modifiers: Json
@@ -11043,6 +11101,15 @@ export type Database = {
         Args: { p_is_priority: boolean; p_note?: string; p_order_id: number }
         Returns: Json
       }
+      snapshot_payroll_calculation: {
+        Args: {
+          p_entries: Json
+          p_period_month: number
+          p_period_year: number
+          p_standard_days: number
+        }
+        Returns: Json
+      }
       split_order: {
         Args: {
           p_idempotency_key?: string
@@ -11240,6 +11307,17 @@ export type Database = {
           p_storage_type: string
           p_unit_cost: number
           p_units: Json
+        }
+        Returns: number
+      }
+      upsert_payroll_adjustment: {
+        Args: {
+          p_adjustment_id?: number
+          p_amount?: number
+          p_effective_month?: string
+          p_employee_id?: number
+          p_kind?: string
+          p_note?: string
         }
         Returns: number
       }

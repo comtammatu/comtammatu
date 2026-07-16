@@ -46,19 +46,17 @@ test("HR Server Action gates match the route contract", () => {
   const positionTasksActions = read(
     "apps/web/app/(protected)/hr/position-tasks-actions.ts",
   );
-  const hrPage = read("apps/web/app/(protected)/hr/page.tsx");
   const leaveActions = read(
     "apps/web/app/(protected)/hr/leave-request-actions.ts",
   );
   const payrollActions = read("apps/web/app/(protected)/hr/payroll-actions.ts");
   const payrollCalculateActions = [
-    "createPayrollPeriod",
+    "fetchPayrollPreview",
     "fetchPayrollPeriod",
-    "updatePayrollPeriodStandardDays",
-    "calculatePayroll",
-    "fetchPayrollEntries",
+    "savePayrollAdjustment",
+    "removePayrollAdjustment",
+    "snapshotPayrollPreview",
   ];
-  const payrollApproveActions = ["approvePayroll", "markPayrollPaid"];
 
   assert.match(
     staffActions,
@@ -122,7 +120,6 @@ test("HR Server Action gates match the route contract", () => {
     hrActions,
     /fetchShifts\(\): Promise<ActionResult> \{\s*const ctx = await getAuthContext\(HR_ROLES\);/,
   );
-  assert.match(hrPage, /const canManagePositionTasks = canManageEmployees;/);
   assert.match(
     hrActions,
     /forceCloseStaleAttendance = withAction\(\s*\{\s*roles: HR_EMPLOYEE_VIEW_ROLES,\s*schema: forceCloseStaleAttendanceSchema,\s*permission: PERMISSION_KEYS\.HR_APPROVE_CHECKOUT,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
@@ -164,7 +161,7 @@ test("HR Server Action gates match the route contract", () => {
   );
   assert.match(
     payrollActions,
-    /fetchPayrollPeriods\(\): Promise<ActionResult> \{\s*const ctx = await getAuthContextWithPermission\(\s*PAYROLL_ROLES,\s*PERMISSION_KEYS\.FINANCE_PAYROLL_CALCULATE,/,
+    /fetchPayrollPeriods\(\): Promise<ActionResult> \{\s*const context = await getAuthContextWithPermission\(\s*PAYROLL_ROLES,\s*PERMISSION_KEYS\.FINANCE_PAYROLL_CALCULATE,/,
   );
   for (const action of payrollCalculateActions) {
     assert.match(
@@ -174,47 +171,42 @@ test("HR Server Action gates match the route contract", () => {
       ),
     );
   }
-  for (const action of payrollApproveActions) {
-    assert.match(
-      payrollActions,
-      new RegExp(
-        `${action} = withAction\\(\\s*\\{[\\s\\S]*?roles: \\["owner"\\] as const,[\\s\\S]*?permission: PERMISSION_KEYS\\.FINANCE_PAYROLL_APPROVE,`,
-      ),
-    );
-  }
+  assert.doesNotMatch(
+    payrollActions,
+    /FINANCE_PAYROLL_APPROVE/,
+    "Finance owns payment approval and evidence; HR payroll actions must not mark payment",
+  );
 });
 
-test("HR client surface keeps owner setup separate from branch oversight", () => {
+test("HR routes keep employee, attendance and setup surfaces separate", () => {
   const hrPage = read("apps/web/app/(protected)/hr/page.tsx");
   const hrClient = read("apps/web/app/(protected)/hr/hr-client.tsx");
+  const attendancePage = read(
+    "apps/web/app/(protected)/hr/attendance/page.tsx",
+  );
+  const setupPage = read("apps/web/app/(protected)/hr/setup/page.tsx");
 
   assert.match(
     hrPage,
-    /const canManageEmployees = claims\.user_role === "owner"/,
-  );
-  assert.match(
-    hrPage,
-    /const canViewEmployees = canManageEmployees \|\| isBranchManager/,
-  );
-  assert.match(hrPage, /canManageEmployees=\{canManageEmployees\}/);
-  assert.match(
-    hrClient,
-    /if \(!canManageEmployees \|\| shiftsLoaded\) return;/,
+    /from\("positions"\)/,
   );
   assert.match(
     hrClient,
-    /\.\.\.\(canManageEmployees\s*\?\s*\[\s*\{ value: "payroll", label: copy\.tabs\.payroll \},\s*\{ value: "setup", label: copy\.tabs\.setup \},\s*\]\s*:\s*\[\]\s*\),/,
+    /<EmployeeTable[\s\S]*canManage/,
+  );
+  assert.doesNotMatch(
+    hrClient,
+    /AppPageTabs|AttendanceTable|ShiftsTable|PositionTasksClient/,
+    "the employee landing must not preload unrelated HR data",
   );
   assert.match(
-    hrClient,
-    /\{canManageEmployees \? \(\s*<TabsContent value="setup"/,
+    attendancePage,
+    /<AttendanceTable branches=\{branches\} \/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
   );
   assert.match(
-    hrClient,
-    /const activeEmployees = canManageEmployees\s*\?\s*employees\.filter\(\(employee\) => employee\.is_active\)\s*:\s*\[\];/,
+    setupPage,
+    /<HrSetupClient[\s\S]*initialShifts=\{shifts\}[\s\S]*positionTasksData=\{positionTasksData\}/,
   );
-  assert.match(hrClient, /canManage=\{canManageEmployees\}/);
-  assert.match(hrClient, /\{canManageEmployees \? \(\s*<EmployeeFormDialog/);
 });
 
 test("HR employee payroll and contract controls stay owner-only", () => {

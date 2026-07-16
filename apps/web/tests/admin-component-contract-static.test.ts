@@ -36,7 +36,6 @@ const HR_DATA_TABLE_FILES = [
   "apps/web/app/(protected)/hr/employee-table.tsx",
   "apps/web/app/(protected)/hr/shifts-table.tsx",
   "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",
-  "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx",
 ];
 
 function extractConstObjectBody(source: string, name: string): string {
@@ -891,12 +890,17 @@ test("HR list surfaces use DataTable and shared status badge domains", () => {
   for (const file of [
     "apps/web/app/(protected)/hr/attendance-table.tsx",
     "apps/web/app/(protected)/hr/leave-requests-table.tsx",
-    "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",
   ]) {
     const source = read(file);
     assert.match(source, /@\/components\/status-badge/);
     assert.doesNotMatch(source, /\bconst\s+[A-Z0-9_]*STATUS[A-Z0-9_]*/);
   }
+
+  const payrollList = read(
+    "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",
+  );
+  assert.match(payrollList, /<AppToolbar/);
+  assert.match(payrollList, /<DataTable/);
 
   const statusBadge = read(STATUS_BADGE);
   const sharedLabels = read(SHARED_LABELS);

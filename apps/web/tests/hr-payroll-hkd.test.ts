@@ -39,15 +39,15 @@ const payrollActionsCode = payrollActionsSource
   .filter((line) => !line.trim().startsWith("//"))
   .join("\n");
 
-test("Payroll source: active contract first, employee row fallback", () => {
+test("Payroll live preview: active contract first, employee row fallback", () => {
   assert.ok(payrollActionsSource, "payroll action source should load");
   for (const expected of [
-    "insurance_base_salary, dependents_count",
     'from("employment_contracts")',
     "contractByEmployee",
-    "contract?.gross_salary ?? emp.base_salary ?? 0",
-    "contract?.insurance_base_salary ?? emp.insurance_base_salary ?? 0",
+    "contract?.gross_salary ?? employee.base_salary",
+    "contract?.insurance_base_salary ?? employee.insurance_base_salary",
     "insuranceBaseSalary,",
+    "calculatePayrollEntry({",
   ]) {
     assert.ok(
       payrollActionsSource.includes(expected),
@@ -61,21 +61,16 @@ test("Payroll source: active contract first, employee row fallback", () => {
   );
 });
 
-test("HKD payroll: standardDays === 0 guard", () => {
+test("Payroll live preview validates the selected standard days", () => {
   assert.match(
     payrollActionsSource,
-    /\.select\("id, period_month, period_year, standard_days, status"\)/,
-    "calculatePayroll must read owner-entered standard_days from payroll_periods",
+    /standardDays: z\.coerce\.number\(\)\.positive\(\)\.max\(31\)/,
+    "the live preview must reject a zero or invalid standard-day value",
   );
   assert.match(
     payrollActionsSource,
-    /if \(standardDays === 0\) \{[\s\S]*?payrollActionCopy\.calculate\.missingStandardDays/,
-    "calculatePayroll must guard against a zero standard-day period",
-  );
-  assert.match(
-    payrollMessagesSource,
-    /missingStandardDays: "Kỳ lương không có ngày công chuẩn\."/,
-    "the zero standard-day guard must keep an operator-facing message",
+    /export const fetchPayrollPreview = withAction/,
+    "payroll should calculate a selected month directly, without creating a period first",
   );
   assert.doesNotMatch(
     payrollActionsSource,
@@ -84,7 +79,7 @@ test("HKD payroll: standardDays === 0 guard", () => {
   );
 });
 
-test("HKD payroll: attendance and leave day snapshots are explicit", () => {
+test("Payroll live preview: attendance, leave and adjustments feed the atomic snapshot", () => {
   for (const expected of [
     '.select("employee_id, date, check_out")',
     "buildCompletedWorkdays",
@@ -92,9 +87,11 @@ test("HKD payroll: attendance and leave day snapshots are explicit", () => {
     "calculateAnnualLeaveUsedThroughMonth",
     "splitAnnualLeaveByQuota",
     "calculatePayableDays",
-    "paid_leave_days: paidLeaveDays",
-    "unpaid_leave_days: unpaidLeaveDays",
-    "payable_days: payableDays",
+    "paid_leave_days: entry.paidLeaveDays",
+    "unpaid_leave_days: entry.unpaidLeaveDays",
+    "payable_days: entry.payableDays",
+    'from("payroll_adjustments")',
+    '"snapshot_payroll_calculation"',
   ]) {
     assert.ok(
       payrollActionsSource.includes(expected),
@@ -108,32 +105,39 @@ test("HKD payroll: attendance and leave day snapshots are explicit", () => {
   );
 });
 
-test("HKD payroll: list queries are bounded", () => {
+test("Payroll snapshot keeps finalized values separate from live estimates", () => {
   assert.match(
     payrollActionsSource,
-    /\.limit\(60\)/,
-    "fetchPayrollPeriods must cap results",
+    /finalizedByEmployee/,
+    "a locked payroll month must read its saved entries",
+  );
+  assert.match(
+    payrollActionsSource,
+    /finalized: finalizedByEmployee\.get\(employee\.id\) \?\? null/,
+    "the preview row must carry the finalized snapshot separately",
+  );
+  assert.match(
+    payrollMessagesSource,
+    /finalizedNet: "Thực lĩnh đã chốt"/,
+    "the UI must label the finalized number differently from the live estimate",
   );
 });
 
-test("HKD payroll: calculate persists via one atomic RPC", () => {
+test("Payroll snapshot persists through one atomic RPC and never marks payment", () => {
   assert.match(
     payrollActionsSource,
-    /\.rpc\(\s*"upsert_payroll_calculation"/,
-    "calculatePayroll must persist entries + status via the atomic RPC",
+    /\.rpc\(\s*"snapshot_payroll_calculation"/,
+    "snapshot must persist the period and all entries atomically",
   );
   assert.doesNotMatch(
     payrollActionsCode,
-    /\.update\(\s*\{\s*status:\s*"calculated"/,
-    "the separate payroll_periods.status='calculated' write must be folded into the RPC",
+    /\.update\(\s*\{\s*status:\s*"paid"/,
+    "HR must not mark a payroll period as paid; Finance owns payment evidence",
   );
-});
-
-test("HKD payroll: calculate reports employeeCount from the RPC result", () => {
   assert.match(
     payrollActionsSource,
-    /employee_count\s*\?\?\s*entries\.length/,
-    "meta.employeeCount must read the RPC's persisted-row count (regression for the calculated(0) toast)",
+    /data\.branchId != null/,
+    "a tenant-wide snapshot must reject a branch-filtered preview",
   );
 });
 

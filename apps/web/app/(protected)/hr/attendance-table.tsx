@@ -7,7 +7,6 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Image as IconImage, ListChecks as IconListChecks } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,
   ItemActions,
@@ -27,6 +26,10 @@ import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import {
   BRANCH_VI,
   ERRORS_VI,
@@ -51,7 +54,7 @@ import {
 import { fetchApprovedLeaveMonth } from "./leave-request-actions";
 import type { BranchOption } from "./_types";
 import { StatusBadge } from "@/components/status-badge";
-import { AppEmptyState } from "@/components/surface";
+import { AppEmptyState, AppToolbar } from "@/components/surface";
 import { AppDialog } from "@/components/form/form-dialog";
 import {
   DataTable,
@@ -166,6 +169,11 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
     });
   }
 
+  function selectView(nextView: "clock" | "summary") {
+    setView(nextView);
+    loadData(selectedBranch, selectedMonth, nextView);
+  }
+
   // Initial load on mount — the tab used to open blank with a hint
   // pointing at a load button that does not exist.
   const initialLoadRef = useRef(false);
@@ -182,64 +190,62 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Select
-          value={selectedBranch.toString()}
-          onValueChange={(v) => loadData(Number(v), selectedMonth)}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder={BRANCH_VI.select} />
-          </SelectTrigger>
-          <SelectContent>
-            {branches.map((b) => (
-              <SelectItem key={b.id} value={b.id.toString()}>
-                {b.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={selectedMonth}
-          onValueChange={(v) => loadData(selectedBranch, v)}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {monthOptions.map((m) => (
-              <SelectItem key={m} value={m}>
-                {m}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Frame className="flex gap-1 bg-transparent p-1">
-          <Button
-            variant={view === "summary" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => {
-              setView("summary");
-              loadData(selectedBranch, selectedMonth, "summary");
-            }}
-          >
-            {attendanceCopy.summaryView}
-          </Button>
-          <Button
-            variant={view === "clock" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => {
-              setView("clock");
-              loadData(selectedBranch, selectedMonth, "clock");
-            }}
-          >
-            {attendanceCopy.clockView}
-          </Button>
-        </Frame>
-
-        {isPending && <Spinner />}
-      </div>
+      <AppToolbar
+        filters={
+          <>
+            <Select
+              value={selectedBranch.toString()}
+              onValueChange={(value) => loadData(Number(value), selectedMonth)}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder={BRANCH_VI.select} />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={selectedMonth}
+              onValueChange={(value) => loadData(selectedBranch, value)}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((month) => (
+                  <SelectItem key={month} value={month}>
+                    {month}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+        actions={
+          <>
+            <ToggleGroup
+              type="single"
+              value={view}
+              onValueChange={(value) => {
+                if (value === "clock" || value === "summary") selectView(value);
+              }}
+              aria-label={attendanceCopy.summaryView}
+            >
+              <ToggleGroupItem value="summary" size="sm">
+                {attendanceCopy.summaryView}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="clock" size="sm">
+                {attendanceCopy.clockView}
+              </ToggleGroupItem>
+            </ToggleGroup>
+            {isPending ? <Spinner /> : null}
+          </>
+        }
+      />
       <p className="text-sm text-muted-foreground">
         {attendanceCopy.workdayRule}
       </p>

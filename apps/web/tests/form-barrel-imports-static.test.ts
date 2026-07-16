@@ -8,8 +8,6 @@ const repoRoot = resolve(process.cwd(), "../..");
 const directFormImportFiles = [
   "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx",
-  "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx",
-  "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
   "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx",
   "apps/web/app/(protected)/inventory/settings/qc/qc-settings-client.tsx",
