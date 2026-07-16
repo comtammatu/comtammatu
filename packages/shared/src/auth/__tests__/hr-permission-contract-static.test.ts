@@ -46,7 +46,6 @@ test("HR Server Action gates match the route contract", () => {
   const positionTasksActions = read(
     "apps/web/app/(protected)/hr/position-tasks-actions.ts",
   );
-  const hrPage = read("apps/web/app/(protected)/hr/page.tsx");
   const leaveActions = read(
     "apps/web/app/(protected)/hr/leave-request-actions.ts",
   );
