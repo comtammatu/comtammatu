@@ -75,7 +75,7 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 ## D017: Admin là L0 Tenant Command; Branch Manager dùng L1 Branch Command (2026-06-13)
 
-**Decision (net, sau D018/D050):** Product framing = `bộ phần mềm quản lý vận hành và bán hàng` cho HKD. `/admin/*` = L0 tenant command cho `owner`. `branch_manager` KHÔNG phải Admin user — home = `/br/{branchId}` (D050); điều hành + thiết lập chi nhánh trong Operator plane. Domain workspaces (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`) là workflow surface độc lập, không phải tab con của Admin. Role/route chỉ là gate bề mặt; action + row access qua permission keys, RPC/RLS, branch scope.
+**Decision (net, sau D018/D050/ADR 0012):** Product framing = `bộ phần mềm quản lý vận hành và bán hàng` cho HKD. Admin Dashboard là L0 tenant command chỉ dành cho `owner`, gồm `/admin` và các route family ổn định `/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, `/branches`; chúng không cần chuyển thành tab con hay đổi URL. `branch_manager` KHÔNG phải Admin user — home = `/br/{branchId}` (D050); điều hành + thiết lập chi nhánh trong Branch plane. Role/route chỉ là gate bề mặt; action + row access qua permission keys, RPC/RLS, branch scope.
 
 **Canonical:** `docs/spec/role-route-matrix.md`. Không thêm workflow branch-scoped mới vào `/admin/*`.
 
@@ -85,7 +85,7 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 ## D019: W5 — Cấu trúc hoá UI (shell · route home · nav · padding) (2026-06-13)
 
-**Decision (net, sau D050):** (1) 2 họ chrome, không có họ thứ 3 — **Quản trị** = `AppShell` (admin + domain workspaces) và **Vận hành** = Operator plane `/br/[branchId]/*` + station chrome (POS/KDS/Runner); (2) một capability = một route home theo `role-route-matrix.md`; (3) padding một chủ = `AppPage`; (4) nav là data — mọi sidebar/bottom-nav project từ `nav-config.ts`, cấm `ShellNavGroup[]` literal trong shell. Canonical + gates: `docs/spec/design-system.md` § Structural Governance. Đảo điểm nào phải sửa quyết định này trước.
+**Decision (net, sau D050/ADR 0012):** (1) 2 họ chrome, không có họ thứ 3 — **Admin Dashboard** = `AppShell` cho Owner tại `/admin` và các domain route family, **Branch** = Operator plane `/br/[branchId]/*` + station chrome (POS/KDS/Runner); (2) một capability = một route home theo `role-route-matrix.md`; (3) padding một chủ = `AppPage`; (4) nav là data — mọi sidebar/bottom-nav project từ `nav-config.ts`, cấm `ShellNavGroup[]` literal trong shell. Canonical + gates: `docs/spec/design-system.md` § Structural Governance. Đảo điểm nào phải sửa quyết định này trước.
 
 ## D020: Enterprise Accounting / TT 200 / VAS is outside the HKD product (2026-06-13)
 
@@ -262,7 +262,7 @@ Canonical route/ACL: bảng generated trong `docs/spec/role-route-matrix.md`.
 
 **Decision (owner, net):**
 
-1. **Hai mặt phẳng = 2 họ chrome D019:** Operator plane (mobile/tablet, gốc `/br/[branchId]/*`) + Office plane (`AppShell` desktop: `/admin` + domain workspaces + `/branches`).
+1. **Hai mặt phẳng = 2 họ chrome D019/ADR 0012:** Branch plane (mobile/tablet, gốc `/br/[branchId]/*`) + Admin Dashboard (`AppShell` responsive chỉ dành cho Owner: `/admin` + domain route families + `/branches`).
 2. **Mọi route operator-facing dồn về `/br/[branchId]/*`** (đã move: `/employee/*` → `/br/[id]/shift/*`; sàn Kho → `/br/[id]/stock/*`). branchId trên URL = SSoT; staff pin thì Branch Hub tự điền.
 3. Branch dashboard + control + setup (tables/pos/kds/printers) + `pos-sessions` thuộc Operator plane (amend D019 §1 + D017).
 4. **Branch-context = 1 provider** `resolveBranchContext()` thay 3 cơ chế scope cũ; proxy + RLS + `MODULE_ACL` + `has_permission` giữ nguyên làm cổng gác — context chỉ là lớp đọc.
@@ -270,7 +270,7 @@ Canonical route/ACL: bảng generated trong `docs/spec/role-route-matrix.md`.
 6. **Phone bottom-nav operator = `Hôm nay · Ca · Lịch · Tôi`** (ratify D058 §2) + capability tiles từ `nav-config.ts`/`MODULE_ACL`, gate server-side.
 7. Không viết lại POS/KDS/Runner — chỉ re-root lên context + Hub.
 
-Scope: Office-side People/Branch IA thuộc D048; "Việc trong ca" thuộc D052. Đảo điểm nào phải sửa bản ghi này + D019 trước.
+Scope: Admin Dashboard People/Branch IA thuộc D048; "Việc trong ca" thuộc D052. Đảo điểm nào phải sửa bản ghi này + D019 trước.
 
 ## D052: "Việc trong ca" — gom & cấu hình theo vị trí (2026-06-29)
 
@@ -320,16 +320,16 @@ Scope: Office-side People/Branch IA thuộc D048; "Việc trong ca" thuộc D052
 **Decision (net sau D059/D061/D076/D077):** Branch runtime là touch-first dưới
 `/br/[branchId]/*`; Management workspaces giữ dense desktop-responsive
 presentation. Hai plane dùng chung data loader/model/Server Action/RPC/permission
-khi phù hợp nhưng không dùng Office chrome trong Branch. Mỗi role chỉ được quảng
+khi phù hợp nhưng không dùng Admin Dashboard chrome trong Branch. Mỗi role chỉ được quảng
 bá một cửa cho cùng job; compatibility route phải redirect.
 
 Page archetype sống ở `docs/spec/page-archetypes.md`; component ownership/query
 sống trong machine registry. Mọi surface đổi phải QA phone, tablet và desktop.
 ## D059: Branch-complete native workflow (2026-07-03)
 
-**Decision (net):** Mỗi active branch-pinned role phải làm được job được cấp
-quyền trong Branch runtime mà không đi qua Office bridge. Branch Hub là home;
-management workspace chỉ còn shortcut có kiểm quyền cho owner/Branch Manager.
+**Decision (net, sau ADR 0012):** Mỗi active branch-pinned role phải làm được job được cấp
+quyền trong Branch runtime mà không đi qua Admin Dashboard bridge. Branch Hub là home;
+Admin Dashboard chỉ còn một shortcut có kiểm quyền cho Owner.
 Branch presenter touch-native có thể chia sẻ loader/model/action với Management,
 nhưng không chia sẻ chrome hoặc desktop-first presenter.
 ## D060: Inventory workflow — WAC, không lot/FIFO/requisition (2026-07-03)
@@ -411,8 +411,8 @@ GRN bắt đầu từ NCC, không từ PO.
 
 1. **Site 16 tắt hẳn:** chuyển toàn bộ tồn về Phước Hải (site 3) qua luồng transfer sẵn có (`central_kitchen → branch` hợp lệ theo transfer matrix D000) rồi `is_active = false`. Nhân sự bucket `production_manager` — **sửa bởi D076:** không sắp xếp lại role, tài khoản bị xoá cùng lượt retire bucket (không auto-remap). DB enum `branch_kind` GIỮ nguyên (lịch sử data); chỉ vận hành và UI hết fork.
 2. **Một kind vận hành duy nhất `branch`.** Mọi nâng cấp stock đã chuẩn bị cho đợt Bếp (mockup GRN 3 bước · Ghi mẻ một màn · Tồn 44px, đã owner-duyệt) áp cho `/br/[branchId]/(operator)/stock/*` kind `branch`. Plan sống ở `tasks/todo.md` § Branch Stock Cutover.
-3. **Công thức = Office-only:** operator dùng công thức để prefill định mức khi ghi mẻ, không sửa; tile `production/recipes` rời operator, quản trị công thức về `/inventory` (owner/quản lý).
-4. **Chỉ "Danh mục" mở cho chi nhánh; PO và Trả hàng NCC NGHỈ HẲN cả hai plane** (owner siết lại cùng ngày): GRN đã NCC-first (`po_id` nullable) nên không cần PO; hàng lỗi xử qua Báo hao hụt (ảnh + lý do) thay Trả NCC. Bảng + lịch sử DB giữ nguyên; gỡ tile/route/action khỏi operator lẫn Office. Catalog mở cho `branch` KHÔNG cần grant mới — categories/units/ingredients gate bằng RLS/module, suppliers dùng `supplier_manage` đã cấp ở D068 §4.
+3. **Công thức = Admin Dashboard-only:** operator dùng công thức để prefill định mức khi ghi mẻ, không sửa; tile `production/recipes` rời operator, quản trị công thức về Admin Dashboard `/inventory` (Owner).
+4. **Chỉ "Danh mục" mở cho chi nhánh; PO và Trả hàng NCC NGHỈ HẲN cả hai plane** (owner siết lại cùng ngày): GRN đã NCC-first (`po_id` nullable) nên không cần PO; hàng lỗi xử qua Báo hao hụt (ảnh + lý do) thay Trả NCC. Bảng + lịch sử DB giữ nguyên; gỡ tile/route/action khỏi Branch lẫn Admin Dashboard. Catalog mở cho `branch` KHÔNG cần grant mới — categories/units/ingredients gate bằng RLS/module, suppliers dùng `supplier_manage` đã cấp ở D068 §4.
 5. **Mô hình tồn kho tối giản — (sửa bởi D078) 1 chi nhánh · 1 location (Kho):** bỏ lô/HSD (cột + plumbing RPC, slice riêng trong tracker). Kho↔Bếp và `commit_intra_branch_transfer` nghỉ hẳn; vòng Yêu cầu → Gửi → Nhận / transfer cross-branch operator cũng nghỉ sau khi chuyển tồn site 16 → 3 xong.
 6. **Sau khi site 16 tắt, gỡ fork central khỏi operator UI** — `CENTRAL_HOME_TILE_SUFFIXES`, CTA home central, các nhánh `isCentralKitchen`/`isCentralSupply` trong loader hub, entries `kinds` central trong nav-config, archetype exceptions #19–#23, mục central trong `docs/ref/screen-context-map.md` §2.5 — xóa sạch, không tombstone.
 

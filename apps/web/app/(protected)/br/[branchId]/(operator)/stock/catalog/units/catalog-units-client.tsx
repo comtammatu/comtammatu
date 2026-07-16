@@ -60,7 +60,7 @@ export function CatalogUnitsClient({
   const [, startMutation] = useTransition();
 
   // Standard units are system-managed (fixed factors); only packaging units
-  // are editable here, matching the office units screen.
+  // are editable here, matching the Admin Dashboard units screen.
   // Active packaging units only: standard units are system-managed, and
   // inactive units would render a permanently-disabled deactivate control.
   const packagingRows = rows.filter((row) => !row.is_standard && row.is_active);

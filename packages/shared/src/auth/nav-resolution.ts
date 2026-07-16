@@ -4,7 +4,6 @@ import {
   resolveAdminDiscoveryGroups,
   resolveBranchManagementDiscoveryGroup,
   resolveBranchOperationDiscoveryGroup,
-  resolveWorkspaceDiscoveryGroup,
 } from "./app-discovery";
 import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 
@@ -81,18 +80,6 @@ export function resolveAdminNavGroups(role: StaffRole): ResolvedNavGroup[] {
   }));
 }
 
-export function resolveWorkspaceItems(role: StaffRole): ResolvedNavLink[] {
-  const group = resolveWorkspaceDiscoveryGroup(role);
-
-  if (!group) {
-    return [];
-  }
-
-  return group.items.map((item) =>
-    resolveNavLink(item, item.href ?? undefined),
-  );
-}
-
 export function resolveBranchOperationItems(
   role: StaffRole,
   branchId?: number | null,
@@ -127,12 +114,12 @@ export function resolveQuickLaunchGroups(
   role: StaffRole,
   branchId?: number | null,
 ): QuickLaunchGroup[] {
-  const workspaceItems = resolveWorkspaceItems(role);
+  const adminGroups = resolveAdminNavGroups(role);
   const branchManagementItems = resolveBranchManagementItems(role, branchId);
   const branchOperationItems = resolveBranchOperationItems(role, branchId);
 
   return [
-    { title: NAV_GROUP_LABELS_VI.workspaces, items: workspaceItems },
+    ...adminGroups,
     {
       title: NAV_GROUP_LABELS_VI.branchManagement,
       items: branchManagementItems,

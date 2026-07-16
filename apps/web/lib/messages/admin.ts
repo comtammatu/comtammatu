@@ -1,6 +1,26 @@
 import { formatCount } from "@comtammatu/shared/format";
 
 export const admin = {
+  dashboard: {
+    eyebrow: "Chỉ dành cho Owner",
+    title: "Admin Dashboard",
+    description:
+      "Theo dõi, kiểm soát và thiết lập hoạt động toàn hệ thống từ một nơi.",
+    operationsTitle: "Điều hành toàn hệ thống",
+    operationsDescription:
+      "Mở từng mảng quản trị để xem dữ liệu và xử lý công việc ở cấp hệ thống.",
+    foundationTitle: "Nền tảng & thiết lập",
+    foundationDescription:
+      "Quản lý chi nhánh và các cấu hình dùng chung cho toàn hệ thống.",
+    financeDescription: "Dòng tiền, thu chi, đối soát và báo cáo tài chính.",
+    ordersDescription: "Theo dõi đơn hàng và xử lý ngoại lệ bán hàng.",
+    inventoryDescription: "Tồn kho, nhập hàng, kiểm kê và giá trị kho.",
+    menuDescription: "Món bán, giá, nhóm món và cấu hình thực đơn.",
+    hrDescription: "Nhân sự, ngày công, phân quyền và lương.",
+    branchesDescription: "Danh sách và thông tin các chi nhánh.",
+    settingsDescription: "Thanh toán, máy in và cấu hình toàn hệ thống.",
+    openModule: "Mở mô-đun",
+  },
   nav: {
     ariaLabel: "Điều hướng quản trị",
     overview: "Tổng quan",
@@ -13,7 +33,8 @@ export const admin = {
   },
   printTemplates: {
     loadErrorTitle: "Không thể tải mẫu phiếu in",
-    loadErrorTemplates: "Không tải được danh sách mẫu phiếu in. Vui lòng thử lại.",
+    loadErrorTemplates:
+      "Không tải được danh sách mẫu phiếu in. Vui lòng thử lại.",
     loadErrorBranches: "Không tải được danh sách chi nhánh. Vui lòng thử lại.",
   },
   staffForm: {
