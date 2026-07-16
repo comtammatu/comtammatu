@@ -41,6 +41,9 @@ export const SELF_ORDER_VI = {
   pendingApprovalTitle: "Đã gửi món",
   pendingApprovalDescription:
     "Nhân viên đã nhận lượt gọi món của bàn. Vui lòng đợi một chút để gọi thêm.",
+  pendingDialogTitle: "Đã gửi đơn cho Thu Ngân",
+  pendingDialogDescription: "Bạn có thể xem thực đơn trong lúc chờ và gọi thêm món.",
+  callMore: "Gọi thêm",
   activeSessionTitle: "Đang gọi món",
   addMoreTitle: "Gọi thêm món",
   closedTitle: "Đã thanh toán",
@@ -143,14 +146,21 @@ export const SELF_ORDER_VI = {
   paymentDescription: "Chọn cách thanh toán sau khi nhân viên đã duyệt món.",
   buyerTitle: "Thông tin HĐĐT",
   buyerDescription:
-    "HĐĐT vẫn được phát hành cho đơn đã thanh toán. Chỉ nhập MST khi khách cần thông tin người mua.",
-  buyerNoInvoice: "Khách không lấy hóa đơn (vẫn xuất HĐĐT)",
+    "HĐĐT vẫn được phát hành cho đơn đã thanh toán. Nhập MST nếu bạn cần thông tin người mua trên hóa đơn.",
+  buyerNoInvoice: "Không cần ghi thông tin người mua (vẫn xuất HĐĐT)",
   buyerName: "Tên người mua / công ty",
   buyerTaxCode: "Mã số thuế",
   buyerAddress: "Địa chỉ",
   buyerEmail: "Email nhận hóa đơn",
   buyerEmailInvalid: "Email chưa đúng định dạng.",
-  buyerBusinessHint: "Có MST thì cần đủ tên, MST và địa chỉ.",
+  buyerBusinessHint:
+    "Nhập MST để tự điền tên và địa chỉ. Hãy kiểm tra lại trước khi thanh toán.",
+  buyerTaxLookupLoading: "Đang tra cứu MST...",
+  buyerTaxLookupFound: "Đã tìm thấy thông tin. Vui lòng kiểm tra lại.",
+  buyerTaxLookupNotFound:
+    "Không tìm thấy MST. Vui lòng kiểm tra hoặc nhập tay.",
+  buyerTaxLookupUnavailable:
+    "Chưa tra cứu được. Bạn vẫn có thể nhập tên và địa chỉ.",
   buyerTaxInvalid: "MST phải có dạng 10 số hoặc 10-3 số.",
   buyerBusinessMissing: "Vui lòng nhập đủ tên, MST và địa chỉ.",
   staffQueueButton: "QR gọi món",

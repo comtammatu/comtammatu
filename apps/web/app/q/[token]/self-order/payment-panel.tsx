@@ -38,6 +38,10 @@ import {
   parseVietQrBankApps,
   type VietQrBankApp,
 } from "@lib/self-order/bank-app-link";
+import {
+  isBusinessTaxCode,
+  lookupBusinessTaxCode,
+} from "@lib/self-order/business-tax-lookup";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
 
 export interface GuestPaymentRequestState {
@@ -86,6 +90,13 @@ export interface PaymentPanelProps {
   onBuyerEmailChange: (value: string) => void;
   onRequestPayment: (method: "cash_call" | "vietqr") => void;
 }
+
+type BuyerTaxLookupStatus =
+  | "idle"
+  | "loading"
+  | "found"
+  | "not-found"
+  | "unavailable";
 
 function BankAppLauncher({
   accountNo,
@@ -236,10 +247,17 @@ export function PaymentPanel({
   onBuyerEmailChange,
   onRequestPayment,
 }: PaymentPanelProps) {
+  const [buyerTaxLookupStatus, setBuyerTaxLookupStatus] =
+    useState<BuyerTaxLookupStatus>("idle");
   const buyerNameRef = useRef<HTMLInputElement>(null);
   const buyerTaxCodeRef = useRef<HTMLInputElement>(null);
   const buyerAddressRef = useRef<HTMLInputElement>(null);
   const buyerEmailRef = useRef<HTMLInputElement>(null);
+  const buyerTaxLookupAbortRef = useRef<AbortController | null>(null);
+  const lastLookedUpTaxCodeRef = useRef("");
+  const buyerTaxCodeValueRef = useRef(buyerTaxCode);
+
+  buyerTaxCodeValueRef.current = buyerTaxCode;
 
   useEffect(() => {
     const target =
@@ -254,6 +272,92 @@ export function PaymentPanel({
               : null;
     target?.focus();
   }, [errorFocusRequest]);
+
+  useEffect(
+    () => () => {
+      buyerTaxLookupAbortRef.current?.abort();
+    },
+    [],
+  );
+
+  function resetBuyerTaxLookup() {
+    buyerTaxLookupAbortRef.current?.abort();
+    buyerTaxLookupAbortRef.current = null;
+    lastLookedUpTaxCodeRef.current = "";
+    setBuyerTaxLookupStatus("idle");
+  }
+
+  function handleBuyerTaxCodeChange(value: string) {
+    if (buyerName) onBuyerNameChange("");
+    if (buyerAddress) onBuyerAddressChange("");
+    if (value.trim() && buyerNotGetInvoice) {
+      onBuyerNotGetInvoiceChange(false);
+    }
+    buyerTaxCodeValueRef.current = value;
+    resetBuyerTaxLookup();
+    onBuyerTaxCodeChange(value);
+  }
+
+  async function handleBuyerTaxCodeBlur() {
+    const taxCode = buyerTaxCodeValueRef.current.trim();
+    if (
+      !isBusinessTaxCode(taxCode) ||
+      lastLookedUpTaxCodeRef.current === taxCode
+    ) {
+      return;
+    }
+
+    buyerTaxLookupAbortRef.current?.abort();
+    const controller = new AbortController();
+    buyerTaxLookupAbortRef.current = controller;
+    lastLookedUpTaxCodeRef.current = taxCode;
+    setBuyerTaxLookupStatus("loading");
+
+    try {
+      const business = await lookupBusinessTaxCode(taxCode, controller.signal);
+      if (
+        controller.signal.aborted ||
+        buyerTaxCodeValueRef.current.trim() !== taxCode
+      ) {
+        return;
+      }
+
+      if (!business) {
+        setBuyerTaxLookupStatus("not-found");
+        return;
+      }
+
+      onBuyerNameChange(business.name);
+      onBuyerAddressChange(business.address);
+      setBuyerTaxLookupStatus("found");
+    } catch {
+      if (controller.signal.aborted) return;
+      lastLookedUpTaxCodeRef.current = "";
+      setBuyerTaxLookupStatus("unavailable");
+    }
+  }
+
+  const buyerTaxLookupMessage =
+    buyerTaxLookupStatus === "loading"
+      ? SELF_ORDER_VI.buyerTaxLookupLoading
+      : buyerTaxLookupStatus === "found"
+        ? SELF_ORDER_VI.buyerTaxLookupFound
+        : buyerTaxLookupStatus === "not-found"
+          ? SELF_ORDER_VI.buyerTaxLookupNotFound
+          : buyerTaxLookupStatus === "unavailable"
+            ? SELF_ORDER_VI.buyerTaxLookupUnavailable
+            : null;
+
+  const canEditBuyerDetails =
+    buyerTaxLookupStatus === "not-found" ||
+    buyerTaxLookupStatus === "unavailable";
+
+  const buyerTaxCodeDescribedBy = [
+    fieldErrors.buyerTaxCode ? "self-order-buyer-tax-code-error" : null,
+    buyerTaxLookupMessage ? "self-order-buyer-tax-code-lookup" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (!activeOrder) {
     return (
@@ -284,7 +388,45 @@ export function PaymentPanel({
       icon={<IconReceipt />}
       size="sm"
     >
-      <>
+      <div className="grid gap-3">
+        <Field data-invalid={Boolean(fieldErrors.buyerTaxCode)}>
+          <FieldLabel htmlFor="self-order-buyer-tax-code">
+            {SELF_ORDER_VI.buyerTaxCode}
+          </FieldLabel>
+          <Input
+            ref={buyerTaxCodeRef}
+            id="self-order-buyer-tax-code"
+            name="buyerTaxCode"
+            className="h-12 font-mono text-base"
+            inputMode="numeric"
+            maxLength={14}
+            autoComplete="off"
+            spellCheck={false}
+            value={buyerTaxCode}
+            disabled={disabled || isPending}
+            aria-invalid={Boolean(fieldErrors.buyerTaxCode)}
+            aria-describedby={buyerTaxCodeDescribedBy || undefined}
+            placeholder="0123456789"
+            onChange={(event) => handleBuyerTaxCodeChange(event.target.value)}
+            onBlur={() => void handleBuyerTaxCodeBlur()}
+          />
+          <FieldError id="self-order-buyer-tax-code-error">
+            {fieldErrors.buyerTaxCode}
+          </FieldError>
+          {buyerTaxLookupMessage ? (
+            <p
+              id="self-order-buyer-tax-code-lookup"
+              role="status"
+              aria-live="polite"
+              className="flex items-center gap-2 text-xs text-muted-foreground"
+            >
+              {buyerTaxLookupStatus === "loading" ? (
+                <Spinner aria-hidden="true" className="size-4" />
+              ) : null}
+              {buyerTaxLookupMessage}
+            </p>
+          ) : null}
+        </Field>
         <div className="flex items-center gap-2 rounded-md bg-muted/30 p-3">
           <Checkbox
             id="self-order-buyer-not-get-invoice"
@@ -292,7 +434,9 @@ export function PaymentPanel({
             checked={buyerNotGetInvoice}
             disabled={disabled || isPending}
             onCheckedChange={(value) => {
-              onBuyerNotGetInvoiceChange(value === true);
+              const nextValue = value === true;
+              if (nextValue) resetBuyerTaxLookup();
+              onBuyerNotGetInvoiceChange(nextValue);
             }}
           />
           <Label htmlFor="self-order-buyer-not-get-invoice" className="text-sm">
@@ -300,7 +444,7 @@ export function PaymentPanel({
           </Label>
         </div>
         {!buyerNotGetInvoice ? (
-          <div className="grid gap-3">
+          <>
             <Field data-invalid={Boolean(fieldErrors.buyerName)}>
               <FieldLabel htmlFor="self-order-buyer-name">
                 {SELF_ORDER_VI.buyerName}
@@ -313,6 +457,7 @@ export function PaymentPanel({
                 autoComplete="name"
                 value={buyerName}
                 disabled={disabled || isPending}
+                readOnly={!canEditBuyerDetails}
                 aria-invalid={Boolean(fieldErrors.buyerName)}
                 aria-describedby={
                   fieldErrors.buyerName
@@ -324,34 +469,6 @@ export function PaymentPanel({
               />
               <FieldError id="self-order-buyer-name-error">
                 {fieldErrors.buyerName}
-              </FieldError>
-            </Field>
-            <Field data-invalid={Boolean(fieldErrors.buyerTaxCode)}>
-              <FieldLabel htmlFor="self-order-buyer-tax-code">
-                {SELF_ORDER_VI.buyerTaxCode}
-              </FieldLabel>
-              <Input
-                ref={buyerTaxCodeRef}
-                id="self-order-buyer-tax-code"
-                name="buyerTaxCode"
-                className="h-12 font-mono text-base"
-                inputMode="numeric"
-                maxLength={14}
-                autoComplete="off"
-                spellCheck={false}
-                value={buyerTaxCode}
-                disabled={disabled || isPending}
-                aria-invalid={Boolean(fieldErrors.buyerTaxCode)}
-                aria-describedby={
-                  fieldErrors.buyerTaxCode
-                    ? "self-order-buyer-tax-code-error"
-                    : undefined
-                }
-                placeholder="0123456789"
-                onChange={(event) => onBuyerTaxCodeChange(event.target.value)}
-              />
-              <FieldError id="self-order-buyer-tax-code-error">
-                {fieldErrors.buyerTaxCode}
               </FieldError>
             </Field>
             <Field data-invalid={Boolean(fieldErrors.buyerAddress)}>
@@ -366,6 +483,7 @@ export function PaymentPanel({
                 autoComplete="street-address"
                 value={buyerAddress}
                 disabled={disabled || isPending}
+                readOnly={!canEditBuyerDetails}
                 aria-invalid={Boolean(fieldErrors.buyerAddress)}
                 aria-describedby={
                   fieldErrors.buyerAddress
@@ -409,9 +527,9 @@ export function PaymentPanel({
             <p className="text-xs text-muted-foreground">
               {SELF_ORDER_VI.buyerBusinessHint}
             </p>
-          </div>
+          </>
         ) : null}
-      </>
+      </div>
     </AppSection>
   );
 

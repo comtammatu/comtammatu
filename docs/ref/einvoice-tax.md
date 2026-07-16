@@ -60,10 +60,10 @@ Trong chế độ HĐĐT active, hệ thống mặc định phát hành **HĐĐT
 payment POS**. Daily summary chỉ còn dùng cho backfill hoặc khi chủ trương vận
 hành chuyển sang template tổng hợp riêng.
 
-| Luồng                 | Khi nào                     | Tần suất                     | Đối tượng pháp lý                                |
-| --------------------- | --------------------------- | ---------------------------- | ------------------------------------------------ |
+| Luồng                 | Khi nào                              | Tần suất                     | Đối tượng pháp lý                                |
+| --------------------- | ------------------------------------ | ---------------------------- | ------------------------------------------------ |
 | **POS realtime**      | Payment POS trong chế độ HĐĐT active | Per-order (ngay tại quầy)    | HĐ điện tử per-order; có MST nếu khách cung cấp  |
-| **B2C daily summary** | Backfill hoặc rollout riêng | 1 HĐ tổng hợp/chi nhánh/ngày | HĐ tổng hợp B2C (template riêng đăng ký với CQT) |
+| **B2C daily summary** | Backfill hoặc rollout riêng          | 1 HĐ tổng hợp/chi nhánh/ngày | HĐ tổng hợp B2C (template riêng đăng ký với CQT) |
 
 Mỗi order chỉ thuộc **đúng 1** trong 2 luồng (không double-issue).
 
@@ -76,8 +76,8 @@ Mỗi order chỉ thuộc **đúng 1** trong 2 luồng (không double-issue).
 HKD kê khai (không đăng ký phương pháp khấu trừ) nộp GTGT + TNCN theo tỷ lệ %
 trên doanh thu (NĐ 68/2026 + biểu ngành nghề pháp luật GTGT/TNCN):
 
-| Ngành áp dụng cho Má Tư           | GTGT   | TNCN     | Ghi chú                                                              |
-| --------------------------------- | ------ | -------- | -------------------------------------------------------------------- |
+| Ngành áp dụng cho Má Tư           | GTGT   | TNCN     | Ghi chú                                                                                                                             |
+| --------------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Dịch vụ ăn uống (tại chỗ/mang đi) | **3%** | **1,5%** | 2,4% là mức giảm TẠM THỜI 01/07/2025–31/12/2026 (NQ 204/2025 + NĐ 174/2025, giảm 20% của 3%); từ 01/01/2027 về 3% nếu không gia hạn |
 
 - Mẫu HĐ bán hàng từ máy tính tiền (`2/...`): giá trên hóa đơn là giá bán đã
@@ -95,14 +95,14 @@ trên doanh thu (NĐ 68/2026 + biểu ngành nghề pháp luật GTGT/TNCN):
 
 ### 2.2 Nếu đăng ký phương pháp khấu trừ (HĐ GTGT mẫu `1/...`)
 
-| Loại hàng hóa / dịch vụ                    | Thuế suất | Ghi chú                                                        |
-| ------------------------------------------ | --------- | -------------------------------------------------------------- |
+| Loại hàng hóa / dịch vụ                    | Thuế suất | Ghi chú                                                                            |
+| ------------------------------------------ | --------- | ---------------------------------------------------------------------------------- |
 | Thực phẩm chế biến tại chỗ (ăn uống)       | **8%**    | Áp dụng giảm 2% đến 31/12/2026 theo NQ 204/2025/QH15 nếu không thuộc nhóm loại trừ |
-| Đồ uống có cồn                             | **10%**   | Bia, rượu                                                      |
-| Đồ uống không cồn                          | **8%**    | Áp dụng giảm 2% đến 31/12/2026 nếu không thuộc nhóm loại trừ   |
-| Nguyên liệu thực phẩm thô (rau, thịt, gạo) | **5%**    | Khi mua từ nhà cung cấp                                        |
-| Dịch vụ vận chuyển nội địa                 | **8%**    | Phí giao hàng nếu có                                           |
-| Xuất khẩu                                  | **0%**    | Không áp dụng                                                  |
+| Đồ uống có cồn                             | **10%**   | Bia, rượu                                                                          |
+| Đồ uống không cồn                          | **8%**    | Áp dụng giảm 2% đến 31/12/2026 nếu không thuộc nhóm loại trừ                       |
+| Nguyên liệu thực phẩm thô (rau, thịt, gạo) | **5%**    | Khi mua từ nhà cung cấp                                                            |
+| Dịch vụ vận chuyển nội địa                 | **8%**    | Phí giao hàng nếu có                                                               |
+| Xuất khẩu                                  | **0%**    | Không áp dụng                                                                      |
 
 > ⚠️ **Lưu ý hậu 31/12/2026**: NQ 204/2025/QH15 + NĐ 174/2025/NĐ-CP hết hiệu
 > lực → các nhóm đang được giảm 2% quay về **10%** và tỷ lệ trực tiếp ăn uống
@@ -122,7 +122,8 @@ trên doanh thu (NĐ 68/2026 + biểu ngành nghề pháp luật GTGT/TNCN):
 
 ```
 Payment thành công tại POS
-  → Nếu khách cung cấp MST: cashier nhập thông tin người mua
+  → Nếu khách cung cấp MST: khách tự nhập trên `/q/[token]` hoặc cashier nhập tại POS
+      ↳ UI khách tra cứu gợi ý tên/địa chỉ theo MST rồi cho phép kiểm tra, sửa tay
   → Nếu khách không lấy HĐ: POS dùng buyerName='Bán cho người tiêu dùng',
      MST trống, buyerNotGetInvoice=true
   → createTaxInvoice action gọi Viettel S-invoice API
@@ -172,6 +173,14 @@ backfill hoặc khi chủ trương vận hành chuyển sang template tổng h�
       qua `COMPANY_TAX_CODE` cho endpoint/API lookup
 - Tên, địa chỉ, MST người mua
     + Khách có MST: bắt buộc tên + MST hợp lệ
+    + Trên `/q/[token]`, app gọi API công khai `GET
+      https://api.vietqr.io/v2/business/{taxCode}` của VietQR.IO/Casso để gợi ý
+      tên và địa chỉ từ dữ liệu tra cứu MST (nguồn do API công bố: `gdt.gov.vn`).
+      Khi tra cứu thành công, tên/địa chỉ được tự điền và khóa sửa; hai trường
+      này chỉ mở nhập tay khi API lỗi hoặc không tìm thấy. Hai trạng thái đó
+      không chặn thanh toán và validation hiện có vẫn là cổng cuối. Viettel
+      S-invoice chỉ nhận thông tin lúc phát hành, không phải nguồn tự điền dữ
+      liệu người mua.
     + Khách không lấy HĐ: ghi "Bán cho người tiêu dùng", MST trống
     + B2C summary backfill: ghi "Bán cho người tiêu dùng", MST trống
     + Căn cứ: NĐ 254/2026/NĐ-CP (hiệu lực 01/07/2026) Phụ lục "Nội dung của hóa
@@ -516,13 +525,13 @@ buộc với nhóm doanh thu **> 3 tỷ/năm** (TNCN **17%**), hoặc nhóm 500t
 nguyện chọn. Khi đó chứng từ đầu vào (`supplier_invoices` + 3-way matching) trở
 thành **dữ liệu thuế trực tiếp**, không chỉ là hồ sơ tham chiếu.
 
-| Được trừ | Không được trừ |
-| --- | --- |
-| Nguyên liệu, hàng hóa phục vụ SXKD | Chi phí không liên quan hoạt động SXKD |
-| Lương công nhân viên **có đóng BHXH bắt buộc** | Chi phí **không có hóa đơn/chứng từ** |
-| Khấu hao TSCĐ | **Lương/thù lao của chủ hộ** |
-| Lãi vay phục vụ SXKD | Tiền phạt vi phạm hành chính |
-| Dịch vụ mua ngoài **có hóa đơn, thanh toán không tiền mặt nếu ≥ 5tr** | Chi tiêu cá nhân/gia đình của chủ hộ |
+| Được trừ                                                              | Không được trừ                         |
+| --------------------------------------------------------------------- | -------------------------------------- |
+| Nguyên liệu, hàng hóa phục vụ SXKD                                    | Chi phí không liên quan hoạt động SXKD |
+| Lương công nhân viên **có đóng BHXH bắt buộc**                        | Chi phí **không có hóa đơn/chứng từ**  |
+| Khấu hao TSCĐ                                                         | **Lương/thù lao của chủ hộ**           |
+| Lãi vay phục vụ SXKD                                                  | Tiền phạt vi phạm hành chính           |
+| Dịch vụ mua ngoài **có hóa đơn, thanh toán không tiền mặt nếu ≥ 5tr** | Chi tiêu cá nhân/gia đình của chủ hộ   |
 
 > Với HKD ≤ 3 tỷ tính theo tỷ lệ % trên doanh thu (mặc định của Má Tư hiện tại),
 > chi phí đầu vào KHÔNG trực tiếp giảm thuế — nhưng vẫn cần lưu đủ để xác định
@@ -541,7 +550,9 @@ Hệ thống abstract qua interface `InvoiceProvider` (`packages/shared/src/prov
 interface InvoiceProvider {
   readonly name: string;
   createInvoice(request: InvoiceRequest): Promise<InvoiceResult>;
-  createBatchInvoice(requests: InvoiceRequest[]): Promise<BatchInvoiceItemResult[]>; // batch issue (daily summary)
+  createBatchInvoice(
+    requests: InvoiceRequest[],
+  ): Promise<BatchInvoiceItemResult[]>; // batch issue (daily summary)
   getStatus(providerRef: string): Promise<InvoiceStatus>;
   cancelInvoice(providerRef: string, reason: string): Promise<void>;
   downloadInvoice(request: InvoiceDownloadRequest): Promise<InvoiceArchive>; // PDF/XML pass-through
@@ -607,17 +618,17 @@ Auth flow:
 
 **Common Sinvoice error codes** (per HDSD v1):
 
-| Code                                  | Vấn đề                | Action                                        |
-| ------------------------------------- | --------------------- | --------------------------------------------- |
-| `1517` Invoice serial inactive        | Mẫu HĐ chưa kích hoạt | Active thông báo phát hành với CQT            |
-| `1521` / `47` `INVOICE_NO_DUPLICATED` | Số HĐ trùng           | Retry 1 phút sau (UNIQUE lock OK)             |
+| Code                                  | Vấn đề                | Action                                                  |
+| ------------------------------------- | --------------------- | ------------------------------------------------------- |
+| `1517` Invoice serial inactive        | Mẫu HĐ chưa kích hoạt | Active thông báo phát hành với CQT                      |
+| `1521` / `47` `INVOICE_NO_DUPLICATED` | Số HĐ trùng           | Retry 1 phút sau (UNIQUE lock OK)                       |
 | `1520` Invalid supplier tax code      | MST không khớp        | Check `COMPANY_TAX_CODE` với tài khoản/template Viettel |
-| `OUT_OF_INVOICE_NO`                   | Hết số HĐ trong dải   | Đăng ký dải mới với CQT                       |
-| `INVALID_USER_PASSWORD`               | Sai cred              | Kiểm tra `SINVOICE_USERNAME/PASSWORD`         |
-| `429` Too Many Requests               | Rate limit            | Cron auto retry next-cycle                    |
-| `503` Service Unavailable             | Sinvoice maintenance  | Đợi BU thông báo                              |
-| `TRANSACTION_IS_BEING_PROCESSED`      | UUID đang xử lý       | Đợi 1 phút                                    |
-| `INVALID_TRANSACTION_UUID`            | UUID format sai       | Bug code → fix `buildSinvoiceTransactionUuid` |
+| `OUT_OF_INVOICE_NO`                   | Hết số HĐ trong dải   | Đăng ký dải mới với CQT                                 |
+| `INVALID_USER_PASSWORD`               | Sai cred              | Kiểm tra `SINVOICE_USERNAME/PASSWORD`                   |
+| `429` Too Many Requests               | Rate limit            | Cron auto retry next-cycle                              |
+| `503` Service Unavailable             | Sinvoice maintenance  | Đợi BU thông báo                                        |
+| `TRANSACTION_IS_BEING_PROCESSED`      | UUID đang xử lý       | Đợi 1 phút                                              |
+| `INVALID_TRANSACTION_UUID`            | UUID format sai       | Bug code → fix `buildSinvoiceTransactionUuid`           |
 
 ### 5.5 Provider init logic
 
@@ -650,7 +661,7 @@ SELECT public.get_finance_dashboard_summary(
 );
 -- Returns: { invoices_attention, invoices_issued, invoices_not_required,
 --            webhook_failures_count, ... }
-````
+```
 
 ACL gate: `finance:view`.
 
@@ -694,12 +705,12 @@ WHERE ti.invoice_kind = 'daily_summary'
 Hệ thống nêu **loại nghĩa vụ** để cảnh báo vận hành; **mức phạt cụ thể do kế toán
 chốt** theo văn bản xử phạt hiện hành (không hardcode mức trong app).
 
-| Hành vi | Căn cứ | Hệ quả |
-| --- | --- | --- |
-| Không lập HĐĐT khi bán hàng / không dùng HĐĐT máy tính tiền (HKD > 1 tỷ) | NĐ 254/2026 + NĐ xử phạt hóa đơn hiện hành | Phạt vi phạm về hóa đơn theo từng hành vi |
-| Chậm nộp **tiền thuế** | Luật Quản lý thuế 108/2025 + NĐ 252/2026 | Tiền chậm nộp theo quy định hiện hành |
-| Chậm nộp **tờ khai** | Luật Quản lý thuế 108/2025 + NĐ 252/2026 + NĐ xử phạt | Phạt theo số ngày chậm |
-| Kê khai sai dẫn đến thiếu thuế | Luật Quản lý thuế 108/2025 + NĐ 252/2026 | Truy thu + tiền chậm nộp + phạt theo hành vi |
+| Hành vi                                                                  | Căn cứ                                                | Hệ quả                                       |
+| ------------------------------------------------------------------------ | ----------------------------------------------------- | -------------------------------------------- |
+| Không lập HĐĐT khi bán hàng / không dùng HĐĐT máy tính tiền (HKD > 1 tỷ) | NĐ 254/2026 + NĐ xử phạt hóa đơn hiện hành            | Phạt vi phạm về hóa đơn theo từng hành vi    |
+| Chậm nộp **tiền thuế**                                                   | Luật Quản lý thuế 108/2025 + NĐ 252/2026              | Tiền chậm nộp theo quy định hiện hành        |
+| Chậm nộp **tờ khai**                                                     | Luật Quản lý thuế 108/2025 + NĐ 252/2026 + NĐ xử phạt | Phạt theo số ngày chậm                       |
+| Kê khai sai dẫn đến thiếu thuế                                           | Luật Quản lý thuế 108/2025 + NĐ 252/2026              | Truy thu + tiền chậm nộp + phạt theo hành vi |
 
 > Đây là dữ liệu để Finance/POS cảnh báo (vd: order chưa phát hành HĐĐT, kỳ kê khai
 > sắp đến hạn). Hệ thống **không** tự tính/áp mức phạt — chỉ surface rủi ro cho
@@ -812,13 +823,13 @@ Toàn bộ schema + RPC HĐĐT đã gộp vào `supabase/migrations/000000000000
 `supabase/migration-archive/`; bảng dưới mô tả từng feature theo file gốc đó.
 
 | File gốc (`supabase/migration-archive/`) | Mô tả                                                                                                                                                        |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tax_invoice_state_machine.sql`     | RPC `transition_tax_invoice_state` + matrix + `tax_invoice_events` + `signing_started_at` + `uq_tax_invoices_active_per_order`                               |
-| `pos_hddt_not_required_d4.sql`      | Thêm state `not_required` (D4 — đã retire)                                                                                                                   |
-| `hddt_summary_schema.sql`           | `tax_invoices` cols + `tax_invoice_orders` junction + `summary_run_queue` + `uq_tax_invoices_active_per_summary`                                             |
-| `hddt_summary_rpcs.sql`             | `transition_tax_invoice_state_as_system` + `_compute_vat_breakdown` + `aggregate_daily_b2c_invoice` (v1) + trigger `tio_assert_one_active_summary_per_order` |
-| `hddt_aggregate_rpc_fixes.sql`      | Fix bucket `payments.paid_at` (orders không có column) + `pg_advisory_xact_lock(BIGINT)` 1-arg                                                               |
-| `finance_dashboard_summary_rpc.sql` | `get_finance_dashboard_summary` cho `/finance` dashboard                                                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tax_invoice_state_machine.sql`          | RPC `transition_tax_invoice_state` + matrix + `tax_invoice_events` + `signing_started_at` + `uq_tax_invoices_active_per_order`                               |
+| `pos_hddt_not_required_d4.sql`           | Thêm state `not_required` (D4 — đã retire)                                                                                                                   |
+| `hddt_summary_schema.sql`                | `tax_invoices` cols + `tax_invoice_orders` junction + `summary_run_queue` + `uq_tax_invoices_active_per_summary`                                             |
+| `hddt_summary_rpcs.sql`                  | `transition_tax_invoice_state_as_system` + `_compute_vat_breakdown` + `aggregate_daily_b2c_invoice` (v1) + trigger `tio_assert_one_active_summary_per_order` |
+| `hddt_aggregate_rpc_fixes.sql`           | Fix bucket `payments.paid_at` (orders không có column) + `pg_advisory_xact_lock(BIGINT)` 1-arg                                                               |
+| `finance_dashboard_summary_rpc.sql`      | `get_finance_dashboard_summary` cho `/finance` dashboard                                                                                                     |
 
 ---
 

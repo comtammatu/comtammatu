@@ -33,7 +33,7 @@ test("S3 exposes snapshot, submit, and payment without device capability", () =>
   }
 });
 
-test("S4 is one menu page with dialog/toast feedback and adaptive polling", () => {
+test("S4 is one responsive menu page with pending-state feedback and adaptive polling", () => {
   const client = read("app/q/[token]/self-order-client.tsx");
   const bill = read("app/q/[token]/self-order/bill-drawer.tsx");
   const cart = read("app/q/[token]/self-order/cart-sheet.tsx");
@@ -55,11 +55,22 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(client, /onOpenPayment=\{\(\) => setBillView\("payment"\)\}/);
   assert.match(client, /!ambiguous && order \? \(/);
   assert.match(client, /toast\.error\(refreshError\)/);
-  assert.match(client, /toast\.warning\(SELF_ORDER_VI\.awaitingCalloutTitle/);
   assert.match(client, /toast\.warning\(SELF_ORDER_VI\.rejectedCalloutTitle/);
   assert.match(client, /guestToastKeyRef/);
-  assert.doesNotMatch(client, /<AppDialog|guestNotice|setGuestNotice/);
-  assert.match(client, /awaitingCalloutTitle/);
+  assert.match(client, /from "@\/components\/form"/);
+  assert.match(client, /<AppDialog/);
+  assert.match(client, /awaitingDialogOpen/);
+  assert.match(client, /pendingDialogTitle/);
+  assert.match(client, /pendingDialogDescription/);
+  assert.match(client, /SELF_ORDER_VI\.callMore/);
+  assert.match(client, /SELF_ORDER_VI\.paymentCompletedClose/);
+  assert.match(client, /footerClassName="flex-col gap-2 sm:flex-row"/);
+  assert.match(client, /const isFirstPendingSubmit = !awaiting/);
+  assert.match(
+    client,
+    /state === "awaiting_confirmation"[\s\S]*isFirstPendingSubmit[\s\S]*setAwaitingDialogOpen\(true\)/,
+  );
+  assert.doesNotMatch(client, /toast\.warning\(SELF_ORDER_VI\.awaitingCalloutTitle/);
   assert.match(client, /rejectedCalloutTitle/);
   assert.match(client, /SELF_ORDER_VI\.submitAddMore/);
   assert.match(client, /<BillDrawer/);
@@ -92,6 +103,11 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(summary, /items\.flatMap\(buildBillRows\)/);
   assert.match(summary, /formatVND\(row\.unitPrice\)/);
   assert.match(summary, /formatVND\(row\.lineTotal\)/);
+  assert.match(summary, /import \{ BrandMascot \} from "@\/components\/brand"/);
+  assert.match(summary, /<BrandMascot decorative size="sm" \/>/);
+  assert.match(summary, /awaitingCalloutTitle/);
+  assert.match(summary, /awaitingCalloutDescription/);
+  assert.match(summary, /role="status"/);
   assert.match(bill, /SELF_ORDER_VI\.subtotal/);
   assert.match(bill, /SELF_ORDER_VI\.serviceCharge/);
   assert.match(bill, /SELF_ORDER_VI\.discount/);
@@ -105,7 +121,8 @@ test("S4 is one menu page with dialog/toast feedback and adaptive polling", () =
   assert.match(menu, /from "\.\/menu-display"/);
   assert.match(menu, /menuPromptTitle/);
   assert.doesNotMatch(menu, /bg-gradient-to-t from-black/);
-  assert.doesNotMatch(menu, /featuredMainDishes|MenuPhotoButton|grid-cols-2/);
+  assert.doesNotMatch(menu, /featuredMainDishes|MenuPhotoButton/);
+  assert.match(menu, /grid grid-cols-1 gap-3 md:grid-cols-2/);
   assert.doesNotMatch(menu, /category\.type !== "main_dish"/);
   assert.match(menu, /items-stretch justify-start gap-4 p-3/);
   assert.match(menu, /active:scale-95/);
@@ -197,7 +214,7 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(contracts, /manual_limit_quantity/);
   assert.match(guestUi, /branch_menu_limit_availability/);
   assert.match(guestUi, /primary \(terracotta\)/);
-  assert.match(guestUi, /no per-item category eyebrow/);
+  assert.match(guestUi, /no\s+per-item category eyebrow/);
   assert.doesNotMatch(guestUi, /fixed lower-right/);
 });
 
