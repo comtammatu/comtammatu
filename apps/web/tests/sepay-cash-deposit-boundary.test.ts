@@ -19,6 +19,7 @@ function matchedCashDeposit(): SepayBankTransaction {
     processingStatus: "processed",
     errorCode: null,
     orderId: null,
+    orderNumber: null,
     paymentId: null,
     expenseId: 601,
     expenseIds: [601],

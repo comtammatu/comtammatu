@@ -29,6 +29,12 @@ import { POS_ERROR_CODES } from "../_utils/error-codes";
 export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
   // Cash-specific sentinels first.
   {
+    match: includesAny("pending_momo_payment_requires_provider_resolution"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn đang chờ MoMo xác nhận. Hãy kiểm tra giao dịch MoMo trước khi thu tiền mặt.",
+  },
+  {
     match: includesAny("self_order_payment_cancel_staff_required"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage:
@@ -107,18 +113,18 @@ export const confirmCashPaymentRpcFallback: RpcErrorFallback = {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Mappings for `supabase.rpc("create_payment", ...)` failures.
+ * Mappings for `supabase.rpc("create_remote_payment_intent", ...)` failures.
  *
  * Order (most-specific → most-general):
  *
- * 1. `already_paid` — `create_payment`-specific. Different copy from the
+ * 1. `already_paid` — payment-intent-specific. Different copy from the
  *    pre-RPC `order.payment_status === "paid"` guard inside the handler
  *    (both say "Đơn hàng đã thanh toán." — kept identical so cashier sees
  *    the same toast regardless of which check fired first).
  * 2. `amount_mismatch_recomputed` BEFORE `amount_mismatch` — substring
  *    shadow. The longer sentinel ("đơn đã thay đổi so với dữ liệu món…")
  *    is the shared payment vocabulary; the shorter `amount_mismatch`
- *    is the `create_payment` RPC's own check ("Số tiền không khớp.").
+ *    is the payment-intent RPC's own check ("Số tiền không khớp.").
  * 3. Shared payment vocabulary — inlined so the mapping table is the
  *    single source of truth.
  *
@@ -134,6 +140,12 @@ export const confirmCashPaymentRpcFallback: RpcErrorFallback = {
  * fits the `RpcErrorMapping` shape.
  */
 export const createPaymentRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: (_message, code) => code === "55P03",
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Đơn hàng đang được xử lý bởi một giao dịch khác. Vui lòng tải lại sau vài giây.",
+  },
   {
     match: includesAny("already_paid"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,

@@ -1,5 +1,9 @@
 import { getVNDateString } from "@comtammatu/shared/time";
 
+const SEPAY_LOCAL_DATE_TIME_PATTERN =
+  /^(\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))[ T]((?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?)$/;
+const EXPLICIT_TIME_ZONE_PATTERN = /(?:Z|[+-]\d{2}:\d{2})$/i;
+
 export type SepayTransferType = "in" | "out";
 
 export interface SepayDateRange {
@@ -16,6 +20,10 @@ export interface SepayWebhookRow {
   order_id: number | null;
   payment_id: number | null;
   expense_id: number | null;
+  orders?:
+    | { order_number?: string | null }
+    | Array<{ order_number?: string | null }>
+    | null;
   payload: unknown;
 }
 
@@ -46,6 +54,7 @@ export interface SepayBankTransaction {
   processingStatus: string;
   errorCode: string | null;
   orderId: number | null;
+  orderNumber: string | null;
   paymentId: number | null;
   expenseId: number | null;
   expenseIds: number[];
@@ -85,6 +94,25 @@ export function isSepayExpenseAllocationBalanced(
   );
 }
 
+export function nextSepayExpenseSelection(
+  currentIds: readonly number[],
+  expenseId: number,
+  persistedIntentIds: ReadonlySet<number>,
+): number[] {
+  if (currentIds.includes(expenseId)) {
+    return currentIds.filter((id) => id !== expenseId);
+  }
+
+  if (
+    persistedIntentIds.has(expenseId) ||
+    currentIds.some((id) => persistedIntentIds.has(id))
+  ) {
+    return [expenseId];
+  }
+
+  return [...currentIds, expenseId];
+}
+
 export function isSepayRefundAllocationBalanced(
   transactionAmount: number,
   selectedRefundAmount: number,
@@ -104,6 +132,62 @@ export type SepayReconciliationState =
   | "matched"
   | "needs_review"
   | "webhook_error";
+
+const SEPAY_RECOVERABLE_PAYMENT_REVIEW_CODES = [
+  "missing_payment_code_needs_review",
+  "order_not_found_needs_review",
+  "ambiguous_payment_code_needs_review",
+  "amount_mismatch_needs_review",
+] as const;
+
+const SEPAY_PAYMENT_CONFLICT_REVIEW_CODES = [
+  "payment_method_conflict_needs_review",
+  "payment_state_conflict_needs_review",
+  "overpayment_needs_review",
+] as const;
+
+function includesErrorCode(
+  values: readonly string[],
+  errorCode: string | null,
+): boolean {
+  return errorCode != null && values.some((value) => value === errorCode);
+}
+
+export function isSepayPaymentConflictReviewCode(
+  errorCode: string | null,
+): boolean {
+  return includesErrorCode(SEPAY_PAYMENT_CONFLICT_REVIEW_CODES, errorCode);
+}
+
+export function isSepayBusinessReviewCode(errorCode: string | null): boolean {
+  return (
+    includesErrorCode(SEPAY_RECOVERABLE_PAYMENT_REVIEW_CODES, errorCode) ||
+    isSepayPaymentConflictReviewCode(errorCode)
+  );
+}
+
+export function canManuallyLinkSepayPayment(
+  transaction: Pick<
+    SepayBankTransaction,
+    | "errorCode"
+    | "expenseIds"
+    | "paymentId"
+    | "processingStatus"
+    | "transferType"
+  >,
+): boolean {
+  return (
+    transaction.transferType === "in" &&
+    transaction.processingStatus === "processed" &&
+    transaction.paymentId == null &&
+    transaction.expenseIds.length === 0 &&
+    (transaction.errorCode == null ||
+      includesErrorCode(
+        SEPAY_RECOVERABLE_PAYMENT_REVIEW_CODES,
+        transaction.errorCode,
+      ))
+  );
+}
 
 export const SEPAY_BANK_WEBHOOK_REVIEW_VALUES = [
   "reviewing",
@@ -189,16 +273,13 @@ export function readSepayBankWebhookReview(
 export function classifySepayUnmatchedMoneyIn(
   transaction: Pick<
     SepayBankTransaction,
-    | "code"
-    | "content"
-    | "errorCode"
-    | "processingStatus"
-    | "referenceCode"
+    "code" | "content" | "errorCode" | "processingStatus" | "referenceCode"
   >,
 ): SepayUnmatchedMoneyInReason {
   if (
     transaction.processingStatus === "failed" ||
-    transaction.errorCode != null
+    (transaction.errorCode != null &&
+      !isSepayBusinessReviewCode(transaction.errorCode))
   ) {
     return "webhook_error";
   }
@@ -231,7 +312,8 @@ export function classifySepayReconciliationState(
   if (
     transaction.processingStatus === "failed" ||
     (transaction.errorCode != null &&
-      !isUnclassifiedMoneyOutStatus(transaction))
+      !isUnclassifiedMoneyOutStatus(transaction) &&
+      !isSepayBusinessReviewCode(transaction.errorCode))
   ) {
     return "webhook_error";
   }
@@ -282,11 +364,25 @@ function readTransferType(
 export function sepayTransactionBusinessDate(
   transaction: Pick<SepayBankTransaction, "createdAt" | "transactionDate">,
 ): string {
-  if (transaction.transactionDate) {
-    const match = transaction.transactionDate.match(/^\d{4}-\d{2}-\d{2}/);
-    if (match?.[0]) return match[0];
+  return getVNDateString(resolveSepayTransactionInstant(transaction));
+}
+
+export function resolveSepayTransactionInstant(
+  transaction: Pick<SepayBankTransaction, "createdAt" | "transactionDate">,
+): string {
+  const transactionDate = transaction.transactionDate?.trim();
+  const localMatch = transactionDate?.match(SEPAY_LOCAL_DATE_TIME_PATTERN);
+  if (localMatch?.[1] && localMatch[2]) {
+    return `${localMatch[1]}T${localMatch[2]}+07:00`;
   }
-  return getVNDateString(transaction.createdAt);
+  if (
+    transactionDate &&
+    EXPLICIT_TIME_ZONE_PATTERN.test(transactionDate) &&
+    !Number.isNaN(Date.parse(transactionDate))
+  ) {
+    return transactionDate;
+  }
+  return transaction.createdAt;
 }
 
 export function isSepayBusinessDateInRange(
@@ -317,6 +413,8 @@ export function mapSepayWebhookRow(
   const amount = rawAmount != null ? Math.abs(rawAmount) : null;
   if (!transferType || amount == null || amount <= 0) return null;
 
+  const order = Array.isArray(row.orders) ? row.orders[0] : row.orders;
+
   return {
     eventId: row.id,
     requestId: row.request_id,
@@ -324,6 +422,8 @@ export function mapSepayWebhookRow(
     processingStatus: row.processing_status,
     errorCode: row.error_code,
     orderId: row.order_id,
+    orderNumber:
+      typeof order?.order_number === "string" ? order.order_number : null,
     paymentId: row.payment_id,
     expenseId: row.expense_id,
     expenseIds: row.expense_id != null ? [row.expense_id] : [],

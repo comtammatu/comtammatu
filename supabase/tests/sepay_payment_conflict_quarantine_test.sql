@@ -1,0 +1,780 @@
+-- Run against a non-production database with migrations and dev seed applied:
+-- psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/sepay_payment_conflict_quarantine_test.sql
+
+\set ON_ERROR_STOP on
+BEGIN;
+
+DO $$
+DECLARE
+  v_tenant_id bigint;
+  v_branch_id bigint;
+  v_owner_id uuid;
+  v_menu_category_id bigint;
+  v_menu_item_id bigint;
+  v_menu_item_name text;
+  v_station_id bigint;
+  v_account_number text := '999999999999';
+  v_amount numeric := 100000;
+  v_code_suffix text := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 20));
+  v_fresh_code text;
+  v_pending_code text;
+  v_cash_code text;
+  v_momo_code text;
+  v_manual_code text;
+  v_fresh_order_id bigint;
+  v_fresh_payment_id bigint;
+  v_fresh_event_id bigint;
+  v_pending_order_id bigint;
+  v_pending_payment_id bigint;
+  v_pending_event_id bigint;
+  v_duplicate_event_id bigint;
+  v_cash_order_id bigint;
+  v_cash_payment_id bigint;
+  v_cash_event_id bigint;
+  v_momo_order_id bigint;
+  v_momo_payment_id bigint;
+  v_momo_event_id bigint;
+  v_manual_order_id bigint;
+  v_manual_payment_id bigint;
+  v_manual_event_id bigint;
+  v_denied_event_id bigint;
+  v_invalid_event_id bigint;
+  v_result jsonb;
+  v_before_order jsonb;
+  v_before_payment jsonb;
+  v_after_order jsonb;
+  v_after_payment jsonb;
+  v_error_message text;
+BEGIN
+  SELECT
+    b.tenant_id,
+    b.id,
+    p.id
+  INTO
+    v_tenant_id,
+    v_branch_id,
+    v_owner_id
+  FROM public.branches b
+  JOIN public.profiles p
+    ON p.tenant_id = b.tenant_id
+   AND COALESCE(p.is_active, true)
+  JOIN public.positions po
+    ON po.id = p.position_id
+   AND po.tenant_id = p.tenant_id
+   AND po.code = 'owner'
+  WHERE b.is_active
+  ORDER BY b.id, p.id
+  LIMIT 1;
+
+  IF v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'Seed data missing for SePay conflict quarantine test';
+  END IF;
+
+  INSERT INTO public.system_settings (tenant_id, key, value)
+  VALUES (v_tenant_id, 'payment_vietqr_account_no', v_account_number)
+  ON CONFLICT (key, tenant_id)
+  DO UPDATE SET value = EXCLUDED.value, updated_at = now();
+
+  INSERT INTO public.menu_categories (tenant_id, name)
+  VALUES (v_tenant_id, 'SePay Test ' || v_code_suffix)
+  RETURNING id INTO v_menu_category_id;
+
+  v_menu_item_name := 'SePay Test Item ' || v_code_suffix;
+  INSERT INTO public.menu_items (
+    tenant_id,
+    category_id,
+    name,
+    base_price
+  ) VALUES (
+    v_tenant_id,
+    v_menu_category_id,
+    v_menu_item_name,
+    v_amount
+  ) RETURNING id INTO v_menu_item_id;
+
+  INSERT INTO public.kds_stations (tenant_id, branch_id, name)
+  VALUES (v_tenant_id, v_branch_id, 'SePay Test ' || v_code_suffix)
+  RETURNING id INTO v_station_id;
+
+  INSERT INTO public.kds_station_categories (
+    tenant_id,
+    station_id,
+    category_id
+  ) VALUES (
+    v_tenant_id,
+    v_station_id,
+    v_menu_category_id
+  );
+
+  v_fresh_code := 'SP' || v_code_suffix || 'F';
+  v_pending_code := 'SP' || v_code_suffix || 'P';
+  v_cash_code := 'SP' || v_code_suffix || 'C';
+  v_momo_code := 'SP' || v_code_suffix || 'M';
+  v_manual_code := 'SP' || v_code_suffix || 'L';
+
+  PERFORM set_config('comtammatu.skip_quota_enforcement', 'true', true);
+
+  INSERT INTO public.orders (
+    tenant_id,
+    branch_id,
+    order_number,
+    order_type,
+    status,
+    subtotal,
+    total_amount,
+    created_by,
+    payment_method,
+    payment_status,
+    payment_code
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    'SEPAY-PENDING-' || v_code_suffix,
+    'takeaway',
+    'served',
+    v_amount,
+    v_amount,
+    v_owner_id,
+    'vietqr',
+    'pending',
+    v_pending_code
+  ) RETURNING id INTO v_pending_order_id;
+
+  INSERT INTO public.order_items (
+    tenant_id,
+    order_id,
+    menu_item_id,
+    item_name,
+    quantity,
+    unit_price,
+    subtotal,
+    status,
+    vat_rate
+  ) VALUES (
+    v_tenant_id,
+    v_pending_order_id,
+    v_menu_item_id,
+    v_menu_item_name,
+    1,
+    v_amount,
+    v_amount,
+    'served',
+    0
+  );
+
+  INSERT INTO public.payments (
+    tenant_id,
+    branch_id,
+    order_id,
+    method,
+    amount,
+    status,
+    provider_ref,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    v_pending_order_id,
+    'vietqr',
+    v_amount,
+    'pending',
+    v_pending_code,
+    v_owner_id
+  ) RETURNING id INTO v_pending_payment_id;
+
+  INSERT INTO public.webhook_events (
+    tenant_id,
+    provider,
+    request_id,
+    signature_valid,
+    payload
+  ) VALUES (
+    v_tenant_id,
+    'sepay',
+    'pending-' || v_code_suffix,
+    true,
+    jsonb_build_object(
+      'transferType', 'in',
+      'transferAmount', v_amount,
+      'accountNumber', v_account_number,
+      'referenceCode', 'REF-PENDING-' || v_code_suffix,
+      'content', v_pending_code
+    )
+  ) RETURNING id INTO v_pending_event_id;
+
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+  v_result := public.reconcile_sepay_order_evidence(
+    v_pending_event_id,
+    v_pending_code
+  );
+
+  IF v_result ->> 'status' <> 'matched'
+     OR (v_result ->> 'payment_id')::bigint <> v_pending_payment_id THEN
+    RAISE EXCEPTION 'Pending VietQR did not reuse and complete its payment: %', v_result;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.payments p
+    JOIN public.orders o ON o.id = p.order_id
+    JOIN public.webhook_events e ON e.payment_id = p.id
+    WHERE p.id = v_pending_payment_id
+      AND p.status = 'completed'
+      AND p.method = 'vietqr'
+      AND o.payment_status = 'paid'
+      AND o.payment_method = 'vietqr'
+      AND e.id = v_pending_event_id
+      AND e.processing_status = 'processed'
+      AND e.error_code IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Pending VietQR settlement state is incomplete';
+  END IF;
+
+  v_result := public.reconcile_sepay_order_evidence(
+    v_pending_event_id,
+    v_pending_code
+  );
+  IF v_result ->> 'status' <> 'matched'
+     OR COALESCE((v_result ->> 'idempotent')::boolean, false) IS NOT true THEN
+    RAISE EXCEPTION 'Same-event replay was not idempotent: %', v_result;
+  END IF;
+
+  INSERT INTO public.orders (
+    tenant_id,
+    branch_id,
+    order_number,
+    order_type,
+    status,
+    subtotal,
+    total_amount,
+    created_by,
+    payment_method,
+    payment_status,
+    payment_code
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    'SEPAY-FRESH-' || v_code_suffix,
+    'takeaway',
+    'served',
+    v_amount,
+    v_amount,
+    v_owner_id,
+    NULL,
+    'unpaid',
+    v_fresh_code
+  ) RETURNING id INTO v_fresh_order_id;
+
+  INSERT INTO public.order_items (
+    tenant_id,
+    order_id,
+    menu_item_id,
+    item_name,
+    quantity,
+    unit_price,
+    subtotal,
+    status,
+    vat_rate
+  ) VALUES (
+    v_tenant_id,
+    v_fresh_order_id,
+    v_menu_item_id,
+    v_menu_item_name,
+    1,
+    v_amount,
+    v_amount,
+    'served',
+    0
+  );
+
+  INSERT INTO public.webhook_events (
+    tenant_id,
+    provider,
+    request_id,
+    signature_valid,
+    payload
+  ) VALUES (
+    v_tenant_id,
+    'sepay',
+    'fresh-' || v_code_suffix,
+    true,
+    jsonb_build_object(
+      'transferType', 'in',
+      'transferAmount', v_amount,
+      'accountNumber', v_account_number,
+      'referenceCode', 'REF-FRESH-' || v_code_suffix,
+      'content', v_fresh_code
+    )
+  ) RETURNING id INTO v_fresh_event_id;
+
+  v_result := public.reconcile_sepay_order_evidence(
+    v_fresh_event_id,
+    v_fresh_code
+  );
+  v_fresh_payment_id := NULLIF(v_result ->> 'payment_id', '')::bigint;
+
+  IF v_result ->> 'status' <> 'matched'
+     OR v_fresh_payment_id IS NULL
+     OR (
+       SELECT count(*)
+       FROM public.payments
+       WHERE tenant_id = v_tenant_id
+         AND order_id = v_fresh_order_id
+         AND status <> 'failed'
+     ) <> 1
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.payments p
+       JOIN public.orders o ON o.id = p.order_id
+       JOIN public.webhook_events e ON e.payment_id = p.id
+       WHERE p.id = v_fresh_payment_id
+         AND p.order_id = v_fresh_order_id
+         AND p.method = 'vietqr'
+         AND p.status = 'completed'
+         AND p.amount = v_amount
+         AND p.provider_ref = v_fresh_code
+         AND o.payment_status = 'paid'
+         AND o.payment_method = 'vietqr'
+         AND e.id = v_fresh_event_id
+         AND e.order_id = v_fresh_order_id
+         AND e.processing_status = 'processed'
+         AND e.error_code IS NULL
+     ) THEN
+    RAISE EXCEPTION 'Fresh unpaid order did not settle exactly once: %', v_result;
+  END IF;
+
+  INSERT INTO public.webhook_events (
+    tenant_id,
+    provider,
+    request_id,
+    signature_valid,
+    payload
+  ) VALUES (
+    v_tenant_id,
+    'sepay',
+    'duplicate-' || v_code_suffix,
+    true,
+    jsonb_build_object(
+      'transferType', 'in',
+      'transferAmount', v_amount,
+      'accountNumber', v_account_number,
+      'referenceCode', 'REF-DUPLICATE-' || v_code_suffix,
+      'content', v_pending_code
+    )
+  ) RETURNING id INTO v_duplicate_event_id;
+
+  v_result := public.reconcile_sepay_order_evidence(
+    v_duplicate_event_id,
+    v_pending_code
+  );
+  IF v_result ->> 'review_code' <> 'overpayment_needs_review'
+     OR EXISTS (
+       SELECT 1 FROM public.webhook_events
+       WHERE id = v_duplicate_event_id AND payment_id IS NOT NULL
+     ) THEN
+    RAISE EXCEPTION 'Distinct second transfer was not quarantined: %', v_result;
+  END IF;
+
+  INSERT INTO public.orders (
+    tenant_id,
+    branch_id,
+    order_number,
+    order_type,
+    status,
+    subtotal,
+    total_amount,
+    created_by,
+    payment_method,
+    payment_status,
+    payment_code,
+    cash_received,
+    cash_change
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    'SEPAY-CASH-' || v_code_suffix,
+    'takeaway',
+    'completed',
+    v_amount,
+    v_amount,
+    v_owner_id,
+    'cash',
+    'paid',
+    v_cash_code,
+    v_amount + 20000,
+    20000
+  ) RETURNING id INTO v_cash_order_id;
+
+  INSERT INTO public.payments (
+    tenant_id,
+    branch_id,
+    order_id,
+    method,
+    amount,
+    status,
+    paid_at,
+    provider_data,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    v_cash_order_id,
+    'cash',
+    v_amount,
+    'completed',
+    now(),
+    '{"source":"pos"}'::jsonb,
+    v_owner_id
+  ) RETURNING id INTO v_cash_payment_id;
+
+  SELECT to_jsonb(o) INTO v_before_order
+  FROM public.orders o WHERE o.id = v_cash_order_id;
+  SELECT to_jsonb(p) INTO v_before_payment
+  FROM public.payments p WHERE p.id = v_cash_payment_id;
+
+  INSERT INTO public.webhook_events (
+    tenant_id,
+    provider,
+    request_id,
+    signature_valid,
+    payload
+  ) VALUES (
+    v_tenant_id,
+    'sepay',
+    'cash-' || v_code_suffix,
+    true,
+    jsonb_build_object(
+      'transferType', 'in',
+      'transferAmount', v_amount,
+      'accountNumber', v_account_number,
+      'referenceCode', 'REF-CASH-' || v_code_suffix,
+      'content', v_cash_code
+    )
+  ) RETURNING id INTO v_cash_event_id;
+
+  v_result := public.reconcile_sepay_order_evidence(v_cash_event_id, v_cash_code);
+
+  SELECT to_jsonb(o) INTO v_after_order
+  FROM public.orders o WHERE o.id = v_cash_order_id;
+  SELECT to_jsonb(p) INTO v_after_payment
+  FROM public.payments p WHERE p.id = v_cash_payment_id;
+
+  IF v_result ->> 'review_code' <> 'payment_method_conflict_needs_review'
+     OR v_before_order IS DISTINCT FROM v_after_order
+     OR v_before_payment IS DISTINCT FROM v_after_payment THEN
+    RAISE EXCEPTION 'Completed cash truth was changed: %', v_result;
+  END IF;
+
+  INSERT INTO public.orders (
+    tenant_id,
+    branch_id,
+    order_number,
+    order_type,
+    status,
+    subtotal,
+    total_amount,
+    created_by,
+    payment_method,
+    payment_status,
+    payment_code
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    'SEPAY-MOMO-' || v_code_suffix,
+    'takeaway',
+    'completed',
+    v_amount,
+    v_amount,
+    v_owner_id,
+    'momo',
+    'paid',
+    v_momo_code
+  ) RETURNING id INTO v_momo_order_id;
+
+  INSERT INTO public.payments (
+    tenant_id,
+    branch_id,
+    order_id,
+    method,
+    amount,
+    status,
+    paid_at,
+    provider_ref,
+    provider_data,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    v_momo_order_id,
+    'momo',
+    v_amount,
+    'completed',
+    now(),
+    'MOMO-' || v_code_suffix,
+    '{"resultCode":"0","transactionId":"momo-authoritative"}'::jsonb,
+    v_owner_id
+  ) RETURNING id INTO v_momo_payment_id;
+
+  SELECT to_jsonb(o) INTO v_before_order
+  FROM public.orders o WHERE o.id = v_momo_order_id;
+  SELECT to_jsonb(p) INTO v_before_payment
+  FROM public.payments p WHERE p.id = v_momo_payment_id;
+
+  INSERT INTO public.webhook_events (
+    tenant_id,
+    provider,
+    request_id,
+    signature_valid,
+    payload
+  ) VALUES (
+    v_tenant_id,
+    'sepay',
+    'momo-' || v_code_suffix,
+    true,
+    jsonb_build_object(
+      'transferType', 'in',
+      'transferAmount', v_amount,
+      'accountNumber', v_account_number,
+      'referenceCode', 'REF-MOMO-' || v_code_suffix,
+      'content', v_momo_code
+    )
+  ) RETURNING id INTO v_momo_event_id;
+
+  v_result := public.reconcile_sepay_order_evidence(v_momo_event_id, v_momo_code);
+
+  SELECT to_jsonb(o) INTO v_after_order
+  FROM public.orders o WHERE o.id = v_momo_order_id;
+  SELECT to_jsonb(p) INTO v_after_payment
+  FROM public.payments p WHERE p.id = v_momo_payment_id;
+
+  IF v_result ->> 'review_code' <> 'payment_method_conflict_needs_review'
+     OR v_before_order IS DISTINCT FROM v_after_order
+     OR v_before_payment IS DISTINCT FROM v_after_payment THEN
+    RAISE EXCEPTION 'Completed MoMo truth was changed: %', v_result;
+  END IF;
+
+  INSERT INTO public.orders (
+    tenant_id,
+    branch_id,
+    order_number,
+    order_type,
+    status,
+    subtotal,
+    total_amount,
+    created_by,
+    payment_method,
+    payment_status,
+    payment_code
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    'SEPAY-MANUAL-' || v_code_suffix,
+    'takeaway',
+    'completed',
+    v_amount,
+    v_amount,
+    v_owner_id,
+    'vietqr',
+    'paid',
+    v_manual_code
+  ) RETURNING id INTO v_manual_order_id;
+
+  INSERT INTO public.payments (
+    tenant_id,
+    branch_id,
+    order_id,
+    method,
+    amount,
+    status,
+    paid_at,
+    provider_ref,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    v_manual_order_id,
+    'vietqr',
+    v_amount,
+    'completed',
+    now(),
+    v_manual_code,
+    v_owner_id
+  ) RETURNING id INTO v_manual_payment_id;
+
+  INSERT INTO public.webhook_events (
+    tenant_id,
+    provider,
+    request_id,
+    signature_valid,
+    payload
+  ) VALUES (
+    v_tenant_id,
+    'sepay',
+    'manual-' || v_code_suffix,
+    true,
+    jsonb_build_object(
+      'transferType', 'in',
+      'transferAmount', v_amount,
+      'accountNumber', v_account_number,
+      'referenceCode', 'REF-MANUAL-' || v_code_suffix
+    )
+  ) RETURNING id INTO v_manual_event_id;
+
+  v_result := public.reconcile_sepay_order_evidence(v_manual_event_id, '');
+  IF v_result ->> 'status' <> 'missing_payment_code' THEN
+    RAISE EXCEPTION 'Missing-code event was not classified for review: %', v_result;
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  PERFORM set_config('request.jwt.claim.sub', v_owner_id::text, true);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_owner_id,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object('tenant_id', v_tenant_id)
+    )::text,
+    true
+  );
+
+  BEGIN
+    PERFORM public.link_sepay_transaction_to_payment(
+      v_cash_event_id,
+      v_manual_payment_id
+    );
+    RAISE EXCEPTION 'Owner linked a quarantined cash conflict';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+    IF v_error_message <> 'webhook_event_failed' THEN
+      RAISE EXCEPTION 'Unexpected cash-conflict denial: %', v_error_message;
+    END IF;
+  END;
+
+  BEGIN
+    PERFORM public.link_sepay_transaction_to_payment(
+      v_momo_event_id,
+      v_manual_payment_id
+    );
+    RAISE EXCEPTION 'Owner linked a quarantined MoMo conflict';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+    IF v_error_message <> 'webhook_event_failed' THEN
+      RAISE EXCEPTION 'Unexpected MoMo-conflict denial: %', v_error_message;
+    END IF;
+  END;
+
+  v_result := public.link_sepay_transaction_to_payment(
+    v_manual_event_id,
+    v_manual_payment_id
+  );
+
+  IF (v_result ->> 'payment_id')::bigint <> v_manual_payment_id
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.webhook_events
+       WHERE id = v_manual_event_id
+         AND order_id = v_manual_order_id
+         AND payment_id = v_manual_payment_id
+         AND processing_status = 'processed'
+         AND error_code IS NULL
+     ) THEN
+    RAISE EXCEPTION 'Owner could not recover missing-code bank evidence: %', v_result;
+  END IF;
+
+  INSERT INTO public.webhook_events (
+    tenant_id,
+    provider,
+    request_id,
+    signature_valid,
+    payload,
+    processing_status,
+    http_status,
+    error_code,
+    processed_at
+  ) VALUES (
+    v_tenant_id,
+    'sepay',
+    'denied-' || v_code_suffix,
+    true,
+    jsonb_build_object(
+      'transferType', 'in',
+      'transferAmount', v_amount,
+      'accountNumber', v_account_number
+    ),
+    'processed',
+    200,
+    'missing_payment_code_needs_review',
+    now()
+  ) RETURNING id INTO v_denied_event_id;
+
+  PERFORM set_config('request.jwt.claim.sub', gen_random_uuid()::text, true);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', current_setting('request.jwt.claim.sub'),
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object('tenant_id', v_tenant_id)
+    )::text,
+    true
+  );
+
+  BEGIN
+    PERFORM public.link_sepay_transaction_to_payment(
+      v_denied_event_id,
+      v_manual_payment_id
+    );
+    RAISE EXCEPTION 'Non-Owner linked SePay bank evidence';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+
+  INSERT INTO public.webhook_events (
+    tenant_id,
+    provider,
+    request_id,
+    signature_valid,
+    payload
+  ) VALUES (
+    v_tenant_id,
+    'sepay',
+    'invalid-' || v_code_suffix,
+    true,
+    jsonb_build_object(
+      'transferType', 'in',
+      'transferAmount', -1,
+      'accountNumber', v_account_number,
+      'content', v_pending_code
+    )
+  ) RETURNING id INTO v_invalid_event_id;
+
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  v_result := public.reconcile_sepay_order_evidence(
+    v_invalid_event_id,
+    v_pending_code
+  );
+
+  IF v_result ->> 'status' <> 'invalid_amount'
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.webhook_events
+       WHERE id = v_invalid_event_id
+         AND processing_status = 'failed'
+         AND error_code = 'invalid_amount'
+     ) THEN
+    RAISE EXCEPTION 'Invalid amount was not kept fail-closed: %', v_result;
+  END IF;
+
+  IF has_function_privilege(
+    'service_role',
+    'public.confirm_sepay_payment(bigint,bigint,text,numeric,text,text,jsonb)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'service_role still executes confirm_sepay_payment directly';
+  END IF;
+END;
+$$;
+
+ROLLBACK;

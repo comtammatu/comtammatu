@@ -1283,6 +1283,7 @@ export const inventory = {
     totalInvoice: "Tổng hóa đơn",
     outstandingPayable: "Còn phải trả",
     paidAmount: "Đã thanh toán",
+    supplierCredit: "Bù trừ NCC",
     aging: "Tuổi nợ",
     noOpenDueDate: "Chưa có hạn",
     agingPaid: "Đã tất toán",
@@ -1291,8 +1292,8 @@ export const inventory = {
     agingDueIn: (days: number) => `Còn ${days} ngày`,
     agingOverdue: (days: number) => `Quá hạn ${days} ngày`,
     payableFormulaLabel: "Cách tính",
-    payableFormula: (total: string, paid: string) =>
-      `Còn phải trả = ${total} − ${paid}`,
+    payableFormula: (total: string, paid: string, credit: string) =>
+      `Còn phải trả = ${total} − ${paid} đã trả − ${credit} bù trừ`,
     lastPayment: "Lần trả gần nhất",
     lastPaymentSummary: (date: string, method: string, amount: string) =>
       `${date} · ${method} · ${amount}`,
@@ -1311,6 +1312,8 @@ export const inventory = {
     paymentRecorded: "Đã ghi nhận thanh toán NCC",
     paymentTooLarge: "Số tiền trả vượt quá phần còn phải trả.",
     noPaymentInvoice: "Chưa chọn hóa đơn để thanh toán.",
+    paymentRetrySameIntent:
+      "Chưa xác nhận được kết quả. Hãy thử lại ngay trên biểu mẫu này.",
     linkedGrn: "Phiếu nhập liên kết",
     linkedPo: "Đơn mua liên kết",
     notLinked: "Chưa liên kết",

@@ -129,6 +129,7 @@ interface OrdersClientProps {
   initialSummary: OrdersSummary;
   branches: { id: number; name: string }[];
   showBranchFilter: boolean;
+  initialSelectedOrder?: OrderRow | null;
 }
 
 /* ─── Component ─── */
@@ -138,12 +139,15 @@ export function OrdersClient({
   initialSummary,
   branches,
   showBranchFilter,
+  initialSelectedOrder = null,
 }: OrdersClientProps) {
   const router = useRouter();
   const params = useParams();
   const [orders, setOrders] = useState<OrderRow[]>(initialOrders);
   const [summary, setSummary] = useState<OrdersSummary>(initialSummary);
-  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(
+    initialSelectedOrder,
+  );
   const [isPending, startTransition] = useTransition();
   // xl:+ swaps the OrderDetailSheet slide-over for an inline master-detail
   // right column (design decision D063 W4b) — same OrderDetailContent body,

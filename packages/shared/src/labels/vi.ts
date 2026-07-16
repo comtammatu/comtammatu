@@ -446,7 +446,7 @@ export const PAYMENT_RECORD_STATUS_LABELS_VI = {
 /** Derived payment reconciliation state for operating expenses. */
 export const EXPENSE_PAYMENT_STATE_LABELS_VI = {
   unpaid: "Chưa trả",
-  cash_paid: "Đã chi TM",
+  cash_paid: "Đã trả TM",
   transfer_matched: "Đã khớp NH",
   transfer_needs_match: "Cần khớp NH",
 } as const;

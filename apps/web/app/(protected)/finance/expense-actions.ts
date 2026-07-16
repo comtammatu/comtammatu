@@ -18,6 +18,7 @@ import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
 import type { SepayRefundMatchOption } from "./_lib/sepay-bank-transaction-model";
 import {
+  EXPENSE_CATEGORIES_BY_GROUP,
   EXPENSE_CATEGORY_VALUES,
   EXPENSE_PAYMENT_METHODS,
 } from "./_lib/expense-categories";
@@ -34,6 +35,7 @@ export interface ExpenseRow {
   amount: number;
   payment_method: string;
   paid_at: string | null;
+  transfer_content: string | null;
   vendor_name: string | null;
   note: string | null;
   created_at: string;
@@ -41,6 +43,15 @@ export interface ExpenseRow {
 }
 
 export type ExpenseMatchOption = ExpenseRow;
+
+export interface CreateExpenseResult {
+  id: number;
+  transferContent?: string;
+}
+
+export interface ExpensePaymentTransitionResult {
+  transferContent?: string;
+}
 
 export interface SepayRefundSearchCursor {
   approvedAt: string;
@@ -89,7 +100,7 @@ const createExpenseSchema = z.object({
 
 export async function createExpense(
   input: z.infer<typeof createExpenseSchema>,
-): Promise<ActionResult> {
+): Promise<ActionResult<CreateExpenseResult>> {
   const parsed = createExpenseSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -127,53 +138,167 @@ export async function createExpense(
     return { success: false, error: "Không có quyền cho chi nhánh này." };
   }
 
-  const paidAt =
-    parsed.data.paymentMethod === "unpaid" ? null : new Date().toISOString();
+  let expenseId: number;
+  let transferContent: string | undefined;
 
-  const { data, error } = await supabase
-    .from("expenses")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: branchId,
-      expense_date: parsed.data.expenseDate,
-      category: parsed.data.category,
-      amount: parsed.data.amount,
-      payment_method: parsed.data.paymentMethod,
-      paid_at: paidAt,
-      vendor_name: parsed.data.vendorName ?? null,
-      note: parsed.data.note ?? null,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
+  if (parsed.data.paymentMethod === "transfer") {
+    const { data, error } = await supabase.rpc(
+      "create_expense_transfer_intent",
+      {
+        // PostgreSQL accepts NULL here; generated RPC args cannot encode input nullability.
+        p_branch_id: branchId as number,
+        p_expense_date: parsed.data.expenseDate,
+        p_category: parsed.data.category,
+        p_amount: parsed.data.amount,
+        p_vendor_name: parsed.data.vendorName || undefined,
+        p_note: parsed.data.note || undefined,
+      },
+    );
+    const created = data?.[0];
 
-  if (error || !data) {
-    return { success: false, error: "Không thể lưu chi phí." };
+    if (error || !created) {
+      console.error(
+        "[finance:expense-transfer-intent] failed to create intent",
+        error?.code,
+      );
+      return {
+        success: false,
+        error: "Không thể tạo nội dung chuyển khoản.",
+      };
+    }
+
+    expenseId = created.expense_id;
+    transferContent = created.transfer_content;
+  } else {
+    const paidAt =
+      parsed.data.paymentMethod === "unpaid" ? null : new Date().toISOString();
+    const { data, error } = await supabase
+      .from("expenses")
+      .insert({
+        tenant_id: claims.tenant_id,
+        branch_id: branchId,
+        expense_date: parsed.data.expenseDate,
+        category: parsed.data.category,
+        amount: parsed.data.amount,
+        payment_method: parsed.data.paymentMethod,
+        paid_at: paidAt,
+        vendor_name: parsed.data.vendorName ?? null,
+        note: parsed.data.note ?? null,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: "Không thể lưu chi phí." };
+    }
+
+    expenseId = data.id;
   }
 
   await logAudit(supabase, {
     action: "create",
     entityType: "expense",
-    entityId: data.id,
+    entityId: expenseId,
     newData: {
       branch_id: branchId,
       category: parsed.data.category,
       amount: parsed.data.amount,
-      payment_method: parsed.data.paymentMethod,
+      payment_method: transferContent ? "unpaid" : parsed.data.paymentMethod,
+      transfer_content: transferContent ?? null,
     },
   });
 
-  return { success: true, data: { id: data.id } };
+  return {
+    success: true,
+    data: { id: expenseId, ...(transferContent ? { transferContent } : {}) },
+  };
 }
 
-const deleteExpenseSchema = z.object({
+const expenseMutationSchema = z.object({
   expenseId: z.coerce.number().int().positive(),
 });
 
+const transitionExpensePaymentSchema = expenseMutationSchema.extend({
+  targetMethod: z.enum(EXPENSE_PAYMENT_METHODS),
+});
+
+function mapExpenseMutationError(
+  code: string | undefined,
+  fallback: string,
+): string {
+  if (code === "42501") return "Không có quyền sửa khoản chi này.";
+  if (code === "P0002") return "Không tìm thấy khoản chi.";
+  if (code === "23505") {
+    return "Khoản chi đã được khớp giao dịch ngân hàng.";
+  }
+  if (code === "40001") {
+    return "Trạng thái khoản chi vừa thay đổi. Hãy tải lại và thử lại.";
+  }
+  if (code === "23514") {
+    return "Trạng thái hiện tại không cho phép thao tác này.";
+  }
+  if (code === "PGRST202") {
+    return "Chức năng cập nhật khoản chi chưa sẵn sàng.";
+  }
+  return fallback;
+}
+
+export async function transitionExpensePayment(
+  input: z.infer<typeof transitionExpensePaymentSchema>,
+): Promise<ActionResult<ExpensePaymentTransitionResult>> {
+  const parsed = transitionExpensePaymentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền sửa chi phí." };
+
+  const { data, error } = await ctx.supabase.rpc("transition_expense_payment", {
+    p_expense_id: parsed.data.expenseId,
+    p_target_method: parsed.data.targetMethod,
+  });
+  const updated = data?.[0];
+
+  if (error || !updated) {
+    console.error(
+      "[finance:expense-payment] failed to transition expense",
+      error?.code,
+    );
+    return {
+      success: false,
+      error: mapExpenseMutationError(
+        error?.code,
+        "Không thể cập nhật thanh toán khoản chi.",
+      ),
+    };
+  }
+
+  if (parsed.data.targetMethod === "transfer" && !updated.transfer_content) {
+    return {
+      success: false,
+      error: "Không thể tạo nội dung chuyển khoản.",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      ...(updated.transfer_content
+        ? { transferContent: updated.transfer_content }
+        : {}),
+    },
+  };
+}
+
 export async function deleteExpense(
-  input: z.infer<typeof deleteExpenseSchema>,
+  input: z.infer<typeof expenseMutationSchema>,
 ): Promise<ActionResult> {
-  const parsed = deleteExpenseSchema.safeParse(input);
+  const parsed = expenseMutationSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
@@ -184,23 +309,20 @@ export async function deleteExpense(
   );
   if (!ctx) return { success: false, error: "Không có quyền xóa chi phí." };
 
-  const { supabase, claims } = ctx;
-
-  const { error } = await supabase
-    .from("expenses")
-    .delete()
-    .eq("tenant_id", claims.tenant_id)
-    .eq("id", parsed.data.expenseId);
+  const { error } = await ctx.supabase.rpc("cancel_expense", {
+    p_expense_id: parsed.data.expenseId,
+  });
 
   if (error) {
-    return { success: false, error: "Không thể xóa chi phí." };
+    console.error(
+      "[finance:expense-cancel] failed to cancel expense",
+      error.code,
+    );
+    return {
+      success: false,
+      error: mapExpenseMutationError(error.code, "Không thể xóa chi phí."),
+    };
   }
-
-  await logAudit(supabase, {
-    action: "delete",
-    entityType: "expense",
-    entityId: parsed.data.expenseId,
-  });
 
   return { success: true };
 }
@@ -217,40 +339,50 @@ export async function fetchExpenses(params: {
   if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
 
   const { supabase, claims } = ctx;
+  const pageSize = 500;
+  const rows: Array<Omit<ExpenseRow, "matchedEventIds">> = [];
 
-  let query = supabase
-    .from("expenses")
-    .select(
-      "id, branch_id, expense_date, category, amount, payment_method, paid_at, vendor_name, note, created_at",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .gte("expense_date", params.startDate)
-    .lte("expense_date", params.endDate)
-    .order("expense_date", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(500);
+  for (let offset = 0; ; offset += pageSize) {
+    let query = supabase
+      .from("expenses")
+      .select(
+        "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
+      .gte("expense_date", params.startDate)
+      .lte("expense_date", params.endDate)
+      .order("expense_date", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1);
 
-  if (params.branchId != null) {
-    query = query.eq("branch_id", params.branchId);
+    if (params.branchId != null) {
+      query = query.eq("branch_id", params.branchId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      return { success: false, error: "Không tải được danh sách chi phí." };
+    }
+
+    rows.push(
+      ...(data ?? []).map((row) => ({
+        id: row.id,
+        branch_id: row.branch_id,
+        expense_date: row.expense_date,
+        category: row.category,
+        amount: Number(row.amount),
+        payment_method: row.payment_method,
+        paid_at: row.paid_at,
+        transfer_content: row.transfer_content,
+        vendor_name: row.vendor_name,
+        note: row.note,
+        created_at: row.created_at,
+      })),
+    );
+
+    if ((data?.length ?? 0) < pageSize) break;
   }
-
-  const { data, error } = await query;
-  if (error) {
-    return { success: false, error: "Không tải được danh sách chi phí." };
-  }
-
-  const rows = (data ?? []).map((r) => ({
-    id: r.id,
-    branch_id: r.branch_id,
-    expense_date: r.expense_date,
-    category: r.category,
-    amount: Number(r.amount),
-    payment_method: r.payment_method,
-    paid_at: r.paid_at,
-    vendor_name: r.vendor_name,
-    note: r.note,
-    created_at: r.created_at,
-  }));
   const matchedByExpense = await fetchExpenseMatchMap(
     supabase,
     claims.tenant_id,
@@ -683,60 +815,95 @@ async function fetchExpenseMatchMap(
         Array.from(eventIds),
       ]),
     );
+  if (expenseIds?.length === 0) return new Map();
 
-  let matchQuery = supabase
-    .from("bank_transaction_expense_matches")
-    .select("webhook_event_id, expense_id")
-    .eq("tenant_id", tenantId);
-  if (expenseIds != null) {
-    if (expenseIds.length === 0) return new Map();
-    matchQuery = matchQuery.in("expense_id", [...expenseIds]);
-  }
-  const { data: matchRows, error: matchErr } = await matchQuery;
+  const idBatches: Array<readonly number[] | null> =
+    expenseIds == null
+      ? [null]
+      : Array.from({ length: Math.ceil(expenseIds.length / 500) }, (_, index) =>
+          expenseIds.slice(index * 500, (index + 1) * 500),
+        );
+  const resultPageSize = 1_000;
+  let matchSchemaAvailable = true;
 
-  if (matchErr && !isExpenseMatchSchemaMissing(matchErr.code)) {
-    console.error(
-      "[finance:expense-match] failed to load bank_transaction_expense_matches",
-      matchErr.code,
-    );
-    throw new Error("Unable to load bank transaction expense matches");
-  } else if (!matchErr) {
-    for (const row of (matchRows ?? []) as ExpenseMatchRow[]) {
-      addMatch(row.expense_id, row.webhook_event_id);
+  for (const idBatch of idBatches) {
+    if (!matchSchemaAvailable) break;
+    for (let offset = 0; ; offset += resultPageSize) {
+      let matchQuery = supabase
+        .from("bank_transaction_expense_matches")
+        .select("webhook_event_id, expense_id")
+        .eq("tenant_id", tenantId)
+        .range(offset, offset + resultPageSize - 1);
+      if (idBatch != null) {
+        matchQuery = matchQuery.in("expense_id", [...idBatch]);
+      }
+      const { data: matchRows, error: matchErr } = await matchQuery;
+
+      if (matchErr) {
+        if (isExpenseMatchSchemaMissing(matchErr.code)) {
+          matchSchemaAvailable = false;
+          break;
+        }
+        console.error(
+          "[finance:expense-match] failed to load bank_transaction_expense_matches",
+          matchErr.code,
+        );
+        throw new Error("Unable to load bank transaction expense matches");
+      }
+
+      for (const row of (matchRows ?? []) as ExpenseMatchRow[]) {
+        addMatch(row.expense_id, row.webhook_event_id);
+      }
+      if ((matchRows?.length ?? 0) < resultPageSize) break;
     }
   }
 
-  let webhookQuery = supabase
-    .from("webhook_events")
-    .select("id, expense_id")
-    .eq("tenant_id", tenantId)
-    .eq("provider", "sepay")
-    .not("expense_id", "is", null);
-  if (expenseIds != null) {
-    webhookQuery = webhookQuery.in("expense_id", [...expenseIds]);
-  }
-  const { data: webhookRows, error: webhookErr } = await webhookQuery;
+  for (const idBatch of idBatches) {
+    for (let offset = 0; ; offset += resultPageSize) {
+      let webhookQuery = supabase
+        .from("webhook_events")
+        .select("id, expense_id")
+        .eq("tenant_id", tenantId)
+        .eq("provider", "sepay")
+        .not("expense_id", "is", null)
+        .range(offset, offset + resultPageSize - 1);
+      if (idBatch != null) {
+        webhookQuery = webhookQuery.in("expense_id", [...idBatch]);
+      }
+      const { data: webhookRows, error: webhookErr } = await webhookQuery;
 
-  if (webhookErr) {
-    console.error(
-      "[finance:expense-match] failed to load webhook_event expense matches",
-      webhookErr.code,
-    );
-    throw new Error("Unable to load webhook expense matches");
-  }
+      if (webhookErr) {
+        console.error(
+          "[finance:expense-match] failed to load webhook_event expense matches",
+          webhookErr.code,
+        );
+        throw new Error("Unable to load webhook expense matches");
+      }
 
-  for (const row of (webhookRows ?? []) as WebhookExpenseMatchRow[]) {
-    if (row.expense_id != null) {
-      addMatch(row.expense_id, row.id);
+      for (const row of (webhookRows ?? []) as WebhookExpenseMatchRow[]) {
+        if (row.expense_id != null) {
+          addMatch(row.expense_id, row.id);
+        }
+      }
+      if ((webhookRows?.length ?? 0) < resultPageSize) break;
     }
   }
 
   return toEventIdMap();
 }
 
-export async function fetchExpenseMatchOptions(): Promise<
-  ActionResult<ExpenseMatchOption[]>
-> {
+const fetchExpenseMatchOptionsSchema = z.object({
+  includeExpenseIds: z.array(z.number().int().positive()).max(500).optional(),
+});
+
+export async function fetchExpenseMatchOptions(
+  input?: z.infer<typeof fetchExpenseMatchOptionsSchema>,
+): Promise<ActionResult<ExpenseMatchOption[]>> {
+  const parsed = fetchExpenseMatchOptionsSchema.safeParse(input ?? {});
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
@@ -744,18 +911,20 @@ export async function fetchExpenseMatchOptions(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
 
   const { supabase, claims } = ctx;
-  const matchedByExpense = await fetchExpenseMatchMap(
-    supabase,
-    claims.tenant_id,
+  const includeExpenseIds = Array.from(
+    new Set(parsed.data.includeExpenseIds ?? []),
   );
 
-  const { data, error } = await supabase
+  const { data: candidateRows, error } = await supabase
     .from("expenses")
     .select(
-      "id, branch_id, expense_date, category, amount, payment_method, paid_at, vendor_name, note, created_at",
+      "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
     )
     .eq("tenant_id", claims.tenant_id)
-    .eq("payment_method", "transfer")
+    .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
+    .or(
+      "payment_method.eq.unpaid,payment_method.eq.transfer,transfer_content.not.is.null",
+    )
     .order("expense_date", { ascending: false })
     .order("id", { ascending: false })
     .limit(150);
@@ -764,9 +933,37 @@ export async function fetchExpenseMatchOptions(): Promise<
     return { success: false, error: "Không tải được danh sách chi phí." };
   }
 
+  let includedRows: NonNullable<typeof candidateRows> = [];
+  if (includeExpenseIds.length > 0) {
+    const includedResult = await supabase
+      .from("expenses")
+      .select(
+        "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
+      .in("id", includeExpenseIds);
+
+    if (includedResult.error) {
+      return { success: false, error: "Không tải được khoản chi đã khớp." };
+    }
+    includedRows = includedResult.data ?? [];
+  }
+
+  const rowsById = new Map(
+    (candidateRows ?? []).map((row) => [row.id, row] as const),
+  );
+  for (const row of includedRows) rowsById.set(row.id, row);
+  const rows = Array.from(rowsById.values());
+  const matchedByExpense = await fetchExpenseMatchMap(
+    supabase,
+    claims.tenant_id,
+    rows.map((row) => row.id),
+  );
+
   return {
     success: true,
-    data: (data ?? []).map((r) => ({
+    data: rows.map((r) => ({
       id: r.id,
       branch_id: r.branch_id,
       expense_date: r.expense_date,
@@ -774,6 +971,7 @@ export async function fetchExpenseMatchOptions(): Promise<
       amount: Number(r.amount),
       payment_method: r.payment_method,
       paid_at: r.paid_at,
+      transfer_content: r.transfer_content,
       vendor_name: r.vendor_name,
       note: r.note,
       created_at: r.created_at,

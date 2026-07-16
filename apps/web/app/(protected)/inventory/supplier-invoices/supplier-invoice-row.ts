@@ -11,6 +11,7 @@ export type SupplierInvoiceRow = {
   paymentStatus: string;
   amount: number;
   paidAmount: number;
+  creditAppliedAmount: number;
   variance: number | null;
   invoiceDate: string | null;
   dueDate: string | null;
@@ -27,9 +28,33 @@ export type SupplierInvoicePaymentSummary = {
 };
 
 export function getSupplierInvoiceOutstandingAmount(
-  invoice: Pick<SupplierInvoiceRow, "amount" | "paidAmount">,
+  invoice: Pick<
+    SupplierInvoiceRow,
+    "amount" | "paidAmount" | "creditAppliedAmount"
+  >,
 ) {
-  return Math.max(invoice.amount - invoice.paidAmount, 0);
+  return Math.max(
+    invoice.amount - invoice.paidAmount - invoice.creditAppliedAmount,
+    0,
+  );
+}
+
+export function getSupplierInvoiceEffectivePaymentStatus(
+  invoice: Pick<
+    SupplierInvoiceRow,
+    "amount" | "paidAmount" | "creditAppliedAmount"
+  >,
+) {
+  const settledAmount = invoice.paidAmount + invoice.creditAppliedAmount;
+  if (settledAmount >= invoice.amount) return "paid";
+  return settledAmount > 0 ? "partial" : "unpaid";
+}
+
+export function resolveSupplierPaymentIntentKey(
+  currentKey: string | null,
+  createKey: () => string,
+) {
+  return currentKey ?? createKey();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -66,6 +91,9 @@ export function mapSupplierInvoiceRow(
     (row.matching_status as string | undefined) ??
     (row.match_status as string | undefined) ??
     "pending";
+  const amount = Number(row.total_amount ?? 0);
+  const paidAmount = Number(row.paid_amount ?? 0);
+  const creditAppliedAmount = Number(row.credit_applied_amount ?? 0);
   const payments = getSupplierPayments(row)
     .map(mapSupplierPayment)
     .sort((left, right) => {
@@ -91,9 +119,14 @@ export function mapSupplierInvoiceRow(
       rawMatchStatus === "matched" && grnId == null
         ? "pending"
         : rawMatchStatus,
-    paymentStatus: (row.payment_status as string) ?? "unpaid",
-    amount: Number(row.total_amount ?? 0),
-    paidAmount: Number(row.paid_amount ?? 0),
+    paymentStatus: getSupplierInvoiceEffectivePaymentStatus({
+      amount,
+      paidAmount,
+      creditAppliedAmount,
+    }),
+    amount,
+    paidAmount,
+    creditAppliedAmount,
     variance:
       (row.variance_pct as number | null | undefined) != null
         ? Number(row.variance_pct)

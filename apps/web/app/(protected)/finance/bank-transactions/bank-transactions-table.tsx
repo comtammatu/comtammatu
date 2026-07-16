@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowDownLeft as IconMoneyIn,
   ArrowUpRight as IconMoneyOut,
 } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -27,9 +29,12 @@ import {
 import { messages } from "@lib/messages";
 import {
   SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
+  canManuallyLinkSepayPayment,
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
   isOpenSepayBankWebhookReview,
+  isSepayPaymentConflictReviewCode,
+  resolveSepayTransactionInstant,
   type SepayBankWebhookReviewStatus,
   type SepayBankTransaction,
   type SepayMissingBankWebhookPayment,
@@ -90,11 +95,6 @@ type BankReconciliationRow =
       payment: SepayMissingBankWebhookPayment;
     };
 
-function compactDateTime(value: string | null): string {
-  if (!value) return "—";
-  return value.replace("T", " ").slice(0, 16);
-}
-
 function referenceCode(tx: SepayBankTransaction): string {
   return tx.referenceCode ?? tx.code ?? tx.requestId;
 }
@@ -149,8 +149,7 @@ function PaymentAmountCell({
   payment: SepayMissingBankWebhookPayment;
 }) {
   return (
-    <div className="flex items-center justify-end gap-1.5 whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-success">
-      <IconMoneyIn className="size-3.5" aria-hidden />+
+    <div className="whitespace-nowrap text-right font-mono text-sm font-semibold tabular-nums text-foreground">
       {formatVND(payment.amount)}
     </div>
   );
@@ -161,8 +160,16 @@ function reasonLabel(reason: SepayUnmatchedMoneyInReason): string {
 }
 
 function reasonDetail(tx: SepayBankTransaction): string {
-  if (tx.errorCode) return tx.errorCode;
-  if (tx.processingStatus === "failed") return tx.processingStatus;
+  if (tx.errorCode) {
+    const labels = copy.unmatchedMoneyInTable.errorCodeLabels as Record<
+      string,
+      string
+    >;
+    return labels[tx.errorCode] ?? copy.unmatchedMoneyInTable.technicalError;
+  }
+  if (tx.processingStatus === "failed") {
+    return copy.unmatchedMoneyInTable.technicalError;
+  }
   return optionalReferenceCode(tx);
 }
 
@@ -182,20 +189,36 @@ function reviewStatusLabel(
 function missingWebhookBadge(payment: SepayMissingBankWebhookPayment) {
   const status = payment.bankWebhookReviewStatus ?? REVIEW_PENDING_VALUE;
   const variant =
-    status === "resolved"
-      ? "success"
-      : status === "ignored"
-        ? "secondary"
-        : "warning";
+    status === "resolved" || status === "ignored" ? "secondary" : "warning";
 
   return <Badge variant={variant}>{reviewStatusLabel(status)}</Badge>;
 }
 
+function MissingWebhookStatusCell({
+  payment,
+}: {
+  payment: SepayMissingBankWebhookPayment;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      {missingWebhookBadge(payment)}
+      <span className="text-xs text-muted-foreground">
+        {copy.reconciliation.missingBankWebhook}
+      </span>
+    </div>
+  );
+}
+
 function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
   const state = classifySepayReconciliationState(tx);
+  const hasPaymentConflictDetail =
+    tx.transferType === "in" &&
+    isSepayPaymentConflictReviewCode(tx.errorCode);
   const detail =
     tx.transferType === "in" && state !== "matched"
-      ? reasonLabel(classifySepayUnmatchedMoneyIn(tx))
+      ? hasPaymentConflictDetail
+        ? null
+        : reasonLabel(classifySepayUnmatchedMoneyIn(tx))
       : state !== "matched"
         ? copy.reconciliation.unmatchedMoneyOut
         : null;
@@ -207,7 +230,7 @@ function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
         <span className="text-xs text-muted-foreground">{detail}</span>
       ) : null}
       {tx.transferType === "in" && state !== "matched" ? (
-        <span className="font-mono text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {reasonDetail(tx)}
         </span>
       ) : null}
@@ -251,7 +274,7 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
           </span>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>{compactDateTime(row.payment.paidAt)}</span>
+          <span>{formatVNDateTime(row.payment.paidAt)}</span>
           <span>
             {copy.missingWebhookTable.order}:{" "}
             {formatOrderId(row.payment.orderId)}
@@ -264,6 +287,12 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
     );
   }
 
+  const conflictOrder =
+    isSepayPaymentConflictReviewCode(row.tx.errorCode) &&
+    row.tx.orderId != null
+      ? { id: row.tx.orderId, number: row.tx.orderNumber }
+      : null;
+
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex min-w-0 items-center gap-2">
@@ -273,13 +302,23 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
         </span>
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span>
-          {compactDateTime(row.tx.transactionDate ?? row.tx.createdAt)}
-        </span>
+        <span>{formatVNDateTime(resolveSepayTransactionInstant(row.tx))}</span>
         <span className="font-mono">{referenceCode(row.tx)}</span>
         <span>
           {copy.account}: {row.tx.accountNumber ?? "—"}
         </span>
+        {conflictOrder ? (
+          <span>
+            {copy.unmatchedMoneyInTable.conflictOrder}:{" "}
+            <Link
+              href={`/orders?orderId=${String(conflictOrder.id)}`}
+              className="font-mono font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {conflictOrder.number ??
+                copy.unmatchedMoneyInTable.openConflictOrder}
+            </Link>
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -304,6 +343,12 @@ function MatchCell({
       refundMatchConfirmed={tx.refundMatchConfirmed}
       transferType={tx.transferType}
       expenseOptions={expenseOptions}
+      evidence={{
+        content: tx.content ?? copy.noContent,
+        reference: referenceCode(tx),
+        occurredAt: formatVNDateTime(resolveSepayTransactionInstant(tx)),
+        accountNumber: tx.accountNumber,
+      }}
     />
   );
 }
@@ -321,7 +366,11 @@ function LinkPaymentCell({
   const table = copy.unmatchedMoneyInTable;
   const reason = classifySepayUnmatchedMoneyIn(tx);
 
-  if (!canLinkPayments || reason === "webhook_error") {
+  if (
+    !canLinkPayments ||
+    reason === "webhook_error" ||
+    !canManuallyLinkSepayPayment(tx)
+  ) {
     return (
       <span className="text-muted-foreground">{table.linkUnavailable}</span>
     );
@@ -405,7 +454,7 @@ function ReviewStatusSelect({
 
   return (
     <Select value={value} onValueChange={handleChange} disabled={isPending}>
-      <SelectTrigger size="sm" className="h-8 w-28">
+      <SelectTrigger size="sm" className="h-8 w-40">
         <SelectValue placeholder={table.reviewStatusPlaceholder} />
       </SelectTrigger>
       <SelectContent align="end">
@@ -465,15 +514,15 @@ function rowMatchesFilter(
   const state = classifySepayReconciliationState(row.tx);
 
   if (filter === "needs_review") {
-    return state !== "matched";
+    return state === "needs_review";
   }
   if (filter === "matched") return state === "matched";
   if (filter === "webhook_error") return state === "webhook_error";
   if (filter === "money_in_review") {
-    return row.tx.transferType === "in" && state !== "matched";
+    return row.tx.transferType === "in" && state === "needs_review";
   }
   if (filter === "money_out_review") {
-    return row.tx.transferType === "out" && state !== "matched";
+    return row.tx.transferType === "out" && state === "needs_review";
   }
 
   return false;
@@ -485,7 +534,8 @@ export function BankTransactionsTable({
   expenseOptions,
   canLinkPayments,
 }: BankTransactionsTableProps) {
-  const [filter, setFilter] = React.useState<BankReconciliationFilter>("all");
+  const [filter, setFilter] =
+    React.useState<BankReconciliationFilter>("needs_review");
   const rows = React.useMemo<BankReconciliationRow[]>(
     () => [
       ...transactions.map((tx) => ({ kind: "bank" as const, tx })),
@@ -500,7 +550,12 @@ export function BankTransactionsTable({
     () => rows.filter((row) => rowMatchesFilter(row, filter)),
     [filter, rows],
   );
-  const isFiltered = filter !== "all";
+  const openQueueCount = React.useMemo(
+    () => rows.filter((row) => rowMatchesFilter(row, "needs_review")).length,
+    [rows],
+  );
+  const hasRows = rows.length > 0;
+  const isQueueView = filter === "needs_review";
   const filterOptions = [
     ["all", copy.filters.all],
     ["needs_review", copy.filters.needsReview],
@@ -536,12 +591,7 @@ export function BankTransactionsTable({
         row.kind === "bank" ? (
           <ReconciliationStatusCell tx={row.tx} />
         ) : (
-          <div className="flex flex-col gap-1">
-            {missingWebhookBadge(row.payment)}
-            <span className="text-xs text-muted-foreground">
-              {copy.reconciliation.missingBankWebhook}
-            </span>
-          </div>
+          <MissingWebhookStatusCell payment={row.payment} />
         ),
     },
     {
@@ -570,35 +620,44 @@ export function BankTransactionsTable({
           ? `bank-${row.tx.eventId}`
           : `missing-${row.payment.paymentId}`
       }
+      filters={[
+        {
+          key: "reconciliation",
+          placeholder: copy.filters.placeholder,
+          options: filterOptions.map(([value, label]) => ({ value, label })),
+        },
+      ]}
+      filterValues={{ reconciliation: filter }}
+      onFilterChange={(_, value) => {
+        if (isBankReconciliationFilter(value)) setFilter(value);
+      }}
       actions={
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          {filterOptions.map(([value, label]) => (
-            <Button
-              key={value}
-              type="button"
-              variant={filter === value ? "default" : "outline"}
-              size="sm"
-              className="h-8 px-3 text-xs"
-              onClick={() =>
-                setFilter(isBankReconciliationFilter(value) ? value : "all")
-              }
-            >
-              {label}
-            </Button>
-          ))}
-          <Badge variant="secondary" className="font-mono">
-            {copy.visibleRows(filteredRows.length, rows.length)}
-          </Badge>
-        </div>
+        <Badge
+          variant={openQueueCount > 0 ? "warning" : "success"}
+          className="font-mono"
+        >
+          {copy.queueCount(formatCount(openQueueCount))}
+        </Badge>
       }
-      emptyTitle={isFiltered ? copy.filteredEmptyTitle : copy.emptyTitle}
+      emptyTitle={
+        !hasRows
+          ? copy.emptyTitle
+          : isQueueView
+            ? copy.queueEmptyTitle
+            : copy.filteredEmptyTitle
+      }
       emptyDescription={
-        isFiltered ? copy.filteredEmptyDescription : copy.emptyDescription
+        !hasRows
+          ? copy.emptyDescription
+          : isQueueView
+            ? copy.queueEmptyDescription
+            : copy.filteredEmptyDescription
       }
-      emptyMode={isFiltered ? "no-results" : "no-data"}
+      emptyMode={hasRows ? "no-results" : "no-data"}
+      mobileBreakpoint={1024}
       mobileCardRender={(row) => (
         <Item variant="outline">
-          <ItemContent className="gap-3">
+          <ItemContent className="min-w-0 gap-3">
             <RowContentCell row={row} />
             <div className="flex items-start justify-between gap-3">
               {row.kind === "bank" ? (
@@ -609,7 +668,7 @@ export function BankTransactionsTable({
               {row.kind === "bank" ? (
                 <ReconciliationStatusCell tx={row.tx} />
               ) : (
-                missingWebhookBadge(row.payment)
+                <MissingWebhookStatusCell payment={row.payment} />
               )}
             </div>
             <div className="flex justify-end">

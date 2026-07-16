@@ -145,10 +145,7 @@ test("SePay evidence invokes the POS settlement service only after an exact matc
     /lower\(COALESCE\(payment_code, ''\)\) = lower\(v_payment_code\)/,
   );
   assert.match(migration, /public\.confirm_sepay_payment\(/);
-  assert.match(
-    migration,
-    /v_confirmation_status IS DISTINCT FROM 'completed'/,
-  );
+  assert.match(migration, /v_confirmation_status IS DISTINCT FROM 'completed'/);
   assert.doesNotMatch(migration, /FOR v_event IN/);
   assert.doesNotMatch(route, /confirm_sepay_payment/);
   assert.doesNotMatch(route, /issueTaxInvoiceForPaidOrder/);
@@ -276,13 +273,14 @@ test("POS VietQR renders transfer QR with the order payment code", () => {
     "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
 
-  assert.match(schema, /z\.enum\(\["cash", "vietqr", "momo"\]\)/);
+  assert.match(schema, /z\.enum\(\["vietqr", "momo"\]\)/);
+  assert.doesNotMatch(schema, /method: z\.enum\(\[[^\]]*"cash"/);
   assert.match(action, /ensureOrderPaymentCode/);
   assert.match(action, /"ensure_order_payment_code"/);
   assert.match(action, /new VietQRProvider/);
   assert.match(action, /description: orderPaymentCode\.data/);
   assert.match(action, /p_method: method/);
-  assert.match(action, /p_provider_ref: providerResult\.providerRef/);
+  assert.match(action, /p_provider_ref: providerRef/);
   assert.doesNotMatch(bill, /buildVietQrEmvco/);
   assert.match(bill, /const result = await createPayment\(/);
 });
@@ -524,7 +522,7 @@ test("POS rehydrates pending VietQR QR from current Admin settings", () => {
   );
   assert.match(
     action,
-    /const vietQrSettings =[\s\S]*readVietQrSettings\(supabase, claims\.tenant_id\)/,
+    /const vietQrSettings =[\s\S]*readVietQrSettings\(supabase, input\.tenantId\)/,
   );
   assert.match(
     action,
@@ -561,6 +559,9 @@ test("VietQR bank account configuration lives in Admin settings, not env", () =>
 
 test("MoMo webhook accepts completed unconditionally per no-stock-deduction policy, keeps defensive stock_failed 500", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/momo/route.ts");
+  const migration = readRepoFile(
+    "supabase/migrations/20260715170000_add_guarded_payment_write_rpcs.sql",
+  );
 
   // No-stock-deduction policy (migration 20260611001000): completed /
   // already_completed accepted unconditionally, no stock_consumed gate.
@@ -569,7 +570,7 @@ test("MoMo webhook accepts completed unconditionally per no-stock-deduction poli
   // stock_failed stays defensive (pre-migration RPC) and fail-closed 500
   // so MoMo retries.
   assert.match(source, /case "stock_failed":/);
-  assert.match(source, /error_code: "stock_consumption_failed"/);
+  assert.match(migration, /v_error_code := 'stock_consumption_failed'/);
   assert.match(source, /status: 500/);
 });
 

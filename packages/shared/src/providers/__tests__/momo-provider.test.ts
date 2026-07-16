@@ -58,12 +58,24 @@ async function withMomoEnv<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-function mockFetchOnce(responseBody: unknown): () => void {
+type MoMoCreateRequest = { requestId: string; orderId: string };
+
+function mockFetchOnce(
+  responseBody:
+    | Record<string, unknown>
+    | ((request: MoMoCreateRequest) => Record<string, unknown>),
+): () => void {
   const original = globalThis.fetch;
-  globalThis.fetch = (async () =>
-    ({
-      json: async () => responseBody,
-    }) as unknown as Response) as typeof fetch;
+  globalThis.fetch = (async (_input, init) => {
+    const request = JSON.parse(String(init?.body)) as MoMoCreateRequest;
+    const body =
+      typeof responseBody === "function"
+        ? responseBody(request)
+        : responseBody;
+    return {
+      json: async () => body,
+    } as unknown as Response;
+  }) as typeof fetch;
   return () => {
     globalThis.fetch = original;
   };
@@ -77,13 +89,14 @@ function getProviderData(
 
 test("createPayment: uses qrCodeUrl when present (happy path)", async () => {
   await withMomoEnv(async () => {
-    const restore = mockFetchOnce({
+    const restore = mockFetchOnce((request) => ({
       resultCode: 0,
       message: "Successful.",
       qrCodeUrl: "00020101021238_NATIVE_MOMO_QR",
       payUrl: "https://test-payment.momo.vn/v2/gateway/pay/abc",
-      orderId: "MOMO-42-deadbeef",
-    });
+      orderId: request.orderId,
+      requestId: request.requestId,
+    }));
     try {
       const provider = new MoMoProvider(PROVIDER_CONFIG);
       const result = await provider.createPayment(REQUEST);
@@ -102,15 +115,75 @@ test("createPayment: uses qrCodeUrl when present (happy path)", async () => {
   });
 });
 
+test("createPayment: rejects an unbound MoMo create response", async () => {
+  await withMomoEnv(async () => {
+    const restore = mockFetchOnce((request) => ({
+      resultCode: 0,
+      message: "Successful.",
+      qrCodeUrl: "00020101021238_WRONG_TRANSACTION",
+      orderId: `${request.orderId}-other`,
+      requestId: `${request.requestId}-other`,
+    }));
+    try {
+      const provider = new MoMoProvider(PROVIDER_CONFIG);
+      const result = await provider.createPayment(REQUEST);
+      assert.equal(result.status, "failed");
+      assert.equal(result.qrData, undefined);
+      const data = getProviderData(result);
+      assert.equal(data.orderIdMatched, false);
+      assert.equal(data.requestIdMatched, false);
+      assert.match(String(data.message), /identifiers do not match/);
+    } finally {
+      restore();
+    }
+  });
+});
+
+test("createPayment: concurrent requests use distinct webhook idempotency keys", async () => {
+  await withMomoEnv(async () => {
+    const original = globalThis.fetch;
+    const requestIds: string[] = [];
+    globalThis.fetch = (async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as {
+        requestId: string;
+        orderId: string;
+      };
+      requestIds.push(body.requestId);
+      return {
+        json: async () => ({
+          resultCode: 0,
+          message: "Successful.",
+          qrCodeUrl: `QR-${body.orderId}`,
+          orderId: body.orderId,
+          requestId: body.requestId,
+        }),
+      } as Response;
+    }) as typeof fetch;
+
+    try {
+      const provider = new MoMoProvider(PROVIDER_CONFIG);
+      await Promise.all([
+        provider.createPayment(REQUEST),
+        provider.createPayment(REQUEST),
+      ]);
+      assert.equal(requestIds.length, 2);
+      assert.notEqual(requestIds[0], requestIds[1]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});
+
 test("createPayment: fails when qrCodeUrl is absent even if deeplink is returned", async () => {
   await withMomoEnv(async () => {
-    const restore = mockFetchOnce({
+    const restore = mockFetchOnce((request) => ({
       resultCode: 0,
       message: "Successful.",
       payUrl: "https://test-payment.momo.vn/v2/gateway/pay/xyz",
       deeplink: "momo://app/payment/xyz",
-      orderId: "MOMO-42-deadbeef",
-    });
+      orderId: request.orderId,
+      requestId: request.requestId,
+    }));
     try {
       const provider = new MoMoProvider(PROVIDER_CONFIG);
       const result = await provider.createPayment(REQUEST);
@@ -128,12 +201,13 @@ test("createPayment: fails when qrCodeUrl is absent even if deeplink is returned
 
 test("createPayment: fails when only payUrl is returned", async () => {
   await withMomoEnv(async () => {
-    const restore = mockFetchOnce({
+    const restore = mockFetchOnce((request) => ({
       resultCode: 0,
       message: "Successful.",
       payUrl: "https://test-payment.momo.vn/v2/gateway/pay/xyz",
-      orderId: "MOMO-42-deadbeef",
-    });
+      orderId: request.orderId,
+      requestId: request.requestId,
+    }));
     try {
       const provider = new MoMoProvider(PROVIDER_CONFIG);
       const result = await provider.createPayment(REQUEST);
@@ -151,13 +225,14 @@ test("createPayment: fails when only payUrl is returned", async () => {
 
 test("createPayment: prefers qrCodeUrl over payUrl when both present", async () => {
   await withMomoEnv(async () => {
-    const restore = mockFetchOnce({
+    const restore = mockFetchOnce((request) => ({
       resultCode: 0,
       message: "Successful.",
       qrCodeUrl: "00020101021238_NATIVE",
       payUrl: "https://test-payment.momo.vn/v2/gateway/pay/abc",
-      orderId: "MOMO-42-deadbeef",
-    });
+      orderId: request.orderId,
+      requestId: request.requestId,
+    }));
     try {
       const provider = new MoMoProvider(PROVIDER_CONFIG);
       const result = await provider.createPayment(REQUEST);
@@ -171,11 +246,12 @@ test("createPayment: prefers qrCodeUrl over payUrl when both present", async () 
 
 test("createPayment: fails when qrCodeUrl, deeplink, and payUrl all missing", async () => {
   await withMomoEnv(async () => {
-    const restore = mockFetchOnce({
+    const restore = mockFetchOnce((request) => ({
       resultCode: 0,
       message: "Successful.",
-      orderId: "MOMO-42-deadbeef",
-    });
+      orderId: request.orderId,
+      requestId: request.requestId,
+    }));
     try {
       const provider = new MoMoProvider(PROVIDER_CONFIG);
       const result = await provider.createPayment(REQUEST);

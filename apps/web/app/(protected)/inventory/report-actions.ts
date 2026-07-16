@@ -4,8 +4,8 @@ import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   INVENTORY_OPS_ROLES,
+  MODULE_ACL,
   PERMISSION_KEYS,
-  PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
@@ -238,8 +238,8 @@ export interface ApAgingRow {
 
 export async function fetchApAging(): Promise<ActionResult<ApAgingRow[]>> {
   const ctx = await getAuthContextWithPermission(
-    PROCUREMENT_ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
+    MODULE_ACL.finance.allowedRoles,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
@@ -316,10 +316,7 @@ export async function fetchConsumptionVariance(
     ((ingredients ?? []) as IngredientReportRow[]).map((i) => {
       const baseUnit =
         i.ingredient_units.find((u) => u.is_base)?.units?.code || "kg";
-      return [
-        i.id,
-        { name: i.name, unit: baseUnit },
-      ];
+      return [i.id, { name: i.name, unit: baseUnit }];
     }),
   );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { UseFormReturn } from "react-hook-form";
@@ -67,6 +67,7 @@ import type { SupplierInvoiceCursor } from "../procurement-actions";
 import {
   getSupplierInvoiceOutstandingAmount,
   mapSupplierInvoiceRow,
+  resolveSupplierPaymentIntentKey,
   type SupplierInvoiceRow,
 } from "./supplier-invoice-row";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
@@ -103,6 +104,7 @@ type SupplierInvoiceGroup = {
   invoiceCount: number;
   totalAmount: number;
   paidAmount: number;
+  creditAppliedAmount: number;
   outstandingAmount: number;
   overdueAmount: number;
   overdueCount: number;
@@ -212,7 +214,7 @@ function sortSupplierInvoices(
 }
 
 function isInvoiceOverdue(invoice: SupplierInvoiceRow) {
-  if (!invoice.dueDate || invoice.paymentStatus === "paid") {
+  if (!invoice.dueDate || getSupplierInvoiceOutstandingAmount(invoice) <= 0) {
     return false;
   }
 
@@ -471,6 +473,7 @@ export function SupplierInvoicesClient({
   const grnIdParam = searchParams.get("grnId");
   const preselectInvoiceId = invoiceIdParam ? Number(invoiceIdParam) : null;
   const preselectGrnId = grnIdParam ? Number(grnIdParam) : null;
+  const isInvoiceDeepLink = preselectInvoiceId != null;
 
   const [rows, setRows] = useState(invoices);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -492,6 +495,7 @@ export function SupplierInvoicesClient({
     preselectGrnId != null && preselectInvoiceId == null,
   );
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const paymentIntentKeyRef = useRef<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.supplierInvoices;
   const createDefaultValues = useMemo(
@@ -588,6 +592,7 @@ export function SupplierInvoicesClient({
           invoiceCount: 0,
           totalAmount: 0,
           paidAmount: 0,
+          creditAppliedAmount: 0,
           outstandingAmount: 0,
           overdueAmount: 0,
           overdueCount: 0,
@@ -601,6 +606,7 @@ export function SupplierInvoicesClient({
       group.invoiceCount += 1;
       group.totalAmount += invoice.amount;
       group.paidAmount += invoice.paidAmount;
+      group.creditAppliedAmount += invoice.creditAppliedAmount;
       group.outstandingAmount += outstandingAmount;
       if (outstandingAmount > 0 && invoice.dueDate) {
         group.nextDueDate =
@@ -657,13 +663,38 @@ export function SupplierInvoicesClient({
       showOnlyOverdue);
 
   async function reloadInvoices(nextSelectedId?: number | null) {
-    const again = await fetchSupplierInvoicesPage({ branchId });
+    const [again, exactSelected] = await Promise.all([
+      fetchSupplierInvoicesPage({ branchId }),
+      typeof nextSelectedId === "number"
+        ? fetchSupplierInvoicesPage({
+            branchId,
+            invoiceId: nextSelectedId,
+            pageSize: 1,
+          })
+        : Promise.resolve(null),
+    ]);
     if (!again.success || !again.data) return;
 
     const { items, hasMore: more, nextCursor: cursor } = again.data;
-    const nextRows = (items as Array<Record<string, unknown>>).map(
+    let nextRows = (items as Array<Record<string, unknown>>).map(
       mapSupplierInvoiceRow,
     );
+
+    if (typeof nextSelectedId === "number") {
+      const exactItem = (
+        exactSelected?.success ? exactSelected.data?.items[0] : undefined
+      ) as Record<string, unknown> | undefined;
+      if (!exactItem || Number(exactItem.id) !== nextSelectedId) {
+        toast.error(exactSelected?.error ?? copy.loadFailed);
+        return;
+      }
+
+      const exactRow = mapSupplierInvoiceRow(exactItem);
+      nextRows = [
+        exactRow,
+        ...nextRows.filter((invoice) => invoice.id !== exactRow.id),
+      ];
+    }
 
     setRows(nextRows);
     // Fresh first page — restore keyset state from the paginated result,
@@ -746,18 +777,44 @@ export function SupplierInvoicesClient({
       return { success: false, error: copy.paymentTooLarge };
     }
 
-    const res = await recordSupplierPayment({
-      invoiceId: selectedInvoice.id,
-      amount,
-      paymentMethod: values.paymentMethod,
-      referenceNote: values.referenceNote?.trim() || undefined,
-    });
+    const idempotencyKey = resolveSupplierPaymentIntentKey(
+      paymentIntentKeyRef.current,
+      () => crypto.randomUUID(),
+    );
+    paymentIntentKeyRef.current = idempotencyKey;
 
-    if (res.success) {
-      await reloadInvoices(selectedInvoice.id);
+    try {
+      const res = await recordSupplierPayment({
+        invoiceId: selectedInvoice.id,
+        idempotencyKey,
+        amount,
+        paymentMethod: values.paymentMethod,
+        referenceNote: values.referenceNote?.trim() || undefined,
+      });
+
+      if (res.success) {
+        await reloadInvoices(selectedInvoice.id);
+      }
+
+      return res;
+    } catch {
+      return { success: false, error: copy.paymentRetrySameIntent };
     }
+  }
 
-    return res;
+  function openSupplierPaymentDialog() {
+    paymentIntentKeyRef.current = crypto.randomUUID();
+    setPaymentOpen(true);
+  }
+
+  function handlePaymentOpenChange(open: boolean) {
+    if (open && paymentIntentKeyRef.current == null) {
+      paymentIntentKeyRef.current = crypto.randomUUID();
+    }
+    if (!open) {
+      paymentIntentKeyRef.current = null;
+    }
+    setPaymentOpen(open);
   }
 
   function handleRecomputeMatching() {
@@ -855,6 +912,18 @@ export function SupplierInvoicesClient({
                 )}
               </span>
             </div>
+            {group.creditAppliedAmount > 0 ? (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">
+                  {copy.supplierCredit}
+                </span>
+                <span className="font-mono">
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(group.creditAppliedAmount),
+                  )}
+                </span>
+              </div>
+            ) : null}
           </div>
 
           <span className="mt-4 text-sm font-medium text-primary">
@@ -940,11 +1009,23 @@ export function SupplierInvoicesClient({
       header: copy.paidAmount,
       className: "min-w-36 text-right",
       render: (group) => (
-        <span className="font-mono text-sm tabular-nums">
-          {messages.inventory.common.currencyCompact(
-            formatVND(group.paidAmount),
-          )}
-        </span>
+        <div className="flex flex-col items-end gap-1 text-right">
+          <span className="font-mono text-sm tabular-nums">
+            {messages.inventory.common.currencyCompact(
+              formatVND(group.paidAmount),
+            )}
+          </span>
+          {group.creditAppliedAmount > 0 ? (
+            <span className="text-xs text-muted-foreground">
+              {copy.supplierCredit}:{" "}
+              <span className="font-mono tabular-nums">
+                {messages.inventory.common.currencyCompact(
+                  formatVND(group.creditAppliedAmount),
+                )}
+              </span>
+            </span>
+          ) : null}
+        </div>
       ),
     },
     {
@@ -1058,7 +1139,12 @@ export function SupplierInvoicesClient({
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        <div className="flex min-w-0 flex-col gap-4">
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-4",
+            isInvoiceDeepLink && "order-2 xl:order-1",
+          )}
+        >
           <AppToolbar
             search={
               <InputGroup className="min-w-0 flex-1">
@@ -1188,6 +1274,7 @@ export function SupplierInvoicesClient({
         <AppSection
           title={detailTitle}
           headerHint={detailSubtitle ?? undefined}
+          className={cn(isInvoiceDeepLink && "order-1 xl:order-2")}
         >
           {selectedInvoice ? (
             <div className="flex flex-col gap-4">
@@ -1198,8 +1285,8 @@ export function SupplierInvoicesClient({
                 {canPaySupplier && selectedOutstandingAmount > 0 ? (
                   <Button
                     type="button"
-                    size="sm"
-                    onClick={() => setPaymentOpen(true)}
+                    size="touch"
+                    onClick={openSupplierPaymentDialog}
                     disabled={isPending}
                   >
                     {copy.payAction}
@@ -1207,7 +1294,7 @@ export function SupplierInvoicesClient({
                 ) : null}
                 <Button
                   type="button"
-                  size="sm"
+                  size="touch"
                   variant="outline"
                   onClick={handleRecomputeMatching}
                   disabled={isPending}
@@ -1287,6 +1374,9 @@ export function SupplierInvoicesClient({
                       messages.inventory.common.currencyCompact(
                         formatVND(selectedInvoice.paidAmount),
                       ),
+                      messages.inventory.common.currencyCompact(
+                        formatVND(selectedInvoice.creditAppliedAmount),
+                      ),
                     ),
                   },
                   {
@@ -1330,9 +1420,10 @@ export function SupplierInvoicesClient({
                   {
                     term: copy.linkedPo,
                     description:
-                      selectedInvoice.poCode &&
-                      selectedInvoice.poId != null ? (
-                        <span className="font-mono">{selectedInvoice.poCode}</span>
+                      selectedInvoice.poCode && selectedInvoice.poId != null ? (
+                        <span className="font-mono">
+                          {selectedInvoice.poCode}
+                        </span>
                       ) : (
                         copy.notLinked
                       ),
@@ -1414,7 +1505,7 @@ export function SupplierInvoicesClient({
 
       <FormDialog
         open={paymentOpen}
-        onOpenChange={setPaymentOpen}
+        onOpenChange={handlePaymentOpenChange}
         schema={supplierPaymentSchema}
         defaultValues={paymentDefaultValues}
         entityKey={selectedInvoice?.id ?? "supplier-payment"}

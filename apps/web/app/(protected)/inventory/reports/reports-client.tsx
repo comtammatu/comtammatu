@@ -40,6 +40,7 @@ export type ReportsProps = {
     values: { value: number; color: InventorySemanticColor }[];
   }>;
   apAging: ApAgingItem[];
+  showSupplierPayables: boolean;
   consumptionVariance: VarianceItem[];
   foodCostTrend: number[];
   foodCostTrendAvailable: boolean;
@@ -49,6 +50,7 @@ export type ReportsProps = {
 export function ReportsClient({
   movementSummary,
   apAging,
+  showSupplierPayables,
   consumptionVariance,
   foodCostTrend,
   foodCostTrendAvailable,
@@ -85,7 +87,10 @@ export function ReportsClient({
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-4">
         <AppSection
-          className="col-span-12 flex flex-col lg:col-span-8"
+          className={cn(
+            "col-span-12 flex flex-col",
+            showSupplierPayables ? "lg:col-span-8" : "lg:col-span-12",
+          )}
           title={messages.inventory.reports.movementTitle}
           icon={<IconChartBar />}
           contentClassName="flex flex-1 flex-col gap-4"
@@ -129,81 +134,83 @@ export function ReportsClient({
           </div>
         </AppSection>
 
-        <AppSection
-          className="col-span-12 lg:col-span-4"
-          title={messages.inventory.reports.supplierPayables}
-        >
-          <div className="flex flex-col gap-3">
-            {apAging.map((item, idx) => {
-              const isOverdue = idx === apAging.length - 1;
-              const barColor =
-                idx === 0
-                  ? resolveInventoryColorValue("success")
-                  : idx === 1
-                    ? resolveInventoryColorValue("primary")
-                    : idx === 2
-                      ? resolveInventoryColorValue("warning")
-                      : resolveInventoryColorValue("danger");
-              return (
-                <div
-                  key={item.range}
-                  className={cn(
-                    "rounded-md p-3",
-                    isOverdue
-                      ? "border border-destructive/20 bg-destructive/10"
-                      : "bg-muted/50",
-                  )}
-                >
-                  <div className="mb-1 flex justify-between text-xs">
-                    <span
-                      className={cn(
-                        isOverdue
-                          ? "text-destructive"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {item.range}
-                    </span>
-                    <span
-                      className={cn(
-                        "font-bold",
-                        isOverdue ? "text-destructive" : "text-foreground",
-                      )}
-                    >
-                      {messages.inventory.reports.amountVnd(
-                        formatVND(item.amount),
-                      )}
-                    </span>
-                  </div>
+        {showSupplierPayables ? (
+          <AppSection
+            className="col-span-12 lg:col-span-4"
+            title={messages.inventory.reports.supplierPayables}
+          >
+            <div className="flex flex-col gap-3">
+              {apAging.map((item, idx) => {
+                const isOverdue = idx === apAging.length - 1;
+                const barColor =
+                  idx === 0
+                    ? resolveInventoryColorValue("success")
+                    : idx === 1
+                      ? resolveInventoryColorValue("primary")
+                      : idx === 2
+                        ? resolveInventoryColorValue("warning")
+                        : resolveInventoryColorValue("danger");
+                return (
                   <div
+                    key={item.range}
                     className={cn(
-                      "h-2 w-full overflow-hidden rounded-full",
-                      isOverdue ? "bg-destructive/20" : "bg-muted",
+                      "rounded-md p-3",
+                      isOverdue
+                        ? "border border-destructive/20 bg-destructive/10"
+                        : "bg-muted/50",
                     )}
                   >
+                    <div className="mb-1 flex justify-between text-xs">
+                      <span
+                        className={cn(
+                          isOverdue
+                            ? "text-destructive"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {item.range}
+                      </span>
+                      <span
+                        className={cn(
+                          "font-bold",
+                          isOverdue ? "text-destructive" : "text-foreground",
+                        )}
+                      >
+                        {messages.inventory.reports.amountVnd(
+                          formatVND(item.amount),
+                        )}
+                      </span>
+                    </div>
                     <div
-                      className="h-full rounded-full transition-[width,background-color]"
-                      style={{
-                        width: `${(item.amount / maxAP) * 100}%`,
-                        backgroundColor: barColor,
-                      }}
-                    />
+                      className={cn(
+                        "h-2 w-full overflow-hidden rounded-full",
+                        isOverdue ? "bg-destructive/20" : "bg-muted",
+                      )}
+                    >
+                      <div
+                        className="h-full rounded-full transition-[width,background-color]"
+                        style={{
+                          width: `${(item.amount / maxAP) * 100}%`,
+                          backgroundColor: barColor,
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-          <Button
-            asChild
-            type="button"
-            variant="outline"
-            className="w-full text-muted-foreground"
-          >
-            <Link href="/inventory/supplier-invoices">
-              {messages.inventory.reports.openSupplierDebt}
-            </Link>
-          </Button>
-        </AppSection>
+                );
+              })}
+            </div>
+            <Button
+              asChild
+              type="button"
+              variant="outline"
+              className="w-full text-muted-foreground"
+            >
+              <Link href="/inventory/supplier-invoices">
+                {messages.inventory.reports.openSupplierDebt}
+              </Link>
+            </Button>
+          </AppSection>
+        ) : null}
 
         <AppSection
           className="col-span-12 md:col-span-6"

@@ -1,4 +1,5 @@
 import { fetchFoodCost } from "@/_lib/food-cost-actions";
+import { loadAuthState } from "@/_lib/auth";
 import {
   fetchApAging,
   fetchConsumptionVariance,
@@ -62,12 +63,14 @@ function calculateTrendDeltaPct(trend: number[]) {
 }
 
 export async function ReportsPageContent() {
+  const { claims } = await loadAuthState();
+  const showSupplierPayables = claims.user_role === "owner";
   const startDate = getVNMonthStartDateString();
   const endDate = getVNDateString();
   const trendStartDate = getVNMonthSequenceBack(12).at(-1)?.date ?? startDate;
 
   const [apRes, varRes, movementRes, foodCostRes] = await Promise.all([
-    fetchApAging(),
+    showSupplierPayables ? fetchApAging() : Promise.resolve(null),
     fetchConsumptionVariance({ startDate, endDate }),
     fetchStockMovementReport({ startDate, endDate }),
     fetchFoodCost({
@@ -77,7 +80,7 @@ export async function ReportsPageContent() {
   ]);
 
   let apAging: ApAgingItem[] = [];
-  if (apRes.success && apRes.data) {
+  if (apRes?.success && apRes.data) {
     const rows = apRes.data as Array<{
       buckets: {
         current: { total: number };
@@ -200,6 +203,7 @@ export async function ReportsPageContent() {
     <ReportsClient
       movementSummary={movementSummary}
       apAging={apAging}
+      showSupplierPayables={showSupplierPayables}
       consumptionVariance={consumptionVariance}
       foodCostTrend={foodCostTrend}
       foodCostTrendAvailable={foodCostTrendAvailable}

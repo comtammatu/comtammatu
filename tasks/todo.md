@@ -57,6 +57,108 @@ redesign, production apply, and unrelated runtime-control work from PR #284.
 - [x] Pass focused tests, migration replay, full gates, and T3 review.
 - [x] Publish replacement PR #298, then close PR #284 without merge as a
       superseded merge unit.
+## MoMo Finance Reporting Contract Closure (2026-07-16)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + database + workflow + orchestration;
+external skills = Supabase + Supabase Postgres best practices; runtime tools =
+Production catalog reads, fresh local replay, generated types, focused SQL and
+TypeScript tests, and full repository gates. Production remains read-only until
+the Owner applies the final forward migration.
+
+- **PM:** Restoring MoMo settlement must also restore truthful Finance method
+  breakdowns. Total collected and the cash/VietQR/MoMo split must not disagree.
+- **BA:** `payments.amount` remains the money source. `momo_revenue` is separate
+  in the daily view and three revenue RPCs; cashier `qr_revenue` remains the
+  existing combined VietQR + MoMo export bucket.
+- **Senior Dev:** Add one forward migration after the already-applied provider
+  constraint migration. Recreate only the materialized view, three revenue RPCs,
+  and cashier RPC body; preserve current scope checks and explicit ACLs. Keep
+  generated types pure and handle PostgreSQL input-nullability metadata limits
+  at the application boundary.
+- **QA/QC:** Prove cash 10 + VietQR 20 + MoMo 30 gives total 60 and exact method
+  splits in the view and all revenue RPCs, while cashier QR/MoMo is 50. Require
+  fresh replay, no `PUBLIC`/`anon` execute, typecheck, full gates, Preview
+  rehearsal, Production apply/postcheck, and a no-diff Production typegen before
+  PR #297 can leave Draft.
+
+- [x] Independently verify the seven Production migrations, their ledgers,
+      SePay/MoMo data invariants, triggers, constraints, ACLs, and advisor counts.
+- [x] Classify the advisor delta as intentional: five guarded authenticated
+      definers added and two prior warnings removed, net `+3 WARN`.
+- [x] Add the forward reporting migration, generated-type normalization, and
+      focused static/SQL regression coverage. Fresh replay and focused gates are
+      green.
+- [x] Apply the corrected migration to the approved PR #297 Preview and prove
+      catalog, `search_path`, functional totals, ACLs, indexes, and advisor
+      stability. The exact-source replay passed after review hardening; the
+      rollback acceptance left no business data behind.
+- [ ] Apply the same migration to Production, rerun `db:types` with no diff,
+      complete full gates, then change PR #297 from Draft and merge.
+
+## SePay Completed-Payment Conflict Guard (2026-07-15)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + workflow +
+orchestration; external skill = Supabase; runtime tools = refreshed Production
+catalog/ledger reads, a clean `origin/main` worktree, focused TypeScript and SQL
+tests, Preview rehearsal, and full repository gates. Skipped = Production DDL,
+payment-wide immutability, supplier-payment idempotency, Finance redesign,
+conflict adjudication UI, and merging any part of PR #284 wholesale.
+
+- **PM:** Stop SePay from changing a completed cash, MoMo, or other payment.
+  Preserve automatic settlement only for an unpaid order with no active payment
+  or an exact pending VietQR intent. Every valid unmatched bank event must remain
+  visible and recoverable by the Owner.
+- **BA:** `payments` remains the collected-payment truth and `webhook_events`
+  remains bank evidence. A completed non-VietQR payment plus signed SePay money-in
+  is a conflict, not a correction. A distinct second transfer for an already
+  evidenced VietQR payment is an overpayment review item; replay of the same
+  bank request remains idempotent.
+- **Senior Dev:** Add one forward migration from current `main`. Serialize on the
+  order, classify before the legacy confirmation function, revoke direct
+  `service_role` execution of that unsafe lower-level function, Owner-gate the
+  manual-link RPC in SQL, and reclassify only the known signed business failures.
+  Update only the webhook result schema and Finance classifier needed to surface
+  those rows. Add no new table or generalized workflow abstraction.
+- **QA/QC:** Prove unpaid and pending VietQR success; completed cash/MoMo remain
+  byte-for-byte financially unchanged; distinct duplicate transfer is
+  quarantined; missing-code and not-found evidence is recoverable; invalid
+  signature/amount remains fail-closed; replay does not duplicate; Owner succeeds
+  and Branch/non-user callers receive `42501`; receipt failure stays fail-soft
+  and SePay does not issue HĐĐT inline.
+
+Synthesis: the prior “cash correction” behavior is explicitly rejected because
+it destroys the distinction between POS payment truth and bank evidence. This
+slice contains the live data-integrity fault and restores an Owner recovery path;
+it does not decide the final conflict outcome or broaden direct payment mutation.
+
+- [x] **F1 — runtime proof.** Confirm the deployed function bodies, privileges,
+      migration ledger, deployment commit, and affected event counts read-only.
+- [x] **F2 — forward containment.** Write the migration and narrow runtime
+      adapters/tests without touching Production.
+- [x] **F3a — local verification.** Run focused SQL/TypeScript tests, repository
+      gates, local RPC transport checks, and the T3 review matrix.
+- [ ] **F3b — Preview rehearsal.** Apply after supplier-payment idempotency on an
+      isolated source Preview and replay the two-session conflict matrix.
+- [x] **F4 — draft delivery.** Review evidence is prepared for the
+      Owner-authorized commit, push, and Draft PR. Merge and Production DDL
+      remain explicitly out of scope.
+
+Local attestation: both SePay SQL acceptance tests pass with rollback, including
+the pre-migration backfill rehearsal (`UPDATE 2`), fresh unpaid-order path, and
+Owner denial when attempting to link quarantined cash or MoMo conflicts;
+focused TypeScript is 17/17. The Finance period loaders page every 1,000-row Data
+API window with stable tie-breakers, and chunk downstream ID filters instead of
+silently truncating long periods. The table displays mapped operator copy instead
+of raw review codes. Read-only
+Production counts prove the former 100-row window hid 54 of 68 review candidates
+and 46 of 62 completed VietQR payments missing bank evidence. Typecheck, T3 lint,
+build, and the full web suite are green. The canonical SQL runner now expands
+relative migration includes fail-closed. Its three remaining failures are
+unrelated local-fixture drift; paid Preview rehearsal remains the open F3b gate.
 
 ## Branch Hub Shell Slice From PR #284 (2026-07-15)
 
@@ -82,6 +184,85 @@ workflows and keep POS/KDS/Runner as separate station apps.
 - [x] Apply the current-main-compatible Branch shell/home subset.
 - [x] Pass focused tests, UI contract lint, typecheck, lint, build, and review-tier.
 - [x] Commit, push, and open the first replacement PR without closing PR #284.
+
+## Payment Provider RPC Ledger (2026-07-15)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + workflow +
+orchestration; external skills = Supabase + Ponytail; runtime tools = isolated
+local Supabase, SQL acceptance, two-session race harness, focused static tests,
+and full repository gates. Skipped = Production DDL, Production data repair,
+merge, and Preview creation until the Owner confirms the exact hourly cost.
+
+- **PM:** Remove every path that can leave an order stuck behind a partial MoMo
+  intent or let a retry overwrite terminal provider evidence. Keep cash,
+  VietQR, MoMo, SePay, invoice, and stock ownership boundaries explicit.
+- **BA:** A remote intent is pending only after its displayable provider
+  metadata commits. A signed provider result owns settlement; a terminal result
+  is immutable; cash cannot replace pending MoMo; a final MoMo failure releases
+  the order for another payment.
+- **Senior Dev:** Add service-only `create_remote_payment_intent`, route the new
+  runtime through it, and preserve authenticated legacy
+  `create_payment(..., p_status)` only as a pending-only DB-first compatibility
+  wrapper. Serialize MoMo webhook writes in event -> order advisory -> payment
+  order, keep exact signed payload evidence, and restrict direct payment updates
+  to the old runtime's validated pending-provider metadata fill and Owner-only
+  completed-VietQR `bankWebhookReview` update.
+- **QA/QC:** Prove the new RPC is denied to browser roles, the legacy signature
+  cannot settle remote payments, direct payment INSERT/DELETE are absent, direct
+  UPDATE rejects every shape except validated pending-provider metadata and the
+  exact Owner completed-VietQR review marker, and actor/branch ACL, amount
+  recomputation, idempotency, terminal immutability, deadlock freedom, and
+  fixture/session cleanup remain intact.
+
+- [x] **P0-D1a — atomic provider intent.** Store provider reference and metadata
+      in the same service-only transaction after rechecking the active POS actor
+      and branch permission; fail closed on incomplete MoMo QR evidence.
+- [x] **P0-D1b — serialized MoMo settlement.** Commit exact pending, success, or
+      failure payloads under the webhook-event lock and order advisory lock;
+      completed/refunded payments cannot be downgraded.
+- [x] **P0-D1c — local acceptance.** Targeted SQL, static provider tests, and the
+      eight-scenario concurrency harness are green with zero residual fixtures.
+- [x] **P0-D1d — closure gates.** Complete T3 lint, build, full tests, independent
+      review, and diff hygiene.
+- [x] **P1-D1e — pending MoMo/cash containment.** Reject cash before it can
+      rewrite a pending MoMo row; prove signed MoMo success wins the two-session
+      race with exact event evidence and no deadlock.
+- [ ] **P0-D1f — Preview proof.** Create and meter a Preview only after the Owner
+      confirms the quoted `$0.01344/hour`; run migration preflight, deploy, and
+      phone/tablet/payment smoke there.
+- [ ] **P0-D2 — payment-table UPDATE revoke.** After the new runtime is deployed
+      and proven, revoke the remaining authenticated `UPDATE` grant that exists
+      only for the two guarded DB-first compatibility paths: pending provider
+      metadata fill and Owner completed-VietQR review. Direct payment
+      INSERT/DELETE are already revoked in D1.
+
+Attestation: the service-only remote-payment intent and MoMo settlement RPCs are
+written and applied only to the isolated local Supabase stack. The local catalog
+intentionally contains both `create_remote_payment_intent` and the authenticated
+legacy `create_payment(..., p_status)` signature; the latter is a temporary
+pending-only wrapper and cannot complete cash, MoMo, or VietQR. Browser roles
+cannot call the new RPC or directly INSERT/DELETE payments. Authenticated UPDATE
+remains only for the trigger-validated pending-provider metadata and Owner
+completed-VietQR review shapes required by the deployed runtime, and is scheduled
+for P0-D2 revocation after cutover. The cash RPC fails closed while signed
+provider settlement remains authoritative.
+Preview and Production remain untouched; merge is outside this slice.
+
+## Expense Payment State Closure (2026-07-16)
+
+- [x] Add Owner-only atomic `transition_expense_payment` and `cancel_expense`
+      RPCs with idempotent state transitions and audit evidence.
+- [x] Revoke authenticated direct `UPDATE` on `expenses`; retain rolling
+      compatibility DELETE only with trigger-owned audit and matched-evidence
+      protection.
+- [x] Make cash movement use `paid_at`, while the Chi vận hành ledger continues
+      to use the incurred business date.
+- [x] Preserve exact SePay intent matching, exact supplier-invoice deep links,
+      and fail-closed financial loading across long reporting periods.
+- [ ] Prove the current migration wave on Supabase Preview and run phone/tablet
+      Finance smoke before changing PR #297 from Draft.
 
 ## Admin Dashboard Owner Boundary And Branch Containment (2026-07-15)
 
@@ -382,6 +563,59 @@ from Server Action/RLS authorization.
       the Branch Hub phone, tablet, and desktop route smoke are green against
       local Supabase. Manager setup now resolves an active `branch` and the
       `branch_manager` position instead of pinning a retired central site.
+
+## Finance Reconciliation Workbench v1
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + database + UI + workflow;
+external skills = Playwright + Supabase; outside review = Gemini, while Cursor
+Agent was unavailable; runtime tools = focused tests, full repo gates, and local
+browser verification. Skipped = schema/RPC changes, production writes, new
+reconciliation states, and enterprise accounting.
+
+UI Advisor Gate
+
+- Surface: `/finance/bank-transactions`; route family: `finance`; product plane:
+  Admin Dashboard; Branch chrome mode: n/a; change: visual + flow only.
+- Context: Finance § 2.9; actor: Owner; job: find unlinked bank evidence and
+  attach the correct existing payment, Chi vận hành, NCC payment, or refund.
+- Journey: open review queue -> inspect evidence -> choose one matching action
+  -> save -> row moves to matched history; recovery: close without saving or
+  retry the existing safe error path.
+- Information order: 1) review queue/filter 2) evidence row + amount/status 3)
+  matched history; exclude: cross-source money totals and new accounting data.
+- Pattern: `LIST`; exemplar: Inventory GRN list; data display: `DataTable`.
+- States: loading, empty queue, no filter results, pending mutation, safe error,
+  matched, webhook error, and permission denial.
+- Components: `AppPage`, `FilterBar`, `DataTable`, `Select`, `Badge`, `Sheet`,
+  and existing Finance actions/models; fallback: none.
+- Responsive/accessibility: same IA at 390/768/1440; mixed touch/keyboard;
+  preserve labels, focus trap, visible focus, and touch-safe actions.
+- Verification: static reconciliation tests, typecheck, lint, build, test, and
+  authenticated local browser smoke at the target viewports.
+
+- **PM:** Ship one queue-first Owner workbench; remove five summary cards and
+  make `Cần rà` the default without adding a new route or metric.
+- **BA:** Never sum unmatched bank events with missing-webhook payments because
+  both can represent one transfer. Preserve exact-total and one-evidence rules.
+- **Senior Dev:** Reuse the current union rows, classifiers, actions, `DataTable`,
+  and `Sheet`; change presentation only.
+- **QA/QC:** Prove default queue filtering, closed-webhook exclusion, action
+  parity, no heterogeneous total, and mobile/desktop focus behavior.
+
+- [x] **F1 — queue-first list.** Remove KPI cards, default to `needs_review`,
+      and replace the seven-button rail with one filter and a safe work count.
+- [x] **F2 — focused evidence matching.** Move the existing multi-source match
+      controls from `Popover` to `Sheet` without changing actions or payloads.
+- [x] **F3 — verification.** Focused tests, repo gates, and responsive browser
+      smoke are green.
+
+Attestation: the diff matches the T3 contract. The Owner exact-match journey
+moved one 240,000 VND outgoing SePay row from the review queue to matched
+history through the existing RPC. The page has no horizontal overflow at
+390/768/1440, and a Branch Manager navigating directly to the route is returned
+to `/br/1`. `corepack pnpm verify` is green (web: 1,005 passed, 33 skipped).
 
 ## Branch Stock Hub Viewport
 
@@ -1395,8 +1629,8 @@ catalog and stock levels, then verifies the next real POS order.
       passing, 33 skipped, and 0 failing tests; the earlier nine-failure wave is
       no longer present in the current tree.
 
-- [x] **S1 — extend the Branch/Admin Dashboard import boundary guard before converting
-      anything.** Widen `operator-admin-dashboard-shell-boundary` in
+- [x] **S1 — extend the operator/Office import boundary guard before converting
+      anything.** Widen `operator-office-shell-boundary` in
       `scripts/check-ui-contract.mjs` so `(operator)/**` may not import
       `@/(protected)/inventory/**` except `*-actions.ts`; allowlist `_lib/**`
       until S7 lands. Freeze current offenders as the baseline and burn one line
@@ -1453,7 +1687,7 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [ ] **S5 — fork the GRN line sheet out of the shared component tree.**
       `GrnLineEditSheet` (`apps/web/app/components/inventory/grn-line-editor.tsx`)
-      is imported by both the operator create flow and Admin Dashboard
+      is imported by both the operator create flow and Office
       `inventory/grn/new/[supplierId]`. It is presentation, and D067 §1 requires
       presentation to fork.
   - Build `(operator)/stock/grn/_components/grn-line-sheet.tsx` as the single
@@ -1480,7 +1714,7 @@ v_out_base`. Do not rescale consumption by actual output.
   - Hide the GRN receiving-location card when `branchLocations.length <= 1` and
     resolve the location server-side.
 
-- [ ] **S7 — relocate shared pure logic out of the Admin Dashboard route tree.** Move
+- [ ] **S7 — relocate shared pure logic out of the Office route tree.** Move
       `_lib/format`, `_lib/purchase-units`, `_lib/reference-cost`, `_lib/grn-draft`,
       and `_lib/types` to `apps/web/lib/inventory/` and import from there on both
       planes. This is a move, not a fork: the sharing was correct and the location
@@ -1495,7 +1729,7 @@ v_out_base`. Do not rescale consumption by actual output.
       since D068 §4. Remove the operator recipe surface entirely — the tile AND the
       `stock/production/recipes/**` route family (list, editor, new — the
       clients still expose create/edit/delete today); recipe administration
-      stays in Admin Dashboard `/inventory` (D073 §3). Guard entries for the removed
+      stays in Office `/inventory` (D073 §3). Guard entries for the removed
       routes: `scripts/page-archetypes.mjs` + the route-manifest arrays in
       `scripts/check-ui-contract.mjs`.
 
@@ -1545,10 +1779,10 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [x] **S12 — retire supplier returns end-to-end (D073 §4).** Delete the
       operator routes (`stock/supplier-returns/**`, 3 pages + 3 clients), the
-      Admin Dashboard routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
+      Office routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
       the shared loaders/model (`branch-supplier-return-data.ts`,
       `supplier-return-model.ts`), the actions file
-      (`supplier-return-actions.ts`), the nav tile and Admin Dashboard nav item, and the
+      (`supplier-return-actions.ts`), the nav tile and Office nav item, and the
       copy catalog. Keep the DB tables, RPCs, and the
       `has_active_supplier_return` GRN integrity gates — history stays, and the
       gate is inert without new returns. Rejected GRN goods route through Báo
@@ -1560,11 +1794,11 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [x] **S13 — retire purchase orders from daily use (D073 §4).** Delete the
       operator wrappers (`stock/purchase-orders/**`, 3 files) and the PO nav
-      tile; remove the Admin Dashboard PO nav entry and routes from daily navigation;
+      tile; remove the Office PO nav entry and routes from daily navigation;
       remove the PO door from the GRN source picker
       (`fetchOpenPurchaseOrdersForReceiving` / `openPurchaseOrders` in
       `apps/web/lib/inventory/grn-source-data.ts`) and the
-      `openPurchaseOrders` hub-queue count. Delete the Admin Dashboard PO routes and the PO server actions
+      `openPurchaseOrders` hub-queue count. Delete the Office PO routes and the PO server actions
       (`purchase-order-actions.ts` mutators) with the navigation — D073 §4
       retires both planes, not nav alone. Guard entries: PO rows in
       `scripts/page-archetypes.mjs` and the PO arrays in
@@ -1722,3 +1956,66 @@ Rewritten 2026-07-10 after Codex Outside Voice rejected the prior 7-item Phase 1
 `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` **plus**
 browser smoke: KDS multi-ticket / reconnect / filter / reduced-motion; POS cart
 one-shot enter; operator skeleton on bottom-nav.
+
+## Supplier payment correctness and idempotency (P0-B, T3)
+
+Status: additive implementation is local-green and T3 review-clean on
+`codex/supplier-payment-idempotency`. Production was read-only checked on
+2026-07-15: zero supplier invoices, supplier payments, supplier credit notes,
+over-settled invoices, or zero-balance invoices with an open status. No
+Production write or migration apply is authorized in this slice.
+
+Skill plan: repository authority = engineering + database + workflow + Finance
+and operational data contracts + orchestration; external aid = Supabase's
+official database-function guidance. Verification layers = source trace,
+transactional rollback SQL, full local gates, then an on-demand Supabase Preview
+Branch and two-session race rehearsal after cost approval. No UI redesign, new
+ledger table, or Production mutation belongs in this slice.
+
+### T3 synthesis
+
+- **PM:** prevent a retried partial supplier payment from creating a second
+  money fact; prevent payment above the effective payable balance; keep AP
+  payment under the Owner-only control-room boundary. The canonical outcome is
+  one payment intent → at most one `supplier_payments` row and one invoice
+  increment.
+- **BA:** effective payable balance is
+  `total_amount - paid_amount - credit_applied_amount`. An exact replay means
+  the same tenant, Owner actor, invoice, amount, method, and normalized business
+  reference under the same UUID. Reusing the UUID with any changed fact is a
+  conflict, not a new payment. `reference_note` remains business/bank evidence
+  and never stores the technical key.
+- **Senior Dev:** add nullable `supplier_payments.idempotency_key` plus a partial
+  unique index on `(tenant_id, idempotency_key)`. Add the uniquely named,
+  required-key RPC `record_supplier_payment` with safe empty `search_path`,
+  explicit Owner + permission + tenant checks, invoice row locking,
+  credit-aware cap, conflict-safe insert, and explicit grants. Replace the
+  five-argument `create_supplier_payment` body with a temporary compatibility
+  wrapper so the additive DB-first migration does not break the currently
+  deployed caller; Supabase's Data API does not support overloaded function
+  names. The client mints one UUID when a payment dialog opens and reuses it for
+  every retry of that intent. No helper table or generic idempotency framework.
+- **QA:** prove first write, exact replay, changed-payload conflict, two distinct
+  legitimate partial payments, credit-aware final payment and overpayment
+  rejection, Owner/tenant denial, rollback atomicity, direct-DML revocation,
+  unique-index presence, and legacy/new function grants. Preview additionally
+  runs the same-key retry through the real PostgREST/Server Action transport,
+  generated-type regeneration, security and performance advisors, and direct
+  UI smoke. PostgreSQL lock semantics are already local-proven.
+
+### Rollout and closure gates
+
+- [x] Additive migration + application changes + local rollback acceptance are
+      green. A real two-session local race returned one payment ID and one
+      ledger row; 1,050 web tests, typecheck, lint, build, and three independent
+      re-reviews are green. The legacy wrapper is explicitly transitional, not
+      the end state.
+- [ ] Apply only to an approved Preview Branch; regenerate database types from
+      that applied schema and run full gates.
+- [ ] Deploy/prove the required-key runtime before any destructive signature
+      cleanup.
+- [ ] Land a separate cleanup migration that drops the legacy
+      `create_supplier_payment` function; verify it is absent and
+      `record_supplier_payment` requires the UUID key.
+- [ ] Production apply and merge remain owner-delegated operations, with source,
+      migration ledger, deployed runtime, and smoke evidence closed together.

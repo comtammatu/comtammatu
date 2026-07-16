@@ -40,6 +40,7 @@
     "db:baseline:local-check": "node scripts/supabase-baseline-local-check.mjs",
     "db:test": "node scripts/run-db-tests.mjs",
     "db:schema-drift": "node scripts/check-schema-drift.mjs",
+    "test:db:payment-race": "node scripts/run-payment-provider-race.mjs",
     "hddt:export": "corepack pnpm --filter @comtammatu/web hddt:export",
     "inventory:cleanup:dry-run": "corepack pnpm --filter @comtammatu/web inventory:cleanup:dry-run",
     "inventory:csv-reseed:dry-run": "corepack pnpm --filter @comtammatu/web inventory:csv-reseed:dry-run",

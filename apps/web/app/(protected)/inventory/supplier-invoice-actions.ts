@@ -2,9 +2,9 @@
 
 import { z } from "zod";
 import {
+  MODULE_ACL,
   PERMISSION_KEYS,
   PROCUREMENT_ROLES,
-  STAFF_ROLES,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { addVNDateDays } from "@comtammatu/shared/time";
@@ -41,6 +41,7 @@ const invoiceSchema = z
 
 const supplierPaymentSchema = z.object({
   invoiceId: z.coerce.number().int().positive(),
+  idempotencyKey: z.string().uuid(),
   amount: z.coerce
     .number()
     .positive({ error: "Số tiền thanh toán phải lớn hơn 0." }),
@@ -120,19 +121,20 @@ export const createSupplierInvoice = withAction(
 
 export const recordSupplierPayment = withAction(
   {
-    roles: STAFF_ROLES,
+    roles: MODULE_ACL.finance.allowedRoles,
     schema: supplierPaymentSchema,
     permission: PERMISSION_KEYS.FINANCE_AP_PAY,
     forbiddenError: "Không có quyền thanh toán công nợ NCC.",
   },
   async (data, { supabase, claims }) => {
     const { data: payment, error } = await supabase.rpc(
-      "create_supplier_payment",
+      "record_supplier_payment",
       {
         p_tenant_id: claims.tenant_id,
         p_supplier_invoice_id: data.invoiceId,
         p_amount: data.amount,
         p_payment_method: data.paymentMethod,
+        p_idempotency_key: data.idempotencyKey,
         p_reference_note: data.referenceNote?.trim() || undefined,
       },
     );
@@ -154,6 +156,13 @@ export const recordSupplierPayment = withAction(
           error: "Số tiền trả vượt quá phần còn phải trả.",
         };
       }
+      if (message.includes("supplier_payment_idempotency_conflict")) {
+        return {
+          success: false,
+          error:
+            "Lần thanh toán này đã được dùng với dữ liệu khác. Hãy đóng và mở lại biểu mẫu.",
+        };
+      }
       if (message.includes("invoice_missing_grn_for_payment")) {
         return {
           success: false,
@@ -163,7 +172,8 @@ export const recordSupplierPayment = withAction(
       if (message.includes("invoice_not_matched_for_payment")) {
         return {
           success: false,
-          error: "Cần đối soát khớp hóa đơn với phiếu nhập trước khi thanh toán.",
+          error:
+            "Cần đối soát khớp hóa đơn với phiếu nhập trước khi thanh toán.",
         };
       }
       if (message.includes("invalid_payment_method")) {
@@ -184,7 +194,7 @@ const supplierInvoiceSelect = (branchId?: number) => {
     branchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
-  return `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), ${grnSelect}`;
+  return `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), ${grnSelect}`;
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;
@@ -207,6 +217,7 @@ const supplierInvoiceCursorSchema = z.object({
 
 const fetchSupplierInvoicesPaginatedSchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
+  invoiceId: z.coerce.number().int().positive().optional(),
   before: supplierInvoiceCursorSchema.optional(),
   pageSize: z.coerce
     .number()
@@ -239,7 +250,7 @@ export async function fetchSupplierInvoicesPage(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const { branchId, before, pageSize } = parsed.data;
+  const { branchId, invoiceId, before, pageSize } = parsed.data;
 
   let query = supabase
     .from("supplier_invoices")
@@ -248,6 +259,10 @@ export async function fetchSupplierInvoicesPage(
 
   if (branchId != null) {
     query = query.eq("goods_received_notes.branch_id", branchId);
+  }
+
+  if (invoiceId != null) {
+    query = query.eq("id", invoiceId);
   }
 
   if (before) {
@@ -266,7 +281,10 @@ export async function fetchSupplierInvoicesPage(
     .limit(pageSize + 1);
 
   if (error) {
-    return { success: false, error: messages.inventory.supplierInvoices.loadFailed };
+    return {
+      success: false,
+      error: messages.inventory.supplierInvoices.loadFailed,
+    };
   }
 
   const fetched = (data ?? []) as unknown as Array<{

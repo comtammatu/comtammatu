@@ -3,15 +3,20 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import {
   attachSupplierPaymentMatches,
   buildSepayPaymentWebhookSummary,
   buildSepayReconciliationSummary,
+  canManuallyLinkSepayPayment,
   classifySepayReconciliationState,
   classifySepayUnmatchedMoneyIn,
+  isOpenSepayBankWebhookReview,
+  isSepayPaymentConflictReviewCode,
   isSepayTransactionInDateRange,
   mapSepayWebhookRow,
   readSepayBankWebhookReview,
+  resolveSepayTransactionInstant,
   sepayTransactionBusinessDate,
   sumSepayBankMovementSince,
   type SepayBankTransaction,
@@ -19,6 +24,7 @@ import {
   type SepaySupplierPaymentMatch,
   type SepayWebhookRow,
 } from "../app/(protected)/finance/_lib/sepay-bank-transaction-model";
+import { fetchSepayDataApiRows } from "../app/(protected)/finance/_lib/sepay-bank-transactions";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
@@ -49,6 +55,7 @@ function row(
   processingStatus = "processed",
   errorCode: string | null = null,
   orderId: number | null = null,
+  orderNumber: string | null = null,
 ): SepayWebhookRow {
   return {
     id,
@@ -59,6 +66,7 @@ function row(
     order_id: orderId,
     payment_id: paymentId,
     expense_id: expenseId,
+    orders: orderNumber ? { order_number: orderNumber } : null,
     payload,
   };
 }
@@ -131,6 +139,47 @@ test("SePay bank transaction maps incoming and outgoing webhook payloads", () =>
   );
 });
 
+test("SePay conflict evidence maps the operational order number", () => {
+  const conflict = tx(
+    row(
+      3,
+      {
+        transferType: "in",
+        transferAmount: "150000",
+        content: "MATU DH 321",
+      },
+      undefined,
+      null,
+      null,
+      "processed",
+      "payment_state_conflict_needs_review",
+      321,
+      "MT-20260715-0321",
+    ),
+  );
+
+  assert.equal(conflict.orderId, 321);
+  assert.equal(conflict.orderNumber, "MT-20260715-0321");
+});
+
+test("SePay Data API pagination reads every deterministic range", async () => {
+  const rows = Array.from({ length: 2005 }, (_, index) => ({ id: index + 1 }));
+  const requestedRanges: Array<[number, number]> = [];
+
+  const result = await fetchSepayDataApiRows(async (from, to) => {
+    requestedRanges.push([from, to]);
+    return { data: rows.slice(from, to + 1), error: null };
+  });
+
+  assert.equal(result.error, null);
+  assert.equal(result.data?.length, 2005);
+  assert.deepEqual(requestedRanges, [
+    [0, 999],
+    [1000, 1999],
+    [2000, 2999],
+  ]);
+});
+
 test("SePay bank movement sums plus and minus from opening date", () => {
   const movement = sumSepayBankMovementSince(
     [
@@ -200,6 +249,40 @@ test("SePay bank transaction date range uses transaction date then VN created da
       ),
     ),
     "2026-07-02",
+  );
+});
+
+test("SePay provider-local timestamps resolve to an explicit Vietnam instant", () => {
+  const createdAt = "2026-07-01T01:30:00.000Z";
+  const localInstant = resolveSepayTransactionInstant({
+    transactionDate: "2026-07-01 08:30:00",
+    createdAt,
+  });
+
+  assert.equal(localInstant, "2026-07-01T08:30:00+07:00");
+  assert.equal(formatVNDateTime(localInstant), "08:30 01/07/2026");
+  assert.equal(
+    resolveSepayTransactionInstant({
+      transactionDate: "invalid",
+      createdAt,
+    }),
+    createdAt,
+  );
+  assert.equal(
+    resolveSepayTransactionInstant({
+      transactionDate: "2026-07-01T08:30:00+07:00",
+      createdAt,
+    }),
+    "2026-07-01T08:30:00+07:00",
+  );
+  const utcCrossover = {
+    transactionDate: "2026-07-01T18:30:00Z",
+    createdAt,
+  };
+  assert.equal(sepayTransactionBusinessDate(utcCrossover), "2026-07-02");
+  assert.equal(
+    formatVNDateTime(resolveSepayTransactionInstant(utcCrossover)),
+    "01:30 02/07/2026",
   );
 });
 
@@ -429,6 +512,85 @@ test("SePay unmatched money-in classifier explains why no order is attached", ()
   );
 });
 
+test("signed SePay business mismatches stay reviewable without exposing conflict linking", () => {
+  const recoverable = tx(
+    row(
+      4,
+      { transferType: "in", transferAmount: 30000 },
+      "2026-07-01T01:00:00.000Z",
+      null,
+      null,
+      "processed",
+      "missing_payment_code_needs_review",
+    ),
+  );
+  const paymentConflict = tx(
+    row(
+      5,
+      {
+        transferType: "in",
+        transferAmount: 30000,
+        content: "DHABC123",
+      },
+      "2026-07-01T01:00:00.000Z",
+      null,
+      null,
+      "processed",
+      "payment_method_conflict_needs_review",
+      105,
+    ),
+  );
+  const technicalFailure = tx(
+    row(
+      6,
+      { transferType: "in", transferAmount: 30000 },
+      "2026-07-01T01:00:00.000Z",
+      null,
+      null,
+      "failed",
+      "invalid_amount",
+    ),
+  );
+
+  assert.equal(classifySepayReconciliationState(recoverable), "needs_review");
+  assert.equal(classifySepayUnmatchedMoneyIn(recoverable), "missing_reference");
+  assert.equal(canManuallyLinkSepayPayment(recoverable), true);
+  assert.equal(
+    isSepayPaymentConflictReviewCode(recoverable.errorCode),
+    false,
+  );
+
+  assert.equal(
+    classifySepayReconciliationState(paymentConflict),
+    "needs_review",
+  );
+  assert.equal(canManuallyLinkSepayPayment(paymentConflict), false);
+  assert.equal(
+    isSepayPaymentConflictReviewCode(paymentConflict.errorCode),
+    true,
+  );
+  assert.equal(
+    isSepayPaymentConflictReviewCode(
+      "payment_state_conflict_needs_review",
+    ),
+    true,
+  );
+  assert.equal(
+    isSepayPaymentConflictReviewCode("overpayment_needs_review"),
+    true,
+  );
+
+  assert.equal(
+    classifySepayReconciliationState(technicalFailure),
+    "webhook_error",
+  );
+  assert.equal(canManuallyLinkSepayPayment(technicalFailure), false);
+  assert.equal(
+    isSepayPaymentConflictReviewCode(technicalFailure.errorCode),
+    false,
+  );
+});
+
 test("SePay money-in manual link stays guarded by RPC", () => {
   const migration = read(
     "supabase/migrations/20260709064834_link_sepay_transaction_to_payment.sql",
@@ -456,6 +618,70 @@ test("SePay money-in manual link stays guarded by RPC", () => {
   assert.match(table, /linkSepayTransactionToPayment/);
 });
 
+test("SePay conflict hardening gates automatic settlement and Owner recovery", () => {
+  const migration = read(
+    "supabase/migrations/20260715135031_harden_sepay_payment_conflicts.sql",
+  );
+
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.reconcile_sepay_order_evidence/,
+  );
+  assert.match(migration, /PERFORM pg_advisory_xact_lock\(v_order_id\)/);
+  assert.match(migration, /payment_method_conflict_needs_review/);
+  assert.match(migration, /payment_state_conflict_needs_review/);
+  assert.match(migration, /overpayment_needs_review/);
+  assert.match(migration, /prior_event\.payment_id IS NOT NULL/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.confirm_sepay_payment\([\s\S]*service_role/,
+  );
+  assert.match(migration, /NOT public\.auth_is_owner\(v_user_id\)/);
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.link_sepay_transaction_to_payment\(bigint, bigint\)[\s\S]*TO authenticated/,
+  );
+  assert.match(
+    migration,
+    /WHEN 'missing_payment_code' THEN 'missing_payment_code_needs_review'/,
+  );
+  assert.doesNotMatch(migration, /corrected_from_cash/);
+});
+
+test("SePay reconciliation reads a complete pilot window without exposing review codes", () => {
+  const loader = read(
+    "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
+  );
+  const table = read(
+    "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
+  );
+  const messages = read("apps/web/lib/messages/finance.ts");
+
+  assert.match(loader, /SEPAY_DATA_API_PAGE_SIZE = 1000/);
+  assert.match(loader, /SEPAY_DATA_API_IN_CHUNK_SIZE = 200/);
+  assert.match(loader, /fetchSepayChunkedDataApiRows/);
+  assert.match(
+    loader,
+    /\.order\("created_at", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)[\s\S]*\.range\(from, to\)/,
+  );
+  assert.match(
+    loader,
+    /\.order\("paid_at", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)[\s\S]*\.range\(from, to\)/,
+  );
+  assert.match(
+    loader,
+    /\.order\("payment_date", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)[\s\S]*\.range\(from, to\)/,
+  );
+  assert.doesNotMatch(
+    loader,
+    /SEPAY_(?:TRANSACTION_LIST|PAYMENT_WEBHOOK_CHECK)_LIMIT/,
+  );
+  assert.doesNotMatch(table, /return tx\.errorCode/);
+  assert.doesNotMatch(table, /return tx\.processingStatus/);
+  assert.match(messages, /payment_method_conflict_needs_review/);
+  assert.match(messages, /overpayment_needs_review/);
+});
+
 test("SePay bank reconciliation reads supplier AP payments without turning them into expenses", () => {
   const loader = read(
     "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
@@ -479,7 +705,15 @@ test("SePay bank reconciliation reads supplier AP payments without turning them 
   assert.match(table, /supplierPaymentMatchConfirmed=/);
   assert.match(cell, /supplierInvoiceHref/);
   assert.match(cell, /\/finance\/supplier-invoices\?invoiceId=/);
-  assert.match(cell, /matchedSupplierPayment/);
+  assert.match(
+    cell,
+    /openSupplierInvoice\([\s\S]*match\.invoiceNumber \?\? `#\$\{match\.invoiceId\}`/,
+  );
+  assert.match(
+    cell,
+    /<Button[\s\S]*asChild[\s\S]*size="touch"[\s\S]*supplierInvoiceHref/,
+  );
+  assert.doesNotMatch(cell, /sm:h-7|sm:min-h-7/);
   assert.match(cell, /matchSepayTransactionWithSupplierPayments/);
   assert.match(action, /match_sepay_transaction_supplier_payments/);
   assert.match(migration, /ADD COLUMN webhook_event_id bigint/);
@@ -502,12 +736,94 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   const messages = read("apps/web/lib/messages/finance.ts");
 
   assert.match(page, /<BankTransactionsTable/);
+  assert.match(page, /<AppPage width="xwide"/);
+  assert.doesNotMatch(
+    page,
+    /KpiCard|KpiRow|needsReviewAmount|buildSepayReconciliationSummary/,
+  );
   assert.match(table, /type BankReconciliationRow/);
   assert.match(table, /rowMatchesFilter/);
+  assert.match(table, /useState<BankReconciliationFilter>\("needs_review"\)/);
+  assert.match(table, /filters=\{/);
+  assert.match(table, /queueCount\(formatCount\(openQueueCount\)\)/);
+  assert.match(table, /const hasRows = rows\.length > 0/);
+  assert.match(table, /const isQueueView = filter === "needs_review"/);
+  assert.match(table, /copy\.queueEmptyTitle/);
+  assert.match(table, /emptyMode=\{hasRows \? "no-results" : "no-data"\}/);
+  assert.match(table, /mobileBreakpoint=\{1024\}/);
+  assert.match(table, /formatVNDateTime/);
+  assert.match(table, /resolveSepayTransactionInstant/);
+  assert.match(table, /isSepayPaymentConflictReviewCode\(tx\.errorCode\)/);
+  assert.match(
+    table,
+    /\? hasPaymentConflictDetail\s*\?\s*null\s*:\s*reasonLabel\(classifySepayUnmatchedMoneyIn\(tx\)\)/,
+  );
+  assert.match(table, /const conflictOrder[\s\S]*row\.tx\.orderNumber/);
+  assert.match(
+    table,
+    /href=\{`\/orders\?orderId=\$\{String\(conflictOrder\.id\)\}`\}/,
+  );
+  assert.match(table, /conflictOrder\.number/);
+  assert.doesNotMatch(
+    table,
+    /conflictOrder[\s\S]{0,300}formatOrderId\(conflictOrder/,
+  );
+  assert.match(table, /copy\.unmatchedMoneyInTable\.conflictOrder/);
+  assert.match(messages, /conflictOrder: "Đơn liên quan"/);
+  assert.match(messages, /openConflictOrder: "Mở đơn"/);
+
+  const loader = read(
+    "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
+  );
+  const ordersActions = read("apps/web/app/(protected)/orders/actions.ts");
+  const ordersPage = read("apps/web/app/(protected)/orders/page.tsx");
+  const ordersBody = read(
+    "apps/web/app/(protected)/orders/orders-page-body.tsx",
+  );
+  const ordersClient = read(
+    "apps/web/app/(protected)/orders/orders-client.tsx",
+  );
+  assert.match(
+    loader,
+    /orders!webhook_events_order_id_fkey\(order_number\)/,
+  );
+  assert.match(ordersActions, /orderId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/);
+  assert.match(ordersActions, /query = query\.eq\("id", parsed\.data\.orderId\)/);
+  assert.match(ordersPage, /fetchOrders\(\{[\s\S]*orderId: requestedOrderId/);
+  assert.match(ordersPage, /initialSelectedOrder == null\) notFound\(\)/);
+  assert.match(ordersBody, /initialSelectedOrder=\{initialSelectedOrder\}/);
+  assert.match(ordersClient, /useState<OrderRow \| null>\([\s\S]*initialSelectedOrder/);
+  assert.doesNotMatch(table, /\.replace\("T", " "\)\.slice/);
+  assert.match(table, /return state === "needs_review"/);
+  assert.match(table, /evidence=\{\{/);
   assert.match(table, /money_out_review/);
   assert.match(table, /missing_webhook/);
   assert.doesNotMatch(page, /outgoingMoneyReviewTransactions/);
   assert.match(messages, /Lọc đối soát/);
+  assert.match(messages, /Đối soát ngân hàng/);
+  assert.match(messages, /Thanh toán #\$\{id\}/);
+
+  const matchCell = read(
+    "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
+  );
+  assert.match(matchCell, /<Sheet open=\{open\}/);
+  assert.match(matchCell, /<SheetDescription>/);
+  assert.doesNotMatch(matchCell, /Popover(Content|Trigger)?/);
+  assert.doesNotMatch(matchCell, /max-h-(48|72).*overflow-y-auto/);
+  assert.match(matchCell, /htmlFor=\{checkboxId\}/);
+  assert.match(matchCell, /formatVNDateTime/);
+  assert.match(matchCell, /formatVNBusinessDate/);
+  assert.match(messages, /Hoàn tiền \$\{order\}/);
+  assert.match(messages, /Chưa có bằng chứng ngân hàng/);
+  assert.match(messages, /Nộp tiền mặt vào tài khoản/);
+  assert.match(messages, /Không còn việc đối soát cần xử lý/);
+});
+
+test("SePay default review queue keeps only open webhook evidence", () => {
+  assert.equal(isOpenSepayBankWebhookReview(null), true);
+  assert.equal(isOpenSepayBankWebhookReview("reviewing"), true);
+  assert.equal(isOpenSepayBankWebhookReview("resolved"), false);
+  assert.equal(isOpenSepayBankWebhookReview("ignored"), false);
 });
 
 test("SePay payment webhook summary finds paid VietQR payments without bank evidence", () => {

@@ -1468,6 +1468,7 @@ export type Database = {
           paid_at: string | null
           payment_method: string
           tenant_id: number
+          transfer_content: string | null
           updated_at: string
           vendor_name: string | null
         }
@@ -1483,6 +1484,7 @@ export type Database = {
           paid_at?: string | null
           payment_method?: string
           tenant_id: number
+          transfer_content?: string | null
           updated_at?: string
           vendor_name?: string | null
         }
@@ -1498,6 +1500,7 @@ export type Database = {
           paid_at?: string | null
           payment_method?: string
           tenant_id?: number
+          transfer_content?: string | null
           updated_at?: string
           vendor_name?: string | null
         }
@@ -7791,6 +7794,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: number
+          idempotency_key: string | null
+          idempotency_result_status: string | null
           payment_date: string
           payment_method: string
           reference_note: string | null
@@ -7804,6 +7809,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
+          idempotency_key?: string | null
+          idempotency_result_status?: string | null
           payment_date?: string
           payment_method: string
           reference_note?: string | null
@@ -7817,6 +7824,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
+          idempotency_key?: string | null
+          idempotency_result_status?: string | null
           payment_date?: string
           payment_method?: string
           reference_note?: string | null
@@ -9341,6 +9350,7 @@ export type Database = {
       }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
+      cancel_expense: { Args: { p_expense_id: number }; Returns: Json }
       cancel_leave_request: {
         Args: { p_request_id: number }
         Returns: undefined
@@ -9526,6 +9536,20 @@ export type Database = {
         Returns: Json
       }
       count_unread_notifications: { Args: never; Returns: number }
+      create_expense_transfer_intent: {
+        Args: {
+          p_amount: number
+          p_branch_id: number
+          p_category: string
+          p_expense_date: string
+          p_note?: string
+          p_vendor_name?: string
+        }
+        Returns: {
+          expense_id: number
+          transfer_content: string
+        }[]
+      }
       create_expiry_writeoff: {
         Args: {
           p_branch_id: number
@@ -9635,6 +9659,19 @@ export type Database = {
           p_payment_id: number
           p_payout_method: string
           p_reason: string
+        }
+        Returns: Json
+      }
+      create_remote_payment_intent: {
+        Args: {
+          p_amount: number
+          p_branch_id: number
+          p_created_by: string
+          p_method: string
+          p_order_id: number
+          p_provider_data: Json
+          p_provider_ref: string
+          p_tenant_id: number
         }
         Returns: Json
       }
@@ -9829,6 +9866,14 @@ export type Database = {
       extend_express_window: {
         Args: { p_branch_id: number; p_minutes: number; p_note: string }
         Returns: string
+      }
+      finalize_momo_failed_payment: {
+        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
+        Returns: Json
+      }
+      finalize_momo_successful_payment: {
+        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
+        Returns: Json
       }
       finalize_paid_order: {
         Args: { p_actor_id?: string; p_order_id: number }
@@ -10377,6 +10422,10 @@ export type Database = {
         Args: { p_event_id: number; p_supplier_payment_ids: number[] }
         Returns: Json
       }
+      match_sepay_transfer_intent_event: {
+        Args: { p_event_id: number }
+        Returns: Json
+      }
       materialize_print_document: {
         Args: {
           p_content: Json
@@ -10571,6 +10620,10 @@ export type Database = {
         Args: { p_event_id: number; p_payment_code: string }
         Returns: Json
       }
+      record_momo_pending_result: {
+        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
+        Returns: Json
+      }
       record_production_run: {
         Args: {
           p_actual_ingredients?: Json
@@ -10588,6 +10641,17 @@ export type Database = {
       }
       record_sepay_cash_deposit_as_system: {
         Args: { p_event_id: number }
+        Returns: Json
+      }
+      record_supplier_payment: {
+        Args: {
+          p_amount: number
+          p_idempotency_key: string
+          p_payment_method: string
+          p_reference_note?: string
+          p_supplier_invoice_id: number
+          p_tenant_id: number
+        }
         Returns: Json
       }
       recreate_grn_at_receiving_site: {
@@ -10733,6 +10797,10 @@ export type Database = {
       }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
       reverse_payment_and_post: { Args: { p_refund_id: number }; Returns: Json }
+      review_completed_vietqr_bank_webhook: {
+        Args: { p_payment_id: number; p_status: string }
+        Returns: Json
+      }
       revoke_permission: {
         Args: {
           p_branch_id: number
@@ -11035,6 +11103,15 @@ export type Database = {
           p_order_id: number
         }
         Returns: Json
+      }
+      transition_expense_payment: {
+        Args: { p_expense_id: number; p_target_method: string }
+        Returns: {
+          expense_id: number
+          paid_at: string
+          payment_method: string
+          transfer_content: string
+        }[]
       }
       transition_order_item_status: {
         Args: {

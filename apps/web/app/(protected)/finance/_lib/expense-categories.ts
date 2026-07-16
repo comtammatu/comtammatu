@@ -89,10 +89,13 @@ export type ExpensePaymentState = (typeof EXPENSE_PAYMENT_STATES)[number];
 export function classifyExpensePaymentState(expense: {
   payment_method: string;
   paid_at: string | null;
+  transfer_content?: string | null;
   matchedEventIds?: readonly number[];
 }): ExpensePaymentState {
-  if (expense.payment_method === "unpaid" || expense.paid_at == null) {
-    return "unpaid";
+  if (expense.transfer_content) {
+    return (expense.matchedEventIds?.length ?? 0) > 0
+      ? "transfer_matched"
+      : "transfer_needs_match";
   }
 
   if (expense.payment_method === "transfer") {
@@ -101,5 +104,31 @@ export function classifyExpensePaymentState(expense: {
       : "transfer_needs_match";
   }
 
+  if (expense.payment_method === "unpaid" || expense.paid_at == null) {
+    return "unpaid";
+  }
+
   return "cash_paid";
+}
+
+export function isExpenseVisibleForBankMatch(
+  expense: {
+    category: string;
+    payment_method: string;
+    paid_at: string | null;
+    matchedEventIds: readonly number[];
+  },
+  eventId: number,
+): boolean {
+  if (expense.matchedEventIds.includes(eventId)) return true;
+  if (
+    expense.matchedEventIds.length > 0 ||
+    !isOperatingExpenseCategory(expense.category)
+  ) {
+    return false;
+  }
+
+  if (expense.payment_method === "unpaid") return expense.paid_at == null;
+  if (expense.payment_method === "transfer") return expense.paid_at != null;
+  return false;
 }
