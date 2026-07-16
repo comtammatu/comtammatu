@@ -39,7 +39,8 @@ redesign, production apply, and unrelated runtime-control work from PR #284.
 - [x] Add static and executable SQL regression coverage, wired into CI; repair
   the three dormant SQL tests exposed when the runner becomes blocking.
 - [x] Pass focused tests, migration replay, full gates, and T3 review.
-- [ ] Publish the replacement PR before closing superseded PR #284.
+- [x] Publish replacement PR #298, then close PR #284 without merge as a
+  superseded merge unit.
 
 ## Branch Hub Shell Slice From PR #284 (2026-07-15)
 
