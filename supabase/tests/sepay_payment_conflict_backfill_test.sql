@@ -120,7 +120,7 @@ BEGIN
 END;
 $$;
 
-\ir ../migrations/20260715135031_harden_sepay_payment_conflicts.sql
+\ir ../migration-archive/20260715135031_harden_sepay_payment_conflicts.sql
 
 DO $$
 BEGIN
