@@ -9,6 +9,22 @@
 > checkout with `git status` and re-check production state for any migration or
 > runtime claim.
 
+## Admin Inventory Flow Density (2026-07-15)
+
+Skill plan: repo rules = engineering + skills + UI + workflow; external =
+Ponytail; runtime = focused static test, UI contract lint, and full repository
+gates. Skipped = shared primitive redesign, Branch Inventory, data behavior,
+database work, and production.
+
+UI Advisor Gate: `/inventory` Owner Admin Dashboard; presentation-only change.
+Four workflow groups form a balanced `2 × 2` grid on wide screens; three groups
+form three columns. Phone remains one column and compact screens remain two.
+
+- [x] Apply the route-local responsive grid override without changing
+      `LinkCardGrid` or Branch Inventory.
+- [x] Lock the 4-card and 3-card breakpoint contract in the existing static test.
+- [x] Pass typecheck, T2 lint, build, full tests, and final diff review.
+
 ## Branch Realtime Active-Scope Authorization (2026-07-16)
 
 ### T3 contract
@@ -41,7 +57,6 @@ redesign, production apply, and unrelated runtime-control work from PR #284.
 - [x] Pass focused tests, migration replay, full gates, and T3 review.
 - [x] Publish replacement PR #298, then close PR #284 without merge as a
       superseded merge unit.
-
 ## MoMo Finance Reporting Contract Closure (2026-07-16)
 
 ### T3 contract
