@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Banknote as IconCash,
   Landmark as IconBank,
+  Smartphone as IconMoMo,
   QrCode as IconQrcode,
   ReceiptText as IconReceipt,
 } from "lucide-react";
@@ -48,7 +49,7 @@ export interface GuestPaymentRequestState {
   id?: number | null;
   clientOpId?: string | null;
   status: string;
-  method: "cash_call" | "vietqr";
+  method: "cash_call" | "vietqr" | "momo";
   amount: number;
   paymentId?: number | null;
   paymentCode?: string | null;
@@ -56,6 +57,8 @@ export interface GuestPaymentRequestState {
   bankCode?: string | null;
   accountNo?: string | null;
   accountName?: string | null;
+  momoDeeplink?: string | null;
+  momoPayUrl?: string | null;
   createdAt?: string | null;
   expiresAt?: string | null;
 }
@@ -79,7 +82,7 @@ export interface PaymentPanelProps {
   buyerAddress: string;
   buyerEmail: string;
   isPending: boolean;
-  pendingMethod: "cash_call" | "vietqr" | null;
+  pendingMethod: "cash_call" | "vietqr" | "momo" | null;
   error: string | null;
   fieldErrors: InvoiceFieldErrors;
   errorFocusRequest: InvoiceErrorFocusRequest | null;
@@ -88,7 +91,7 @@ export interface PaymentPanelProps {
   onBuyerTaxCodeChange: (value: string) => void;
   onBuyerAddressChange: (value: string) => void;
   onBuyerEmailChange: (value: string) => void;
-  onRequestPayment: (method: "cash_call" | "vietqr") => void;
+  onRequestPayment: (method: "cash_call" | "vietqr" | "momo") => void;
 }
 
 type BuyerTaxLookupStatus =
@@ -375,6 +378,7 @@ export function PaymentPanel({
   }
 
   const isVietQrPending = activePaymentRequest?.status === "vietqr_pending";
+  const isMomoPending = activePaymentRequest?.status === "momo_pending";
   const hasRecoverableVietQr =
     isVietQrPending &&
     Boolean(activePaymentRequest.qrData) &&
@@ -612,6 +616,50 @@ export function PaymentPanel({
                   </div>
                 </div>
               ) : null}
+              {isMomoPending ? (
+                <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3 text-center">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="font-heading text-sm font-semibold">
+                      {SELF_ORDER_VI.momoPendingTitle}
+                    </h3>
+                  </div>
+                  {activePaymentRequest.momoDeeplink ? (
+                    <Button
+                      type="button"
+                      size="touch"
+                      className="w-full"
+                      onClick={() =>
+                        window.location.assign(
+                          activePaymentRequest.momoDeeplink ?? "",
+                        )
+                      }
+                    >
+                      <IconMoMo data-icon="inline-start" />
+                      {SELF_ORDER_VI.momoOpenApp}
+                    </Button>
+                  ) : null}
+                  {activePaymentRequest.momoPayUrl ? (
+                    <Button
+                      type="button"
+                      variant={
+                        activePaymentRequest.momoDeeplink
+                          ? "outline"
+                          : "default"
+                      }
+                      size="touch"
+                      className="w-full"
+                      onClick={() =>
+                        window.location.assign(
+                          activePaymentRequest.momoPayUrl ?? "",
+                        )
+                      }
+                    >
+                      <IconMoMo data-icon="inline-start" />
+                      {SELF_ORDER_VI.momoOpenBrowser}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2">
@@ -641,6 +689,20 @@ export function PaymentPanel({
                   <IconQrcode data-icon="inline-start" />
                 )}
                 {SELF_ORDER_VI.vietQrCreate}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                disabled={disabled || isPending}
+                onClick={() => onRequestPayment("momo")}
+              >
+                {pendingMethod === "momo" ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <IconMoMo data-icon="inline-start" />
+                )}
+                {SELF_ORDER_VI.momoCreate}
               </Button>
             </div>
           )}

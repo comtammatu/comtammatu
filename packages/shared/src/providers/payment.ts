@@ -21,6 +21,9 @@ export interface PaymentRequest {
   orderNumber: string;
   amount: number;
   description?: string;
+  providerRef?: string;
+  redirectUrl?: string;
+  requireQrCode?: boolean;
 }
 
 export interface PaymentResult {
@@ -38,6 +41,7 @@ export interface PaymentStatus {
   status: "pending" | "completed" | "failed";
   providerRef: string | null;
   paidAt: string | null;
+  providerData?: Record<string, unknown>;
 }
 
 export interface WebhookVerification {

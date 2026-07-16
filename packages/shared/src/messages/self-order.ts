@@ -42,7 +42,8 @@ export const SELF_ORDER_VI = {
   pendingApprovalDescription:
     "Nhân viên đã nhận lượt gọi món của bàn. Vui lòng đợi một chút để gọi thêm.",
   pendingDialogTitle: "Đã gửi đơn cho Thu Ngân",
-  pendingDialogDescription: "Bạn có thể xem thực đơn trong lúc chờ và gọi thêm món.",
+  pendingDialogDescription:
+    "Bạn có thể xem thực đơn trong lúc chờ và gọi thêm món.",
   callMore: "Gọi thêm",
   activeSessionTitle: "Đang gọi món",
   addMoreTitle: "Gọi thêm món",
@@ -124,6 +125,8 @@ export const SELF_ORDER_VI = {
     "Món chưa sẵn sàng để thanh toán qua QR. Vui lòng đợi hoặc gọi nhân viên hỗ trợ.",
   vietQrConfigUnavailable:
     "Chưa thể tạo mã QR thanh toán. Vui lòng chọn tiền mặt hoặc gọi nhân viên hỗ trợ.",
+  momoUnavailable:
+    "MoMo chưa sẵn sàng tại bàn này. Vui lòng chọn phương thức khác hoặc gọi nhân viên hỗ trợ.",
   paymentIntentExpired:
     "Yêu cầu thanh toán đã hết hạn. Vui lòng tải lại để tạo yêu cầu mới.",
   paymentCompletedBlocked:
@@ -133,8 +136,12 @@ export const SELF_ORDER_VI = {
   paymentTitle: "Thanh toán",
   cashCall: "Gọi nhân viên thu tiền mặt",
   vietQrCreate: "Tạo mã QR thanh toán",
+  momoCreate: "Thanh toán bằng MoMo",
   cashCallOk: "Đã gọi nhân viên thu tiền mặt.",
   vietQrPendingTitle: "Mã QR thanh toán",
+  momoPendingTitle: "Đang chờ xác nhận từ MoMo",
+  momoOpenApp: "Mở MoMo",
+  momoOpenBrowser: "Mở trang thanh toán",
   openBankApp: "Mở ứng dụng",
   chooseBankAppTitle: "Chọn ứng dụng",
   chooseBankAppDescription:
@@ -214,6 +221,7 @@ export const SELF_ORDER_VI = {
   staffActionFailed: "Không xử lý được yêu cầu QR.",
   cashCallStaff: "Khách gọi thu tiền mặt",
   vietQrPendingStaff: "QR thanh toán đang chờ",
+  momoPendingStaff: "MoMo đang chờ xác nhận",
   statusPendingApproval: "Đã gửi món",
   statusActive: "Đang gọi món",
   statusAwaitingVietQr: "Đang chờ thanh toán QR",

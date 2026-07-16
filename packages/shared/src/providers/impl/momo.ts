@@ -3,6 +3,7 @@ import type {
   PaymentProvider,
   PaymentRequest,
   PaymentResult,
+  PaymentStatus,
   WebhookVerification,
 } from "../payment";
 
@@ -28,6 +29,8 @@ import type {
 
 const SANDBOX_URL = "https://test-payment.momo.vn/v2/gateway/api/create";
 const PRODUCTION_URL = "https://payment.momo.vn/v2/gateway/api/create";
+const SANDBOX_QUERY_URL = "https://test-payment.momo.vn/v2/gateway/api/query";
+const PRODUCTION_QUERY_URL = "https://payment.momo.vn/v2/gateway/api/query";
 const LOCALHOST_NAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function resolveHttpUrl(rawUrl: string, envName: string): URL {
@@ -39,6 +42,32 @@ function resolveHttpUrl(rawUrl: string, envName: string): URL {
     return parsed;
   } catch {
     throw new Error(`${envName} is not a valid HTTP(S) URL.`);
+  }
+}
+
+function resolveMoMoCheckoutUrl(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    if (
+      url.protocol !== "https:" ||
+      !["test-payment.momo.vn", "payment.momo.vn"].includes(url.hostname) ||
+      url.pathname !== "/v2/gateway/pay" ||
+      !url.searchParams.get("t")
+    ) {
+      return null;
+    }
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+function resolveMoMoDeeplink(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === "momo:" ? url.href : null;
+  } catch {
+    return null;
   }
 }
 
@@ -70,9 +99,21 @@ export class MoMoProvider implements PaymentProvider {
     return this.isSandbox ? SANDBOX_URL : PRODUCTION_URL;
   }
 
+  private get queryApiUrl(): string {
+    return this.isSandbox ? SANDBOX_QUERY_URL : PRODUCTION_QUERY_URL;
+  }
+
   async createPayment(request: PaymentRequest): Promise<PaymentResult> {
-    const requestId = `${this.partnerCode}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-    const orderId = `MOMO-${request.orderId}-${crypto.randomUUID().slice(0, 8)}`;
+    const providerRef = request.providerRef?.trim();
+    if (providerRef && !/^[A-Za-z0-9_-]{1,50}$/.test(providerRef)) {
+      throw new Error("MoMo providerRef must be 1-50 URL-safe characters.");
+    }
+    const requestId =
+      providerRef ??
+      `${this.partnerCode}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    const orderId =
+      providerRef ??
+      `MOMO-${request.orderId}-${crypto.randomUUID().slice(0, 8)}`;
     const amount = Math.round(request.amount);
     const orderInfo =
       request.description ?? `Thanh toan don hang ${request.orderNumber}`;
@@ -98,9 +139,14 @@ export class MoMoProvider implements PaymentProvider {
 
     const baseUrl = parsedBaseUrl.origin;
     const ipnUrl = `${baseUrl}/api/webhooks/momo`;
-    const redirectUrl = process.env.MOMO_REDIRECT_URL
-      ? resolveHttpUrl(process.env.MOMO_REDIRECT_URL, "MOMO_REDIRECT_URL").href
-      : `${baseUrl}/payment/momo/return`;
+    const redirectUrl = request.redirectUrl
+      ? resolveHttpUrl(request.redirectUrl, "MoMo redirectUrl")
+      : process.env.MOMO_REDIRECT_URL
+        ? resolveHttpUrl(process.env.MOMO_REDIRECT_URL, "MOMO_REDIRECT_URL")
+        : new URL("/payment/momo/return", baseUrl);
+    if (request.redirectUrl && redirectUrl.origin !== baseUrl) {
+      throw new Error("MoMo redirectUrl must use NEXT_PUBLIC_APP_URL origin.");
+    }
 
     const requestType = "captureWallet";
     const extraData = Buffer.from(
@@ -131,7 +177,7 @@ export class MoMoProvider implements PaymentProvider {
       amount,
       orderId,
       orderInfo,
-      redirectUrl,
+      redirectUrl: redirectUrl.href,
       ipnUrl,
       extraData,
       requestType,
@@ -184,10 +230,27 @@ export class MoMoProvider implements PaymentProvider {
       }
 
       const qrCodeUrl = data.qrCodeUrl?.trim() || undefined;
-      const deeplink = data.deeplink?.trim() || undefined;
-      const payUrl = data.payUrl?.trim() || undefined;
+      const deeplink = data.deeplink?.trim()
+        ? (resolveMoMoDeeplink(data.deeplink) ?? undefined)
+        : undefined;
+      const rawPayUrl = data.payUrl?.trim() || undefined;
+      const payUrl =
+        request.requireQrCode === false && rawPayUrl
+          ? resolveMoMoCheckoutUrl(rawPayUrl)
+          : rawPayUrl;
 
-      if (!qrCodeUrl) {
+      if (request.requireQrCode === false && !deeplink && !payUrl) {
+        return {
+          status: "failed",
+          providerRef: orderId,
+          providerData: {
+            resultCode: data.resultCode,
+            message: "MoMo did not return a usable deeplink or checkout URL.",
+          },
+        };
+      }
+
+      if (request.requireQrCode !== false && !qrCodeUrl) {
         return {
           status: "failed",
           providerRef: orderId,
@@ -205,16 +268,21 @@ export class MoMoProvider implements PaymentProvider {
       return {
         status: "pending",
         providerRef: orderId,
-        qrData: qrCodeUrl,
+        qrData: request.requireQrCode === false ? undefined : qrCodeUrl,
+        redirectUrl:
+          request.requireQrCode === false
+            ? (deeplink ?? payUrl ?? undefined)
+            : undefined,
         providerData: {
+          providerRef: orderId,
           momoOrderId: orderId,
           requestId,
-          qrSource: "qrCodeUrl",
+          qrSource: request.requireQrCode === false ? undefined : "qrCodeUrl",
           qrCodeUrl,
           payUrl,
           deeplink,
           deeplinkMiniApp: data.deeplinkMiniApp,
-          redirectUrl,
+          redirectUrl: redirectUrl.href,
         },
       };
     } catch (err) {
@@ -226,6 +294,75 @@ export class MoMoProvider implements PaymentProvider {
         },
       };
     }
+  }
+
+  async checkStatus(providerRef: string): Promise<PaymentStatus> {
+    const reference = providerRef.trim();
+    if (!/^[A-Za-z0-9_-]{1,50}$/.test(reference)) {
+      throw new Error("MoMo providerRef must be 1-50 URL-safe characters.");
+    }
+    const rawSignature = [
+      `accessKey=${this.accessKey}`,
+      `orderId=${reference}`,
+      `partnerCode=${this.partnerCode}`,
+      `requestId=${reference}`,
+    ].join("&");
+    const res = await fetch(this.queryApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        partnerCode: this.partnerCode,
+        requestId: reference,
+        orderId: reference,
+        lang: "vi",
+        signature: this.sign(rawSignature),
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    const data = (await res.json()) as {
+      partnerCode?: string;
+      requestId?: string;
+      orderId?: string;
+      amount?: number | string;
+      resultCode?: number;
+      transId?: number | string;
+      responseTime?: number | string;
+      message?: string;
+    };
+    if (
+      !res.ok ||
+      data.partnerCode !== this.partnerCode ||
+      data.requestId !== reference ||
+      data.orderId !== reference ||
+      !Number.isFinite(Number(data.amount)) ||
+      typeof data.resultCode !== "number" ||
+      !Number.isInteger(data.resultCode)
+    ) {
+      throw new Error(
+        "MoMo query response did not match the requested payment.",
+      );
+    }
+    return {
+      status:
+        data.resultCode === 0 || data.resultCode === 9000
+          ? "completed"
+          : [1000, 7000, 7002].includes(data.resultCode)
+            ? "pending"
+            : "failed",
+      providerRef: reference,
+      paidAt: null,
+      providerData: {
+        partnerCode: data.partnerCode,
+        requestId: data.requestId,
+        orderId: data.orderId,
+        amount: String(data.amount),
+        resultCode: String(data.resultCode),
+        transId: data.transId == null ? null : String(data.transId),
+        responseTime:
+          data.responseTime == null ? null : String(data.responseTime),
+        message: typeof data.message === "string" ? data.message : null,
+      },
+    };
   }
 
   /**

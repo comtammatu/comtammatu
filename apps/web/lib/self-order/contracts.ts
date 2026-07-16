@@ -91,7 +91,7 @@ export const invoiceBuyerSchema = z
 export const selfOrderPaymentRequestSchema = z
   .object({
     clientOpId: selfOrderClientOpIdSchema,
-    method: z.enum(["cash_call", "vietqr"]),
+    method: z.enum(["cash_call", "vietqr", "momo"]),
     invoice: invoiceBuyerSchema.optional(),
   })
   .strict();
@@ -114,6 +114,7 @@ export const selfOrderDerivedStateSchema = z.enum([
 export const selfOrderPaymentRequestStatusSchema = z.enum([
   "cash_call",
   "vietqr_pending",
+  "momo_pending",
   "completed",
   "cancelled",
   "expired",
@@ -131,7 +132,7 @@ const publicSelfOrderPaymentRequestSchema = z
     id: z.number().int().positive().optional(),
     clientOpId: z.uuid().optional(),
     status: selfOrderPaymentRequestStatusSchema,
-    method: z.enum(["cash_call", "vietqr"]),
+    method: z.enum(["cash_call", "vietqr", "momo"]),
     amount: z.number().finite().min(0),
     paymentId: z.number().int().positive().nullable().optional(),
     paymentCode: z.string().min(1).nullable().optional(),
@@ -139,6 +140,8 @@ const publicSelfOrderPaymentRequestSchema = z
     bankCode: z.string().min(1).nullable().optional(),
     accountNo: z.string().min(1).nullable().optional(),
     accountName: z.string().nullable().optional(),
+    momoDeeplink: z.string().min(1).nullable().optional(),
+    momoPayUrl: z.string().url().nullable().optional(),
     createdAt: z.string().datetime({ offset: true }),
     expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
   })
@@ -159,6 +162,23 @@ export const selfOrderVietQrResponseSchema = publicSelfOrderPaymentRequestSchema
     recovered: z.boolean().optional(),
   })
   .strict();
+
+export const selfOrderMomoResponseSchema = publicSelfOrderPaymentRequestSchema
+  .extend({
+    ok: z.literal(true).optional(),
+    method: z.literal("momo"),
+    status: z.literal("momo_pending"),
+    amount: z.number().finite().positive(),
+    paymentCode: z.string().min(1),
+    momoDeeplink: z.string().min(1).nullable().optional(),
+    momoPayUrl: z.string().url().nullable().optional(),
+    expiresAt: z.string().datetime({ offset: true }).nullable(),
+    idempotent: z.boolean().optional(),
+    recovered: z.boolean().optional(),
+  })
+  .refine((value) => Boolean(value.momoDeeplink || value.momoPayUrl), {
+    message: "MoMo checkout URL is required.",
+  });
 
 export const selfOrderSubmitActionResponseSchema = z
   .object({

@@ -1,9 +1,20 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { messages } from "@lib/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { BrandLockup, BrandMascot } from "@/components/brand";
 
-export default function MomoReturnPage() {
+export default async function MomoReturnPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string | string[] }>;
+}) {
+  const { token } = await searchParams;
+  const tableToken = typeof token === "string" ? token : null;
+  if (tableToken && /^[A-Za-z0-9_-]{24,128}$/.test(tableToken)) {
+    redirect(`/q/${encodeURIComponent(tableToken)}?momo=returned`);
+  }
+
   const copy = messages.payment.momoReturn;
 
   return (

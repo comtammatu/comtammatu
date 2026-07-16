@@ -851,6 +851,104 @@ Contract: `docs/spec/self-order-guest-ui.md`. Owner decision: `docs/plan/decisio
 § D075. The POS order is the only seating lifecycle; `self_order_sessions`,
 `self_order_batches`, and `self_order_session_devices` are deleted.
 
+## Self-Order MoMo Deeplink Restoration (2026-07-16)
+
+### T3 acceptance contract
+
+UI Advisor Gate
+
+- Surface: `/q/[token]` payment drawer; route family: `self-order`; plane: public; change: behavior + one payment method.
+- Context: Self-Order guest payment (G7); actor: table guest; job: launch the already-reserved MoMo checkout and return to the same bill without treating browser return as settlement.
+- Journey: payable bill -> select MoMo -> persisted deeplink -> MoMo -> return to `/q/[token]`; recovery: reload resumes the stored checkout and normal payment polling.
+- Information order: existing payment amount and pending state remain primary; exclude provider internals, payment identifiers, and any manual confirmation control.
+- Pattern: existing `PUBLIC-WORKFLOW` drawer; exemplar: `apps/web/app/q/[token]/self-order/payment-panel.tsx`; components: existing `AppSection`, `Button`, `Spinner`, `Alert`; no new primitive.
+- States: launch pending, persisted pending, return-only, IPN/query completion, unavailable, and retry; touch-first at `390x844`, keyboard remains reachable; verify both deeplink and hosted-URL fallback.
+
+Skill plan: repo rules = engineering + skills + database + UI + workflow;
+external skills = Supabase + Ponytail; runtime tools = CodeGraph, Production
+aggregate/catalog reads, isolated Supabase Preview rehearsal, MoMo sandbox
+contract tests, browser QA, and full repository gates. Skipped = replaying PR
+#284, Production writes, deployment, changing payment guards, and any inventory
+route move.
+
+- **PM:** A guest with one unambiguous payable Self-Order bill can choose MoMo,
+  open the exact MoMo deeplink on the same device, return to the bill, and see
+  authoritative settlement without a new guest checkout surface. Cash and
+  VietQR remain unchanged. `/br/[branchId]/stock/count` remains a staff
+  inventory-count task, not a personnel-count workflow.
+- **BA:** The order amount is snapshotted under the table/order lock before
+  contacting MoMo. One guest operation may create or resume only one live MoMo
+  request for that order; a second click, reload, or browser return may never
+  create a second payment. The signed MoMo IPN or signed provider query is the
+  only completion authority. A server-authenticated MoMo query is the recovery
+  authority when IPN delivery is missing. A browser redirect, deeplink launch,
+  or client claim is never proof of payment. Amount, tenant, branch, order, provider
+  reference, and request id must all match exactly. A non-terminal provider
+  state does not fall back to cash or VietQR; staff can only release the bill
+  after the provider state is terminal or has been explicitly reviewed.
+- **Senior Dev:** Add one forward migration from current `main`, extending only
+  the canonical `self_order_payment_requests` lifecycle, its active-intent
+  index/invariant trigger, public payload, staff visibility, and service-only
+  reservation/claim/persist/recovery RPCs. Reuse the current `MoMoProvider`
+  signing and `/api/webhooks/momo` settlement functions; extend their typed
+  request/result contract only where a caller-stable provider reference and
+  redirect/deeplink are needed. Store a strictly validated MoMo gateway URL
+  with the pending intent. Add a public return/resume route that only redirects
+  the guest back to `/q/[token]`; it must not mutate payment state. Add a
+  Cron-secret-protected reconciler which queries only claimed, stale guest
+  intents and delegates terminal settlement to the existing guarded MoMo RPCs.
+- **QA/QC:** Prove fresh intent, exact replay, double-click race, competing
+  method rejection, provider-create timeout, persisted-link failure, invalid
+  redirect host, browser-return-only, duplicate IPN, IPN-before-recovery,
+  amount mismatch, bad signature, pending query, terminal failure, terminal
+  success, staff cancellation boundary, and a failed Cron authorization. Run
+  this matrix on an isolated Preview branch with sandbox MoMo credentials;
+  browser-smoke the phone flow at `390x844`; then run types, focused SQL/static
+  tests, `typecheck`, `lint`, `build`, and the full test suite.
+
+### Ordered delivery
+
+1. Reconcile the current source and Production catalog with the contract;
+   retain no code from the obsolete 2.6k-line PR #284 migration.
+2. Write/review the single forward migration and its SQL acceptance tests;
+   then regenerate database types from the rehearsal schema.
+3. Implement the smallest server bridge: reserve -> provider create -> guarded
+   metadata persist -> same-device deeplink/return -> polling resume.
+4. Extend the existing IPN path only for the new request mapping and add the
+   guarded recovery Cron; do not introduce a second settlement implementation.
+5. Update the Self-Order contract, client/server schemas, payment drawer,
+   POS payment-call visibility, and no-copy payment-state tests together.
+6. Create a cost-confirmed Preview branch, replay the forward migration, deploy
+   the exact commit with sandbox configuration, and execute the full matrix.
+7. Prepare a production canary/runbook. Production needs fresh Owner approval
+   for the exact migration, the configuration activation, deployment, and
+   post-apply checks; none is implied by this planning task.
+
+### Current read-only findings / stop conditions
+
+- Production is `ACTIVE_HEALTHY`; the MoMo method/provider constraints and the
+  signed webhook settlement RPCs are present. There are zero existing
+  Self-Order MoMo requests and zero MoMo webhook events, so no customer intent
+  needs migration.
+- The Production `payment_enable_momo` setting currently resolves to `false`,
+  and no MoMo reconciliation Cron job is registered. Environment presence alone
+  is therefore insufficient to admit the feature. The setting must stay false
+  until Preview proof and the owner-approved rollout step.
+- The first aggregate preflight made an incorrect JSON-type assumption about
+  `system_settings.value`; it failed before reading any business row or making
+  any write. The catalog-confirmed text query above is the authoritative result.
+
+### Implementation attestation
+
+The source slice is implemented and locally review-clean. The focused MoMo
+provider and Self-Order contract suites, baseline-plus-forward replay,
+`typecheck`, `lint`, `build`, and the full test suite pass. Browser QA proves the
+return route at desktop and `390x844`, including its redirect back to the same
+Self-Order token. A live payment-panel launch and MoMo sandbox settlement remain
+unclaimed: the local Supabase target was unavailable, and native Preview branch
+creation is now blocked until the migration lineage is reconciled and the
+baseline is regenerated. Production remains untouched and MoMo stays disabled.
+
 ### Same-device VietQR handoff T3 contract
 
 Skill plan: repo rules = engineering + skills + database + UI + workflow;

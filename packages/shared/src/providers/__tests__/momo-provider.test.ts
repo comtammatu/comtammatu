@@ -58,7 +58,11 @@ async function withMomoEnv<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-type MoMoCreateRequest = { requestId: string; orderId: string };
+type MoMoCreateRequest = {
+  requestId: string;
+  orderId: string;
+  autoCapture: boolean;
+};
 
 function mockFetchOnce(
   responseBody:
@@ -69,9 +73,7 @@ function mockFetchOnce(
   globalThis.fetch = (async (_input, init) => {
     const request = JSON.parse(String(init?.body)) as MoMoCreateRequest;
     const body =
-      typeof responseBody === "function"
-        ? responseBody(request)
-        : responseBody;
+      typeof responseBody === "function" ? responseBody(request) : responseBody;
     return {
       json: async () => body,
     } as unknown as Response;
@@ -195,6 +197,121 @@ test("createPayment: fails when qrCodeUrl is absent even if deeplink is returned
       assert.match(String(data.message), /qrCodeUrl/);
     } finally {
       restore();
+    }
+  });
+});
+
+test("createPayment: keeps a Self-Order reference and returns deeplink checkout", async () => {
+  await withMomoEnv(async () => {
+    const restore = mockFetchOnce((request) => {
+      assert.equal(request.autoCapture, true);
+      return {
+        resultCode: 0,
+        message: "Successful.",
+        payUrl: "https://test-payment.momo.vn/v2/gateway/pay?t=checkout-token",
+        deeplink: "momo://app/payment/checkout-token",
+        orderId: request.orderId,
+        requestId: request.requestId,
+      };
+    });
+    try {
+      const provider = new MoMoProvider(PROVIDER_CONFIG);
+      const result = await provider.createPayment({
+        ...REQUEST,
+        providerRef: "MTSO-42-0123456789abcdef0123",
+        redirectUrl:
+          "https://pos-test.example.com/payment/momo/return?token=table-token",
+        requireQrCode: false,
+      });
+      assert.equal(result.status, "pending");
+      assert.equal(result.providerRef, "MTSO-42-0123456789abcdef0123");
+      assert.equal(result.redirectUrl, "momo://app/payment/checkout-token");
+      assert.equal(
+        getProviderData(result).payUrl,
+        "https://test-payment.momo.vn/v2/gateway/pay?t=checkout-token",
+      );
+    } finally {
+      restore();
+    }
+  });
+});
+
+test("createPayment: rejects an unsafe deeplink and falls back to MoMo checkout", async () => {
+  await withMomoEnv(async () => {
+    const restore = mockFetchOnce((request) => ({
+      resultCode: 0,
+      message: "Successful.",
+      payUrl: "https://test-payment.momo.vn/v2/gateway/pay?t=checkout-token",
+      deeplink: "https://untrusted.example/checkout",
+      orderId: request.orderId,
+      requestId: request.requestId,
+    }));
+    try {
+      const provider = new MoMoProvider(PROVIDER_CONFIG);
+      const result = await provider.createPayment({
+        ...REQUEST,
+        providerRef: "MTSO-42-0123456789abcdef0123",
+        redirectUrl:
+          "https://pos-test.example.com/payment/momo/return?token=table-token",
+        requireQrCode: false,
+      });
+      assert.equal(
+        result.redirectUrl,
+        "https://test-payment.momo.vn/v2/gateway/pay?t=checkout-token",
+      );
+      assert.equal(getProviderData(result).deeplink, undefined);
+    } finally {
+      restore();
+    }
+  });
+});
+
+test("checkStatus: validates the server query response against its reference", async () => {
+  await withMomoEnv(async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => ({
+      ok: true,
+      json: async () => ({
+        partnerCode: PROVIDER_CONFIG.partnerCode,
+        requestId: "MTSO-42-0123456789abcdef0123",
+        orderId: "MTSO-42-0123456789abcdef0123",
+        amount: 100_000,
+        resultCode: 0,
+        transId: 12345,
+      }),
+    })) as unknown as typeof fetch;
+    try {
+      const provider = new MoMoProvider(PROVIDER_CONFIG);
+      const result = await provider.checkStatus("MTSO-42-0123456789abcdef0123");
+      assert.equal(result.status, "completed");
+      assert.equal(result.providerData?.amount, "100000");
+      assert.equal(result.providerData?.resultCode, "0");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});
+
+test("checkStatus: treats 9000 as completed for this auto-capture provider", async () => {
+  await withMomoEnv(async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => ({
+      ok: true,
+      json: async () => ({
+        partnerCode: PROVIDER_CONFIG.partnerCode,
+        requestId: "MTSO-42-0123456789abcdef0123",
+        orderId: "MTSO-42-0123456789abcdef0123",
+        amount: 100_000,
+        resultCode: 9000,
+      }),
+    })) as unknown as typeof fetch;
+    try {
+      const provider = new MoMoProvider(PROVIDER_CONFIG);
+      const result = await provider.checkStatus("MTSO-42-0123456789abcdef0123");
+      assert.equal(result.status, "completed");
+      assert.equal(result.providerData?.resultCode, "9000");
+    } finally {
+      globalThis.fetch = original;
     }
   });
 });
