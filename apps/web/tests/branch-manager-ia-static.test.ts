@@ -5,9 +5,8 @@ import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
-const OFFICE_ROUTE_PREFIXES = [
+const ADMIN_DASHBOARD_ROUTE_PREFIXES = [
   "/admin",
-  "/branch-settings",
   "/branches",
   "/finance",
   "/hr",
@@ -216,11 +215,14 @@ test("POS, KDS, and Runner stay standalone station apps", () => {
     assert.match(layout, /<main/);
     assert.match(layout, /h-dvh/);
     assert.match(layout, /touch-manipulation/);
-    assert.doesNotMatch(layout, /<AppPage|OperatorBottomNav|OfficeModuleShell/);
+    assert.doesNotMatch(
+      layout,
+      /<AppPage|OperatorBottomNav|AdminDashboardModuleShell/,
+    );
   }
 });
 
-test("Branch operator routes do not link, redirect, or revalidate Office routes", () => {
+test("Branch operator routes do not link, redirect, or revalidate Admin Dashboard routes", () => {
   for (const dir of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings",
@@ -233,7 +235,7 @@ test("Branch operator routes do not link, redirect, or revalidate Office routes"
     if (!existsSync(resolve(repoRoot, dir))) continue;
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
-      for (const prefix of OFFICE_ROUTE_PREFIXES) {
+      for (const prefix of ADMIN_DASHBOARD_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
         for (const [label, pattern] of [
           ["href prop", new RegExp(`href\\s*=\\s*(?:{\\s*)?["'\`]${route}`)],
@@ -262,7 +264,7 @@ test("Branch operator routes do not link, redirect, or revalidate Office routes"
 test("Branch operator routes do not import management shell chrome", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /\bBranchManagementShell\b/],
-    ["OfficeModuleShell", /\bOfficeModuleShell\b/],
+    ["AdminDashboardModuleShell", /\bAdminDashboardModuleShell\b/],
     ["InventoryShell", /\bInventoryShell\b/],
     ["FinanceShell", /\bFinanceShell\b/],
     ["ManagementShell", /\bManagementShell\b/],
@@ -558,7 +560,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
   ]) {
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
-      for (const prefix of OFFICE_ROUTE_PREFIXES) {
+      for (const prefix of ADMIN_DASHBOARD_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
         for (const [label, pattern] of [
           ["href prop", new RegExp(`href\\s*=\\s*(?:{\\s*)?["'\`]${route}`)],
@@ -601,7 +603,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
 test("Branch-scoped operational routes do not use management shell", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /BranchManagementShell/],
-    ["OfficeModuleShell", /OfficeModuleShell/],
+    ["AdminDashboardModuleShell", /AdminDashboardModuleShell/],
     ["InventoryShell", /InventoryShell/],
     ["FinanceShell", /FinanceShell/],
     ["ManagementShell", /ManagementShell/],

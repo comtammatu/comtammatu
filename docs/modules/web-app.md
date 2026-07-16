@@ -2,8 +2,8 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js App Router phục vụ các surface quản trị tenant, workspace domain,
-Branch Hub, POS/KDS và public/auth. Package manifest sở hữu phiên bản framework;
+Ứng dụng Next.js App Router phục vụ Admin Dashboard, Branch Hub, POS/KDS và
+public/auth. Package manifest sở hữu phiên bản framework;
 route runtime và generated matrix sở hữu danh sách route hiện hành.
 
 **Phạm vi sở hữu:** `apps/web/`
@@ -28,14 +28,14 @@ Role/scope/route boundary canonical sống ở
 owner; Branch Manager dùng L1 Branch Command dưới
 `/br/[branchId]/*`.
 
-| Surface           | Route family                                                                                                 | Entry point                                            | Navigation / back contract                                                                                                                                                    | Breadcrumb / scope contract                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Root entry        | `/`                                                                                                          | Single-branch resolver                                 | `getDefaultRedirect(claims)`: branch-pinned staff → `/br/{branchId}`; Owner → `/`, rồi tự mở khi có đúng một active `branch` kind. Central kinds không phải operator scope.   | Nhiều operating branch mới hiện picker; route scope sai fail closed.                                   |
-| Public / auth     | `/login`, `/access-denied`, `/payment/momo/return`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login`, external return URL, hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                                                                                                | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.               |
-| Admin foundation  | Tenant `/admin/settings/*`                                                                                   | `/admin/settings`                                      | `OfficeModuleShell` dùng cùng Office sidebar; Settings sub-pages là deep-nav của shell, không có SettingsNav riêng.                                                           | Breadcrumb root là `Thiết lập hệ thống`; OfficeModuleShell build breadcrumb từ active nav + path tail. |
-| Domain workspaces | `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/notifications/*`                            | `MODULE_ACL[module].path`                              | Workspace shell dùng sidebar/domain nav; link rời workspace phải đi qua `resolveRoleHomeLink(role)`. `/hr/payroll/*` là direct-support, không đưa vào discovery/nav mặc định. | Breadcrumb root là nhóm `Công việc`; filter/tab state giữ trong URL, không lưu local state.            |
-| Branch operations | `/br/[branchId]/*`, gồm hub, dashboard, shift, profile, stock, pos, kds, runner, settings                    | `/br/[branchId]`                                       | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Admin. Staff discovery vẫn có thể link sang Runner display public.           | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.                 |
-| Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                         | `/br/[branchId]/shift`                                 | Dùng Branch runtime bottom nav và shared Employee components; không có App Router surface `/employee`.                                                                        | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.                |
+| Surface           | Route family                                                                                                 | Entry point                                            | Navigation / back contract                                                                                                                                                  | Breadcrumb / scope contract                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Root entry        | `/`                                                                                                          | Single-branch resolver                                 | `getDefaultRedirect(claims)`: branch-pinned staff → `/br/{branchId}`; Owner → `/`, rồi tự mở khi có đúng một active `branch` kind. Central kinds không phải operator scope. | Nhiều operating branch mới hiện picker; route scope sai fail closed.                         |
+| Public / auth     | `/login`, `/access-denied`, `/payment/momo/return`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login`, external return URL, hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                                                                                              | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.     |
+| Admin Dashboard   | Owner-only `/admin`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`            | `/admin`                                               | `AdminDashboardModuleShell`, `FinanceShell`, và `InventoryShell` cùng dùng Owner nav. `/admin` là HUB; Settings và module con dùng deep-nav tương ứng.                      | Breadcrumb root là `Admin Dashboard`; filter/tab state giữ trong URL, không lưu local state. |
+| Utility           | `/notifications/*`                                                                                           | Link kèm `returnTo`                                    | Không là product plane; dùng trang độc lập và quay lại context gọi.                                                                                                         | Không có sidebar riêng.                                                                      |
+| Branch operations | `/br/[branchId]/*`, gồm hub, dashboard, shift, profile, stock, pos, kds, runner, settings                    | `/br/[branchId]`                                       | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Admin. Staff discovery vẫn có thể link sang Runner display public.         | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.       |
+| Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                         | `/br/[branchId]/shift`                                 | Dùng Branch runtime bottom nav và shared Employee components; không có App Router surface `/employee`.                                                                      | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.      |
 
 Quy tắc history: thay đổi route đưa người dùng giữa các trang phải dùng
 `Link` / `router.push` thường để nút Back của trình duyệt quay lại route trước.
@@ -48,16 +48,17 @@ route contract thay đổi.
 
 ## Thành phần chính
 
-### Khung quản trị (`apps/web/app/components/office-module-shell.tsx`)
+### Khung Admin Dashboard (`apps/web/app/components/admin-dashboard-module-shell.tsx`)
 
-Shell Management dùng chung cho admin/menu/hr/orders; với route `/admin/*` thành phần này render:
+Shell dùng chung cho admin/menu/hr/orders; với route `/admin/*` thành phần này render:
 
-- Sidebar thu gọn được với điều hướng lọc theo role (đọc `ADMIN_NAV_GROUPS` từ `@comtammatu/shared/auth`)
-- Lớp quản trị giữ nền tảng vận hành và báo cáo điều hành, không phải menu gom mọi domain
+- Sidebar Owner-only đọc `ADMIN_NAV_GROUPS` từ `@comtammatu/shared/auth`.
+- `/admin` mở hub 1/2/3 cột; không thêm KPI khi chưa có data contract.
 - Header với thông tin user và nút đăng xuất
 - Responsive: sidebar thu gọn trên mobile
 
-Nhóm điều hướng được lọc qua `canAccess(role, moduleKey)` — phân hệ nào không có quyền sẽ bị ẩn.
+Nhóm điều hướng được lọc qua `canAccess(role, "admin_dashboard")` trước khi
+lọc capability của từng module. Branch Manager/Staff không nhận tenant nav.
 
 ### Form đăng nhập (`apps/web/app/(public)/(auth)/login/login-form.tsx`)
 
@@ -67,7 +68,7 @@ Component "use client". Dùng React Hook Form + Zod validation. Gọi server act
 
 Server action có rate limiting (`loginRateLimit` từ `@comtammatu/security`). Validate bằng Zod, gọi `signInWithPassword()`, trích xuất claims, redirect qua `resolvePostLoginRedirect()`.
 
-## Inventory workspace hiện tại
+## Inventory Admin Dashboard hiện tại
 
 ### IA theo workflow
 
@@ -118,11 +119,11 @@ Browser request
 
 ## Quy tắc import
 
-| File Type                     | Can Import                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------ |
-| `page.tsx` (RSC)              | `@comtammatu/database/supabase/server`, `@comtammatu/shared`, `@comtammatu/ui` |
-| `layout.tsx` (RSC)            | Same as page.tsx                                                               |
-| `"use client"` components     | `@comtammatu/database/supabase/client`, `@comtammatu/shared`, `@comtammatu/ui` |
+| File Type                     | Can Import                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| `page.tsx` (RSC)              | `@comtammatu/database/supabase/server`, `@comtammatu/shared`, `@comtammatu/ui`         |
+| `layout.tsx` (RSC)            | Same as page.tsx                                                                       |
+| `"use client"` components     | `@comtammatu/database/supabase/client`, `@comtammatu/shared`, `@comtammatu/ui`         |
 | `actions.ts` (Server Actions) | Explicit server/service database subpath, `@comtammatu/shared`, `@comtammatu/security` |
 
 ## Thêm một trang quản trị mới
@@ -136,20 +137,22 @@ Browser request
 
 ## Các lỗi thường gặp
 
-| Failure                               | Signal                                   | Recovery                                                                                |
-| ------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- |
-| "use client" barrel import            | Turbopack build crash                    | Use `/supabase/client` import path                                                      |
-| Missing module in route-resolution    | 404 or no ACL check                      | Add URL pattern → ModuleKey mapping                                                     |
-| Missing nav entry                     | Page exists but unreachable from sidebar | Add to `ADMIN_NAV_GROUPS`, unless the route is an intentional direct-only support route |
-| Layout re-checks auth/ACL              | Double redirect or divergent gate         | Remove the duplicate check; proxy owns protected-route auth                             |
+| Failure                            | Signal                                   | Recovery                                                                                |
+| ---------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- |
+| "use client" barrel import         | Turbopack build crash                    | Use `/supabase/client` import path                                                      |
+| Missing module in route-resolution | 404 or no ACL check                      | Add URL pattern → ModuleKey mapping                                                     |
+| Missing nav entry                  | Page exists but unreachable from sidebar | Add to `ADMIN_NAV_GROUPS`, unless the route is an intentional direct-only support route |
+| Layout re-checks auth/ACL          | Double redirect or divergent gate        | Remove the duplicate check; proxy owns protected-route auth                             |
 
 ## Lý do thiết kế
 
 - **Proxy là cổng auth duy nhất:** Mọi enforcement auth xảy ra trong `proxy.ts`
   trước khi route code chạy; layout/page đọc invariant, không dựng gate thứ hai.
 - **Mặc định RSC:** Các page là React Server Components. Chỉ phần tử tương tác (form, dropdown) dùng "use client".
-- **Admin nay hẹp lại có chủ đích:** giữ các control nền tảng L0 cho owner, còn Branch Manager dùng `/br/[branchId]/*` và các workflow domain sâu nằm trong workspace riêng.
+- **Admin Dashboard là Owner-only:** giữ các control L0 cho Owner; Branch Manager dùng `/br/[branchId]/*` và workflow Branch-native.
 - **Inventory là surface độc lập:** `/inventory` là domain vận hành Inventory canonical.
-- **Employee portal đã live:** các page profile, clock, attendance, schedule, leave request, và payslip là surface nhân viên hiện hành. HR workspace mặc định mở nhân viên/ca/ngày công/nghỉ phép; `/hr/payroll/*` vẫn là direct-support cho owner để đối soát/chốt lương.
+- **Staff runtime đã live:** profile, clock, attendance, schedule, leave request,
+  và payslip nằm trong Branch. HR Admin Dashboard và `/hr/payroll/*` chỉ dành
+  cho Owner.
 - **Finance mặc định là tài chính vận hành HKD:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Các route kế toán doanh nghiệp và đóng/mở lại kỳ không nằm trong app surface hiện tại.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ config danh mục nguyên liệu, đơn vị, ngưỡng cảnh báo, và QC; `page.tsx` redirect theo permission về categories/units/qc. Catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`.

@@ -7,6 +7,7 @@ import { getModuleLabelVi } from "../labels";
  */
 
 export type ModuleKey =
+  | "admin_dashboard"
   | "menu"
   | "inventory"
   | "inventory_procurement"
@@ -38,9 +39,14 @@ interface ModuleAcl {
 }
 
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
+  admin_dashboard: {
+    path: "/admin",
+    allowedRoles: ["owner"],
+    label: getModuleLabelVi("admin_dashboard"),
+  },
   menu: {
     path: "/menu",
-    allowedRoles: ["owner", "branch_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("menu"),
   },
   inventory: {
@@ -71,7 +77,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   hr: {
     path: "/hr",
-    allowedRoles: ["owner", "branch_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("hr"),
   },
   hr_payroll: {

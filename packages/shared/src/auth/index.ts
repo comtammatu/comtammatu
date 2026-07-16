@@ -8,7 +8,6 @@ export type {
 export {
   ACCESS_BUCKETS,
   STAFF_ROLES,
-  ADMIN_ROLES,
   BRANCH_ROLES,
   TENANT_LEVEL_ROLES,
   MANAGEABLE_STAFF_ROLES,
@@ -37,7 +36,6 @@ export {
   extractClaimsFromAccessToken,
   getDefaultRedirect,
   getSafeInternalReturnTo,
-  isAdminRole,
   resolvePostLoginRedirect,
 } from "./scope";
 export { getInventoryValueVisibility } from "./inventory-value";
@@ -53,7 +51,6 @@ export {
 export type {
   NavItemConfig,
   NavGroupConfig,
-  WorkspaceNavItemConfig,
   BranchScopedNavItemConfig,
   BranchManagementNavItemConfig,
   BranchOperationNavItemConfig,
@@ -63,7 +60,6 @@ export type {
 export {
   ADMIN_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
-  DOMAIN_WORKSPACE_ITEMS,
   BRANCH_OPERATION_ITEMS,
   OPERATOR_TILE_GROUP_ORDER,
   OPERATOR_TILE_GROUP_TITLES,
@@ -87,7 +83,6 @@ export {
   resolveNavLink,
   resolveQuickLaunchGroups,
   resolveRoleHomeLink,
-  resolveWorkspaceItems,
 } from "./nav-resolution";
 export type {
   AppDiscoveryBlockedReason,
@@ -102,7 +97,6 @@ export {
   resolveBranchOperationDiscoveryGroup,
   resolveDiscoveredAppGroups,
   resolveDiscoveredApps,
-  resolveWorkspaceDiscoveryGroup,
 } from "./app-discovery";
 export type {
   RouteBackBehavior,
@@ -115,10 +109,11 @@ export {
   resolveRouteFamilyContract,
 } from "./route-map";
 export {
+  ADMIN_DASHBOARD_ROUTE_PREFIXES,
   INVENTORY_PROCUREMENT_PREFIXES,
   INVENTORY_ROUTE_PREFIXES,
   PUBLIC_APP_PATHS,
-  isAdminRoutePath,
+  isAdminDashboardRoutePath,
   isPublicAppPath,
   isRunnerPublicDisplayPath,
   resolveModuleFromPath,

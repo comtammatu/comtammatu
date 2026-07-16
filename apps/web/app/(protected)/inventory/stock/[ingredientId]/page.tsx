@@ -93,7 +93,7 @@ function StockMetric({
   );
 }
 
-function OfficeStockIngredientDetail({
+function AdminDashboardStockIngredientDetail({
   data,
 }: {
   data: StockIngredientDetailData;
@@ -430,7 +430,7 @@ export async function StockIngredientDetailPageContent({
     queryBranchId: params.branchId,
   });
 
-  return <OfficeStockIngredientDetail data={data} />;
+  return <AdminDashboardStockIngredientDetail data={data} />;
 }
 
 export default async function StockIngredientDetailPage({

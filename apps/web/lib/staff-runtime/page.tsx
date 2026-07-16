@@ -218,16 +218,6 @@ export type EmployeeHomeRoutes = {
   team?: string;
 };
 
-const DEFAULT_HOME_ROUTES: EmployeeHomeRoutes = {
-  clock: "/br",
-  tasks: "/br",
-  schedule: "/br",
-  profile: "/br",
-  checkoutApprovals: "/br",
-  count: "/br",
-  wasteApprovals: "/inventory/waste/approvals",
-};
-
 type EmployeeHomeAuthState = Awaited<ReturnType<typeof loadAuthState>>;
 type EmployeeHomeWorkflowLayout = "standard" | "stepper";
 type StepTone = "default" | "success" | "warning" | "info";
@@ -346,7 +336,7 @@ function getWorkTitle(state: TodayWorkState, copy: WorkdayCopy): string {
 }
 
 export type StaffWorkdayPageContentProps = {
-  routes?: EmployeeHomeRoutes;
+  routes: EmployeeHomeRoutes;
   authState?: EmployeeHomeAuthState;
   showNotificationControl?: boolean;
   enableBranchOpsRefresh?: boolean;
@@ -358,7 +348,7 @@ export type StaffWorkdayPageContentProps = {
 };
 
 export async function StaffWorkdayPageContent({
-  routes = DEFAULT_HOME_ROUTES,
+  routes,
   authState,
   showNotificationControl = true,
   enableBranchOpsRefresh = true,
@@ -367,7 +357,7 @@ export async function StaffWorkdayPageContent({
   plane = "employee",
   copy = employeeWorkdayCopy,
   tasksCopy = employeeWorkdayTasksCopy,
-}: StaffWorkdayPageContentProps = {}) {
+}: StaffWorkdayPageContentProps) {
   const primitives =
     plane === "branch"
       ? BRANCH_WORKDAY_PRIMITIVES
@@ -1070,4 +1060,3 @@ export async function StaffWorkdayPageContent({
     </PageShell>
   );
 }
-

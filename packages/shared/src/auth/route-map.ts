@@ -3,15 +3,14 @@ import { MODULE_ACL, type ModuleKey } from "./module-acl";
 import { isPublicAppPath, resolveModuleFromPath } from "./route-resolution";
 
 export type RouteSurface =
-  | "admin"
-  | "workspace"
+  | "admin_dashboard"
   | "branch_management"
   | "branch_operation"
+  | "utility"
   | "public";
 
 export type RoutePrimaryNav =
-  | "admin-sidebar"
-  | "workspace-sidebar"
+  | "admin-dashboard-sidebar"
   | "management-sidebar"
   | "operator-bottom-nav"
   | "operational-chrome"
@@ -55,101 +54,101 @@ export const ROUTE_FAMILY_CONTRACTS = [
   },
   {
     id: "admin",
-    label: APP_COPY_VI.settingsLabel,
-    surface: "admin",
-    entryPath: MODULE_ACL.settings.path,
+    label: APP_COPY_VI.adminDashboardTitle,
+    surface: "admin_dashboard",
+    entryPath: "/admin",
     matchPrefixes: ["/admin"],
-    moduleKeys: ["settings"],
-    primaryNav: "admin-sidebar",
+    moduleKeys: ["admin_dashboard", "settings"],
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "none",
-    breadcrumbRoot: APP_COPY_VI.settingsLabel,
+    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
     requiresBranchId: false,
   },
   {
     id: "menu",
     label: MODULE_ACL.menu.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.menu.path,
     matchPrefixes: [MODULE_ACL.menu.path],
     moduleKeys: ["menu"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
     requiresBranchId: false,
   },
   {
     id: "orders",
     label: MODULE_ACL.orders.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.orders.path,
     matchPrefixes: [MODULE_ACL.orders.path],
     moduleKeys: ["orders"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
     requiresBranchId: false,
   },
   {
     id: "inventory",
     label: MODULE_ACL.inventory.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.inventory.path,
     // MODULE_ACL.inventory.path ("/inventory") prefix-matches every
     // /inventory/* sub-route already; the INVENTORY_ROUTE_PREFIXES spread
     // here was fully redundant (D058 W3).
     matchPrefixes: [MODULE_ACL.inventory.path],
     moduleKeys: ["inventory", "inventory_procurement"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
     requiresBranchId: false,
   },
   {
     id: "finance",
     label: MODULE_ACL.finance.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.finance.path,
     matchPrefixes: [MODULE_ACL.finance.path],
     moduleKeys: ["finance"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
     requiresBranchId: false,
   },
   {
     id: "branches",
     label: MODULE_ACL.branches.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.branches.path,
     matchPrefixes: [MODULE_ACL.branches.path],
     moduleKeys: ["branches"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
     requiresBranchId: false,
   },
   {
     id: "hr",
     label: MODULE_ACL.hr.label,
-    surface: "workspace",
+    surface: "admin_dashboard",
     entryPath: MODULE_ACL.hr.path,
     matchPrefixes: [MODULE_ACL.hr.path],
     moduleKeys: ["hr", "hr_payroll", "staff"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "admin-dashboard-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
     requiresBranchId: false,
   },
   {
     id: "notifications",
     label: MODULE_ACL.notifications.label,
-    surface: "workspace",
+    surface: "utility",
     entryPath: MODULE_ACL.notifications.path,
     matchPrefixes: [MODULE_ACL.notifications.path],
     moduleKeys: ["notifications"],
-    primaryNav: "workspace-sidebar",
+    primaryNav: "none",
     backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,
+    breadcrumbRoot: null,
     requiresBranchId: false,
   },
   {

@@ -67,6 +67,119 @@ workflows and keep POS/KDS/Runner as separate station apps.
 - [x] Pass focused tests, UI contract lint, typecheck, lint, build, and review-tier.
 - [x] Commit, push, and open the first replacement PR without closing PR #284.
 
+## Admin Dashboard Owner Boundary And Branch Containment (2026-07-15)
+
+### T3 contract
+
+Skill plan: repo rules = engineering + skills + UI + workflow + orchestration;
+external skills = `ponytail:ponytail` full mode + `web-design-guidelines`;
+runtime tools = focused auth/static UI tests, generated route-matrix check, UI
+contract lint, full repository gates, and phone/tablet/desktop browser QA;
+skipped = database/schema skills, Finance workflow skills, KPI/data design,
+route moves, PR #284, and production changes.
+
+UI Advisor Gate
+
+- Surface: `/admin`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`,
+  `/hr`; route family: `admin_dashboard`; plane: Admin Dashboard; change:
+  hierarchy + navigation + route authority.
+- Context: Owner moves between branch operation and tenant oversight. Branch
+  Manager/Staff operate one assigned branch. Actor/job: Owner opens chain-wide
+  control modules; non-Owners complete daily work without discovering tenant
+  administration.
+- Journey: login/root → Branch Hub or location picker → one Admin Dashboard
+  entry → `/admin` launcher → a tenant module. Recovery: disallowed direct URLs
+  and `returnTo` fall back to the assigned Branch; wrong-branch URLs remain
+  fail-closed.
+- Information order: Admin Dashboard identity → owner control modules → system
+  settings. Exclude KPI/stat cards until a canonical owner-summary data
+  contract exists; exclude daily Branch jobs from the launcher.
+- Archetype/exemplar/data display: `/admin` = `HUB`; reuse the current Settings
+  hub and inventory hub card-grid rhythm. Use link cards only, no fabricated
+  metric data.
+- States: Owner with one/many branches, Branch Manager/Cashier direct URL,
+  missing branch context, unknown Admin Dashboard child route, empty branch
+  list, and long labels.
+- Components/fallback: existing `AppPage`, `AppPageHeader`, `AppSection`,
+  `LinkCardGrid`, and `AppLinkCard`; existing Branch Hub action section; no new
+  primitive. Navigation links preserve keyboard and open-in-new-tab behavior.
+- Responsive/accessibility/input: 1 column phone, 2 columns tablet portrait,
+  3 columns desktop; inherited visible focus and 44px touch targets; no hover-
+  only affordance, no motion addition, URL remains scope/state authority.
+- Verification: role/route unit matrix, proxy/static guards, launcher archetype,
+  no visible `Văn phòng`, UI-contract lint, full T3 gate, and browser smoke at
+  phone, tablet portrait, and desktop.
+
+- **PM:** Remove the third Office/workspace product plane now. Done means Owner
+  can choose Branch or Admin Dashboard, while every non-Owner starts and stays
+  in Branch for daily work.
+- **BA:** Route-surface authority is Owner-only for `/admin`, `/menu`, `/orders`,
+  `/inventory`, `/finance`, `/branches`, and `/hr`. Capability ACL stays intact
+  for Branch-native orders, stock, menu limits, approvals, and setup routes.
+- **Senior Dev:** Add one shared Admin Dashboard path classifier, enforce it in
+  proxy and `returnTo`, collapse discovery/nav into Admin Dashboard + Branch,
+  and rename current Office shell symbols without creating a parallel shell.
+- **QA/QC:** Prove direct URLs and `returnTo` fail closed for Manager/Cashier,
+  Branch-native capabilities still pass, Owner discovery is complete, no
+  visible `Văn phòng` remains, and the launcher uses existing responsive card
+  primitives with keyboard/focus behavior inherited from links.
+
+Synthesis
+
+- Agreement: Admin Dashboard and Branch are the only product planes; public and
+  utility routes are not product planes.
+- Resolved conflict — access versus capability: `module-acl.ts` owns the
+  Owner-only `admin_dashboard` surface key. The path classifier identifies the
+  surface, while proxy and `returnTo` consume that ACL key. Existing capability
+  keys remain available to Branch-native stock, orders, approvals, and setup.
+- Resolved conflict — Owner default: preserve D077 Branch-first login behavior;
+  Owner reaches Admin Dashboard through one truthful Hub/picker entry.
+- Resolved conflict — route parity: block non-Owner access to `/admin`, `/menu`,
+  `/orders`, `/inventory`, `/finance`, `/branches`, and `/hr`; preserve
+  `/br/[branchId]/orders`, `/stock`, `/menu-limits`, `/team`, `/settings`, and
+  approval routes according to existing capability and branch-scope gates.
+- Scope/implementation: route classification, ACL consumption, discovery/nav,
+  shell/copy taxonomy, `/admin` launcher, Branch Hub/picker, tests, and owning
+  product contracts only.
+- Tests/recovery: assert Owner admission and complete discovery; Manager/Cashier
+  fallback; Branch-native parity; unknown admin-family fail-close; responsive
+  launcher and no Office copy. Revert the isolated branch if any full gate or
+  branch-runtime parity test fails; there is no DB or production rollback.
+- Out of scope: Finance behavior, SePay/MoMo, KPI invention, database/schema/
+  generated types, route moves, PR #284, and production.
+
+- [x] **A1 — authority boundary.** Gate all Admin Dashboard route families in
+      proxy and post-login return routing while preserving Branch-native paths.
+- [x] **A2 — discovery and shell taxonomy.** Remove the workspace surface,
+      expose Admin Dashboard navigation only to Owner, and rename Office shell
+      symbols to Admin Dashboard terminology.
+- [x] **A3 — truthful launchers.** Build `/admin` from existing `AppPage`,
+      `LinkCardGrid`, and `AppLinkCard`; reduce Branch Hub Owner links to one
+      Admin Dashboard entry; keep Manager Branch links branch-local.
+- [x] **A4 — contracts and verification.** Update the decision, Design System,
+      role-route matrix, static regressions, full gates, and responsive browser
+      evidence before delivery.
+- [x] **A5 — notification deep-link containment.** Resolve notification action
+      URLs at hydration so legacy Admin paths reach the recipient's authorized
+      Branch workflow, retain Owner access, and fail closed for unknown,
+      unsafe, unscoped, or cross-branch targets. Accept both purchase-order URL
+      forms used by current main and the queued PR #284 migration.
+
+### T3 attestation
+
+- `REVIEW_TIER=T3 corepack pnpm verify` passed on 2026-07-15: dependency audit,
+  baseline, typecheck, lint, production build, and all repository tests.
+- Focused Admin Dashboard/Branch regressions passed: 61 shared auth tests and
+  70 web static tests. Runtime browser suite passed 11/11 with Manager and
+  Cashier Admin-family rejection, Branch-native Orders parity, Owner launcher,
+  and Branch shell checks across phone, tablet portrait/landscape, and desktop.
+- Notification deep-link regressions passed 4/4. The final resolver also passed
+  monorepo typecheck (7/7), T3 lint (7/7), production build (2/2), and the full
+  repository test suite with no failures.
+- No database migration, generated database type change, production write, or
+  deployment occurred. Finance/SePay behavior, KPI invention, route moves, and
+  PR #284 remain intentionally outside this slice.
+
 ## POS Item Customizer Mobile Scroll (2026-07-11)
 
 Skill plan: repo rules = engineering + skills + workflow + ui; external skills =
@@ -1266,8 +1379,8 @@ catalog and stock levels, then verifies the next real POS order.
       passing, 33 skipped, and 0 failing tests; the earlier nine-failure wave is
       no longer present in the current tree.
 
-- [x] **S1 — extend the operator/Office import boundary guard before converting
-      anything.** Widen `operator-office-shell-boundary` in
+- [x] **S1 — extend the Branch/Admin Dashboard import boundary guard before converting
+      anything.** Widen `operator-admin-dashboard-shell-boundary` in
       `scripts/check-ui-contract.mjs` so `(operator)/**` may not import
       `@/(protected)/inventory/**` except `*-actions.ts`; allowlist `_lib/**`
       until S7 lands. Freeze current offenders as the baseline and burn one line
@@ -1324,7 +1437,7 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [ ] **S5 — fork the GRN line sheet out of the shared component tree.**
       `GrnLineEditSheet` (`apps/web/app/components/inventory/grn-line-editor.tsx`)
-      is imported by both the operator create flow and Office
+      is imported by both the operator create flow and Admin Dashboard
       `inventory/grn/new/[supplierId]`. It is presentation, and D067 §1 requires
       presentation to fork.
   - Build `(operator)/stock/grn/_components/grn-line-sheet.tsx` as the single
@@ -1351,7 +1464,7 @@ v_out_base`. Do not rescale consumption by actual output.
   - Hide the GRN receiving-location card when `branchLocations.length <= 1` and
     resolve the location server-side.
 
-- [ ] **S7 — relocate shared pure logic out of the Office route tree.** Move
+- [ ] **S7 — relocate shared pure logic out of the Admin Dashboard route tree.** Move
       `_lib/format`, `_lib/purchase-units`, `_lib/reference-cost`, `_lib/grn-draft`,
       and `_lib/types` to `apps/web/lib/inventory/` and import from there on both
       planes. This is a move, not a fork: the sharing was correct and the location
@@ -1366,7 +1479,7 @@ v_out_base`. Do not rescale consumption by actual output.
       since D068 §4. Remove the operator recipe surface entirely — the tile AND the
       `stock/production/recipes/**` route family (list, editor, new — the
       clients still expose create/edit/delete today); recipe administration
-      stays in Office `/inventory` (D073 §3). Guard entries for the removed
+      stays in Admin Dashboard `/inventory` (D073 §3). Guard entries for the removed
       routes: `scripts/page-archetypes.mjs` + the route-manifest arrays in
       `scripts/check-ui-contract.mjs`.
 
@@ -1416,10 +1529,10 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [x] **S12 — retire supplier returns end-to-end (D073 §4).** Delete the
       operator routes (`stock/supplier-returns/**`, 3 pages + 3 clients), the
-      Office routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
+      Admin Dashboard routes (`/inventory/supplier-returns/**`, 3 pages + 4 clients),
       the shared loaders/model (`branch-supplier-return-data.ts`,
       `supplier-return-model.ts`), the actions file
-      (`supplier-return-actions.ts`), the nav tile and Office nav item, and the
+      (`supplier-return-actions.ts`), the nav tile and Admin Dashboard nav item, and the
       copy catalog. Keep the DB tables, RPCs, and the
       `has_active_supplier_return` GRN integrity gates — history stays, and the
       gate is inert without new returns. Rejected GRN goods route through Báo
@@ -1431,11 +1544,11 @@ v_out_base`. Do not rescale consumption by actual output.
 
 - [x] **S13 — retire purchase orders from daily use (D073 §4).** Delete the
       operator wrappers (`stock/purchase-orders/**`, 3 files) and the PO nav
-      tile; remove the Office PO nav entry and routes from daily navigation;
+      tile; remove the Admin Dashboard PO nav entry and routes from daily navigation;
       remove the PO door from the GRN source picker
       (`fetchOpenPurchaseOrdersForReceiving` / `openPurchaseOrders` in
       `apps/web/lib/inventory/grn-source-data.ts`) and the
-      `openPurchaseOrders` hub-queue count. Delete the Office PO routes and the PO server actions
+      `openPurchaseOrders` hub-queue count. Delete the Admin Dashboard PO routes and the PO server actions
       (`purchase-order-actions.ts` mutators) with the navigation — D073 §4
       retires both planes, not nav alone. Guard entries: PO rows in
       `scripts/page-archetypes.mjs` and the PO arrays in
