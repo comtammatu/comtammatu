@@ -34,8 +34,11 @@ over older task notes, regressions, and memory.
 ## Migration Policy
 
 - Every migration is T3. Write the migration file before applying it.
-- Verify the target ref before every apply. Agents may create, use, and delete a
-  Preview Branch; merge/reset/rebase into production remain production writes.
+- Verify the target ref before every apply. Preview Branch creation is allowed
+  only when `supabase/migration-lineage.json` is `aligned` and explicitly enables
+  native branching. While it is blocked, use the local source replay and do not
+  create a parent-history Preview. Preview deletion remains allowed for cleanup;
+  merge/reset/rebase into production remain production writes.
 - Production defaults to file → PR → merge → owner applies. Agent apply requires
   explicit delegation for the exact operation in the current session.
 - Delegation never authorizes changing or disabling repo guards. If the guarded

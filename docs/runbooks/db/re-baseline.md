@@ -5,6 +5,10 @@
 > self-contained baseline that squashes the forward chain so a from-empty replay
 > matches current prod exactly.
 
+`supabase/migration-lineage.json` is the machine gate for this runbook. Never
+raise its frozen forward limit to make CI green; completing this runbook is the
+only path from `blocked_pending_rebaseline` to `aligned`.
+
 ## Why this exists
 
 `supabase/migrations/00000000000000_baseline.sql` is a point-in-time `pg_dump` of
@@ -18,7 +22,7 @@ replaying cleanly on top of the snapshot — the **squash-vs-history** class:
   still contained it.
 - **State self-assertions.** `20260616200000_rls_dedup_stock_transfer_payroll.sql`
   asserts a production-only RLS policy count (`payroll_entries survivors expected
-  3, got 2`) that a baseline-plus-forwards replay does not reproduce.
+3, got 2`) that a baseline-plus-forwards replay does not reproduce.
 
 The clean fix is **not** to rewrite historical migrations — it is to
 **re-baseline**: regenerate the baseline from current prod and archive the
@@ -47,11 +51,12 @@ now-squashed forward chain.
    stripped:
 
    ```bash
+   CUTOFF=<14-digit verified production ledger cutoff>
    ART=.baseline-artifacts/supabase-live-baseline-<ts>
    { echo "SET check_function_bodies = false;"; echo;
      cat "$ART/private.schema.sql"; echo;
      grep -v "^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin " "$ART/public.schema.sql";
-   } > supabase/migrations/00000000000000_baseline.sql
+   } > "supabase/migrations/${CUTOFF}_baseline.sql"
    ```
 
    Notes:
@@ -84,7 +89,21 @@ now-squashed forward chain.
    remains active because `pg_dump --schema=public,private` omits extensions,
    storage buckets/policies, realtime publication membership, and cron jobs.
 
-3. **Prove a clean from-empty replay** (full chain now = baseline + only the
+   Classify DML before moving files. One-off production backfills/repairs become
+   history; bootstrap/reference rows required by an empty environment move to
+   the canonical seed or managed-surfaces fold. Do not assume a schema dump
+   preserves `INSERT`, `UPDATE`, or `DELETE` effects.
+
+3. **Update the lineage manifest.** Set the new baseline file/version/hash, keep
+   `state=blocked_pending_rebaseline`, keep `productionCutoff=null`, keep native
+   Preview blocked, and reduce `activeForwardLimit` to the remaining forward
+   count. Run:
+
+   ```bash
+   corepack pnpm lint:migration-lineage
+   ```
+
+4. **Prove a clean from-empty replay** (full chain now = baseline + only the
    post-cutoff migrations):
 
    ```bash
@@ -94,22 +113,41 @@ now-squashed forward chain.
    It must exit 0. If a remaining post-cutoff migration still diverges, fix THAT
    migration (it has not yet reached prod-stable squash) or move the cutoff later.
 
-4. **Regenerate types** from the rebuilt schema and confirm no drift:
+5. **Regenerate types** from the rebuilt schema and confirm no drift:
 
    ```bash
    pnpm db:types
-   git diff --stat packages/database/src/database.types.ts   # expect no change
+   git diff --stat packages/database/src/types/database.types.ts   # expect no change
    ```
 
-5. **Ledger note (prod is NOT re-applied).** Re-baselining changes only the
+6. **Ledger note (prod is NOT re-applied).** Re-baselining changes only the
    committed files; prod's `schema_migrations` already lists every applied
    migration. Do **not** run `supabase db push`/`migration repair` against prod
    as part of this — the new baseline is a replay artifact for fresh envs, not a
    prod migration. Verify the prod ledger still matches the (archived) history
-   before and after.
+   before and after. Native Preview remains blocked in this state.
 
-6. **PR + owner apply.** File → PR → owner. Tier **T3** (baseline / migration
-   chain). After merge, future migrations append on top of the new baseline.
+7. **Merge the source re-baseline while native Preview stays blocked.** The PR
+   contains the baseline, archive/seed/fold classification, manifest hash, types,
+   and replay evidence. It does not apply schema or rewrite production history.
+
+8. **Align the production migration ledger only under a separate explicit owner
+   approval.** Rehearse the current Supabase CLI squash/repair behavior on a
+   disposable database, preserve the existing ledger evidence, and prove that
+   `supabase migration list --linked` contains the new baseline cutoff plus only
+   newer forward versions. This is a production metadata write; source
+   re-baselining does not authorize it.
+
+9. **Enable native Preview only after live ledger proof.** In a follow-up change,
+   set
+   `productionCutoff=baselineVersion`, `state=aligned`,
+   `nativePreviewBranching=enabled`, and `activeForwardLimit` to at most `20`.
+   Re-run the lineage guard, create one throwaway Preview, inspect its deployment
+   log, and delete it after verification.
+
+10. **Close the alignment change.** File → PR → owner. Tier **T3** (baseline /
+    migration chain). Future migrations append on top of the aligned baseline
+    and retain their filename version in the production ledger.
 
 ## Acceptance
 
@@ -118,3 +156,5 @@ now-squashed forward chain.
 - The remaining forward chain is either strictly newer than the dump cutoff, not
   yet represented by prod, or the managed-surfaces fold migration, and the whole
   remaining chain replays clean.
+- `pnpm lint:migration-lineage` exits 0; native Preview is enabled only after the
+  live production ledger and baseline version match.

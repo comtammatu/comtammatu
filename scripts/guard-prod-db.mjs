@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 // PreToolUse guard for agent sessions. Machine enforcement of the
 // Environment Registry in docs/agent/rules/database.md — this script is an
@@ -16,9 +18,10 @@ import { readFileSync } from "node:fs";
 // host, stored pooler URL), pg_restore toward a protected target (restore is
 // a write by definition), HTTP clients sending write methods/bodies to a
 // protected target, and write-capable Supabase MCP tools (any server name)
-// targeting a protected ref. Preview branch create/delete is explicitly allowed
-// because it does not mutate the protected parent; branch merge/reset/rebase is
-// still blocked. Read paths stay open.
+// targeting a protected ref. Preview branch delete is allowed for cleanup;
+// creation is allowed only when supabase/migration-lineage.json proves the
+// repository baseline and production ledger are aligned. Branch
+// merge/reset/rebase remains blocked. Read paths stay open.
 //
 // Known residual gaps (text matching cannot close them; the real fix is
 // keeping prod credentials out of the local agent env): SDK writes via
@@ -29,6 +32,38 @@ const PROTECTED_REFS = {
   iexwsuaqqenyjiskawoj: "PRODUCTION (comtammatu)",
   dyksphedgzqsqjqgxzog: "matu-platform production (separate codebase)",
 };
+
+const LINEAGE_MANIFEST = new URL(
+  "../supabase/migration-lineage.json",
+  import.meta.url,
+);
+
+function nativePreviewBranchingEnabled() {
+  try {
+    const lineage = JSON.parse(readFileSync(LINEAGE_MANIFEST, "utf8"));
+    const manifestAllows =
+      lineage.state === "aligned" &&
+      lineage.nativePreviewBranching === "enabled" &&
+      lineage.productionCutoff === lineage.baselineVersion;
+    if (!manifestAllows) return false;
+
+    const check = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(
+          new URL("./check-migration-lineage.mjs", import.meta.url),
+        ),
+      ],
+      {
+        cwd: fileURLToPath(new URL("../", import.meta.url)),
+        stdio: "ignore",
+      },
+    );
+    return check.status === 0;
+  } catch {
+    return false;
+  }
+}
 
 // `do` / `perform` close the live bypass where a DO $$ … PERFORM rpc() $$
 // block mutated prod while a bare UPDATE was correctly blocked. `call` was
@@ -99,6 +134,8 @@ function stripSqlNoise(sql) {
 // (e.g. `supabase --debug db push`); line continuations are folded first.
 const MUTATING_CLI =
   /\bsupabase(?:\s+-{1,2}[\w-]+(?:[= ]\S+)?)*\s+(db\s+(?:push|reset)|migration\s+(?:up|repair)|link\b|functions\s+deploy|secrets\s+set|config\s+push)/;
+const PREVIEW_CREATE_CLI =
+  /\bsupabase(?:\s+-{1,2}[\w-]+(?:[= ]\S+)?)*\s+branches\s+create\b/;
 
 const HTTP_CLIENT = /\b(curl|wget|httpie|xh)\b/;
 const HTTP_WRITE =
@@ -137,6 +174,12 @@ const toolInput = input.tool_input ?? {};
 
 if (toolName === "Bash") {
   const cmd = String(toolInput.command ?? "").replace(/\\\r?\n/g, " ");
+
+  if (PREVIEW_CREATE_CLI.test(cmd) && !nativePreviewBranchingEnabled()) {
+    block(
+      "native Preview branch creation while migration lineage is blocked pending re-baseline",
+    );
+  }
 
   // The supabase CLI resolves its target from supabase/config.toml /
   // .temp/project-ref, which point at production — block regardless of
@@ -198,8 +241,14 @@ if (mcpMatch) {
   const label = PROTECTED_REFS[target];
   if (!label) process.exit(0); // unknown ref (e.g. a future dev project) — allowed
 
-  if (action === "create_branch" || action === "delete_branch") {
+  if (action === "delete_branch") {
     process.exit(0);
+  }
+  if (action === "create_branch") {
+    if (nativePreviewBranchingEnabled()) process.exit(0);
+    block(
+      "native Preview branch creation while migration lineage is blocked pending re-baseline",
+    );
   }
 
   if (action === "execute_sql") {

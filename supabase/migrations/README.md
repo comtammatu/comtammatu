@@ -1,7 +1,7 @@
 # Supabase migrations — baseline-first
 
-`00000000000000_baseline.sql` is the **canonical self-contained install** for a
-fresh environment: a `pg_dump` of the current production `public` + `private`
+`00000000000000_baseline.sql` is the self-contained install for a fresh
+environment: a point-in-time `pg_dump` of the production `public` + `private`
 schemas. `private` is emitted first so public triggers/policies that reference
 `private.*` resolve, and `check_function_bodies` is disabled at the top so the
 private SQL helpers that read public tables create before those tables exist. It
@@ -10,6 +10,11 @@ replays clean from an empty database — the CI `baseline-replay` job
 incremental chains could not replay from empty (squash-vs-history drop ordering
 plus migrations that self-assert production-only state), which is why this single
 squashed baseline exists.
+
+The machine-readable lineage state lives in `../migration-lineage.json`. When it
+is `blocked_pending_rebaseline`, native Preview creation is forbidden and the
+active forward count is frozen; do not raise the ceiling or patch the baseline
+hash. `pnpm lint:migration-lineage` enforces this contract.
 
 ## What's here
 
@@ -47,6 +52,9 @@ single source of truth for managed surfaces.
 
 - **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
   is NOT reset to the baseline; the baseline is for fresh/dev envs only.
+- Native Supabase Branching is usable only when `../migration-lineage.json` says
+  the baseline version and production cutoff are aligned. Moving files to
+  `../migration-archive/` alone does not change the parent project's ledger.
 - **Production still needs the 2026-05-30 fixes applied** (under `../migration-archive/`,
   also in git history) — owner-gated:
   - `20260602008000_payroll_entries_self_read_paid_only.sql`
@@ -63,4 +71,7 @@ Full procedure: `docs/runbooks/db/re-baseline.md`. In short — owner dumps
   defaults the migration role cannot set),
 - prepend `SET check_function_bodies = false;` with `private` before `public`,
 - `git mv` the squashed forward chain into `supabase/migration-archive/`,
+- classify required bootstrap DML into seed/fold instead of losing it in a schema
+  dump,
+- update `../migration-lineage.json`,
 - prove `pnpm db:baseline:local-check` exits 0 and `pnpm db:types` shows no diff.

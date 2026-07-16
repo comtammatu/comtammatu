@@ -15,7 +15,9 @@ const DEFAULT_API_PORT = 55421;
 const DEFAULT_DB_PORT = 55432;
 const DEFAULT_SHADOW_PORT = 55430;
 const DEFAULT_TIMEOUT_MS = 600_000;
-const DEFAULT_BASELINE = "supabase/migrations/00000000000000_baseline.sql";
+const DEFAULT_BASELINE = JSON.parse(
+  readFileSync("supabase/migration-lineage.json", "utf8"),
+).baselineFile;
 // The baseline is self-contained (public + private dumped together), so no
 // bootstrap is prepended by default. Pass --bootstrap=<path> only for an older
 // public-only baseline whose private.* references need a separate prepend.

@@ -22,6 +22,9 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
 - `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
 - `supabase/migration-archive/` — historical and squashed forward migrations
   retained for archaeology, not replayed by the active chain.
+- `supabase/migration-lineage.json` — machine gate for the baseline hash,
+  production cutoff, active-forward ceiling, and native Preview eligibility.
+  `blocked_pending_rebaseline` forbids parent-history Preview creation.
 - `supabase/migrations/20260627140000_fold_managed_surfaces.sql` — extensions /
   storage buckets + RLS policies / realtime publication / cron jobs (excluded from
   the baseline schema dump, folded back in here). It is a forward migration in the

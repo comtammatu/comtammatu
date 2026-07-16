@@ -1540,7 +1540,7 @@ trigger and its helper.
       drawer IA; the obsolete capability rollout and index entry are removed;
       ADR 0011 no longer records the retired Self-Order realtime topic.
 
-### Preview migration-chain repair (T2)
+### Preview migration-chain containment (T3)
 
 Skill plan: repo rules = engineering + skills + database + workflow; external = Supabase; runtime = CodeGraph + migration-list precheck + Preview Branch; skipped = production apply and schema mutation.
 
@@ -1549,9 +1549,13 @@ BA: rules = historical SQL remains available to developers but never executes in
 Dev: approach = move the historical tree outside `supabase/migrations`, update exact path references, and add one static guard; risk = documentation/test path drift.
 QA: tests = migration discovery excludes the archive, baseline replay, focused static test, and Preview provisioning; regressions to recheck = migration list has no archived versions.
 
-Attestation: the source layout matches this T2 contract. Focused static tests,
-typecheck, lint, and build pass; baseline replay is blocked by unavailable Docker,
-and Preview provisioning requires the unpushed migration layout to reach GitHub.
+Attestation: the source layout and fail-closed guards match this T3 contract.
+The baseline plus all 156 active forward migrations replays locally without
+executing the archive; lineage, guard-sync, typecheck, lint, build, and the full
+test suite pass. Native Preview branch creation is intentionally blocked while
+the manifest is `blocked_pending_rebaseline`. Production is untouched. The next
+owner-gated database step is to reconcile the Production ledger, regenerate the
+baseline, record its exact cutoff and hash, then reopen Preview rehearsal.
 
 ### Known gap, out of scope
 
