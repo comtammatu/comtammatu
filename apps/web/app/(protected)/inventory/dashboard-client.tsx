@@ -849,7 +849,13 @@ export function DashboardClient(props: DashboardProps) {
               : messages.inventory.dashboard.mainFlowsOperatorDescription}
           </p>
         </div>
-        <LinkCardGrid>
+        <LinkCardGrid
+          className={
+            flowCards.length === 4
+              ? "lg:grid-cols-2 xl:grid-cols-2"
+              : "xl:grid-cols-3"
+          }
+        >
           {flowCards.map((flow) => {
             const Icon = flow.icon;
             const primaryAction =
