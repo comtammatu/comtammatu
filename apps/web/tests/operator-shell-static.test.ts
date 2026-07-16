@@ -189,10 +189,12 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /presentation="stations"/);
   assert.match(home, /presentation="plain"/);
   assert.match(home, /stationDescriptions/);
-  assert.match(home, /claims\.user_role === "owner"/);
+  assert.match(home, /canAccess\(claims\.user_role, "admin_dashboard"\)/);
+  assert.doesNotMatch(home, /claims\.user_role === "owner"/);
   assert.match(home, /resolveOperatorTileIcon/);
   assert.match(home, /getBranchPrimaryHomeGroup/);
-  assert.doesNotMatch(home, /BranchOperatorControlBar|LayoutDashboard/);
+  assert.doesNotMatch(home, /BranchOperatorControlBar/);
+  assert.match(home, /MODULE_ACL\.admin_dashboard\.path/);
   assert.doesNotMatch(homeContract, /"\/team"|"\/stock(?:\/|")/);
   for (const suffix of ["/pos", "/kds", "/runner", "/menu-limits"]) {
     assert.ok(homeContract.includes(`"${suffix}"`), suffix);
@@ -426,7 +428,7 @@ test("operator home keeps KPI overview out of the Hub", () => {
   assert.doesNotMatch(home, /KpiCard|HubOverview|fetchBranchDayStatus/);
 });
 
-test("branch dashboard renders command lanes instead of Office-style KPI summary", () => {
+test("branch dashboard renders command lanes instead of Admin Dashboard-style KPI summary", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
@@ -519,7 +521,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     assert.match(source, /redirect\(`\/br\/\$\{branchId\}\/settings`\)/);
     assert.doesNotMatch(
       source,
-      /<AppPage\b|AppPageHeader|BranchManagementShell|OfficeModuleShell|ManagementShell|KpiCard/,
+      /<AppPage\b|AppPageHeader|BranchManagementShell|AdminDashboardModuleShell|ManagementShell|KpiCard/,
       path,
     );
   }

@@ -23,23 +23,15 @@ export type EmployeeClockRoutes = {
   managerHr: string;
 };
 
-const DEFAULT_CLOCK_ROUTES: EmployeeClockRoutes = {
-  home: "/br",
-  tasks: "/br",
-  schedule: "/br",
-  profile: "/br",
-  managerHr: "/hr",
-};
-
 type StaffClockPageContentProps = {
-  routes?: EmployeeClockRoutes;
+  routes: EmployeeClockRoutes;
   plane?: ClockPlane;
 };
 
 export async function StaffClockPageContent({
-  routes = DEFAULT_CLOCK_ROUTES,
+  routes,
   plane = "employee",
-}: StaffClockPageContentProps = {}) {
+}: StaffClockPageContentProps) {
   const state = await getTodayWorkState();
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
 
@@ -81,4 +73,3 @@ export async function StaffClockPageContent({
     </PageShell>
   );
 }
-

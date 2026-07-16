@@ -1,6 +1,7 @@
 import { Fragment, Suspense } from "react";
 import { notFound } from "next/navigation";
 import {
+  canAccess,
   MODULE_ACL,
   resolveOperatorTiles,
   type BranchKind,
@@ -66,15 +67,14 @@ export default async function OperatorHomePage({
   // Pre-clock-in tiles stay visible so the operator understands what unlocks.
   const tilesLockedBeforeClockIn = isFloorRole && beforeClockIn;
 
-  const isBranchManagerOrOwner =
-    claims.user_role === "branch_manager" || claims.user_role === "owner";
+  const canManageBranch = canAccess(claims.user_role, "branch_settings");
 
   const branchTodayGroup = getBranchPrimaryHomeGroup(rawGroups);
   const branchTodayTileLimit = branchTodayGroup
     ? getBranchHomeTileLimit(branchTodayGroup.id)
     : 0;
 
-  const groups = isBranchManagerOrOwner
+  const groups = canManageBranch
     ? (() => {
         const managerHomeHrefs = getOperatorHomeTileHrefs(
           rawGroups,
@@ -98,14 +98,8 @@ export default async function OperatorHomePage({
         ].filter((group) => group.tiles.length > 0)
       : [];
 
-  const branchManagementLinks = isBranchManagerOrOwner
+  const branchManagementLinks = canManageBranch
     ? [
-        {
-          key: "branch-menu",
-          href: MODULE_ACL.menu.path,
-          icon: resolveOperatorTileIcon("Utensils"),
-          title: MODULE_ACL.menu.label,
-        },
         {
           key: "branch-settings",
           href: `/br/${context.branchId}/settings`,
@@ -115,35 +109,16 @@ export default async function OperatorHomePage({
       ]
     : [];
 
-  const ownerWorkspaceLinks =
-    claims.user_role === "owner"
-      ? [
-          {
-            key: "owner-finance",
-            href: MODULE_ACL.finance.path,
-            icon: resolveOperatorTileIcon("ChartBar"),
-            title: MODULE_ACL.finance.label,
-          },
-          {
-            key: "owner-hr",
-            href: MODULE_ACL.hr.path,
-            icon: resolveOperatorTileIcon("Users"),
-            title: MODULE_ACL.hr.label,
-          },
-          {
-            key: "owner-payroll",
-            href: MODULE_ACL.hr_payroll.path,
-            icon: resolveOperatorTileIcon("Briefcase"),
-            title: MODULE_ACL.hr_payroll.label,
-          },
-          {
-            key: "owner-settings",
-            href: MODULE_ACL.settings.path,
-            icon: resolveOperatorTileIcon("Settings"),
-            title: MODULE_ACL.settings.label,
-          },
-        ]
-      : [];
+  const ownerAdminLinks = canAccess(claims.user_role, "admin_dashboard")
+    ? [
+        {
+          key: "owner-admin-dashboard",
+          href: MODULE_ACL.admin_dashboard.path,
+          icon: resolveOperatorTileIcon("LayoutDashboard"),
+          title: APP_COPY_VI.adminDashboardTitle,
+        },
+      ]
+    : [];
 
   return (
     <BranchOperatorPage title={APP_COPY_VI.operatorHome}>
@@ -212,8 +187,8 @@ export default async function OperatorHomePage({
       />
 
       <BranchOperatorActionSection
-        title={APP_COPY_VI.storeManagement}
-        links={ownerWorkspaceLinks}
+        title={APP_COPY_VI.adminDashboardTitle}
+        links={ownerAdminLinks}
         columns={2}
         mobileColumns={2}
         wideColumns

@@ -6,7 +6,7 @@ import {
   getDefaultRedirect,
 } from "../scope";
 import { buildAccessDeniedPath } from "../blocked-state";
-import { ADMIN_ROLES, type JwtClaims, type StaffRole } from "../types";
+import type { JwtClaims, StaffRole } from "../types";
 import { canAccess, MODULE_ACL } from "../module-acl";
 import {
   resolveDiscoveredAppGroups,
@@ -15,6 +15,7 @@ import {
 import { resolveRoleHomeLink } from "../nav-resolution";
 import { resolveRouteFamilyContract } from "../route-map";
 import {
+  isAdminDashboardRoutePath,
   isPublicAppPath,
   resolveModuleFromPath,
   isRunnerPublicDisplayPath,
@@ -98,6 +99,14 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
     "admin",
   );
   assert.equal(
+    resolveRouteFamilyContract("/admin")?.surface,
+    "admin_dashboard",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/inventory/grn/123")?.surface,
+    "admin_dashboard",
+  );
+  assert.equal(
     resolveRouteFamilyContract("/br/3/dashboard")?.id,
     "branch-dashboard",
   );
@@ -166,6 +175,38 @@ test("unknown inventory paths are not active route contracts", () => {
   }
 });
 
+test("route resolver rejects segment lookalikes", () => {
+  for (const pathname of [
+    "/admin/settings-old",
+    "/finance-old",
+    "/branches-old",
+    "/menu-old",
+    "/orders-old",
+    "/hr-old",
+    "/notifications-old",
+    "/br/3/shift-old",
+    "/br/3/profile-old",
+    "/br/3/stock-old",
+    "/br/3/orders-old",
+    "/br/3/dashboard-old",
+    "/br/3/team-old",
+    "/br/3/settings-old",
+  ]) {
+    assert.equal(resolveModuleFromPath(pathname), null, pathname);
+  }
+});
+
+test("resolvePostLoginRedirect rejects segment lookalikes", () => {
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/orders-old"),
+    "/br/3",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("owner"), "/admin/settings-old"),
+    "/",
+  );
+});
+
 test("resolvePostLoginRedirect → null returnTo → default", () => {
   assert.equal(resolvePostLoginRedirect(makeClaims("owner"), null), "/");
   assert.equal(
@@ -204,7 +245,7 @@ test("resolvePostLoginRedirect → removed admin aliases fall back", () => {
 });
 
 test("resolvePostLoginRedirect → admin returnTo to retired employee route falls back to Branch entry", () => {
-  for (const role of ADMIN_ROLES) {
+  for (const role of MODULE_ACL.admin_dashboard.allowedRoles) {
     assert.equal(resolvePostLoginRedirect(makeClaims(role), "/employee"), "/");
     assert.equal(
       resolvePostLoginRedirect(makeClaims(role), "/employee/profile"),
@@ -214,7 +255,7 @@ test("resolvePostLoginRedirect → admin returnTo to retired employee route fall
 });
 
 test("resolvePostLoginRedirect → admin returnTo to old checkout approvals falls back", () => {
-  for (const role of ADMIN_ROLES) {
+  for (const role of MODULE_ACL.admin_dashboard.allowedRoles) {
     assert.equal(
       resolvePostLoginRedirect(
         makeClaims(role),
@@ -246,6 +287,33 @@ test("resolvePostLoginRedirect → branch_manager cannot keep admin returnTo", (
       "/br/3",
     );
   }
+});
+
+test("resolvePostLoginRedirect → non-owner Admin Dashboard families fall back", () => {
+  for (const role of ["branch_manager", "cashier"] as const) {
+    for (const returnTo of [
+      "/admin",
+      "/menu",
+      "/orders?status=open",
+      "/inventory/stock",
+      "/finance/revenue",
+      "/branches",
+      "/hr",
+    ]) {
+      assert.equal(
+        resolvePostLoginRedirect(makeClaims(role, 3), returnTo),
+        "/br/3",
+        `${role}: ${returnTo}`,
+      );
+    }
+  }
+});
+
+test("resolvePostLoginRedirect → cashier keeps Branch-native orders", () => {
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/orders"),
+    "/br/3/orders",
+  );
 });
 
 test("resolvePostLoginRedirect → cashier accessing own-branch POS → allowed", () => {
@@ -294,13 +362,26 @@ test("resolvePostLoginRedirect → external URL is rejected", () => {
   );
 });
 
-test("resolvePostLoginRedirect → branch_manager accessing inventory suppliers → allowed", () => {
+test("resolvePostLoginRedirect → branch_manager top-level inventory falls back to Branch", () => {
   assert.equal(
     resolvePostLoginRedirect(
       makeClaims("branch_manager", 3),
       "/inventory/suppliers",
     ),
-    "/inventory/suppliers",
+    "/br/3",
+  );
+});
+
+test("resolvePostLoginRedirect → Branch-native capabilities remain available", () => {
+  for (const pathname of ["/br/3/stock", "/br/3/orders", "/br/3/menu-limits"]) {
+    assert.equal(
+      resolvePostLoginRedirect(makeClaims("branch_manager", 3), pathname),
+      pathname,
+    );
+  }
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/orders"),
+    "/br/3/orders",
   );
 });
 
@@ -362,10 +443,10 @@ test("resolvePostLoginRedirect → owner cover-ca POS/KDS/Runner returnTo resolv
   }
 });
 
-test("resolvePostLoginRedirect → branch_manager can enter HR shifts but not payroll", () => {
+test("resolvePostLoginRedirect → branch_manager cannot enter Admin Dashboard HR", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr"),
-    "/hr",
+    "/br/3",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr/payroll"),
@@ -508,7 +589,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
 });
 
 test("canAccess → only owner can access tenant admin modules", () => {
-  const adminModules = ["staff", "settings"] as const;
+  const adminModules = ["admin_dashboard", "staff", "settings"] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
     for (const role of ["branch_manager", "cashier", "chef"] as const) {
@@ -578,14 +659,19 @@ test("canAccess → owner can cover-ca POS/KDS/Runner; floor roles unchanged", (
   }
 });
 
-test("canAccess → branch manager can access HR shift workspace but not payroll", () => {
-  assert.equal(canAccess("branch_manager", "hr"), true);
+test("canAccess → Admin Dashboard HR and payroll are owner-only", () => {
+  assert.equal(canAccess("branch_manager", "hr"), false);
   assert.equal(canAccess("branch_manager", "hr_payroll"), false);
   assert.equal(canAccess("owner", "hr_payroll"), true);
 });
 
 test("resolveDiscoveredApps → settings entries are discoverable for authorized roles", () => {
   const ownerApps = resolveDiscoveredApps("owner");
+  assert.ok(
+    ownerApps.some(
+      (app) => app.moduleKey === "admin_dashboard" && app.href === "/admin",
+    ),
+  );
   assert.ok(
     ownerApps.some(
       (app) => app.moduleKey === "settings" && app.href === "/admin/settings",
@@ -670,26 +756,17 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
       ?.surface,
     "branch_operation",
   );
-  assert.ok(
-    branchManagerApps.some(
-      (app) => app.moduleKey === "menu" && app.href === "/menu",
-    ),
+  assert.equal(
+    branchManagerGroups.some((group) => group.surface === "admin_dashboard"),
+    false,
   );
-  assert.ok(
-    branchManagerApps.some(
-      (app) => app.moduleKey === "orders" && app.href === "/orders",
-    ),
-  );
-  assert.ok(
-    branchManagerApps.some(
-      (app) => app.moduleKey === "inventory" && app.href === "/inventory",
-    ),
-  );
-  assert.ok(
-    branchManagerApps.some(
-      (app) => app.moduleKey === "hr" && app.href === "/hr",
-    ),
-  );
+  for (const href of ["/admin", "/menu", "/orders", "/inventory", "/hr"]) {
+    assert.equal(
+      branchManagerApps.some((app) => app.href === href),
+      false,
+      href,
+    );
+  }
 
   const cashierApps = resolveDiscoveredApps("cashier", 3);
   assert.equal(
@@ -705,6 +782,31 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
 test("getSafeInternalReturnTo → accepts internal paths", () => {
   assert.equal(getSafeInternalReturnTo("/finance"), "/finance");
   assert.equal(getSafeInternalReturnTo("/orders?x=1#y"), "/orders?x=1#y");
+});
+
+test("isAdminDashboardRoutePath → classifies only tenant management families", () => {
+  for (const pathname of [
+    "/admin",
+    "/admin/settings",
+    "/menu",
+    "/orders/history",
+    "/inventory/grn",
+    "/finance",
+    "/branches",
+    "/hr/payroll",
+  ]) {
+    assert.equal(isAdminDashboardRoutePath(pathname), true, pathname);
+  }
+
+  for (const pathname of [
+    "/br/7/orders",
+    "/br/7/stock",
+    "/br/7/menu-limits",
+    "/notifications",
+    "/orders-old",
+  ]) {
+    assert.equal(isAdminDashboardRoutePath(pathname), false, pathname);
+  }
 });
 
 test("getSafeInternalReturnTo → rejects unsafe paths", () => {

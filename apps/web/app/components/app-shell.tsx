@@ -34,7 +34,7 @@ import {
 } from "@/lib/shell-primitives";
 import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
-import { WorkspaceBottomNav } from "@/components/workspace-bottom-nav";
+import { AdminDashboardBottomNav } from "@/components/admin-dashboard-bottom-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
@@ -58,8 +58,8 @@ export interface AppShellProps {
   tier2: ShellNavGroup[];
   shellHeader?: AppShellHeaderConfig;
   /**
-   * Mobile-only workspace bottom navbar (same nav model as the sidebar +
-   * drawer trigger). Default true for all back-office shells.
+   * Mobile-only Admin Dashboard bottom navbar (same nav model as the sidebar +
+   * drawer trigger). Default true for all Admin Dashboard shells.
    */
   bottomNav?: boolean;
 }
@@ -91,6 +91,7 @@ export function AppShell({
     () => findActivePrimaryNavItem(tier1, pathname),
     [tier1, pathname],
   );
+  const showBottomNav = bottomNav && pathname !== "/admin";
 
   return (
     <SidebarProvider open={true}>
@@ -234,13 +235,17 @@ export function AppShell({
           ) : null}
         </header>
 
-        <div className={cn("flex-1 p-3 md:p-4", bottomNav && "pb-24 lg:pb-4")}>
+        <div
+          className={cn("flex-1 p-3 md:p-4", showBottomNav && "pb-24 lg:pb-4")}
+        >
           <AppShellPaddingBoundary>
             <div className="flex min-h-0 flex-col gap-4">{children}</div>
           </AppShellPaddingBoundary>
         </div>
       </SidebarInset>
-      {bottomNav ? <WorkspaceBottomNav tier1={tier1} tier2={tier2} /> : null}
+      {showBottomNav ? (
+        <AdminDashboardBottomNav tier1={tier1} tier2={tier2} />
+      ) : null}
     </SidebarProvider>
   );
 }

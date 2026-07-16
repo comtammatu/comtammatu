@@ -8,7 +8,9 @@ import {
 } from "../app/(protected)/inventory/_lib/inventory-nav";
 
 function hrefs(groups: ReturnType<typeof resolveInventoryNav>): Set<string> {
-  return new Set(groups.flatMap((group) => group.items.map((item) => item.href)));
+  return new Set(
+    groups.flatMap((group) => group.items.map((item) => item.href)),
+  );
 }
 
 const shellSource = readFileSync(
@@ -36,8 +38,8 @@ const qcSettingsSource = readFileSync(
   "app/(protected)/inventory/settings/qc/qc-settings-client.tsx",
   "utf8",
 );
-const workspaceBottomNavSource = readFileSync(
-  "app/components/workspace-bottom-nav.tsx",
+const adminDashboardBottomNavSource = readFileSync(
+  "app/components/admin-dashboard-bottom-nav.tsx",
   "utf8",
 );
 
@@ -64,13 +66,14 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
     "/inventory/ingredients",
     "/inventory/recipes",
   ]) {
-    assert.equal(visible.has(href), true, `owner inventory nav must include ${href}`);
+    assert.equal(
+      visible.has(href),
+      true,
+      `owner inventory nav must include ${href}`,
+    );
   }
 
-  for (const href of [
-    "/inventory/transfers",
-    "/inventory/supplier-returns",
-  ]) {
+  for (const href of ["/inventory/transfers", "/inventory/supplier-returns"]) {
     assert.equal(
       visible.has(href),
       false,
@@ -138,7 +141,10 @@ test("inventory nav click targets preserve branch URL scope", () => {
   assert.equal(stockItem?.href, "/inventory/stock");
   assert.equal(stockItem?.linkHref, "/inventory/stock?branchId=3");
   assert.match(appShellSource, /href=\{subItem\.linkHref \?\? subItem\.href\}/);
-  assert.match(workspaceBottomNavSource, /href: item\.linkHref \?\? item\.href/);
+  assert.match(
+    adminDashboardBottomNavSource,
+    /href: item\.linkHref \?\? item\.href/,
+  );
   assert.equal(withInventoryBranchNavScope(groups, null), groups);
 });
 
@@ -163,7 +169,7 @@ test("owner inventory nav excludes /inventory/drafts (folded into GRN list draft
   );
 });
 
-test("office inventory nav keeps transfer routes under Giao dịch kho", () => {
+test("Admin Dashboard inventory nav keeps transfer routes under Giao dịch kho", () => {
   const groups = resolveInventoryNav({
     userRole: "owner",
     showProcurement: true,
@@ -179,14 +185,11 @@ test("office inventory nav keeps transfer routes under Giao dịch kho", () => {
     .flatMap((group) => group.items)
     .find((item) => item.href === "/inventory/operations");
 
-  for (const href of [
-    "/inventory/stock",
-    "/inventory/stocktake",
-  ]) {
+  for (const href of ["/inventory/stock", "/inventory/stocktake"]) {
     assert.equal(
       visible.has(href),
       true,
-      `office inventory nav must advertise ${href} as an oversight entry — additive to the branch operator door at /br/[id]/stock/*`,
+      `Admin Dashboard inventory nav must advertise ${href} as an oversight entry — additive to the branch operator door at /br/[id]/stock/*`,
     );
   }
 
@@ -273,7 +276,10 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
     settingsLayoutSource,
     /<AppPage width="xwide" density="compact">/,
   );
-  assert.match(settingsLayoutSource, /<SettingsSectionNav items=\{sectionItems\}/);
+  assert.match(
+    settingsLayoutSource,
+    /<SettingsSectionNav items=\{sectionItems\}/,
+  );
   assert.doesNotMatch(settingsLayoutSource, /from "lucide-react"/);
   assert.doesNotMatch(settingsLayoutSource, /icon: Icon[A-Z]/);
   assert.doesNotMatch(settingsLayoutSource, /settings\/expiry|icon: "expiry"/);

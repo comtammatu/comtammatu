@@ -72,6 +72,14 @@ const stockLevelsMigration = readFileSync(
   "utf8",
 );
 
+const branchOpsAuthorizationMigration = readFileSync(
+  new URL(
+    "../../../supabase/migrations/20260715220008_harden_branch_ops_realtime_scope.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 const baseline = readFileSync(
   new URL(
     "../../../supabase/migrations/00000000000000_baseline.sql",
@@ -148,6 +156,24 @@ test("DB trigger broadcasts to the matching topic/event on a private channel", (
 test("realtime.messages receive policy is scoped to branch ops topics", () => {
   assert.match(migration, /realtime\.topic\(\)\s+LIKE\s+'branch:%:ops'/);
   assert.match(migration, /can_read_branch_ops/);
+});
+
+test("branch ops topics require an active profile and active assigned branch", () => {
+  assert.match(branchOpsAuthorizationMigration, /b\.is_active IS TRUE/);
+  assert.match(branchOpsAuthorizationMigration, /pr\.is_active IS TRUE/);
+  assert.match(
+    branchOpsAuthorizationMigration,
+    /pr\.branch_id = p_branch_id[\s\S]*public\.auth_is_owner\(pr\.id\)/,
+  );
+  assert.doesNotMatch(branchOpsAuthorizationMigration, /staff_permissions/);
+  assert.match(
+    branchOpsAuthorizationMigration,
+    /REVOKE ALL ON FUNCTION public\.can_read_branch_ops\(bigint\)[\s\S]*FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    branchOpsAuthorizationMigration,
+    /GRANT EXECUTE ON FUNCTION public\.can_read_branch_ops\(bigint\)[\s\S]*TO authenticated, service_role/,
+  );
 });
 
 test("POS menu sync owns branch ops refresh without a layout duplicate", () => {

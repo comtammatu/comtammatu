@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
-import { Building2 as IconBuilding2, Wallet as IconWallet } from "lucide-react";
+import {
+  Building2 as IconBuilding2,
+  LayoutDashboard as IconLayoutDashboard,
+} from "lucide-react";
 import { canAccess, MODULE_ACL } from "@comtammatu/shared/auth";
 import {
   APP_COPY_VI,
@@ -52,7 +55,7 @@ export async function WorkLocationPickerPage() {
   }
 
   const { allowedBranches } = selectOperatorBranchScope(claims, data, null);
-  const showOfficeCard = canAccess(claims.user_role, "finance");
+  const showAdminDashboardCard = canAccess(claims.user_role, "admin_dashboard");
   const orderedSites = [...allowedBranches].sort((a, b) => a.id - b.id);
   const [soleBranch] = orderedSites;
 
@@ -63,26 +66,26 @@ export async function WorkLocationPickerPage() {
   return (
     <AppPage density="compact" width="default">
       <AppPageHeader title={MODULE_ACL.branch_picker.label} />
-      {orderedSites.length > 0 || showOfficeCard ? (
-        <LinkCardGrid className="lg:grid-cols-4">
+      {orderedSites.length > 0 || showAdminDashboardCard ? (
+        <LinkCardGrid className="xl:grid-cols-3">
           {orderedSites.map((site) => (
             <AppLinkCard
               key={site.id}
               href={`/br/${site.id}`}
               title={site.name}
               description={getSiteKindLabelVi(resolveSiteKind(site))}
-              icon={<IconBuilding2 />}
+              icon={<IconBuilding2 aria-hidden="true" />}
               ctaLabel="Chọn"
             />
           ))}
-          {showOfficeCard ? (
+          {showAdminDashboardCard ? (
             <AppLinkCard
-              href={MODULE_ACL.finance.path}
-              title={APP_COPY_VI.officePlaneTitle}
-              description={APP_COPY_VI.officePlaneDescription}
-              icon={<IconWallet />}
+              href={MODULE_ACL.admin_dashboard.path}
+              title={APP_COPY_VI.adminDashboardTitle}
+              description={APP_COPY_VI.adminDashboardDescription}
+              icon={<IconLayoutDashboard aria-hidden="true" />}
               tone="secondary"
-              ctaLabel={APP_COPY_VI.officePlaneCta}
+              ctaLabel={APP_COPY_VI.adminDashboardCta}
             />
           ) : null}
         </LinkCardGrid>
