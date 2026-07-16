@@ -132,7 +132,7 @@ test("SePay webhook prefers full transfer content code over truncated code field
 test("SePay evidence invokes the POS settlement service only after an exact match", () => {
   const route = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
   const migration = readRepoFile(
-    "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
+    "supabase/migration-archive/20260711024758_sepay_webhook_order_evidence.sql",
   );
 
   assert.match(migration, /ADD COLUMN IF NOT EXISTS order_id/);
@@ -338,10 +338,10 @@ test("Printed provisional bills do not include payment QR", () => {
 
 test("SePay webhook retries receipt enqueue on already-completed settlements", () => {
   const migration = readRepoFile(
-    "supabase/migrations/20260703140015_sepay_webhook_receipt_already_completed.sql",
+    "supabase/migration-archive/20260703140015_sepay_webhook_receipt_already_completed.sql",
   );
   const baseline = readRepoFile(
-    "supabase/migrations/00000000000000_baseline.sql",
+    "supabase/migrations/20260716093507_baseline.sql",
   );
 
   assert.match(
@@ -560,7 +560,7 @@ test("VietQR bank account configuration lives in Admin settings, not env", () =>
 test("MoMo webhook accepts completed unconditionally per no-stock-deduction policy, keeps defensive stock_failed 500", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/momo/route.ts");
   const migration = readRepoFile(
-    "supabase/migrations/20260715170000_add_guarded_payment_write_rpcs.sql",
+    "supabase/migration-archive/20260715170000_add_guarded_payment_write_rpcs.sql",
   );
 
   // No-stock-deduction policy (migration 20260611001000): completed /

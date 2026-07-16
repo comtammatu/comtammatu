@@ -6,7 +6,7 @@ import { test } from "node:test";
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
 const migration = read(
-  "../../supabase/migrations/20260710032423_self_order_cash_invoice_binding.sql",
+  "../../supabase/migration-archive/20260710032423_self_order_cash_invoice_binding.sql",
 );
 const paymentActions = read(
   "app/(protected)/br/[branchId]/pos/payment-actions.ts",

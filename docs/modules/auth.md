@@ -6,7 +6,7 @@
 
 Authentication and authorization for staff/operator surfaces. Protected requests pass through this module before reaching feature code. The auth chain spans four layers: Supabase Auth (identity), JWT custom claims hook (position + legacy-role injection), proxy.ts (route-level ACL enforcement), and RLS with `has_permission()` (row-level, permission-driven). Public customer surfaces such as `/br/[branchId]/runner` bypass staff login by design.
 
-**Owner:** `packages/shared/src/auth/` + `apps/web/proxy.ts` + `supabase/migrations/00000000000000_baseline.sql` + `supabase/migrations/*auth*`
+**Owner:** `packages/shared/src/auth/` + `apps/web/proxy.ts` + `supabase/migrations/20260716093507_baseline.sql` + `supabase/migrations/*auth*`
 
 Canonical role/scope/route boundaries live in `docs/spec/role-route-matrix.md`.
 `module-acl.ts` remains the runtime route fast-gate source of truth; route,
@@ -48,9 +48,9 @@ explicitly derives a bucket from it.
 | `apps/web/app/(public)/access-denied/page.tsx`        | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
 | `apps/web/app/_lib/auth.ts`                           | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
 | `apps/web/proxy.ts`                                   | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
-| `supabase/migrations/00000000000000_baseline.sql`     | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
-| `supabase/migrations/00000000000000_baseline.sql`     | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
-| `supabase/migrations/00000000000000_baseline.sql`     | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
+| `supabase/migrations/20260716093507_baseline.sql`     | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
+| `supabase/migrations/20260716093507_baseline.sql`     | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
+| `supabase/migrations/20260716093507_baseline.sql`     | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
 | `supabase/migrations/*branch_ops_realtime_scope.sql`  | Active profile/branch authorization for private `branch:{id}:ops` topics                       | Realtime scope gate       |
 | `apps/web/app/(protected)/hr/staff/[id]/permissions/` | HR UI for grant/revoke + audit (page + client + actions)                                       | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                    | Server helper `currentUserHasPermission()`                                                     | App-side permission reads |
@@ -91,7 +91,7 @@ Two DB-side gates exist; pick the right one:
 
 ## Invariants (post H3a, 2026-05-07)
 
-- **`profiles.position_id` is NOT NULL** + FK `ON DELETE RESTRICT`. Every active or inactive profile MUST point to a seeded position in its tenant. Enforced in `supabase/migrations/00000000000000_baseline.sql`.
+- **`profiles.position_id` is NOT NULL** + FK `ON DELETE RESTRICT`. Every active or inactive profile MUST point to a seeded position in its tenant. Enforced in `supabase/migrations/20260716093507_baseline.sql`.
   - `handle_new_user` trigger raises `position_not_resolved` (SQLSTATE P0001) if `raw_app_meta_data->>'role'` does not map to a seeded position — signup fails loudly instead of inserting a broken profile.
   - `admin_update_profile` raises the same exception if a manager passes a role that does not resolve to a position for the tenant.
   - Deleting a position with active profiles raises `foreign_key_violation` (SQLSTATE 23503). Admins must reassign profiles before deleting.

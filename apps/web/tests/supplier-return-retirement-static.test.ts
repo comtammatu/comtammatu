@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
@@ -71,9 +72,11 @@ test("supplier-return UI copy is retired while GRN rejection copy stays neutral"
 });
 
 test("supplier-return history, RPCs, and GRN integrity gates remain", () => {
-  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const baseline = normalizePgDumpSql(
+    read("supabase/migrations/20260716093507_baseline.sql"),
+  );
   const integrityMigration = read(
-    "supabase/migrations/20260708130500_inventory_supplier_integrity_gates.sql",
+    "supabase/migration-archive/20260708130500_inventory_supplier_integrity_gates.sql",
   );
   const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
 

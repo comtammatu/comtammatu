@@ -37,10 +37,10 @@ const grnCreateController = readRepo(
   "apps/web/lib/inventory/use-grn-create-controller.ts",
 );
 const migration = readRepo(
-  "supabase/migrations/20260708111916_fix_grn_draft_branch_scope.sql",
+  "supabase/migration-archive/20260708111916_fix_grn_draft_branch_scope.sql",
 );
 const poDraftMigration = readRepo(
-  "supabase/migrations/20260708130514_separate_free_and_po_grn_drafts.sql",
+  "supabase/migration-archive/20260708130514_separate_free_and_po_grn_drafts.sql",
 );
 
 test("GRN supplier drafts are looked up in the selected receiving branch", () => {

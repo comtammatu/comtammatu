@@ -11,7 +11,7 @@ function read(path: string): string {
 
 const issueActions = read("apps/web/app/(protected)/inventory/issue-actions.ts");
 const migration = read(
-  "supabase/migrations/20260709104156_branch_issue_location_to_kitchen.sql",
+  "supabase/migration-archive/20260709104156_branch_issue_location_to_kitchen.sql",
 );
 
 test("branch stock issue drafts prefer warehouse before default issue", () => {

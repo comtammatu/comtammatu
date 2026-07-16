@@ -30,7 +30,7 @@ const stockOutcomeAvailabilityMigration = readFileSync(
 const ingredientPoolAvailabilityMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260709143000_pos_menu_availability_ingredient_pool.sql",
+    "../../supabase/migration-archive/20260709143000_pos_menu_availability_ingredient_pool.sql",
   ),
   "utf8",
 );
@@ -54,7 +54,7 @@ const menuLimitsActions = readFileSync(
 const warehouseStockGateMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260711120000_enable_pos_sale_stock_deduction_at_branch_warehouse.sql",
+    "../../supabase/migration-archive/20260711120000_enable_pos_sale_stock_deduction_at_branch_warehouse.sql",
   ),
   "utf8",
 );
@@ -62,7 +62,7 @@ const warehouseStockGateMigration = readFileSync(
 const singleWarehouseMigration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260710220000_single_warehouse_retire_branch_kitchen.sql",
+    "../../supabase/migration-archive/20260710220000_single_warehouse_retire_branch_kitchen.sql",
   ),
   "utf8",
 );

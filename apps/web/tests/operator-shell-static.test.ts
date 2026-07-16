@@ -770,7 +770,7 @@ test("employee profile self-service update uses the scoped profile RPC", () => {
   );
   const copy = read("apps/web/lib/messages/employee.ts");
   const migration = read(
-    "supabase/migrations/20260707165303_add_profile_birth_date.sql",
+    "supabase/migration-archive/20260707165303_add_profile_birth_date.sql",
   );
 
   assert.match(action, /z\.object/);

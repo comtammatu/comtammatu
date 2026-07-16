@@ -1,5 +1,5 @@
 -- Rollback M3: restore original hook (no position claim).
--- Copy of supabase/migrations/20260401000001_jwt_custom_claims_hook.sql body.
+-- Copy of supabase/migration-archive/20260401000001_jwt_custom_claims_hook.sql body.
 
 CREATE OR REPLACE FUNCTION public.custom_access_token_hook(event JSONB)
 RETURNS JSONB

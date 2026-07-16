@@ -1,6 +1,6 @@
 # Supabase migrations — baseline-first
 
-`00000000000000_baseline.sql` is the self-contained install for a fresh
+`20260716093507_baseline.sql` is the self-contained install for a fresh
 environment: a point-in-time `pg_dump` of the production `public` + `private`
 schemas. `private` is emitted first so public triggers/policies that reference
 `private.*` resolve, and `check_function_bodies` is disabled at the top so the
@@ -12,13 +12,15 @@ plus migrations that self-assert production-only state), which is why this singl
 squashed baseline exists.
 
 The machine-readable lineage state lives in `../migration-lineage.json`. When it
-is `blocked_pending_rebaseline`, native Preview creation is forbidden and the
-active forward count is frozen; do not raise the ceiling or patch the baseline
-hash. `pnpm lint:migration-lineage` enforces this contract.
+is `blocked_pending_rebaseline`, repo-managed Preview creation is forbidden and
+the active forward count is frozen; do not raise the ceiling or patch the
+baseline hash. `pnpm lint:migration-lineage` enforces this contract. An installed
+Supabase GitHub App runs outside this repo guard and must be disabled in Supabase
+or cleaned up explicitly while lineage is blocked.
 
 ## What's here
 
-- `00000000000000_baseline.sql` — full `public` + `private` schema: tables,
+- `20260716093507_baseline.sql` — full `public` + `private` schema: tables,
   functions, RLS policies, indexes, grants, materialized views, the auth hook
   (`custom_access_token_hook` + its grant), and the `private` schema helpers.
   Apply first on a fresh env. Self-contained — no separate bootstrap file.
@@ -30,7 +32,7 @@ hash. `pnpm lint:migration-lineage` enforces this contract.
 
 `pg_dump --schema=public --schema=private` excludes Supabase-managed surfaces, so
 they are folded back in as the forward migration
-`20260627140000_fold_managed_surfaces.sql`. It is idempotent (`CREATE … IF NOT
+`20260716093508_fold_managed_surfaces.sql`. It is idempotent (`CREATE … IF NOT
 EXISTS`, `DROP … IF EXISTS` + recreate, `DO $$ … $$` guards) and applied
 automatically by `supabase db start` / `supabase db reset` / Supabase Branching as
 part of the chain — there is no separate manual apply step:
@@ -55,11 +57,6 @@ single source of truth for managed surfaces.
 - Native Supabase Branching is usable only when `../migration-lineage.json` says
   the baseline version and production cutoff are aligned. Moving files to
   `../migration-archive/` alone does not change the parent project's ledger.
-- **Production still needs the 2026-05-30 fixes applied** (under `../migration-archive/`,
-  also in git history) — owner-gated:
-  - `20260602008000_payroll_entries_self_read_paid_only.sql`
-  - `20260602009000_attendance_writes_revoke_direct_insert.sql`
-  - `20260602010000_rls_policy_dedup.sql`
 
 ## Regenerating the baseline (re-baseline)
 
@@ -69,8 +66,11 @@ Full procedure: `docs/runbooks/db/re-baseline.md`. In short — owner dumps
 
 - strip `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin …` (Supabase-managed
   defaults the migration role cannot set),
+- neutralize environment-managed table/sequence ACL defaults before replaying
+  the explicit production grants,
 - prepend `SET check_function_bodies = false;` with `private` before `public`,
 - `git mv` the squashed forward chain into `supabase/migration-archive/`,
+- re-version the managed-surfaces fold strictly after the new baseline cutoff,
 - classify required bootstrap DML into seed/fold instead of losing it in a schema
   dump,
 - update `../migration-lineage.json`,

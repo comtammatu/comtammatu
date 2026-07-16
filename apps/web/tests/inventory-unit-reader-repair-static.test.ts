@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const migration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260711130000_repair_inventory_unit_readers.sql",
+    "supabase/migration-archive/20260711130000_repair_inventory_unit_readers.sql",
   ),
   "utf8",
 );

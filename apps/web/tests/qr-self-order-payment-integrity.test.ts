@@ -7,7 +7,7 @@ const migration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260710011125_self_order_payment_intent_integrity.sql",
+    "supabase/migration-archive/20260710011125_self_order_payment_intent_integrity.sql",
   ),
   "utf8",
 );
@@ -214,7 +214,7 @@ test("Self-Order SePay evidence auto-confirms through the POS settlement service
     join(
       process.cwd(),
       "../..",
-      "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
+      "supabase/migration-archive/20260711024758_sepay_webhook_order_evidence.sql",
     ),
     "utf8",
   );

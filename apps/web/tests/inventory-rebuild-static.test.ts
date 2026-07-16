@@ -17,13 +17,13 @@ const centralTransferMigration = readRepo(
   "supabase/migration-archive/20260622041251_allow_central_supply_central_kitchen_transfers.sql",
 );
 const branchKitchenTransferMigration = readRepo(
-  "supabase/migrations/20260706084210_branch_kitchen_stock_transfer.sql",
+  "supabase/migration-archive/20260706084210_branch_kitchen_stock_transfer.sql",
 );
 const branchKitchenCleanupMigration = readRepo(
-  "supabase/migrations/20260706084153_branch_kitchen_location_cleanup.sql",
+  "supabase/migration-archive/20260706084153_branch_kitchen_location_cleanup.sql",
 );
 const consumptionSourceStockMigration = readRepo(
-  "supabase/migrations/20260706084325_fix_consumption_source_stock.sql",
+  "supabase/migration-archive/20260706084325_fix_consumption_source_stock.sql",
 );
 
 function extractSqlFunctionBody(

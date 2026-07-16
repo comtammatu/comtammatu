@@ -19,7 +19,7 @@ const recipeActionSource = readRepo(
   "apps/web/app/(protected)/inventory/recipe-actions.ts",
 );
 const recipeUpsertSql = readRepo(
-  "supabase/migrations/20260708112544_allow_inventory_recipe_upsert.sql",
+  "supabase/migration-archive/20260708112544_allow_inventory_recipe_upsert.sql",
 );
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {

@@ -181,7 +181,7 @@ test("autofill bank app links keep the exact VietQR payment facts", () => {
 
 test("self-order snapshot migration does not read unassigned records", () => {
   const migration = readRepo(
-    "supabase/migrations/20260708124000_fix_self_order_snapshot_empty_session.sql",
+    "supabase/migration-archive/20260708124000_fix_self_order_snapshot_empty_session.sql",
   );
 
   assert.match(migration, /v_session_payload jsonb := NULL/);
@@ -197,7 +197,7 @@ test("self-order snapshot migration does not read unassigned records", () => {
 
 test("self-order requires an open POS session before customer writes", () => {
   const migration = readRepo(
-    "supabase/migrations/20260708125500_self_order_require_open_pos_session.sql",
+    "supabase/migration-archive/20260708125500_self_order_require_open_pos_session.sql",
   );
   const server = readWeb("lib/self-order/server.ts");
   const staffActions = readWeb(

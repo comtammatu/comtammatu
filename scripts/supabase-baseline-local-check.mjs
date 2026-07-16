@@ -30,6 +30,7 @@ function printHelp() {
 Options:
   --baseline=<path>        SQL baseline file to apply before active forward migrations. Default: ${DEFAULT_BASELINE}
   --bootstrap=<path>       Optional private-schema bootstrap prepended to baseline (none by default; baseline is self-contained).
+  --forward-cutoff=<ver>   Copy active forward migrations up to this 14-digit version.
   --workdir=<path>         Scratch workdir. Default: /tmp/comtammatu-baseline-local-check-<timestamp>
   --api-port=<number>      Supabase API port. Default: ${DEFAULT_API_PORT}
   --db-port=<number>       Postgres port. Default: ${DEFAULT_DB_PORT}
@@ -46,6 +47,7 @@ function parseArgs(argv) {
     baseline: null,
     bootstrap: null,
     dbPort: DEFAULT_DB_PORT,
+    forwardCutoff: null,
     help: false,
     keep: false,
     shadowPort: DEFAULT_SHADOW_PORT,
@@ -64,6 +66,8 @@ function parseArgs(argv) {
       options.baseline = arg.slice("--baseline=".length);
     } else if (arg.startsWith("--bootstrap=")) {
       options.bootstrap = arg.slice("--bootstrap=".length);
+    } else if (arg.startsWith("--forward-cutoff=")) {
+      options.forwardCutoff = arg.slice("--forward-cutoff=".length);
     } else if (arg.startsWith("--workdir=")) {
       options.workdir = arg.slice("--workdir=".length);
     } else if (arg.startsWith("--api-port=")) {
@@ -77,6 +81,10 @@ function parseArgs(argv) {
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
+  }
+
+  if (options.forwardCutoff && !/^\d{14}$/.test(options.forwardCutoff)) {
+    throw new Error("--forward-cutoff must be a 14-digit migration version");
   }
 
   for (const [name, value] of [
@@ -130,7 +138,11 @@ function run(command, args, options = {}) {
   }
 }
 
-function copyActiveForwardMigrations(migrationsDir, baselinePath) {
+function copyActiveForwardMigrations(
+  migrationsDir,
+  baselinePath,
+  forwardCutoff,
+) {
   const sourceDir = join(process.cwd(), "supabase", "migrations");
   const excluded = new Set([
     "00000000000000_baseline.sql",
@@ -141,6 +153,7 @@ function copyActiveForwardMigrations(migrationsDir, baselinePath) {
     if (!/^\d{14}_.+\.sql$/.test(fileName) || excluded.has(fileName)) {
       continue;
     }
+    if (forwardCutoff && fileName.slice(0, 14) > forwardCutoff) continue;
     copyFileSync(join(sourceDir, fileName), join(migrationsDir, fileName));
   }
 }
@@ -148,6 +161,7 @@ function copyActiveForwardMigrations(migrationsDir, baselinePath) {
 function writeScratchProject(options, baselinePath, bootstrapPath, workdir) {
   const supabaseDir = join(workdir, "supabase");
   const migrationsDir = join(supabaseDir, "migrations");
+  rmSync(migrationsDir, { recursive: true, force: true });
   mkdirSync(migrationsDir, { recursive: true });
 
   writeFileSync(
@@ -180,7 +194,11 @@ site_url = "http://localhost:3000"
     join(migrationsDir, "20260526000000_live_schema_baseline.sql"),
     bootstrapSql ? `${bootstrapSql}\n\n${baselineSql}` : baselineSql,
   );
-  copyActiveForwardMigrations(migrationsDir, baselinePath);
+  copyActiveForwardMigrations(
+    migrationsDir,
+    baselinePath,
+    options.forwardCutoff,
+  );
 }
 
 async function main() {

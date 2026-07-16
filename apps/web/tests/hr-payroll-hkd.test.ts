@@ -29,7 +29,7 @@ const contractInsuranceMigrationSource = readFileSync(
 const monthlyAnnualLeaveMigrationSource = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260708050914_hr_leave_monthly_annual_policy.sql",
+    "../../supabase/migration-archive/20260708050914_hr_leave_monthly_annual_policy.sql",
   ),
   "utf8",
 );

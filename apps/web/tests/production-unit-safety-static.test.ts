@@ -10,10 +10,10 @@ function read(path: string): string {
 }
 
 const safetyMigration = read(
-  "supabase/migrations/20260710012355_production_unit_safety.sql",
+  "supabase/migration-archive/20260710012355_production_unit_safety.sql",
 );
 const repairMigration = read(
-  "supabase/migrations/20260710012357_production_recipe_unit_repair.sql",
+  "supabase/migration-archive/20260710012357_production_recipe_unit_repair.sql",
 );
 const runActions = read(
   "apps/web/app/(protected)/inventory/production-run-actions.ts",

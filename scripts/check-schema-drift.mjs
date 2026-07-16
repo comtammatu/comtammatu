@@ -2,7 +2,9 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
-const DEFAULT_BASELINE = "supabase/migrations/00000000000000_baseline.sql";
+const DEFAULT_BASELINE = JSON.parse(
+  readFileSync("supabase/migration-lineage.json", "utf8"),
+).baselineFile;
 const DEFAULT_SCHEMAS = ["public", "private"];
 
 function printHelp() {
@@ -156,16 +158,15 @@ function parseBaseline(sql, schemas) {
 
     for (index += 1; index < lines.length; index += 1) {
       const trimmed = lines[index].trim().replace(/,$/, "");
-      if (trimmed === ");" || trimmed === ")" || trimmed.startsWith(") ")) break;
+      if (trimmed === ");" || trimmed === ")" || trimmed.startsWith(") "))
+        break;
       if (
         !trimmed ||
         trimmed.startsWith("--") ||
         /^(CONSTRAINT|PRIMARY KEY|UNIQUE|CHECK|FOREIGN KEY|EXCLUDE|LIKE|PARTITION)\b/i.test(
           trimmed,
         ) ||
-        /^(CASE|WHEN|THEN|ELSE|END)\b/i.test(
-          trimmed,
-        )
+        /^(CASE|WHEN|THEN|ELSE|END)\b/i.test(trimmed)
       ) {
         continue;
       }
@@ -200,7 +201,10 @@ function columnKey(item) {
 
 function diffKeys(left, right, keyFn) {
   const rightKeys = new Set(right.map(keyFn));
-  return left.map(keyFn).filter((key) => !rightKeys.has(key)).sort();
+  return left
+    .map(keyFn)
+    .filter((key) => !rightKeys.has(key))
+    .sort();
 }
 
 function compareManifests(baseline, prod) {
@@ -258,7 +262,9 @@ function printReport(report) {
 }
 
 function emitProdSql(schemas) {
-  const schemaList = schemas.map((schema) => `'${schema.replaceAll("'", "''")}'`).join(", ");
+  const schemaList = schemas
+    .map((schema) => `'${schema.replaceAll("'", "''")}'`)
+    .join(", ");
   process.stdout.write(`SELECT jsonb_build_object(
   'functions', COALESCE((
     SELECT jsonb_agg(

@@ -5977,6 +5977,12 @@ export type Database = {
           id: number
           invoice_payload: Json
           method: string
+          momo_checkout_claim_id: string | null
+          momo_checkout_claimed_at: string | null
+          momo_checkout_url: string | null
+          momo_reconcile_claim_id: string | null
+          momo_reconcile_claimed_at: string | null
+          momo_reconcile_last_attempt_at: string | null
           order_id: number
           payment_code_snapshot: string | null
           payment_id: number | null
@@ -6002,6 +6008,12 @@ export type Database = {
           id?: never
           invoice_payload?: Json
           method: string
+          momo_checkout_claim_id?: string | null
+          momo_checkout_claimed_at?: string | null
+          momo_checkout_url?: string | null
+          momo_reconcile_claim_id?: string | null
+          momo_reconcile_claimed_at?: string | null
+          momo_reconcile_last_attempt_at?: string | null
           order_id: number
           payment_code_snapshot?: string | null
           payment_id?: number | null
@@ -6027,6 +6039,12 @@ export type Database = {
           id?: never
           invoice_payload?: Json
           method?: string
+          momo_checkout_claim_id?: string | null
+          momo_checkout_claimed_at?: string | null
+          momo_checkout_url?: string | null
+          momo_reconcile_claim_id?: string | null
+          momo_reconcile_claimed_at?: string | null
+          momo_reconcile_last_attempt_at?: string | null
           order_id?: number
           payment_code_snapshot?: string | null
           payment_id?: number | null
@@ -9585,19 +9603,14 @@ export type Database = {
         Returns: Json
       }
       confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
-      confirm_production_run:
-        | {
-            Args: { p_actual_quantity?: number; p_run_id: number }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_actual_ingredients?: Json
-              p_actual_quantity?: number
-              p_run_id: number
-            }
-            Returns: Json
-          }
+      confirm_production_run: {
+        Args: {
+          p_actual_ingredients?: Json
+          p_actual_quantity?: number
+          p_run_id: number
+        }
+        Returns: Json
+      }
       confirm_sepay_payment: {
         Args: {
           p_account_number: string
@@ -10958,6 +10971,15 @@ export type Database = {
         Args: { p_order_id: number }
         Returns: number
       }
+      self_order_apply_momo_query_result: {
+        Args: {
+          p_claim_id: string
+          p_payload: Json
+          p_payment_request_id: number
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
       self_order_branch_has_open_pos_session: {
         Args: { p_branch_id: number; p_tenant_id: number }
         Returns: boolean
@@ -10979,12 +11001,34 @@ export type Database = {
         Args: { p_items: Json; p_tenant_id: number }
         Returns: Json
       }
+      self_order_claim_momo_checkout: {
+        Args: { p_claim_id: string; p_client_op_id: string; p_token: string }
+        Returns: Json
+      }
+      self_order_claim_momo_reconciliation_batch: {
+        Args: { p_claim_id: string; p_limit?: number; p_min_age?: string }
+        Returns: {
+          amount: number
+          payment_id: number
+          payment_request_id: number
+          provider_ref: string
+          tenant_id: number
+        }[]
+      }
       self_order_consume_rate_limits: {
         Args: {
           p_ip_hash: string
           p_purpose: string
           p_table_id: number
           p_tenant_id: number
+          p_token: string
+        }
+        Returns: Json
+      }
+      self_order_create_momo_payment_request: {
+        Args: {
+          p_client_op_id: string
+          p_invoice_payload?: Json
           p_token: string
         }
         Returns: Json
@@ -11026,14 +11070,46 @@ export type Database = {
         Args: { p_branch_id: number; p_tenant_id: number }
         Returns: number
       }
+      self_order_recover_momo_checkout_request: {
+        Args: { p_client_op_id: string; p_token: string }
+        Returns: Json
+      }
       self_order_reject_request: {
         Args: { p_request_id: number }
+        Returns: Json
+      }
+      self_order_release_momo_checkout_claim: {
+        Args: {
+          p_claim_id: string
+          p_payment_request_id: number
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
+      self_order_release_momo_reconciliation_claim: {
+        Args: {
+          p_claim_id: string
+          p_payment_request_id: number
+          p_tenant_id: number
+        }
         Returns: Json
       }
       self_order_scope_hash: { Args: { p_value: string }; Returns: string }
       self_order_set_actor_claims: {
         Args: { p_actor: string; p_tenant_id: number }
         Returns: undefined
+      }
+      self_order_set_momo_checkout: {
+        Args: {
+          p_claim_id: string
+          p_pay_url: string
+          p_payment_id: number
+          p_payment_request_id: number
+          p_provider_data: Json
+          p_provider_ref: string
+          p_tenant_id: number
+        }
+        Returns: Json
       }
       self_order_submit: {
         Args: {

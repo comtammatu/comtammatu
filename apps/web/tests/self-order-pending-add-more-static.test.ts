@@ -10,7 +10,7 @@ const readRepo = (path: string) =>
 
 test("pending self-order additions merge through an idempotent operation ledger", () => {
   const migration = readRepo(
-    "supabase/migrations/20260716180000_restore_self_order_pending_add_more.sql",
+    "supabase/migration-archive/20260716180000_restore_self_order_pending_add_more.sql",
   );
 
   assert.match(migration, /CREATE TABLE public\.self_order_request_operations/);

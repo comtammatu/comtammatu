@@ -66,7 +66,7 @@ test("stocktake heartbeat lock RPC rechecks ttl and branch permission", () => {
 
 test("branch manager transfer request RPC gates inbound requests by receiving branch", () => {
   const source = readRepoFile(
-    "supabase/migrations/20260702094500_branch_stock_operator_actions.sql",
+    "supabase/migration-archive/20260702094500_branch_stock_operator_actions.sql",
   );
 
   assert.match(

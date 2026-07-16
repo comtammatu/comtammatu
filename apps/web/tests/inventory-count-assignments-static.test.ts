@@ -17,13 +17,13 @@ const countAssignmentsActionsSource = readWeb(
   "app/(protected)/inventory/count-assignments/actions.ts",
 );
 const countAssignmentShiftMigrationSource = readWeb(
-  "../../supabase/migrations/20260708064356_inventory_count_assignment_shift_scope.sql",
+  "../../supabase/migration-archive/20260708064356_inventory_count_assignment_shift_scope.sql",
 );
 const countAssignmentKitchenMigrationSource = readWeb(
-  "../../supabase/migrations/20260708191713_count_slips_branch_kitchen.sql",
+  "../../supabase/migration-archive/20260708191713_count_slips_branch_kitchen.sql",
 );
 const countAssignmentWarehouseRepairMigrationSource = readWeb(
-  "../../supabase/migrations/20260711125604_repair_count_assignment_warehouse_rpcs.sql",
+  "../../supabase/migration-archive/20260711125604_repair_count_assignment_warehouse_rpcs.sql",
 );
 
 test("count assignment checklist uses one labeled hit target", () => {

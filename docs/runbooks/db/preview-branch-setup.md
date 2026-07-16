@@ -14,7 +14,7 @@ source tree.
 
 Cho tới khi manifest chuyển sang `aligned`:
 
-1. Không tạo Preview Branch bằng Dashboard, CLI hoặc MCP.
+1. Không chủ động tạo Preview Branch bằng Dashboard, CLI hoặc MCP.
 2. Dùng `corepack pnpm db:baseline:local-check` để chứng minh source install từ
    empty DB.
 3. Dùng `corepack pnpm lint:migration-lineage` để xác nhận baseline hash, archive
@@ -22,7 +22,11 @@ Cho tới khi manifest chuyển sang `aligned`:
 4. Không tăng `activeForwardLimit`; re-baseline là đường duy nhất để mở migration
    mới và native Preview trở lại.
 
-Guard runtime chặn `create_branch` nhưng vẫn cho `delete_branch` để cleanup.
+Guard runtime chặn `create_branch` từ repo tooling nhưng vẫn cho `delete_branch`
+để cleanup. Guard này không kiểm soát Supabase GitHub App đã cài ở cấp project;
+app vẫn có thể tự tạo branch khi PR thay đổi. Muốn chặn cứng phải tắt integration
+ở Supabase. Khi manifest còn blocked, branch tự tạo chỉ là evidence quan sát,
+không được dùng để tuyên bố lineage đã aligned và phải được xóa sau kiểm chứng.
 
 ## Flow sau khi lineage đã aligned
 
@@ -55,10 +59,10 @@ Vercel Preview có thể được nối thủ công với credential của Previ
 runtime. Ghi rõ preview host và Supabase ref; không cho preview deploy nhận
 production service-role key.
 
-## Parked automation option
+## Automation hiện hành
 
-Per-PR auto-provision qua Supabase GitHub App và Vercel integration chưa được coi
-là runtime hiện hành. Chỉ bật sau khi lineage alignment, seed safety, teardown,
-spend control và env binding được kiểm chứng. Khi đó flow kỳ vọng mới là PR open
-→ branch + preview deploy, PR close/merge → teardown; cập nhật runbook từ bằng
-chứng live trước khi cho agent dựa vào automation đó.
+Per-PR auto-provision qua Supabase GitHub App và Vercel integration đang hoạt
+động ngoài repo guard. Flow thực tế là PR update có thể tạo/cập nhật branch và
+Preview deploy ngay cả khi manifest còn blocked. Vì vậy CI lineage gate, seed
+safety, env binding, deployment log và teardown đều phải được kiểm chứng độc
+lập; không suy luận trạng thái automation từ guard local.

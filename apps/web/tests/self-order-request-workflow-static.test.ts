@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 const migration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260710113746_self_order_request_workflow.sql",
+    "supabase/migration-archive/20260710113746_self_order_request_workflow.sql",
   ),
   "utf8",
 );
@@ -15,17 +16,19 @@ const rateLimitMigration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260710191526_self_order_request_rate_limits.sql",
+    "supabase/migration-archive/20260710191526_self_order_request_rate_limits.sql",
   ),
   "utf8",
 );
-const baseline = readFileSync(
-  join(
-    process.cwd(),
-    "../..",
-    "supabase/migrations/00000000000000_baseline.sql",
+const baseline = normalizePgDumpSql(
+  readFileSync(
+    join(
+      process.cwd(),
+      "../..",
+      "supabase/migrations/20260716093507_baseline.sql",
+    ),
+    "utf8",
   ),
-  "utf8",
 );
 
 function functionBody(signature: string, next: string): string {

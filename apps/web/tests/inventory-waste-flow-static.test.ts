@@ -29,7 +29,7 @@ test("waste form exposes photo upload for DB-enforced photo gates", () => {
 
 test("waste writeoff RPCs target the current stock_issue_items unit contract", () => {
   const migration = read(
-    "supabase/migrations/20260709131500_fix_waste_writeoff_rpc_unit_drop.sql",
+    "supabase/migration-archive/20260709131500_fix_waste_writeoff_rpc_unit_drop.sql",
   );
   const action = read("apps/web/app/(protected)/inventory/waste-actions.ts");
   const client = read(

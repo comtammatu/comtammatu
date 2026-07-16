@@ -1,9 +1,10 @@
 # Runbook — Re-baseline the migration chain from current prod
 
-> **Owner-run, prod-touching (read-only dump).** Agents are SELECT-only on prod
-> and cannot `pg_dump` it; this is an owner action. The goal is a NEW
-> self-contained baseline that squashes the forward chain so a from-empty replay
-> matches current prod exactly.
+> **Prod-touching, read-only dump.** Prefer the owner-held direct connection.
+> A linked CLI dump is only a candidate artifact and is acceptable only after a
+> from-empty replay and normalized catalog/ACL fingerprints match current prod.
+> The goal is a NEW self-contained baseline that squashes the forward chain so a
+> from-empty replay matches current prod exactly.
 
 `supabase/migration-lineage.json` is the machine gate for this runbook. Never
 raise its frozen forward limit to make CI green; completing this runbook is the
@@ -11,7 +12,7 @@ only path from `blocked_pending_rebaseline` to `aligned`.
 
 ## Why this exists
 
-`supabase/migrations/00000000000000_baseline.sql` is a point-in-time `pg_dump` of
+`supabase/migrations/20260716093507_baseline.sql` is a point-in-time `pg_dump` of
 prod (`public` + `private`). Over time the forward chain accumulates and stops
 replaying cleanly on top of the snapshot — the **squash-vs-history** class:
 
@@ -37,8 +38,8 @@ now-squashed forward chain.
 
 ## Procedure
 
-1. **Dump public + private from prod** (owner-run; read-only). Use the repo tool —
-   it builds the direct privileged libpq connection from `.env.local`
+1. **Dump public + private from prod** (read-only). Prefer the repo tool — it
+   builds the direct privileged libpq connection from `.env.local`
    (`SUPABASE_PASSWORD_IEXW` + `supabase/.temp/pooler-url`):
 
    ```bash
@@ -59,6 +60,20 @@ now-squashed forward chain.
    } > "supabase/migrations/${CUTOFF}_baseline.sql"
    ```
 
+   If the direct owner credential is unavailable, a linked dump may be used as
+   a candidate only:
+
+   ```bash
+   supabase db dump --linked --schema public,private \
+     --file ".baseline-artifacts/${CUTOFF}_candidate.sql"
+   ```
+
+   Replay that candidate locally and compare normalized public/private catalog
+   fingerprints and all schema/function/relation ACLs with prod before moving it
+   into `supabase/migrations/`. Counts alone are insufficient. Ignore physical
+   column ordinals and generated PostgreSQL `NOT NULL` constraint names; require
+   semantic column and named-constraint definitions to match.
+
    Notes:
    - `private` first so public triggers/policies referencing `private.*` resolve;
      `SET check_function_bodies = false` so private SQL helpers that read public
@@ -67,13 +82,15 @@ now-squashed forward chain.
      defaults the local migration role cannot set (`42501`); keep the
      `FOR ROLE postgres` ones. A fresh Supabase env configures them itself.
    - The extract uses `--no-owner` and keeps GRANTs inlined (do NOT pass
-     `--no-privileges`). Never use `supabase db dump --linked` — it silently drops
-     RLS-restricted tables.
+     `--no-privileges`).
+   - Before the dump's explicit object grants, revoke all table and sequence
+     privileges in `public` + `private` from `anon`, `authenticated`, and
+     `service_role`. Fresh Supabase environments may grant a broader default ACL;
+     the following explicit dump grants must then restore the exact prod ACL.
    - The baseline is self-contained — there is no separate `private-bootstrap.sql`.
    - Managed surfaces (storage buckets/policies, extensions, realtime, cron) are
-     omitted by `pg_dump --schema`, so replaying the chain re-applies them via the
-     fold migration `20260627140000_fold_managed_surfaces.sql` (Section C storage
-     policies etc.).
+     omitted by `pg_dump --schema`, so replaying the chain re-applies them via a
+     managed-surfaces fold versioned immediately after the baseline cutoff.
 
 2. **Archive the squashed forward chain.** Every public/private schema migration
    with a timestamp at or before the new dump's cutoff and represented by the
@@ -84,10 +101,12 @@ now-squashed forward chain.
    ```
 
    Keep only migrations newer than the re-baseline cutoff, migrations not yet
-   represented by prod, plus the managed-surfaces fold migration
-   `20260627140000_fold_managed_surfaces.sql`. The fold migration intentionally
-   remains active because `pg_dump --schema=public,private` omits extensions,
-   storage buckets/policies, realtime publication membership, and cron jobs.
+   represented by prod, plus the managed-surfaces fold migration. Archive its
+   old version with the squashed chain, then copy it to the next valid version
+   strictly greater than the baseline cutoff and lower than the first
+   unsquashed forward migration. The fold intentionally remains active because
+   a public/private schema dump omits extensions, storage buckets/policies,
+   realtime publication membership, and cron jobs.
 
    Classify DML before moving files. One-off production backfills/repairs become
    history; bootstrap/reference rows required by an empty environment move to
@@ -113,11 +132,12 @@ now-squashed forward chain.
    It must exit 0. If a remaining post-cutoff migration still diverges, fix THAT
    migration (it has not yet reached prod-stable squash) or move the cutoff later.
 
-5. **Regenerate types** from the rebuilt schema and confirm no drift:
+5. **Regenerate types** from the full rebuilt schema. Review the diff and accept
+   only fields/RPCs introduced by unsquashed post-cutoff migrations:
 
    ```bash
    pnpm db:types
-   git diff --stat packages/database/src/types/database.types.ts   # expect no change
+   git diff -- packages/database/src/types/database.types.ts
    ```
 
 6. **Ledger note (prod is NOT re-applied).** Re-baselining changes only the
@@ -136,7 +156,9 @@ now-squashed forward chain.
    disposable database, preserve the existing ledger evidence, and prove that
    `supabase migration list --linked` contains the new baseline cutoff plus only
    newer forward versions. This is a production metadata write; source
-   re-baselining does not authorize it.
+   re-baselining does not authorize it. The repo prod guard must not be disabled;
+   if it blocks `migration repair`, the owner performs the exact reviewed command
+   outside the guarded agent runtime.
 
 9. **Enable native Preview only after live ledger proof.** In a follow-up change,
    set
@@ -152,7 +174,9 @@ now-squashed forward chain.
 ## Acceptance
 
 - `pnpm db:baseline:local-check` exits 0 on a from-empty docker DB.
-- `pnpm db:types` produces no diff vs committed types.
+- Baseline-only normalized catalog and ACL fingerprints match prod exactly.
+- Type generation from the full rebuilt schema contains only reviewed
+  post-cutoff deltas.
 - The remaining forward chain is either strictly newer than the dump cutoff, not
   yet represented by prod, or the managed-surfaces fold migration, and the whole
   remaining chain replays clean.

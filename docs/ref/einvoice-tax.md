@@ -250,7 +250,7 @@ draft → not_required                       ← không được tạo mới
 
 #### Allowed transitions (DB enforced)
 
-State machine enforce qua RPC `transition_tax_invoice_state(id, to_status, payload?, note?)` (định nghĩa trong `supabase/migrations/00000000000000_baseline.sql`). Mọi UPDATE status PHẢI đi qua RPC — không cho phép client UPDATE trực tiếp.
+State machine enforce qua RPC `transition_tax_invoice_state(id, to_status, payload?, note?)` (định nghĩa trong `supabase/migrations/20260716093507_baseline.sql`). Mọi UPDATE status PHẢI đi qua RPC — không cho phép client UPDATE trực tiếp.
 
 ```
 draft     → signing, cancelled, not_required
@@ -651,7 +651,7 @@ Auth flow:
 
 ### 6.2 Dashboard `/finance` (RPC `get_finance_dashboard_summary`)
 
-RPC `get_finance_dashboard_summary` (định nghĩa trong `supabase/migrations/00000000000000_baseline.sql`) cung cấp counters:
+RPC `get_finance_dashboard_summary` (định nghĩa trong `supabase/migrations/20260716093507_baseline.sql`) cung cấp counters:
 
 ```sql
 SELECT public.get_finance_dashboard_summary(
@@ -818,7 +818,7 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-viettel-op
 
 ## 10. Schema HĐĐT trong baseline
 
-Toàn bộ schema + RPC HĐĐT đã gộp vào `supabase/migrations/00000000000000_baseline.sql`
+Toàn bộ schema + RPC HĐĐT đã gộp vào `supabase/migrations/20260716093507_baseline.sql`
 (baseline-first consolidation). Các file timestamped gốc nằm ở
 `supabase/migration-archive/`; bảng dưới mô tả từng feature theo file gốc đó.
 

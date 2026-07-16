@@ -53,10 +53,11 @@ redesign, production apply, and unrelated runtime-control work from PR #284.
 
 - [x] Add the focused forward migration and durable auth contract.
 - [x] Add static and executable SQL regression coverage, wired into CI; repair
-  the three dormant SQL tests exposed when the runner becomes blocking.
+      the three dormant SQL tests exposed when the runner becomes blocking.
 - [x] Pass focused tests, migration replay, full gates, and T3 review.
 - [x] Publish replacement PR #298, then close PR #284 without merge as a
       superseded merge unit.
+
 ## MoMo Finance Reporting Contract Closure (2026-07-16)
 
 ### T3 contract
@@ -1557,6 +1558,37 @@ the manifest is `blocked_pending_rebaseline`. Production is untouched. The next
 owner-gated database step is to reconcile the Production ledger, regenerate the
 baseline, record its exact cutoff and hash, then reopen Preview rehearsal.
 
+#### Owner-approved re-baseline execution (2026-07-16)
+
+- **PM:** Replace the 156-forward source chain with one Production-equivalent
+  baseline plus only post-cutoff forwards. Do not enable or deploy MoMo to
+  Production.
+- **BA:** Production ledger cutoff is `20260716093507`. Classify the five newer
+  source migrations against the Production schema; only real post-cutoff deltas
+  remain forwards. Schema/data on Production are immutable during source
+  re-baselining. Ledger alignment may change metadata only after the new baseline
+  has replayed and matched Production catalogs.
+- **Senior Dev:** Compare the public/private Production catalog with a fresh
+  replay, generate the baseline from the matching Production schema, and move
+  the managed-surfaces fold to a post-baseline version.
+- **QA/Ops:** Require empty-DB replay, reviewed generated-type deltas, green full gates,
+  and a healthy throwaway Preview. If any proof differs, keep lineage blocked
+  and do not repair Production migration history.
+
+Execution result: baseline `20260716093507` matches Production semantic columns,
+named constraints, and schema/function/relation ACL fingerprints exactly. The
+managed fold is now `20260716093508`; seven forward migrations remain active,
+including the managed fold.
+`20260716180000_restore_self_order_pending_add_more.sql` moved to archive because
+its table/function state is already represented by the Production baseline. The
+Production snapshot also exposed three ledger-marked contracts that were absent
+from the live schema: the inventory-count checkout gate, Branch Hub notification
+deep-links, and removal of the stale two-argument `confirm_production_run`
+overload. Two focused repair migrations preserve those contracts without changing
+the baseline snapshot. The baseline-only replay and the full seven-forward chain
+replay pass. Lineage remains blocked until the Production ledger metadata is
+repaired and verified.
+
 ### Known gap, out of scope
 
 No admin surface exists for toggling `tables.self_order_enabled` or printing a
@@ -1946,7 +1978,7 @@ destructive lot/expiry + production_orders drops).
 
 - [x] **Three PROD RPCs deep-link notifications to the retired `/employee/*`
       routes.** Migration ready (not applied — needs owner-delegated apply):
-      `supabase/migrations/20260710193000_fix_notification_employee_deep_links.sql`
+      `supabase/migration-archive/20260710193000_fix_notification_employee_deep_links.sql`
       recreates `reject_leave_request`, `approve_inventory_count_slip`,
       `request_inventory_count_recount` from baseline `/br/...` links and
       backfills historical `/employee/*` notification rows (incl. checkout).

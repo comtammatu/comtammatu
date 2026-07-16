@@ -25,7 +25,7 @@ test("bank fund pulls SePay in and out with the right sign", () => {
     "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
   );
   const migration = read(
-    "supabase/migrations/20260714031027_20260713160248_persist_sepay_refund_match.sql",
+    "supabase/migration-archive/20260714031027_20260713160248_persist_sepay_refund_match.sql",
   );
   const periodMigration = read(
     "supabase/migrations/20260716100000_close_expense_payment_state_machine.sql",

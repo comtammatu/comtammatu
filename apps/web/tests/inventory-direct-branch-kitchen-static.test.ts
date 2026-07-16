@@ -10,25 +10,25 @@ function readRepo(path: string): string {
 }
 
 const grnLocationMigration = readRepo(
-  "supabase/migrations/20260709031653_grn_direct_branch_kitchen_location.sql",
+  "supabase/migration-archive/20260709031653_grn_direct_branch_kitchen_location.sql",
 );
 const grnAmendLocationMigration = readRepo(
-  "supabase/migrations/20260709033912_fix_grn_amend_receipt_location.sql",
+  "supabase/migration-archive/20260709033912_fix_grn_amend_receipt_location.sql",
 );
 const grnAmendNumericOverflowMigration = readRepo(
-  "supabase/migrations/20260709053036_guard_grn_amend_numeric_overflow.sql",
+  "supabase/migration-archive/20260709053036_guard_grn_amend_numeric_overflow.sql",
 );
 const grnVarianceMigration = readRepo(
-  "supabase/migrations/20260709054044_widen_grn_variance_pct.sql",
+  "supabase/migration-archive/20260709054044_widen_grn_variance_pct.sql",
 );
 const grnAmendAuditMigration = readRepo(
-  "supabase/migrations/20260709125300_grn_amend_audit_history.sql",
+  "supabase/migration-archive/20260709125300_grn_amend_audit_history.sql",
 );
 const grnAmendValueMigration = readRepo(
-  "supabase/migrations/20260709140543_fix_grn_cost_only_amend_value.sql",
+  "supabase/migration-archive/20260709140543_fix_grn_cost_only_amend_value.sql",
 );
 const grnRecreateMigration = readRepo(
-  "supabase/migrations/20260709125638_grn_recreate_receiving_site.sql",
+  "supabase/migration-archive/20260709125638_grn_recreate_receiving_site.sql",
 );
 const grnActions = readRepo(
   "apps/web/app/(protected)/inventory/grn-actions.ts",

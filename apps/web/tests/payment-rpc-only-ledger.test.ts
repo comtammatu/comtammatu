@@ -3,12 +3,13 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260715170000_add_guarded_payment_write_rpcs.sql",
+  "supabase/migration-archive/20260715170000_add_guarded_payment_write_rpcs.sql",
 );
 const providerConstraintMigration = read(
   "supabase/migrations/20260716113000_restore_momo_payment_provider_contract.sql",
@@ -101,7 +102,9 @@ test("pending intent and provider metadata share one guarded write boundary", ()
 });
 
 test("payment intent migration preserves the production RPC during DB-first rollout", () => {
-  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const baseline = normalizePgDumpSql(
+    read("supabase/migrations/20260716093507_baseline.sql"),
+  );
   const legacyWrapperStart = migration.indexOf(
     "CREATE OR REPLACE FUNCTION public.create_payment(",
   );
@@ -164,7 +167,10 @@ test("incremental production schema admits MoMo payment evidence", () => {
     providerConstraintMigration.match(/VALIDATE CONSTRAINT/g)?.length,
     2,
   );
-  assert.doesNotMatch(providerConstraintMigration, /self_order_payment_requests/);
+  assert.doesNotMatch(
+    providerConstraintMigration,
+    /self_order_payment_requests/,
+  );
 });
 
 test("DB-first payment compatibility permits only pending provider metadata fill", () => {

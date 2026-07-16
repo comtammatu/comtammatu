@@ -86,11 +86,13 @@ const SAFE_READ_FUNCTIONS = new Set([
   "jsonb_build_object",
   "least",
   "max",
+  "md5",
   "min",
   "nullif",
   "pg_get_functiondef",
   "pg_get_viewdef",
   "sum",
+  "string_agg",
   "to_regclass",
   "to_regprocedure",
 ]);

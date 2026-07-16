@@ -5,9 +5,9 @@ import { test } from "node:test";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const lockMigration =
-  "supabase/migrations/20260709074049_lock_inventory_adjustment_workflow.sql";
+  "supabase/migration-archive/20260709074049_lock_inventory_adjustment_workflow.sql";
 const menuKitchenReplenishmentMigration =
-  "supabase/migrations/20260709162000_menu_limits_kitchen_replenishment.sql";
+  "supabase/migration-archive/20260709162000_menu_limits_kitchen_replenishment.sql";
 
 function read(path: string): string {
   return readFileSync(`${root}${path}`, "utf8");

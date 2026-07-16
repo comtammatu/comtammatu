@@ -248,6 +248,15 @@ const FIXTURES = [
     }),
   ],
   [
+    "allow: mcp execute_sql catalog fingerprint vs prod",
+    0,
+    mcp("execute_sql", {
+      project_id: PROD,
+      query:
+        "select md5(string_agg(table_name, ',')) from information_schema.tables",
+    }),
+  ],
+  [
     "allow: mcp execute_sql pg_catalog safe aggregate",
     0,
     mcp("execute_sql", {

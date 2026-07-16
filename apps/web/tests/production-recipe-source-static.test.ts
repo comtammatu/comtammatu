@@ -19,7 +19,7 @@ const newPageSource = readFileSync(
   "utf8",
 );
 const recipeUnitMigrationSource = readFileSync(
-  "../../supabase/migrations/20260707182000_patch_production_recipe_unit_and_permissions.sql",
+  "../../supabase/migration-archive/20260707182000_patch_production_recipe_unit_and_permissions.sql",
   "utf8",
 );
 
