@@ -122,6 +122,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node scripts/supabase-e2e-bringup.mjs
+      - run: pnpm db:test
       - run: pnpm --filter @comtammatu/web exec playwright install --with-deps chromium
       # Production build so the heavy POS route is pre-compiled; `next dev`
       # compiles it on-demand, which blows the smoke's timeout. The bring-up
