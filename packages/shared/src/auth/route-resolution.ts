@@ -40,6 +40,16 @@ export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/waste",
 ] as const;
 
+export const ADMIN_DASHBOARD_ROUTE_PREFIXES = [
+  "/admin",
+  "/menu",
+  "/orders",
+  "/inventory",
+  "/finance",
+  "/branches",
+  "/hr",
+] as const;
+
 function matchesPathPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
@@ -68,15 +78,17 @@ export function isPublicAppPath(pathname: string): boolean {
   );
 }
 
-export function isAdminRoutePath(pathname: string): boolean {
-  return pathname === "/admin" || pathname.startsWith("/admin/");
+export function isAdminDashboardRoutePath(pathname: string): boolean {
+  return ADMIN_DASHBOARD_ROUTE_PREFIXES.some((prefix) =>
+    matchesPathPrefix(pathname, prefix),
+  );
 }
 
 export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (pathname === "/admin" || pathname === "/admin/") {
-    return "settings";
+    return "admin_dashboard";
   }
-  if (pathname.startsWith("/admin/settings")) return "settings";
+  if (matchesPathPrefix(pathname, "/admin/settings")) return "settings";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (matchesPathPrefix(pathname, prefix)) {
@@ -88,13 +100,13 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   for (const prefix of INVENTORY_ROUTE_PREFIXES) {
     if (matchesPathPrefix(pathname, prefix)) return "inventory";
   }
-  if (pathname.startsWith("/finance")) return "finance";
-  if (pathname.startsWith("/branches")) return "branches";
-  if (pathname.startsWith("/menu")) return "menu";
-  if (pathname.startsWith("/orders")) return "orders";
-  if (pathname.startsWith("/hr/staff")) return "staff";
-  if (pathname.startsWith("/hr/payroll")) return "hr_payroll";
-  if (pathname.startsWith("/hr")) return "hr";
+  if (matchesPathPrefix(pathname, "/finance")) return "finance";
+  if (matchesPathPrefix(pathname, "/branches")) return "branches";
+  if (matchesPathPrefix(pathname, "/menu")) return "menu";
+  if (matchesPathPrefix(pathname, "/orders")) return "orders";
+  if (matchesPathPrefix(pathname, "/hr/staff")) return "staff";
+  if (matchesPathPrefix(pathname, "/hr/payroll")) return "hr_payroll";
+  if (matchesPathPrefix(pathname, "/hr")) return "hr";
   if (pathname === "/" || pathname === "/br" || pathname === "/br/")
     return "branch_picker";
   if (/^\/br\/\d+\/?$/.test(pathname)) return "operator_home";
@@ -108,24 +120,24 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/shift\/leave-approvals(?:\/|$)/.test(pathname)) {
     return "employee_leave_approvals";
   }
-  if (/^\/br\/\d+\/shift/.test(pathname)) return "operator_home";
-  if (/^\/br\/\d+\/profile/.test(pathname)) return "operator_home";
+  if (/^\/br\/\d+\/shift(?:\/|$)/.test(pathname)) return "operator_home";
+  if (/^\/br\/\d+\/profile(?:\/|$)/.test(pathname)) return "operator_home";
   if (/^\/br\/\d+\/stock\/count(?:\/|$)/.test(pathname)) return "operator_home";
-  if (/^\/br\/\d+\/stock/.test(pathname)) return "inventory";
-  if (/^\/br\/\d+\/orders/.test(pathname)) return "orders";
-  if (/^\/br\/\d+\/dashboard/.test(pathname)) return "branch_dashboard";
-  if (/^\/br\/\d+\/team/.test(pathname)) return "branch_team";
+  if (/^\/br\/\d+\/stock(?:\/|$)/.test(pathname)) return "inventory";
+  if (/^\/br\/\d+\/orders(?:\/|$)/.test(pathname)) return "orders";
+  if (/^\/br\/\d+\/dashboard(?:\/|$)/.test(pathname)) return "branch_dashboard";
+  if (/^\/br\/\d+\/team(?:\/|$)/.test(pathname)) return "branch_team";
   if (/^\/br\/\d+\/menu-limits(?:\/|$)/.test(pathname))
     return "branch_menu_limits";
   if (/^\/br\/\d+\/settings\/menu-limits(?:\/|$)/.test(pathname)) return null;
   if (/^\/br\/\d+\/pos-sessions(?:\/|$)/.test(pathname))
     return "branch_pos_sessions";
   if (/^\/br\/\d+\/settings\/pos-sessions(?:\/|$)/.test(pathname)) return null;
-  if (/^\/br\/\d+\/settings/.test(pathname)) return "branch_settings";
+  if (/^\/br\/\d+\/settings(?:\/|$)/.test(pathname)) return "branch_settings";
   if (/^\/br\/\d+\/pos(?:\/|$)/.test(pathname)) return "pos";
   if (/^\/br\/\d+\/kds(?:\/|$)/.test(pathname)) return "kds";
   if (/^\/br\/\d+\/runner(?:\/|$)/.test(pathname)) return "runner";
-  if (pathname.startsWith("/notifications")) return "notifications";
+  if (matchesPathPrefix(pathname, "/notifications")) return "notifications";
 
   return null;
 }

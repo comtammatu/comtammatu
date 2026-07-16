@@ -1,5 +1,5 @@
 import { canAccess } from "./module-acl";
-import { ADMIN_ROLES, type JwtClaims } from "./types";
+import type { JwtClaims } from "./types";
 
 export type StationKind = "pos" | "kds" | "runner";
 
@@ -8,18 +8,14 @@ export interface BranchHubContext {
   isDesktop: boolean;
 }
 
-function isAdminRole(role: JwtClaims["user_role"]): boolean {
-  return ADMIN_ROLES.includes(role);
-}
-
 /** Determine the default redirect path for a role after login */
 export function getDefaultRedirect(claims: JwtClaims): string {
   if (canAccess(claims.user_role, "operator_home")) {
     return claims.branch_id != null ? `/br/${claims.branch_id}` : "/";
   }
 
-  if (isAdminRole(claims.user_role)) {
-    return "/finance";
+  if (canAccess(claims.user_role, "admin_dashboard")) {
+    return "/admin";
   }
 
   return "/access-denied?reason=role-unassigned";
@@ -37,7 +33,7 @@ export function resolveBranchHubDestination(
     return `/br/${claims.branch_id}/${ctx.standaloneStation}`;
   }
 
-  if (ctx.isDesktop && isAdminRole(claims.user_role)) {
+  if (ctx.isDesktop && canAccess(claims.user_role, "admin_dashboard")) {
     return getDefaultRedirect(claims);
   }
 
@@ -48,7 +44,7 @@ export function resolveBranchHubDestination(
     return `/br/${claims.branch_id}`;
   }
 
-  if (isAdminRole(claims.user_role)) {
+  if (canAccess(claims.user_role, "admin_dashboard")) {
     return "/";
   }
 

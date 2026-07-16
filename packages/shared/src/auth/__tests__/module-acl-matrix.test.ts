@@ -18,6 +18,7 @@ function accessibleModules(role: StaffRole): ModuleKey[] {
 
 const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
   owner: [
+    "admin_dashboard",
     "branch_dashboard",
     "branch_menu_limits",
     "branch_picker",
@@ -51,11 +52,9 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "branch_team",
     "employee_checkout_approvals",
     "employee_leave_approvals",
-    "hr",
     "inventory",
     "inventory_procurement",
     "kds",
-    "menu",
     "notifications",
     "operator_home",
     "orders",

@@ -80,7 +80,7 @@ export function resolveInventoryNav({
     title: "1 · Kiểm soát tồn",
     items: [
       // Cross-branch oversight entries (D061), additive to the branch
-      // operator plane at /br/[id]/stock/* — office=oversight, branch=floor.
+      // operator plane at /br/[id]/stock/* — admin-dashboard=oversight, branch=floor.
       {
         href: "/inventory/stock",
         label: tNav("stock", "navigation"),
@@ -147,7 +147,10 @@ export function resolveInventoryNav({
           href: "/inventory/production",
           label: "Sản xuất",
           icon: IconToolsKitchen,
-          matchPrefixes: ["/inventory/production/new", "/inventory/production/"],
+          matchPrefixes: [
+            "/inventory/production/new",
+            "/inventory/production/",
+          ],
           exact: true,
         },
       ],

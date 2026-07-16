@@ -63,23 +63,18 @@ function parseRoleLabels(source) {
 
 /**
  * `allowedRoles` is either an inline string-literal array or a reference to a
- * named role-set constant declared above MODULE_ACL in the same file
- * (currently only `EMPLOYEE_PORTAL_ROLES`, itself `STAFF_ROLES.filter(role
- * => !ADMIN_ROLES.includes(role))`). Resolve named references against the
- * accessBuckets/adminRoles already parsed from types.ts so a role subset
- * change in either file cannot silently drop out of the generated table.
+ * named role-set constant declared above MODULE_ACL in the same file. Resolve
+ * named references against the access buckets already parsed from types.ts so
+ * a role subset change cannot silently drop out of the generated table.
  */
-function resolveNamedRoleSet(name, accessBuckets, adminRoles) {
+function resolveNamedRoleSet(name, accessBuckets) {
   if (name === "STAFF_ROLES") return accessBuckets;
-  if (name === "EMPLOYEE_PORTAL_ROLES") {
-    return accessBuckets.filter((role) => !adminRoles.includes(role));
-  }
   throw new Error(
     `module-acl.ts: allowedRoles references unknown named role set "${name}" — teach resolveNamedRoleSet about it.`,
   );
 }
 
-function parseModuleAcl(source, accessBuckets, adminRoles) {
+function parseModuleAcl(source, accessBuckets) {
   const block = source.match(
     /export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = \{([\s\S]*?)\n\};/,
   );
@@ -109,7 +104,7 @@ function parseModuleAcl(source, accessBuckets, adminRoles) {
       if (rolesMatch[1].startsWith("[")) {
         roles = [...rolesMatch[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
       } else {
-        roles = resolveNamedRoleSet(rolesMatch[1], accessBuckets, adminRoles);
+        roles = resolveNamedRoleSet(rolesMatch[1], accessBuckets);
       }
     }
     entries.push({ key, path: pathMatch[1], allowedRoles: roles });
@@ -252,8 +247,7 @@ function parseNavAdvertisementSources(source) {
   }
 
   const namedArrays = [
-    { name: "ADMIN_NAV_GROUPS", label: "Admin sidebar" },
-    { name: "DOMAIN_WORKSPACE_ITEMS", label: "Workspace nav" },
+    { name: "ADMIN_NAV_GROUPS", label: "Admin Dashboard nav" },
     { name: "BRANCH_MANAGEMENT_ITEMS", label: "Branch management nav" },
     { name: "BRANCH_OPERATION_ITEMS", label: "Branch operation nav" },
   ];
@@ -315,15 +309,15 @@ function parsePermissionKeysByNamespace(source) {
 // actual "log in fresh, land where" outcome documented per role.
 // ---------------------------------------------------------------------------
 
-function derivePostLoginHomes(accessBuckets) {
+function derivePostLoginHomes(accessBuckets, adminDashboardRoles) {
   const rows = [];
   for (const role of accessBuckets) {
-    if (role === "owner") {
+    if (adminDashboardRoles.has(role)) {
       rows.push({
         role,
         desktop: "/ (auto-opens the sole operating branch)",
         phone: "/ (auto-opens the sole operating branch)",
-        note: "D077: only branch-kind sites are operable; multiple operating branches retain the picker. Owner-only workspaces remain permission-gated shortcuts from Branch Hub.",
+        note: "Only branch-kind sites are operable. Owner enters the Admin Dashboard through one owner-only Branch Hub or picker link.",
       });
       continue;
     }
@@ -373,7 +367,7 @@ function renderRouteFamilyTable(families) {
 
 function renderPostLoginHomeTable(rows, roleLabels) {
   const header =
-    "| Role | Desktop / office context | Phone / station context | Notes |\n" +
+    "| Role | Desktop / Admin Dashboard context | Phone / station context | Notes |\n" +
     "| ---- | ------------------------- | ------------------------ | ----- |";
   const body = rows.map(
     (r) =>
@@ -396,6 +390,14 @@ function renderActionGateTable(moduleAcl, families, permissionsByNamespace) {
       for (const moduleKey of f.moduleKeys) {
         for (const role of moduleAclByKey[moduleKey]?.allowedRoles ?? []) {
           roleSet.add(role);
+        }
+      }
+      if (f.surface === "admin_dashboard") {
+        const surfaceRoles = new Set(
+          moduleAclByKey.admin_dashboard?.allowedRoles ?? [],
+        );
+        for (const role of roleSet) {
+          if (!surfaceRoles.has(role)) roleSet.delete(role);
         }
       }
       // Namespace candidates: the moduleKey(s) and the family id verbatim
@@ -479,7 +481,7 @@ function buildGeneratedBody({
     "",
     "## Permission Boundary (generated)",
     "",
-    "Route family -> required route bucket (module ACL union) -> the action-gate",
+    "Route family -> required route bucket (Admin Dashboard surface ACL intersected with the module capability union) -> the action-gate",
     "permission keys in that family's namespace(s), read from",
     "`PERMISSION_KEYS` in `permissions.ts`. This is the full set in-namespace,",
     "not a hand-picked sample — route access and action authorization stay",
@@ -504,14 +506,7 @@ function collectGeneratedData() {
 
   const accessBuckets = parseAccessBuckets(typesSource);
   const roleLabels = parseRoleLabels(typesSource);
-  const adminRolesMatch = typesSource.match(
-    /export const ADMIN_ROLES: readonly StaffRole\[\] = \[([\s\S]*?)\] as const;/,
-  );
-  const adminRoles = adminRolesMatch
-    ? [...adminRolesMatch[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1])
-    : [];
-
-  const moduleAcl = parseModuleAcl(moduleAclSource, accessBuckets, adminRoles);
+  const moduleAcl = parseModuleAcl(moduleAclSource, accessBuckets);
   const moduleAclByKey = Object.fromEntries(
     moduleAcl.map((entry) => [entry.key, entry]),
   );
@@ -519,7 +514,10 @@ function collectGeneratedData() {
   const families = parseRouteFamilyContracts(routeMapSource, moduleAclByKey);
   const permissionsByNamespace =
     parsePermissionKeysByNamespace(permissionsSource);
-  const postLoginHomes = derivePostLoginHomes(accessBuckets);
+  const postLoginHomes = derivePostLoginHomes(
+    accessBuckets,
+    new Set(moduleAclByKey.admin_dashboard?.allowedRoles ?? []),
+  );
 
   return {
     moduleAcl,

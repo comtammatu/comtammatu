@@ -29,7 +29,7 @@ export async function GRNListPageContent({
       drafts={showDrafts && data.canCreate ? data.drafts : undefined}
       draftsLoadFailed={showDrafts && data.canCreate && data.draftsLoadFailed}
       grnsLoadFailed={data.grnsLoadFailed}
-      withinOfficeTabs={embedded}
+      withinAdminDashboardTabs={embedded}
     />
   );
 }

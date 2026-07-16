@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { getCashierProfile } from "./helpers/supabase";
 import {
+  E2E_AUTH_STORAGE,
   E2E_AUTH_STORAGE_MANAGER,
   E2E_AUTH_STORAGE_OWNER,
 } from "../playwright.config";
@@ -13,9 +14,8 @@ const TABLET_PORTRAIT = { width: 768, height: 1024 };
 const TABLET_LANDSCAPE = { width: 1024, height: 768 };
 const DESKTOP = { width: 1440, height: 900 };
 
-const OFFICE_PREFIXES = [
+const ADMIN_DASHBOARD_PREFIXES = [
   "/admin",
-  "/branch-settings",
   "/branches",
   "/finance",
   "/hr",
@@ -57,13 +57,13 @@ function watchPageHealth(page: Page) {
 async function expectHealthyRoute(
   page: Page,
   path: string,
-  options: { allowWorkspaceLinks?: boolean } = {},
+  options: { adminDashboardLinkCount?: number | "some" } = {},
 ) {
   await page.goto(path, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("load");
   await page.waitForTimeout(800);
 
-  const state = await page.evaluate((officePrefixes) => {
+  const state = await page.evaluate((adminDashboardPrefixes) => {
     const links = Array.from(document.querySelectorAll("a[href]")).map(
       (link) => link.getAttribute("href") ?? "",
     );
@@ -75,22 +75,30 @@ async function expectHealthyRoute(
           document.documentElement.scrollWidth,
           document.body.scrollWidth,
         ) - window.innerWidth,
-      officeLinkCount: links.filter((href) =>
-        officePrefixes.some((prefix) => href.startsWith(prefix)),
+      adminDashboardLinkCount: links.filter((href) =>
+        adminDashboardPrefixes.some(
+          (prefix) =>
+            href === prefix ||
+            href.startsWith(`${prefix}/`) ||
+            href.startsWith(`${prefix}?`) ||
+            href.startsWith(`${prefix}#`),
+        ),
       ).length,
       isLoginSurface: /Đăng nhập|Log in to Vercel|Continue with Email/.test(
         text,
       ),
       isAdminSurface: /Tổng quan quản trị|Điều hướng quản trị/.test(text),
     };
-  }, OFFICE_PREFIXES);
+  }, ADMIN_DASHBOARD_PREFIXES);
 
   expect(state.pathname).toBe(path);
   expect(state.overflowX).toBeLessThanOrEqual(2);
-  if (options.allowWorkspaceLinks) {
-    expect(state.officeLinkCount).toBeGreaterThan(0);
+  if (options.adminDashboardLinkCount === "some") {
+    expect(state.adminDashboardLinkCount).toBeGreaterThan(0);
   } else {
-    expect(state.officeLinkCount).toBe(0);
+    expect(state.adminDashboardLinkCount).toBe(
+      options.adminDashboardLinkCount ?? 0,
+    );
   }
   expect(state.isLoginSurface).toBe(false);
   expect(state.isAdminSurface).toBe(false);
@@ -105,40 +113,81 @@ function expectedOwnerBottomNavCurrentCount(path: string, branchId: number) {
 }
 
 test.describe("branch route shell ownership", () => {
-  test("manager opens its Branch Hub without Owner workspaces across breakpoints", async ({
-    browser,
-  }) => {
-    const context = await browser.newContext({
+  for (const actor of [
+    {
+      label: "manager",
       storageState: E2E_AUTH_STORAGE_MANAGER,
+      viewports: [MOBILE, TABLET_PORTRAIT, TABLET_LANDSCAPE, DESKTOP],
+    },
+    {
+      label: "cashier",
+      storageState: E2E_AUTH_STORAGE,
+      viewports: [MOBILE],
+    },
+  ] as const) {
+    test(`${actor.label} stays in Branch and cannot enter Admin Dashboard URLs`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        storageState: actor.storageState,
+      });
+      const page = await context.newPage();
+      const health = watchPageHealth(page);
+
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("load");
+      await page.waitForURL((url) => /^\/br\/\d+$/.test(url.pathname));
+      const hubPath = new URL(page.url()).pathname;
+      expect(hubPath).toMatch(/^\/br\/\d+$/);
+
+      for (const viewport of actor.viewports) {
+        await page.setViewportSize(viewport);
+        await expectHealthyRoute(page, hubPath);
+      }
+
+      for (const path of ADMIN_DASHBOARD_PREFIXES) {
+        await page.goto(path, { waitUntil: "domcontentloaded" });
+        await page.waitForLoadState("load");
+        await expect(page).toHaveURL(hubPath);
+      }
+
+      await expectHealthyRoute(page, `${hubPath}/orders`);
+
+      expect(health.consoleErrors).toEqual([]);
+      expect(health.pageErrors).toEqual([]);
+      expect(health.serverErrors).toEqual([]);
+      await context.close();
     });
-    const page = await context.newPage();
+  }
+
+  test("owner opens the Admin Dashboard launcher across breakpoints", async ({
+    page,
+  }) => {
     const health = watchPageHealth(page);
 
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("load");
-    await page.waitForURL((url) => /^\/br\/\d+$/.test(url.pathname));
-    const hubPath = new URL(page.url()).pathname;
-    expect(hubPath).toMatch(/^\/br\/\d+$/);
-
-    for (const viewport of [
-      MOBILE,
-      TABLET_PORTRAIT,
-      TABLET_LANDSCAPE,
-      DESKTOP,
-    ]) {
+    for (const viewport of [MOBILE, TABLET_PORTRAIT, DESKTOP]) {
       await page.setViewportSize(viewport);
-      await expectHealthyRoute(page, hubPath, { allowWorkspaceLinks: true });
+      await expectHealthyRoute(page, "/admin", {
+        adminDashboardLinkCount: "some",
+      });
       await expect(
-        page.locator(
-          'a[href^="/admin"], a[href^="/finance"], a[href^="/hr"]',
-        ),
+        page.getByRole("heading", { name: "Admin Dashboard", exact: true }),
+      ).toBeVisible();
+      await expect(page.getByText("Chỉ dành cho Owner")).toBeVisible();
+      await expect(
+        page.getByText("Điều hành toàn hệ thống", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Nền tảng & thiết lập", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("navigation", { name: "Điều hướng quản trị" }),
       ).toHaveCount(0);
     }
 
     expect(health.consoleErrors).toEqual([]);
     expect(health.pageErrors).toEqual([]);
     expect(health.serverErrors).toEqual([]);
-    await context.close();
   });
 
   test("POS and KDS keep standalone station chrome", async ({ page }) => {
@@ -225,18 +274,16 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/shift/checkout-approvals`,
     ]) {
       await expectHealthyRoute(page, path, {
-        allowWorkspaceLinks: path === `/br/${branchId}`,
+        adminDashboardLinkCount: path === `/br/${branchId}` ? 1 : 0,
       });
       if (path === `/br/${branchId}`) {
         await expect(page.getByText("Cần xử lý")).toBeVisible();
         await expect(page.getByText("Trạm vận hành")).toBeVisible();
-        await expect(page.getByText("Quản lý cửa hàng")).toBeVisible();
-        await expect(page.getByText("Tài chính")).toBeVisible();
-        await expect(page.getByText("Nhân sự")).toBeVisible();
-        await expect(page.getByText("Lương")).toBeVisible();
-        await expect(page.locator('a[href="/finance"]')).toHaveCount(1);
-        await expect(page.locator('a[href="/hr"]')).toHaveCount(1);
-        await expect(page.locator('a[href="/hr/payroll"]')).toHaveCount(1);
+        await expect(page.getByText("Cấu hình chi nhánh")).toBeVisible();
+        await expect(page.locator('a[href="/admin"]')).toHaveCount(1);
+        await expect(page.locator('a[href="/finance"]')).toHaveCount(0);
+        await expect(page.locator('a[href="/hr"]')).toHaveCount(0);
+        await expect(page.locator('a[href="/hr/payroll"]')).toHaveCount(0);
       }
       const operatorNav = page.getByRole("navigation", {
         name: APP_COPY_VI.operatorAriaLabel,
@@ -287,7 +334,7 @@ test.describe("branch route shell ownership", () => {
     expect(health.serverErrors).toEqual([]);
   });
 
-  test("Office count management keeps desktop tables or an explicit empty state", async ({
+  test("Admin Dashboard count management keeps desktop tables or an explicit empty state", async ({
     page,
   }) => {
     test.setTimeout(90_000);

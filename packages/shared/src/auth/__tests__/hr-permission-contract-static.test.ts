@@ -15,12 +15,12 @@ const extractTemplateConst = (source: string, name: string) => {
   return value;
 };
 
-test("HR route ACL keeps staff and payroll owner-only", () => {
+test("Admin Dashboard HR route ACL is owner-only", () => {
   assert.deepEqual(MODULE_ACL.staff.allowedRoles, ["owner"]);
   assert.deepEqual(MODULE_ACL.hr_payroll.allowedRoles, ["owner"]);
-  assert.deepEqual(MODULE_ACL.hr.allowedRoles, ["owner", "branch_manager"]);
+  assert.deepEqual(MODULE_ACL.hr.allowedRoles, ["owner"]);
 
-  assert.equal(canAccess("branch_manager", "hr"), true);
+  assert.equal(canAccess("branch_manager", "hr"), false);
   assert.equal(canAccess("branch_manager", "staff"), false);
   assert.equal(canAccess("branch_manager", "hr_payroll"), false);
 
@@ -289,19 +289,19 @@ test("retired employee route has no standalone module ACL key", () => {
   const routeMap = read("packages/shared/src/auth/route-map.ts");
   const proxy = read("apps/web/proxy.ts");
 
-  assert.doesNotMatch(moduleAcl, /\|\s*"employee"/);
+  assert.doesNotMatch(moduleAcl, /\|\s*"employee"(?!_)/);
   assert.doesNotMatch(moduleAcl, /\nemployee:\s*\{/);
   assert.doesNotMatch(navConfig, /moduleKey:\s*"employee"/);
   assert.doesNotMatch(routeMap, /MODULE_ACL\.employee(?!_)/);
   assert.doesNotMatch(proxy, /moduleKey === "employee"/);
   assert.ok(
     routeResolution.includes(
-      'if (/^\\/br\\/\\d+\\/shift/.test(pathname)) return "operator_home";',
+      'if (/^\\/br\\/\\d+\\/shift(?:\\/|$)/.test(pathname)) return "operator_home";',
     ),
   );
   assert.ok(
     routeResolution.includes(
-      'if (/^\\/br\\/\\d+\\/profile/.test(pathname)) return "operator_home";',
+      'if (/^\\/br\\/\\d+\\/profile(?:\\/|$)/.test(pathname)) return "operator_home";',
     ),
   );
 });

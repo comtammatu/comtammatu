@@ -35,14 +35,22 @@ DECLARE
   v_result jsonb;
   v_count integer;
 BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns c
+    WHERE c.table_schema = 'public'
+      AND c.table_name = 'self_order_payment_requests'
+      AND c.column_name = 'session_id'
+  ) THEN
+    RAISE EXCEPTION
+      'TEST FAILED: retired self_order_payment_requests.session_id still exists';
+  END IF;
+
   SELECT b.tenant_id, b.id
   INTO v_tenant, v_branch
   FROM public.branches b
   WHERE b.is_active = true
-    AND EXISTS (
-      SELECT 1 FROM public.menu_items mi
-      WHERE mi.tenant_id = b.tenant_id AND mi.is_active = true
-    )
+    AND b.branch_kind = 'branch'
     AND EXISTS (
       SELECT 1 FROM public.profiles p
       WHERE p.tenant_id = b.tenant_id
@@ -62,17 +70,33 @@ BEGIN
     p.id
   LIMIT 1;
 
-  SELECT mi.id, mi.category_id
-  INTO v_menu_item, v_category
-  FROM public.menu_items mi
-  WHERE mi.tenant_id = v_tenant
-    AND mi.is_active = true
-  ORDER BY mi.id
-  LIMIT 1;
-
-  IF v_tenant IS NULL OR v_branch IS NULL OR v_profile IS NULL OR v_menu_item IS NULL THEN
+  IF v_tenant IS NULL OR v_branch IS NULL OR v_profile IS NULL THEN
     RAISE EXCEPTION 'Seed data missing for self-order S1 acceptance';
   END IF;
+
+  INSERT INTO public.menu_categories (tenant_id, name, type, sort_order)
+  VALUES (
+    v_tenant,
+    '__s1_category_' || gen_random_uuid()::text,
+    'main_dish',
+    999
+  )
+  RETURNING id INTO v_category;
+
+  INSERT INTO public.menu_items (
+    tenant_id,
+    category_id,
+    name,
+    base_price,
+    sort_order
+  ) VALUES (
+    v_tenant,
+    v_category,
+    '__s1_menu_item_' || gen_random_uuid()::text,
+    10000,
+    999
+  )
+  RETURNING id INTO v_menu_item;
 
   SELECT s.id
   INTO v_station
@@ -245,9 +269,10 @@ BEGIN
     FROM public.self_order_payment_requests pr
     WHERE pr.id = v_payment_request
       AND pr.order_id = v_one_order
-      AND pr.session_id IS NULL
+      AND pr.table_id = v_one_table
+      AND pr.branch_id = v_branch
   ) THEN
-    RAISE EXCEPTION 'PAYMENT REQUEST MUST BIND ORDER WITHOUT SESSION';
+    RAISE EXCEPTION 'PAYMENT REQUEST MUST BIND THE CURRENT ORDER AND TABLE';
   END IF;
 
   PERFORM set_config('request.jwt.claim.sub', v_profile::text, true);
