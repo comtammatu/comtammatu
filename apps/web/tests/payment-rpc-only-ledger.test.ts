@@ -94,7 +94,10 @@ test("pending intent and provider metadata share one guarded write boundary", ()
     providerConstraintMigration,
     /permission\.permission_key = 'pos:use'/,
   );
-  assert.match(providerConstraintMigration, /TO service_role;/);
+  assert.match(
+    providerConstraintMigration,
+    /GRANT EXECUTE ON FUNCTION public\.create_remote_payment_intent\(\s*bigint,\s*bigint,\s*bigint,\s*text,\s*numeric,\s*uuid,\s*text,\s*jsonb\s*\) TO service_role;/,
+  );
   assert.match(providerConstraintMigration, /p_provider_data \?\| ARRAY/);
   assert.match(
     providerConstraintMigration,

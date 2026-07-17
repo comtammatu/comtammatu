@@ -355,6 +355,10 @@ GRANT EXECUTE ON FUNCTION public.create_remote_payment_intent(
   bigint,
   text,
   numeric,
+  uuid,
+  text,
+  jsonb
+) TO service_role;
 
 DROP FUNCTION IF EXISTS public.get_daily_revenue(bigint, date, date);
 DROP FUNCTION IF EXISTS public.get_revenue_kpis(bigint, date, date);
