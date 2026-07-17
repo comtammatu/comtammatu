@@ -14,6 +14,9 @@ const migration = read(
 const providerConstraintMigration = read(
   "supabase/migrations/20260717130000_retire_momo_payment_contract.sql",
 );
+const paymentCutoverMigration = read(
+  "supabase/migrations/20260717151345_retire_legacy_momo_payment_entrypoints.sql",
+);
 const paymentActions = read(
   "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
 );
@@ -118,49 +121,28 @@ test("pending intent and provider metadata share one guarded write boundary", ()
   assert.doesNotMatch(paymentActions, /method === "momo"/);
 });
 
-test("payment intent migration preserves the production RPC during DB-first rollout", () => {
+test("authenticated remote-payment RPC is absent after provider cutover", () => {
   const baseline = normalizePgDumpSql(
     read("supabase/migrations/20260716093507_baseline.sql"),
   );
-  const legacyWrapperStart = migration.indexOf(
-    "CREATE OR REPLACE FUNCTION public.create_payment(",
-  );
-  const legacyWrapperEnd = migration.indexOf(
-    "COMMENT ON FUNCTION public.create_payment(",
-    legacyWrapperStart,
-  );
-  const legacyWrapper = migration.slice(legacyWrapperStart, legacyWrapperEnd);
 
   assert.match(
     baseline,
     /FUNCTION public\.create_payment\(p_tenant_id bigint[\s\S]*p_status text/,
   );
-  assert.doesNotMatch(
-    migration,
+  assert.match(
+    paymentCutoverMigration,
     /DROP FUNCTION IF EXISTS public\.create_payment/,
-  );
-  assert.doesNotMatch(
-    migration,
-    /DROP FUNCTION IF EXISTS public\.persist_pending_payment_provider_data/,
   );
   assert.match(
     providerConstraintMigration,
     /DROP FUNCTION IF EXISTS public\.finalize_momo_failed_payment/,
   );
   assert.match(
-    migration,
-    /CREATE OR REPLACE FUNCTION public\.create_payment\([\s\S]*legacy_remote_payment_only[\s\S]*remote_payment_requires_provider_settlement/,
+    paymentCutoverMigration,
+    /p_new_method NOT IN \('cash', 'vietqr'\)/,
   );
-  assert.match(
-    migration,
-    /GRANT EXECUTE ON FUNCTION public\.create_payment\([\s\S]*TO authenticated/,
-  );
-  assert.match(
-    legacyWrapper,
-    /SUM\(order_item\.quantity::numeric \* order_item\.unit_price\)/,
-  );
-  assert.match(legacyWrapper, /amount_mismatch_recomputed/);
-  assert.match(
+  assert.doesNotMatch(
     databaseTypes,
     /create_payment:\s*\{\s*Args:\s*\{[^}]*p_status\?: string[^}]*\}/,
   );
