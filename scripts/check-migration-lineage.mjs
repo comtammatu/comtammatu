@@ -9,6 +9,8 @@ const ARCHIVE_PATH = "supabase/migration-archive";
 const MAX_ALIGNED_FORWARD_MIGRATIONS = 20;
 const VERSIONED_SQL = /^(\d{14})_.+\.sql$/;
 const BASELINE_SQL = /^(\d{14})_baseline\.sql$/;
+const FUNCTION_ACL_RESET =
+  'REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";';
 const errors = [];
 
 function fail(message) {
@@ -60,12 +62,16 @@ if (baselineFile !== expectedBaselineFile) {
 if (!existsSync(baselineFile ?? "")) {
   fail(`${String(baselineFile)} does not exist`);
 } else {
-  const actualHash = createHash("sha256")
-    .update(readFileSync(baselineFile))
-    .digest("hex");
+  const baselineSql = readFileSync(baselineFile);
+  const actualHash = createHash("sha256").update(baselineSql).digest("hex");
   if (actualHash !== baselineSha256) {
     fail(
       `${baselineFile}: hash drifted; only the re-baseline workflow may update the baseline and manifest together`,
+    );
+  }
+  if (!baselineSql.toString("utf8").includes(FUNCTION_ACL_RESET)) {
+    fail(
+      `${baselineFile}: must neutralize fresh-environment function ACL defaults before restoring production grants`,
     );
   }
 }

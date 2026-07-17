@@ -83,7 +83,7 @@ now-squashed forward chain.
      `FOR ROLE postgres` ones. A fresh Supabase env configures them itself.
    - The extract uses `--no-owner` and keeps GRANTs inlined (do NOT pass
      `--no-privileges`).
-   - Before the dump's explicit object grants, revoke all table and sequence
+   - Before the dump's explicit object grants, revoke all table, sequence, and function
      privileges in `public` + `private` from `anon`, `authenticated`, and
      `service_role`. Fresh Supabase environments may grant a broader default ACL;
      the following explicit dump grants must then restore the exact prod ACL.

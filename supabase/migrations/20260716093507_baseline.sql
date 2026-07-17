@@ -49400,6 +49400,7 @@ CREATE POLICY "zone_lock_rpc_only_write" ON "public"."stocktake_zone_locks" TO "
 -- Neutralize environment-managed ACL defaults before restoring production grants.
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
+REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
 
 
 

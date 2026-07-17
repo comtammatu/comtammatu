@@ -2,7 +2,7 @@
   "state": "aligned",
   "baselineFile": "supabase/migrations/20260716093507_baseline.sql",
   "baselineVersion": "20260716093507",
-  "baselineSha256": "41eadf9374691430bc6f915f3318dd00cdda64b26ef3d4bc751dfe319426f097",
+  "baselineSha256": "8072ee2142edcb0836929b5758142deb71bd54289db46788f909e83acfea7b9b",
   "productionCutoff": "20260716093507",
   "nativePreviewBranching": "enabled",
   "activeForwardLimit": 5
