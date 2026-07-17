@@ -12,10 +12,10 @@ const migration = read(
   "supabase/migration-archive/20260715170000_add_guarded_payment_write_rpcs.sql",
 );
 const providerConstraintMigration = read(
-  "supabase/migrations/20260717130000_retire_momo_payment_contract.sql",
+  "supabase/migration-archive/20260717130000_retire_momo_payment_contract.sql",
 );
 const paymentCutoverMigration = read(
-  "supabase/migrations/20260717151345_retire_legacy_momo_payment_entrypoints.sql",
+  "supabase/migration-archive/20260717151345_retire_legacy_momo_payment_entrypoints.sql",
 );
 const paymentActions = read(
   "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
@@ -123,10 +123,10 @@ test("pending intent and provider metadata share one guarded write boundary", ()
 
 test("authenticated remote-payment RPC is absent after provider cutover", () => {
   const baseline = normalizePgDumpSql(
-    read("supabase/migrations/20260716093507_baseline.sql"),
+    read("supabase/migrations/20260717151345_baseline.sql"),
   );
 
-  assert.match(
+  assert.doesNotMatch(
     baseline,
     /FUNCTION public\.create_payment\(p_tenant_id bigint[\s\S]*p_status text/,
   );

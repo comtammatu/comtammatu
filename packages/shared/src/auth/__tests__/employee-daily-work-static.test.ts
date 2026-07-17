@@ -361,12 +361,12 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
   const workStateSrc = read(
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
   );
-  const baselineSrc = read("supabase/migrations/20260716093507_baseline.sql");
+  const baselineSrc = read("supabase/migrations/20260717151345_baseline.sql");
   const countGateMigrationSrc = read(
     "supabase/migration-archive/20260629183853_require_inventory_count_checkout_gate.sql",
   );
   const countGateRepairMigrationSrc = read(
-    "supabase/migrations/20260716181000_restore_inventory_count_checkout_gate.sql",
+    "supabase/migration-archive/20260716181000_restore_inventory_count_checkout_gate.sql",
   );
   const branchStaffMigrationSrc = read(
     "supabase/migration-archive/20260708115755_branch_staff_guard_mapper.sql",

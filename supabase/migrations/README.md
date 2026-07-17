@@ -1,6 +1,6 @@
 # Supabase migrations — baseline-first
 
-`20260716093507_baseline.sql` is the self-contained install for a fresh
+`20260717151345_baseline.sql` is the self-contained install for a fresh
 environment: a point-in-time `pg_dump` of the production `public` + `private`
 schemas. `private` is emitted first so public triggers/policies that reference
 `private.*` resolve, and `check_function_bodies` is disabled at the top so the
@@ -20,7 +20,7 @@ or cleaned up explicitly while lineage is blocked.
 
 ## What's here
 
-- `20260716093507_baseline.sql` — full `public` + `private` schema: tables,
+- `20260717151345_baseline.sql` — full `public` + `private` schema: tables,
   functions, RLS policies, indexes, grants, materialized views, the auth hook
   (`custom_access_token_hook` + its grant), and the `private` schema helpers.
   Apply first on a fresh env. Self-contained — no separate bootstrap file.
@@ -32,7 +32,7 @@ or cleaned up explicitly while lineage is blocked.
 
 `pg_dump --schema=public --schema=private` excludes Supabase-managed surfaces, so
 they are folded back in as the forward migration
-`20260716093508_fold_managed_surfaces.sql`. It is idempotent (`CREATE … IF NOT
+`20260717151346_fold_managed_surfaces.sql`. It is idempotent (`CREATE … IF NOT
 EXISTS`, `DROP … IF EXISTS` + recreate, `DO $$ … $$` guards) and applied
 automatically by `supabase db start` / `supabase db reset` / Supabase Branching as
 part of the chain — there is no separate manual apply step:
@@ -40,7 +40,7 @@ part of the chain — there is no separate manual apply step:
 - extensions (pgcrypto, uuid-ossp, hypopg, index_advisor, pg_cron). pgcrypto's
   `crypt`/`gen_salt` are required by the QA seed; the fold migration's Section A
   runs before the seed, so the seed always has them.
-- storage buckets (4) + storage.objects RLS policies (12). The policy section
+- storage buckets (5) + storage.objects RLS policies (10). The policy section
   needs `storage.objects` ownership; the Supabase migration role has it, so it runs
   in-chain without intervention.
 - realtime publication membership (`ADD TABLE`, guarded so it only adds tables not

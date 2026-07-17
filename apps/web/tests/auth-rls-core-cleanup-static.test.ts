@@ -77,7 +77,7 @@ test("active auth templates and target-role lists use canonical access names", (
   const checkedSources = [
     "supabase/_local-dev/dev-tenant-seed.sql",
     "supabase/tests/branch_manager_kds_permissions_test.sql",
-    "supabase/migrations/20260716093507_baseline.sql",
+    "supabase/migrations/20260717151345_baseline.sql",
   ];
 
   for (const file of checkedSources) {
