@@ -30,7 +30,7 @@ repo root), keep the graph fresh instead of trusting a previous session:
 
 Before implementation, read the applicable rule files:
 
-- Always read `docs/agent/rules/engineering.md` for core constraints, import/runtime boundaries, and Git conventions. Commands and architecture live here.
+- Always read `docs/agent/rules/engineering.md` for core constraints, import/runtime boundaries, and Git conventions. Root command and architecture summaries stay here; detailed authority is routed by `references.md`.
 - Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. Its **Authority Order** and **Required Routing Matrix** give layer-first and task-signal routing into the rules, skills, and verification a task needs.
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.

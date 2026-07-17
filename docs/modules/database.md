@@ -60,7 +60,7 @@ When facts disagree, trust the higher tier:
 | Tier | Source                                          | What it tells you                                               |
 | ---- | ----------------------------------------------- | --------------------------------------------------------------- |
 | 1    | `packages/database/src/types/database.types.ts` | The shape currently usable from app code (post `pnpm db:types`) |
-| 2    | Applied state of Preview/production DB          | What RLS, defaults, constraints actually enforce right now      |
+| 2    | Applied state of registered DEV/Preview/production DB | What RLS, defaults, constraints actually enforce right now |
 | 3    | `supabase/migrations/*.sql`                     | What changes have been authored — file existence ≠ applied      |
 | 4    | `docs/spec/database-schema.md`                  | Schema source ladder, migration layout, and status vocabulary   |
 | 5    | Hand-written module docs                        | Narrative + design rationale; can lag the sources above         |
@@ -71,6 +71,7 @@ Use these labels consistently when communicating migration state:
 
 - **planned** — change discussed, no SQL written yet
 - **drafted** — `.sql` file committed in `supabase/migrations/`, NOT yet applied
+- **dev-applied** — migration applied to the registered persistent Cloud DEV project
 - **preview-applied** — migration applied to an on-demand Preview Branch
 - **types generated** — `pnpm db:types` regenerated from the configured type-source schema
 - **prod-applied** — migration applied to the production project under `database.md` rights
@@ -177,7 +178,8 @@ filenames after the baseline.
 4. Add policies (at minimum: tenant isolation for SELECT)
 5. Add GRANTs: `GRANT SELECT, INSERT, UPDATE, DELETE ON ... TO authenticated`
 6. Add tenant scope to business keys unless an explicit exception applies
-7. Verify on a Preview Branch when runtime schema proof is needed
+7. Verify on registered Cloud DEV when runtime schema proof is needed; use a
+   Preview Branch only through the trusted registration or owner-operated path
 8. Follow the production apply rights and deploy ordering in `database.md`
 9. Run `corepack pnpm db:types` after the type-source schema is applied
 10. Run the repository verification gates

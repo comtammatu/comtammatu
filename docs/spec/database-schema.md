@@ -32,10 +32,12 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
   step (the storage-policy section needs `storage.objects` owner, which the migration
   role has).
 - Production keeps its applied migration history; the baseline is the fresh-env
-  install path. There is no persistent dev/test Supabase project, so non-prod
-  verification uses an on-demand Preview Branch or local baseline replay.
-  Production evidence stays within `database.md` read rights. Fresh-env notes live in
-  `supabase/migrations/README.md`.
+  install path. Persistent non-production verification uses the registered Cloud
+  DEV project `matu-greenfield`; disposable Preview work additionally requires
+  the trusted registration or owner-operated path defined by `database.md`.
+  Workstations do not use Local Docker as a fallback. Empty-database replay is a
+  CI-only harness, and Production evidence stays within `database.md` read rights.
+  Fresh-env notes live in `supabase/migrations/README.md`.
 
 ## Source Ladder
 
@@ -44,7 +46,7 @@ When database facts disagree, trust the higher source:
 | Tier | Source                                          | Use For                                                               |
 | ---- | ----------------------------------------------- | --------------------------------------------------------------------- |
 | 1    | `packages/database/src/types/database.types.ts` | Shape currently usable by app code after `corepack pnpm db:types`     |
-| 2    | Applied Preview/production Supabase state       | RLS, defaults, constraints, extensions, and real runtime behavior     |
+| 2    | Applied registered DEV/Preview/production state | RLS, defaults, constraints, extensions, and real runtime behavior     |
 | 3    | `supabase/migrations/*.sql`                     | Authored schema changes; file existence does not prove applied status |
 | 4    | `docs/modules/database.md` and module docs      | Domain grouping, rationale, and implementation guidance               |
 
@@ -73,6 +75,8 @@ Use these labels exactly when describing schema state:
 - **planned** — no SQL file exists yet.
 - **drafted** — SQL file exists in `supabase/migrations/`, but apply status is
   not proven.
+- **dev-applied** — migration was applied to the registered persistent Cloud
+  DEV project.
 - **preview-applied** — migration was applied to an on-demand Preview Branch.
 - **types generated** — `corepack pnpm db:types` regenerated types from the
   schema used by app code.

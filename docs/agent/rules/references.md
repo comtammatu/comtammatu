@@ -17,29 +17,37 @@ runtime adapters, local tool state, and `tasks/todo.md` are not parallel SSOTs.
 - Routes/scopes: `docs/spec/role-route-matrix.md`
 - Notifications: `docs/spec/toast-notification-system.md`
 - Finance: `docs/modules/finance.md`
+- Inventory: `docs/ref/inventory.md`
 - Infrastructure: `docs/modules/infrastructure.md`
+- Legal/tax/payroll/HĐĐT: `docs/ref/legal-framework-2026.md` first, then
+  `docs/ref/payroll-pit.md`, `docs/ref/einvoice-tax.md`,
+  `docs/ref/labor-contracts.md`, and `docs/ref/business-context.md` as applicable
 
-## Runtime Adapters
+## Agent Entrypoints Per IDE
 
 Adapter directories wire tools back to repo authority; they do not own rules.
 
-| Runtime      | Entrypoint                     | MCP config           | Production DB guard                                                               |
-| ------------ | ------------------------------ | -------------------- | --------------------------------------------------------------------------------- |
-| Claude Code  | `CLAUDE.md` shim → `AGENTS.md` | `.mcp.json`          | `.claude/settings.json` → canonical guard                                         |
-| Codex        | `AGENTS.md`                    | `.codex/config.toml` | `.codex/hooks.json` → canonical guard                                             |
-| Cursor/other | Adapter-local pointer required | Adapter-specific     | Unregistered: read-only until adapter is added and guard-sync registration exists |
+| Runtime      | Entrypoint                     | MCP config                            | Production DB guard                                                               |
+| ------------ | ------------------------------ | ------------------------------------- | --------------------------------------------------------------------------------- |
+| Claude Code  | `CLAUDE.md` shim → `AGENTS.md` | Plugin/runtime config; no tracked file | `.claude/settings.json` → canonical guard                                         |
+| Codex        | `AGENTS.md`                    | `.codex/config.toml`                  | `.codex/hooks.json` → canonical guard                                             |
+| Cursor/other | Adapter-local pointer required | Adapter-specific                      | Unregistered: read-only until adapter is added and guard-sync registration exists |
 
 The production guard contract spans the Environment Registry in `database.md`,
-`scripts/guard-prod-db.mjs`, and every adapter registered by
-`scripts/check-guard-sync.mjs`. A runtime without an adapter is unguarded; use
-only read-only/plan/ask/sandbox review until it is registered. Keep secrets,
-tokens, caches, generated sessions, worktrees, and local state untracked.
+`scripts/guard-prod-db.mjs`, the pinned Codex MCP binding in
+`.codex/config.toml`, and every adapter registered by
+`scripts/check-guard-sync.mjs`. Project-less direct MCP reads are accepted only
+when that Codex binding is mechanically verified. A runtime without an adapter
+is unguarded; use only read-only/plan/ask/sandbox review until it is registered.
+Keep secrets, tokens, caches, generated sessions, worktrees, and local state
+untracked.
 
 ## Intentional Mirror
 
 Only the `MIRROR:constraints` block is duplicated between `AGENTS.md` and
-`engineering.md`; `corepack pnpm lint:rules-mirror` enforces equality. Commands
-and architecture live only in `AGENTS.md`.
+`engineering.md`; `corepack pnpm lint:rules-mirror` enforces equality. The root
+command and architecture summary lives in `AGENTS.md`; full architecture
+authority remains in the System Sources above.
 
 ## Planning And Knowledge
 

@@ -228,13 +228,15 @@ cùng một slice.
 
 **Decision:** "Thông báo trên thiết bị" = popup OS từ client qua `Notification` API khi PWA đang mở (Realtime INSERT → refetch → `showNotification`); KHÔNG có lớp Web Push server (VAPID/cron/ledger đã gỡ). Đánh đổi chấp nhận: không thông báo khi app đóng. Popup bắn cho MỌI severity nhìn thấy được (gồm `info` `pos.order_new`). In-app feed giữ nguyên. Canonical: `docs/spec/toast-notification-system.md`. Đảo phải sửa bản ghi này trước.
 
-## D047: Non-prod runtime = Supabase preview-branch + Vercel Preview mỗi PR (2026-06-27)
+## D047: Non-prod runtime = Cloud DEV + Preview Branch on-demand (2026-06-27, cập nhật 2026-07-17)
 
-**Decision (net):** Non-prod database runtime dùng Supabase Preview Branch;
-Vercel Preview có thể nối vào đúng branch ref khi cần runtime smoke. Agent được
-create/use/delete Preview Branch theo database rules; quyền production không mở
-rộng. Per-PR auto-provision vẫn Parked đến khi seed safety, teardown, spend và
-env binding được chứng minh. Canonical: `docs/agent/rules/database.md` +
+**Decision (net):** Persistent non-prod database runtime dùng Cloud DEV đã đăng
+ký trong Environment Registry. Preview Branch chỉ dùng on-demand; agent-side
+read/mutation cần trusted registration, nếu không chủ dự án trực tiếp vận hành
+và cung cấp evidence. Vercel Preview có thể nối đúng non-production ref khi cần
+runtime smoke; quyền production không mở rộng. Per-PR auto-provision vẫn Parked
+đến khi seed safety, teardown, spend, env binding và trusted registration được
+chứng minh. Canonical: `docs/agent/rules/database.md` +
 `docs/runbooks/db/preview-branch-setup.md`.
 
 ## D048: Hợp nhất IA quản lý Người + Chi nhánh (2026-06-28)
@@ -412,7 +414,7 @@ GRN bắt đầu từ NCC, không từ PO.
 **Decision (owner 2026-07-10):**
 
 1. **Site 16 tắt hẳn:** chuyển toàn bộ tồn về Phước Hải (site 3) qua luồng transfer sẵn có (`central_kitchen → branch` hợp lệ theo transfer matrix D000) rồi `is_active = false`. Nhân sự bucket `production_manager` — **sửa bởi D076:** không sắp xếp lại role, tài khoản bị xoá cùng lượt retire bucket (không auto-remap). DB enum `branch_kind` GIỮ nguyên (lịch sử data); chỉ vận hành và UI hết fork.
-2. **Một kind vận hành duy nhất `branch`.** Mọi nâng cấp stock đã chuẩn bị cho đợt Bếp (mockup GRN 3 bước · Ghi mẻ một màn · Tồn 44px, đã owner-duyệt) áp cho `/br/[branchId]/(operator)/stock/*` kind `branch`. Plan sống ở `tasks/todo.md` § Branch Stock Cutover.
+2. **Một kind vận hành duy nhất `branch`.** Mọi nâng cấp stock đã chuẩn bị cho đợt Bếp (mockup GRN 3 bước · Ghi mẻ một màn · Tồn 44px, đã owner-duyệt) áp cho `/br/[branchId]/(operator)/stock/*` kind `branch`. Contract sống ở `docs/ref/inventory.md`; các outcome chưa đạt Exit được theo dõi bằng những H2 lane `inventory` hiện hành trong `tasks/todo.md`.
 3. **Công thức = Admin Dashboard-only:** operator dùng công thức để prefill định mức khi ghi mẻ, không sửa; tile `production/recipes` rời operator, quản trị công thức về Admin Dashboard `/inventory` (Owner).
 4. **Chỉ "Danh mục" mở cho chi nhánh; PO và Trả hàng NCC NGHỈ HẲN cả hai plane** (owner siết lại cùng ngày): GRN đã NCC-first (`po_id` nullable) nên không cần PO; hàng lỗi xử qua Báo hao hụt (ảnh + lý do) thay Trả NCC. Bảng + lịch sử DB giữ nguyên; gỡ tile/route/action khỏi Branch lẫn Admin Dashboard. Catalog mở cho `branch` KHÔNG cần grant mới — categories/units/ingredients gate bằng RLS/module, suppliers dùng `supplier_manage` đã cấp ở D068 §4.
 5. **Mô hình tồn kho tối giản — (sửa bởi D078) 1 chi nhánh · 1 location (Kho):** bỏ lô/HSD (cột + plumbing RPC, slice riêng trong tracker). Kho↔Bếp và `commit_intra_branch_transfer` nghỉ hẳn; vòng Yêu cầu → Gửi → Nhận / transfer cross-branch operator cũng nghỉ sau khi chuyển tồn site 16 → 3 xong.

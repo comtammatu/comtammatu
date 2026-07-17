@@ -13,11 +13,16 @@ Use this file for review depth, debate artifacts, verification, and completion.
 T1 never applies when a change alters policy, authority, behavior, production
 rights, security, or source-of-truth routing. When uncertain, choose higher.
 
-`scripts/check-review-tier.mjs` computes a PR-wide floor from the merge-base to
-HEAD. CI runs it with `REVIEW_TIER_STRICT=1`; missing or under-floor T2/T3
-declarations fail. It scans the PR commit range plus `REVIEW_TIER`; the highest
-bare `T1`/`T2`/`T3` token wins. Local dirty-tree output can include unrelated
-work and must not be presented as task attribution.
+`scripts/check-review-tier.mjs` computes the floor from the GitHub event payload:
+PR base/head SHAs for `pull_request`, and exact before/after SHAs for `push`.
+CI runs it with `REVIEW_TIER_STRICT=1`; missing or malformed event data, refs,
+diffs, logs, or under-floor declarations fail closed. It scans that event's
+commit range plus `REVIEW_TIER`; the highest bare `T1`/`T2`/`T3` token wins.
+Local runs use the `origin/main`/`main` merge-base plus tracked and untracked
+working-tree changes, remain advisory, and must not be presented as task
+attribution. T1 automation accepts only modified lockfile-only diffs or modified
+non-governance Markdown diffs totaling at most two added/deleted lines; new,
+deleted, renamed, binary, mixed, or larger doc changes floor at T2.
 
 ## Skill Plan
 
@@ -53,6 +58,28 @@ For every boundary touched, compare both sides:
 Scope this to the changed boundary. When the same deterministic failure recurs,
 add or extend one guard instead of adding more prose.
 
+## Current Task Lifecycle
+
+`tasks/todo.md` contains active outcomes only. Each H2 has exactly one `State`,
+`Kind`, `Tier`, `Lane`, `Exit`, and `Evidence`, followed by at least one unchecked
+action. Allowed states are `triage`, `ready`, `doing`, `verify`, and `blocked`:
+
+- `triage`: reproduce and bound a finding before implementation.
+- `ready`: the outcome, risk tier, and proof are actionable.
+- `doing`: one agent or delivery lane actively owns the outcome.
+- `verify`: implementation exists, but the stated evidence is incomplete.
+- `blocked`: an external dependency prevents the Exit; add one `Blocker` line
+  naming the dependency and its recheck trigger.
+
+There is no persisted `done`, `closed`, or `superseded` state and no checked
+checkbox. Delete the H2 after its Exit passes; git is the shipped-work history.
+Split unrelated outcomes instead of nesting a mini-roadmap. Route stable
+contracts to owning docs, deterministic failures to a guard/test plus
+`tasks/regressions.md` when durable, and incident learning to `tasks/lessons.md`.
+Review plans, attestations, snapshots, and debate transcripts stay in the task
+or PR conversation, not this tracker. `scripts/check-doc-staleness.mjs` enforces
+the mechanical shape.
+
 ## Verification
 
 Before marking implementation complete:
@@ -61,8 +88,11 @@ Before marking implementation complete:
    For release-grade or broad slices, run `corepack pnpm verify`.
 2. Run targeted tests for the changed behavior and inspect the task-scoped diff.
 3. Re-index CodeGraph after source, SQL, or generated-type changes.
-4. Run `corepack pnpm lint:review-tier` and record the declared tier with the
-   actual verification in the commit/PR/task summary.
+4. Give the checker a machine-readable declaration: set `REVIEW_TIER=Tn` for a
+   local run, and include a bare `T1`/`T2`/`T3` token in a commit message inside
+   the CI event range before pushing. Run `corepack pnpm lint:review-tier` and
+   mirror the declared tier plus actual verification in the PR/task summary;
+   those summaries are evidence surfaces but are not checker inputs.
 5. For T3, attest which acceptance/test items passed, which are intentionally
    out of scope, and where each material rule is implemented.
 6. CI must be green before calling landed work complete. Keep `written`,

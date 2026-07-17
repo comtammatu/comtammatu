@@ -93,17 +93,37 @@ requires a new decision.
 
 Current code has a broad `/finance/*` workspace. The target product contract is:
 
-| Route family               | Current role                 | Decision                                                              |
-| -------------------------- | ---------------------------- | --------------------------------------------------------------------- |
-| `/finance`                 | Four-metric basic landing    | Should show revenue, inventory value, operating expense, gross profit |
-| `/finance/revenue`         | Revenue analytics            | Keep, but do not make it the only money-control entry                 |
-| `/finance/inventory-value` | Inventory value drilldown    | Link from Finance Basic, implemented in Finance                       |
-| `/finance/food-cost`       | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                 |
+| Route family                 | Current role                 | Decision                                                              |
+| ---------------------------- | ---------------------------- | --------------------------------------------------------------------- |
+| `/finance`                   | Four-metric basic landing    | Should show revenue, inventory value, operating expense, gross profit |
+| `/finance/revenue`           | Revenue analytics            | Keep, but do not make it the only money-control entry                 |
+| `/finance/inventory-value`   | Inventory value drilldown    | Link from Finance Basic, implemented in Finance                       |
+| `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                 |
 | `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses  |
-| `/finance/invoices`        | HĐĐT queue                   | Keep as support workflow                                              |
-| `/finance/summary`         | HĐĐT summary trigger         | Keep admin-only by action permission                                  |
+| `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                              |
+| `/finance/summary`           | HĐĐT summary trigger         | Keep admin-only by action permission                                  |
 
 There is no current `/admin/accounting/*` app surface.
+
+## Money Write Boundary
+
+- `payments` is collected-money truth; bank/webhook rows are evidence. A signed
+  SePay transfer that conflicts with an already completed payment is quarantined
+  for Owner review and never rewrites that completed payment automatically.
+- Supplier payments use one caller-minted UUID per intent. An exact retry returns
+  the original fact; reusing the UUID with changed tenant, actor, invoice, amount,
+  method, or normalized reference is a conflict. Balance validation, row locking,
+  insert, and invoice update remain one RPC transaction.
+- Expense payment and cancellation state changes use their named Owner-gated
+  transition RPCs. Cash timing follows `paid_at`; the operating-expense ledger
+  keeps the incurred business date.
+- Application money mutations are RPC-owned. Any authenticated direct DML kept
+  for a deployed compatibility caller is transitional debt, must be trigger-
+  constrained, and is removed only after the replacement runtime is proven.
+  Browser code must not become a second payment-write authority.
+
+Runtime deployment, database grants, generated types, and authenticated browser
+behavior are separate acceptance gates; evidence for one never implies another.
 
 ## Acceptance Criteria
 

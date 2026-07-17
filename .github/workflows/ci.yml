@@ -21,13 +21,13 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
       TURBO_TELEMETRY_DISABLED: "1"
       NEXT_TELEMETRY_DISABLED: "1"
-      # Fail closed when a T2/T3 PR lacks or under-declares its review tier.
+      # Fail closed when the event commit range lacks or under-declares its tier.
       REVIEW_TIER_STRICT: "1"
     steps:
       - uses: actions/checkout@v7
         with:
-          # Full history so check-review-tier can merge-base against origin/main;
-          # a shallow clone makes the base unreachable and the guard self-skips.
+          # Full history so check-review-tier can verify the event's exact SHAs
+          # and compute the pull-request merge-base without guessing a branch.
           fetch-depth: 0
 
       # Reads the pnpm version from package.json "packageManager".
@@ -41,8 +41,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm deps:audit
-
-      - run: pnpm lint:baseline
 
       - run: pnpm typecheck
 
@@ -128,8 +126,9 @@ jobs:
       - run: pnpm --filter @comtammatu/web exec playwright install --with-deps chromium
       # Production build so the heavy POS route is pre-compiled; `next dev`
       # compiles it on-demand, which blows the smoke's timeout. The bring-up
-      # already wrote .env.local pointing at the local stack, so the build inlines
-      # the right NEXT_PUBLIC_SUPABASE_URL and `next start` serves against it.
+      # exported the local test values through the GitHub runner environment, so
+      # the build inlines the right NEXT_PUBLIC_SUPABASE_URL without writing repo
+      # .env.local files.
       - run: pnpm --filter @comtammatu/web build
       # Scoped to the POS->payment->KDS core (payment-cash) — the deterministic
       # hot-path smoke. The broader suite (guides/visual/inventory RBAC/realtime

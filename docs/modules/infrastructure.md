@@ -61,12 +61,12 @@ UPSTASH_REDIS_REST_URL            # Rate limiting
 UPSTASH_REDIS_REST_TOKEN          # Rate limiting
 ```
 
-### Supabase (local dev)
+### Supabase (CI-only local E2E)
 
 ```
-SUPABASE_URL                      # Local Supabase URL
+SUPABASE_URL                      # CI harness URL
 SUPABASE_SERVICE_ROLE_KEY         # For admin operations
-SUPABASE_DB_PASSWORD              # Local DB password
+SUPABASE_DB_PASSWORD              # CI harness DB password
 ```
 
 ## Development Setup
@@ -75,10 +75,10 @@ SUPABASE_DB_PASSWORD              # Local DB password
 # 1. Install dependencies
 pnpm install
 
-# 2. Link Supabase project
-supabase link --project-ref YOUR_PROJECT_ID
+# 2. Verify the Environment Registry and select the registered Cloud DEV ref
+# Do not treat stored CLI link state as target authority.
 
-# 3. Generate types after migrations are applied to your dev/test type source
+# 3. Generate types after migrations are applied to the approved type source
 pnpm db:types
 
 # 4. Start dev server
@@ -86,6 +86,10 @@ pnpm dev
 ```
 
 Full setup guide: `docs/ref/setup.md`
+
+Workstation database operations follow `docs/agent/rules/database.md`: use the
+registered persistent Cloud DEV target with a literal binding. Local Docker is
+reserved for the CI-only E2E harness and is not a workstation fallback.
 
 ## Deployment
 
