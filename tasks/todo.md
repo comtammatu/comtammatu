@@ -1499,6 +1499,30 @@ the baseline snapshot. The baseline-only replay and the full five-forward chain
 replay pass. The Production ledger metadata is reconciled, the lineage manifest
 is aligned, and native Preview branching is enabled.
 
+#### Greenfield re-baseline execution (2026-07-17)
+
+- **Production proof:** Read-only ledger inspection confirmed the prior baseline
+  plus all six forward migrations through
+  `20260717151345_retire_legacy_momo_payment_entrypoints` are present. No
+  Production schema, data, or migration-ledger write was performed.
+- **New source chain:** `20260717151345_baseline.sql` now represents the current
+  Production `public` + `private` schema; its SHA-256 is
+  `3b038dc7756dd6ce98f93247f4930b86d8ccf52f151de947fd054130e5119cd5`.
+  `20260717151346_fold_managed_surfaces.sql` restores the exact five buckets,
+  ten storage policies, ten Realtime tables, extension set, and nine cron jobs.
+  The former baseline, fold, and six represented forwards are archived.
+- **Greenfield replay:** Cloud DEV `xrsantkidwknjhcgcfmi` was reset with
+  `--no-seed`. Its ledger contains only the new baseline and managed fold; tenant,
+  profile, order, and auth-user counts are all zero. Normalized Production/DEV
+  fingerprints match for 237 relations, 1,546 columns, 885 constraints, 558
+  indexes, 418 functions, 260 policies, 143 triggers, 1,151 function ACL rows,
+  and 4,294 relation ACL rows. Three stale Production `COMMENT` strings were
+  normalized to current source references; no behavioral schema or ACL changed.
+- **Verification:** DEV type generation has no diff. Full `pnpm verify` passes.
+  Lineage intentionally remains `blocked_pending_rebaseline`, with one active
+  forward and native Preview blocked, until a separate owner-approved Production
+  ledger-alignment operation is rehearsed and applied.
+
 #### MoMo payment decommission (2026-07-17)
 
 - **PM/BA:** Cash and VietQR are the only payment methods. Self-Order may offer

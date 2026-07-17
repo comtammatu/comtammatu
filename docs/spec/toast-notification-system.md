@@ -35,7 +35,7 @@ Use these sources in order:
 3. Durable feed actions: `apps/web/app/(protected)/notifications/actions.ts`
 4. Durable feed UI: `apps/web/app/_components/notification-*`
 5. Foreground popup runtime: `apps/web/app/_hooks/use-foreground-notifications.ts`, `apps/web/app/_components/notification-popup-control.tsx`, and `apps/web/app/sw.ts` (notificationclick)
-6. Database contract: `supabase/migrations/20260716093507_baseline.sql` (bảng notifications; migration gốc nằm trong `supabase/migration-archive/`) and forward notification migrations
+6. Database contract: `supabase/migrations/20260717151345_baseline.sql` (bảng notifications; migration gốc nằm trong `supabase/migration-archive/`) and forward notification migrations
 7. External outbox: `public.notification_outbox` and module-specific dispatchers
 8. Product vocabulary: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 

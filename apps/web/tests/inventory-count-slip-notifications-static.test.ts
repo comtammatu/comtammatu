@@ -18,10 +18,10 @@ function around(source: string, needle: string) {
 
 test("count-slip RPCs emit durable notifications with review links", () => {
   const baselineSql = normalizePgDumpSql(
-    readRepoFile("supabase/migrations/20260716093507_baseline.sql"),
+    readRepoFile("supabase/migrations/20260717151345_baseline.sql"),
   );
   const repairSql = readRepoFile(
-    "supabase/migrations/20260716182000_restore_missed_runtime_contracts.sql",
+    "supabase/migration-archive/20260716182000_restore_missed_runtime_contracts.sql",
   );
   const messageSrc = readRepoFile("apps/web/lib/messages/notifications.ts");
   const itemSrc = readRepoFile(

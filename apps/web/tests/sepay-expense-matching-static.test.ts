@@ -23,7 +23,7 @@ const transferIntentMigration = read(
   "supabase/migration-archive/20260715123314_expense_transfer_intent_lifecycle.sql",
 );
 const expensePaymentStateMigration = read(
-  "supabase/migrations/20260716100000_close_expense_payment_state_machine.sql",
+  "supabase/migration-archive/20260716100000_close_expense_payment_state_machine.sql",
 );
 const adjudicationStart = hardeningMigration.indexOf("DO $$");
 const adjudicationEnd = hardeningMigration.indexOf(
