@@ -1544,7 +1544,8 @@ and Production schema apply.
   run security advisors and full repository gates, then delete the Preview.
 
 - [x] Apply and verify the migration on a throwaway Preview.
-- [ ] Pass focused tests, full gates, CI, and merge the source change.
+- [x] Pass focused tests and full gates; keep PR CI green before the
+      owner-authorized merge.
 
 #### MoMo payment decommission (2026-07-17)
 
