@@ -3,6 +3,7 @@ import "server-only";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { getPaymentProvider } from "@comtammatu/shared/providers";
+import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 import type { PublicSelfOrderSnapshot, SelfOrderCartItem } from "./contracts";
 import {
@@ -64,6 +65,12 @@ type SelfOrderPaymentRequestStatus =
   | "completed"
   | "cancelled"
   | "expired";
+
+type SelfOrderTableScope = {
+  client: UntypedServiceClient;
+  tenantId: number;
+  branchId: number;
+};
 
 function service(): UntypedServiceClient {
   return createServiceClient() as unknown as UntypedServiceClient;
@@ -370,9 +377,9 @@ function ictTodayDate(): string {
   }).format(new Date());
 }
 
-async function loadBranchAvailabilityMap(
+async function loadSelfOrderTableScope(
   token: string,
-): Promise<Map<number, SelfOrderAvailability> | null> {
+): Promise<SelfOrderTableScope | null> {
   const client = service();
   const { data: table, error: tableError } = await client
     .from("tables")
@@ -389,6 +396,14 @@ async function loadBranchAvailabilityMap(
     return null;
   }
 
+  return { client, tenantId, branchId };
+}
+
+async function loadBranchAvailabilityMapForScope({
+  client,
+  tenantId,
+  branchId,
+}: SelfOrderTableScope): Promise<Map<number, SelfOrderAvailability> | null> {
   const { data: gateEnabled, error: gateError } = await client.rpc<boolean>(
     "is_feature_enabled",
     {
@@ -436,6 +451,34 @@ async function loadBranchAvailabilityMap(
   return map;
 }
 
+async function loadBranchAvailabilityMap(
+  token: string,
+): Promise<Map<number, SelfOrderAvailability> | null> {
+  const scope = await loadSelfOrderTableScope(token);
+  return scope ? loadBranchAvailabilityMapForScope(scope) : null;
+}
+
+async function loadMomoEnabledForScope({
+  client,
+  tenantId,
+}: SelfOrderTableScope): Promise<boolean> {
+  const { data: setting, error } = await client
+    .from("system_settings")
+    .select("value")
+    .eq("tenant_id", tenantId)
+    .eq("key", SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO)
+    .maybeSingle();
+  if (error) {
+    console.error("[self-order] MoMo setting lookup failed", error);
+    return false;
+  }
+  const value = setting?.value;
+  return (
+    typeof value === "string" &&
+    ["true", "1"].includes(value.trim().toLowerCase())
+  );
+}
+
 function enrichMenuWithAvailability(
   snapshot: Extract<PublicSelfOrderSnapshot, { ok: true }>,
   availabilityByItemId: Map<number, SelfOrderAvailability>,
@@ -472,9 +515,16 @@ async function withMenuAvailability(
   snapshot: PublicSelfOrderSnapshot,
 ): Promise<PublicSelfOrderSnapshot> {
   if (!snapshot.ok) return snapshot;
-  const availability = await loadBranchAvailabilityMap(token);
-  if (!availability) return snapshot;
-  return enrichMenuWithAvailability(snapshot, availability);
+  const scope = await loadSelfOrderTableScope(token);
+  if (!scope) return snapshot;
+  const [availability, momoEnabled] = await Promise.all([
+    loadBranchAvailabilityMapForScope(scope),
+    loadMomoEnabledForScope(scope),
+  ]);
+  const enriched = { ...snapshot, momoEnabled };
+  return availability
+    ? enrichMenuWithAvailability(enriched, availability)
+    : enriched;
 }
 
 function publicPayloadFailure(

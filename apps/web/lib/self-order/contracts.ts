@@ -360,6 +360,7 @@ export const publicSelfOrderAvailableSnapshotSchema = z
   .object({
     ok: z.literal(true),
     state: selfOrderDerivedStateSchema,
+    momoEnabled: z.boolean().optional().default(false),
     branch: z.object({ name: z.string().min(1).max(200) }).strict(),
     table: z
       .object({

@@ -74,6 +74,7 @@ export interface InvoiceErrorFocusRequest {
 
 export interface PaymentPanelProps {
   disabled: boolean;
+  momoEnabled: boolean;
   activeOrder: PublicSelfOrderAvailableSnapshot["order"];
   activePaymentRequest: GuestPaymentRequestState | null;
   buyerNotGetInvoice: boolean;
@@ -231,6 +232,7 @@ function BankAppLauncher({
 
 export function PaymentPanel({
   disabled,
+  momoEnabled,
   activeOrder,
   activePaymentRequest,
   buyerNotGetInvoice,
@@ -690,20 +692,22 @@ export function PaymentPanel({
                 )}
                 {SELF_ORDER_VI.vietQrCreate}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                disabled={disabled || isPending}
-                onClick={() => onRequestPayment("momo")}
-              >
-                {pendingMethod === "momo" ? (
-                  <Spinner className="size-4" />
-                ) : (
-                  <IconMoMo data-icon="inline-start" />
-                )}
-                {SELF_ORDER_VI.momoCreate}
-              </Button>
+              {momoEnabled ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  disabled={disabled || isPending}
+                  onClick={() => onRequestPayment("momo")}
+                >
+                  {pendingMethod === "momo" ? (
+                    <Spinner className="size-4" />
+                  ) : (
+                    <IconMoMo data-icon="inline-start" />
+                  )}
+                  {SELF_ORDER_VI.momoCreate}
+                </Button>
+              ) : null}
             </div>
           )}
         </>

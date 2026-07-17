@@ -5,6 +5,7 @@ import { test } from "node:test";
 import {
   selfOrderMomoResponseSchema,
   selfOrderPaymentRequestSchema,
+  publicSelfOrderAvailableSnapshotSchema,
 } from "../lib/self-order/contracts";
 
 const root = join(process.cwd(), "../..");
@@ -107,4 +108,44 @@ test("browser deeplink and return are not payment settlement authority", () => {
   assert.match(cron, /getCronSecret\(\)/);
   assert.match(cron, /MOMO_RECONCILE_ENABLED/);
   assert.match(cron, /self_order_apply_momo_query_result/);
+});
+
+test("Self-Order hides MoMo when the tenant kill switch is disabled", () => {
+  const server = readWeb("lib/self-order/server.ts");
+  const client = readWeb("app/q/[token]/self-order-client.tsx");
+  const paymentPanel = readWeb(
+    "app/q/[token]/self-order/payment-panel.tsx",
+  );
+
+  assert.match(server, /SYSTEM_SETTING_KEYS\.PAYMENT_ENABLE_MOMO/);
+  assert.match(server, /loadMomoEnabledForScope/);
+  assert.match(client, /momoEnabled=\{available\.momoEnabled\}/);
+  assert.match(
+    paymentPanel,
+    /\{momoEnabled \? \([\s\S]*onRequestPayment\("momo"\)/,
+  );
+
+  const baseSnapshot = {
+    ok: true as const,
+    state: "unopened" as const,
+    branch: { name: "Má Tư" },
+    table: { id: 1, number: 1 },
+    openOrderCount: 0,
+    order: null,
+    rounds: [],
+    request: null,
+    paymentRequest: null,
+    menu: [],
+  };
+  assert.equal(
+    publicSelfOrderAvailableSnapshotSchema.parse(baseSnapshot).momoEnabled,
+    false,
+  );
+  assert.equal(
+    publicSelfOrderAvailableSnapshotSchema.parse({
+      ...baseSnapshot,
+      momoEnabled: true,
+    }).momoEnabled,
+    true,
+  );
 });

@@ -777,6 +777,7 @@ export function SelfOrderClient({
         {!ambiguous && order ? (
           <PaymentPanel
             disabled={awaiting || paymentPending}
+            momoEnabled={available.momoEnabled}
             activeOrder={order}
             activePaymentRequest={activePaymentRequest}
             buyerNotGetInvoice={buyerNotGetInvoice}
