@@ -1,7 +1,7 @@
 /**
  * Payment Provider Interface
  *
- * Tương tự Go interface — mỗi payment method (cash, VietQR, MoMo)
+ * Tương tự Go interface — mỗi payment method (cash, VietQR)
  * implement interface này. Server action chỉ gọi qua interface,
  * không biết implementation cụ thể.
  *
@@ -9,11 +9,10 @@
  * PaymentProvider (interface)
  *   ├── CashProvider
  *   ├── VietQRProvider
- *   └── MoMoProvider
  * ```
  */
 
-export type PaymentMethod = "cash" | "vietqr" | "momo";
+export type PaymentMethod = "cash" | "vietqr";
 
 export interface PaymentRequest {
   tenantId: number;
@@ -21,9 +20,6 @@ export interface PaymentRequest {
   orderNumber: string;
   amount: number;
   description?: string;
-  providerRef?: string;
-  redirectUrl?: string;
-  requireQrCode?: boolean;
 }
 
 export interface PaymentResult {
@@ -31,7 +27,7 @@ export interface PaymentResult {
   providerRef: string | null;
   /** QR image URL or data for display */
   qrData?: string;
-  /** Redirect URL (MoMo deeplink) */
+  /** Optional provider redirect URL. */
   redirectUrl?: string;
   /** Raw provider response for storage */
   providerData?: Record<string, unknown>;
@@ -41,14 +37,6 @@ export interface PaymentStatus {
   status: "pending" | "completed" | "failed";
   providerRef: string | null;
   paidAt: string | null;
-  providerData?: Record<string, unknown>;
-}
-
-export interface WebhookVerification {
-  valid: boolean;
-  orderId?: string;
-  amount?: number;
-  providerRef?: string;
 }
 
 export interface PaymentProvider {
@@ -59,9 +47,6 @@ export interface PaymentProvider {
 
   /** Poll payment status (VietQR). Not all providers support this. */
   checkStatus?(providerRef: string): Promise<PaymentStatus>;
-
-  /** Verify webhook signature (MoMo). Not all providers support this. */
-  verifyWebhook?(payload: unknown, signature: string): WebhookVerification;
 }
 
 /**

@@ -92,7 +92,7 @@ export async function fetchSelfOrderPosState(
       .select("id, order_id")
       .eq("tenant_id", ctx.claims.tenant_id)
       .eq("branch_id", parsedBranchId.data)
-      .in("status", ["cash_call", "vietqr_pending", "momo_pending"])
+      .in("status", ["cash_call", "vietqr_pending"])
       .order("created_at", { ascending: false }),
   ]);
 

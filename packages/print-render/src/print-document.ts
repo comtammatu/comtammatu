@@ -105,7 +105,7 @@ export type PrintDocumentNoteBlock = {
 };
 
 export type PrintDocumentQrData = {
-  type?: "vietqr" | "momo" | string;
+  type?: "vietqr" | string;
   content?: string;
   header_label?: string;
   account_no?: string | null;

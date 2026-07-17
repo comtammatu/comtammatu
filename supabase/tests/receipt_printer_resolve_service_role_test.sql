@@ -1,7 +1,7 @@
 -- =============================================================
 -- Regression test: resolve_branch_printer_for_type resolves under service_role
 --
--- SePay/MoMo webhooks run confirm_sepay_payment → enqueue_receipt_print as
+-- SePay webhooks run confirm_sepay_payment → enqueue_receipt_print as
 -- service_role (no user JWT). The resolver used to gate on
 -- p_tenant_id = auth_tenant_id(), which is NULL for service_role, so it returned
 -- NULL and the webhook receipt was never queued. This locks in the service_role

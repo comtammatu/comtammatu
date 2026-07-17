@@ -45,7 +45,7 @@ limits, team, approvals, settings, orders, and stock capabilities remain
 available through their existing route and permission gates. Cashier keeps
 Branch-native orders but cannot enter `/orders`.
 
-Finance behavior, SePay/MoMo reconciliation, database schema, route moves, and
+Finance behavior, SePay reconciliation, database schema, route moves, and
 Owner KPI implementation remain separate slices.
 
 ## Verification

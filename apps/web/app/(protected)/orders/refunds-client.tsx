@@ -77,7 +77,7 @@ function bankReconciliationLabel(refund: RefundRow): string {
 }
 
 function paymentMethodLabel(method: string | null): string {
-  if (method === "cash" || method === "vietqr" || method === "momo") {
+  if (method === "cash" || method === "vietqr") {
     return PAYMENT_METHOD_LABELS_VI[method];
   }
   return method ?? "—";

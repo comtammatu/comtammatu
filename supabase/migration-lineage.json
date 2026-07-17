@@ -5,5 +5,5 @@
   "baselineSha256": "41eadf9374691430bc6f915f3318dd00cdda64b26ef3d4bc751dfe319426f097",
   "productionCutoff": "20260716093507",
   "nativePreviewBranching": "enabled",
-  "activeForwardLimit": 7
+  "activeForwardLimit": 5
 }

@@ -19,15 +19,6 @@ function readRepoFile(path: string): string {
   return readFileSync(candidate, "utf8");
 }
 
-test("MoMo webhook binds payment lookup to signed tenant/order scope", () => {
-  const source = readRepoFile("apps/web/app/api/webhooks/momo/route.ts");
-
-  assert.match(
-    source,
-    /\.from\("payments"\)[\s\S]*\.eq\("tenant_id", extra\.tenantId\)[\s\S]*\.eq\("order_id", extra\.orderId\)[\s\S]*\.eq\("provider_ref", payload\.orderId\)[\s\S]*\.eq\("method", "momo"\)/,
-  );
-});
-
 test("SePay webhook verifies raw-body HMAC and returns SePay success JSON", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
 
@@ -273,7 +264,7 @@ test("POS VietQR renders transfer QR with the order payment code", () => {
     "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
 
-  assert.match(schema, /z\.enum\(\["vietqr", "momo"\]\)/);
+  assert.match(schema, /z\.enum\(\["vietqr"\]\)/);
   assert.doesNotMatch(schema, /method: z\.enum\(\[[^\]]*"cash"/);
   assert.match(action, /ensureOrderPaymentCode/);
   assert.match(action, /"ensure_order_payment_code"/);
@@ -555,23 +546,6 @@ test("VietQR bank account configuration lives in Admin settings, not env", () =>
     /process\.env(?:\[[^\]]*VIETQR_|\.VIETQR_)/,
   );
   assert.doesNotMatch(providerInit, /VIETQR_|VietQRProvider/);
-});
-
-test("MoMo webhook accepts completed unconditionally per no-stock-deduction policy, keeps defensive stock_failed 500", () => {
-  const source = readRepoFile("apps/web/app/api/webhooks/momo/route.ts");
-  const migration = readRepoFile(
-    "supabase/migration-archive/20260715170000_add_guarded_payment_write_rpcs.sql",
-  );
-
-  // No-stock-deduction policy (migration 20260611001000): completed /
-  // already_completed accepted unconditionally, no stock_consumed gate.
-  assert.doesNotMatch(source, /stock_consumed === true/);
-  assert.match(source, /case "completed":\s*\n\s*case "already_completed":/);
-  // stock_failed stays defensive (pre-migration RPC) and fail-closed 500
-  // so MoMo retries.
-  assert.match(source, /case "stock_failed":/);
-  assert.match(migration, /v_error_code := 'stock_consumption_failed'/);
-  assert.match(source, /status: 500/);
 });
 
 test("payment completion migration recomputes amount and does not complete on stock failure", () => {

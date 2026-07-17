@@ -29,12 +29,6 @@ import { POS_ERROR_CODES } from "../_utils/error-codes";
 export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
   // Cash-specific sentinels first.
   {
-    match: includesAny("pending_momo_payment_requires_provider_resolution"),
-    errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    userMessage:
-      "Đơn đang chờ MoMo xác nhận. Hãy kiểm tra giao dịch MoMo trước khi thu tiền mặt.",
-  },
-  {
     match: includesAny("self_order_payment_cancel_staff_required"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage:

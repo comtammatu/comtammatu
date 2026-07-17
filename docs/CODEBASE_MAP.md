@@ -11,7 +11,7 @@
   Current work lives in `tasks/todo.md`; durable architecture choices live in
   active ADRs or the owning spec/ref/rule doc.
 - **Current surface:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS,
-  Print, Payments (Cash + VietQR + Momo), Finance Basic, HR/payroll basics, and
+  Print, Payments (Cash + VietQR), Finance Basic, HR/payroll basics, and
   HĐĐT via Viettel S-invoice are the current production surface.
 - **Tech stack:** Next.js, React, TypeScript, Tailwind, Zod, Supabase, and
   Turborepo. Package manifests own exact versions.

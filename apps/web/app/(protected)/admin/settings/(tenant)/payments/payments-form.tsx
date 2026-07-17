@@ -37,7 +37,6 @@ const paymentContentTokenSchema = z
 
 const paymentsSchema = z.object({
   enable_vietqr: z.boolean(),
-  enable_momo: z.boolean(),
   vietqr_bank_code: z
     .string()
     .trim()
@@ -82,13 +81,11 @@ function normalizePaymentContentToken(value: string): string {
 interface PaymentsFormProps {
   settings: Record<string, string>;
   sepayEnvConfigured: boolean;
-  momoEnvConfigured: boolean;
 }
 
 export function PaymentsForm({
   settings,
   sepayEnvConfigured,
-  momoEnvConfigured,
 }: PaymentsFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -98,7 +95,6 @@ export function PaymentsForm({
     defaultValues: {
       enable_vietqr:
         settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR] === "true",
-      enable_momo: settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO] === "true",
       vietqr_bank_code:
         settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ?? "",
       vietqr_account_no:
@@ -142,9 +138,6 @@ export function PaymentsForm({
       const fd = new FormData();
       if (values.enable_vietqr) {
         fd.set(SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR, "true");
-      }
-      if (values.enable_momo) {
-        fd.set(SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO, "true");
       }
       fd.set(
         SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE,
@@ -374,53 +367,6 @@ export function PaymentsForm({
               </div>
             </div>
 
-            <Controller
-              control={form.control}
-              name="enable_momo"
-              render={({ field }) => (
-                <Frame className="flex flex-row items-start justify-between gap-2 p-4">
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor="enable-momo" className="text-base">
-                      MoMo
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {messages.settings.payments.momoNeeds}{" "}
-                      <code className="rounded-md bg-muted px-1 text-xs">
-                        MOMO_PARTNER_CODE
-                      </code>
-                      ,{" "}
-                      <code className="rounded-md bg-muted px-1 text-xs">
-                        MOMO_ACCESS_KEY
-                      </code>
-                      ,{" "}
-                      <code className="rounded-md bg-muted px-1 text-xs">
-                        MOMO_SECRET_KEY
-                      </code>
-                      .
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {messages.settings.payments.envStatus}{" "}
-                      {momoEnvConfigured ? (
-                        <span className="text-success">
-                          {messages.settings.payments.envConfigured}
-                        </span>
-                      ) : (
-                        <span className="text-warning">
-                          {messages.settings.payments.envMissing}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <Switch
-                    id="enable-momo"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    disabled={!momoEnvConfigured}
-                    className="mt-1"
-                  />
-                </Frame>
-              )}
-            />
           </SettingsFormSection>
         </TabsContent>
 

@@ -55,7 +55,6 @@ Auth And ACL.
 
 ## Git And Commit Conventions
 
-- Commits MUST be authored as `comtammatu@gmail.com`. The identity is set repo-locally (`git config user.email comtammatu@gmail.com`, `git config user.name "Luong The Binh"`); never override the author per commit.
 - NEVER add AI attribution to commits or PRs: no `Co-Authored-By:` trailers, no "Generated with" bylines.
 - Subject line: English, imperative, conventional prefix when one fits (`fix(scope): …`, `feat: …`, `chore: …`).
 - Agent-authored, non-merge implementation commits MUST carry a `Verification:`

@@ -37,7 +37,7 @@ const FINANCE_COMPARE_MODES = [
 ] as const;
 export type FinanceCompareMode = (typeof FINANCE_COMPARE_MODES)[number];
 
-const FINANCE_PAYMENTS = ["all", "cash", "vietqr", "momo"] as const;
+const FINANCE_PAYMENTS = ["all", "cash", "vietqr"] as const;
 export type FinancePayment = (typeof FINANCE_PAYMENTS)[number];
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

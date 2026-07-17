@@ -126,25 +126,6 @@ function readOptionalNumber(
   return Number.isFinite(candidate) && candidate > 0 ? candidate : null;
 }
 
-function readMoMoCheckoutUrl(value: unknown): string | null {
-  if (typeof value !== "string" || !value) return null;
-  try {
-    const url = new URL(value);
-    if (url.protocol === "momo:") return url.href;
-    if (
-      url.protocol === "https:" &&
-      ["test-payment.momo.vn", "payment.momo.vn"].includes(url.hostname) &&
-      url.pathname === "/v2/gateway/pay" &&
-      url.searchParams.get("t")
-    ) {
-      return url.href;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
 function normalizePaymentRequest(
   value: unknown,
 ): GuestPaymentRequestState | null {
@@ -153,15 +134,12 @@ function normalizePaymentRequest(
   const method = readOptionalString(record, "method");
   const amount = Number(record.amount);
   if (
-    (method !== "cash_call" && method !== "vietqr" && method !== "momo") ||
+    (method !== "cash_call" && method !== "vietqr") ||
     !Number.isFinite(amount) ||
     amount < 0
   ) {
     return null;
   }
-  const momoDeeplink = readMoMoCheckoutUrl(record.momoDeeplink);
-  const momoPayUrl = readMoMoCheckoutUrl(record.momoPayUrl);
-  if (method === "momo" && !momoDeeplink && !momoPayUrl) return null;
   return {
     id: readOptionalNumber(record, "id"),
     clientOpId: readOptionalString(record, "clientOpId"),
@@ -174,8 +152,6 @@ function normalizePaymentRequest(
     bankCode: readOptionalString(record, "bankCode"),
     accountNo: readOptionalString(record, "accountNo"),
     accountName: readOptionalString(record, "accountName"),
-    momoDeeplink,
-    momoPayUrl,
     createdAt: readOptionalString(record, "createdAt"),
     expiresAt: readOptionalString(record, "expiresAt"),
   };
@@ -293,7 +269,7 @@ export function SelfOrderClient({
   const [billView, setBillView] = useState<"bill" | "payment">("bill");
   const [awaitingDialogOpen, setAwaitingDialogOpen] = useState(false);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<
-    "cash_call" | "vietqr" | "momo" | null
+    "cash_call" | "vietqr" | null
   >(null);
   const [isSubmitting, startSubmit] = useTransition();
   const [isPaymentPending, startPayment] = useTransition();
@@ -445,16 +421,6 @@ export function SelfOrderClient({
     [cartItems],
   );
 
-  useEffect(() => {
-    if (
-      new URLSearchParams(window.location.search).get("momo") !== "returned"
-    ) {
-      return;
-    }
-    setBillView("payment");
-    setBillOpen(true);
-  }, []);
-
   if (!snapshot.ok) return <UnavailableState snapshot={snapshot} />;
 
   const available = snapshot;
@@ -470,10 +436,9 @@ export function SelfOrderClient({
   const itemCount = order?.itemCount ?? 0;
   const cartQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cartItems.reduce((sum, item) => sum + lineTotal(item), 0);
-  const ctaLabel =
-    open || awaiting
-      ? SELF_ORDER_VI.submitAddMore
-      : SELF_ORDER_VI.submitFirstBatch;
+  const ctaLabel = open || awaiting
+    ? SELF_ORDER_VI.submitAddMore
+    : SELF_ORDER_VI.submitFirstBatch;
   const ctaDisabled = paymentPending;
   const ctaDisabledHint = paymentPending
     ? SELF_ORDER_VI.activePaymentIntent
@@ -602,7 +567,7 @@ export function SelfOrderClient({
     return errors;
   }
 
-  function requestPayment(method: "cash_call" | "vietqr" | "momo") {
+  function requestPayment(method: "cash_call" | "vietqr") {
     if (!order || activePaymentRequest) return;
     const fieldErrors = validateInvoice();
     setInvoiceFieldErrors(fieldErrors);
@@ -663,15 +628,6 @@ export function SelfOrderClient({
       setBillView("payment");
       setBillOpen(true);
       void refreshSnapshot();
-      if (paymentRequest.method === "momo") {
-        const checkoutUrl =
-          paymentRequest.momoDeeplink ?? paymentRequest.momoPayUrl;
-        if (!checkoutUrl) {
-          setPaymentError(SELF_ORDER_VI.paymentFailed);
-          return;
-        }
-        window.location.assign(checkoutUrl);
-      }
     });
   }
 
@@ -777,7 +733,6 @@ export function SelfOrderClient({
         {!ambiguous && order ? (
           <PaymentPanel
             disabled={awaiting || paymentPending}
-            momoEnabled={available.momoEnabled}
             activeOrder={order}
             activePaymentRequest={activePaymentRequest}
             buyerNotGetInvoice={buyerNotGetInvoice}

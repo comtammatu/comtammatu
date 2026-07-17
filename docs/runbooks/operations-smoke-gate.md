@@ -76,7 +76,6 @@ Ghi lại mọi ID phát sinh: `branch_id`, `terminal_id`, `order_id`, `payment_
    - VietQR: expected QR mang đúng `orders.payment_code` theo configured prefix;
      SePay webhook hoặc cashier confirm qua `confirm_vietqr_payment` hoàn tất
      order/payment.
-   - MoMo: expected chỉ dùng native QR khi provider trả `qrCodeUrl`; webhook hoàn tất qua `complete_payment_and_consume_stock`.
 
 6. Kiểm order/payment sau thanh toán.
    - Expected: order `completed`, payment `completed`, table được release nếu dine-in.

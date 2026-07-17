@@ -225,5 +225,5 @@ test("Generated types expose only the current Self-Order request model", () => {
     databaseTypes,
     /\n {6}self_order_get_payment_request_status: \{/,
   );
-  assert.equal(databaseTypes.match(/momo_revenue:/g)?.length, 4);
+  assert.equal(databaseTypes.match(/momo_revenue:/g)?.length ?? 0, 0);
 });

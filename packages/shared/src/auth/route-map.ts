@@ -40,7 +40,6 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: [
       "/login",
       "/access-denied",
-      "/payment/momo",
       "/api/health",
       "/api/webhooks",
       "/manifest.webmanifest",

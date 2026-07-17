@@ -22,7 +22,6 @@ const paymentContentTokenSchema = z
 
 const paymentSettingsSchema = z.object({
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: z.enum(["true", "false"]),
-  [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]: z.enum(["true", "false"]),
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: z
     .string()
     .trim()
@@ -62,10 +61,6 @@ export async function updatePaymentSettings(
   const raw = {
     [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]:
       formData.get(SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR) === "true"
-        ? "true"
-        : "false",
-    [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]:
-      formData.get(SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO) === "true"
         ? "true"
         : "false",
     [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: str(
