@@ -14,14 +14,59 @@ over older task notes, regressions, and memory.
 | `iexwsuaqqenyjiskawoj` | **PRODUCTION** — the only comtammatu database  | Table/view/catalog reads only by default. Writes require explicit owner delegation in the current session. |
 | `dyksphedgzqsqjqgxzog` | `matu-platform` production — separate codebase | Do not touch.                                                                                              |
 
-- No persistent dev/test Supabase project exists. Use an on-demand Preview
-  Branch for non-production verification.
-- `.mcp.json`, org-scoped MCP servers, and the Supabase CLI are write-capable.
-  Codex's repo MCP URL is separately pinned `read_only=true`.
+`Do not touch` prohibits both reads and writes through CLI, SQL, HTTP, and
+project-scoped MCP tools; it is not the guarded-read policy used for comtammatu
+Production.
+
+- **DEV — `matu-greenfield` (`xrsantkidwknjhcgcfmi`)** is the persistent
+  non-production Cloud target. Verify this ref before every tool or SQL call;
+  use only task-scoped non-production data and never treat it as production.
+  `corepack pnpm db:types` always generates from this registered DEV target and
+  rejects any other `SUPABASE_PROJECT_ID`.
+  The local guard permits `supabase db push` only with a literal `--db-url`
+  whose host is the direct DEV database endpoint; direct DEV `psql` URLs are
+  supported only as static literal `-c` commands with `-X` or `--no-psqlrc`.
+  Interactive sessions, script files, psql variables/meta-commands, stored link
+  state, startup-file commands, env-indirected targets, and every other
+  mutating Supabase CLI path remain blocked.
+- Use an on-demand Preview Branch for isolated migration replay or disposable
+  verification. A workstation must not substitute Supabase Local Docker for
+  either Cloud target. The CI-only E2E harness is the sole isolated Docker
+  exception and may write only its ignored `apps/web/.env.test.local` plus the
+  GitHub runner's `GITHUB_ENV`; it never writes repository `.env.local` files.
+  CLI creation additionally requires the literal parent binding
+  `--project-ref iexwsuaqqenyjiskawoj`; stored link state and any other parent
+  remain blocked.
+  Until a trusted Preview-ref registration path exists, registered agent hooks
+  block mutation tools against a newly created Preview ref; stop and report the
+  blocker instead of weakening the guard or substituting Local Docker.
+- Org-scoped MCP servers and the Supabase CLI are write-capable. This repo has
+  no tracked `.mcp.json`; never infer a project binding from one. Codex's direct
+  repo MCP URL in `.codex/config.toml` is pinned to comtammatu Production with
+  `read_only=true`; the runtime guard and `lint:guard-sync` both verify that
+  exact binding before a project-less direct MCP read is accepted. Claude and
+  connector-wrapped MCP tools must carry an explicit registered project ref.
 - `scripts/guard-prod-db.mjs` enforces this registry through registered adapters
   in `.claude/settings.json` and `.codex/hooks.json`.
   `corepack pnpm lint:guard-sync` verifies the registry, guard, adapters, and
-  behavior fixtures. Unregistered runtimes remain read-only around production.
+  behavior fixtures. Every Supabase MCP action is routed through the guard;
+  unknown future actions fail closed. Unregistered runtimes remain read-only
+  around production.
+- Guarded Supabase CLI, SQL, and HTTP reads require one literal registered ref;
+  stored-link state, env-indirected URLs/refs, unregistered refs, and ambiguous
+  target selectors fail closed. Project-scoped CLI reads use a literal
+  `--project-ref` or direct registered `--db-url` as supported by that command.
+  Production CLI and MCP reads are limited to schema/catalog surfaces; project
+  metadata, logs, advisors, API keys, and secrets remain blocked. Registered DEV
+  may use the broader project-read actions required for non-production QA.
+- Protected HTTP reads must also disable hidden request input: use `curl -q`,
+  `wget --no-config`, or HTTPie/xh `--ignore-stdin`. Explicit client config,
+  stdin/request bodies, mutating methods, and unresolved Supabase URLs remain
+  blocked.
+- Guarded `psql` calls must use a direct registered database URL plus `-X` or
+  `--no-psqlrc`; startup files, inherited libpq target selectors, host/service
+  overrides, env-indirected connections, shell-expanded SQL, and psql variables
+  are outside the verified target/query and therefore fail closed.
 
 ## Query And Authorization Boundary
 
@@ -36,17 +81,20 @@ over older task notes, regressions, and memory.
 - Every migration is T3. Write the migration file before applying it.
 - Verify the target ref before every apply. Preview Branch creation is allowed
   only when `supabase/migration-lineage.json` is `aligned` and explicitly enables
-  native branching. While it is blocked, use the local source replay and do not
-  create a parent-history Preview. Preview deletion remains allowed for cleanup;
-  merge/reset/rebase into production remain production writes.
+  native branching. When lineage or the Cloud target cannot be verified, stop
+  and report the blocker; never fall back to Supabase Local Docker on a
+  workstation. Preview deletion is allowed only when the hook can prove the
+  comtammatu parent; org-scoped branch-id-only tools fail closed. Merge,
+  reset, and rebase into production remain production writes.
 - Production defaults to file → PR → merge → owner applies. Agent apply requires
   explicit delegation for the exact operation in the current session.
 - Delegation never authorizes changing or disabling repo guards. If the guarded
   runtime still blocks the operation, the owner applies outside it or provides a
   scoped approval path.
 - Production reads through `execute_sql` are limited to tables, views, catalogs,
-  and the guard's small read-only built-in allowlist. Never invoke an RPC or
-  user-defined function through `SELECT`; PostgreSQL functions may be volatile.
+  and the guard's small read-only built-in allowlist. Production CLI/MCP reads
+  stay within schema/catalog actions. Never invoke an RPC or user-defined
+  function through `SELECT`; PostgreSQL functions may be volatile.
 - Additive schema must land before dependent runtime code. For destructive
   changes, deploy code that stops reading the old shape before applying the
   migration. Split DB-first/code-first PRs when one deploy cannot preserve both.

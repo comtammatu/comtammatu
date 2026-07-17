@@ -1,9 +1,7 @@
 #!/usr/bin/env node
-// Bring up a from-empty Supabase Local stack for the e2e smoke and wire the app
-// env to it. Applies the active migration chain (baseline + forward) + the
-// dev-tenant + QA seeds (cashier.datdo / chef.datdo, password Test1234!), then
-// writes the env files Playwright and `next dev` need. Used by the CI e2e-smoke
-// job; runnable locally.
+// Bring up a from-empty Supabase Local stack for the CI e2e smoke. Applies the
+// active migration chain (baseline + forward) + dev/QA seeds, then writes the
+// ignored test env and GitHub runner environment required by later CI steps.
 //
 // Non-essential services (studio/inbucket/analytics/edge runtime) are disabled —
 // the POS->payment->KDS smoke does not use them (the repo has no edge functions,
@@ -12,7 +10,14 @@
 // Supabase project. Storage stays enabled: the fold migration provisions storage
 // buckets + policies, which need the storage schema the storage service creates.
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  cpSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 
 const REPO = process.cwd();
@@ -21,6 +26,15 @@ const WORKDIR = process.env["E2E_SUPABASE_WORKDIR"] || "/tmp/comtammatu-e2e-stac
 const API_PORT = Number(process.env["E2E_API_PORT"] || 55421);
 const DB_PORT = Number(process.env["E2E_DB_PORT"] || 55432);
 const SHADOW_PORT = Number(process.env["E2E_SHADOW_PORT"] || 55430);
+const GITHUB_ENV = process.env["GITHUB_ENV"];
+
+if (
+  process.env["CI"] !== "true" ||
+  process.env["GITHUB_ACTIONS"] !== "true" ||
+  !GITHUB_ENV
+) {
+  throw new Error("supabase-e2e-bringup is restricted to the GitHub Actions CI harness");
+}
 
 // Prefer a CLI on PATH (fast locally); fall back to `pnpm dlx supabase` (CI).
 function supabase(args, { timeoutMs = 600_000 } = {}) {
@@ -132,23 +146,12 @@ E2E_INVENTORY_MANAGER_PASSWORD=Test1234!
 `;
   writeFileSync(resolve(REPO, "apps/web/.env.test.local"), testEnv);
 
-  // `next dev` (the Playwright webServer) reads ../../.env.local then .env.local.
-  // Point them at the same local stack so the app talks to the e2e database.
-  // POS_NETWORK_GATE=off disables the production POS/KDS network perimeter
-  // (proxy.ts): the smoke runs from loopback, which getClientIp() correctly
-  // rejects as private, so without this the prod build 307s POS to
-  // /access-denied (untrusted-network). This is the documented kill-switch for
-  // running POS off the branch wifi. Set in .env.local so it is inlined at
-  // `next build` (edge middleware) and present for `next start`.
-  const appEnv = `NEXT_PUBLIC_SUPABASE_URL=${apiUrl}
-NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon}
-SUPABASE_SERVICE_ROLE_KEY=${service}
-POS_NETWORK_GATE=off
-`;
-  writeFileSync(resolve(REPO, ".env.local"), appEnv);
-  writeFileSync(resolve(REPO, "apps/web/.env.local"), appEnv);
+  appendFileSync(
+    GITHUB_ENV,
+    `${testEnv}POS_NETWORK_GATE=off\n`,
+  );
 
-  process.stdout.write(`\nSupabase e2e stack ready at ${apiUrl}\nWrote apps/web/.env.test.local + .env.local\n`);
+  process.stdout.write(`\nSupabase e2e stack ready at ${apiUrl}\nWrote apps/web/.env.test.local and CI environment\n`);
 }
 
 main();

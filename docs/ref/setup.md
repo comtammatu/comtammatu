@@ -36,18 +36,19 @@ UPSTASH_REDIS_REST_URL=https://YOUR_REDIS.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
 ```
 
-`SUPABASE_PROJECT_ID` dùng cho `corepack pnpm db:types`. Thiết lập ở shell env
-khi cần generate types:
+`corepack pnpm db:types` luôn dùng registered Cloud DEV type source; không cần
+và không được override `SUPABASE_PROJECT_ID` sang project khác:
 
 ```bash
-SUPABASE_PROJECT_ID=your-project-id corepack pnpm db:types
+corepack pnpm db:types
 ```
 
 ## Database
 
 - Migration production là owner-gated. Agent viết migration file; owner apply
   production trừ khi owner ủy quyền rõ trong chính session hiện tại.
-- Kiểm migration non-production bằng Supabase Preview Branch khi có. Xem
+- Kiểm migration non-production trên persistent Cloud DEV đã đăng ký. Chỉ dùng
+  Preview Branch qua trusted registration hoặc owner-operated path. Xem
   `docs/agent/rules/database.md`.
 - Không chạy `supabase db push` vào production.
 
@@ -72,11 +73,10 @@ SET position_id = (
 WHERE id = '<user-uuid>';
 ```
 
-Seed QA/dev chỉ chạy trên non-production:
-
-```bash
-supabase db query --linked --file supabase/seed.sql
-```
+Seed QA/dev chỉ chạy trên target non-production đã được Environment Registry
+cho phép và phải dùng literal target binding theo
+`docs/agent/rules/database.md`. Không dùng stored CLI link state; nếu guard
+không hỗ trợ đúng operation/target của task thì dừng và báo blocker.
 
 ## Chạy local
 

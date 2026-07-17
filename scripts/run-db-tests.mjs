@@ -102,7 +102,7 @@ function run() {
   const containerName = getDatabaseContainer();
   if (!containerName) {
     process.stderr.write(`Error: Could not find a running database container mapping to port ${DB_PORT}.\n`);
-    process.stderr.write("Make sure the local e2e stack is running (node scripts/supabase-e2e-bringup.mjs).\n");
+    process.stderr.write("Run this only in the CI e2e harness after supabase-e2e-bringup.\n");
     process.exit(1);
   }
 

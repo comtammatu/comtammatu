@@ -1,10 +1,10 @@
 # Runbook — Re-baseline the migration chain from current prod
 
-> **Prod-touching, read-only dump.** Prefer the owner-held direct connection.
-> A linked CLI dump is only a candidate artifact and is acceptable only after a
-> from-empty replay and normalized catalog/ACL fingerprints match current prod.
-> The goal is a NEW self-contained baseline that squashes the forward chain so a
-> from-empty replay matches current prod exactly.
+> **Prod-touching, read-only dump.** Use only the owner-held direct connection
+> with the Production ref verified against the Environment Registry. Stored CLI
+> link state is never target authority. The goal is a NEW self-contained
+> baseline that squashes the forward chain so a from-empty replay matches current
+> prod exactly.
 
 `supabase/migration-lineage.json` is the machine gate for this runbook. Never
 raise its frozen forward limit to make CI green; completing this runbook is the
@@ -33,7 +33,8 @@ now-squashed forward chain.
 
 - A prod read connection string (owner-held). `pg_dump` is a read; the prod-DB
   guard does not block `pg_dump` (only `pg_restore`, write `psql`, write MCP).
-- Docker running locally (`db:baseline:local-check` needs it).
+- The CI baseline-replay job is available for the from-empty Docker proof;
+  workstations do not substitute Local Docker for a Cloud target.
 - A clean git worktree off `main`.
 
 ## Procedure
@@ -60,19 +61,13 @@ now-squashed forward chain.
    } > "supabase/migrations/${CUTOFF}_baseline.sql"
    ```
 
-   If the direct owner credential is unavailable, a linked dump may be used as
-   a candidate only:
-
-   ```bash
-   supabase db dump --linked --schema public,private \
-     --file ".baseline-artifacts/${CUTOFF}_candidate.sql"
-   ```
-
-   Replay that candidate locally and compare normalized public/private catalog
-   fingerprints and all schema/function/relation ACLs with prod before moving it
-   into `supabase/migrations/`. Counts alone are insufficient. Ignore physical
-   column ordinals and generated PostgreSQL `NOT NULL` constraint names; require
-   semantic column and named-constraint definitions to match.
+   If the direct owner credential is unavailable, stop; do not replace it with
+   stored link state or an unregistered target. Replay the resulting candidate
+   through the CI-only baseline harness and compare normalized public/private
+   catalog fingerprints and all schema/function/relation ACLs with prod before
+   moving it into `supabase/migrations/`. Counts alone are insufficient. Ignore
+   physical column ordinals and generated PostgreSQL `NOT NULL` constraint
+   names; require semantic column and named-constraint definitions to match.
 
    Notes:
    - `private` first so public triggers/policies referencing `private.*` resolve;
@@ -122,15 +117,17 @@ now-squashed forward chain.
    corepack pnpm lint:migration-lineage
    ```
 
-4. **Prove a clean from-empty replay** (full chain now = baseline + only the
-   post-cutoff migrations):
+4. **Prove a clean from-empty replay in CI** (full chain now = baseline + only
+   the post-cutoff migrations). The `baseline-replay` job runs:
 
    ```bash
    pnpm db:baseline:local-check
    ```
 
-   It must exit 0. If a remaining post-cutoff migration still diverges, fix THAT
-   migration (it has not yet reached prod-stable squash) or move the cutoff later.
+   It must exit 0 in the CI-only Docker harness; do not run it as a workstation
+   Cloud-target fallback. If a remaining post-cutoff migration still diverges,
+   fix THAT migration (it has not yet reached prod-stable squash) or move the
+   cutoff later.
 
 5. **Regenerate types** from the full rebuilt schema. Review the diff and accept
    only fields/RPCs introduced by unsquashed post-cutoff migrations:
@@ -153,9 +150,10 @@ now-squashed forward chain.
 
 8. **Align the production migration ledger only under a separate explicit owner
    approval.** Rehearse the current Supabase CLI squash/repair behavior on a
-   disposable database, preserve the existing ledger evidence, and prove that
-   `supabase migration list --linked` contains the new baseline cutoff plus only
-   newer forward versions. This is a production metadata write; source
+   disposable database, preserve the existing ledger evidence, and use an
+   owner-operated literal Production binding to prove that the migration list
+   contains the new baseline cutoff plus only newer forward versions. Stored
+   link state is not evidence. This is a production metadata write; source
    re-baselining does not authorize it. The repo prod guard must not be disabled;
    if it blocks `migration repair`, the owner performs the exact reviewed command
    outside the guarded agent runtime.
@@ -164,8 +162,9 @@ now-squashed forward chain.
    set
    `productionCutoff=baselineVersion`, `state=aligned`,
    `nativePreviewBranching=enabled`, and `activeForwardLimit` to at most `20`.
-   Re-run the lineage guard, create one throwaway Preview, inspect its deployment
-   log, and delete it after verification.
+   Re-run the lineage guard and create one throwaway Preview. Inspect its
+   deployment log only through trusted registration or owner-operated evidence,
+   then delete it after verification.
 
 10. **Close the alignment change.** File → PR → owner. Tier **T3** (baseline /
     migration chain). Future migrations append on top of the aligned baseline
@@ -173,7 +172,8 @@ now-squashed forward chain.
 
 ## Acceptance
 
-- `pnpm db:baseline:local-check` exits 0 on a from-empty docker DB.
+- CI `baseline-replay` runs `pnpm db:baseline:local-check` successfully on its
+  from-empty Docker DB.
 - Baseline-only normalized catalog and ACL fingerprints match prod exactly.
 - Type generation from the full rebuilt schema contains only reviewed
   post-cutoff deltas.

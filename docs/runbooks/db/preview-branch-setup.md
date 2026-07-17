@@ -1,9 +1,16 @@
 # Preview Branch — Non-Production Database
 
-Dùng Preview Branch cho migration replay, RLS/RPC verification và smoke có write
-mà không đụng production. Quyền tạo branch phụ thuộc vào
-`supabase/migration-lineage.json`; production merge/reset/rebase/apply vẫn là
-production write và cần quyền riêng.
+Preview Branch là môi trường throwaway cho migration replay, RLS/RPC
+verification và smoke có write mà không đụng production. Quyền tạo branch phụ
+thuộc vào `supabase/migration-lineage.json`; production
+merge/reset/rebase/apply vẫn là production write và cần quyền riêng.
+
+Guard của repo chỉ cho agent đọc hoặc mutate một Preview ref mới sau khi ref đó
+đi qua trusted registration path. Khi đường đăng ký này chưa có, agent chỉ được
+dùng các thao tác create/teardown branch đã được guard xác minh; việc kiểm tra
+deployment status/log và mutation evidence phải chuyển sang persistent Cloud
+DEV đã đăng ký, hoặc do chủ dự án trực tiếp vận hành và cung cấp từ Preview.
+Không được nới guard, dùng stored link state hay thay bằng Local Docker.
 
 ## Trạng thái hiện tại — aligned
 
@@ -26,13 +33,21 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
 3. Tạo một Preview Branch throwaway bằng tooling Supabase được kết nối cho task.
 4. Ghi project ref/URL và xác minh ref không trùng protected refs trong
    Environment Registry.
-5. Xác nhận deployment log chỉ chạy baseline version đã aligned và các forward
-   migration mới hơn cutoff; dừng ngay nếu thấy archived/remote-only history.
-6. Chỉ seed bằng dữ liệu non-production, không secret và không customer data.
-7. Chạy schema/RLS/RPC tests, smoke flow cần thiết và security advisors.
-8. Nếu branch là type source, chạy `corepack pnpm db:types` và review diff.
-9. Thu thập evidence: ref, migration versions, test result và cleanup result.
-10. Xóa Preview Branch khi xong; không để resource throwaway chạy vô thời hạn.
+5. Chỉ kiểm tra deployment status/log của Preview qua trusted registration hoặc
+   owner-operated evidence. Xác nhận log chỉ chạy baseline version đã aligned
+   và các forward migration mới hơn cutoff; dừng ngay nếu thấy
+   archived/remote-only history.
+6. Trước mọi mutation, chứng minh Preview ref đã được trusted registration hoặc
+   chuyển mutation test sang persistent Cloud DEV với literal target binding.
+   Nếu không có một trong hai đường này, dừng và báo blocker.
+7. Chỉ seed bằng dữ liệu non-production, không secret và không customer data.
+8. Chạy schema/RLS/RPC tests, smoke flow cần thiết và security advisors trên
+   target đã được phép mutation; ghi rõ target là DEV hay Preview.
+9. Nếu registered Cloud DEV là type source của task, chạy
+   `corepack pnpm db:types` và review diff. Preview ref không thay thế DEV type
+   source qua stored link hay env override.
+10. Thu thập evidence: ref, migration versions, test result và cleanup result.
+11. Xóa Preview Branch khi xong; không để resource throwaway chạy vô thời hạn.
 
 ## Preconditions
 
@@ -42,9 +57,11 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
 - `supabase/seed.sql` đã được kiểm tra không mang production data hoặc secret.
 - Caller có tooling/credential đủ để tạo và xóa branch.
 - Mọi URL/service-role key trong session được đối chiếu với ref đã ghi.
+- Agent-side Preview mutation có trusted registration path; nếu không, kế hoạch
+  mutation phải chỉ rõ persistent Cloud DEV hoặc owner-operated Preview.
 
-Nếu một precondition chưa chứng minh, không tạo branch; local baseline replay là
-evidence source-only, không được báo thành cloud Preview proof.
+Nếu một precondition chưa chứng minh, không tạo branch. CI baseline replay chỉ
+là source-chain evidence, không được báo thành cloud Preview proof.
 
 ## Vercel Preview
 
