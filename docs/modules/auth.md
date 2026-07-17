@@ -123,11 +123,21 @@ delegates to `has_permission(branch_id, key)` in RLS — owner bypass built-in,
 temporal validity filtered, branch access explicit through grants or
 `profiles.branch_id`.
 
-**Grant/revoke** goes through SECURITY DEFINER RPCs that enforce caller must hold `staff:assign_permission` and log every change to `permission_audit_log`:
+**Grant/revoke** goes through SECURITY DEFINER RPCs that enforce caller must hold
+`staff:assign_permission`:
 
 - `grant_permission(target, branch, key, template?, valid_from?, valid_until?)`
 - `revoke_permission(target, branch, key)`
 - `apply_template_to_user(target, branch, template, valid_from?, valid_until?)`
+
+Direct Data API access to `staff_permissions` is read-only for `authenticated`
+and unavailable to `anon`; clients must use the RPCs above for every write. A
+position or assigned-branch change does not implicitly revoke existing grants.
+Grant lifecycle changes must be made explicitly through PBAC RPCs.
+
+Audit coverage is not yet uniform: new grants and revocations write
+`permission_audit_log`, while updating an existing row through
+`grant_permission` does not currently append a new audit event.
 
 Owner is protected: RPCs refuse to touch a user whose position code is `owner` (governed separately via `tenants.representative`).
 

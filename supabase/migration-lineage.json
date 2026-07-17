@@ -1,9 +1,9 @@
 {
-  "state": "blocked_pending_rebaseline",
+  "state": "aligned",
   "baselineFile": "supabase/migrations/20260717151345_baseline.sql",
   "baselineVersion": "20260717151345",
   "baselineSha256": "3b038dc7756dd6ce98f93247f4930b86d8ccf52f151de947fd054130e5119cd5",
-  "productionCutoff": null,
-  "nativePreviewBranching": "blocked",
-  "activeForwardLimit": 1
+  "productionCutoff": "20260717151345",
+  "nativePreviewBranching": "enabled",
+  "activeForwardLimit": 20
 }

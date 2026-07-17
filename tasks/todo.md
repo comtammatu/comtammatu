@@ -1519,9 +1519,32 @@ is aligned, and native Preview branching is enabled.
   and 4,294 relation ACL rows. Three stale Production `COMMENT` strings were
   normalized to current source references; no behavioral schema or ACL changed.
 - **Verification:** DEV type generation has no diff. Full `pnpm verify` passes.
-  Lineage intentionally remains `blocked_pending_rebaseline`, with one active
-  forward and native Preview blocked, until a separate owner-approved Production
-  ledger-alignment operation is rehearsed and applied.
+  The owner-approved Production ledger repair now records only the canonical
+  baseline and managed fold, with non-empty statements for both. This follow-up
+  enables native Preview branching and must prove one throwaway branch before
+  merge.
+
+#### Staff permission Data API boundary (2026-07-17)
+
+Skill plan: repo rules = engineering + skills + database + workflow; external =
+Supabase + Supabase Postgres Best Practices + Careful; runtime = Production
+catalog reads, one throwaway Preview, focused static coverage, and full gates.
+Skipped = legacy role retirement, implicit grant cleanup on position changes,
+and Production schema apply.
+
+- **PM:** Keep authenticated permission reads working while removing direct
+  browser writes; all mutations continue through the existing PBAC RPCs.
+- **BA:** Self and tenant-admin SELECT audiences remain equivalent. `anon` gets
+  no table access, browser roles get no sequence access, and position changes do
+  not silently revoke grants.
+- **Senior Dev:** Replace the two permissive SELECT policies with one equivalent
+  policy and narrow table privileges in one forward migration. Add no new RPC or
+  authorization layer.
+- **QA/Ops:** Lock the SQL contract statically, inspect Preview grants/policies,
+  run security advisors and full repository gates, then delete the Preview.
+
+- [x] Apply and verify the migration on a throwaway Preview.
+- [ ] Pass focused tests, full gates, CI, and merge the source change.
 
 #### MoMo payment decommission (2026-07-17)
 
