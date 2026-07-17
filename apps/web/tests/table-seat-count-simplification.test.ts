@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 function readWebSource(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -35,8 +36,8 @@ test("table creation still relies on the database default capacity", () => {
   const actionSource = readWebSource(
     "app/(protected)/branch-settings/_shared/tables/actions.ts",
   );
-  const baselineSource = readRepoSource(
-    "supabase/migrations/00000000000000_baseline.sql",
+  const baselineSource = normalizePgDumpSql(
+    readRepoSource("supabase/migrations/20260716093507_baseline.sql"),
   );
 
   assert.match(

@@ -8,19 +8,19 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260708055851_bank_transaction_expense_matches.sql",
+  "supabase/migration-archive/20260708055851_bank_transaction_expense_matches.sql",
 );
 const manyToManyMigration = read(
-  "supabase/migrations/20260709050752_allow_expense_multiple_bank_transactions.sql",
+  "supabase/migration-archive/20260709050752_allow_expense_multiple_bank_transactions.sql",
 );
 const serviceMatchMigration = read(
-  "supabase/migrations/20260709075048_sepay_service_expense_match.sql",
+  "supabase/migration-archive/20260709075048_sepay_service_expense_match.sql",
 );
 const hardeningMigration = read(
-  "supabase/migrations/20260714031036_20260714163000_harden_finance_expense_reconciliation.sql",
+  "supabase/migration-archive/20260714031036_20260714163000_harden_finance_expense_reconciliation.sql",
 );
 const transferIntentMigration = read(
-  "supabase/migrations/20260715123314_expense_transfer_intent_lifecycle.sql",
+  "supabase/migration-archive/20260715123314_expense_transfer_intent_lifecycle.sql",
 );
 const expensePaymentStateMigration = read(
   "supabase/migrations/20260716100000_close_expense_payment_state_machine.sql",

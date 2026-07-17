@@ -7,7 +7,7 @@ const migration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260710004403_self_order_session_integrity.sql",
+    "supabase/migration-archive/20260710004403_self_order_session_integrity.sql",
   ),
   "utf8",
 );

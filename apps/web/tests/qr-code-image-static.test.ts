@@ -146,16 +146,14 @@ test("MB Bank link receives the exact VietQR payload", () => {
   assert.equal(url.searchParams.get("qrContent"), qrData);
 });
 
-test("MoMo opens only as a QR scanner without merchant payment data", () => {
-  const href = buildVietQrBankAppUrl({
-    appId: "momo",
-    accountNo: "0123456789",
-    bankCode: "MB",
-    amount: 167_000,
-    paymentCode: "MATU ABC123",
-  });
-
-  assert.equal(href, "momo://app");
+test("Self-Order does not hardcode a MoMo payment or unsupported app target", () => {
+  const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
+  const contracts = readWeb("lib/self-order/contracts.ts");
+  const server = readWeb("lib/self-order/server.ts");
+  assert.doesNotMatch(paymentPanel, /id:\s*"momo"/);
+  assert.doesNotMatch(paymentPanel, /onRequestPayment\("momo"\)/);
+  assert.doesNotMatch(contracts, /momoDeeplink|momoPayUrl/);
+  assert.doesNotMatch(server, /createSelfOrderMomoPaymentRequest/);
 });
 
 test("autofill bank app links keep the exact VietQR payment facts", () => {
@@ -181,7 +179,7 @@ test("autofill bank app links keep the exact VietQR payment facts", () => {
 
 test("self-order snapshot migration does not read unassigned records", () => {
   const migration = readRepo(
-    "supabase/migrations/20260708124000_fix_self_order_snapshot_empty_session.sql",
+    "supabase/migration-archive/20260708124000_fix_self_order_snapshot_empty_session.sql",
   );
 
   assert.match(migration, /v_session_payload jsonb := NULL/);
@@ -197,7 +195,7 @@ test("self-order snapshot migration does not read unassigned records", () => {
 
 test("self-order requires an open POS session before customer writes", () => {
   const migration = readRepo(
-    "supabase/migrations/20260708125500_self_order_require_open_pos_session.sql",
+    "supabase/migration-archive/20260708125500_self_order_require_open_pos_session.sql",
   );
   const server = readWeb("lib/self-order/server.ts");
   const staffActions = readWeb(

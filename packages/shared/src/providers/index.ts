@@ -5,7 +5,6 @@ export type {
   PaymentRequest,
   PaymentResult,
   PaymentStatus,
-  WebhookVerification,
 } from "./payment";
 export {
   registerPaymentProvider,
@@ -34,7 +33,6 @@ export {
   buildVietQrEmvco,
   resolveBankBin,
 } from "./impl/vietqr";
-export { MoMoProvider, createMoMoProviderFromEnv } from "./impl/momo";
 export {
   ViettelSinvoiceProvider,
   buildSinvoiceTransactionUuid,

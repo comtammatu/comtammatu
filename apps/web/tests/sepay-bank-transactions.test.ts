@@ -593,7 +593,7 @@ test("signed SePay business mismatches stay reviewable without exposing conflict
 
 test("SePay money-in manual link stays guarded by RPC", () => {
   const migration = read(
-    "supabase/migrations/20260709064834_link_sepay_transaction_to_payment.sql",
+    "supabase/migration-archive/20260709064834_link_sepay_transaction_to_payment.sql",
   );
   const action = read(
     "apps/web/app/(protected)/finance/bank-webhook-review-actions.ts",
@@ -620,7 +620,7 @@ test("SePay money-in manual link stays guarded by RPC", () => {
 
 test("SePay conflict hardening gates automatic settlement and Owner recovery", () => {
   const migration = read(
-    "supabase/migrations/20260715135031_harden_sepay_payment_conflicts.sql",
+    "supabase/migration-archive/20260715135031_harden_sepay_payment_conflicts.sql",
   );
 
   assert.match(
@@ -694,7 +694,7 @@ test("SePay bank reconciliation reads supplier AP payments without turning them 
   );
   const action = read("apps/web/app/(protected)/finance/expense-actions.ts");
   const migration = read(
-    "supabase/migrations/20260714031025_20260713153523_persist_sepay_supplier_payment_match.sql",
+    "supabase/migration-archive/20260714031025_20260713153523_persist_sepay_supplier_payment_match.sql",
   );
 
   assert.match(loader, /\.from\("supplier_payments"\)/);

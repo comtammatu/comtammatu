@@ -53,11 +53,16 @@ redesign, production apply, and unrelated runtime-control work from PR #284.
 
 - [x] Add the focused forward migration and durable auth contract.
 - [x] Add static and executable SQL regression coverage, wired into CI; repair
-  the three dormant SQL tests exposed when the runner becomes blocking.
+      the three dormant SQL tests exposed when the runner becomes blocking.
 - [x] Pass focused tests, migration replay, full gates, and T3 review.
 - [x] Publish replacement PR #298, then close PR #284 without merge as a
       superseded merge unit.
+
 ## MoMo Finance Reporting Contract Closure (2026-07-16)
+
+Status: superseded by the 2026-07-17 MoMo payment decommission below. This
+section records the prior implementation decision and is not a current runtime
+contract.
 
 ### T3 contract
 
@@ -186,6 +191,10 @@ workflows and keep POS/KDS/Runner as separate station apps.
 - [x] Commit, push, and open the first replacement PR without closing PR #284.
 
 ## Payment Provider RPC Ledger (2026-07-15)
+
+Status: superseded by the 2026-07-17 MoMo payment decommission below. The
+VietQR guarded-write boundary remains current; the MoMo provider and settlement
+parts are retired.
 
 ### T3 contract
 
@@ -1442,7 +1451,7 @@ trigger and its helper.
       drawer IA; the obsolete capability rollout and index entry are removed;
       ADR 0011 no longer records the retired Self-Order realtime topic.
 
-### Preview migration-chain repair (T2)
+### Preview migration-chain containment (T3)
 
 Skill plan: repo rules = engineering + skills + database + workflow; external = Supabase; runtime = CodeGraph + migration-list precheck + Preview Branch; skipped = production apply and schema mutation.
 
@@ -1451,9 +1460,60 @@ BA: rules = historical SQL remains available to developers but never executes in
 Dev: approach = move the historical tree outside `supabase/migrations`, update exact path references, and add one static guard; risk = documentation/test path drift.
 QA: tests = migration discovery excludes the archive, baseline replay, focused static test, and Preview provisioning; regressions to recheck = migration list has no archived versions.
 
-Attestation: the source layout matches this T2 contract. Focused static tests,
-typecheck, lint, and build pass; baseline replay is blocked by unavailable Docker,
-and Preview provisioning requires the unpushed migration layout to reach GitHub.
+Attestation: the source layout and fail-closed guards match this T3 contract.
+The baseline plus all 156 active forward migrations replays locally without
+executing the archive; lineage, guard-sync, typecheck, lint, build, and the full
+test suite pass. Native Preview branch creation is intentionally blocked while
+the manifest is `blocked_pending_rebaseline`. Production is untouched. The next
+owner-gated database step is to reconcile the Production ledger, regenerate the
+baseline, record its exact cutoff and hash, then reopen Preview rehearsal.
+
+#### Owner-approved re-baseline execution (2026-07-16)
+
+- **PM:** Replace the 156-forward source chain with one Production-equivalent
+  baseline plus only post-cutoff forwards. Do not enable or deploy MoMo to
+  Production.
+- **BA:** Production ledger cutoff is `20260716093507`. Classify the five newer
+  source migrations against the Production schema; only real post-cutoff deltas
+  remain forwards. Schema/data on Production are immutable during source
+  re-baselining. Ledger alignment may change metadata only after the new baseline
+  has replayed and matched Production catalogs.
+- **Senior Dev:** Compare the public/private Production catalog with a fresh
+  replay, generate the baseline from the matching Production schema, and move
+  the managed-surfaces fold to a post-baseline version.
+- **QA/Ops:** Require empty-DB replay, reviewed generated-type deltas, green full gates,
+  and a healthy throwaway Preview. If any proof differs, keep lineage blocked
+  and do not repair Production migration history.
+
+Execution result: baseline `20260716093507` matches Production semantic columns,
+named constraints, and schema/function/relation ACL fingerprints exactly. The
+managed fold is now `20260716093508`; five forward migrations remain active,
+including the managed fold.
+`20260716180000_restore_self_order_pending_add_more.sql` moved to archive because
+its table/function state is already represented by the Production baseline. The
+Production snapshot also exposed three ledger-marked contracts that were absent
+from the live schema: the inventory-count checkout gate, Branch Hub notification
+deep-links, and removal of the stale two-argument `confirm_production_run`
+overload. Two focused repair migrations preserve those contracts without changing
+the baseline snapshot. The baseline-only replay and the full five-forward chain
+replay pass. The Production ledger metadata is reconciled, the lineage manifest
+is aligned, and native Preview branching is enabled.
+
+#### MoMo payment decommission (2026-07-17)
+
+- **PM/BA:** Cash and VietQR are the only payment methods. Self-Order may offer
+  MoMo only when the official VietQR OS catalog supplies a supported app target;
+  it must not create a MoMo merchant payment intent, webhook, return flow,
+  settlement, or finance method.
+- **Senior Dev:** Remove the MoMo provider/runtime/configuration surfaces and add
+  one fail-closed forward migration that rejects live MoMo facts before removing
+  the legacy RPC, constraint, and finance-reporting contracts.
+- **QA/Ops:** A read-only Production check found no MoMo payments, orders,
+  webhook events, or enablement setting. The live VietQR Android/iOS catalogs do
+  not currently advertise a MoMo deeplink, so Self-Order must not hardcode one.
+  Local typecheck, lint, focused payment tests, full tests, and build are required
+  before publish. Fresh Preview replay and browser proof remain required after
+  publish; Production stays untouched.
 
 ### Known gap, out of scope
 
@@ -1844,7 +1904,7 @@ destructive lot/expiry + production_orders drops).
 
 - [x] **Three PROD RPCs deep-link notifications to the retired `/employee/*`
       routes.** Migration ready (not applied — needs owner-delegated apply):
-      `supabase/migrations/20260710193000_fix_notification_employee_deep_links.sql`
+      `supabase/migration-archive/20260710193000_fix_notification_employee_deep_links.sql`
       recreates `reject_leave_request`, `approve_inventory_count_slip`,
       `request_inventory_count_recount` from baseline `/br/...` links and
       backfills historical `/employee/*` notification rows (incl. checkout).

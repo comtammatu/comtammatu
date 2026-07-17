@@ -334,7 +334,7 @@ test("HR imports the shared staff runtime, not the retired employee runtime", ()
 
 test("HR personnel admin RLS keeps HR grants off base-table policies", () => {
   const personnelRls = read(
-    "supabase/migrations/20260708090000_hr_owner_only_personnel_rls.sql",
+    "supabase/migration-archive/20260708090000_hr_owner_only_personnel_rls.sql",
   );
 
   assert.doesNotMatch(personnelRls, /CREATE OR REPLACE FUNCTION public\./);

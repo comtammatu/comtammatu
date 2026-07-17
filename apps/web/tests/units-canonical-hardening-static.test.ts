@@ -2,14 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const readRepo = (path: string) =>
+  readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = readRepo(
   "supabase/migration-archive/20260703170000_units_canonical_hardening.sql",
 );
-const baseline = readRepo("supabase/migrations/00000000000000_baseline.sql");
+const baseline = normalizePgDumpSql(
+  readRepo("supabase/migrations/20260716093507_baseline.sql"),
+);
 
 test("hardening migration self-heals name to mirror code", () => {
   assert.match(

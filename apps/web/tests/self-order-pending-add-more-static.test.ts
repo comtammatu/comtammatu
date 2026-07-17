@@ -10,7 +10,7 @@ const readRepo = (path: string) =>
 
 test("pending self-order additions merge through an idempotent operation ledger", () => {
   const migration = readRepo(
-    "supabase/migrations/20260716180000_restore_self_order_pending_add_more.sql",
+    "supabase/migration-archive/20260716180000_restore_self_order_pending_add_more.sql",
   );
 
   assert.match(migration, /CREATE TABLE public\.self_order_request_operations/);
@@ -46,7 +46,7 @@ test("awaiting guests can continue ordering while the first confirmation is a di
   const summary = readWeb("app/q/[token]/self-order/order-summary.tsx");
 
   assert.match(client, /const ctaDisabled = paymentPending/);
-  assert.match(client, /const ctaLabel = open \|\| awaiting/);
+  assert.match(client, /const ctaLabel =\s*open \|\| awaiting/);
   assert.match(client, /const isFirstPendingSubmit = !awaiting/);
   assert.match(
     client,
@@ -60,7 +60,7 @@ test("awaiting guests can continue ordering while the first confirmation is a di
   assert.match(messages, /pendingDialogTitle: "Đã gửi đơn cho Thu Ngân"/);
   assert.match(
     messages,
-    /pendingDialogDescription: "Bạn có thể xem thực đơn trong lúc chờ và gọi thêm món\."/,
+    /pendingDialogDescription:\s*"Bạn có thể xem thực đơn trong lúc chờ và gọi thêm món\."/,
   );
   assert.match(messages, /callMore: "Gọi thêm"/);
   assert.match(summary, /blur-\[2px\]/);

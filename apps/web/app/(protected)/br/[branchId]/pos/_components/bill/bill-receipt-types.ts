@@ -79,5 +79,4 @@ export interface PendingExtras {
 export const METHOD_LABELS: Record<string, string> = {
   cash: "Tiền mặt",
   vietqr: "VietQR",
-  momo: "MoMo",
 };

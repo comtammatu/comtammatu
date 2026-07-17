@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -53,15 +54,15 @@ function latestMigrationDefining(functionName: string): {
   const migrationDir = `${root}supabase/migrations`;
   const matches = readdirSync(migrationDir)
     .filter((file) => /^\d+_.*\.sql$/.test(file))
-    .filter((file) =>
-      read(`supabase/migrations/${file}`).includes(
-        `CREATE OR REPLACE FUNCTION public.${functionName}`,
-      ),
-    )
-    .sort();
-  const file = matches.at(-1);
-  assert.ok(file, `${functionName} migration not found`);
-  return { file, sql: read(`supabase/migrations/${file}`) };
+    .map((file) => ({
+      file,
+      sql: normalizePgDumpSql(read(`supabase/migrations/${file}`)),
+    }))
+    .filter(({ sql }) => sql.includes(`CREATE FUNCTION public.${functionName}`))
+    .sort((left, right) => left.file.localeCompare(right.file));
+  const match = matches.at(-1);
+  assert.ok(match, `${functionName} migration not found`);
+  return match;
 }
 
 test("active inventory reads do not select dropped legacy unit columns", () => {
@@ -127,12 +128,21 @@ test("post Phase C migrations do not reference dropped ingredient unit fields", 
   const migrationDir = `${root}supabase/migrations`;
   const files = readdirSync(migrationDir)
     .filter((file) => /^\d+_.*\.sql$/.test(file))
+    .filter((file) => file !== "20260716093507_baseline.sql")
     .filter(
       (file) => file > "20260707002300_inventory_unit_system_phase_c.sql",
     );
 
+  const runtimeRepair = read(
+    "supabase/migrations/20260716182000_restore_missed_runtime_contracts.sql",
+  );
+  assert.match(
+    runtimeRepair,
+    /DROP FUNCTION IF EXISTS public\.confirm_production_run\(bigint, numeric\)/,
+  );
+
   for (const file of files) {
-    const sql = read(`supabase/migrations/${file}`);
+    const sql = normalizePgDumpSql(read(`supabase/migrations/${file}`));
     assert.doesNotMatch(
       sql,
       /\bing\.(?:purchase_unit|measure_unit|purchase_to_measure_factor|unit)\b/,
@@ -149,11 +159,14 @@ test("post Phase C migrations do not reference dropped ingredient unit fields", 
 
 test("latest menu recipe upsert RPC does not write dropped unit text", () => {
   const { file, sql } = latestMigrationDefining("upsert_recipe_lines");
-  const body = section(
-    `supabase/migrations/${file}`,
-    "CREATE OR REPLACE FUNCTION public.upsert_recipe_lines",
+  const from = sql.indexOf("CREATE FUNCTION public.upsert_recipe_lines");
+  const to = sql.indexOf(
     "REVOKE ALL ON FUNCTION public.upsert_recipe_lines",
+    from,
   );
+  assert.ok(from >= 0, `upsert_recipe_lines not found in ${file}`);
+  assert.ok(to >= 0, `upsert_recipe_lines ACL not found in ${file}`);
+  const body = sql.slice(from, to);
 
   assert.match(sql, /public\.inventory_entry_unit_code\(/);
   assert.doesNotMatch(
@@ -410,7 +423,7 @@ test.skip("inventory RPCs derive persisted unit text from the unit catalog", () 
   const migration = read(
     "supabase/migration-archive/20260704193015_inventory_unit_rpc_contract.sql",
   );
-  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const baseline = read("supabase/migrations/20260716093507_baseline.sql");
 
   for (const sql of [migration, baseline]) {
     assert.match(sql, /inventory_entry_unit_code/);
@@ -445,7 +458,7 @@ test.skip("expiry writeoff RPC does not accept a unit text argument", () => {
   const bridge = read(
     "supabase/migration-archive/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql",
   );
-  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const baseline = read("supabase/migrations/20260716093507_baseline.sql");
   const action = read("apps/web/app/(protected)/inventory/waste-actions.ts");
 
   assert.match(
@@ -508,7 +521,7 @@ test.skip("employee count slip prefill preserves the submitted entry unit", () =
 
 test.skip("stock transfer receive converts received entry quantities to base units", () => {
   const sql = read(
-    "supabase/migrations/20260706071001_stock_transfer_receive_base_quantity.sql",
+    "supabase/migration-archive/20260706071001_stock_transfer_receive_base_quantity.sql",
   );
   const fnStart = sql.indexOf(
     "CREATE OR REPLACE FUNCTION public.stock_transfer_receive",
@@ -543,7 +556,7 @@ test.skip("stock transfer receive converts received entry quantities to base uni
 
 test.skip("GRN amend and legacy GRN movements use base quantities", () => {
   const sql = read(
-    "supabase/migrations/20260706084233_grn_base_quantity_legacy_cleanup.sql",
+    "supabase/migration-archive/20260706084233_grn_base_quantity_legacy_cleanup.sql",
   );
   const fnStart = sql.indexOf(
     "CREATE OR REPLACE FUNCTION public.amend_grn_line",
@@ -583,7 +596,7 @@ test.skip("GRN amend and legacy GRN movements use base quantities", () => {
 
 test("inventory unit closure keeps transfer RPCs on entry units only", () => {
   const sql = read(
-    "supabase/migrations/20260708103000_inventory_unit_closure.sql",
+    "supabase/migration-archive/20260708103000_inventory_unit_closure.sql",
   );
 
   const draftStart = sql.indexOf(
@@ -634,7 +647,7 @@ test("inventory unit closure keeps transfer RPCs on entry units only", () => {
 
 test("inventory unit closure backfills old null entry units and resolves production run base unit", () => {
   const sql = read(
-    "supabase/migrations/20260708103000_inventory_unit_closure.sql",
+    "supabase/migration-archive/20260708103000_inventory_unit_closure.sql",
   );
 
   for (const table of [
@@ -678,7 +691,7 @@ test("inventory unit closure backfills old null entry units and resolves product
 
 test("production runs store and use explicit inventory locations", () => {
   const sql = read(
-    "supabase/migrations/20260708182845_production_run_locations.sql",
+    "supabase/migration-archive/20260708182845_production_run_locations.sql",
   );
 
   assert.match(sql, /ADD COLUMN IF NOT EXISTS source_location_id bigint/);
@@ -712,7 +725,7 @@ test("production runs store and use explicit inventory locations", () => {
 
 test("inventory unit constraints lock entry unit columns at the database boundary", () => {
   const sql = read(
-    "supabase/migrations/20260707191741_inventory_unit_not_null_constraints.sql",
+    "supabase/migration-archive/20260707191741_inventory_unit_not_null_constraints.sql",
   );
 
   assert.match(sql, /WHERE entry_unit_id IS NULL/);

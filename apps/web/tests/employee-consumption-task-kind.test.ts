@@ -15,7 +15,7 @@ const taskKindMigration = readRepo(
   "supabase/migration-archive/20260619042223_employee_consumption_task_kind.sql",
 );
 const attendanceShiftIntegrityMigration = readRepo(
-  "supabase/migrations/20260709094314_attendance_shift_integrity.sql",
+  "supabase/migration-archive/20260709094314_attendance_shift_integrity.sql",
 );
 const todayWorkStateSource = readWeb("lib/staff-runtime/_lib/today-work-state.ts");
 const checkoutActionSource = readWeb("lib/staff-runtime/clock/actions.ts");

@@ -9,7 +9,7 @@ const migration = readFileSync(
   join(
     root,
     "../..",
-    "supabase/migrations/20260711140000_retire_self_order_v2.sql",
+    "supabase/migration-archive/20260711140000_retire_self_order_v2.sql",
   ),
   "utf8",
 );
@@ -17,7 +17,7 @@ const hardeningMigration = readFileSync(
   join(
     root,
     "../..",
-    "supabase/migrations/20260712071537_harden_self_order_payment_evidence.sql",
+    "supabase/migration-archive/20260712071537_harden_self_order_payment_evidence.sql",
   ),
   "utf8",
 );
@@ -225,5 +225,5 @@ test("Generated types expose only the current Self-Order request model", () => {
     databaseTypes,
     /\n {6}self_order_get_payment_request_status: \{/,
   );
-  assert.equal(databaseTypes.match(/momo_revenue:/g)?.length, 4);
+  assert.equal(databaseTypes.match(/momo_revenue:/g)?.length ?? 0, 0);
 });

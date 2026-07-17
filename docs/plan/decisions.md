@@ -47,7 +47,7 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 **Decision:**
 
-1. LOẠI khỏi backlog (không đề xuất lại): Local-First/offline POS, VNPay (VietQR+MoMo đủ), native POS Flutter/Capacitor (PWA chạy ổn — tái khẳng định bởi D062).
+1. LOẠI khỏi backlog (không đề xuất lại): Local-First/offline POS, VNPay (VietQR đủ), native POS Flutter/Capacitor (PWA chạy ổn — tái khẳng định bởi D062).
 2. Role POS: sàn bán hàng dùng access bucket `cashier`; phục vụ là công việc trong ca, không phải role auth riêng.
 3. Mọi tính năng mới qua **phễu "phần mềm hỗ trợ HKD"**: giảm thao tác chủ + nhân viên hiện có; không thêm nghi thức quản trị (phân ca, duyệt nhiều tầng, kế toán doanh nghiệp) HKD không dùng.
 

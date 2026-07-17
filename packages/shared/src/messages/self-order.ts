@@ -138,7 +138,7 @@ export const SELF_ORDER_VI = {
   openBankApp: "Mở ứng dụng",
   chooseBankAppTitle: "Chọn ứng dụng",
   chooseBankAppDescription:
-    "Ngân hàng có thể nhận sẵn VietQR. Với MoMo, lưu QR rồi chọn ảnh trong Quét mã.",
+    "Liên kết gửi sẵn thông tin VietQR. Hãy kiểm tra người nhận, số tiền và nội dung trước khi xác nhận.",
   bankAppsLoading: "Đang tải danh sách ứng dụng...",
   bankAppsLoadFailed: "Không tải được danh sách ứng dụng.",
   saveVietQr: "Lưu QR",

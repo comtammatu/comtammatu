@@ -39,7 +39,7 @@ test("UI and RPC both reject non-zero expense allocation delta", () => {
     "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
   );
   const migration = read(
-    "supabase/migrations/20260714031023_20260713151901_enforce_sepay_expense_allocation_amount.sql",
+    "supabase/migration-archive/20260714031023_20260713151901_enforce_sepay_expense_allocation_amount.sql",
   );
 
   assert.match(cell, /!hasChanges \|\| !allocationBalanced/);

@@ -53,7 +53,7 @@ test("cash deposit is a matched internal transfer, not customer money-in", () =>
 
 test("cash deposit has one verified atomic write boundary", () => {
   const migration = read(
-    "supabase/migrations/20260714031021_20260713150807_harden_sepay_cash_deposit_boundary.sql",
+    "supabase/migration-archive/20260714031021_20260713150807_harden_sepay_cash_deposit_boundary.sql",
   );
   const route = read("apps/web/app/api/webhooks/sepay/route.ts");
 

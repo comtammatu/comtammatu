@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { normalizePgDumpSql } from "./sql-test-utils";
 import {
   lineTotalFromUnitCost,
   unitCostFromLineTotal,
@@ -361,7 +362,9 @@ test("GRN create-from-supplier saveLine threads the picked entryUnitId to upsert
 });
 
 test("confirm_goods_receipt_note converts every grn_items row via inv_to_base regardless of source (PO or supplier)", () => {
-  const sql = readRepo("supabase/migrations/00000000000000_baseline.sql");
+  const sql = normalizePgDumpSql(
+    readRepo("supabase/migrations/20260716093507_baseline.sql"),
+  );
   const fnStart = sql.indexOf(
     "CREATE FUNCTION public.confirm_goods_receipt_note",
   );

@@ -19,7 +19,6 @@ DECLARE
   v_fresh_code text;
   v_pending_code text;
   v_cash_code text;
-  v_momo_code text;
   v_manual_code text;
   v_fresh_order_id bigint;
   v_fresh_payment_id bigint;
@@ -31,9 +30,6 @@ DECLARE
   v_cash_order_id bigint;
   v_cash_payment_id bigint;
   v_cash_event_id bigint;
-  v_momo_order_id bigint;
-  v_momo_payment_id bigint;
-  v_momo_event_id bigint;
   v_manual_order_id bigint;
   v_manual_payment_id bigint;
   v_manual_event_id bigint;
@@ -109,7 +105,6 @@ BEGIN
   v_fresh_code := 'SP' || v_code_suffix || 'F';
   v_pending_code := 'SP' || v_code_suffix || 'P';
   v_cash_code := 'SP' || v_code_suffix || 'C';
-  v_momo_code := 'SP' || v_code_suffix || 'M';
   v_manual_code := 'SP' || v_code_suffix || 'L';
 
   PERFORM set_config('comtammatu.skip_quota_enforcement', 'true', true);
@@ -482,94 +477,6 @@ BEGIN
   ) VALUES (
     v_tenant_id,
     v_branch_id,
-    'SEPAY-MOMO-' || v_code_suffix,
-    'takeaway',
-    'completed',
-    v_amount,
-    v_amount,
-    v_owner_id,
-    'momo',
-    'paid',
-    v_momo_code
-  ) RETURNING id INTO v_momo_order_id;
-
-  INSERT INTO public.payments (
-    tenant_id,
-    branch_id,
-    order_id,
-    method,
-    amount,
-    status,
-    paid_at,
-    provider_ref,
-    provider_data,
-    created_by
-  ) VALUES (
-    v_tenant_id,
-    v_branch_id,
-    v_momo_order_id,
-    'momo',
-    v_amount,
-    'completed',
-    now(),
-    'MOMO-' || v_code_suffix,
-    '{"resultCode":"0","transactionId":"momo-authoritative"}'::jsonb,
-    v_owner_id
-  ) RETURNING id INTO v_momo_payment_id;
-
-  SELECT to_jsonb(o) INTO v_before_order
-  FROM public.orders o WHERE o.id = v_momo_order_id;
-  SELECT to_jsonb(p) INTO v_before_payment
-  FROM public.payments p WHERE p.id = v_momo_payment_id;
-
-  INSERT INTO public.webhook_events (
-    tenant_id,
-    provider,
-    request_id,
-    signature_valid,
-    payload
-  ) VALUES (
-    v_tenant_id,
-    'sepay',
-    'momo-' || v_code_suffix,
-    true,
-    jsonb_build_object(
-      'transferType', 'in',
-      'transferAmount', v_amount,
-      'accountNumber', v_account_number,
-      'referenceCode', 'REF-MOMO-' || v_code_suffix,
-      'content', v_momo_code
-    )
-  ) RETURNING id INTO v_momo_event_id;
-
-  v_result := public.reconcile_sepay_order_evidence(v_momo_event_id, v_momo_code);
-
-  SELECT to_jsonb(o) INTO v_after_order
-  FROM public.orders o WHERE o.id = v_momo_order_id;
-  SELECT to_jsonb(p) INTO v_after_payment
-  FROM public.payments p WHERE p.id = v_momo_payment_id;
-
-  IF v_result ->> 'review_code' <> 'payment_method_conflict_needs_review'
-     OR v_before_order IS DISTINCT FROM v_after_order
-     OR v_before_payment IS DISTINCT FROM v_after_payment THEN
-    RAISE EXCEPTION 'Completed MoMo truth was changed: %', v_result;
-  END IF;
-
-  INSERT INTO public.orders (
-    tenant_id,
-    branch_id,
-    order_number,
-    order_type,
-    status,
-    subtotal,
-    total_amount,
-    created_by,
-    payment_method,
-    payment_status,
-    payment_code
-  ) VALUES (
-    v_tenant_id,
-    v_branch_id,
     'SEPAY-MANUAL-' || v_code_suffix,
     'takeaway',
     'completed',
@@ -649,19 +556,6 @@ BEGIN
     GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
     IF v_error_message <> 'webhook_event_failed' THEN
       RAISE EXCEPTION 'Unexpected cash-conflict denial: %', v_error_message;
-    END IF;
-  END;
-
-  BEGIN
-    PERFORM public.link_sepay_transaction_to_payment(
-      v_momo_event_id,
-      v_manual_payment_id
-    );
-    RAISE EXCEPTION 'Owner linked a quarantined MoMo conflict';
-  EXCEPTION WHEN check_violation THEN
-    GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
-    IF v_error_message <> 'webhook_event_failed' THEN
-      RAISE EXCEPTION 'Unexpected MoMo-conflict denial: %', v_error_message;
     END IF;
   END;
 

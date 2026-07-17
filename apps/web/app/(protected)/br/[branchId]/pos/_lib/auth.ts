@@ -111,9 +111,8 @@ export async function posUseAuth(
  * provisional bills but MUST NOT touch the cash drawer. Cashier and
  * branch_manager+ hold POS_CONFIRM_PAYMENT.
  *
- * VietQR / MoMo confirm paths keep `posUseAuth` instead (e-wallet flows
- * are webhook-driven, do not touch the physical cash drawer, and the
- * cashier merely confirms the remote provider's success).
+ * VietQR paths keep `posUseAuth` instead because bank settlement does not
+ * touch the physical cash drawer.
  */
 export async function posConfirmPaymentAuth(
   input?: unknown,

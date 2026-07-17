@@ -130,10 +130,6 @@ export function RevenueChartsBlock({
                 label: "VietQR",
                 theme: { light: "var(--chart-2)", dark: "var(--chart-2)" },
               },
-              momo: {
-                label: "MoMo",
-                theme: { light: "var(--chart-3)", dark: "var(--chart-3)" },
-              },
             } satisfies ChartConfig
           }
           chartClassName="aspect-square max-h-72"

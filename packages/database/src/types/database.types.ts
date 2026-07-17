@@ -8948,7 +8948,6 @@ export type Database = {
           date: string | null
           dine_in_revenue: number | null
           discount_amount: number | null
-          momo_revenue: number | null
           order_count: number | null
           subtotal_revenue: number | null
           takeaway_revenue: number | null
@@ -9585,19 +9584,14 @@ export type Database = {
         Returns: Json
       }
       confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
-      confirm_production_run:
-        | {
-            Args: { p_actual_quantity?: number; p_run_id: number }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_actual_ingredients?: Json
-              p_actual_quantity?: number
-              p_run_id: number
-            }
-            Returns: Json
-          }
+      confirm_production_run: {
+        Args: {
+          p_actual_ingredients?: Json
+          p_actual_quantity?: number
+          p_run_id: number
+        }
+        Returns: Json
+      }
       confirm_sepay_payment: {
         Args: {
           p_account_number: string
@@ -9967,14 +9961,6 @@ export type Database = {
         Args: { p_branch_id: number; p_minutes: number; p_note: string }
         Returns: string
       }
-      finalize_momo_failed_payment: {
-        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
-        Returns: Json
-      }
-      finalize_momo_successful_payment: {
-        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
-        Returns: Json
-      }
       finalize_paid_order: {
         Args: { p_actor_id?: string; p_order_id: number }
         Returns: undefined
@@ -10061,7 +10047,6 @@ export type Database = {
           branch_id: number
           cash_revenue: number
           date: string
-          momo_revenue: number
           order_count: number
           tenant_id: number
           total_revenue: number
@@ -10251,7 +10236,6 @@ export type Database = {
           cash_revenue: number
           dine_in_revenue: number
           discount_amount: number
-          momo_revenue: number
           net_revenue: number
           order_count: number
           refreshed_at: string
@@ -10278,7 +10262,6 @@ export type Database = {
           cash_revenue: number
           dine_in_revenue: number
           discount_amount: number
-          momo_revenue: number
           order_count: number
           period_end: string
           period_label: string
@@ -10718,10 +10701,6 @@ export type Database = {
       }
       reconcile_sepay_order_evidence: {
         Args: { p_event_id: number; p_payment_code: string }
-        Returns: Json
-      }
-      record_momo_pending_result: {
-        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
         Returns: Json
       }
       record_production_run: {

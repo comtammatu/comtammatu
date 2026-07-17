@@ -78,7 +78,7 @@ test("refund allocation requires exact money conservation", () => {
 
 test("refund ledger migration enforces the smallest safe v1 contract", () => {
   const migration = read(
-    "supabase/migrations/20260714031027_20260713160248_persist_sepay_refund_match.sql",
+    "supabase/migration-archive/20260714031027_20260713160248_persist_sepay_refund_match.sql",
   );
 
   assert.match(migration, /existing_refunds_require_payout_classification/);
@@ -100,7 +100,7 @@ test("refund ledger migration enforces the smallest safe v1 contract", () => {
 
 test("refund RLS reuses the browser-callable Owner permission boundary", () => {
   const migration = read(
-    "supabase/migrations/20260714144849_fix_refund_owner_policy_execution.sql",
+    "supabase/migration-archive/20260714144849_fix_refund_owner_policy_execution.sql",
   );
 
   assert.match(
@@ -119,7 +119,7 @@ test("refund RLS reuses the browser-callable Owner permission boundary", () => {
 
 test("owner predicate remains service-only", () => {
   const migration = read(
-    "supabase/migrations/20260714155721_lock_owner_predicate_function_acl.sql",
+    "supabase/migration-archive/20260714155721_lock_owner_predicate_function_acl.sql",
   );
 
   assert.match(

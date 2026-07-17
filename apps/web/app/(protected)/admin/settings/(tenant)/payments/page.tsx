@@ -20,11 +20,6 @@ export default async function PaymentSettingsPage() {
 
   const sepayEnvConfigured = !!process.env.SEPAY_WEBHOOK_SECRET;
 
-  const momoEnvConfigured =
-    !!process.env.MOMO_PARTNER_CODE &&
-    !!process.env.MOMO_ACCESS_KEY &&
-    !!process.env.MOMO_SECRET_KEY;
-
   return (
     <SettingsPageFrame
       title={messages.settings.pages.paymentsTitle}
@@ -33,7 +28,6 @@ export default async function PaymentSettingsPage() {
       <PaymentsForm
         settings={settings}
         sepayEnvConfigured={sepayEnvConfigured}
-        momoEnvConfigured={momoEnvConfigured}
       />
     </SettingsPageFrame>
   );

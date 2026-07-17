@@ -9,6 +9,7 @@ import {
   resolveSupplierPaymentIntentKey,
   type SupplierInvoiceRow,
 } from "../app/(protected)/inventory/supplier-invoices/supplier-invoice-row";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
@@ -285,7 +286,9 @@ test("supplier invoice desktop layout does not squeeze the detail pane", () => {
 });
 
 test("baseline keeps supplier payment ledger and invoice status together", () => {
-  const source = readRoot("supabase/migrations/00000000000000_baseline.sql");
+  const source = normalizePgDumpSql(
+    readRoot("supabase/migrations/20260716093507_baseline.sql"),
+  );
 
   assert.match(source, /CREATE FUNCTION public\.create_supplier_payment/);
   assert.match(source, /INSERT INTO public\.supplier_payments/);
@@ -294,7 +297,7 @@ test("baseline keeps supplier payment ledger and invoice status together", () =>
 
 test("supplier payment RPC requires matched GRN evidence", () => {
   const migration = readRoot(
-    "supabase/migrations/20260715073331_harden_supplier_payment_idempotency.sql",
+    "supabase/migration-archive/20260715073331_harden_supplier_payment_idempotency.sql",
   );
   const acceptance = readRoot(
     "supabase/tests/supplier_payment_idempotency_test.sql",
@@ -315,7 +318,7 @@ test("supplier payment RPC requires matched GRN evidence", () => {
 
 test("supplier payment migration enforces exact replay, credit-aware cap, and Owner boundary", () => {
   const migration = readRoot(
-    "supabase/migrations/20260715073331_harden_supplier_payment_idempotency.sql",
+    "supabase/migration-archive/20260715073331_harden_supplier_payment_idempotency.sql",
   );
 
   assert.match(migration, /ADD COLUMN idempotency_key uuid/);
@@ -350,7 +353,7 @@ test("supplier payment migration enforces exact replay, credit-aware cap, and Ow
 
 test("AP aging uses effective balance after supplier credit", () => {
   const migration = readRoot(
-    "supabase/migrations/20260715073331_harden_supplier_payment_idempotency.sql",
+    "supabase/migration-archive/20260715073331_harden_supplier_payment_idempotency.sql",
   );
 
   assert.match(migration, /CREATE OR REPLACE FUNCTION public\.get_ap_aging/);
@@ -372,7 +375,7 @@ test("AP aging uses effective balance after supplier credit", () => {
 
 test("supplier returns are unique per active GRN", () => {
   const migration = readRoot(
-    "supabase/migrations/20260708130500_inventory_supplier_integrity_gates.sql",
+    "supabase/migration-archive/20260708130500_inventory_supplier_integrity_gates.sql",
   );
 
   assert.match(
@@ -385,9 +388,9 @@ test("supplier returns are unique per active GRN", () => {
 });
 
 test("supplier invoice matching requires linked GRN evidence", () => {
-  const baseline = readRoot("supabase/migrations/00000000000000_baseline.sql");
+  const baseline = readRoot("supabase/migrations/20260716093507_baseline.sql");
   const migration = readRoot(
-    "supabase/migrations/20260708062218_supplier_invoice_missing_grn_pending.sql",
+    "supabase/migration-archive/20260708062218_supplier_invoice_missing_grn_pending.sql",
   );
   const mapper = readWeb(
     "app/(protected)/inventory/supplier-invoices/supplier-invoice-row.ts",

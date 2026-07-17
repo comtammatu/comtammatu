@@ -10,7 +10,6 @@ import {
   BUYER_NOT_GET_INVOICE_NAME,
   buildVietQrEmvco,
   getPaymentProvider,
-  getRegisteredMethods,
   VietQRProvider,
   type PaymentMethod,
   type PaymentProvider,
@@ -100,7 +99,7 @@ export interface CreatePaymentSuccessData {
 }
 
 export interface PendingRemotePaymentForBillData {
-  method: "vietqr" | "momo";
+  method: "vietqr";
   payment_id: number;
   provider_ref?: string;
   qr_data?: string;
@@ -140,33 +139,7 @@ function mapPaymentRpcError(message: string): string | null {
   return null;
 }
 
-function sanitizeProviderMessage(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim().replace(/\s+/g, " ");
-  return trimmed ? trimmed.slice(0, 160) : null;
-}
-
-function describeProviderCreateFailure(
-  method: PaymentMethod,
-  providerData?: Record<string, unknown>,
-): string {
-  if (method === "momo") {
-    const message = sanitizeProviderMessage(providerData?.message);
-    if (message) {
-      return `Không tạo được QR MoMo: ${message}`;
-    }
-
-    const error = sanitizeProviderMessage(providerData?.error);
-    if (error?.includes("NEXT_PUBLIC_APP_URL")) {
-      return "Không tạo được QR MoMo vì NEXT_PUBLIC_APP_URL phải là URL HTTPS public để MoMo gọi IPN.";
-    }
-    if (error && /timeout|timed out|aborted/i.test(error)) {
-      return "MoMo phản hồi quá chậm. Vui lòng thử tạo lại QR.";
-    }
-
-    return "Không tạo được QR MoMo. Vui lòng kiểm tra cấu hình MoMo hoặc thử lại.";
-  }
-
+function describeProviderCreateFailure(method: PaymentMethod): string {
   if (method === "vietqr") {
     return "Không tạo được thanh toán VietQR. Vui lòng kiểm tra cấu hình ngân hàng.";
   }
@@ -174,14 +147,7 @@ function describeProviderCreateFailure(
   return "Không thể tạo thanh toán.";
 }
 
-function describeProviderException(
-  method: PaymentMethod,
-  err: unknown,
-): string {
-  const message = err instanceof Error ? err.message : "";
-  if (method === "momo" && message.includes("NEXT_PUBLIC_APP_URL")) {
-    return "Không tạo được QR MoMo vì NEXT_PUBLIC_APP_URL phải là URL HTTPS public để MoMo gọi IPN.";
-  }
+function describeProviderException(method: PaymentMethod, _err: unknown): string {
   return describeProviderCreateFailure(method);
 }
 
@@ -223,7 +189,7 @@ async function resolvePaymentProviderForMethod(
   tenantId: number,
   method: PaymentMethod,
 ): Promise<PaymentProvider | null> {
-  if (method !== "vietqr") return getPaymentProvider(method);
+  if (method === "cash") return getPaymentProvider(method);
 
   const settings = await readVietQrSettings(supabase, tenantId);
   if (!settings.bankCode || !settings.accountNo) return null;
@@ -277,12 +243,6 @@ function pickRemoteQrData(
   method: PaymentMethod,
   providerData: Record<string, unknown> | undefined,
 ): string | undefined {
-  if (method === "momo") {
-    // MoMo qrCodeUrl is QR payload data. payUrl/deeplink are navigation
-    // links and must not be rendered as POS QR.
-    return strValue(providerData, "qrCodeUrl");
-  }
-
   if (method === "vietqr") {
     const payload = buildVietQrPayloadFromProviderData(providerData);
     if (payload) return payload;
@@ -352,7 +312,7 @@ function buildPendingRemotePaymentForBillData(
   },
   vietQrSettings?: VietQrSettings,
 ): PendingRemotePaymentForBillData | null {
-  if (row.method !== "vietqr" && row.method !== "momo") return null;
+  if (row.method !== "vietqr") return null;
 
   const method = row.method;
   const storedProviderData = asRecord(row.provider_data);
@@ -370,8 +330,7 @@ function buildPendingRemotePaymentForBillData(
       : storedProviderData;
   const qrInfo = pickVietQrInfo(providerData);
   const qrData = pickRemoteQrData(method, providerData);
-  const redirectUrl =
-    method === "momo" ? undefined : strValue(providerData, "redirectUrl");
+  const redirectUrl = strValue(providerData, "redirectUrl");
 
   return {
     method,
@@ -423,14 +382,6 @@ async function loadPendingRemotePaymentForBillData(
 function resumePendingPayment(
   pending: PendingRemotePaymentForBillData,
 ): ActionResult<CreatePaymentSuccessData> {
-  if (pending.method === "momo" && !pending.qr_data) {
-    return {
-      success: false,
-      error:
-        "Phiên MoMo đang chờ nhưng thiếu dữ liệu QR. Vui lòng liên hệ quản lý để đối soát trước khi thử lại.",
-    };
-  }
-
   return {
     success: true,
     data: {
@@ -454,10 +405,7 @@ async function resolveAllowedPaymentMethods(
     .from("system_settings")
     .select("key, value")
     .eq("tenant_id", tenantId)
-    .in("key", [
-      SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR,
-      SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO,
-    ]);
+    .eq("key", SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR);
 
   const settings: Record<string, string> = {};
   if (rows) {
@@ -466,10 +414,9 @@ async function resolveAllowedPaymentMethods(
     }
   }
 
-  const registered = new Set(getRegisteredMethods());
   const methods: PaymentMethod[] = [];
 
-  if (registered.has("cash")) {
+  if (getPaymentProvider("cash")) {
     methods.push("cash");
   }
   if (truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR])) {
@@ -478,13 +425,6 @@ async function resolveAllowedPaymentMethods(
       methods.push("vietqr");
     }
   }
-  if (
-    truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]) &&
-    registered.has("momo")
-  ) {
-    methods.push("momo");
-  }
-
   return methods;
 }
 
@@ -511,7 +451,6 @@ const getCachedPaymentSettings = unstable_cache(
       .eq("tenant_id", tenantId)
       .in("key", [
         SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR,
-        SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO,
         SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE,
         SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO,
         SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME,
@@ -539,14 +478,13 @@ const getCachedPaymentSettings = unstable_cache(
 /* ─── fetchPaymentMethodsForPos ─── */
 
 /**
- * Methods available on POS for this tenant: cash + enabled e-wallets
- * with registered providers (env credentials).
+ * Methods available on POS for this tenant: cash + configured VietQR.
  *
  * Auth `posUseAuth` (POS_USE). The branch-scope guard is inline (not via
  * `customAuth`) to keep the specific "Không có quyền truy cập chi nhánh
  * này" copy — the helper's null-from-customAuth path collapses to the
  * generic "Không có quyền". `ensurePaymentProvidersRegistered()` runs after
- * auth; method list build order is cash → vietqr → momo.
+ * auth; method list build order is cash → vietqr.
  */
 export const fetchPaymentMethodsForPos = withActionPositional(
   {
@@ -573,10 +511,9 @@ export const fetchPaymentMethodsForPos = withActionPositional(
       };
     }
 
-    const registered = new Set(getRegisteredMethods());
     const methods: PaymentMethod[] = [];
 
-    if (registered.has("cash")) {
+    if (getPaymentProvider("cash")) {
       methods.push("cash");
     }
     if (truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR])) {
@@ -587,13 +524,6 @@ export const fetchPaymentMethodsForPos = withActionPositional(
         methods.push("vietqr");
       }
     }
-    if (
-      truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]) &&
-      registered.has("momo")
-    ) {
-      methods.push("momo");
-    }
-
     return { success: true, data: { methods } };
   },
 );
@@ -601,13 +531,13 @@ export const fetchPaymentMethodsForPos = withActionPositional(
 /* ─── createPayment ─── */
 
 /**
- * Create a pending MoMo or VietQR intent. Cash uses the separate
+ * Create a pending VietQR intent. Cash uses the separate
  * `confirmCashPayment` path and never enters this action.
  *
  * Auth is `posUseAuth` (POS_USE — any POS operator) — looser than
  * `confirmCashPayment`'s `posConfirmPaymentAuth` (POS_CONFIRM_PAYMENT,
  * cashier-only cash-drawer gate). Waiters with POS_USE can therefore start
- * a MoMo / VietQR payment session (no cash drawer involved) but cannot
+ * a VietQR payment session (no cash drawer involved) but cannot
  * confirm cash.
  *
  * Non-obvious constraints:
@@ -781,10 +711,7 @@ export const createPayment = withActionPositional(
       });
       return {
         success: false,
-        error: describeProviderCreateFailure(
-          method,
-          providerResult.providerData,
-        ),
+        error: describeProviderCreateFailure(method),
       };
     }
 
@@ -795,10 +722,7 @@ export const createPayment = withActionPositional(
     ) {
       return {
         success: false,
-        error:
-          method === "momo"
-            ? "MoMo đã tạo phiên thanh toán nhưng không trả về qrCodeUrl."
-            : "Không tạo được dữ liệu QR cho phương thức thanh toán này.",
+        error: "Không tạo được dữ liệu QR cho phương thức thanh toán này.",
       };
     }
 
@@ -987,15 +911,6 @@ export const cancelPendingPayment = withActionPositional(
             "Phiên này thuộc yêu cầu QR tự gọi món. Hãy xử lý tại hàng chờ thanh toán.",
         };
       }
-      if (
-        message.includes("momo_cancellation_requires_provider_confirmation")
-      ) {
-        return {
-          success: false,
-          error:
-            "Không thể hủy phiên MoMo khi nhà cung cấp chưa xác nhận kết quả cuối.",
-        };
-      }
       if (error.code === "55P03") {
         return {
           success: false,
@@ -1074,7 +989,7 @@ export interface CashPaymentResult {
 /**
  * Auth requires POS_CONFIRM_PAYMENT (cashier / branch_manager+); staff without POS_CONFIRM_PAYMENT
  * with only POS_USE + POS_PRINT can print a provisional bill but MUST NOT
- * touch the cash drawer. VietQR / MoMo keep POS_USE at createPayment /
+ * touch the cash drawer. VietQR keeps POS_USE at createPayment /
  * confirmVietQrPayment (e-wallet is the webhook source of truth, no cash
  * drawer).
  *

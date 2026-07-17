@@ -2,14 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const readRepo = (path: string) =>
+  readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = readRepo(
   "supabase/migration-archive/20260703160000_inventory_unit_system_phase_a.sql",
 );
-const baseline = readRepo("supabase/migrations/00000000000000_baseline.sql");
+const baseline = normalizePgDumpSql(
+  readRepo("supabase/migrations/20260716093507_baseline.sql"),
+);
 
 test("Phase A migration adds the two-tier unit schema additively", () => {
   for (const expected of [
@@ -34,7 +38,10 @@ test("Phase A migration seeds standard mass/volume units with locked factors", (
     "('l',  'Lít',        'volume', 1000::numeric)",
     "('cl', 'Xen-ti-lít', 'volume', 10::numeric)",
   ]) {
-    assert.ok(migration.includes(expected), `expected standard seed row ${expected}`);
+    assert.ok(
+      migration.includes(expected),
+      `expected standard seed row ${expected}`,
+    );
   }
 });
 
@@ -42,7 +49,21 @@ test("Phase A migration normalizes stale unit codes and seeds packaging units", 
   assert.match(migration, /WHERE lower\(code\) = 'lit'/);
   assert.match(migration, /WHERE lower\(code\) = 'bich'/);
   assert.match(migration, /WHERE lower\(code\) = 'piece'/);
-  for (const packagingCode of ["bao", "thùng", "chai", "lon", "hũ", "hộp", "gói", "túi", "lốc", "khay", "vỉ", "trái", "cái"]) {
+  for (const packagingCode of [
+    "bao",
+    "thùng",
+    "chai",
+    "lon",
+    "hũ",
+    "hộp",
+    "gói",
+    "túi",
+    "lốc",
+    "khay",
+    "vỉ",
+    "trái",
+    "cái",
+  ]) {
     assert.ok(
       migration.includes(`('${packagingCode}'`),
       `expected packaging seed for ${packagingCode}`,
@@ -139,5 +160,8 @@ test("inv_derive_to_base_factor is present in the baseline for a from-empty inst
 });
 
 test("inv_to_base is unchanged by Phase A (signature and body untouched)", () => {
-  assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION public\.inv_to_base\(/);
+  assert.doesNotMatch(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.inv_to_base\(/,
+  );
 });

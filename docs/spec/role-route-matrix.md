@@ -146,7 +146,7 @@ declared before their broader siblings.
 
 | Family id | Surface | Entry path | Match prefixes | Module keys | Requires branchId |
 | --------- | ------- | ---------- | --------------- | ----------- | ------------------ |
-| `public` | public | `/login` | `/login`, `/access-denied`, `/payment/momo`, `/api/health`, `/api/webhooks`, `/manifest.webmanifest`, `/sw.js` | — | no |
+| `public` | public | `/login` | `/login`, `/access-denied`, `/api/health`, `/api/webhooks`, `/manifest.webmanifest`, `/sw.js` | — | no |
 | `admin` | admin_dashboard | `/admin` | `/admin` | `admin_dashboard`, `settings` | no |
 | `menu` | admin_dashboard | `/menu` | `/menu` | `menu` | no |
 | `orders` | admin_dashboard | `/orders` | `/orders` | `orders` | no |

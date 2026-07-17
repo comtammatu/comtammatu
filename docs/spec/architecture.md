@@ -165,7 +165,6 @@ Top-level surfaces (see `module-acl.ts` for canonical role lists):
 | Branch menu limits | `/br/[branchId]/menu-limits` | owner, branch_manager                              |
 | Staff day runtime  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*` | branch-pinned roles                                 |
 | Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)   |
-| Payment return     | `/payment/momo/return`       | public (Momo redirect target)                                |
 
 Role/scope/route boundary is canonical in `docs/spec/role-route-matrix.md`.
 Branch Manager branch setup belongs under `/br/[branchId]/*`, not new

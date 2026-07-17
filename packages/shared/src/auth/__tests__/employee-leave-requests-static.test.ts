@@ -57,18 +57,18 @@ test("Employee leave migration uses branch-scoped RLS and RPC workflow", () => {
 });
 
 test("Current baseline keeps leave approval RPCs scoped to the request branch", () => {
-  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const baseline = read("supabase/migrations/20260716093507_baseline.sql");
   const approveStart = baseline.indexOf(
-    "CREATE FUNCTION public.approve_leave_request",
+    'CREATE OR REPLACE FUNCTION "public"."approve_leave_request"',
   );
   const rejectStart = baseline.indexOf(
-    "CREATE FUNCTION public.reject_leave_request",
+    'CREATE OR REPLACE FUNCTION "public"."reject_leave_request"',
   );
   const approveBody = baseline.slice(approveStart, rejectStart);
   const rejectBody = baseline.slice(
     rejectStart,
     baseline.indexOf(
-      "COMMENT ON FUNCTION public.reject_leave_request",
+      'COMMENT ON FUNCTION "public"."reject_leave_request"',
       rejectStart,
     ),
   );
@@ -121,7 +121,9 @@ test("Employee leave permission and generated type mirrors are wired", () => {
 
 test("Branch staff runtime exposes leave request self-service from Schedule", () => {
   const schedule = read("apps/web/lib/staff-runtime/schedule/page.tsx");
-  const scheduleActions = read("apps/web/lib/staff-runtime/schedule/actions.ts");
+  const scheduleActions = read(
+    "apps/web/lib/staff-runtime/schedule/actions.ts",
+  );
   const page = read("apps/web/lib/staff-runtime/leave/page.tsx");
   const client = read("apps/web/lib/staff-runtime/leave/leave-client.tsx");
   const actions = read("apps/web/lib/staff-runtime/leave/actions.ts");
@@ -178,7 +180,9 @@ test("Branch staff runtime exposes leave request self-service from Schedule", ()
 });
 
 test("HR attendance route exposes branch-scoped leave approvals", () => {
-  const attendancePage = read("apps/web/app/(protected)/hr/attendance/page.tsx");
+  const attendancePage = read(
+    "apps/web/app/(protected)/hr/attendance/page.tsx",
+  );
   const table = read("apps/web/app/(protected)/hr/leave-requests-table.tsx");
   const actions = read("apps/web/app/(protected)/hr/leave-request-actions.ts");
   const messages = read("apps/web/lib/messages/hr.ts");

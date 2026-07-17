@@ -7,16 +7,16 @@ const repoRoot = resolve(import.meta.dirname, "..", "..", "..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const integrityMigration = read(
-  "supabase/migrations/20260709094314_attendance_shift_integrity.sql",
+  "supabase/migration-archive/20260709094314_attendance_shift_integrity.sql",
 );
 const patchMigration = read(
-  "supabase/migrations/20260709104015_fix_attendance_checkout_notification_conflict.sql",
+  "supabase/migration-archive/20260709104015_fix_attendance_checkout_notification_conflict.sql",
 );
 const forceCloseAfterShiftEndMigration = read(
-  "supabase/migrations/20260710141738_allow_force_close_after_shift_end.sql",
+  "supabase/migration-archive/20260710141738_allow_force_close_after_shift_end.sql",
 );
 const overnightBusinessDateMigration = read(
-  "supabase/migrations/20260711143450_fix_overnight_attendance_business_date.sql",
+  "supabase/migration-archive/20260711143450_fix_overnight_attendance_business_date.sql",
 );
 
 test("attendance checkout notification upsert has a matching unique arbiter", () => {

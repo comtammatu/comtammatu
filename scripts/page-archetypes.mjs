@@ -194,7 +194,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/orders/page.tsx": "LIST",
   "apps/web/app/(public)/(auth)/login/page.tsx": "GATE/AUTH",
   "apps/web/app/(public)/access-denied/page.tsx": "GATE/AUTH",
-  "apps/web/app/(public)/payment/momo/return/page.tsx": "GATE/AUTH",
   "apps/web/app/offline/page.tsx": "GATE/AUTH",
   "apps/web/app/page.tsx": "GATE/AUTH",
   "apps/web/app/q/[token]/page.tsx": "PUBLIC-WORKFLOW",

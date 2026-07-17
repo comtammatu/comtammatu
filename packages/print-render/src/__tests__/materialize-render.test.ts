@@ -21,7 +21,7 @@ type RowBlock = Extract<PrintDocumentBlock, { type: "row" }>;
 
 const baselineSql = readFileSync(
   new URL(
-    "../../../../supabase/migrations/00000000000000_baseline.sql",
+    "../../../../supabase/migrations/20260716093507_baseline.sql",
     import.meta.url,
   ),
   "utf8",

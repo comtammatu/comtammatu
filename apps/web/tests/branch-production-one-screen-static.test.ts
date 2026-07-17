@@ -11,7 +11,7 @@ const detailClient = read(
   "app/(protected)/br/[branchId]/(operator)/stock/production/[id]/branch-production-detail-client.tsx",
 );
 const atomicMigration = read(
-  "../../supabase/migrations/20260711135909_record_production_run_atomic.sql",
+  "../../supabase/migration-archive/20260711135909_record_production_run_atomic.sql",
 );
 
 test("branch production records planned and actual output on one screen", () => {

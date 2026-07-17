@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 const repoRoot = join(import.meta.dirname, "../../..");
 
@@ -16,8 +17,11 @@ function around(source: string, needle: string) {
 }
 
 test("count-slip RPCs emit durable notifications with review links", () => {
-  const baselineSql = readRepoFile(
-    "supabase/migrations/00000000000000_baseline.sql",
+  const baselineSql = normalizePgDumpSql(
+    readRepoFile("supabase/migrations/20260716093507_baseline.sql"),
+  );
+  const repairSql = readRepoFile(
+    "supabase/migrations/20260716182000_restore_missed_runtime_contracts.sql",
   );
   const messageSrc = readRepoFile("apps/web/lib/messages/notifications.ts");
   const itemSrc = readRepoFile(
@@ -27,8 +31,8 @@ test("count-slip RPCs emit durable notifications with review links", () => {
     baselineSql,
     "'inventory.count_slip_submitted'",
   );
-  const approvedBlock = around(baselineSql, "'inventory.count_slip_approved'");
-  const recountBlock = around(baselineSql, "'inventory.count_slip_recount'");
+  const approvedBlock = around(repairSql, "'inventory.count_slip_approved'");
+  const recountBlock = around(repairSql, "'inventory.count_slip_recount'");
 
   assert.match(
     submittedBlock,

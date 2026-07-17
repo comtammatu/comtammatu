@@ -162,32 +162,13 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
 test("SePay webhook uses the POS settlement service without direct HĐĐT issuance", () => {
   const src = read("apps/web/app/api/webhooks/sepay/route.ts");
   const migration = read(
-    "supabase/migrations/20260711024758_sepay_webhook_order_evidence.sql",
+    "supabase/migration-archive/20260711024758_sepay_webhook_order_evidence.sql",
   );
 
   assert.doesNotMatch(src, /issueTaxInvoiceForPaidOrder/);
   assert.doesNotMatch(src, /confirm_sepay_payment/);
   assert.match(src, /"reconcile_sepay_order_evidence"/);
   assert.match(migration, /public\.confirm_sepay_payment\(/);
-});
-
-test("MoMo webhook attempts HĐĐT after successful webhook payment", () => {
-  const src = read("apps/web/app/api/webhooks/momo/route.ts");
-
-  assert.ok(
-    src.includes("issueTaxInvoiceForPaidOrder"),
-    "MoMo paid webhook must attempt per-order HĐĐT issuance",
-  );
-  assert.match(
-    src,
-    /case "completed":\s*\n\s*case "already_completed": \{/,
-    "HĐĐT attempt must run for both fresh and idempotent MoMo paid outcomes",
-  );
-  assert.ok(
-    src.includes("annotateInvoiceAttemptFailure") &&
-      src.includes('error_code: "invoice_attempt_failed"'),
-    "MoMo webhook event should record invoice attempt failure without failing payment",
-  );
 });
 
 test("finance can recover paid SePay orders that missed HĐĐT", () => {

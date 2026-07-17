@@ -6,7 +6,7 @@ import { test } from "node:test";
 const migration = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260706085000_pos_stock_outcome_to_kitchen.sql",
+    "../../supabase/migration-archive/20260706085000_pos_stock_outcome_to_kitchen.sql",
   ),
   "utf8",
 );

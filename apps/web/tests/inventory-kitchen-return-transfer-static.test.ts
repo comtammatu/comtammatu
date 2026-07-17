@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const migration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260710010833_allow_kitchen_return_transfers.sql",
+    "supabase/migration-archive/20260710010833_allow_kitchen_return_transfers.sql",
   ),
   "utf8",
 );

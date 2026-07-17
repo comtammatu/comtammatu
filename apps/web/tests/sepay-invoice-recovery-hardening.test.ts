@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createInvoiceSchema } from "../lib/hddt-per-order";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 const root = new URL("../../../", import.meta.url);
 
@@ -54,7 +55,9 @@ test("SePay recovery is keyset-paginated and preserves stored buyer payload", ()
 test("SePay recovery and shared issuer fail closed before provider submission", () => {
   const recovery = read("apps/web/app/(protected)/finance/actions.ts");
   const issuer = read("apps/web/lib/hddt-per-order.ts");
-  const baseline = read("supabase/migrations/00000000000000_baseline.sql");
+  const baseline = normalizePgDumpSql(
+    read("supabase/migrations/20260716093507_baseline.sql"),
+  );
 
   assert.match(
     recovery,
@@ -100,7 +103,7 @@ test("shared invoice recovery preserves the canonical no-buyer flag", () => {
 
 test("daily summary excludes saved buyer requests and shares the order lock", () => {
   const migration = read(
-    "supabase/migrations/20260714031034_20260714103000_harden_sepay_invoice_recovery.sql",
+    "supabase/migration-archive/20260714031034_20260714103000_harden_sepay_invoice_recovery.sql",
   );
 
   assert.match(

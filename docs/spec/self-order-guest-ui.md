@@ -177,8 +177,13 @@ HĐĐT buyer fields; its back control returns to G6. Exactly one live intent
 across both methods; a live intent locks add-more, item customization, and
 buyer fields. VietQR reload renders the stored amount, payment code, QR bytes,
 bank snapshot, and expiry — it never rebuilds an active QR from current
-settings. Guests cannot cancel an intent; staff own cancellation after verifying
-money is not already in flight.
+settings. MoMo is never a Self-Order payment method. It may appear only when the
+official VietQR app catalog for the current OS supplies a supported deeplink;
+the handoff then carries the stored recipient, amount, payment code, and account
+name and creates no MoMo intent or settlement state. Self-Order must not invent
+an undocumented MoMo scheme or fall back to the MoMo merchant payment API.
+Guests cannot cancel an intent; staff own cancellation after verifying money is
+not already in flight.
 
 ### G8 · Paid
 

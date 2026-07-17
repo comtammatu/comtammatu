@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { normalizePgDumpSql } from "./sql-test-utils";
 
 // The realtime "branch ops bus" is a cross-file contract: the DB trigger
 // broadcasts on topic `branch:{id}:ops` with event `ops` on a private channel,
@@ -66,7 +67,7 @@ const migration = readFileSync(
 
 const stockLevelsMigration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260706193000_stock_levels_branch_ops_refresh.sql",
+    "../../../supabase/migration-archive/20260706193000_stock_levels_branch_ops_refresh.sql",
     import.meta.url,
   ),
   "utf8",
@@ -74,18 +75,20 @@ const stockLevelsMigration = readFileSync(
 
 const branchOpsAuthorizationMigration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260715220008_harden_branch_ops_realtime_scope.sql",
+    "../../../supabase/migration-archive/20260715220008_harden_branch_ops_realtime_scope.sql",
     import.meta.url,
   ),
   "utf8",
 );
 
-const baseline = readFileSync(
-  new URL(
-    "../../../supabase/migrations/00000000000000_baseline.sql",
-    import.meta.url,
+const baseline = normalizePgDumpSql(
+  readFileSync(
+    new URL(
+      "../../../supabase/migrations/20260716093507_baseline.sql",
+      import.meta.url,
+    ),
+    "utf8",
   ),
-  "utf8",
 );
 
 const posLayout = readFileSync(
@@ -103,7 +106,7 @@ const posMenuClient = readFileSync(
 
 const posMenuMigration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260706084257_realtime_pr6_menu_sync.sql",
+    "../../../supabase/migration-archive/20260706084257_realtime_pr6_menu_sync.sql",
     import.meta.url,
   ),
   "utf8",

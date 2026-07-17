@@ -1,6 +1,6 @@
 /**
  * TS mirror of `public.inv_derive_to_base_factor` (SQL, in
- * supabase/migrations/20260703160000_inventory_unit_system_phase_a.sql). Used
+ * supabase/migration-archive/20260703160000_inventory_unit_system_phase_a.sql). Used
  * for the client-side live preview in the ingredient dialog only — the
  * server RPC is the authoritative computation. Keep both in sync if the
  * resolution rule changes.

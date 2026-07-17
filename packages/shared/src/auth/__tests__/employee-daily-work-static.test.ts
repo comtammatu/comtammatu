@@ -51,9 +51,7 @@ test("Employee Daily Work migration hardens attendance and adds checklist RPCs",
 
 test("Employee clock client and actions no longer use GPS for clock-in/out", () => {
   const actionSrc = read("apps/web/lib/staff-runtime/clock/actions.ts");
-  const clientSrc = read(
-    "apps/web/lib/staff-runtime/clock/clock-client.tsx",
-  );
+  const clientSrc = read("apps/web/lib/staff-runtime/clock/clock-client.tsx");
 
   assert.ok(
     actionSrc.includes("clockInWithPhoto") &&
@@ -225,9 +223,7 @@ test("HRM consumption history stays available but no longer gates Employee check
   const taskKindMigration = read(
     "supabase/migration-archive/20260619042223_employee_consumption_task_kind.sql",
   );
-  const clockActionsSrc = read(
-    "apps/web/lib/staff-runtime/clock/actions.ts",
-  );
+  const clockActionsSrc = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const tasksClientSrc = read(
     "apps/web/lib/staff-runtime/tasks/tasks-client.tsx",
   );
@@ -365,12 +361,15 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
   const workStateSrc = read(
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
   );
-  const baselineSrc = read("supabase/migrations/00000000000000_baseline.sql");
+  const baselineSrc = read("supabase/migrations/20260716093507_baseline.sql");
   const countGateMigrationSrc = read(
     "supabase/migration-archive/20260629183853_require_inventory_count_checkout_gate.sql",
   );
+  const countGateRepairMigrationSrc = read(
+    "supabase/migrations/20260716181000_restore_inventory_count_checkout_gate.sql",
+  );
   const branchStaffMigrationSrc = read(
-    "supabase/migrations/20260708115755_branch_staff_guard_mapper.sql",
+    "supabase/migration-archive/20260708115755_branch_staff_guard_mapper.sql",
   );
   const approvalsPageSrc = read(
     "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
@@ -440,14 +439,27 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
     workStateSrc.includes('"branch_staff"'),
     "branch_staff must require the same staff-runtime attendance/checklist flow as cashier and chef",
   );
-  for (const src of [baselineSrc, countGateMigrationSrc]) {
+  assert.ok(
+    baselineSrc.includes(
+      'CREATE OR REPLACE FUNCTION "public"."employee_request_clock_out"',
+    ),
+    "production baseline must retain the current checkout RPC before the forward repair",
+  );
+  assert.ok(
+    countGateMigrationSrc.includes("AND i.task_kind <> 'inventory_count'"),
+    "the original gate must keep inventory_count separate from checklist completion",
+  );
+  for (const src of [countGateMigrationSrc, countGateRepairMigrationSrc]) {
     assert.ok(
-      src.includes("AND i.task_kind <> 'inventory_count'") &&
-        src.includes("inventory_count_slips") &&
+      src.includes("inventory_count_slips") &&
         src.includes("s.status IN ('submitted', 'approved')"),
       "employee_request_clock_out must gate inventory_count from count slips, not the checklist checkbox",
     );
   }
+  assert.ok(
+    !countGateRepairMigrationSrc.includes("attendance_checklist_items"),
+    "the forward repair must not restore the retired general checklist completion gate",
+  );
   assert.ok(
     branchStaffMigrationSrc.includes("WHEN 'guard' THEN 'branch_staff'") &&
       branchStaffMigrationSrc.includes("WHEN 'cleaner' THEN 'branch_staff'") &&

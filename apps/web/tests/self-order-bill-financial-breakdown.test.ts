@@ -4,7 +4,7 @@ import { test } from "node:test";
 
 const migration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260711043533_self_order_bill_financial_breakdown.sql",
+    "../../../supabase/migration-archive/20260711043533_self_order_bill_financial_breakdown.sql",
     import.meta.url,
   ),
   "utf8",

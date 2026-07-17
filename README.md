@@ -17,7 +17,7 @@ Mô hình vận hành production: **Tenant → Chi nhánh**.
 | M1  | Menu                 | Categories, items, variants, modifiers, sides                                             | SHIPPED |
 | M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                  | SHIPPED |
 | M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                      | SHIPPED |
-| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm) + Momo (IPN webhook). All live in production.   | SHIPPED |
+| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm).                                                | SHIPPED |
 | M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production               | SHIPPED |
 | M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Enterprise COA/Journal outside HKD scope | PARTIAL |
 | M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial | PARTIAL |

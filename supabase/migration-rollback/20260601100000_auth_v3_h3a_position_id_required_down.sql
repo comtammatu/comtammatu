@@ -40,7 +40,7 @@ $$;
 -- ─── 2. Restore admin_update_profile (pre-H3a — no NULL guard) ──
 -- (Body is identical to H3a except the NULL check on v_final_position.)
 -- For brevity, reapply by reverting to the prior migration's definition.
--- See `supabase/migrations/20260423030000_auth_v2_m5_drop_legacy.sql:81-211`.
+-- See `supabase/migration-archive/20260423030000_auth_v2_m5_drop_legacy.sql:81-211`.
 
 -- ─── 3. Restore FK ON DELETE SET NULL ─────────────────────────
 ALTER TABLE public.profiles

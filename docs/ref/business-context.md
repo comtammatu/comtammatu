@@ -127,4 +127,3 @@ Nguồn chuẩn: `ACCESS_BUCKETS` trong `packages/shared/src/auth/types.ts`.
 
 - Tiền mặt
 - VietQR (bank transfer)
-- Momo (e-wallet)

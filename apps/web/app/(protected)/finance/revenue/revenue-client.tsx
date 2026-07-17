@@ -115,7 +115,6 @@ interface PeriodAggregateRow {
   total_tax: number;
   cash_revenue: number;
   vietqr_revenue: number;
-  momo_revenue: number;
   branch_ids: number[];
 }
 
@@ -132,7 +131,6 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
       existing.total_tax += r.total_tax ?? 0;
       existing.cash_revenue += r.cash_revenue ?? 0;
       existing.vietqr_revenue += r.vietqr_revenue ?? 0;
-      existing.momo_revenue += r.momo_revenue ?? 0;
       if (!existing.branch_ids.includes(r.branch_id)) {
         existing.branch_ids.push(r.branch_id);
       }
@@ -148,7 +146,6 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
         total_tax: r.total_tax ?? 0,
         cash_revenue: r.cash_revenue ?? 0,
         vietqr_revenue: r.vietqr_revenue ?? 0,
-        momo_revenue: r.momo_revenue ?? 0,
         branch_ids: [r.branch_id],
       });
     }
@@ -308,9 +305,7 @@ export function RevenueClient({
 
   // ─── Payment donut data ────────────────────────────────────
   const paymentTotal =
-    (kpis?.cash_revenue ?? 0) +
-    (kpis?.vietqr_revenue ?? 0) +
-    (kpis?.momo_revenue ?? 0);
+    (kpis?.cash_revenue ?? 0) + (kpis?.vietqr_revenue ?? 0);
   const paymentData = [
     {
       key: "cash",
@@ -321,11 +316,6 @@ export function RevenueClient({
       key: "vietqr",
       label: "VietQR",
       value: kpis?.vietqr_revenue ?? 0,
-    },
-    {
-      key: "momo",
-      label: "MoMo",
-      value: kpis?.momo_revenue ?? 0,
     },
   ];
 
@@ -351,7 +341,6 @@ export function RevenueClient({
         revCopy.csvHeaders.colNetRevenue,
         revCopy.csvHeaders.colCash,
         revCopy.csvHeaders.colVietqr,
-        revCopy.csvHeaders.colMomo,
         revCopy.csvHeaders.colVat,
       ],
       rows: periodRows.map((r) => [
@@ -360,7 +349,6 @@ export function RevenueClient({
         Math.round(netRevenuePreVatFor(r)),
         Math.round(r.cash_revenue),
         Math.round(r.vietqr_revenue),
-        Math.round(r.momo_revenue),
         Math.round(r.total_tax),
       ]),
       footer: kpis
@@ -370,7 +358,6 @@ export function RevenueClient({
             Math.round(netRevenuePreVat),
             Math.round(kpis.cash_revenue),
             Math.round(kpis.vietqr_revenue),
-            Math.round(kpis.momo_revenue),
             Math.round(kpis.total_tax),
           ]
         : undefined,
@@ -385,7 +372,7 @@ export function RevenueClient({
         revCopy.csvHeaders.colOrders,
         revCopy.csvHeaders.colNetRevenue,
         revCopy.csvHeaders.colCash,
-        revCopy.csvHeaders.colQrMomo,
+        revCopy.csvHeaders.colQr,
       ],
       rows: cashiers.map((c) => [
         c.cashier_name,
@@ -455,12 +442,6 @@ export function RevenueClient({
       render: (row) => formatVND(row.vietqr_revenue),
     },
     {
-      key: "momo",
-      header: "MoMo",
-      className: "text-right font-mono tabular-nums text-muted-foreground",
-      render: (row) => formatVND(row.momo_revenue),
-    },
-    {
       key: "vat",
       header: revCopy.periodTable.colVat,
       className: "text-right font-mono tabular-nums text-muted-foreground",
@@ -496,11 +477,6 @@ export function RevenueClient({
         {
           key: "vietqr",
           content: formatVND(kpis?.vietqr_revenue ?? 0),
-          className: "text-right font-mono tabular-nums",
-        },
-        {
-          key: "momo",
-          content: formatVND(kpis?.momo_revenue ?? 0),
           className: "text-right font-mono tabular-nums",
         },
         {
