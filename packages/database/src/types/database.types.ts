@@ -9682,19 +9682,6 @@ export type Database = {
         }
         Returns: Json
       }
-      create_payment: {
-        Args: {
-          p_amount: number
-          p_branch_id: number
-          p_created_by: string
-          p_method: string
-          p_order_id: number
-          p_provider_ref?: string
-          p_status?: string
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
       create_production_order: {
         Args: {
           p_branch_id: number
