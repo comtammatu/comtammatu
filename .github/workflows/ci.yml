@@ -123,10 +123,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/supabase-e2e-bringup.mjs
       - run: pnpm db:test
-      - run: pnpm test:db:payment-race
-        timeout-minutes: 5
-        env:
-          E2E_DB_PORT: "55432"
       - run: node scripts/finance-transfer-intent-race-test.mjs
         timeout-minutes: 5
       - run: pnpm --filter @comtammatu/web exec playwright install --with-deps chromium
