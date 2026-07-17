@@ -26,6 +26,13 @@ const authTypes = readFileSync(
   resolve(repoRoot, "packages/shared/src/auth/types.ts"),
   "utf8",
 );
+const staffPermissionBoundaryMigration = readFileSync(
+  resolve(
+    repoRoot,
+    "supabase/migrations/20260717164132_harden_staff_permission_boundary.sql",
+  ),
+  "utf8",
+);
 
 function extractSqlFunction(source: string, name: string): string {
   const pattern = new RegExp(
@@ -118,4 +125,40 @@ test("compatibility service position remains an alias, not an access bucket", ()
     new RegExp(`${compatibilityServicePosition}:\\s*"cashier"`),
     "compatibility service position must map to cashier for prior tokens/data",
   );
+});
+
+test("staff permission rows are read-only to authenticated clients through one policy", () => {
+  assert.match(
+    staffPermissionBoundaryMigration,
+    /REVOKE ALL ON TABLE public\.staff_permissions FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    staffPermissionBoundaryMigration,
+    /GRANT SELECT ON TABLE public\.staff_permissions TO authenticated/,
+  );
+  assert.match(
+    staffPermissionBoundaryMigration,
+    /REVOKE ALL ON SEQUENCE public\.staff_permissions_id_seq FROM PUBLIC, anon, authenticated/,
+  );
+  assert.match(
+    staffPermissionBoundaryMigration,
+    /DROP POLICY IF EXISTS staff_permissions_select_admin/,
+  );
+  assert.match(
+    staffPermissionBoundaryMigration,
+    /DROP POLICY IF EXISTS staff_permissions_select_self/,
+  );
+  assert.match(
+    staffPermissionBoundaryMigration,
+    /CREATE POLICY staff_permissions_select[\s\S]*user_id = \(SELECT auth\.uid\(\)\)[\s\S]*OR \([\s\S]*tenant_id = \(SELECT public\.auth_tenant_id\(\)\)[\s\S]*public\.has_permission\(NULL::bigint, 'staff:assign_permission'\)/,
+  );
+  assert.equal(
+    [
+      ...staffPermissionBoundaryMigration.matchAll(
+        /CREATE POLICY staff_permissions_select\b/g,
+      ),
+    ].length,
+    1,
+  );
+  assert.doesNotMatch(staffPermissionBoundaryMigration, /has_permission_any/);
 });
