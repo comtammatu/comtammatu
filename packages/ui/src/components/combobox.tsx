@@ -93,9 +93,16 @@ function Combobox({
         <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </BaseCombobox.Trigger>
       <BaseCombobox.Portal>
-        <BaseCombobox.Positioner align="start" sideOffset={4}>
+        <BaseCombobox.Positioner
+          align="start"
+          sideOffset={4}
+          className="isolate z-50"
+        >
           <BaseCombobox.Popup
-            className={cn("w-(--anchor-width) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-effect-popover", contentClassName)}
+            className={cn(
+              "w-(--anchor-width) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-effect-popover",
+              contentClassName,
+            )}
             aria-label={placeholder}
           >
             <div className="flex h-8 items-center gap-2 rounded-md bg-input/20 px-2 dark:bg-input/30">

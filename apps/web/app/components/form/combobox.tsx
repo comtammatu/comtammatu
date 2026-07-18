@@ -112,7 +112,11 @@ export const Combobox = forwardRef<HTMLButtonElement, ComboboxProps>(
           }
         />
         <ComboboxPrimitive.Portal>
-          <ComboboxPrimitive.Positioner align="start" sideOffset={4}>
+          <ComboboxPrimitive.Positioner
+            align="start"
+            sideOffset={4}
+            className="isolate z-50"
+          >
             <ComboboxPrimitive.Popup
               className="w-(--anchor-width) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-effect-popover"
               aria-label={ariaLabel ?? placeholder}

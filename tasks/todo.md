@@ -5,6 +5,17 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Repair Base UI floating-layer canary regressions
+
+State: doing
+Kind: defect
+Tier: T2
+Lane: design-system
+Exit: Base UI floating primitives render above application chrome, and existing Select call sites display option labels instead of raw values.
+Evidence: Focused primitive regression coverage plus authenticated Preview canary for KDS Select and Sheet behavior at desktop and 390px.
+
+- [ ] Fix the shared primitive contracts, run repository gates, redeploy Preview, and repeat the authenticated canary.
+
 ## Prove Self-Order offline navigation isolation
 
 State: verify

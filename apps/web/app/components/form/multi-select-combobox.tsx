@@ -136,7 +136,11 @@ export function MultiSelectCombobox({
         }
       />
       <ComboboxPrimitive.Portal>
-        <ComboboxPrimitive.Positioner align="start" sideOffset={4}>
+        <ComboboxPrimitive.Positioner
+          align="start"
+          sideOffset={4}
+          className="isolate z-50"
+        >
           <ComboboxPrimitive.Popup className="w-(--anchor-width) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-effect-popover">
             <ComboboxPrimitive.Input
               className="h-8 w-full rounded-md bg-input/20 px-2 text-xs/relaxed outline-hidden placeholder:text-muted-foreground dark:bg-input/30"

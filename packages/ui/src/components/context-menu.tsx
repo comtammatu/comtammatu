@@ -26,7 +26,10 @@ function ContextMenuContent({
 }: React.ComponentProps<typeof ContextMenuPrimitive.Positioner>) {
   return (
     <ContextMenuPrimitive.Portal>
-      <ContextMenuPrimitive.Positioner {...props}>
+      <ContextMenuPrimitive.Positioner
+        className="isolate z-50 outline-none"
+        {...props}
+      >
         <ContextMenuPrimitive.Popup
           data-slot="context-menu-content"
           className={cn(

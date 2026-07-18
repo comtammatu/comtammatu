@@ -44,6 +44,7 @@ function DropdownMenuContent({
       <DropdownMenuPrimitive.Positioner
         align={align}
         sideOffset={sideOffset}
+        className="isolate z-50 outline-none"
         {...props}
       >
         <DropdownMenuPrimitive.Popup
@@ -252,7 +253,10 @@ function DropdownMenuSubContent({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Positioner>) {
   return (
     <DropdownMenuPrimitive.Portal>
-      <DropdownMenuPrimitive.Positioner {...props}>
+      <DropdownMenuPrimitive.Positioner
+        className="isolate z-50 outline-none"
+        {...props}
+      >
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-sub-content"
           className={cn(

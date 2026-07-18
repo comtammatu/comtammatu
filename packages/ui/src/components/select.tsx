@@ -11,23 +11,46 @@ import {
   ChevronUp as IconChevronUp,
 } from "lucide-react";
 
-type SelectProps = Omit<
-  SelectPrimitive.Root.Props<string>,
-  "onValueChange"
-> & {
+type SelectProps = Omit<SelectPrimitive.Root.Props<string>, "onValueChange"> & {
   onValueChange?: (value: string) => void;
 };
 
-function Select({ onValueChange, ...props }: SelectProps) {
+function collectSelectItems(children: React.ReactNode) {
+  const items: { label: React.ReactNode; value: string }[] = [];
+
+  React.Children.forEach(children, (child) => {
+    if (
+      !React.isValidElement<{ children?: React.ReactNode; value?: unknown }>(
+        child,
+      )
+    ) {
+      return;
+    }
+
+    if (child.type === SelectItem && typeof child.props.value === "string") {
+      items.push({ label: child.props.children, value: child.props.value });
+      return;
+    }
+
+    items.push(...collectSelectItems(child.props.children));
+  });
+
+  return items;
+}
+
+function Select({ children, items, onValueChange, ...props }: SelectProps) {
   return (
     <SelectPrimitive.Root
       {...props}
+      items={items ?? collectSelectItems(children)}
       onValueChange={(value) => {
         if (typeof value === "string") {
           onValueChange?.(value);
         }
       }}
-    />
+    >
+      {children}
+    </SelectPrimitive.Root>
   );
 }
 
@@ -100,6 +123,7 @@ function SelectContent({
       <SelectPrimitive.Positioner
         align={align}
         alignItemWithTrigger={position === "item-aligned"}
+        className="isolate z-50"
         {...props}
       >
         <SelectPrimitive.Popup
@@ -165,10 +189,7 @@ function SelectItem({
   );
 }
 
-function SelectSeparator({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+function SelectSeparator({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       role="separator"

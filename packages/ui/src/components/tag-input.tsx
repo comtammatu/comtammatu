@@ -170,7 +170,11 @@ function TagInput({
           />
         </BaseCombobox.InputGroup>
         <BaseCombobox.Portal>
-          <BaseCombobox.Positioner align="start" sideOffset={4}>
+          <BaseCombobox.Positioner
+            align="start"
+            sideOffset={4}
+            className="isolate z-50"
+          >
             <BaseCombobox.Popup className="w-(--anchor-width) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-effect-popover">
               <div className="flex h-8 items-center gap-2 rounded-md bg-input/20 px-2 dark:bg-input/30">
                 <BaseCombobox.Input

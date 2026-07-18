@@ -32,7 +32,11 @@ function TooltipContent({
 }: React.ComponentProps<typeof TooltipPrimitive.Positioner>) {
   return (
     <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Positioner sideOffset={sideOffset} {...props}>
+      <TooltipPrimitive.Positioner
+        sideOffset={sideOffset}
+        className="isolate z-50"
+        {...props}
+      >
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           className={cn(

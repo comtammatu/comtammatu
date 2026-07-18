@@ -10,6 +10,14 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
   getPaginationItems,
@@ -210,6 +218,51 @@ test("Base render composition preserves semantic link elements", () => {
     breadcrumb,
     /^<a href="\/reports"[^>]*data-slot="breadcrumb-link"/,
   );
+});
+
+test("Base floating layers stack above app chrome and Select resolves labels", () => {
+  const floatingSources = [
+    read("packages/ui/src/components/combobox.tsx"),
+    read("packages/ui/src/components/context-menu.tsx"),
+    read("packages/ui/src/components/dropdown-menu.tsx"),
+    read("packages/ui/src/components/popover.tsx"),
+    read("packages/ui/src/components/select.tsx"),
+    read("packages/ui/src/components/tag-input.tsx"),
+    read("packages/ui/src/components/tooltip.tsx"),
+    read("apps/web/app/components/form/combobox.tsx"),
+    read("apps/web/app/components/form/multi-select-combobox.tsx"),
+  ];
+
+  for (const source of floatingSources) {
+    assert.match(
+      source,
+      /Positioner[\s\S]*?className="isolate z-50(?: outline-none)?"/,
+    );
+  }
+
+  const select = renderToStaticMarkup(
+    createElement(
+      Select,
+      { value: "all" },
+      createElement(
+        SelectTrigger,
+        { "aria-label": "Order type" },
+        createElement(SelectValue, { placeholder: "Filter" }),
+      ),
+      createElement(
+        SelectContent,
+        null,
+        createElement(
+          SelectGroup,
+          null,
+          createElement(SelectItem, { value: "all" }, "Tất cả"),
+        ),
+      ),
+    ),
+  );
+
+  assert.match(select, />Tất cả</);
+  assert.doesNotMatch(select, />all</);
 });
 
 test("native visual primitives preserve label, separator, and overflow semantics", () => {
