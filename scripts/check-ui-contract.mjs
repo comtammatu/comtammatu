@@ -1777,24 +1777,7 @@ const perFileCountBudgets = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /className=\{?(?:cn\()?\s*['"](?=[^'"]*\brounded-(?:md|lg)\b)(?=[^'"]*\bborder\b)[^'"]*['"]/g,
-    allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/service-charge-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-page-skeleton.tsx": 1,
-      "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/recipe-lines-editor.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/stocktake-mode-selector.tsx": 1,
-      "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx": 2,
-      "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx": 1,
-      "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx": 1,
-      "apps/web/app/(protected)/orders/order-detail-sheet.tsx": 1,
-      "apps/web/app/(public)/(auth)/login/page.tsx": 1,
-    },
+    allowlist: {},
   },
   {
     id: "radius-tier-baseline",
@@ -1829,24 +1812,7 @@ const perFileCountBudgets = [
     ],
     pattern:
       /\b(?:bg|border|ring|text|fill|stroke)-(?:warning|success|destructive|info|primary|accent|secondary)\/(?!(?:10|15|20)\b)\d+\b|\b(?:bg|border|ring|text|fill|stroke)-muted\/(?!(?:30|50)\b)\d+\b/g,
-    allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/kds/_components/age-badge.tsx": 3,
-      "apps/web/app/(protected)/br/[branchId]/kds/_components/order-grid.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/_components/unassigned-banner.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/_hooks/use-kds-row-effects.tsx": 5,
-      "apps/web/app/(protected)/br/[branchId]/kds/_lib/item-status-style.ts": 3,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/discount-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-actions-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/order-item-row.tsx": 7,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/service-charge-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-line-item-compact.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/printer-status-badge.tsx": 3,
-      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/runner/runner-order-board-client.tsx": 5,
-    },
+    allowlist: {},
   },
   {
     id: "uppercase-label-scale",
@@ -2333,7 +2299,20 @@ for (const file of allPageFiles) {
 const LIST_WIDTH_TIER_QUEUE_EXCEPTIONS = new Set([
   "apps/web/app/(protected)/inventory/waste/approvals/page.tsx",
 ]);
+const ADMIN_LIST_WIDTH_TIER_FAMILIES = [
+  "apps/web/app/(protected)/finance/",
+  "apps/web/app/(protected)/hr/",
+];
 const LIST_WIDTH_TIER_PINNED_PAGES = [
+  ...Object.entries(PAGE_ARCHETYPES)
+    .filter(
+      ([file, archetype]) =>
+        archetype === "LIST" &&
+        ADMIN_LIST_WIDTH_TIER_FAMILIES.some((family) =>
+          file.startsWith(family),
+        ),
+    )
+    .map(([file]) => file),
   "apps/web/app/(protected)/inventory/grn/page.tsx",
   "apps/web/app/(protected)/inventory/ingredients/page.tsx",
   "apps/web/app/(protected)/inventory/issues/page.tsx",

@@ -6,7 +6,7 @@ import fs from "node:fs";
 // the same file. A key granted in a template but missing from the catalog
 // kills every from-empty bring-up (SQLSTATE 23503) while prod keeps working —
 // this check fails it in the lint chain instead of in the e2e-smoke job.
-const SEED = "supabase/_local-dev/dev-tenant-seed.sql";
+const SEED = "apps/web/tests/fixtures/supabase-e2e/tenant.sql";
 const text = fs.readFileSync(SEED, "utf8");
 
 // End each INSERT block at a semicolon that closes a line — descriptions may

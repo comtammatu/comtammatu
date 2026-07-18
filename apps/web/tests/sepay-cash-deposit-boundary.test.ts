@@ -76,11 +76,11 @@ test("Finance cannot synthesize SePay evidence for a cash deposit", () => {
     repoRoot,
     "apps/web/app/(protected)/finance/cash-transfer-actions.ts",
   );
-  const cashPanel = read(
+  const retiredLandingPanelPath = join(
+    repoRoot,
     "apps/web/app/(protected)/finance/components/cash-panel.tsx",
   );
 
   assert.equal(existsSync(actionPath), false);
-  assert.doesNotMatch(cashPanel, /transferCashToBank|cash-transfer-actions/);
-  assert.doesNotMatch(cashPanel, /referenceCode|SePay Webhook Ref/);
+  assert.equal(existsSync(retiredLandingPanelPath), false);
 });

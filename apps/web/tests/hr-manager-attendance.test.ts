@@ -50,8 +50,8 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
   );
   assert.match(
     hrMessagesSource,
-    /ownerTitle:\s*"Nhân sự"/,
-    "Owner HR page should keep the HR workspace title",
+    /ownerTitle:\s*"Hồ sơ nhân sự"/,
+    "Owner HR landing should name the employee-record surface precisely",
   );
   assert.match(
     hrMessagesSource,

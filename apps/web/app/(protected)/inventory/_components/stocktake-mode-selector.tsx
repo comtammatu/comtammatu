@@ -4,6 +4,7 @@ import { STOCKTAKE_MODE_LABELS_VI } from "@comtammatu/shared/labels";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Item } from "@comtammatu/ui/components/item";
 
 export type StocktakeMode =
   | "daily"
@@ -93,51 +94,44 @@ export function StocktakeModeSelector({
         const label = STOCKTAKE_MODE_LABELS_VI[m];
         const checked = value === m;
         return (
-          <label
+          <Item
             key={m}
-            data-checked={checked ? "true" : "false"}
+            asChild
+            variant="outline"
             className={cn(
-              "flex cursor-pointer flex-col gap-1.5 rounded-md border p-3 text-sm transition",
+              "cursor-pointer flex-col items-stretch gap-1.5 text-sm",
               checked
                 ? "border-primary bg-primary/10"
-                : "border-muted hover:border-primary/20",
+                : "hover:border-primary/20",
               disabled && "cursor-not-allowed opacity-60",
             )}
           >
-            <div className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="stocktake-mode"
-                value={m}
-                checked={checked}
-                disabled={disabled}
-                onChange={() => onChange(m)}
-                className="size-4 accent-primary"
-              />
-              <span className="font-medium">{label}</span>
-              <div className="ml-auto flex items-center gap-1">
-                {meta.defaultBlind ? (
-                  <Badge
-                    variant="outline"
-                    className="border-warning/20 bg-warning/15 text-warning"
-                  >
-                    Blind
-                  </Badge>
-                ) : null}
-                {meta.unaudited ? (
-                  <Badge
-                    variant="outline"
-                    className="border-border bg-muted text-muted-foreground"
-                  >
-                    Unaudited
-                  </Badge>
-                ) : null}
+            <label data-checked={checked ? "true" : "false"}>
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="stocktake-mode"
+                  value={m}
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => onChange(m)}
+                  className="size-4 accent-primary"
+                />
+                <span className="font-medium">{label}</span>
+                <div className="ml-auto flex items-center gap-1">
+                  {meta.defaultBlind ? (
+                    <Badge variant="warning">Blind</Badge>
+                  ) : null}
+                  {meta.unaudited ? (
+                    <Badge variant="secondary">Unaudited</Badge>
+                  ) : null}
+                </div>
               </div>
-            </div>
-            <p className="line-clamp-2 break-words text-xs text-muted-foreground">
-              {meta.description}
-            </p>
-          </label>
+              <p className="line-clamp-2 break-words text-xs text-muted-foreground">
+                {meta.description}
+              </p>
+            </label>
+          </Item>
         );
       })}
     </div>

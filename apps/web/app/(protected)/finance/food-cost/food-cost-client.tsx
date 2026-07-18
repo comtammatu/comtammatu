@@ -64,24 +64,6 @@ export function FoodCostClient({
   coveredOrderCount,
   totalOrderCount,
 }: Props) {
-  const totalRevenue = rows.reduce((s, r) => s + Number(r.revenue ?? 0), 0);
-  const estimatedFoodCost = rows.reduce(
-    (s, r) => s + Number(r.ingredient_cost ?? 0),
-    0,
-  );
-  const avgMarginPct =
-    totalRevenue > 0
-      ? ((totalRevenue - estimatedFoodCost) / totalRevenue) * 100
-      : null;
-  const avgMarginTone =
-    avgMarginPct == null
-      ? "neutral"
-      : avgMarginPct >= MARGIN_GREEN
-        ? "success"
-        : avgMarginPct >= MARGIN_WARN
-          ? "warning"
-          : "destructive";
-
   const columns: DataTableColumn<FoodCostRow>[] = [
     {
       key: "item",
@@ -109,7 +91,7 @@ export function FoodCostClient({
     {
       key: "margin",
       header: foodCopy.margin,
-      className: "w-24 text-right font-medium",
+      className: "w-24 text-right font-mono font-medium tabular-nums",
       render: (row) => {
         const pct = marginPct(row);
         return (
@@ -130,7 +112,7 @@ export function FoodCostClient({
         hide={["compare", "payment", "granularity"]}
       />
 
-      <KpiRow>
+      <KpiRow density="compact">
         <KpiCard
           label={foodCopy.actualFoodCost}
           value={formatVND(actualFoodCost)}
@@ -154,29 +136,18 @@ export function FoodCostClient({
               : "success"
           }
         />
-        <KpiCard
-          label={foodCopy.totalFoodCost}
-          value={formatVND(estimatedFoodCost)}
-          hint={
-            totalRevenue > 0
-              ? foodCopy.shareOfRevenueHint(
-                  formatPercent((estimatedFoodCost / totalRevenue) * 100),
-                )
-              : "—"
-          }
-        />
-        <KpiCard
-          label={foodCopy.averageMargin}
-          value={avgMarginPct == null ? "—" : formatPercent(avgMarginPct)}
-          hint={foodCopy.marginThresholdHint(
-            formatPercent(MARGIN_GREEN, 0),
-            formatPercent(MARGIN_WARN, 0),
-          )}
-          tone={avgMarginTone}
-        />
       </KpiRow>
 
-      <AppSection contentFlush contentScroll>
+      <AppSection
+        title={foodCopy.tableTitle}
+        description={foodCopy.tableDescription}
+        badge={{
+          children: foodCopy.itemCount(formatCount(rows.length)),
+          variant: "secondary",
+        }}
+        contentFlush
+        contentScroll
+      >
         <DataTable
           columns={columns}
           data={rows}
@@ -198,11 +169,14 @@ export function FoodCostClient({
                   <ItemTitle>{row.item_name ?? "—"}</ItemTitle>
                   <ItemDescription>
                     {foodCopy.quantitySold}:{" "}
-                    {formatCount(Number(row.quantity_sold ?? 0))}
+                    {formatCount(Number(row.quantity_sold ?? 0))} ·{" "}
+                    {foodCopy.revenueCurrency}:{" "}
+                    {formatVND(Number(row.revenue ?? 0))}
                   </ItemDescription>
                 </ItemContent>
                 <ItemFooter>
                   <span className="text-xs text-muted-foreground">
+                    {foodCopy.foodCostCurrency}:{" "}
                     {formatVND(Number(row.ingredient_cost ?? 0))}
                   </span>
                   <span

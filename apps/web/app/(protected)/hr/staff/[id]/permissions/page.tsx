@@ -144,84 +144,82 @@ export default async function StaffPermissionsPage({ params }: Props) {
                 variant: "secondary" as const,
               }
         }
-        tabs={
-          <AppPageTabs
-            items={[
-              {
-                value: "overview",
-                label: messages.admin.staffPermissions.tabOverview,
-              },
-              {
-                value: "permissions",
-                label: messages.admin.staffPermissions.tabPermissions,
-              },
-              {
-                value: "history",
-                label: messages.admin.staffPermissions.tabHistory,
-              },
-            ]}
-            defaultValue="overview"
-          >
-            <TabsContent value="overview">
-              <OverviewTab
-                fullName={profile.full_name}
-                phone={profile.phone}
-                positionLabel={positionLabel}
-                defaultBranchName={defaultBranchName}
-                positionCode={profile.positions?.code}
-                isActive={profile.is_active ?? false}
-              />
-            </TabsContent>
-
-            <TabsContent value="permissions">
-              <PermissionsClient
-                targetUserId={profile.id}
-                targetFullName={profile.full_name}
-                currentGrants={grantList.map((g) => ({
-                  id: g.id,
-                  branchId: g.branch_id,
-                  permissionKey: g.permission_key,
-                  sourceTemplate: g.source_template,
-                  grantedAt: g.granted_at,
-                  validUntil: g.valid_until,
-                }))}
-                branches={branchList.map((b) => ({
-                  id: b.id,
-                  name: b.name,
-                  branchKind: b.branch_kind,
-                }))}
-                permissionKeys={permList.map((p) => ({
-                  key: p.key,
-                  module: p.module,
-                  description: p.description,
-                  scope: p.scope,
-                }))}
-                templates={templateList.map((t) => ({
-                  id: t.id,
-                  name: t.name,
-                  positionCode: t.position_code,
-                  permissionKeys: t.permission_keys,
-                }))}
-              />
-            </TabsContent>
-
-            <TabsContent value="history">
-              <HistoryTab
-                entries={auditList.map((a) => ({
-                  id: a.id,
-                  action: a.action,
-                  permissionKey: a.permission_key,
-                  branchId: a.branch_id,
-                  at: a.at,
-                  actorUserId: a.actor_user_id,
-                }))}
-                branchNameById={branchNameById}
-                actorNameById={nameByUserId}
-              />
-            </TabsContent>
-          </AppPageTabs>
-        }
       />
+      <AppPageTabs
+        items={[
+          {
+            value: "overview",
+            label: messages.admin.staffPermissions.tabOverview,
+          },
+          {
+            value: "permissions",
+            label: messages.admin.staffPermissions.tabPermissions,
+          },
+          {
+            value: "history",
+            label: messages.admin.staffPermissions.tabHistory,
+          },
+        ]}
+        defaultValue="overview"
+      >
+        <TabsContent value="overview">
+          <OverviewTab
+            fullName={profile.full_name}
+            phone={profile.phone}
+            positionLabel={positionLabel}
+            defaultBranchName={defaultBranchName}
+            positionCode={profile.positions?.code}
+            isActive={profile.is_active ?? false}
+          />
+        </TabsContent>
+
+        <TabsContent value="permissions">
+          <PermissionsClient
+            targetUserId={profile.id}
+            targetFullName={profile.full_name}
+            currentGrants={grantList.map((g) => ({
+              id: g.id,
+              branchId: g.branch_id,
+              permissionKey: g.permission_key,
+              sourceTemplate: g.source_template,
+              grantedAt: g.granted_at,
+              validUntil: g.valid_until,
+            }))}
+            branches={branchList.map((b) => ({
+              id: b.id,
+              name: b.name,
+              branchKind: b.branch_kind,
+            }))}
+            permissionKeys={permList.map((p) => ({
+              key: p.key,
+              module: p.module,
+              description: p.description,
+              scope: p.scope,
+            }))}
+            templates={templateList.map((t) => ({
+              id: t.id,
+              name: t.name,
+              positionCode: t.position_code,
+              permissionKeys: t.permission_keys,
+            }))}
+          />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <HistoryTab
+            entries={auditList.map((a) => ({
+              id: a.id,
+              action: a.action,
+              permissionKey: a.permission_key,
+              branchId: a.branch_id,
+              at: a.at,
+              actorUserId: a.actor_user_id,
+            }))}
+            branchNameById={branchNameById}
+            actorNameById={nameByUserId}
+          />
+        </TabsContent>
+      </AppPageTabs>
     </AppPage>
   );
 }

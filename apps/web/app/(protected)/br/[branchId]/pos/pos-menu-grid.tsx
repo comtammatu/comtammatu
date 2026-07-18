@@ -158,7 +158,7 @@ const MenuItemButton = memo(function MenuItemButton({
             decoding="async"
           />
         ) : (
-          <span className="flex h-full w-full items-center justify-center bg-muted/60">
+          <span className="flex h-full w-full items-center justify-center bg-muted/50">
             <IconUtensils className="size-6 text-muted-foreground/30" />
           </span>
         )}

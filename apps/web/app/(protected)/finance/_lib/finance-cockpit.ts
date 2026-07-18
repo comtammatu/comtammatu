@@ -132,6 +132,7 @@ export interface FinanceCockpitData {
   compareKpis: Pick<
     FinanceCockpitKpis,
     | "totalCollected"
+    | "netRevenueBeforeVat"
     | "orderCount"
     | "operatingExpense"
     | "ingredientCost"
@@ -785,6 +786,7 @@ export async function fetchFinanceCockpit(
     compareKpis: compareKpis
       ? {
           totalCollected: compareKpis.totalCollected,
+          netRevenueBeforeVat: compareKpis.netRevenueBeforeVat,
           orderCount: compareKpis.orderCount,
           operatingExpense: compareKpis.operatingExpense,
           ingredientCost: compareKpis.ingredientCost,

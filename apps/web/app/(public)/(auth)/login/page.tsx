@@ -1,6 +1,7 @@
 import { BRAND_NAME, BrandLockup, BrandMascot } from "@/components/brand";
 import { LoginForm } from "./login-form";
 import { AppSection } from "@/components/surface";
+import { Frame } from "@comtammatu/ui/components/frame";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export default function LoginPage() {
@@ -13,9 +14,9 @@ export default function LoginPage() {
       <div className="relative z-10 flex flex-col items-center gap-3 px-6 pt-10 pb-4 lg:justify-between lg:p-12 lg:bg-primary/10">
         <span aria-hidden="true" className="hidden lg:block" />
         <div className="flex flex-col items-center gap-6 lg:flex-1 lg:justify-center">
-          <div className="rounded-lg border border-border/20 bg-card/90 p-3 shadow-effect-card-resting">
+          <Frame className="border-border/20 bg-card/90 p-3 shadow-effect-card-resting">
             <BrandLockup decorative size="md" priority className="lg:h-28" />
-          </div>
+          </Frame>
           <div className="flex flex-col items-center text-center gap-2">
             {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: brand tagline static text */}
             <p className="font-heading text-lg font-bold tracking-tight text-foreground lg:text-xl">
@@ -37,7 +38,11 @@ export default function LoginPage() {
       <section className="relative z-10 flex flex-1 items-center justify-center p-6 sm:p-8">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center justify-center h-20 w-20 mb-4 lg:hidden">
-            <BrandMascot mood="waving" animated className="shrink-0 scale-[0.35]" />
+            <BrandMascot
+              mood="waving"
+              animated
+              className="shrink-0 scale-[0.35]"
+            />
           </div>
           <AppSection
             title={ACTIONS_VI.signIn}

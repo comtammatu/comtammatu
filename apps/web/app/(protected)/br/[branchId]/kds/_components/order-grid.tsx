@@ -331,9 +331,7 @@ function HeatmapCard({
   );
   const activeTickets = useMemo(
     () =>
-      order.tickets.filter((ticket) =>
-        isKdsActiveTicketStatus(ticket.status),
-      ),
+      order.tickets.filter((ticket) => isKdsActiveTicketStatus(ticket.status)),
     [order.tickets],
   );
 
@@ -466,7 +464,7 @@ function OrderColumn({
           <AppEmptyState
             data-testid={`kds-column-empty-${column.id}`}
             compact
-            className="border-dashed bg-muted/20 px-3 py-3"
+            className="border-dashed bg-muted/30 px-3 py-3"
             title={column.emptyTitle}
           />
         ) : (

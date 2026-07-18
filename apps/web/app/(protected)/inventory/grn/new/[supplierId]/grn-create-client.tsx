@@ -16,6 +16,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Select,
@@ -202,14 +203,14 @@ export function GrnCreateClient({
           </p>
         </div>
         {controller.showWarehouseEditor ? (
-          <div className="rounded-md border bg-card p-3 sm:col-span-2">
+          <Frame className="p-3 sm:col-span-2">
             {warehouseField}
             {controller.receivingSiteSaving ? (
               <p className="mt-2 text-xs text-muted-foreground">
                 {GRN_CREATE_COPY.receivingLocationSaving}
               </p>
             ) : null}
-          </div>
+          </Frame>
         ) : (
           <div className="rounded-md bg-muted/50 px-3 py-2">
             <SectionLabel density="dense">

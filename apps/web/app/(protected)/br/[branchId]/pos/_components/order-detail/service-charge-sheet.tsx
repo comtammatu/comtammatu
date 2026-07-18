@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIONS_VI, FORM_VI, POS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Field,
   FieldDescription,
@@ -112,13 +113,13 @@ export function ServiceChargeSheet({
                 onValueChange={setAmountText}
                 placeholder={POS_VI.serviceChargeAmountPlaceholder}
               />
-              <FieldDescription>
-                {POS_VI.serviceChargeHint}
-              </FieldDescription>
+              <FieldDescription>{POS_VI.serviceChargeHint}</FieldDescription>
             </Field>
 
             <Field data-invalid={!noteValid && noteTrimLen > 0}>
-              <FieldLabel htmlFor="service-charge-note">{FORM_VI.notes}</FieldLabel>
+              <FieldLabel htmlFor="service-charge-note">
+                {FORM_VI.notes}
+              </FieldLabel>
               <Textarea
                 id="service-charge-note"
                 value={note}
@@ -133,7 +134,7 @@ export function ServiceChargeSheet({
             </Field>
           </FieldGroup>
 
-          <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-sm">
+          <Frame className="border-border/60 bg-muted/50 p-3 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>{FORM_VI.subtotal}</span>
               <span className="tabular-nums">{formatVND(subtotal)}</span>
@@ -160,7 +161,7 @@ export function ServiceChargeSheet({
               <span>{POS_VI.newTotal}</span>
               <span className="tabular-nums">{formatVND(previewTotal)}</span>
             </div>
-          </div>
+          </Frame>
         </div>
 
         <SheetFooter className="sm:flex-row sm:justify-between">
@@ -171,9 +172,7 @@ export function ServiceChargeSheet({
               disabled={!canClear}
               onClick={handleClear}
               title={
-                !noteValid
-                  ? POS_VI.clearServiceChargeReasonTitle
-                  : undefined
+                !noteValid ? POS_VI.clearServiceChargeReasonTitle : undefined
               }
               className="sm:order-first"
             >

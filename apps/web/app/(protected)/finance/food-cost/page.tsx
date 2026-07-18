@@ -47,11 +47,11 @@ export default async function FoodCostPage({
     : null;
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow={messages.finance.foodCost.eyebrow}
         title={messages.finance.nav.items.foodCost}
-        description={messages.finance.foodCost.estimateNote}
+        description={messages.finance.foodCost.description}
         meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
       />
       <FoodCostClient

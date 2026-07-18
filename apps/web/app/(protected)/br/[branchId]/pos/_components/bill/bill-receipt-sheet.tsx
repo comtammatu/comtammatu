@@ -21,6 +21,7 @@ import {
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   InputGroup,
@@ -295,9 +296,9 @@ function PaymentQrPlaceholder({
   Icon: ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="mx-auto flex size-48 items-center justify-center rounded-md border bg-muted/40">
+    <Frame className="mx-auto flex size-48 items-center justify-center bg-muted/50">
       <Icon className="size-10 text-muted-foreground" />
-    </div>
+    </Frame>
   );
 }
 

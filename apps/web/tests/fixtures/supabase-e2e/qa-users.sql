@@ -1,8 +1,8 @@
 -- =============================================================================
--- Dev / staging: tạo Auth users → profile (trigger handle_new_user) + employees
+-- CI-only E2E fixture: tạo Auth users → profile (trigger handle_new_user) + employees
 -- Mật khẩu tất cả: Test1234!
 --
--- Apply with: supabase db query --linked --file supabase/seed.sql
+-- Copied only into the isolated CI scratch project by scripts/supabase-e2e-bringup.mjs.
 --
 -- Điều kiện:
 --   - Tenant slug `comtammatu`; seed tenant có "Chi nhánh Đất Đỏ",

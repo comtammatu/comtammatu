@@ -11,44 +11,46 @@ Mô hình vận hành production: **Tenant → Chi nhánh**.
 
 ## Modules
 
-| #   | Module               | Scope                                                                                     | Status  |
-| --- | -------------------- | ----------------------------------------------------------------------------------------- | ------- |
-| M0  | Khung quản trị       | Buồng lái điều hành, sidebar, foundation, báo cáo điều hành                               | SHIPPED |
-| M1  | Menu                 | Categories, items, variants, modifiers, sides                                             | SHIPPED |
-| M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                  | SHIPPED |
-| M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                      | SHIPPED |
-| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm).                                                | SHIPPED |
-| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production               | SHIPPED |
+| #   | Module               | Scope                                                                                                | Status  |
+| --- | -------------------- | ---------------------------------------------------------------------------------------------------- | ------- |
+| M0  | Khung quản trị       | Buồng lái điều hành, sidebar, foundation, báo cáo điều hành                                          | SHIPPED |
+| M1  | Menu                 | Categories, items, variants, modifiers, sides                                                        | SHIPPED |
+| M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                             | SHIPPED |
+| M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                                 | SHIPPED |
+| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm).                                                           | SHIPPED |
+| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production                          | SHIPPED |
 | M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Enterprise COA/Journal outside HKD scope | PARTIAL |
-| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial | PARTIAL |
+| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial           | PARTIAL |
 
 Active tracker: [`tasks/todo.md`](tasks/todo.md).
 
 ## Tech Stack
 
-- **Runtime:** Node.js ≥ 24
-- **Framework:** Next.js 16.2 (App Router, Turbopack dev, Webpack production build)
-- **Language:** TypeScript 6.0 (strict + `noUncheckedIndexedAccess`)
-- **UI:** React 19.2 · Tailwind CSS 4.2 · Com Tam Ma Tu Custom Theme · Má Tư Design System primitives (`@comtammatu/ui`)
-- **Validation:** Zod 4
-- **Database:** Supabase (PostgREST + Auth + RLS), JWT custom claims hook
-- **Monorepo:** Turborepo 2.9 + pnpm 10.33
-- **PWA:** Serwist service worker, per-branch installable POS manifest
-- **Rate limiting:** Upstash Redis
-- **Native printer:** ESC-POS LAN print-agent (Node 24, packaged via `@yao-pkg/pkg`)
-- **Hosting:** Vercel
+- **Web runtime:** Node.js ≥ 24 · Next.js 16 App Router · React 19 · Turbopack
+- **Language and validation:** TypeScript 6 strict · Zod 4
+- **UI:** Tailwind CSS 4 · Com Tam Ma Tu Custom Theme · `@comtammatu/ui`
+- **Data and auth:** Supabase Cloud (Postgres, PostgREST, Auth, RLS, Realtime, Storage)
+- **PWA:** Serwist service worker and per-branch installable manifests
+- **Infrastructure:** Vercel (`sin1`) · Upstash Redis · GitHub Actions
+- **Branch edge:** Node 24 ESC/POS LAN print-agent, esbuild bundle, Windows service via NSSM
+- **Monorepo:** pnpm 10.33 · Turborepo 2
+
+Exact dependency versions belong to `package.json` files and `pnpm-lock.yaml`.
+Runtime, environment, and deployment contracts live in
+[`docs/modules/infrastructure.md`](docs/modules/infrastructure.md).
 
 ## Project Structure
 
 ```
 apps/
   web/              # Next.js 16 app (POS, KDS, admin, inventory, finance, hr, branch operator hub)
-  print-agent/      # ESC-POS LAN printer daemon (packaged via pkg)
+  print-agent/      # ESC-POS LAN printer daemon (esbuild bundle + NSSM service)
 packages/
   database/         # Supabase clients (server / client / service / middleware) + types
+  print-render/     # Shared receipt/template renderer for web preview + print-agent
   shared/           # Auth (module-acl, permissions, scope), labels, payroll calc, formatters
   security/         # Upstash Redis rate limiting
-  ui/               # Má Tư Design System primitives + Tailwind 4 token runtime
+  ui/               # Má Tư Design System primitives (`@comtammatu/ui`) + Tailwind 4 token runtime
 supabase/
   migrations/       # SQL migrations (production: file → PR → merge → owner apply)
 docs/
@@ -64,20 +66,20 @@ scripts/            # SQL seeds, lint helpers
 
 ## URL Routes
 
-| Path                        | Audience          | Surface                                                 |
-| --------------------------- | ----------------- | ------------------------------------------------------- |
-| `/login`                    | Public            | Authentication                                          |
-| `/admin/*`                  | Manager+          | Dashboard, settings, staff, reports                     |
-| `/menu`                     | Manager+          | Menu CRUD                                               |
-| `/inventory/*`              | Inventory roles   | Canonical inventory hub (PO, GRN, stocktake…)           |
-| `/finance/*`                | Finance roles     | Finance Basic, tiền đã thu, food-cost, chi phí, HĐĐT    |
-| `/hr/*`                     | HR/payroll        | Payroll periods, payslips                               |
-| `/orders`                   | Manager+          | Cross-branch order browser                              |
-| `/notifications`            | All staff         | Notification center                                     |
-| `/br/[branchId]/*`          | All staff         | Operator hub (Hôm nay · Ca · Lịch · Tôi) + `stock/*`    |
-| `/br/[branchId]/pos`        | Cashier / service | Point of Sale (PWA installable)                         |
-| `/br/[branchId]/kds`        | Chef              | Kitchen Display                                         |
-| `/br/[branchId]/settings/*` | Branch manager+   | Per-branch POS, tables, printers                        |
+| Path                        | Audience          | Surface                                              |
+| --------------------------- | ----------------- | ---------------------------------------------------- |
+| `/login`                    | Public            | Authentication                                       |
+| `/admin/*`                  | Manager+          | Dashboard, settings, staff, reports                  |
+| `/menu`                     | Manager+          | Menu CRUD                                            |
+| `/inventory/*`              | Inventory roles   | Canonical inventory hub (PO, GRN, stocktake…)        |
+| `/finance/*`                | Finance roles     | Finance Basic, tiền đã thu, food-cost, chi phí, HĐĐT |
+| `/hr/*`                     | HR/payroll        | Payroll periods, payslips                            |
+| `/orders`                   | Manager+          | Cross-branch order browser                           |
+| `/notifications`            | All staff         | Notification center                                  |
+| `/br/[branchId]/*`          | All staff         | Operator hub (Hôm nay · Ca · Lịch · Tôi) + `stock/*` |
+| `/br/[branchId]/pos`        | Cashier / service | Point of Sale (PWA installable)                      |
+| `/br/[branchId]/kds`        | Chef              | Kitchen Display                                      |
+| `/br/[branchId]/settings/*` | Branch manager+   | Per-branch POS, tables, printers                     |
 
 Auth + ACL được enforce tại [`apps/web/proxy.ts`](apps/web/proxy.ts) qua Auth v2 (Position ⟂ Permission, RLS-first). Route catalog: [`packages/shared/src/auth/module-acl.ts`](packages/shared/src/auth/module-acl.ts).
 
@@ -87,47 +89,47 @@ Setup chi tiết (MCP, gstack skills, Supabase JWT hook, seed accounts): [`docs/
 
 ```bash
 nvm use                                # Node ≥ 24
-pnpm install
+corepack pnpm install
 cp .env.example apps/web/.env.local    # Fill Supabase + Upstash credentials
-pnpm dev                               # Turbopack dev server (http://localhost:3000)
+corepack pnpm dev                      # Turbopack dev server (http://localhost:3000)
 ```
 
 ## Commands
 
 ```bash
-pnpm dev                # Turbopack dev (all apps)
-pnpm dev:web            # Web only
-pnpm dev:print          # Print agent only
-pnpm build              # Production build (next build + Serwist service worker)
-pnpm typecheck          # TS check across packages
-pnpm lint               # ESLint + repo guards (copy, ui-contract, client-storage, rules-mirror, guard-sync, regression-guards, review-tier, doc-staleness)
-pnpm test               # Test suites (turbo test)
-pnpm verify             # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
-pnpm format             # Prettier
-pnpm db:types           # Regenerate Supabase types after a migration
+corepack pnpm dev        # Turbopack dev (all apps)
+corepack pnpm dev:web    # Web only
+corepack pnpm dev:print  # Print agent only
+corepack pnpm build      # Production build (next build + Serwist service worker)
+corepack pnpm typecheck  # TS check across packages
+corepack pnpm lint       # ESLint + repo guards
+corepack pnpm test       # Test suites (turbo test)
+corepack pnpm verify     # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
+corepack pnpm format     # Prettier
+corepack pnpm db:types   # Regenerate Supabase types after a migration
 ```
 
 End-to-end testing (Playwright):
 
 ```bash
-pnpm --filter @comtammatu/web test:e2e
-pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
+corepack pnpm --filter @comtammatu/web test:e2e
+corepack pnpm --filter @comtammatu/web guides:capture # Capture POS flow screenshots
 ```
 
 ## Documentation
 
-| Doc                                                            | Purpose                                        |
-| -------------------------------------------------------------- | ---------------------------------------------- |
-| [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading      |
-| [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index        |
-| [`tasks/todo.md`](tasks/todo.md)                               | Greenfield preparation gate tracker            |
+| Doc                                                            | Purpose                                       |
+| -------------------------------------------------------------- | --------------------------------------------- |
+| [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading     |
+| [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index       |
+| [`tasks/todo.md`](tasks/todo.md)                               | Greenfield preparation gate tracker           |
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Legacy decision index; no backlog             |
-| [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                            |
-| [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                      |
-| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | UI design-system SSOT / Custom Theme contract  |
-| [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model          |
-| [`docs/ref/setup.md`](docs/ref/setup.md)                       | Minimal local project setup                    |
-| [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor  |
+| [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                           |
+| [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                     |
+| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | UI design-system SSOT / Custom Theme contract |
+| [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model         |
+| [`docs/ref/setup.md`](docs/ref/setup.md)                       | Minimal local project setup                   |
+| [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor |
 
 ## License
 

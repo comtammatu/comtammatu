@@ -71,6 +71,17 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
   );
   assert.match(drawerSource, /overscroll-contain/);
   assert.match(drawerSource, /motion-reduce:animate-none/);
+  assert.match(drawerSource, /responsiveFullscreen = false/);
+  assert.match(
+    drawerSource,
+    /data-\[vaul-drawer-direction=bottom\]:before:inset-0/,
+  );
+  assert.match(
+    drawerSource,
+    /sm:data-\[vaul-drawer-direction=bottom\]:before:inset-2/,
+  );
+  assert.match(posSource, /<DrawerContent showHandle responsiveFullscreen>/);
+  assert.doesNotMatch(posSource, /sm:before:inset-2/);
   assert.doesNotMatch(posSource, /data-\[vaul-drawer-direction=bottom\]:top-0/);
   assert.doesNotMatch(
     archivedOrdersSource,

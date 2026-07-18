@@ -51,11 +51,11 @@ export function AgeBadge({
         "flex shrink-0 items-baseline justify-center gap-1 border text-center",
         sizeClass.container,
         isComplete
-          ? "border-success/40 bg-success/15 text-success"
+          ? "border-success/20 bg-success/15 text-success"
           : elapsedMinutes >= 10
-            ? "border-destructive/40 bg-destructive/15 text-destructive motion-safe:animate-pulse"
+            ? "border-destructive/20 bg-destructive/15 text-destructive motion-safe:animate-pulse"
             : elapsedMinutes >= 5
-              ? "border-warning/40 bg-warning/15 text-warning"
+              ? "border-warning/20 bg-warning/15 text-warning"
               : "border-border/50 bg-background/80 text-muted-foreground",
       )}
     >

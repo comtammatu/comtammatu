@@ -1,7 +1,7 @@
 -- LOCAL-DEV ONLY tenant/branch/position/role-template bootstrap.
 -- The base dataset (tenant comtammatu, branches, positions, role_templates)
 -- historically lived in archived migrations below the consolidated baseline,
--- which is schema-only. supabase/seed.sql assumes this data already exists
+-- which is schema-only. The CI QA-user fixture assumes this data already exists
 -- (it looks up tenant slug 'comtammatu' and branches "Chi nhánh Đất Đỏ" /
 -- "Chi nhánh Phước Hải"). This file recreates the minimal prerequisites,
 -- with values mirrored from prod (read-only) where applicable. Idempotent.
@@ -74,7 +74,7 @@ VALUES (
 )
 ON CONFLICT (slug) DO NOTHING;
 
--- 3) Branches. Names match supabase/seed.sql lookups.
+-- 3) Branches. Names match the QA-user fixture lookups.
 INSERT INTO public.branches (tenant_id, name, address, code, branch_kind, is_active)
 SELECT t.id, v.name, v.address, v.code, 'branch', true
 FROM public.tenants t

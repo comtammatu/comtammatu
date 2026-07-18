@@ -296,9 +296,12 @@ Số luật về giảm trừ, biểu thuế, mức đóng, trần bảo hiểm 
 
 ### Khi gặp luật/thuế
 
-1. Đọc `legal-framework-2026.md` trước.
-2. Đọc doc chuyên đề: `einvoice-tax.md`, `payroll-pit.md`, `labor-contracts.md`.
-3. Không lấy tỷ lệ/ngưỡng từ trí nhớ hoặc nguồn blog nếu doc dự án đã có SSoT.
+1. Phân loại domain:
+   - Thuế HKD/GTGT/HĐĐT/chứng từ vào-ra dùng `einvoice-tax.md`.
+   - TNCN lương/payroll/BHXH/BHYT/BHTN/HĐLĐ dùng `payroll-pit.md` và
+     `labor-contracts.md`.
+2. Đọc `legal-framework-2026.md` trước khi khẳng định bất kỳ căn cứ, mức, ngưỡng hoặc thời hạn pháp lý nào.
+3. Với phép tính, dùng contract thực thi đã nêu trong doc chuyên đề; không chép lại công thức hay hardcode số từ trí nhớ.
 4. Nếu nguồn pháp lý và code khác nhau, ghi mismatch; không tự hòa giải thầm.
 
 ## Nguồn khảo cứu bên ngoài

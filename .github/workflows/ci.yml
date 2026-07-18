@@ -21,13 +21,13 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
       TURBO_TELEMETRY_DISABLED: "1"
       NEXT_TELEMETRY_DISABLED: "1"
-      # Fail closed when the event commit range lacks or under-declares its tier.
+      # Fail closed when a T2/T3 PR lacks or under-declares its review tier.
       REVIEW_TIER_STRICT: "1"
     steps:
       - uses: actions/checkout@v7
         with:
-          # Full history so check-review-tier can verify the event's exact SHAs
-          # and compute the pull-request merge-base without guessing a branch.
+          # Full history so check-review-tier can merge-base against origin/main;
+          # a shallow clone makes the base unreachable and the guard self-skips.
           fetch-depth: 0
 
       # Reads the pnpm version from package.json "packageManager".
@@ -41,6 +41,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm deps:audit
+
+      - run: pnpm lint:baseline
 
       - run: pnpm typecheck
 
@@ -98,10 +100,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:baseline:local-check -- --api-port=55441 --db-port=55442 --shadow-port=55440
 
-  # Separate job (does not block the fast gates): stands up a from-empty Supabase
-  # Local with the self-contained baseline + dev/QA seeds, starts the app, and runs
-  # the Playwright POS->payment->KDS smoke. This is the first automated end-to-end
-  # run of the order/payment hot path against a real (local) database + RPCs.
+  # Separate job (does not block the fast gates): the CI-only E2E harness starts
+  # an isolated Supabase stack with baseline + dev/QA seeds, starts the app, and
+  # runs the Playwright POS->payment->KDS smoke. It never changes workspace env.
   e2e-smoke:
     needs: detect
     if: >-
@@ -125,17 +126,15 @@ jobs:
         timeout-minutes: 5
       - run: pnpm --filter @comtammatu/web exec playwright install --with-deps chromium
       # Production build so the heavy POS route is pre-compiled; `next dev`
-      # compiles it on-demand, which blows the smoke's timeout. The bring-up
-      # exported the local test values through the GitHub runner environment, so
-      # the build inlines the right NEXT_PUBLIC_SUPABASE_URL without writing repo
-      # .env.local files.
-      - run: pnpm --filter @comtammatu/web build
+      # compiles it on-demand, which blows the smoke's timeout. The dedicated
+      # E2E scripts consume only apps/web/.env.test.local.
+      - run: pnpm --filter @comtammatu/web build:e2e
       # Scoped to the POS->payment->KDS core (payment-cash) — the deterministic
       # hot-path smoke. The broader suite (guides/visual/inventory RBAC/realtime
       # KDS) needs more seed/setup and is out of scope for a fast CI gate.
       - run: pnpm --filter @comtammatu/web run test:e2e:smoke
         env:
-          E2E_WEB_COMMAND: pnpm start
+          E2E_WEB_COMMAND: pnpm start:e2e
       - if: failure()
         uses: actions/upload-artifact@v7
         with:

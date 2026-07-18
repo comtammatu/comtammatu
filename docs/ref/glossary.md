@@ -225,7 +225,7 @@ Nguyên tắc nền:
 | `net_sales_before_vat`   | Doanh thu ròng trước VAT / doanh thu thuần | Giá trị bán hàng sau giảm giá/hoàn tiền, trước VAT/GTGT. Đây là nghĩa chuẩn của `doanh thu ròng` trong báo cáo vận hành F&B. | `gross_sales - discount_amount - refund_amount`; nếu giá POS đã gồm VAT thì phải tách VAT trước khi dùng cho margin. | Tổng tiền khách trả gồm VAT, tiền mặt trong két, HĐĐT đã phát hành, doanh thu tính thuế. | `finance.revenue.before_vat_after_discount`.                        |
 | `total_collected`        | Tiền đã thu                                | Tổng tiền đã nhận từ thanh toán hoàn tất, có thể gồm VAT tùy payment/order total.                                            | Sum payment/order total tại thời điểm paid, bucket theo ngày Việt Nam.                                               | Doanh thu trước VAT, HĐĐT đã phát hành, công nợ.                                         | `finance.revenue.money_collected`.                                  |
 | `cash_collected`         | Tiền mặt đã thu                            | Phần `total_collected` bằng tiền mặt.                                                                                        | Sum paid amount method `cash`.                                                                                       | Tiền mặt hiện hữu trong két, cash variance.                                              | Payment split.                                                      |
-| `bank_wallet_collected`  | Chuyển khoản đã thu                        | Phần `total_collected` qua VietQR hoặc chuyển khoản.                                                                          | Sum paid amount method `bank_transfer`/`vietqr`.                                                                     | Doanh thu kênh bán, tiền ngân hàng đã settle nếu có delay.                               | Payment split.                                                      |
+| `bank_wallet_collected`  | Chuyển khoản đã thu                        | Phần `total_collected` qua VietQR hoặc chuyển khoản.                                                                         | Sum paid amount method `bank_transfer`/`vietqr`.                                                                     | Doanh thu kênh bán, tiền ngân hàng đã settle nếu có delay.                               | Payment split.                                                      |
 | `payment_split`          | Cơ cấu thanh toán                          | Tỷ trọng thu theo phương thức thanh toán.                                                                                    | `amount_by_method / total_collected`.                                                                                | Sales channel mix.                                                                       | Finance/revenue report.                                             |
 | `tax_collected`          | Thuế đã thu/ước tính phải nộp              | Phần VAT/GTGT tương ứng doanh thu bán ra theo cấu hình HKD/HĐĐT.                                                             | Theo `einvoice-tax.md`; không hardcode trong UI.                                                                     | Lãi, doanh thu thuần, chi phí.                                                           | HĐĐT/tax module.                                                    |
 | `issued_invoice_revenue` | Doanh thu HĐĐT đã phát hành                | Tổng giá trị HĐĐT trạng thái `issued`.                                                                                       | Sum tax invoice amount where `status='issued'`.                                                                      | Doanh thu POS nếu chưa/không xuất HĐĐT, tiền đã thu.                                     | HĐĐT report.                                                        |
@@ -492,15 +492,15 @@ Tổng tồn chi nhánh không giảm ở bước này; tồn chỉ giảm khi c
 
 ### Thanh toán và tiền mặt
 
-| Canonical term   | Nhãn chuẩn             | Định nghĩa                                                                                     | Không dùng                                 |
-| ---------------- | ---------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `payment_method` | phương thức thanh toán | Customer payment `payments.method`: `cash`, `vietqr`.                                          | kênh bán                                   |
-| `cash`           | tiền mặt               | Tiền mặt khách trả.                                                                            | tiền mặt hiện hữu nếu chưa kiểm đếm két    |
-| `bank_transfer`  | chuyển khoản           | `supplier_payments.payment_method` cho thanh toán NCC; không phải `payments.method` của khách. | VietQR ở payment khách                     |
-| `vietqr`         | VietQR                 | QR chuyển khoản liên ngân hàng.                                                                | QR thanh toán chung                        |
-| `payment_status` | trạng thái thanh toán  | `unpaid` -> `partial` -> `paid`.                                                               | order status                               |
-| `payment_close`  | đóng thanh toán POS    | Event xác nhận thanh toán, chuyển order sang `completed`.                                      | served, ready                              |
-| `cash_session`   | ca tiền mặt            | Phiên mở/đóng két, kiểm đếm, chênh lệch.                                                       | ca POS nếu không quản lý tiền mặt          |
+| Canonical term   | Nhãn chuẩn             | Định nghĩa                                                                                     | Không dùng                              |
+| ---------------- | ---------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `payment_method` | phương thức thanh toán | Customer payment `payments.method`: `cash`, `vietqr`.                                          | kênh bán                                |
+| `cash`           | tiền mặt               | Tiền mặt khách trả.                                                                            | tiền mặt hiện hữu nếu chưa kiểm đếm két |
+| `bank_transfer`  | chuyển khoản           | `supplier_payments.payment_method` cho thanh toán NCC; không phải `payments.method` của khách. | VietQR ở payment khách                  |
+| `vietqr`         | VietQR                 | QR chuyển khoản liên ngân hàng.                                                                | QR thanh toán chung                     |
+| `payment_status` | trạng thái thanh toán  | `unpaid` -> `partial` -> `paid`.                                                               | order status                            |
+| `payment_close`  | đóng thanh toán POS    | Event xác nhận thanh toán, chuyển order sang `completed`.                                      | served, ready                           |
+| `cash_session`   | ca tiền mặt            | Phiên mở/đóng két, kiểm đếm, chênh lệch.                                                       | ca POS nếu không quản lý tiền mặt       |
 
 ### HĐĐT, thuế, và kế toán HKD
 
@@ -810,16 +810,18 @@ không đặt title như một KPI.
 
 ### Finance
 
-Finance Basic hiện có bốn metric chính theo `docs/modules/finance.md`:
+Finance Basic hiện có bốn card chính theo `docs/modules/finance.md`:
 
-- `finance.revenue.money_collected` / `finance.revenue.before_vat_after_discount`
+- `finance.revenue.money_collected`
+- `finance.revenue.before_vat_after_discount`
 - `finance.inventory_value.current`
 - `finance.expense.operating`
-- `finance.gross_profit.readonly`
 
-Các số khác như `net_operating_profit`, `prime_cost`, `labor_cost`, AP aging,
-cash variance, HĐĐT recovery là supporting workflow hoặc analysis. Không đẩy
-thành KPI mặc định nếu chưa cập nhật Finance contract.
+Các số khác như `finance.gross_profit.readonly`, `net_operating_profit`,
+`prime_cost`, `labor_cost`, AP aging, cash variance, HĐĐT recovery là supporting
+workflow hoặc analysis. Không đẩy thành KPI mặc định nếu chưa cập nhật Finance
+contract. Chi tiết giá trị tồn kho thuộc Inventory; Finance chỉ hiển thị card
+tổng giá trị hiện tại.
 
 ### Inventory
 

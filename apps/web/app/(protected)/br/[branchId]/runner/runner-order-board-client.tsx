@@ -92,7 +92,7 @@ export function RunnerOrderBoardClient({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="grid grid-cols-12 divide-x divide-border/70 border-b border-border bg-muted/70">
+      <div className="grid grid-cols-12 divide-x divide-border/70 border-b border-border bg-muted/50">
         <RunnerColumnHeading span={RUNNER_COLUMN_SPAN.order}>
           {RUNNER_BOARD_COPY.tableHeaders.order}
         </RunnerColumnHeading>
@@ -141,7 +141,10 @@ function RunnerOverflowRail({
 
   return (
     <div
-      className={cn("shrink-0 border-t border-border bg-muted/70 p-2", className)}
+      className={cn(
+        "shrink-0 border-t border-border bg-muted/50 p-2",
+        className,
+      )}
       data-runner-overflow-rail
     >
       <div
@@ -322,7 +325,7 @@ function RunnerOrderListRow({
         "grid h-full min-h-0 w-full grid-cols-12 items-stretch divide-x divide-border/70 border-b border-l-4 p-0 rounded-none border-x-0 motion-safe:transition-[background-color,border-color,opacity,transform] motion-safe:duration-300 motion-safe:ease-out",
         getRunnerRowClass(),
         featured && "border-l-primary",
-        featured && "bg-warning/15 ring-1 ring-inset ring-warning/40",
+        featured && "bg-warning/15 ring-1 ring-inset ring-warning/20",
         hiddenBelowXl && "hidden xl:grid",
         row.exiting &&
           "pointer-events-none -translate-x-full opacity-0 motion-safe:scale-95",
@@ -387,5 +390,5 @@ function getRunnerStatusLabel(_status: RunnerBoardStatus): "Đang chờ" {
 }
 
 function getRunnerRowClass(): string {
-  return "border-warning/70 bg-warning/5";
+  return "border-warning/20 bg-warning/10";
 }

@@ -115,10 +115,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     /displayRows\.slice\(0, RUNNER_ROW_LIMIT_XL\)/,
   );
   assert.match(runnerPageSource, /hiddenBelowXl && "hidden xl:grid"/);
-  assert.match(
-    runnerPageSource,
-    /const RUNNER_OVERFLOW_TILE_LIMIT = 4;/,
-  );
+  assert.match(runnerPageSource, /const RUNNER_OVERFLOW_TILE_LIMIT = 4;/);
   assert.match(
     runnerPageSource,
     /const RUNNER_OVERFLOW_PREVIEW_LIMIT = RUNNER_OVERFLOW_TILE_LIMIT - 1;/,
@@ -133,10 +130,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     runnerPageSource,
     /activeRows\.slice\(0, RUNNER_OVERFLOW_PREVIEW_LIMIT\)/,
   );
-  assert.match(
-    runnerPageSource,
-    /activeRows\.length - previewRows\.length/,
-  );
+  assert.match(runnerPageSource, /activeRows\.length - previewRows\.length/);
   assert.match(runnerPageSource, /grid-flow-col auto-cols-fr gap-2/);
   assert.match(runnerPageSource, /className="flex h-dvh min-h-0 w-full/);
   assert.match(runnerPageSource, /className="flex h-full min-h-0 w-full/);
@@ -240,7 +234,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /featured && "border-l-primary"/);
   assert.match(
     runnerPageSource,
-    /featured && "bg-warning\/15 ring-1 ring-inset ring-warning\/40"/,
+    /featured && "bg-warning\/15 ring-1 ring-inset ring-warning\/20"/,
   );
   assert.doesNotMatch(runnerPageSource, /bg-primary text-primary-foreground/);
   assert.doesNotMatch(runnerPageSource, /\.eq\("status", "ready"\)/);
@@ -351,6 +345,19 @@ test("Runner public board uses polling, not raw Realtime changes", () => {
   assert.doesNotMatch(runnerRealtimeRefreshSource, /useRealtimeChannel/);
   assert.doesNotMatch(runnerRealtimeRefreshSource, /postgres_changes/);
   assert.doesNotMatch(runnerRealtimeRefreshSource, /\.channel\(/);
+});
+
+test("Runner polling loads active tickets once per refresh", () => {
+  const start = runnerPageOnlySource.indexOf(
+    "async function fetchRunnerVisibleTickets",
+  );
+  const end = runnerPageOnlySource.indexOf(
+    "export default async function RunnerPage",
+  );
+  const loader = runnerPageOnlySource.slice(start, end);
+
+  assert.equal((loader.match(/\.from\("kds_tickets"\)/g) ?? []).length, 1);
+  assert.doesNotMatch(loader, /activeBatchIds|activeUngroupedOrderIds/);
 });
 
 test("Runner idle visual renders the shared animated Cot Let status mascot", () => {

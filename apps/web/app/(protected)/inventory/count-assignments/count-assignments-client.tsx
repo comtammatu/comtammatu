@@ -14,6 +14,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   InputGroup,
   InputGroupAddon,
@@ -174,7 +175,9 @@ export function CountAssignmentsClient({
   const visibleEmployees = useMemo(() => {
     const query = employeeSearch.trim();
     if (!query) return employees;
-    return employees.filter((employee) => matchesSearch([employee.name], query));
+    return employees.filter((employee) =>
+      matchesSearch([employee.name], query),
+    );
   }, [employeeSearch, employees]);
   const visibleIngredients = useMemo(() => {
     const query = ingredientSearch.trim();
@@ -315,9 +318,7 @@ export function CountAssignmentsClient({
       key: "employee",
       header: "Nhân viên",
       className: "min-w-52",
-      render: (employee) => (
-        <div className="font-medium">{employee.name}</div>
-      ),
+      render: (employee) => <div className="font-medium">{employee.name}</div>,
     },
     {
       key: "assignments",
@@ -391,7 +392,9 @@ export function CountAssignmentsClient({
         }
         badge={
           scopeReady
-            ? { children: `${assignedEmployeeCount}/${employees.length} đã giao` }
+            ? {
+                children: `${assignedEmployeeCount}/${employees.length} đã giao`,
+              }
             : undefined
         }
       />
@@ -465,8 +468,7 @@ export function CountAssignmentsClient({
           emptyTitle={INVENTORY_VI.countAssignNoEmployeesTitle}
           emptyDescription={INVENTORY_VI.countAssignNoEmployeesDescription}
           mobileCardRender={(employee) => {
-            const selectedIds =
-              selectionByEmployee[String(employee.id)] ?? [];
+            const selectedIds = selectionByEmployee[String(employee.id)] ?? [];
             return (
               <Item variant="outline" className="items-start">
                 <ItemContent className="min-w-0">
@@ -551,49 +553,56 @@ export function CountAssignmentsClient({
           />
         </InputGroup>
 
-        <ScrollArea className="h-96 min-h-0 rounded-md border">
-          <div className="grid gap-1 p-2 sm:grid-cols-2">
-            {ingredients.length === 0 ? (
-              <p className="col-span-full px-3 py-2 text-sm text-muted-foreground">
-                {INVENTORY_VI.countAssignNoFinishedGoods}
-              </p>
-            ) : visibleIngredients.length === 0 ? (
-              <p className="col-span-full px-3 py-2 text-sm text-muted-foreground">
-                {INVENTORY_VI.countAssignNoIngredientMatches}
-              </p>
-            ) : (
-              visibleIngredients.map((ingredient) => {
-                const checked = draftIds.includes(ingredient.id);
-                const checkboxId = `count-assignment-${activeEmployee?.id}-${ingredient.id}`;
-                return (
-                  <Label
-                    key={ingredient.id}
-                    htmlFor={checkboxId}
-                    className={cn(
-                      "flex min-w-0 cursor-pointer items-center gap-3 rounded-md border px-3 py-2",
-                      checked
-                        ? "border-primary/20 bg-primary/10"
-                        : "border-transparent hover:bg-muted",
-                    )}
-                  >
-                    <Checkbox
-                      id={checkboxId}
-                      checked={checked}
-                      onCheckedChange={() => toggleIngredient(ingredient.id)}
-                      disabled={isPending}
-                    />
-                    <span className="min-w-0 flex-1 truncate">
-                      {ingredient.name}
-                    </span>
-                    {ingredient.unit ? (
-                      <Badge variant="outline">{ingredient.unit}</Badge>
-                    ) : null}
-                  </Label>
-                );
-              })
-            )}
-          </div>
-        </ScrollArea>
+        <Frame className="h-96 min-h-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="grid gap-1 p-2 sm:grid-cols-2">
+              {ingredients.length === 0 ? (
+                <p className="col-span-full px-3 py-2 text-sm text-muted-foreground">
+                  {INVENTORY_VI.countAssignNoFinishedGoods}
+                </p>
+              ) : visibleIngredients.length === 0 ? (
+                <p className="col-span-full px-3 py-2 text-sm text-muted-foreground">
+                  {INVENTORY_VI.countAssignNoIngredientMatches}
+                </p>
+              ) : (
+                visibleIngredients.map((ingredient) => {
+                  const checked = draftIds.includes(ingredient.id);
+                  const checkboxId = `count-assignment-${activeEmployee?.id}-${ingredient.id}`;
+                  return (
+                    <Item
+                      key={ingredient.id}
+                      asChild
+                      variant="outline"
+                      className={cn(
+                        "min-w-0 cursor-pointer items-center gap-3",
+                        checked
+                          ? "border-primary/20 bg-primary/10"
+                          : "border-transparent hover:bg-muted",
+                      )}
+                    >
+                      <Label htmlFor={checkboxId}>
+                        <Checkbox
+                          id={checkboxId}
+                          checked={checked}
+                          onCheckedChange={() =>
+                            toggleIngredient(ingredient.id)
+                          }
+                          disabled={isPending}
+                        />
+                        <span className="min-w-0 flex-1 truncate">
+                          {ingredient.name}
+                        </span>
+                        {ingredient.unit ? (
+                          <Badge variant="outline">{ingredient.unit}</Badge>
+                        ) : null}
+                      </Label>
+                    </Item>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </Frame>
       </AppDialog>
     </AppPage>
   );

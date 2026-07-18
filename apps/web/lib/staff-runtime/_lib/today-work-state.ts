@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getEmployeeContext } from "./staff-runtime-context";
 import {
   resolveCurrentShiftContext,
@@ -154,7 +155,7 @@ function assignmentCellKey(row: {
   return `${row.location_id}:${row.ingredient_id}`;
 }
 
-export async function getTodayWorkState(): Promise<TodayWorkState> {
+async function loadTodayWorkState(): Promise<TodayWorkState> {
   const now = new Date();
   const calendarDate = getVNDateString(now);
   const previousDate = addVNDateDays(calendarDate, -1);
@@ -191,17 +192,19 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
 
   // Per-shift attendance: a day may have a morning and an evening record.
   // Resolve the shift for the current VN time and drive state from that record.
-  const { data: activeShifts } = await supabase
-    .from("shifts")
-    .select("id, name, start_time, end_time")
-    .eq("tenant_id", claims.tenant_id)
-    .or(`branch_id.is.null,branch_id.eq.${ctx.branchId ?? -1}`)
-    .eq("is_active", true)
-    .order("start_time");
-  const { data: candidateRecords } = await supabase
-    .from("attendance_records")
-    .select(
-      `
+  const [{ data: activeShifts }, { data: candidateRecords }] =
+    await Promise.all([
+      supabase
+        .from("shifts")
+        .select("id, name, start_time, end_time")
+        .eq("tenant_id", claims.tenant_id)
+        .or(`branch_id.is.null,branch_id.eq.${ctx.branchId ?? -1}`)
+        .eq("is_active", true)
+        .order("start_time"),
+      supabase
+        .from("attendance_records")
+        .select(
+          `
       id,
       date,
       shift_id,
@@ -217,12 +220,13 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
       branches ( name ),
       shifts ( name, start_time, end_time )
     `,
-    )
-    .eq("employee_id", employeeId)
-    .eq("tenant_id", claims.tenant_id)
-    .gte("date", previousDate)
-    .lte("date", calendarDate)
-    .order("check_in", { ascending: true });
+        )
+        .eq("employee_id", employeeId)
+        .eq("tenant_id", claims.tenant_id)
+        .gte("date", previousDate)
+        .lte("date", calendarDate)
+        .order("check_in", { ascending: true }),
+    ]);
 
   const shiftContext = resolveCurrentShiftContext(
     activeShifts ?? [],
@@ -481,3 +485,5 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     },
   };
 }
+
+export const getTodayWorkState = cache(loadTodayWorkState);

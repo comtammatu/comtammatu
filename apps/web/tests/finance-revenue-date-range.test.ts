@@ -219,7 +219,9 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.match(page, /coveredOrderCount=\{actualSummary\.orderCount\}/);
   assert.match(client, /label=\{foodCopy\.actualFoodCost\}/);
   assert.match(client, /foodCopy\.coverageValue/);
-  assert.match(client, /const estimatedFoodCost = rows\.reduce/);
+  assert.equal((client.match(/<KpiCard/g) ?? []).length, 2);
+  assert.match(client, /title=\{foodCopy\.tableTitle\}[\s\S]*<DataTable/);
+  assert.doesNotMatch(client, /const estimatedFoodCost = rows\.reduce/);
   assert.match(
     expenseActions,
     /select\("order_id, quantity_change, unit_cost"\)/,
@@ -228,7 +230,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.match(financeMessages, /actualFoodCost: "Giá vốn đã ghi nhận"/);
 });
 
-test("Finance gross profit is gated by actual food-cost order coverage", () => {
+test("Finance keeps gross-profit coverage as supporting logic, not a landing KPI", () => {
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
@@ -248,10 +250,9 @@ test("Finance gross profit is gated by actual food-cost order coverage", () => {
     "gross profit must not be trusted when only a subset of paid orders has posted consumption",
   );
   assert.match(cockpit, /missingCostCoverageHint/);
-  assert.match(page, /grossProfitNeedsReview/);
-  assert.match(page, /grossProfitCoverageHint/);
-  assert.match(page, /cockpit\.compareKpis\?\.costAvailable/);
-  assert.match(financeMessages, /grossProfitNeedsReview: "Cần rà soát"/);
+  assert.doesNotMatch(page, /basic\.kpis\.grossProfit/);
+  assert.match(page, /basic\.kpis\.netRevenue/);
+  assert.match(financeMessages, /netRevenue: "Doanh thu ròng"/);
 });
 
 test("Finance cockpit branch filter also scopes supplier payable risk", () => {

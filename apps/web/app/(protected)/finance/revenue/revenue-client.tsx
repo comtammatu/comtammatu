@@ -23,7 +23,9 @@ import {
   AppPage,
   AppPageHeader,
   AppSection,
+  KpiRow,
 } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   DataTable,
   type DataTableColumn,
@@ -45,15 +47,7 @@ const RevenueChartsBlock = dynamic(
   () => import("./revenue-charts-internal").then((m) => m.RevenueChartsBlock),
   {
     ssr: false,
-    loading: () => (
-      <>
-        <Skeleton className="h-44 w-full rounded-lg" />
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Skeleton className="aspect-square max-h-72 w-full rounded-lg" />
-          <Skeleton className="aspect-square max-h-72 w-full rounded-lg" />
-        </div>
-      </>
-    ),
+    loading: () => <Skeleton className="h-44 w-full rounded-lg" />,
   },
 );
 import {
@@ -160,40 +154,6 @@ function netRevenuePreVatFor(r: PeriodAggregateRow): number {
   return r.gross_sales - r.discount_amount;
 }
 
-interface BranchAggregateRow {
-  branchId: number;
-  revenue: number;
-  orders: number;
-}
-
-function aggregateByBranch(
-  rows: RollupRow[],
-  branches: AccessibleBranch[],
-): Array<BranchAggregateRow & { name: string }> {
-  const map = new Map<number, BranchAggregateRow>();
-  for (const r of rows) {
-    const existing = map.get(r.branch_id);
-    // BA "Doanh thu thuần": gross_sales − discount_amount per branch
-    const rev = (r.subtotal_revenue ?? 0) - (r.discount_amount ?? 0);
-    if (existing) {
-      existing.revenue += rev;
-      existing.orders += r.order_count;
-    } else {
-      map.set(r.branch_id, {
-        branchId: r.branch_id,
-        revenue: rev,
-        orders: r.order_count,
-      });
-    }
-  }
-  const branchName = (id: number) =>
-    branches.find((b) => b.id === id)?.name ??
-    messages.finance.common.branchFallback(id);
-  return Array.from(map.values())
-    .map((r) => ({ ...r, name: branchName(r.branchId) }))
-    .sort((a, b) => b.revenue - a.revenue);
-}
-
 function bucketsToHeatmap(buckets: HourBucket[]): HeatmapCell[] {
   return buckets.map((b) => ({
     dow: b.dow,
@@ -201,21 +161,6 @@ function bucketsToHeatmap(buckets: HourBucket[]): HeatmapCell[] {
     value: Number(b.net_revenue),
     orderCount: Number(b.order_count),
   }));
-}
-
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <h2 className="font-heading text-base font-semibold">{title}</h2>
-      <p className="text-sm text-muted-foreground">{description}</p>
-    </div>
-  );
 }
 
 // ─── Component ─────────────────────────────────────────────────
@@ -239,10 +184,6 @@ export function RevenueClient({
   canRefreshFinanceViews,
 }: Props) {
   const periodRows = useMemo(() => aggregateByPeriod(rollupRows), [rollupRows]);
-  const branchRows = useMemo(
-    () => aggregateByBranch(rollupRows, branches),
-    [rollupRows, branches],
-  );
   const heatmapCells = useMemo(
     () => bucketsToHeatmap(hourBuckets),
     [hourBuckets],
@@ -302,22 +243,6 @@ export function RevenueClient({
     x: String(i),
     y: p.revenue,
   }));
-
-  // ─── Payment donut data ────────────────────────────────────
-  const paymentTotal =
-    (kpis?.cash_revenue ?? 0) + (kpis?.vietqr_revenue ?? 0);
-  const paymentData = [
-    {
-      key: "cash",
-      label: filterCopy.paymentCash.replace("Chỉ ", ""),
-      value: kpis?.cash_revenue ?? 0,
-    },
-    {
-      key: "vietqr",
-      label: "VietQR",
-      value: kpis?.vietqr_revenue ?? 0,
-    },
-  ];
 
   // ─── Filter signature for CSV export ───────────────────────
   const branchLabel =
@@ -575,12 +500,7 @@ export function RevenueClient({
         canRefresh={canRefreshFinanceViews}
       />
 
-      <SectionHeading
-        title={revCopy.sections.keyMetricsTitle}
-        description={revCopy.sections.keyMetricsDescription}
-      />
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <KpiRow density="compact" className="lg:grid-cols-4">
         <KpiCard
           label={revCopy.kpi.netRevenue}
           value={formatVND(netRevenuePreVat)}
@@ -616,43 +536,7 @@ export function RevenueClient({
           hint={revCopy.kpi.aovOrderHint}
           delta={delta(aovPerOrder, prevAovOrder, "higher_better")}
         />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <KpiCard
-          label={revCopy.kpi.discountRate}
-          value={formatPercent(discountPct)}
-          hint={kpis ? formatVND(kpis.discount_amount) : "—"}
-          tone={
-            discountPct >= 15
-              ? "destructive"
-              : discountPct >= 8
-                ? "warning"
-                : "neutral"
-          }
-          delta={delta(discountPct, prevDiscountPct, "lower_better")}
-        />
-        <KpiCard
-          label={revCopy.kpi.voidRate}
-          value={formatPercent(voidedPct)}
-          hint={
-            kpis
-              ? revCopy.kpi.voidHint(
-                  formatVND(kpis.voided_amount),
-                  formatCount(kpis.voided_count),
-                )
-              : "—"
-          }
-          tone={
-            voidedPct >= 5
-              ? "destructive"
-              : voidedPct >= 3
-                ? "warning"
-                : "neutral"
-          }
-          delta={delta(voidedPct, prevVoidedPct, "lower_better")}
-        />
-      </div>
+      </KpiRow>
 
       {/* Compare period footnote */}
       {compare ? (
@@ -662,204 +546,236 @@ export function RevenueClient({
         </p>
       ) : null}
 
-      <SectionHeading
-        title={revCopy.sections.chartTitle}
-        description={revCopy.sections.chartDescription}
-      />
-
-      <RevenueChartsBlock
-        trendData={trendData}
-        resolvedStart={resolvedStart}
-        resolvedEnd={resolvedEnd}
-        granularityLabel={granularityLabel}
-        paymentData={paymentData}
-        paymentTotal={paymentTotal}
-        branchRows={branchRows}
-        branchActive={params.branch != null}
-      />
-
-      <AppSection
-        title={revCopy.heatmap.title}
-        description={
-          hourlyEnabled
-            ? revCopy.heatmap.description
-            : revCopy.heatmap.tooLargeRange
-        }
+      <AppPageTabs
+        items={[
+          { value: "overview", label: revCopy.tabs.overview },
+          { value: "analysis", label: revCopy.tabs.analysis },
+          { value: "control", label: revCopy.tabs.control },
+        ]}
+        defaultValue="overview"
       >
-        {hourlyEnabled && heatmapCells.length > 0 ? (
-          <HeatmapGrid cells={heatmapCells} />
-        ) : (
-          <AppEmptyState
-            compact
-            className="h-32 border-dashed bg-transparent py-0"
-            title={
+        <TabsContent value="overview" className="flex flex-col gap-4">
+          <RevenueChartsBlock
+            trendData={trendData}
+            resolvedStart={resolvedStart}
+            resolvedEnd={resolvedEnd}
+            granularityLabel={granularityLabel}
+          />
+
+          <AppSection
+            title={revCopy.periodTable.title}
+            description={
+              params.branch == null
+                ? revCopy.periodTable.descriptionAll
+                : revCopy.periodTable.descriptionSingle
+            }
+            contentFlush
+            contentScroll
+          >
+            <DataTable
+              columns={periodColumns}
+              data={periodRows}
+              getRowKey={(row) => row.period_start}
+              emptyTitle={revCopy.periodTable.empty}
+              mobileCardRender={(row) => {
+                const href = periodDrillHref(row);
+                return (
+                  <Item variant="outline">
+                    <ItemContent>
+                      <ItemTitle>
+                        {href ? (
+                          <Link
+                            href={href}
+                            className="text-primary underline-offset-2 hover:underline"
+                          >
+                            {row.period_label}
+                          </Link>
+                        ) : (
+                          row.period_label
+                        )}
+                      </ItemTitle>
+                      <ItemDescription>
+                        {formatCount(row.order_count)}{" "}
+                        {revCopy.periodTable.colOrders} ·{" "}
+                        {revCopy.periodTable.colCash}:{" "}
+                        {formatVND(row.cash_revenue)} · VietQR:{" "}
+                        {formatVND(row.vietqr_revenue)}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemFooter>
+                      <span className="text-xs text-muted-foreground">
+                        {revCopy.periodTable.colVat}: {formatVND(row.total_tax)}
+                      </span>
+                      <span className="font-mono text-sm font-semibold tabular-nums">
+                        {formatVND(netRevenuePreVatFor(row))}
+                      </span>
+                    </ItemFooter>
+                  </Item>
+                );
+              }}
+              desktopFooterRows={periodFooterRows}
+              mobileFooter={
+                <Frame className="flex items-center justify-between bg-muted/30 p-3 text-sm">
+                  <span className="font-medium">
+                    {revCopy.periodTable.total}
+                  </span>
+                  <span className="font-mono font-semibold tabular-nums">
+                    {formatVND(netRevenuePreVat)}
+                  </span>
+                </Frame>
+              }
+            />
+          </AppSection>
+        </TabsContent>
+
+        <TabsContent value="analysis" className="flex flex-col gap-4">
+          <KpiRow density="compact">
+            <KpiCard
+              label={revCopy.kpi.discountRate}
+              value={formatPercent(discountPct)}
+              hint={kpis ? formatVND(kpis.discount_amount) : "—"}
+              tone={
+                discountPct >= 15
+                  ? "destructive"
+                  : discountPct >= 8
+                    ? "warning"
+                    : "neutral"
+              }
+              delta={delta(discountPct, prevDiscountPct, "lower_better")}
+            />
+            <KpiCard
+              label={revCopy.kpi.voidRate}
+              value={formatPercent(voidedPct)}
+              hint={
+                kpis
+                  ? revCopy.kpi.voidHint(
+                      formatVND(kpis.voided_amount),
+                      formatCount(kpis.voided_count),
+                    )
+                  : "—"
+              }
+              tone={
+                voidedPct >= 5
+                  ? "destructive"
+                  : voidedPct >= 3
+                    ? "warning"
+                    : "neutral"
+              }
+              delta={delta(voidedPct, prevVoidedPct, "lower_better")}
+            />
+          </KpiRow>
+
+          <AppSection
+            title={revCopy.heatmap.title}
+            description={
               hourlyEnabled
-                ? revCopy.heatmap.empty
-                : revCopy.heatmap.tooLargeEmpty
+                ? revCopy.heatmap.description
+                : revCopy.heatmap.tooLargeRange
             }
-          />
-        )}
-      </AppSection>
-
-      <SectionHeading
-        title={revCopy.sections.tableTitle}
-        description={revCopy.sections.tableDescription}
-      />
-
-      <AppSection
-        title={revCopy.periodTable.title}
-        description={
-          params.branch == null
-            ? revCopy.periodTable.descriptionAll
-            : revCopy.periodTable.descriptionSingle
-        }
-        contentFlush
-        contentScroll
-      >
-        <DataTable
-          columns={periodColumns}
-          data={periodRows}
-          getRowKey={(row) => row.period_start}
-          emptyTitle={revCopy.periodTable.empty}
-          mobileCardRender={(row) => {
-            const href = periodDrillHref(row);
-            return (
-              <Item variant="outline">
-                <ItemContent>
-                  <ItemTitle>
-                    {href ? (
-                      <Link
-                        href={href}
-                        className="text-primary underline-offset-2 hover:underline"
-                      >
-                        {row.period_label}
-                      </Link>
-                    ) : (
-                      row.period_label
-                    )}
-                  </ItemTitle>
-                  <ItemDescription>
-                    {formatCount(row.order_count)}{" "}
-                    {revCopy.periodTable.colOrders}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemFooter>
-                  <span className="text-xs text-muted-foreground">
-                    {revCopy.periodTable.colVat}: {formatVND(row.total_tax)}
-                  </span>
-                  <span className="font-mono text-sm font-semibold tabular-nums">
-                    {formatVND(netRevenuePreVatFor(row))}
-                  </span>
-                </ItemFooter>
-              </Item>
-            );
-          }}
-          desktopFooterRows={periodFooterRows}
-          mobileFooter={
-            <Frame className="flex items-center justify-between bg-muted/30 p-3 text-sm">
-              <span className="font-medium">{revCopy.periodTable.total}</span>
-              <span className="font-mono font-semibold tabular-nums">
-                {formatVND(netRevenuePreVat)}
-              </span>
-            </Frame>
-          }
-        />
-      </AppSection>
-
-      {/* Cashier table + Top items table */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <AppSection
-          title={revCopy.cashierTable.title}
-          description={
-            cashierEnabled
-              ? revCopy.cashierTable.description
-              : revCopy.cashierTable.tooLargeRange
-          }
-          contentFlush
-          contentScroll
-        >
-          <DataTable
-            columns={cashierColumns}
-            data={cashierRows}
-            getRowKey={(row) => row.cashier_id ?? row.cashier_name}
-            emptyTitle={
-              cashierEnabled
-                ? revCopy.cashierTable.empty
-                : revCopy.cashierTable.tooLargeEmpty
-            }
-            mobileCardRender={(row) => (
-              <Item variant="outline">
-                <ItemContent>
-                  <ItemTitle>{row.cashier_name}</ItemTitle>
-                  <ItemDescription>
-                    {formatCount(Number(row.order_count))}{" "}
-                    {revCopy.cashierTable.colOrders}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemFooter>
-                  <span className="text-xs text-muted-foreground">
-                    {revCopy.cashierTable.colCash}:{" "}
-                    {formatVND(Number(row.cash_revenue))}
-                  </span>
-                  <span className="font-mono text-sm font-semibold tabular-nums">
-                    {formatVND(Number(row.net_revenue))}
-                  </span>
-                </ItemFooter>
-              </Item>
+          >
+            {hourlyEnabled && heatmapCells.length > 0 ? (
+              <HeatmapGrid cells={heatmapCells} />
+            ) : (
+              <AppEmptyState
+                compact
+                className="h-32 border-dashed bg-transparent py-0"
+                title={
+                  hourlyEnabled
+                    ? revCopy.heatmap.empty
+                    : revCopy.heatmap.tooLargeEmpty
+                }
+              />
             )}
+          </AppSection>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <AppSection
+              title={revCopy.cashierTable.title}
+              description={
+                cashierEnabled
+                  ? revCopy.cashierTable.description
+                  : revCopy.cashierTable.tooLargeRange
+              }
+              contentFlush
+              contentScroll
+            >
+              <DataTable
+                columns={cashierColumns}
+                data={cashierRows}
+                getRowKey={(row) => row.cashier_id ?? row.cashier_name}
+                emptyTitle={
+                  cashierEnabled
+                    ? revCopy.cashierTable.empty
+                    : revCopy.cashierTable.tooLargeEmpty
+                }
+                mobileCardRender={(row) => (
+                  <Item variant="outline">
+                    <ItemContent>
+                      <ItemTitle>{row.cashier_name}</ItemTitle>
+                      <ItemDescription>
+                        {formatCount(Number(row.order_count))}{" "}
+                        {revCopy.cashierTable.colOrders}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemFooter>
+                      <span className="text-xs text-muted-foreground">
+                        {revCopy.cashierTable.colCash}:{" "}
+                        {formatVND(Number(row.cash_revenue))}
+                      </span>
+                      <span className="font-mono text-sm font-semibold tabular-nums">
+                        {formatVND(Number(row.net_revenue))}
+                      </span>
+                    </ItemFooter>
+                  </Item>
+                )}
+              />
+            </AppSection>
+
+            <AppSection
+              title={revCopy.topItems.title}
+              description={revCopy.topItems.description}
+              contentFlush
+              contentScroll
+            >
+              <DataTable
+                columns={topItemColumns}
+                data={topItemRows}
+                getRowKey={(row) => `${row.branch_id}-${row.menu_item_id}`}
+                emptyTitle={revCopy.topItems.empty}
+                mobileCardRender={(row) => (
+                  <Item variant="outline">
+                    <ItemContent>
+                      <ItemTitle>{row.item_name}</ItemTitle>
+                      <ItemDescription>
+                        {formatCount(Number(row.quantity_sold))}{" "}
+                        {revCopy.topItems.colQty}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemFooter>
+                      <span className="text-xs text-muted-foreground">
+                        {revCopy.topItems.colRevenue}
+                      </span>
+                      <span className="font-mono text-sm font-semibold tabular-nums">
+                        {formatVND(row.revenue)}
+                      </span>
+                    </ItemFooter>
+                  </Item>
+                )}
+              />
+            </AppSection>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="control" className="flex flex-col gap-4">
+          <WorkQueueStrip
+            summary={dashboardSummary}
+            health={dashboardHealth}
+            hide={["foodCost", "webhook"]}
           />
-        </AppSection>
 
-        <AppSection
-          title={revCopy.topItems.title}
-          description={revCopy.topItems.description}
-          contentFlush
-          contentScroll
-        >
-          <DataTable
-            columns={topItemColumns}
-            data={topItemRows}
-            getRowKey={(row) => `${row.branch_id}-${row.menu_item_id}`}
-            emptyTitle={revCopy.topItems.empty}
-            mobileCardRender={(row) => (
-              <Item variant="outline">
-                <ItemContent>
-                  <ItemTitle>{row.item_name}</ItemTitle>
-                  <ItemDescription>
-                    {formatCount(Number(row.quantity_sold))}{" "}
-                    {revCopy.topItems.colQty}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemFooter>
-                  <span className="text-xs text-muted-foreground">
-                    CN #{row.branch_id}
-                  </span>
-                  <span className="font-mono text-sm font-semibold tabular-nums">
-                    {formatVND(row.revenue)}
-                  </span>
-                </ItemFooter>
-              </Item>
-            )}
-          />
-        </AppSection>
-      </div>
-
-      <SectionHeading
-        title={revCopy.sections.controlTitle}
-        description={revCopy.sections.controlDescription}
-      />
-
-      <WorkQueueStrip
-        summary={dashboardSummary}
-        health={dashboardHealth}
-        hide={["foodCost", "webhook"]}
-      />
-
-      {cashVariance ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <CashVarianceCard variance={cashVariance} />
-        </div>
-      ) : null}
+          {cashVariance ? <CashVarianceCard variance={cashVariance} /> : null}
+        </TabsContent>
+      </AppPageTabs>
     </AppPage>
   );
 }

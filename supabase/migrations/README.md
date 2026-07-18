@@ -47,8 +47,7 @@ part of the chain — there is no separate manual apply step:
   already members).
 - cron jobs via `cron.schedule(...)`.
 
-The `config.toml` auth-hook setting stays in the repo. The fold migration is the
-single source of truth for managed surfaces.
+The fold migration is the single source of truth for managed surfaces.
 
 The public/private baseline cannot carry triggers owned by `auth.users`.
 `20260717164133_restore_auth_user_profile_trigger.sql` restores the canonical

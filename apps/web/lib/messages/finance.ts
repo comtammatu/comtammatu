@@ -123,20 +123,20 @@ export const finance = {
     defaultPageTitle: "Tài chính",
     crumbLabel: "Vận hành · Tài chính",
     description:
-      "Theo dõi tiền đã thu, doanh thu ròng, tồn kho, chi vận hành và lãi gộp.",
+      "Theo dõi tiền đã thu, doanh thu ròng, giá trị tồn kho và chi vận hành.",
     admin: "Quản trị",
   },
   page: {
     eyebrow: "Báo cáo vận hành",
     title: "Tài chính của quán",
     description:
-      "Bốn số cần nhìn trước: tiền đã thu, giá trị tồn kho, chi vận hành và lãi gộp.",
+      "Bốn số cần nhìn trước: tiền đã thu, doanh thu ròng, giá trị tồn kho và chi vận hành.",
   },
   powerLite: {
     eyebrow: "Báo cáo vận hành",
     title: "Sức khỏe tài chính",
     description:
-      "Một màn hình cho chủ quán: tiền đã thu, tồn kho, chi vận hành và lãi gộp.",
+      "Một màn hình cho chủ quán: tiền đã thu, doanh thu ròng, giá trị tồn kho và chi vận hành.",
     cashTitle: "Tiền đã thu",
     cashDescription: "Chỉ theo dõi tiền đã thu và cách tiền đi vào quỹ.",
     profitTitle: "Lãi gộp",
@@ -174,15 +174,14 @@ export const finance = {
     ownerNewsTitle: "Cần kiểm tra",
     noOwnerNews: "Chưa có điểm cần xử lý.",
     openWorkItem: "Mở xử lý",
-    hddtComplianceTitle: "HĐĐT & Tuân thủ",
-    hddtComplianceDescription:
-      "Kiểm tra nhanh hóa đơn đã phát hành và việc cần xử lý sau khi thu tiền.",
-    hddtComplianceAction: "Mở hàng đợi HĐĐT",
-    hddtComplianceOk: "Đã ổn",
-    hddtComplianceNeedsWork: "Cần xử lý",
-    hddtIssued: "Đã phát hành",
-    hddtAttention: "Cần xử lý",
-    hddtNotRequired: "Không cần xuất",
+    hddtComplianceTitle: "HĐĐT bán ra",
+    hddtComplianceDescription: "Hàng đợi cần xử lý sau thanh toán.",
+    hddtComplianceAction: "Mở HĐĐT",
+    hddtComplianceOk: "Không có việc tồn",
+    hddtComplianceNeedsWork: (count: string) => `${count} cần xử lý`,
+    hddtComplianceOkDescription: "Không có HĐĐT nào đang chờ xử lý.",
+    hddtComplianceNeedsWorkDescription: (count: string) =>
+      `${count} HĐĐT cần kiểm tra hoặc hoàn tất.`,
     hddtNoDataTitle: "Chưa có dữ liệu HĐĐT",
     hddtNoDataDescription:
       "Khi có đơn đã thanh toán và hóa đơn phát sinh, trạng thái HĐĐT sẽ hiện tại đây.",
@@ -234,23 +233,14 @@ export const finance = {
     dateMeta: (date: string, branch: string) => `${date} · ${branch}`,
     periodMeta: (start: string, end: string) => `${start} → ${end}`,
     kpis: {
-      revenue: "Tiền đã thu",
-      revenueHint: (orders: string, beforeVat: string) =>
-        `${orders} đơn đã thanh toán · doanh thu ròng ${beforeVat}`,
+      moneyCollected: "Tiền đã thu",
+      moneyCollectedHint: (orders: string) => `${orders} đơn đã thanh toán`,
+      netRevenue: "Doanh thu ròng",
+      netRevenueHint: "Đã trừ giảm giá",
       inventoryValue: "Giá trị tồn kho",
       inventoryValueHint: "Tồn hiện tại × giá vốn BQ hoặc giá nhập tham chiếu",
       operatingExpense: "Chi vận hành",
       operatingExpenseHint: "Đã ghi trong kỳ · không gồm giá vốn món",
-      grossProfit: "Lãi gộp",
-      grossProfitNeedsReview: "Cần rà soát",
-      grossProfitHint: (foodCost: string, margin: string) =>
-        `Doanh thu ròng − giá vốn ${foodCost} · ${margin}`,
-      grossProfitCoverageHint: (covered: string, total: string) =>
-        `${covered}/${total} đơn có giá vốn món`,
-    },
-    actions: {
-      revenue: "Xem tiền đã thu",
-      grossProfit: "Xem lãi gộp",
     },
   },
   nav: {
@@ -261,8 +251,6 @@ export const finance = {
     items: {
       finance: "Tài chính",
       todayMoney: "Tổng quan",
-      inventoryValue: "Tồn kho",
-      grossProfit: "Lãi gộp",
       revenue: "Doanh thu ròng",
       bankTransactions: "Đối soát ngân hàng",
       expenses: "Chi vận hành",
@@ -277,9 +265,10 @@ export const finance = {
       eyebrow: "Tài chính",
       title: "Chi vận hành",
       description:
-        "Chi vận hành được ghi nhận theo ngày phát sinh, kể cả khoản chưa trả. Dòng tiền chỉ thay đổi khi đã trả.",
+        "Ghi nhận và theo dõi các khoản chi vận hành theo ngày phát sinh.",
     },
     add: "Thêm khoản chi",
+    listTitle: "Sổ chi vận hành",
     totalLabel: "Tổng chi vận hành trong kỳ",
     totalHint: (count: string) => `${count} khoản đã ghi`,
     loadErrorTitle: "Không thể tải sổ Chi vận hành",
@@ -430,11 +419,6 @@ export const finance = {
       bankIn: string,
       bankOut: string,
     ) => `Tồn ${date}: ${opening} + thu CK ${bankIn} − chi CK ${bankOut}`,
-    cashDeltaTitle: "Dòng tiền trong kỳ",
-    cashDeltaHint: "Theo kỳ/chi nhánh đang lọc: tiền đã thu trừ chi đã trả.",
-    cashMovementTitle: "Dòng tiền vận hành bằng tiền mặt",
-    cashMovementBreakdown: (cashIn: string, cashOut: string) =>
-      `Theo kỳ/chi nhánh: thu bán hàng ${cashIn} − hoàn tiền, chi vận hành và trả NCC ${cashOut}. Không gồm nộp tiền vào NH.`,
     openingTitle: "Tồn quỹ đầu kỳ",
     openingDescription:
       "Đếm tiền mặt thực tế và số dư tài khoản ngân hàng cùng một ngày làm mốc. Hệ cộng tiền thu và trừ tiền chi từ ngày này để ra số dư hiện tại.",
@@ -763,24 +747,14 @@ export const finance = {
     page: {
       eyebrow: "Báo cáo doanh thu ròng",
       title: "Doanh thu ròng",
-      description:
-        "Theo dõi tiền đã thu, doanh thu ròng, số đơn, khách và cơ cấu thanh toán theo kỳ.",
+      description: "Theo dõi tiền đã thu, doanh thu ròng và số đơn theo kỳ.",
       meta: (branch: string, range: string, granularity: string) =>
         `${branch} · ${range} · ${granularity}`,
     },
-    sections: {
-      keyMetricsTitle: "Chỉ số chính",
-      keyMetricsDescription:
-        "Các số dùng để báo cáo tiền đã thu và doanh thu ròng kỳ này trước khi đi vào biểu đồ và bảng.",
-      chartTitle: "Diễn biến và cơ cấu",
-      chartDescription:
-        "Xu hướng, phương thức thanh toán, chi nhánh và khung giờ cao điểm.",
-      tableTitle: "Bảng kiểm tra",
-      tableDescription:
-        "Dữ liệu dạng bảng để đối chiếu, xem chi tiết ngày và xuất CSV.",
-      controlTitle: "Điểm cần xử lý",
-      controlDescription:
-        "Các lệch doanh thu, hóa đơn và quỹ tiền mặt cần nhìn sau phần báo cáo.",
+    tabs: {
+      overview: "Tổng hợp",
+      analysis: "Phân tích",
+      control: "Kiểm soát",
     },
     kpi: {
       netRevenue: "Doanh thu ròng",
@@ -808,19 +782,6 @@ export const finance = {
         `${start} → ${end} · ${gran.toLowerCase()}`,
       sparklineLabel: "Xu hướng doanh thu ròng",
       tooltipLabel: "Doanh thu ròng",
-    },
-    paymentChart: {
-      title: "Cơ cấu phương thức thanh toán",
-      total: (amount: string) => `Tổng ${amount}`,
-      empty: "Chưa có thanh toán nào",
-      cash: "Tiền mặt",
-    },
-    branchChart: {
-      title: "Doanh thu ròng theo chi nhánh",
-      descriptionAll: "Top chi nhánh trong kỳ",
-      descriptionSingle: "Đang xem 1 chi nhánh — chuyển sang Tất cả để so sánh",
-      emptySingle: "Chuyển sang Tất cả chi nhánh để so sánh.",
-      emptyData: "Chưa có dữ liệu chi nhánh.",
     },
     heatmap: {
       title: "Khung giờ cao điểm",
@@ -942,17 +903,18 @@ export const finance = {
       "Đã xảy ra lỗi khi tải hàng đợi HĐ tổng hợp. Vui lòng tải lại trang; nếu vẫn lỗi, kiểm tra cấu hình HĐĐT hoặc thử lại sau.",
   },
   foodCost: {
-    eyebrow: "Vận hành",
-    estimateNote:
-      "Rà soát giá vốn món: số đã ghi nhận lấy từ tiêu hao kho, bảng món bên dưới là định mức để tham chiếu.",
+    eyebrow: "Tài chính",
+    description: "Đối chiếu giá vốn đã ghi nhận và định mức theo món trong kỳ.",
     actualFoodCost: "Giá vốn đã ghi nhận",
     actualFoodCostHint: "Từ tiêu hao kho đã post cho món bán.",
     coverage: "Độ phủ giá vốn",
     coverageValue: (covered: string, total: string) =>
       `${covered}/${total} đơn`,
     coverageHint: "Chỉ tin lãi gộp khi đơn đã trả tiền có đủ tiêu hao kho.",
-    totalFoodCost: "Giá vốn định mức",
-    averageMargin: "Biên lãi định mức",
+    tableTitle: "Giá vốn theo món",
+    tableDescription:
+      "Định mức dùng để tham chiếu; số đã ghi nhận lấy từ tiêu hao kho.",
+    itemCount: (count: string) => `${count} món`,
     quantitySold: "SL bán",
     revenueCurrency: "Doanh thu ròng (₫)",
     foodCostCurrency: "Giá vốn định mức (₫)",
@@ -962,8 +924,5 @@ export const finance = {
     loadSalesFailed: "Không thể tải dữ liệu giá vốn món.",
     loadRecipeFailed: "Không thể tải định mức giá vốn món.",
     loadWacFailed: "Không thể tải WAC giá vốn món.",
-    shareOfRevenueHint: (pct: string) => `${pct} / DT`,
-    marginThresholdHint: (green: string, warn: string) =>
-      `Ngưỡng: ≥${green} xanh · ≥${warn} vàng`,
   },
 } as const;

@@ -16,6 +16,7 @@ import { z } from "zod";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -293,7 +294,7 @@ function UnitsField({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <Frame className="overflow-hidden">
         <div className="hidden grid-cols-12 items-center gap-3 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid">
           <div className="col-span-3">{copy.units.colUnit}</div>
           <div className="col-span-6">Quy đổi</div>
@@ -316,7 +317,7 @@ function UnitsField({
             />
           ))}
         </div>
-      </div>
+      </Frame>
 
       <p className="text-xs text-muted-foreground">{copy.units.hint}</p>
       {errorMessage ? (

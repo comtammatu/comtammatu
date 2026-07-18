@@ -104,7 +104,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   });
 
   return (
-    <AppPage width="wide">
+    <AppPage width="xwide">
       <AppPageHeader
         title={messages.admin.staffPage.title}
         description={messages.admin.staffPage.description}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
@@ -30,21 +31,29 @@ export default async function HrAttendancePage() {
           </Button>
         }
       />
-      <AppSection
-        title={copy.attendanceTitle}
-        contentFlush
-        contentScroll
+      <AppPageTabs
+        items={[
+          { value: "attendance", label: copy.tabs.attendance },
+          { value: "leave", label: messages.hr.leave.approvalsTitle },
+        ]}
+        defaultValue="attendance"
       >
-        <AttendanceTable branches={branches} />
-      </AppSection>
-      <AppSection
-        title={messages.hr.leave.approvalsTitle}
-        description={messages.hr.leave.approvalsDescription}
-        contentFlush
-        contentScroll
-      >
-        <LeaveRequestsTable branches={branches} />
-      </AppSection>
+        <TabsContent value="attendance">
+          <AppSection title={copy.attendanceTitle} contentFlush contentScroll>
+            <AttendanceTable branches={branches} />
+          </AppSection>
+        </TabsContent>
+        <TabsContent value="leave">
+          <AppSection
+            title={messages.hr.leave.approvalsTitle}
+            description={messages.hr.leave.approvalsDescription}
+            contentFlush
+            contentScroll
+          >
+            <LeaveRequestsTable branches={branches} />
+          </AppSection>
+        </TabsContent>
+      </AppPageTabs>
     </AppPage>
   );
 }

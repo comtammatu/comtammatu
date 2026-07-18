@@ -22,6 +22,18 @@ const employeeCountClientSource = readWeb(
 );
 const employeeMessagesSource = readWeb("lib/messages/employee.ts");
 
+test("today work state deduplicates and parallelizes independent reads", () => {
+  assert.match(todayWorkStateSource, /import \{ cache \} from "react"/);
+  assert.match(
+    todayWorkStateSource,
+    /await Promise\.all\(\[[\s\S]*\.from\("shifts"\)[\s\S]*\.from\("attendance_records"\)[\s\S]*\]\)/,
+  );
+  assert.match(
+    todayWorkStateSource,
+    /export const getTodayWorkState = cache\(loadTodayWorkState\)/,
+  );
+});
+
 test("today work state preserves inventory count and groups start/end phases", () => {
   assert.match(
     todayWorkStateSource,

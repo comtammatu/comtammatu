@@ -126,7 +126,7 @@ export function PrinterStatusIndicator({
     failedCount > 0 ? (
       <Badge
         variant="outline"
-        className="gap-1 border-destructive/40 text-destructive"
+        className="gap-1 border-destructive/20 text-destructive"
         title={FAILED_BADGE_COPY.title(failedCount)}
       >
         <IconPrinterOff className="size-3.5" />
@@ -152,7 +152,7 @@ export function PrinterStatusIndicator({
     ) : status.isOnline ? (
       <Badge
         variant="outline"
-        className="gap-1 border-success/40 text-success"
+        className="gap-1 border-success/20 text-success"
         title={`Agent ${status.agentId ?? ""} — online`}
       >
         <IconPrinter className="size-3.5" />
@@ -162,7 +162,7 @@ export function PrinterStatusIndicator({
     ) : (
       <Badge
         variant="outline"
-        className="gap-1 border-destructive/40 text-destructive"
+        className="gap-1 border-destructive/20 text-destructive"
         title={offlineTitle}
       >
         <IconPrinterOff className="size-3.5" />

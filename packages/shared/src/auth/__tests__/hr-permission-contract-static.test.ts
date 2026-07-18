@@ -209,19 +209,20 @@ test("HR routes keep employee, attendance and setup surfaces separate", () => {
   );
 });
 
-test("HR employee payroll and contract controls stay owner-only", () => {
+test("HR employee salary-source and contract controls stay owner-only", () => {
   const employeeTable = read("apps/web/app/(protected)/hr/employee-table.tsx");
   const employeeFormDialog = read(
     "apps/web/app/(protected)/hr/employee-form-dialog.tsx",
   );
 
   assert.match(employeeTable, /\.\.\.\(canManage\s*\?\s*\[/);
-  assert.match(employeeTable, /key: "payroll"/);
-  assert.match(employeeTable, /render: renderPayrollProfile/);
+  assert.match(employeeTable, /key: "salarySource"/);
+  assert.match(employeeTable, /render: renderSalarySource/);
   assert.match(
     employeeTable,
-    /\{canManage \? renderPayrollProfile\(employee\) : null\}/,
+    /\{canManage \? renderSalarySource\(employee\) : null\}/,
   );
+  assert.doesNotMatch(employeeTable, /formatVND|insurance_base_salary|Lương \/ HĐ/);
   assert.match(employeeTable, /\{canManage \? renderEdit\(employee\) : null\}/);
   assert.match(
     employeeTable,

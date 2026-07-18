@@ -21,6 +21,7 @@ import {
 import { join, resolve } from "node:path";
 
 const REPO = process.cwd();
+const FIXTURES = join(REPO, "apps", "web", "tests", "fixtures", "supabase-e2e");
 const PROJECT_ID = "comtammatu-e2e";
 const WORKDIR = process.env["E2E_SUPABASE_WORKDIR"] || "/tmp/comtammatu-e2e-stack";
 const API_PORT = Number(process.env["E2E_API_PORT"] || 55421);
@@ -57,8 +58,14 @@ function writeScratch() {
       cpSync(join(REPO, "supabase/migrations", f), join(WORKDIR, "supabase/migrations", f));
     }
   }
-  cpSync(join(REPO, "supabase/_local-dev/dev-tenant-seed.sql"), join(WORKDIR, "supabase/_local-dev/dev-tenant-seed.sql"));
-  cpSync(join(REPO, "supabase/seed.sql"), join(WORKDIR, "supabase/seed.sql"));
+  cpSync(
+    join(FIXTURES, "tenant.sql"),
+    join(WORKDIR, "supabase/_local-dev/dev-tenant-seed.sql"),
+  );
+  cpSync(
+    join(FIXTURES, "qa-users.sql"),
+    join(WORKDIR, "supabase/seed.sql"),
+  );
   writeFileSync(
     join(WORKDIR, "supabase", "config.toml"),
     `project_id = "${PROJECT_ID}"

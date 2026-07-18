@@ -45,12 +45,12 @@ function getItemStatusToneClass(status: string): string {
   switch (status) {
     case "pending":
     case "preparing":
-      return "border-warning/30 bg-warning/10";
+      return "border-warning/20 bg-warning/10";
     case "ready":
     case "served":
-      return "border-success/30 bg-success/10";
+      return "border-success/20 bg-success/10";
     case "cancelled":
-      return "border-destructive/30 bg-destructive/10";
+      return "border-destructive/20 bg-destructive/10";
     default:
       return "bg-card";
   }
@@ -128,16 +128,16 @@ function useOrderItemChangeTone(row: OrderItemRowData): RowChangeTone {
 
 function getRowChangeToneClass(tone: RowChangeTone): string | false {
   if (tone === "quantity") {
-    return "bg-warning/10 ring-2 ring-inset ring-warning/50 motion-safe:animate-pulse";
+    return "bg-warning/10 ring-2 ring-inset ring-warning/20 motion-safe:animate-pulse";
   }
   if (tone === "removed") {
-    return "bg-destructive/10 ring-2 ring-inset ring-destructive/40";
+    return "bg-destructive/10 ring-2 ring-inset ring-destructive/20";
   }
   if (tone === "status") {
-    return "bg-success/10 ring-2 ring-inset ring-success/40";
+    return "bg-success/10 ring-2 ring-inset ring-success/20";
   }
   if (tone === "content") {
-    return "bg-info/10 ring-2 ring-inset ring-info/40";
+    return "bg-info/10 ring-2 ring-inset ring-info/20";
   }
   return false;
 }

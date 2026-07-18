@@ -165,6 +165,11 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(bill, /paymentView/);
   assert.match(bill, /onOpenPayment/);
   assert.match(bill, /onBackToBill/);
+  assert.match(
+    hooks,
+    /const fast = snapshot\.ok && snapshot\.state === "awaiting_confirmation"/,
+  );
+  assert.doesNotMatch(hooks, /fast[\s\S]{0,120}payment_pending/);
   assert.match(hooks, /fast \? 3_000 : 15_000/);
   assert.doesNotMatch(hooks, /realtimeTopic|\.channel\(/);
   const payment = read("app/q/[token]/self-order/payment-panel.tsx");

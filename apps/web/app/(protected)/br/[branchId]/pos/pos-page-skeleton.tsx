@@ -1,14 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
 
 function PosSkeletonPanel({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-md border bg-card p-4 shadow-xs">
+    <Frame className="p-4 shadow-xs">
       <div className="flex flex-col gap-2">{children}</div>
-    </div>
+    </Frame>
   );
 }
 

@@ -11,6 +11,16 @@ function requirePublicEnv(name: string, value: string | undefined): string {
   return trimmed;
 }
 
+function getPublicSupabaseKey(): string {
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (publishableKey) return publishableKey;
+
+  return requirePublicEnv(
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+}
+
 /**
  * Browser Supabase client — for "use client" components.
  * Import: `import { createClient } from "@comtammatu/database/supabase/client"`
@@ -21,9 +31,6 @@ export function createClient() {
       "NEXT_PUBLIC_SUPABASE_URL",
       process.env.NEXT_PUBLIC_SUPABASE_URL,
     ),
-    requirePublicEnv(
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    ),
+    getPublicSupabaseKey(),
   );
 }

@@ -7,13 +7,22 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 test("E2E manager fixture matches the seeded manager account", () => {
-  const seed = read("../../supabase/seed.sql");
+  const seed = read("tests/fixtures/supabase-e2e/qa-users.sql");
   const bringup = read("../../scripts/supabase-e2e-bringup.mjs");
+  const packageManifest = read("package.json");
+  const ci = read("../../.github/workflows/ci.yml");
   const authSetup = read("e2e/auth.setup.ts");
   const email = "manager.datdo@comtammatu.vn";
 
   assert.match(seed, new RegExp(email));
   assert.match(bringup, new RegExp(`E2E_INVENTORY_MANAGER_EMAIL=${email}`));
+  assert.match(bringup, /process\.env\["CI"\] !== "true"/);
+  assert.match(bringup, /POS_NETWORK_GATE=off/);
+  assert.doesNotMatch(bringup, /\.env\.local/);
+  assert.match(packageManifest, /"build:e2e": "dotenv -e \.env\.test\.local -- next build/);
+  assert.match(packageManifest, /"start:e2e": "dotenv -e \.env\.test\.local -- next start"/);
+  assert.match(ci, /pnpm --filter @comtammatu\/web build:e2e/);
+  assert.match(ci, /E2E_WEB_COMMAND: pnpm start:e2e/);
   assert.match(authSetup, /resolveUserByEmail\(supabase, email\)/);
   assert.match(authSetup, /\.eq\("branch_kind", "branch"\)/);
   assert.match(authSetup, /\.eq\("code", "branch_manager"\)/);

@@ -253,16 +253,17 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Archetype:** `DASHBOARD`.
 - **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
-  - Cung cấp bức tranh tài chính chính xác về dòng tiền vào/ra, chi phí nguyên liệu, chi phí nhân sự và lợi nhuận gộp thực tế của HKD theo ngày/tháng để đưa ra quyết định kinh doanh.
-- **Mục tiêu Người dùng (Goal):** Biết hôm nay lời hay lỗ bao nhiêu, tiền mặt thực tế đã khớp với tài khoản ngân hàng chưa, và xuất file cho kế toán thuế.
+  - Cung cấp bức tranh ngắn gọn về tiền đã thu, doanh thu ròng, giá trị tồn kho và chi vận hành của HKD theo kỳ.
+- **Mục tiêu Người dùng (Goal):** Nhìn một màn để biết số tiền đã thu, doanh thu ròng và các điểm tài chính cần xử lý; mở báo cáo chuyên biệt khi cần đối chiếu.
 - **Luồng thao tác (Workflow):**
   1. **Chọn kỳ báo cáo:** Lọc theo ngày hôm nay / Tuần này / Tháng này / Chọn khoảng ngày.
   2. **Chọn phạm vi:** Lọc theo toàn chuỗi hoặc một chi nhánh cụ thể.
-  3. **Xem KPIs:** Đọc các chỉ số doanh thu ròng, chi phí nguyên liệu (COGS), chi phí nhân sự, lợi nhuận gộp.
+  3. **Xem KPIs:** Đọc bốn card Tiền đã thu, Doanh thu ròng, Giá trị tồn kho và Chi vận hành.
   4. **Đối soát dòng tiền:** Xem danh sách giao dịch SePay khớp tự động với VietQR -> Xác nhận các dòng chưa khớp.
   5. **Xuất bản:** Xuất báo cáo dạng file Excel/CSV phục vụ kê khai thuế theo Thông tư 152/2025/TT-BTC.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Biểu đồ xu hướng doanh thu; Bảng KPIs tài chính chuẩn hóa; Bảng kê chi tiết các giao dịch dòng tiền kèm mã tham chiếu giao dịch ngân hàng.
+  - **Nên hiển thị:** Bốn KPI chuẩn hóa và hàng việc tài chính cần xử lý. Biểu đồ, bảng doanh thu, giá vốn món, sổ chi và đối soát ngân hàng nằm trong route chuyên biệt.
+  - **Không lặp:** Finance chỉ hiển thị card Giá trị tồn kho; bảng chi tiết tồn kho thuộc Inventory.
   - **KHÔNG hiển thị:** Nút bấm tạo order mới, danh sách các bước chế biến món ăn của bếp, hoặc các tính năng phân tích tài chính doanh nghiệp cổ phần phức tạp không áp dụng cho mô hình HKD.
 - **Quy chuẩn UX/UI:**
   - Mọi số liệu tiền tệ phải được định dạng chuẩn VND bằng hàm `formatVND` (ví dụ: `150.000đ`, không viết `150k` hay `150000`).

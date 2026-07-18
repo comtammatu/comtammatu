@@ -5,7 +5,6 @@ import { Pencil as IconPencil, Users as IconUsers } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { formatVND } from "@comtammatu/shared/format";
 import {
   Item,
   ItemActions,
@@ -23,7 +22,6 @@ import { EmployeeFormDialog } from "./employee-form-dialog";
 import {
   ACTIONS_VI,
   BRANCH_VI,
-  FORM_VI,
   STAFF_VI,
 } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
@@ -67,32 +65,19 @@ export function EmployeeTable({
     );
   }
 
-  function hasActiveContract(employee: EmployeeRow) {
-    return (employee.employment_contracts ?? []).some(
-      (contract) => contract.status === "active",
-    );
-  }
-
-  function renderPayrollProfile(employee: EmployeeRow) {
-    const salary = Number(employee.base_salary ?? 0);
-    const insuranceBase = Number(employee.insurance_base_salary ?? 0);
-    return (
-      <div className="flex min-w-40 flex-col gap-1">
-        <span className="font-mono text-sm tabular-nums">
-          {salary > 0 ? formatVND(salary) : "Chưa có lương"}
-        </span>
-        <div className="flex flex-wrap gap-1.5">
-          <Badge
-            variant={hasActiveContract(employee) ? "secondary" : "outline"}
-          >
-            {hasActiveContract(employee) ? "Có HĐ" : "Thiếu HĐ"}
-          </Badge>
-          <Badge variant={insuranceBase > 0 ? "secondary" : "outline"}>
-            {insuranceBase > 0 ? "Có mức BH" : "Chưa có mức BH"}
-          </Badge>
-        </div>
-      </div>
-    );
+  function renderSalarySource(employee: EmployeeRow) {
+    const copy = messages.hr.client.salarySource;
+    if (
+      (employee.employment_contracts ?? []).some(
+        (contract) => contract.status === "active",
+      )
+    ) {
+      return <Badge variant="secondary">{copy.contract}</Badge>;
+    }
+    if (Number(employee.base_salary ?? 0) > 0) {
+      return <Badge variant="outline">{copy.employee}</Badge>;
+    }
+    return <Badge variant="warning">{copy.missing}</Badge>;
   }
 
   function renderEdit(employee: EmployeeRow) {
@@ -111,18 +96,19 @@ export function EmployeeTable({
   const columns: DataTableColumn<EmployeeRow>[] = [
     {
       key: "name",
-      header: "Họ tên",
+      header: STAFF_VI.long,
       render: (employee) => (
-        <span className="font-medium">
-          {employee.profiles?.full_name ?? "—"}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">
+            {employee.profiles?.full_name ?? "—"}
+          </span>
+          {employee.employee_code ? (
+            <span className="text-xs text-muted-foreground">
+              {employee.employee_code}
+            </span>
+          ) : null}
+        </div>
       ),
-    },
-    {
-      key: "code",
-      header: "Mã NV",
-      className: "text-muted-foreground",
-      render: (employee) => employee.employee_code ?? "—",
     },
     {
       key: "branch",
@@ -145,15 +131,15 @@ export function EmployeeTable({
     ...(canManage
       ? [
           {
-            key: "payroll",
-            header: "Lương / HĐ",
-            render: renderPayrollProfile,
+            key: "salarySource",
+            header: messages.hr.client.salarySource.header,
+            render: renderSalarySource,
           } satisfies DataTableColumn<EmployeeRow>,
         ]
       : []),
     {
       key: "status",
-      header: FORM_VI.status,
+      header: messages.hr.client.employmentStatus,
       render: renderStatus,
     },
     ...(canManage
@@ -187,16 +173,16 @@ export function EmployeeTable({
                 {employee.profiles?.full_name ?? "—"}
               </ItemTitle>
               <ItemDescription className="line-clamp-none text-sm leading-6">
-                {employee.employee_code ?? "—"} ·{" "}
+                {employee.employee_code ? `${employee.employee_code} · ` : ""}
                 {employee.profiles?.branches?.name ?? "—"}
               </ItemDescription>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2">
                 {employee.profiles?.positions?.label_vi ? (
                   <Badge variant="secondary" className="w-fit">
                     {employee.profiles.positions.label_vi}
                   </Badge>
                 ) : null}
-                {canManage ? renderPayrollProfile(employee) : null}
+                {canManage ? renderSalarySource(employee) : null}
               </div>
             </ItemContent>
             <ItemActions className="flex flex-col items-end gap-2">

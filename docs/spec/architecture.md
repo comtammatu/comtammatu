@@ -8,41 +8,42 @@ Tenant (L0, single row: Hộ kinh doanh Cơm Tấm Má Tư)
         └── Staff (profiles, role-based)
 ```
 
-## System Overview
+## System Topology
 
+```mermaid
+flowchart LR
+    client["Browser / installable PWA"] --> proxy["proxy.ts<br/>session + surface + scope + network gates"]
+    proxy --> web["Next.js App Router<br/>RSC + Server Actions + route handlers"]
+    web --> data["Supabase Cloud<br/>Auth + Postgres + PostgREST + RLS + Realtime + Storage"]
+    web --> rate["Upstash Redis<br/>rate limiting"]
+    web --> provider["External providers<br/>payments + HĐĐT"]
+    data -->|"print_jobs Realtime + recovery polling"| agent["Branch print-agent<br/>Node.js Windows service"]
+    agent --> printer["ESC/POS LAN printers"]
+    agent -->|"heartbeat + claim/status"| data
+    agent -->|"branch presence"| web
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  Browser                                                                  │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│  │ Admin    │ │Inventory │ │ Finance  │ │ HR       │ │Notifs    │        │
-│  │ /admin/* │ │/inventory│ │ /finance │ │ /hr      │ │/notifs.  │        │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│  │ Orders   │ │ POS      │ │ KDS      │ │ Br Settings                    │
-│  │ /orders  │ │ /br/*/pos│ │ /br/*/kds│ │ /br/[id]/settings/*           │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ ┌──────────┐        │
-│                                                       │Branch Hub│        │
-│                                                       │/br/[id]  │        │
-│                                                       └──────────┘        │
-└────────────────────┬─────────────────────────────────────────────────────┘
-                     │
-              ┌──────▼──────┐
-              │  proxy.ts   │  Auth + ACL routing
-              └──────┬──────┘
-                     │
-              ┌──────▼──────┐
-              │  Next.js 16 │  App Router (RSC + Server Actions)
-              │  App Router │
-              └──────┬──────┘
-                     │
-         ┌───────────┼───────────┐
-         │           │           │
-    ┌────▼────┐ ┌────▼────┐ ┌───▼────┐
-    │Supabase │ │Supabase │ │Upstash │
-    │  Auth   │ │PostgREST│ │ Redis  │
-    │  + JWT  │ │  + RLS  │ │  Rate  │
-    └─────────┘ └─────────┘ └────────┘
-```
+
+The platform has two deployable runtimes: the stateless web application and one
+branch-local print-agent process per active branch. Supabase Cloud remains the
+operational system of record; the print-agent is an adapter for physical LAN
+printers, not a second business-data authority.
+
+## Technical Specifications
+
+| Concern              | Contract                                                                                                                               |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Product shape        | Single tenant, multiple branches, path-based surfaces on one web domain                                                                |
+| Web runtime          | Node.js 24+, Next.js App Router on Vercel; RSC, Server Actions, route handlers, and scheduled routes share one app                     |
+| Data authority       | Supabase Cloud owns Auth, Postgres, PostgREST, RLS, Realtime, and Storage                                                              |
+| Authorization        | `proxy.ts` gates session/surface/scope; RLS and authorized RPCs own data/action authority                                              |
+| Mutation correctness | Server Action input is Zod-validated; multi-row correctness is implemented in one Postgres RPC                                         |
+| Offline posture      | Cloud-first PWA; cached shell/static assets may degrade gracefully, but POS has no local-first transaction authority                   |
+| Printing             | `print_jobs` is the durable queue; the branch agent claims idempotently, retries LAN delivery, and recovery-polls around Realtime gaps |
+| Delivery             | Web deploys through Vercel; database and branch-agent releases have separate promotion gates                                           |
+
+Precise framework versions belong to package manifests and `pnpm-lock.yaml`.
+Environment, deployment, and release contracts live in
+`docs/modules/infrastructure.md`.
 
 ## Auth Flow
 
@@ -74,16 +75,20 @@ picker, while exactly one active branch opens its Branch Hub.
 POS/KDS are not anyone's post-login fallback target — operators reach
 `/br/[branchId]/pos` or `/br/[branchId]/kds` via Branch Hub or a direct link.
 
-## RLS Pattern
+## Data Authorization Pattern
 
-```sql
--- Tenant-scoped (all tables)
-USING (tenant_id = auth_tenant_id())
+RLS chooses the boundary from the table and action semantics; there is no
+generic role predicate to copy across policies:
 
--- Branch-scoped (with tenant override)
-USING (branch_id = auth_branch_id()
-  OR auth_role() = 'owner')
-```
+- Tenant scope derives from `auth_tenant_id()`.
+- Branch scope derives from `auth_branch_id()` plus the documented Owner path.
+- Revocable action/data authority uses `has_permission(branch_id, key)` or
+  `has_permission_any(key)`.
+- `auth_role()` remains a compatibility route bucket and an explicitly
+  documented structural side guard, not a destructive permission grant.
+
+The complete layer contract lives in `docs/modules/auth.md`; database policy
+rules live in `docs/agent/rules/database.md`.
 
 ## Package Dependencies
 
@@ -92,7 +97,11 @@ USING (branch_id = auth_branch_id()
   ├── @comtammatu/shared    (auth types, ACL, scope helpers)
   ├── @comtammatu/database  (Supabase clients)
   ├── @comtammatu/ui        (Má Tư DS primitives + token runtime)
-  └── @comtammatu/security  (Upstash rate limiting)
+  ├── @comtammatu/security  (Upstash rate limiting)
+  └── @comtammatu/print-render (receipt/template rendering)
+
+@comtammatu/print-agent
+  └── @comtammatu/print-render (same rendering contract as web preview)
 ```
 
 ## Operating Planes
@@ -115,7 +124,7 @@ flowchart TB
     app --> domain
     app --> data
     app --> ui
-    app --> edge
+    data --> edge
     domain --> data
     data --> verify
     ui --> verify
@@ -148,32 +157,22 @@ Change ownership:
 
 > Decision: D009 — path-based, không sub-domain. Sub-domain không nằm trong backlog hiện tại.
 
-Top-level surfaces (see `module-acl.ts` for canonical role lists):
+Route families are grouped into stable surfaces; exact role/module mappings are
+generated in `docs/spec/role-route-matrix.md` and must not be copied here:
 
-| Surface            | Route                        | Allowed roles (summary)                                      |
-| ------------------ | ---------------------------- | ------------------------------------------------------------ |
-| Admin              | `/admin/*`                   | owner                                                        |
-| Inventory          | `/inventory/*`               | owner, branch_manager                                        |
-| Finance            | `/finance/*`                 | owner                                                        |
-| HR                 | `/hr/*`                      | owner, branch_manager                                        |
-| Orders             | `/orders`                    | owner, branch_manager, cashier                               |
-| Notifications      | `/notifications`             | all staff                                                    |
-| POS                | `/br/[branchId]/pos`         | owner, cashier, branch_manager                               |
-| KDS                | `/br/[branchId]/kds`         | owner, chef, branch_manager                                  |
-| Branch dashboard   | `/br/[branchId]/dashboard`   | owner, branch_manager                                        |
-| Branch settings    | `/br/[branchId]/settings/*`  | owner, branch_manager                                        |
-| Branch menu limits | `/br/[branchId]/menu-limits` | owner, branch_manager                              |
-| Staff day runtime  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*` | branch-pinned roles                                 |
-| Access denied      | `/access-denied`             | public (rendered with reason copy from `blocked-state.ts`)   |
+| Surface         | Route families                                                             | Boundary                                                          |
+| --------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Admin Dashboard | `/admin`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, `/hr` | Owner-only surface gate before reusable module capabilities       |
+| Branch          | `/br/[branchId]/*`                                                         | Module ACL + URL/JWT branch scope; PBAC/RLS owns actions and data |
+| Utility         | `/notifications`, `/access-denied`                                         | Explicit utility/public contracts, not a product plane            |
 
-Role/scope/route boundary is canonical in `docs/spec/role-route-matrix.md`.
-Branch Manager branch setup belongs under `/br/[branchId]/*`, not new
-tenant-admin routes.
+Branch Manager and Staff daily work stays under `/br/[branchId]/*`; the Admin
+Dashboard families remain Owner-only per ADR 0012.
 
 ## Infrastructure Strategy
 
-```
-Browser → proxy.ts → Next.js → Supabase Cloud
-```
-
-Local-First/offline đã LOẠI BỎ vĩnh viễn theo D012 (2026-06-10) — cloud + PWA là kiến trúc cuối.
+The web and database remain cloud-authoritative. D012 removes local-first/offline
+POS and a native-app rewrite from scope; it does not remove the D062 minimal PWA
+offline shell or the branch-local print adapter. Infrastructure topology,
+environment separation, secret ownership, CI, and promotion gates are canonical
+in `docs/modules/infrastructure.md`.

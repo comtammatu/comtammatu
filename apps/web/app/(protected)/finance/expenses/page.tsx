@@ -35,7 +35,7 @@ export default async function ExpensesPage({
 
   if (!branchesRes.success || !expensesRes.success) {
     return (
-      <AppPage width="wide" density="compact">
+      <AppPage width="xwide" density="compact">
         <AppPageHeader
           eyebrow={copy.page.eyebrow}
           title={copy.page.title}
@@ -64,7 +64,7 @@ export default async function ExpensesPage({
   const todayBusinessDate = getVNDateString();
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow={copy.page.eyebrow}
         title={copy.page.title}
@@ -76,8 +76,6 @@ export default async function ExpensesPage({
         branches={branches}
         rows={rows}
         totalAmount={totalAmount}
-        resolvedStart={resolved.start}
-        resolvedEnd={resolved.end}
         todayBusinessDate={todayBusinessDate}
         canManageExpenses={canManageExpenses}
       />

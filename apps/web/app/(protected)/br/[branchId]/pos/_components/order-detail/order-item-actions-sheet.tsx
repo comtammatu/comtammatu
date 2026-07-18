@@ -114,7 +114,9 @@ export function OrderItemActionsSheet({
         className="pos-safe-bottom max-h-dvh-80 gap-1 px-0 sm:mx-auto sm:max-w-md"
       >
         <SheetHeader>
-          <SheetTitle className="text-base">{POS_VI.itemActionsTitle}</SheetTitle>
+          <SheetTitle className="text-base">
+            {POS_VI.itemActionsTitle}
+          </SheetTitle>
           <SheetDescription className="sr-only">
             {POS_VI.itemActionsDescription}
           </SheetDescription>
@@ -154,7 +156,7 @@ export function OrderItemActionsSheet({
             <Button
               type="button"
               size="touch"
-              className="w-full bg-success text-success-foreground hover:bg-success/90"
+              className="w-full bg-success text-success-foreground hover:bg-success"
               disabled={isPending}
               onClick={() => {
                 if (item) onMarkServed(item.id);
@@ -226,9 +228,7 @@ export function OrderItemActionsSheet({
               {POS_VI.reduceQuantity}
             </Button>
           )}
-          {canVoid && (
-            <Separator className="my-1" />
-          )}
+          {canVoid && <Separator className="my-1" />}
           {canVoid && (
             <Button
               type="button"

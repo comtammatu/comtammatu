@@ -5,14 +5,16 @@
 Enterprise accounting is outside the current Finance product boundary.
 
 Finance Basic is the default Finance experience when `/finance` opens as
-`Sức khỏe tài chính` and answers four owner-level questions without ambiguous
-revenue labels:
+`Sức khỏe tài chính` and shows four decision cards without ambiguous revenue
+labels:
 
-- **Tiền đã thu / doanh thu ròng**: kỳ này đã thu bao nhiêu tiền, và doanh thu
-  ròng trước VAT dùng cho margin là bao nhiêu?
+- **Tiền đã thu**: kỳ này đã thu bao nhiêu tiền?
+- **Doanh thu ròng**: doanh thu sau giảm giá và trước VAT là bao nhiêu?
 - **Giá trị tồn kho**: hiện đang giữ bao nhiêu tiền trong kho?
 - **Chi vận hành**: kỳ này đã ghi nhận bao nhiêu chi phí vận hành?
-- **Lợi nhuận gộp**: doanh thu sau giảm giá/trước VAT trừ giá vốn món còn bao nhiêu?
+
+Gross profit and food-cost coverage remain supporting analysis in
+`/finance/food-cost`; they are not default landing cards.
 
 Do not expand Finance by default into a full enterprise accounting product.
 The current business model is HKD, so the Finance surface must serve restaurant
@@ -45,35 +47,41 @@ level operating reports.
 
 ### Finance Basic
 
-Finance Basic is the current finance surface. It owns four primary metrics:
+Finance Basic is the current finance surface. Its landing owns four primary
+cards:
 
-1. **Revenue**
+1. **Money collected**
    - Completed paid orders by branch/date.
    - Revenue must be bucketed by completed payment time in Vietnam local date.
    - `Tiền đã thu` is money collected from completed payments.
+
+2. **Net revenue**
    - `Doanh thu ròng` on the owner-facing surface means net sales after
      discounts/refunds and before VAT; this is the margin denominator.
    - Never ask the owner to choose the meaning of `doanh thu ròng`; adapt legacy
      source fields into either `total_collected` or `net_sales_before_vat`.
    - Top món uses the same `resolved.start→end` window as every other KPI; side items in `order_items.sides` are counted as their own món and their revenue is subtracted from the parent món line to avoid double-counting (migrations `20260609151615` + `20260609161402`, applied on prod).
 
-2. **Inventory value**
+3. **Inventory value**
    - Current stock value from inventory stock levels.
    - Use weighted/average unit cost when available, falling back to ingredient unit cost.
    - Treat it as a current snapshot, not a period metric.
 
-3. **Operating expense**
+4. **Operating expense**
    - Posted operating expenses in the selected period.
    - Exclude direct ingredient COGS from the top-line operating expense number.
    - If operating expenses are not recorded yet, show zero rather than inventing spend from supplier purchases.
 
-4. **Gross profit**
-   - Revenue before VAT after discounts minus ingredient cost/food cost.
-   - Show gross margin as supporting context.
-   - Keep this read-only until recipe/food-cost data is trusted.
+Supporting analysis:
+
+- **Gross profit**
+  - Revenue before VAT after discounts minus ingredient cost/food cost.
+  - Show gross margin as supporting context.
+  - Keep this read-only until recipe/food-cost data is trusted.
 
 Supporting workflows remain available but are not the first screen:
 
+- Food-cost and gross-profit analysis.
 - Cash session reconciliation.
 - Payment/order desync recovery.
 - HĐĐT recovery and export.
@@ -93,47 +101,29 @@ requires a new decision.
 
 Current code has a broad `/finance/*` workspace. The target product contract is:
 
-| Route family                 | Current role                 | Decision                                                              |
-| ---------------------------- | ---------------------------- | --------------------------------------------------------------------- |
-| `/finance`                   | Four-metric basic landing    | Should show revenue, inventory value, operating expense, gross profit |
-| `/finance/revenue`           | Revenue analytics            | Keep, but do not make it the only money-control entry                 |
-| `/finance/inventory-value`   | Inventory value drilldown    | Link from Finance Basic, implemented in Finance                       |
-| `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                 |
-| `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses  |
-| `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                              |
-| `/finance/summary`           | HĐĐT summary trigger         | Keep admin-only by action permission                                  |
+| Route family                 | Current role                 | Decision                                                                  |
+| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------- |
+| `/finance`                   | Four-card basic landing      | Show money collected, net revenue, inventory value, and operating expense |
+| `/finance/revenue`           | Revenue analytics            | Keep, but do not make it the only money-control entry                     |
+| `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                     |
+| `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses      |
+| `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                  |
+| `/finance/summary`           | HĐĐT summary trigger         | Keep admin-only by action permission                                      |
+
+Inventory owns the detailed stock-value workspace. Finance displays only the
+current inventory-value card and does not expose a duplicate inventory route.
 
 There is no current `/admin/accounting/*` app surface.
-
-## Money Write Boundary
-
-- `payments` is collected-money truth; bank/webhook rows are evidence. A signed
-  SePay transfer that conflicts with an already completed payment is quarantined
-  for Owner review and never rewrites that completed payment automatically.
-- Supplier payments use one caller-minted UUID per intent. An exact retry returns
-  the original fact; reusing the UUID with changed tenant, actor, invoice, amount,
-  method, or normalized reference is a conflict. Balance validation, row locking,
-  insert, and invoice update remain one RPC transaction.
-- Expense payment and cancellation state changes use their named Owner-gated
-  transition RPCs. Cash timing follows `paid_at`; the operating-expense ledger
-  keeps the incurred business date.
-- Application money mutations are RPC-owned. Any authenticated direct DML kept
-  for a deployed compatibility caller is transitional debt, must be trigger-
-  constrained, and is removed only after the replacement runtime is proven.
-  Browser code must not become a second payment-write authority.
-
-Runtime deployment, database grants, generated types, and authenticated browser
-behavior are separate acceptance gates; evidence for one never implies another.
 
 ## Acceptance Criteria
 
 Finance Basic is operationally acceptable only when all of these are true:
 
-1. Owner can open one screen and see revenue, inventory value, operating expense, and gross profit.
+1. Owner can open one screen and see money collected, net revenue, inventory value, and operating expense.
 2. Revenue uses the paid-at Vietnam-local period contract.
 3. Inventory value uses actual stock valuation data, not a static estimate.
 4. Operating expense is clearly separate from direct ingredient COGS.
-5. Gross profit is derived from revenue before VAT after discounts minus food cost.
+5. Gross profit remains supporting read-only analysis derived from revenue before VAT after discounts minus food cost.
 6. Labels avoid advanced accounting terms unless the user is inside an advanced accounting route.
 7. Support workflows for HĐĐT, payment/order desync, cash sessions, and supplier payables stay accessible but do not dominate the first screen.
 8. No current operating action depends on enterprise-accounting screens.
@@ -151,7 +141,7 @@ Do not call the module "done" because enterprise-accounting objects exist in old
 ## Current Gaps
 
 - Chi vận hành is captured in `/finance/expenses`; keep it as single-entry HKD operating expense, not enterprise accounting.
-- Inventory value exists under reporting/inventory and is linked from Finance.
+- Inventory value detail stays in Inventory; Finance shows only the current-value card.
 - HĐĐT is active through Viettel S-invoice, but recovery and archival workflows are support workflows, not the Finance Basic landing.
 - Period close/reopen is not an app workflow. Treat it as database-only support unless a new owner decision reopens it.
 

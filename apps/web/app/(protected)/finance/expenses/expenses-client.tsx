@@ -11,7 +11,7 @@ import {
   RotateCcw as IconRotateCcw,
   Trash2 as IconTrash,
 } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -26,13 +26,12 @@ import {
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
-import { AppSection, KpiRow } from "@/components/surface";
+import { AppSection } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -76,8 +75,6 @@ interface Props {
   branches: Branch[];
   rows: ExpenseRow[];
   totalAmount: number;
-  resolvedStart: string;
-  resolvedEnd: string;
   todayBusinessDate: string;
   canManageExpenses: boolean;
 }
@@ -143,8 +140,6 @@ export function ExpensesClient({
   branches,
   rows,
   totalAmount,
-  resolvedStart,
-  resolvedEnd,
   todayBusinessDate,
   canManageExpenses,
 }: Props) {
@@ -444,25 +439,24 @@ export function ExpensesClient({
         hide={["compare", "granularity"]}
       />
 
-      {canManageExpenses ? (
-        <div className="flex items-center justify-end">
-          <Button onClick={() => setDialogOpen(true)}>
-            <IconPlus data-icon="inline-start" />
-            {copy.add}
-          </Button>
-        </div>
-      ) : null}
-
-      <KpiRow density="compact">
-        <KpiCard
-          label={copy.totalLabel}
-          value={formatVND(totalAmount)}
-          hint={`${copy.totalHint(String(rows.length))} · ${formatVNBusinessDate(resolvedStart)} → ${formatVNBusinessDate(resolvedEnd)}`}
-          tone="primary"
-        />
-      </KpiRow>
-
-      <AppSection contentFlush contentScroll>
+      <AppSection
+        title={copy.listTitle}
+        headerHint={`${copy.totalLabel}: ${formatVND(totalAmount)}`}
+        badge={{
+          children: copy.totalHint(formatCount(rows.length)),
+          variant: "secondary",
+        }}
+        action={
+          canManageExpenses ? (
+            <Button onClick={() => setDialogOpen(true)}>
+              <IconPlus data-icon="inline-start" />
+              {copy.add}
+            </Button>
+          ) : null
+        }
+        contentFlush
+        contentScroll
+      >
         <DataTable
           columns={columns}
           data={rows}
@@ -484,7 +478,10 @@ export function ExpensesClient({
                     </ItemTitle>
                     <ItemDescription>
                       {formatVNBusinessDate(row.expense_date)} ·{" "}
-                      {branchLabel(row.branch_id)}
+                      {branchLabel(row.branch_id)} ·{" "}
+                      {(copy.paymentMethodLabels as Record<string, string>)[
+                        expensePaymentMethod(row)
+                      ] ?? expensePaymentMethod(row)}
                     </ItemDescription>
                   </ItemContent>
                   {canManageExpenses && actionItems.length > 0 ? (

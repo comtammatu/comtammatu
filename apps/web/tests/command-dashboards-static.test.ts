@@ -8,8 +8,6 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const ADMIN_COPY = "apps/web/lib/messages/admin.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
-const FINANCE_CASH_PANEL =
-  "apps/web/app/(protected)/finance/components/cash-panel.tsx";
 const FINANCE_COPY = "apps/web/lib/messages/finance.ts";
 const INVENTORY_COPY = "apps/web/lib/messages/inventory.ts";
 const PRINT_JOBS_PAGE =
@@ -36,21 +34,22 @@ test("finance basic landing only promotes direct-contract KPI cards", () => {
   const pageBody = page.slice(
     page.indexOf("export default async function FinancePage"),
   );
-  const cashPanel = read(FINANCE_CASH_PANEL);
   const copy = read(FINANCE_COPY);
 
   assert.match(page, /xl:grid-cols-4/);
-  assert.match(page, /label=\{financeCopy\.basic\.kpis\.revenue\}/);
+  assert.match(page, /label=\{financeCopy\.basic\.kpis\.moneyCollected\}/);
+  assert.match(page, /label=\{financeCopy\.basic\.kpis\.netRevenue\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.inventoryValue\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.operatingExpense\}/);
-  assert.match(page, /label=\{financeCopy\.basic\.kpis\.grossProfit\}/);
+  assert.doesNotMatch(page, /label=\{financeCopy\.basic\.kpis\.grossProfit\}/);
   assert.doesNotMatch(page, /financeCopy\.basic\.kpis\.netProfit/);
   assert.doesNotMatch(page, /cockpit\.kpis\.netProfit/);
   assert.doesNotMatch(page, /IconPiggyBank/);
   assert.doesNotMatch(page, /xl:grid-cols-5/);
-  assert.match(page, /cashNetMovementPeriod/);
-  assert.match(cashPanel, /cashNetMovementPeriod/);
-  assert.doesNotMatch(cashPanel, /\bnetProfit\b/);
+  assert.doesNotMatch(page, /cashNetMovementPeriod/);
+  assert.doesNotMatch(page, /CashPanel|HddtComplianceBand/);
+  assert.doesNotMatch(page, /FINANCE_INVOICE_QUEUE_HREF/);
+  assert.doesNotMatch(page, /\/finance\/inventory-value/);
   assert.match(
     page,
     /title=\{powerLiteCopy\.title\}[\s\S]{0,120}?description=\{powerLiteCopy\.description\}/,
@@ -60,23 +59,16 @@ test("finance basic landing only promotes direct-contract KPI cards", () => {
     /<FinanceAttentionSection exceptions=\{cockpit\.exceptions\}/,
   );
   assert.match(page, /item\.tone !== "neutral"/);
-  assert.match(page, /item\.href !== FINANCE_INVOICE_QUEUE_HREF/);
   assert.ok(
     pageBody.indexOf("<KpiRow") < pageBody.indexOf("<FinanceAttentionSection"),
     "Finance Basic KPIs must appear before the exception queue",
   );
-  assert.ok(
-    pageBody.indexOf("<FinanceAttentionSection") <
-      pageBody.indexOf("<CashPanel"),
-    "the exception queue must appear before supporting cash detail",
-  );
-  assert.ok(
-    pageBody.indexOf("<CashPanel") < pageBody.indexOf("<HddtComplianceBand"),
-    "HĐĐT detail must remain a supporting section after cash detail",
-  );
+  assert.equal((pageBody.match(/<FinanceAttentionSection/g) ?? []).length, 1);
   assert.match(copy, /title: "Sức khỏe tài chính"/);
-  assert.match(copy, /doanh thu ròng \$\{beforeVat\}/);
-  assert.match(copy, /cashDeltaTitle: "Dòng tiền trong kỳ"/);
+  assert.match(copy, /moneyCollected: "Tiền đã thu"/);
+  assert.match(copy, /netRevenue: "Doanh thu ròng"/);
+  assert.match(copy, /netRevenueHint: "Đã trừ giảm giá"/);
+  assert.doesNotMatch(copy, /cashDeltaTitle:/);
   assert.doesNotMatch(copy, /netProfit:/);
   assert.doesNotMatch(copy, /netProfitHint/);
 });
@@ -121,7 +113,7 @@ test("finance and admin copy keep domain vocabulary explicit", () => {
   assert.match(copy, /Doanh thu ròng/);
   assert.match(copy, /Lãi gộp/);
   assert.match(copy, /Giá vốn món/);
-  assert.match(copy, /Dòng tiền trong kỳ/);
+  assert.doesNotMatch(copy, /Dòng tiền trong kỳ/);
 });
 
 test("inventory copy uses Vietnamese operational labels on active surfaces", () => {

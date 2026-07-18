@@ -1,20 +1,13 @@
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
-import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
 import { calculateSepayBankBalance } from "./sepay-bank-transaction-model";
 import { fetchSepayBankMovementSince } from "./sepay-bank-transactions";
 
 /**
- * Cash-basis view (D028 deliverable 3): the cash book the HKD owner thinks in.
- *
- * Two truths, deliberately distinct:
- *  - Running cash fund: tenant-level, "now". Anchored by an owner-counted
- *    opening balance + date in system_settings; from there we add cash collected
- *    and subtract cash spent. Only meaningful once anchored — without an
- *    opening, summing all-time cash would assume zero withdrawals.
- *  - Period operating cash signal: respects the cockpit branch/date filter and
- *    excludes internal cash-to-bank transfers and manual materials cost.
+ * Tenant-level running funds anchored by owner-counted cash and bank balances.
+ * Without an opening anchor, summing all-time movement would assume zero
+ * withdrawals and produce a misleading balance.
  */
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
@@ -56,18 +49,6 @@ export interface CashSummary {
   /** SePay outgoing transfers since openingDate. */
   bankOutSince: number;
   bankOnHand: number;
-  /** Actual cash collected in the selected branch/date period. */
-  cashCollectedPeriod: number;
-  /** Approved cash refunds in the selected period. */
-  cashRefundPeriod: number;
-  /** Cash-only operating expenses in the selected period. */
-  cashExpensePeriod: number;
-  /** Cash-only supplier payments in the selected period. */
-  cashSupplierPaymentPeriod: number;
-  /** Cash refunds + expenses + supplier payments in the selected period. */
-  cashOutPeriod: number;
-  /** Cash collected minus cash out in the selected period. */
-  cashNetMovementPeriod: number;
 }
 
 const EMPTY_OPENING = {
@@ -94,27 +75,6 @@ type CashLedgerMovementRpcClient = {
       cash_refunds?: number;
       cash_expenses?: number;
       cash_supplier_payments?: number;
-    } | null;
-    error: { code?: string } | null;
-  }>;
-};
-
-type PeriodOperatingCashMovementRpcClient = {
-  rpc: (
-    fn: "get_operating_cash_movement_for_period",
-    args: {
-      p_start_date: string;
-      p_end_date: string;
-      p_branch_id: number | null;
-    },
-  ) => PromiseLike<{
-    data: {
-      cash_collections?: number;
-      cash_refunds?: number;
-      cash_expenses?: number;
-      cash_supplier_payments?: number;
-      cash_out?: number;
-      net_cash_movement?: number;
     } | null;
     error: { code?: string } | null;
   }>;
@@ -152,56 +112,9 @@ async function fetchCashLedgerMovementSince(
   };
 }
 
-async function fetchPeriodOperatingCashMovement(
-  supabase: SupabaseClient,
-  startDate: string,
-  endDate: string,
-  branchId: number | null,
-) {
-  const { data, error } = await (
-    supabase as unknown as PeriodOperatingCashMovementRpcClient
-  ).rpc("get_operating_cash_movement_for_period", {
-    p_start_date: startDate,
-    p_end_date: endDate,
-    p_branch_id: branchId,
-  });
-
-  if (error) {
-    console.error("[finance:cash] failed to load period movement", error.code);
-    throw new Error("Unable to load period cash movement");
-  }
-
-  return {
-    collections: requireLedgerNumber(
-      data?.cash_collections,
-      "cash_collections",
-    ),
-    refunds: requireLedgerNumber(data?.cash_refunds, "cash_refunds"),
-    expenses: requireLedgerNumber(data?.cash_expenses, "cash_expenses"),
-    supplierPayments: requireLedgerNumber(
-      data?.cash_supplier_payments,
-      "cash_supplier_payments",
-    ),
-    cashOut: requireLedgerNumber(data?.cash_out, "cash_out"),
-    netMovement: requireLedgerNumber(
-      data?.net_cash_movement,
-      "net_cash_movement",
-    ),
-  };
-}
-
-export async function fetchCashSummary(
-  params: FinanceParams,
-  resolved: ResolvedFinanceRange,
-): Promise<CashSummary> {
+export async function fetchCashSummary(): Promise<CashSummary> {
   const { supabase, claims } = await loadAuthState();
   const tenantId = claims.tenant_id;
-  const periodMovement = await fetchPeriodOperatingCashMovement(
-    supabase,
-    resolved.start,
-    resolved.end,
-    params.branch,
-  );
 
   // Opening anchor (tenant-level).
   const { data: settingRows } = await supabase
@@ -223,15 +136,7 @@ export async function fetchCashSummary(
   );
 
   if (!openingDate) {
-    return {
-      ...EMPTY_OPENING,
-      cashCollectedPeriod: periodMovement.collections,
-      cashRefundPeriod: periodMovement.refunds,
-      cashExpensePeriod: periodMovement.expenses,
-      cashSupplierPaymentPeriod: periodMovement.supplierPayments,
-      cashOutPeriod: periodMovement.cashOut,
-      cashNetMovementPeriod: periodMovement.netMovement,
-    };
+    return EMPTY_OPENING;
   }
 
   // Running balances are tenant-wide from the anchor date. A refunded cash
@@ -268,11 +173,5 @@ export async function fetchCashSummary(
     bankInSince,
     bankOutSince,
     bankOnHand: calculateSepayBankBalance(bankOpeningBalance, bankMovement),
-    cashCollectedPeriod: periodMovement.collections,
-    cashRefundPeriod: periodMovement.refunds,
-    cashExpensePeriod: periodMovement.expenses,
-    cashSupplierPaymentPeriod: periodMovement.supplierPayments,
-    cashOutPeriod: periodMovement.cashOut,
-    cashNetMovementPeriod: periodMovement.netMovement,
   };
 }

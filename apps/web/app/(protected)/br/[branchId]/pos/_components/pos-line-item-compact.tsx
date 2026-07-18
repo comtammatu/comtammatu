@@ -103,10 +103,10 @@ function useLineChangeFeedback({
 
 function getLineChangeToneClass(tone: LineChangeTone): string | false {
   if (tone === "quantity") {
-    return "bg-info/10 ring-2 ring-inset ring-info/40 motion-safe:animate-pulse";
+    return "bg-info/10 ring-2 ring-inset ring-info/20 motion-safe:animate-pulse";
   }
   if (tone === "content") {
-    return "bg-info/10 ring-2 ring-inset ring-info/40";
+    return "bg-info/10 ring-2 ring-inset ring-info/20";
   }
   return false;
 }

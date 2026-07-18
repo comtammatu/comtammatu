@@ -8,12 +8,19 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function requirePublicKey(): string {
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (publishableKey) return publishableKey;
+
+  return requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+}
+
 export function getSupabaseUrl(): string {
   return requireEnv("NEXT_PUBLIC_SUPABASE_URL");
 }
 
 export function getSupabaseAnonKey(): string {
-  return requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  return requirePublicKey();
 }
 
 export function getSupabaseServiceRoleKey(): string {

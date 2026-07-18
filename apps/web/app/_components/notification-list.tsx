@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
   ToggleGroup,
@@ -191,7 +191,9 @@ export function NotificationList({
         </div>
       ) : null}
 
-      <ScrollArea className={scrollClassName}>
+      <div
+        className={cn("overflow-y-auto overscroll-contain", scrollClassName)}
+      >
         <AppBoneyardSkeleton
           name="notifications-list"
           loading={loading}
@@ -235,7 +237,7 @@ export function NotificationList({
             </Button>
           </div>
         ) : null}
-      </ScrollArea>
+      </div>
 
       {showViewAll ? (
         <div className="border-t px-3 py-2 text-right">

@@ -10,6 +10,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { Check as IconCheck, X as IconX } from "lucide-react";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
 import { approveWaste } from "@/(protected)/inventory/waste-actions";
 import {
@@ -114,10 +115,9 @@ function WasteApprovalCard({
   }
 
   return (
-    <Item
-      variant="outline"
+    <Frame
       className={cn(
-        "rounded-lg border bg-card p-0 flex flex-col items-stretch",
+        "flex flex-col items-stretch",
         row.isSelfCreated && "border-warning/20 bg-warning/10",
       )}
     >
@@ -260,6 +260,6 @@ function WasteApprovalCard({
           </Button>
         </div>
       </div>
-    </Item>
+    </Frame>
   );
 }

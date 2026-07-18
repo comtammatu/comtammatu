@@ -1,10 +1,10 @@
-import { cn } from "@comtammatu/ui/lib/utils";
 import {
   formatCount,
   formatPercent,
   formatVND,
 } from "@comtammatu/shared/format";
-import { AppSection } from "@/components/surface";
+import { KpiCard } from "@/components/kpi/kpi-card";
+import { AppSection, KpiRow } from "@/components/surface";
 import { messages } from "@lib/messages";
 import type {
   FinanceDashboardHealth,
@@ -54,39 +54,6 @@ function formatNullablePercent(value: number | null | undefined): string {
   return formatPercent(value);
 }
 
-interface MetricProps {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "neutral" | "warning" | "destructive";
-}
-
-function Metric({ label, value, hint, tone = "neutral" }: MetricProps) {
-  return (
-    <div
-      className={cn(
-        "rounded-md border p-3",
-        tone === "warning" && "border-warning/20 bg-warning/10",
-        tone === "destructive" && "border-destructive/20 bg-destructive/10",
-      )}
-    >
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "mt-1 text-lg font-semibold font-mono tabular-nums",
-          tone === "warning" && "text-warning",
-          tone === "destructive" && "text-destructive",
-        )}
-      >
-        {value}
-      </p>
-      {hint ? (
-        <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-      ) : null}
-    </div>
-  );
-}
-
 export function WorkQueueStrip({
   summary,
   health,
@@ -101,58 +68,67 @@ export function WorkQueueStrip({
       title={copy.workQueue.title}
       description={copy.workQueue.description}
       className={className}
-      contentClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
     >
-      {visible.includes("invoices") && (
-        <Metric
-          label={copy.workQueue.invoicesAttention}
-          value={formatNullableCount(summary?.invoice_attention_count)}
-          hint={copy.workQueue.invoicesAttentionHint}
-          tone={
-            (summary?.invoice_attention_count ?? 0) > 0 ? "warning" : "neutral"
-          }
-        />
-      )}
-      {visible.includes("cash") && (
-        <Metric
-          label={copy.workQueue.cashVariance}
-          value={formatNullableCount(health.cashVarianceSessionCount)}
-          hint={copy.workQueue.absoluteVarianceHint(
-            formatMoney(health.cashVarianceAbsAmount),
-          )}
-          tone={
-            health.cashVarianceAbsAmount >= 500_000
-              ? "destructive"
-              : health.cashVarianceAbsAmount > 0
+      <KpiRow density="compact" className="lg:grid-cols-4">
+        {visible.includes("invoices") && (
+          <KpiCard
+            density="compact"
+            label={copy.workQueue.invoicesAttention}
+            value={formatNullableCount(summary?.invoice_attention_count)}
+            hint={copy.workQueue.invoicesAttentionHint}
+            tone={
+              (summary?.invoice_attention_count ?? 0) > 0
                 ? "warning"
                 : "neutral"
-          }
-        />
-      )}
-      {visible.includes("foodCost") && (
-        <Metric
-          label={copy.workQueue.foodCostAlert}
-          value={formatNullableCount(health.foodCostExceptionCount)}
-          hint={
-            health.topFoodCostExceptionName
-              ? `${health.topFoodCostExceptionName} · ${formatNullablePercent(health.topFoodCostExceptionPct)}`
-              : copy.workQueue.thresholdHint(
-                  formatNullablePercent(FOOD_COST_EXCEPTION_THRESHOLD),
-                )
-          }
-          tone={health.foodCostExceptionCount > 0 ? "warning" : "neutral"}
-        />
-      )}
-      {visible.includes("webhook") && (
-        <Metric
-          label={copy.workQueue.webhookFailures}
-          value={formatNullableCount(summary?.failed_webhook_count)}
-          hint={copy.workQueue.webhookFailuresHint}
-          tone={
-            (summary?.failed_webhook_count ?? 0) > 0 ? "destructive" : "neutral"
-          }
-        />
-      )}
+            }
+          />
+        )}
+        {visible.includes("cash") && (
+          <KpiCard
+            density="compact"
+            label={copy.workQueue.cashVariance}
+            value={formatNullableCount(health.cashVarianceSessionCount)}
+            hint={copy.workQueue.absoluteVarianceHint(
+              formatMoney(health.cashVarianceAbsAmount),
+            )}
+            tone={
+              health.cashVarianceAbsAmount >= 500_000
+                ? "destructive"
+                : health.cashVarianceAbsAmount > 0
+                  ? "warning"
+                  : "neutral"
+            }
+          />
+        )}
+        {visible.includes("foodCost") && (
+          <KpiCard
+            density="compact"
+            label={copy.workQueue.foodCostAlert}
+            value={formatNullableCount(health.foodCostExceptionCount)}
+            hint={
+              health.topFoodCostExceptionName
+                ? `${health.topFoodCostExceptionName} · ${formatNullablePercent(health.topFoodCostExceptionPct)}`
+                : copy.workQueue.thresholdHint(
+                    formatNullablePercent(FOOD_COST_EXCEPTION_THRESHOLD),
+                  )
+            }
+            tone={health.foodCostExceptionCount > 0 ? "warning" : "neutral"}
+          />
+        )}
+        {visible.includes("webhook") && (
+          <KpiCard
+            density="compact"
+            label={copy.workQueue.webhookFailures}
+            value={formatNullableCount(summary?.failed_webhook_count)}
+            hint={copy.workQueue.webhookFailuresHint}
+            tone={
+              (summary?.failed_webhook_count ?? 0) > 0
+                ? "destructive"
+                : "neutral"
+            }
+          />
+        )}
+      </KpiRow>
     </AppSection>
   );
 }

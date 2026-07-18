@@ -72,11 +72,12 @@ test("bank fund pulls SePay in and out with the right sign", () => {
     /unmatchedTransfer|supplierPaymentsSince\.bankTransfer/,
     "expense and AP records must not move the signed bank balance again",
   );
-  assert.match(cockpit, /get_operating_cash_movement_for_period/);
-  assert.match(cockpit, /p_start_date:\s*startDate/);
-  assert.match(cockpit, /p_end_date:\s*endDate/);
-  assert.match(cockpit, /p_branch_id:\s*branchId/);
-  assert.match(page, /cashNetMovementPeriod=\{cash\.cashNetMovementPeriod\}/);
+  assert.doesNotMatch(
+    cockpit,
+    /get_operating_cash_movement_for_period/,
+    "the landing must not load a supporting period-cash metric it no longer renders",
+  );
+  assert.doesNotMatch(page, /cashNetMovementPeriod/);
   assert.doesNotMatch(page, /cockpit\.kpis\.totalCollected\s*-/);
   assert.match(
     cockpit,

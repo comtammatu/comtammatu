@@ -140,7 +140,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   });
 
   return (
-    <AppPage width="wide">
+    <AppPage width="xwide">
       <AppPageHeader
         title={copy.title}
         description={copy.description}
@@ -171,7 +171,10 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
           icon={<IconHistory />}
         />
       ) : (
-        <AppSection title={copy.recentItems(auditDisplayRows.length)} contentFlush>
+        <AppSection
+          title={copy.recentItems(auditDisplayRows.length)}
+          contentFlush
+        >
           <PermissionAuditTable rows={auditDisplayRows} />
         </AppSection>
       )}

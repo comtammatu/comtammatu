@@ -13,6 +13,7 @@ import { formatCount } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Drawer,
@@ -1542,35 +1543,37 @@ export function PosDesktopInner({
   );
 
   const serviceModeSelector = (
-    <ToggleGroup
-      type="single"
-      value={cartOrderType}
-      variant="outline"
-      size="touch"
-      spacing={0}
-      className="grid w-full grid-cols-2 rounded-md border bg-muted/40 p-1"
-      aria-label={messages.pos.desktop.serviceModeAria}
-      onValueChange={(value) => {
-        if (value === "dine_in" || value === "takeaway") {
-          handleOrderTypeChange(value);
-        }
-      }}
-    >
-      <ToggleGroupItem
-        value="dine_in"
-        className="w-full min-w-0 justify-center text-sm font-semibold"
-        disabled={cartItemCount > 0 && cartOrderType !== "dine_in"}
+    <Frame className="bg-muted/50 p-1">
+      <ToggleGroup
+        type="single"
+        value={cartOrderType}
+        variant="outline"
+        size="touch"
+        spacing={0}
+        className="grid w-full grid-cols-2"
+        aria-label={messages.pos.desktop.serviceModeAria}
+        onValueChange={(value) => {
+          if (value === "dine_in" || value === "takeaway") {
+            handleOrderTypeChange(value);
+          }
+        }}
       >
-        {messages.pos.desktop.dineIn}
-      </ToggleGroupItem>
-      <ToggleGroupItem
-        value="takeaway"
-        className="w-full min-w-0 justify-center text-sm font-semibold"
-        disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
-      >
-        {messages.pos.desktop.takeaway}
-      </ToggleGroupItem>
-    </ToggleGroup>
+        <ToggleGroupItem
+          value="dine_in"
+          className="w-full min-w-0 justify-center text-sm font-semibold"
+          disabled={cartItemCount > 0 && cartOrderType !== "dine_in"}
+        >
+          {messages.pos.desktop.dineIn}
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="takeaway"
+          className="w-full min-w-0 justify-center text-sm font-semibold"
+          disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
+        >
+          {messages.pos.desktop.takeaway}
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </Frame>
   );
 
   // Back-to-main handler: dine_in → table gate; takeaway draft → takeaway gate.
@@ -1615,10 +1618,7 @@ export function PosDesktopInner({
       onOpenChange={setCartDrawerOpen}
       shouldScaleBackground={false}
     >
-      <DrawerContent
-        showHandle
-        className="h-dvh max-h-dvh p-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh before:inset-0 before:rounded-none before:border-0 before:bg-background sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-lg sm:before:border sm:before:bg-popover"
-      >
+      <DrawerContent showHandle responsiveFullscreen>
         <DrawerTitle className="sr-only">
           {appendTarget != null
             ? `${messages.pos.desktop.pendingAppendTitle} ${

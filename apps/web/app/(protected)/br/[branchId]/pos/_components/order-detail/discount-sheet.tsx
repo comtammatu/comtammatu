@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Field,
   FieldDescription,
@@ -174,14 +175,20 @@ export function DiscountSheet({
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="discount-value">
-                {type === "pct" ? POS_VI.discountPctLabel : POS_VI.discountVndLabel}
+                {type === "pct"
+                  ? POS_VI.discountPctLabel
+                  : POS_VI.discountVndLabel}
               </FieldLabel>
               <FormattedNumberInput
                 id="discount-value"
                 maxFractionDigits={type === "pct" ? 2 : 0}
                 value={valueText}
                 onValueChange={setValueText}
-                placeholder={type === "pct" ? POS_VI.discountPctPlaceholder : POS_VI.discountVndPlaceholder}
+                placeholder={
+                  type === "pct"
+                    ? POS_VI.discountPctPlaceholder
+                    : POS_VI.discountVndPlaceholder
+                }
               />
               <FieldDescription>
                 {type === "pct"
@@ -191,7 +198,9 @@ export function DiscountSheet({
             </Field>
 
             <Field data-invalid={!noteValid && noteTrimLen > 0}>
-              <FieldLabel htmlFor="discount-note">{POS_VI.discountReasonLabel}</FieldLabel>
+              <FieldLabel htmlFor="discount-note">
+                {POS_VI.discountReasonLabel}
+              </FieldLabel>
               <Textarea
                 id="discount-note"
                 value={note}
@@ -206,7 +215,7 @@ export function DiscountSheet({
             </Field>
           </FieldGroup>
 
-          <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-sm">
+          <Frame className="border-border/60 bg-muted/50 p-3 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>{subtotalLabel}</span>
               <span className="tabular-nums">{formatVND(subtotal)}</span>
@@ -234,7 +243,7 @@ export function DiscountSheet({
               <span>{totalLabel}</span>
               <span className="tabular-nums">{formatVND(previewTotal)}</span>
             </div>
-          </div>
+          </Frame>
         </div>
 
         <SheetFooter className="sm:flex-row sm:justify-between">

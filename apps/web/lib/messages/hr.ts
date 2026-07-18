@@ -4,10 +4,10 @@ import { LEAVE_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
 export const hr = {
   workspace: {
     eyebrow: "Nhân sự",
-    ownerTitle: "Nhân sự",
+    ownerTitle: "Hồ sơ nhân sự",
     branchManagerTitle: "Ngày công",
     ownerDescription:
-      "Tách hồ sơ nhân sự, chấm công/ngày công, checklist theo vị trí và lương cho mô hình Hộ kinh doanh.",
+      "Quản lý hồ sơ nhân viên, HĐLĐ và nguồn tính lương; phân quyền truy cập được tách riêng.",
     branchManagerDescription:
       "Theo dõi ca, ngày công, kết ca và nghỉ phép của chi nhánh được gán.",
   },
@@ -116,30 +116,15 @@ export const hr = {
     openPayroll: "Mở đối soát lương",
     employeeSearch: "Tìm tên, mã, chi nhánh hoặc chức danh",
     employeeEmpty: "Chưa có hồ sơ nhân viên phù hợp.",
-    employeeCount: (count: number) => `${formatCount(count)} nhân viên`,
-    readinessSummary: (params: {
-      active: number;
-      payrollReady: number;
-      insured: number;
-      contractMissing: number;
-    }) =>
-      `${params.active} đang làm · ${params.payrollReady} sẵn sàng tính lương · ${params.insured} đã BHXH · ${params.contractMissing} thiếu HĐ`,
+    employmentStatus: "Tình trạng làm việc",
+    salarySource: {
+      header: "Nguồn lương",
+      contract: "HĐLĐ hiệu lực",
+      employee: "Hồ sơ nhân sự",
+      missing: "Thiếu nguồn lương",
+    },
     staffAccounts: "Tài khoản & quyền",
     addEmployee: "Thêm nhân viên",
-    readiness: {
-      activePeople: "Đang làm",
-      totalPeople: (count: number) => `Tổng ${formatCount(count)} hồ sơ`,
-      payrollReady: "Sẵn sàng tính lương",
-      payrollReadyHint: "Có lương tháng để vào kỳ lương",
-      insured: "Có mức đóng BH",
-      insuredHint: "HĐLĐ/BHXH đã có căn cứ tính",
-      contractMissing: "Thiếu HĐ active",
-      contractMissingHint: "Cần bổ sung trước khi chốt payroll đầy đủ",
-      branches: "Chi nhánh",
-      branchScope: "Phạm vi quản lý hiện tại",
-      shifts: "Ca làm",
-      shiftHint: "Khung ca dùng chung mọi chi nhánh",
-    },
   },
   leave: {
     status: {

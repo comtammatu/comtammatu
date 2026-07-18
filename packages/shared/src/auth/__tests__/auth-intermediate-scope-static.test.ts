@@ -30,7 +30,7 @@ const SCAN_ROOTS = [
   "apps/web/proxy.ts",
   "packages/database/src/types/database.types.ts",
   "packages/shared/src/auth",
-  "supabase/seed.sql",
+  "apps/web/tests/fixtures/supabase-e2e/qa-users.sql",
   "supabase/migrations",
   "docs/agent/rules/database.md",
   "docs/modules/auth.md",
@@ -45,7 +45,6 @@ const SKIP_PATH_PARTS = [
   "apps/web/public/sw.js",
   "supabase/migrations/20260717151345_baseline.sql",
   "supabase/migration-archive",
-  "supabase/migration-rollback",
   // The one-shot dead-role-string cleanup must name the tokens in its strip
   // regexes; it removes them rather than using them in the active contract.
   "supabase/migration-archive/20260613130000_drop_dead_role_strings.sql",

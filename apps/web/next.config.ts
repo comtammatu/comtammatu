@@ -5,33 +5,25 @@ import { resolve } from "node:path";
 // inline <script>. Nonce-based CSP needs a middleware refactor; until that
 // lands we accept 'unsafe-inline' on script/style. Everything else is tightly
 // scoped — Supabase REST/storage/realtime + Upstash + self.
-// Dev-only: allow the local Supabase stack (supabase start → 127.0.0.1:54321)
-// so the browser can reach REST + realtime against a local DB. Production
-// NODE_ENV keeps the original byte-identical policy.
-let localSupabase = "";
-if (process.env.NODE_ENV !== "production") {
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    try {
-      const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL);
-      const wsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
-      localSupabase = ` ${url.origin} ${wsProtocol}//${url.host}`;
-    } catch {
-      // Fallback if parsing fails
-    }
-  }
-  // Fallback to default ports if no env URL or parsing failed
-  if (!localSupabase) {
-    localSupabase =
-      " http://127.0.0.1:54321 ws://127.0.0.1:54321 http://127.0.0.1:55521 ws://127.0.0.1:55521 http://127.0.0.1:55421 ws://127.0.0.1:55421";
+// CI's isolated e2e stack uses an HTTP origin. Normal runtime traffic is
+// constrained to Supabase Cloud by the wildcard sources below.
+let ciSupabase = "";
+if (process.env.CI === "true" && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  try {
+    const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const wsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
+    ciSupabase = ` ${url.origin} ${wsProtocol}//${url.host}`;
+  } catch {
+    // Invalid CI test configuration is handled by the application startup.
   }
 }
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: https://*.supabase.co https://play-lh.googleusercontent.com https://*.mzstatic.com${localSupabase}`,
+  `img-src 'self' data: blob: https://*.supabase.co https://play-lh.googleusercontent.com https://*.mzstatic.com${ciSupabase}`,
   "font-src 'self' data:",
-  `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://api.vietqr.io${localSupabase}`,
+  `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.upstash.io https://api.vietqr.io${ciSupabase}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

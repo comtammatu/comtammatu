@@ -289,161 +289,163 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
                     ? `Kèm: ${item.sides.map(formatSide).join(", ")}`
                     : null;
                 return (
-                  <li
-                    key={item.id}
-                    className={cn(
-                      "rounded-md border p-3 transition-colors",
-                      itemStatusToneClass(item.status),
-                    )}
-                  >
-                    {/* Top row: name + status badge ↔ qty × price */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
+                  <li key={item.id}>
+                    <Frame
+                      className={cn(
+                        "p-3 transition-colors",
+                        itemStatusToneClass(item.status),
+                      )}
+                    >
+                      {/* Top row: name + status badge ↔ qty × price */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={cn(
+                                "text-sm font-semibold",
+                                isCancelled &&
+                                  "line-through text-muted-foreground",
+                              )}
+                            >
+                              {item.item_name}
+                            </span>
+                            <StatusBadge
+                              domain="order-item"
+                              value={item.status}
+                              className="h-5 px-1.5 text-xs font-semibold uppercase tracking-wide"
+                            />
+                          </div>
+                          {item.variant_name && (
+                            <p
+                              className={cn(
+                                "mt-1 text-xs text-muted-foreground",
+                                isCancelled && "line-through",
+                              )}
+                            >
+                              {item.variant_name}
+                            </p>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p
                             className={cn(
-                              "text-sm font-semibold",
+                              "font-mono text-sm font-semibold",
                               isCancelled &&
                                 "line-through text-muted-foreground",
                             )}
                           >
-                            {item.item_name}
-                          </span>
-                          <StatusBadge
-                            domain="order-item"
-                            value={item.status}
-                            className="h-5 px-1.5 text-xs font-semibold uppercase tracking-wide"
-                          />
-                        </div>
-                        {item.variant_name && (
-                          <p
-                            className={cn(
-                              "mt-1 text-xs text-muted-foreground",
-                              isCancelled && "line-through",
-                            )}
-                          >
-                            {item.variant_name}
+                            {formatVND(item.subtotal)}
                           </p>
-                        )}
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {item.quantity} × {formatVND(item.unit_price)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p
-                          className={cn(
-                            "font-mono text-sm font-semibold",
-                            isCancelled && "line-through text-muted-foreground",
-                          )}
-                        >
-                          {formatVND(item.subtotal)}
-                        </p>
-                        <p className="font-mono text-xs text-muted-foreground">
-                          {item.quantity} × {formatVND(item.unit_price)}
-                        </p>
-                      </div>
-                    </div>
 
-                    {/* Detail rows: modifiers / sides / note / cancel reason */}
-                    {(modifierLine ||
-                      sideLine ||
-                      item.note ||
-                      (isCancelled && item.cancel_reason)) && (
-                      <DescriptionList
-                        className="mt-2 border-t pt-2 text-xs flex flex-col gap-1 [&>div]:flex [&>div]:flex-row [&>div]:justify-between [&>div]:items-center sm:[&>div]:justify-start sm:[&>div]:gap-2"
-                        items={[
-                          ...(modifierLine
-                            ? [
-                                {
-                                  term: (
-                                    <span
-                                      className={cn(
-                                        isCancelled &&
-                                          "line-through opacity-70",
-                                      )}
-                                    >
-                                      {POS_VI.options}
-                                    </span>
-                                  ),
-                                  description: (
-                                    <span
-                                      className={cn(
-                                        isCancelled &&
-                                          "line-through opacity-70",
-                                      )}
-                                    >
-                                      {item.modifiers
-                                        .map(formatModifier)
-                                        .join(", ")}
-                                    </span>
-                                  ),
-                                },
-                              ]
-                            : []),
-                          ...(sideLine
-                            ? [
-                                {
-                                  term: (
-                                    <span
-                                      className={cn(
-                                        isCancelled &&
-                                          "line-through opacity-70",
-                                      )}
-                                    >
-                                      {ORDERS_VI.sidesLabel}
-                                    </span>
-                                  ),
-                                  description: (
-                                    <span
-                                      className={cn(
-                                        isCancelled &&
-                                          "line-through opacity-70",
-                                      )}
-                                    >
-                                      {item.sides.map(formatSide).join(", ")}
-                                    </span>
-                                  ),
-                                },
-                              ]
-                            : []),
-                          ...(item.note
-                            ? [
-                                {
-                                  term: (
-                                    <span
-                                      className={cn(
-                                        isCancelled &&
-                                          "line-through opacity-70",
-                                      )}
-                                    >
-                                      {FORM_VI.notes}
-                                    </span>
-                                  ),
-                                  description: (
-                                    <span
-                                      className={cn(
-                                        isCancelled &&
-                                          "line-through opacity-70",
-                                      )}
-                                    >
-                                      {item.note}
-                                    </span>
-                                  ),
-                                },
-                              ]
-                            : []),
-                          ...(isCancelled && item.cancel_reason
-                            ? [
-                                {
-                                  term: (
-                                    <span className="text-destructive">
-                                      {ORDERS_VI.cancelReasonLabel}
-                                    </span>
-                                  ),
-                                  description: item.cancel_reason,
-                                },
-                              ]
-                            : []),
-                        ]}
-                      />
-                    )}
+                      {/* Detail rows: modifiers / sides / note / cancel reason */}
+                      {(modifierLine ||
+                        sideLine ||
+                        item.note ||
+                        (isCancelled && item.cancel_reason)) && (
+                        <DescriptionList
+                          className="mt-2 border-t pt-2 text-xs flex flex-col gap-1 [&>div]:flex [&>div]:flex-row [&>div]:justify-between [&>div]:items-center sm:[&>div]:justify-start sm:[&>div]:gap-2"
+                          items={[
+                            ...(modifierLine
+                              ? [
+                                  {
+                                    term: (
+                                      <span
+                                        className={cn(
+                                          isCancelled &&
+                                            "line-through opacity-70",
+                                        )}
+                                      >
+                                        {POS_VI.options}
+                                      </span>
+                                    ),
+                                    description: (
+                                      <span
+                                        className={cn(
+                                          isCancelled &&
+                                            "line-through opacity-70",
+                                        )}
+                                      >
+                                        {item.modifiers
+                                          .map(formatModifier)
+                                          .join(", ")}
+                                      </span>
+                                    ),
+                                  },
+                                ]
+                              : []),
+                            ...(sideLine
+                              ? [
+                                  {
+                                    term: (
+                                      <span
+                                        className={cn(
+                                          isCancelled &&
+                                            "line-through opacity-70",
+                                        )}
+                                      >
+                                        {ORDERS_VI.sidesLabel}
+                                      </span>
+                                    ),
+                                    description: (
+                                      <span
+                                        className={cn(
+                                          isCancelled &&
+                                            "line-through opacity-70",
+                                        )}
+                                      >
+                                        {item.sides.map(formatSide).join(", ")}
+                                      </span>
+                                    ),
+                                  },
+                                ]
+                              : []),
+                            ...(item.note
+                              ? [
+                                  {
+                                    term: (
+                                      <span
+                                        className={cn(
+                                          isCancelled &&
+                                            "line-through opacity-70",
+                                        )}
+                                      >
+                                        {FORM_VI.notes}
+                                      </span>
+                                    ),
+                                    description: (
+                                      <span
+                                        className={cn(
+                                          isCancelled &&
+                                            "line-through opacity-70",
+                                        )}
+                                      >
+                                        {item.note}
+                                      </span>
+                                    ),
+                                  },
+                                ]
+                              : []),
+                            ...(isCancelled && item.cancel_reason
+                              ? [
+                                  {
+                                    term: (
+                                      <span className="text-destructive">
+                                        {ORDERS_VI.cancelReasonLabel}
+                                      </span>
+                                    ),
+                                    description: item.cancel_reason,
+                                  },
+                                ]
+                              : []),
+                          ]}
+                        />
+                      )}
+                    </Frame>
                   </li>
                 );
               })}

@@ -18,7 +18,7 @@ export function HrSetupClient({ initialShifts, positionTasksData }: Props) {
   const copy = messages.hr.client;
 
   return (
-    <div className="flex flex-col gap-4">
+    <>
       <AppSection
         title={copy.setupSteps.shifts.title}
         description={copy.setupSteps.shifts.description}
@@ -47,6 +47,6 @@ export function HrSetupClient({ initialShifts, positionTasksData }: Props) {
       >
         <PositionTasksClient initialData={positionTasksData} />
       </AppSection>
-    </div>
+    </>
   );
 }

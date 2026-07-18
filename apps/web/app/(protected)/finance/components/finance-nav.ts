@@ -1,6 +1,5 @@
 import {
   BarChart3 as IconBarChart3,
-  Boxes as IconBoxes,
   FileSpreadsheet as IconFileSpreadsheet,
   FileCheck as IconFileCheck,
   FileText as IconFileText,
@@ -44,11 +43,6 @@ export function resolveFinanceNav({
           href: "/finance/bank-transactions",
           label: financeNav.items.bankTransactions,
           icon: IconLandmark,
-        },
-        {
-          href: "/finance/inventory-value",
-          label: financeNav.items.inventoryValue,
-          icon: IconBoxes,
         },
         {
           href: "/finance/food-cost",

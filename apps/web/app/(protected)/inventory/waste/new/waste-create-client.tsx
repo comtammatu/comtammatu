@@ -24,7 +24,8 @@ import { Trash as IconTrash } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form/combobox";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
-import { Item, ItemGroup } from "@comtammatu/ui/components/item";
+import { ItemGroup } from "@comtammatu/ui/components/item";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { WasteReasonDropdown } from "@/(protected)/inventory/_components/waste-reason-dropdown";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
 import { WastePhotoUpload } from "@/(protected)/inventory/_components/waste-photo-upload";
@@ -487,11 +488,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
             forcePhotoLineUids.has(line.uid) ||
             line.photoUrls.length > 0;
           return (
-            <Item
-              key={line.uid}
-              variant="outline"
-              className="rounded-lg border bg-card p-0 flex flex-col items-stretch"
-            >
+            <Frame key={line.uid} className="flex flex-col items-stretch">
               <div className="p-4 pb-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-heading text-sm font-semibold">
@@ -707,7 +704,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                   />
                 </div>
               </div>
-            </Item>
+            </Frame>
           );
         })}
       </ItemGroup>

@@ -14,7 +14,6 @@ import {
 import { MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import {
-  dedupeRowsById,
   fetchChunkedRows,
   fetchPagedRows,
   uniqueNumbers,
@@ -291,78 +290,8 @@ async function fetchRunnerVisibleTickets(args: {
     return { tickets: [], error: true };
   }
 
-  const activeTickets = activeTicketsResult.data ?? [];
-  const activeBatchIds = uniqueNumbers(
-    activeTickets
-      .map((ticket) => ticket.kitchen_send_batch_id)
-      .filter((id): id is number => id !== null),
-  );
-  const activeUngroupedOrderIds = uniqueNumbers(
-    activeTickets
-      .filter((ticket) => ticket.kitchen_send_batch_id === null)
-      .map((ticket) => ticket.order_id),
-  );
-  const chunks: RunnerTicketSnapshot[][] = [];
-
-  if (activeBatchIds.length > 0) {
-    const batchTicketsResult = await fetchChunkedRows<RunnerTicketSnapshot>(
-      activeBatchIds,
-      (batchIds) =>
-        fetchPagedRows<RunnerTicketSnapshot>(async (from, to) => {
-          const { data, error } = await supabase
-            .from("kds_tickets")
-            .select(RUNNER_TICKET_SELECT)
-            .eq("tenant_id", tenantId)
-            .eq("branch_id", branchId)
-            .in("status", RUNNER_ACTIVE_STATUSES)
-            .gte("created_at", todayStartIso)
-            .in("kitchen_send_batch_id", batchIds)
-            .order("created_at", { ascending: false })
-            .order("id", { ascending: false })
-            .range(from, to);
-
-          return {
-            data: (data ?? null) as RunnerTicketSnapshot[] | null,
-            error,
-          };
-        }),
-    );
-
-    if (batchTicketsResult.error) return { tickets: [], error: true };
-    chunks.push(batchTicketsResult.data ?? []);
-  }
-
-  if (activeUngroupedOrderIds.length > 0) {
-    const ungroupedTicketsResult = await fetchChunkedRows<RunnerTicketSnapshot>(
-      activeUngroupedOrderIds,
-      (orderIds) =>
-        fetchPagedRows<RunnerTicketSnapshot>(async (from, to) => {
-          const { data, error } = await supabase
-            .from("kds_tickets")
-            .select(RUNNER_TICKET_SELECT)
-            .eq("tenant_id", tenantId)
-            .eq("branch_id", branchId)
-            .in("status", RUNNER_ACTIVE_STATUSES)
-            .gte("created_at", todayStartIso)
-            .is("kitchen_send_batch_id", null)
-            .in("order_id", orderIds)
-            .order("created_at", { ascending: false })
-            .order("id", { ascending: false })
-            .range(from, to);
-
-          return {
-            data: (data ?? null) as RunnerTicketSnapshot[] | null,
-            error,
-          };
-        }),
-    );
-
-    if (ungroupedTicketsResult.error) return { tickets: [], error: true };
-    chunks.push(ungroupedTicketsResult.data ?? []);
-  }
-
   return {
-    tickets: sortRunnerTicketsNewestFirst(dedupeRowsById(chunks.flat())),
+    tickets: sortRunnerTicketsNewestFirst(activeTicketsResult.data ?? []),
     error: false,
   };
 }
@@ -522,7 +451,7 @@ function RunnerFooter() {
         aria-hidden="true"
         className="brand-strip brand-pattern-hat-gao w-full"
       />
-      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-border bg-muted/70 px-4 py-2 font-heading text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:px-8 xl:py-4">
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-border bg-muted/50 px-4 py-2 font-heading text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:px-8 xl:py-4">
         <span>{RUNNER_COPY.footer.wifi}</span>
         <span>{RUNNER_COPY.footer.password}</span>
       </div>

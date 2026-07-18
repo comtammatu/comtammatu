@@ -16,6 +16,7 @@ import {
 } from "react-hook-form";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Select,
@@ -24,7 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Combobox, MultiSelectCombobox, FormattedNumberInput } from "@/components/form";
+import {
+  Combobox,
+  MultiSelectCombobox,
+  FormattedNumberInput,
+} from "@/components/form";
 import {
   getDefaultProductionUnit,
   getProductionUnitOptions,
@@ -198,7 +203,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <Frame className="overflow-hidden">
         <div
           className={cn(
             "hidden items-center gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:grid",
@@ -232,7 +237,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
             />
           ))}
         </div>
-      </div>
+      </Frame>
     </div>
   );
 }

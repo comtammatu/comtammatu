@@ -43,10 +43,13 @@ test("KDS service columns keep semantic labels without visible title bars", () =
     /rounded-lg border border-border\/70 bg-card\/40/,
   );
   assert.match(orderGridSource, /<AppEmptyState[\s\S]*compact/);
-  assert.match(orderGridSource, /data-testid=\{`kds-column-empty-\$\{column\.id\}`\}/);
   assert.match(
     orderGridSource,
-    /className="border-dashed bg-muted\/20 px-3 py-3"/,
+    /data-testid=\{`kds-column-empty-\$\{column\.id\}`\}/,
+  );
+  assert.match(
+    orderGridSource,
+    /className="border-dashed bg-muted\/30 px-3 py-3"/,
   );
   assert.doesNotMatch(orderGridSource, /md:grid-cols-2/);
   assert.doesNotMatch(orderGridSource, /lg:overflow-hidden/);

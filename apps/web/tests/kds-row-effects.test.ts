@@ -162,9 +162,9 @@ test("KDS row effect classes use semantic tokens and motion-safe animation", () 
     getKdsRowEffectClass("quantity") || "",
     /motion-safe:animate-pulse/,
   );
-  assert.match(getKdsRowEffectClass("content") || "", /ring-info\/40/);
-  assert.match(getKdsRowEffectClass("status") || "", /ring-success\/40/);
-  assert.match(getKdsRowEffectClass("removed") || "", /ring-destructive\/40/);
+  assert.match(getKdsRowEffectClass("content") || "", /ring-info\/20/);
+  assert.match(getKdsRowEffectClass("status") || "", /ring-success\/20/);
+  assert.match(getKdsRowEffectClass("removed") || "", /ring-destructive\/20/);
 });
 
 test("KDS row effects are wired across board, comprehensive, and focus rows", () => {

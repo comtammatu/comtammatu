@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,
   ItemActions,
@@ -231,9 +232,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
       key: "status",
       header: "Trạng thái",
       className: "w-36",
-      render: (row) => (
-        <StatusBadge domain="count-slip" value={row.status} />
-      ),
+      render: (row) => <StatusBadge domain="count-slip" value={row.status} />,
     },
   ];
 
@@ -537,40 +536,43 @@ function CountSlipReviewDialog({
       bodyClassName="min-h-0 overflow-hidden"
       footer={footer}
     >
-      <ScrollArea className="h-96 min-h-0 rounded-md border">
-        <DataTable
-          columns={lineColumns}
-          data={activeRow.lines}
-          getRowKey={(line) => line.id}
-          emptyTitle="Phiếu chưa có dòng kiểm đếm"
-          mobileCardRender={(line) => (
-            <Item variant="muted" className="items-start">
-              <ItemContent className="min-w-0">
-                <ItemTitle className="break-words">
-                  {line.ingredientName}
-                </ItemTitle>
-                <ItemDescription>
-                  Hệ thống: {formatQty(line.systemQuantity)} {line.systemUnit}
-                </ItemDescription>
-                <ItemDescription>
-                  Thực đếm: {formatQty(line.countedQuantity)} {line.countedUnit}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <span
-                  className={cn(
-                    "font-mono font-semibold tabular-nums",
-                    varianceClassName(line.variance),
-                  )}
-                >
-                  {formatVariance(line.variance)}
-                  {line.variance !== null ? ` ${line.varianceUnit}` : ""}
-                </span>
-              </ItemActions>
-            </Item>
-          )}
-        />
-      </ScrollArea>
+      <Frame className="h-96 min-h-0 overflow-hidden">
+        <ScrollArea className="h-full">
+          <DataTable
+            columns={lineColumns}
+            data={activeRow.lines}
+            getRowKey={(line) => line.id}
+            emptyTitle="Phiếu chưa có dòng kiểm đếm"
+            mobileCardRender={(line) => (
+              <Item variant="muted" className="items-start">
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="break-words">
+                    {line.ingredientName}
+                  </ItemTitle>
+                  <ItemDescription>
+                    Hệ thống: {formatQty(line.systemQuantity)} {line.systemUnit}
+                  </ItemDescription>
+                  <ItemDescription>
+                    Thực đếm: {formatQty(line.countedQuantity)}{" "}
+                    {line.countedUnit}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <span
+                    className={cn(
+                      "font-mono font-semibold tabular-nums",
+                      varianceClassName(line.variance),
+                    )}
+                  >
+                    {formatVariance(line.variance)}
+                    {line.variance !== null ? ` ${line.varianceUnit}` : ""}
+                  </span>
+                </ItemActions>
+              </Item>
+            )}
+          />
+        </ScrollArea>
+      </Frame>
 
       <div className="grid gap-2 text-sm sm:grid-cols-[1fr_auto] sm:items-start">
         <div className="flex min-w-0 flex-col gap-1">

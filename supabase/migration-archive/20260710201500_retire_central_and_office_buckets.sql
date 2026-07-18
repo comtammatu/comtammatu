@@ -38,7 +38,7 @@ WHERE po.code IN (
 -- 2) Reassign non-cascading FK references (audit/business columns without
 --    ON DELETE SET NULL/CASCADE) to the owning tenant's owner before the
 --    hard delete, so the delete cannot fail on a foreign key violation.
---    This mirrors supabase/seed.sql's own-account cleanup pattern.
+--    This mirrors the QA-user fixture's own-account cleanup pattern.
 -- ─────────────────────────────────────────────────────────────────────────
 DO $$
 DECLARE
