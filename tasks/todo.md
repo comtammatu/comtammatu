@@ -5,20 +5,6 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
-## Rebuild Má Tư Design System governance
-
-State: doing
-Kind: debt
-Tier: T3
-Lane: ui-foundation
-Exit: Radix UI, Vaul, and cmdk are absent; behavioral primitives use Base UI
-through `@comtammatu/ui`; Má Tư remains the visual authority; outcome-based
-guard ownership, repository gates, and current-branch browser evidence pass.
-Evidence: Dependency/source scans, focused and repository gates, plus matching
-Preview desktop and `390px` browser captures.
-
-- [ ] Deploy the Preview-safe Service Worker guard, prove the Preview console is clean at desktop/`390px`, then retain production-like PWA registration evidence.
-
 ## Prove Self-Order offline navigation isolation
 
 State: verify
