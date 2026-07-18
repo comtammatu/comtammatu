@@ -50,10 +50,29 @@ part of the chain — there is no separate manual apply step:
 The `config.toml` auth-hook setting stays in the repo. The fold migration is the
 single source of truth for managed surfaces.
 
+The public/private baseline cannot carry triggers owned by `auth.users`.
+`20260717164133_restore_auth_user_profile_trigger.sql` restores the canonical
+`on_auth_user_created` trigger after the baseline, so hosted Auth signups invoke
+`public.handle_new_user()` on a fresh Cloud environment.
+
+The baseline also emits materialized views `WITH NO DATA`.
+`20260717170555_initialize_materialized_views.sql` populates only uninitialized
+current views before runtime functions use concurrent refresh.
+
+A managed-state reset can leave the pg_cron launcher on its previous job cache.
+`20260717171918_reregister_managed_cron_jobs.sql` re-registers the canonical jobs
+only while the environment has no orders, records a one-cadence health grace for
+new job ids, and reloads the launcher configuration. Populated Production skips
+the re-registration path.
+
 ## Existing environments
 
 - **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
   is NOT reset to the baseline; the baseline is for fresh/dev envs only.
+- **Cloud DEV (`xrsantkidwknjhcgcfmi`)** may use the one-shot
+  `../_cloud-dev/matu-greenfield-owner-seed.sql` after an empty schema-only
+  replay. The seed is not part of automatic `db.seed` and must never run on
+  Production.
 - Native Supabase Branching is usable only when `../migration-lineage.json` says
   the baseline version and production cutoff are aligned. Moving files to
   `../migration-archive/` alone does not change the parent project's ledger.

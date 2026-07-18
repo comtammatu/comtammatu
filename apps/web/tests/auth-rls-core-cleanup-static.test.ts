@@ -33,6 +33,13 @@ const staffPermissionBoundaryMigration = readFileSync(
   ),
   "utf8",
 );
+const authUserProfileTriggerMigration = readFileSync(
+  resolve(
+    repoRoot,
+    "supabase/migrations/20260717164133_restore_auth_user_profile_trigger.sql",
+  ),
+  "utf8",
+);
 
 function extractSqlFunction(source: string, name: string): string {
   const pattern = new RegExp(
@@ -161,4 +168,24 @@ test("staff permission rows are read-only to authenticated clients through one p
     1,
   );
   assert.doesNotMatch(staffPermissionBoundaryMigration, /has_permission_any/);
+});
+
+test("fresh Cloud environments restore the canonical auth user profile trigger", () => {
+  assert.match(
+    authUserProfileTriggerMigration,
+    /DROP TRIGGER IF EXISTS on_auth_user_created ON auth\.users/,
+  );
+  assert.match(
+    authUserProfileTriggerMigration,
+    /CREATE TRIGGER on_auth_user_created\s+AFTER INSERT ON auth\.users\s+FOR EACH ROW\s+EXECUTE FUNCTION public\.handle_new_user\(\)/,
+  );
+  assert.equal(
+    [
+      ...authUserProfileTriggerMigration.matchAll(
+        /CREATE TRIGGER on_auth_user_created/g,
+      ),
+    ].length,
+    1,
+  );
+  assert.doesNotMatch(authUserProfileTriggerMigration, /INSERT INTO auth\.users/);
 });
