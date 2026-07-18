@@ -7,7 +7,7 @@
 
 ## Rebuild Má Tư Design System governance
 
-State: verify
+State: doing
 Kind: debt
 Tier: T3
 Lane: ui-foundation
@@ -17,7 +17,7 @@ guard ownership, repository gates, and current-branch browser evidence pass.
 Evidence: Dependency/source scans, focused and repository gates, plus matching
 Preview desktop and `390px` browser captures.
 
-- [ ] Create or identify a matching Preview and record desktop/`390px` browser evidence with a measured performance baseline.
+- [ ] Deploy the Preview-safe Service Worker guard, prove the Preview console is clean at desktop/`390px`, then retain production-like PWA registration evidence.
 
 ## Prove Self-Order offline navigation isolation
 

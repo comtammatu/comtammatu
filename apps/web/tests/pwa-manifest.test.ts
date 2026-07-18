@@ -5,6 +5,18 @@ import { GET as getOperatorManifest } from "../app/(protected)/br/[branchId]/(op
 import { GET as getKdsManifest } from "../app/(protected)/br/[branchId]/kds/manifest.webmanifest/route";
 import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/manifest.webmanifest/route";
 
+test("protected Vercel previews do not register a service worker", () => {
+  const rootLayoutSource = readFileSync(
+    new URL("../app/layout.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    rootLayoutSource,
+    /disable=\{\s*process\.env\.NODE_ENV === "development"\s*\|\|\s*process\.env\.VERCEL_ENV === "preview"\s*\}/,
+  );
+});
+
 test("root PWA manifest opens the operator entry instead of the retired employee app", () => {
   const manifest = JSON.parse(
     readFileSync(
