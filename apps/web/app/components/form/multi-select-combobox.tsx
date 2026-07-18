@@ -7,19 +7,7 @@ import { matchesSearch } from "@lib/search";
 import { fieldTriggerChrome } from "@comtammatu/ui/lib/field-trigger";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@comtammatu/ui/components/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@comtammatu/ui/components/popover";
+import { ComboboxPrimitive } from "@comtammatu/ui/components/combobox";
 
 interface MultiSelectComboboxOption {
   value: string;
@@ -53,8 +41,7 @@ export interface MultiSelectComboboxProps {
 }
 
 /**
- * Multi-select combobox for bulk-add flows. Composes
- * `Popover + Command + Checkbox` from the UI primitive layer.
+ * Multi-select combobox for bulk-add flows using the shared Base UI behavior.
  *
  * Pending selection is held internally and flushed to the parent only on
  * confirm; cancel/dismiss discards. Use `alreadySelected` on options to
@@ -87,14 +74,17 @@ export function MultiSelectCombobox({
     [options],
   );
 
-  function toggle(value: string) {
-    setPending((prev) => {
-      const next = new Set(prev);
-      if (next.has(value)) next.delete(value);
-      else next.add(value);
-      return next;
-    });
-  }
+  const pendingOptions = useMemo(
+    () =>
+      [...pending].map(
+        (value) =>
+          options.find((option) => option.value === value) ?? {
+            value,
+            label: value,
+          },
+      ),
+    [options, pending],
+  );
 
   function handleConfirm() {
     const arr = [...pending];
@@ -104,58 +94,71 @@ export function MultiSelectCombobox({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="field"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled || selectableCount === 0}
-          className={cn(
-            "justify-between font-normal",
-            fieldTriggerChrome,
-            "hover:bg-input/20 aria-expanded:bg-input/30",
-            triggerClassName,
-          )}
-        >
-          <span className="inline-flex items-center gap-2 truncate">
-            <IconPlus className="size-4 shrink-0" />
-            {triggerLabel}
-          </span>
-          <IconSelector className="ml-2 size-3.5 shrink-0 text-muted-foreground" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-(--radix-popover-trigger-width) p-0"
-        align="start"
-      >
-        <Command
-          filter={(v, search, keywords) => {
-            return matchesSearch([v, ...(keywords ?? [])], search) ? 1 : 0;
-          }}
-        >
-          <CommandInput placeholder={searchPlaceholder} />
-          <CommandList className="max-h-72">
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup>
-              {options.map((opt) => {
-                const isAlready = !!opt.alreadySelected;
-                const isLocked = !!opt.disabled;
-                const isPending = pending.has(opt.value);
+    <ComboboxPrimitive.Root
+      items={options}
+      multiple
+      value={pendingOptions}
+      open={open}
+      disabled={disabled || selectableCount === 0}
+      itemToStringLabel={(option) => option.label}
+      itemToStringValue={(option) => option.value}
+      isItemEqualToValue={(left, right) => left.value === right.value}
+      filter={(option, query) =>
+        matchesSearch(
+          [option.label, option.value, ...(option.keywords ?? [])],
+          query,
+        )
+      }
+      onOpenChange={setOpen}
+      onValueChange={(nextOptions) =>
+        setPending(new Set(nextOptions.map((option) => option.value)))
+      }
+    >
+      <ComboboxPrimitive.Trigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="field"
+            className={cn(
+              "justify-between font-normal",
+              fieldTriggerChrome,
+              "hover:bg-input/20 aria-expanded:bg-input/30",
+              triggerClassName,
+            )}
+          >
+            <span className="inline-flex items-center gap-2 truncate">
+              <IconPlus className="size-4 shrink-0" />
+              {triggerLabel}
+            </span>
+            <IconSelector className="ml-2 size-3.5 shrink-0 text-muted-foreground" />
+          </Button>
+        }
+      />
+      <ComboboxPrimitive.Portal>
+        <ComboboxPrimitive.Positioner align="start" sideOffset={4}>
+          <ComboboxPrimitive.Popup className="w-(--anchor-width) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-effect-popover">
+            <ComboboxPrimitive.Input
+              className="h-8 w-full rounded-md bg-input/20 px-2 text-xs/relaxed outline-hidden placeholder:text-muted-foreground dark:bg-input/30"
+              placeholder={searchPlaceholder}
+            />
+            <ComboboxPrimitive.Empty className="py-6 text-center text-xs/relaxed">
+              {emptyMessage}
+            </ComboboxPrimitive.Empty>
+            <ComboboxPrimitive.List className="no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none">
+              {(option: MultiSelectComboboxOption) => {
+                const isAlready = !!option.alreadySelected;
+                const isLocked = !!option.disabled;
+                const isPending = pending.has(option.value);
                 const checked = isAlready || isPending;
+
                 return (
-                  <CommandItem
-                    key={opt.value}
-                    value={opt.label}
-                    keywords={opt.keywords}
+                  <ComboboxPrimitive.Item
+                    key={option.value}
+                    value={option}
                     disabled={isAlready || isLocked}
-                    onSelect={() => {
-                      if (isAlready || isLocked) return;
-                      toggle(opt.value);
-                    }}
                     className={cn(
+                      "flex min-h-7 cursor-default items-center gap-2 rounded-md px-2.5 py-1.5 text-xs/relaxed outline-hidden select-none data-[highlighted]:bg-muted data-[highlighted]:text-foreground",
                       (isAlready || isLocked) &&
                         "cursor-not-allowed opacity-60",
                     )}
@@ -168,12 +171,12 @@ export function MultiSelectCombobox({
                       className="mr-2"
                     />
                     <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate">{opt.label}</span>
-                      {opt.hint || (isLocked && opt.disabledReason) ? (
+                      <span className="truncate">{option.label}</span>
+                      {option.hint || (isLocked && option.disabledReason) ? (
                         <span className="truncate text-xs text-muted-foreground">
-                          {isLocked && opt.disabledReason
-                            ? opt.disabledReason
-                            : opt.hint}
+                          {isLocked && option.disabledReason
+                            ? option.disabledReason
+                            : option.hint}
                         </span>
                       ) : null}
                     </div>
@@ -182,26 +185,26 @@ export function MultiSelectCombobox({
                         {alreadyAppliedHint}
                       </span>
                     ) : null}
-                  </CommandItem>
+                  </ComboboxPrimitive.Item>
                 );
-              })}
-            </CommandGroup>
-          </CommandList>
-          <div className="flex items-center justify-between border-t px-2 py-2">
-            <span className="text-xs text-muted-foreground">
-              {pending.size > 0 ? pendingHint(pending.size) : pickHint}
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              disabled={pending.size === 0}
-              onClick={handleConfirm}
-            >
-              {confirmLabel(pending.size)}
-            </Button>
-          </div>
-        </Command>
-      </PopoverContent>
-    </Popover>
+              }}
+            </ComboboxPrimitive.List>
+            <div className="flex items-center justify-between border-t px-2 py-2">
+              <span className="text-xs text-muted-foreground">
+                {pending.size > 0 ? pendingHint(pending.size) : pickHint}
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                disabled={pending.size === 0}
+                onClick={handleConfirm}
+              >
+                {confirmLabel(pending.size)}
+              </Button>
+            </div>
+          </ComboboxPrimitive.Popup>
+        </ComboboxPrimitive.Positioner>
+      </ComboboxPrimitive.Portal>
+    </ComboboxPrimitive.Root>
   );
 }

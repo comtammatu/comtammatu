@@ -225,13 +225,17 @@ export function BranchStocktakeCountClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar>
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link
-              href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}
-              aria-label="Quay lại phiên kiểm kê"
-            >
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link
+                href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}
+                aria-label="Quay lại phiên kiểm kê"
+              />
+            }
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-sm font-semibold">
@@ -242,10 +246,17 @@ export function BranchStocktakeCountClient({
               {data.currentRound}
             </p>
           </div>
-          <Button asChild variant="outline" size="touch" className="shrink-0">
-            <Link href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}>
-              Xem & chốt
-            </Link>
+          <Button
+            variant="outline"
+            size="touch"
+            className="shrink-0"
+            render={
+              <Link
+                href={`${stocktakeBasePath}/${data.sessionId}?view=detail`}
+              />
+            }
+          >
+            Xem & chốt
           </Button>
         </BranchOperatorControlBar>
 

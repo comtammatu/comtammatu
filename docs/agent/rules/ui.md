@@ -1,16 +1,19 @@
 # UI, UX, Route Surface, And Copy Rules
 
 Read this file before UI, UX, route surface, styling, component, or copy changes.
-It controls agent workflow; exact visual contracts stay in the UI SSOTs.
+It controls agent workflow. Má Tư visual contract, primitive behavior and route
+workflow have separate owners; do not use one to overrule another concern.
 
 ## Authority
 
 Read in order:
 
-1. `docs/spec/design-system.md` — tokens, typography, primitives, theme.
+1. `docs/spec/design-system.md` — Má Tư tokens, typography, density, theme,
+   visual state and motion recipes.
 2. `docs/spec/page-archetypes.md` — page/workflow composition and UI Advisor Gate.
 3. `docs/ref/screen-context-map.md` — audience, device, route context.
-4. `docs/modules/ui.md` — runtime adapters and implementation map.
+4. `docs/modules/ui.md` and `packages/ui/src/components/*` — Base behavior,
+   adapters and implementation map.
 5. Target route/component and targeted `tasks/regressions.md` rows.
 
 Do not restate exact class strings, typography scales, theme storage, primitive
@@ -22,9 +25,10 @@ Before editing, declare the surface, user job, device/viewport, route family,
 change type, and authority granted by the task. Complete
 `page-archetypes.md` § 0.1 before external design advice.
 
-- If the archetype and design system already decide the shape, implement them.
-- If a real hierarchy/interaction choice remains, use at most one external
-  design reviewer; its output is advisory.
+- If the archetype and visual contract already decide the shape, implement them.
+- If a real hierarchy/interaction choice remains, use the smallest set of
+  independent design reviewers that can add distinct evidence; their output is
+  advisory.
 - A typo/editorial copy change may be T1. Layout, hierarchy, state, navigation,
   interaction, or multi-surface changes follow `workflow.md` T2/T3.
 
@@ -40,7 +44,8 @@ change type, and authority granted by the task. Complete
 - Destructive actions are separated from primary actions and require explicit
   confirmation or a safe recovery path.
 - Use Má Tư DS primitives and approved surface adapters before route-local raw
-  styling. Do not invent fake primitives or a second theme.
+  styling. A direct primitive composition is valid only when its semantic job
+  is not covered by an adapter; do not invent fake primitives or a second theme.
 - Accessibility basics are non-negotiable: keyboard reachability, visible focus,
   labels/names, semantic status not conveyed by color alone, and adequate touch
   targets.
@@ -63,5 +68,5 @@ change type, and authority granted by the task. Complete
   desktop/tablet viewport when layout changes.
 - Verify action, loading, empty, error, disabled, destructive, keyboard, and
   navigation states touched by the diff.
-- Treat the design-system spec as authority and guards/browser evidence as
-  enforcement/proof, not competing SSOTs.
+- Treat each authority owner as scoped to its concern. Guards and browser
+  evidence prove outcomes; they do not create a competing visual contract.

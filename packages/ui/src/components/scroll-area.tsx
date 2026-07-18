@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
 
 import { cn } from "../lib/utils";
 
@@ -9,25 +8,15 @@ function ScrollArea({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
+}: React.ComponentProps<"div">) {
   return (
-    <ScrollAreaPrimitive.Root
+    <div
       data-slot="scroll-area"
-      className={cn("relative", className)}
+      className={cn("relative overflow-auto", className)}
       {...props}
     >
-      <ScrollAreaPrimitive.Viewport
-        data-slot="scroll-area-viewport"
-        // Override radix's inner `display:table` to `block` so children's
-        // `min-w-0`/`truncate` chain works (we never need horizontal overflow
-        // detection — horizontal lists use plain `overflow-x-auto`).
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-foreground focus-visible:outline-1 [&>div]:block! [&>div]:min-w-0!"
-      >
-        {children}
-      </ScrollAreaPrimitive.Viewport>
-      <ScrollBar />
-      <ScrollAreaPrimitive.Corner />
-    </ScrollAreaPrimitive.Root>
+      {children}
+    </div>
   );
 }
 
@@ -35,23 +24,20 @@ function ScrollBar({
   className,
   orientation = "vertical",
   ...props
-}: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
+}: React.ComponentProps<"div"> & {
+  orientation?: "horizontal" | "vertical";
+}) {
   return (
-    <ScrollAreaPrimitive.ScrollAreaScrollbar
+    <div
       data-slot="scroll-area-scrollbar"
       data-orientation={orientation}
-      orientation={orientation}
+      aria-hidden="true"
       className={cn(
         "flex touch-none p-px transition-colors select-none data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent",
         className,
       )}
       {...props}
-    >
-      <ScrollAreaPrimitive.ScrollAreaThumb
-        data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
-      />
-    </ScrollAreaPrimitive.ScrollAreaScrollbar>
+    />
   );
 }
 

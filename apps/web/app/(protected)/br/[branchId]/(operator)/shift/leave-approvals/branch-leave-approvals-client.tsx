@@ -291,40 +291,40 @@ export function BranchLeaveApprovalsClient({
               return (
                 <Item
                   key={request.id}
-                  asChild
                   variant="outline"
                   className="min-h-20 touch-manipulation"
+                  render={
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(request.id)}
+                    />
+                  }
                 >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(request.id)}
-                  >
-                    <ItemContent className="min-w-0 gap-1 text-left">
-                      <ItemTitle size="heading">
-                        {getLeaveRequestEmployeeName(
-                          request,
-                          copy.fallbackEmployee,
-                        )}
-                      </ItemTitle>
-                      <ItemDescription className="line-clamp-none">
-                        {formatDateRange(request.start_date, request.end_date)}{" "}
-                        · {days} {copy.dayUnit}
-                      </ItemDescription>
-                      <ItemDescription className="line-clamp-2 break-words">
-                        {copy.types[request.leave_type]}
-                        {request.reason ? ` · ${request.reason}` : ""}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                      <StatusBadge
-                        domain="leave-request"
-                        value={request.status}
-                        label={copy.status[request.status]}
-                        size="sm"
-                      />
-                      <IconChevronRight className="size-4 text-muted-foreground" />
-                    </ItemActions>
-                  </button>
+                  <ItemContent className="min-w-0 gap-1 text-left">
+                    <ItemTitle size="heading">
+                      {getLeaveRequestEmployeeName(
+                        request,
+                        copy.fallbackEmployee,
+                      )}
+                    </ItemTitle>
+                    <ItemDescription className="line-clamp-none">
+                      {formatDateRange(request.start_date, request.end_date)} ·{" "}
+                      {days} {copy.dayUnit}
+                    </ItemDescription>
+                    <ItemDescription className="line-clamp-2 break-words">
+                      {copy.types[request.leave_type]}
+                      {request.reason ? ` · ${request.reason}` : ""}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <StatusBadge
+                      domain="leave-request"
+                      value={request.status}
+                      label={copy.status[request.status]}
+                      size="sm"
+                    />
+                    <IconChevronRight className="size-4 text-muted-foreground" />
+                  </ItemActions>
                 </Item>
               );
             })}

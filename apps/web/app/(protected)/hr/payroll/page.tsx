@@ -19,7 +19,12 @@ function parseMonth(value: string | undefined) {
   if (!matched) return fallback;
   const year = Number(matched[1]);
   const month = Number(matched[2]);
-  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12
+  ) {
     return fallback;
   }
   return { year, month };
@@ -57,8 +62,8 @@ export default async function PayrollPage({
         title={copy.live.title}
         description={copy.live.description}
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/hr">{copy.backToHr}</Link>
+          <Button variant="outline" size="sm" render={<Link href="/hr" />}>
+            {copy.backToHr}
           </Button>
         }
       />
@@ -75,8 +80,12 @@ export default async function PayrollPage({
           title={copy.live.loadFailedTitle}
           description={copy.live.loadFailedDescription}
         >
-          <Button asChild variant="outline" size="sm">
-            <Link href="/hr/payroll">{copy.live.retry}</Link>
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href="/hr/payroll" />}
+          >
+            {copy.live.retry}
           </Button>
         </AppSection>
       )}

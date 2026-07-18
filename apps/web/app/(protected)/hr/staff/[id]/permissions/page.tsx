@@ -126,11 +126,14 @@ export default async function StaffPermissionsPage({ params }: Props) {
           defaultBranchName,
         )}
         breadcrumb={
-          <Button asChild variant="ghost" size="sm" className="-ml-3">
-            <Link href="/hr/staff">
-              <IconArrowLeft className="mr-1 size-4" />
-              {messages.admin.staffPermissions.backToList}
-            </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-3"
+            render={<Link href="/hr/staff" />}
+          >
+            <IconArrowLeft className="mr-1 size-4" />
+            {messages.admin.staffPermissions.backToList}
           </Button>
         }
         badge={

@@ -58,7 +58,6 @@ export function AppBottomNav({
           return (
             <Button
               key={item.href}
-              asChild
               variant="ghost"
               size="touch"
               data-active={item.active ? "true" : undefined}
@@ -67,17 +66,18 @@ export function AppBottomNav({
                 "min-w-0 data-active:text-primary data-active:bg-primary/10 rounded-md font-medium",
                 itemClassName,
               )}
-            >
-              <Link
-                href={item.href}
-                aria-current={item.active ? "page" : undefined}
-              >
-                <Icon
-                  data-icon="inline-start"
-                  strokeWidth={item.active ? 2.4 : 2}
+              render={
+                <Link
+                  href={item.href}
+                  aria-current={item.active ? "page" : undefined}
                 />
-                <span className="max-w-full truncate">{item.label}</span>
-              </Link>
+              }
+            >
+              <Icon
+                data-icon="inline-start"
+                strokeWidth={item.active ? 2.4 : 2}
+              />
+              <span className="max-w-full truncate">{item.label}</span>
             </Button>
           );
         })}

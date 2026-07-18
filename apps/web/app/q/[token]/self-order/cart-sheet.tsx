@@ -124,9 +124,7 @@ function CartLine({
       <ItemContent className="min-w-0 gap-1">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <ItemTitle className="text-base font-semibold">
-              {title}
-            </ItemTitle>
+            <ItemTitle className="text-base font-semibold">{title}</ItemTitle>
             {tag ? (
               <Badge variant="secondary" className="px-1.5 text-2xs">
                 {tag}
@@ -226,8 +224,7 @@ export function CartSheet(props: CartSheetProps) {
     [items],
   );
 
-  const submitDisabled =
-    !props.canSubmit || props.isSubmitting || ctaDisabled;
+  const submitDisabled = !props.canSubmit || props.isSubmitting || ctaDisabled;
 
   return (
     <>
@@ -276,17 +273,19 @@ export function CartSheet(props: CartSheetProps) {
                     : SELF_ORDER_VI.cartReviewDescription}
                 </SheetDescription>
               </div>
-              <SheetClose asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-touch"
-                  className="-mt-1 -mr-1 shrink-0 self-start text-muted-foreground"
-                  aria-label={SELF_ORDER_VI.closeCartAria}
-                >
-                  <IconX />
-                </Button>
-              </SheetClose>
+              <SheetClose
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-touch"
+                    className="-mt-1 -mr-1 shrink-0 self-start text-muted-foreground"
+                    aria-label={SELF_ORDER_VI.closeCartAria}
+                  >
+                    <IconX />
+                  </Button>
+                }
+              />
             </div>
           </SheetHeader>
 

@@ -41,11 +41,13 @@ export default async function NotificationsPage({
         description={messages.notifications.pageDescription}
         actions={
           backHref ? (
-            <Button asChild variant="outline" size="touch">
-              <Link href={backHref}>
-                <ArrowLeft data-icon="inline-start" />
-                {messages.notifications.back}
-              </Link>
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href={backHref} />}
+            >
+              <ArrowLeft data-icon="inline-start" />
+              {messages.notifications.back}
             </Button>
           ) : undefined
         }

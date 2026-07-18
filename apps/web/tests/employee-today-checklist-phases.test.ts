@@ -167,7 +167,7 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
   );
   assert.match(
     employeeTasksClientSource,
-    /<Link href=\{countHref\}>[\s\S]*homeCopy\.countCta/,
+    /render=\{<Link href=\{countHref\} \/>\}[\s\S]*homeCopy\.countCta/,
     "Inventory count task should link through countHref",
   );
 
@@ -178,7 +178,7 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
   );
   assert.match(
     employeeTasksClientSource,
-    /\{isCountTask && !item\.done \? \(\s*<Button[\s\S]*?<Link href=\{countHref\}>[\s\S]*?\) : null\}/,
+    /\{isCountTask && !item\.done \? \(\s*<Button[\s\S]*?render=\{<Link href=\{countHref\} \/>\}[\s\S]*?\) : null\}/,
     "Count task should render the count link CTA only while it still needs action",
   );
   assert.match(
@@ -264,7 +264,7 @@ test("employee inventory count uses a compact grid and per-ingredient sheet", ()
   );
   assert.match(
     employeeCountClientSource,
-    /<SheetContent side="right" className="w-full overflow-hidden sm:max-w-md">/,
+    /<SheetContent\s+side="right"\s+className="w-full overflow-hidden sm:max-w-md"/,
     "The drawer should constrain overflow on mobile and desktop",
   );
 });

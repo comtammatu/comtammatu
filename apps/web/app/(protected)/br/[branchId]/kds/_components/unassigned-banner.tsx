@@ -34,11 +34,13 @@ export function UnassignedBanner({
         <Button type="button" variant="ghost" size="touch" onClick={onFilter}>
           {messages.pos.kds.viewUnassigned}
         </Button>
-        <Button asChild variant="outline" size="touch">
-          <Link href={`/br/${branchId}/settings/kds`}>
-            {messages.pos.kds.openStationConfig}
-            <IconArrowRight data-icon="inline-end" aria-hidden />
-          </Link>
+        <Button
+          variant="outline"
+          size="touch"
+          render={<Link href={`/br/${branchId}/settings/kds`} />}
+        >
+          {messages.pos.kds.openStationConfig}
+          <IconArrowRight data-icon="inline-end" aria-hidden />
         </Button>
       </div>
     </div>

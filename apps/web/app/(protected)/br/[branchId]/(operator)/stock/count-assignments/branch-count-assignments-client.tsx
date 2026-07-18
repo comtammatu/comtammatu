@@ -273,48 +273,51 @@ export function BranchCountAssignmentsClient({
             return (
               <Item
                 key={employee.id}
-                asChild
                 variant="outline"
                 className="min-h-20 touch-manipulation"
+                render={
+                  <button
+                    type="button"
+                    onClick={() => openEmployee(employee)}
+                  />
+                }
               >
-                <button type="button" onClick={() => openEmployee(employee)}>
-                  <ItemContent className="min-w-0 gap-1 text-left">
-                    <ItemTitle size="heading">{employee.name}</ItemTitle>
-                    <ItemDescription className="line-clamp-none flex flex-wrap gap-1">
-                      {selectedIds.slice(0, 4).map((ingredientId) => {
-                        const ingredientName =
-                          ingredientById.get(ingredientId)?.name ??
-                          `#${ingredientId}`;
-                        return (
-                          <Badge
-                            key={ingredientId}
-                            variant="secondary"
-                            className="min-w-0 max-w-full sm:max-w-48"
-                            aria-label={ingredientName}
-                            title={ingredientName}
-                          >
-                            <span className="min-w-0 truncate">
-                              {ingredientName}
-                            </span>
-                          </Badge>
-                        );
-                      })}
-                      {selectedIds.length > 4 ? (
-                        <Badge variant="secondary">
-                          +{selectedIds.length - 4}
+                <ItemContent className="min-w-0 gap-1 text-left">
+                  <ItemTitle size="heading">{employee.name}</ItemTitle>
+                  <ItemDescription className="line-clamp-none flex flex-wrap gap-1">
+                    {selectedIds.slice(0, 4).map((ingredientId) => {
+                      const ingredientName =
+                        ingredientById.get(ingredientId)?.name ??
+                        `#${ingredientId}`;
+                      return (
+                        <Badge
+                          key={ingredientId}
+                          variant="secondary"
+                          className="min-w-0 max-w-full sm:max-w-48"
+                          aria-label={ingredientName}
+                          title={ingredientName}
+                        >
+                          <span className="min-w-0 truncate">
+                            {ingredientName}
+                          </span>
                         </Badge>
-                      ) : null}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <Badge
-                      variant={selectedIds.length > 0 ? "success" : "outline"}
-                    >
-                      {selectedIds.length}
-                    </Badge>
-                    <IconChevronRight className="size-4 text-muted-foreground" />
-                  </ItemActions>
-                </button>
+                      );
+                    })}
+                    {selectedIds.length > 4 ? (
+                      <Badge variant="secondary">
+                        +{selectedIds.length - 4}
+                      </Badge>
+                    ) : null}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <Badge
+                    variant={selectedIds.length > 0 ? "success" : "outline"}
+                  >
+                    {selectedIds.length}
+                  </Badge>
+                  <IconChevronRight className="size-4 text-muted-foreground" />
+                </ItemActions>
               </Item>
             );
           })}
@@ -335,11 +338,13 @@ export function BranchCountAssignmentsClient({
         ),
       }}
       action={
-        <Button asChild variant="outline" size="touch">
-          <Link href={`/br/${data.branchId}/stock/count-slips`}>
-            <IconFileText className="size-4" />
-            {INVENTORY_VI.countSlipTitle}
-          </Link>
+        <Button
+          variant="outline"
+          size="touch"
+          render={<Link href={`/br/${data.branchId}/stock/count-slips`} />}
+        >
+          <IconFileText className="size-4" />
+          {INVENTORY_VI.countSlipTitle}
         </Button>
       }
       size="sm"
@@ -414,29 +419,25 @@ export function BranchCountAssignmentsClient({
                   return (
                     <Item
                       key={ingredient.id}
-                      asChild
                       variant={checked ? "muted" : "outline"}
                       className="min-h-14 cursor-pointer"
+                      render={<Label htmlFor={checkboxId} />}
                     >
-                      <Label htmlFor={checkboxId}>
-                        <Checkbox
-                          id={checkboxId}
-                          size="touch"
-                          checked={checked}
-                          disabled={isPending}
-                          onCheckedChange={() =>
-                            toggleIngredient(ingredient.id)
-                          }
-                        />
-                        <ItemContent className="min-w-0">
-                          <span className="break-words font-medium">
-                            {ingredient.name}
-                          </span>
-                          {ingredient.unit ? (
-                            <ItemDescription>{ingredient.unit}</ItemDescription>
-                          ) : null}
-                        </ItemContent>
-                      </Label>
+                      <Checkbox
+                        id={checkboxId}
+                        size="touch"
+                        checked={checked}
+                        disabled={isPending}
+                        onCheckedChange={() => toggleIngredient(ingredient.id)}
+                      />
+                      <ItemContent className="min-w-0">
+                        <span className="break-words font-medium">
+                          {ingredient.name}
+                        </span>
+                        {ingredient.unit ? (
+                          <ItemDescription>{ingredient.unit}</ItemDescription>
+                        ) : null}
+                      </ItemContent>
                     </Item>
                   );
                 })

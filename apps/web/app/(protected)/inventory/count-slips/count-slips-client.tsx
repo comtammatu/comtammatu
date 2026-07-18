@@ -231,9 +231,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
       key: "status",
       header: "Trạng thái",
       className: "w-36",
-      render: (row) => (
-        <StatusBadge domain="count-slip" value={row.status} />
-      ),
+      render: (row) => <StatusBadge domain="count-slip" value={row.status} />,
     },
   ];
 
@@ -269,11 +267,12 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
         title={INVENTORY_VI.countSlipTitle}
         description={INVENTORY_VI.countSlipDescription}
         actions={
-          <Button asChild variant="outline">
-            <Link href="/inventory/count-assignments">
-              <IconClipboardList aria-hidden="true" />
-              {INVENTORY_VI.countAssignTitle}
-            </Link>
+          <Button
+            variant="outline"
+            render={<Link href="/inventory/count-assignments" />}
+          >
+            <IconClipboardList aria-hidden="true" />
+            {INVENTORY_VI.countAssignTitle}
           </Button>
         }
         badge={{

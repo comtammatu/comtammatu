@@ -162,13 +162,11 @@ export function TerminalsClient({
               <Button
                 variant="outline"
                 size="touch"
-                asChild
                 className="w-full sm:w-auto"
+                render={<Link href={`/br/${selectedBranchId}/pos`} />}
               >
-                <Link href={`/br/${selectedBranchId}/pos`}>
-                  <IconExternalLink data-icon="inline-start" />
-                  {messages.settings.pos.openPosUi}
-                </Link>
+                <IconExternalLink data-icon="inline-start" />
+                {messages.settings.pos.openPosUi}
               </Button>
             )}
             <Button

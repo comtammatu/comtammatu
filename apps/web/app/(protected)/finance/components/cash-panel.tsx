@@ -139,11 +139,13 @@ export function CashPanel({
         title={copy.bankTitle}
         icon={<IconBank />}
         action={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/finance/bank-transactions">
-              {copy.bankTransactionsAction}
-              <IconArrowRight data-icon="inline-end" aria-hidden />
-            </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href="/finance/bank-transactions" />}
+          >
+            {copy.bankTransactionsAction}
+            <IconArrowRight data-icon="inline-end" aria-hidden />
           </Button>
         }
       >

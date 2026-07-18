@@ -100,11 +100,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "4mb",
     },
-    // Per-icon tree-shaking for lucide-react. Without this, importing any icon
-    // pulls the full barrel into bundles. radix-ui: packages/ui components
-    // import the unified `radix-ui` barrel (~26 components) — same tree-shake
-    // treatment avoids pulling every Radix primitive into shared chunks.
-    optimizePackageImports: ["lucide-react", "radix-ui"],
+    // Per-icon tree-shaking for lucide-react keeps icon imports out of shared chunks.
+    optimizePackageImports: ["lucide-react"],
   },
 };
 

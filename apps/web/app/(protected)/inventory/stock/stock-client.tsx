@@ -206,15 +206,13 @@ function QuickActionButton({
 }) {
   return (
     <Button
-      asChild
       size={size}
       variant={primary ? "default" : "outline"}
       className={className}
+      render={<Link href={href} />}
     >
-      <Link href={href}>
-        <Icon className="size-3.5" />
-        {label}
-      </Link>
+      <Icon className="size-3.5" />
+      {label}
     </Button>
   );
 }
@@ -662,31 +660,40 @@ export function StockClient({
 
   const desktopSecondaryActionsDropdown = hasSecondaryActions ? (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          {stockCopy.actions.actionsDropdown}
-          <IconChevronDown className="size-3.5" />
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="outline" size="sm" className="gap-1.5">
+            {stockCopy.actions.actionsDropdown}
+            <IconChevronDown className="size-3.5" />
+          </Button>
+        }
+      />
       <DropdownMenuContent align="end" className="w-56">
         {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
-          <DropdownMenuItem asChild>
-            <Link
-              href={actionHrefs.stocktake}
-              className="flex items-center gap-2"
-            >
-              <IconClipboardList className="size-4 text-muted-foreground" />
-              <span>{stockCopy.actions.stocktake}</span>
-            </Link>
-          </DropdownMenuItem>
+          <DropdownMenuItem
+            render={
+              <Link
+                href={actionHrefs.stocktake}
+                className="flex items-center gap-2"
+              >
+                <IconClipboardList className="size-4 text-muted-foreground" />
+                <span>{stockCopy.actions.stocktake}</span>
+              </Link>
+            }
+          />
         ) : null}
         {actionPermissions.canWriteoff ? (
-          <DropdownMenuItem asChild>
-            <Link href={actionHrefs.waste} className="flex items-center gap-2">
-              <IconTrash className="size-4 text-muted-foreground" />
-              <span>{stockCopy.actions.waste}</span>
-            </Link>
-          </DropdownMenuItem>
+          <DropdownMenuItem
+            render={
+              <Link
+                href={actionHrefs.waste}
+                className="flex items-center gap-2"
+              >
+                <IconTrash className="size-4 text-muted-foreground" />
+                <span>{stockCopy.actions.waste}</span>
+              </Link>
+            }
+          />
         ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
@@ -799,10 +806,12 @@ export function StockClient({
             </Button>
           ) : null}
           {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
-            <Button asChild size="touch" variant="outline">
-              <Link href={actionHrefs.stocktake}>
-                {stockCopy.actions.count}
-              </Link>
+            <Button
+              size="touch"
+              variant="outline"
+              render={<Link href={actionHrefs.stocktake} />}
+            >
+              {stockCopy.actions.count}
             </Button>
           ) : null}
           {actionPermissions.canAdjustException ? (
@@ -907,11 +916,9 @@ export function StockClient({
           symbol="riceGrain"
         >
           {actionPermissions.canReceiveGrn && actionHrefs.receive ? (
-            <Button asChild size="sm">
-              <Link href={actionHrefs.receive}>
-                <IconTruck className="size-4" />
-                {stockCopy.actions.receiveGrn}
-              </Link>
+            <Button size="sm" render={<Link href={actionHrefs.receive} />}>
+              <IconTruck className="size-4" />
+              {stockCopy.actions.receiveGrn}
             </Button>
           ) : null}
         </AppEmptyState>
@@ -993,7 +1000,6 @@ export function StockClient({
           }}
         />
       ) : null}
-
     </>
   );
 

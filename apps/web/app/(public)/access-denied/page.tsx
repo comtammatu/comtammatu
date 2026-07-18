@@ -48,7 +48,10 @@ export default async function AccessDeniedPage({
           </Badge>
         }
       >
-        <NoteCallout tone="muted" className="text-sm leading-6 text-muted-foreground">
+        <NoteCallout
+          tone="muted"
+          className="text-sm leading-6 text-muted-foreground"
+        >
           {copy.nextStep}
           {from ? (
             <p className="mt-2 text-xs font-medium text-muted-foreground/80">
@@ -58,14 +61,21 @@ export default async function AccessDeniedPage({
         </NoteCallout>
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button asChild size="touch" className="flex-1">
-            <Link href="/" replace>
-              <IconArrowLeft className="size-4" />
-              Về trang mặc định
-            </Link>
+          <Button
+            size="touch"
+            className="flex-1"
+            render={<Link href="/" replace />}
+          >
+            <IconArrowLeft className="size-4" />
+            Về trang mặc định
           </Button>
           <form action="/api/auth/signout" method="post" className="flex-1">
-            <Button type="submit" variant="outline" size="touch" className="w-full">
+            <Button
+              type="submit"
+              variant="outline"
+              size="touch"
+              className="w-full"
+            >
               Đăng xuất
             </Button>
           </form>

@@ -21,7 +21,7 @@ test("mobile multi-order picker keeps its order list scrollable inside the drawe
     source,
     /ScrollArea[\s\S]*className="min-h-0 flex-1 px-4"/,
   );
-  assert.match(source, /data-vaul-no-drag/);
+  assert.doesNotMatch(source, /data-vaul-no-drag/);
   assert.match(
     source,
     /DrawerFooter[\s\S]*className="pos-safe-bottom shrink-0"/,

@@ -174,7 +174,9 @@ export function CountAssignmentsClient({
   const visibleEmployees = useMemo(() => {
     const query = employeeSearch.trim();
     if (!query) return employees;
-    return employees.filter((employee) => matchesSearch([employee.name], query));
+    return employees.filter((employee) =>
+      matchesSearch([employee.name], query),
+    );
   }, [employeeSearch, employees]);
   const visibleIngredients = useMemo(() => {
     const query = ingredientSearch.trim();
@@ -315,9 +317,7 @@ export function CountAssignmentsClient({
       key: "employee",
       header: "Nhân viên",
       className: "min-w-52",
-      render: (employee) => (
-        <div className="font-medium">{employee.name}</div>
-      ),
+      render: (employee) => <div className="font-medium">{employee.name}</div>,
     },
     {
       key: "assignments",
@@ -382,16 +382,19 @@ export function CountAssignmentsClient({
         title={INVENTORY_VI.countAssignTitle}
         description={INVENTORY_VI.countAssignDescription}
         actions={
-          <Button asChild variant="outline">
-            <Link href="/inventory/count-slips">
-              <IconFileText aria-hidden="true" />
-              {INVENTORY_VI.countSlipTitle}
-            </Link>
+          <Button
+            variant="outline"
+            render={<Link href="/inventory/count-slips" />}
+          >
+            <IconFileText aria-hidden="true" />
+            {INVENTORY_VI.countSlipTitle}
           </Button>
         }
         badge={
           scopeReady
-            ? { children: `${assignedEmployeeCount}/${employees.length} đã giao` }
+            ? {
+                children: `${assignedEmployeeCount}/${employees.length} đã giao`,
+              }
             : undefined
         }
       />
@@ -465,8 +468,7 @@ export function CountAssignmentsClient({
           emptyTitle={INVENTORY_VI.countAssignNoEmployeesTitle}
           emptyDescription={INVENTORY_VI.countAssignNoEmployeesDescription}
           mobileCardRender={(employee) => {
-            const selectedIds =
-              selectionByEmployee[String(employee.id)] ?? [];
+            const selectedIds = selectionByEmployee[String(employee.id)] ?? [];
             return (
               <Item variant="outline" className="items-start">
                 <ItemContent className="min-w-0">

@@ -79,11 +79,11 @@ export function OrdersPageBody({
         description={ORDERS_COPY.description}
         actions={
           <Button
-            asChild
             variant="outline"
             size={embedded ? "touch" : "sm"}
+            render={<Link href="/finance" />}
           >
-            <Link href="/finance">{ORDERS_COPY.reportsAction}</Link>
+            {ORDERS_COPY.reportsAction}
           </Button>
         }
         tabs={content}

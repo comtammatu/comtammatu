@@ -200,14 +200,12 @@ export function ReportsClient({
               })}
             </div>
             <Button
-              asChild
               type="button"
               variant="outline"
               className="w-full text-muted-foreground"
+              render={<Link href="/inventory/supplier-invoices" />}
             >
-              <Link href="/inventory/supplier-invoices">
-                {messages.inventory.reports.openSupplierDebt}
-              </Link>
+              {messages.inventory.reports.openSupplierDebt}
             </Button>
           </AppSection>
         ) : null}

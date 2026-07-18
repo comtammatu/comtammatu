@@ -227,7 +227,7 @@ export function ArchivedOrdersSheet({
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent
           showHandle
-          className="h-dvh max-h-dvh p-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh before:inset-0 before:rounded-none before:border-0 before:bg-background"
+          className="mt-0 h-dvh max-h-dvh p-0 before:inset-0 before:rounded-none before:border-0 before:bg-background"
         >
           <DrawerTitle className="sr-only">
             {messages.pos.archivedOrders.sheetTitle}

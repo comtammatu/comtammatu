@@ -106,10 +106,13 @@ export function QrCodeImage({
           >
             {children}
             {downloadLabel && downloadName ? (
-              <Button asChild type="button" variant="outline" size="touch">
-                <a href={imageSource} download={downloadName}>
-                  {downloadLabel}
-                </a>
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                render={<a href={imageSource} download={downloadName} />}
+              >
+                {downloadLabel}
               </Button>
             ) : null}
           </div>

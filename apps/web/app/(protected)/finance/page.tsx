@@ -77,10 +77,12 @@ function HddtComplianceBand({
         variant: needsWork ? "warning" : "success",
       }}
       action={
-        <Button asChild variant="outline" size="sm">
-          <Link href="/finance/invoices?queue=attention">
-            {powerLiteCopy.hddtComplianceAction}
-          </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          render={<Link href="/finance/invoices?queue=attention" />}
+        >
+          {powerLiteCopy.hddtComplianceAction}
         </Button>
       }
     >
@@ -138,31 +140,27 @@ function FinanceAttentionSection({
           {actionable.map((item) => (
             <Item
               key={`${item.href}:${item.label}`}
-              asChild
               variant="outline"
               size="sm"
               role="listitem"
+              render={<Link href={item.href} />}
             >
-              <Link href={item.href}>
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="line-clamp-none">
-                    {item.label}
-                  </ItemTitle>
-                  <ItemDescription className="line-clamp-none">
-                    {item.hint}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions className="ml-auto">
-                  <Badge
-                    variant={
-                      item.tone === "destructive" ? "destructive" : "warning"
-                    }
-                  >
-                    {item.value}
-                  </Badge>
-                  <IconArrowRight className="size-4" aria-hidden />
-                </ItemActions>
-              </Link>
+              <ItemContent className="min-w-0">
+                <ItemTitle className="line-clamp-none">{item.label}</ItemTitle>
+                <ItemDescription className="line-clamp-none">
+                  {item.hint}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions className="ml-auto">
+                <Badge
+                  variant={
+                    item.tone === "destructive" ? "destructive" : "warning"
+                  }
+                >
+                  {item.value}
+                </Badge>
+                <IconArrowRight className="size-4" aria-hidden />
+              </ItemActions>
             </Item>
           ))}
         </ItemGroup>

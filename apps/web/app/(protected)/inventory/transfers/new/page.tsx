@@ -23,11 +23,9 @@ export async function NewTransferPageContent({
   const basePath = "/inventory/transfers";
   const backHref = withTransferBranchQuery(basePath, data.userBranchId);
   const backAction = (
-    <Button variant="outline" size="sm" asChild>
-      <Link href={backHref}>
-        <IconChevronLeft data-icon="inline-start" />
-        {messages.inventory.grn.back}
-      </Link>
+    <Button variant="outline" size="sm" render={<Link href={backHref} />}>
+      <IconChevronLeft data-icon="inline-start" />
+      {messages.inventory.grn.back}
     </Button>
   );
 

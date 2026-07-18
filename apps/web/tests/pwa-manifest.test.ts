@@ -199,10 +199,13 @@ test("POS and KDS toolbars render a return-to-entry link; runner never does", ()
     /<PwaToolbarEntryLink\s+href=\{`\/br\/\$\{branchId\}`\}\s+label=\{copy\.entryLinkLabel\}/,
   );
   assert.match(toolbarSource, /entryLinkLabel: "Về Cổng vận hành"/);
-  assert.match(pwaToolbarSource, /<Link href=\{href\} aria-label=\{label\}>/);
   assert.match(
     pwaToolbarSource,
-    /asChild\s+variant="ghost"\s+size="icon-touch"/,
+    /render=\{<Link href=\{href\} aria-label=\{label\} \/>\}/,
+  );
+  assert.match(
+    pwaToolbarSource,
+    /<Button\s+variant="ghost"\s+size="icon-touch"/,
   );
 
   // Quiet POS/KDS state should not reserve an entry-link-only toolbar row over the
@@ -357,7 +360,10 @@ test("self-order QR preview keeps staff inside the PWA scope", () => {
     tableSettingsSource,
     /const previewHref = table \? `\/q\/\$\{table\.token\}` : "";/,
   );
-  assert.match(tableSettingsSource, /<a href=\{previewHref\}>/);
+  assert.match(
+    tableSettingsSource,
+    /render=\{<a href=\{previewHref\} \/>\}/,
+  );
   assert.doesNotMatch(tableSettingsSource, /target="_blank"/);
 });
 

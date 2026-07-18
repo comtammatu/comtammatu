@@ -146,12 +146,14 @@ function BankAppLauncher({
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerTrigger asChild>
-        <Button type="button" size="touch" className="w-full">
-          <IconBank data-icon="inline-start" />
-          {SELF_ORDER_VI.openBankApp}
-        </Button>
-      </DrawerTrigger>
+      <DrawerTrigger
+        render={
+          <Button type="button" size="touch" className="w-full">
+            <IconBank data-icon="inline-start" />
+            {SELF_ORDER_VI.openBankApp}
+          </Button>
+        }
+      />
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>{SELF_ORDER_VI.chooseBankAppTitle}</DrawerTitle>
@@ -176,22 +178,20 @@ function BankAppLauncher({
                 return (
                   <li key={app.id}>
                     <Button
-                      asChild
                       variant="outline"
                       size="touch"
                       className="w-full justify-start"
+                      render={<a href={href} />}
                     >
-                      <a href={href}>
-                        <Avatar aria-hidden="true">
-                          {app.logoUrl ? (
-                            <AvatarImage src={app.logoUrl} alt="" />
-                          ) : null}
-                          <AvatarFallback>
-                            {app.name.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        {app.name}
-                      </a>
+                      <Avatar aria-hidden="true">
+                        {app.logoUrl ? (
+                          <AvatarImage src={app.logoUrl} alt="" />
+                        ) : null}
+                        <AvatarFallback>
+                          {app.name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {app.name}
                     </Button>
                   </li>
                 );

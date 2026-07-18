@@ -131,16 +131,18 @@ export function KdsBoardTopBar({
         </Button>
         <ViewModeToggle mode={mode} onChange={onModeChange} />
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-lg"
-              aria-label={KDS_HEADER_COPY.moreMenu}
-            >
-              <IconMoreVertical />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-lg"
+                aria-label={KDS_HEADER_COPY.moreMenu}
+              >
+                <IconMoreVertical />
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end" className="w-56">
             <ThemeMenuItem />
           </DropdownMenuContent>

@@ -311,59 +311,59 @@ function SessionHistoryPanel({
         const resolved = breached && isVarianceResolved(session);
         return (
           <Button
-            asChild
             key={session.id}
             variant={selected ? "secondary" : "ghost"}
             size="touch-lg"
             className="w-full justify-start text-left"
+            render={
+              <Link
+                href={`/br/${branchId}/pos-sessions?session=${session.id}`}
+                aria-current={selected ? "page" : undefined}
+                className="flex min-w-0 flex-1 flex-wrap items-center gap-3"
+              />
+            }
           >
-            <Link
-              href={`/br/${branchId}/pos-sessions?session=${session.id}`}
-              aria-current={selected ? "page" : undefined}
-              className="flex min-w-0 flex-1 flex-wrap items-center gap-3"
-            >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                <IconClock className="size-5" />
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <IconClock className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1 basis-40">
+              <span className="block truncate text-sm font-semibold">
+                {resolveSessionLabel(session)}
               </span>
-              <span className="min-w-0 flex-1 basis-40">
-                <span className="block truncate text-sm font-semibold">
-                  {resolveSessionLabel(session)}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {formatDateTime(session.opened_at)}
-                </span>
-                {session.cash_difference != null ? (
-                  <span
-                    className={cn(
-                      "mt-1 block text-xs font-medium tabular-nums",
-                      breached && !resolved
-                        ? "text-destructive"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {messages.settings.posSessions.sessionVarianceLine(
-                      formatVND(session.cash_difference),
-                    )}
-                  </span>
-                ) : null}
+              <span className="block truncate text-xs text-muted-foreground">
+                {formatDateTime(session.opened_at)}
               </span>
-              <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
-                {breached ? (
-                  <Badge variant={resolved ? "outline" : "destructive"}>
-                    {resolved
-                      ? messages.settings.posSessions.varianceResolvedShort
-                      : messages.settings.posSessions.varianceShort}
-                  </Badge>
-                ) : null}
-                <Badge
-                  variant={session.status === "open" ? "warning" : "outline"}
+              {session.cash_difference != null ? (
+                <span
+                  className={cn(
+                    "mt-1 block text-xs font-medium tabular-nums",
+                    breached && !resolved
+                      ? "text-destructive"
+                      : "text-muted-foreground",
+                  )}
                 >
-                  {session.status === "open"
-                    ? messages.settings.posSessions.open
-                    : messages.settings.posSessions.closed}
+                  {messages.settings.posSessions.sessionVarianceLine(
+                    formatVND(session.cash_difference),
+                  )}
+                </span>
+              ) : null}
+            </span>
+            <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+              {breached ? (
+                <Badge variant={resolved ? "outline" : "destructive"}>
+                  {resolved
+                    ? messages.settings.posSessions.varianceResolvedShort
+                    : messages.settings.posSessions.varianceShort}
                 </Badge>
-              </span>
-            </Link>
+              ) : null}
+              <Badge
+                variant={session.status === "open" ? "warning" : "outline"}
+              >
+                {session.status === "open"
+                  ? messages.settings.posSessions.open
+                  : messages.settings.posSessions.closed}
+              </Badge>
+            </span>
           </Button>
         );
       })}

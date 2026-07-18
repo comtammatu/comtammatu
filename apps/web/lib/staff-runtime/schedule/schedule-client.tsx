@@ -571,15 +571,13 @@ function SelectedDayDetail({
       {canRequestLeave ? (
         <DrawerFooter>
           <Button
-            asChild
             variant="outline"
             size="touch"
             className="w-full sm:w-fit"
+            render={<Link href={leaveHref} />}
           >
-            <Link href={leaveHref}>
-              <IconCalendarX data-icon="inline-start" />
-              {copy.requestLeaveCta}
-            </Link>
+            <IconCalendarX data-icon="inline-start" />
+            {copy.requestLeaveCta}
           </Button>
         </DrawerFooter>
       ) : null}

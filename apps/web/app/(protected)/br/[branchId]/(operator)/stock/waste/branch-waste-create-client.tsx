@@ -711,18 +711,22 @@ export function BranchWasteCreateClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link
-              href={stockBasePath}
-              aria-label="Quay lại kho"
-              aria-disabled={isSubmitting || undefined}
-              className={
-                isSubmitting ? "pointer-events-none opacity-50" : undefined
-              }
-              onClick={handleLeaveClick}
-            >
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link
+                href={stockBasePath}
+                aria-label="Quay lại kho"
+                aria-disabled={isSubmitting || undefined}
+                className={
+                  isSubmitting ? "pointer-events-none opacity-50" : undefined
+                }
+                onClick={handleLeaveClick}
+              />
+            }
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{wasteCopy.title}</p>
@@ -839,47 +843,45 @@ export function BranchWasteCreateClient({
                   return (
                     <div key={line.uid} role="listitem">
                       <Item
-                        asChild
                         variant="outline"
                         className="min-h-20 touch-manipulation"
+                        render={
+                          <button
+                            type="button"
+                            className="w-full text-left"
+                            onClick={() => openExistingLine(line)}
+                            disabled={isSubmitting || editor !== null}
+                          />
+                        }
                       >
-                        <button
-                          type="button"
-                          className="w-full text-left"
-                          onClick={() => openExistingLine(line)}
-                          disabled={isSubmitting || editor !== null}
-                        >
-                          <ItemContent className="min-w-0 gap-1">
-                            <ItemTitle className="line-clamp-none text-sm font-semibold">
-                              {details.ingredient?.name ?? "Nguyên liệu"}
-                            </ItemTitle>
-                            <ItemDescription className="line-clamp-none text-xs">
-                              {formatQty(quantity)}{" "}
-                              {details.selectedUnit?.label ?? line.unit}
-                              {details.stock
-                                ? ` · Tồn: ${formatQty(details.stock.quantity)} ${details.ingredient?.unit ?? line.unit}`
-                                : ""}
-                            </ItemDescription>
-                            <ItemDescription className="line-clamp-none text-xs font-semibold text-foreground">
-                              {formatVND(details.value)}
-                            </ItemDescription>
-                          </ItemContent>
-                          <ItemActions className="shrink-0">
-                            <WasteTierBadge
-                              tier={
-                                photoRequired && details.preview.tier === 0
-                                  ? 1
-                                  : details.preview.tier
-                              }
-                              photoRequired={photoRequired}
-                              approvalRequired={
-                                details.preview.approvalRequired
-                              }
-                              compact
-                            />
-                            <IconChevronRight className="size-4 text-muted-foreground" />
-                          </ItemActions>
-                        </button>
+                        <ItemContent className="min-w-0 gap-1">
+                          <ItemTitle className="line-clamp-none text-sm font-semibold">
+                            {details.ingredient?.name ?? "Nguyên liệu"}
+                          </ItemTitle>
+                          <ItemDescription className="line-clamp-none text-xs">
+                            {formatQty(quantity)}{" "}
+                            {details.selectedUnit?.label ?? line.unit}
+                            {details.stock
+                              ? ` · Tồn: ${formatQty(details.stock.quantity)} ${details.ingredient?.unit ?? line.unit}`
+                              : ""}
+                          </ItemDescription>
+                          <ItemDescription className="line-clamp-none text-xs font-semibold text-foreground">
+                            {formatVND(details.value)}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemActions className="shrink-0">
+                          <WasteTierBadge
+                            tier={
+                              photoRequired && details.preview.tier === 0
+                                ? 1
+                                : details.preview.tier
+                            }
+                            photoRequired={photoRequired}
+                            approvalRequired={details.preview.approvalRequired}
+                            compact
+                          />
+                          <IconChevronRight className="size-4 text-muted-foreground" />
+                        </ItemActions>
                       </Item>
                     </div>
                   );
@@ -895,17 +897,21 @@ export function BranchWasteCreateClient({
         <AppDetailFooter
           sticky
           leading={
-            <Button asChild variant="outline" size="touch">
-              <Link
-                href={stockBasePath}
-                aria-disabled={isSubmitting || undefined}
-                className={
-                  isSubmitting ? "pointer-events-none opacity-50" : undefined
-                }
-                onClick={handleLeaveClick}
-              >
-                {ACTIONS_VI.cancel}
-              </Link>
+            <Button
+              variant="outline"
+              size="touch"
+              render={
+                <Link
+                  href={stockBasePath}
+                  aria-disabled={isSubmitting || undefined}
+                  className={
+                    isSubmitting ? "pointer-events-none opacity-50" : undefined
+                  }
+                  onClick={handleLeaveClick}
+                />
+              }
+            >
+              {ACTIONS_VI.cancel}
             </Button>
           }
           trailing={

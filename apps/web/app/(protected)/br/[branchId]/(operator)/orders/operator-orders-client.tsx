@@ -79,46 +79,46 @@ export function OperatorOrdersClient({
           {visibleOrders.map((order) => (
             <Item
               key={order.id}
-              asChild
               variant="outline"
               size="sm"
               className="chrome-tap min-h-14 bg-card text-left"
+              render={
+                <button type="button" onClick={() => setSelectedOrder(order)} />
+              }
             >
-              <button type="button" onClick={() => setSelectedOrder(order)}>
-                <ItemHeader>
-                  <ItemContent className="min-w-0">
-                    <ItemTitle className="font-mono">
-                      {order.order_number}
-                    </ItemTitle>
-                    <ItemDescription>
-                      {STAFF_VI.long}: {order.created_by_name}
-                    </ItemDescription>
-                  </ItemContent>
-                  <StatusBadge domain="order" value={order.status} />
-                </ItemHeader>
-                <ItemFooter>
+              <ItemHeader>
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="font-mono">
+                    {order.order_number}
+                  </ItemTitle>
+                  <ItemDescription>
+                    {STAFF_VI.long}: {order.created_by_name}
+                  </ItemDescription>
+                </ItemContent>
+                <StatusBadge domain="order" value={order.status} />
+              </ItemHeader>
+              <ItemFooter>
+                <span className="text-xs text-muted-foreground">
+                  {BRANCH_VI.long}: {order.branch_name}
+                </span>
+                <span className="font-mono text-sm font-semibold tabular-nums">
+                  {formatVND(order.total_amount)}
+                </span>
+              </ItemFooter>
+              <ItemFooter>
+                <span className="text-xs text-muted-foreground">
+                  {formatVNDateTime(order.created_at)}
+                </span>
+                {order.payment_method ? (
+                  <Badge variant="outline" className="text-xs">
+                    {getPaymentMethodLabelVi(order.payment_method)}
+                  </Badge>
+                ) : (
                   <span className="text-xs text-muted-foreground">
-                    {BRANCH_VI.long}: {order.branch_name}
+                    {ORDERS_COPY.noPayment}
                   </span>
-                  <span className="font-mono text-sm font-semibold tabular-nums">
-                    {formatVND(order.total_amount)}
-                  </span>
-                </ItemFooter>
-                <ItemFooter>
-                  <span className="text-xs text-muted-foreground">
-                    {formatVNDateTime(order.created_at)}
-                  </span>
-                  {order.payment_method ? (
-                    <Badge variant="outline" className="text-xs">
-                      {getPaymentMethodLabelVi(order.payment_method)}
-                    </Badge>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      {ORDERS_COPY.noPayment}
-                    </span>
-                  )}
-                </ItemFooter>
-              </button>
+                )}
+              </ItemFooter>
             </Item>
           ))}
         </ItemGroup>

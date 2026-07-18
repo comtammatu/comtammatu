@@ -149,38 +149,36 @@ function TransferCard({
   const movementDate = row.shipped_at ?? row.received_at ?? row.created_at;
 
   return (
-    <Item asChild variant="outline" className="min-h-16">
-      <Link href={href}>
-        <ItemMedia
-          variant="icon"
-          className="rounded-md bg-primary/10 p-2 text-primary"
-        >
-          <Icon />
-        </ItemMedia>
-        <ItemContent className="min-w-0">
-          <ItemTitle className="line-clamp-none w-full justify-between gap-2">
-            <span className="min-w-0 truncate font-mono tabular-nums">
-              {row.transfer_number}
-            </span>
-            <StatusBadge domain="inventory" value={row.status} size="sm" />
-          </ItemTitle>
-          <ItemDescription className="line-clamp-none">
-            <span className="inline-flex max-w-full items-center gap-1">
-              <span className="truncate">{row.from_branch_name}</span>
-              <IconArrowRight className="size-3 shrink-0" />
-              <span className="truncate">{row.to_branch_name}</span>
-            </span>
-          </ItemDescription>
-          <ItemDescription>
-            <span className="font-mono tabular-nums">
-              {formatVNDate(movementDate)}
-            </span>
-          </ItemDescription>
-        </ItemContent>
-        <ItemActions className="ml-auto">
-          <IconChevronRight className="size-4 text-muted-foreground" />
-        </ItemActions>
-      </Link>
+    <Item variant="outline" className="min-h-16" render={<Link href={href} />}>
+      <ItemMedia
+        variant="icon"
+        className="rounded-md bg-primary/10 p-2 text-primary"
+      >
+        <Icon />
+      </ItemMedia>
+      <ItemContent className="min-w-0">
+        <ItemTitle className="line-clamp-none w-full justify-between gap-2">
+          <span className="min-w-0 truncate font-mono tabular-nums">
+            {row.transfer_number}
+          </span>
+          <StatusBadge domain="inventory" value={row.status} size="sm" />
+        </ItemTitle>
+        <ItemDescription className="line-clamp-none">
+          <span className="inline-flex max-w-full items-center gap-1">
+            <span className="truncate">{row.from_branch_name}</span>
+            <IconArrowRight className="size-3 shrink-0" />
+            <span className="truncate">{row.to_branch_name}</span>
+          </span>
+        </ItemDescription>
+        <ItemDescription>
+          <span className="font-mono tabular-nums">
+            {formatVNDate(movementDate)}
+          </span>
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions className="ml-auto">
+        <IconChevronRight className="size-4 text-muted-foreground" />
+      </ItemActions>
     </Item>
   );
 }
@@ -331,8 +329,8 @@ export default async function OperatorStockTransferPage({
           title={copy.loadFailed}
           description={transferResult.error ?? copy.loadFailed}
         >
-          <Button size="touch" asChild>
-            <Link href={`/br/${branchId}/stock`}>{ACTIONS_VI.back}</Link>
+          <Button size="touch" render={<Link href={`/br/${branchId}/stock`} />}>
+            {ACTIONS_VI.back}
           </Button>
         </AppEmptyState>
       )}

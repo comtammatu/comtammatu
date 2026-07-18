@@ -38,19 +38,18 @@ export function SettingsSectionNav({
     <AppToolbar className="flex-wrap">
       {items.map((item) => {
         const Icon = SETTINGS_SECTION_ICONS[item.icon];
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active =
+          pathname === item.href || pathname.startsWith(`${item.href}/`);
 
         return (
           <Button
             key={item.href}
-            asChild
             variant={active ? "secondary" : "ghost"}
             aria-current={active ? "page" : undefined}
+            render={<Link href={item.href} />}
           >
-            <Link href={item.href}>
-              <Icon />
-              {item.label}
-            </Link>
+            <Icon />
+            {item.label}
           </Button>
         );
       })}

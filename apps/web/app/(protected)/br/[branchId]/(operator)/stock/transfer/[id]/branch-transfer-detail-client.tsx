@@ -100,11 +100,9 @@ export function BranchTransferDetailClient({
     actionConfig && actionLabel ? (
       actionConfig.kind === "receive" ? (
         actionConfig.enabled ? (
-          <Button size="touch-lg" asChild>
-            <Link href={receiveHref}>
-              <IconPackageCheck data-icon="inline-start" />
-              {actionLabel}
-            </Link>
+          <Button size="touch-lg" render={<Link href={receiveHref} />}>
+            <IconPackageCheck data-icon="inline-start" />
+            {actionLabel}
           </Button>
         ) : (
           <Button type="button" size="touch-lg" disabled>
@@ -128,10 +126,12 @@ export function BranchTransferDetailClient({
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <BranchOperatorControlBar className="sm:hidden">
-        <Button asChild variant="ghost" size="icon-touch">
-          <Link href={listHref} aria-label={ACTIONS_VI.back}>
-            <IconArrowLeft />
-          </Link>
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={<Link href={listHref} aria-label={ACTIONS_VI.back} />}
+        >
+          <IconArrowLeft />
         </Button>
         <div className="min-w-0 flex-1">
           <p className="truncate font-mono text-sm font-semibold tabular-nums">

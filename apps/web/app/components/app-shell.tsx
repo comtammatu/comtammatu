@@ -131,19 +131,19 @@ export function AppShell({
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
-                        asChild
                         isActive={active}
                         tooltip={item.label}
                         className="relative rounded-md data-active:bg-primary/10 data-active:text-primary font-medium dark:data-active:bg-primary/15 before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-r-sm before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
-                      >
-                        <Link
-                          href={item.href}
-                          aria-current={active ? "page" : undefined}
-                        >
-                          <Icon />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
+                        render={
+                          <Link
+                            href={item.href}
+                            aria-current={active ? "page" : undefined}
+                          >
+                            <Icon />
+                            <span>{item.label}</span>
+                          </Link>
+                        }
+                      />
                       {subNavGroups.length > 0 ? (
                         <SidebarMenuSub>
                           {subNavGroups.map((group) => (
@@ -164,20 +164,20 @@ export function AppShell({
                                 return (
                                   <SidebarMenuSubItem key={subItem.href}>
                                     <SidebarMenuSubButton
-                                      asChild
                                       isActive={subActive}
                                       className="relative data-active:text-primary data-active:font-semibold dark:data-active:text-primary-foreground before:absolute before:-left-2.5 before:top-3 before:size-1.5 before:rounded-full before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
-                                    >
-                                      <Link
-                                        href={subItem.linkHref ?? subItem.href}
-                                        aria-current={
-                                          subActive ? "page" : undefined
-                                        }
-                                      >
-                                        <SubIcon />
-                                        <span>{subItem.label}</span>
-                                      </Link>
-                                    </SidebarMenuSubButton>
+                                      render={
+                                        <Link
+                                          href={subItem.linkHref ?? subItem.href}
+                                          aria-current={
+                                            subActive ? "page" : undefined
+                                          }
+                                        >
+                                          <SubIcon />
+                                          <span>{subItem.label}</span>
+                                        </Link>
+                                      }
+                                    />
                                   </SidebarMenuSubItem>
                                 );
                               })}

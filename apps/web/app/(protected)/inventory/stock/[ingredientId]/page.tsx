@@ -333,43 +333,49 @@ function AdminDashboardStockIngredientDetail({
           <AppSection title={detailCopy.operationTitle}>
             <div className="grid grid-cols-2 gap-2">
               {data.permissions.canReceiveGrn ? (
-                <Button asChild size="sm">
-                  <Link href={actionHrefs.receive}>
-                    <IconReceipt className="size-3.5" />
-                    {stockCopy.actions.receiveGoods}
-                  </Link>
+                <Button size="sm" render={<Link href={actionHrefs.receive} />}>
+                  <IconReceipt className="size-3.5" />
+                  {stockCopy.actions.receiveGoods}
                 </Button>
               ) : null}
               {data.permissions.canCreateTransfer ? (
-                <Button asChild size="sm" variant="outline">
-                  <Link href={actionHrefs.transfer}>
-                    <IconTruck className="size-3.5" />
-                    {stockCopy.actions.transfer}
-                  </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  render={<Link href={actionHrefs.transfer} />}
+                >
+                  <IconTruck className="size-3.5" />
+                  {stockCopy.actions.transfer}
                 </Button>
               ) : null}
               {data.permissions.canCreateStocktake ? (
-                <Button asChild size="sm" variant="outline">
-                  <Link href={actionHrefs.stocktake}>
-                    <IconClipboardList className="size-3.5" />
-                    {stockCopy.actions.stocktake}
-                  </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  render={<Link href={actionHrefs.stocktake} />}
+                >
+                  <IconClipboardList className="size-3.5" />
+                  {stockCopy.actions.stocktake}
                 </Button>
               ) : null}
               {data.permissions.canCreateIssue ? (
-                <Button asChild size="sm" variant="outline">
-                  <Link href={actionHrefs.issues}>
-                    <IconTruck className="size-3.5" />
-                    {stockCopy.actions.issueStock}
-                  </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  render={<Link href={actionHrefs.issues} />}
+                >
+                  <IconTruck className="size-3.5" />
+                  {stockCopy.actions.issueStock}
                 </Button>
               ) : null}
               {data.permissions.canWriteoff ? (
-                <Button asChild size="sm" variant="outline">
-                  <Link href={actionHrefs.waste}>
-                    <IconTrash className="size-3.5" />
-                    {stockCopy.actions.waste}
-                  </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  render={<Link href={actionHrefs.waste} />}
+                >
+                  <IconTrash className="size-3.5" />
+                  {stockCopy.actions.waste}
                 </Button>
               ) : null}
             </div>
@@ -406,11 +412,13 @@ function AdminDashboardStockIngredientDetail({
             />
           </AppSection>
 
-          <Button asChild variant="ghost" className="justify-start">
-            <Link href={listHref}>
-              <IconArrowLeft className="size-4" />
-              {ACTIONS_VI.back}
-            </Link>
+          <Button
+            variant="ghost"
+            className="justify-start"
+            render={<Link href={listHref} />}
+          >
+            <IconArrowLeft className="size-4" />
+            {ACTIONS_VI.back}
           </Button>
         </div>
       </div>

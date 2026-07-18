@@ -25,16 +25,12 @@ export default async function HrAttendancePage() {
         title={copy.tabs.attendance}
         description={copy.attendanceDescription}
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/hr">{messages.hr.payroll.backToHr}</Link>
+          <Button variant="outline" size="sm" render={<Link href="/hr" />}>
+            {messages.hr.payroll.backToHr}
           </Button>
         }
       />
-      <AppSection
-        title={copy.attendanceTitle}
-        contentFlush
-        contentScroll
-      >
+      <AppSection title={copy.attendanceTitle} contentFlush contentScroll>
         <AttendanceTable branches={branches} />
       </AppSection>
       <AppSection

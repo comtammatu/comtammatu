@@ -184,14 +184,12 @@ export function GrnListClient({
       className: "w-10",
       render: (grn) => (
         <Button
-          asChild
           variant="ghost"
           size="icon-sm"
           aria-label={`${ACTIONS_VI.viewDetails} ${grn.code}`}
+          render={<Link href={grnDetailHref(basePath, grn.id)} />}
         >
-          <Link href={grnDetailHref(basePath, grn.id)}>
-            <IconDotsVertical className="size-4" />
-          </Link>
+          <IconDotsVertical className="size-4" />
         </Button>
       ),
     },
@@ -204,11 +202,9 @@ export function GrnListClient({
   );
   const hasActiveFilters = hasGrnListFilters(filters);
   const desktopActions = canCreate ? (
-    <Button asChild size="sm">
-      <Link href={`${basePath}/new`}>
-        <IconPlus className="size-4" />
-        {INVENTORY_VI.newGrn}
-      </Link>
+    <Button size="sm" render={<Link href={`${basePath}/new`} />}>
+      <IconPlus className="size-4" />
+      {INVENTORY_VI.newGrn}
     </Button>
   ) : null;
 

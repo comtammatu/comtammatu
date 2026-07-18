@@ -99,10 +99,12 @@ export function GrnReviewOperatorClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={grnListBasePath} aria-label={grnCopy.back}>
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={<Link href={grnListBasePath} aria-label={grnCopy.back} />}
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-sm font-semibold tabular-nums">
@@ -161,47 +163,47 @@ export function GrnReviewOperatorClient({
                 {lines.map((line) => (
                   <div key={line.lineId} role="listitem">
                     <Item
-                      asChild
                       variant="outline"
                       className="min-h-20 touch-manipulation"
+                      render={
+                        <button
+                          type="button"
+                          className="w-full text-left"
+                          onClick={() => setEditingLineId(line.lineId)}
+                          disabled={!canEditDraft}
+                        />
+                      }
                     >
-                      <button
-                        type="button"
-                        className="w-full text-left"
-                        onClick={() => setEditingLineId(line.lineId)}
-                        disabled={!canEditDraft}
-                      >
-                        <ItemContent className="min-w-0 gap-1">
-                          <ItemTitle className="line-clamp-none text-sm font-semibold">
-                            {line.name}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none text-xs">
-                            {grnCopy.line.orderedDeliveredAccepted(
-                              line.required,
-                              line.actual,
-                              line.actual - line.rejected,
-                              line.rejected,
-                              line.unit,
-                            )}
-                          </ItemDescription>
-                          {line.dirty ? (
-                            <span className="text-xs font-medium text-warning">
-                              {grnCopy.line.unsaved}
-                            </span>
-                          ) : null}
-                        </ItemContent>
-                        <ItemActions className="shrink-0">
-                          {line.rejected > 0 ||
-                          line.qualityStatus === "rejected" ? (
-                            <IconAlertTriangle className="size-5 text-warning" />
-                          ) : (
-                            <IconCircleCheck className="size-5 text-success" />
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle className="line-clamp-none text-sm font-semibold">
+                          {line.name}
+                        </ItemTitle>
+                        <ItemDescription className="line-clamp-none text-xs">
+                          {grnCopy.line.orderedDeliveredAccepted(
+                            line.required,
+                            line.actual,
+                            line.actual - line.rejected,
+                            line.rejected,
+                            line.unit,
                           )}
-                          {canEditDraft ? (
-                            <IconChevronRight className="size-4 text-muted-foreground" />
-                          ) : null}
-                        </ItemActions>
-                      </button>
+                        </ItemDescription>
+                        {line.dirty ? (
+                          <span className="text-xs font-medium text-warning">
+                            {grnCopy.line.unsaved}
+                          </span>
+                        ) : null}
+                      </ItemContent>
+                      <ItemActions className="shrink-0">
+                        {line.rejected > 0 ||
+                        line.qualityStatus === "rejected" ? (
+                          <IconAlertTriangle className="size-5 text-warning" />
+                        ) : (
+                          <IconCircleCheck className="size-5 text-success" />
+                        )}
+                        {canEditDraft ? (
+                          <IconChevronRight className="size-4 text-muted-foreground" />
+                        ) : null}
+                      </ItemActions>
                     </Item>
                   </div>
                 ))}
@@ -255,11 +257,13 @@ export function GrnReviewOperatorClient({
         <AppDetailFooter
           sticky
           leading={
-            <Button variant="outline" size="touch" asChild>
-              <Link href={grnListBasePath}>
-                <IconArrowLeft data-icon="inline-start" />
-                {grnCopy.back}
-              </Link>
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href={grnListBasePath} />}
+            >
+              <IconArrowLeft data-icon="inline-start" />
+              {grnCopy.back}
             </Button>
           }
           trailing={

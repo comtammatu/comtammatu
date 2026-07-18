@@ -238,9 +238,9 @@ export function CountSlipClient({
   const locked = slip?.status === "submitted" || slip?.status === "approved";
 
   const [draft, setDraft] = useState<Record<number, DraftLine>>({});
-  const [selectedIngredientId, setSelectedIngredientId] = useState<number | null>(
-    null,
-  );
+  const [selectedIngredientId, setSelectedIngredientId] = useState<
+    number | null
+  >(null);
   const selectedAssignment =
     activeGroup?.assignments.find(
       (assignment) => assignment.ingredientId === selectedIngredientId,
@@ -363,7 +363,9 @@ export function CountSlipClient({
     const entry = assignment ? draft[assignment.ingredientId] : undefined;
     const inputId = assignment ? `count-${assignment.ingredientId}` : "count";
     const unitInputId = `${inputId}-unit`;
-    const baseUnit = assignment ? getBaseCountUnit(assignment.countUnits) : null;
+    const baseUnit = assignment
+      ? getBaseCountUnit(assignment.countUnits)
+      : null;
     const selectedUnit =
       assignment == null
         ? null
@@ -390,7 +392,10 @@ export function CountSlipClient({
           if (!open) setSelectedIngredientId(null);
         }}
       >
-        <SheetContent side="right" className="w-full overflow-hidden sm:max-w-md">
+        <SheetContent
+          side="right"
+          className="w-full overflow-hidden sm:max-w-md"
+        >
           {assignment ? (
             <>
               <SheetHeader>
@@ -492,11 +497,13 @@ export function CountSlipClient({
                 </div>
               </div>
               <SheetFooter>
-                <SheetClose asChild>
-                  <Button type="button" variant="outline" size="touch">
-                    Xong
-                  </Button>
-                </SheetClose>
+                <SheetClose
+                  render={
+                    <Button type="button" variant="outline" size="touch">
+                      Xong
+                    </Button>
+                  }
+                />
               </SheetFooter>
             </>
           ) : null}
@@ -602,32 +609,35 @@ export function CountSlipClient({
                 const stockUnitLabel = baseUnit?.code ?? null;
                 return (
                   <Item
-                    asChild
                     key={assignment.ingredientId}
                     variant="outline"
                     className="min-h-24 cursor-pointer items-start gap-2 bg-card text-left hover:bg-muted/50"
+                    render={
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedIngredientId(assignment.ingredientId)
+                        }
+                      />
+                    }
                   >
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedIngredientId(assignment.ingredientId)
-                      }
-                    >
-                      <ItemContent className="min-w-0 gap-1">
-                        <ItemTitle size="heading" className="line-clamp-none w-full break-words">
-                          {assignment.ingredientName}
-                        </ItemTitle>
-                        <ItemDescription className="line-clamp-none break-words text-xs">
-                          {summary ??
-                            (stockUnitLabel
-                              ? `Đơn vị tồn chuẩn: ${stockUnitLabel}`
-                              : "Chưa nhập")}
-                        </ItemDescription>
-                      </ItemContent>
-                      <Badge variant={summary ? "success" : "secondary"}>
-                        {summary ? "Đã nhập" : "Chưa đếm"}
-                      </Badge>
-                    </button>
+                    <ItemContent className="min-w-0 gap-1">
+                      <ItemTitle
+                        size="heading"
+                        className="line-clamp-none w-full break-words"
+                      >
+                        {assignment.ingredientName}
+                      </ItemTitle>
+                      <ItemDescription className="line-clamp-none break-words text-xs">
+                        {summary ??
+                          (stockUnitLabel
+                            ? `Đơn vị tồn chuẩn: ${stockUnitLabel}`
+                            : "Chưa nhập")}
+                      </ItemDescription>
+                    </ItemContent>
+                    <Badge variant={summary ? "success" : "secondary"}>
+                      {summary ? "Đã nhập" : "Chưa đếm"}
+                    </Badge>
                   </Item>
                 );
               })}

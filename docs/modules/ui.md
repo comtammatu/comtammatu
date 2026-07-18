@@ -3,43 +3,30 @@
 ## Overview
 
 UI của repo là Com Tam Ma Tu Custom Theme (Ma Tu Concept 01) chạy trên
-Má Tư Design System primitives trong `@comtammatu/ui`. Radix, lucide, Tailwind,
-và CVA là implementation dependencies, không phải source of truth cao hơn
-contract.
+Má Tư Design System primitives trong `@comtammatu/ui`. Base UI là behavioral
+primitive layer đích; lucide, Tailwind và CVA là implementation dependencies,
+không phải visual authority.
 Không còn helper layer hay theme system riêng theo route/surface.
 
-Single source of truth for agent decisions:
-
-1. `docs/spec/design-system.md`
-
-File này là implementation guide: cách áp dụng contract vào app code, wrapper,
-forms, keyboard shortcut, overlay, feedback, và rebuild flow. Không dùng file
-này để override token, typography, rhythm, visual role, hoặc primitive authority
-đã chốt trong `docs/spec/design-system.md`.
-
-Runtime config, primitives, adapters, runbooks, worklogs, and regression rules
-are evidence/enforcement for that contract. They do not authorize a second
-design system:
-
-- `packages/ui/src/styles/globals.css`
-- `apps/web/app/layout.tsx`
-- `packages/ui/src/components/*`
-- `apps/web/app/components/surface.tsx`
-- `tasks/regressions.md`
-
-Runtime files are evidence. If runtime comments, package metadata, or generated
-tokens disagree with `docs/spec/design-system.md`, treat that as drift and fix
-the contract/runtime before building new UI.
+File này là implementation guide: cách áp dụng visual contract vào app code,
+forms, keyboard shortcut, overlay, feedback và migration flow. Không dùng file
+này để override Má Tư token hoặc visual role; cũng không ghi đè Base UI behavior
+bằng wrapper compatibility.
 
 ## Contract Boundary
 
-Tất cả UI/UX rebuild phải đi theo `docs/spec/design-system.md` trước khi sửa
-runtime. Role split:
+Mọi UI/UX rebuild phải xác định owner của quyết định trước rồi mới đọc runtime.
+Visual change đọc `design-system.md`; behavior/accessibility đọc primitive;
+workflow đọc archetype và route. Role split:
 
-- `docs/spec/design-system.md`: Custom Theme authority; owns tokens, typography,
-  rhythm, primitive roles, surface contracts, and forbidden compatibility names.
+- `docs/spec/design-system.md`: Má Tư visual authority; owns token, typography,
+  density, brand, states, elevation và motion recipe.
+- `packages/ui/src/components/*`: primitive behavior; Base UI migration và
+  accessibility contract sống ở đây.
 - `docs/modules/ui.md`: implementation guide; owns composition, form, overlay,
-  feedback, shortcut, and rebuild workflow guidance.
+  feedback, shortcut và migration matrix.
+- `docs/spec/page-archetypes.md` + target route: workflow composition, job,
+  state và responsive IA.
 - `docs/agent/rules/ui.md`: fast-loading guardrails for agents.
 - `tasks/regressions.md`: negative rules from incidents; not an authority to
   invent new visual language.
@@ -47,9 +34,9 @@ runtime. Role split:
 - `docs/worklog/README.md`: policy only; transient UI review notes belong in PR
   or task notes, then any durable contract is promoted to spec/modules/tasks.
 
-Không được coi external UI scaffold output là authority cao hơn Custom Theme
-contract. Pattern mới được route-scoped nếu vẫn giữ token, primitive, route
-family, và workflow; chỉ sửa spec khi đổi contract hoặc shared adapter.
+Không được coi external scaffold output là authority cao hơn Má Tư visual
+contract. Shadcn được dùng để đối chiếu component anatomy, state, UX và motion;
+không được dùng làm preset hay visual source.
 
 Code mới phải dùng `apps/web/app/components/surface.tsx`, `BrandMark` /
 `BrandLockup` / `BrandSymbol` / `BrandMascot`, semantic token classes, và font
@@ -66,18 +53,22 @@ Read order cho agent khi làm UI:
 5. `tasks/regressions.md`
 6. Domain docs liên quan đến route đang sửa
 
-## Primitive Baseline Contract
+## Primitive Runtime Contract
 
-Baseline hiện tại: Má Tư DS primitives trong `packages/ui/src/components/*` cho
-monorepo `apps/web` + `packages/ui`. Đây là primitive implementation baseline;
-semantic token values và rhythm phải theo `docs/spec/design-system.md`.
+Runtime hiện tại: Má Tư DS primitives trong `packages/ui/src/components/*` cho
+monorepo `apps/web` + `packages/ui`. Primitives dùng Base UI cho behavior, còn
+semantic token và visual recipe vẫn theo `docs/spec/design-system.md`. Không
+giữ compatibility shim thay thế visual contract hoặc component API cũ.
 
 Điều này có nghĩa:
 
 - primitive structure phải theo file trong `packages/ui/src/components/*`
+- chỉ `packages/ui` được import `@base-ui/react`; app code đi qua
+  `@comtammatu/ui`
 - semantic token values phải theo `docs/spec/design-system.md`
 - brand color/typography phải đi qua semantic token và font variables chung
-- page/shell chỉ được compose từ primitives có sẵn và app surface adapters
+- page/shell ưu tiên primitives có sẵn và app surface adapters; direct primitive
+  composition được phép khi semantic job riêng không phù hợp adapter hiện có
 - logo/brand lockup, symbol, mascot trong web runtime phải đi qua `BrandMark` /
   `BrandLockup` / `BrandSymbol` / `BrandMascot`
 - không được giữ `app-*` helper classes hoặc custom background/theme chrome ở root
@@ -112,11 +103,10 @@ Primitive source vẫn sống tại `packages/ui/src/components/*`, và app code
 
 Không fork primitive theo surface.
 
-`CardContent` table/list exceptions phải đi qua named primitive props:
-`flush` cho table-edge/list-edge alignment và `scroll` cho horizontal table
-scrolling. AppSection dùng `contentFlush` / `contentScroll` cho cùng vai trò.
-Không dùng local `className="p-0"` hoặc `className="overflow-x-auto"` trên
-`CardContent` hay `AppSection contentClassName` ở app code.
+Ưu tiên named primitive props: `flush` cho table-edge/list-edge alignment và
+`scroll` cho horizontal table scrolling; AppSection dùng `contentFlush` /
+`contentScroll` cho cùng vai trò. Một surface có workflow riêng có thể compose
+spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 
 ## App Surface Adapters
 
@@ -352,11 +342,9 @@ của tab đang active. Trên mobile `<md`, bottom-nav ưu tiên `tier2` và ch�
 tab "Mô-đun" mở drawer sidebar đầy đủ. Từ tablet `md` trở lên, bottom-nav ẩn và
 Admin Dashboard dùng một sidebar cố định.
 
-Shell/nav registry drift bị chặn bởi `shell-registry-bespoke-main` và
-`nav-shell-inline-literal`: route mới không tự dựng `<main>`, sidebar,
-bottom-nav, hoặc inline `ShellNavGroup[]`; dùng `AppShell`,
-`AdminDashboardModuleShell`, `AppBottomNav` /
-`AdminDashboardBottomNav`, và nav resolver đã có.
+Shell mới cần chứng minh job chrome riêng, giữ đúng plane authority, và dùng
+navigation resolver hiện hành. Guard chỉ giữ outcome đo được: navigation không
+trở thành inline data và Branch/Operations không rò Admin Dashboard chrome.
 
 ## Component Governance
 
@@ -382,7 +370,7 @@ Convention:
 
 - Shortcut đơn phím (`T`, `D`, `/`) mặc định KHÔNG fire khi focus đang ở input/textarea/contenteditable.
 - Shortcut có meta (`Cmd+Enter`, `Ctrl+K`) có thể dùng `fireInInput: true` để fire cả khi đang gõ.
-- `Escape` để clear filter hoặc đóng dialog (Radix tự lo đóng dialog).
+- `Escape` để clear filter hoặc đóng dialog (primitive overlay tự xử lý close/focus return theo contract).
 - Hiển thị hint với `<Kbd>` hoặc `<KbdGroup>` khi nhiều phím, cạnh label button, `className="hidden md:inline-flex"` để ẩn trên mobile.
 - Thêm `aria-keyshortcuts="T"` trên button/toggle để screen reader đọc được.
 

@@ -1610,14 +1610,10 @@ export function PosDesktopInner({
     : undefined;
 
   const mobileSidebarDrawer = isTouchLayout ? (
-    <Drawer
-      open={cartDrawerOpen}
-      onOpenChange={setCartDrawerOpen}
-      shouldScaleBackground={false}
-    >
+    <Drawer open={cartDrawerOpen} onOpenChange={setCartDrawerOpen}>
       <DrawerContent
         showHandle
-        className="h-dvh max-h-dvh p-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh before:inset-0 before:rounded-none before:border-0 before:bg-background sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-lg sm:before:border sm:before:bg-popover"
+        className="mt-0 h-dvh max-h-dvh p-0 before:inset-0 before:rounded-none before:border-0 before:bg-background sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-lg sm:before:border sm:before:bg-popover"
       >
         <DrawerTitle className="sr-only">
           {appendTarget != null

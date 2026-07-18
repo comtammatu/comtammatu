@@ -711,7 +711,7 @@ test("SePay bank reconciliation reads supplier AP payments without turning them 
   );
   assert.match(
     cell,
-    /<Button[\s\S]*asChild[\s\S]*size="touch"[\s\S]*supplierInvoiceHref/,
+    /<Button[\s\S]*size="touch"[\s\S]*render=\{[\s\S]*supplierInvoiceHref/,
   );
   assert.doesNotMatch(cell, /sm:h-7|sm:min-h-7/);
   assert.match(cell, /matchSepayTransactionWithSupplierPayments/);

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Accordion as AccordionPrimitive } from "radix-ui";
+import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { ChevronDown as IconChevronDown } from "lucide-react";
 
 import { cn } from "../lib/utils";
@@ -20,7 +20,7 @@ function AccordionItem({
     <AccordionPrimitive.Item
       data-slot="accordion-item"
       className={cn(
-        "mb-2 rounded-lg border border-border bg-card px-4 shadow-effect-card-resting transition-colors duration-200 last:mb-0 data-[state=open]:bg-secondary/15",
+        "mb-2 rounded-lg border border-border bg-card px-4 transition-colors duration-200 last:mb-0 data-open:bg-secondary/15",
         className,
       )}
       {...props}
@@ -38,7 +38,7 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          "flex flex-1 items-center justify-between gap-3 rounded-md py-3 text-left font-heading text-sm font-semibold transition-colors outline-none hover:text-primary focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-foreground disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
+          "flex flex-1 items-center justify-between gap-3 rounded-md py-3 text-left font-heading text-sm font-semibold transition-colors outline-none hover:text-primary focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-foreground disabled:pointer-events-none disabled:opacity-50 data-panel-open:[&>svg]:rotate-180",
           className,
         )}
         {...props}
@@ -54,15 +54,15 @@ function AccordionContent({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Content>) {
+}: React.ComponentProps<typeof AccordionPrimitive.Panel>) {
   return (
-    <AccordionPrimitive.Content
+    <AccordionPrimitive.Panel
       data-slot="accordion-content"
-      className="overflow-hidden text-xs/relaxed data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
+      className="overflow-hidden text-xs/relaxed data-[starting-style]:animate-accordion-down data-[ending-style]:animate-accordion-up"
       {...props}
     >
       <div className={cn("pb-3", className)}>{children}</div>
-    </AccordionPrimitive.Content>
+    </AccordionPrimitive.Panel>
   );
 }
 

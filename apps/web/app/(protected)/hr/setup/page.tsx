@@ -3,7 +3,10 @@ import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchShifts } from "../actions";
-import { fetchPositionTasksData, type PositionTasksData } from "../position-tasks-actions";
+import {
+  fetchPositionTasksData,
+  type PositionTasksData,
+} from "../position-tasks-actions";
 import type { ShiftRow } from "../_types";
 import { HrSetupClient } from "./setup-client";
 
@@ -33,8 +36,8 @@ export default async function HrSetupPage() {
         title={copy.tabs.setup}
         description={copy.setupDescription}
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/hr">{messages.hr.payroll.backToHr}</Link>
+          <Button variant="outline" size="sm" render={<Link href="/hr" />}>
+            {messages.hr.payroll.backToHr}
           </Button>
         }
       />

@@ -4,7 +4,10 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft as IconArrowLeft, ClipboardCheck as IconClipboardCheck } from "lucide-react";
+import {
+  ArrowLeft as IconArrowLeft,
+  ClipboardCheck as IconClipboardCheck,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Label } from "@comtammatu/ui/components/label";
@@ -110,14 +113,22 @@ export function BranchStocktakeNewClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê">
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê" />
+            }
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{stocktakeCopy.startTitle}</p>
-            <p className="truncate text-xs text-muted-foreground">{branchName}</p>
+            <p className="truncate text-sm font-semibold">
+              {stocktakeCopy.startTitle}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {branchName}
+            </p>
           </div>
         </BranchOperatorControlBar>
 
@@ -167,7 +178,9 @@ export function BranchStocktakeNewClient({
                 </ItemTitle>
                 <ItemDescription className="line-clamp-none text-xs">
                   {stocktakeCopy.defaultByMode(
-                    modeMeta.defaultBlind ? stocktakeCopy.on : stocktakeCopy.off,
+                    modeMeta.defaultBlind
+                      ? stocktakeCopy.on
+                      : stocktakeCopy.off,
                   )}
                 </ItemDescription>
               </ItemContent>
@@ -192,7 +205,9 @@ export function BranchStocktakeNewClient({
                 },
                 {
                   label: stocktakeCopy.blindMode,
-                  value: modeMeta.defaultBlind ? stocktakeCopy.on : stocktakeCopy.off,
+                  value: modeMeta.defaultBlind
+                    ? stocktakeCopy.on
+                    : stocktakeCopy.off,
                 },
               ]}
             />

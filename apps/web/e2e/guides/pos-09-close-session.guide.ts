@@ -160,7 +160,7 @@ test.describe("POS-09 Đóng ca POS", () => {
         await firstInput.fill("5");
         // Scroll the sheet to the confirm button via keyboard — do NOT use
         // locator scrollIntoViewIfNeeded: it also matches the header button
-        // and the Radix sheet auto-dismisses when focus lands outside.
+        // and moving focus outside may dismiss the active sheet.
         await p.keyboard.press("End");
         await p.waitForTimeout(300);
       },

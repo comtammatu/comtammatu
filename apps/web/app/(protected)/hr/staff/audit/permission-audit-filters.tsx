@@ -26,7 +26,7 @@ export interface PermissionAuditFilterValue {
   since: string | null;
 }
 
-// Radix Select forbids empty-string item values; this sentinel maps to the
+// The select control reserves empty-string item values; this sentinel maps to the
 // "no filter" state and is serialized as an absent query param.
 const ALL_VALUE = "all";
 
