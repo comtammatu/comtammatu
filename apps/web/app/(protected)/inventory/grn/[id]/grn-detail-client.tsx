@@ -241,17 +241,14 @@ export function GRNDetailClient({
         leading={
           <>
             {!isDraft ? (
-              <Button asChild variant="ghost">
-                <Link
-                  href={
-                    isMobile
-                      ? grnMobileBackPath
-                      : grnListBasePath
-                  }
-                >
-                  <IconArrowLeft className="size-5" />
-                  {grnCopy.back}
-                </Link>
+              <Button
+                variant="ghost"
+                render={
+                  <Link href={isMobile ? grnMobileBackPath : grnListBasePath} />
+                }
+              >
+                <IconArrowLeft className="size-5" />
+                {grnCopy.back}
               </Button>
             ) : null}
             {isDraft ? (
@@ -297,17 +294,20 @@ export function GRNDetailClient({
               />
             ) : null}
             {!isDraft ? (
-              <Button asChild variant="outline">
-                <Link
-                  href={
-                    grn.invoiceId
-                      ? `${supplierInvoicesBasePath}?invoiceId=${grn.invoiceId}`
-                      : `${supplierInvoicesBasePath}?grnId=${grn.id}`
-                  }
-                >
-                  <IconReceipt className="size-5" />
-                  {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
-                </Link>
+              <Button
+                variant="outline"
+                render={
+                  <Link
+                    href={
+                      grn.invoiceId
+                        ? `${supplierInvoicesBasePath}?invoiceId=${grn.invoiceId}`
+                        : `${supplierInvoicesBasePath}?grnId=${grn.id}`
+                    }
+                  />
+                }
+              >
+                <IconReceipt className="size-5" />
+                {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
               </Button>
             ) : null}
           </>
@@ -466,11 +466,13 @@ export function GRNDetailClient({
         leading={
           <>
             {!isDraft ? (
-              <Button asChild variant="ghost" size="touch">
-                <Link href={grnMobileBackPath}>
-                  <IconArrowLeft className="size-5" />
-                  {grnCopy.back}
-                </Link>
+              <Button
+                variant="ghost"
+                size="touch"
+                render={<Link href={grnMobileBackPath} />}
+              >
+                <IconArrowLeft className="size-5" />
+                {grnCopy.back}
               </Button>
             ) : null}
             {isDraft ? (
@@ -518,17 +520,21 @@ export function GRNDetailClient({
               />
             ) : null}
             {!isDraft ? (
-              <Button asChild variant="outline" size="touch">
-                <Link
-                  href={
-                    grn.invoiceId
-                      ? `${supplierInvoicesBasePath}?invoiceId=${grn.invoiceId}`
-                      : `${supplierInvoicesBasePath}?grnId=${grn.id}`
-                  }
-                >
-                  <IconReceipt className="size-5" />
-                  {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
-                </Link>
+              <Button
+                variant="outline"
+                size="touch"
+                render={
+                  <Link
+                    href={
+                      grn.invoiceId
+                        ? `${supplierInvoicesBasePath}?invoiceId=${grn.invoiceId}`
+                        : `${supplierInvoicesBasePath}?grnId=${grn.id}`
+                    }
+                  />
+                }
+              >
+                <IconReceipt className="size-5" />
+                {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
               </Button>
             ) : null}
           </>
@@ -596,10 +602,13 @@ export function GRNDetailClient({
     return (
       <div className="flex w-full flex-col gap-3">
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon" className="shrink-0">
-            <Link href={grnMobileBackPath} aria-label={grnCopy.back}>
-              <IconArrowLeft className="size-4" />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            render={<Link href={grnMobileBackPath} aria-label={grnCopy.back} />}
+          >
+            <IconArrowLeft className="size-4" />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-sm font-semibold">

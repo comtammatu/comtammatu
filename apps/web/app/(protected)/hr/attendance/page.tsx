@@ -26,8 +26,8 @@ export default async function HrAttendancePage() {
         title={copy.tabs.attendance}
         description={copy.attendanceDescription}
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/hr">{messages.hr.payroll.backToHr}</Link>
+          <Button variant="outline" size="sm" render={<Link href="/hr" />}>
+            {messages.hr.payroll.backToHr}
           </Button>
         }
       />

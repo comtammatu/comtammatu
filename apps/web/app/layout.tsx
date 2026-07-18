@@ -111,7 +111,10 @@ export default async function RootLayout({
         <ThemeProvider defaultTheme="light" disableTransitionOnChange>
           <SerwistProvider
             swUrl="/sw.js"
-            disable={process.env.NODE_ENV === "development"}
+            disable={
+              process.env.NODE_ENV === "development" ||
+              process.env.VERCEL_ENV === "preview"
+            }
           >
             <TooltipProvider>{children}</TooltipProvider>
           </SerwistProvider>

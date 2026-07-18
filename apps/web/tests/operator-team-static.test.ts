@@ -151,7 +151,7 @@ test("operator team opens the workspace tabs without a duplicate entry hub", () 
   );
   assert.match(
     staffRuntimeSource,
-    /<Link href=\{teamRoute\}>[\s\S]*Quản lý đội chi nhánh/,
+    /render=\{<Link href=\{teamRoute\} \/>\}[\s\S]*Quản lý đội chi nhánh/,
   );
   assert.doesNotMatch(staffRuntimeSource, /title="Duyệt ca & kho"/);
   assert.doesNotMatch(staffRuntimeSource, /title="Nhân sự & Phân công"/);
@@ -234,14 +234,14 @@ test("operator team board drawer keeps long shift details inside the drawer", ()
     teamBoardSource,
     /className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4"/,
   );
-  assert.match(teamBoardSource, /data-vaul-no-drag=""/);
+  assert.doesNotMatch(teamBoardSource, /data-vaul-no-drag/);
   assert.match(teamBoardSource, /className="break-words"/);
 });
 
 test("operator team shift rows open one detail drawer before focused actions", () => {
   assert.match(
     teamBoardSource,
-    /<InteractiveCard[\s\S]*asChild[\s\S]*<button type="button" onClick=\{\(\) => onOpenDrawer\(row\)\}>/,
+    /<InteractiveCard[\s\S]*render=\{[\s\S]*<button type="button" onClick=\{\(\) => onOpenDrawer\(row\)\}/,
   );
   assert.doesNotMatch(teamBoardSource, /useLongPress|rowHref/);
   assert.match(

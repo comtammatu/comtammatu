@@ -117,35 +117,35 @@ function StockTouchRow({
 }) {
   return (
     <Item
-      asChild
       variant="outline"
       size="sm"
       className="min-h-16 touch-manipulation gap-3 px-3 py-2.5"
+      render={
+        <Link
+          href={`/br/${branchId}/stock/on-hand/${item.id}`}
+          aria-label={stockCopy.actions.viewDetailAria(item.name)}
+          role="listitem"
+        />
+      }
     >
-      <Link
-        href={`/br/${branchId}/stock/on-hand/${item.id}`}
-        aria-label={stockCopy.actions.viewDetailAria(item.name)}
-        role="listitem"
-      >
-        <ItemContent className="min-w-0">
-          <div className="flex min-w-0 items-center gap-2">
-            <ItemTitle size="heading" className="min-w-0 flex-1">
-              {item.name}
-            </ItemTitle>
-            <StockRiskBadge item={item} />
-          </div>
-          <ItemDescription>
-            {[ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind, item.sku]
-              .filter(Boolean)
-              .join(" · ")}
-          </ItemDescription>
-        </ItemContent>
+      <ItemContent className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <ItemTitle size="heading" className="min-w-0 flex-1">
+            {item.name}
+          </ItemTitle>
+          <StockRiskBadge item={item} />
+        </div>
+        <ItemDescription>
+          {[ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind, item.sku]
+            .filter(Boolean)
+            .join(" · ")}
+        </ItemDescription>
+      </ItemContent>
 
-        <ItemActions className="min-w-0 justify-end">
-          <StockQuantity item={item} />
-          <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </ItemActions>
-      </Link>
+      <ItemActions className="min-w-0 justify-end">
+        <StockQuantity item={item} />
+        <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+      </ItemActions>
     </Item>
   );
 }
@@ -232,11 +232,12 @@ export function BranchStockOnHandClient({
           }}
           action={
             canCreateGrn ? (
-              <Button asChild size="touch">
-                <Link href={`/br/${branchId}/stock/grn/new`}>
-                  <IconTruck />
-                  {stockCopy.actions.receiveGrn}
-                </Link>
+              <Button
+                size="touch"
+                render={<Link href={`/br/${branchId}/stock/grn/new`} />}
+              >
+                <IconTruck />
+                {stockCopy.actions.receiveGrn}
               </Button>
             ) : undefined
           }
@@ -260,11 +261,12 @@ export function BranchStockOnHandClient({
         }}
         action={
           showReceiveAction ? (
-            <Button asChild size="touch">
-              <Link href={`/br/${branchId}/stock/grn/new`}>
-                <IconTruck />
-                {stockCopy.actions.receiveGrn}
-              </Link>
+            <Button
+              size="touch"
+              render={<Link href={`/br/${branchId}/stock/grn/new`} />}
+            >
+              <IconTruck />
+              {stockCopy.actions.receiveGrn}
             </Button>
           ) : undefined
         }
@@ -289,11 +291,12 @@ export function BranchStockOnHandClient({
             symbol="riceGrain"
           >
             {canCreateGrn ? (
-              <Button asChild size="touch">
-                <Link href={`/br/${branchId}/stock/grn/new`}>
-                  <IconTruck />
-                  {stockCopy.actions.receiveGrn}
-                </Link>
+              <Button
+                size="touch"
+                render={<Link href={`/br/${branchId}/stock/grn/new`} />}
+              >
+                <IconTruck />
+                {stockCopy.actions.receiveGrn}
               </Button>
             ) : null}
           </AppEmptyState>

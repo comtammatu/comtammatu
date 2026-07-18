@@ -44,11 +44,13 @@ export function PwaInstallHelpDialog({
           ))}
         </ol>
         <DialogFooter>
-          <DialogClose asChild>
-            <Button type="button" variant="outline">
-              {closeLabel}
-            </Button>
-          </DialogClose>
+          <DialogClose
+            render={
+              <Button type="button" variant="outline">
+                {closeLabel}
+              </Button>
+            }
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>

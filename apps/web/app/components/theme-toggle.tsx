@@ -42,7 +42,7 @@ export function ThemeMenuItem() {
   const { theme, toggleTheme } = useTheme();
   const isNight = theme === "night";
   return (
-    <DropdownMenuItem onSelect={toggleTheme}>
+    <DropdownMenuItem onClick={toggleTheme}>
       {isNight ? <Sun /> : <Moon />}
       {isNight
         ? messages.common.themeToggleToLight

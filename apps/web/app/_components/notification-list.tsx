@@ -241,8 +241,13 @@ export function NotificationList({
 
       {showViewAll ? (
         <div className="border-t px-3 py-2 text-right">
-          <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
-            <Link href="/notifications">{messages.notifications.viewAll}</Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            render={<Link href="/notifications" />}
+          >
+            {messages.notifications.viewAll}
           </Button>
         </div>
       ) : null}

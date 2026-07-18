@@ -87,30 +87,26 @@ export function CatalogIndexClient({
         {rows.map((row) => (
           <Item
             key={row.key}
-            asChild
             variant="outline"
             size="sm"
             className="chrome-tap min-h-12 select-none bg-card"
+            render={<Link href={row.href} />}
           >
-            <Link href={row.href}>
-              <ItemMedia
-                variant="icon"
-                className="rounded-md bg-muted p-2 text-muted-foreground"
-              >
-                <row.icon aria-hidden="true" />
-              </ItemMedia>
-              <ItemContent className="min-w-0">
-                <ItemTitle size="heading">
-                  {row.title}
-                </ItemTitle>
-              </ItemContent>
-              <ItemActions className="shrink-0 text-muted-foreground">
-                <span className="font-mono text-sm tabular-nums">
-                  {counts[row.key]}
-                </span>
-                <ChevronRight aria-hidden="true" className="size-4" />
-              </ItemActions>
-            </Link>
+            <ItemMedia
+              variant="icon"
+              className="rounded-md bg-muted p-2 text-muted-foreground"
+            >
+              <row.icon aria-hidden="true" />
+            </ItemMedia>
+            <ItemContent className="min-w-0">
+              <ItemTitle size="heading">{row.title}</ItemTitle>
+            </ItemContent>
+            <ItemActions className="shrink-0 text-muted-foreground">
+              <span className="font-mono text-sm tabular-nums">
+                {counts[row.key]}
+              </span>
+              <ChevronRight aria-hidden="true" className="size-4" />
+            </ItemActions>
           </Item>
         ))}
       </ItemGroup>

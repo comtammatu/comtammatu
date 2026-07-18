@@ -286,12 +286,10 @@ export function TransfersListClient({
         <Button
           variant="ghost"
           size="icon-sm"
-          asChild
           aria-label={`${ACTIONS_VI.viewDetails} ${r.transfer_number}`}
+          render={<Link href={detailHref(r.id)} />}
         >
-          <Link href={detailHref(r.id)}>
-            <IconArrowRight className="size-4" />
-          </Link>
+          <IconArrowRight className="size-4" />
         </Button>
       ),
     },
@@ -339,23 +337,19 @@ export function TransfersListClient({
         {canReceiveSupplier || canCreate ? (
           <div className="flex justify-end gap-2">
             {canReceiveSupplier ? (
-              <Button size="touch" asChild>
-                <Link href={supplierGrnHref}>
-                  <IconPackageImport data-icon="inline-start" />
-                  {INVENTORY_VI.receivingEyebrow}
-                </Link>
+              <Button size="touch" render={<Link href={supplierGrnHref} />}>
+                <IconPackageImport data-icon="inline-start" />
+                {INVENTORY_VI.receivingEyebrow}
               </Button>
             ) : null}
             {canCreate ? (
               <Button
                 size="touch"
                 variant={canReceiveSupplier ? "outline" : "default"}
-                asChild
+                render={<Link href={createHref} />}
               >
-                <Link href={createHref}>
-                  <IconPlus data-icon="inline-start" />
-                  {createLabel}
-                </Link>
+                <IconPlus data-icon="inline-start" />
+                {createLabel}
               </Button>
             ) : null}
           </div>
@@ -411,11 +405,12 @@ export function TransfersListClient({
   }
 
   const desktopCreateAction = canCreate ? (
-    <Button size={isOperator ? "touch" : "sm"} asChild>
-      <Link href={createHref}>
-        <IconPlus data-icon="inline-start" />
-        {createLabel}
-      </Link>
+    <Button
+      size={isOperator ? "touch" : "sm"}
+      render={<Link href={createHref} />}
+    >
+      <IconPlus data-icon="inline-start" />
+      {createLabel}
     </Button>
   ) : null;
 

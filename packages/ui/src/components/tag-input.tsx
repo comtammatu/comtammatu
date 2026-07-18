@@ -1,20 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { Combobox as BaseCombobox } from "@base-ui/react/combobox";
 import { Check as IconCheck, X as IconX } from "lucide-react";
 
 import { cn } from "../lib/utils";
 import { fieldTriggerChrome } from "../lib/field-trigger";
 import { Badge } from "./badge";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "./command";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 export type TagInputOption = {
   value: string;
@@ -39,26 +31,10 @@ type TagInputProps = Omit<React.ComponentProps<"div">, "onChange"> & {
   "aria-invalid"?: boolean;
 };
 
-function Tag({
-  children,
-  onRemove,
-}: {
-  children: React.ReactNode;
-  onRemove?: () => void;
-}) {
+function Tag({ children }: { children: React.ReactNode }) {
   return (
     <Badge variant="secondary" className="gap-1 pr-1">
       <span className="truncate">{children}</span>
-      {onRemove ? (
-        <button
-          type="button"
-          className="inline-flex size-4 items-center justify-center rounded-full outline-none hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground"
-          onClick={onRemove}
-          aria-label={`Xóa ${children}`}
-        >
-          <IconX className="size-3" />
-        </button>
-      ) : null}
     </Badge>
   );
 }
@@ -83,7 +59,7 @@ function TagInput({
     React.useState(defaultValue);
   const selectedValues = value ?? uncontrolledValue;
   const selectedSet = new Set(selectedValues);
-  const selectedOptions = selectedValues.map((item) => ({
+  const selectedOptions: TagInputOption[] = selectedValues.map((item) => ({
     value: item,
     label: options.find((option) => option.value === item)?.label ?? item,
   }));
@@ -114,81 +90,118 @@ function TagInput({
     if (value == null) setUncontrolledValue(next);
     onValueChange?.(next, meta);
   };
-  const addOption = (option: TagInputOption) => {
-    if (option.disabled || selectedSet.has(option.value)) return;
-    setValues([...selectedValues, option.value], option);
-    setQuery("");
-    setOpen(false);
-  };
-  const removeValue = (removed: string) => {
-    setValues(
-      selectedValues.filter((item) => item !== removed),
-      { removed },
-    );
-  };
-
   return (
     <div
       data-slot="tag-input"
       className={cn("flex flex-col gap-1.5", className)}
       {...props}
     >
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            disabled={disabled}
-            aria-invalid={ariaInvalid}
-            data-placeholder={selectedOptions.length ? undefined : true}
-            className={cn(
-              "flex min-h-8 w-full flex-wrap items-center gap-1.5 px-2 py-1 text-left text-xs",
-              fieldTriggerChrome,
-            )}
-          >
-            {selectedOptions.length ? (
-              selectedOptions.map((option) => (
-                <Tag
-                  key={option.value}
-                  onRemove={() => removeValue(option.value)}
-                >
-                  {option.label}
-                </Tag>
-              ))
-            ) : (
-              <span className="text-muted-foreground">{placeholder}</span>
-            )}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-[var(--radix-popover-trigger-width)] p-0"
-          align="start"
+      <BaseCombobox.Root
+        items={menuOptions}
+        multiple
+        value={selectedOptions}
+        open={open}
+        disabled={disabled}
+        inputValue={query}
+        itemToStringLabel={(option) => option.label}
+        itemToStringValue={(option) => option.value}
+        isItemEqualToValue={(left, right) => left.value === right.value}
+        filter={(option, nextQuery) => {
+          const normalizedNextQuery = nextQuery.trim().toLocaleLowerCase();
+          return (
+            !normalizedNextQuery ||
+            [option.label, option.value, ...(option.keywords ?? [])].some(
+              (candidate) =>
+                candidate.toLocaleLowerCase().includes(normalizedNextQuery),
+            )
+          );
+        }}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (nextOpen) setQuery("");
+        }}
+        onInputValueChange={setQuery}
+        onValueChange={(nextOptions) => {
+          const nextValues = nextOptions.map((option) => option.value);
+          const added = nextOptions.find(
+            (option) => !selectedSet.has(option.value),
+          );
+          const removed = selectedValues.find(
+            (item) => !nextValues.includes(item),
+          );
+
+          setValues(nextValues, added ?? (removed ? { removed } : undefined));
+          if (added) {
+            setQuery("");
+            setOpen(false);
+          }
+        }}
+      >
+        <BaseCombobox.InputGroup
+          aria-invalid={ariaInvalid}
+          className={cn(
+            "flex min-h-8 w-full flex-wrap items-center gap-1.5 px-2 py-1 text-left text-xs",
+            fieldTriggerChrome,
+          )}
         >
-          <Command shouldFilter>
-            <CommandInput
-              placeholder={searchPlaceholder}
-              value={query}
-              onValueChange={setQuery}
-            />
-            <CommandList>
-              <CommandEmpty>{emptyText}</CommandEmpty>
-              <CommandGroup>
-                {menuOptions.map((option) => (
-                  <CommandItem
+          <BaseCombobox.Chips>
+            <BaseCombobox.Value placeholder={placeholder}>
+              {(selected: TagInputOption[]) =>
+                selected.map((option) => (
+                  <BaseCombobox.Chip
                     key={option.value}
-                    value={option.label}
-                    keywords={[option.value, ...(option.keywords ?? [])]}
+                    className="inline-flex max-w-full items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
+                  >
+                    <span className="truncate">{option.label}</span>
+                    <BaseCombobox.ChipRemove
+                      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full outline-none hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground"
+                      aria-label={`Xóa ${option.label}`}
+                    >
+                      <IconX className="size-3" />
+                    </BaseCombobox.ChipRemove>
+                  </BaseCombobox.Chip>
+                ))
+              }
+            </BaseCombobox.Value>
+          </BaseCombobox.Chips>
+          <BaseCombobox.Input
+            className="min-w-20 flex-1 bg-transparent outline-hidden placeholder:text-muted-foreground"
+            placeholder={selectedOptions.length ? undefined : placeholder}
+          />
+        </BaseCombobox.InputGroup>
+        <BaseCombobox.Portal>
+          <BaseCombobox.Positioner
+            align="start"
+            sideOffset={4}
+            className="isolate z-50"
+          >
+            <BaseCombobox.Popup className="w-(--anchor-width) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-effect-popover">
+              <div className="flex h-8 items-center gap-2 rounded-md bg-input/20 px-2 dark:bg-input/30">
+                <BaseCombobox.Input
+                  className="min-w-0 flex-1 bg-transparent text-xs/relaxed outline-hidden placeholder:text-muted-foreground"
+                  placeholder={searchPlaceholder}
+                />
+              </div>
+              <BaseCombobox.Empty className="py-6 text-center text-xs/relaxed">
+                {emptyText}
+              </BaseCombobox.Empty>
+              <BaseCombobox.List className="no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none">
+                {(option: TagInputOption) => (
+                  <BaseCombobox.Item
+                    key={option.value}
+                    value={option}
                     disabled={option.disabled}
-                    onSelect={() => addOption(option)}
+                    className="flex min-h-7 cursor-default items-center gap-2 rounded-md px-2.5 py-1.5 text-xs/relaxed outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-muted data-[highlighted]:text-foreground"
                   >
                     <IconCheck className="size-3.5 opacity-0" />
                     <span className="truncate">{option.label}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+                  </BaseCombobox.Item>
+                )}
+              </BaseCombobox.List>
+            </BaseCombobox.Popup>
+          </BaseCombobox.Positioner>
+        </BaseCombobox.Portal>
+      </BaseCombobox.Root>
     </div>
   );
 }

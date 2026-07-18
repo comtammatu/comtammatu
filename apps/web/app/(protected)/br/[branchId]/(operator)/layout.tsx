@@ -88,55 +88,47 @@ export default async function OperatorLayout({
             <>
               {canUseBranchPicker && context.canSwitchBranch ? (
                 <Button
-                  asChild
                   variant="outline"
                   size="touch"
                   className="min-w-11"
                   aria-label={MODULE_ACL.branch_picker.label}
                   title={MODULE_ACL.branch_picker.label}
+                  render={<Link href={MODULE_ACL.branch_picker.path} />}
                 >
-                  <Link href={MODULE_ACL.branch_picker.path}>
-                    <IconBuilding2 data-icon="inline-start" />
-                    <span className="hidden sm:inline">
-                      {MODULE_ACL.branch_picker.label}
-                    </span>
-                  </Link>
+                  <IconBuilding2 data-icon="inline-start" />
+                  <span className="hidden sm:inline">
+                    {MODULE_ACL.branch_picker.label}
+                  </span>
                 </Button>
               ) : null}
               {canManageBranch ? (
                 <Button
-                  asChild
                   variant="outline"
                   size="icon-touch"
                   aria-label={APP_COPY_VI.branchCommand}
                   title={APP_COPY_VI.branchCommand}
+                  render={<Link href={`/br/${context.branchId}/dashboard`} />}
                 >
-                  <Link href={`/br/${context.branchId}/dashboard`}>
-                    <IconLayoutDashboard />
-                  </Link>
+                  <IconLayoutDashboard />
                 </Button>
               ) : null}
               <Button
-                asChild
                 variant="outline"
                 size="icon-touch"
                 aria-label={messages.operator.nav.profileShort}
+                render={<Link href={`/br/${context.branchId}/profile`} />}
               >
-                <Link href={`/br/${context.branchId}/profile`}>
-                  <IconUser />
-                </Link>
+                <IconUser />
               </Button>
               <Button
-                asChild
                 variant="outline"
                 size="icon-touch"
                 aria-label={messages.operator.header.notificationsAria}
                 className="relative"
+                render={<Link href={notificationsHref} />}
               >
-                <Link href={notificationsHref}>
-                  <IconBell />
-                  <NotificationCountBadge count={unread} />
-                </Link>
+                <IconBell />
+                <NotificationCountBadge count={unread} />
               </Button>
             </>
           }

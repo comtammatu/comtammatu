@@ -141,16 +141,20 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
 
   if (item.action_url) {
     return (
-      <Button asChild variant="ghost" className={className}>
-        <Link
-          href={item.action_url}
-          onClick={() => {
-            handleRead();
-            onNavigate?.();
-          }}
-        >
-          {content}
-        </Link>
+      <Button
+        variant="ghost"
+        className={className}
+        render={
+          <Link
+            href={item.action_url}
+            onClick={() => {
+              handleRead();
+              onNavigate?.();
+            }}
+          />
+        }
+      >
+        {content}
       </Button>
     );
   }

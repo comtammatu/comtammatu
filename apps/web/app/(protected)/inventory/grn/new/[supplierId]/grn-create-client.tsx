@@ -326,41 +326,41 @@ export function GrnCreateClient({
             const referenceCost = getDisplayReferenceCost(ingredient);
             return (
               <InteractiveCard
-                asChild
                 key={ingredient.id}
                 padding="compact"
                 minHeight="tap"
                 className="rounded-lg"
+                render={
+                  <button
+                    type="button"
+                    onClick={() => controller.openEdit(ingredient.id)}
+                    className="w-full text-left"
+                  />
+                }
               >
-                <button
-                  type="button"
-                  onClick={() => controller.openEdit(ingredient.id)}
-                  className="w-full text-left"
-                >
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-2xs font-bold uppercase text-muted-foreground">
-                    {(ingredient.sku ?? ingredient.name).slice(0, 2)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold leading-tight">
-                      {ingredient.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {ingredient.sku ? `${ingredient.sku} · ` : ""}
-                      {referenceCost?.unit || ingredient.unit}
-                      {referenceCost
-                        ? ` · ~${GRN_CREATE_COPY.lastCost(
-                            referenceCost.value,
-                            referenceCost.unit,
-                          )}`
-                        : ""}
-                    </p>
-                  </div>
-                  {added ? (
-                    <IconCircleCheck className="size-5 shrink-0 text-success" />
-                  ) : (
-                    <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                  )}
-                </button>
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-2xs font-bold uppercase text-muted-foreground">
+                  {(ingredient.sku ?? ingredient.name).slice(0, 2)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold leading-tight">
+                    {ingredient.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {ingredient.sku ? `${ingredient.sku} · ` : ""}
+                    {referenceCost?.unit || ingredient.unit}
+                    {referenceCost
+                      ? ` · ~${GRN_CREATE_COPY.lastCost(
+                          referenceCost.value,
+                          referenceCost.unit,
+                        )}`
+                      : ""}
+                  </p>
+                </div>
+                {added ? (
+                  <IconCircleCheck className="size-5 shrink-0 text-success" />
+                ) : (
+                  <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                )}
               </InteractiveCard>
             );
           })

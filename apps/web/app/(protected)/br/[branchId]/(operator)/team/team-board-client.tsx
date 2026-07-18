@@ -347,35 +347,31 @@ function MobileTeamCard({
 
   return (
     <InteractiveCard
-      asChild
       minHeight="tap"
       padding="compact"
       className={`h-auto touch-manipulation select-none text-left ${className ?? ""}`}
+      render={<button type="button" onClick={() => onOpenDrawer(row)} />}
     >
-      <button type="button" onClick={() => onOpenDrawer(row)}>
-        <div className="flex min-w-0 flex-1 flex-col gap-2 pointer-events-none">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{row.fullName}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {subtitle}
-              </p>
-            </div>
-            <AttendanceBadge shift={row.shift} />
+      <div className="flex min-w-0 flex-1 flex-col gap-2 pointer-events-none">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{row.fullName}</p>
+            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            <CountBadge status={row.countStatus} />
-            {row.onApprovedLeave ? (
-              <StatusBadge
-                domain="leave-request"
-                value="approved"
-                label={copy.leaveApproved}
-              />
-            ) : null}
-          </div>
+          <AttendanceBadge shift={row.shift} />
         </div>
-        <IconChevronRight className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
-      </button>
+        <div className="flex flex-wrap gap-1.5">
+          <CountBadge status={row.countStatus} />
+          {row.onApprovedLeave ? (
+            <StatusBadge
+              domain="leave-request"
+              value="approved"
+              label={copy.leaveApproved}
+            />
+          ) : null}
+        </div>
+      </div>
+      <IconChevronRight className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
     </InteractiveCard>
   );
 }
@@ -538,10 +534,7 @@ export function TeamBoardClient({
                   {drawerRow.shift?.shiftName ?? copy.shiftNone}
                 </DrawerDescription>
               </DrawerHeader>
-              <div
-                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4"
-                data-vaul-no-drag=""
-              >
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4">
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap gap-2">
                     <AttendanceBadge shift={drawerRow.shift} />

@@ -130,7 +130,6 @@ function AppendDraftPaneComponent({
               return (
                 <li key={item.key} className="relative">
                   <Item
-                    asChild
                     variant="outline"
                     size="sm"
                     className={cn(
@@ -138,27 +137,28 @@ function AppendDraftPaneComponent({
                       isRemoving &&
                         "bg-destructive/10 opacity-0 motion-safe:scale-95",
                     )}
-                  >
-                    <Button
-                      variant="ghost"
-                      className="w-full min-w-0 text-left justify-start font-normal h-auto p-0 disabled:pointer-events-none disabled:opacity-50"
-                      aria-label={messages.pos.appendDraft.editItemAria(
-                        displayName,
-                      )}
-                      disabled={isSubmitting || isRemoving}
-                      onClick={() => onEditItem(item)}
-                    >
-                      <PosLineItemCompact
-                        quantity={item.quantity}
-                        title={displayName}
-                        total={formatVND(subtotal)}
-                        options={summary.options}
-                        modifiers={summary.modifiers}
-                        sides={summary.sides}
-                        note={summary.note}
-                        isPriority={summary.isPriority}
+                    render={
+                      <Button
+                        variant="ghost"
+                        className="w-full min-w-0 text-left justify-start font-normal h-auto p-0 disabled:pointer-events-none disabled:opacity-50"
+                        aria-label={messages.pos.appendDraft.editItemAria(
+                          displayName,
+                        )}
+                        disabled={isSubmitting || isRemoving}
+                        onClick={() => onEditItem(item)}
                       />
-                    </Button>
+                    }
+                  >
+                    <PosLineItemCompact
+                      quantity={item.quantity}
+                      title={displayName}
+                      total={formatVND(subtotal)}
+                      options={summary.options}
+                      modifiers={summary.modifiers}
+                      sides={summary.sides}
+                      note={summary.note}
+                      isPriority={summary.isPriority}
+                    />
                   </Item>
                   <Button
                     type="button"
@@ -183,9 +183,7 @@ function AppendDraftPaneComponent({
       <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
-            <SectionLabel>
-              {messages.pos.appendDraft.summaryLabel}
-            </SectionLabel>
+            <SectionLabel>{messages.pos.appendDraft.summaryLabel}</SectionLabel>
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <Badge variant="outline">
                 {messages.pos.appendDraft.itemCount(quantity)}

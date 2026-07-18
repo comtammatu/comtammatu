@@ -116,31 +116,29 @@ function buildQueueRows(
 function QueueRowItem({ row }: { row: QueueRow }) {
   return (
     <Item
-      asChild
       variant="outline"
       size="sm"
       className="chrome-tap min-h-12 select-none bg-card transition-transform active:scale-[0.97]"
+      render={<Link href={row.href} />}
     >
-      <Link href={row.href}>
-        <ItemMedia
-          variant="icon"
-          className="rounded-md bg-warning/10 p-2 text-warning"
-        >
-          <row.icon />
-        </ItemMedia>
-        <ItemContent className="min-w-0">
-          <ItemTitle size="heading" className="line-clamp-none w-full">
-            {row.title}
-          </ItemTitle>
-          <ItemDescription className="line-clamp-none">
-            {row.meta}
-          </ItemDescription>
-        </ItemContent>
-        <ItemActions className="shrink-0 text-muted-foreground">
-          <Badge variant="warning">{formatCount(row.count)}</Badge>
-          <ChevronRight />
-        </ItemActions>
-      </Link>
+      <ItemMedia
+        variant="icon"
+        className="rounded-md bg-warning/10 p-2 text-warning"
+      >
+        <row.icon />
+      </ItemMedia>
+      <ItemContent className="min-w-0">
+        <ItemTitle size="heading" className="line-clamp-none w-full">
+          {row.title}
+        </ItemTitle>
+        <ItemDescription className="line-clamp-none">
+          {row.meta}
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions className="shrink-0 text-muted-foreground">
+        <Badge variant="warning">{formatCount(row.count)}</Badge>
+        <ChevronRight />
+      </ItemActions>
     </Item>
   );
 }

@@ -84,14 +84,20 @@ function StocktakeSessionCard({
   onOpenDrawer: (row: StocktakeSessionRow) => void;
 }) {
   const router = useRouter();
-  
+
   const longPress = useLongPress({
     onLongPress: () => onOpenDrawer(row),
-    onClick: () => router.push(`${routeBase}/${row.id}?branchId=${row.branch_id}`),
+    onClick: () =>
+      router.push(`${routeBase}/${row.id}?branchId=${row.branch_id}`),
   });
 
   return (
-    <InteractiveCard minHeight="mobile" padding="default" className="flex-col items-stretch touch-none select-none cursor-pointer" {...longPress}>
+    <InteractiveCard
+      minHeight="mobile"
+      padding="default"
+      className="flex-col items-stretch touch-none select-none cursor-pointer"
+      {...longPress}
+    >
       <div className="flex items-center justify-between gap-2 pointer-events-none">
         <span className="font-mono text-sm font-medium">KK-{row.id}</span>
         <StatusBadge domain="inventory" value={row.status} />
@@ -211,12 +217,12 @@ export function StocktakeListClient({
         <Button
           variant="ghost"
           size="icon-lg"
-          asChild
           aria-label={messages.inventory.stocktake.detailsAria}
+          render={
+            <Link href={`${routeBase}/${r.id}?branchId=${r.branch_id}`} />
+          }
         >
-          <Link href={`${routeBase}/${r.id}?branchId=${r.branch_id}`}>
-            <IconArrowRight className="size-4" />
-          </Link>
+          <IconArrowRight className="size-4" />
         </Button>
       ),
     },
@@ -228,12 +234,10 @@ export function StocktakeListClient({
         type="button"
         variant="outline"
         size={embedded ? "touch" : "default"}
-        asChild
+        render={<Link href={`${routeBase}/new${branchQuery}`} />}
       >
-        <Link href={`${routeBase}/new${branchQuery}`}>
-          <IconClipboardCheck className="size-4" />
-          {messages.inventory.stocktake.openSession}
-        </Link>
+        <IconClipboardCheck className="size-4" />
+        {messages.inventory.stocktake.openSession}
       </Button>
     </div>
   );
@@ -325,23 +329,45 @@ export function StocktakeListClient({
         emptyMode={isFiltered ? "no-results" : "no-data"}
         emptyIcon={<IconClipboardCheck />}
         mobileCardRender={(r) => (
-          <StocktakeSessionCard row={r} routeBase={routeBase} onOpenDrawer={setDrawerRow} />
+          <StocktakeSessionCard
+            row={r}
+            routeBase={routeBase}
+            onOpenDrawer={setDrawerRow}
+          />
         )}
       />
-      <Drawer open={!!drawerRow} onOpenChange={(open) => !open && setDrawerRow(null)}>
+      <Drawer
+        open={!!drawerRow}
+        onOpenChange={(open) => !open && setDrawerRow(null)}
+      >
         <DrawerContent>
           {drawerRow && (
             <>
               <DrawerHeader>
                 <DrawerTitle>KK-{drawerRow.id}</DrawerTitle>
-                <DrawerDescription>{drawerRow.branches?.name ?? "—"}</DrawerDescription>
+                <DrawerDescription>
+                  {drawerRow.branches?.name ?? "—"}
+                </DrawerDescription>
               </DrawerHeader>
               <div className="p-4 flex flex-col gap-3">
-                <Button variant="default" className="w-full" onClick={() => router.push(`${routeBase}/${drawerRow.id}?branchId=${drawerRow.branch_id}`)}>
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() =>
+                    router.push(
+                      `${routeBase}/${drawerRow.id}?branchId=${drawerRow.branch_id}`,
+                    )
+                  }
+                >
                   Xem chi tiết
                 </Button>
                 {drawerRow.status === "in_progress" && (
-                  <Button variant="destructive" className="w-full" disabled={isPending} onClick={() => handleCancelSession(drawerRow.id)}>
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    disabled={isPending}
+                    onClick={() => handleCancelSession(drawerRow.id)}
+                  >
                     <IconBan className="mr-2 h-4 w-4" />
                     Hủy phiếu
                   </Button>
@@ -358,5 +384,9 @@ export function StocktakeListClient({
     return <div className="flex w-full flex-col gap-3">{content}</div>;
   }
 
-  return <AppPage width="xwide" density="compact">{content}</AppPage>;
+  return (
+    <AppPage width="xwide" density="compact">
+      {content}
+    </AppPage>
+  );
 }

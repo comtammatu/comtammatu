@@ -344,7 +344,7 @@ export function DataTable<T>({
                     setOpenContextRowKey(open ? rowKey : null)
                   }
                 >
-                  <ContextMenuTrigger asChild>{rowElement}</ContextMenuTrigger>
+                  <ContextMenuTrigger render={rowElement} />
                   <ContextMenuContent>{rowContextMenu}</ContextMenuContent>
                 </ContextMenu>
               );

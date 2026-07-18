@@ -81,29 +81,40 @@ export function BranchStocktakeListClient({
       hideHeaderOnMobile
       action={
         canManage ? (
-          <Button asChild size="touch">
-            <Link href={`${stocktakeBasePath}/new`}>
-              <IconClipboardCheck data-icon="inline-start" />
-              {stocktakeCopy.openSession}
-            </Link>
+          <Button
+            size="touch"
+            render={<Link href={`${stocktakeBasePath}/new`} />}
+          >
+            <IconClipboardCheck data-icon="inline-start" />
+            {stocktakeCopy.openSession}
           </Button>
         ) : undefined
       }
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stockBasePath} aria-label="Quay lại kho">
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={<Link href={stockBasePath} aria-label="Quay lại kho" />}
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{stocktakeCopy.title}</p>
-            <p className="truncate text-xs text-muted-foreground">{branchName}</p>
+            <p className="truncate text-sm font-semibold">
+              {stocktakeCopy.title}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {branchName}
+            </p>
           </div>
           {canManage ? (
-            <Button asChild size="touch" className="shrink-0">
-              <Link href={`${stocktakeBasePath}/new`}>Mở đợt</Link>
+            <Button
+              size="touch"
+              className="shrink-0"
+              render={<Link href={`${stocktakeBasePath}/new`} />}
+            >
+              Mở đợt
             </Button>
           ) : null}
         </BranchOperatorControlBar>
@@ -172,36 +183,36 @@ export function BranchStocktakeListClient({
                 return (
                   <div key={session.id} role="listitem">
                     <Item
-                      asChild
                       variant="outline"
                       className="min-h-16 touch-manipulation"
+                      render={
+                        <Link href={`${stocktakeBasePath}/${session.id}`} />
+                      }
                     >
-                      <Link href={`${stocktakeBasePath}/${session.id}`}>
-                        <ItemContent className="min-w-0 gap-1">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <ItemTitle className="truncate font-mono text-sm font-semibold">
-                              KK-{session.id}
-                            </ItemTitle>
-                            <StatusBadge
-                              domain="inventory"
-                              value={session.status}
-                              size="sm"
-                            />
-                          </div>
-                          <ItemDescription className="line-clamp-none text-xs">
-                            {session.status === "in_progress"
-                              ? `${progress.counted}/${progress.total} dòng đã đếm · ${formatPercent(progress.percent)}`
-                              : formatVNDate(
-                                  session.completedAt ??
-                                    session.startedAt ??
-                                    session.createdAt,
-                                )}
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions className="self-center text-muted-foreground">
-                          <IconArrowRight />
-                        </ItemActions>
-                      </Link>
+                      <ItemContent className="min-w-0 gap-1">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <ItemTitle className="truncate font-mono text-sm font-semibold">
+                            KK-{session.id}
+                          </ItemTitle>
+                          <StatusBadge
+                            domain="inventory"
+                            value={session.status}
+                            size="sm"
+                          />
+                        </div>
+                        <ItemDescription className="line-clamp-none text-xs">
+                          {session.status === "in_progress"
+                            ? `${progress.counted}/${progress.total} dòng đã đếm · ${formatPercent(progress.percent)}`
+                            : formatVNDate(
+                                session.completedAt ??
+                                  session.startedAt ??
+                                  session.createdAt,
+                              )}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions className="self-center text-muted-foreground">
+                        <IconArrowRight />
+                      </ItemActions>
                     </Item>
                   </div>
                 );

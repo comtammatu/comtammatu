@@ -178,32 +178,32 @@ function BranchGrnListItem({
   return (
     <div role="listitem">
       <Item
-        asChild
         variant="outline"
         className={
           grn.status === "cancelled"
             ? "min-h-20 touch-manipulation opacity-60"
             : "min-h-20 touch-manipulation"
         }
+        render={
+          <Link href={grnDetailHref(`/br/${branchId}/stock/grn`, grn.id)} />
+        }
       >
-        <Link href={grnDetailHref(`/br/${branchId}/stock/grn`, grn.id)}>
-          <ItemContent className="min-w-0 gap-1">
-            <ItemTitle size="heading" className="line-clamp-none font-mono">
-              {grn.code}
-            </ItemTitle>
-            <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span>{grn.supplierName}</span>
-              <span className="font-mono tabular-nums">{grn.date}</span>
-              {grn.poId != null && grn.poCode !== "—" ? (
-                <span className="font-mono">PO {grn.poCode}</span>
-              ) : null}
-            </ItemDescription>
-          </ItemContent>
-          <ItemActions className="shrink-0">
-            <StatusBadge domain="inventory" value={grn.status} size="sm" />
-            <IconChevronRight className="size-4 text-muted-foreground" />
-          </ItemActions>
-        </Link>
+        <ItemContent className="min-w-0 gap-1">
+          <ItemTitle size="heading" className="line-clamp-none font-mono">
+            {grn.code}
+          </ItemTitle>
+          <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>{grn.supplierName}</span>
+            <span className="font-mono tabular-nums">{grn.date}</span>
+            {grn.poId != null && grn.poCode !== "—" ? (
+              <span className="font-mono">PO {grn.poCode}</span>
+            ) : null}
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions className="shrink-0">
+          <StatusBadge domain="inventory" value={grn.status} size="sm" />
+          <IconChevronRight className="size-4 text-muted-foreground" />
+        </ItemActions>
       </Item>
     </div>
   );
@@ -270,11 +270,13 @@ export function BranchGrnListClient({
       hideHeaderOnMobile
     >
       {canCreate ? (
-        <Button asChild size="touch" className="w-full">
-          <Link href={`/br/${branchId}/stock/grn/new`}>
-            <IconPlus className="size-4" />
-            {INVENTORY_VI.receivingEyebrow}
-          </Link>
+        <Button
+          size="touch"
+          className="w-full"
+          render={<Link href={`/br/${branchId}/stock/grn/new`} />}
+        >
+          <IconPlus className="size-4" />
+          {INVENTORY_VI.receivingEyebrow}
         </Button>
       ) : null}
 

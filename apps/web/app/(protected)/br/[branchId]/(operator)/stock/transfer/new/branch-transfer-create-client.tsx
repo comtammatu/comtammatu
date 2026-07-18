@@ -296,7 +296,7 @@ export function BranchTransferCreateClient({
                         <SelectItem
                           key={ingredient.id}
                           value={String(ingredient.id)}
-                          textValue={`${ingredient.name} ${getTransferWarehouseUnit(
+                          label={`${ingredient.name} ${getTransferWarehouseUnit(
                             ingredient,
                           )} ${ingredient.id}`}
                           className="min-h-11 py-2.5"
@@ -490,8 +490,12 @@ export function BranchTransferCreateClient({
       <AppDetailFooter
         sticky
         leading={
-          <Button variant="outline" size="touch" asChild>
-            <Link href={controller.listHref}>{ACTIONS_VI.cancel}</Link>
+          <Button
+            variant="outline"
+            size="touch"
+            render={<Link href={controller.listHref} />}
+          >
+            {ACTIONS_VI.cancel}
           </Button>
         }
         trailing={

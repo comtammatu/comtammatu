@@ -260,15 +260,13 @@ export function TasksClient({
                       ) : null}
                       {isCountTask && !item.done ? (
                         <Button
-                          asChild
                           size="touch"
                           className="w-full sm:w-fit"
                           variant="default"
+                          render={<Link href={countHref} />}
                         >
-                          <Link href={countHref}>
-                            <IconCount data-icon="inline-start" />
-                            {homeCopy.countCta}
-                          </Link>
+                          <IconCount data-icon="inline-start" />
+                          {homeCopy.countCta}
                         </Button>
                       ) : null}
                     </ItemContent>
@@ -280,11 +278,13 @@ export function TasksClient({
         );
       })}
       {checkoutHref && requiredRemaining === 0 && !disabled ? (
-        <Button asChild size="touch-lg" className="w-full sm:w-fit">
-          <Link href={checkoutHref}>
-            <IconLogout data-icon="inline-start" />
-            {checkoutLabel}
-          </Link>
+        <Button
+          size="touch-lg"
+          className="w-full sm:w-fit"
+          render={<Link href={checkoutHref} />}
+        >
+          <IconLogout data-icon="inline-start" />
+          {checkoutLabel}
         </Button>
       ) : null}
     </div>

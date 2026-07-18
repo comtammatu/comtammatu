@@ -789,16 +789,18 @@ export function DashboardClient(props: DashboardProps) {
             title={messages.inventory.dashboard.priorityAlertsTitle}
             size="sm"
             action={
-              <Button variant="ghost" size="sm" asChild>
-                <Link
-                  href={withBranch(
-                    showProcurement
-                      ? paths.operationTab("grn")
-                      : paths.stock,
-                  )}
-                >
-                  {ACTIONS_VI.viewAll}
-                </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                render={
+                  <Link
+                    href={withBranch(
+                      showProcurement ? paths.operationTab("grn") : paths.stock,
+                    )}
+                  />
+                }
+              >
+                {ACTIONS_VI.viewAll}
               </Button>
             }
           >
@@ -807,9 +809,7 @@ export function DashboardClient(props: DashboardProps) {
                 <AppLinkCard
                   key={`r-${item.ingredientId}-${item.branchId}`}
                   href={withBranch(
-                    showProcurement
-                      ? paths.operationTab("grn")
-                      : paths.stock,
+                    showProcurement ? paths.operationTab("grn") : paths.stock,
                   )}
                   title={item.name}
                   description={messages.inventory.dashboard.reorderStatus(
@@ -887,11 +887,9 @@ export function DashboardClient(props: DashboardProps) {
                         key={action.href}
                         variant="outline"
                         size="sm"
-                        asChild
+                        render={<Link href={withBranch(action.href)} />}
                       >
-                        <Link href={withBranch(action.href)}>
-                          {action.label}
-                        </Link>
+                        {action.label}
                       </Button>
                     ))}
                   </div>
@@ -943,10 +941,14 @@ export function DashboardClient(props: DashboardProps) {
             )}
             size="sm"
             action={
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={withBranch(paths.operationTab("transfers"))}>
-                  {ACTIONS_VI.viewAll}
-                </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                render={
+                  <Link href={withBranch(paths.operationTab("transfers"))} />
+                }
+              >
+                {ACTIONS_VI.viewAll}
               </Button>
             }
           >
@@ -986,10 +988,12 @@ export function DashboardClient(props: DashboardProps) {
             )}
             size="sm"
             action={
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={withBranch(paths.stocktake)}>
-                  {ACTIONS_VI.viewAll}
-                </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                render={<Link href={withBranch(paths.stocktake)} />}
+              >
+                {ACTIONS_VI.viewAll}
               </Button>
             }
           >

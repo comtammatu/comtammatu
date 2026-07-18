@@ -25,11 +25,13 @@ export default async function OperatorNewTransferPage({ params }: PageProps) {
       title={operatorFlow.transferCreateTitle}
       description={operatorFlow.transferCreateDescription}
       action={
-        <Button variant="outline" size="touch" asChild>
-          <Link href={basePath}>
-            <IconChevronLeft data-icon="inline-start" />
-            {messages.inventory.grn.back}
-          </Link>
+        <Button
+          variant="outline"
+          size="touch"
+          render={<Link href={basePath} />}
+        >
+          <IconChevronLeft data-icon="inline-start" />
+          {messages.inventory.grn.back}
         </Button>
       }
     >

@@ -96,7 +96,7 @@ export function StocktakeModeSelector({
         return (
           <Item
             key={m}
-            asChild
+            render={<label data-checked={checked ? "true" : "false"} />}
             variant="outline"
             className={cn(
               "cursor-pointer flex-col items-stretch gap-1.5 text-sm",
@@ -106,31 +106,29 @@ export function StocktakeModeSelector({
               disabled && "cursor-not-allowed opacity-60",
             )}
           >
-            <label data-checked={checked ? "true" : "false"}>
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="stocktake-mode"
-                  value={m}
-                  checked={checked}
-                  disabled={disabled}
-                  onChange={() => onChange(m)}
-                  className="size-4 accent-primary"
-                />
-                <span className="font-medium">{label}</span>
-                <div className="ml-auto flex items-center gap-1">
-                  {meta.defaultBlind ? (
-                    <Badge variant="warning">Blind</Badge>
-                  ) : null}
-                  {meta.unaudited ? (
-                    <Badge variant="secondary">Unaudited</Badge>
-                  ) : null}
-                </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="stocktake-mode"
+                value={m}
+                checked={checked}
+                disabled={disabled}
+                onChange={() => onChange(m)}
+                className="size-4 accent-primary"
+              />
+              <span className="font-medium">{label}</span>
+              <div className="ml-auto flex items-center gap-1">
+                {meta.defaultBlind ? (
+                  <Badge variant="warning">Blind</Badge>
+                ) : null}
+                {meta.unaudited ? (
+                  <Badge variant="secondary">Unaudited</Badge>
+                ) : null}
               </div>
-              <p className="line-clamp-2 break-words text-xs text-muted-foreground">
-                {meta.description}
-              </p>
-            </label>
+            </div>
+            <p className="line-clamp-2 break-words text-xs text-muted-foreground">
+              {meta.description}
+            </p>
           </Item>
         );
       })}

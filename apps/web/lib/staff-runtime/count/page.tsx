@@ -121,7 +121,11 @@ async function resolveCurrentCountShiftId(
       .filter((record) => record.check_out)
       .map((record) => record.shift_id),
   );
-  return resolveDefaultShiftId(activeShifts ?? [], undefined, completedShiftIds);
+  return resolveDefaultShiftId(
+    activeShifts ?? [],
+    undefined,
+    completedShiftIds,
+  );
 }
 
 interface EmployeeCountSurfaceProps {
@@ -216,11 +220,12 @@ async function buildEmployeeCountSurface({
     }
   }
 
-  const assignmentRows = ((assignmentData ?? []) as unknown as AssignmentRow[])
-    .filter(
-      (row) =>
-        row.shift_id !== null || !shiftSpecificCells.has(assignmentCellKey(row)),
-    );
+  const assignmentRows = (
+    (assignmentData ?? []) as unknown as AssignmentRow[]
+  ).filter(
+    (row) =>
+      row.shift_id !== null || !shiftSpecificCells.has(assignmentCellKey(row)),
+  );
 
   if (assignmentRows.length === 0) {
     return {
@@ -416,19 +421,19 @@ function CountUnavailableState({
     <BranchOperatorPanel tone="info" size="sm">
       <AppEmptyState
         title={title ?? messages.employee.profile.missingProfileTitle}
-        description={description ?? messages.employee.profile.missingProfileDescription}
+        description={
+          description ?? messages.employee.profile.missingProfileDescription
+        }
         icon={<IconUserCircle />}
       >
         <Button
-          asChild
           variant="outline"
           size="touch"
           className="w-full sm:w-fit"
+          render={<Link href={profileHref ?? "/br"} />}
         >
-          <Link href={profileHref ?? "/br"}>
-            <IconUserCircle data-icon="inline-start" />
-            {messages.employee.profile.openProfile}
-          </Link>
+          <IconUserCircle data-icon="inline-start" />
+          {messages.employee.profile.openProfile}
         </Button>
       </AppEmptyState>
     </BranchOperatorPanel>
@@ -444,9 +449,7 @@ function renderCountUnavailableState(props: {
   return <CountUnavailableState {...props} />;
 }
 
-export async function StaffCountPanelContent(
-  props: EmployeeCountSurfaceProps,
-) {
+export async function StaffCountPanelContent(props: EmployeeCountSurfaceProps) {
   const { content } = await buildEmployeeCountSurface(props);
   return content;
 }
@@ -457,7 +460,8 @@ export async function StaffCountPageContent({
 }: EmployeeCountPageContentProps) {
   const { branchId, branchName, content } =
     await buildEmployeeCountSurface(props);
-  const PageShell = props.plane === "branch" ? BranchOperatorPage : EmployeePage;
+  const PageShell =
+    props.plane === "branch" ? BranchOperatorPage : EmployeePage;
 
   return (
     <PageShell

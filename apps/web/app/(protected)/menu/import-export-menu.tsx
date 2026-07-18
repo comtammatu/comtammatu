@@ -69,16 +69,18 @@ export function MenuImportExportMenu() {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" disabled={isExporting}>
-            {isExporting ? (
-              <Spinner className="mr-2" />
-            ) : (
-              <IconFileSpreadsheet className="mr-2 size-4" />
-            )}
-            Import / Export
-          </Button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" disabled={isExporting}>
+              {isExporting ? (
+                <Spinner className="mr-2" />
+              ) : (
+                <IconFileSpreadsheet className="mr-2 size-4" />
+              )}
+              Import / Export
+            </Button>
+          }
+        />
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
             <IconUpload className="mr-2 size-4" />

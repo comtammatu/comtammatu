@@ -57,32 +57,34 @@ function BranchVarianceItem({
 
   return (
     <div role="listitem">
-      <Item asChild variant="outline" className="min-h-20 touch-manipulation">
-        <Link href={stockHref}>
-          <ItemContent className="min-w-0 gap-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <ItemTitle className="truncate text-sm font-semibold">
-                {variance.ingredientName}
-              </ItemTitle>
-              <Badge variant={badgeVariant} className="shrink-0 tabular-nums">
-                {formatPercent(variance.variancePct)}
-              </Badge>
-            </div>
-            <ItemDescription className="line-clamp-none flex flex-wrap gap-x-2 gap-y-1 text-xs">
-              <span>
-                {reportCopy.branchActual}:{" "}
-                {quantityWithUnit(variance.actual, variance.unit)}
-              </span>
-              <span>
-                {reportCopy.branchTheoretical}:{" "}
-                {quantityWithUnit(variance.theoretical, variance.unit)}
-              </span>
-            </ItemDescription>
-          </ItemContent>
-          <ItemActions className="self-center text-muted-foreground">
-            <IconChevronRight />
-          </ItemActions>
-        </Link>
+      <Item
+        variant="outline"
+        className="min-h-20 touch-manipulation"
+        render={<Link href={stockHref} />}
+      >
+        <ItemContent className="min-w-0 gap-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <ItemTitle className="truncate text-sm font-semibold">
+              {variance.ingredientName}
+            </ItemTitle>
+            <Badge variant={badgeVariant} className="shrink-0 tabular-nums">
+              {formatPercent(variance.variancePct)}
+            </Badge>
+          </div>
+          <ItemDescription className="line-clamp-none flex flex-wrap gap-x-2 gap-y-1 text-xs">
+            <span>
+              {reportCopy.branchActual}:{" "}
+              {quantityWithUnit(variance.actual, variance.unit)}
+            </span>
+            <span>
+              {reportCopy.branchTheoretical}:{" "}
+              {quantityWithUnit(variance.theoretical, variance.unit)}
+            </span>
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions className="self-center text-muted-foreground">
+          <IconChevronRight />
+        </ItemActions>
       </Item>
     </div>
   );
@@ -118,41 +120,43 @@ function BranchMovementItem({
 
   return (
     <div role="listitem">
-      <Item asChild variant="outline" className="min-h-28 touch-manipulation">
-        <Link href={stockHref}>
-          <ItemContent className="min-w-0 gap-2">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <ItemTitle className="truncate text-sm font-semibold">
-                  {movement.ingredientName}
-                </ItemTitle>
-                <ItemDescription className="line-clamp-none mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs">
-                  <span>
-                    {reportCopy.branchOpening}:{" "}
-                    {quantityWithUnit(movement.opening, movement.unit)}
-                  </span>
-                  <span>
-                    {reportCopy.branchClosing}:{" "}
-                    {quantityWithUnit(movement.closing, movement.unit)}
-                  </span>
-                </ItemDescription>
+      <Item
+        variant="outline"
+        className="min-h-28 touch-manipulation"
+        render={<Link href={stockHref} />}
+      >
+        <ItemContent className="min-w-0 gap-2">
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <ItemTitle className="truncate text-sm font-semibold">
+                {movement.ingredientName}
+              </ItemTitle>
+              <ItemDescription className="line-clamp-none mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs">
+                <span>
+                  {reportCopy.branchOpening}:{" "}
+                  {quantityWithUnit(movement.opening, movement.unit)}
+                </span>
+                <span>
+                  {reportCopy.branchClosing}:{" "}
+                  {quantityWithUnit(movement.closing, movement.unit)}
+                </span>
+              </ItemDescription>
+            </div>
+            <IconChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-3">
+            {metrics.map((metric) => (
+              <div key={metric.label} className="min-w-0">
+                <p className="leading-tight text-muted-foreground">
+                  {metric.label}
+                </p>
+                <p className="break-words font-mono font-medium leading-tight tabular-nums">
+                  {signedQuantityWithUnit(metric.value, movement.unit)}
+                </p>
               </div>
-              <IconChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-3">
-              {metrics.map((metric) => (
-                <div key={metric.label} className="min-w-0">
-                  <p className="leading-tight text-muted-foreground">
-                    {metric.label}
-                  </p>
-                  <p className="break-words font-mono font-medium leading-tight tabular-nums">
-                    {signedQuantityWithUnit(metric.value, movement.unit)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </ItemContent>
-        </Link>
+            ))}
+          </div>
+        </ItemContent>
       </Item>
     </div>
   );
@@ -194,10 +198,12 @@ export function BranchStockReportsClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stockBasePath} aria-label={ACTIONS_VI.back}>
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={<Link href={stockBasePath} aria-label={ACTIONS_VI.back} />}
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">

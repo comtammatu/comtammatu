@@ -56,7 +56,10 @@ export function BranchActionItem({
         {icon}
       </ItemMedia>
       <ItemContent className="min-w-0">
-        <ItemTitle size="heading" className="line-clamp-none flex w-full flex-wrap items-center gap-2 sm:text-base">
+        <ItemTitle
+          size="heading"
+          className="line-clamp-none flex w-full flex-wrap items-center gap-2 sm:text-base"
+        >
           {title}
           {badge ? (
             <Badge variant={badge.variant} className="shrink-0">
@@ -71,15 +74,13 @@ export function BranchActionItem({
       {href && ctaLabel ? (
         <ItemActions className="basis-full justify-start pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0">
           <Button
-            asChild
             variant="outline"
             size="touch"
             className="w-full sm:w-auto"
+            render={<Link href={href} aria-label={ariaLabel} />}
           >
-            <Link href={href} aria-label={ariaLabel}>
-              {ctaLabel}
-              <IconArrowRight className="size-4" data-icon="inline-end" />
-            </Link>
+            {ctaLabel}
+            <IconArrowRight className="size-4" data-icon="inline-end" />
           </Button>
         </ItemActions>
       ) : null}

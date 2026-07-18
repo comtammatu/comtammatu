@@ -22,16 +22,16 @@ export function EmployeePortalBackControl({
         "h-9 min-h-9 shrink-0 gap-1.5 px-2 text-sm text-muted-foreground",
         className,
       )}
-      asChild
+      render={
+        <Link
+          href={`/br/${branchId}`}
+          title={APP_COPY_VI.operatorHome}
+          aria-label={APP_COPY_VI.operatorHome}
+        />
+      }
     >
-      <Link
-        href={`/br/${branchId}`}
-        title={APP_COPY_VI.operatorHome}
-        aria-label={APP_COPY_VI.operatorHome}
-      >
-        <IconDoorEnter className="size-4 shrink-0" />
-        <span>{HR_VI.exit}</span>
-      </Link>
+      <IconDoorEnter className="size-4 shrink-0" />
+      <span>{HR_VI.exit}</span>
     </Button>
   );
 }

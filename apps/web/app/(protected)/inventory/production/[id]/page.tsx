@@ -43,11 +43,14 @@ export default async function ProductionDetailPage({
         title={`Lệnh sản xuất ${run.production_number}`}
         actions={<StatusBadge domain="inventory" value={run.status} />}
         breadcrumb={
-          <Button asChild variant="ghost" size="sm" className="px-2">
-            <Link href="/inventory/production">
-              <IconArrowLeft data-icon="inline-start" />
-              Quay lại
-            </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="px-2"
+            render={<Link href="/inventory/production" />}
+          >
+            <IconArrowLeft data-icon="inline-start" />
+            Quay lại
           </Button>
         }
       />

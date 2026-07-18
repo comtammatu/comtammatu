@@ -87,15 +87,13 @@ export async function EmployeeLeavePageContent({
       hideHeaderOnMobile={hideHeaderOnMobile}
       action={
         <Button
-          asChild
           variant="outline"
           size="touch"
           className="w-full sm:w-fit"
+          render={<Link href={returnHref} />}
         >
-          <Link href={returnHref}>
-            <IconCalendarDays data-icon="inline-start" />
-            {copy.backToSchedule}
-          </Link>
+          <IconCalendarDays data-icon="inline-start" />
+          {copy.backToSchedule}
         </Button>
       }
     >

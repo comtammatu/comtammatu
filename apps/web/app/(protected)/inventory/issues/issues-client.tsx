@@ -143,10 +143,7 @@ function toUtf8Base64(value: string): string {
   return btoa(binary);
 }
 
-function buildListHref(
-  listBasePath: string,
-  params: URLSearchParams,
-): string {
+function buildListHref(listBasePath: string, params: URLSearchParams): string {
   const query = params.toString();
   return query ? `${listBasePath}?${query}` : listBasePath;
 }
@@ -708,91 +705,92 @@ export function IssuesClient({
         <Button
           variant="ghost"
           size="icon-sm"
-          asChild
           aria-label={`${ACTIONS_VI.viewDetails} ${item.code}`}
+          render={<Link href={`${listBasePath}/${item.id}`} />}
         >
-          <Link href={`${listBasePath}/${item.id}`}>
-            <IconDotsVertical className="size-4" />
-          </Link>
+          <IconDotsVertical className="size-4" />
         </Button>
       ),
     },
   ];
 
-  const recordedConsumptionColumns: DataTableColumn<RecordedConsumptionRow>[] = [
-    {
-      key: "recordedAt",
-      header: INVENTORY_VI.recordedAtLabel,
-      render: (item) => (
-        <span className="font-mono tabular-nums text-muted-foreground">
-          {item.recordedAt}
-        </span>
-      ),
-    },
-    {
-      key: "ingredientName",
-      header: PRODUCT_VI.rawIngredient,
-      render: (item) => item.ingredientName,
-    },
-    {
-      key: "branchName",
-      header: BRANCH_VI.long,
-      render: (item) => item.branchName,
-    },
-    {
-      key: "locationName",
-      header: INVENTORY_VI.deductLocationLabel,
-      render: (item) => item.locationName,
-    },
-    {
-      key: "quantity",
-      header: FORM_VI.quantity,
-      render: (item) => (
-        <span className="font-mono tabular-nums">{item.quantity}</span>
-      ),
-    },
-    {
-      key: "unitCost",
-      header: INVENTORY_VI.unitCostLabel,
-      render: (item) => (
-        <span className="font-mono tabular-nums">{item.unitCost}</span>
-      ),
-    },
-    {
-      key: "totalCost",
-      header: FORM_VI.amount,
-      className: "text-right",
-      render: (item) => (
-        <span className="font-mono font-medium tabular-nums">
-          {item.totalCost}
-        </span>
-      ),
-    },
-    {
-      key: "sourceLabel",
-      header: INVENTORY_VI.sourceLabel,
-      className: "min-w-44",
-      render: (item) => item.sourceLabel,
-    },
-  ];
+  const recordedConsumptionColumns: DataTableColumn<RecordedConsumptionRow>[] =
+    [
+      {
+        key: "recordedAt",
+        header: INVENTORY_VI.recordedAtLabel,
+        render: (item) => (
+          <span className="font-mono tabular-nums text-muted-foreground">
+            {item.recordedAt}
+          </span>
+        ),
+      },
+      {
+        key: "ingredientName",
+        header: PRODUCT_VI.rawIngredient,
+        render: (item) => item.ingredientName,
+      },
+      {
+        key: "branchName",
+        header: BRANCH_VI.long,
+        render: (item) => item.branchName,
+      },
+      {
+        key: "locationName",
+        header: INVENTORY_VI.deductLocationLabel,
+        render: (item) => item.locationName,
+      },
+      {
+        key: "quantity",
+        header: FORM_VI.quantity,
+        render: (item) => (
+          <span className="font-mono tabular-nums">{item.quantity}</span>
+        ),
+      },
+      {
+        key: "unitCost",
+        header: INVENTORY_VI.unitCostLabel,
+        render: (item) => (
+          <span className="font-mono tabular-nums">{item.unitCost}</span>
+        ),
+      },
+      {
+        key: "totalCost",
+        header: FORM_VI.amount,
+        className: "text-right",
+        render: (item) => (
+          <span className="font-mono font-medium tabular-nums">
+            {item.totalCost}
+          </span>
+        ),
+      },
+      {
+        key: "sourceLabel",
+        header: INVENTORY_VI.sourceLabel,
+        className: "min-w-44",
+        render: (item) => item.sourceLabel,
+      },
+    ];
 
   const renderIssueCard = (item: IssueRow) => (
-    <InteractiveCard asChild minHeight="mobile" padding="default">
-      <Link href={`${listBasePath}/${item.id}`} className="block">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-semibold">{item.code}</span>
-            <StatusBadge domain="inventory" value={item.status} size="sm" />
-          </div>
-          <p className="truncate text-xs text-muted-foreground">
-            {item.branchName}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {issueTypeLabel(item.type, item.branchKind)} &middot; {item.date}
-          </p>
+    <InteractiveCard
+      minHeight="mobile"
+      padding="default"
+      render={<Link href={`${listBasePath}/${item.id}`} className="block" />}
+    >
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm font-semibold">{item.code}</span>
+          <StatusBadge domain="inventory" value={item.status} size="sm" />
         </div>
-        <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
-      </Link>
+        <p className="truncate text-xs text-muted-foreground">
+          {item.branchName}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {issueTypeLabel(item.type, item.branchKind)} &middot; {item.date}
+        </p>
+      </div>
+      <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
     </InteractiveCard>
   );
 

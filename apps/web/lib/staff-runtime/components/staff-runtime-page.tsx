@@ -512,37 +512,35 @@ function EmployeeActionItem({
 
   return (
     <Item
-      asChild
       variant="outline"
       size={size}
       className={cn(
         "group/employee-action chrome-tap min-h-14 items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-sm active:scale-[0.97] sm:items-center",
         size === "sm" && "min-h-12",
       )}
+      render={<Link href={href} />}
     >
-      <Link href={href}>
-        {Icon ? (
-          <ItemMedia
-            variant="icon"
-            className="rounded-md bg-muted p-2 text-primary transition-colors duration-150 group-hover/employee-action:bg-primary/10 group-active/employee-action:bg-primary/10"
-          >
-            <Icon />
-          </ItemMedia>
+      {Icon ? (
+        <ItemMedia
+          variant="icon"
+          className="rounded-md bg-muted p-2 text-primary transition-colors duration-150 group-hover/employee-action:bg-primary/10 group-active/employee-action:bg-primary/10"
+        >
+          <Icon />
+        </ItemMedia>
+      ) : null}
+      <ItemContent className="min-w-0">
+        <ItemTitle size="heading" className="line-clamp-none w-full">
+          {title}
+        </ItemTitle>
+        {description ? (
+          <ItemDescription className="line-clamp-none text-sm leading-6">
+            {description}
+          </ItemDescription>
         ) : null}
-        <ItemContent className="min-w-0">
-          <ItemTitle size="heading" className="line-clamp-none w-full">
-            {title}
-          </ItemTitle>
-          {description ? (
-            <ItemDescription className="line-clamp-none text-sm leading-6">
-              {description}
-            </ItemDescription>
-          ) : null}
-        </ItemContent>
-        <ItemActions className="self-center text-muted-foreground">
-          <IconChevronRight />
-        </ItemActions>
-      </Link>
+      </ItemContent>
+      <ItemActions className="self-center text-muted-foreground">
+        <IconChevronRight />
+      </ItemActions>
     </Item>
   );
 }
@@ -628,15 +626,13 @@ export function EmployeeMissingProfileEmpty({
       icon={<IconUserCircle />}
     >
       <Button
-        asChild
         variant="outline"
         size="touch"
         className="w-full sm:w-fit"
+        render={<Link href={profileHref} />}
       >
-        <Link href={profileHref}>
-          <IconUserCircle data-icon="inline-start" />
-          {actionLabel}
-        </Link>
+        <IconUserCircle data-icon="inline-start" />
+        {actionLabel}
       </Button>
     </AppEmptyState>
   );

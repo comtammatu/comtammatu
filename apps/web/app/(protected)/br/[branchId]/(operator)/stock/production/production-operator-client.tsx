@@ -73,11 +73,9 @@ export function ProductionOperatorClient({
           size="sm"
           action={
             canCreateProduction && workQueue.length > 0 ? (
-              <Button asChild size="touch">
-                <Link href={`${basePath}/new`}>
-                  <IconPlus data-icon="inline-start" />
-                  Tạo lệnh
-                </Link>
+              <Button size="touch" render={<Link href={`${basePath}/new`} />}>
+                <IconPlus data-icon="inline-start" />
+                Tạo lệnh
               </Button>
             ) : undefined
           }
@@ -93,8 +91,11 @@ export function ProductionOperatorClient({
               icon={<IconChefHat />}
             >
               {canCreateProduction ? (
-                <Button asChild size="touch-lg">
-                  <Link href={`${basePath}/new`}>Tạo lệnh sản xuất</Link>
+                <Button
+                  size="touch-lg"
+                  render={<Link href={`${basePath}/new`} />}
+                >
+                  Tạo lệnh sản xuất
                 </Button>
               ) : null}
             </AppEmptyState>
@@ -135,31 +136,29 @@ function ProductionRunList({
         <Item
           key={run.id}
           role="listitem"
-          asChild
           variant="outline"
           className="min-h-20 touch-manipulation"
+          render={<Link href={`${basePath}/${run.id}`} />}
         >
-          <Link href={`${basePath}/${run.id}`}>
-            <ItemContent className="min-w-0 gap-1">
-              <ItemTitle className="line-clamp-none text-sm font-semibold">
-                {run.finished_good_name}
-              </ItemTitle>
-              <ItemDescription className="line-clamp-none flex flex-wrap gap-x-2 gap-y-1">
-                <span className="font-mono tabular-nums">
-                  {run.production_number}
-                </span>
-                <span>{formatVNDate(run.created_at)}</span>
-                <span>
-                  {formatQuantity(run.planned_quantity)}{" "}
-                  {run.entry_unit_name ?? ""}
-                </span>
-              </ItemDescription>
-            </ItemContent>
-            <ItemActions className="shrink-0">
-              <StatusBadge domain="inventory" value={run.status} size="sm" />
-              <IconChevronRight className="size-4 text-muted-foreground" />
-            </ItemActions>
-          </Link>
+          <ItemContent className="min-w-0 gap-1">
+            <ItemTitle className="line-clamp-none text-sm font-semibold">
+              {run.finished_good_name}
+            </ItemTitle>
+            <ItemDescription className="line-clamp-none flex flex-wrap gap-x-2 gap-y-1">
+              <span className="font-mono tabular-nums">
+                {run.production_number}
+              </span>
+              <span>{formatVNDate(run.created_at)}</span>
+              <span>
+                {formatQuantity(run.planned_quantity)}{" "}
+                {run.entry_unit_name ?? ""}
+              </span>
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions className="shrink-0">
+            <StatusBadge domain="inventory" value={run.status} size="sm" />
+            <IconChevronRight className="size-4 text-muted-foreground" />
+          </ItemActions>
         </Item>
       ))}
     </ItemGroup>

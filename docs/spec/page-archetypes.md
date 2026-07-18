@@ -1,6 +1,6 @@
 # Page Archetype Standard — Com Tam Ma Tu Web App
 
-> Status: locked subordinate contract. Authority: `docs/spec/design-system.md`
+> Status: subordinate contract. Authority: `docs/spec/design-system.md`
 > (see § Structural Governance § F there). On any conflict, `design-system.md`
 > wins — this file never restates or overrides its tokens, rhythm, primitive
 > roles, or Structural Governance chrome/shell/nav/padding rules; it only adds
@@ -8,8 +8,8 @@
 
 ## 0. What This File Is For
 
-Every `apps/web/app/**/page.tsx` renders one of a fixed set of page archetypes.
-An archetype is a locked recipe: layout skeleton, data-display idiom, state
+Every `apps/web/app/**/page.tsx` renders one of a shared set of page archetypes.
+An archetype is a workflow recipe: layout skeleton, data-display idiom, state
 handling, and the shared status/money/date/navigation vocabulary it must use.
 This file is the recipe book; `scripts/check-ui-contract.mjs` is the mapping
 gate that keeps every page declared against it (see § 4).
@@ -139,20 +139,18 @@ rather than staying a near-empty category.
 | 11  | BOARD           | Realtime operational queue (full-screen Operations chrome)                         |
 | 12  | PUBLIC-WORKFLOW | Token-scoped customer transaction without Admin Dashboard chrome                   |
 
-## 3. Locked Recipes
+## 3. Shared Composition Recipes
 
 ### LIST
 
 **Exemplar:** `apps/web/app/(protected)/inventory/grn/page.tsx` +
 `grn-list-client.tsx`.
 
-- Skeleton: `AppPage width="xwide"` → `AppPageHeader` (eyebrow = module name,
-  `actions` = primary create CTA) → `AppToolbar` (search + status-count filter
-  chips + branch filter live together, one toolbar) → `DataTable`. Every LIST
-  page pins the one dense-data width tier `xwide` (`design-system.md` § Rhythm
-  Contract — the single capped 1600px tier); a LIST on any other tier is drift.
-  `scripts/check-ui-contract.mjs` enforces this against the `PAGE_ARCHETYPES`
-  LIST entries so a page cannot re-enter on a narrower tier.
+- Skeleton: an appropriate `AppPage` width → `AppPageHeader` (eyebrow = module
+  name, `actions` = primary create CTA) → a coordinated filter/control region
+  → `DataTable` when values need tabular comparison. Choose width from the
+  dataset, reading task, and primary viewport; prove density in the rendered
+  surface rather than pinning every LIST to one utility tier.
 - Data display: `DataTable` with `mobileCardRender` for the phone card list
   and the `Table` primitive for desktop — same fields, status colors, and
   actions at both breakpoints. Cursor pagination through the shared
@@ -177,7 +175,8 @@ delegation:
   `/br/[branchId]/orders` owns a native operator presentation first, then links
   into deeper workflow screens. Sharing data loaders is fine; wrapping the
   Admin Dashboard screen as the Branch entry UI is drift.
-- **≤ 40 lines.**
+- Keep the wrapper delegation-only; its size is a review signal, not a line-count
+  gate.
 - Parse and validate `branchId` from `params`; `notFound()` on a bad id.
 - Render the canonical `*PageContent` export (§ 1) with `routeBranchId`, a
   branch-scoped `basePath`, and `embedded` (suppresses the chrome the Branch
@@ -199,7 +198,7 @@ re-mounted `PageContent`'s own `embedded` branch must do so the operator
 plane reads as one coherent V2 operator surface instead of Admin Dashboard chrome
 leaking through a branch-scoped shell. It is subordinate to
 `design-system.md` — it does not add tokens, rhythm, or primitives, it only
-locks which existing contract choices apply inside an `embedded` branch.
+clarifies which existing contract choices apply inside an `embedded` branch.
 The fix for every rule below lives **inside the shared `PageContent`/client
 component via the `embedded` branch**, never as a forked operator-only
 component — the same branch benefits both planes, and the Admin Dashboard plane
@@ -210,28 +209,24 @@ component — the same branch benefits both planes, and the Admin Dashboard plan
   branch context) already owns the page-header job; a second `AppPageHeader`
   inside the embedded content is a duplicate header. Gate `AppPageHeader`
   rendering on `!embedded`, or split it out of the shared `content` block so
-  the embedded return path skips it entirely. Gate
-  `operator-embedded-page-header-boundary` catches shared `content` blocks that
-  put `AppPageHeader` outside an explicit `embedded` branch.
+  the embedded return path skips it entirely. Review the rendered operator
+  surface for duplicate context before accepting the composition.
 - **R2 — No nested page shell.** An embedded branch MUST NOT wrap its content
   in `AppPage` (or an `AppPage`-backed adapter such as
   `InventoryPageContent`) — the operator layout's own `AppPage
 density="compact"` already owns width/padding. Return a bare flex
   container (`<div className="flex w-full flex-col gap-3">{content}</div>`)
   in the shared `PageContent`'s explicit `embedded` return path.
-- **R3 — Touch-sized primary actions on the operator plane.** Primary action
-  buttons (create/receive/submit CTAs a thumb must hit reliably) use
-  `size="touch"` when `embedded`, not the Admin Dashboard-density `size="sm"` /
-  `size="xs"`. Branch through the `embedded` prop:
-  `size={embedded ? "touch" : "sm"}`, or a locally computed variable
-  (`stock-client.tsx`'s `isCompactLayout` pattern already does this for
-  layout — reuse the same shape for size).
+- **R3 — Touch-safe primary actions on the operator plane.** Primary actions
+  (create/receive/submit CTAs a thumb must hit reliably) need the shared touch
+  target at the rendered viewport. `size="touch"` is the usual primitive recipe;
+  another composition is valid when it proves the same target and hierarchy.
 - **R4 — DataTable, not twin trees.** List/table content inside an embedded
   branch renders through the shared `DataTable` `mobileCardRender` (Rhythm
   Contract § List Surface contract), never a hand-maintained
   `md:hidden`/`hidden md:block` pair. This is the existing repo-wide
-  `responsive-double-render` ratchet, restated here because an embedded
-  branch is by construction always the narrow-column case.
+  responsive-composition guard, restated here because an embedded branch is by
+  construction always the narrow-column case.
 - **R5 — Compact filters, no desktop toolbar bar.** An embedded branch must
   not render the full desktop `AppToolbar` filter row when the operator
   column is narrower than the toolbar needs. Prefer the existing responsive
@@ -286,10 +281,10 @@ density="compact"` already owns width/padding. Return a bare flex
   import `DocumentFormFrame`, `DataTable`, or an Admin Dashboard form presentation.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
-- **Guard note:** the DOC-WORKFLOW gate accepts the Admin Dashboard
-  `DocumentFormFrame` recipe or the Branch touch recipe above in the route page
-  and its direct client owner. The remaining hand-rolled baseline is outside
-  Inventory and only shrinks as it migrates.
+- **Composition note:** Admin Dashboard uses the `DocumentFormFrame` recipe;
+  Branch uses the touch recipe above in the route page and its direct client
+  owner. A distinct workflow may compose directly when it preserves its plane,
+  touch behavior, accessibility, and visual hierarchy.
 - `employee/count` folds FORM-PAGE into this archetype: it collects a
   line-array count slip and is DOC-WORKFLOW in shape even though it does not
   yet use `DocumentFormFrame`.
@@ -423,8 +418,7 @@ allowlist, not a precedent for stretching another archetype's definition:
 3. `apps/web/app/(protected)/inventory/page.tsx` — `KpiRow` + `LinkCardGrid`
    overview hybrid. Classified **DASHBOARD**.
 4. `apps/web/app/(protected)/inventory/stock/page.tsx` — master half of a
-   master-detail pair; already an allowlisted `use-is-mobile-budget`
-   exception. Classified **LIST**.
+   master-detail pair with responsive composition. Classified **LIST**.
 5. `apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx` —
    detail half of the same pair. Classified **DETAIL**.
 6. `apps/web/app/(protected)/finance/summary/page.tsx` — REPORT plus a
@@ -439,7 +433,7 @@ allowlist, not a precedent for stretching another archetype's definition:
    approval queue. A per-issue approve / reject card with a nested waste-line
    `ItemGroup`, tier badges, photo links, and an inline review-note field; the
    decision surface is the card, not a row. Classified **LIST** (queue
-   variant); exempt from the LIST `DataTable` / `width="xwide"` gate.
+   variant); it uses the card decision surface instead of a tabular LIST recipe.
 10. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx`
     — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
     `BranchOperatorPanel`, and full-row `Item` links because the supported
@@ -539,7 +533,7 @@ Before building or changing any `(protected)/**/page.tsx`:
 1. Read `docs/agent/rules/ui.md` Guardrails and complete the UI Advisor Gate in
    § 0.1.
 2. Find the target route's archetype in § 2/§ 4, and read its
-   locked recipe in § 3.
+   composition recipe in § 3.
 3. Read the recipe's named exemplar file(s) in full.
 4. Run `codegraph explore "<adapter name>"` (or MCP `codegraph_explore`) for
    live usage of the adapters the recipe names (`DataTable`,

@@ -40,7 +40,6 @@ import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types"
 const financeCopy = messages.finance;
 const powerLiteCopy = financeCopy.powerLite;
 const HKD_RANGES: readonly FinanceRange[] = ["today", "yesterday", "7d", "mtd"];
-
 function FinanceAttentionSection({
   exceptions,
 }: {
@@ -63,31 +62,27 @@ function FinanceAttentionSection({
           {actionable.map((item) => (
             <Item
               key={`${item.href}:${item.label}`}
-              asChild
               variant="outline"
               size="sm"
               role="listitem"
+              render={<Link href={item.href} />}
             >
-              <Link href={item.href}>
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="line-clamp-none">
-                    {item.label}
-                  </ItemTitle>
-                  <ItemDescription className="line-clamp-none">
-                    {item.hint}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions className="ml-auto">
-                  <Badge
-                    variant={
-                      item.tone === "destructive" ? "destructive" : "warning"
-                    }
-                  >
-                    {item.value}
-                  </Badge>
-                  <IconArrowRight className="size-4" aria-hidden />
-                </ItemActions>
-              </Link>
+              <ItemContent className="min-w-0">
+                <ItemTitle className="line-clamp-none">{item.label}</ItemTitle>
+                <ItemDescription className="line-clamp-none">
+                  {item.hint}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions className="ml-auto">
+                <Badge
+                  variant={
+                    item.tone === "destructive" ? "destructive" : "warning"
+                  }
+                >
+                  {item.value}
+                </Badge>
+                <IconArrowRight className="size-4" aria-hidden />
+              </ItemActions>
             </Item>
           ))}
         </ItemGroup>

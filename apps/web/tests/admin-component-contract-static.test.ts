@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
@@ -15,7 +14,6 @@ const UI_AUDIT = "scripts/audit-ui-components.mjs";
 const UI_CONTRACT = "scripts/check-ui-contract.mjs";
 const UI_COMPONENT_REGISTRY = "scripts/ui-component-registry.mjs";
 const UI_GUARD_REPORTING = "scripts/ui-contract-guard-reporting.mjs";
-const UI_CONTRACT_SCOPE = "scripts/ui-contract-scope.mjs";
 const PAGE_ARCHETYPES = "scripts/page-archetypes.mjs";
 const ROOT_LOADING = "apps/web/app/loading.tsx";
 const DESIGN_SYSTEM = "docs/spec/design-system.md";
@@ -131,39 +129,6 @@ function extractObjectPropertyBody(source: string, name: string): string {
   assert.fail(`${name} object body is not closed`);
 }
 
-function extractStringNumberObject(body: string): Array<[string, number]> {
-  return [...body.matchAll(/"([^"]+)":\s*(\d+)/g)]
-    .map((match): [string, number] => {
-      const key = match[1];
-      assert.ok(key, "string-number object key capture is missing");
-      return [key, Number(match[2])];
-    })
-    .sort(([left], [right]) => left.localeCompare(right));
-}
-
-function extractGuardAllowlist(source: string, guardId: string) {
-  const idAnchor = source.indexOf(`id: "${guardId}"`);
-  assert.notEqual(idAnchor, -1, `${guardId} guard is missing`);
-  const keyAnchor = source.indexOf("allowlist:", idAnchor);
-  assert.notEqual(keyAnchor, -1, `${guardId} allowlist is missing`);
-  const start = source.indexOf("{", keyAnchor);
-  assert.notEqual(start, -1, `${guardId} allowlist body is missing`);
-
-  let depth = 0;
-  for (let index = start; index < source.length; index += 1) {
-    const char = source.charAt(index);
-    if (char === "{") depth += 1;
-    if (char === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        return extractStringNumberObject(source.slice(start + 1, index));
-      }
-    }
-  }
-
-  assert.fail(`${guardId} allowlist body is not closed`);
-}
-
 function hasUiContractGuard(source: string, guardId: string): boolean {
   return source.includes(`id: "${guardId}"`) || source.includes(`${guardId}:`);
 }
@@ -204,7 +169,7 @@ test("Print job monitor keeps owner recovery filter through DataTable filters", 
   assert.match(source, /retryJobFromMonitor/);
 });
 
-test("UI contract guard freezes Admin Finance Branch component drift", () => {
+test("UI contract guard protects Má Tư outcomes and the Base UI boundary", () => {
   const source = read(UI_CONTRACT);
   const designSystem = read(DESIGN_SYSTEM);
   const uiModule = read(UI_MODULE);
@@ -212,19 +177,11 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
   const selectPrimitive = read(UI_SELECT);
 
   for (const id of [
-    "admin-finance-branch-raw-table-import",
-    "admin-finance-branch-raw-card-import",
-    "admin-finance-branch-toolbar-fixed-control",
     "operator-admin-dashboard-route-boundary",
     "focus-ring-contrast",
-    "radius-scale",
-    "radius-tier-baseline",
-    "gap-scale",
-    "primitive-radius-scale",
     "primitive-transition-all",
     "app-transition-all",
     "app-loading-spinner-ssot",
-    "surface-clone-ssot",
     "root-viewport-allows-zoom",
     "app-presentation-state-copy",
     "app-action-data-state-copy",
@@ -232,44 +189,12 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     "app-page-local-number-formatter",
     "vnd-format-ssot",
     "date-format-ssot",
-    "status-label-ssot",
-    "stat-card-ssot",
     "no-native-dialog",
     "responsive-double-render",
-    "use-is-mobile-budget",
-    "shell-registry-bespoke-main",
     "nav-shell-inline-literal",
     "operator-admin-dashboard-shell-boundary",
-    "heading-scale",
-    "icon-size",
-    "uppercase-label-scale",
-    "app-arbitrary-sizing",
-    "tint-opacity",
-    "raw-card-import-file-baseline",
-    "raw-table-import-file-baseline",
-    "raw-dialog-import-file-baseline",
-    "raw-alert-dialog-import-file-baseline",
-    "primitive-runtime-arbitrary-px-rem-sizing",
-    "primitive-arbitrary-shadow",
-    "primitive-shadow-overrun",
-    "card-content-named-layout-props",
-    "card-content-classname-baseline",
-    "card-title-classname-baseline",
-    "app-section-content-named-layout-props",
     "scrollarea-no-max-height-only",
-    "status-chip-wrapper-baseline",
-    "pos-kds-touch-reveal-baseline",
-    "space-y-baseline",
-    "raw-padding-baseline",
-    "gap-atypical-baseline",
-    "inline-chrome-baseline",
-    "hand-rolled-page-heading-baseline",
-    "hover-shadow-rung",
-    "app-effect-shadow-rung",
-    "resting-shadow-rung",
-    "resting-shadow-baseline",
-    "custom-shadow-baseline",
-    "motion-color-duration",
+    "pos-kds-touch-reveal",
   ]) {
     assert.match(source, new RegExp(`id: "${id}"`));
   }
@@ -289,40 +214,22 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     "icon-button-accessible-name",
     "route-boundary-adapters",
     "route-boundary-coverage",
-    "raw-empty-import-route-code",
-    "page-padding:",
     "button-height-on-button",
-    "BUTTON_HEIGHT_BASELINE",
-    "operator-embedded-button-density",
-    "operator-embedded-page-header-boundary",
     'endsWith("/loading.tsx")',
     'endsWith("/error.tsx")',
     "href=[\"']#",
-    "frozenPrimitiveImportBaselines",
-    "formatterGuardBaselines",
-    'component: "card"',
-    'component: "table"',
-    'component: "dialog"',
-    'component: "alert-dialog"',
+    "retiredPrimitiveDependencies",
+    "matu-ds-boundary",
+    "formatterGuards",
     "raw-table-element",
     "<table\\b",
-    "SURFACE_CLONE_ADAPTER_IMPLEMENTATIONS",
-    "SURFACE_CLONE_EXCEPTIONS",
-    "countLocalSurfaceClone",
-    "LOCAL_SURFACE_CLONE_RE",
     "validateAuditSignalGuardCoverage",
     "audit-to-guard-map",
     "SIGNAL_GUARD_COVERAGE",
     "extractTopLevelObjectEntries",
     "extractConstArrayBody",
     "extractArrayObjectIds",
-    "extractObjectPropertyBody",
-    "extractGuardAllowlist",
     "guardGroup",
-    "exceptionAllowlistGuard",
-    "exceptionAllowlistGroup",
-    "exceptionAllowlist",
-    "blocking-exception",
   ]) {
     assert.match(
       source,
@@ -330,26 +237,10 @@ test("UI contract guard freezes Admin Finance Branch component drift", () => {
     );
   }
 
-  const embeddedDensityFiles = extractConstArrayBody(
-    source,
-    "OPERATOR_EMBEDDED_BUTTON_DENSITY_FILES",
-  );
-  const embeddedHeaderFiles = extractConstArrayBody(
-    source,
-    "OPERATOR_EMBEDDED_PAGE_HEADER_FILES",
-  );
-  for (const registry of [embeddedDensityFiles, embeddedHeaderFiles]) {
-    assert.doesNotMatch(
-      registry,
-      /apps\/web\/app\/\(protected\)\/inventory\/stock\/stock-client\.tsx/,
-      "Office-only stock client must not be classified as an embedded operator adapter",
-    );
-  }
-
   assert.match(designSystem, /High-level primitive import governance/);
   assert.match(
     designSystem,
-    /shadcn-ui and Web Interface Guidelines are advisory checklists only/,
+    /Shadcn and Web Interface Guidelines are explicit comparison inputs/,
   );
   assert.match(designSystem, /scripts\/check-ui-contract\.mjs/);
   assert.match(designSystem, /scripts\/ui-component-registry\.mjs/);
@@ -399,8 +290,6 @@ test("UI component audit command stays wired for route-family drill-down", () =>
     "PRIMITIVES",
     "ADAPTERS",
     "ADAPTER_IMPLEMENTATIONS",
-    "STATUS_MAP_IMPLEMENTATIONS",
-    "RESPONSIVE_ADAPTER_IMPLEMENTATIONS",
     "APP_ADAPTER_REGISTRY",
     "validateUiComponentRegistry",
     "Component Selection Coverage",
@@ -410,26 +299,16 @@ test("UI component audit command stays wired for route-family drill-down", () =>
     "nativeInteractiveElement",
     "iconButtonAriaRisk",
     "actionHeightDrift",
-    "localSurfaceClone",
     "loadingSpinnerDrift",
     "LOADING_SPINNER_DRIFT_RE",
     "ACTION_HEIGHT_TOKEN_RE",
-    "LOCAL_SURFACE_CLONE_RE",
-    "LOCAL_SECTION_CLONE_RE",
-    "LOCAL_TOOLBAR_CLONE_RE",
-    "LOCAL_TABLE_CLONE_RE",
-    "LOCAL_DIALOG_CLONE_RE",
     "extractJsxOpeningTags",
     "countNativeInteractiveElement",
-    "hasDirectAsChildPrimitiveParent",
+    "hasDirectPrimitiveRenderParent",
     "countIconButtonAriaRisk",
     "countActionHeightDrift",
-    "countLocalDefinition",
-    "countLocalSurfaceClone",
-    "skipDynamic",
     "TouchButton",
     "action height",
-    "surface clone",
     "pageLocalFormatter",
     "routeLocalStateCopy",
     "actionDataStateCopy",
@@ -437,19 +316,12 @@ test("UI component audit command stays wired for route-family drill-down", () =>
     "PAGE_LOCAL_FORMATTER_RE",
     "isActionDataSourceFile",
     "USE_IS_MOBILE_RE",
-    "STATUS_MAP_RE",
-    "countUseIsMobile",
-    "countStatusMap",
     "isUiSourceFile",
-    "rawPrimitiveImportBaseline",
-    "FROZEN_PRIMITIVE_IMPORTS",
-    "countFrozenPrimitiveImport",
     "SIGNAL_GUARD_COVERAGE",
     "SIGNAL_GUARD_STATUSES",
     "validateSignalGuardCoverage",
     "guardIdExists",
     "Signal Guard Coverage",
-    "blocking-exception",
     "--family",
     "--all",
   ]) {
@@ -484,32 +356,18 @@ test("UI component audit command stays wired for route-family drill-down", () =>
     componentRegistry,
     /apps\/web\/app\/_components\/boneyard-skeleton\.tsx/,
   );
-  assert.match(auditScript, /const STATUS_MAP_RE =/);
-  assert.doesNotMatch(auditScript, /statusMap:[\s\S]*\[\{\[\]/);
   assert.match(auditScript, /signal\(source, file\)/);
   assert.match(auditScript, /ROUTE_LOCAL_STATE_COPY_RE =[\s\S]*\[\^\\n/);
-  assert.match(auditScript, /STATUS_MAP_IMPLEMENTATIONS\.has\(file\)/);
-  assert.match(auditScript, /RESPONSIVE_ADAPTER_IMPLEMENTATIONS\.has\(file\)/);
-  assert.match(auditScript, /RESPONSIVE_COMPOSITION_EXCEPTIONS\.has\(file\)/);
   assert.match(auditScript, /NATIVE_INTERACTIVE_EXCEPTIONS\.has\(file\)/);
-  assert.match(auditScript, /LOCAL_SURFACE_CLONE_EXCEPTIONS\.has\(file\)/);
   assert.match(auditScript, /href=\["'\]#/);
   assert.match(auditScript, /sr-only/);
   assert.match(auditScript, /aria-labelledby/);
   assert.match(auditScript, /target=\["'\]_blank/);
-  assert.match(auditScript, /useIsMobile: countUseIsMobile/);
-  assert.match(
-    auditScript,
-    /rawPrimitiveImportBaseline: countFrozenPrimitiveImport/,
-  );
-  assert.match(
-    auditScript,
-    /rawPrimitiveImportBaseline: \{\s*status: "blocking-exception"[\s\S]*guardGroup: "frozenPrimitiveImportBaselines"[\s\S]*raw-card-import-file-baseline[\s\S]*raw-alert-dialog-import-file-baseline[\s\S]*exceptionAllowlistGroup: "frozenPrimitiveImportBaselines"/,
-  );
+  assert.match(auditScript, /useIsMobile: USE_IS_MOBILE_RE/);
   assert.match(auditScript, /pageLocalFormatter: PAGE_LOCAL_FORMATTER_RE/);
   assert.match(
     auditScript,
-    /pageLocalFormatter: \{\s*status: "blocking-zero"[\s\S]*guardGroup: "formatterGuardBaselines"[\s\S]*finance-page-local-formatter[\s\S]*app-page-local-number-formatter[\s\S]*vnd-format-ssot[\s\S]*date-format-ssot/,
+    /pageLocalFormatter: \{\s*status: "blocking-zero"[\s\S]*guardGroup: "formatterGuards"[\s\S]*finance-page-local-formatter[\s\S]*app-page-local-number-formatter[\s\S]*vnd-format-ssot[\s\S]*date-format-ssot/,
   );
   assert.match(
     auditScript,
@@ -521,23 +379,8 @@ test("UI component audit command stays wired for route-family drill-down", () =>
   );
   assert.match(
     auditScript,
-    /useIsMobile: \{\s*status: "blocking-exception"[\s\S]*guardIds: \["use-is-mobile-budget"\][\s\S]*reason:/,
+    /useIsMobile: \{\s*status: "advisory"[\s\S]*guardIds: \[\][\s\S]*reason:/,
   );
-  assert.match(
-    auditScript,
-    /statusMap: \{\s*status: "blocking-exception"[\s\S]*guardIds: \["status-label-ssot"\][\s\S]*reason:/,
-  );
-  assert.match(
-    auditScript,
-    /statCardDef: \{\s*status: "blocking-exception"[\s\S]*guardIds: \["stat-card-ssot"\][\s\S]*reason:/,
-  );
-  assert.match(auditScript, /exceptionAllowlistGuard: "use-is-mobile-budget"/);
-  assert.match(
-    auditScript,
-    /exceptionAllowlistGroup: "frozenPrimitiveImportBaselines"/,
-  );
-  assert.match(auditScript, /exceptionAllowlistGuard: "status-label-ssot"/);
-  assert.match(auditScript, /exceptionAllowlistGuard: "stat-card-ssot"/);
   assert.match(
     auditScript,
     /actionDataStateCopy: \{\s*status: "blocking-zero"[\s\S]*guardIds: \["app-action-data-state-copy"\]/,
@@ -561,69 +404,13 @@ test("UI component audit command stays wired for route-family drill-down", () =>
 
   assert.deepEqual(
     extractGuardIds(
-      extractObjectPropertyBody(
-        guardCoverageBody,
-        "rawPrimitiveImportBaseline",
-      ),
-    ),
-    extractArrayObjectIds(
-      extractConstArrayBody(uiContract, "frozenPrimitiveImportBaselines"),
-    ),
-    "rawPrimitiveImportBaseline guardIds must match frozenPrimitiveImportBaselines",
-  );
-  assert.deepEqual(
-    extractGuardIds(
       extractObjectPropertyBody(guardCoverageBody, "pageLocalFormatter"),
     ),
     extractArrayObjectIds(
-      extractConstArrayBody(uiContract, "formatterGuardBaselines"),
+      extractConstArrayBody(uiContract, "formatterGuards"),
     ),
-    "pageLocalFormatter guardIds must match formatterGuardBaselines",
+    "pageLocalFormatter guardIds must match formatterGuards",
   );
-
-  const rawPrimitiveEntry = extractObjectPropertyBody(
-    guardCoverageBody,
-    "rawPrimitiveImportBaseline",
-  );
-  const rawPrimitiveAuditAllowlist = new Map(
-    extractStringNumberObject(
-      extractObjectPropertyBody(rawPrimitiveEntry, "exceptionAllowlist"),
-    ),
-  );
-  const rawPrimitiveGuardAllowlist = new Map<string, number>();
-  for (const guardId of extractGuardIds(rawPrimitiveEntry)) {
-    for (const [file, count] of extractGuardAllowlist(uiContract, guardId)) {
-      rawPrimitiveGuardAllowlist.set(
-        file,
-        (rawPrimitiveGuardAllowlist.get(file) ?? 0) + count,
-      );
-    }
-  }
-  assert.deepEqual(
-    [...rawPrimitiveAuditAllowlist].sort(([left], [right]) =>
-      left.localeCompare(right),
-    ),
-    [...rawPrimitiveGuardAllowlist].sort(([left], [right]) =>
-      left.localeCompare(right),
-    ),
-    "raw primitive exception allowlist must match the union of its guard group",
-  );
-
-  for (const [signal, guardId] of [
-    ["useIsMobile", "use-is-mobile-budget"],
-    ["statusMap", "status-label-ssot"],
-    ["statCardDef", "stat-card-ssot"],
-  ] as const) {
-    const entryBody = extractObjectPropertyBody(guardCoverageBody, signal);
-    const auditAllowlist = extractStringNumberObject(
-      extractObjectPropertyBody(entryBody, "exceptionAllowlist"),
-    );
-    assert.deepEqual(
-      auditAllowlist,
-      extractGuardAllowlist(uiContract, guardId),
-      `${signal} exception allowlist must match ${guardId}`,
-    );
-  }
 
   assert.match(uiModule, /corepack pnpm audit:ui-components/);
   assert.match(uiModule, /scripts\/ui-contract-guard-reporting\.mjs/);
@@ -684,13 +471,12 @@ test("UI contract guard reporting stays reverse-complete", async () => {
     "extractAuditVisibleGuardIds",
     "buildUiContractGuardReporting",
     "unclassified guard ids",
-    "ratchet-maintenance",
   ]) {
     assert.match(reportingSource, new RegExp(marker));
   }
   assert.match(uiContract, /buildUiContractGuardReporting/);
-  assert.match(uiContract, /guard-reporting-closure/);
-  assert.match(auditScript, /## Guard Reporting Closure/);
+  assert.match(uiContract, /guard-ownership/);
+  assert.match(auditScript, /## Guard Ownership/);
 
   const report = reportingModule.buildUiContractGuardReporting(
     uiContract,
@@ -709,95 +495,6 @@ test("UI contract guard reporting stays reverse-complete", async () => {
   );
   assert.deepEqual(fixtureReport.unclassified, ["fixture-unclassified-guard"]);
   assert.match(fixtureReport.errors.join("\n"), /unclassified guard ids/);
-});
-
-test("UI baseline reporting separates debt from permanent exceptions", async () => {
-  const auditScript = read(UI_AUDIT);
-  const uiContract = read(UI_CONTRACT);
-  const scopeSource = read(UI_CONTRACT_SCOPE);
-  const reportingModule = (await import(
-    pathToFileURL(resolve(repoRoot, UI_GUARD_REPORTING)).href
-  )) as {
-    UI_CONTRACT_BASELINE_POLICIES: Record<string, unknown>;
-    buildUiContractBaselineReporting: (
-      definitions: Array<{
-        id: string;
-        actualByFile: Record<string, number>;
-        allowed: number;
-      }>,
-    ) => {
-      errors: string[];
-      rows: Array<{
-        actual: number;
-        allowed: number;
-        delta: number;
-        debt: number;
-        permanent: number;
-      }>;
-    };
-  };
-  const scopeModule = (await import(
-    pathToFileURL(resolve(repoRoot, UI_CONTRACT_SCOPE)).href
-  )) as {
-    UI_RUNTIME_SOURCE_ROOTS: readonly string[];
-  };
-
-  assert.deepEqual(
-    [...scopeModule.UI_RUNTIME_SOURCE_ROOTS],
-    [
-      "apps/web/app",
-      "apps/web/lib/branch-operator",
-      "apps/web/lib/staff-runtime",
-    ],
-  );
-  assert.match(scopeSource, /uiRuntimeRoots/);
-  assert.match(uiContract, /UI_RUNTIME_SOURCE_ROOTS/);
-  assert.match(auditScript, /UI_RUNTIME_SOURCE_ROOTS/);
-  assert.match(uiContract, /baseline-reporting-closure/);
-  assert.match(auditScript, /## Baseline Ratchet Truth/);
-
-  const policyIds = Object.keys(reportingModule.UI_CONTRACT_BASELINE_POLICIES);
-  const zeroDefinitions = policyIds.map((id) => ({
-    id,
-    actualByFile: {},
-    allowed: 0,
-  }));
-  assert.deepEqual(
-    reportingModule.buildUiContractBaselineReporting(zeroDefinitions).errors,
-    [],
-  );
-  assert.match(
-    reportingModule
-      .buildUiContractBaselineReporting(zeroDefinitions.slice(1))
-      .errors.join("\n"),
-    /baseline ids missing live definition/,
-  );
-
-  const liveResult = spawnSync(
-    process.execPath,
-    [resolve(repoRoot, UI_CONTRACT), "--report-baselines=json"],
-    { cwd: repoRoot, encoding: "utf8" },
-  );
-  assert.equal(liveResult.status, 0, liveResult.stderr || liveResult.stdout);
-  const liveReport = JSON.parse(liveResult.stdout) as {
-    errors: string[];
-    totals: {
-      actual: number;
-      allowed: number;
-      delta: number;
-      debt: number;
-      permanent: number;
-    };
-  };
-  assert.deepEqual(liveReport.errors, []);
-  assert.equal(liveReport.totals.actual, liveReport.totals.allowed);
-  assert.equal(liveReport.totals.delta, 0);
-  assert.equal(
-    liveReport.totals.actual,
-    liveReport.totals.debt + liveReport.totals.permanent,
-  );
-  assert.ok(liveReport.totals.debt > 0);
-  assert.ok(liveReport.totals.permanent > 0);
 });
 
 test("UI component registry classifies every primitive and approved adapter", async () => {

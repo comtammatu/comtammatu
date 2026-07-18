@@ -50,19 +50,25 @@ export function RowActionsMenu({
 }: RowActionsMenuProps) {
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size={triggerSize} className={triggerClassName}>
-          <IconDots
-            className="size-4"
-            data-icon={triggerLabel ? "inline-start" : undefined}
-          />
-          {triggerLabel ? (
-            <span>{triggerLabel}</span>
-          ) : (
-            <span className="sr-only">{label}</span>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size={triggerSize}
+            className={triggerClassName}
+          >
+            <IconDots
+              className="size-4"
+              data-icon={triggerLabel ? "inline-start" : undefined}
+            />
+            {triggerLabel ? (
+              <span>{triggerLabel}</span>
+            ) : (
+              <span className="sr-only">{label}</span>
+            )}
+          </Button>
+        }
+      />
       <DropdownMenuContent align={align}>
         {items.map((item) => (
           <Fragment key={item.key}>
@@ -70,18 +76,18 @@ export function RowActionsMenu({
             {item.href ? (
               <DropdownMenuItem
                 variant={item.destructive ? "destructive" : "default"}
-                asChild
-              >
-                <Link href={item.href}>
-                  {item.icon}
-                  {item.label}
-                </Link>
-              </DropdownMenuItem>
+                render={
+                  <Link href={item.href}>
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                }
+              ></DropdownMenuItem>
             ) : (
               <DropdownMenuItem
                 disabled={item.disabled}
                 variant={item.destructive ? "destructive" : "default"}
-                onSelect={() => item.onSelect?.()}
+                onClick={() => item.onSelect?.()}
               >
                 {item.icon}
                 {item.label}
@@ -107,18 +113,18 @@ export function RowActionsContextMenuItems({
           {item.href ? (
             <ContextMenuItem
               variant={item.destructive ? "destructive" : "default"}
-              asChild
-            >
-              <Link href={item.href}>
-                {item.icon}
-                {item.label}
-              </Link>
-            </ContextMenuItem>
+              render={
+                <Link href={item.href}>
+                  {item.icon}
+                  {item.label}
+                </Link>
+              }
+            ></ContextMenuItem>
           ) : (
             <ContextMenuItem
               disabled={item.disabled}
               variant={item.destructive ? "destructive" : "default"}
-              onSelect={() => item.onSelect?.()}
+              onClick={() => item.onSelect?.()}
             >
               {item.icon}
               {item.label}

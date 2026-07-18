@@ -158,7 +158,11 @@ function timeToMinutes(value: string | null | undefined): number | null {
 
 function isPastShiftEnd(state: TodayWorkState): boolean {
   const attendance = state.attendance;
-  if (!attendance?.checkIn || attendance.checkOut || attendance.checkoutRequestedAt) {
+  if (
+    !attendance?.checkIn ||
+    attendance.checkOut ||
+    attendance.checkoutRequestedAt
+  ) {
     return false;
   }
   if (attendance.date < state.today) return true;
@@ -559,12 +563,12 @@ export function ClockClient({
           ]}
         />
         <Button
-          asChild
           variant="outline"
           size="touch"
           className="w-full sm:w-fit"
+          render={<Link href={routes.schedule} />}
         >
-          <Link href={routes.schedule}>{clockCopy.viewSchedule}</Link>
+          {clockCopy.viewSchedule}
         </Button>
       </Panel>
     );
@@ -730,10 +734,7 @@ export function ClockClient({
         </Button>
 
         {checkoutState === "submitting" ? (
-          <InlineState
-            media={<Spinner />}
-            title={checkoutPendingLabel}
-          />
+          <InlineState media={<Spinner />} title={checkoutPendingLabel} />
         ) : null}
       </Panel>
     );

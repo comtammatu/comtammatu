@@ -22,15 +22,13 @@ export function CatalogBackControl({
   return (
     <header className="flex items-center gap-2">
       <Button
-        asChild
         variant="ghost"
         size="icon-touch"
         aria-label={title}
         className="-ml-2 shrink-0 text-muted-foreground"
+        render={<Link href={backHref} />}
       >
-        <Link href={backHref}>
-          <IconArrowLeft />
-        </Link>
+        <IconArrowLeft />
       </Button>
       {heading}
     </header>

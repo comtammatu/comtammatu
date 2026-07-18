@@ -22,7 +22,13 @@ import { toast } from "@comtammatu/ui/components/sonner";
 
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-import { AppPage, AppPageHeader, AppSection, DescriptionList, AppDetailFooter } from "@/components/surface";
+import {
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  DescriptionList,
+  AppDetailFooter,
+} from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   DataTable,
@@ -260,9 +266,7 @@ export function StocktakeDetailClient({
           {
             term: stocktakeDetailCopy.metrics.status,
             description: (
-              <Badge variant={statusBadge.variant}>
-                {statusBadge.label}
-              </Badge>
+              <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
             ),
           },
           {
@@ -286,7 +290,9 @@ export function StocktakeDetailClient({
               <span
                 className={cn(
                   "tabular-nums",
-                  varianceCount > 0 ? "text-warning font-bold" : "text-muted-foreground"
+                  varianceCount > 0
+                    ? "text-warning font-bold"
+                    : "text-muted-foreground",
                 )}
               >
                 {varianceCount}
@@ -295,7 +301,9 @@ export function StocktakeDetailClient({
           },
           {
             term: stocktakeCopy.startedAt,
-            description: formatVNDateTime(session.started_at ?? session.created_at),
+            description: formatVNDateTime(
+              session.started_at ?? session.created_at,
+            ),
           },
           ...(session.completed_at
             ? [
@@ -377,13 +385,18 @@ export function StocktakeDetailClient({
     return (
       <div className="flex w-full flex-col gap-3">
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon" className="shrink-0">
-            <Link
-              href={`${routeBase}?branchId=${session.branch_id}`}
-              aria-label={ACTIONS_VI.back}
-            >
-              <IconArrowLeft className="size-4" />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            render={
+              <Link
+                href={`${routeBase}?branchId=${session.branch_id}`}
+                aria-label={ACTIONS_VI.back}
+              />
+            }
+          >
+            <IconArrowLeft className="size-4" />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-sm font-semibold">
@@ -403,11 +416,7 @@ export function StocktakeDetailClient({
         {stocktakeActions ? (
           <AppDetailFooter
             sticky
-            trailing={
-              <div className="flex gap-2">
-                {stocktakeActions}
-              </div>
-            }
+            trailing={<div className="flex gap-2">{stocktakeActions}</div>}
           />
         ) : null}
       </div>
@@ -429,7 +438,8 @@ export function StocktakeDetailClient({
             href={`${routeBase}?branchId=${session.branch_id}`}
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
           >
-            <IconArrowLeft className="size-4" /> {tRoute("/inventory/stocktake")}
+            <IconArrowLeft className="size-4" />{" "}
+            {tRoute("/inventory/stocktake")}
           </Link>
         }
         actions={stocktakeActions}
@@ -647,7 +657,9 @@ function ResultsPhase({
       header: stocktakeDetailCopy.results.variance,
       render: (line) => {
         if (line.counted_quantity == null) {
-          return <span className="text-sm font-mono text-muted-foreground">—</span>;
+          return (
+            <span className="text-sm font-mono text-muted-foreground">—</span>
+          );
         }
         const variance = line.variance ?? 0;
         return (
@@ -704,16 +716,15 @@ function ResultsPhase({
           {stocktakeDetailCopy.results.nextActionTitle}
         </p>
         <p className="text-sm text-muted-foreground">
-          {stocktakeDetailCopy.results.nextActionDescription(
-            varianceCount,
-          )}
+          {stocktakeDetailCopy.results.nextActionDescription(varianceCount)}
         </p>
       </div>
-      <Button asChild size={embedded ? "touch" : "sm"}>
-        <Link href={reviewHref}>
-          {stocktakeDetailCopy.results.nextActionCta}
-          <IconArrowRight className="size-4" />
-        </Link>
+      <Button
+        size={embedded ? "touch" : "sm"}
+        render={<Link href={reviewHref} />}
+      >
+        {stocktakeDetailCopy.results.nextActionCta}
+        <IconArrowRight className="size-4" />
       </Button>
     </AppSection>
   );
@@ -742,9 +753,16 @@ function ResultsPhase({
                     {line.ingredients?.name ?? `#${line.ingredient_id}`}
                   </span>
                   {line.counted_quantity == null ? (
-                    <span className="font-mono text-sm text-muted-foreground">—</span>
+                    <span className="font-mono text-sm text-muted-foreground">
+                      —
+                    </span>
                   ) : (
-                    <span className={cn("font-mono text-sm font-bold tabular-nums", varianceColor)}>
+                    <span
+                      className={cn(
+                        "font-mono text-sm font-bold tabular-nums",
+                        varianceColor,
+                      )}
+                    >
                       {variance > 0 && "+"}
                       {variance}
                     </span>
@@ -753,7 +771,9 @@ function ResultsPhase({
                 <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                   <span>
                     {stocktakeDetailCopy.results.systemShort}:{" "}
-                    <span className="font-mono text-foreground font-medium">{line.system_quantity}</span>
+                    <span className="font-mono text-foreground font-medium">
+                      {line.system_quantity}
+                    </span>
                     {" · "}
                     {stocktakeDetailCopy.results.countedShort}:{" "}
                     <span className="font-mono text-foreground font-medium">
@@ -761,7 +781,9 @@ function ResultsPhase({
                     </span>
                   </span>
                   {line.variance_reason ? (
-                    <span className="truncate italic">{line.variance_reason}</span>
+                    <span className="truncate italic">
+                      {line.variance_reason}
+                    </span>
                   ) : null}
                 </div>
               </Item>
@@ -801,7 +823,9 @@ function ResultsPhase({
                     {line.ingredients?.name ?? `#${line.ingredient_id}`}
                   </span>
                   {line.counted_quantity == null ? (
-                    <span className="shrink-0 font-mono text-sm text-muted-foreground">—</span>
+                    <span className="shrink-0 font-mono text-sm text-muted-foreground">
+                      —
+                    </span>
                   ) : (
                     <span
                       className={cn(

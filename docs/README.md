@@ -15,8 +15,8 @@
 - Ngôn ngữ chuẩn + thuật ngữ dự án: [ref/glossary.md](ref/glossary.md)
 - Skill/plugin/tool routing cho agent: [agent/rules/skills.md](agent/rules/skills.md)
 - Kiến trúc hệ thống: [architecture/README.md](architecture/README.md)
-- UI Design System SSOT / Custom Theme contract: [spec/design-system.md](spec/design-system.md)
-- UI implementation guide, not a second authority: [modules/ui.md](modules/ui.md)
+- Má Tư visual contract and authority map: [spec/design-system.md](spec/design-system.md)
+- UI implementation and Base UI migration guide: [modules/ui.md](modules/ui.md)
 - Database schema source ladder: [spec/database-schema.md](spec/database-schema.md)
 - Finance active boundary: [modules/finance.md](modules/finance.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
@@ -40,7 +40,8 @@
 - `ref/`: canonical rules, boundary, business semantics, glossary chuẩn
 - `modules/` và `spec/`: technical structure và schema
 - `agent/rules/`: agent entry rules, workflow gates, skill routing, database/UI/engineering constraints
-- `spec/design-system.md`: single source of truth cho UI design-system; runtime tokens, primitives, adapters, runbooks, worklogs, and regression rules only implement, verify, or enforce it
+- `spec/design-system.md`: Má Tư visual contract; primitive behavior,
+  workflow composition và regression proof có owner riêng trong authority map
 - `plan/`: active decisions and ADRs
 - `runbooks/`: operational verification
 - `worklog/`: policy only; use PR/task notes for transient implementation artifacts

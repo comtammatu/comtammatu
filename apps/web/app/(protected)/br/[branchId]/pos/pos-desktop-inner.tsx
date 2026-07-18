@@ -1613,11 +1613,7 @@ export function PosDesktopInner({
     : undefined;
 
   const mobileSidebarDrawer = isTouchLayout ? (
-    <Drawer
-      open={cartDrawerOpen}
-      onOpenChange={setCartDrawerOpen}
-      shouldScaleBackground={false}
-    >
+    <Drawer open={cartDrawerOpen} onOpenChange={setCartDrawerOpen}>
       <DrawerContent showHandle responsiveFullscreen>
         <DrawerTitle className="sr-only">
           {appendTarget != null

@@ -484,11 +484,9 @@ function SelfOrderQrDialog({
           <IconCopy data-icon="inline-start" />
           {tableMessages.copyLink}
         </Button>
-        <Button asChild variant="outline">
-          <a href={previewHref}>
-            <IconExternalLink data-icon="inline-start" />
-            {tableMessages.openLink}
-          </a>
+        <Button variant="outline" render={<a href={previewHref} />}>
+          <IconExternalLink data-icon="inline-start" />
+          {tableMessages.openLink}
         </Button>
       </div>
     </AppDialog>

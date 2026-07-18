@@ -495,10 +495,12 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
         description={messages.pos.menu.menuLimitsEmptyDescription}
         symbol="roundPlate"
       >
-        <Button asChild variant="outline" size="touch">
-          <Link href={`/br/${branchId}/settings`}>
-            {messages.settings.branch.branchSettingsBack}
-          </Link>
+        <Button
+          variant="outline"
+          size="touch"
+          render={<Link href={`/br/${branchId}/settings`} />}
+        >
+          {messages.settings.branch.branchSettingsBack}
         </Button>
       </AppEmptyState>
     );
@@ -597,14 +599,16 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
             <>
               <DrawerHeader>
                 <DrawerTitle>{drawerRow.item_name}</DrawerTitle>
-                <DrawerDescription asChild>
-                  <div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">
-                    {renderItemBadge(drawerRow)}
-                    <Badge variant="outline" className="font-mono">
-                      {formatVND(drawerRow.base_price)}
-                    </Badge>
-                  </div>
-                </DrawerDescription>
+                <DrawerDescription
+                  render={
+                    <div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">
+                      {renderItemBadge(drawerRow)}
+                      <Badge variant="outline" className="font-mono">
+                        {formatVND(drawerRow.base_price)}
+                      </Badge>
+                    </div>
+                  }
+                ></DrawerDescription>
               </DrawerHeader>
               <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-2">
                 <Item variant="muted" size="sm" className="items-center">
@@ -648,26 +652,24 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                 />
                 <FieldGroup className="gap-4">
                   <Item
-                    asChild
                     variant="muted"
                     className="items-center justify-between"
+                    render={<Field orientation="horizontal" />}
                   >
-                    <Field orientation="horizontal">
-                      <FieldContent>
-                        <FieldLabel htmlFor="menu-limit-disabled">
-                          {messages.pos.menu.servingStatusLabel}
-                        </FieldLabel>
-                        <FieldDescription>
-                          {messages.pos.menu.servingStatusHint}
-                        </FieldDescription>
-                      </FieldContent>
-                      <Switch
-                        id="menu-limit-disabled"
-                        size="touch"
-                        checked={draftDisabled}
-                        onCheckedChange={setDraftDisabled}
-                      />
-                    </Field>
+                    <FieldContent>
+                      <FieldLabel htmlFor="menu-limit-disabled">
+                        {messages.pos.menu.servingStatusLabel}
+                      </FieldLabel>
+                      <FieldDescription>
+                        {messages.pos.menu.servingStatusHint}
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      id="menu-limit-disabled"
+                      size="touch"
+                      checked={draftDisabled}
+                      onCheckedChange={setDraftDisabled}
+                    />
                   </Item>
 
                   <Field>
@@ -704,7 +706,6 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                     </FieldLabel>
                     <Textarea
                       id="menu-limit-replenish-reason"
-                      data-vaul-no-drag
                       value={replenishReason}
                       onChange={(event) =>
                         setReplenishReason(event.target.value)

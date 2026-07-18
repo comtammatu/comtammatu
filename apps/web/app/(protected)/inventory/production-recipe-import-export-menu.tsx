@@ -25,7 +25,11 @@ import {
   importProductionRecipes,
 } from "./production-actions";
 
-import { ACTIONS_VI, INVENTORY_VI, TOAST_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  INVENTORY_VI,
+  TOAST_VI,
+} from "@comtammatu/shared/messages";
 export function ProductionRecipeImportExportMenu({
   onImported,
 }: {
@@ -65,16 +69,18 @@ export function ProductionRecipeImportExportMenu({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" disabled={isExporting}>
-            {isExporting ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <IconFileSpreadsheet data-icon="inline-start" />
-            )}
-            {INVENTORY_VI.productionRecipeImportExport}
-          </Button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" disabled={isExporting}>
+              {isExporting ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <IconFileSpreadsheet data-icon="inline-start" />
+              )}
+              {INVENTORY_VI.productionRecipeImportExport}
+            </Button>
+          }
+        />
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => setImportOpen(true)}>

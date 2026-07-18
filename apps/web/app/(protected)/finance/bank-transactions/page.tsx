@@ -59,8 +59,8 @@ export default async function BankTransactionsPage({
         description={copy.description}
         meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/finance">{messages.finance.common.backToFinance}</Link>
+          <Button variant="outline" size="sm" render={<Link href="/finance" />}>
+            {messages.finance.common.backToFinance}
           </Button>
         }
       />

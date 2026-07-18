@@ -39,11 +39,7 @@ import {
 import { fetchOrders } from "./actions";
 import { OrderDetailContent, OrderDetailSheet } from "./order-detail-sheet";
 import { useIsXlUp } from "./_hooks/use-is-xl-up";
-import type {
-  OrderRow,
-  OrdersSummary,
-  FetchOrdersFilters,
-} from "./actions";
+import type { OrderRow, OrdersSummary, FetchOrdersFilters } from "./actions";
 import {
   DataTable,
   type DataTableColumn,
@@ -170,7 +166,12 @@ export function OrdersClient({
   }, [initialSummary]);
 
   const routeBranchId = params?.branchId ? Number(params.branchId) : null;
-  const currentBranchId = (routeBranchId && !isNaN(routeBranchId)) ? routeBranchId : (branchId ? Number(branchId) : null);
+  const currentBranchId =
+    routeBranchId && !isNaN(routeBranchId)
+      ? routeBranchId
+      : branchId
+        ? Number(branchId)
+        : null;
 
   const initialSubscribeSeenRef = useRef(false);
 
@@ -186,12 +187,14 @@ export function OrdersClient({
       if (tenantId === null) return null;
 
       // Filter dynamically based on current branch selection or route context
-      const realtimeFilter = currentBranchId 
+      const realtimeFilter = currentBranchId
         ? `branch_id=eq.${String(currentBranchId)}`
         : `tenant_id=eq.${String(tenantId)}`;
 
       return supabase
-        .channel(`orders-list-realtime-${String(tenantId)}-${String(currentBranchId ?? "all")}`)
+        .channel(
+          `orders-list-realtime-${String(tenantId)}-${String(currentBranchId ?? "all")}`,
+        )
         .on(
           "postgres_changes",
           {
@@ -292,108 +295,99 @@ export function OrdersClient({
 
       {/* ─── Filter bar ─── */}
       <AppToolbar className="items-end">
-          <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-            <Label htmlFor="date-from" className="text-xs">
-              {FORM_VI.fromDate}
-            </Label>
-            <Input
-              id="date-from"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full sm:w-36"
-            />
-          </div>
+        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
+          <Label htmlFor="date-from" className="text-xs">
+            {FORM_VI.fromDate}
+          </Label>
+          <Input
+            id="date-from"
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-full sm:w-36"
+          />
+        </div>
 
-          <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-            <Label htmlFor="date-to" className="text-xs">
-              {FORM_VI.toDate}
-            </Label>
-            <Input
-              id="date-to"
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full sm:w-36"
-            />
-          </div>
+        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
+          <Label htmlFor="date-to" className="text-xs">
+            {FORM_VI.toDate}
+          </Label>
+          <Input
+            id="date-to"
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-full sm:w-36"
+          />
+        </div>
 
-          <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-            <Label htmlFor="status-filter" className="text-xs">
-              {FORM_VI.status}
+        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
+          <Label htmlFor="status-filter" className="text-xs">
+            {FORM_VI.status}
+          </Label>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger id="status-filter" className="w-full sm:w-40">
+              <SelectValue placeholder="Tất cả" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(ORDER_STATUS_LABELS_VI).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {showBranchFilter && branches.length > 0 && (
+          <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
+            <Label htmlFor="branch-filter" className="text-xs">
+              {BRANCH_VI.long}
             </Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger id="status-filter" className="w-full sm:w-40">
-                <SelectValue placeholder="Tất cả" />
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger id="branch-filter" className="w-full sm:w-44">
+                <SelectValue placeholder={BRANCH_VI.selectAll} />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(ORDER_STATUS_LABELS_VI).map(
-                  ([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ),
-                )}
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+        )}
 
-          {showBranchFilter && branches.length > 0 && (
-            <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
-              <Label htmlFor="branch-filter" className="text-xs">
-                {BRANCH_VI.long}
-              </Label>
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger id="branch-filter" className="w-full sm:w-44">
-                  <SelectValue placeholder={BRANCH_VI.selectAll} />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="flex w-full items-end gap-2 sm:w-auto">
+        <div className="flex w-full items-end gap-2 sm:w-auto">
+          <Button
+            onClick={handleFilter}
+            disabled={isPending}
+            size="sm"
+            className="flex-1 sm:flex-none"
+          >
+            {isPending && <Spinner className="mr-1.5 size-3.5" />}
+            Lọc
+          </Button>
+          {hasFilters && (
             <Button
-              onClick={handleFilter}
+              onClick={handleReset}
               disabled={isPending}
+              variant="outline"
               size="sm"
               className="flex-1 sm:flex-none"
             >
-              {isPending && <Spinner className="mr-1.5 size-3.5" />}
-              Lọc
+              Xóa bộ lọc
             </Button>
-            {hasFilters && (
-              <Button
-                onClick={handleReset}
-                disabled={isPending}
-                variant="outline"
-                size="sm"
-                className="flex-1 sm:flex-none"
-              >
-                Xóa bộ lọc
-              </Button>
-            )}
-          </div>
+          )}
+        </div>
       </AppToolbar>
 
       <AppToolbar className="justify-between">
-          <p className="text-sm text-muted-foreground">
-            {ORDERS_COPY.listCountNote(
-              displayOrders.length,
-              summary.totalCount,
-            )}
-          </p>
-          {hasFilters && (
-            <Badge variant="info">
-              Bộ lọc đang áp dụng
-            </Badge>
-          )}
+        <p className="text-sm text-muted-foreground">
+          {ORDERS_COPY.listCountNote(displayOrders.length, summary.totalCount)}
+        </p>
+        {hasFilters && <Badge variant="info">Bộ lọc đang áp dụng</Badge>}
       </AppToolbar>
 
       {/* ─── Table ─── */}
@@ -403,60 +397,60 @@ export function OrdersClient({
         contentFlush
         contentScroll
       >
-          <DataTable
-            columns={ORDER_COLUMNS}
-            data={displayOrders}
-            getRowKey={(order) => order.id}
-            pageSize={50}
-            onRowClick={setSelectedOrder}
-            emptyTitle="Không có đơn hàng nào"
-            emptyDescription={
-              hasFilters
-                ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
-                : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
-            }
-            emptyIcon={<IconShoppingBag />}
-            emptyMode={hasFilters ? "no-results" : "no-data"}
-            mobileCardRender={(order) => (
-              <Item
-                asChild
-                variant="outline"
-                className="cursor-pointer text-left"
-              >
-                <button type="button" onClick={() => setSelectedOrder(order)}>
-                  <ItemHeader>
-                    <ItemContent>
-                      <ItemTitle className="font-mono">
-                        {order.order_number}
-                      </ItemTitle>
-                      <ItemDescription>{order.branch_name}</ItemDescription>
-                    </ItemContent>
-                    <StatusBadge domain="order" value={order.status} />
-                  </ItemHeader>
-                  <ItemFooter>
-                    <span className="text-xs text-muted-foreground">
-                      {STAFF_VI.long}: {order.created_by_name}
-                    </span>
-                    <span className="font-mono text-sm font-semibold tabular-nums">
-                      {formatVND(order.total_amount)}
-                    </span>
-                  </ItemFooter>
-                  <ItemFooter>
-                    <span className="text-xs text-muted-foreground">
-                      {formatVNDateTime(order.created_at)}
-                    </span>
-                    {order.payment_method ? (
-                      <Badge variant="outline" className="text-xs">
-                        {getPaymentMethodLabelVi(order.payment_method)}
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </ItemFooter>
-                </button>
-              </Item>
-            )}
-          />
+        <DataTable
+          columns={ORDER_COLUMNS}
+          data={displayOrders}
+          getRowKey={(order) => order.id}
+          pageSize={50}
+          onRowClick={setSelectedOrder}
+          emptyTitle="Không có đơn hàng nào"
+          emptyDescription={
+            hasFilters
+              ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+              : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
+          }
+          emptyIcon={<IconShoppingBag />}
+          emptyMode={hasFilters ? "no-results" : "no-data"}
+          mobileCardRender={(order) => (
+            <Item
+              variant="outline"
+              className="cursor-pointer text-left"
+              render={
+                <button type="button" onClick={() => setSelectedOrder(order)} />
+              }
+            >
+              <ItemHeader>
+                <ItemContent>
+                  <ItemTitle className="font-mono">
+                    {order.order_number}
+                  </ItemTitle>
+                  <ItemDescription>{order.branch_name}</ItemDescription>
+                </ItemContent>
+                <StatusBadge domain="order" value={order.status} />
+              </ItemHeader>
+              <ItemFooter>
+                <span className="text-xs text-muted-foreground">
+                  {STAFF_VI.long}: {order.created_by_name}
+                </span>
+                <span className="font-mono text-sm font-semibold tabular-nums">
+                  {formatVND(order.total_amount)}
+                </span>
+              </ItemFooter>
+              <ItemFooter>
+                <span className="text-xs text-muted-foreground">
+                  {formatVNDateTime(order.created_at)}
+                </span>
+                {order.payment_method ? (
+                  <Badge variant="outline" className="text-xs">
+                    {getPaymentMethodLabelVi(order.payment_method)}
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </ItemFooter>
+            </Item>
+          )}
+        />
       </AppSection>
     </>
   );

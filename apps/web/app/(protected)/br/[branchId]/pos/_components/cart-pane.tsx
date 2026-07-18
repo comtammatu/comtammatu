@@ -389,10 +389,7 @@ function CartPaneComponent({
       ) : (
         <>
           <ScrollArea className="min-h-0 flex-1">
-            <div
-              className="flex flex-col gap-2 px-3 py-2 sm:px-4 sm:py-3"
-              data-vaul-no-drag
-            >
+            <div className="flex flex-col gap-2 px-3 py-2 sm:px-4 sm:py-3">
               {cart.items.map((item) => {
                 const discountAmount = calcItemDiscountAmount(item);
                 const netSubtotal = calcItemNetSubtotal(item);

@@ -480,14 +480,12 @@ export function BranchStockIssueDetailClient({
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
           <Button
-            asChild
             variant="ghost"
             size="icon-touch"
             title={ACTIONS_VI.back}
+            render={<Link href={issuesBasePath} aria-label={ACTIONS_VI.back} />}
           >
-            <Link href={issuesBasePath} aria-label={ACTIONS_VI.back}>
-              <IconArrowLeft />
-            </Link>
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-sm font-semibold">

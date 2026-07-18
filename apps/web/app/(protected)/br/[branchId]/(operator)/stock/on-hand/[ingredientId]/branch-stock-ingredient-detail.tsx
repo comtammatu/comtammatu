@@ -141,10 +141,14 @@ export function BranchStockIngredientDetail({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stockBasePath} aria-label={detailCopy.backToStock}>
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link href={stockBasePath} aria-label={detailCopy.backToStock} />
+            }
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{ingredient.name}</p>
@@ -167,11 +171,12 @@ export function BranchStockIngredientDetail({
               }}
               action={
                 data.permissions.canReceiveGrn ? (
-                  <Button asChild size="touch">
-                    <Link href={`${stockBasePath}/grn/new`}>
-                      <IconReceipt data-icon="inline-start" />
-                      {stockCopy.actions.receiveGoods}
-                    </Link>
+                  <Button
+                    size="touch"
+                    render={<Link href={`${stockBasePath}/grn/new`} />}
+                  >
+                    <IconReceipt data-icon="inline-start" />
+                    {stockCopy.actions.receiveGoods}
                   </Button>
                 ) : null
               }
@@ -369,11 +374,13 @@ export function BranchStockIngredientDetail({
         <AppDetailFooter
           sticky
           trailing={
-            <Button size="touch-lg" variant="outline" asChild>
-              <Link href={stockBasePath}>
-                <IconArrowLeft data-icon="inline-start" />
-                {ACTIONS_VI.back}
-              </Link>
+            <Button
+              size="touch-lg"
+              variant="outline"
+              render={<Link href={stockBasePath} />}
+            >
+              <IconArrowLeft data-icon="inline-start" />
+              {ACTIONS_VI.back}
             </Button>
           }
         />

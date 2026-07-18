@@ -839,97 +839,97 @@ export function SupplierInvoicesClient({
 
     return (
       <InteractiveCard
-        asChild
         minHeight="mobile"
         padding="default"
         className={cn(
           "flex-col items-stretch gap-3 text-left",
           isActive && "border-primary/20 bg-primary/10 ring-2 ring-primary/20",
         )}
+        render={
+          <button
+            type="button"
+            onClick={() => {
+              if (primaryInvoice) setSelectedInvoiceId(primaryInvoice.id);
+            }}
+            aria-pressed={isActive}
+          />
+        }
       >
-        <button
-          type="button"
-          onClick={() => {
-            if (primaryInvoice) setSelectedInvoiceId(primaryInvoice.id);
-          }}
-          aria-pressed={isActive}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-1">
-              <p className="truncate text-sm font-semibold">{group.title}</p>
-              <p className="truncate text-sm text-muted-foreground">
-                {group.subtitle}
-              </p>
-            </div>
-            {group.overdueCount > 0 ? (
-              <Badge variant="outline" className="border-destructive/20">
-                {copy.overdueGroupSummary(group.overdueCount)}
-              </Badge>
-            ) : null}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="truncate text-sm font-semibold">{group.title}</p>
+            <p className="truncate text-sm text-muted-foreground">
+              {group.subtitle}
+            </p>
           </div>
+          {group.overdueCount > 0 ? (
+            <Badge variant="outline" className="border-destructive/20">
+              {copy.overdueGroupSummary(group.overdueCount)}
+            </Badge>
+          ) : null}
+        </div>
 
-          <div className="mt-4 grid gap-2 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{copy.totalInvoice}</span>
-              <span className="font-mono font-semibold">
-                {messages.inventory.common.currencyCompact(
-                  formatVND(group.totalAmount),
-                )}
-              </span>
-            </div>
+        <div className="mt-4 grid gap-2 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{copy.totalInvoice}</span>
+            <span className="font-mono font-semibold">
+              {messages.inventory.common.currencyCompact(
+                formatVND(group.totalAmount),
+              )}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">
+              {copy.outstandingPayable}
+            </span>
+            <span className="font-mono font-semibold">
+              {messages.inventory.common.currencyCompact(
+                formatVND(group.outstandingAmount),
+              )}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{copy.aging}</span>
+            <span
+              className={cn(
+                "text-right font-mono font-semibold",
+                group.overdueAmount > 0 && "text-destructive",
+              )}
+            >
+              {group.overdueAmount > 0
+                ? messages.inventory.common.currencyCompact(
+                    formatVND(group.overdueAmount),
+                  )
+                : group.nextDueDate
+                  ? formatDate(group.nextDueDate)
+                  : copy.noOpenDueDate}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{copy.paidAmount}</span>
+            <span className="font-mono">
+              {messages.inventory.common.currencyCompact(
+                formatVND(group.paidAmount),
+              )}
+            </span>
+          </div>
+          {group.creditAppliedAmount > 0 ? (
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">
-                {copy.outstandingPayable}
+                {copy.supplierCredit}
               </span>
-              <span className="font-mono font-semibold">
-                {messages.inventory.common.currencyCompact(
-                  formatVND(group.outstandingAmount),
-                )}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{copy.aging}</span>
-              <span
-                className={cn(
-                  "text-right font-mono font-semibold",
-                  group.overdueAmount > 0 && "text-destructive",
-                )}
-              >
-                {group.overdueAmount > 0
-                  ? messages.inventory.common.currencyCompact(
-                      formatVND(group.overdueAmount),
-                    )
-                  : group.nextDueDate
-                    ? formatDate(group.nextDueDate)
-                    : copy.noOpenDueDate}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{copy.paidAmount}</span>
               <span className="font-mono">
                 {messages.inventory.common.currencyCompact(
-                  formatVND(group.paidAmount),
+                  formatVND(group.creditAppliedAmount),
                 )}
               </span>
             </div>
-            {group.creditAppliedAmount > 0 ? (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">
-                  {copy.supplierCredit}
-                </span>
-                <span className="font-mono">
-                  {messages.inventory.common.currencyCompact(
-                    formatVND(group.creditAppliedAmount),
-                  )}
-                </span>
-              </div>
-            ) : null}
-          </div>
+          ) : null}
+        </div>
 
-          <span className="mt-4 text-sm font-medium text-primary">
-            {isActive ? copy.analyzing : copy.groupDetailAction}
-          </span>
-        </button>
+        <span className="mt-4 text-sm font-medium text-primary">
+          {isActive ? copy.analyzing : copy.groupDetailAction}
+        </span>
       </InteractiveCard>
     );
   };

@@ -30,7 +30,7 @@ test("inventory dashboard keeps the four owner entrypoint groups visible", () =>
 
   assert.match(
     source,
-    /<Link href=\{withBranch\(action\.href\)\}>\s*\{action\.label\}\s*<\/Link>/,
+    /render=\{<Link href=\{withBranch\(action\.href\)\} \/>\}[\s\S]*\{action\.label\}/,
   );
   assert.match(
     source,

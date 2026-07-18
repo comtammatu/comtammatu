@@ -234,32 +234,32 @@ export function BranchCountSlipsClient({
             {visibleRows.map((row) => (
               <Item
                 key={row.id}
-                asChild
                 variant="outline"
                 className="min-h-20 touch-manipulation"
+                render={
+                  <button type="button" onClick={() => setSelectedId(row.id)} />
+                }
               >
-                <button type="button" onClick={() => setSelectedId(row.id)}>
-                  <ItemContent className="min-w-0 gap-1 text-left">
-                    <ItemTitle size="heading">{row.employeeName}</ItemTitle>
-                    <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span>{row.locationName}</span>
-                      {row.shiftName ? <span>{row.shiftName}</span> : null}
-                      <span>{formatVNDate(row.countDate)}</span>
-                    </ItemDescription>
-                    <ItemDescription className="line-clamp-none">
-                      {INVENTORY_VI.grnDraftLineCount(row.lines.length)} ·{" "}
-                      {INVENTORY_VI.varianceLineCount(changedLineCount(row))}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <StatusBadge
-                      domain="count-slip"
-                      value={row.status}
-                      size="sm"
-                    />
-                    <IconChevronRight className="size-4 text-muted-foreground" />
-                  </ItemActions>
-                </button>
+                <ItemContent className="min-w-0 gap-1 text-left">
+                  <ItemTitle size="heading">{row.employeeName}</ItemTitle>
+                  <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span>{row.locationName}</span>
+                    {row.shiftName ? <span>{row.shiftName}</span> : null}
+                    <span>{formatVNDate(row.countDate)}</span>
+                  </ItemDescription>
+                  <ItemDescription className="line-clamp-none">
+                    {INVENTORY_VI.grnDraftLineCount(row.lines.length)} ·{" "}
+                    {INVENTORY_VI.varianceLineCount(changedLineCount(row))}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <StatusBadge
+                    domain="count-slip"
+                    value={row.status}
+                    size="sm"
+                  />
+                  <IconChevronRight className="size-4 text-muted-foreground" />
+                </ItemActions>
               </Item>
             ))}
           </ItemGroup>

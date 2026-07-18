@@ -110,24 +110,28 @@ function PosMoreMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-touch"
-          className="shrink-0"
-          aria-label={messages.pos.sessionHeader.moreMenuAria}
-        >
-          <IconMoreVertical />
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-touch"
+            className="shrink-0"
+            aria-label={messages.pos.sessionHeader.moreMenuAria}
+          >
+            <IconMoreVertical />
+          </Button>
+        }
+      />
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem asChild>
-          <Link href={`/br/${branchId}`}>
-            <IconDoorEnter />
-            {APP_COPY_VI.operatorHome}
-          </Link>
-        </DropdownMenuItem>
+        <DropdownMenuItem
+          render={
+            <Link href={`/br/${branchId}`}>
+              <IconDoorEnter />
+              {APP_COPY_VI.operatorHome}
+            </Link>
+          }
+        />
 
         <DropdownMenuItem onClick={toggleSound}>
           {audioMode === "off" ? (

@@ -2,11 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import {
-  Minus as IconMinus,
-  Plus as IconPlus,
-  X as IconX,
-} from "lucide-react";
+import { Minus as IconMinus, Plus as IconPlus, X as IconX } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -373,17 +369,19 @@ export function SelfOrderItemSheet({
                 ))}
               </span>
             ) : null}
-            <SheetClose asChild>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon-touch"
-                className="absolute top-2 right-2 z-10"
-                aria-label={SELF_ORDER_VI.closeCustomizerAria}
-              >
-                <IconX />
-              </Button>
-            </SheetClose>
+            <SheetClose
+              render={
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon-touch"
+                  className="absolute top-2 right-2 z-10"
+                  aria-label={SELF_ORDER_VI.closeCustomizerAria}
+                >
+                  <IconX />
+                </Button>
+              }
+            />
           </div>
 
           <div className="flex shrink-0 items-center border-b border-border/60 px-4 py-3">
@@ -414,31 +412,31 @@ export function SelfOrderItemSheet({
                     {item.menu_item_variants.map((variant) => (
                       <Item
                         key={variant.id}
-                        asChild
                         variant="outline"
                         className="cursor-pointer hover:bg-accent"
-                      >
-                        <FieldLabel
-                          htmlFor={`self-order-variant-${item.id}-${variant.id}`}
-                          className="w-full items-center gap-3 font-normal"
-                        >
-                          <RadioGroupItem
-                            id={`self-order-variant-${item.id}-${variant.id}`}
-                            value={String(variant.id)}
-                            size="touch"
+                        render={
+                          <FieldLabel
+                            htmlFor={`self-order-variant-${item.id}-${variant.id}`}
+                            className="w-full items-center gap-3 font-normal"
                           />
-                          <ItemContent>
-                            <ItemTitle className="text-base">
-                              {variant.name}
-                            </ItemTitle>
-                          </ItemContent>
-                          <ItemActions className="shrink-0 text-base text-muted-foreground">
-                            {formatVND(
-                              Number(item.base_price) +
-                                Number(variant.price_adjustment),
-                            )}
-                          </ItemActions>
-                        </FieldLabel>
+                        }
+                      >
+                        <RadioGroupItem
+                          id={`self-order-variant-${item.id}-${variant.id}`}
+                          value={String(variant.id)}
+                          size="touch"
+                        />
+                        <ItemContent>
+                          <ItemTitle className="text-base">
+                            {variant.name}
+                          </ItemTitle>
+                        </ItemContent>
+                        <ItemActions className="shrink-0 text-base text-muted-foreground">
+                          {formatVND(
+                            Number(item.base_price) +
+                              Number(variant.price_adjustment),
+                          )}
+                        </ItemActions>
                       </Item>
                     ))}
                   </RadioGroup>
@@ -452,29 +450,29 @@ export function SelfOrderItemSheet({
                     {item.menu_item_modifiers.map((modifier) => (
                       <Item
                         key={modifier.id}
-                        asChild
                         variant="outline"
                         className="cursor-pointer hover:bg-accent"
-                      >
-                        <FieldLabel
-                          htmlFor={`self-order-modifier-${item.id}-${modifier.id}`}
-                          className="w-full items-center gap-3 font-normal"
-                        >
-                          <Checkbox
-                            id={`self-order-modifier-${item.id}-${modifier.id}`}
-                            size="touch"
-                            checked={selectedModifierIds.has(modifier.id)}
-                            onCheckedChange={() => toggleModifier(modifier.id)}
+                        render={
+                          <FieldLabel
+                            htmlFor={`self-order-modifier-${item.id}-${modifier.id}`}
+                            className="w-full items-center gap-3 font-normal"
                           />
-                          <ItemContent>
-                            <ItemTitle className="text-base">
-                              {modifier.name}
-                            </ItemTitle>
-                          </ItemContent>
-                          <ItemActions className="shrink-0 text-base text-muted-foreground">
-                            +{formatVND(Number(modifier.price))}
-                          </ItemActions>
-                        </FieldLabel>
+                        }
+                      >
+                        <Checkbox
+                          id={`self-order-modifier-${item.id}-${modifier.id}`}
+                          size="touch"
+                          checked={selectedModifierIds.has(modifier.id)}
+                          onCheckedChange={() => toggleModifier(modifier.id)}
+                        />
+                        <ItemContent>
+                          <ItemTitle className="text-base">
+                            {modifier.name}
+                          </ItemTitle>
+                        </ItemContent>
+                        <ItemActions className="shrink-0 text-base text-muted-foreground">
+                          +{formatVND(Number(modifier.price))}
+                        </ItemActions>
                       </Item>
                     ))}
                   </ItemGroup>

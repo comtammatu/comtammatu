@@ -383,11 +383,12 @@ export function CountAssignmentsClient({
         title={INVENTORY_VI.countAssignTitle}
         description={INVENTORY_VI.countAssignDescription}
         actions={
-          <Button asChild variant="outline">
-            <Link href="/inventory/count-slips">
-              <IconFileText aria-hidden="true" />
-              {INVENTORY_VI.countSlipTitle}
-            </Link>
+          <Button
+            variant="outline"
+            render={<Link href="/inventory/count-slips" />}
+          >
+            <IconFileText aria-hidden="true" />
+            {INVENTORY_VI.countSlipTitle}
           </Button>
         }
         badge={
@@ -571,7 +572,7 @@ export function CountAssignmentsClient({
                   return (
                     <Item
                       key={ingredient.id}
-                      asChild
+                      render={<Label htmlFor={checkboxId} />}
                       variant="outline"
                       className={cn(
                         "min-w-0 cursor-pointer items-center gap-3",
@@ -580,22 +581,18 @@ export function CountAssignmentsClient({
                           : "border-transparent hover:bg-muted",
                       )}
                     >
-                      <Label htmlFor={checkboxId}>
-                        <Checkbox
-                          id={checkboxId}
-                          checked={checked}
-                          onCheckedChange={() =>
-                            toggleIngredient(ingredient.id)
-                          }
-                          disabled={isPending}
-                        />
-                        <span className="min-w-0 flex-1 truncate">
-                          {ingredient.name}
-                        </span>
-                        {ingredient.unit ? (
-                          <Badge variant="outline">{ingredient.unit}</Badge>
-                        ) : null}
-                      </Label>
+                      <Checkbox
+                        id={checkboxId}
+                        checked={checked}
+                        onCheckedChange={() => toggleIngredient(ingredient.id)}
+                        disabled={isPending}
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {ingredient.name}
+                      </span>
+                      {ingredient.unit ? (
+                        <Badge variant="outline">{ingredient.unit}</Badge>
+                      ) : null}
                     </Item>
                   );
                 })
