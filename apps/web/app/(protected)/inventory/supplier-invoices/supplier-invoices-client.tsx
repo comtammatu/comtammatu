@@ -31,12 +31,12 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Stat } from "@comtammatu/ui/components/stat";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { cn } from "@comtammatu/ui";
 import {
   BusinessDateField,
@@ -1312,25 +1312,29 @@ export function SupplierInvoicesClient({
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <Stat
+                <KpiCard
+                  density="compact"
                   label={copy.totalInvoice}
                   value={messages.inventory.common.currencyCompact(
                     formatVND(selectedInvoice.amount),
                   )}
                 />
-                <Stat
+                <KpiCard
+                  density="compact"
                   label={copy.outstandingPayable}
                   value={messages.inventory.common.currencyCompact(
                     formatVND(selectedOutstandingAmount),
                   )}
                 />
-                <Stat
+                <KpiCard
+                  density="compact"
                   label={copy.paidAmount}
                   value={messages.inventory.common.currencyCompact(
                     formatVND(selectedInvoice.paidAmount),
                   )}
                 />
-                <Stat
+                <KpiCard
+                  density="compact"
                   label={copy.aging}
                   value={
                     <span

@@ -493,7 +493,7 @@ Default primitive mapping:
 | table navigation                  | `Pagination`                                                                                                      |
 | split pane                        | `Resizable`                                                                                                       |
 | filter/action row                 | `Toolbar`                                                                                                         |
-| metric block                      | `Stat` in primitive demos; app metric cards use `KpiCard` only for numeric/stat values                            |
+| metric block                      | `KpiCard` for numeric/stat values                                                                                 |
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 

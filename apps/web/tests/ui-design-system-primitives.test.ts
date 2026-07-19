@@ -36,7 +36,6 @@ test("Má Tư DS primitive parity files are present in the shared UI package", (
     "packages/ui/src/components/pagination.tsx",
     "packages/ui/src/components/resizable.tsx",
     "packages/ui/src/components/slider.tsx",
-    "packages/ui/src/components/stat.tsx",
     "packages/ui/src/components/tag-input.tsx",
     "packages/ui/src/components/toolbar.tsx",
   ]) {
@@ -47,6 +46,18 @@ test("Má Tư DS primitive parity files are present in the shared UI package", (
   assert.match(designSystem, /BrandSymbol/);
   assert.match(designSystem, /Combobox/);
   assert.match(designSystem, /Pagination/);
+});
+
+test("app metrics use KpiCard without the retired Stat primitive", () => {
+  const supplierInvoices = read(
+    "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+  );
+
+  assert.equal(exists("packages/ui/src/components/stat.tsx"), false);
+  assert.doesNotMatch(read("docs/modules/ui.md"), /`stat`/);
+  assert.match(supplierInvoices, /import \{ KpiCard \}/);
+  assert.equal(supplierInvoices.match(/<KpiCard/g)?.length, 4);
+  assert.doesNotMatch(supplierInvoices, /components\/stat["']|<Stat(?:\s|>)/);
 });
 
 test("shared primitives use Base UI behavior without Radix", () => {
