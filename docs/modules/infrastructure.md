@@ -100,6 +100,13 @@ GitHub Actions runs the standard gates on pull requests and `main`. Conditional
 jobs replay the from-empty database baseline and run the POS → payment → KDS
 smoke against the CI-only isolated Supabase stack.
 
+Every Vercel Preview build runs `scripts/check-preview-supabase-env.mjs` before
+Next.js compilation. The guard reads the Environment Registry directly, requires
+the canonical Supabase URL and matching `SUPABASE_PROJECT_ID`, and currently
+accepts only the registered persistent Cloud DEV target. Production,
+do-not-touch, unregistered, mismatched, or unverifiable privileged-key bindings
+fail closed. Production and CI-only Local builds stay outside this Preview gate.
+
 ### Dependency maintenance boundaries
 
 Package manifests and the lockfile remain the version source of truth. The
