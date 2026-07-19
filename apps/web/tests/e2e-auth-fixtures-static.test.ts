@@ -17,6 +17,7 @@ test("E2E manager fixture matches the seeded manager account", () => {
   assert.match(seed, new RegExp(email));
   assert.match(bringup, new RegExp(`E2E_INVENTORY_MANAGER_EMAIL=${email}`));
   assert.match(bringup, /process\.env\["CI"\] !== "true"/);
+  assert.equal([...bringup.matchAll(/maxBuffer: MAX_BUFFER/g)].length, 2);
   assert.match(bringup, /POS_NETWORK_GATE=off/);
   assert.doesNotMatch(bringup, /\.env\.local/);
   assert.match(packageManifest, /"build:e2e": "dotenv -e \.env\.test\.local -- next build/);
