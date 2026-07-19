@@ -333,13 +333,6 @@ export const PRIMITIVE_COMPONENT_REGISTRY = {
     "Loader icon plus animate-spin",
     "button and panel pending states",
   ),
-  "stat.tsx": adapterOnly(
-    "primitive metric internals",
-    "KpiCard and KpiRow for app metrics",
-    "DescriptionList for non-metric values",
-    "route-local Stat or SummaryCard contract",
-    "shared metric adapter",
-  ),
   "switch.tsx": direct(
     "immediate binary setting",
     "Switch inside Field",

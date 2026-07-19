@@ -101,7 +101,6 @@ Primitive source vẫn sống tại `packages/ui/src/components/*`, và app code
 - `empty` — tất cả empty-state UI (no-data, no-results, error, inline)
 - `field` + `field-group` — form field composition (label, control, error, description)
 - `item` + `item-group` — list rows with media/title/description/actions
-- `stat` — primitive-level DS parity; app dashboard metrics vẫn đi qua `KpiCard`
 - `spinner` — loading indicator (thay cho `Loader2 + animate-spin`)
 
 Không fork primitive theo surface.
