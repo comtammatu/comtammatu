@@ -444,7 +444,6 @@ export type Database = {
           check_in: string | null
           check_in_photo_path: string | null
           check_out: string | null
-          check_out_code_verified: boolean
           checklist_template_id: number | null
           checkout_approval_note: string | null
           checkout_approval_target_roles: string[]
@@ -452,7 +451,6 @@ export type Database = {
           checkout_approved_by: string | null
           checkout_requested_at: string | null
           checkout_requested_by_role: string | null
-          code_verified: boolean | null
           created_at: string
           date: string
           employee_id: number
@@ -471,7 +469,6 @@ export type Database = {
           check_in?: string | null
           check_in_photo_path?: string | null
           check_out?: string | null
-          check_out_code_verified?: boolean
           checklist_template_id?: number | null
           checkout_approval_note?: string | null
           checkout_approval_target_roles?: string[]
@@ -479,7 +476,6 @@ export type Database = {
           checkout_approved_by?: string | null
           checkout_requested_at?: string | null
           checkout_requested_by_role?: string | null
-          code_verified?: boolean | null
           created_at?: string
           date: string
           employee_id: number
@@ -498,7 +494,6 @@ export type Database = {
           check_in?: string | null
           check_in_photo_path?: string | null
           check_out?: string | null
-          check_out_code_verified?: boolean
           checklist_template_id?: number | null
           checkout_approval_note?: string | null
           checkout_approval_target_roles?: string[]
@@ -506,7 +501,6 @@ export type Database = {
           checkout_approved_by?: string | null
           checkout_requested_at?: string | null
           checkout_requested_by_role?: string | null
-          code_verified?: boolean | null
           created_at?: string
           date?: string
           employee_id?: number
@@ -4274,6 +4268,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string
+          is_delegable_to_staff: boolean
           key: string
           module: string
           scope: string
@@ -4281,6 +4276,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description: string
+          is_delegable_to_staff?: boolean
           key: string
           module: string
           scope: string
@@ -4288,6 +4284,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string
+          is_delegable_to_staff?: boolean
           key?: string
           module?: string
           scope?: string
@@ -6357,7 +6354,6 @@ export type Database = {
           id: number
           is_active: boolean
           name: string
-          role_code: string | null
           tenant_id: number
           updated_at: string
         }
@@ -6367,7 +6363,6 @@ export type Database = {
           id?: never
           is_active?: boolean
           name?: string
-          role_code?: string | null
           tenant_id: number
           updated_at?: string
         }
@@ -6377,7 +6372,6 @@ export type Database = {
           id?: never
           is_active?: boolean
           name?: string
-          role_code?: string | null
           tenant_id?: number
           updated_at?: string
         }
@@ -9223,27 +9217,6 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_force_close_attendance: {
-        Args: {
-          p_approved_by: string
-          p_attendance_id: number
-          p_branch_id: number
-          p_note?: string
-          p_tenant_id: number
-        }
-        Returns: string
-      }
-      admin_update_profile: {
-        Args: {
-          p_branch_id?: number
-          p_full_name?: string
-          p_is_active?: boolean
-          p_phone?: string
-          p_role?: string
-          p_target_id: string
-        }
-        Returns: undefined
-      }
       aggregate_daily_b2c_invoice: {
         Args: { p_actor?: string; p_branch_id: number; p_summary_date: string }
         Returns: Json
@@ -9271,10 +9244,6 @@ export type Database = {
           p_order_id: number
         }
         Returns: Json
-      }
-      apply_checklist_template_to_role: {
-        Args: { p_role: string; p_template_name: string; p_tenant_id: number }
-        Returns: number
       }
       apply_credit_note_to_invoice: {
         Args: { p_amount: number; p_credit_id: number; p_invoice_id: number }
@@ -9307,6 +9276,13 @@ export type Database = {
           p_valid_until?: string
         }
         Returns: number
+      }
+      approve_employee_clock_out: {
+        Args: { p_attendance_id: number; p_note?: string }
+        Returns: {
+          branch_id: number
+          check_out: string
+        }[]
       }
       approve_inventory_count_slip: {
         Args: { p_slip_id: number }
@@ -9352,33 +9328,12 @@ export type Database = {
       auth_branch_id: { Args: never; Returns: number }
       auth_is_owner: { Args: { p_user: string }; Returns: boolean }
       auth_role: { Args: never; Returns: string }
-      auth_role_to_position: { Args: { p_role: string }; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
       auto_close_periods: { Args: never; Returns: number }
       bill_line_items: { Args: { p_order_id: number }; Returns: Json }
       branch_manager_approve_consumption_report: {
         Args: { p_report_id: number; p_tenant_id: number }
         Returns: Json
-      }
-      branch_manager_approve_employee_clock_out: {
-        Args: {
-          p_approved_by: string
-          p_attendance_id: number
-          p_branch_id: number
-          p_note?: string
-          p_tenant_id: number
-        }
-        Returns: string
-      }
-      branch_manager_reject_employee_clock_out: {
-        Args: {
-          p_attendance_id: number
-          p_branch_id: number
-          p_note?: string
-          p_rejected_by: string
-          p_tenant_id: number
-        }
-        Returns: boolean
       }
       branch_manager_request_consumption_adjustment: {
         Args: {
@@ -9952,6 +9907,16 @@ export type Database = {
           tenant_id: number
         }[]
       }
+      force_close_stale_attendance: {
+        Args: {
+          p_approved_by: string
+          p_attendance_id: number
+          p_branch_id: number
+          p_note?: string
+          p_tenant_id: number
+        }
+        Returns: string
+      }
       generate_order_payment_code: { Args: never; Returns: string }
       get_ap_aging: {
         Args: never
@@ -10001,6 +9966,13 @@ export type Database = {
           short_total: number
           total_variance: number
           worst_cashiers: Json
+        }[]
+      }
+      get_checkout_review_queue: {
+        Args: { p_branch_id: number; p_include_rows?: boolean }
+        Returns: {
+          pending_count: number
+          rows: Json
         }[]
       }
       get_daily_revenue: {
@@ -10077,6 +10049,13 @@ export type Database = {
         }[]
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
+      get_leave_review_queue: {
+        Args: { p_branch_id: number; p_include_rows?: boolean }
+        Returns: {
+          pending_count: number
+          rows: Json
+        }[]
+      }
       get_menu_item_sales_agg: {
         Args: {
           p_branch_id?: number
@@ -10532,10 +10511,6 @@ export type Database = {
         Args: { p_main_item_id: number; p_modifiers: Json; p_tenant_id: number }
         Returns: number
       }
-      position_id_from_access_bucket: {
-        Args: { p_access_bucket: string; p_tenant: number }
-        Returns: number
-      }
       post_pos_cancelled_ready_waste: {
         Args: { p_actor_id?: string; p_order_id: number; p_reason?: string }
         Returns: Json
@@ -10736,6 +10711,13 @@ export type Database = {
           ok: boolean
           skipped: boolean
           status: string
+        }[]
+      }
+      reject_employee_clock_out: {
+        Args: { p_attendance_id: number; p_note?: string }
+        Returns: {
+          branch_id: number
+          rejected: boolean
         }[]
       }
       reject_leave_request: {
@@ -11224,6 +11206,17 @@ export type Database = {
       update_pos_order_status: {
         Args: { p_new_status: string; p_order_id: number }
         Returns: Json
+      }
+      update_staff_profile: {
+        Args: {
+          p_branch_id?: number
+          p_full_name?: string
+          p_is_active?: boolean
+          p_phone?: string
+          p_position_code?: string
+          p_target_id: string
+        }
+        Returns: undefined
       }
       update_tenant_identity: {
         Args: {

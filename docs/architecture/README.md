@@ -1,4 +1,4 @@
-# Architecture Hub
+# Architecture Landing
 
 Điểm vào chung cho tài liệu kiến trúc cấp hệ thống. Glossary chuẩn của dự án được giữ tại `docs/ref/glossary.md`.
 

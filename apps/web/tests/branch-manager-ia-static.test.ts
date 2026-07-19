@@ -5,8 +5,8 @@ import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
-const ADMIN_DASHBOARD_ROUTE_PREFIXES = [
-  "/admin",
+const OWNER_ROUTE_PREFIXES = [
+  "/",
   "/branches",
   "/finance",
   "/hr",
@@ -69,10 +69,10 @@ test("Branch command and secondary routes stay in the operator touch plane", () 
 
   for (const contract of [
     {
-      id: "operator-home",
+      id: "branch-home",
       surface: "branch_operation",
       entryPath: "/br/[branchId]",
-      moduleKey: "operator_home",
+      moduleKey: "branch_home",
       primaryNav: "operator-bottom-nav",
     },
     {
@@ -217,12 +217,12 @@ test("POS, KDS, and Runner stay standalone station apps", () => {
     assert.match(layout, /touch-manipulation/);
     assert.doesNotMatch(
       layout,
-      /<AppPage|OperatorBottomNav|AdminDashboardModuleShell/,
+      /<AppPage|OperatorBottomNav|OwnerModuleShell/,
     );
   }
 });
 
-test("Branch operator routes do not link, redirect, or revalidate Admin Dashboard routes", () => {
+test("Branch operator routes do not link, redirect, or revalidate Owner surface routes", () => {
   for (const dir of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings",
@@ -235,7 +235,7 @@ test("Branch operator routes do not link, redirect, or revalidate Admin Dashboar
     if (!existsSync(resolve(repoRoot, dir))) continue;
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
-      for (const prefix of ADMIN_DASHBOARD_ROUTE_PREFIXES) {
+      for (const prefix of OWNER_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
         for (const [label, pattern] of [
           ["href prop", new RegExp(`href\\s*=\\s*(?:{\\s*)?["'\`]${route}`)],
@@ -264,7 +264,7 @@ test("Branch operator routes do not link, redirect, or revalidate Admin Dashboar
 test("Branch operator routes do not import management shell chrome", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /\bBranchManagementShell\b/],
-    ["AdminDashboardModuleShell", /\bAdminDashboardModuleShell\b/],
+    ["OwnerModuleShell", /\bOwnerModuleShell\b/],
     ["InventoryShell", /\bInventoryShell\b/],
     ["FinanceShell", /\bFinanceShell\b/],
     ["ManagementShell", /\bManagementShell\b/],
@@ -376,7 +376,7 @@ test("Branch command dashboard is a branch-native command surface", () => {
   assert.doesNotMatch(
     settingsMessages,
     /setupLaneTitle|commandBranchSetup/,
-    "Branch Command must not keep a Settings doorway lane; Settings is already the setup hub",
+    "Branch Command must not keep a Settings doorway lane; Settings is already the setup landing",
   );
   assert.doesNotMatch(
     commandConfig,
@@ -394,42 +394,42 @@ test("Branch command dashboard is a branch-native command surface", () => {
   assert.doesNotMatch(settingsMessages, /Chưa có món active/);
 });
 
-test("Branch settings hub exposes setup controls only", () => {
-  const settingsHub = read(
+test("Branch settings landing exposes setup controls only", () => {
+  const settingsLanding = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   );
-  // The branch setup hub follows the operator/employee action-row rhythm; route
+  // The branch setup landing follows the operator/employee action-row rhythm; route
   // hrefs stay in the co-located tile config.
-  const hubTiles = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/_lib/hub-tiles.ts",
+  const settingsLinks = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/_lib/settings-links.ts",
   );
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
-  assert.match(settingsHub, /<BranchOperatorPage/);
-  assert.match(settingsHub, /<BranchOperatorActionSection/);
-  assert.doesNotMatch(settingsHub, /<AppLinkCard/);
-  assert.doesNotMatch(settingsHub, /<LinkCardGrid/);
+  assert.match(settingsLanding, /<BranchOperatorPage/);
+  assert.match(settingsLanding, /<BranchOperatorActionSection/);
+  assert.doesNotMatch(settingsLanding, /<AppLinkCard/);
+  assert.doesNotMatch(settingsLanding, /<LinkCardGrid/);
   // Per-tile ACL gating keeps each tile to surfaces the role can open.
   assert.match(
-    settingsHub,
-    /canAccess\(role, tile\.moduleKey\)/,
-    "settings hub tiles must be module-ACL gated per tile",
+    settingsLanding,
+    /canAccess\(role, link\.moduleKey\)/,
+    "settings landing tiles must be module-ACL gated per tile",
   );
   // Setup route hrefs now live in the extracted tile config.
-  assert.match(hubTiles, /settings\/tables/);
-  assert.match(hubTiles, /settings\/pos/);
-  assert.match(hubTiles, /settings\/printers/);
-  assert.match(hubTiles, /settings\/kds/);
-  assert.doesNotMatch(hubTiles, /settings\/pos-sessions/);
-  assert.doesNotMatch(hubTiles, /menu-limits/);
-  assert.doesNotMatch(hubTiles, /href:\s*"\/menu"/);
-  assert.doesNotMatch(settingsHub, /AttendanceSettingsCard/);
-  assert.doesNotMatch(settingsHub, /\/hr/);
-  assert.doesNotMatch(settingsHub, /className="md:p-6"/);
+  assert.match(settingsLinks, /settings\/tables/);
+  assert.match(settingsLinks, /settings\/pos/);
+  assert.match(settingsLinks, /settings\/printers/);
+  assert.match(settingsLinks, /settings\/kds/);
+  assert.doesNotMatch(settingsLinks, /settings\/pos-sessions/);
+  assert.doesNotMatch(settingsLinks, /menu-limits/);
+  assert.doesNotMatch(settingsLinks, /href:\s*"\/menu"/);
+  assert.doesNotMatch(settingsLanding, /AttendanceSettingsCard/);
+  assert.doesNotMatch(settingsLanding, /\/hr/);
+  assert.doesNotMatch(settingsLanding, /className="md:p-6"/);
   assert.match(
     settingsMessages,
-    /hubDescription: \(branchName: string\) =>\s*`\$\{branchName\} · Bàn, POS, bếp và in`/,
-    "Settings hub description should state the concrete setup scope",
+    /landingDescription: \(branchName: string\) =>\s*`\$\{branchName\} · Bàn, POS, bếp và in`/,
+    "Settings landing description should state the concrete setup scope",
   );
   assert.match(
     settingsMessages,
@@ -439,7 +439,7 @@ test("Branch settings hub exposes setup controls only", () => {
   assert.doesNotMatch(
     settingsMessages,
     /Bàn, máy POS, trạm bếp, máy in và cấu hình chấm công của chi nhánh/,
-    "Settings hub must not advertise attendance setup unless it exposes that tile",
+    "Settings landing must not advertise attendance setup unless it exposes that tile",
   );
 });
 
@@ -532,7 +532,7 @@ test("Branch settings pages do not import admin route-local settings clients", (
     const source = read(file);
     assert.doesNotMatch(
       source,
-      /@\/\(protected\)\/admin\/settings\/(?:tables|pos|kds|printers)\//,
+      /@\/\(protected\)\/settings\/(?:tables|pos|kds|printers)\//,
       `${file} must import shared setup clients instead of admin route-local clients`,
     );
   }
@@ -560,7 +560,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
   ]) {
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
-      for (const prefix of ADMIN_DASHBOARD_ROUTE_PREFIXES) {
+      for (const prefix of OWNER_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
         for (const [label, pattern] of [
           ["href prop", new RegExp(`href\\s*=\\s*(?:{\\s*)?["'\`]${route}`)],
@@ -591,7 +591,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
   assert.match(
     branchWasteCreateClient,
     /href=\{stockBasePath\}/,
-    "branch waste form needs an explicit cancel target back to the stock hub",
+    "branch waste form needs an explicit cancel target back to the stock landing",
   );
   assert.doesNotMatch(
     branchWasteCreateClient,
@@ -603,7 +603,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
 test("Branch-scoped operational routes do not use management shell", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /BranchManagementShell/],
-    ["AdminDashboardModuleShell", /AdminDashboardModuleShell/],
+    ["OwnerModuleShell", /OwnerModuleShell/],
     ["InventoryShell", /InventoryShell/],
     ["FinanceShell", /FinanceShell/],
     ["ManagementShell", /ManagementShell/],

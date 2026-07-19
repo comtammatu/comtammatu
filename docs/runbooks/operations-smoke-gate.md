@@ -93,7 +93,7 @@ Ghi lại mọi ID phát sinh: `branch_id`, `terminal_id`, `order_id`, `payment_
 8. Kiểm in.
    - Expected: receipt print job được claim và chuyển `printed`.
    - Expected: receipt có branch name/address, order number, line items, total, payment method.
-   - Expected: failed print job có đường retry ở `/admin/settings/printers/jobs`.
+   - Expected: failed print job có đường retry ở `/settings/printers/jobs`.
 
 9. Kiểm HĐĐT.
    - Expected: HĐĐT issued qua Viettel S-invoice hoặc queue/support workflow có trạng thái rõ.

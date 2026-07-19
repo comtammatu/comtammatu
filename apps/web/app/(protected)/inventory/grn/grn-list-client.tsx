@@ -102,7 +102,7 @@ export function GrnListClient({
   canCreate,
   draftsLoadFailed = false,
   grnsLoadFailed = false,
-  withinAdminDashboardTabs = false,
+  withinOwnerTabs = false,
 }: {
   grns: GrnRow[];
   basePath?: string;
@@ -110,7 +110,7 @@ export function GrnListClient({
   canCreate: boolean;
   draftsLoadFailed?: boolean;
   grnsLoadFailed?: boolean;
-  withinAdminDashboardTabs?: boolean;
+  withinOwnerTabs?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<GrnListStatusFilter>("all");
@@ -264,7 +264,7 @@ export function GrnListClient({
             {filtered.length}/{grns.length}
           </Badge>
         }
-        actions={withinAdminDashboardTabs ? desktopActions : null}
+        actions={withinOwnerTabs ? desktopActions : null}
       />
 
       <DataTable
@@ -344,8 +344,8 @@ export function GrnListClient({
     <GrnDraftsTab drafts={drafts ?? []} basePath={basePath} />
   );
 
-  const draftSectionWithinAdminDashboardTabs =
-    withinAdminDashboardTabs &&
+  const draftSectionWithinOwnerTabs =
+    withinOwnerTabs &&
     drafts &&
     (drafts.length > 0 || draftsLoadFailed) ? (
       <AppSection
@@ -360,9 +360,9 @@ export function GrnListClient({
       </AppSection>
     ) : null;
 
-  const adminDashboardBody = withinAdminDashboardTabs ? (
+  const ownerBody = withinOwnerTabs ? (
     <>
-      {draftSectionWithinAdminDashboardTabs}
+      {draftSectionWithinOwnerTabs}
       {listBody}
     </>
   ) : drafts ? (
@@ -383,9 +383,9 @@ export function GrnListClient({
     listBody
   );
 
-  if (withinAdminDashboardTabs) {
+  if (withinOwnerTabs) {
     return (
-      <div className="flex w-full flex-col gap-3">{adminDashboardBody}</div>
+      <div className="flex w-full flex-col gap-3">{ownerBody}</div>
     );
   }
 
@@ -396,7 +396,7 @@ export function GrnListClient({
         title={tNav("grn", "navigation")}
         actions={desktopActions}
       />
-      {adminDashboardBody}
+      {ownerBody}
     </AppPage>
   );
 }

@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Admin manual trigger + queue dashboard for daily B2C summary HĐĐT.
+ * Owner manual trigger and queue for daily B2C summary HĐĐT.
  *
  * Counterpart to the Vercel cron route at
  * apps/web/app/api/cron/hddt-daily-summary/route.ts. Both share

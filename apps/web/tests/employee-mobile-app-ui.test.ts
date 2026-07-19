@@ -54,7 +54,7 @@ test("operator entry owns the mobile shell and keeps bottom nav outside scroll c
   const appBottomNav = read("apps/web/app/components/app-bottom-nav.tsx");
 
   assert.match(layout, /homeHref=\{`\/br\/\$\{context\.branchId\}`\}/);
-  assert.match(layout, /homeAriaLabel=\{APP_COPY_VI\.operatorHome\}/);
+  assert.match(layout, /homeAriaLabel=\{APP_COPY_VI\.branchHome\}/);
   assert.match(layout, /id="main-content"[\s\S]*overflow-y-auto/);
   assert.match(
     layout,
@@ -90,12 +90,7 @@ test("standalone employee route stays out of active nav and route contracts", ()
     assert.doesNotMatch(source, /hrefTemplate:\s*"\/employee/);
     assert.doesNotMatch(source, /entryPath:\s*"\/employee/);
   }
-  assert.match(scope, /targetUrl\.pathname\.startsWith\("\/employee"\)/);
-  assert.ok(
-    scope.indexOf('targetUrl.pathname.startsWith("/employee")') <
-      scope.indexOf("resolveModuleFromPath(targetUrl.pathname)"),
-    "old employee returnTo paths must fall back before route resolution",
-  );
+  assert.doesNotMatch(scope, /\/employee(?:\/|"|')/);
 });
 
 test("Branch wrappers pass profile fallbacks into shared shift content", () => {

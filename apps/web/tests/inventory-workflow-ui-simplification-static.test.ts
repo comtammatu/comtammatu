@@ -51,7 +51,7 @@ test("operator consumption and issue routes keep separate business roles", () =>
   assert.match(dictionary, /stocktake: \{ long: "Kiểm kê đối chiếu" \}/);
 });
 
-test("Admin Dashboard stock quick issue stays on consumption while Branch lookup stays read-only", () => {
+test("Owner surface stock quick issue stays on consumption while Branch lookup stays read-only", () => {
   const stock = read("app/(protected)/inventory/stock/stock-client.tsx");
   const branchStock = read(
     "app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
@@ -151,7 +151,7 @@ test("operations tabs use the same sectioned list chrome", () => {
 
   assert.match(
     grn,
-    /actions=\{withinAdminDashboardTabs \? desktopActions : null\}/,
+    /actions=\{withinOwnerTabs \? desktopActions : null\}/,
   );
   assert.match(grn, /const listTable = grnsLoadFailed \? \(/);
   assert.match(grn, /title=\{messages\.inventory\.grn\.loadFailed\}/);

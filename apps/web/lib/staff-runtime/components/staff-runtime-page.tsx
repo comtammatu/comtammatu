@@ -610,14 +610,14 @@ interface EmployeeMissingProfileEmptyProps {
   title?: string;
   description?: string;
   actionLabel?: string;
-  profileHref?: string;
+  profileHref: string;
 }
 
 export function EmployeeMissingProfileEmpty({
   title = messages.employee.profile.missingProfileTitle,
   description = messages.employee.profile.missingProfileDescription,
   actionLabel = messages.employee.profile.openProfile,
-  profileHref = "/br",
+  profileHref,
 }: EmployeeMissingProfileEmptyProps) {
   return (
     <AppEmptyState

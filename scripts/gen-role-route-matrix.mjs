@@ -3,7 +3,7 @@ import path from "node:path";
 
 // Generates the GENERATED body of docs/spec/role-route-matrix.md from the
 // auth source-of-truth files (module-acl.ts, route-map.ts, nav-config.ts,
-// scope.ts, branch-hub.ts, types.ts, permissions.ts). The doc's hand-authored
+// scope.ts, login-destination.ts, types.ts, permissions.ts). The doc's hand-authored
 // prose (product frame, principles, scope layers, navigation contract, change
 // checklist) lives in a preamble the generator reads verbatim from the
 // existing file and re-emits unchanged — only the block between the
@@ -22,7 +22,7 @@ const MODULE_ACL_PATH = "packages/shared/src/auth/module-acl.ts";
 const ROUTE_MAP_PATH = "packages/shared/src/auth/route-map.ts";
 const NAV_CONFIG_PATH = "packages/shared/src/auth/nav-config.ts";
 const SCOPE_PATH = "packages/shared/src/auth/scope.ts";
-const BRANCH_HUB_PATH = "packages/shared/src/auth/branch-hub.ts";
+const LOGIN_DESTINATION_PATH = "packages/shared/src/auth/login-destination.ts";
 const TYPES_PATH = "packages/shared/src/auth/types.ts";
 const PERMISSIONS_PATH = "packages/shared/src/auth/permissions.ts";
 
@@ -37,11 +37,11 @@ function readSource(relPath) {
 // Parse packages/shared/src/auth/types.ts
 // ---------------------------------------------------------------------------
 
-function parseAccessBuckets(source) {
+function parseStaffRoles(source) {
   const block = source.match(
-    /export const ACCESS_BUCKETS = \[([\s\S]*?)\] as const;/,
+    /export const STAFF_ROLES = \[([\s\S]*?)\] as const;/,
   );
-  if (!block) throw new Error("types.ts: could not find ACCESS_BUCKETS");
+  if (!block) throw new Error("types.ts: could not find STAFF_ROLES");
   return [...block[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
 }
 
@@ -64,17 +64,17 @@ function parseRoleLabels(source) {
 /**
  * `allowedRoles` is either an inline string-literal array or a reference to a
  * named role-set constant declared above MODULE_ACL in the same file. Resolve
- * named references against the access buckets already parsed from types.ts so
+ * named references against the application roles already parsed from types.ts so
  * a role subset change cannot silently drop out of the generated table.
  */
-function resolveNamedRoleSet(name, accessBuckets) {
-  if (name === "STAFF_ROLES") return accessBuckets;
+function resolveNamedRoleSet(name, staffRoles) {
+  if (name === "STAFF_ROLES") return staffRoles;
   throw new Error(
     `module-acl.ts: allowedRoles references unknown named role set "${name}" — teach resolveNamedRoleSet about it.`,
   );
 }
 
-function parseModuleAcl(source, accessBuckets) {
+function parseModuleAcl(source, staffRoles) {
   const block = source.match(
     /export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = \{([\s\S]*?)\n\};/,
   );
@@ -104,7 +104,7 @@ function parseModuleAcl(source, accessBuckets) {
       if (rolesMatch[1].startsWith("[")) {
         roles = [...rolesMatch[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
       } else {
-        roles = resolveNamedRoleSet(rolesMatch[1], accessBuckets);
+        roles = resolveNamedRoleSet(rolesMatch[1], staffRoles);
       }
     }
     entries.push({ key, path: pathMatch[1], allowedRoles: roles });
@@ -247,7 +247,7 @@ function parseNavAdvertisementSources(source) {
   }
 
   const namedArrays = [
-    { name: "ADMIN_NAV_GROUPS", label: "Admin Dashboard nav" },
+    { name: "OWNER_NAV_GROUPS", label: "Owner nav" },
     { name: "BRANCH_MANAGEMENT_ITEMS", label: "Branch management nav" },
     { name: "BRANCH_OPERATION_ITEMS", label: "Branch operation nav" },
   ];
@@ -304,29 +304,27 @@ function parsePermissionKeysByNamespace(source) {
 
 // ---------------------------------------------------------------------------
 // Derive post-login home per role. Mirrors the decision order of
-// resolvePostLoginRedirect (scope.ts) -> resolveBranchHubDestination
-// (branch-hub.ts) for the no-returnTo / no-standalone-station case, i.e. the
-// actual "log in fresh, land where" outcome documented per role.
+// getDefaultRedirect (login-destination.ts), i.e. the actual fresh-login home.
 // ---------------------------------------------------------------------------
 
-function derivePostLoginHomes(accessBuckets, adminDashboardRoles) {
+function derivePostLoginHomes(staffRoles, ownerRoles) {
   const rows = [];
-  for (const role of accessBuckets) {
-    if (adminDashboardRoles.has(role)) {
+  for (const role of staffRoles) {
+    if (ownerRoles.has(role)) {
       rows.push({
         role,
-        desktop: "/ (auto-opens the sole operating branch)",
-        phone: "/ (auto-opens the sole operating branch)",
-        note: "Only branch-kind sites are operable. Owner enters the Admin Dashboard through one owner-only Branch Hub or picker link.",
+        desktop: "/ (Owner overview)",
+        phone: "/ (Owner overview)",
+        note: "Owner enters the L0 surface directly and opens a branch explicitly when needed.",
       });
       continue;
     }
 
     rows.push({
       role,
-      desktop: "/br/{branchId} (Operator hub for the claimed branch)",
-      phone: "/br/{branchId} (Operator hub for the claimed branch)",
-      note: "Branch-pinned roles land in the Branch Hub for their JWT branch_id.",
+      desktop: "/br/{branchId} (Branch home for the claimed branch)",
+      phone: "/br/{branchId} (Branch home for the claimed branch)",
+      note: "Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed.",
     });
   }
   return rows;
@@ -367,7 +365,7 @@ function renderRouteFamilyTable(families) {
 
 function renderPostLoginHomeTable(rows, roleLabels) {
   const header =
-    "| Role | Desktop / Admin Dashboard context | Phone / station context | Notes |\n" +
+    "| Role | Desktop context | Phone / station context | Notes |\n" +
     "| ---- | ------------------------- | ------------------------ | ----- |";
   const body = rows.map(
     (r) =>
@@ -392,10 +390,8 @@ function renderActionGateTable(moduleAcl, families, permissionsByNamespace) {
           roleSet.add(role);
         }
       }
-      if (f.surface === "admin_dashboard") {
-        const surfaceRoles = new Set(
-          moduleAclByKey.admin_dashboard?.allowedRoles ?? [],
-        );
+      if (f.surface === "owner") {
+        const surfaceRoles = new Set(moduleAclByKey.owner?.allowedRoles ?? []);
         for (const role of roleSet) {
           if (!surfaceRoles.has(role)) roleSet.delete(role);
         }
@@ -442,7 +438,7 @@ function buildGeneratedBody({
     "<!--",
     "  This section is GENERATED by scripts/gen-role-route-matrix.mjs from:",
     `  ${MODULE_ACL_PATH}, ${ROUTE_MAP_PATH}, ${NAV_CONFIG_PATH},`,
-    `  ${SCOPE_PATH}, ${BRANCH_HUB_PATH}, ${TYPES_PATH}, ${PERMISSIONS_PATH}.`,
+    `  ${SCOPE_PATH}, ${LOGIN_DESTINATION_PATH}, ${TYPES_PATH}, ${PERMISSIONS_PATH}.`,
     "  Do NOT hand-edit below this line — run `corepack pnpm gen:route-matrix`",
     "  after any auth-source change, and `corepack pnpm lint:route-matrix` (or",
     "  `--check`) verifies this block is not stale. Hand-authored prose",
@@ -472,16 +468,14 @@ function buildGeneratedBody({
     "",
     "## Post-Login Home By Role (generated)",
     "",
-    "Derived from `resolvePostLoginRedirect` (`scope.ts`) falling through to",
-    "`resolveBranchHubDestination` (`branch-hub.ts`) for the no-`returnTo`,",
-    "no-standalone-station case — i.e. where a fresh login actually lands.",
-    "D077 promotes Branch Hub for every active access bucket and excludes central-kind sites.",
+    "Derived from `getDefaultRedirect` (`login-destination.ts`) for the",
+    "no-`returnTo` case — i.e. where a fresh login actually lands.",
     "",
     renderPostLoginHomeTable(postLoginHomes, roleLabels),
     "",
     "## Permission Boundary (generated)",
     "",
-    "Route family -> required route bucket (Admin Dashboard surface ACL intersected with the module capability union) -> the action-gate",
+    "Route family -> required route bucket (Owner surface ACL intersected with the module capability union) -> the action-gate",
     "permission keys in that family's namespace(s), read from",
     "`PERMISSION_KEYS` in `permissions.ts`. This is the full set in-namespace,",
     "not a hand-picked sample — route access and action authorization stay",
@@ -499,14 +493,14 @@ function collectGeneratedData() {
   const navConfigSource = readSource(NAV_CONFIG_PATH);
   const typesSource = readSource(TYPES_PATH);
   const permissionsSource = readSource(PERMISSIONS_PATH);
-  // scope.ts / branch-hub.ts drive derivePostLoginHomes's decision order —
+  // scope.ts / login-destination.ts drive derivePostLoginHomes's decision order —
   // read so a missing/renamed file fails loudly instead of silently drifting.
   readSource(SCOPE_PATH);
-  readSource(BRANCH_HUB_PATH);
+  readSource(LOGIN_DESTINATION_PATH);
 
-  const accessBuckets = parseAccessBuckets(typesSource);
+  const staffRoles = parseStaffRoles(typesSource);
   const roleLabels = parseRoleLabels(typesSource);
-  const moduleAcl = parseModuleAcl(moduleAclSource, accessBuckets);
+  const moduleAcl = parseModuleAcl(moduleAclSource, staffRoles);
   const moduleAclByKey = Object.fromEntries(
     moduleAcl.map((entry) => [entry.key, entry]),
   );
@@ -515,8 +509,8 @@ function collectGeneratedData() {
   const permissionsByNamespace =
     parsePermissionKeysByNamespace(permissionsSource);
   const postLoginHomes = derivePostLoginHomes(
-    accessBuckets,
-    new Set(moduleAclByKey.admin_dashboard?.allowedRoles ?? []),
+    staffRoles,
+    new Set(moduleAclByKey.owner?.allowedRoles ?? []),
   );
 
   return {
@@ -565,7 +559,7 @@ function main() {
       process.exit(0);
     }
     console.error(
-      `[gen-role-route-matrix] ${DOC_PATH} is STALE vs auth source (module-acl.ts / route-map.ts / nav-config.ts / scope.ts / branch-hub.ts / types.ts / permissions.ts).`,
+      `[gen-role-route-matrix] ${DOC_PATH} is STALE vs auth source (module-acl.ts / route-map.ts / nav-config.ts / scope.ts / login-destination.ts / types.ts / permissions.ts).`,
     );
     console.error(
       `  Fix: run \`corepack pnpm gen:route-matrix\` and commit the result.`,

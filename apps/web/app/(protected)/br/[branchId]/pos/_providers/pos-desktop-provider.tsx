@@ -32,7 +32,6 @@ import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
 import {
   cycleAudioMode,
   getPosAudioModeKey,
-  getPosSoundPrefKey,
   playOperationalAlert,
   resolveAudioMode,
   type OperationalAudioMode,
@@ -255,13 +254,8 @@ export function PosDesktopProvider({
   const [audioMode, setAudioMode] = useState<OperationalAudioMode>("off");
   const audioModeKey = getPosAudioModeKey(branchId);
   useEffect(() => {
-    setAudioMode(
-      resolveAudioMode(
-        readDevicePref(audioModeKey),
-        readDevicePref(getPosSoundPrefKey(branchId)),
-      ),
-    );
-  }, [audioModeKey, branchId]);
+    setAudioMode(resolveAudioMode(readDevicePref(audioModeKey)));
+  }, [audioModeKey]);
   const bumpArchivedToken = useCallback(() => {
     setArchivedToken((t) => t + 1);
   }, []);

@@ -139,7 +139,7 @@ test("checkout request and reject stay on the current branch shift contract", ()
   );
   assert.match(
     employeeClockActionSource,
-    /branch_manager_reject_employee_clock_out[\s\S]*p_rejected_by: ctx\.user\.id/,
+    /ctx\.supabase\.rpc\(\s*"reject_employee_clock_out"[\s\S]*p_attendance_id: parsed\.data\.attendanceId/,
     "Checkout reject should use the same DB-side hierarchy contract as approval",
   );
 });

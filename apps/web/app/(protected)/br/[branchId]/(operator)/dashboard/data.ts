@@ -38,7 +38,8 @@ export interface BranchDayStatus {
  * blocking the page.
  *
  * Every query uses the caller's session so RLS/PBAC remains the authorization
- * boundary after the route resolves the requested Branch context.
+ * boundary after the route resolves the requested Branch context. Checkout
+ * counts use the authenticated hierarchy-aware RPC.
  */
 export async function fetchBranchDayStatus(
   supabase: ServerClient,
@@ -115,13 +116,10 @@ export async function fetchBranchDayStatus(
       .eq("branch_id", branchId)
       .eq("status", "open")
       .maybeSingle(),
-    supabase
-      .from("attendance_records")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .is("check_out", null)
-      .not("checkout_requested_at", "is", null),
+    supabase.rpc("get_checkout_review_queue", {
+      p_branch_id: branchId,
+      p_include_rows: false,
+    }),
     supabase.rpc("list_branch_menu_daily_limits", {
       p_branch_id: branchId,
     }),
@@ -180,7 +178,7 @@ export async function fetchBranchDayStatus(
       lastSeenAt !== null &&
       Date.now() - new Date(lastSeenAt).getTime() < AGENT_OFFLINE_THRESHOLD_MS,
     printerFailed24h: failedRes.count ?? 0,
-    pendingCheckouts: checkoutRes.count ?? 0,
+    pendingCheckouts: checkoutRes.data?.[0]?.pending_count ?? 0,
     menuLimitAvailableItems,
     setupActiveTerminals: terminalRes.count ?? 0,
     setupActiveKdsStations: stationRes.count ?? 0,
@@ -202,7 +200,7 @@ export interface BranchQueueCounts {
 }
 
 /**
- * Permission-gated pending counts for the hub's unified "Cần xử lý" queue.
+ * Permission-gated pending counts for the branch home's "Cần xử lý" queue.
  * Each field is `null` when the role lacks the underlying approval
  * permission (row must not render) and a number — 0 included — when the
  * role holds it (row always renders, per V2's "queue is the persistent
@@ -260,69 +258,68 @@ export async function fetchBranchQueueCounts(
     draftProductionRes,
     inboundTransferRes,
   ] = await Promise.all([
-      checkoutPermission.data === true
-        ? supabase
-            .from("attendance_records")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", branchId)
-            .is("check_out", null)
-            .not("checkout_requested_at", "is", null)
-        : Promise.resolve(null),
-      leavePermission.data === true
-        ? supabase
-            .from("leave_requests")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", branchId)
-            .eq("status", "pending")
-        : Promise.resolve(null),
-      countPermission.data === true
-        ? supabase
-            .from("inventory_count_slips")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", branchId)
-            .eq("status", "submitted")
-        : Promise.resolve(null),
-      wastePermission.data === true
-        ? supabase
-            .from("stock_issues")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", branchId)
-            .eq("issue_type", "writeoff")
-            .eq("approval_status", "pending")
-        : Promise.resolve(null),
-      grnPermission.data === true
-        ? supabase
-            .from("goods_received_notes")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", branchId)
-            .eq("status", "draft")
-        : Promise.resolve(null),
-      productionPermission.data === true
-        ? supabase
-            .from("production_runs")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", branchId)
-            .in("status", ["draft", "in_progress"])
-        : Promise.resolve(null),
-      transferPermission.data === true
-        ? supabase
-            .from("stock_transfers")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("to_branch_id", branchId)
-            .in("status", ["confirmed_ship", "in_transit"])
-        : Promise.resolve(null),
-    ]);
+    checkoutPermission.data === true
+      ? supabase.rpc("get_checkout_review_queue", {
+          p_branch_id: branchId,
+          p_include_rows: false,
+        })
+      : Promise.resolve(null),
+    leavePermission.data === true
+      ? supabase.rpc("get_leave_review_queue", {
+          p_branch_id: branchId,
+          p_include_rows: false,
+        })
+      : Promise.resolve(null),
+    countPermission.data === true
+      ? supabase
+          .from("inventory_count_slips")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .eq("status", "submitted")
+      : Promise.resolve(null),
+    wastePermission.data === true
+      ? supabase
+          .from("stock_issues")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .eq("issue_type", "writeoff")
+          .eq("approval_status", "pending")
+      : Promise.resolve(null),
+    grnPermission.data === true
+      ? supabase
+          .from("goods_received_notes")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .eq("status", "draft")
+      : Promise.resolve(null),
+    productionPermission.data === true
+      ? supabase
+          .from("production_runs")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .in("status", ["draft", "in_progress"])
+      : Promise.resolve(null),
+    transferPermission.data === true
+      ? supabase
+          .from("stock_transfers")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("to_branch_id", branchId)
+          .in("status", ["confirmed_ship", "in_transit"])
+      : Promise.resolve(null),
+  ]);
 
   return {
-    pendingCheckouts: checkoutRes ? (checkoutRes.count ?? 0) : null,
-    pendingLeaveRequests: leaveRes ? (leaveRes.count ?? 0) : null,
+    pendingCheckouts: checkoutRes
+      ? (checkoutRes.data?.[0]?.pending_count ?? 0)
+      : null,
+    pendingLeaveRequests: leaveRes
+      ? (leaveRes.data?.[0]?.pending_count ?? 0)
+      : null,
     pendingCountSlips: countRes ? (countRes.count ?? 0) : null,
     pendingWaste: wasteRes ? (wasteRes.count ?? 0) : null,
     draftGrns: draftGrnRes ? (draftGrnRes.count ?? 0) : null,

@@ -111,7 +111,7 @@ test("terminal transfers expose no primary mutation", () => {
   }
 });
 
-test("receive-ready status contract stays shared by Office and Branch", () => {
+test("receive-ready status contract stays shared by Owner surface and Branch", () => {
   assert.equal(isTransferReceiveReady("in_transit"), true);
   assert.equal(isTransferReceiveReady("confirmed_receive"), true);
   assert.equal(isTransferReceiveReady("confirmed_ship"), false);

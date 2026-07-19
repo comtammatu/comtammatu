@@ -70,10 +70,10 @@ Defined in `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`).
 | Branch-pinned staff | `/br/{branchId}`                                  |
 
 Root `/` delegates to this same resolver; multiple active branches produce the
-picker, while exactly one active branch opens its Branch Hub.
+picker, while exactly one active branch opens its Branch home.
 
 POS/KDS are not anyone's post-login fallback target — operators reach
-`/br/[branchId]/pos` or `/br/[branchId]/kds` via Branch Hub or a direct link.
+`/br/[branchId]/pos` or `/br/[branchId]/kds` via Branch home or a direct link.
 
 ## Data Authorization Pattern
 
@@ -160,14 +160,14 @@ Change ownership:
 Route families are grouped into stable surfaces; exact role/module mappings are
 generated in `docs/spec/role-route-matrix.md` and must not be copied here:
 
-| Surface         | Route families                                                             | Boundary                                                          |
-| --------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Admin Dashboard | `/admin`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, `/hr` | Owner-only surface gate before reusable module capabilities       |
-| Branch          | `/br/[branchId]/*`                                                         | Module ACL + URL/JWT branch scope; PBAC/RLS owns actions and data |
-| Utility         | `/notifications`, `/access-denied`                                         | Explicit utility/public contracts, not a product plane            |
+| Surface | Route families                                                                                   | Boundary                                                          |
+| ------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Owner   | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, `/hr`, `/settings`                 | Owner-only control plane before reusable module capabilities      |
+| Branch  | `/br/[branchId]/*`                                                                               | Module ACL + URL/JWT branch scope; PBAC/RLS owns actions and data |
+| Utility | `/notifications`, `/access-denied`                                                               | Explicit utility/public contracts, not a product plane            |
 
-Branch Manager and Staff daily work stays under `/br/[branchId]/*`; the Admin
-Dashboard families remain Owner-only per ADR 0012.
+Branch Manager and Staff daily work stays under `/br/[branchId]/*`; the Owner
+surface families remain Owner-only per ADR 0012.
 
 ## Infrastructure Strategy
 

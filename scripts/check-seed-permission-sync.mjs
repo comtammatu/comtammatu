@@ -7,12 +7,19 @@ import fs from "node:fs";
 // kills every from-empty bring-up (SQLSTATE 23503) while prod keeps working —
 // this check fails it in the lint chain instead of in the e2e-smoke job.
 const SEED = "apps/web/tests/fixtures/supabase-e2e/tenant.sql";
+const MIGRATION =
+  "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql";
 const text = fs.readFileSync(SEED, "utf8");
+const migrationText = fs.readFileSync(MIGRATION, "utf8");
 
 // End each INSERT block at a semicolon that closes a line — descriptions may
 // legitimately contain inline semicolons (e.g. "…HĐĐT); manager-gated").
-const catalogBlock = text.match(/INSERT INTO public\.permission_keys[\s\S]*?;[ \t]*$/m);
-const templateBlock = text.match(/INSERT INTO public\.role_templates[\s\S]*?;[ \t]*$/m);
+const catalogBlock = text.match(
+  /INSERT INTO public\.permission_keys[\s\S]*?;[ \t]*$/m,
+);
+const templateBlock = text.match(
+  /INSERT INTO public\.role_templates[\s\S]*?;[ \t]*$/m,
+);
 if (!catalogBlock || !templateBlock) {
   console.error(
     `[seed-permissions] could not locate the permission_keys/role_templates INSERT blocks in ${SEED}`,
@@ -39,6 +46,47 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
+const delegablePattern =
+  /UPDATE public\.permission_keys\s+SET is_delegable_to_staff = key = ANY \(ARRAY\[([\s\S]*?)\]::text\[\]\);/;
+const seedDelegableBlock = text.match(delegablePattern)?.[1];
+const migrationDelegableBlock = migrationText.match(delegablePattern)?.[1];
+if (!seedDelegableBlock || !migrationDelegableBlock) {
+  console.error(
+    `[seed-permissions] could not locate canonical staff delegability in ${SEED} and ${MIGRATION}`,
+  );
+  process.exit(1);
+}
+
+const parseKeys = (block) =>
+  new Set([...block.matchAll(/'([a-z_]+:[a-z_]+)'/g)].map((m) => m[1]));
+const seedDelegable = parseKeys(seedDelegableBlock);
+const migrationDelegable = parseKeys(migrationDelegableBlock);
+const missingDelegable = [...migrationDelegable]
+  .filter((key) => !seedDelegable.has(key))
+  .sort();
+const extraDelegable = [...seedDelegable]
+  .filter((key) => !migrationDelegable.has(key))
+  .sort();
+const unknownDelegable = [...seedDelegable]
+  .filter((key) => !catalog.has(key))
+  .sort();
+
+if (
+  missingDelegable.length > 0 ||
+  extraDelegable.length > 0 ||
+  unknownDelegable.length > 0
+) {
+  console.error(
+    `[seed-permissions] staff-delegable permission drift between ${SEED} and ${MIGRATION}`,
+  );
+  for (const key of missingDelegable)
+    console.error(`- missing from seed: ${key}`);
+  for (const key of extraDelegable) console.error(`- extra in seed: ${key}`);
+  for (const key of unknownDelegable)
+    console.error(`- missing from catalog: ${key}`);
+  process.exit(1);
+}
+
 console.log(
-  `[seed-permissions] ${granted.size} template-granted keys all present in the ${catalog.size}-key catalog (${SEED}).`,
+  `[seed-permissions] ${granted.size} template-granted keys are catalogued and ${seedDelegable.size} staff-delegable keys match the canonical migration (${SEED}).`,
 );

@@ -125,9 +125,10 @@ test("HR per-position editor exposes the consumption task kind", () => {
   );
   assert.match(
     positionTasksActionsSource,
-    /bucket === "owner"[\s\S]*position\.code === "waiter"/,
-    "HR position-task editor should exclude owner and inactive waiter positions",
+    /bucket === "unassigned" \|\|[\s\S]*bucket === "owner"/,
+    "HR position-task editor should exclude owner and unmapped positions",
   );
+  assert.doesNotMatch(positionTasksActionsSource, /position\.code === "waiter"/);
 });
 
 test("checkout approval no longer requires a consumption report", () => {

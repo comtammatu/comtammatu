@@ -128,7 +128,7 @@ function PosMoreMenu({
           render={
             <Link href={`/br/${branchId}`}>
               <IconDoorEnter />
-              {APP_COPY_VI.operatorHome}
+              {APP_COPY_VI.branchHome}
             </Link>
           }
         />

@@ -197,8 +197,7 @@ export async function fetchPositionTasksData(): Promise<
       const bucket = staffRoleFromPositionCode(position.code);
       if (
         bucket === "unassigned" ||
-        bucket === "owner" ||
-        position.code === "waiter"
+        bucket === "owner"
       ) {
         return [];
       }

@@ -278,10 +278,10 @@ test("POS VietQR renders transfer QR with the order payment code", () => {
 
 test("Payment settings use POS QR as the only order receipt path", () => {
   const form = readRepoFile(
-    "apps/web/app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx",
+    "apps/web/app/(protected)/settings/(tenant)/payments/payments-form.tsx",
   );
   const settingsAction = readRepoFile(
-    "apps/web/app/(protected)/admin/settings/(tenant)/payments/actions.ts",
+    "apps/web/app/(protected)/settings/(tenant)/payments/actions.ts",
   );
   const webhook = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
   const messages = readRepoFile("apps/web/lib/messages/settings.ts");
@@ -298,7 +298,7 @@ test("Payment settings use POS QR as the only order receipt path", () => {
 
 test("SePay expense commands match an existing expense instead of classifying its category", () => {
   const form = readRepoFile(
-    "apps/web/app/(protected)/admin/settings/(tenant)/payments/payments-form.tsx",
+    "apps/web/app/(protected)/settings/(tenant)/payments/payments-form.tsx",
   );
   const webhook = readRepoFile("apps/web/app/api/webhooks/sepay/route.ts");
   const messages = readRepoFile("apps/web/lib/messages/settings.ts");
@@ -502,7 +502,7 @@ test("POS VietQR uses locally generated EMVCo payloads, not VietQR image URLs", 
   assert.match(migration, /\('OCB', '970448'\)/);
 });
 
-test("POS rehydrates pending VietQR QR from current Admin settings", () => {
+test("POS rehydrates pending VietQR QR from current Owner settings", () => {
   const action = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
   );
@@ -533,7 +533,7 @@ test("POS rehydrates pending VietQR QR from current Admin settings", () => {
   );
 });
 
-test("VietQR bank account configuration lives in Admin settings, not env", () => {
+test("VietQR bank account configuration lives in Owner settings, not env", () => {
   const envExample = readRepoFile(".env.example");
   const paymentActions = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",

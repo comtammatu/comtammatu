@@ -606,7 +606,7 @@ export const inventory = {
       `TB ${formatCount(sampleCount)} lần: ${averagePrice} ₫/${unit} (${sign}${percent})`,
     detail: {
       title: "Chi tiết đơn hàng",
-      hubLabel: "Nhập hàng chi nhánh",
+      landingLabel: "Nhập hàng chi nhánh",
       meta: (supplier: string, date: string, sentAt: string) =>
         `${supplier} • ${date} • Gửi NCC ${sentAt} • Bước mở đầu của quy trình mua hàng`,
       goodsTotal: "Tổng tiền hàng",

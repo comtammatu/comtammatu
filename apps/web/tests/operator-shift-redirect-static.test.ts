@@ -136,7 +136,7 @@ test("operator checkout approvals render the branch approvals plane", () => {
   assert.ok(source.includes("hideHeaderOnMobile"), path);
   assert.ok(source.includes('plane="branch"'), path);
   assert.doesNotMatch(source, /redirect\("\/employee\/checkout-approvals"\)/);
-  assert.match(employeeSource, /routeBranchId\?: number/);
+  assert.match(employeeSource, /routeBranchId: number/);
   assert.match(employeeSource, /plane === "branch" \? BranchOperatorPage/);
   assert.match(employeeSource, /plane === "branch" \? BranchOperatorPanel/);
   assert.match(source, /searchParams/);
@@ -169,10 +169,16 @@ test("operator stock count renders the branch count plane", () => {
   assert.doesNotMatch(source, /redirect\(`\/inventory\/stocktake/);
 });
 
-test("employee count client keeps location changes on the current route", () => {
+test("staff count client requires its canonical current route", () => {
   const source = read("apps/web/lib/staff-runtime/count/count-client.tsx");
+  const pageSource = read("apps/web/lib/staff-runtime/count/page.tsx");
 
-  assert.ok(source.includes('baseHref = "/br"'));
+  assert.ok(source.includes("baseHref: string;"));
+  assert.doesNotMatch(source, /baseHref = "\/br"/);
+  assert.match(
+    pageSource,
+    /baseHref=\{baseHref \?\? `\/br\/\$\{branchId\}\/stock\/count`\}/,
+  );
   assert.ok(
     source.includes("router.replace(`${baseHref}?${params.toString()}`)"),
   );
@@ -348,12 +354,12 @@ test("operator home uses the Branch operator action layout", () => {
     source.includes("BranchOperatorActionSection"),
     "operator home uses domain tile rows via Branch action rows",
   );
-  // Hub hierarchy W2: the unified "Cần xử lý" queue collapses to compact
+  // Landing hierarchy W2: the unified "Cần xử lý" queue collapses to compact
   // single-line rows (Item/ItemMedia/ItemActions), not full AppLinkCard
   // tiles — domain tile rows below it still render through
   // BranchOperatorActionSection.
   const queueSource = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-queue-section.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-queue-section.tsx",
   );
   assert.match(queueSource, /CompactQueueSection/);
   assert.match(queueSource, /QueueRowItem/);

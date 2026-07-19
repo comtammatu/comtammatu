@@ -25,6 +25,7 @@ function claims(
     tenant_id: 1,
     branch_id: branchId,
     user_role: role,
+    position_code: role === "branch_staff" ? "cleaner" : role,
   };
 }
 
@@ -41,7 +42,6 @@ test("selectOperatorBranchScope -> owner operates active branch-kind sites only"
   );
   assert.equal(selected.currentBranchId, 1);
   assert.equal(selected.defaultBranchId, 1);
-  assert.equal(selected.canSwitchBranch, true);
 });
 
 test("selectOperatorBranchScope -> requested operating branch wins only when allowed", () => {
@@ -79,7 +79,6 @@ test("selectOperatorBranchScope -> pinned staff only sees own branch", () => {
     [2],
   );
   assert.equal(selected.currentBranchId, 2);
-  assert.equal(selected.canSwitchBranch, false);
 });
 
 test("selectOperatorBranchScope -> branch-scoped roles never see central-kind sites", () => {

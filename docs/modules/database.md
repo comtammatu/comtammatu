@@ -57,13 +57,13 @@ hand-written table/function counts here.
 
 When facts disagree, trust the higher tier:
 
-| Tier | Source                                          | What it tells you                                               |
-| ---- | ----------------------------------------------- | --------------------------------------------------------------- |
-| 1    | `packages/database/src/types/database.types.ts` | The shape currently usable from app code (post `pnpm db:types`) |
-| 2    | Applied state of registered DEV/Preview/production DB | What RLS, defaults, constraints actually enforce right now |
-| 3    | `supabase/migrations/*.sql`                     | What changes have been authored — file existence ≠ applied      |
-| 4    | `docs/spec/database-schema.md`                  | Schema source ladder, migration layout, and status vocabulary   |
-| 5    | Hand-written module docs                        | Narrative + design rationale; can lag the sources above         |
+| Tier | Source                                                | What it tells you                                               |
+| ---- | ----------------------------------------------------- | --------------------------------------------------------------- |
+| 1    | `packages/database/src/types/database.types.ts`       | The shape currently usable from app code (post `pnpm db:types`) |
+| 2    | Applied state of registered DEV/Preview/production DB | What RLS, defaults, constraints actually enforce right now      |
+| 3    | `supabase/migrations/*.sql`                           | What changes have been authored — file existence ≠ applied      |
+| 4    | `docs/spec/database-schema.md`                        | Schema source ladder, migration layout, and status vocabulary   |
+| 5    | Hand-written module docs                              | Narrative + design rationale; can lag the sources above         |
 
 ### Migration Status Vocabulary
 
@@ -93,7 +93,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | Payments      | `payments`, `payment_webhooks`, `refunds`                                                                                                                              |
 | Inventory     | `ingredients`, `recipes`, `stock_levels`, `stock_movements`, `inventory_locations`, `stocktake_sessions`, `stocktake_lines`, `stock_transfers`, `stock_transfer_items` |
 | Procurement   | `suppliers`, `purchase_orders`, `purchase_order_items`, `goods_received_notes`, `grn_items`, `supplier_invoices`, `supplier_returns`                                   |
-| Production    | `production_recipes`, `production_runs` — writes are permission-, branch-, and RPC-gated                                                                                |
+| Production    | `production_recipes`, `production_runs` — writes are permission-, branch-, and RPC-gated                                                                               |
 | Finance       | `tax_invoices`, `expenses`, `accounting_periods`                                                                                                                       |
 | HR            | `employees`, `employment_contracts`, `shifts`, `attendance_records`, `payroll_periods`, `payroll_entries`                                                              |
 | Print agent   | `print_jobs` (claim/complete/expire RPCs), `printer_configs`                                                                                                           |
@@ -148,12 +148,12 @@ filenames after the baseline.
 
 ## Security Functions (SECURITY DEFINER)
 
-| Function                     | Purpose                           | Why DEFINER                                      |
-| ---------------------------- | --------------------------------- | ------------------------------------------------ |
-| `custom_access_token_hook()` | Inject claims into JWT            | Must read profiles during auth — RLS would block |
-| `handle_new_user()`          | Create profile on signup          | Trigger runs before user has JWT                 |
-| `update_my_profile()`        | Self-update safe fields           | Bypasses column-level restrictions safely        |
-| `admin_update_profile()`     | Manager updates with scope checks | Implements role hierarchy logic in SQL           |
+| Function                     | Purpose                        | Why DEFINER                                          |
+| ---------------------------- | ------------------------------ | ---------------------------------------------------- |
+| `custom_access_token_hook()` | Inject claims into JWT         | Must read profiles during auth — RLS would block     |
+| `handle_new_user()`          | Create profile on signup       | Trigger runs before user has JWT                     |
+| `update_my_profile()`        | Self-update safe fields        | Bypasses column-level restrictions safely            |
+| `update_staff_profile()`     | Owner updates staff assignment | Atomically replaces PBAC grants on assignment change |
 
 > Auth-bootstrap DEFINER functions only. Permission-management RPCs
 > (`grant_permission`, `revoke_permission`, `apply_template_to_user`, …) are in

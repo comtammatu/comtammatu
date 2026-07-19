@@ -11,7 +11,7 @@
 -- Step 0: normalize seeded operating branch records without touching central sites.
 --
 -- Tài khoản QA được seed (password: Test1234!):
---   • owner@comtammatu.vn              – owner (tenant-level, pinned to a dev branch)
+--   • owner@comtammatu.vn              – owner (tenant-level)
 --   • keeper@comtammatu.vn       – owner (keeper, không bị xoá)
 --   • manager.datdo@comtammatu.vn      – branch_manager Đất Đỏ
 --   • cashier.datdo@comtammatu.vn      – cashier Đất Đỏ
@@ -152,7 +152,7 @@ DECLARE
   v_tenant   BIGINT;
   v_datdo    BIGINT;
   v_phuochai BIGINT;
-  v_dev_branch BIGINT;
+  v_keeper   UUID := 'a0000002-0000-4000-8000-000000000002'::uuid;
   v_pw       TEXT := 'Test1234!';
   v_crypt    TEXT;
 
@@ -167,24 +167,12 @@ BEGIN
     RAISE EXCEPTION 'Thiếu Chi nhánh Đất Đỏ hoặc Chi nhánh Phước Hải.';
   END IF;
 
-  SELECT id INTO v_dev_branch
-  FROM public.branches
-  WHERE tenant_id = v_tenant AND branch_kind = 'branch' AND is_active = true
-  ORDER BY (id = v_datdo) DESC, id
-  LIMIT 1;
-
-  IF v_dev_branch IS NULL THEN
-    RAISE EXCEPTION 'Thiếu chi nhánh active — chạy seed tenant trước.';
-  END IF;
-
   FOR r IN
     SELECT *
     FROM (
-      -- Owner / Super Manager: tenant-level but we pin branch_id to a dev branch
-      -- so auth_branch_id() is never NULL (unblocks branch-scoped RLS/RPC).
-      SELECT 'a0000001-0000-4000-8000-000000000001'::uuid AS user_id, 'owner@comtammatu.vn'::text AS email, 'owner'::text AS role, v_dev_branch::bigint AS branch_id, 'Owner'::text AS full_name, 'EMP-OWNER'::text AS emp_code
+      SELECT 'a0000001-0000-4000-8000-000000000001'::uuid AS user_id, 'owner@comtammatu.vn'::text AS email, 'owner'::text AS position_code, NULL::bigint AS branch_id, 'Owner'::text AS full_name, 'EMP-OWNER'::text AS emp_code
       UNION ALL
-      SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, 'keeper@comtammatu.vn'::text, 'owner'::text, v_dev_branch::bigint, 'Owner (keeper)'::text, 'EMP-KEEPER'::text
+      SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, 'keeper@comtammatu.vn'::text, 'owner'::text, NULL::bigint, 'Owner (keeper)'::text, 'EMP-KEEPER'::text
       UNION ALL
       SELECT 'a0000003-0000-4000-8000-000000000003'::uuid, 'manager.datdo@comtammatu.vn'::text, 'branch_manager'::text, v_datdo, 'QL Chi nhánh Đất Đỏ'::text, 'EMP-MGR-DD'::text
       UNION ALL
@@ -215,8 +203,6 @@ BEGIN
             jsonb_build_object(
               'provider', 'email',
               'providers', jsonb_build_array('email'),
-              'tenant_id', v_tenant,
-              'role', r.role,
               'full_name', r.full_name
             )
           ),
@@ -290,12 +276,16 @@ BEGIN
           'provider', 'email',
           'providers', jsonb_build_array('email'),
           'tenant_id', v_tenant,
-          'role', r.role,
+          'position_code', r.position_code,
           'full_name', r.full_name
         )
         || CASE
           WHEN r.branch_id IS NULL THEN '{}'::jsonb
           ELSE jsonb_build_object('branch_id', r.branch_id)
+        END
+        || CASE
+          WHEN r.position_code = 'owner' THEN '{}'::jsonb
+          ELSE jsonb_build_object('provisioned_by', v_keeper)
         END
       ),
       jsonb_build_object('full_name', r.full_name),
@@ -333,17 +323,6 @@ BEGIN
   END LOOP;
 END;
 $$;
-
--- ─── Auth: backfill staff_permissions cho tất cả profile vừa seed ──
--- handle_new_user chỉ set position_id; grant permissions qua template phải
--- gọi tay. sync_missing_permissions_from_template() additive + idempotent.
-DO $$
-DECLARE
-  v_res RECORD;
-BEGIN
-  SELECT * INTO v_res FROM public.sync_missing_permissions_from_template();
-  RAISE NOTICE 'Auth seed: staff_permissions rows added=%', v_res.rows_added;
-END $$;
 
 -- ─── QA fixture: a pending annual leave for cashier.datdo so preview branches can
 -- exercise the HR leave approve/reject + notification flow. Guarded: a fixture

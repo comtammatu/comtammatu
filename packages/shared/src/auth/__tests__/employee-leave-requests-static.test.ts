@@ -121,6 +121,9 @@ test("Employee leave permission and generated type mirrors are wired", () => {
 
 test("Branch staff runtime exposes leave request self-service from Schedule", () => {
   const schedule = read("apps/web/lib/staff-runtime/schedule/page.tsx");
+  const scheduleRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx",
+  );
   const scheduleActions = read(
     "apps/web/lib/staff-runtime/schedule/actions.ts",
   );
@@ -129,9 +132,13 @@ test("Branch staff runtime exposes leave request self-service from Schedule", ()
   const actions = read("apps/web/lib/staff-runtime/leave/actions.ts");
   const messages = read("apps/web/lib/messages/employee.ts");
 
-  for (const expected of ['leaveHref = "/br"', "fetchMySchedule(monthStart)"]) {
+  for (const expected of ["fetchMySchedule(monthStart)"]) {
     assert.ok(schedule.includes(expected), `expected schedule ${expected}`);
   }
+  assert.match(
+    scheduleRoute,
+    /leaveHref=\{`\/br\/\$\{branchId\}\/shift\/schedule\/leave`\}/,
+  );
 
   for (const expected of [
     '.from("leave_requests")',

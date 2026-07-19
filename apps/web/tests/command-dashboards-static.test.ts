@@ -6,14 +6,14 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-const ADMIN_COPY = "apps/web/lib/messages/admin.ts";
+const ADMIN_COPY = "apps/web/lib/messages/owner.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
 const FINANCE_COPY = "apps/web/lib/messages/finance.ts";
 const INVENTORY_COPY = "apps/web/lib/messages/inventory.ts";
 const PRINT_JOBS_PAGE =
-  "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx";
+  "apps/web/app/(protected)/settings/printers/jobs/page.tsx";
 const PRINT_JOBS_CLIENT =
-  "apps/web/app/(protected)/admin/settings/printers/jobs/print-jobs-client.tsx";
+  "apps/web/app/(protected)/settings/printers/jobs/print-jobs-client.tsx";
 const BRANCH_PAGE =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx";
 const BRANCH_COMMAND_CONFIG =
@@ -196,7 +196,7 @@ test("branch command landing surfaces operations and readiness", () => {
   assert.doesNotMatch(surface, /\/employee\/checkout-approvals/);
 });
 
-test("branch runtime reads stay session-scoped with checkout RLS", () => {
+test("branch runtime reads stay session-scoped with hierarchy-aware checkout projections", () => {
   const data = read(BRANCH_DATA);
   const todayWorkState = read(TODAY_WORK_STATE);
   const attendancePolicy = read(ATTENDANCE_POLICY_MIGRATION);
@@ -218,7 +218,11 @@ test("branch runtime reads stay session-scoped with checkout RLS", () => {
   );
   assert.match(
     data,
-    /supabase\s*\.from\("attendance_records"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
+    /supabase\.rpc\("get_checkout_review_queue", \{[\s\S]{0,120}?p_branch_id: branchId,[\s\S]{0,120}?p_include_rows: false/,
+  );
+  assert.match(
+    data,
+    /supabase\.rpc\("get_leave_review_queue", \{[\s\S]{0,120}?p_branch_id: branchId,[\s\S]{0,120}?p_include_rows: false/,
   );
   assert.match(attendancePolicy, /ALTER POLICY "attendance_select"/i);
   assert.match(attendancePolicy, /auth_tenant_id"?\(\)/);

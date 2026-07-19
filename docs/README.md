@@ -36,7 +36,7 @@
 
 ## Quy ước
 
-- `architecture/`: cross-cutting architecture hub, dẫn sang glossary chuẩn ở `ref/glossary.md`
+- `architecture/`: cross-cutting architecture landing, dẫn sang glossary chuẩn ở `ref/glossary.md`
 - `ref/`: canonical rules, boundary, business semantics, glossary chuẩn
 - `modules/` và `spec/`: technical structure và schema
 - `agent/rules/`: agent entry rules, workflow gates, skill routing, database/UI/engineering constraints

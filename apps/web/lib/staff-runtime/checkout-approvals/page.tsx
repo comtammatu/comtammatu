@@ -1,16 +1,12 @@
 import Link from "next/link";
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing employee checkout approval page keeps operational copy inline */
+import { z } from "zod";
 import {
   ClipboardCheck as IconClipboardCheck,
   Home as IconHome,
   ShieldAlert as IconShieldAlert,
 } from "lucide-react";
-import { createServiceClient } from "@comtammatu/database/supabase/service";
-import {
-  PERMISSION_KEYS,
-  resolveRoleHomeLink,
-  type StaffRole,
-} from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { formatCount } from "@comtammatu/shared/format";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
@@ -34,80 +30,34 @@ const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
   "branch_manager",
 ];
 
-function normalizeEmployee(employee: unknown): {
-  employeeCode: string | null;
-  fullName: string | null;
-} {
-  if (!employee || typeof employee !== "object") {
-    return { employeeCode: null, fullName: null };
-  }
-
-  const maybe = employee as {
-    employee_code?: unknown;
-    profiles?: unknown;
-  };
-  const profile =
-    maybe.profiles && typeof maybe.profiles === "object"
-      ? (maybe.profiles as { full_name?: unknown })
-      : null;
-
-  return {
-    employeeCode:
-      typeof maybe.employee_code === "string" ? maybe.employee_code : null,
-    fullName: typeof profile?.full_name === "string" ? profile.full_name : null,
-  };
-}
-
-function normalizeShift(shift: unknown): {
-  name: string | null;
-  startTime: string | null;
-  endTime: string | null;
-} {
-  if (!shift || typeof shift !== "object") {
-    return { name: null, startTime: null, endTime: null };
-  }
-  const maybe = shift as {
-    name?: unknown;
-    start_time?: unknown;
-    end_time?: unknown;
-  };
-  return {
-    name: typeof maybe.name === "string" ? maybe.name : null,
-    startTime: typeof maybe.start_time === "string" ? maybe.start_time : null,
-    endTime: typeof maybe.end_time === "string" ? maybe.end_time : null,
-  };
-}
-
-function normalizeBranch(branch: unknown): string | null {
-  if (!branch || typeof branch !== "object") return null;
-  const maybe = branch as { name?: unknown };
-  return typeof maybe.name === "string" ? maybe.name : null;
-}
-
-async function loadVisibleBranchIds({
-  role,
-  branchId,
-  routeBranchId,
-}: {
-  role: StaffRole;
-  branchId: number | null;
-  routeBranchId?: number;
-}): Promise<number[] | null> {
-  if (routeBranchId !== undefined) {
-    if (role === "owner") return [routeBranchId];
-    if (role === "branch_manager" && branchId === routeBranchId) {
-      return [routeBranchId];
-    }
-    return [];
-  }
-
-  if (role === "owner") return null;
-  if (role === "branch_manager") return branchId ? [branchId] : [];
-  return [];
-}
+const checkoutReviewRowSchema = z.object({
+  id: z.number().int().positive(),
+  date: z.string(),
+  branch_id: z.number().int().positive(),
+  check_in: z.string().nullable(),
+  checkout_requested_at: z.string(),
+  checkout_requested_by_role: z.string().nullable(),
+  checkout_approval_target_roles: z.array(z.string()),
+  employee_id: z.number().int().positive(),
+  branch_name: z.string().nullable(),
+  employee_code: z.string().nullable(),
+  employee_full_name: z.string().nullable(),
+  requester_role: z.string(),
+  shift_name: z.string().nullable(),
+  shift_start_time: z.string().nullable(),
+  shift_end_time: z.string().nullable(),
+  checklist: z.array(
+    z.object({
+      id: z.number().int().positive(),
+      title: z.string(),
+      is_done: z.boolean(),
+      is_required: z.boolean(),
+    }),
+  ),
+});
 
 interface CheckoutApprovalsPageContentProps {
-  routeBranchId?: number;
+  routeBranchId: number;
   focusAttendanceId?: number;
   hideHeaderOnMobile?: boolean;
   plane?: CheckoutApprovalsPlane;
@@ -120,15 +70,11 @@ export async function StaffCheckoutApprovalsPageContent({
   focusAttendanceId,
   hideHeaderOnMobile,
   plane = "employee",
-}: CheckoutApprovalsPageContentProps = {}) {
+}: CheckoutApprovalsPageContentProps) {
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
   const Panel = plane === "branch" ? BranchOperatorPanel : EmployeePanel;
   const { supabase, claims } = await loadAuthState();
-  const branchId = claims.branch_id;
-  const homeLink =
-    routeBranchId !== undefined
-      ? { href: `/br/${routeBranchId}`, label: "Nay" }
-      : resolveRoleHomeLink(claims.user_role, branchId);
+  const homeLink = { href: `/br/${routeBranchId}`, label: "Nay" };
   const canUseApprovalRoute = CHECKOUT_APPROVER_ROLES.includes(
     claims.user_role,
   );
@@ -160,104 +106,60 @@ export async function StaffCheckoutApprovalsPageContent({
     );
   }
 
-  const service = createServiceClient();
-  const visibleBranchIds = await loadVisibleBranchIds({
-    role: claims.user_role,
-    branchId,
-    routeBranchId,
+  const scopedOut =
+    claims.user_role === "branch_manager" && claims.branch_id !== routeBranchId;
+
+  const canApprovePromise = supabase.rpc("has_permission", {
+    p_branch_id: routeBranchId,
+    p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
   });
-  const scopedOut = visibleBranchIds !== null && visibleBranchIds.length === 0;
-  const permissionBranchId = routeBranchId ?? branchId;
 
-  const canApprovePromise =
-    claims.user_role === "branch_manager" && permissionBranchId
-      ? supabase.rpc("has_permission", {
-          p_branch_id: permissionBranchId,
-          p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-        })
-      : supabase.rpc("has_permission_any", {
-          p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-        });
-
-  const recordsQuery = service
-    .from("attendance_records")
-    .select(
-      `
-        id,
-        date,
-        branch_id,
-        check_in,
-        checkout_requested_at,
-        checkout_requested_by_role,
-        checkout_approval_target_roles,
-        employee_id,
-        branches ( name ),
-        employees (
-          employee_code,
-          profiles ( full_name )
-        ),
-        shifts ( name, start_time, end_time ),
-        attendance_checklist_items (
-          id,
-          title,
-          is_done,
-          is_required
-        )
-      `,
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .contains("checkout_approval_target_roles", [claims.user_role])
-    .is("check_out", null)
-    .not("checkout_requested_at", "is", null)
-    .order("checkout_requested_at", { ascending: true });
-
-  const [{ data: canApprove }, recordsResult] = await Promise.all([
+  const [{ data: canApprove }, queueResult] = await Promise.all([
     canApprovePromise,
     scopedOut
       ? Promise.resolve({ data: [] })
-      : visibleBranchIds === null
-        ? recordsQuery
-        : recordsQuery.in("branch_id", visibleBranchIds),
+      : supabase.rpc("get_checkout_review_queue", {
+          p_branch_id: routeBranchId,
+          p_include_rows: true,
+        }),
   ]);
-  const records = recordsResult.data ?? [];
+  const parsedRecords = checkoutReviewRowSchema
+    .array()
+    .safeParse(queueResult.data?.[0]?.rows ?? []);
+  if (!parsedRecords.success && !scopedOut) {
+    console.error("[checkout-approvals/page] invalid review queue payload", {
+      branchId: routeBranchId,
+    });
+  }
+  const records = parsedRecords.success ? parsedRecords.data : [];
   const items: CheckoutApprovalItem[] = records.map((record) => {
-    const employee = normalizeEmployee(record.employees);
-    const shift = normalizeShift(record.shifts);
-    const branchName = normalizeBranch(record.branches);
     const shiftRange =
-      shift.startTime || shift.endTime
-        ? `${formatVNClockTime(shift.startTime)} - ${formatVNClockTime(
-            shift.endTime,
+      record.shift_start_time || record.shift_end_time
+        ? `${formatVNClockTime(record.shift_start_time)} - ${formatVNClockTime(
+            record.shift_end_time,
           )}`
         : null;
 
-    const checklistRows = (record.attendance_checklist_items ?? []) as Array<{
-      id: number;
-      title: string;
-      is_done: boolean;
-      is_required: boolean;
-    }>;
-
     return {
       id: record.id,
-      employeeName: employee.fullName ?? "Nhân viên",
-      employeeCode: employee.employeeCode,
-      branchName,
+      employeeName: record.employee_full_name ?? "Nhân viên",
+      employeeCode: record.employee_code,
+      branchName: record.branch_name,
       dateLabel: formatDateVN(record.date),
       checkInLabel: record.check_in ? formatTimeVN(record.check_in) : "—",
       requestedLabel: record.checkout_requested_at
         ? formatTimeVN(record.checkout_requested_at)
         : "—",
-      shiftLabel: shift.name
+      shiftLabel: record.shift_name
         ? shiftRange
-          ? `${shift.name} · ${shiftRange}`
-          : shift.name
+          ? `${record.shift_name} · ${shiftRange}`
+          : record.shift_name
         : "Chưa có ca",
       requestKindLabel:
         record.checkout_requested_by_role === "branch_manager"
           ? "Quản lý chi nhánh"
           : "Nhân viên chi nhánh",
-      checklist: checklistRows.map((c) => ({
+      checklist: record.checklist.map((c) => ({
         id: c.id,
         title: c.title,
         isDone: c.is_done,

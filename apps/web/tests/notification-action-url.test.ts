@@ -6,10 +6,15 @@ import type { JwtClaims, StaffRole } from "@comtammatu/shared/auth";
 import { resolveNotificationActionUrl } from "@lib/notifications/action-url";
 
 function claims(role: StaffRole, branchId: number | null): JwtClaims {
-  return { tenant_id: 1, branch_id: branchId, user_role: role };
+  return {
+    tenant_id: 1,
+    branch_id: branchId,
+    user_role: role,
+    position_code: role === "branch_staff" ? "cleaner" : role,
+  };
 }
 
-test("Owner keeps Admin links and receives canonical Branch links for retired routes", () => {
+test("Owner keeps Owner links and receives canonical Branch links", () => {
   assert.equal(
     resolveNotificationActionUrl(claims("owner", null), {
       actionUrl: "/inventory/grn/44",
@@ -21,7 +26,7 @@ test("Owner keeps Admin links and receives canonical Branch links for retired ro
   );
   assert.equal(
     resolveNotificationActionUrl(claims("owner", null), {
-      actionUrl: "/br/3/settings/pos-sessions?session=92",
+      actionUrl: "/br/3/pos-sessions?session=92",
       entityId: 92,
       kind: "pos.shift_variance",
       targetBranchId: 3,
@@ -30,7 +35,7 @@ test("Owner keeps Admin links and receives canonical Branch links for retired ro
   );
 });
 
-test("known notification kinds map to their real Branch workflows", () => {
+test("known notification kinds keep canonical Branch workflow URLs", () => {
   const cases: Array<{
     role: StaffRole;
     actionUrl: string;
@@ -40,98 +45,98 @@ test("known notification kinds map to their real Branch workflows", () => {
   }> = [
     {
       role: "branch_manager",
-      actionUrl: "/inventory/stock?ingredient=12&branch=3",
+      actionUrl: "/br/3/stock/on-hand/12",
       entityId: 12,
       kind: "inventory.stock_low",
       expected: "/br/3/stock/on-hand/12",
     },
     {
       role: "branch_manager",
-      actionUrl: "/inventory/grn/44",
+      actionUrl: "/br/3/stock/grn/44",
       entityId: 44,
       kind: "workflow.grn_pending",
       expected: "/br/3/stock/grn/44",
     },
     {
       role: "branch_manager",
-      actionUrl: "/inventory/purchase-orders/18",
+      actionUrl: "/br/3/stock/grn",
       entityId: 18,
       kind: "workflow.po_sent",
       expected: "/br/3/stock/grn",
     },
     {
       role: "branch_manager",
-      actionUrl: "/inventory/grn",
+      actionUrl: "/br/3/stock/grn",
       entityId: 18,
       kind: "workflow.po_sent",
       expected: "/br/3/stock/grn",
     },
     {
       role: "branch_manager",
-      actionUrl: "/inventory/count-slips",
+      actionUrl: "/br/3/stock/count-slips",
       entityId: 8,
       kind: "inventory.count_slip_submitted",
       expected: "/br/3/stock/count-slips",
     },
     {
       role: "branch_manager",
-      actionUrl: "/inventory/stocktake/21",
+      actionUrl: "/br/3/stock/stocktake/21",
       entityId: 21,
       kind: "workflow.stocktake_submitted",
       expected: "/br/3/stock/stocktake/21",
     },
     {
       role: "branch_manager",
-      actionUrl: "/inventory/transfers/34",
+      actionUrl: "/br/3/stock/receive/34",
       entityId: 34,
       kind: "workflow.transfer_in_transit",
       expected: "/br/3/stock/receive/34",
     },
     {
-      role: "branch_manager",
+      role: "owner",
       actionUrl: "/hr",
       entityId: 5,
       kind: "hr.leave_requested",
-      expected: "/br/3/shift/leave-approvals",
+      expected: "/hr",
     },
     {
-      role: "branch_manager",
-      actionUrl: "/employee/checkout-approvals",
+      role: "owner",
+      actionUrl: "/br/3/shift/checkout-approvals",
       entityId: 7,
       kind: "attendance.checkout_requested",
       expected: "/br/3/shift/checkout-approvals",
     },
     {
       role: "cashier",
-      actionUrl: "/employee/count",
+      actionUrl: "/br/3/stock/count",
       entityId: 9,
       kind: "inventory.count_slip_approved",
       expected: "/br/3/stock/count",
     },
     {
       role: "chef",
-      actionUrl: "/employee/count",
+      actionUrl: "/br/3/stock/count",
       entityId: 10,
       kind: "inventory.count_slip_recount",
       expected: "/br/3/stock/count",
     },
     {
       role: "cashier",
-      actionUrl: "/employee/leave",
+      actionUrl: "/br/3/shift/schedule/leave",
       entityId: 11,
       kind: "hr.leave_approved",
       expected: "/br/3/shift/schedule/leave",
     },
     {
       role: "branch_manager",
-      actionUrl: "/br/3/settings/pos-sessions?session=92",
+      actionUrl: "/br/3/pos-sessions?session=92",
       entityId: 92,
       kind: "pos.shift_variance",
       expected: "/br/3/pos-sessions?session=92",
     },
     {
       role: "branch_manager",
-      actionUrl: "/orders",
+      actionUrl: "/br/3/orders",
       entityId: 12,
       kind: "pos.payment_stock_failed",
       expected: "/br/3/orders",
@@ -150,6 +155,16 @@ test("known notification kinds map to their real Branch workflows", () => {
       item.kind,
     );
   }
+
+  assert.equal(
+    resolveNotificationActionUrl(claims("branch_manager", 3), {
+      actionUrl: "/hr",
+      kind: "hr.leave_requested",
+      entityId: 5,
+      targetBranchId: 3,
+    }),
+    null,
+  );
 });
 
 test("valid same-branch links survive and unprovable links fail closed", () => {

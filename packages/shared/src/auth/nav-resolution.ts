@@ -1,7 +1,7 @@
 import type { StaffRole } from "./types";
 import { canAccess, type ModuleKey, MODULE_ACL } from "./module-acl";
 import {
-  resolveAdminDiscoveryGroups,
+  resolveOwnerDiscoveryGroups,
   resolveBranchManagementDiscoveryGroup,
   resolveBranchOperationDiscoveryGroup,
 } from "./app-discovery";
@@ -33,23 +33,23 @@ export function resolveRoleHomeLink(
   role: StaffRole,
   branchId?: number | null,
 ): ResolvedHomeLink {
-  if (branchId != null && branchId > 0 && canAccess(role, "operator_home")) {
+  if (role === "owner") {
     return {
-      label: APP_COPY_VI.operatorHome,
+      label: MODULE_ACL.owner.label,
+      href: MODULE_ACL.owner.path,
+    };
+  }
+
+  if (branchId != null && branchId > 0 && canAccess(role, "branch_home")) {
+    return {
+      label: APP_COPY_VI.branchHome,
       href: `/br/${branchId}`,
     };
   }
 
-  if (canAccess(role, "operator_home")) {
-    return {
-      label: APP_COPY_VI.operatorHome,
-      href: MODULE_ACL.branch_picker.path,
-    };
-  }
-
   return {
-    label: MODULE_ACL.finance.label,
-    href: MODULE_ACL.finance.path,
+    label: APP_COPY_VI.branchHome,
+    href: "/access-denied?reason=branch-scope-mismatch",
   };
 }
 
@@ -71,8 +71,8 @@ export function resolveNavLink(
   };
 }
 
-export function resolveAdminNavGroups(role: StaffRole): ResolvedNavGroup[] {
-  return resolveAdminDiscoveryGroups(role).map((group) => ({
+export function resolveOwnerNavGroups(role: StaffRole): ResolvedNavGroup[] {
+  return resolveOwnerDiscoveryGroups(role).map((group) => ({
     title: group.title,
     items: group.items.map((item) =>
       resolveNavLink(item, item.href ?? undefined),
@@ -114,12 +114,12 @@ export function resolveQuickLaunchGroups(
   role: StaffRole,
   branchId?: number | null,
 ): QuickLaunchGroup[] {
-  const adminGroups = resolveAdminNavGroups(role);
+  const ownerGroups = resolveOwnerNavGroups(role);
   const branchManagementItems = resolveBranchManagementItems(role, branchId);
   const branchOperationItems = resolveBranchOperationItems(role, branchId);
 
   return [
-    ...adminGroups,
+    ...ownerGroups,
     {
       title: NAV_GROUP_LABELS_VI.branchManagement,
       items: branchManagementItems,

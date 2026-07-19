@@ -1,7 +1,7 @@
 # Khung ngữ nghĩa dữ liệu vận hành
 
 Tài liệu này là contract cho cách đặt tên, lấy dữ liệu, tính toán, và hiển thị
-metric/card trên Admin, Inventory, Finance, Reports, và các bề mặt tổng quan.
+metric/card trên Owner, Inventory, Finance, Reports, và các bề mặt tổng quan.
 
 Mục tiêu: không để Agent tự sinh `Card`, `Title`, `KPI`, hay "feature" mới chỉ
 vì thấy thiếu chỗ hiển thị. Mỗi số liệu trên UI phải trả lời được: nó là gì,
@@ -169,9 +169,9 @@ KPI hay hàng đợi vận hành hiện tại.
 không được gọi các số đó là gate đóng ngày kho nếu GRN/WAC/stock ledger đã
 đúng.
 
-## Tổng quan Admin
+## Tổng quan Owner
 
-Tổng quan Admin không phải chỗ gom mọi KPI. Nó chỉ được hiển thị ba nhóm:
+Tổng quan Owner không phải chỗ gom mọi KPI. Nó chỉ được hiển thị ba nhóm:
 
 1. **Tình trạng vận hành cần chú ý**: lỗi HĐĐT, print-agent offline, payment
    mismatch, stock alert, ca POS lệch tiền.
@@ -179,13 +179,13 @@ Tổng quan Admin không phải chỗ gom mọi KPI. Nó chỉ được hiển t
 3. **Lối vào module**: shortcut đến Finance, Inventory, HR, POS/KDS settings,
    Reports.
 
-Card Admin có số tiền hoặc tính toán tài chính phải dùng `finance.*`. Card Admin
+Card Owner có số tiền hoặc tính toán tài chính phải dùng `finance.*`. Card Owner
 có tồn kho hoặc phiếu kho phải dùng `inventory.*`. Nếu chỉ là link điều hướng,
 không được đặt title như một KPI.
 
 ## Quy tắc cho Agent
 
-- Trước khi sửa tổng quan/card/title/KPI ở Admin, Inventory, Finance, Reports:
+- Trước khi sửa tổng quan/card/title/KPI ở Owner, Inventory, Finance, Reports:
   đọc file này, `docs/ref/glossary.md`, và module doc tương ứng.
 - Nếu title mới chứa một danh từ nghiệp vụ, kiểm tra glossary trước.
 - Nếu card mới chứa một con số, phải khai báo hoặc tái dùng `contract_key`.

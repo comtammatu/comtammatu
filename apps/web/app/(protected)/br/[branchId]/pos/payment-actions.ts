@@ -1331,7 +1331,7 @@ export interface VietQrConfig {
 }
 
 /**
- * Returns VietQR bank config from Admin settings.
+ * Returns VietQR bank config from Owner settings.
  * Returns null when VietQR is disabled or not configured.
  */
 export const fetchVietQrConfig = withActionPositional(

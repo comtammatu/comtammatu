@@ -1,43 +1,47 @@
 import { canAccess } from "./module-acl";
+import { getDefaultRedirect } from "./login-destination";
 import {
-  getDefaultRedirect,
-  resolveBranchHubDestination,
-  type BranchHubContext,
-} from "./branch-hub";
-import {
-  isAdminDashboardRoutePath,
+  isOwnerRoutePath,
   isRunnerPublicDisplayPath,
   resolveModuleFromPath,
 } from "./route-resolution";
-import type { JwtClaims, StaffRole } from "./types";
+import {
+  STAFF_ROLES,
+  staffRoleFromPositionCode,
+  type JwtClaims,
+  type StaffRole,
+} from "./types";
 
-export { getDefaultRedirect } from "./branch-hub";
+export { getDefaultRedirect } from "./login-destination";
 
 /** Extract claims from Supabase user app_metadata */
 function extractClaims(appMetadata: Record<string, unknown>): JwtClaims | null {
   const tenantId = appMetadata.tenant_id;
-  // JWT hook writes "user_role", raw app_metadata has "role"
-  const role = appMetadata.user_role ?? appMetadata.role;
+  const role = appMetadata.user_role;
+  const positionCode = appMetadata.position_code;
+  const branchId = appMetadata.branch_id;
 
-  if (typeof tenantId !== "number" || typeof role !== "string") {
+  if (
+    typeof tenantId !== "number" ||
+    !Number.isSafeInteger(tenantId) ||
+    tenantId <= 0 ||
+    typeof role !== "string" ||
+    !STAFF_ROLES.includes(role as StaffRole) ||
+    typeof positionCode !== "string" ||
+    staffRoleFromPositionCode(positionCode) !== role ||
+    (branchId !== null &&
+      (typeof branchId !== "number" ||
+        !Number.isSafeInteger(branchId) ||
+        branchId <= 0))
+  ) {
     return null;
   }
 
-  const branchId = appMetadata.branch_id;
-  const position = appMetadata.position;
-  const accessBucket = appMetadata.access_bucket;
-  const positionCode = appMetadata.position_code;
-
   return {
     tenant_id: tenantId,
-    branch_id: typeof branchId === "number" ? branchId : null,
+    branch_id: branchId,
     user_role: role as StaffRole,
-    access_bucket:
-      typeof accessBucket === "string"
-        ? (accessBucket as StaffRole)
-        : undefined,
-    position: typeof position === "string" ? position : undefined,
-    position_code: typeof positionCode === "string" ? positionCode : undefined,
+    position_code: positionCode,
   };
 }
 
@@ -46,7 +50,7 @@ function extractClaims(appMetadata: Record<string, unknown>): JwtClaims | null {
  *
  * `session.user.app_metadata` (supabase-js) reads from the `auth.users` row and
  * DOES NOT include claims injected by the `custom_access_token_hook`. Those
- * hook-added claims (`user_role`, `position`) only live inside the JWT itself.
+ * hook-added claims (`user_role`, `position_code`) only live inside the JWT.
  * Call this helper on `session.access_token` whenever you need the canonical
  * server-side view of the user's claims.
  *
@@ -129,11 +133,8 @@ export function getSafeInternalReturnTo(
 export function resolvePostLoginRedirect(
   claims: JwtClaims,
   returnTo: string | null | undefined,
-  branchHubContext?: BranchHubContext,
 ): string {
-  const fallback = branchHubContext
-    ? resolveBranchHubDestination(claims, branchHubContext)
-    : getDefaultRedirect(claims);
+  const fallback = getDefaultRedirect(claims);
   const safeReturnTo = getSafeInternalReturnTo(returnTo);
 
   if (!safeReturnTo) {
@@ -147,18 +148,11 @@ export function resolvePostLoginRedirect(
     return fallback;
   }
 
-  if (targetUrl.pathname.startsWith("/employee")) {
-    return fallback;
-  }
-
   if (isRunnerPublicDisplayPath(targetUrl.pathname)) {
     return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
   }
 
-  if (
-    isAdminDashboardRoutePath(targetUrl.pathname) &&
-    !canAccess(claims.user_role, "admin_dashboard")
-  ) {
+  if (isOwnerRoutePath(targetUrl.pathname) && claims.user_role !== "owner") {
     return fallback;
   }
 
@@ -177,10 +171,7 @@ export function resolvePostLoginRedirect(
   const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
   if (routeBranchId != null) {
-    const allowCrossBranchBranchSurface = canAccess(
-      claims.user_role,
-      "admin_dashboard",
-    );
+    const allowCrossBranchBranchSurface = claims.user_role === "owner";
 
     if (!allowCrossBranchBranchSurface && claims.branch_id !== routeBranchId) {
       return fallback;

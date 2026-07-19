@@ -16,7 +16,7 @@ type PayslipPlane = "employee" | "branch";
 export async function StaffPayslipPageContent(props: {
   searchParams: Promise<{ year?: string }>;
   hideHeaderOnMobile?: boolean;
-  profileHref?: string;
+  profileHref: string;
   plane?: PayslipPlane;
 }) {
   const ctx = await getEmployeeContext();

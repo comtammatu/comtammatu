@@ -26,7 +26,10 @@ export interface LeaveRequestRow {
     id: number;
     employee_code: string | null;
     start_date: string | null;
-    profiles: { full_name: string } | null;
+    profiles: {
+      full_name: string;
+      positions: { code: string } | null;
+    } | null;
   } | null;
   annual_leave_balance: {
     year: number;

@@ -65,7 +65,7 @@ function latestMigrationDefining(functionName: string): {
   return match;
 }
 
-test("active inventory reads do not select dropped legacy unit columns", () => {
+test("active inventory reads do not select dropped unit columns", () => {
   const checks = new Map([
     [
       "apps/web/app/(protected)/inventory/count-slips/page.tsx",
@@ -335,7 +335,7 @@ test("menu recipe editor resets entry unit when changing ingredient", () => {
   assert.match(editor, /\bunitEditable\b/);
 });
 
-test("recipe runtime DTOs expose unitLabel instead of legacy unit", () => {
+test("recipe runtime DTOs expose unitLabel instead of retired unit text", () => {
   const sections = new Map([
     [
       "RecipeLineIngredient",
@@ -554,7 +554,7 @@ test.skip("stock transfer receive converts received entry quantities to base uni
   assert.match(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
 });
 
-test.skip("GRN amend and legacy GRN movements use base quantities", () => {
+test.skip("GRN amend and historical GRN movements use base quantities", () => {
   const sql = read(
     "supabase/migration-archive/20260706084233_grn_base_quantity_legacy_cleanup.sql",
   );

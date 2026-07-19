@@ -35,7 +35,7 @@ export async function OrdersPageContent({
 
   // Scope resolution only applies to embedded (routeBranchId) callers: the
   // engine always resolves a concrete default branch, which would narrow the
-  // Admin Dashboard page's unfiltered-by-default view for owner.
+  // Owner surface page's unfiltered-by-default view for owner.
   let branchFilter: number | undefined;
   if (routeBranchId != null) {
     const branches = await fetchActiveBranches(supabase, claims.tenant_id);

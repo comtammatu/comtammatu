@@ -152,7 +152,7 @@ export function StaffFormDialog({
                   name="password"
                   label="Mật khẩu"
                   type="password"
-                  placeholder={messages.admin.staffForm.passwordPlaceholder}
+                  placeholder={messages.owner.staffForm.passwordPlaceholder}
                   required
                 />
               </>
@@ -162,7 +162,7 @@ export function StaffFormDialog({
               control={form.control}
               name="full_name"
               label="Họ tên"
-              placeholder={messages.admin.staffForm.fullNamePlaceholder}
+              placeholder={messages.owner.staffForm.fullNamePlaceholder}
               required
             />
 
@@ -179,7 +179,7 @@ export function StaffFormDialog({
               name="position_code"
               label="Chức vụ"
               options={positionOptions}
-              placeholder={messages.admin.staffForm.rolePlaceholder}
+              placeholder={messages.owner.staffForm.rolePlaceholder}
               required
             />
 
@@ -190,13 +190,13 @@ export function StaffFormDialog({
               options={branchOptions}
               placeholder={
                 isSiteOptional
-                  ? messages.admin.staffForm.branchNotApplicable
-                  : messages.admin.staffForm.branchPlaceholder
+                  ? messages.owner.staffForm.branchNotApplicable
+                  : messages.owner.staffForm.branchPlaceholder
               }
               disabled={isSiteOptional}
               description={
                 !isSiteOptional
-                  ? messages.admin.staffForm.branchDescription
+                  ? messages.owner.staffForm.branchDescription
                   : undefined
               }
             />

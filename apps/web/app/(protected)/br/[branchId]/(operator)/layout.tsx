@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   Bell as IconBell,
-  Building2 as IconBuilding2,
+  House as IconHouse,
   LayoutDashboard as IconLayoutDashboard,
   User as IconUser,
 } from "lucide-react";
@@ -53,13 +53,13 @@ export default async function OperatorLayout({
 
   const canUseShiftTab =
     claims.user_role !== "owner" &&
-    (canAccess(claims.user_role, "operator_home") ||
+    (canAccess(claims.user_role, "branch_home") ||
       canAccess(claims.user_role, "employee_checkout_approvals"));
   const canManageBranch =
     canAccess(claims.user_role, "branch_dashboard") ||
     canAccess(claims.user_role, "branch_settings") ||
     canAccess(claims.user_role, "branch_pos_sessions");
-  const canUseBranchPicker = canAccess(claims.user_role, "branch_picker");
+  const canOpenOwnerHome = claims.user_role === "owner";
   const unreadResult = await unreadPromise;
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
@@ -82,22 +82,22 @@ export default async function OperatorLayout({
           subtitle={ROLE_LABEL_VI[claims.user_role]}
           subtitleHiddenOnMobile
           homeHref={`/br/${context.branchId}`}
-          homeAriaLabel={APP_COPY_VI.operatorHome}
+          homeAriaLabel={APP_COPY_VI.branchHome}
           wide
           actions={
             <>
-              {canUseBranchPicker && context.canSwitchBranch ? (
+              {canOpenOwnerHome ? (
                 <Button
                   variant="outline"
                   size="touch"
                   className="min-w-11"
-                  aria-label={MODULE_ACL.branch_picker.label}
-                  title={MODULE_ACL.branch_picker.label}
-                  render={<Link href={MODULE_ACL.branch_picker.path} />}
+                  aria-label={APP_COPY_VI.ownerTitle}
+                  title={APP_COPY_VI.ownerTitle}
+                  render={<Link href={MODULE_ACL.owner.path} />}
                 >
-                  <IconBuilding2 data-icon="inline-start" />
+                  <IconHouse data-icon="inline-start" />
                   <span className="hidden sm:inline">
-                    {MODULE_ACL.branch_picker.label}
+                    {APP_COPY_VI.ownerTitle}
                   </span>
                 </Button>
               ) : null}

@@ -87,30 +87,30 @@ function StaffActionsMenu({
 
   return (
     <RowActionsMenu
-      label={messages.admin.staffPage.actions}
+      label={messages.owner.staffPage.actions}
       triggerSize={variant === "card" ? "sm" : "icon-lg"}
       triggerClassName={variant === "card" ? "rounded-full" : undefined}
       triggerLabel={
-        variant === "card" ? messages.admin.staffPage.actions : undefined
+        variant === "card" ? messages.owner.staffPage.actions : undefined
       }
       items={[
         {
           key: "edit",
-          label: messages.admin.staffPage.actionEdit,
+          label: messages.owner.staffPage.actionEdit,
           icon: <IconPencil data-icon="inline-start" />,
           onSelect: () => onEdit(member),
         },
         {
           key: "permissions",
-          label: messages.admin.staffPage.actionPermissions,
+          label: messages.owner.staffPage.actionPermissions,
           icon: <IconKey data-icon="inline-start" />,
           href: `/hr/staff/${member.id}/permissions`,
         },
         {
           key: isActive ? "deactivate" : "activate",
           label: isActive
-            ? messages.admin.staffPage.actionDeactivate
-            : messages.admin.staffPage.actionActivate,
+            ? messages.owner.staffPage.actionDeactivate
+            : messages.owner.staffPage.actionActivate,
           icon: isActive ? (
             <IconToggleLeft data-icon="inline-start" />
           ) : (
@@ -131,7 +131,7 @@ export function StaffTable({
   const [editStaff, setEditStaff] = useState<StaffRow | null>(null);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
-  const staffCopy = messages.admin.staffPage;
+  const staffCopy = messages.owner.staffPage;
 
   const filtered = useMemo(() => {
     const q = search.trim();

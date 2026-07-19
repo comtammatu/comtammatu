@@ -50,7 +50,7 @@ export default async function InventoryLayout({
   const isOwner = claims.user_role === "owner";
   const showProcurement =
     isOwner ||
-    (canAccess(claims.user_role, "inventory_procurement") &&
+    (canAccess(claims.user_role, "branch_stock") &&
       hasProcurementRead);
   const showProduction =
     isOwner ||

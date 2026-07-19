@@ -13,7 +13,6 @@ test("operator routes use a route group without wrapping station apps", () => {
     false,
   );
   for (const path of [
-    "apps/web/app/(protected)/br/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
@@ -78,7 +77,7 @@ test("operator header shows branch context and keeps profile and notifications",
   const appHeader = read("apps/web/app/components/app-header.tsx");
 
   assert.match(layout, /homeHref=\{`\/br\/\$\{context\.branchId\}`\}/);
-  assert.match(layout, /homeAriaLabel=\{APP_COPY_VI\.operatorHome\}/);
+  assert.match(layout, /homeAriaLabel=\{APP_COPY_VI\.branchHome\}/);
   assert.match(layout, /subtitle=\{ROLE_LABEL_VI\[claims\.user_role\]\}/);
   assert.match(layout, /subtitleHiddenOnMobile/);
   assert.match(layout, /\swide\s/);
@@ -86,7 +85,6 @@ test("operator header shows branch context and keeps profile and notifications",
   assert.match(layout, /context\.branch\.name\.replace\(\/\^Chi nhánh\\s\+\//);
   assert.match(layout, /className="sm:hidden"/);
   assert.match(layout, /className="hidden sm:inline"/);
-  assert.doesNotMatch(layout, /Hub \$\{hubLabel\}/);
   assert.match(appHeader, /homeHref\?: string/);
   assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
   assert.match(appHeader, /"min-h-11 min-w-11 shrink-0 justify-center"/);
@@ -141,9 +139,9 @@ test("notifications page provides a safe branch return path", () => {
 test("operator home label is today, not an old branch title", () => {
   const labels = read("packages/shared/src/labels/vi.ts");
 
-  assert.match(labels, /operatorHome: "Nay"/);
-  assert.match(labels, /operator_home: "Nay"/);
-  assert.doesNotMatch(labels, /operatorHome: "Branch Hub"/);
+  assert.match(labels, /branchHome: "Hôm nay"/);
+  assert.match(labels, /branch_home: "Nay"/);
+  assert.doesNotMatch(labels, /branchHome: "Branch home"/);
   assert.doesNotMatch(labels, /Branch Runtime|Branch Ops/);
 });
 
@@ -177,7 +175,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /BranchOperatorPage/);
   assert.match(home, /claims\.user_role !== "owner"/);
   const todaySource = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-today-status.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-today-status.tsx",
   );
   assert.match(todaySource, /BranchOperatorControlBar/);
   assert.match(todaySource, /getTodayWorkState/);
@@ -189,12 +187,11 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /presentation="stations"/);
   assert.match(home, /presentation="plain"/);
   assert.match(home, /stationDescriptions/);
-  assert.match(home, /canAccess\(claims\.user_role, "admin_dashboard"\)/);
-  assert.doesNotMatch(home, /claims\.user_role === "owner"/);
+  assert.match(home, /claims\.user_role === "owner"/);
   assert.match(home, /resolveOperatorTileIcon/);
   assert.match(home, /getBranchPrimaryHomeGroup/);
   assert.doesNotMatch(home, /BranchOperatorControlBar/);
-  assert.match(home, /MODULE_ACL\.admin_dashboard\.path/);
+  assert.match(home, /href: "\/"/);
   assert.doesNotMatch(homeContract, /"\/team"|"\/stock(?:\/|")/);
   for (const suffix of ["/pos", "/kds", "/runner", "/menu-limits"]) {
     assert.ok(homeContract.includes(`"${suffix}"`), suffix);
@@ -204,10 +201,9 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
     /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
   );
   assert.match(home, /mobileColumns=\{2\}/);
-  assert.match(home, /<HubQueueSection/);
+  assert.match(home, /<BranchQueueSection/);
   assert.doesNotMatch(home, /branch-dashboard/);
   assert.doesNotMatch(home, /showOverview/);
-  assert.doesNotMatch(home, /HubOverviewSection/);
   assert.doesNotMatch(home, /operatorRuntimeActions/);
   assert.match(home, /operatorOpsActions/);
   assert.doesNotMatch(home, /EmployeeStatusStrip/);
@@ -268,7 +264,7 @@ test("operator stock count route renders the Branch count plane", () => {
   assert.match(countSurface, /props\.plane === "branch"/);
 });
 
-test("operator hub owns branch workflow entry tiles", () => {
+test("branch home owns branch workflow entry tiles", () => {
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
   const operatorTiles =
     navConfig.split("export const OPERATOR_TILE_ITEMS =")[1] ?? "";
@@ -277,7 +273,6 @@ test("operator hub owns branch workflow entry tiles", () => {
   assert.match(navConfig, /approvals: "Duyệt"/);
   assert.match(navConfig, /sales_kitchen: "Bán hàng"/);
   assert.match(navConfig, /stock: "Kho hàng"/);
-  assert.doesNotMatch(navConfig, /office_bridge/);
   assert.match(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/shift\/clock"/,
@@ -418,21 +413,21 @@ test("pre-clock-in gate disables floor tiles instead of hiding them", () => {
   assert.doesNotMatch(page, /tiles: \[\]/);
 });
 
-test("operator home keeps KPI overview out of the Hub", () => {
+test("operator home keeps KPI overview out of the Landing", () => {
   const home = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
 
   assert.equal(
     exists(
-      "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-overview-section.tsx",
+      "apps/web/app/(protected)/br/[branchId]/(operator)/_components/landing/landing-overview-section.tsx",
     ),
     false,
   );
-  assert.doesNotMatch(home, /KpiCard|HubOverview|fetchBranchDayStatus/);
+  assert.doesNotMatch(home, /KpiCard|fetchBranchDayStatus/);
 });
 
-test("branch dashboard renders command lanes instead of Admin Dashboard-style KPI summary", () => {
+test("branch dashboard renders command lanes instead of Owner surface-style KPI summary", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
@@ -456,25 +451,25 @@ test("branch dashboard renders command lanes instead of Admin Dashboard-style KP
     "kds",
     "runner",
     "branch_menu_limits",
-    "orders",
+    "branch_orders",
   ]) {
     assert.match(commandConfig, new RegExp(`moduleKey: "${moduleKey}"`));
   }
 });
 
-test("branch settings hub stays a setup-only Branch operator surface", () => {
+test("branch settings landing stays a setup-only Branch operator surface", () => {
   const settingsHub = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   );
-  const hubTiles = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/_lib/hub-tiles.ts",
+  const settingsLinks = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/_lib/settings-links.ts",
   );
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
   assert.match(settingsHub, /<BranchOperatorPage/);
   assert.match(settingsHub, /BranchOperatorActionSection/);
-  assert.match(settingsHub, /visibleTiles\.map/);
-  assert.match(settingsHub, /canAccess\(role, tile\.moduleKey\)/);
+  assert.match(settingsHub, /visibleLinks\.map/);
+  assert.match(settingsHub, /canAccess\(role, link\.moduleKey\)/);
   assert.doesNotMatch(settingsHub, /columns=\{1\}/);
   assert.doesNotMatch(
     settingsHub,
@@ -482,20 +477,20 @@ test("branch settings hub stays a setup-only Branch operator surface", () => {
   );
   assert.doesNotMatch(settingsHub, /pos-sessions|menu-limits|\/hr|Attendance/);
 
-  const tableIndex = hubTiles.indexOf("settings/tables");
-  const posIndex = hubTiles.indexOf("settings/pos");
-  const kdsIndex = hubTiles.indexOf("settings/kds");
-  const printersIndex = hubTiles.indexOf("settings/printers");
+  const tableIndex = settingsLinks.indexOf("settings/tables");
+  const posIndex = settingsLinks.indexOf("settings/pos");
+  const kdsIndex = settingsLinks.indexOf("settings/kds");
+  const printersIndex = settingsLinks.indexOf("settings/printers");
   assert.ok(tableIndex >= 0, "tables tile exists");
   assert.ok(posIndex > tableIndex, "POS setup follows tables");
   assert.ok(kdsIndex > posIndex, "KDS setup follows POS");
   assert.ok(printersIndex > kdsIndex, "printers setup follows KDS");
   assert.doesNotMatch(
-    hubTiles,
+    settingsLinks,
     /branch_dashboard|branch_pos_sessions|moduleKey: "hr"|\/hr/,
   );
 
-  assert.match(settingsMessages, /hubTitle: "Thiết lập vận hành chi nhánh"/);
+  assert.match(settingsMessages, /landingTitle: "Thiết lập vận hành chi nhánh"/);
   assert.match(settingsMessages, /`\$\{branchName\} · Bàn, POS, bếp và in`/);
   assert.match(settingsMessages, /posSetupTitle: "Máy POS & tồn kho"/);
   assert.doesNotMatch(
@@ -525,7 +520,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     assert.match(source, /redirect\(`\/br\/\$\{branchId\}\/settings`\)/);
     assert.doesNotMatch(
       source,
-      /<AppPage\b|AppPageHeader|BranchManagementShell|AdminDashboardModuleShell|ManagementShell|KpiCard/,
+      /<AppPage\b|AppPageHeader|BranchManagementShell|OwnerModuleShell|ManagementShell|KpiCard/,
       path,
     );
   }
@@ -618,7 +613,7 @@ test("operator home renders the unified Cần xử lý queue before domain tile 
   );
 
   const queueSource = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/hub/hub-queue-section.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-queue-section.tsx",
   );
 
   assert.match(queueSource, /fetchBranchQueueCounts/);
@@ -628,8 +623,8 @@ test("operator home renders the unified Cần xử lý queue before domain tile 
   assert.match(queueSource, /branchCopy\.queueTitle/);
 
   assert.ok(
-    home.indexOf("<HubQueueSection") < home.indexOf("groups.map"),
-    "Hub queue should render before domain tile rows",
+    home.indexOf("<BranchQueueSection") < home.indexOf("groups.map"),
+    "Landing queue should render before domain tile rows",
   );
 });
 

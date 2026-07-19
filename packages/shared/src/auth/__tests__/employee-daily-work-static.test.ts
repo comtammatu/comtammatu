@@ -167,7 +167,7 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
     !branchSettingsPageSrc.includes("AttendanceSettingsCard") &&
       !branchSettingsPageSrc.includes('href="/hr"') &&
       !branchSettingsPageSrc.includes("role_code"),
-    "branch settings hub must stay branch-setup only; checklist configuration belongs to HR workspace, not a branch setup shortcut",
+    "branch settings landing must stay branch-setup only; checklist configuration belongs to HR workspace, not a branch setup shortcut",
   );
 });
 
@@ -350,7 +350,7 @@ test("HRM consumption history stays available but no longer gates Employee check
   );
 });
 
-test("Employee checkout approval keeps checkout pending until Branch Manager approves", () => {
+test("archived checkout lineage remains testable with branch-scoped manager authority", () => {
   const migration = read(
     "supabase/migration-archive/20260609100000_employee_checkout_approval.sql",
   );
@@ -373,6 +373,9 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
   );
   const approvalsPageSrc = read(
     "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
+  );
+  const authorityMigrationSrc = read(
+    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
 
   for (const expected of [
@@ -399,7 +402,7 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
       ) &&
       !countGateMigrationSrc.includes(["super", "manager"].join("_")) &&
       !countGateMigrationSrc.includes(`'${["wait", "er"].join("")}'`),
-    "current checkout approval gate must use canonical access buckets only",
+    "current checkout approval gate must use canonical application roles only",
   );
 
   assert.ok(
@@ -416,12 +419,15 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
   );
 
   assert.ok(
-    actionSrc.includes("probePermission") &&
-      actionSrc.includes("PERMISSION_KEYS.HR_APPROVE_CHECKOUT") &&
-      actionSrc.includes('"owner"') &&
+    authorityMigrationSrc.includes(
+      "CREATE OR REPLACE FUNCTION public.approve_employee_clock_out",
+    ) &&
+      authorityMigrationSrc.includes(
+        "CREATE OR REPLACE FUNCTION public.reject_employee_clock_out",
+      ) &&
       actionSrc.includes("employee_request_clock_out") &&
-      actionSrc.includes("branch_manager_approve_employee_clock_out"),
-    "expected approval action to check branch-scoped permission before service-role approval",
+      actionSrc.includes('ctx.supabase.rpc(\n    "approve_employee_clock_out"'),
+    "expected approval action to use the authenticated DB-side hierarchy contract",
   );
   assert.ok(
     workStateSrc.includes('"checkout_pending"') &&
@@ -469,14 +475,21 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
       branchStaffMigrationSrc.includes(
         "IF v_requester_role NOT IN ('cashier', 'chef', 'branch_staff') THEN",
       ),
-    "guard/cleaner must map to branch_staff and remain branch-manager checkout approvals",
+    "archive must preserve the historical branch_staff checkout lineage",
   );
   assert.ok(
     approvalsPageSrc.includes("CHECKOUT_APPROVER_ROLES") &&
       approvalsPageSrc.includes("checkout_approval_target_roles") &&
-      approvalsPageSrc.includes("has_permission_any") &&
       approvalsPageSrc.includes("has_permission") &&
+      approvalsPageSrc.includes("get_checkout_review_queue") &&
       approvalsPageSrc.includes("HR_APPROVE_CHECKOUT"),
-    "expected approval page to be manager-tier and permission scoped",
+    "expected approval page to remain permission scoped",
+  );
+  assert.ok(
+    authorityMigrationSrc.includes("'hr:approve_checkout'") &&
+      authorityMigrationSrc.includes("po.code = 'branch_manager'") &&
+      authorityMigrationSrc.includes("sp.branch_id = p_branch_id") &&
+      authorityMigrationSrc.includes("pr.branch_id = p_branch_id"),
+    "current forward migration must preserve same-branch Branch Manager checkout authority",
   );
 });

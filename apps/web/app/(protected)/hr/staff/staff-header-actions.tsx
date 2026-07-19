@@ -23,7 +23,7 @@ export function StaffHeaderOverflow() {
           <Button variant="outline" size="icon">
             <IconDots className="size-4" />
             <span className="sr-only">
-              {messages.admin.staffPage.moreActions}
+              {messages.owner.staffPage.moreActions}
             </span>
           </Button>
         }
@@ -33,7 +33,7 @@ export function StaffHeaderOverflow() {
           render={
             <Link href="/hr">
               <IconBriefcase className="mr-2 size-4" />
-              {messages.admin.staffPage.hrLink}
+              {messages.owner.staffPage.hrLink}
             </Link>
           }
         />
@@ -41,7 +41,7 @@ export function StaffHeaderOverflow() {
           render={
             <Link href="/hr/staff/audit">
               <IconScrollText className="mr-2 size-4" />
-              {messages.admin.staffAudit.linkLabel}
+              {messages.owner.staffAudit.linkLabel}
             </Link>
           }
         />

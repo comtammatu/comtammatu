@@ -28,6 +28,7 @@ const API_PORT = Number(process.env["E2E_API_PORT"] || 55421);
 const DB_PORT = Number(process.env["E2E_DB_PORT"] || 55432);
 const SHADOW_PORT = Number(process.env["E2E_SHADOW_PORT"] || 55430);
 const GITHUB_ENV = process.env["GITHUB_ENV"];
+const MAX_BUFFER = 64 * 1024 * 1024;
 
 if (
   process.env["CI"] !== "true" ||
@@ -39,9 +40,9 @@ if (
 
 // Prefer a CLI on PATH (fast locally); fall back to `pnpm dlx supabase` (CI).
 function supabase(args, { timeoutMs = 600_000 } = {}) {
-  let r = spawnSync("supabase", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs });
+  let r = spawnSync("supabase", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs, maxBuffer: MAX_BUFFER });
   if (r.error && r.error.code === "ENOENT") {
-    r = spawnSync("pnpm", ["dlx", "supabase", ...args], { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs });
+    r = spawnSync("pnpm", ["dlx", "supabase", ...args], { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs, maxBuffer: MAX_BUFFER });
   }
   return r;
 }

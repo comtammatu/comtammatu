@@ -4,7 +4,7 @@ import {
   buildAccessDeniedPath,
   canAccess,
   extractClaimsFromAccessToken,
-  isAdminDashboardRoutePath,
+  isOwnerRoutePath,
   isPublicAppPath,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
@@ -12,7 +12,6 @@ import {
   type JwtClaims,
   type ModuleKey,
 } from "@comtammatu/shared/auth";
-import { resolveBranchHubContextFromHeaders } from "@/_lib/branch-hub-device";
 import { getClientIp } from "@lib/network/client-ip";
 
 // Module-level flag — emit one warning per warm Edge instance when the POS
@@ -104,9 +103,8 @@ function redirectToDefaultLanding(
   sessionResponse: NextResponse,
   claims: JwtClaims,
 ): NextResponse {
-  const branchHubContext = resolveBranchHubContextFromHeaders(request.headers);
   const url = new URL(
-    resolvePostLoginRedirect(claims, null, branchHubContext),
+    resolvePostLoginRedirect(claims, null),
     request.nextUrl.origin,
   );
   return redirectWithCookies(url, sessionResponse);
@@ -155,11 +153,8 @@ export async function proxy(request: NextRequest) {
     if (!session) return response; // unauthenticated → show login
     // Authenticated → bounce to role's post-login destination.
     if (claims) {
-      const branchHubContext = resolveBranchHubContextFromHeaders(
-        request.headers,
-      );
       const url = new URL(
-        resolvePostLoginRedirect(claims, null, branchHubContext),
+        resolvePostLoginRedirect(claims, null),
         request.nextUrl.origin,
       );
       return redirectWithCookies(url, response);
@@ -176,7 +171,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Authenticated — verify claims + module ACL. Blocked operational routes go
-  // to `/access-denied`; disallowed Admin Dashboard routes go to the role's
+  // to `/access-denied`; disallowed Owner routes go to the role's
   // default landing page. Proxy is the single gate: layouts and pages downstream MUST
   // NOT re-check these invariants.
   //
@@ -188,24 +183,21 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  // Admin Dashboard is an owner-only route surface. Capability keys such as
+  // Owner routes are an owner-only surface. Capability keys such as
   // inventory and orders remain shared with Branch-native routes, so this
   // surface gate must run before the per-module capability gate below.
-  if (
-    isAdminDashboardRoutePath(pathname) &&
-    !canAccess(claims.user_role, "admin_dashboard")
-  ) {
+  if (isOwnerRoutePath(pathname) && claims.user_role !== "owner") {
     return redirectToDefaultLanding(request, response, claims);
   }
 
   // Module ACL: each route resolves to a ModuleKey, and the user's role must
-  // be in that module's allowedRoles. Admin Dashboard routes that fail ACL
+  // be in that module's allowedRoles. Owner routes that fail ACL
   // redirect to the role's default landing page; other routes redirect to
   // /access-denied.
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
     if (!canAccess(claims.user_role, moduleKey)) {
-      if (isAdminDashboardRoutePath(pathname)) {
+      if (isOwnerRoutePath(pathname)) {
         return redirectToDefaultLanding(request, response, claims);
       }
 
@@ -320,8 +312,8 @@ export async function proxy(request: NextRequest) {
         }
       }
     }
-  } else if (isAdminDashboardRoutePath(pathname)) {
-    // Admin Dashboard route with no module mapping — redirect to default
+  } else if (isOwnerRoutePath(pathname)) {
+    // Owner route with no module mapping — redirect to default
     // landing to avoid serving management pages without ACL enforcement.
     return redirectToDefaultLanding(request, response, claims);
   }

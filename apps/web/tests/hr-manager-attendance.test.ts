@@ -115,7 +115,7 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
   );
   assert.match(
     hrActionsSource,
-    /supabase\.rpc\(\s*"admin_force_close_attendance"/,
+    /supabase\.rpc\(\s*"force_close_stale_attendance"/,
     "Force-close action should use the guarded stale attendance RPC",
   );
   assert.doesNotMatch(
@@ -145,7 +145,7 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
   }
 });
 
-test("branch manager HR reads survive owner-only personnel RLS", () => {
+test("branch manager attendance and leave reviews remain branch-scoped", () => {
   assert.match(
     hrActionsSource,
     /const attendanceClient =\s*claims\.user_role === "branch_manager" \? createServiceClient\(\) : supabase;/,
@@ -158,17 +158,12 @@ test("branch manager HR reads survive owner-only personnel RLS", () => {
   );
   assert.match(
     leaveRequestActionsSource,
-    /import \{ createServiceClient \} from "@comtammatu\/database\/supabase\/service";/,
-    "Leave review actions should have an explicit service client for branch-manager reads",
+    /const REVIEW_ROLES: readonly StaffRole\[\] = \["owner", "branch_manager"\]/,
+    "Leave review actions must include the branch operator role",
   );
-  assert.match(
+  assert.doesNotMatch(
     leaveRequestActionsSource,
-    /const leaveClient =\s*claims\.user_role === "branch_manager" \? createServiceClient\(\) : supabase;/,
-    "Branch manager leave reads should use a service client after action-level branch authorization",
-  );
-  assert.match(
-    leaveRequestActionsSource,
-    /await leaveClient\s*\.from\("leave_requests"\)[\s\S]*employees \(/,
-    "Leave review reads embed employees through the branch-gated service client",
+    /createServiceClient/,
+    "Leave reviews must stay on the authenticated RLS/PBAC client",
   );
 });

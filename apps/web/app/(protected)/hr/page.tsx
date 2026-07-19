@@ -28,7 +28,7 @@ export default async function HrPage() {
   const branches = (branchesResult.data ?? []) as BranchOption[];
   const positionOptions = (positionsResult.data ?? []).flatMap((position) => {
     const role = staffRoleFromPositionCode(position.code);
-    if (role === "owner" || role === "unassigned" || position.code === "waiter") {
+    if (role === "owner" || role === "unassigned") {
       return [];
     }
     return [{ value: position.code, label: position.label_vi ?? position.code }];

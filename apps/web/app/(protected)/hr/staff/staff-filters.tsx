@@ -37,8 +37,8 @@ export function StaffFilters({
   return (
     <div className="flex flex-wrap gap-3">
       <Select
-        value={searchParams.get("role") ?? "all"}
-        onValueChange={(v) => updateFilter("role", v)}
+        value={searchParams.get("position") ?? "all"}
+        onValueChange={(v) => updateFilter("position", v)}
       >
         <SelectTrigger className="w-45">
           <SelectValue placeholder={HR_VI.allRoles} />

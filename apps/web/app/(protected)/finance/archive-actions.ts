@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Admin actions for HĐĐT archive:
+ * Owner actions for HĐĐT archive:
  *   - getArchiveDownloadUrl(invoiceId, kind) — mint 5-min signed URL
  *     for /finance/invoices "Tải PDF/XML" buttons. Gate: finance:view.
  *
@@ -97,4 +97,3 @@ export async function getArchiveDownloadUrl(
     },
   };
 }
-

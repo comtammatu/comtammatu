@@ -20,7 +20,6 @@ interface OperationsPageProps {
     branchId?: string | string[];
     startDate?: string | string[];
     endDate?: string | string[];
-    create?: string | string[];
   }>;
 }
 
@@ -41,7 +40,7 @@ export default async function OperationsPage({
 
   const showProcurement =
     isOwner ||
-    (canAccess(claims.user_role, "inventory_procurement") &&
+    (canAccess(claims.user_role, "branch_stock") &&
       hasProcurementRead);
 
   // Compute allowed tabs based on permissions

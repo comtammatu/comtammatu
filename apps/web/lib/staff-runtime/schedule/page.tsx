@@ -20,16 +20,16 @@ const EMPTY_SCHEDULE: ScheduleMonthData = {
 };
 
 type StaffSchedulePageContentProps = {
-  leaveHref?: string;
-  profileHref?: string;
+  leaveHref: string;
+  profileHref: string;
   plane?: SchedulePlane;
 };
 
 export async function StaffSchedulePageContent({
-  leaveHref = "/br",
+  leaveHref,
   profileHref,
   plane = "employee",
-}: StaffSchedulePageContentProps = {}) {
+}: StaffSchedulePageContentProps) {
   const ctx = await getEmployeeContext();
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
 
@@ -71,4 +71,3 @@ export async function StaffSchedulePageContent({
     </PageShell>
   );
 }
-

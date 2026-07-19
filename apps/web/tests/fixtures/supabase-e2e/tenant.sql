@@ -46,7 +46,6 @@ VALUES (
   jsonb_build_object(
     'provider', 'email',
     'providers', jsonb_build_array('email'),
-    'role', 'owner',
     'full_name', 'Owner (keeper)'
   ),
   jsonb_build_object('full_name', 'Owner (keeper)'),
@@ -101,6 +100,7 @@ CROSS JOIN (VALUES
   ('kitchen_helper',    'Phụ bếp',               'Kitchen Helper'),
   ('grill_counter',     'Quầy nướng',            'Grill Counter'),
   ('cleaner',           'Tạp vụ',                'Cleaner'),
+  ('guard',             'Bảo vệ',                'Guard'),
   ('cashier',           'Thu ngân (kiêm phục vụ)','Cashier / Service')
 ) AS v(code, label_vi, label_en)
 WHERE t.slug = 'comtammatu'
@@ -202,6 +202,62 @@ VALUES
   ('supplier_return:read','inventory_procurement','Xem phiếu trả hàng nhà cung cấp','either')
 ON CONFLICT (key) DO NOTHING;
 
+UPDATE public.permission_keys
+SET is_delegable_to_staff = key = ANY (ARRAY[
+  'dashboard:view',
+  'hr:approve_checkout',
+  'hr:approve_leave_request',
+  'hr:request_leave',
+  'hr:view_employee',
+  'inventory:adjust_approve',
+  'inventory:count_approve',
+  'inventory:count_assign',
+  'inventory:grn_express_extend',
+  'inventory:item_review_override_set',
+  'inventory:production_confirm',
+  'inventory:production_create',
+  'inventory:read',
+  'inventory:stocktake_complete',
+  'inventory:stocktake_create',
+  'inventory:stocktake_recount',
+  'inventory:transfer_create',
+  'inventory:transfer_receive',
+  'inventory:waste_approve',
+  'inventory:write',
+  'inventory:writeoff',
+  'kds:mark_ready',
+  'kds:recall',
+  'kds:use',
+  'menu:read',
+  'orders:read',
+  'orders:void',
+  'orders:write',
+  'pos:apply_discount',
+  'pos:close_shift',
+  'pos:close_shift_variance_override',
+  'pos:confirm_payment',
+  'pos:open_cashbox',
+  'pos:print',
+  'pos:reprint_receipt',
+  'pos:send_kitchen',
+  'pos:use',
+  'pos:void_order',
+  'printer:manage',
+  'procurement:grn_confirm',
+  'procurement:grn_create',
+  'procurement:override_code_rotate',
+  'procurement:price_list_read',
+  'procurement:read',
+  'procurement:supplier_manage',
+  'reports:export',
+  'reports:view_branch',
+  'settings:branch',
+  'staff:view',
+  'supplier_return:confirm',
+  'supplier_return:create',
+  'supplier_return:read'
+]::text[]);
+
 -- 5) Role templates (mirrored from prod permission_keys; one per position_code).
 INSERT INTO public.role_templates (tenant_id, name, position_code, permission_keys, is_system)
 SELECT t.id, v.name, v.position_code, v.permission_keys::text[], true
@@ -209,8 +265,12 @@ FROM public.tenants t
 CROSS JOIN (VALUES
   ('cashier', 'cashier', ARRAY['hr:request_leave','orders:read','orders:void','orders:write','pos:close_shift','pos:confirm_payment','pos:open_cashbox','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use','pos:void_order']),
   ('chef', 'chef', ARRAY['hr:request_leave','kds:mark_ready','kds:use']),
-  ('kitchen_helper', 'kitchen_helper', ARRAY['hr:request_leave','kds:use']),
-  ('branch_manager', 'branch_manager', ARRAY['dashboard:view','hr:approve_leave_request','hr:approve_checkout','hr:request_leave','inventory:adjust_approve','inventory:count_approve','inventory:count_assign','inventory:grn_express_extend','inventory:item_review_override_set','inventory:production_confirm','inventory:production_create','inventory:read','inventory:stocktake_complete','inventory:stocktake_create','inventory:stocktake_recount','inventory:transfer_create','inventory:transfer_receive','inventory:waste_approve','inventory:write','inventory:writeoff','kds:mark_ready','kds:recall','kds:use','menu:read','orders:read','orders:refund','orders:void','orders:write','pos:apply_discount','pos:close_shift','pos:close_shift_variance_override','pos:confirm_payment','pos:open_cashbox','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use','pos:void_order','printer:manage','procurement:grn_confirm','procurement:grn_create','procurement:override_code_rotate','procurement:price_list_read','procurement:read','procurement:supplier_manage','reports:export','reports:view_branch','settings:branch','staff:manage','staff:view','supplier_return:confirm','supplier_return:create','supplier_return:read','hr:view_employee']),
+  ('kitchen_counter', 'kitchen_counter', ARRAY['hr:request_leave','kds:mark_ready','kds:use']),
+  ('kitchen_helper', 'kitchen_helper', ARRAY['hr:request_leave','kds:mark_ready','kds:use']),
+  ('grill_counter', 'grill_counter', ARRAY['hr:request_leave','kds:mark_ready','kds:use']),
+  ('cleaner', 'cleaner', ARRAY['hr:request_leave']),
+  ('guard', 'guard', ARRAY['hr:request_leave']),
+  ('branch_manager', 'branch_manager', ARRAY['dashboard:view','hr:approve_checkout','hr:approve_leave_request','hr:request_leave','hr:view_employee','inventory:adjust_approve','inventory:count_approve','inventory:count_assign','inventory:grn_express_extend','inventory:item_review_override_set','inventory:production_confirm','inventory:production_create','inventory:read','inventory:stocktake_complete','inventory:stocktake_create','inventory:stocktake_recount','inventory:transfer_create','inventory:transfer_receive','inventory:waste_approve','inventory:write','inventory:writeoff','kds:mark_ready','kds:recall','kds:use','menu:read','orders:read','orders:void','orders:write','pos:apply_discount','pos:close_shift','pos:close_shift_variance_override','pos:confirm_payment','pos:open_cashbox','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use','pos:void_order','printer:manage','procurement:grn_confirm','procurement:grn_create','procurement:override_code_rotate','procurement:price_list_read','procurement:read','procurement:supplier_manage','reports:export','reports:view_branch','settings:branch','staff:view','supplier_return:confirm','supplier_return:create','supplier_return:read']),
   ('owner', 'owner', ARRAY['accounting:period_reopen','crm:campaign_send','crm:read','crm:write','dashboard:view','finance:ap_pay','finance:expense_approve','finance:expense_create','finance:payroll_approve','finance:payroll_calculate','finance:view','hr:approve_leave_request','hr:approve_checkout','hr:manage_employee','hr:request_leave','hr:view_employee','inventory:adjust_approve','inventory:catalog_review_policy_set','inventory:grn_express_configure','inventory:grn_express_extend','inventory:grn_hardblock_override','inventory:item_review_override_set','inventory:production_confirm','inventory:production_create','inventory:read','inventory:stocktake_complete','inventory:stocktake_create','inventory:stocktake_recount','inventory:stocktake_unblind','inventory:transfer_create','inventory:transfer_receive','inventory:transfer_ship','inventory:units_master','inventory:waste_approve','inventory:waste_bypass_photo','inventory:write','inventory:writeoff','kds:mark_ready','kds:recall','kds:use','menu:manage_category','menu:publish','menu:read','menu:write','orders:read','orders:refund','orders:refund_approve','orders:void','orders:write','pos:apply_discount','pos:close_shift','pos:close_shift_variance_override','pos:confirm_payment','pos:open_cashbox','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use','pos:void_order','printer:manage','procurement:grn_amend','procurement:grn_confirm','procurement:grn_create','procurement:invoice_create','procurement:invoice_match','procurement:override_code_rotate','procurement:po_approve','procurement:po_create','procurement:price_list_read','procurement:price_list_write','procurement:read','procurement:supplier_manage','reports:export','reports:pit_export','reports:view_branch','reports:view_tenant','settings:branch','settings:integrations','settings:tenant','staff:assign_permission','staff:assign_position','staff:manage','staff:view'])
 ) AS v(name, position_code, permission_keys)
 WHERE t.slug = 'comtammatu'
@@ -219,15 +279,31 @@ WHERE t.slug = 'comtammatu'
     WHERE rt.tenant_id = t.id AND rt.position_code = v.position_code
   );
 
+UPDATE public.role_templates template
+SET permission_keys = ARRAY(
+      SELECT permission.key
+      FROM public.permission_keys permission
+      ORDER BY permission.key
+    ),
+    updated_at = now()
+FROM public.tenants tenant
+WHERE template.tenant_id = tenant.id
+  AND tenant.slug = 'comtammatu'
+  AND template.position_code = 'owner';
+
 -- 6) Keeper profile + employee (handle_new_user is disabled, so build manually).
 INSERT INTO public.profiles (id, tenant_id, branch_id, position_id, full_name)
 SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, t.id,
-  (SELECT b.id FROM public.branches b WHERE b.tenant_id = t.id AND b.name = 'Chi nhánh Đất Đỏ' LIMIT 1),
+  NULL::bigint,
   (SELECT po.id FROM public.positions po WHERE po.tenant_id = t.id AND po.code = 'owner' LIMIT 1),
   'Owner (keeper)'
 FROM public.tenants t
 WHERE t.slug = 'comtammatu'
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE
+SET branch_id = NULL,
+    position_id = EXCLUDED.position_id,
+    is_active = true,
+    updated_at = now();
 
 INSERT INTO public.employees (tenant_id, profile_id, employee_code, is_active)
 SELECT t.id, 'a0000002-0000-4000-8000-000000000002'::uuid, 'EMP-KEEPER', true

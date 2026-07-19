@@ -13,9 +13,9 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
-import { buildHubTiles } from "./_lib/hub-tiles";
+import { buildSettingsLinks } from "./_lib/settings-links";
 
-export default async function BranchSettingsHubPage({
+export default async function BranchSettingsPage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
@@ -40,37 +40,37 @@ export default async function BranchSettingsHubPage({
   const copy = messages.settings.branch;
   const role = claims.user_role;
 
-  const tiles = buildHubTiles(branchId, copy, {
+  const links = buildSettingsLinks(branchId, copy, {
     tables: IconArmchair,
     pos: IconDeviceDesktop,
     printers: IconPrinter,
     kds: IconChefHat,
   });
-  const visibleTiles = tiles.filter((tile) => canAccess(role, tile.moduleKey));
-  const hasContent = visibleTiles.length > 0;
+  const visibleLinks = links.filter((link) => canAccess(role, link.moduleKey));
+  const hasContent = visibleLinks.length > 0;
 
   return (
     <BranchOperatorPage
-      title={copy.hubTitle}
-      description={copy.hubDescription(branch.name)}
+      title={copy.landingTitle}
+      description={copy.landingDescription(branch.name)}
     >
       {hasContent ? (
         <BranchOperatorActionSection
           title={copy.setupEssentialsTitle}
           description={copy.setupLaneDescription}
-          links={visibleTiles.map((tile) => ({
-            key: `${tile.moduleKey}-${tile.href}`,
-            href: tile.href,
-            icon: tile.icon,
-            title: tile.title,
-            description: tile.description,
+          links={visibleLinks.map((link) => ({
+            key: `${link.moduleKey}-${link.href}`,
+            href: link.href,
+            icon: link.icon,
+            title: link.title,
+            description: link.description,
           }))}
         />
       ) : (
         <AppEmptyState
           mode="no-access"
-          title={copy.hubEmptyTitle}
-          description={copy.hubEmptyDescription}
+          title={copy.landingEmptyTitle}
+          description={copy.landingEmptyDescription}
         />
       )}
     </BranchOperatorPage>

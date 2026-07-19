@@ -174,9 +174,10 @@ test("employee task UI renders inventory count as a count link, not a checkbox",
   );
   assert.match(
     employeeTasksClientSource,
-    /countHref = "\/br"/,
-    "Inventory count task should default to Branch Hub when no route override is supplied",
+    /countHref: string;/,
+    "Inventory count task should require its canonical Branch route",
   );
+  assert.doesNotMatch(employeeTasksClientSource, /countHref = "\/br"/);
   assert.match(
     employeeTasksClientSource,
     /render=\{<Link href=\{countHref\} \/>\}[\s\S]*homeCopy\.countCta/,

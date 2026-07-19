@@ -76,7 +76,7 @@ interface CalendarCell {
 interface ScheduleClientProps {
   initialData: ScheduleMonthData;
   initialMonthStart: string;
-  leaveHref?: string;
+  leaveHref: string;
   monthlySalary?: number;
   plane?: SchedulePlane;
 }
@@ -588,7 +588,7 @@ function SelectedDayDetail({
 export function ScheduleClient({
   initialData,
   initialMonthStart,
-  leaveHref = "/br",
+  leaveHref,
   monthlySalary = 0,
   plane = "employee",
 }: ScheduleClientProps) {

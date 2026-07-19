@@ -111,7 +111,7 @@ export async function loadInventoryDashboardData(
   // role/permission map already disqualifies the user.
   const isOwner = claims.user_role === "owner";
   const procurementSyncOk =
-    isOwner || canAccess(claims.user_role, "inventory_procurement");
+    isOwner || canAccess(claims.user_role, "branch_stock");
   const productionSyncOk =
     isOwner || canAccessProductionSurface(claims.user_role);
 

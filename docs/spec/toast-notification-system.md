@@ -6,7 +6,7 @@
 
 - Surface: all authenticated web surfaces plus operational POS/KDS surfaces.
 - Primary user job: know whether the current action succeeded, failed, needs retry, or created follow-up work.
-- Route family: `/admin/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]/shift/*`, `/inventory/*`, `/notifications`.
+- Route family: `/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]/shift/*`, `/inventory/*`, `/notifications`.
 - Change type: behavior and UX contract. Runtime code should follow this contract before adding new notification producers.
 - Primitives: `Sonner`, `Button`, `Popover`, `Card`, `ScrollArea`, `Badge`, `Empty`, `Item`, `Tooltip`, and route shells from Má Tư DS primitives.
 
@@ -120,7 +120,7 @@ Out of scope for the current contract:
 | GRN price variance needs approval             | Yes for submitter                         | Yes for approver role                            | Optional                             |
 | Stock low recurring alert                     | No unless user triggered check            | Yes with dedup key                               | Optional                             |
 | KDS ticket received                           | Usually no toast if visible in live queue | Optional only for cross-station handoff          | No                                   |
-| Print job retry failed                        | Error toast for operator                  | Yes for settings/admin if repeated               | Optional                             |
+| Print job retry failed                        | Error toast for operator                  | Yes for settings/ if repeated               | Optional                             |
 
 ## Severity Contract
 
@@ -356,7 +356,7 @@ UI rules:
 
 - Toasts are allowed for payment, order creation, print, session open/close, and recoverable cashier errors.
 - Do not show global notification chrome that competes with cart/payment work.
-- Durable notifications are for manager/admin follow-up, not cashier confirmation.
+- Durable notifications are for manager/ follow-up, not cashier confirmation.
 
 ### KDS
 
@@ -365,10 +365,10 @@ UI rules:
 - Avoid creating notification rows for every ticket movement unless another station/role needs handoff.
 - New-ticket attention sound/voice is operational audio (`docs/spec/operational-audio-alerts.md`), not a durable notification.
 
-### Admin
+### Owner
 
 - Full notification feed and badge/entry point are appropriate.
-- Admin notifications should link to review queues, settings, audit, finance, staff, or inventory exception pages.
+- Owner notifications should link to review queues, settings, audit, finance, staff, or inventory exception pages.
 
 ### Inventory
 
@@ -378,7 +378,7 @@ UI rules:
 ### Employee
 
 - Keep notifications task-led and narrow.
-- Do not turn employee notification feed into an admin dashboard.
+- Do not turn the staff notification feed into an Owner control surface.
 
 ## Producer Patterns
 

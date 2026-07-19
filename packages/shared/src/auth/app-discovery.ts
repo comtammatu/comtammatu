@@ -1,7 +1,7 @@
 import type { StaffRole } from "./types";
 import { canAccess, MODULE_ACL, type ModuleKey } from "./module-acl";
 import {
-  ADMIN_NAV_GROUPS,
+  OWNER_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
   BRANCH_OPERATION_ITEMS,
   type BranchScopedNavItemConfig,
@@ -9,7 +9,7 @@ import {
 import { NAV_GROUP_LABELS_VI } from "../labels";
 
 export type AppDiscoverySurface =
-  | "admin_dashboard"
+  | "owner"
   | "branch_management"
   | "branch_operation";
 
@@ -77,22 +77,22 @@ function resolveBlockedLink(
   };
 }
 
-export function resolveAdminDiscoveryGroups(
+export function resolveOwnerDiscoveryGroups(
   role: StaffRole,
 ): DiscoveredAppGroup[] {
-  if (!canAccess(role, "admin_dashboard")) {
+  if (!canAccess(role, "owner")) {
     return [];
   }
 
-  return ADMIN_NAV_GROUPS.map((group) => ({
+  return OWNER_NAV_GROUPS.map((group) => ({
     title: group.title,
-    surface: "admin_dashboard" as const,
+    surface: "owner" as const,
     items: group.items
       .filter((item) => canAccess(role, item.moduleKey))
       .map((item) =>
         resolveAvailableLink(
           item,
-          "admin_dashboard",
+          "owner",
           MODULE_ACL[item.moduleKey].path,
         ),
       ),
@@ -195,7 +195,7 @@ export function resolveDiscoveredAppGroups(
   );
 
   return [
-    ...resolveAdminDiscoveryGroups(role),
+    ...resolveOwnerDiscoveryGroups(role),
     branchManagementGroup,
     branchOperationGroup,
   ].filter((group): group is DiscoveredAppGroup => group != null);

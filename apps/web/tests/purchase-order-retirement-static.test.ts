@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("purchase orders have no Branch or Office daily-use surface", () => {
+test("purchase orders have no Branch or Owner App Router surface", () => {
   const operations = read(
     "apps/web/app/(protected)/inventory/operations/page.tsx",
   );
@@ -31,7 +31,7 @@ test("purchase orders have no Branch or Office daily-use surface", () => {
     "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx",
     "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx",
   ]) {
-    assert.match(read(path), /redirect\("\/inventory\/grn/);
+    assert.equal(existsSync(resolve(repoRoot, path)), false);
   }
 });
 

@@ -38,8 +38,8 @@ const qcSettingsSource = readFileSync(
   "app/(protected)/inventory/settings/qc/qc-settings-client.tsx",
   "utf8",
 );
-const adminDashboardBottomNavSource = readFileSync(
-  "app/components/admin-dashboard-bottom-nav.tsx",
+const ownerBottomNavSource = readFileSync(
+  "app/components/owner-bottom-nav.tsx",
   "utf8",
 );
 
@@ -142,7 +142,7 @@ test("inventory nav click targets preserve branch URL scope", () => {
   assert.equal(stockItem?.linkHref, "/inventory/stock?branchId=3");
   assert.match(appShellSource, /href=\{subItem\.linkHref \?\? subItem\.href\}/);
   assert.match(
-    adminDashboardBottomNavSource,
+    ownerBottomNavSource,
     /href: item\.linkHref \?\? item\.href/,
   );
   assert.equal(withInventoryBranchNavScope(groups, null), groups);
@@ -165,11 +165,11 @@ test("owner inventory nav excludes /inventory/drafts (folded into GRN list draft
   assert.equal(
     visible.has("/inventory/drafts"),
     false,
-    "GRN drafts are a tab on /inventory/grn, not a separate nav entry — /inventory/drafts redirects there",
+    "GRN drafts are part of the canonical GRN workflow, not a separate route",
   );
 });
 
-test("Admin Dashboard inventory nav keeps transfer routes under Giao dịch kho", () => {
+test("Owner surface inventory nav keeps transfer routes under Giao dịch kho", () => {
   const groups = resolveInventoryNav({
     userRole: "owner",
     showProcurement: true,
@@ -189,7 +189,7 @@ test("Admin Dashboard inventory nav keeps transfer routes under Giao dịch kho"
     assert.equal(
       visible.has(href),
       true,
-      `Admin Dashboard inventory nav must advertise ${href} as an oversight entry — additive to the branch operator door at /br/[id]/stock/*`,
+      `Owner surface inventory nav must advertise ${href} as an oversight entry — additive to the branch operator door at /br/[id]/stock/*`,
     );
   }
 

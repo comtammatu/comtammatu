@@ -718,7 +718,7 @@ chốt** theo văn bản xử phạt hiện hành (không hardcode mức trong a
 
 ---
 
-## 7. Cron + Admin manual trigger flow
+## 7. Cron + Owner manual trigger flow
 
 ### 7.1 Cron route
 
@@ -744,7 +744,7 @@ Response shape:
 }
 ```
 
-### 7.2 Admin manual trigger
+### 7.2 Owner manual trigger
 
 UI: `/finance/summary` (`apps/web/app/(protected)/finance/summary/page.tsx`). Server actions: `apps/web/app/(protected)/finance/summary-invoice-actions.ts`.
 

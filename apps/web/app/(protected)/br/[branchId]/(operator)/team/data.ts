@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  staffRoleFromPositionCode,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import {
   addVNDateDays,
   getVNDateString,
@@ -57,6 +61,7 @@ export interface TeamBoardRow {
   employeeCode: string | null;
   fullName: string;
   positionLabel: string | null;
+  positionRole: StaffRole | "unassigned";
   shifts: TeamBoardShiftAttendance[];
   countStatus: TeamBoardCountStatus;
   onApprovedLeave: boolean;
@@ -67,6 +72,7 @@ interface EmployeeMeta {
   employeeCode: string | null;
   fullName: string;
   positionLabel: string | null;
+  positionRole: StaffRole | "unassigned";
   effectiveChecklistTemplateId: number | null;
 }
 
@@ -129,7 +135,7 @@ export const fetchTeamBoard = withAction(
             id, employee_code, is_active, default_checklist_template_id,
             profiles!inner (
               full_name, branch_id,
-              positions ( label_vi, default_checklist_template_id )
+              positions ( code, label_vi, default_checklist_template_id )
             )
           `,
         )
@@ -147,7 +153,7 @@ export const fetchTeamBoard = withAction(
               employee_code, default_checklist_template_id,
               profiles (
                 full_name,
-                positions ( label_vi, default_checklist_template_id )
+                positions ( code, label_vi, default_checklist_template_id )
               )
             ),
             attendance_checklist_items ( phase, is_required, is_done )
@@ -259,6 +265,9 @@ export const fetchTeamBoard = withAction(
         fullName: stringField(row.profiles, "full_name") ?? "Nhân viên",
         positionLabel:
           typeof position?.label_vi === "string" ? position.label_vi : null,
+        positionRole: staffRoleFromPositionCode(
+          typeof position?.code === "string" ? position.code : null,
+        ),
         effectiveChecklistTemplateId:
           row.default_checklist_template_id ?? positionTemplateId,
       });
@@ -312,6 +321,9 @@ export const fetchTeamBoard = withAction(
           fullName: stringField(profile, "full_name") ?? "Nhân viên",
           positionLabel:
             typeof position?.label_vi === "string" ? position.label_vi : null,
+          positionRole: staffRoleFromPositionCode(
+            typeof position?.code === "string" ? position.code : null,
+          ),
           effectiveChecklistTemplateId:
             (typeof employee?.default_checklist_template_id === "number"
               ? employee.default_checklist_template_id
@@ -372,6 +384,7 @@ export const fetchTeamBoard = withAction(
           employeeCode: meta.employeeCode,
           fullName: meta.fullName,
           positionLabel: meta.positionLabel,
+          positionRole: meta.positionRole,
           shifts: shiftsByEmployee.get(employeeId) ?? [],
           countStatus: leaveEmployeeIds.has(employeeId)
             ? "not_assigned"

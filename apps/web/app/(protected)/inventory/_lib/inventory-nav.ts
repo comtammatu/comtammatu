@@ -80,7 +80,7 @@ export function resolveInventoryNav({
     title: "1 · Kiểm soát tồn",
     items: [
       // Cross-branch oversight entries (D061), additive to the branch
-      // operator plane at /br/[id]/stock/* — admin-dashboard=oversight, branch=floor.
+      // operator plane at /br/[id]/stock/* — owner=oversight, branch=floor.
       {
         href: "/inventory/stock",
         label: tNav("stock", "navigation"),

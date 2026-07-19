@@ -11,7 +11,7 @@ HR owner position, and canonical owner auth identity.
 
 ## Context
 
-The H3a security audit (2026-05-07) closed the silent-demote vector in `has_permission()` owner-bypass by enforcing `profiles.position_id NOT NULL` with FK `ON DELETE RESTRICT` and adding defensive guards in `handle_new_user` + `admin_update_profile`. After H3a, a profile cannot reach a NULL `position_id` state via any code path.
+The H3a security audit (2026-05-07) closed the silent-demote vector in `has_permission()` owner-bypass by enforcing `profiles.position_id NOT NULL` with FK `ON DELETE RESTRICT` and adding defensive guards in `handle_new_user` and the canonical staff assignment RPC. After H3a, a profile cannot reach a NULL `position_id` state via any code path.
 
 The rejected alternative was to add `tenants.owner_user_id UUID` and immediately extend `has_permission()` with a second OR branch (defense-in-depth dual source). The intent was "make owner-bypass robust against position_id NULL" — but H3a already closed that vector.
 
@@ -29,11 +29,11 @@ Three concepts were conflated in original code:
 2. **Do not update `has_permission()` / `_auth_is_owner()` / `has_permission_any()`** to add a second OR branch without a new owner-gated decision. No functional regression to fix — H3a sufficient.
 3. **Three concepts kept separate** with clear semantics:
 
-| Column                   | Type                              | Purpose                          | Owner-bypass?        |
-| ------------------------ | --------------------------------- | -------------------------------- | -------------------- |
-| `tenants.representative` | TEXT                              | HKD owner / registered representative name | ❌ Never             |
-| `positions.code='owner'` | (lookup via profiles.position_id) | HR label, JWT user_role source   | ✅ Currently         |
-| `tenants.owner_user_id`  | UUID FK auth.users                | Canonical auth identity column   | ❌ Not used by current RLS |
+| Column                   | Type                              | Purpose                                    | Owner-bypass?              |
+| ------------------------ | --------------------------------- | ------------------------------------------ | -------------------------- |
+| `tenants.representative` | TEXT                              | HKD owner / registered representative name | ❌ Never                   |
+| `positions.code='owner'` | (lookup via profiles.position_id) | HR label, JWT user_role source             | ✅ Currently               |
+| `tenants.owner_user_id`  | UUID FK auth.users                | Canonical auth identity column             | ❌ Not used by current RLS |
 
 ## Why minimum-regret over full dual-source
 
@@ -112,7 +112,7 @@ UPDATE tenants t
 ## Future work (NOT in this ADR)
 
 - **`transfer_ownership(p_new_user_id UUID)` RPC:** atomic UPDATE + audit log + permission gate (only current owner can transfer).
-- **UI surface:** `/admin/settings/general` ownership-transfer flow.
+- **UI surface:** `/settings/general` ownership-transfer flow.
 - **has_permission dual-source flip:** if second silent-demote incident observed, single PR adds OR branch using already-populated column.
 - **Tenant-scope CHECK trigger:** `tenants.owner_user_id` should reference profile in same tenant (Postgres FK can't express; needs trigger). Defer until transfer_ownership RPC ships.
 

@@ -123,8 +123,7 @@ export const finance = {
     defaultPageTitle: "Tài chính",
     crumbLabel: "Vận hành · Tài chính",
     description:
-      "Theo dõi tiền đã thu, doanh thu ròng, giá trị tồn kho và chi vận hành.",
-    admin: "Quản trị",
+      "Theo dõi tiền đã thu, doanh thu ròng, tồn kho, chi vận hành và lãi gộp.",
   },
   page: {
     eyebrow: "Báo cáo vận hành",

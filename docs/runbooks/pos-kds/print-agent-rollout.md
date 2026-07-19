@@ -17,11 +17,11 @@ Complete all items before opening the branch for the day.
 ### Database (tenant admin)
 
 - [ ] Branch exists and is active
-- [ ] `/admin/settings/printers` — 3 printer rows (`receipt` / `kitchen_1` / `kitchen_2`),
+- [ ] `/settings/printers` — 3 printer rows (`receipt` / `kitchen_1` / `kitchen_2`),
       all `is_active = true`
 - [ ] `lan_host` + `lan_port` (default 9100) filled for every printer; reachable
       from the POS PC subnet (`nc <host> 9100` to verify)
-- [ ] `/admin/settings/printers` — each branch kitchen printer has the right
+- [ ] `/settings/printers` — each branch kitchen printer has the right
       print types (`kitchen_ticket`, `cancel_ticket`) and menu categories assigned.
       Categories not assigned to a branch printer are not included in kitchen tickets.
 - [ ] Cashier accounts have `pos:send_kitchen` for POS order dispatch; chef
@@ -81,7 +81,7 @@ Complete all items before opening the branch for the day.
 5. Close the order → receipt prints.
 6. Power off the kitchen printer. Create a new order, then click **Hoàn thành**
    on KDS for one routed item.
-7. Open `/admin/settings/printers/jobs` → the job is in `failed` with a
+7. Open `/settings/printers/jobs` → the job is in `failed` with a
    `connect ECONNREFUSED` or `timed out after 5000ms` message.
 8. Power the printer back on, click **Thử lại** → job transitions to `printed`
    within 3 seconds; `retry_count = 1` in the monitor table.
@@ -91,7 +91,7 @@ Document completion: tick this checklist, sign, file with branch opening checkli
 ## 1. Daily operational checks (shift open)
 
 - Open POS → header shows green **Máy in: online**.
-- Open `/admin/settings/printers/jobs` → KPI **Agent online: 1 / 1**, no
+- Open `/settings/printers/jobs` → KPI **Agent online: 1 / 1**, no
   `failed` rows from last 24h.
 - If red or numbers don't line up → follow §3 troubleshooting BEFORE opening shift.
 
@@ -123,14 +123,14 @@ remaining active items creates a separate kitchen ticket.
 
 ### 3.2 Ticket does not print
 
-1. Open `/admin/settings/printers/jobs`, filter `status = failed`.
+1. Open `/settings/printers/jobs`, filter `status = failed`.
 2. Read the `last_error`:
    - `connect ECONNREFUSED <host>:9100` → printer unreachable; check PoE/power
      and LAN cable.
    - `printer <host>:<port> timed out after 5000ms` → printer reachable on layer
      3 but not accepting raw socket; check it's not paused/offline on its panel.
    - `printer <id> not in cache / inactive` → someone flipped `is_active=false`;
-     re-enable at `/admin/settings/printers` and wait up to 5 minutes OR restart
+     re-enable at `/settings/printers` and wait up to 5 minutes OR restart
      the service for instant refresh.
 3. Fix the hardware, then click **Thử lại** on each failed job.
 
@@ -144,7 +144,7 @@ No manual action required.
 
 Should not happen because of `UNIQUE(idempotency_key)`. If it does:
 
-1. Inspect both rows in `/admin/settings/printers/jobs`.
+1. Inspect both rows in `/settings/printers/jobs`.
 2. If the second row has a different `idempotency_key`, the duplicate came from
    an extra click that triggered a new `send_seq` — this is expected user
    behaviour, not a bug.
@@ -209,7 +209,7 @@ Go criteria for fleet rollout:
 
 - Agent source: [apps/print-agent/README.md](../../../apps/print-agent/README.md)
 - Install script: [apps/print-agent/scripts/install-service.ps1](../../../apps/print-agent/scripts/install-service.ps1)
-- Admin monitor: `/admin/settings/printers/jobs`
+- Owner monitor: `/settings/printers/jobs`
 - DB schema: `supabase/migrations/20260717151345_baseline.sql` (print_jobs,
   printer_agents, v_print_agent_fleet, enqueue/completion RPCs) +
   `supabase/migrations/20260717151346_fold_managed_surfaces.sql`

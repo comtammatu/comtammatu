@@ -21,7 +21,7 @@ import { FormattedNumberInput } from "@/components/form";
 import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { TriangleAlert as IconAlertTriangle } from "lucide-react";
-import { EmployeePortalBackControl } from "../employee-portal-back-control";
+import { BranchRuntimeBackControl } from "../branch-runtime-back-control";
 import { openPosSession } from "./actions";
 
 interface PosTerminal {
@@ -77,7 +77,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
 
   return (
     <div className="relative flex flex-1 flex-col overflow-y-auto p-4">
-      <EmployeePortalBackControl
+      <BranchRuntimeBackControl
         branchId={branchId}
         className="z-10 mb-3 self-start"
       />

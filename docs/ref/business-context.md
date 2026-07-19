@@ -121,7 +121,7 @@ Cashier (POS/service) → KDS (realtime) → Chef bumps → Cashier pays → com
 owner, branch_manager, cashier, chef, branch_staff
 ```
 
-Nguồn chuẩn: `ACCESS_BUCKETS` trong `packages/shared/src/auth/types.ts`.
+Nguồn chuẩn: `STAFF_ROLES` trong `packages/shared/src/auth/types.ts`.
 
 ### Phương thức thanh toán
 

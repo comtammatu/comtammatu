@@ -28,7 +28,7 @@
 | Loại       | EMVCo/NAPAS bank-transfer payload                            |
 | Generation | Sinh payload cục bộ trong provider; không gọi VietQR image API |
 | Settlement | SePay evidence webhook hoặc cashier xác nhận theo quyền      |
-| Cấu hình   | Tài khoản nhận tiền sống trong Admin settings                |
+| Cấu hình   | Tài khoản nhận tiền sống trong Owner settings                |
 
 **Cách hoạt động**: Mỗi đơn có mã chuyển khoản cố định trong
 `orders.payment_code`: `<configured prefix> + space + 12 ký tự chữ/số`. Phiếu
@@ -51,7 +51,7 @@ SePay đẩy evidence webhook, hoặc cashier xác nhận theo quyền khi cần
 - Idempotency: lưu webhook_events(provider='sepay', request_id=payload.id) trước khi chốt payment
 - Match payment: scan `content`, `description` và `code`, rồi chọn candidate hợp
   lệ dài nhất; mã `DH...` chỉ được giữ để đọc legacy evidence
-- Validate: transferType='in', số tiền khớp đơn, tài khoản nhận khớp cấu hình VietQR trong Admin
+- Validate: transferType='in', số tiền khớp đơn, tài khoản nhận khớp cấu hình VietQR trong Owner
 ```
 
 ---
@@ -188,7 +188,7 @@ Hệ thống → Export báo cáo thuế GTGT theo tháng (tổng đầu ra / đ
 ```bash
 # Payment
 SEPAY_WEBHOOK_SECRET=    # Secret Key khi tạo webhook HMAC-SHA256 trên SePay
-# VietQR bank/account/name thiết lập trong Admin > Thanh toán, không đặt ENV.
+# VietQR bank/account/name thiết lập trong Owner > Thanh toán, không đặt ENV.
 
 # HĐĐT
 COMPANY_TAX_CODE=

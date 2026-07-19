@@ -70,10 +70,8 @@ function seedSelections(data: BranchCountAssignmentData) {
 
 export function BranchCountAssignmentsClient({
   data,
-  embeddedInTeam = false,
 }: {
   data: BranchCountAssignmentData;
-  embeddedInTeam?: boolean;
 }) {
   const router = useRouter();
   const basePath = `/br/${data.branchId}/stock/count-assignments`;
@@ -353,9 +351,7 @@ export function BranchCountAssignmentsClient({
     </BranchOperatorPanel>
   );
 
-  const page = embeddedInTeam ? (
-    panel
-  ) : (
+  const page = (
     <BranchOperatorPage
       title={INVENTORY_VI.countAssignTitle}
       description={data.branchName}

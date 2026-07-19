@@ -42,7 +42,7 @@ export function PermissionAuditFilters({
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
-  const copy = messages.admin.staffAudit;
+  const copy = messages.owner.staffAudit;
 
   // `since` is a free-typed date; push on Apply rather than per keystroke.
   const [draftSince, setDraftSince] = useState(value.since ?? "");

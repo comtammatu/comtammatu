@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { OperationalAudioMode } from "@lib/operational-audio";
-import { EmployeePortalBackControl } from "../../employee-portal-back-control";
+import { BranchRuntimeBackControl } from "../../branch-runtime-back-control";
 import { ViewModeToggle } from "./view-mode-toggle";
 import type { KdsViewMode } from "../_hooks/use-kds-view-mode";
 
@@ -72,7 +72,7 @@ export function KdsBoardTopBar({
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2 px-2 py-2 xl:flex-nowrap xl:px-3">
       <div className="flex shrink-0 items-center gap-1.5">
-        <EmployeePortalBackControl
+        <BranchRuntimeBackControl
           branchId={branchId}
           className="h-11 min-h-11 px-3 text-sm"
         />
