@@ -50,7 +50,7 @@ packages/
   print-render/     # Shared receipt/template renderer for web preview + print-agent
   shared/           # Auth (module-acl, permissions, scope), labels, payroll calc, formatters
   security/         # Upstash Redis rate limiting
-  ui/               # Má Tư Design System primitives (`@comtammatu/ui`) + Tailwind 4 token runtime
+  ui/               # Má Tư Design System shared components (`@comtammatu/ui`) + Tailwind 4 token runtime
 supabase/
   migrations/       # SQL migrations (production: file → PR → merge → owner apply)
 docs/

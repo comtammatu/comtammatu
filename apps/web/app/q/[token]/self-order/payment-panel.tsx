@@ -92,11 +92,7 @@ export interface PaymentPanelProps {
 }
 
 type BuyerTaxLookupStatus =
-  | "idle"
-  | "loading"
-  | "found"
-  | "not-found"
-  | "unavailable";
+  "idle" | "loading" | "found" | "not-found" | "unavailable";
 
 function BankAppLauncher({
   accountNo,
@@ -391,10 +387,11 @@ export function PaymentPanel({
             {SELF_ORDER_VI.buyerTaxCode}
           </FieldLabel>
           <Input
+            size="touch"
             ref={buyerTaxCodeRef}
             id="self-order-buyer-tax-code"
             name="buyerTaxCode"
-            className="h-12 font-mono text-base"
+            className="font-mono"
             inputMode="numeric"
             maxLength={14}
             autoComplete="off"
@@ -447,10 +444,10 @@ export function PaymentPanel({
                 {SELF_ORDER_VI.buyerName}
               </FieldLabel>
               <Input
+                size="touch"
                 ref={buyerNameRef}
                 id="self-order-buyer-name"
                 name="buyerName"
-                className="h-12 text-base"
                 autoComplete="name"
                 value={buyerName}
                 disabled={disabled || isPending}
@@ -473,10 +470,10 @@ export function PaymentPanel({
                 {SELF_ORDER_VI.buyerAddress}
               </FieldLabel>
               <Input
+                size="touch"
                 ref={buyerAddressRef}
                 id="self-order-buyer-address"
                 name="buyerAddress"
-                className="h-12 text-base"
                 autoComplete="street-address"
                 value={buyerAddress}
                 disabled={disabled || isPending}
@@ -499,10 +496,10 @@ export function PaymentPanel({
                 {SELF_ORDER_VI.buyerEmail}
               </FieldLabel>
               <Input
+                size="touch"
                 ref={buyerEmailRef}
                 id="self-order-buyer-email"
                 name="buyerEmail"
-                className="h-12 text-base"
                 type="email"
                 autoComplete="email"
                 spellCheck={false}

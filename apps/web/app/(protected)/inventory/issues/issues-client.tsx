@@ -596,14 +596,12 @@ export function IssuesClient({
               {FORM_VI.fromDate}
             </Label>
             <Input
+              size={isOperator ? "touch" : "field"}
               id="recorded-start-date"
               type="date"
               value={recordedStartDate}
               onChange={(event) => setRecordedStartDate(event.target.value)}
-              className={cn(
-                "bg-background",
-                isOperator ? "h-12 w-full" : "h-10 w-40",
-              )}
+              className={cn("bg-background", isOperator ? "w-full" : "w-40")}
             />
           </div>
           <div
@@ -619,14 +617,12 @@ export function IssuesClient({
               {FORM_VI.toDate}
             </Label>
             <Input
+              size={isOperator ? "touch" : "field"}
               id="recorded-end-date"
               type="date"
               value={recordedEndDate}
               onChange={(event) => setRecordedEndDate(event.target.value)}
-              className={cn(
-                "bg-background",
-                isOperator ? "h-12 w-full" : "h-10 w-40",
-              )}
+              className={cn("bg-background", isOperator ? "w-full" : "w-40")}
             />
           </div>
         </>

@@ -17,11 +17,7 @@ import {
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 
 type BranchOperatorTone =
-  | "default"
-  | "success"
-  | "warning"
-  | "info"
-  | "destructive";
+  "default" | "success" | "warning" | "info" | "destructive";
 
 const toneIconClassName = {
   default: "text-muted-foreground",
@@ -584,7 +580,7 @@ function BranchOperatorActionItem({
       variant="outline"
       size={size}
       className={cn(
-        "group/branch-operator-action chrome-tap items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-sm active:scale-[0.97]",
+        "group/branch-operator-action chrome-tap items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-effect-card-hover active:scale-[0.97]",
         presentation === "stations"
           ? "min-h-16 items-center sm:min-h-24 sm:items-start"
           : "min-h-14 lg:items-center",

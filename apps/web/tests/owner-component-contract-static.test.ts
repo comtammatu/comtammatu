@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
@@ -19,6 +20,8 @@ const ROOT_LOADING = "apps/web/app/loading.tsx";
 const DESIGN_SYSTEM = "docs/spec/design-system.md";
 const UI_MODULE = "docs/modules/ui.md";
 const UI_BUTTON = "packages/ui/src/components/button.tsx";
+const UI_INPUT = "packages/ui/src/components/input.tsx";
+const UI_INPUT_GROUP = "packages/ui/src/components/input-group.tsx";
 const UI_SELECT = "packages/ui/src/components/select.tsx";
 const STATUS_BADGE = "apps/web/app/components/status-badge.tsx";
 const SHARED_LABELS = "packages/shared/src/labels/vi.ts";
@@ -151,6 +154,32 @@ test("DataTable renders the toolbar contract it exposes", () => {
   assert.match(surface, /variant\?: "card" \| "inline"/);
 });
 
+test("Input variants own height and InputGroup owns child chrome", () => {
+  const input = read(UI_INPUT);
+  const source = read(UI_INPUT_GROUP);
+
+  assert.match(input, /const inputVariants = cva/);
+  assert.match(input, /default: "h-7"/);
+  assert.match(input, /field: "h-10"/);
+  assert.match(input, /touch: "min-h-12 text-base/);
+  assert.match(input, /data-size=\{size \?\? "default"\}/);
+
+  for (const contract of [
+    "has-[>input:focus-visible]:ring-2",
+    "[&>input]:rounded-none",
+    "[&>input]:border-0",
+    "[&>input]:bg-transparent",
+    "[&>input]:shadow-none",
+    "[&>input]:focus-visible:ring-0",
+  ]) {
+    assert.ok(source.includes(contract), `missing ${contract}`);
+  }
+  assert.match(
+    source,
+    /<Input\s+data-slot="input-group-control"\s+className=\{className\}/,
+  );
+});
+
 test("Batch 1 Owner screens use DataTable instead of raw table/card layout", () => {
   for (const file of [BRANCH_TABLE, PRINT_JOBS, STAFF_AUDIT_TABLE]) {
     const source = read(file);
@@ -241,7 +270,7 @@ test("UI contract guard protects Má Tư outcomes and the Base UI boundary", () 
     );
   }
 
-  assert.match(designSystem, /High-level primitive import governance/);
+  assert.match(designSystem, /High-level shared-component import governance/);
   assert.match(
     designSystem,
     /Shadcn and Web Interface Guidelines are explicit comparison inputs/,
@@ -291,12 +320,13 @@ test("UI component audit command stays wired for route-family drill-down", () =>
 
   for (const marker of [
     "ROUTE_FAMILIES",
-    "PRIMITIVES",
+    "SHARED_COMPONENT_IMPORTS",
     "ADAPTERS",
     "ADAPTER_IMPLEMENTATIONS",
     "APP_ADAPTER_REGISTRY",
     "validateUiComponentRegistry",
     "Component Selection Coverage",
+    "UI Component Guidance",
     "Page Archetype Coverage",
     "parseOptions",
     "transitionAll",
@@ -327,6 +357,7 @@ test("UI component audit command stays wired for route-family drill-down", () =>
     "guardIdExists",
     "Signal Guard Coverage",
     "--family",
+    "--component",
     "--all",
   ]) {
     assert.match(auditScript, new RegExp(marker));
@@ -410,9 +441,7 @@ test("UI component audit command stays wired for route-family drill-down", () =>
     extractGuardIds(
       extractObjectPropertyBody(guardCoverageBody, "pageLocalFormatter"),
     ),
-    extractArrayObjectIds(
-      extractConstArrayBody(uiContract, "formatterGuards"),
-    ),
+    extractArrayObjectIds(extractConstArrayBody(uiContract, "formatterGuards")),
     "pageLocalFormatter guardIds must match formatterGuards",
   );
 
@@ -501,14 +530,14 @@ test("UI contract guard reporting stays reverse-complete", async () => {
   assert.match(fixtureReport.errors.join("\n"), /unclassified guard ids/);
 });
 
-test("UI component registry classifies every primitive and approved adapter", async () => {
+test("UI component registry classifies and explains every shared component and approved adapter", async () => {
   const auditScript = read(UI_AUDIT);
   const uiContract = read(UI_CONTRACT);
   const registrySource = read(UI_COMPONENT_REGISTRY);
   const registryModule = (await import(
     pathToFileURL(resolve(repoRoot, UI_COMPONENT_REGISTRY)).href
   )) as {
-    buildPrimitiveComponentCoverage: (actualFiles: string[]) => {
+    buildSharedComponentCoverage: (actualFiles: string[]) => {
       actual: string[];
       registered: string[];
       unclassified: string[];
@@ -516,8 +545,19 @@ test("UI component registry classifies every primitive and approved adapter", as
       errors: string[];
       total: number;
     };
+    findComponentGuidance: (query: string) => Array<{
+      layer: string;
+      name: string;
+      source: string;
+      classification: string;
+      need: string;
+      use: string;
+      fallback: string;
+      forbidden: string;
+      exemplar: string;
+    }>;
     validateUiComponentRegistry: (root: string) => {
-      primitiveCoverage: {
+      sharedComponentCoverage: {
         actual: string[];
         registered: string[];
         unclassified: string[];
@@ -534,12 +574,12 @@ test("UI component registry classifies every primitive and approved adapter", as
   };
 
   for (const marker of [
-    "PRIMITIVE_COMPONENT_REGISTRY",
+    "SHARED_COMPONENT_REGISTRY",
     "APP_ADAPTER_REGISTRY",
     "DOMAIN_ADAPTER_FAMILIES",
     "adapter-only",
     "workflow-only",
-    "unclassified primitive files",
+    "unclassified shared component files",
     "BranchOperatorPage",
     "EmployeePage",
   ]) {
@@ -551,11 +591,11 @@ test("UI component registry classifies every primitive and approved adapter", as
 
   const report = registryModule.validateUiComponentRegistry(repoRoot);
   assert.deepEqual(report.errors, []);
-  assert.deepEqual(report.primitiveCoverage.unclassified, []);
-  assert.deepEqual(report.primitiveCoverage.stale, []);
+  assert.deepEqual(report.sharedComponentCoverage.unclassified, []);
+  assert.deepEqual(report.sharedComponentCoverage.stale, []);
   assert.deepEqual(
-    report.primitiveCoverage.actual,
-    report.primitiveCoverage.registered,
+    report.sharedComponentCoverage.actual,
+    report.sharedComponentCoverage.registered,
   );
   assert.ok(report.appAdapterCount > 0);
   assert.equal(report.domainFamilyCount, 2);
@@ -573,12 +613,72 @@ test("UI component registry classifies every primitive and approved adapter", as
     assert.ok(report.auditAdapterNames.includes(adapter));
   }
 
-  const fixtureReport = registryModule.buildPrimitiveComponentCoverage([
-    ...report.primitiveCoverage.actual,
+  assert.deepEqual(
+    registryModule.findComponentGuidance("Card").map((entry) => entry.layer),
+    ["shared-component"],
+  );
+  assert.deepEqual(
+    registryModule.findComponentGuidance("KpiCard").map((entry) => entry.layer),
+    ["app-adapter"],
+  );
+  assert.deepEqual(
+    registryModule
+      .findComponentGuidance("InteractiveCard")
+      .map((entry) => entry.layer),
+    ["shared-component"],
+  );
+  assert.ok(!report.auditAdapterNames.includes("InteractiveCard"));
+  assert.deepEqual(
+    registryModule
+      .findComponentGuidance("BranchOperatorPage")
+      .map((entry) => entry.layer),
+    ["domain-adapter"],
+  );
+  assert.deepEqual(
+    registryModule
+      .findComponentGuidance("FormField")
+      .map((entry) => entry.layer),
+    ["app-adapter"],
+  );
+  assert.deepEqual(registryModule.findComponentGuidance("MissingWidget"), []);
+
+  const cardGuidance = spawnSync(
+    process.execPath,
+    [resolve(repoRoot, UI_AUDIT), "--component", "Card"],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+  assert.equal(cardGuidance.status, 0, cardGuidance.stderr);
+  assert.match(cardGuidance.stdout, /# UI Component Guidance/);
+  assert.match(cardGuidance.stdout, /surface framing internals/);
+  assert.match(cardGuidance.stdout, /AppSection, AppLinkCard, KpiCard/);
+
+  const inputGuidance = spawnSync(
+    process.execPath,
+    [resolve(repoRoot, UI_AUDIT), "--component", "Input"],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+  assert.equal(inputGuidance.status, 0, inputGuidance.stderr);
+  assert.match(inputGuidance.stdout, /Live direct-Input census/);
+  assert.match(inputGuidance.stdout, /route-or-surface/);
+  assert.match(inputGuidance.stdout, /Route-local fixed-height allowances/);
+
+  const unknownGuidance = spawnSync(
+    process.execPath,
+    [resolve(repoRoot, UI_AUDIT), "--component", "MissingWidget"],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+  assert.equal(unknownGuidance.status, 1);
+  assert.match(unknownGuidance.stderr, /Unknown UI component or adapter/);
+
+  const fixtureReport = registryModule.buildSharedComponentCoverage([
+    ...report.sharedComponentCoverage.actual,
     "fixture-agent-invented.tsx",
   ]);
   assert.deepEqual(fixtureReport.unclassified, ["fixture-agent-invented.tsx"]);
-  assert.match(fixtureReport.errors.join("\n"), /unclassified primitive files/);
+  assert.match(
+    fixtureReport.errors.join("\n"),
+    /unclassified shared component files/,
+  );
 });
 
 test("HR list surfaces use DataTable and shared status badge domains", () => {

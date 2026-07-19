@@ -2,7 +2,6 @@
 
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
-import { cn } from "@comtammatu/ui";
 import {
   Field,
   FieldDescription,
@@ -61,6 +60,7 @@ export function NumberField<TFieldValues extends FieldValues>({
         {required ? " *" : null}
       </FieldLabel>
       <FormattedNumberInput
+        size="field"
         id={fieldId}
         name={field.name}
         value={value}
@@ -74,7 +74,7 @@ export function NumberField<TFieldValues extends FieldValues>({
         autoFocus={autoFocus}
         aria-invalid={hasError}
         aria-describedby={describedBy}
-        className={cn("h-10", className)}
+        className={className}
       />
       {description ? (
         <FieldDescription id={descriptionId}>{description}</FieldDescription>

@@ -19,13 +19,14 @@ This file owns the Má Tư visual language: semantic tokens, typography, density
 brand, visual states, elevation, and motion recipes. It is the visual source of
 truth; it does not own every behavioral or workflow decision in the UI system.
 
-| Concern | Owner | Role |
-| --- | --- | --- |
-| Visual language | This file + `packages/ui/src/styles/globals.css` | Má Tư tokens and recipes |
-| Primitive behavior | `packages/ui/src/components/*` | Base UI accessibility and interaction behavior |
-| Workflow composition | `docs/spec/page-archetypes.md` + target route | job, state, navigation, responsive IA |
-| Runtime integration | `docs/modules/ui.md` | migration and adapter map |
-| Regression proof | guards, focused tests, browser evidence | verify outcomes, not prose wording |
+| Concern              | Owner                                            | Role                                   |
+| -------------------- | ------------------------------------------------ | -------------------------------------- |
+| Visual language      | This file + `packages/ui/src/styles/globals.css` | Má Tư tokens and recipes               |
+| Headless behavior    | Base UI                                          | accessibility and interaction          |
+| Shared components    | `packages/ui/src/components/*`                   | styled Má Tư component implementations |
+| Workflow composition | `docs/spec/page-archetypes.md` + target route    | job, state, navigation, responsive IA  |
+| Runtime integration  | `docs/modules/ui.md`                             | migration and adapter map              |
+| Regression proof     | guards, focused tests, browser evidence          | verify outcomes, not prose wording     |
 
 When owners disagree, resolve the decision at the concern that owns it. Do not
 copy an exception into a new route and do not create a second visual language.
@@ -33,16 +34,16 @@ copy an exception into a new route and do not create a second visual language.
 ## Decision
 
 The design system is the Com Tam Ma Tu Custom Theme implemented through Má Tư
-primitives in `@comtammatu/ui`. Base UI supplies primitive behavior; lucide,
-Tailwind, and class-variance-authority are implementation dependencies. They do
-not own Má Tư visual decisions.
+shared components in `@comtammatu/ui`. Base UI supplies headless primitive
+behavior; lucide, Tailwind, and class-variance-authority are implementation
+dependencies. They do not own Má Tư visual decisions.
 
 Shadcn and Web Interface Guidelines are explicit comparison inputs. They may
 identify missing component anatomy, accessibility, states, UX, or CSS motion.
 They never create a preset, token source, or visual authority for this repo.
 
 Custom Theme means the established Ma Tu Concept 01 semantic tokens, typography,
-spacing rhythm, component roles, brand primitives, and app surface adapters
+spacing rhythm, component roles, brand components, and app surface adapters
 documented here. It does not mean a route-local theme layer, a new component
 library outside `@comtammatu/ui`, or a parallel visual language.
 
@@ -50,11 +51,11 @@ Active runtime:
 
 - custom theme: Com Tam Ma Tu Custom Theme / Ma Tu Concept 01
 - token source: `packages/ui/src/styles/globals.css`
-- primitive source: `packages/ui/src/components/*`
-- primitive behavior: Base UI
-- primitive dependencies: lucide, Tailwind CSS 4, CVA
+- shared component source: `packages/ui/src/components/*`
+- headless primitive behavior: Base UI
+- component styling dependencies: lucide, Tailwind CSS 4, CVA
 - brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`, `/brand/mascot/be-suon-tuoi-runner.png`, `/brand/mascot/cotlet.png`, `/brand/mascot/cotlet.spritesheet.webp`, `/brand/mascot/cotlet.pet.json`, `/brand/symbols/*.svg`
-- web brand primitive: `apps/web/app/components/brand.tsx`
+- web brand component: `apps/web/app/components/brand.tsx`
 - web app surface adapters: `apps/web/app/components/surface.tsx`
 
 Agents must preserve this decision unless the task explicitly asks to change the design system itself.
@@ -62,8 +63,8 @@ Agents must preserve this decision unless the task explicitly asks to change the
 ## Authority Order
 
 Choose the owner for the decision first, then read the implementation evidence.
-The visual contract selects Má Tư expression; primitive implementation selects
-Base behavior; archetypes and routes select the workflow; tests and browser
+The visual contract selects Má Tư expression; Base UI primitives select headless
+behavior; shared components select styled implementation; archetypes and routes select the workflow; tests and browser
 evidence prove the result. Product copy remains owned by `docs/ref/glossary.md`,
 `packages/shared/src/labels/vi.ts`, and domain dictionaries.
 
@@ -105,7 +106,7 @@ Theme runtime:
   state provider. `setTheme` writes the `matu-theme` cookie (SameSite=Lax,
   1-year max-age). Scope, branch, workflow, and auth state must never use
   browser storage; theme is the only browser-stored UI preference.
-- The single theme toggle is the `ThemeToggle` primitive (`apps/web/app/components/theme-toggle.tsx`)
+- The single theme toggle is the `ThemeToggle` component (`apps/web/app/components/theme-toggle.tsx`)
   mounted in `AppHeader`, the operations PWA toolbar, the employee header, and
   the public self-order guest header (`/q/[token]`).
   Do not add a second theme context, a route-local toggle, or a localStorage
@@ -140,12 +141,12 @@ Approved project utilities:
 - `shadow-effect-*` (popover / dialog / drawer / tooltip / card-hover),
   `bg-effect-scrim`, and `drawer-scrim` are the Má Tư DS depth utilities backed by
   the `--effect-*` token family (see § Elevation). The `--motion-*` / `--ease-*`
-  motion tokens (see § G Motion) are consumed inside `packages/ui` primitives via
+  motion tokens (see § G Motion) are consumed inside `packages/ui` components via
   `duration-[var(--motion-*)]` / `ease-[var(--ease-*)]`. These were
   adopted **into** this contract from the Má Tư Design System; they are therefore the
   current semantic contract, not a "parallel namespace" or "external DS token names"
   per the Forbidden list below.
-- New utilities require a design-system update first; prefer primitive props
+- New utilities require a design-system update first; prefer shared-component props
   or app surface adapters when the pattern is reusable.
 
 Forbidden for new app UI:
@@ -187,7 +188,7 @@ reads consistently across the app:
 
 ### Callout / tint chrome routing
 
-Any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N` tint MUST route through a primitive, not hand-rolled chrome:
+Any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N` tint MUST route through a shared component, not hand-rolled chrome:
 
 - `Alert` (icon + message + action) for actionable alerts.
 - `NoteCallout` (labeled note) for informational notes. The canonical warning callout is `NoteCallout tone="warning"` (`bg-warning/15`, no border).
@@ -215,7 +216,7 @@ Required utility mapping:
 Rules:
 
 - The `geist` package exposes `--font-geist-sans` / `--font-geist-mono`; `next/font/google` exposes `--font-be-vietnam-pro`. `globals.css` binds `--font-sans` to `--font-geist-sans`, `--font-heading` to `--font-be-vietnam-pro`, and `--font-mono` to `--font-geist-mono`. App code consumes only `font-sans` / `font-heading` / `font-mono`.
-- Route/page headings, card titles, dialog titles, sheet titles, section titles, and brand lockup text use `font-heading` unless a Má Tư DS primitive already applies it.
+- Route/page headings, card titles, dialog titles, sheet titles, section titles, and brand lockup text use `font-heading` unless a Má Tư DS shared component already applies it.
 - Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
 - Do not add route-specific `font-family`, custom font variables, or extra font families.
@@ -236,7 +237,7 @@ Rules:
 - Do not add per-route `theme.css` files.
 - Do not create one-off color ramps for a module.
 - Do not scale typography with viewport width.
-- Do not change primitive radius, color, focus, or disabled behavior from a page wrapper.
+- Do not change shared-component radius, color, focus, or disabled behavior from a page wrapper.
 
 If a new token is truly needed, it must be added to `packages/ui/src/styles/globals.css`, documented here, and checked against `tasks/regressions.md`.
 
@@ -252,7 +253,7 @@ A module that needs to deviate must update this contract first, not patch a sing
 | ---------------------------- | ------------------------------------ | ------------------------------------- |
 | Page outer padding (mobile)  | `p-3`                                | Set by `AppPage` density="compact"    |
 | Page outer padding (default) | `p-4`                                | Set by `AppPage` default              |
-| Card inner (default)         | `p-4`                                | Set by `Card` primitive               |
+| Card inner (default)         | `p-4`                                | Set by `Card` shared component        |
 | Card inner (size="sm")       | `p-3`                                | Set by `Card data-size=sm`            |
 | Toolbar inner                | `p-3`                                | Set by `AppToolbar`                   |
 | Section vertical gap         | `gap-4` (default), `gap-3` (compact) | Set by `AppPage`                      |
@@ -325,9 +326,9 @@ keep one semantic H1, a clear hierarchy, and responsive action behavior.
 | Empty-state media                   | `size-8`–`size-12` (via `EmptyMedia variant="icon"`)             |
 | Image / document thumbnail          | `size-12`–`size-16` with `object-cover` (img preview, not glyph) |
 
-`size-7`, `size-9`, `size-11` are NOT allowed in app surfaces. `size-14`, `size-16` are NOT allowed outside `EmptyMedia`, brand lockup, splash imagery, or image/document thumbnails (photo upload preview, supplier doc thumbnail, GRN evidence). Inventory/POS hero glyphs MUST compose `EmptyMedia` or render through a primitive, not free-style `size-12` inside a card.
+`size-7`, `size-9`, `size-11` are NOT allowed in app surfaces. `size-14`, `size-16` are NOT allowed outside `EmptyMedia`, brand lockup, splash imagery, or image/document thumbnails (photo upload preview, supplier doc thumbnail, GRN evidence). Inventory/POS hero glyphs MUST compose `EmptyMedia` or render through a shared component, not free-style `size-12` inside a card.
 
-### D. Height Scale (lock to primitive)
+### D. Height Scale (lock to shared components)
 
 `Button` is the single source of truth for button height. Variants:
 
@@ -349,17 +350,20 @@ keep one semantic H1, a clear hierarchy, and responsive action behavior.
 
 Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<button>`, `<Link>`, or `<Button>` acting as a button. Min-heights `min-h-12`, `min-h-14`, `min-h-16` MUST come from the `touch` / `touch-lg` variants — do not override on a different variant via `className`. Touch CTAs use `min-h-` rather than fixed `h-` so wrapped labels grow vertically without clipping.
 
-If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the primitive. The `tile` (POS table-gate selectable tile) and `icon-touch` (48px icon-only) `Button` sizes, and the `touch` / `touch-lg` sizes on the `Toggle` / `ToggleGroup` cva (POS segmented service-mode control), were added under this rule — consume them via `size=`, never a raw `h-*` / `min-h-*` on the group or item `className`. The `button-height-on-button` gate (below) enforces this for `<Button>`. The bare form-control primitives `Select` (trigger), `Switch`, `Checkbox`, and `RadioGroupItem` expose a `touch` value on their own cva `size` prop (`min-h-12` trigger / enlarged 20px box + ≥44px hit area), added under this same rule for POS/KDS order-flow controls — consume via `size="touch"`, never a raw `h-*` / `size-*` on the control `className`.
+If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the shared component. The `tile` (POS table-gate selectable tile) and `icon-touch` (48px icon-only) `Button` sizes, and the `touch` / `touch-lg` sizes on the `Toggle` / `ToggleGroup` cva (POS segmented service-mode control), were added under this rule — consume them via `size=`, never a raw `h-*` / `min-h-*` on the group or item `className`. The `button-height-on-button` gate (below) enforces this for `<Button>`. The bare form controls `Select` (trigger), `Switch`, `Checkbox`, and `RadioGroupItem` expose a `touch` value on their own cva `size` prop (`min-h-12` trigger / enlarged 20px box + ≥44px hit area), added under this same rule for POS/KDS order-flow controls — consume via `size="touch"`, never a raw `h-*` / `size-*` on the control `className`.
 
-`Input` (the bare primitive) is fixed at `h-7`. Composite form controls rendered through the `apps/web/app/components/form/*` layer use a taller `h-10` so labels, addons, and touch targets sit comfortably — set once in that layer via `Button size="field"` / `SelectTrigger size="field"`, never per page.
+`Input` owns three evidenced sizes: `size="default"` (`h-7`) for compact use, `size="field"` (`h-10`) for structured form helpers, and `size="touch"` (`min-h-12`) for named touch-first native-input workflows. Composite form controls rendered through the `apps/web/app/components/form/*` layer select `field`; route code MUST NOT recreate these sizes with raw height classes.
 
-| Control role                                                | Height | Source                                                                                          |
-| ----------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------- |
-| Bare text / number `Input` primitive                        | `h-7`  | `Input` primitive (`packages/ui`)                                                               |
-| Form text / number field                                    | `h-10` | `form/text-field`, `form/number-field`                                                          |
-| Field-trigger (select, combobox, multi-select, date-picker) | `h-10` | `form/select-field`, `form/combobox*`, `form/multi-select-combobox`, `form/business-date-field` |
+Routing is semantic, not import-count driven: standard RHF text uses `TextField`; localized numeric entry uses the domain number helpers; non-RHF or specialized labeled controls use `FormField` / shared `Field`; search and addon controls use `InputGroup`. Direct `Input` remains valid for native date/month/file workflows, identifiers, and tightly composed inline editors, but it MUST NOT recreate label/error anatomy or border/ring/height ownership in route code.
 
-`h-10` is permitted ONLY on these `form/*` field controls, applied through the shared wrapper. The forbidden fixed heights `h-10` / `h-11` / `h-12` / `h-14` / `h-16` above apply to elements acting as a **button CTA** (`<button>` / `<Link>` / `<Button>` used as an action) — a form-field control that holds input or opens a popover/list is governed by this table, not by the button-height ban. Do not hand-patch a raw `Input` or `SelectTrigger` to `h-10`; route it through the `form/*` wrapper so field height stays single-sourced. Vertical chrome should otherwise be controlled with `Field` / `FieldGroup` spacing, not ad-hoc height overrides.
+| Control role                                                | Height     | Source                                                                                          |
+| ----------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------- |
+| Bare text / number `Input size="default"`                   | `h-7`      | `Input` shared component (`packages/ui`)                                                        |
+| Form text / number field (`Input size="field"`)             | `h-10`     | `form/text-field`, `form/number-field`                                                          |
+| Touch-first native input (`Input size="touch"`)             | `min-h-12` | named operator/public workflows only                                                            |
+| Field-trigger (select, combobox, multi-select, date-picker) | `h-10`     | `form/select-field`, `form/combobox*`, `form/multi-select-combobox`, `form/business-date-field` |
+
+`h-10` form-field height is selected through the shared wrapper/API. The forbidden fixed heights `h-10` / `h-11` / `h-12` / `h-14` / `h-16` above apply to elements acting as a **button CTA** (`<button>` / `<Link>` / `<Button>` used as an action) — a form-field control that holds input or opens a popover/list is governed by this table, not by the button-height ban. Do not hand-patch a raw `Input` or `SelectTrigger`; route it through the semantic size or `form/*` wrapper so field height stays single-sourced. Vertical chrome should otherwise be controlled with `Field` / `FieldGroup` spacing, not ad-hoc height overrides.
 
 ### E. Radius Scale (4 tiers, 4 tokens only)
 
@@ -388,7 +392,7 @@ operational state or slow an operator task. Base UI supplies the behavior beneat
 these recipes.
 
 **Timing and easing.** Prefer Má Tư's shared `--motion-*` / `--ease-*` tokens
-for reusable primitives and repeated feedback. A route may add a distinct timing
+for reusable shared components and repeated feedback. A route may add a distinct timing
 or easing when it has a clear interaction or brand-feedback role and the
 rendered state is reviewed; move the recipe into the visual layer once it is
 reused. Do not add arbitrary timing merely as decoration.
@@ -421,18 +425,19 @@ The system is **border-first**: a resting surface normally separates through
 use a different named recipe when its layered state is clear in the rendered UI
 and does not make a resting data surface look interactive.
 
-| Rung           | Utility                            | Locked role                                                                                                                                                                                  |
-| -------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rest           | border                                 | Resting data surfaces are border-first. Elevation starts when a surface becomes interactive or floats above other content.                                                                  |
-| Hover          | `shadow-effect-card-hover`         | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` + `OperationalBoardCard` (`surface.tsx`). Hairline ring + `0 1px 3px` drop. |
-| Overlay        | `shadow-effect-popover`            | Popover-family floating layers: `popover`, `dropdown-menu`, `select`. Bakes the `--effect-ring-border` hairline + soft drop (replaces the old `shadow-md ring-1 ring-foreground/10`).        |
-| Modal          | `shadow-effect-dialog`             | `dialog` content.                                                                                                                                                                            |
-| Sheet / Drawer | `shadow-effect-drawer`             | `sheet` content and `drawer` panel.                                                                                                                                                           |
-| Tooltip        | `shadow-effect-tooltip`            | `tooltip` content.                                                                                                                                                                           |
-| Toast          | `--effect-toast` (on `.cn-toast`)  | Sonner toasts — `box-shadow: var(--effect-toast)` is applied directly on `.cn-toast` in `globals.css`; there is no separate utility class.                                                   |
-| Sticky CTA     | `shadow-lg`                        | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky bottom-0 chrome-safe-pb` footers).                                                         |
-| Ceiling        | `shadow-xl` / `shadow-2xl`         | **Only** fixed surfaces floating over scrolling content: POS mobile action bar (`shadow-2xl`), KDS focus card / chart tooltip (`shadow-xl`). Nowhere else.                                   |
-| Overlay scrim  | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop = `bg-effect-scrim`; Drawer backdrop = `drawer-scrim` (scrim + `--effect-drawer-blur`).                                                                                |
+| Rung              | Utility                            | Locked role                                                                                                                                                                                  |
+| ----------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rest              | border                             | Resting data surfaces are border-first. Elevation starts when a surface becomes interactive or floats above other content.                                                                   |
+| Glass/chrome rest | `shadow-effect-card-resting`       | Floating translucent chrome only: login glass surfaces and `AppBottomNav`. Never apply it to a resting data `Card`.                                                                          |
+| Hover             | `shadow-effect-card-hover`         | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` + `OperationalBoardCard` (`surface.tsx`). Hairline ring + `0 1px 3px` drop. |
+| Overlay           | `shadow-effect-popover`            | Popover-family floating layers: `popover`, `dropdown-menu`, `select`. Bakes the `--effect-ring-border` hairline + soft drop (replaces the old `shadow-md ring-1 ring-foreground/10`).        |
+| Modal             | `shadow-effect-dialog`             | `dialog` content.                                                                                                                                                                            |
+| Sheet / Drawer    | `shadow-effect-drawer`             | `sheet` content and `drawer` panel.                                                                                                                                                          |
+| Tooltip           | `shadow-effect-tooltip`            | `tooltip` content.                                                                                                                                                                           |
+| Toast             | `--effect-toast` (on `.cn-toast`)  | Sonner toasts — `box-shadow: var(--effect-toast)` is applied directly on `.cn-toast` in `globals.css`; there is no separate utility class.                                                   |
+| Sticky CTA        | `shadow-lg`                        | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky bottom-0 chrome-safe-pb` footers).                                                         |
+| Ceiling           | `shadow-xl` / `shadow-2xl`         | **Only** fixed surfaces floating over scrolling content: POS mobile action bar (`shadow-2xl`), KDS focus card / chart tooltip (`shadow-xl`). Nowhere else.                                   |
+| Overlay scrim     | `bg-effect-scrim` / `drawer-scrim` | Dialog/Sheet backdrop = `bg-effect-scrim`; Drawer backdrop = `drawer-scrim` (scrim + `--effect-drawer-blur`).                                                                                |
 
 **Non-elevation override.** `pos-text-overlay` (`globals.css`, `filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6))`) and `drop-shadow-*` image filters (e.g. the runner mascot) are text/image legibility effects, **not** part of the elevation ladder, and must not be reused as surface shadows.
 
@@ -443,15 +448,16 @@ layering semantics rather than borrowing a heavier role only to add emphasis.
 
 ## Component Authority
 
-The only shared primitive layer is `packages/ui/src/components/*`.
+Base UI is the headless primitive layer. The only shared styled component layer
+is `packages/ui/src/components/*`.
 
-App-level page, section, toolbar, empty-state, and link-card composition is centralized in `apps/web/app/components/surface.tsx`. These exports are adapters around the shared primitives, not a second primitive library.
+App-level page, section, toolbar, empty-state, and link-card composition is centralized in `apps/web/app/components/surface.tsx`. These exports are adapters around the shared components, not a second component library.
 
-Tinted callout chrome routes through a primitive: any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N` tint MUST be an `Alert` (icon + message + action) or a `NoteCallout` (labeled note), never a hand-rolled tinted box. The canonical warning callout is `NoteCallout tone="warning"` (`bg-warning/15`, no border). See § Token Contract → Callout / tint chrome routing and Tint Opacity Scale.
+Tinted callout chrome routes through a shared component: any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N` tint MUST be an `Alert` (icon + message + action) or a `NoteCallout` (labeled note), never a hand-rolled tinted box. The canonical warning callout is `NoteCallout tone="warning"` (`bg-warning/15`, no border). See § Token Contract → Callout / tint chrome routing and Tint Opacity Scale.
 
-Shared layout primitives also exported from `surface.tsx`:
+Shared layout components also exported from `surface.tsx`:
 
-- `KpiRow` — responsive grid (1/2/3 columns) wrapping `KpiCard` metric tiles.
+- `KpiRow` — responsive grid (1/2/3/4 columns) wrapping `KpiCard` metric tiles.
 - `DescriptionList` — `<dl>` term/description pairs for detail-page metadata.
 - `LinkCardGrid` — responsive grid (1/2/3 columns) wrapping `AppLinkCard` entries.
 - `DocumentFormFrame` — page frame for document/line-form workflows (header +
@@ -461,7 +467,7 @@ Shared layout primitives also exported from `surface.tsx`:
 
 ### Card Roles
 
-`Card` is the frame primitive (card-role, `rounded-lg`). `KpiCard` is only for
+`Card` is the shared frame component (card-role, `rounded-lg`). `KpiCard` is only for
 numeric/stat values. `Frame` is the layout-free inset-tier surface
 (`rounded-md border bg-card`, no flex/gap/padding) for a plain bordered box
 whose caller owns its layout and content flow — the delegation target when a box
@@ -470,30 +476,34 @@ card jobs use `AppSection`, `AppLinkCard`, `OperationalBoardCard`,
 `OperationalTile`, `InteractiveCard`, `DataTable.mobileCardRender`, or a
 route-scoped adapter that still renders `Card`.
 
-Default primitive mapping:
+Default component routing:
 
-| Need                              | Use                                                                                                               |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| command/action                    | `Button`, `Toggle`, `ToggleGroup`                                                                                 |
-| state label                       | `Badge`                                                                                                           |
-| framed repeated item              | `Card`                                                                                                            |
-| disclosure                        | `Accordion`                                                                                                       |
-| dense data                        | `Table`                                                                                                           |
-| segmented view                    | `Tabs`                                                                                                            |
-| form input                        | `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Combobox`, `DatePicker`, `Slider`, `TagInput` |
-| dialog flow                       | `Dialog`, `AlertDialog`, `Sheet`, `Drawer`                                                                        |
-| empty/no result/error             | `Empty` or approved wrappers around `Empty`                                                                       |
-| loading                           | `Spinner`, `Skeleton`, `Progress`                                                                                 |
-| list row                          | `Item`, `ItemGroup`                                                                                               |
-| search/filter shell               | `InputGroup`, `Combobox` helpers where appropriate                                                                |
-| section/panel/field eyebrow label | `SectionLabel` (`density="default"` / `"dense"`)                                                                  |
-| route context                     | `Sidebar`, `Breadcrumb`, `Separator`                                                                              |
-| keyboard hint                     | `Kbd`, `KbdGroup`                                                                                                 |
-| transient feedback                | `Sonner`                                                                                                          |
-| table navigation                  | `Pagination`                                                                                                      |
-| split pane                        | `Resizable`                                                                                                       |
-| filter/action row                 | `Toolbar`                                                                                                         |
-| metric block                      | `KpiCard` for numeric/stat values                                                                                 |
+| Need                              | Use                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------ |
+| command/action                    | `Button`, `Toggle`, `ToggleGroup`                                              |
+| business state label              | `StatusBadge`; `Badge` for generic metadata                                    |
+| framed section/panel              | `AppSection`                                                                   |
+| navigation card                   | `AppLinkCard`                                                                  |
+| selectable card-shaped row        | `InteractiveCard` with a semantic render target                                |
+| disclosure                        | `Accordion` or `Collapsible`                                                   |
+| searchable responsive data        | `DataTable`; raw `Table` only inside an approved table adapter                 |
+| segmented view                    | `Tabs`                                                                         |
+| standard app form field           | helpers from `@/components/form`; shared controls compose inside those helpers |
+| short detail or CRUD dialog       | `AppDialog` or `FormDialog`                                                    |
+| simple destructive confirmation   | shared `confirm()`; `ReasonConfirmDialog` when a reason is required            |
+| contextual or long overlay        | `Drawer`, `Sheet`, or Page flow according to the workflow                      |
+| empty/no result/error             | `AppEmptyState`, `TableEmptyStateRow`, `ErrorPanel`, or `NotFoundPanel`        |
+| loading                           | `PageSkeleton`, `PageSpinner`, or the approved route wrapper                   |
+| list row                          | `Item`, `ItemGroup`                                                            |
+| search/filter shell               | `InputGroup`, `Combobox` helpers where appropriate                             |
+| section/panel/field eyebrow label | `SectionLabel` (`density="default"` / `"dense"`)                               |
+| route context                     | `Sidebar`, `Breadcrumb`, `Separator`                                           |
+| keyboard hint                     | `Kbd`, `KbdGroup`                                                              |
+| transient feedback                | `Sonner`                                                                       |
+| table navigation                  | `Pagination`                                                                   |
+| split pane                        | `Resizable`                                                                    |
+| filter/action row                 | `AppToolbar` or `DataTable` toolbar slots                                      |
+| metric block                      | `KpiCard` for numeric/stat values                                              |
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
@@ -501,7 +511,7 @@ Toast and durable notification behavior is specified in `docs/spec/toast-notific
 
 Responsive list/table surfaces normally use the shared `DataTable`
 (`apps/web/app/components/data-table/data-table.tsx`): `mobileCardRender` for
-the phone card list, the `Table` primitive for desktop, `AppEmptyState` /
+the phone card list, the `Table` shared component for desktop, `AppEmptyState` /
 `TableEmptyStateRow` for empty states, and shared pagination. Avoid
 hand-maintained twin JSX trees (`md:hidden` card list + `hidden … md:block`
 table): they duplicate state and can drift. Mobile and desktop MUST expose the
@@ -509,7 +519,7 @@ same fields, status colors, and actions for the same row.
 
 ### Table component system (one hierarchy, no V2)
 
-`Table` is a semantic desktop primitive; `DataTable` is the only shared
+`Table` is a semantic desktop component; `DataTable` is the only shared
 responsive data-table adapter. They are one system, not alternatives. Do not
 add `DataTableV2`, `DesktopTable`, `MobileTable`, or a module-specific table
 wrapper that recreates the same responsibilities.
@@ -530,7 +540,7 @@ wrapper that recreates the same responsibilities.
 | Document lines           | `DataTable` with `render(row, index)`, `mobileCardRender`, and `desktopFooterRows` / `mobileFooter`                                                                    | Document controller owns line mutation by index; finite document lines do not need list pagination         |
 | Report breakdown         | `DataTable`, optionally with read-only footer totals                                                                                                                   | Report query owns period/branch and ordering; totals never replace row-level values                        |
 | Local inline table       | `DataTable` may use its inline search/filter/action slots only when the state is local to that one table and there is no page-level `AppToolbar` for the same controls | Do not duplicate a page toolbar inside the table                                                           |
-| Branch-native touch list | `Item` / `ItemGroup`, not `DataTable`, where a named Branch exception requires one phone/tablet information architecture                                               | Shares loader, model, status vocabulary, and mutation authority with the Owner surface counterpart       |
+| Branch-native touch list | `Item` / `ItemGroup`, not `DataTable`, where a named Branch exception requires one phone/tablet information architecture                                               | Shares loader, model, status vocabulary, and mutation authority with the Owner surface counterpart         |
 
 Each `DataTableColumn` is an operational field, not layout filler: it has a
 stable non-empty header (an action column uses visually hidden `Thao tác`), a
@@ -565,7 +575,7 @@ breakpoint switch can remount them safely.
 ### Empty / Confirm
 
 - Empty states normally render through `AppEmptyState` (page/section) or
-  `TableEmptyStateRow` (inside a `Table`); the raw `Empty*` primitives remain
+  `TableEmptyStateRow` (inside a `Table`); the raw `Empty*` shared components remain
   available to a wrapper with a distinct workflow role.
 - A list surface renders ONE empty treatment per breakpoint — never a panel
   and a table row stacked on the same viewport.
@@ -590,8 +600,8 @@ Business-state labels and badge colors are single-sourced:
 ### Metric Card Role
 
 Dashboard and report metric values render through `KpiCard`
-(`apps/web/app/components/kpi/kpi-card.tsx`): uppercase 2xs label, value
-`text-2xl font-bold tabular-nums`, optional `CompareChip` delta and sparkline,
+(`apps/web/app/components/kpi/kpi-card.tsx`): uppercase `text-xs font-medium`
+label, value `text-2xl font-semibold tabular-nums`, optional `CompareChip` delta and sparkline,
 and a drill-down `href` per the owner Q-spec. Prefer a `KpiCard` variant when
 the reading task matches; a different workflow should compose its own metric
 treatment only when it improves the rendered hierarchy.
@@ -610,35 +620,35 @@ Money, quantity, unit-price, tax-rate, ID/code, and timestamp cells render with 
 | ID / code / order / receipt no. | `font-mono tabular-nums` (left-aligned allowed) |
 | Right-aligned non-numeric label | `text-right` (no `tabular-nums`)                |
 
-Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); counts through `formatCount`; quantities/decimals through `formatQuantity` / `formatDecimal`; and percentage points through `formatPercent` (`12,5%`). Shared formatting guards keep currency, dates, and percentages semantically consistent while `scripts/audit-ui-components.mjs` reports the formatter family as `pageLocalFormatter`. Typed number drafts use `parseVietnameseNumericInput`; spreadsheet imports use the stricter `parseVietnameseNumericImport`, which accepts supported locale variants only when their magnitude is unambiguous and rejects unsafe integers rather than rounding an ID or amount. `font-mono` is required on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` without `font-mono` loses the operational-data reading role. These classes go on `TableCell` / `TableHead`; a shared numeric-cell wrapper is valid when it renders the shared `Table` primitive and preserves this semantic treatment. Avoid `text-left` money columns, numeric columns missing `tabular-nums`, and money/quantity cells missing `font-mono`.
+Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); counts through `formatCount`; quantities/decimals through `formatQuantity` / `formatDecimal`; and percentage points through `formatPercent` (`12,5%`). Shared formatting guards keep currency, dates, and percentages semantically consistent while `scripts/audit-ui-components.mjs` reports the formatter family as `pageLocalFormatter`. Typed number drafts use `parseVietnameseNumericInput`; spreadsheet imports use the stricter `parseVietnameseNumericImport`, which accepts supported locale variants only when their magnitude is unambiguous and rejects unsafe integers rather than rounding an ID or amount. `font-mono` is required on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` without `font-mono` loses the operational-data reading role. These classes go on `TableCell` / `TableHead`; a shared numeric-cell wrapper is valid when it renders the shared `Table` component and preserves this semantic treatment. Avoid `text-left` money columns, numeric columns missing `tabular-nums`, and money/quantity cells missing `font-mono`.
 
 Date and time values render through `@comtammatu/shared/time` (`formatVNBusinessDate`, `formatVNDate`, `formatVNDateTime`, `formatVNTime`, `getVNDateString`, …), which pin `Asia/Ho_Chi_Minh` so server-rendered receipts and reports never drift to the host zone. `BusinessDateField` displays `dd/mm/yyyy` and gives its calendar the `vi` locale; the shared chart tooltip defaults to `vi-VN`; print rendering uses the same shared money/time helpers and its `print-format-ssot` guard.
 
 Allowed app wrappers:
 
 - Data adapters that fetch, map, or validate domain data.
-- Layout wrappers that arrange primitives without changing the visual contract and delegate to `apps/web/app/components/surface.tsx` when they represent page, header, section, toolbar, empty-state, or navigation-card patterns.
+- Layout wrappers that arrange shared components without changing the visual contract and delegate to `apps/web/app/components/surface.tsx` when they represent page, header, section, toolbar, empty-state, or navigation-card patterns.
 - Form wrappers in `apps/web/app/components/form/`.
-- Domain wrappers that remove repetition while still rendering Má Tư DS primitives.
+- Domain wrappers that remove repetition while still rendering Má Tư DS shared components.
 
 Forbidden wrappers:
 
-- Wrappers that restyle a primitive into a new visual system.
+- Wrappers that restyle a shared component into a new visual system.
 - Page-specific clones of `Button`, `Badge`, `Card`, `Table`, `Tabs`, `Input`, or `Select`.
 - Page-specific clones of app page/header/section/toolbar/empty-state/link-card adapters.
 - Compatibility shims for non-current visual systems.
 - Helpers named like `app-*` surface classes.
 - Route-local app surface replacements.
 
-### High-level primitive import governance
+### High-level shared-component import governance
 
-`Card`, `Table`, `Dialog`, and `AlertDialog` are high-level composition
-primitives. Routes should reuse a matching adapter where one exists. A direct
-primitive is valid for a unique semantic composition that would be less clear
-through an adapter; it must still use Má Tư tokens and prove the relevant
+`Card`, `Table`, `Dialog`, and `AlertDialog` are shared styled components.
+Routes should reuse a matching adapter where one exists. Direct shared-component
+composition is valid for a unique semantic job only after the component lookup
+shows no matching adapter; it must still use Má Tư tokens and prove the relevant
 behavior and states.
 
-| Primitive import                         | Default route for new app code                                                                                                               |
+| Shared component import                  | Default route for new app code                                                                                                               |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@comtammatu/ui/components/card`         | App card role: `AppSection`, `AppLinkCard`, `KpiCard` for metrics only, `InteractiveCard`, `OperationalBoardCard`, or a route-scoped adapter |
 | `@comtammatu/ui/components/table`        | `DataTable`, `TableEmptyStateRow`, or a documented document/line-sheet adapter                                                               |
@@ -713,10 +723,10 @@ allowlist.
 
 - Mobile layout is the baseline. Desktop may add density and faster scanning, but not a different information architecture.
 - Root viewport must allow user zoom. Do not set `maximumScale: 1`, `userScalable: false`, or equivalent `user-scalable=no` on runtime app surfaces.
-- Use standard spacing/radius utilities and primitives before custom layout code.
+- Use standard spacing/radius utilities and shared components before custom layout code.
 - Prefer one clear toolbar per workflow.
 - Search, filters, counts, and bulk actions should live together.
-- Empty, loading, error, and blocked states must use approved primitives or wrappers.
+- Empty, loading, error, and blocked states must use approved shared components or wrappers.
 - Do not repeat the same workflow state in header, rail, sidebar, gate, and board.
 
 ## Structural Governance
@@ -758,14 +768,14 @@ contract change; route-local chrome outside this list is drift.
    branch home, staff daily work under `/br/[branchId]/shift/*`, stock action
    entry points under `/br/[branchId]/stock/*`, and branch management
    (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`) when reached from
-   the branch runtime. It uses the shared brand primitives, compact `AppPage`,
+   the branch runtime. It uses the shared brand components, compact `AppPage`,
    and `AppBottomNav`; `branch_management` is a route family inside this chrome,
    not a reason to enter Owner surface chrome or add another shell.
 3. Operations chrome — purpose-built, full-screen, single-job surfaces that
    legitimately cannot wear the management sidebar: POS (`/br/[branchId]/pos`),
    KDS and Runner (`/br/[branchId]/{kds,runner}`). These keep bespoke layout,
    but consume the same tokens,
-   typography, status vocabulary, header lockup, and bottom-nav primitives as
+   typography, status vocabulary, header lockup, and bottom-nav components as
    Owner surface — a different layout, never a second visual language.
 4. Standalone chrome-less surfaces — a named, closed exception, not a fourth
    general-purpose shell: `/notifications` and `/br` (the branch picker). Both
@@ -927,14 +937,14 @@ Before any UI rebuild task:
 
 1. Read `AGENTS.md`, this file, `docs/modules/ui.md`, `tasks/regressions.md`, and the relevant domain docs.
 2. Confirm whether touched files use current app surface adapters, semantic tokens, and approved font utilities.
-3. State the surface, primary user job, affected route family, and primitives to use.
+3. State the surface, primary user job, affected route family, and shared components to use.
 4. Confirm whether the task is a visual refactor, UX flow change, copy change, or behavior change.
-5. Keep each PR to one route family or one primitive rollout wave.
+5. Keep each PR to one route family or one shared-component rollout wave.
 6. If the implementation needs a new pattern, update this contract before applying the pattern broadly.
 
 Before marking a UI task complete:
 
-- No fake primitives.
+- No fake shared components.
 - No arbitrary Tailwind dimensions.
 - No static presentation inline styles.
 - No route-specific theme layer.

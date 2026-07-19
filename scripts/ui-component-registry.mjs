@@ -17,7 +17,7 @@ const adapterOnly = (...args) => decision("adapter-only", ...args);
 const workflowOnly = (...args) => decision("workflow-only", ...args);
 const internal = (...args) => decision("internal", ...args);
 
-export const PRIMITIVE_COMPONENT_REGISTRY = {
+export const SHARED_COMPONENT_REGISTRY = {
   "accordion.tsx": direct(
     "multi-panel disclosure",
     "Accordion",
@@ -174,17 +174,17 @@ export const PRIMITIVE_COMPONENT_REGISTRY = {
   ),
   "input-group.tsx": direct(
     "input with prefix, suffix, or inline action",
-    "InputGroup",
+    "InputGroup with InputGroupInput or another direct shared input control",
     "Field plus Input for a plain field",
-    "absolute-positioned addon inside a raw div",
+    "absolute-positioned addon or repeated child border/ring reset classes",
     "search and unit-aware inputs",
   ),
   "input.tsx": direct(
     "single-line text or numeric control",
-    "Input inside Field or a shared form wrapper",
-    "FormattedNumberInput for localized numeric entry",
-    "unstyled native input or route-local control height",
-    "simple form controls",
+    "TextField for standard RHF fields; direct Input only inside Field/FormField, native browser workflows, or a specialized composition",
+    "InputGroup for search/addons or FormattedNumberInput for localized numeric entry",
+    "unstyled native input, raw Label plus Input anatomy, or route-local control height",
+    "date/file controls, identifiers, and inline editors",
   ),
   "interactive-card.tsx": direct(
     "selectable card-shaped row",
@@ -578,14 +578,6 @@ export const APP_ADAPTER_REGISTRY = {
     "inventory and HR lists",
     true,
   ),
-  InteractiveCard: adapter(
-    "apps/web/app/components/data-table/interactive-card.tsx",
-    "mobile data-row card",
-    "InteractiveCard through DataTable mobileCardRender",
-    "Item for non-tabular content",
-    "custom clickable card row",
-    "responsive DataTable rows",
-  ),
   AppDialog: adapter(
     "apps/web/app/components/form/form-dialog.tsx",
     "detail or short task modal",
@@ -638,6 +630,14 @@ export const APP_ADAPTER_REGISTRY = {
     "Field plus Input for special composition",
     "raw label and input spacing",
     "standard forms",
+  ),
+  FormField: adapter(
+    "apps/web/app/components/form/form-field.tsx",
+    "labeled non-RHF or specialized field composition",
+    "FormField with a shared control and explicit id/ARIA state",
+    "Field for low-level adapter internals or TextField for standard RHF text",
+    "raw Label plus control spacing in route code",
+    "controlled select, combobox, textarea, and specialized input fields",
   ),
   FormattedNumberInput: adapter(
     "apps/web/app/components/form/formatted-number-input.tsx",
@@ -894,6 +894,63 @@ function uniqueSorted(values) {
   return [...new Set(values)].sort();
 }
 
+function normalizeComponentName(value) {
+  return value
+    .toLowerCase()
+    .replace(/\.tsx$/, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+export function findComponentGuidance(query) {
+  const normalizedQuery = normalizeComponentName(query.trim());
+  if (!normalizedQuery) return [];
+
+  const sharedComponents = Object.entries(SHARED_COMPONENT_REGISTRY)
+    .filter(
+      ([file]) =>
+        normalizeComponentName(file.replace(/\.tsx$/, "")) === normalizedQuery,
+    )
+    .map(([file, entry]) => ({
+      layer: "shared-component",
+      name: file.replace(/\.tsx$/, ""),
+      source: `packages/ui/src/components/${file}`,
+      classification: entry.access,
+      ...entry,
+    }));
+
+  const appAdapters = Object.entries(APP_ADAPTER_REGISTRY)
+    .filter(([name]) => normalizeComponentName(name) === normalizedQuery)
+    .map(([name, entry]) => ({
+      layer: "app-adapter",
+      name,
+      classification: "adapter",
+      ...entry,
+    }));
+
+  const domainAdapters = Object.entries(DOMAIN_ADAPTER_FAMILIES)
+    .filter(
+      ([family, entry]) =>
+        normalizeComponentName(family) === normalizedQuery ||
+        normalizeComponentName(entry.prefix) === normalizedQuery ||
+        entry.exports.some(
+          (name) => normalizeComponentName(name) === normalizedQuery,
+        ),
+    )
+    .map(([family, entry]) => ({
+      layer: "domain-adapter",
+      name: family,
+      source: entry.source,
+      classification: "adapter-family",
+      need: entry.need,
+      use: entry.exports.join(", "),
+      fallback: entry.fallback,
+      forbidden: entry.forbidden,
+      exemplar: entry.exemplar,
+    }));
+
+  return [...sharedComponents, ...appAdapters, ...domainAdapters];
+}
+
 function validateDecisionEntry(label, entry, errors) {
   if (!VALID_ACCESS.has(entry.access) && entry.access != null) {
     errors.push(`${label} has unknown access ${entry.access}`);
@@ -905,9 +962,9 @@ function validateDecisionEntry(label, entry, errors) {
   }
 }
 
-export function buildPrimitiveComponentCoverage(actualPrimitiveFiles) {
-  const actual = uniqueSorted(actualPrimitiveFiles);
-  const registered = Object.keys(PRIMITIVE_COMPONENT_REGISTRY).sort();
+export function buildSharedComponentCoverage(actualComponentFiles) {
+  const actual = uniqueSorted(actualComponentFiles);
+  const registered = Object.keys(SHARED_COMPONENT_REGISTRY).sort();
   const actualSet = new Set(actual);
   const registeredSet = new Set(registered);
   const unclassified = actual.filter((file) => !registeredSet.has(file));
@@ -915,17 +972,17 @@ export function buildPrimitiveComponentCoverage(actualPrimitiveFiles) {
   const errors = [];
   const accessCounts = {};
 
-  for (const [file, entry] of Object.entries(PRIMITIVE_COMPONENT_REGISTRY)) {
-    validateDecisionEntry(`primitive ${file}`, entry, errors);
+  for (const [file, entry] of Object.entries(SHARED_COMPONENT_REGISTRY)) {
+    validateDecisionEntry(`shared component ${file}`, entry, errors);
     accessCounts[entry.access] = (accessCounts[entry.access] ?? 0) + 1;
   }
   if (unclassified.length > 0) {
     errors.push(
-      `unclassified primitive files: ${unclassified.join(", ")}. Add a decision route before using or exporting the primitive.`,
+      `unclassified shared component files: ${unclassified.join(", ")}. Add a decision route before using or exporting the component.`,
     );
   }
   if (stale.length > 0) {
-    errors.push(`stale primitive registry files: ${stale.join(", ")}`);
+    errors.push(`stale shared component registry files: ${stale.join(", ")}`);
   }
 
   return {
@@ -948,14 +1005,15 @@ function exportedFunctions(source, prefix) {
 }
 
 export function validateUiComponentRegistry(repoRoot) {
-  const primitiveDir = path.join(repoRoot, "packages/ui/src/components");
-  const actualPrimitiveFiles = fs
-    .readdirSync(primitiveDir, { withFileTypes: true })
+  const sharedComponentDir = path.join(repoRoot, "packages/ui/src/components");
+  const actualSharedComponentFiles = fs
+    .readdirSync(sharedComponentDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".tsx"))
     .map((entry) => entry.name);
-  const primitiveCoverage =
-    buildPrimitiveComponentCoverage(actualPrimitiveFiles);
-  const errors = [...primitiveCoverage.errors];
+  const sharedComponentCoverage = buildSharedComponentCoverage(
+    actualSharedComponentFiles,
+  );
+  const errors = [...sharedComponentCoverage.errors];
 
   for (const [name, entry] of Object.entries(APP_ADAPTER_REGISTRY)) {
     validateDecisionEntry(`app adapter ${name}`, entry, errors);
@@ -1005,7 +1063,7 @@ export function validateUiComponentRegistry(repoRoot) {
   }
 
   return {
-    primitiveCoverage,
+    sharedComponentCoverage,
     appAdapterCount: Object.keys(APP_ADAPTER_REGISTRY).length,
     auditAdapterNames: Object.entries(APP_ADAPTER_REGISTRY)
       .filter(([, entry]) => entry.audit)

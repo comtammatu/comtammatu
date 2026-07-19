@@ -96,7 +96,7 @@ rules live in `docs/agent/rules/database.md`.
 @comtammatu/web
   ├── @comtammatu/shared    (auth types, ACL, scope helpers)
   ├── @comtammatu/database  (Supabase clients)
-  ├── @comtammatu/ui        (Má Tư DS primitives + token runtime)
+  ├── @comtammatu/ui        (Má Tư DS shared components + token runtime)
   ├── @comtammatu/security  (Upstash rate limiting)
   └── @comtammatu/print-render (receipt/template rendering)
 

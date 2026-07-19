@@ -10,6 +10,11 @@ import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
+import {
   Item,
   ItemActions,
   ItemContent,
@@ -24,8 +29,13 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Pencil as IconPencil, Trash2 as IconTrash } from "lucide-react";
 import {
+  Pencil as IconPencil,
+  Search as IconSearch,
+  Trash2 as IconTrash,
+} from "lucide-react";
+import {
+  FormattedNumberInput,
   FormDialog,
   MoneyVndField,
   SelectField,
@@ -238,8 +248,8 @@ export function PayrollListClient({
     router.replace(`/hr/payroll?${params.toString()}`);
   }
 
-  function updateStandardDays() {
-    const parsed = Number(standardDays);
+  function updateStandardDays(value = standardDays) {
+    const parsed = Number(value);
     if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 31) {
       setStandardDays(String(preview.standardDays));
       return;
@@ -432,15 +442,17 @@ export function PayrollListClient({
     <>
       <AppToolbar
         search={
-          <Input
-            value={search}
-            onChange={(event) => {
-              const value = event.target.value;
-              setSearch(value);
-            }}
-            placeholder={copy.search}
-            aria-label={copy.search}
-          />
+          <InputGroup>
+            <InputGroupAddon>
+              <IconSearch aria-hidden />
+            </InputGroupAddon>
+            <InputGroupInput
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={copy.search}
+              aria-label={copy.search}
+            />
+          </InputGroup>
         }
         filters={
           <>
@@ -500,14 +512,17 @@ export function PayrollListClient({
                 </SelectItem>
               </SelectContent>
             </Select>
-            <Input
+            <FormattedNumberInput
               value={standardDays}
-              onChange={(event) => setStandardDays(event.target.value)}
-              onBlur={updateStandardDays}
+              onValueChange={setStandardDays}
+              onValueBlur={(value) => {
+                setStandardDays(value);
+                updateStandardDays(value);
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") updateStandardDays();
               }}
-              inputMode="decimal"
+              maxFractionDigits={2}
               className="w-28 text-right font-mono tabular-nums"
               aria-label={copy.standardDays}
               title={copy.standardDays}

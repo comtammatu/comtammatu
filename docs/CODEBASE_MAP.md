@@ -25,7 +25,7 @@
 | Finance        | [finance.md](modules/finance.md)               | Finance Basic boundary, daily money, HĐĐT, payables     | **High** — cash/legal data  |
 | Inventory      | [inventory.md](ref/inventory.md)               | One-warehouse Branch inventory and production contract  | **High** — stock integrity  |
 | Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, surface shells | Medium                      |
-| UI             | [ui.md](modules/ui.md)                         | Custom Theme application, Má Tư primitives, surfaces    | Low                         |
+| UI             | [ui.md](modules/ui.md)                         | Custom Theme application, shared components, surfaces   | Low                         |
 | Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                           | Medium                      |
 | Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                    | Medium                      |
 
@@ -63,18 +63,18 @@ does not restate agent workflow or architecture contracts:
 
 Use this matrix when adding or moving files. It is the practical replacement for "where should this live?"
 
-| Change type                                  | Primary location                                                    | Must check                                                                         | Avoid                                                  |
-| -------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc                     | Duplicating ACL in layouts/pages                       |
-| New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract                             | Returning raw Supabase error messages                  |
-| New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                                                 | Importing app-only code into shared package            |
-| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `corepack pnpm db:types` after apply                                  | Multi-query partial writes in Server Actions           |
-| New Supabase client usage                    | Explicit `packages/database` subpath for the runtime                | Import boundary in `docs/agent/rules/engineering.md`                               | Root runtime barrel imports                            |
-| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, Má Tư DS primitives, `scripts/check-ui-contract.mjs` | Page-local one-off primitive clones                    |
-| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, Má Tư DS primitives, surface components              | New visual language outside design system              |
-| New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes                                | Hardcoded receipt/format changes per branch            |
-| New skill/plugin/tool routing rule           | `docs/agent/rules/skills.md` plus relevant entrypoint docs          | `AGENTS.md`, `docs/agent/rules/references.md`, `docs/agent/rules/workflow.md`      | Divergent workspace-only rules, secrets, plugin caches |
-| New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                                                   | Separate agent-only doc trees                          |
+| Change type                                  | Primary location                                                    | Must check                                                                                | Avoid                                                  |
+| -------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc                             | Duplicating ACL in layouts/pages                       |
+| New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract                                     | Returning raw Supabase error messages                  |
+| New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                                                         | Importing app-only code into shared package            |
+| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `corepack pnpm db:types` after apply                                          | Multi-query partial writes in Server Actions           |
+| New Supabase client usage                    | Explicit `packages/database` subpath for the runtime                | Import boundary in `docs/agent/rules/engineering.md`                                       | Root runtime barrel imports                            |
+| New reusable UI component                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, Má Tư DS shared components, `scripts/check-ui-contract.mjs`  | Page-local one-off component clones                    |
+| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, Má Tư DS shared components, surface adapters                 | New visual language outside design system              |
+| New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes                                        | Hardcoded receipt/format changes per branch            |
+| New skill/plugin/tool routing rule           | `docs/agent/rules/skills.md` plus relevant entrypoint docs          | `AGENTS.md`, `docs/agent/rules/references.md`, `docs/agent/rules/workflow.md`              | Divergent workspace-only rules, secrets, plugin caches |
+| New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                                                           | Separate agent-only doc trees                          |
 
 ### Current Operating Model
 

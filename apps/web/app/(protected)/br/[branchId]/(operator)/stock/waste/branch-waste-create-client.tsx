@@ -1043,7 +1043,7 @@ export function BranchWasteCreateClient({
                               }
                               disabled={isSubmitting}
                               placeholder="0"
-                              className="h-full flex-1 rounded-none border-0 bg-transparent text-base shadow-none focus-visible:ring-1 dark:bg-transparent"
+                              className="h-full text-base"
                             />
                             {formatIssueMaxEntryQuantity(
                               editorDetails.maxEntryQuantity,

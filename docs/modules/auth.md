@@ -272,7 +272,7 @@ Single canonical helper for "send a blocked user somewhere they can read what ha
 - Public path (bypasses `updateSession`) — reachable by any user.
 - Only reads `searchParams.reason` + `searchParams.from` → renders copy via `resolveBlockedState()`.
 - Does not check auth or redirect on its own. Follows **BLOCKED-STATE-UI-IS-PRESENTATION-ONLY**.
-- Uses Má Tư DS `Card` + `Button` primitives (follows **NO-FAKE-PRIMITIVES**).
+- Uses Má Tư DS `Card` + `Button` shared components (follows **NO-FAKE-PRIMITIVES**).
 - Two actions: "Về phân hệ mặc định" (link to `/`) and "Đăng nhập lại" (link to `/login`).
 
 ## Blast Radius
