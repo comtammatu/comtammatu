@@ -73,7 +73,7 @@ import {
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 
 import { formatPercent } from "@comtammatu/shared/format";
-import { formatVND } from "../_lib/format";
+import { formatVND } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";

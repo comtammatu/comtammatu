@@ -65,7 +65,7 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { formatQty, formatVND } from "../_lib/format";
+import { formatQty, formatVND } from "@lib/inventory/format";
 import { formatStockUnits } from "../_lib/stock-unit-format";
 import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";

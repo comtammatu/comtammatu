@@ -32,7 +32,7 @@ import {
   LinkCardGrid,
   type AppLinkCardProps,
 } from "@/components/surface";
-import { formatVND } from "./_lib/format";
+import { formatVND } from "@lib/inventory/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
 import { tNav, tStatus } from "./_lib/dictionary";
 import { messages } from "@lib/messages";

@@ -44,7 +44,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";

@@ -15,7 +15,7 @@ import {
   fetchGrnDetail,
   loadActiveGrnDraft,
 } from "@/(protected)/inventory/grn-actions";
-import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import { getIngredientUnitDisplayName } from "@/(protected)/inventory/_lib/unit-display";
 import type {
   GrnCreateIngredient,

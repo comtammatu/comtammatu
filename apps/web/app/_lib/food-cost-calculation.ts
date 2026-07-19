@@ -1,5 +1,5 @@
 import { getRecipeLineBaseQuantity } from "../(protected)/inventory/_lib/recipe-cost";
-import type { IngredientUnitRow } from "../(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 
 export interface FoodCostSaleLine {
   branchId: number;

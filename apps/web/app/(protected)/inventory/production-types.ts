@@ -1,6 +1,6 @@
 import type { ProductionRunRow } from "./production-run-actions";
 import type { ProductionRecipeRow } from "./production-recipe-actions";
-import type { IngredientUnitRow } from "./_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 
 export type BranchOption = {
   id: number;

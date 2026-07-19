@@ -1,5 +1,5 @@
-import type { GrnDraftLine } from "@/(protected)/inventory/_lib/grn-draft";
-import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
+import type { GrnDraftLine } from "@lib/inventory/grn-draft";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import { getInventoryLocationKindLabelVi } from "@comtammatu/shared/labels";
 
 export type GrnCreateIngredient = {

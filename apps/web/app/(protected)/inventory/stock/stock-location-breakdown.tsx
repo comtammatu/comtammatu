@@ -1,5 +1,5 @@
 import { cn } from "@comtammatu/ui";
-import { formatQty } from "../_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import {
   shouldShowStockLocationBreakdown,
   stockLocationLabel,

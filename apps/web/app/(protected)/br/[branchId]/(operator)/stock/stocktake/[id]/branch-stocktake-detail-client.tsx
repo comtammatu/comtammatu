@@ -42,7 +42,7 @@ import {
 } from "@lib/inventory/stocktake-model";
 import { messages } from "@lib/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import {
   cancelStocktake,
   completeStocktake,

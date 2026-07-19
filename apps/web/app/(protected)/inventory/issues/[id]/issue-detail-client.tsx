@@ -60,7 +60,7 @@ import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { tRoute, tTerm } from "../../_lib/dictionary";
-import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
+import { formatDateTime, formatQty, formatVND } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
 import {
   cancelStockIssue,

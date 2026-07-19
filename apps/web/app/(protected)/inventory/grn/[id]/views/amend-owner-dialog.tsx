@@ -14,7 +14,7 @@ import {
 import { notify } from "@comtammatu/ui/lib/notify";
 import { AppDialog, FormattedNumberInput } from "@/components/form";
 import { amendGrnLine } from "../../../grn-actions";
-import { formatVND } from "../../../_lib/format";
+import { formatVND } from "@lib/inventory/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   GRN_DETAIL_COPY as grnCopy,

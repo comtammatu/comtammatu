@@ -20,7 +20,7 @@ import {
   AppSection,
 } from "@/components/surface";
 import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
-import { formatVND } from "../_lib/format";
+import { formatVND } from "@lib/inventory/format";
 import {
   resolveInventoryColorValue,
   type InventorySemanticColor,

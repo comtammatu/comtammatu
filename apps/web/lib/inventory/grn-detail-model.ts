@@ -1,4 +1,4 @@
-import type { IngredientRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
 
 export const GRN_DETAIL_COPY = messages.inventory.grn;

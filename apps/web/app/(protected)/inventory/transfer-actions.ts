@@ -12,7 +12,7 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
-import type { TenantSupabase } from "./_lib/types";
+import type { TenantSupabase } from "@lib/inventory/types";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";

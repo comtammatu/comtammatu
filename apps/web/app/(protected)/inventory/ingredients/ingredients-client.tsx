@@ -44,7 +44,7 @@ import {
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
-import { formatDecimal, formatVND } from "../_lib/format";
+import { formatDecimal, formatVND } from "@lib/inventory/format";
 import {
   CATEGORY_TONE_CLASS,
   ITEM_KIND_LABELS,
@@ -55,12 +55,12 @@ import {
   toggleIngredientActive,
 } from "../ingredient-actions";
 import { IngredientDialog } from "./ingredient-dialog";
-import type { CategoryOption, IngredientRow, UnitOption } from "../_lib/types";
+import type { CategoryOption, IngredientRow, UnitOption } from "@lib/inventory/types";
 import { IngredientImportExportMenu } from "./import-export-menu";
 import {
   getDisplayReferenceCost,
   type ReferenceCost,
-} from "../_lib/reference-cost";
+} from "@lib/inventory/reference-cost";
 
 import {
   ACTIONS_VI,

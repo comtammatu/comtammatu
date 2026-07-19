@@ -20,7 +20,7 @@ import {
   type BranchStocktakeCountUnit,
 } from "@lib/inventory/stocktake-model";
 import { messages } from "@lib/messages";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import {
   StocktakeDraftSaverBadge,
   type DraftCounts,

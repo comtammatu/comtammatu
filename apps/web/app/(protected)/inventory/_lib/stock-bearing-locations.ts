@@ -1,4 +1,4 @@
-import type { TenantSupabase } from "./types";
+import type { TenantSupabase } from "@lib/inventory/types";
 
 type LocationRow = {
   id: number;

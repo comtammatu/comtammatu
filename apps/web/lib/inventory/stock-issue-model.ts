@@ -1,4 +1,4 @@
-import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 
 export type BranchInternalIssueType = "writeoff" | "other";
 export type BranchStockIssueType = BranchInternalIssueType | "consumption";

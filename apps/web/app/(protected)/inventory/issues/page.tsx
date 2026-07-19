@@ -6,7 +6,7 @@ import {
   formatDateTime,
   formatQty,
   formatVND,
-} from "../_lib/format";
+} from "@lib/inventory/format";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { tRoute } from "../_lib/dictionary";
 import { getEmbeddedIngredientBaseUnitDisplayName } from "../_lib/unit-display";

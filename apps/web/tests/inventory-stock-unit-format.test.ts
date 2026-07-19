@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { formatQty } from "../app/(protected)/inventory/_lib/format";
+import { formatQty } from "../lib/inventory/format";
 import { formatStockUnits } from "../app/(protected)/inventory/_lib/stock-unit-format";
-import type { IngredientUnitRow } from "../app/(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "../lib/inventory/types";
 
 function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
   return {

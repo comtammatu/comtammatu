@@ -6,7 +6,7 @@ import {
   buildFoodCostRows,
   foodCostUnitCostKey,
 } from "../app/_lib/food-cost-calculation";
-import type { IngredientUnitRow } from "../app/(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "../lib/inventory/types";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");

@@ -205,7 +205,7 @@ test("UI contract guard protects Má Tư outcomes and the Base UI boundary", () 
   assert.ok(
     source.includes(String.raw`from\s+["']@\/\(protected\)\/inventory\/`),
   );
-  assert.ok(source.includes(String.raw`(?!_lib\/)`));
+  assert.ok(!source.includes(String.raw`(?!_lib\/)`));
   assert.ok(source.includes(String.raw`actions(?:\.ts)?`));
   assert.doesNotMatch(source, /app-action-data-state-copy-baseline/);
 

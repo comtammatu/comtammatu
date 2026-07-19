@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { AppEmptyState } from "@/components/surface";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
 import {

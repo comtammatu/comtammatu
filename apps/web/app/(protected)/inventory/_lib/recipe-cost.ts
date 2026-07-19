@@ -1,4 +1,4 @@
-import type { IngredientUnitRow } from "./types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 
 type RecipeLineBaseQuantityInput = {
   quantity: number;

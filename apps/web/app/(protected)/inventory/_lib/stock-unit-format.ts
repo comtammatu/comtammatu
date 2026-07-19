@@ -1,4 +1,4 @@
-import type { IngredientUnitRow } from "./types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 
 // Two-line view of a base-unit stock quantity: a whole-count step breakdown
 // across every unit rung (biggest -> smallest, skipping zero levels) on top,

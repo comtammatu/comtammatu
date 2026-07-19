@@ -39,17 +39,6 @@ Blocker: The accepted product spine is not yet canonical. Recheck after “Confi
 
 - [ ] Define and run one real-auth smoke per accepted spine flow without copying the product map into the tracker.
 
-## Move shared inventory logic out of the Owner surface route tree
-
-State: ready
-Kind: debt
-Tier: T2
-Lane: inventory
-Exit: Branch and Owner surface import `format`, `purchase-units`, `reference-cost`, `grn-draft`, and `types` from `apps/web/lib/inventory/`, and the operator/Owner surface boundary allowlist is narrowed.
-Evidence: Import-boundary guard plus focused inventory tests and a source search showing no shared pure-logic imports from the Owner surface route tree.
-
-- [ ] Move the five shared modules without forking behavior, update both planes, and tighten the allowlist to action boundaries only.
-
 ## Densify the Branch on-hand list
 
 State: ready

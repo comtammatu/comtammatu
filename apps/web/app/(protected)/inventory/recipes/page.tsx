@@ -10,13 +10,13 @@ import {
   resolveInventoryBranchScope,
   resolveRequestedBranchId,
 } from "../_lib/inventory-scope";
-import { formatDate } from "../_lib/format";
+import { formatDate } from "@lib/inventory/format";
 import { getRecipeLineBaseQuantity } from "../_lib/recipe-cost";
 import { getIngredientUnitDisplayName } from "../_lib/unit-display";
 import { RecipesClient } from "./recipes-client";
 import type { RecipeRow, RecipeItem } from "./recipes-client";
 import type { MenuItemOption, IngredientOption } from "./recipe-line-dialog";
-import type { IngredientUnitRow } from "../_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 
 type MenuItemRow = {
   id: number;

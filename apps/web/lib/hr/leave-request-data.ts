@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { messages } from "@lib/messages";
-import type { TenantSupabase } from "@/(protected)/inventory/_lib/types";
+import type { TenantSupabase } from "@lib/inventory/types";
 import {
   calculateAnnualLeaveUsedThroughMonth,
   countAnnualLeaveAccruedThroughMonth,

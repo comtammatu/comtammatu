@@ -10,7 +10,7 @@ import {
   resolveInventoryBranchScope,
   resolveInventoryListScope,
 } from "@/(protected)/inventory/_lib/inventory-scope";
-import type { IngredientRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientRow } from "@lib/inventory/types";
 import {
   fetchStockIssueDetail,
   fetchStockIssues,

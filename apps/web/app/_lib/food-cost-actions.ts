@@ -13,7 +13,7 @@ import {
   type FoodCostResultRow,
   type FoodCostSaleLine,
 } from "./food-cost-calculation";
-import type { IngredientUnitRow } from "../(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 
 const REPORT_ROLES: readonly StaffRole[] = ["owner"];
 const foodCostCopy = messages.finance.foodCost;

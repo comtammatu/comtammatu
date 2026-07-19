@@ -5,7 +5,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
-import { formatDateTime } from "@/(protected)/inventory/_lib/format";
+import { formatDateTime } from "@lib/inventory/format";
 import { fetchStockTransferDetail } from "@/(protected)/inventory/transfer-actions";
 import { computeTransferLineTotal } from "@/(protected)/inventory/transfers/[id]/line-view-model";
 import type { TransferDetail } from "./transfer-detail-model";

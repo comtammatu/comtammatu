@@ -5,7 +5,7 @@ export type {
   BranchOption,
   IngredientRow,
   ReorderAlertRow,
-} from "./_lib/types";
+} from "@lib/inventory/types";
 
 export default async function InventoryPage({
   searchParams,

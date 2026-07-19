@@ -44,7 +44,7 @@ import type {
   CountSlipRow,
   CountSlipStatus,
 } from "@lib/inventory/count-slip-model";
-import { formatQty } from "../_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import { approveCountSlip, requestCountRecount } from "./actions";
 
 function formatVariance(value: number | null): string {

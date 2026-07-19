@@ -34,7 +34,7 @@ import {
   formatDateTime,
   formatQty,
   formatVND,
-} from "../../_lib/format";
+} from "@lib/inventory/format";
 import { formatStockUnits } from "../../_lib/stock-unit-format";
 
 const stockCopy = messages.inventory.stock;

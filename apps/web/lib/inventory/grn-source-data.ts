@@ -14,7 +14,7 @@ import {
 } from "@comtammatu/shared/time";
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
-import type { TenantSupabase } from "@/(protected)/inventory/_lib/types";
+import type { TenantSupabase } from "@lib/inventory/types";
 import type { GrnSourceSupplier } from "./grn-source-model";
 
 type SupplierDbRow = {

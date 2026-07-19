@@ -1,9 +1,9 @@
-import type { IngredientUnitRow } from "./types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
   getDefaultIngredientUnit,
   getIngredientUnitOptions,
   type InventoryUnitOptionWithFactor,
-} from "./unit-options";
+} from "@lib/inventory/unit-options";
 
 export type IssueUnitOption = InventoryUnitOptionWithFactor;
 

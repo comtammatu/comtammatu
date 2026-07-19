@@ -5,14 +5,14 @@ import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
-import { formatDate } from "@/(protected)/inventory/_lib/format";
+import { formatDate } from "@lib/inventory/format";
 import { fetchProcurementBranches } from "@/(protected)/inventory/_lib/procurement-branches";
 import {
   fetchQcSettings,
   type QcSettings,
 } from "@/(protected)/inventory/_lib/qc-settings";
 import { getIngredientUnitDisplayName } from "@/(protected)/inventory/_lib/unit-display";
-import type { IngredientRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientRow } from "@lib/inventory/types";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchGrnDetail } from "@/(protected)/inventory/procurement-actions";
 import type {

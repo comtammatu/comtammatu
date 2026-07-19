@@ -6,10 +6,10 @@ import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
-import { formatDate } from "@/(protected)/inventory/_lib/format";
+import { formatDate } from "@lib/inventory/format";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { fetchStockBearingLocationIds } from "@/(protected)/inventory/_lib/stock-bearing-locations";
-import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
   computeStockStatus,
   isStockReorderRisk,

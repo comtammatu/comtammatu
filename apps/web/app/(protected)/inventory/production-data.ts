@@ -23,7 +23,7 @@ import {
   type ProductionRunRow,
   type ProductionRecipeRow,
 } from "./production-actions";
-import type { IngredientUnitRow, UnitOption } from "./_lib/types";
+import type { IngredientUnitRow, UnitOption } from "@lib/inventory/types";
 import type {
   BranchOption,
   FinishedGoodOption,

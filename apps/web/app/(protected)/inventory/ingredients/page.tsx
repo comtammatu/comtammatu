@@ -12,7 +12,7 @@ import type {
   CategoryOption,
   IngredientRow,
   UnitOption,
-} from "../_lib/types";
+} from "@lib/inventory/types";
 
 export default async function IngredientsPage() {
   const canManageCatalog = await currentUserHasAnyPermissionAny(
