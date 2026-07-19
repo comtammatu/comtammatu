@@ -96,6 +96,14 @@ export function pickGrnReceivingLocation(
   );
 }
 
+export function resolveSoleGrnWarehouseLocation(
+  locations: readonly { id: number }[],
+) {
+  if (locations.length === 0) return { status: "missing" } as const;
+  if (locations.length > 1) return { status: "ambiguous" } as const;
+  return { status: "resolved", locationId: locations[0]!.id } as const;
+}
+
 export function isSameGrnReferenceCost(
   currentCost: number,
   referenceCost: { value: number } | null,

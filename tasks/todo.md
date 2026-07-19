@@ -39,17 +39,6 @@ Blocker: The accepted product spine is not yet canonical. Recheck after “Confi
 
 - [ ] Define and run one real-auth smoke per accepted spine flow without copying the product map into the tracker.
 
-## Resolve the GRN warehouse on the server
-
-State: ready
-Kind: defect
-Tier: T2
-Lane: inventory
-Exit: A new Branch GRN binds its only active Branch warehouse server-side and never depends on client fallback selection.
-Evidence: Focused server/action coverage for one active warehouse, no active warehouse, and ambiguous active warehouses.
-
-- [ ] Move sole-location resolution to the server boundary, keep the receiving-location card hidden for one location, and add focused coverage.
-
 ## Move shared inventory logic out of the Owner surface route tree
 
 State: ready

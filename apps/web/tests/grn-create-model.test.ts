@@ -4,6 +4,7 @@ import {
   getGrnLocationKindLabel,
   isSameGrnReferenceCost,
   pickGrnReceivingLocation,
+  resolveSoleGrnWarehouseLocation,
   type GrnCreateProcurementLocationOption,
 } from "../lib/inventory/grn-create-model";
 
@@ -45,6 +46,26 @@ test("GRN create model keeps a branch receipt on its warehouse and honors draft 
   assert.equal(pickGrnReceivingLocation(locations, 1, 11)?.id, 11);
   assert.equal(pickGrnReceivingLocation(locations, 2)?.id, 20);
   assert.equal(pickGrnReceivingLocation([], 1), null);
+});
+
+test("GRN warehouse resolution accepts exactly one active warehouse", () => {
+  assert.deepEqual(resolveSoleGrnWarehouseLocation([{ id: 10 }]), {
+    status: "resolved",
+    locationId: 10,
+  });
+});
+
+test("GRN warehouse resolution rejects a branch without an active warehouse", () => {
+  assert.deepEqual(resolveSoleGrnWarehouseLocation([]), {
+    status: "missing",
+  });
+});
+
+test("GRN warehouse resolution rejects ambiguous active warehouses", () => {
+  assert.deepEqual(
+    resolveSoleGrnWarehouseLocation([{ id: 10 }, { id: 11 }]),
+    { status: "ambiguous" },
+  );
 });
 
 test("GRN create model exposes contextual receiving labels and stable cost comparison", () => {

@@ -77,6 +77,7 @@ export function useGrnCreateController({
   const [submitting, setSubmitting] = useState(false);
   const [receivingSiteSaving, setReceivingSiteSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const serverResolvesLocation = !canSwitchBranch;
 
   async function ensureServerDraft(): Promise<number | null> {
     if (serverGrnId !== null) return serverGrnId;
@@ -85,7 +86,7 @@ export function useGrnCreateController({
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return null;
     }
-    if (!locationId) {
+    if (!locationId && !serverResolvesLocation) {
       setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
       return null;
     }
@@ -94,7 +95,9 @@ export function useGrnCreateController({
       const created = await createGrnDraft({
         supplierId: supplier.id,
         branchId,
-        locationId,
+        ...(serverResolvesLocation
+          ? {}
+          : { locationId: locationId ?? undefined }),
       });
       if (!created.success) {
         setSubmitError(created.error ?? GRN_CREATE_COPY.toastCreateDraftFailed);
@@ -286,7 +289,7 @@ export function useGrnCreateController({
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return;
     }
-    if (!locationId) {
+    if (!locationId && !serverResolvesLocation) {
       setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
       return;
     }
@@ -317,7 +320,7 @@ export function useGrnCreateController({
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return;
     }
-    if (!locationId) {
+    if (!locationId && !serverResolvesLocation) {
       setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
       return;
     }
@@ -361,7 +364,7 @@ export function useGrnCreateController({
     (location) => location.branchId === branchId,
   );
   const showBranchPicker = canSwitchBranch && procurementBranches.length > 1;
-  const showLocationPicker = branchLocations.length > 1;
+  const showLocationPicker = canSwitchBranch && branchLocations.length > 1;
   const showWarehouseEditor = showBranchPicker || showLocationPicker;
   const selectedBranchName =
     procurementBranches.find((branch) => branch.id === branchId)?.name ??

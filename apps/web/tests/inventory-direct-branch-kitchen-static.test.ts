@@ -281,13 +281,18 @@ test("GRN receiving-site recreate is exposed through action and detail UI only",
   );
 });
 
-test("GRN create flow sends an explicit receiving location", () => {
+test("GRN create resolves the Branch warehouse on the server", () => {
   assert.match(
     grnActions,
     /locationId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)\.optional\(\)/,
   );
   assert.match(grnActions, /\.from\("inventory_locations"\)/);
   assert.match(grnActions, /\.eq\("branch_id", targetBranchId\)/);
+  assert.match(grnActions, /\.eq\("location_kind", "warehouse"\)/);
+  assert.match(grnActions, /\.limit\(2\)/);
+  assert.match(grnActions, /resolveSoleGrnWarehouseLocation/);
+  assert.match(grnActions, /warehouseMissing/);
+  assert.match(grnActions, /warehouseAmbiguous/);
   assert.match(grnActions, /location_id: targetLocationId/);
   assert.match(grnActions, /location_id, po_id/);
   assert.match(grnActions, /updateDraftGrnReceivingSite = withAction/);
@@ -302,12 +307,24 @@ test("GRN create flow sends an explicit receiving location", () => {
   assert.match(grnCreateData, /isStockBearingLocationKind/);
   assert.match(grnCreateData, /locationOptions,/);
   assert.match(grnCreateData, /initialLocationId,/);
+  assert.match(grnCreateData, /canSwitchBranch: routeBranchId == null/);
 
   assert.match(grnCreateController, /pickGrnReceivingLocation\(/);
-  assert.match(grnCreateController, /locationId,/);
+  assert.match(
+    grnCreateController,
+    /const serverResolvesLocation = !canSwitchBranch/,
+  );
+  assert.match(
+    grnCreateController,
+    /\.\.\.\(serverResolvesLocation[\s\S]*\{ locationId: locationId \?\? undefined \}/,
+  );
   assert.match(grnCreateModel, /location\.kind === "warehouse"/);
   assert.match(grnCreateClient, /GRN_CREATE_COPY\.receivingLocation/);
   assert.match(grnCreateController, /updateDraftGrnReceivingSite/);
+  assert.match(
+    grnCreateController,
+    /const showLocationPicker = canSwitchBranch && branchLocations\.length > 1/,
+  );
   assert.match(
     grnCreateController,
     /const showWarehouseEditor = showBranchPicker \|\| showLocationPicker/,
