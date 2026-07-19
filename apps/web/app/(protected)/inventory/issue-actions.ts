@@ -12,7 +12,7 @@ import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
-import type { TenantSupabase } from "./_lib/types";
+import type { TenantSupabase } from "@lib/inventory/types";
 import {
   getEmbeddedIngredientBaseUnitDisplayName,
   getEmbeddedUnitDisplayName,

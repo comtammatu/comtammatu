@@ -35,7 +35,7 @@ import type {
 import type { ProductionShortageRow } from "../../production-types";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { formatDecimalInputValue } from "@comtammatu/shared/format";
-import { formatQty } from "../../_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import {
   productionQuantityFromBase,
   productionQuantityToBase,

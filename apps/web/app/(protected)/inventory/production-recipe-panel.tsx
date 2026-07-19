@@ -61,7 +61,7 @@ import type {
   ProductionRecipeRow,
   RawIngredientOption,
 } from "./production-types";
-import type { UnitOption } from "./_lib/types";
+import type { UnitOption } from "@lib/inventory/types";
 import type { ActionResult } from "@comtammatu/shared/types";
 
 /* ─── Schema ─── */

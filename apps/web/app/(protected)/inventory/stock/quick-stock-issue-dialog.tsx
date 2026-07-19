@@ -39,7 +39,7 @@ import {
   type IssueUnitOption,
 } from "../_lib/issue-units";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
-import { formatQty } from "../_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import type { StockIngredient } from "@lib/inventory/stock-on-hand-model";
 
 const stockCopy = messages.inventory.stock;

@@ -20,7 +20,7 @@ import {
 import { PhotoUploadInput } from "../../../_components/photo-upload-input";
 import { FormattedNumberInput } from "@/components/form";
 import { formatPercent } from "@comtammatu/shared/format";
-import { formatVND } from "../../../_lib/format";
+import { formatVND } from "@lib/inventory/format";
 import {
   deriveGrnVariance as deriveVariance,
   GRN_DETAIL_COPY as grnCopy,

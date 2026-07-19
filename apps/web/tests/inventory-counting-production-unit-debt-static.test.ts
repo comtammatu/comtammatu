@@ -8,12 +8,12 @@ function readWeb(path: string): string {
 }
 
 const unitOptionsSource = readWeb(
-  "app/(protected)/inventory/_lib/unit-options.ts",
+  "lib/inventory/unit-options.ts",
 );
 const countUnitsSource = readWeb("app/(protected)/inventory/_lib/count-units.ts");
 const issueUnitsSource = readWeb("app/(protected)/inventory/_lib/issue-units.ts");
 const purchaseUnitsSource = readWeb(
-  "app/(protected)/inventory/_lib/purchase-units.ts",
+  "lib/inventory/purchase-units.ts",
 );
 const productionUnitsSource = readWeb(
   "app/(protected)/inventory/_lib/production-units.ts",
@@ -43,17 +43,16 @@ test("inventory unit option helpers delegate to one shared implementation", () =
   assert.match(unitOptionsSource, /getDefaultIngredientUnit/);
   assert.match(unitOptionsSource, /getLargestIngredientUnit/);
 
-  for (const source of [
-    countUnitsSource,
-    issueUnitsSource,
-    purchaseUnitsSource,
-    productionUnitsSource,
-  ]) {
-    assert.match(source, /from "\.\/unit-options"/);
+  for (const source of [countUnitsSource, issueUnitsSource, productionUnitsSource]) {
+    assert.match(source, /from "@lib\/inventory\/unit-options"/);
     assert.match(source, /getIngredientUnitOptions/);
     assert.doesNotMatch(source, /\.filter\(\(u/);
     assert.doesNotMatch(source, /\.sort\(\(a, b\)/);
   }
+  assert.match(purchaseUnitsSource, /from "\.\/unit-options"/);
+  assert.match(purchaseUnitsSource, /getIngredientUnitOptions/);
+  assert.doesNotMatch(purchaseUnitsSource, /\.filter\(\(u/);
+  assert.doesNotMatch(purchaseUnitsSource, /\.sort\(\(a, b\)/);
   for (const source of [
     countUnitsSource,
     issueUnitsSource,

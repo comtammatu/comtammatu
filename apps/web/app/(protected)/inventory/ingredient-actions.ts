@@ -27,7 +27,7 @@ import type {
   CategoryOption,
   IngredientUnitRow,
   UnitOption,
-} from "./_lib/types";
+} from "@lib/inventory/types";
 import { fetchUnits } from "./settings/units/units-actions";
 import { fetchCategories } from "./settings/categories/categories-actions";
 import {

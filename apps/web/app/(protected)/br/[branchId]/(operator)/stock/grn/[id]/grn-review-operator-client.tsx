@@ -25,7 +25,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { OperatorFlowSteps } from "@/(protected)/inventory/_components/operator-flow-steps";
-import type { IngredientRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientRow } from "@lib/inventory/types";
 import {
   BranchOperatorControlBar,
   BranchOperatorDetailList,

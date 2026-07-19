@@ -27,9 +27,9 @@ import { getStatusBadgeMeta } from "@/components/status-badge";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
-import { formatVND } from "../../_lib/format";
+import { formatVND } from "@lib/inventory/format";
 import { tRoute } from "../../_lib/dictionary";
-import type { IngredientRow } from "../../_lib/types";
+import type { IngredientRow } from "@lib/inventory/types";
 import { useGrnDetailActions as useGrnLineActions } from "@lib/inventory/use-grn-detail-actions";
 import { useGrnDetailLines as useGrnLines } from "@lib/inventory/use-grn-detail-lines";
 import {

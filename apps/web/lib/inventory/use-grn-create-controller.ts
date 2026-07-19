@@ -17,8 +17,8 @@ import {
   draftTotal,
   type GrnDraft,
   type GrnDraftLine,
-} from "@/(protected)/inventory/_lib/grn-draft";
-import { getDefaultPurchaseUnit } from "@/(protected)/inventory/_lib/purchase-units";
+} from "@lib/inventory/grn-draft";
+import { getDefaultPurchaseUnit } from "@lib/inventory/purchase-units";
 import { GRN_CREATE_COPY } from "./grn-create-copy";
 import {
   getGrnLocationKindLabel,

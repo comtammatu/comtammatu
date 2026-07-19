@@ -1,7 +1,7 @@
 import { STATES_VI } from "@comtammatu/shared/messages";
 import { formatCount, formatPercent } from "@comtammatu/shared/format";
-import { lineTotalFromUnitCost } from "@/(protected)/inventory/_lib/grn-draft";
-import { formatQty, formatVND } from "@/(protected)/inventory/_lib/format";
+import { lineTotalFromUnitCost } from "@lib/inventory/grn-draft";
+import { formatQty, formatVND } from "@lib/inventory/format";
 
 export const GRN_CREATE_COPY = {
   changeSupplier: "Đổi nhà cung cấp",

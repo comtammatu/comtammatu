@@ -1,4 +1,4 @@
-import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
 import type {
   StockActionPermissions,

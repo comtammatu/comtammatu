@@ -19,9 +19,9 @@ import { upsertGrnLine } from "../../../grn-actions";
 import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
-} from "../../../_lib/purchase-units";
-import { getReferenceCostForUnit } from "../../../_lib/reference-cost";
-import type { IngredientRow } from "../../../_lib/types";
+} from "@lib/inventory/purchase-units";
+import { getReferenceCostForUnit } from "@lib/inventory/reference-cost";
+import type { IngredientRow } from "@lib/inventory/types";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   GRN_DETAIL_COPY as grnCopy,

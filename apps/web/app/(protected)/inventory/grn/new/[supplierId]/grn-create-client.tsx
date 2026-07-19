@@ -41,7 +41,7 @@ import {
   DocumentFormFrame,
 } from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { getDisplayReferenceCost } from "../../../_lib/reference-cost";
+import { getDisplayReferenceCost } from "@lib/inventory/reference-cost";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import type {
   GrnCreatePageData,

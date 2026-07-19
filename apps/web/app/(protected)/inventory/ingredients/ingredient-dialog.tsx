@@ -35,9 +35,9 @@ import {
   TextField,
 } from "@/components/form";
 import { createIngredient, updateIngredient } from "../ingredient-actions";
-import type { CategoryOption, IngredientRow, UnitOption } from "../_lib/types";
+import type { CategoryOption, IngredientRow, UnitOption } from "@lib/inventory/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "../_lib/constants";
-import { parseOptionalNumber } from "../_lib/format";
+import { parseOptionalNumber } from "@lib/inventory/format";
 import {
   DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION,
   formatConversionFactorDisplay,

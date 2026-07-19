@@ -68,7 +68,7 @@ import {
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { discardGrnDraft } from "../grn-actions";
-import { formatVND } from "../_lib/format";
+import { formatVND } from "@lib/inventory/format";
 import { tNav } from "../_lib/dictionary";
 import {
   filterGrnListRows,

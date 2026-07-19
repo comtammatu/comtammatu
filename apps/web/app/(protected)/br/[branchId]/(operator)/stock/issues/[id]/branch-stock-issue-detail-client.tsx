@@ -76,7 +76,7 @@ import {
   getIssueMaxEntryQuantity,
   getIssueUnitOptions,
 } from "@/(protected)/inventory/_lib/issue-units";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import {
   cancelStockIssue,
   confirmStockIssue,

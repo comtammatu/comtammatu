@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { getRecipeLineBaseQuantity } from "../app/(protected)/inventory/_lib/recipe-cost";
-import type { IngredientUnitRow } from "../app/(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "../lib/inventory/types";
 
 function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
   return {

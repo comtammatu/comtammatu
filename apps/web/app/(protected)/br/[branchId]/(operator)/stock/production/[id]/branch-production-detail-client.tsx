@@ -51,7 +51,7 @@ import {
   type ProductionRecipeIngredient,
   type ProductionRunRow,
 } from "@/(protected)/inventory/production-run-actions";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import {
   productionQuantityFromBase,
   productionQuantityToBase,

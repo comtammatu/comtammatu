@@ -6,7 +6,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { fetchStockBearingLocationIds } from "@/(protected)/inventory/_lib/stock-bearing-locations";
-import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
   computeStockIngredientDetailStatus,
   stockStorageTemperature,

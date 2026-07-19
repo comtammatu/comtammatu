@@ -5,7 +5,7 @@ import { z } from "zod";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormDialog, SelectField } from "@/components/form";
 import { RecipeLinesEditor } from "../_components/recipe-lines-editor";
-import type { IngredientUnitRow } from "../_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import { upsertRecipeLines } from "../procurement-actions";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 

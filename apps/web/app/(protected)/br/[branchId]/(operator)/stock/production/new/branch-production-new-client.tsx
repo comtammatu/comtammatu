@@ -56,8 +56,8 @@ import {
   type ProductionRecipeIngredient,
 } from "@/(protected)/inventory/production-run-actions";
 import { tTerm } from "@/(protected)/inventory/_lib/dictionary";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
-import { getIngredientUnitOptions } from "@/(protected)/inventory/_lib/unit-options";
+import { formatQty } from "@lib/inventory/format";
+import { getIngredientUnitOptions } from "@lib/inventory/unit-options";
 import {
   productionQuantityFromBase,
   productionQuantityToBase,

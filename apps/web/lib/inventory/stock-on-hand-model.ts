@@ -1,5 +1,5 @@
 import { formatVNDate } from "@comtammatu/shared/time";
-import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
 

@@ -651,7 +651,7 @@ const checks = [
   {
     id: "operator-owner-shell-boundary",
     description:
-      "Branch runtime, Operations, and employee-lib surfaces must not import or render Owner surface chrome. Use the operator layout, AppHeader/AppBottomNav, EmployeePage, or embedded PageContent branches instead.",
+      "Branch runtime, Operations, and employee-lib surfaces must not import or render Owner surface chrome or import Owner inventory modules outside Server Actions. Use shared lib modules or the operator layout instead.",
     roots: [
       {
         dir: "apps/web/app/(protected)/br/[branchId]",
@@ -660,7 +660,7 @@ const checks = [
       { dir: "apps/web/lib/staff-runtime", extensions: [".ts", ".tsx"] },
     ],
     pattern:
-      /\b(?:OwnerModuleShell|OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveOwner(?:PrimaryTabs|DeepNav)|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:owner-module-shell|office-module-shell|management-chrome|app-shell|owner-nav|office-nav|finance-shell|inventory-shell)["']|from\s+["']@\/\(protected\)\/inventory\/(?!_lib\/)(?!(?:[^"']*\/)?[^/"']*actions(?:\.ts)?["'])[^"']+["']/g,
+      /\b(?:OwnerModuleShell|OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveOwner(?:PrimaryTabs|DeepNav)|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:owner-module-shell|office-module-shell|management-chrome|app-shell|owner-nav|office-nav|finance-shell|inventory-shell)["']|from\s+["']@\/\(protected\)\/inventory\/(?!(?:[^"']*\/)?[^/"']*actions(?:\.ts)?["'])[^"']+["']/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/catalog-ingredients-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/suppliers/catalog-suppliers-client.tsx": 1,
@@ -668,15 +668,19 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/thresholds/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/branch-production-detail-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/branch-production-new-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/branch-production-detail-client.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/branch-production-new-client.tsx": 3,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/[id]/count/branch-stocktake-count-client.tsx": 3,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/new/branch-stocktake-new-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/branch-waste-approvals-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/branch-waste-create-client.tsx": 6,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/branch-waste-create-client.tsx": 7,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/branch-stock-issue-detail-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/branch-stock-ingredient-detail.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx": 2,
     },
   },
   {

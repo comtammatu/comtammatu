@@ -37,7 +37,7 @@ import {
   AppSection,
   AppToolbar,
 } from "@/components/surface";
-import { formatVND } from "../_lib/format";
+import { formatVND } from "@lib/inventory/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
 import type {
   MenuItemOption,

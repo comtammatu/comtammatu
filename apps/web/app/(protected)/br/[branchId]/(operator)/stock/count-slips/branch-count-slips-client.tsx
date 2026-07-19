@@ -47,7 +47,7 @@ import {
   approveCountSlip,
   requestCountRecount,
 } from "@/(protected)/inventory/count-slips/actions";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import type {
   CountSlipLineView,
   CountSlipRow,

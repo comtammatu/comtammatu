@@ -8,7 +8,7 @@ import type {
   FinishedGoodOption,
   RawIngredientOption,
 } from "./production-types";
-import type { UnitOption } from "./_lib/types";
+import type { UnitOption } from "@lib/inventory/types";
 import { STORAGE_OPTIONS } from "./_lib/constants";
 
 type StorageType = "ambient" | "refrigerated" | "frozen";

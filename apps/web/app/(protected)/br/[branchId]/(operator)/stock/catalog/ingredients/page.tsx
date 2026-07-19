@@ -8,7 +8,7 @@ import type {
   CategoryOption,
   IngredientRow,
   UnitOption,
-} from "@/(protected)/inventory/_lib/types";
+} from "@lib/inventory/types";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
 import { CatalogIngredientsClient } from "./catalog-ingredients-client";
 

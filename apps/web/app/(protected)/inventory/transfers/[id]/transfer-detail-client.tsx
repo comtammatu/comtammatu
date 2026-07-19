@@ -37,7 +37,7 @@ import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { tRoute, tTerm } from "../../_lib/dictionary";
-import { formatVND } from "../../_lib/format";
+import { formatVND } from "@lib/inventory/format";
 import {
   transferConfirmShip,
   transferMarkInTransit,

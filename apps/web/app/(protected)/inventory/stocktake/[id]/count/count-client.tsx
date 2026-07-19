@@ -22,7 +22,7 @@ import {
   type DraftCounts,
 } from "../../../_components/stocktake-draft-saver";
 import { ZoneLockIndicator } from "../../../_components/zone-lock-indicator";
-import { formatQty } from "../../../_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import { StocktakeCountWizard } from "./stocktake-count-wizard";
 import { messages } from "@lib/messages";
 import {

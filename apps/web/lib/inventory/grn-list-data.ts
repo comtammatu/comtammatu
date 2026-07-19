@@ -5,7 +5,7 @@ import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import { fetchGrns } from "@/(protected)/inventory/procurement-actions";
 import { listMyGrnDrafts } from "@/(protected)/inventory/grn-actions";
-import { formatDate } from "@/(protected)/inventory/_lib/format";
+import { formatDate } from "@lib/inventory/format";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import type { GrnDraftRow, GrnRow } from "./grn-list-model";
 

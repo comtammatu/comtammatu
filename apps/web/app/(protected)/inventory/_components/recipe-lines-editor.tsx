@@ -34,7 +34,7 @@ import {
   getDefaultProductionUnit,
   getProductionUnitOptions,
 } from "../_lib/production-units";
-import type { IngredientUnitRow } from "../_lib/types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
   FORM_VI,
   INVENTORY_VI,

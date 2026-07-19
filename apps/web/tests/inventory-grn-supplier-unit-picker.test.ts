@@ -6,15 +6,15 @@ import { normalizePgDumpSql } from "./sql-test-utils";
 import {
   lineTotalFromUnitCost,
   unitCostFromLineTotal,
-} from "../app/(protected)/inventory/_lib/grn-draft";
+} from "../lib/inventory/grn-draft";
 import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
-} from "../app/(protected)/inventory/_lib/purchase-units";
+} from "../lib/inventory/purchase-units";
 import {
   getDisplayReferenceCost,
   getReferenceCostForUnit,
-} from "../app/(protected)/inventory/_lib/reference-cost";
+} from "../lib/inventory/reference-cost";
 import { getIngredientUnitDisplayName } from "../app/(protected)/inventory/_lib/unit-display";
 
 const repoRoot = resolve(process.cwd(), "../..");
@@ -230,12 +230,12 @@ test("inventory unit display uses the catalog name, not the unit code", () => {
 
 test("inventory unit option helpers are not role-gated by allow flags", () => {
   const sharedSource = readRepo(
-    "apps/web/app/(protected)/inventory/_lib/unit-options.ts",
+    "apps/web/lib/inventory/unit-options.ts",
   );
   assert.match(sharedSource, /unit\.is_active && unit\.unit_code !== ""/);
 
   for (const path of [
-    "apps/web/app/(protected)/inventory/_lib/purchase-units.ts",
+    "apps/web/lib/inventory/purchase-units.ts",
     "apps/web/app/(protected)/inventory/_lib/issue-units.ts",
     "apps/web/app/(protected)/inventory/_lib/production-units.ts",
     "apps/web/app/(protected)/inventory/_lib/count-units.ts",

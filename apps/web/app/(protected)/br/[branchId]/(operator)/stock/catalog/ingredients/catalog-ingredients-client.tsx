@@ -38,7 +38,7 @@ import type {
   CategoryOption,
   IngredientRow,
   UnitOption,
-} from "@/(protected)/inventory/_lib/types";
+} from "@lib/inventory/types";
 import { CatalogBackControl } from "../catalog-back-header";
 
 const copy = messages.catalog.ingredients;

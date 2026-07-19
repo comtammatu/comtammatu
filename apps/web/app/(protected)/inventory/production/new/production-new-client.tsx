@@ -43,7 +43,7 @@ import {
 } from "../../production-run-actions";
 import { tTerm } from "../../_lib/dictionary";
 import { messages } from "@lib/messages";
-import { getIngredientUnitOptions } from "../../_lib/unit-options";
+import { getIngredientUnitOptions } from "@lib/inventory/unit-options";
 import {
   productionQuantityFromBase,
   productionQuantityToBase,
@@ -53,7 +53,7 @@ import type {
   FinishedGoodOption,
   InventoryLocationOption,
 } from "../../production-types";
-import { formatQty } from "../../_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import { formatDecimalInputValue } from "@comtammatu/shared/format";
 
 interface ProductionNewClientProps {

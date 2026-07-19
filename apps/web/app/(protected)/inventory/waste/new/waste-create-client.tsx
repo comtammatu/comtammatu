@@ -33,7 +33,7 @@ import { ShiftCapMeter } from "@/(protected)/inventory/_components/shift-cap-met
 import { BranchDailyCapBanner } from "@/(protected)/inventory/_components/branch-daily-cap-banner";
 import { AntiSplitRollingMeter } from "@/(protected)/inventory/_components/anti-split-rolling-meter";
 import { createWasteEntry } from "@/(protected)/inventory/waste-actions";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import {
   clampIssueEntryQuantity,
   formatIssueMaxEntryQuantity,

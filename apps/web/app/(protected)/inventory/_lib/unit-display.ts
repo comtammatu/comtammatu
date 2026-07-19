@@ -1,4 +1,4 @@
-import type { IngredientUnitRow } from "./types";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 
 function embeddedObject(value: unknown): Record<string, unknown> | null {
   if (Array.isArray(value)) {

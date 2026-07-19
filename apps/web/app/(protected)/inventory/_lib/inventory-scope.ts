@@ -8,7 +8,7 @@ import {
   type ListScopeResolution,
   type OperatorBranchOption,
 } from "@/_lib/branch-context";
-import type { TenantSupabase } from "./types";
+import type { TenantSupabase } from "@lib/inventory/types";
 
 export type InventoryBranchOption = OperatorBranchOption;
 

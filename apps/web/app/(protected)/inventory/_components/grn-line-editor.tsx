@@ -27,13 +27,13 @@ import {
   QuantityInput,
 } from "@/components/form/domain-number-inputs";
 import { FormField } from "@/components/form/form-field";
-import { formatQty } from "@/(protected)/inventory/_lib/format";
+import { formatQty } from "@lib/inventory/format";
 import {
   getPurchaseUnitOptions,
   type PurchaseUnitOption,
-} from "@/(protected)/inventory/_lib/purchase-units";
-import { getReferenceCostForUnit } from "@/(protected)/inventory/_lib/reference-cost";
-import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
+} from "@lib/inventory/purchase-units";
+import { getReferenceCostForUnit } from "@lib/inventory/reference-cost";
+import type { IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import type { GrnLineEditState } from "@lib/inventory/grn-create-model";
