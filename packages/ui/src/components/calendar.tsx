@@ -6,8 +6,8 @@ import {
   getDefaultClassNames,
   type DayButton,
   type Locale,
-} from "react-day-picker";
-import { vi } from "react-day-picker/locale";
+} from "@daypicker/react";
+import { vi } from "@daypicker/react/locale";
 
 import { cn } from "../lib/utils";
 import { Button, buttonVariants } from "./button";
@@ -92,7 +92,7 @@ function Calendar({
             : "flex items-center gap-1 rounded-(--cell-radius) text-sm [&>svg]:size-3.5 [&>svg]:text-muted-foreground",
           defaultClassNames.caption_label,
         ),
-        table: "w-full border-collapse",
+        month_grid: "w-full border-collapse",
         weekdays: cn("flex", defaultClassNames.weekdays),
         weekday: cn(
           "flex-1 rounded-(--cell-radius) text-xs font-normal text-muted-foreground select-none",

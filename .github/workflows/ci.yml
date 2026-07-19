@@ -42,6 +42,8 @@ jobs:
 
       - run: pnpm deps:audit
 
+      - run: pnpm deps:boundaries
+
       - run: pnpm lint:baseline
 
       - run: pnpm typecheck

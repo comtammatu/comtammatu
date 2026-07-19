@@ -5,6 +5,28 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Close the Base UI Select and Combobox escape hatches
+
+State: verify
+Kind: debt
+Tier: T3
+Lane: ui/base-ui
+Exit: Select label resolution is a regression-proven current DS contract, and app form combobox adapters no longer consume a raw Base UI namespace exported by `@comtammatu/ui`.
+Evidence: Component-contract tests, an import guard for the Base UI boundary, focused form tests, UI audit, typecheck, lint, build, and browser checks for single/multi-select behavior.
+
+- [ ] Complete the shared authenticated Preview browser canary in the final verification wave.
+
+## Refresh and optimize project dependencies
+
+State: verify
+Kind: debt
+Tier: T3
+Lane: platform/dependencies
+Exit: Direct dependencies are current within approved compatibility boundaries, duplicate declarations and lockfile drift are absent, and every retained override or deprecated transitive package has an owner plus revisit trigger.
+Evidence: Live registry inventory, dependency audit, Turbo boundaries, security/license reports, focused package gates, and the repository verification matrix.
+
+- [ ] Complete remote CI and the authenticated Preview browser canary.
+
 ## Prove Self-Order offline navigation isolation
 
 State: verify

@@ -279,6 +279,37 @@ function runDedupeCheck() {
   ].filter(Boolean);
 }
 
+function auditLicenses() {
+  const result = spawnSync("pnpm", ["licenses", "list", "--json"], {
+    cwd: ROOT,
+    encoding: "utf8",
+    stdio: "pipe",
+  });
+
+  if (result.status !== 0) {
+    return [
+      "pnpm licenses list failed.",
+      result.stdout.trim(),
+      result.stderr.trim(),
+    ].filter(Boolean);
+  }
+
+  try {
+    const licenses = JSON.parse(result.stdout);
+    const unresolved = Object.keys(licenses).filter((license) =>
+      /^(unknown|unlicensed)$/i.test(license),
+    );
+    return unresolved.map(
+      (license) =>
+        `unresolved dependency license group ${license}: ${licenses[license]
+          .map((entry) => `${entry.name}@${entry.versions.join(",")}`)
+          .join(", ")}`,
+    );
+  } catch (error) {
+    return [`Unable to parse dependency license report: ${error.message}`];
+  }
+}
+
 async function auditDirectDependencies() {
   const packageJsonFiles = await collectPackageJsonFiles();
   const failures = [];
@@ -314,7 +345,11 @@ async function auditDirectDependencies() {
 }
 
 async function main() {
-  const failures = [...runDedupeCheck(), ...(await auditDirectDependencies())];
+  const failures = [
+    ...runDedupeCheck(),
+    ...auditLicenses(),
+    ...(await auditDirectDependencies()),
+  ];
 
   if (failures.length > 0) {
     console.error("Dependency audit failed:\n");
@@ -323,7 +358,9 @@ async function main() {
     return;
   }
 
-  console.log("Dependency audit: không phát hiện direct dependency thừa.");
+  console.log(
+    "Dependency audit: no unused direct dependency, lockfile dedupe drift, or unresolved license.",
+  );
 }
 
 await main();
