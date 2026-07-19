@@ -331,8 +331,17 @@ function MatchCell({
   tx: SepayBankTransaction;
   expenseOptions: ExpenseMatchOption[];
 }) {
+  if (tx.bankTransactionId == null && tx.eventId == null) {
+    return (
+      <span className="text-muted-foreground">
+        {copy.reconciliation.unmatchedMoneyOut}
+      </span>
+    );
+  }
+
   return (
     <MatchExpenseCell
+      bankTransactionId={tx.bankTransactionId ?? null}
       eventId={tx.eventId}
       amount={tx.amount}
       paymentId={tx.paymentId}
@@ -365,9 +374,12 @@ function LinkPaymentCell({
   const [isPending, startTransition] = React.useTransition();
   const table = copy.unmatchedMoneyInTable;
   const reason = classifySepayUnmatchedMoneyIn(tx);
+  const bankTransactionId = tx.bankTransactionId ?? null;
+  const eventId = tx.eventId;
 
   if (
     !canLinkPayments ||
+    (bankTransactionId == null && eventId == null) ||
     reason === "webhook_error" ||
     !canManuallyLinkSepayPayment(tx)
   ) {
@@ -386,7 +398,8 @@ function LinkPaymentCell({
 
     startTransition(async () => {
       const res = await linkSepayTransactionToPayment({
-        eventId: tx.eventId,
+        bankTransactionId,
+        eventId,
         paymentId: parsedPaymentId,
       });
 
@@ -617,7 +630,9 @@ export function BankTransactionsTable({
       data={filteredRows}
       getRowKey={(row) =>
         row.kind === "bank"
-          ? `bank-${row.tx.eventId}`
+          ? `bank-${String(
+              row.tx.bankTransactionId ?? row.tx.eventId ?? row.tx.requestId,
+            )}`
           : `missing-${row.payment.paymentId}`
       }
       filters={[

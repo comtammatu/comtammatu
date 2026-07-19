@@ -48,7 +48,8 @@ const copy = messages.finance.bankTransactions;
 type MatchPurpose = "expense" | "refund" | "supplier";
 
 interface MatchExpenseCellProps {
-  eventId: number;
+  bankTransactionId: number | null;
+  eventId: number | null;
   amount: number;
   paymentId: number | null;
   expenseIds: number[];
@@ -81,6 +82,7 @@ function supplierInvoiceHref(invoiceId: number): string {
 }
 
 export function MatchExpenseCell({
+  bankTransactionId,
   eventId,
   amount,
   paymentId,
@@ -116,10 +118,15 @@ export function MatchExpenseCell({
   const [selectedRefundsById, setSelectedRefundsById] = React.useState<
     Record<number, SepayRefundMatchOption>
   >({});
+  const matchKey = bankTransactionId ?? eventId;
 
   React.useEffect(() => {
     setSelectedIds(expenseIds);
   }, [expenseIds]);
+
+  if (matchKey == null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
 
   const loadRefundOptions = ({
     append,
@@ -158,6 +165,7 @@ export function MatchExpenseCell({
   const handleSupplierPaymentMatch = (supplierPaymentIds: number[]) => {
     startTransition(async () => {
       const res = await matchSepayTransactionWithSupplierPayments({
+        bankTransactionId,
         eventId,
         supplierPaymentIds,
       });
@@ -179,6 +187,7 @@ export function MatchExpenseCell({
   const handleRefundMatch = (refundIds: number[]) => {
     startTransition(async () => {
       const res = await matchSepayTransactionWithRefunds({
+        bankTransactionId,
         eventId,
         refundIds,
       });
@@ -202,7 +211,9 @@ export function MatchExpenseCell({
     (expense) =>
       expenseIds.includes(expense.id) &&
       expense.transfer_content != null &&
-      expense.matchedEventIds.includes(eventId),
+      ((eventId != null && expense.matchedEventIds.includes(eventId)) ||
+        (bankTransactionId != null &&
+          expense.matchedBankTransactionIds.includes(bankTransactionId))),
   );
 
   if (paymentId != null) {
@@ -305,7 +316,9 @@ export function MatchExpenseCell({
 
   const selectedSet = new Set(selectedIds);
   const availableExpenses = expenseOptions
-    .filter((expense) => isExpenseVisibleForBankMatch(expense, eventId))
+    .filter((expense) =>
+      isExpenseVisibleForBankMatch(expense, eventId, bankTransactionId),
+    )
     .sort(
       (left, right) =>
         Math.abs(left.amount - amount) - Math.abs(right.amount - amount),
@@ -383,6 +396,7 @@ export function MatchExpenseCell({
   const handleSave = () => {
     startTransition(async () => {
       const res = await matchSepayTransactionWithExpenses({
+        bankTransactionId,
         eventId,
         expenseIds: selectedIds,
       });
@@ -582,7 +596,7 @@ export function MatchExpenseCell({
               <div>
                 <div className="flex flex-col gap-1 pr-1">
                   {availableRefunds.map((refund) => {
-                    const checkboxId = `sepay-${eventId}-refund-${refund.id}`;
+                    const checkboxId = `sepay-${String(matchKey)}-refund-${refund.id}`;
                     return (
                       <label
                         key={refund.id}
@@ -730,7 +744,7 @@ export function MatchExpenseCell({
                 <div className="flex flex-col gap-1 pr-1">
                   {availableExpenses.map((exp) => {
                     const checked = selectedSet.has(exp.id);
-                    const checkboxId = `sepay-${eventId}-expense-${exp.id}`;
+                    const checkboxId = `sepay-${String(matchKey)}-expense-${exp.id}`;
                     const hasTransferIntent = exp.transfer_content != null;
                     const blockedBySelectedIntent =
                       selectedPersistedIntentId != null &&

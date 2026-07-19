@@ -5,7 +5,10 @@ import {
 } from "@comtammatu/shared/format";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
-import { fetchInventoryValueByBranch } from "@/(protected)/inventory/inventory-value-actions";
+import {
+  fetchInventoryPeriodValue,
+  fetchInventoryValueByBranch,
+} from "@/(protected)/inventory/inventory-value-actions";
 import { messages } from "@lib/messages";
 import {
   fetchAccessibleBranches,
@@ -73,6 +76,21 @@ interface CashVarianceSummary {
   abs_variance_total: number;
 }
 
+interface CashVarianceActionTarget {
+  session_id: number;
+  branch_id: number;
+  cash_difference: number | string;
+}
+
+interface FinanceReconciliationAttention {
+  unmatched_bank_count: number | string;
+  unmatched_bank_amount: number | string;
+  unmatched_money_in_count: number | string;
+  unmatched_money_out_count: number | string;
+  missing_vietqr_count: number | string;
+  missing_vietqr_amount: number | string;
+}
+
 interface BranchOption {
   id: number;
   name: string;
@@ -83,6 +101,7 @@ interface FinanceCockpitKpis {
   orderCount: number;
   netRevenueBeforeVat: number;
   inventoryValue: number;
+  inventoryOpeningValue: number;
   operatingExpense: number;
   ingredientCost: number;
   grossProfit: number;
@@ -149,6 +168,55 @@ export interface FinanceCockpitData {
   dashboardSummary: FinanceDashboardSummary | null;
 }
 
+async function fetchCashVarianceActionTarget({
+  supabase,
+  branchId,
+  startDate,
+  endDate,
+}: {
+  supabase: SupabaseClient;
+  branchId: number | null;
+  startDate: string;
+  endDate: string;
+}): Promise<CashVarianceActionTarget | null> {
+  const { data, error } = await supabase.rpc(
+    "get_cash_variance_action_target",
+    {
+      p_branch_id: branchId as number,
+      p_start_date: startDate,
+      p_end_date: endDate,
+    },
+  );
+  if (error) {
+    console.error("[finance:cash-variance-target] RPC failed", error.code);
+    return null;
+  }
+  return (data?.[0] as CashVarianceActionTarget | undefined) ?? null;
+}
+
+async function fetchFinanceReconciliationAttention({
+  supabase,
+  startDate,
+  endDate,
+}: {
+  supabase: SupabaseClient;
+  startDate: string;
+  endDate: string;
+}): Promise<FinanceReconciliationAttention | null> {
+  const { data, error } = await supabase.rpc(
+    "get_finance_reconciliation_attention",
+    {
+      p_start_date: startDate,
+      p_end_date: endDate,
+    },
+  );
+  if (error) {
+    console.error("[finance:reconciliation-attention] RPC failed", error.code);
+    return null;
+  }
+  return (data?.[0] as FinanceReconciliationAttention | undefined) ?? null;
+}
+
 function toNumber(value: number | string | null | undefined): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -158,11 +226,13 @@ function buildKpis({
   kpis,
   actualFoodCost,
   inventoryValue,
+  inventoryOpeningValue = inventoryValue,
   operatingExpense,
 }: {
   kpis: KpiBundle | null;
   actualFoodCost: ActualFoodCostSnapshot;
   inventoryValue: number;
+  inventoryOpeningValue?: number;
   operatingExpense: number;
 }): FinanceCockpitKpis {
   const totalCollected = toNumber(kpis?.net_revenue);
@@ -188,6 +258,7 @@ function buildKpis({
     orderCount,
     netRevenueBeforeVat,
     inventoryValue,
+    inventoryOpeningValue,
     operatingExpense,
     ingredientCost,
     grossProfit,
@@ -537,6 +608,9 @@ function buildExceptions({
   foodCostRows,
   unpaidSupplierInvoices,
   paymentDesync,
+  cashVarianceHref,
+  reconciliationAttention,
+  reconciliationHref,
 }: {
   kpis: FinanceCockpitKpis;
   dashboardSummary: Pick<
@@ -547,6 +621,9 @@ function buildExceptions({
   foodCostRows: FoodCostRow[];
   unpaidSupplierInvoices: { count: number; amount: number };
   paymentDesync: { count: number; amount: number };
+  cashVarianceHref?: string;
+  reconciliationAttention: FinanceReconciliationAttention | null;
+  reconciliationHref: string;
 }): FinanceException[] {
   const missingCostCount = Math.max(
     0,
@@ -566,13 +643,30 @@ function buildExceptions({
               formatCount(toNumber(cashVariance?.session_count)),
             )
           : copy.exceptions.cashVarianceNoClosedSession,
-      href: "/finance/revenue",
+      href: cashVarianceHref,
       tone:
         toNumber(cashVariance?.abs_variance_total) >= 500_000
           ? "destructive"
           : toNumber(cashVariance?.abs_variance_total) > 0
             ? "warning"
             : "neutral",
+    },
+    {
+      label: copy.exceptions.bankReconciliationLabel,
+      value: copy.exceptions.bankReconciliationValue(
+        formatCount(toNumber(reconciliationAttention?.unmatched_bank_count)),
+        formatCount(toNumber(reconciliationAttention?.missing_vietqr_count)),
+      ),
+      hint: copy.exceptions.bankReconciliationHint(
+        formatVND(toNumber(reconciliationAttention?.unmatched_bank_amount)),
+        formatVND(toNumber(reconciliationAttention?.missing_vietqr_amount)),
+      ),
+      href: reconciliationHref,
+      tone:
+        toNumber(reconciliationAttention?.unmatched_bank_count) > 0 ||
+        toNumber(reconciliationAttention?.missing_vietqr_count) > 0
+          ? "warning"
+          : "neutral",
     },
     {
       label: copy.exceptions.operatingExpenseLabel,
@@ -649,7 +743,10 @@ export async function fetchFinanceCockpit(
     actualFoodCost,
     compareActualFoodCost,
     inventoryValueRes,
+    inventoryPeriodValueRes,
     cashVarianceRes,
+    cashVarianceTarget,
+    reconciliationAttention,
     dashboardSummaryRes,
     topItemsRes,
     operatingExpense,
@@ -689,7 +786,23 @@ export async function fetchFinanceCockpit(
         })
       : Promise.resolve({ rows: [], orderCount: 0 }),
     fetchInventoryValueByBranch(),
+    fetchInventoryPeriodValue({
+      startDate: resolved.start,
+      endDate: resolved.end,
+      ...(params.branch != null ? { branchId: params.branch } : {}),
+    }),
     fetchCashVarianceSummary(params.branch, resolved.start, resolved.end),
+    fetchCashVarianceActionTarget({
+      supabase,
+      branchId: params.branch,
+      startDate: resolved.start,
+      endDate: resolved.end,
+    }),
+    fetchFinanceReconciliationAttention({
+      supabase,
+      startDate: resolved.start,
+      endDate: resolved.end,
+    }),
     fetchFinanceDashboardSummary(params.branch, resolved.start, resolved.end),
     fetchTopItems(params.branch, resolved.start, resolved.end),
     fetchOperatingExpenseTotal({
@@ -725,16 +838,23 @@ export async function fetchFinanceCockpit(
   const inventoryRows = inventoryValueRes.success
     ? (inventoryValueRes.data?.rows ?? [])
     : [];
-  const inventoryValue =
+  const currentInventoryValue =
     params.branch == null
       ? inventoryRows.reduce((sum, row) => sum + row.totalValue, 0)
       : (inventoryRows.find((row) => row.branchId === params.branch)
           ?.totalValue ?? 0);
+  const inventoryValue = inventoryPeriodValueRes.success
+    ? (inventoryPeriodValueRes.data?.closingValue ?? currentInventoryValue)
+    : currentInventoryValue;
+  const inventoryOpeningValue = inventoryPeriodValueRes.success
+    ? (inventoryPeriodValueRes.data?.openingValue ?? inventoryValue)
+    : inventoryValue;
 
   const kpis = buildKpis({
     kpis: kpisRes.success ? (kpisRes.data as KpiBundle | null) : null,
     actualFoodCost,
     inventoryValue,
+    inventoryOpeningValue,
     operatingExpense,
   });
 
@@ -758,7 +878,7 @@ export async function fetchFinanceCockpit(
   );
 
   const branchCashVariance = new Map<number, number>();
-  if (branches.length > 1) {
+  if (params.branch == null && branches.length > 0) {
     const varianceRows = await Promise.all(
       branches.map(async (branch) => {
         const res = await fetchCashVarianceSummary(
@@ -776,6 +896,18 @@ export async function fetchFinanceCockpit(
       branchCashVariance.set(branchId, amount);
     }
   }
+  const cashVarianceBranchId =
+    params.branch ??
+    Array.from(branchCashVariance.entries()).sort(
+      ([, amountA], [, amountB]) => amountB - amountA,
+    )[0]?.[0];
+  const cashVarianceHref =
+    cashVarianceTarget != null
+      ? `/br/${String(cashVarianceTarget.branch_id)}/pos-sessions?session=${String(cashVarianceTarget.session_id)}`
+      : cashVarianceBranchId != null
+        ? `/br/${String(cashVarianceBranchId)}/pos-sessions`
+        : undefined;
+  const reconciliationHref = `/finance/bank-transactions?range=custom&from=${resolved.start}&to=${resolved.end}`;
   const dashboardSummary = dashboardSummaryRes.success
     ? (dashboardSummaryRes.data as FinanceDashboardSummary | null)
     : null;
@@ -823,6 +955,9 @@ export async function fetchFinanceCockpit(
       foodCostRows,
       unpaidSupplierInvoices,
       paymentDesync,
+      cashVarianceHref,
+      reconciliationAttention,
+      reconciliationHref,
     }),
   };
 }

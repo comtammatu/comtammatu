@@ -270,17 +270,17 @@ export function CloseSessionSheet({
                 >
                   <AlertDescription className="text-current">
                     {summary.cash_difference === 0
-                      ? "Số dư khớp hoàn toàn. Có thể chốt ca."
+                      ? "Ca đã chốt và số dư khớp hoàn toàn."
                       : !significantDiff
-                        ? "Chênh lệch nhỏ, xác nhận lại trước khi chốt."
-                        : `Lệch quỹ vượt ngưỡng (> ${formatVND(summary.variance_threshold)}). Đã gửi cảnh báo cho quản lý.`}
+                        ? "Ca đã chốt; chênh lệch trong ngưỡng được giữ lại để đối chiếu."
+                        : `Lệch quỹ vượt ngưỡng (> ${formatVND(summary.variance_threshold)}). Quản lý xử lý tại Lịch sử ca POS.`}
                   </AlertDescription>
                 </Alert>
 
                 <Alert>
                   <AlertDescription>
-                    Ca đã chốt và ghi lại trong hệ thống. Nhấn Xong để quay về
-                    trang nhân viên.
+                    Tiền đếm và lệch lúc chốt đã được ghi lại, không cộng doanh
+                    thu lần hai. Nhấn Xong để quay về trang nhân viên.
                   </AlertDescription>
                 </Alert>
 

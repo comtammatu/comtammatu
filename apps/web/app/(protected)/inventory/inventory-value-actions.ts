@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
@@ -10,6 +11,12 @@ import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 const SYSTEM_ROLES: readonly StaffRole[] = ["owner"];
 
 const BRANCH_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
+
+const inventoryPeriodValueSchema = z.object({
+  startDate: z.string().date(),
+  endDate: z.string().date(),
+  branchId: z.number().int().positive().optional(),
+});
 
 function computeLineValue(
   qty: number,
@@ -89,6 +96,70 @@ export interface BranchValueRow {
   branchId: number;
   branchName: string;
   totalValue: number;
+}
+
+interface InventoryPeriodValueRpcRow {
+  branch_id: number;
+  opening_value: number | string | null;
+  closing_value: number | string | null;
+}
+
+type InventoryPeriodValueRpcClient = {
+  rpc: (
+    fn: "get_inventory_value_period",
+    args: {
+      p_start_date: string;
+      p_end_date: string;
+      p_branch_id: number | null;
+    },
+  ) => PromiseLike<{
+    data: InventoryPeriodValueRpcRow[] | null;
+    error: { code?: string } | null;
+  }>;
+};
+
+export async function fetchInventoryPeriodValue(input: {
+  startDate: string;
+  endDate: string;
+  branchId?: number;
+}): Promise<ActionResult<{ openingValue: number; closingValue: number }>> {
+  const parsed = inventoryPeriodValueSchema.safeParse(input);
+  if (!parsed.success || parsed.data.startDate > parsed.data.endDate) {
+    return { success: false, error: "Khoảng ngày không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    BRANCH_ROLES,
+    PERMISSION_KEYS.INVENTORY_READ,
+    parsed.data.branchId,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await (
+    ctx.supabase as unknown as InventoryPeriodValueRpcClient
+  ).rpc("get_inventory_value_period", {
+    p_start_date: parsed.data.startDate,
+    p_end_date: parsed.data.endDate,
+    p_branch_id: parsed.data.branchId ?? null,
+  });
+
+  if (error) {
+    console.error("[inventory:value-period] RPC failed", error.code);
+    return {
+      success: false,
+      error: messages.inventory.value.calculateFailed,
+    };
+  }
+
+  const totals = (data ?? []).reduce(
+    (sum, row) => ({
+      openingValue: sum.openingValue + Number(row.opening_value ?? 0),
+      closingValue: sum.closingValue + Number(row.closing_value ?? 0),
+    }),
+    { openingValue: 0, closingValue: 0 },
+  );
+
+  return { success: true, data: totals };
 }
 
 export async function fetchInventoryValueByBranch(): Promise<

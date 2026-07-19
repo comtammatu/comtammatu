@@ -16,6 +16,10 @@ Checklist vận hành và readiness gates.
 - [pos-kds/print-agent-rollout.md](pos-kds/print-agent-rollout.md): rollout checklist cho print-agent daemon ESC/POS tại chi nhánh
 - [pos-kds/realtime-load-testing.md](pos-kds/realtime-load-testing.md): load test realtime POS/KDS
 
+## Finance
+
+- [finance-financial-truth-rollout.md](finance-financial-truth-rollout.md): rollout DB → Preview → Production cho SePay ledger, tiền theo ca POS và Daily Close
+
 ## Supabase / Schema / Migration
 
 - [../spec/database-schema.md](../spec/database-schema.md): source ladder, migration status vocabulary, and baseline-first layout

@@ -8,18 +8,34 @@ Finance Basic is the default Finance experience when `/finance` opens as
 `Sức khỏe tài chính` and shows four primary decision cards without ambiguous
 revenue labels:
 
-- **Tiền đã thu**: kỳ này đã thu bao nhiêu tiền?
-- **Doanh thu ròng**: doanh thu sau giảm giá và trước VAT là bao nhiêu?
-- **Giá trị tồn kho**: hiện đang giữ bao nhiêu tiền trong kho?
-- **Chi vận hành**: kỳ này đã ghi nhận bao nhiêu chi phí vận hành?
+- **Doanh thu**: how much completed payment value was recorded in the period?
+- **Bán hàng sau giảm giá**: what is paid-order merchandise value after
+  discount and before VAT?
+- **Giá trị tồn kho**: how much operating inventory value remains at period
+  end, what was the opening value, and what is the percentage movement?
+- **Chi vận hành**: how much posted operating spend was recorded for rent,
+  utilities, payroll, repairs, supplies, marketing, fees/tax, and other
+  operating categories?
 
 Below those period cards, keep the tenant-wide current-funds row:
 
-- **Tiền mặt ở quán**: opening cash plus actual cash collections minus payouts.
-- **Tiền trong ngân hàng**: opening bank balance plus signed SePay movement.
+- **Tiền mặt theo sổ**: opening cash plus completed cash collections minus cash
+  payouts, adjusted only for accepted POS-session variances.
+- **Tiền trong ngân hàng**: required `bank_opening_balance` anchor plus every
+  canonical SePay movement in `bank_transactions`: incoming amounts add and
+  outgoing amounts subtract. The application cannot read the bank's opening
+  account balance, so changing the anchor changes the result only by the anchor
+  delta; it never removes previously imported movements.
 
 These two balances do not follow the page's period or branch filter. Show `—`
 until the owner has set the applicable opening anchor.
+
+`bank_transactions` is the bank-ledger source of truth. Signed SePay webhooks
+and Owner-imported SePay exports are idempotent ingestion paths keyed by the
+stable SePay transaction ID. `webhook_events` remains delivery and processing
+evidence. `bank_transaction_reconciliation_matches` only classifies a bank row
+against a payment, operating expense, supplier payment, or refund; adding or
+removing a match must never change the bank balance.
 
 Gross profit and food-cost coverage remain supporting analysis in
 `/finance/food-cost`; they are not default landing cards.
@@ -58,26 +74,35 @@ level operating reports.
 Finance Basic is the current finance surface. Its landing owns four primary
 cards:
 
-1. **Money collected**
+1. **Completed-payment revenue**
    - Completed paid orders by branch/date.
    - Revenue must be bucketed by completed payment time in Vietnam local date.
-   - `Tiền đã thu` is money collected from completed payments.
+   - The owner-facing label is `Doanh thu`; its precise meaning is completed
+     payment value and it may include VAT. It is not tax-declared revenue.
 
-2. **Net revenue**
-   - `Doanh thu ròng` on the owner-facing surface means net sales after
-     discounts/refunds and before VAT; this is the margin denominator.
-   - Never ask the owner to choose the meaning of `doanh thu ròng`; adapt legacy
-     source fields into either `total_collected` or `net_sales_before_vat`.
+2. **Sales after discount**
+   - `Bán hàng sau giảm giá` is `subtotal_revenue - discount_amount` for paid
+     orders and excludes VAT. The UI must not call this `Doanh thu ròng`, because
+     that label implies accounting adjustments that the current formula does
+     not model separately.
+   - Keep the internal adapter field `netRevenueBeforeVat` only as a legacy code
+     identifier; UI and operating documentation use the precise label above.
    - Top món uses the same `resolved.start→end` window as every other KPI; side items in `order_items.sides` are counted as their own món and their revenue is subtracted from the parent món line to avoid double-counting (migrations `20260609151615` + `20260609161402`, applied on prod).
 
 3. **Inventory value**
-   - Current stock value from inventory stock levels.
-   - Use weighted/average unit cost when available, falling back to ingredient unit cost.
-   - Treat it as a current snapshot, not a period metric.
+   - Period-end value is reconstructed from current stock value and movements
+     after the selected period; opening value additionally reverses movements
+     inside the period.
+   - Use movement unit cost when available, falling back to ingredient unit
+     cost. Show the opening value and neutral percentage movement, because an
+     increase is not inherently good or bad.
 
 4. **Operating expense**
    - Posted operating expenses in the selected period.
-   - Exclude direct ingredient COGS from the top-line operating expense number.
+   - Include only `rent`, `utilities`, `gas_fuel`, `salary`, `repair`,
+     `supplies`, `marketing`, `fees_tax`, and `other`.
+   - Exclude ingredient/material COGS, supplier invoice payments, and internal
+     cash-to-bank deposits/transfers from the top-line operating expense number.
    - If operating expenses are not recorded yet, show zero rather than inventing spend from supplier purchases.
 
 Supporting analysis:
@@ -96,6 +121,59 @@ Supporting workflows remain available but are not the first screen:
 - Supplier payable review.
 - Accountant export.
 
+### POS Session Cash Contract
+
+The closed POS session is the immutable physical-count record:
+
+1. `opening_cash` is the counted cash at shift open.
+2. `cash_revenue` is the sum of completed `payments.amount` with
+   `method='cash'` for paid, non-cancelled orders in that session.
+3. `expected_cash = opening_cash + cash_revenue`.
+4. `cash_difference = closing_cash - expected_cash`, where `closing_cash` is
+   the physical count entered at close.
+
+An over-threshold difference is resolved from
+`/br/[branchId]/pos-sessions?session=[id]`:
+
+- `staff_repaid` is allowed only for a shortage and records full repayment of
+  `abs(cash_difference)`. It does not rewrite the close count or add a cash-book
+  adjustment: the repayment restores physical cash to the already expected
+  amount.
+- `accepted_adjustment` keeps the close count and posts the signed difference
+  into `Tiền mặt theo sổ`: shortage reduces book cash and overage increases it.
+
+Payment-method correction is owner-only in the session bill drawer and HĐĐT
+queue. The atomic RPC updates `payments.method`, the `orders.payment_method`
+display mirror, and recomputes a closed session's expected cash and difference.
+Any prior variance resolution is cleared because the underlying classification
+changed. The audit log preserves the correction reason and prior values. A
+VietQR payment with canonical reconciliation or signed webhook evidence cannot
+be changed to cash until the Owner explicitly removes that bank evidence from
+the bank-reconciliation workflow; changing the payment method never rewrites a
+`bank_transactions` movement.
+
+### Owner and Accountant Visibility
+
+The current application authorization model exposes Finance to `owner`; there
+is no canonical `accountant` staff role. Therefore:
+
+| Actor | Current system access | Must review or act on |
+| --- | --- | --- |
+| Owner | Tenant-wide `/finance`; owner-only bank import/reconciliation, payment-method correction, and opening-balance changes | Daily landing metrics and formulas; current cash/bank anchors; exact POS cash variances; unmatched SePay movements; VietQR payments missing bank evidence; operating expenses; AP; HĐĐT; inventory opening/closing evidence; exports |
+| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance, bank import/reconciliation, opening-balance, or payment-correction authority | Resolve an exact subordinate shift shortage as `staff_repaid` or accept its signed book adjustment as `accepted_adjustment`, subject to branch permission and audit |
+| Accountant | No authenticated Finance role or write authority in the current model | Receive Owner-controlled revenue/payment exports, canonical SePay evidence, expense/AP evidence, HĐĐT evidence, and inventory opening/closing evidence; report discrepancies back to the Owner |
+
+The system must not silently map `office` or another position to Finance
+access. A separate authenticated accountant workspace requires an explicit
+Owner decision on role, tenant/branch scope, read-only versus action
+permissions, period-close authority, and production profile remediation.
+
+Every money-changing or classification-changing workflow leaves a durable
+audit action: `bank_transactions.sepay_import`,
+`bank_transaction.reconcile`, `payment.method_correct`, or
+`pos_session.variance_resolve`. Reconciliation matches classify evidence; they
+never add or subtract a second bank movement.
+
 ### Accounting Advanced Boundary (D020)
 
 Má Tư operates as a Hộ kinh doanh on single-entry bookkeeping (TT 152/2025).
@@ -109,14 +187,14 @@ requires a new decision.
 
 Current code has a broad `/finance/*` workspace. The target product contract is:
 
-| Route family                 | Current role                 | Decision                                                                  |
-| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------- |
-| `/finance`                   | Four-card basic landing      | Show money collected, net revenue, inventory value, and operating expense |
-| `/finance/revenue`           | Revenue analytics            | Keep, but do not make it the only money-control entry                     |
-| `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                     |
-| `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses      |
-| `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                  |
-| `/finance/summary`           | HĐĐT summary trigger         | Keep admin-only by action permission                                      |
+| Route family                 | Current role                 | Decision                                                                                     |
+| ---------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
+| `/finance`                   | Four-card basic landing      | Show completed-payment revenue, sales after discount, inventory value, and operating expense |
+| `/finance/revenue`           | Revenue analytics            | Keep, but do not make it the only money-control entry                                        |
+| `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                                        |
+| `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses                         |
+| `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                                     |
+| `/finance/summary`           | HĐĐT summary trigger         | Keep admin-only by action permission                                                         |
 
 Inventory owns the detailed stock-value workspace. Finance displays only the
 current inventory-value card and does not expose a duplicate inventory route.
@@ -127,7 +205,7 @@ There is no current `/accounting/*` app surface.
 
 Finance Basic is operationally acceptable only when all of these are true:
 
-1. Owner can open one screen and see money collected, net revenue, inventory value, and operating expense.
+1. Owner can open one screen and see completed-payment revenue, sales after discount, inventory opening/closing movement, and operating expense.
 2. Revenue uses the paid-at Vietnam-local period contract.
 3. Inventory value uses actual stock valuation data, not a static estimate.
 4. Operating expense is clearly separate from direct ingredient COGS.
@@ -150,7 +228,8 @@ Do not call the module "done" because enterprise-accounting objects exist in old
 
 - Chi vận hành is captured in `/finance/expenses`; keep it as single-entry HKD operating expense, not enterprise accounting.
 - Inventory value detail stays in Inventory; Finance shows only the current-value card.
-- HĐĐT is active through Viettel S-invoice, but recovery and archival workflows are support workflows, not the Finance Basic landing.
+- HĐĐT is active through Viettel S-invoice, but recovery and archival workflows
+  are support workflows, not the Finance Basic landing.
 - Period close/reopen is not an app workflow. Treat it as database-only support unless a new owner decision reopens it.
 
 ## Source Files

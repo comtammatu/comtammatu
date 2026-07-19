@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight as IconArrowRight,
   Boxes as IconBoxes,
-  Landmark as IconBank,
   ReceiptText as IconReceiptText,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
@@ -38,6 +37,7 @@ import {
 } from "./_lib/finance-cockpit";
 import { fetchCashSummary } from "./_lib/cash-cockpit";
 import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
+import { CurrentFundsSection } from "./components/current-funds-section";
 
 const financeCopy = messages.finance;
 const powerLiteCopy = financeCopy.powerLite;
@@ -168,7 +168,18 @@ export default async function FinancePage({
           icon={<IconBoxes className="size-4 text-muted-foreground" />}
           label={financeCopy.basic.kpis.inventoryValue}
           value={formatVND(cockpit.kpis.inventoryValue)}
-          hint={financeCopy.basic.kpis.inventoryValueHint}
+          hint={financeCopy.basic.kpis.inventoryValueHint(
+            formatVND(cockpit.kpis.inventoryOpeningValue),
+          )}
+          delta={{
+            ...buildCompareDelta(
+              cockpit.kpis.inventoryValue,
+              cockpit.kpis.inventoryOpeningValue,
+              "higher_better",
+            ),
+            tone: "neutral" as const,
+          }}
+          compareHint={financeCopy.basic.kpis.inventoryOpeningCompare}
         />
 
         <KpiCard
@@ -180,38 +191,7 @@ export default async function FinancePage({
         />
       </KpiRow>
 
-      <KpiRow density="compact" className="lg:grid-cols-2 xl:grid-cols-2">
-        <KpiCard
-          icon={<IconWallet className="size-4 text-muted-foreground" />}
-          label={financeCopy.basic.kpis.cashOnHand}
-          value={
-            cash.hasOpening
-              ? formatVND(cash.cashOnHand)
-              : financeCopy.common.noValue
-          }
-          hint={
-            cash.hasOpening
-              ? financeCopy.basic.kpis.currentFundsScope
-              : financeCopy.basic.kpis.cashOnHandMissing
-          }
-        />
-
-        <KpiCard
-          icon={<IconBank className="size-4 text-muted-foreground" />}
-          label={financeCopy.basic.kpis.bankOnHand}
-          value={
-            cash.hasBankOpening
-              ? formatVND(cash.bankOnHand)
-              : financeCopy.common.noValue
-          }
-          hint={
-            cash.hasBankOpening
-              ? financeCopy.basic.kpis.currentFundsScope
-              : financeCopy.basic.kpis.bankOnHandMissing
-          }
-          href="/finance/bank-transactions"
-        />
-      </KpiRow>
+      <CurrentFundsSection cash={cash} />
 
       <FinanceAttentionSection exceptions={cockpit.exceptions} />
     </AppPage>

@@ -15,6 +15,7 @@ import {
   resolveFinanceRange,
 } from "../_lib/finance-params";
 import { BankTransactionsTable } from "./bank-transactions-table";
+import { SepayImportDialog } from "./sepay-import-dialog";
 
 const copy = messages.finance.bankTransactions;
 
@@ -52,9 +53,16 @@ export default async function BankTransactionsPage({
         description={copy.description}
         meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
         actions={
-          <Button variant="outline" size="sm" render={<Link href="/finance" />}>
-            {messages.finance.common.backToFinance}
-          </Button>
+          <div className="flex items-center gap-2">
+            {canLinkPayments ? <SepayImportDialog /> : null}
+            <Button
+              variant="outline"
+              size="sm"
+              render={<Link href="/finance" />}
+            >
+              {messages.finance.common.backToFinance}
+            </Button>
+          </div>
         }
       />
       <FilterBar

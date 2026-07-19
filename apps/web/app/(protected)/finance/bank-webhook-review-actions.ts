@@ -14,10 +14,15 @@ const reviewMissingBankWebhookPaymentSchema = z.object({
   status: z.enum(SEPAY_BANK_WEBHOOK_REVIEW_VALUES),
 });
 
-const linkSepayTransactionToPaymentSchema = z.object({
-  eventId: z.coerce.number().int().positive(),
-  paymentId: z.coerce.number().int().positive(),
-});
+const linkSepayTransactionToPaymentSchema = z
+  .object({
+    bankTransactionId: z.number().int().positive().nullable(),
+    eventId: z.number().int().positive().nullable(),
+    paymentId: z.coerce.number().int().positive(),
+  })
+  .refine(
+    (input) => input.bankTransactionId != null || input.eventId != null,
+  );
 
 type LinkPaymentRpcError = {
   code?: string;
@@ -43,22 +48,37 @@ function mapLinkPaymentError(error: LinkPaymentRpcError): string {
   ) {
     return "Chức năng gắn payment chưa sẵn sàng.";
   }
-  if (normalized.includes("payment_not_found")) {
+  if (
+    normalized.includes("payment_not_found") ||
+    normalized.includes("bank_reconciliation_target_not_found")
+  ) {
     return "Không tìm thấy payment VietQR đã thu.";
   }
-  if (normalized.includes("webhook_event_not_found")) {
+  if (
+    normalized.includes("webhook_event_not_found") ||
+    normalized.includes("bank_transaction_not_found")
+  ) {
     return "Không tìm thấy giao dịch ngân hàng.";
   }
-  if (normalized.includes("webhook_event_already_linked")) {
+  if (
+    normalized.includes("webhook_event_already_linked") ||
+    normalized.includes("bank_reconciliation_target_already_matched")
+  ) {
     return "Giao dịch này đã gắn payment.";
   }
   if (normalized.includes("webhook_event_failed")) {
     return "Lỗi webhook không được gắn payment.";
   }
-  if (normalized.includes("webhook_event_not_in")) {
+  if (
+    normalized.includes("webhook_event_not_in") ||
+    normalized.includes("bank_transaction_direction_mismatch")
+  ) {
     return "Chỉ gắn payment cho giao dịch tiền vào.";
   }
-  if (normalized.includes("payment_amount_mismatch")) {
+  if (
+    normalized.includes("payment_amount_mismatch") ||
+    normalized.includes("bank_reconciliation_amount_mismatch")
+  ) {
     return "Số tiền payment không khớp giao dịch ngân hàng.";
   }
   if (normalized.includes("payment_already_has_bank_webhook")) {
@@ -96,13 +116,26 @@ export async function linkSepayTransactionToPayment(
   }
 
   const { supabase } = ctx;
-  const { data, error } = await (supabase as LinkPaymentRpcClient).rpc(
-    "link_sepay_transaction_to_payment",
-    {
-      p_event_id: parsed.data.eventId,
-      p_payment_id: parsed.data.paymentId,
-    },
-  );
+  const canonicalResult =
+    parsed.data.bankTransactionId == null
+      ? null
+      : await supabase.rpc("reconcile_bank_transaction_targets", {
+          p_bank_transaction_id: parsed.data.bankTransactionId,
+          p_target_type: "payment",
+          p_target_ids: [parsed.data.paymentId],
+        });
+  const legacyResult =
+    canonicalResult != null || parsed.data.eventId == null
+      ? null
+      : await (supabase as LinkPaymentRpcClient).rpc(
+          "link_sepay_transaction_to_payment",
+          {
+            p_event_id: parsed.data.eventId,
+            p_payment_id: parsed.data.paymentId,
+          },
+        );
+  const data = canonicalResult?.data ?? legacyResult?.data ?? null;
+  const error = canonicalResult?.error ?? legacyResult?.error ?? null;
 
   if (error) {
     console.error(

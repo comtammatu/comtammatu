@@ -17,6 +17,10 @@ export function normalizeSessionRows(
       session.expected_cash == null ? null : Number(session.expected_cash),
     cash_difference:
       session.cash_difference == null ? null : Number(session.cash_difference),
+    variance_settlement_amount:
+      session.variance_settlement_amount == null
+        ? null
+        : Number(session.variance_settlement_amount),
   }));
 }
 
@@ -37,6 +41,10 @@ export function normalizeOrderRows(
       subtotal: Number(item.subtotal),
       modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
       sides: Array.isArray(item.sides) ? item.sides : [],
+    })),
+    payments: order.payments.map((payment) => ({
+      ...payment,
+      amount: Number(payment.amount),
     })),
   }));
 }

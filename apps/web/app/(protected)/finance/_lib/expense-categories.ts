@@ -91,17 +91,17 @@ export function classifyExpensePaymentState(expense: {
   paid_at: string | null;
   transfer_content?: string | null;
   matchedEventIds?: readonly number[];
+  matchedBankTransactionIds?: readonly number[];
 }): ExpensePaymentState {
+  const hasBankEvidence =
+    (expense.matchedEventIds?.length ?? 0) > 0 ||
+    (expense.matchedBankTransactionIds?.length ?? 0) > 0;
   if (expense.transfer_content) {
-    return (expense.matchedEventIds?.length ?? 0) > 0
-      ? "transfer_matched"
-      : "transfer_needs_match";
+    return hasBankEvidence ? "transfer_matched" : "transfer_needs_match";
   }
 
   if (expense.payment_method === "transfer") {
-    return (expense.matchedEventIds?.length ?? 0) > 0
-      ? "transfer_matched"
-      : "transfer_needs_match";
+    return hasBankEvidence ? "transfer_matched" : "transfer_needs_match";
   }
 
   if (expense.payment_method === "unpaid" || expense.paid_at == null) {
@@ -117,18 +117,31 @@ export function isExpenseVisibleForBankMatch(
     payment_method: string;
     paid_at: string | null;
     matchedEventIds: readonly number[];
+    matchedBankTransactionIds?: readonly number[];
   },
-  eventId: number,
+  eventId: number | null,
+  bankTransactionId: number | null = null,
 ): boolean {
-  if (expense.matchedEventIds.includes(eventId)) return true;
+  const matchedBankTransactionIds =
+    expense.matchedBankTransactionIds ?? [];
+  if (
+    (eventId != null && expense.matchedEventIds.includes(eventId)) ||
+    (bankTransactionId != null &&
+      matchedBankTransactionIds.includes(bankTransactionId))
+  ) {
+    return true;
+  }
   if (
     expense.matchedEventIds.length > 0 ||
+    matchedBankTransactionIds.length > 0 ||
     !isOperatingExpenseCategory(expense.category)
   ) {
     return false;
   }
 
-  if (expense.payment_method === "unpaid") return expense.paid_at == null;
+  if (expense.payment_method === "unpaid") {
+    return eventId != null && expense.paid_at == null;
+  }
   if (expense.payment_method === "transfer") return expense.paid_at != null;
   return false;
 }

@@ -5,6 +5,7 @@ const SEPAY_LOCAL_DATE_TIME_PATTERN =
 const EXPLICIT_TIME_ZONE_PATTERN = /(?:Z|[+-]\d{2}:\d{2})$/i;
 
 export type SepayTransferType = "in" | "out";
+export type SepayBankIngestSource = "sepay_webhook" | "sepay_export";
 
 export interface SepayDateRange {
   start: string;
@@ -34,6 +35,7 @@ export interface SepaySupplierPaymentMatch {
   paymentDate: string;
   referenceNote: string | null;
   webhookEventId: number | null;
+  bankTransactionId?: number | null;
   invoiceNumber: string | null;
   supplierName: string | null;
 }
@@ -45,10 +47,13 @@ export interface SepayRefundMatchOption {
   orderId: number;
   orderNumber: string;
   webhookEventId: number | null;
+  bankTransactionId?: number | null;
 }
 
 export interface SepayBankTransaction {
-  eventId: number;
+  bankTransactionId?: number | null;
+  eventId: number | null;
+  ingestSource?: SepayBankIngestSource;
   requestId: string;
   createdAt: string;
   processingStatus: string;
@@ -488,7 +493,11 @@ export function attachSupplierPaymentMatches(
 
   return transactions.map((transaction) => {
     const confirmedMatches = payments.filter(
-      (payment) => payment.webhookEventId === transaction.eventId,
+      (payment) =>
+        (transaction.eventId != null &&
+          payment.webhookEventId === transaction.eventId) ||
+        (transaction.bankTransactionId != null &&
+          payment.bankTransactionId === transaction.bankTransactionId),
     );
     if (confirmedMatches.length > 0) {
       for (const match of confirmedMatches) usedPaymentIds.add(match.id);
@@ -514,6 +523,7 @@ export function attachSupplierPaymentMatches(
       (payment) =>
         !usedPaymentIds.has(payment.id) &&
         payment.webhookEventId == null &&
+        payment.bankTransactionId == null &&
         getVNDateString(payment.paymentDate) === businessDate &&
         supplierPaymentMatchesTransaction(payment, transaction),
     );
@@ -552,7 +562,11 @@ export function attachRefundMatches(
 ): SepayBankTransaction[] {
   return transactions.map((transaction) => {
     const confirmedMatches = refunds.filter(
-      (refund) => refund.webhookEventId === transaction.eventId,
+      (refund) =>
+        (transaction.eventId != null &&
+          refund.webhookEventId === transaction.eventId) ||
+        (transaction.bankTransactionId != null &&
+          refund.bankTransactionId === transaction.bankTransactionId),
     );
     return confirmedMatches.length > 0
       ? {
