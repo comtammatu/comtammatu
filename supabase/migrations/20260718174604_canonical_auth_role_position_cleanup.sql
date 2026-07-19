@@ -820,8 +820,11 @@ BEGIN
   FROM canonical_branch_manager_default_permission_keys default_key
   LEFT JOIN public.permission_keys permission
     ON permission.key = default_key.key
-  WHERE permission.key IS NULL
-     OR permission.is_delegable_to_staff IS DISTINCT FROM true;
+  WHERE EXISTS (SELECT 1 FROM public.permission_keys)
+    AND (
+      permission.key IS NULL
+      OR permission.is_delegable_to_staff IS DISTINCT FROM true
+    );
 
   IF v_invalid_default_keys IS NOT NULL THEN
     RAISE EXCEPTION

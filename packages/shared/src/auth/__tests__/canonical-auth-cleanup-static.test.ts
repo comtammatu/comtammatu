@@ -68,6 +68,10 @@ test("minimal tenants repair missing canonical position templates", () => {
   );
   assert.match(
     migration,
+    /FROM canonical_branch_manager_default_permission_keys default_key[\s\S]*?WHERE EXISTS \(SELECT 1 FROM public\.permission_keys\)\s+AND \(\s*permission\.key IS NULL\s+OR permission\.is_delegable_to_staff IS DISTINCT FROM true\s*\)/,
+  );
+  assert.match(
+    migration,
     /WHEN po\.code = 'cashier' THEN ARRAY\([\s\S]*?'pos:use'/,
   );
   assert.match(
