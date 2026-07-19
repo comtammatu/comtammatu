@@ -33,7 +33,7 @@ printers, not a second business-data authority.
 | Concern              | Contract                                                                                                                               |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Product shape        | Single tenant, multiple branches, path-based surfaces on one web domain                                                                |
-| Web runtime          | Node.js 24+, Next.js App Router on Vercel; RSC, Server Actions, route handlers, and scheduled routes share one app                     |
+| Web runtime          | Node.js 24.x, Next.js App Router on Vercel; RSC, Server Actions, route handlers, and scheduled routes share one app                    |
 | Data authority       | Supabase Cloud owns Auth, Postgres, PostgREST, RLS, Realtime, and Storage                                                              |
 | Authorization        | `proxy.ts` gates session/surface/scope; RLS and authorized RPCs own data/action authority                                              |
 | Mutation correctness | Server Action input is Zod-validated; multi-row correctness is implemented in one Postgres RPC                                         |

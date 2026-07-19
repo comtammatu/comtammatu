@@ -23,7 +23,7 @@ Browser POS ─ Server Action ─▶ Postgres RPC ─▶ print_jobs row
 
 ## Prerequisites
 
-- Node.js 24+
+- Node.js 24.x
 - Supabase service role key (agent runs as service principal, not a user)
 - All branch printers must be network-connected with `printers.connection_type='lan'`
   and `lan_host` filled. Non-LAN printer rows fail dispatch with a clear error.

@@ -1,5 +1,5 @@
 # Install Cơm Tấm Má Tư print-agent as a Windows Service via NSSM.
-# Runs via Node.js directly (`node.exe dist\index.js`). Requires Node 24+ installed.
+# Runs via Node.js directly (`node.exe dist\index.js`). Requires Node 24.x installed.
 # Run as Administrator. Reads configuration from .env at the bundle root
 # (next to dist/ and scripts/).
 
@@ -25,7 +25,7 @@ function Require-Nssm {
 $nssm = Require-Nssm
 
 if (-not $NodePath) {
-  Write-Error "node.exe not found in PATH. Install Node 24+ from https://nodejs.org/."
+  Write-Error "node.exe not found in PATH. Install Node 24.x from https://nodejs.org/."
 }
 if (-not (Test-Path $EntryPath)) {
   Write-Error "dist/index.js not found at $EntryPath. Run 'pnpm -F @comtammatu/print-agent build' first."

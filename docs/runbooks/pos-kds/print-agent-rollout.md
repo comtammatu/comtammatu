@@ -41,7 +41,7 @@ Complete all items before opening the branch for the day.
 
 ### Windows PC per branch
 
-- [ ] **Node.js 24+** installed (`node --version` ≥ v24). Download from nodejs.org.
+- [ ] **Node.js 24.x** installed (`node --version` starts with `v24.`). Download from nodejs.org.
 - [ ] NSSM installed (`choco install nssm` or download from nssm.cc)
 - [ ] Bundle unzip vào máy POS (build qua `pnpm --filter @comtammatu/print-agent build` + `scripts/build-bundle.sh` — chỉ cần `dist/index.js`)
 - [ ] `.env` đặt tại thư mục gốc bundle (cạnh `dist/`) chứa:

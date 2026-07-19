@@ -26,7 +26,7 @@ Active tracker: [`tasks/todo.md`](tasks/todo.md).
 
 ## Tech Stack
 
-- **Web runtime:** Node.js ≥ 24 · Next.js 16 App Router · React 19 · Turbopack
+- **Web runtime:** Node.js 24.x · Next.js 16 App Router · React 19 · Turbopack
 - **Language and validation:** TypeScript 6 strict · Zod 4
 - **UI:** Tailwind CSS 4 · Com Tam Ma Tu Custom Theme · `@comtammatu/ui`
 - **Data and auth:** Supabase Cloud (Postgres, PostgREST, Auth, RLS, Realtime, Storage)
@@ -88,7 +88,7 @@ Auth + ACL được enforce tại [`apps/web/proxy.ts`](apps/web/proxy.ts) qua A
 Setup chi tiết (MCP, gstack skills, Supabase JWT hook, seed accounts): [`docs/ref/setup.md`](docs/ref/setup.md).
 
 ```bash
-nvm use                                # Node ≥ 24
+nvm use                                # Node 24.x
 corepack pnpm install
 cp .env.example apps/web/.env.local    # Fill Supabase + Upstash credentials
 corepack pnpm dev                      # Turbopack dev server (http://localhost:3000)

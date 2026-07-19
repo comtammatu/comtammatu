@@ -67,7 +67,7 @@ cat > "$STAGING/INSTALL.md" <<EOF
 
 ## Chi nhánh deploy lần đầu
 
-1. Cài Node.js 24+: https://nodejs.org/
+1. Cài Node.js 24.x: https://nodejs.org/
 2. Cài NSSM: \`choco install nssm\` (cần Chocolatey) hoặc tải từ https://nssm.cc/
 3. Unzip bundle này vào \`C:\\ComTamMaTu\\print-agent\\\`
 4. Mở thư mục, mở file \`.env.example\` → "Save As" thành \`.env\` (cùng thư mục)
