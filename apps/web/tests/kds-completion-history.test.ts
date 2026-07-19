@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
+import { MODULE_ACL } from "@comtammatu/shared/auth";
 import {
   buildKdsCompletionHistory,
   type KdsCompletionHistoryBatch,
@@ -7,6 +9,11 @@ import {
   type KdsCompletionHistoryOrderItem,
   type KdsCompletionHistoryTicket,
 } from "../app/(protected)/br/[branchId]/kds/_lib/completion-history";
+
+const actionsSource = readFileSync(
+  new URL("../app/(protected)/br/[branchId]/kds/actions.ts", import.meta.url),
+  "utf8",
+);
 
 const orders: KdsCompletionHistoryOrderInfo[] = [
   {
@@ -61,6 +68,23 @@ const batches: KdsCompletionHistoryBatch[] = [
     created_at: "2026-05-28T03:01:00.000Z",
   },
 ];
+
+test("KDS completion history follows the canonical route roles and branch scope", () => {
+  assert.deepEqual(MODULE_ACL.kds.allowedRoles, [
+    "owner",
+    "chef",
+    "branch_manager",
+  ]);
+  assert.match(
+    actionsSource,
+    /const KDS_ROLES = MODULE_ACL\.kds\.allowedRoles;/,
+  );
+  assert.match(actionsSource, /getAuthContext\(KDS_ROLES\)/);
+  assert.match(
+    actionsSource,
+    /ctx\.claims\.branch_id !== null[\s\S]*ctx\.claims\.branch_id !== parsed\.data\.branchId/,
+  );
+});
 
 test("KDS completion history groups completed tickets by kitchen batch", () => {
   const tickets: KdsCompletionHistoryTicket[] = [

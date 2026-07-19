@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { MODULE_ACL } from "@comtammatu/shared/auth";
 import { KDS_VI } from "@comtammatu/shared/messages";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
@@ -14,6 +15,8 @@ import {
   type KdsCompletionHistoryTicket,
 } from "./_lib/completion-history";
 import { fetchChunkedRows, uniqueNumbers } from "./_lib/query-helpers";
+
+const KDS_ROLES = MODULE_ACL.kds.allowedRoles;
 
 const branchIdSchema = z.coerce
   .number()
@@ -63,7 +66,7 @@ export async function fetchKdsCompletionHistory(
     };
   }
 
-  const ctx = await getAuthContext(["chef", "branch_manager"]);
+  const ctx = await getAuthContext(KDS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   if (
