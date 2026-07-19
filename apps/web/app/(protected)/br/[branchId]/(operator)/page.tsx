@@ -61,7 +61,7 @@ export default async function OperatorHomePage({
   const isFloorRole =
     claims.user_role === "cashier" || claims.user_role === "chef";
 
-  const workState = await getTodayWorkState();
+  const workState = isFloorRole ? await getTodayWorkState() : null;
   const beforeClockIn = workState?.status === "not_started";
 
   // Pre-clock-in tiles stay visible so the operator understands what unlocks.

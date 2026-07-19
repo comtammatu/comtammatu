@@ -411,6 +411,10 @@ test("pre-clock-in gate disables floor tiles instead of hiding them", () => {
     page,
     /tilesLockedBeforeClockIn && group\.id === "sales_kitchen"/,
   );
+  assert.match(
+    page,
+    /const workState = isFloorRole \? await getTodayWorkState\(\) : null/,
+  );
   assert.doesNotMatch(page, /tiles: \[\]/);
 });
 

@@ -1,4 +1,3 @@
-import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, type JwtClaims } from "@comtammatu/shared/auth";
 import { getRegisteredMethods } from "@comtammatu/shared/providers";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
@@ -38,10 +37,8 @@ export interface BranchDayStatus {
  * fail-soft: a query error degrades that metric to 0/null instead of
  * blocking the page.
  *
- * RLS-backed user-client reads cover payments/orders/tables/print surfaces.
- * pos_sessions (policy keyed on `pos:use`) and the checkout-approval queue
- * go through the service client with explicit tenant+branch filters; the
- * route already gates module ACL + branch match before this runs.
+ * Every query uses the caller's session so RLS/PBAC remains the authorization
+ * boundary after the route resolves the requested Branch context.
  */
 export async function fetchBranchDayStatus(
   supabase: ServerClient,
@@ -52,7 +49,6 @@ export async function fetchBranchDayStatus(
   const failedSinceIso = new Date(
     Date.now() - 24 * 60 * 60 * 1000,
   ).toISOString();
-  const service = createServiceClient();
   ensurePaymentProvidersRegistered();
   const registeredPaymentMethods = getRegisteredMethods();
   const hddtReady =
@@ -112,14 +108,14 @@ export async function fetchBranchDayStatus(
       .eq("branch_id", branchId)
       .in("status", ["failed", "expired"])
       .gte("created_at", failedSinceIso),
-    service
+    supabase
       .from("pos_sessions")
       .select("opened_at")
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
       .eq("status", "open")
       .maybeSingle(),
-    service
+    supabase
       .from("attendance_records")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", claims.tenant_id)
@@ -129,25 +125,25 @@ export async function fetchBranchDayStatus(
     supabase.rpc("list_branch_menu_daily_limits", {
       p_branch_id: branchId,
     }),
-    service
+    supabase
       .from("pos_terminals")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
       .eq("is_active", true),
-    service
+    supabase
       .from("kds_stations")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
       .eq("is_active", true),
-    service
+    supabase
       .from("printers")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
       .eq("is_active", true),
-    service
+    supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", claims.tenant_id)
@@ -217,8 +213,6 @@ export async function fetchBranchQueueCounts(
   claims: JwtClaims,
   branchId: number,
 ): Promise<BranchQueueCounts> {
-  const service = createServiceClient();
-
   const [
     checkoutPermission,
     leavePermission,
@@ -267,7 +261,7 @@ export async function fetchBranchQueueCounts(
     inboundTransferRes,
   ] = await Promise.all([
       checkoutPermission.data === true
-        ? service
+        ? supabase
             .from("attendance_records")
             .select("id", { count: "exact", head: true })
             .eq("tenant_id", claims.tenant_id)
@@ -276,7 +270,7 @@ export async function fetchBranchQueueCounts(
             .not("checkout_requested_at", "is", null)
         : Promise.resolve(null),
       leavePermission.data === true
-        ? service
+        ? supabase
             .from("leave_requests")
             .select("id", { count: "exact", head: true })
             .eq("tenant_id", claims.tenant_id)
