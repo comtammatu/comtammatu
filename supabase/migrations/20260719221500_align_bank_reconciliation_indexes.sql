@@ -29,6 +29,6 @@ CREATE UNIQUE INDEX bank_transaction_reconciliation_matches_refund_key
   ON public.bank_transaction_reconciliation_matches (refund_id, tenant_id)
   WHERE refund_id IS NOT NULL;
 
-CREATE INDEX bank_transaction_reconciliation_matches_created_by_idx
+CREATE INDEX IF NOT EXISTS bank_transaction_reconciliation_matches_created_by_idx
   ON public.bank_transaction_reconciliation_matches (created_by)
   WHERE created_by IS NOT NULL;

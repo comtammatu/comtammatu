@@ -29,6 +29,17 @@ import { fetchSepayDataApiRows } from "../app/(protected)/finance/_lib/sepay-ban
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
+test("bank reconciliation index alignment is replay-safe", () => {
+  const migration = read(
+    "supabase/migrations/20260719221500_align_bank_reconciliation_indexes.sql",
+  );
+
+  assert.match(
+    migration,
+    /CREATE INDEX IF NOT EXISTS bank_transaction_reconciliation_matches_created_by_idx/,
+  );
+});
+
 function payment(
   paymentId: number,
   amount: number,
