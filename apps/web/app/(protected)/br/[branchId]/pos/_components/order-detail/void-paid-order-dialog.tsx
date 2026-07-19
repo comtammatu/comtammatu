@@ -7,6 +7,7 @@ import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -82,11 +83,13 @@ export function VoidPaidOrderDialog({
             />
           </SelectTrigger>
           <SelectContent>
-            {REFUND_PAYOUT_METHODS.map((method) => (
-              <SelectItem key={method} value={method}>
-                {PAYMENT_METHOD_LABELS_VI[method]}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              {REFUND_PAYOUT_METHODS.map((method) => (
+                <SelectItem key={method} value={method}>
+                  {PAYMENT_METHOD_LABELS_VI[method]}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
       </Field>

@@ -81,6 +81,7 @@ test("shared primitives use Base UI behavior without Radix", () => {
   const selectSource = read("packages/ui/src/components/select.tsx");
   const sidebarSource = read("packages/ui/src/components/sidebar.tsx");
   const switchSource = read("packages/ui/src/components/switch.tsx");
+  const scrollAreaSource = read("packages/ui/src/components/scroll-area.tsx");
   const sheetSource = read("packages/ui/src/components/sheet.tsx");
   const tabsSource = read("packages/ui/src/components/tabs.tsx");
   const tagInputSource = read("packages/ui/src/components/tag-input.tsx");
@@ -172,6 +173,9 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.doesNotMatch(
     sheetSource,
     /radix-ui|SheetPrimitive\.(?:Content|Overlay)|asChild/,
+  assert.match(scrollAreaSource, /@base-ui\/react\/scroll-area/);
+  assert.match(scrollAreaSource, /ScrollAreaPrimitive\.(?:Viewport|Content)/);
+  assert.doesNotMatch(scrollAreaSource, /radix-ui/);
   );
   assert.match(tabsSource, /@base-ui\/react\/tabs/);
   assert.match(tabsSource, /TabsPrimitive\.Panel/);
@@ -336,7 +340,7 @@ test("native visual primitives preserve label, separator, and overflow semantics
     /^<div[^>]*data-orientation="vertical"[^>]*role="separator"[^>]*aria-orientation="vertical"/,
   );
   assert.match(scrollArea, /data-slot="scroll-area"/);
-  assert.match(scrollArea, /overflow-auto/);
+  assert.match(scrollArea, /data-slot="scroll-area-viewport"/);
 });
 
 test("Má Tư DS brand asset set includes mascot metadata and symbols", () => {
