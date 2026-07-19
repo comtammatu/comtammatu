@@ -28,7 +28,7 @@ payments, stock, or another local database.
 
 | Concern       | Choice                                                      | Version owner                                            |
 | ------------- | ----------------------------------------------------------- | -------------------------------------------------------- |
-| Runtime       | Node.js 24+                                                 | root `package.json` `engines`                            |
+| Runtime       | Node.js 24.x                                                | root `package.json` `engines`                            |
 | Workspace     | pnpm 10.33 + Turborepo 2                                    | root `package.json`, `turbo.json`                        |
 | Web           | Next.js 16 + React 19                                       | `apps/web/package.json`                                  |
 | Language      | TypeScript 6 strict with `noUncheckedIndexedAccess`         | root manifest + `tsconfig.base.json`                     |
@@ -93,8 +93,8 @@ Turborepo owns task ordering in `turbo.json`:
 - `dev` is persistent and uncached.
 - Web build outputs include Next.js artifacts and the generated Serwist worker;
   print-agent build outputs `dist/index.js`.
-- `corepack pnpm verify` runs dependency audit, baseline hygiene, typecheck,
-  lint/guards, build, and tests.
+- `corepack pnpm verify` runs dependency audit (including Node runtime drift),
+  baseline hygiene, typecheck, lint/guards, build, and tests.
 
 GitHub Actions runs the standard gates on pull requests and `main`. Conditional
 jobs replay the from-empty database baseline and run the POS → payment → KDS

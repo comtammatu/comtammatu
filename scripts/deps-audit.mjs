@@ -131,6 +131,59 @@ function directDeps(manifest) {
   };
 }
 
+async function auditRuntimeContract() {
+  const failures = [];
+  const nodeMajor = readFileSync(join(ROOT, ".nvmrc"), "utf8").trim();
+  if (!/^\d+$/.test(nodeMajor)) {
+    return [`.nvmrc must contain one Node.js major, found ${JSON.stringify(nodeMajor)}`];
+  }
+
+  const rootManifest = await readJson(join(ROOT, "package.json"));
+  const expectedEngine = `${nodeMajor}.x`;
+  if (rootManifest.engines?.node !== expectedEngine) {
+    failures.push(
+      `package.json engines.node must match .nvmrc (${expectedEngine}), found ${rootManifest.engines?.node ?? "missing"}`,
+    );
+  }
+
+  const runningMajor = process.versions.node.split(".")[0];
+  if (runningMajor !== nodeMajor) {
+    failures.push(`deps:audit must run on Node.js ${nodeMajor}.x, found ${process.version}`);
+  }
+
+  const ci = readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8");
+  const setupNodeCount = ci.match(/uses:\s*actions\/setup-node@/g)?.length ?? 0;
+  const versionFileCount = ci.match(/node-version-file:\s*\.nvmrc/g)?.length ?? 0;
+  if (setupNodeCount === 0 || versionFileCount !== setupNodeCount) {
+    failures.push(
+      `every CI setup-node step must read .nvmrc (${versionFileCount}/${setupNodeCount})`,
+    );
+  }
+  if (/^\s*node-version:\s*/m.test(ci)) {
+    failures.push("CI must not hardcode node-version; use node-version-file: .nvmrc");
+  }
+
+  for (const packageJsonPath of await collectPackageJsonFiles()) {
+    const manifest = await readJson(packageJsonPath);
+    const nodeTypes = directDeps(manifest)["@types/node"];
+    if (
+      typeof nodeTypes === "string" &&
+      !new RegExp(`^[~^]?${escapeRegExp(nodeMajor)}\\.`).test(nodeTypes)
+    ) {
+      failures.push(
+        `${relative(ROOT, packageJsonPath)}: @types/node must stay on major ${nodeMajor}, found ${nodeTypes}`,
+      );
+    }
+  }
+
+  const printAgent = await readJson(join(ROOT, "apps", "print-agent", "package.json"));
+  if (!printAgent.scripts?.build?.includes(`--target=node${nodeMajor}`)) {
+    failures.push(`apps/print-agent build must target node${nodeMajor}`);
+  }
+
+  return failures;
+}
+
 function hasTsSurface(packageDir, files) {
   if (existsSync(join(packageDir, "tsconfig.json"))) return true;
   return files.some((file) => file.endsWith(".ts") || file.endsWith(".tsx"));
@@ -346,6 +399,7 @@ async function auditDirectDependencies() {
 
 async function main() {
   const failures = [
+    ...(await auditRuntimeContract()),
     ...runDedupeCheck(),
     ...auditLicenses(),
     ...(await auditDirectDependencies()),
@@ -359,7 +413,7 @@ async function main() {
   }
 
   console.log(
-    "Dependency audit: no unused direct dependency, lockfile dedupe drift, or unresolved license.",
+    "Dependency audit: runtime contract aligned; no unused direct dependency, lockfile dedupe drift, or unresolved license.",
   );
 }
 

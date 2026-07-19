@@ -10,7 +10,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 if (-not $NodePath) {
-  Write-Error "node.exe không có trong PATH. Cài Node 24+ từ https://nodejs.org/."
+  Write-Error "node.exe không có trong PATH. Cài Node 24.x từ https://nodejs.org/."
 }
 if (-not (Test-Path $EntryPath)) {
   Write-Error "Không tìm thấy dist/index.js tại $EntryPath. Chạy 'pnpm -F @comtammatu/print-agent build' trước."
