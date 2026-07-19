@@ -3,7 +3,6 @@
 import type { ComponentProps } from "react";
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
-import { cn } from "@comtammatu/ui";
 import {
   Field,
   FieldDescription,
@@ -51,10 +50,11 @@ export function TextField<TFieldValues extends FieldValues>({
         {required ? " *" : null}
       </FieldLabel>
       <Input
+        size="field"
         id={fieldId}
         aria-invalid={hasError}
         aria-describedby={describedBy}
-        className={cn("h-10", className)}
+        className={className}
         {...inputProps}
         name={field.name}
         value={(field.value as string | undefined) ?? ""}

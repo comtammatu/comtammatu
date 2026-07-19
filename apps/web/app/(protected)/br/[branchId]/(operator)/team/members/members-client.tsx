@@ -26,7 +26,11 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@comtammatu/ui/components/drawer";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { Item, ItemContent } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
@@ -34,17 +38,10 @@ import { AppEmptyState } from "@/components/surface";
 import { formatVNTime as formatTimeVN } from "@comtammatu/shared/time";
 
 export type TeamMemberTodayStatus =
-  | "working"
-  | "checked_out"
-  | "on_leave"
-  | "not_started";
+  "working" | "checked_out" | "on_leave" | "not_started";
 
 export type TeamMemberCountStatus =
-  | "not_assigned"
-  | "not_submitted"
-  | "submitted"
-  | "needs_changes"
-  | "approved";
+  "not_assigned" | "not_submitted" | "submitted" | "needs_changes" | "approved";
 
 export interface TeamMemberRow {
   id: string;
@@ -319,16 +316,17 @@ export function MembersClient({
     <>
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-col gap-2 border-b pb-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <Input
+          <InputGroup className="h-11">
+            <InputGroupAddon>
+              <Search aria-hidden />
+            </InputGroupAddon>
+            <InputGroupInput
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Tìm tên, mã NV, SĐT, chức danh..."
-              className="h-11"
               aria-label="Tìm nhân viên"
             />
-          </div>
+          </InputGroup>
           <div
             className="flex flex-wrap gap-1.5"
             role="group"

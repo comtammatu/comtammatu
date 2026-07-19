@@ -19,7 +19,7 @@ export default function LoginPage() {
           </Frame>
           <div className="flex flex-col items-center text-center gap-2">
             {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: brand tagline static text */}
-            <p className="font-heading text-lg font-bold tracking-tight text-foreground lg:text-xl">
+            <p className="font-heading text-lg font-semibold tracking-tight text-foreground lg:text-xl">
               Hệ thống Vận hành & Bán hàng
             </p>
             {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: brand subtitle static text */}

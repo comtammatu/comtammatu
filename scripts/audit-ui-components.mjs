@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   APP_ADAPTER_REGISTRY,
   DOMAIN_ADAPTER_FAMILIES,
+  findComponentGuidance,
   validateUiComponentRegistry,
 } from "./ui-component-registry.mjs";
 import { buildUiContractGuardReporting } from "./ui-contract-guard-reporting.mjs";
@@ -81,7 +82,7 @@ const ROUTE_FAMILIES = [
   ["unclassified", () => true],
 ];
 
-const PRIMITIVES = [
+const SHARED_COMPONENT_IMPORTS = [
   "card",
   "table",
   "dialog",
@@ -215,10 +216,7 @@ const SIGNAL_GUARD_COVERAGE = {
   },
 };
 
-const SIGNAL_GUARD_STATUSES = new Set([
-  "blocking-zero",
-  "advisory",
-]);
+const SIGNAL_GUARD_STATUSES = new Set(["blocking-zero", "advisory"]);
 
 function guardIdExists(contractSource, guardId) {
   return (
@@ -282,6 +280,7 @@ function validateSignalGuardCoverage() {
 
 function parseOptions(argv) {
   const options = {
+    component: null,
     family: null,
     limit: DEFAULT_LIMIT,
   };
@@ -290,6 +289,11 @@ function parseOptions(argv) {
     const arg = argv[index];
     if (arg === "--all") {
       options.limit = Number.POSITIVE_INFINITY;
+    } else if (arg === "--component") {
+      options.component = argv[index + 1] ?? "";
+      index += 1;
+    } else if (arg.startsWith("--component=")) {
+      options.component = arg.slice("--component=".length);
     } else if (arg === "--family") {
       options.family = argv[index + 1] ?? null;
       index += 1;
@@ -304,6 +308,7 @@ function parseOptions(argv) {
       console.log(`Usage: node scripts/audit-ui-components.mjs [options]
 
 Options:
+  --component <name> Show selection guidance for a shared component or adapter.
   --family <name>  Show high-risk files for one route family.
   --limit <number> Limit high-risk rows. Defaults to ${DEFAULT_LIMIT}.
   --all            Show every scored file.
@@ -460,10 +465,10 @@ function classifyFamily(file) {
   return ROUTE_FAMILIES.find(([, matches]) => matches(file))?.[0] ?? "other";
 }
 
-function primitiveImportCount(source, primitive) {
+function sharedComponentImportCount(source, component) {
   return countMatches(
     source,
-    new RegExp(`from\\s+["@']@comtammatu/ui/components/${primitive}["@']`, "g"),
+    new RegExp(`from\\s+["@']@comtammatu/ui/components/${component}["@']`, "g"),
   );
 }
 
@@ -471,9 +476,9 @@ function summarizeFile(filePath) {
   const file = toPosix(filePath);
   const source = fs.readFileSync(filePath, "utf8");
   const imports = Object.fromEntries(
-    PRIMITIVES.map((primitive) => [
-      primitive,
-      primitiveImportCount(source, primitive),
+    SHARED_COMPONENT_IMPORTS.map((component) => [
+      component,
+      sharedComponentImportCount(source, component),
     ]).filter(([, count]) => count > 0),
   );
   const adapters = Object.fromEntries(
@@ -543,6 +548,116 @@ function table(headers, rows) {
   ].join("\n");
 }
 
+function markdownCell(value) {
+  return String(value ?? "")
+    .replaceAll("|", "\\|")
+    .replaceAll("\n", " ");
+}
+
+function printComponentGuidance(query, matches) {
+  console.log("# UI Component Guidance");
+  console.log();
+  console.log(`Query: \`${query}\``);
+  for (const entry of matches) {
+    console.log();
+    console.log(`## ${entry.layer}: ${entry.name}`);
+    console.log();
+    console.log(
+      table(
+        ["field", "value"],
+        [
+          ["classification", entry.classification],
+          ["source", entry.source],
+          ["need", entry.need],
+          ["use", entry.use],
+          ["fallback", entry.fallback],
+          ["forbidden", entry.forbidden],
+          ["exemplar", entry.exemplar],
+        ].map((row) => row.map(markdownCell)),
+      ),
+    );
+  }
+}
+
+function buildInputUsageCensus() {
+  const rows = UI_RUNTIME_SOURCE_ROOTS.flatMap((root) =>
+    walkFiles(root, [".tsx"]),
+  )
+    .map((filePath) => {
+      const file = toPosix(filePath);
+      const source = fs.readFileSync(filePath, "utf8");
+      if (!/from\s+["']@comtammatu\/ui\/components\/input["']/.test(source)) {
+        return null;
+      }
+      const inputTags = extractJsxOpeningTags(source, "Input");
+      return {
+        file,
+        scope: file.startsWith("apps/web/app/components/form/")
+          ? "shared-form"
+          : "route-or-surface",
+        uses: inputTags.length,
+        fixedHeightUses: inputTags.filter(
+          (tag) =>
+            /\bclassName\s*=/.test(tag) && /\bh-(?:10|11|12|14|16)\b/.test(tag),
+        ).length,
+      };
+    })
+    .filter(Boolean);
+
+  const scopes = ["shared-form", "route-or-surface"].map((scope) => {
+    const scoped = rows.filter((row) => row.scope === scope);
+    return {
+      scope,
+      files: scoped.length,
+      uses: scoped.reduce((total, row) => total + row.uses, 0),
+    };
+  });
+  const fixedHeightRows = rows
+    .filter(
+      (row) => row.scope === "route-or-surface" && row.fixedHeightUses > 0,
+    )
+    .sort((a, b) => a.file.localeCompare(b.file));
+
+  return { rows, scopes, fixedHeightRows };
+}
+
+function printInputUsageCensus() {
+  const census = buildInputUsageCensus();
+  const totalFiles = census.rows.length;
+  const totalUses = census.rows.reduce((total, row) => total + row.uses, 0);
+
+  console.log();
+  console.log("## Live direct-Input census");
+  console.log();
+  console.log(
+    table(
+      ["scope", "import files", "JSX uses"],
+      [
+        ...census.scopes.map((row) => [
+          row.scope,
+          String(row.files),
+          String(row.uses),
+        ]),
+        ["total", String(totalFiles), String(totalUses)],
+      ],
+    ),
+  );
+  console.log();
+  console.log("### Route-local fixed-height allowances");
+  console.log();
+  console.log(
+    census.fixedHeightRows.length > 0
+      ? table(
+          ["file", "uses"],
+          census.fixedHeightRows.map((row) => [
+            markdownCell(row.file),
+            String(row.fixedHeightUses),
+          ]),
+        )
+      : "None.",
+  );
+}
+
 const options = parseOptions(process.argv.slice(2));
 validateSignalGuardCoverage();
 const guardReporting = buildUiContractGuardReporting(
@@ -565,6 +680,25 @@ if (componentRegistry.errors.length > 0) {
   throw new Error(
     `UI component selection coverage is incomplete:\n- ${componentRegistry.errors.join("\n- ")}`,
   );
+}
+if (options.component !== null) {
+  const matches = findComponentGuidance(options.component);
+  if (matches.length === 0) {
+    console.error(
+      `Unknown UI component or adapter "${options.component}". Use the source name, for example Card, KpiCard, or BranchOperatorPage.`,
+    );
+    process.exit(1);
+  }
+  printComponentGuidance(options.component, matches);
+  if (
+    options.component
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "") === "input"
+  ) {
+    printInputUsageCensus();
+  }
+  process.exit(0);
 }
 const appFiles = UI_RUNTIME_SOURCE_ROOTS.flatMap((root) =>
   walkFiles(root, [".ts", ".tsx"]),
@@ -756,13 +890,13 @@ const guardReportingRows = [
 ];
 
 const componentSelectionRows = [
-  ...Object.entries(componentRegistry.primitiveCoverage.accessCounts).map(
-    ([access, count]) => ["primitive", access, String(count)],
+  ...Object.entries(componentRegistry.sharedComponentCoverage.accessCounts).map(
+    ([access, count]) => ["shared-component", access, String(count)],
   ),
   [
-    "primitive",
+    "shared-component",
     "unclassified",
-    String(componentRegistry.primitiveCoverage.unclassified.length),
+    String(componentRegistry.sharedComponentCoverage.unclassified.length),
   ],
   ["app-adapter", "registered", String(componentRegistry.appAdapterCount)],
   ["domain-adapter", "families", String(componentRegistry.domainFamilyCount)],
@@ -827,17 +961,7 @@ console.log(table(["adapter", "caller files", "hits"], adapterRows));
 console.log();
 console.log("## Signal Guard Coverage");
 console.log();
-console.log(
-  table(
-    [
-      "signal",
-      "status",
-      "guard",
-      "reason",
-    ],
-    signalGuardRows,
-  ),
-);
+console.log(table(["signal", "status", "guard", "reason"], signalGuardRows));
 console.log();
 console.log("## Guard Ownership");
 console.log();

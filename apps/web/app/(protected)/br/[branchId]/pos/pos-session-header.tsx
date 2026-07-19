@@ -74,7 +74,7 @@ function PosSessionTopBarComponent({
             showText={false}
           />
           {contextLabel ? (
-            <span className="font-heading min-w-0 truncate text-base font-bold text-foreground md:text-sm md:font-semibold">
+            <span className="font-heading min-w-0 truncate text-base font-semibold text-foreground md:text-sm">
               {contextLabel}
             </span>
           ) : null}

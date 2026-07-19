@@ -1,7 +1,7 @@
 # UI, UX, Route Surface, And Copy Rules
 
 Read this file before UI, UX, route surface, styling, component, or copy changes.
-It controls agent workflow. Má Tư visual contract, primitive behavior and route
+It controls agent workflow. Má Tư visual contract, Base UI behavior and route
 workflow have separate owners; do not use one to overrule another concern.
 
 ## Authority
@@ -16,7 +16,7 @@ Read in order:
    adapters and implementation map.
 5. Target route/component and targeted `tasks/regressions.md` rows.
 
-Do not restate exact class strings, typography scales, theme storage, primitive
+Do not restate exact class strings, typography scales, theme storage, shared-component
 APIs, or page-archetype contracts here. Update their owner when runtime changes.
 
 ## Scope And UI Advisor Gate
@@ -43,9 +43,11 @@ change type, and authority granted by the task. Complete
 - POS and KDS use one vocabulary for the same workflow state.
 - Destructive actions are separated from primary actions and require explicit
   confirmation or a safe recovery path.
-- Use Má Tư DS primitives and approved surface adapters before route-local raw
-  styling. A direct primitive composition is valid only when its semantic job
-  is not covered by an adapter; do not invent fake primitives or a second theme.
+- Use Má Tư DS shared components and approved surface adapters before route-local raw
+  styling. Before composing a new surface, run
+  `corepack pnpm audit:ui-components --component <name>` for the closest shared
+  component or adapter. A direct shared-component composition is valid only when its semantic job
+  is not covered by an adapter; do not invent fake shared components or a second theme.
 - Accessibility basics are non-negotiable: keyboard reachability, visible focus,
   labels/names, semantic status not conveyed by color alone, and adequate touch
   targets.

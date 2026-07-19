@@ -982,7 +982,7 @@ function AddIssueLineDialog({
                       )
                     }
                     placeholder="0"
-                    className="h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-1 dark:bg-transparent"
+                    className="h-full"
                   />
                   {maxQuantityValue ? (
                     <InputGroupAddon align="inline-end">

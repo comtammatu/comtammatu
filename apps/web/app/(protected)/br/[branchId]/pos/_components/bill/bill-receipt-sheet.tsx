@@ -22,10 +22,10 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Frame } from "@comtammatu/ui/components/frame";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -260,11 +260,10 @@ function PaymentLoadingFixture() {
           </div>
           <InputGroup className="h-10">
             <InputGroupAddon>{PAYMENT_LOADING_TEXT.received}</InputGroupAddon>
-            <Input
+            <InputGroupInput
               readOnly
               value="165000"
-              data-slot="input-group-control"
-              className="flex-1 rounded-none border-0 bg-transparent text-right text-lg font-mono font-semibold tabular-nums shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent"
+              className="text-right text-lg font-mono font-semibold tabular-nums"
             />
           </InputGroup>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -1228,7 +1227,7 @@ export function BillReceipt({
                         onValueChange={setCashInput}
                         onFocus={(event) => event.currentTarget.select()}
                         disabled={actionPending}
-                        className="flex-1 rounded-none border-0 bg-transparent text-right text-lg font-mono font-semibold tabular-nums shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent"
+                        className="text-right text-lg font-mono font-semibold tabular-nums"
                       />
                     </InputGroup>
 

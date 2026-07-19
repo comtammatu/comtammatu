@@ -346,6 +346,43 @@ function extractJsxOpeningTags(content, tagName) {
   return extractJsxOpeningTagSpans(content, tagName).map(({ tag }) => tag);
 }
 
+function countRawInputFixedHeightTags(content) {
+  return extractJsxOpeningTags(content, "Input").filter(
+    (tag) =>
+      /\bclassName\s*=/.test(tag) && /\bh-(?:10|11|12|14|16)\b/.test(tag),
+  ).length;
+}
+
+function collectRawInputFixedHeightCounts() {
+  const seen = new Map();
+  for (const filePath of walkUiRuntimeFiles([".tsx"])) {
+    const file = toPosix(filePath);
+    if (file.startsWith("apps/web/app/components/form/")) continue;
+    const content = fs.readFileSync(filePath, "utf8");
+    if (!/from\s+["']@comtammatu\/ui\/components\/input["']/.test(content)) {
+      continue;
+    }
+    const count = countRawInputFixedHeightTags(content);
+    if (count > 0) seen.set(file, count);
+  }
+  return seen;
+}
+
+const rawInputFixedHeightCheck = {
+  id: "raw-input-fixed-height-baseline",
+  description:
+    "Route Inputs select default, field, or touch size semantically; raw fixed-height class patches are forbidden.",
+  allowlist: {},
+  custom() {
+    failures.push(
+      ...perFileBudgetFailures(
+        rawInputFixedHeightCheck,
+        collectRawInputFixedHeightCounts(),
+      ),
+    );
+  },
+};
+
 function hasDirectAsChildPrimitiveParent(content, start) {
   const before = content.slice(Math.max(0, start - 320), start);
   const tail = before.slice(before.lastIndexOf("<"));
@@ -461,6 +498,7 @@ const formatterGuards = [
 ];
 
 const checks = [
+  rawInputFixedHeightCheck,
   {
     id: "print-format-ssot",
     description:
@@ -962,6 +1000,16 @@ const textChecks = [
     ],
   },
   {
+    id: "input-group-direct-input-contract",
+    file: "packages/ui/src/components/input-group.tsx",
+    includes: [
+      "has-[>input:focus-visible]:ring-2",
+      "[&>input]:rounded-none",
+      "[&>input]:border-0",
+      "[&>input]:focus-visible:ring-0",
+    ],
+  },
+  {
     id: "app-page-header-eyebrow-contract",
     file: "apps/web/app/components/surface.tsx",
     includes: [
@@ -1008,22 +1056,22 @@ const textChecks = [
   {
     id: "matu-ds-runtime-contract",
     file: "docs/spec/design-system.md",
-    includes: ["primitive source: `packages/ui/src/components/*`"],
+    includes: ["shared component source: `packages/ui/src/components/*`"],
   },
   {
     id: "matu-ds-agent-rule",
     file: "docs/agent/rules/ui.md",
-    includes: ["Use Má Tư DS primitives and approved surface adapters"],
+    includes: ["Use Má Tư DS shared components and approved surface adapters"],
   },
   {
     id: "matu-ds-module-doc",
     file: "docs/modules/ui.md",
-    includes: ["Runtime hiện tại: Má Tư DS primitives"],
+    includes: ["Runtime hiện tại: Má Tư DS shared components"],
   },
   {
     id: "readme-ui-runtime-current",
     file: "README.md",
-    includes: ["Má Tư Design System primitives (`@comtammatu/ui`)"],
+    includes: ["Má Tư Design System shared components (`@comtammatu/ui`)"],
   },
   {
     id: "readme-design-system-contract-pointer",
@@ -1051,9 +1099,36 @@ const countBudgets = [
     pattern: /<CardTitle\b[^\n]*\bclassName=/g,
     maxCount: 0,
   },
+  {
+    id: "raw-hover-shadow",
+    description:
+      "Interactive UI elevation uses the named card-hover effect instead of raw Tailwind shadow utilities.",
+    roots: uiRuntimeRoots([".tsx"]),
+    pattern: /\bhover:shadow-(?!effect-)[^\s"']+/g,
+    maxCount: 0,
+  },
+  {
+    id: "input-group-child-chrome",
+    description:
+      "InputGroup owns direct-input border, background, shadow, and focus-ring normalization; route callers keep only semantic text or density classes.",
+    roots: uiRuntimeRoots([".tsx"]),
+    pattern: /\brounded-none\b[^"'\n]*\bborder-0\b[^"'\n]*\bbg-transparent\b/g,
+    maxCount: 0,
+  },
 ];
 
 const perFileCountBudgets = [
+  {
+    id: "heading-weight-lock",
+    description:
+      "Headings use semibold; bold is restricted to the documented print-mode page-header exception.",
+    roots: uiRuntimeRoots([".tsx"]),
+    pattern:
+      /(?:\bfont-heading\b[^"'\n]*\bfont-bold\b|\bfont-bold\b[^"'\n]*\bfont-heading\b)/g,
+    allowlist: {
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 1,
+    },
+  },
   {
     id: "card-content-classname-baseline",
     description:
@@ -1257,6 +1332,57 @@ function runLegacyDebtBudgetSelfTest() {
     ) !== 1
   ) {
     throw new Error("primitive import budget self-test did not match");
+  }
+
+  const rawHoverShadowCheck = countBudgets.find(
+    (check) => check.id === "raw-hover-shadow",
+  );
+  if (
+    !rawHoverShadowCheck ||
+    countMatches(
+      'className="hover:shadow-inner hover:shadow-[0_2px_8px_rgb(0_0_0/0.2)]"',
+      rawHoverShadowCheck.pattern,
+    ) !== 2 ||
+    countMatches(
+      'className="hover:shadow-effect-card-hover"',
+      rawHoverShadowCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error("raw hover shadow self-test did not enforce named effects");
+  }
+
+  const headingWeightCheck = perFileCountBudgets.find(
+    (check) => check.id === "heading-weight-lock",
+  );
+  if (
+    !headingWeightCheck ||
+    countMatches(
+      'className="font-heading text-xl font-bold"',
+      headingWeightCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'className="font-bold text-xl font-heading"',
+      headingWeightCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'className="font-heading text-xl font-semibold"',
+      headingWeightCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error("heading weight self-test did not enforce the lock");
+  }
+
+  if (
+    countRawInputFixedHeightTags(
+      '<Input type="text" className="w-full h-10" />',
+    ) !== 1 ||
+    countRawInputFixedHeightTags('<Input type="text" />') !== 0 ||
+    countRawInputFixedHeightTags('<Input type="file" />') !== 0 ||
+    countRawInputFixedHeightTags(
+      '<InputGroup className="h-10"><InputGroupInput /></InputGroup>',
+    ) !== 0
+  ) {
+    throw new Error("raw input fixed-height self-test did not enforce scope");
   }
 }
 

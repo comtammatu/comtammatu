@@ -3,9 +3,9 @@
 ## Overview
 
 UI của repo là Com Tam Ma Tu Custom Theme (Ma Tu Concept 01) chạy trên
-Má Tư Design System primitives trong `@comtammatu/ui`. Base UI là behavioral
-primitive layer đích; lucide, Tailwind và CVA là implementation dependencies,
-không phải visual authority.
+Má Tư Design System shared components trong `@comtammatu/ui`. Base UI là
+behavioral primitive layer; lucide, Tailwind và CVA là implementation
+dependencies, không phải visual authority.
 Không còn helper layer hay theme system riêng theo route/surface.
 
 File này là implementation guide: cách áp dụng visual contract vào app code,
@@ -16,13 +16,14 @@ bằng wrapper compatibility.
 ## Contract Boundary
 
 Mọi UI/UX rebuild phải xác định owner của quyết định trước rồi mới đọc runtime.
-Visual change đọc `design-system.md`; behavior/accessibility đọc primitive;
+Visual change đọc `design-system.md`; behavior/accessibility đọc Base UI và
+shared component implementation;
 workflow đọc archetype và route. Role split:
 
 - `docs/spec/design-system.md`: Má Tư visual authority; owns token, typography,
   density, brand, states, elevation và motion recipe.
-- `packages/ui/src/components/*`: primitive behavior; Base UI migration và
-  accessibility contract sống ở đây.
+- `packages/ui/src/components/*`: shared styled components; Base UI behavior và
+  accessibility contract được tích hợp ở đây.
 - `docs/modules/ui.md`: implementation guide; owns composition, form, overlay,
   feedback, shortcut và migration matrix.
 - `docs/spec/page-archetypes.md` + target route: workflow composition, job,
@@ -41,7 +42,7 @@ không được dùng làm preset hay visual source.
 Code mới phải dùng `apps/web/app/components/surface.tsx`, `BrandMark` /
 `BrandLockup` / `BrandSymbol` / `BrandMascot`, semantic token classes, và font
 utilities hiện hành cho app UI. Nếu ý tưởng cần visual layer mới ở mức token,
-chrome, primitive behavior, hoặc shared adapter, update
+chrome, component behavior, hoặc shared adapter, update
 `docs/spec/design-system.md` trước khi rollout vào runtime.
 
 Read order cho agent khi làm UI:
@@ -53,16 +54,17 @@ Read order cho agent khi làm UI:
 5. `tasks/regressions.md`
 6. Domain docs liên quan đến route đang sửa
 
-## Primitive Runtime Contract
+## Shared Component Runtime Contract
 
-Runtime hiện tại: Má Tư DS primitives trong `packages/ui/src/components/*` cho
-monorepo `apps/web` + `packages/ui`. Primitives dùng Base UI cho behavior, còn
-semantic token và visual recipe vẫn theo `docs/spec/design-system.md`. Không
-giữ compatibility shim thay thế visual contract hoặc component API cũ.
+Runtime hiện tại: Má Tư DS shared components trong
+`packages/ui/src/components/*` cho monorepo `apps/web` + `packages/ui`. Shared
+components dùng Base UI primitives cho behavior, còn semantic token và visual
+recipe vẫn theo `docs/spec/design-system.md`. Không giữ compatibility shim thay
+thế visual contract hoặc component API cũ.
 
 Điều này có nghĩa:
 
-- primitive structure phải theo file trong `packages/ui/src/components/*`
+- shared component structure phải theo file trong `packages/ui/src/components/*`
 - chỉ `packages/ui` được import `@base-ui/react`; app code đi qua
   `@comtammatu/ui`
 - `Select` giữ compound API hiện hành; shared root chuyển `SelectItem` children
@@ -70,15 +72,17 @@ giữ compatibility shim thay thế visual contract hoặc component API cũ.
   minh luôn được ưu tiên; route không tự dựng một label-resolution shim khác
 - semantic token values phải theo `docs/spec/design-system.md`
 - brand color/typography phải đi qua semantic token và font variables chung
-- page/shell ưu tiên primitives có sẵn và app surface adapters; direct primitive
-  composition được phép khi semantic job riêng không phù hợp adapter hiện có
+- page/shell ưu tiên shared components có sẵn và app surface adapters; direct
+  component composition được phép khi semantic job riêng không phù hợp adapter
+  hiện có
 - logo/brand lockup, symbol, mascot trong web runtime phải đi qua `BrandMark` /
   `BrandLockup` / `BrandSymbol` / `BrandMascot`
 - không được giữ `app-*` helper classes hoặc custom background/theme chrome ở root
 
-## Primitive Layer
+## Shared Component Layer
 
-Primitive source vẫn sống tại `packages/ui/src/components/*`, và app code dùng các primitive này qua `@comtammatu/ui`:
+Shared component source sống tại `packages/ui/src/components/*`, và app code
+dùng các component này qua `@comtammatu/ui`:
 
 - `button`
 - `accordion`
@@ -103,9 +107,9 @@ Primitive source vẫn sống tại `packages/ui/src/components/*`, và app code
 - `item` + `item-group` — list rows with media/title/description/actions
 - `spinner` — loading indicator (thay cho `Loader2 + animate-spin`)
 
-Không fork primitive theo surface.
+Không fork shared component theo surface.
 
-Ưu tiên named primitive props: `flush` cho table-edge/list-edge alignment và
+Ưu tiên named component props: `flush` cho table-edge/list-edge alignment và
 `scroll` cho horizontal table scrolling; AppSection dùng `contentFlush` /
 `contentScroll` cho cùng vai trò. Một surface có workflow riêng có thể compose
 spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
@@ -119,7 +123,7 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 - `AppSection` cho card-backed section.
 - `AppToolbar` cho filter/action toolbar.
 - `AppEmptyState` cho empty/no-result/no-access/error state.
-- `Table` trong `packages/ui` chỉ là semantic desktop primitive; route không
+- `Table` trong `packages/ui` chỉ là semantic desktop component; route không
   compose trực tiếp trừ document/line-sheet adapter đã được quy định.
 - `DataTable` là responsive table adapter duy nhất: một row model, desktop
   columns và `mobileCardRender` cùng trường/trạng thái/action. `DataTablePagination`
@@ -128,7 +132,7 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
   là URL/server state của trang. Inline toolbar của `DataTable` chỉ dành cho
   state local của chính bảng; không dựng hai toolbar cho cùng một control.
 - `AppLinkCard` cho navigation/action card.
-- `KpiRow` cho grid responsive (1/2/3 cột) bọc các `KpiCard` chỉ khi đó là
+- `KpiRow` cho grid responsive (1/2/3/4 cột) bọc các `KpiCard` chỉ khi đó là
   metric/stat-value.
 - `DescriptionList` cho cặp term/description (`<dl>`) ở trang chi tiết.
 - `LinkCardGrid` cho grid responsive (1/2/3 cột) bọc các `AppLinkCard`.
@@ -141,6 +145,26 @@ Domain wrappers như Inventory/Employee/Owner có thể giữ API riêng để t
 Card không đồng nghĩa với `KpiCard`: `KpiCard` chỉ cho metric/stat-value; card
 khác dùng `AppSection`, `AppLinkCard`, `OperationalBoardCard`,
 `DataTable.mobileCardRender`, hoặc wrapper route-scoped có render `Card`.
+
+## Component Selection
+
+Registry tại `scripts/ui-component-registry.mjs` là executable index của visual
+contract và implementation guide cho shared component, app adapter và domain
+adapter. Tra cứu trước khi compose một surface mới:
+
+```bash
+corepack pnpm audit:ui-components --component Card
+corepack pnpm audit:ui-components --component KpiCard
+corepack pnpm audit:ui-components --component InteractiveCard
+corepack pnpm audit:ui-components --component BranchOperatorPage
+```
+
+Kết quả trả về `need`, `use`, `fallback`, `forbidden` và `exemplar`. Chọn layer
+theo semantic job, không theo độ tiện của import. Nếu không có kết quả, kiểm tra
+adapter gần nhất trước khi thêm shared API mới.
+
+`apps/web/app/components/data-table/interactive-card.tsx` chỉ là compatibility
+re-export của shared `InteractiveCard`, không phải một app adapter thứ hai.
 
 ## Branch Operator Landing
 
@@ -369,7 +393,7 @@ Convention:
 
 - Shortcut đơn phím (`T`, `D`, `/`) mặc định KHÔNG fire khi focus đang ở input/textarea/contenteditable.
 - Shortcut có meta (`Cmd+Enter`, `Ctrl+K`) có thể dùng `fireInInput: true` để fire cả khi đang gõ.
-- `Escape` để clear filter hoặc đóng dialog (primitive overlay tự xử lý close/focus return theo contract).
+- `Escape` để clear filter hoặc đóng dialog (Base UI overlay behavior tự xử lý close/focus return theo contract).
 - Hiển thị hint với `<Kbd>` hoặc `<KbdGroup>` khi nhiều phím, cạnh label button, `className="hidden md:inline-flex"` để ẩn trên mobile.
 - Thêm `aria-keyshortcuts="T"` trên button/toggle để screen reader đọc được.
 
@@ -407,7 +431,7 @@ App-local form helpers sống tại `apps/web/app/components/form/`. Dùng cho m
 - `BusinessDateField` — RHF date picker, displays `dd/mm/yyyy`, stores `yyyy-mm-dd`, optional branch timezone note
 - `SelectField` — Select voi `options={[{value, label}]}`
 - `ComboboxField` — searchable Select + RHF, label/help/error/required state chung; description/error được liên kết tới trigger
-- `FormField` — label/help/error chung cho `Select`, `Combobox`, hoặc `Textarea` controlled ngoài RHF; đây là anatomy/layout wrapper, control con vẫn phải nhận `id`, `disabled`, và ARIA state phù hợp
+- `FormField` — label/help/error chung cho control ngoài RHF hoặc composition đặc thù; đây là anatomy/layout wrapper, control con vẫn phải nhận `id`, `disabled`, và ARIA state phù hợp
 - `Combobox` — control searchable độc lập; trong data-entry phải đặt trong `FormField` với `id` ổn định
 - `TextareaField` — Textarea + RHF
 - `AppDialog` — generic app Dialog shell for short non-form detail/task overlays
@@ -452,7 +476,7 @@ Sidebar labels phải ngắn và scan được trong sidebar cố định. Tên 
 - Page: long form, nhiều dòng, keyboard-heavy workflow như GRN 20 line, transfer detail edit, stocktake session.
 - Sheet: focused data entry/action ngắn; bottom sheet trên mobile và side sheet trên desktop khi implementation cần responsive surface.
 - `AppDialog`: short non-form detail/task overlay.
-- Dialog primitive: approved exceptional contextual task only.
+- Dialog component: approved exceptional contextual task only.
 - AlertDialog: destructive/irreversible confirm nhu void order, deactivate, inactive lifecycle transition.
 
 ### Audit And Permission Decision
@@ -468,18 +492,18 @@ Cho phép:
 - wrapper nhỏ để tập hợp dữ liệu, nav, và structure
 - wrapper domain delegate về `apps/web/app/components/surface.tsx`
 - dùng `className` để sắp xếp layout cơ bản
-- compose trực tiếp từ Má Tư DS primitives
+- compose trực tiếp từ Má Tư DS shared components
 
 Không cho phép:
 
 - helper class kiểu `app-*`
 - custom theme layer
 - parallel compatibility layer
-- wrapper override visual contract của primitive
+- wrapper override visual contract của shared component
 - module tự tạo lại page/header/section/toolbar/empty/link-card thay vì delegate về `apps/web/app/components/surface.tsx`
 - dùng `div` / `span` / `p` thường để giả lập `Card`, `Badge`, `Button`, `Table`, `Tabs`, `Input`, `Select`
 - per-surface `theme.css`
-- shell chrome tự chế để thay cho shared primitive/surface structure
+- shell chrome tự chế để thay cho shared component/surface structure
 
 Quy tắc review:
 
@@ -490,9 +514,11 @@ Quy tắc review:
 - nếu UI trông giống bảng dữ liệu thì phải dùng `Table`
 - nếu UI là empty/error state thì phải dùng wrapper đã được phê duyệt như `AppEmptyState` / `TableEmptyStateRow`; route code không dùng raw `Empty*` trực tiếp
 - nếu UI là loading spinner thì phải dùng `Spinner`, không tự style `Loader2 + animate-spin`
-- nếu UI là form field thì phải dùng helpers từ `@/components/form` (`TextField`, `NumberField`, `SelectField`, `TextareaField`)
+- nếu UI là standard RHF form field thì dùng helper typed từ `@/components/form` (`TextField`, `NumberField`, `SelectField`, `TextareaField`)
+- nếu UI là controlled field ngoài RHF hoặc composition đặc thù thì dùng `FormField` / shared `Field`; raw `Input` chỉ nằm bên trong anatomy đó, native date/month/file workflow, hoặc inline editor có semantic rõ
+- search/filter dùng `DataTable` search props hoặc `AppToolbar` + `InputGroup`; không ghép icon và `Input` bằng raw flex wrapper
 - nếu UI là form dialog CRUD thì phải dùng `FormDialog` wrapper
-- nếu không có primitive phù hợp, dùng wrapper route-scoped; chỉ update spec khi
+- nếu không có component phù hợp, dùng wrapper route-scoped; chỉ update spec khi
   đổi contract hoặc shared adapter
 
 ## UI Rebuild Gate
@@ -500,11 +526,11 @@ Quy tắc review:
 `docs/spec/page-archetypes.md` § 0.1 UI Advisor Gate là contract duy nhất cho
 quyết định trước khi sửa surface. Không duy trì một checklist thứ hai tại đây.
 Gate phải nối được screen context → actor/job/workflow → information order →
-archetype/exemplar → primitive/fallback → state/responsive/browser QA trước khi
+archetype/exemplar → component/fallback → state/responsive/browser QA trước khi
 implementation bắt đầu.
 
 Nếu không có component khớp hoàn toàn, đi theo thứ tự fallback đã khóa trong
-gate: composition từ primitive hiện có → route-scoped adapter → cập nhật
+gate: composition từ shared component hiện có → route-scoped adapter → cập nhật
 `docs/spec/design-system.md` trước khi thay đổi shared visual role, token, hoặc
 behavior. Thiếu context không phải lý do để cài thêm skill/plugin hay tạo
 parallel design contract.
@@ -513,7 +539,7 @@ Rebuild theo wave nhỏ:
 
 1. Hoàn thành UI Advisor Gate và khóa route family.
 2. Audit exemplar, shared adapter usage, và regression liên quan.
-3. Chuẩn hóa shell/layout/state primitives trong phạm vi surface.
+3. Chuẩn hóa shell/layout/state components trong phạm vi surface.
 4. Sửa flow chính theo information order và primary action đã chốt.
 5. Verify mobile first viewport, desktop density, state coverage, và
    accessibility risk đã nêu trong gate.
@@ -531,7 +557,7 @@ POS và KDS là surface vận hành, không phải dashboard.
 - sau khi khóa context (ca, bàn, trạm, đơn), shell phải co gọn để nhường cho tác vụ chính
 - analytics, hero copy, progress block chỉ là secondary content; không được đẩy queue/cart xuống dưới fold
 - desktop có thể thêm mật độ thông tin, nhưng không được tạo IA khác mobile
-- nếu control trông giống `Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Progress` thì phải dùng primitive thật, không tự style raw `div` / `button`
+- nếu control trông giống `Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Progress` thì phải dùng shared component thật, không tự style raw `div` / `button`
 
 Review heuristic:
 

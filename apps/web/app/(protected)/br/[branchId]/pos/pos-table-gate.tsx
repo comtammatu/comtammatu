@@ -79,7 +79,7 @@ const TableButton = memo(function TableButton({
       size="tile"
       aria-label={`${messages.pos.tableGate.tableAria(table.number, statusLabel)}${hasPendingSelfOrderRequest ? ", QR đang chờ duyệt" : ""}`}
       className={cn(
-        "w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-sm sm:gap-3 lg:p-4",
+        "w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 lg:p-4",
         tileVisualState === "ready" && !isSelected && "bg-success/20",
       )}
       onClick={handleClick}

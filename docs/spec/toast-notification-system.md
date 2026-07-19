@@ -8,7 +8,7 @@
 - Primary user job: know whether the current action succeeded, failed, needs retry, or created follow-up work.
 - Route family: `/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]/shift/*`, `/inventory/*`, `/notifications`.
 - Change type: behavior and UX contract. Runtime code should follow this contract before adding new notification producers.
-- Primitives: `Sonner`, `Button`, `Popover`, `Card`, `ScrollArea`, `Badge`, `Empty`, `Item`, `Tooltip`, and route shells from Má Tư DS primitives.
+- Shared components: `Sonner`, `Button`, `Popover`, `Card`, `ScrollArea`, `Badge`, `Empty`, `Item`, `Tooltip`, and route shells from Má Tư DS shared components.
 
 ## Decision
 

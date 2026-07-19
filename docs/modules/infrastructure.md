@@ -49,7 +49,7 @@ comtammatu/
 ├── packages/
 │   ├── database/           # Supabase clients + generated types
 │   ├── shared/             # Auth types, ACL, utilities
-│   ├── ui/                 # Má Tư DS primitives + token runtime
+│   ├── ui/                 # Má Tư DS shared components + token runtime
 │   ├── print-render/       # Receipt/template renderer SSoT (agent + web preview)
 │   └── security/           # Rate limiting
 ├── supabase/

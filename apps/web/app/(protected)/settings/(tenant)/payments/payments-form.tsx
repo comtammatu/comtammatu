@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { SettingsFormSection } from "@/components/settings-form-section";
+import { TextField } from "@/components/form";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
@@ -216,53 +217,29 @@ export function PaymentsForm({
               />
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="vietqr-bank-code" className="text-xs">
-                    {messages.settings.payments.bankCode}
-                  </Label>
-                  <Input
-                    id="vietqr-bank-code"
-                    placeholder="TCB"
-                    autoCapitalize="characters"
-                    {...form.register("vietqr_bank_code")}
-                  />
-                  {form.formState.errors.vietqr_bank_code && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.vietqr_bank_code.message}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="vietqr-account-no" className="text-xs">
-                    {messages.settings.payments.accountNo}
-                  </Label>
-                  <Input
-                    id="vietqr-account-no"
-                    autoCapitalize="characters"
-                    placeholder="19035xxxxxxxx"
-                    {...form.register("vietqr_account_no")}
-                  />
-                  {form.formState.errors.vietqr_account_no && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.vietqr_account_no.message}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="vietqr-account-name" className="text-xs">
-                    {messages.settings.payments.accountName}
-                  </Label>
-                  <Input
-                    id="vietqr-account-name"
-                    placeholder="HO KINH DOANH COM TAM MA TU"
-                    {...form.register("vietqr_account_name")}
-                  />
-                  {form.formState.errors.vietqr_account_name && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.vietqr_account_name.message}
-                    </p>
-                  )}
-                </div>
+                <TextField
+                  control={form.control}
+                  name="vietqr_bank_code"
+                  id="vietqr-bank-code"
+                  label={messages.settings.payments.bankCode}
+                  placeholder="TCB"
+                  autoCapitalize="characters"
+                />
+                <TextField
+                  control={form.control}
+                  name="vietqr_account_no"
+                  id="vietqr-account-no"
+                  label={messages.settings.payments.accountNo}
+                  autoCapitalize="characters"
+                  placeholder="19035xxxxxxxx"
+                />
+                <TextField
+                  control={form.control}
+                  name="vietqr_account_name"
+                  id="vietqr-account-name"
+                  label={messages.settings.payments.accountName}
+                  placeholder="HO KINH DOANH COM TAM MA TU"
+                />
               </div>
               <p className="text-2xs text-muted-foreground">
                 {messages.settings.payments.bankHelp}
@@ -366,7 +343,6 @@ export function PaymentsForm({
                 </code>
               </div>
             </div>
-
           </SettingsFormSection>
         </TabsContent>
 
@@ -385,57 +361,30 @@ export function PaymentsForm({
               </NoteCallout>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="content-prefix" className="text-xs">
-                    {messages.settings.payments.contentPrefix}
-                  </Label>
-                  <Input
-                    id="content-prefix"
-                    autoCapitalize="characters"
-                    placeholder="MATU"
-                    {...form.register("content_prefix")}
-                  />
-                  {form.formState.errors.content_prefix && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.content_prefix.message}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="content-expense-token" className="text-xs">
-                    {messages.settings.payments.contentExpenseToken}
-                  </Label>
-                  <Input
-                    id="content-expense-token"
-                    autoCapitalize="characters"
-                    placeholder="CHI"
-                    {...form.register("content_expense_token")}
-                  />
-                  {form.formState.errors.content_expense_token && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.content_expense_token.message}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label
-                    htmlFor="content-cash-deposit-token"
-                    className="text-xs"
-                  >
-                    {messages.settings.payments.contentCashDepositToken}
-                  </Label>
-                  <Input
-                    id="content-cash-deposit-token"
-                    autoCapitalize="characters"
-                    placeholder="NOP"
-                    {...form.register("content_cash_deposit_token")}
-                  />
-                  {form.formState.errors.content_cash_deposit_token && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.content_cash_deposit_token.message}
-                    </p>
-                  )}
-                </div>
+                <TextField
+                  control={form.control}
+                  name="content_prefix"
+                  id="content-prefix"
+                  label={messages.settings.payments.contentPrefix}
+                  autoCapitalize="characters"
+                  placeholder="MATU"
+                />
+                <TextField
+                  control={form.control}
+                  name="content_expense_token"
+                  id="content-expense-token"
+                  label={messages.settings.payments.contentExpenseToken}
+                  autoCapitalize="characters"
+                  placeholder="CHI"
+                />
+                <TextField
+                  control={form.control}
+                  name="content_cash_deposit_token"
+                  id="content-cash-deposit-token"
+                  label={messages.settings.payments.contentCashDepositToken}
+                  autoCapitalize="characters"
+                  placeholder="NOP"
+                />
               </div>
 
               <dl className="grid gap-3 text-xs sm:grid-cols-2">

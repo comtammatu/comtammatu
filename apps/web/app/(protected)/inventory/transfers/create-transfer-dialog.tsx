@@ -247,7 +247,7 @@ export function CreateTransferForm({
                   <ItemActions className="flex shrink-0 items-center gap-2">
                     <InputGroup className="h-8 w-32">
                       <FormattedNumberInput
-                        className="h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-1 dark:bg-transparent"
+                        className="h-full"
                         placeholder={messages.inventory.common.quantityShort}
                         aria-label={copy.createNative.quantityLabel}
                         value={line.quantity}
@@ -323,11 +323,7 @@ export function CreateTransferForm({
 
       <AppSection title={FORM_VI.notes}>
         <FormField controlId="owner-transfer-vehicle" label={copy.vehicleInfo}>
-          <Input
-            id="owner-transfer-vehicle"
-            name="vehicleInfo"
-            className="h-10"
-          />
+          <Input size="field" id="owner-transfer-vehicle" name="vehicleInfo" />
         </FormField>
         <FormField controlId="owner-transfer-notes" label={FORM_VI.notes}>
           <Textarea

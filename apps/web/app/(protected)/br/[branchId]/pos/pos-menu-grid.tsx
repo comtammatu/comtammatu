@@ -137,9 +137,9 @@ const MenuItemButton = memo(function MenuItemButton({
         // aspect-[4/5] keeps the card scaling with width — a fixed min-h
         // gets too tall on mobile (390px width → 2-col gap-3 → ~181×226px
         // per card).
-        "group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left transition-transform hover:shadow-sm active:scale-[0.97]",
+        "group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left transition-transform hover:shadow-effect-card-hover active:scale-[0.97]",
         sparseMenu && "md:aspect-[3/2]",
-        blocked && "opacity-60 grayscale hover:shadow-sm",
+        blocked && "opacity-60 grayscale",
       )}
       onClick={handleClick}
     >

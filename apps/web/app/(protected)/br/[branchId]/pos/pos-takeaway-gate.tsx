@@ -5,10 +5,7 @@ import { AppEmptyState, OperationalTile } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Plus as IconPlus,
-  ShoppingBag as IconShoppingBag,
-} from "lucide-react";
+import { Plus as IconPlus, ShoppingBag as IconShoppingBag } from "lucide-react";
 import { messages } from "@lib/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNTime } from "@comtammatu/shared/time";
@@ -39,8 +36,7 @@ function isActiveTakeawayOrder(order: SessionOrder): boolean {
   );
 }
 
-const TAKEAWAY_SEQUENCE_RE =
-  /^(?:MV)-(?:(?:\d{6}|\d{8})-)?(\d{1,4})(?:-.+)?$/i;
+const TAKEAWAY_SEQUENCE_RE = /^(?:MV)-(?:(?:\d{6}|\d{8})-)?(\d{1,4})(?:-.+)?$/i;
 
 function formatTakeawayTileNumber(orderNumber: string): string {
   const cleaned = orderNumber.trim().replace(/^#+/, "");
@@ -83,7 +79,7 @@ function TakeawayOrderTile({
               formatVND(order.total_amount),
             )
       }
-      className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-sm sm:gap-3 lg:p-4"
+      className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 lg:p-4"
       onClick={() => onViewDetail(order.id, order.order_number, order)}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
@@ -170,7 +166,7 @@ function PosTakeawayGateComponent({
                 size="tile"
                 data-testid="pos-takeaway-create-tile"
                 aria-label={messages.pos.takeawayGate.createNew}
-                className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-sm sm:gap-3 lg:p-4"
+                className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 lg:p-4"
                 onClick={onCreateNew}
               >
                 <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
