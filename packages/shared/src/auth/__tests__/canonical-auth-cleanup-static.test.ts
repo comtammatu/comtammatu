@@ -133,6 +133,12 @@ test("Branch Manager approval grants remain exact-branch and hierarchy guarded",
 });
 
 test("personnel RLS and grants do not expose tenant-wide HR to Branch Manager", () => {
+  const profilesSelectPolicy =
+    /CREATE POLICY profiles_select_authorized[\s\S]*?\n\);/.exec(migration)?.[0];
+
+  assert.ok(profilesSelectPolicy);
+  assert.match(profilesSelectPolicy, /public\.auth_role\(\) = 'owner'/);
+  assert.doesNotMatch(profilesSelectPolicy, /public\.auth_is_owner\(/);
   assert.match(migration, /DROP POLICY IF EXISTS profiles_select_admin/);
   assert.match(migration, /branch_id = public\.auth_branch_id\(\)/);
   assert.match(migration, /public\.has_permission\(branch_id, 'staff:view'\)/);

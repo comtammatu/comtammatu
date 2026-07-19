@@ -1197,7 +1197,7 @@ USING (
   tenant_id = public.auth_tenant_id()
   AND (
     id = auth.uid()
-    OR public.auth_is_owner(auth.uid())
+    OR public.auth_role() = 'owner'
     OR (
       branch_id IS NOT NULL
       AND branch_id = public.auth_branch_id()
