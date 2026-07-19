@@ -171,7 +171,7 @@ export function FocusView({
   if (orders.length === 0 || !current) {
     return (
       <ScrollArea className="min-h-0 flex-1">
-        <div className="flex min-h-80 items-center justify-center p-6 md:min-h-96">
+        <div className="flex min-h-80 items-center justify-center p-4 md:min-h-96">
           <AppEmptyState
             title={
               hasGroupedOrders ? "Không có đơn phù hợp bộ lọc" : "Bếp đang rảnh"

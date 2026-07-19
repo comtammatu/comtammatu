@@ -137,7 +137,11 @@ test("DataTable renders the toolbar contract it exposes", () => {
   const dataTable = read(DATA_TABLE);
   const surface = read(SURFACE);
 
-  assert.match(dataTable, /import \{ Input \}/);
+  assert.match(dataTable, /@comtammatu\/ui\/components\/input-group/);
+  assert.match(
+    dataTable,
+    /<InputGroup[\s\S]*<InputGroupAddon[\s\S]*<InputGroupInput/,
+  );
   assert.match(dataTable, /SelectTrigger/);
   assert.match(dataTable, /<AppToolbar[\s\S]*variant="inline"/);
   assert.match(dataTable, /searchable === true/);

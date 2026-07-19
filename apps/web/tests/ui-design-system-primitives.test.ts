@@ -221,6 +221,7 @@ test("Base render composition preserves semantic link elements", () => {
 });
 
 test("Base floating layers stack above app chrome and Select resolves labels", () => {
+  const selectSource = read("packages/ui/src/components/select.tsx");
   const floatingSources = [
     read("packages/ui/src/components/combobox.tsx"),
     read("packages/ui/src/components/context-menu.tsx"),
@@ -229,8 +230,6 @@ test("Base floating layers stack above app chrome and Select resolves labels", (
     read("packages/ui/src/components/select.tsx"),
     read("packages/ui/src/components/tag-input.tsx"),
     read("packages/ui/src/components/tooltip.tsx"),
-    read("apps/web/app/components/form/combobox.tsx"),
-    read("apps/web/app/components/form/multi-select-combobox.tsx"),
   ];
 
   for (const source of floatingSources) {
@@ -263,6 +262,48 @@ test("Base floating layers stack above app chrome and Select resolves labels", (
 
   assert.match(select, />Tất cả</);
   assert.doesNotMatch(select, />all</);
+  assert.match(selectSource, /px-2 py-1 pr-8/);
+
+  const explicitItemsSelect = renderToStaticMarkup(
+    createElement(
+      Select,
+      { items: { all: "Mọi trạng thái" }, value: "all" },
+      createElement(
+        SelectTrigger,
+        { "aria-label": "Status" },
+        createElement(SelectValue),
+      ),
+      createElement(
+        SelectContent,
+        null,
+        createElement(SelectItem, { value: "all" }, "Tất cả"),
+      ),
+    ),
+  );
+
+  assert.match(explicitItemsSelect, />Mọi trạng thái</);
+  assert.doesNotMatch(explicitItemsSelect, />Tất cả</);
+});
+
+test("app combobox adapters preserve Vietnamese search without exposing Base UI parts", () => {
+  const sharedCombobox = read("packages/ui/src/components/combobox.tsx");
+  const formCombobox = read("apps/web/app/components/form/combobox.tsx");
+  const multiSelectCombobox = read(
+    "apps/web/app/components/form/multi-select-combobox.tsx",
+  );
+
+  assert.doesNotMatch(sharedCombobox, /ComboboxPrimitive/);
+  assert.match(formCombobox, /Combobox as SharedCombobox/);
+  assert.match(
+    multiSelectCombobox,
+    /MultiSelectCombobox as SharedMultiSelectCombobox/,
+  );
+  assert.match(formCombobox, /matchesSearch/);
+  assert.match(multiSelectCombobox, /matchesSearch/);
+  assert.doesNotMatch(
+    `${formCombobox}\n${multiSelectCombobox}`,
+    /@base-ui\/react|ComboboxPrimitive|BaseCombobox\./,
+  );
 });
 
 test("native visual primitives preserve label, separator, and overflow semantics", () => {

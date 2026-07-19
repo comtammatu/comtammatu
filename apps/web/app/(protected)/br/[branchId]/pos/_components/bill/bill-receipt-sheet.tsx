@@ -1085,7 +1085,7 @@ export function BillReceipt({
             loading
             fixture={<ReceiptLoadingFixture />}
             fallback={
-              <div className="flex items-center justify-center py-10">
+              <div className="flex min-h-20 items-center justify-center">
                 <Spinner />
               </div>
             }

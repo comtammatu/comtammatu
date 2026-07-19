@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { AppEmptyState } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Item, ItemFooter, ItemGroup } from "@comtammatu/ui/components/item";
 import {
@@ -110,22 +114,21 @@ export function ArchivedOrdersSheet({
   const body = (
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 border-b border-border/60 px-4 py-3 flex flex-col gap-3">
-        <div className="relative">
-          <IconSearch
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <Input
+        <InputGroup>
+          <InputGroupAddon>
+            <IconSearch aria-hidden />
+          </InputGroupAddon>
+          <InputGroupInput
             type="search"
             inputMode="search"
             placeholder={messages.pos.archivedOrders.searchPlaceholder}
-            className="h-10 pl-9 text-base"
+            className="text-base"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             aria-label={messages.pos.archivedOrders.searchAria}
             data-testid="pos-archived-search"
           />
-        </div>
+        </InputGroup>
         <ToggleGroup
           type="single"
           value={scope}

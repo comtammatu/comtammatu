@@ -65,6 +65,9 @@ giữ compatibility shim thay thế visual contract hoặc component API cũ.
 - primitive structure phải theo file trong `packages/ui/src/components/*`
 - chỉ `packages/ui` được import `@base-ui/react`; app code đi qua
   `@comtammatu/ui`
+- `Select` giữ compound API hiện hành; shared root chuyển `SelectItem` children
+  thành Base UI `items` để `SelectValue` resolve đúng label. `items` truyền tường
+  minh luôn được ưu tiên; route không tự dựng một label-resolution shim khác
 - semantic token values phải theo `docs/spec/design-system.md`
 - brand color/typography phải đi qua semantic token và font variables chung
 - page/shell ưu tiên primitives có sẵn và app surface adapters; direct primitive

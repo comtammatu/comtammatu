@@ -437,7 +437,7 @@ export function TemplatesClient({
                   className="mx-auto w-72 max-w-full border bg-white"
                 />
               ) : (
-                <p className="py-12 text-center text-sm text-muted-foreground">
+                <p className="flex min-h-24 items-center justify-center text-center text-sm text-muted-foreground">
                   {previewError ?? copy.previewLoading}
                 </p>
               )}

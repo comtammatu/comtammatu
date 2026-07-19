@@ -8,17 +8,10 @@ import {
   FieldError,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
+import type { ComboboxOption } from "@comtammatu/ui/components/combobox";
 import { Combobox } from "./combobox";
 
-export interface ComboboxFieldOption {
-  value: string;
-  label: string;
-  /** Optional secondary text shown below label (e.g. SKU, unit) */
-  hint?: string;
-  /** Tokens searched in addition to `label` (e.g. sku, category) */
-  keywords?: string[];
-  disabled?: boolean;
-}
+export type ComboboxFieldOption = ComboboxOption;
 
 export interface ComboboxFieldProps<TFieldValues extends FieldValues> {
   control: Control<TFieldValues>;

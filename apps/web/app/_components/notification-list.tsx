@@ -210,7 +210,6 @@ export function NotificationList({
           {items.length === 0 && !loading ? (
             <AppEmptyState
               compact
-              className="py-10"
               title={messages.notifications.empty}
               description={messages.notifications.emptyHint}
               icon={<IconInbox aria-hidden />}

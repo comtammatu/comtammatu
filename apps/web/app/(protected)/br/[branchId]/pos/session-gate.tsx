@@ -76,13 +76,13 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
   }, [branchId, canOpen, cashAmount, router, terminals]);
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+    <div className="relative flex flex-1 flex-col overflow-y-auto p-4">
       <EmployeePortalBackControl
         branchId={branchId}
-        className="absolute left-4 top-4 z-10 sm:left-6 sm:top-6"
+        className="z-10 mb-3 self-start"
       />
 
-      <div className="mx-auto flex w-full max-w-xl flex-1 items-center pt-12 sm:pt-0">
+      <div className="mx-auto flex w-full max-w-xl flex-1 items-center">
         <AppSection
           className="w-full"
           title={messages.pos.sessionGate.title}

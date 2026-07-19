@@ -828,9 +828,11 @@ function ChecklistDetail({ record }: { record: AttendanceRecord }) {
 
   if (items.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        Ca này không có checklist snapshot.
-      </p>
+      <AppEmptyState
+        compact
+        className="border-0 bg-transparent"
+        title="Ca này không có checklist snapshot."
+      />
     );
   }
 

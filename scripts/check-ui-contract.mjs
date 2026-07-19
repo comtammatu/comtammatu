@@ -10,6 +10,7 @@ import {
 } from "./ui-component-registry.mjs";
 import {
   buildUiContractGuardReporting,
+  UI_CONTRACT_LINT_ONLY_GROUPS,
 } from "./ui-contract-guard-reporting.mjs";
 import {
   UI_RUNTIME_SOURCE_ROOTS,
@@ -62,6 +63,42 @@ function walkUiRuntimeFiles(extensions) {
 
 function countMatches(content, pattern) {
   return [...content.matchAll(pattern)].length;
+}
+
+function collectPatternCounts(check) {
+  const seen = new Map();
+
+  for (const root of check.roots) {
+    for (const filePath of walkFiles(root.dir, root.extensions)) {
+      const normalized = toPosix(filePath);
+      const content = fs.readFileSync(filePath, "utf8");
+      const count = countMatches(content, check.pattern);
+      if (count === 0) continue;
+      seen.set(normalized, (seen.get(normalized) ?? 0) + count);
+    }
+  }
+
+  return seen;
+}
+
+function totalBudgetFailure(check, seen) {
+  const count = [...seen.values()].reduce((sum, value) => sum + value, 0);
+  return count > check.maxCount
+    ? `${check.id}: repository has ${count} hit(s), allowed ${check.maxCount}`
+    : null;
+}
+
+function perFileBudgetFailures(check, seen) {
+  const errors = [];
+  for (const [filePath, count] of seen) {
+    const allowed = check.allowlist[filePath] ?? 0;
+    if (count > allowed) {
+      errors.push(
+        `${check.id}: ${filePath} has ${count} hit(s), allowed ${allowed}`,
+      );
+    }
+  }
+  return errors;
 }
 
 function extractConstObjectBody(content, name) {
@@ -215,10 +252,7 @@ function validateAuditSignalGuardCoverage(contractSource) {
   const coverageKeys = [...coverageEntries.keys()].sort();
   const missing = signalKeys.filter((key) => !coverageKeys.includes(key));
   const extra = coverageKeys.filter((key) => !signalKeys.includes(key));
-  const allowedStatuses = new Set([
-    "blocking-zero",
-    "advisory",
-  ]);
+  const allowedStatuses = new Set(["blocking-zero", "advisory"]);
 
   if (missing.length > 0) {
     errors.push(`missing coverage for signal(s): ${missing.join(", ")}`);
@@ -238,10 +272,7 @@ function validateAuditSignalGuardCoverage(contractSource) {
     if (!allowedStatuses.has(status)) {
       errors.push(`${signal} has unknown status "${status}"`);
     }
-    if (
-      status === "advisory" &&
-      !/reason:\s*["']/.test(entryBody)
-    ) {
+    if (status === "advisory" && !/reason:\s*["']/.test(entryBody)) {
       errors.push(`${signal} is ${status} without a reason`);
     }
     if (guardGroup) {
@@ -831,6 +862,11 @@ for (const file of [
       `matu-ds-boundary: ${relativePath} imports Base UI directly; expose behavior through @comtammatu/ui instead`,
     );
   }
+  if (/\bComboboxPrimitive\b/.test(content)) {
+    failures.push(
+      `matu-ds-boundary: ${relativePath} consumes or exports the raw Combobox primitive namespace; use the typed shared Combobox components`,
+    );
+  }
 }
 
 const legacyDocReferencePattern =
@@ -1004,14 +1040,6 @@ const textChecks = [
 
 const countBudgets = [
   {
-    id: "card-content-classname-baseline",
-    description:
-      "CardContent className overrides are composition debt and must not increase.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-    pattern: /<CardContent\b[^\n]*\bclassName=/g,
-    maxCount: 1,
-  },
-  {
     id: "card-title-classname-baseline",
     description:
       "CardTitle className overrides are heading-scale debt and must not increase.",
@@ -1019,18 +1047,31 @@ const countBudgets = [
     pattern: /<CardTitle\b[^\n]*\bclassName=/g,
     maxCount: 0,
   },
-  {
-    id: "resting-shadow-baseline",
-    description:
-      "Resting shadow debt only burns down; new app-surface shadows must route through an approved overlay/fixed-chrome adapter.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
-    pattern:
-      /(?<!drop-)(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
-    maxCount: 2,
-  },
 ];
 
 const perFileCountBudgets = [
+  {
+    id: "card-content-classname-baseline",
+    description:
+      "CardContent layout overrides are restricted to the shared link-card adapter.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /<CardContent\b[^\n]*\bclassName=/g,
+    allowlist: {
+      "apps/web/app/components/surface.tsx": 1,
+    },
+  },
+  {
+    id: "resting-shadow-baseline",
+    description:
+      "Raw elevation utilities are restricted to the two fixed/sticky chrome roles approved by the design-system elevation ladder.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /(?<!drop-)(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
+    allowlist: {
+      "apps/web/app/components/surface.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 1,
+    },
+  },
   {
     id: "space-y-baseline",
     description:
@@ -1043,31 +1084,11 @@ const perFileCountBudgets = [
   {
     id: "raw-padding-baseline",
     description:
-      "Large local padding is frozen per file; route cleanup must not create offsetting padding debt elsewhere.",
+      "Large local padding debt is zero; use the page, surface, empty-state, or input-group contract instead.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\b(?:p|px|py|pt|pb|pl|pr)-(?:5|6|7|8|9|10|11|12|14|16|20|24)\b/g,
-    allowlist: {
-      "apps/web/app/_components/notification-list.tsx": 1,
-      "apps/web/app/(protected)/admin/settings/printers/templates/templates-client.tsx": 1,
-      "apps/web/app/(protected)/branches/network-config-dialog.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
-      "apps/web/app/(protected)/branch-settings/_shared/kds/station-form-dialog.tsx": 1,
-      "apps/web/app/(protected)/hr/attendance-table.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/blind-counting-grid.tsx": 1,
-      "apps/web/app/(protected)/inventory/_components/inventory-branch-filter.tsx": 1,
-      "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": 1,
-      "apps/web/app/(protected)/menu/item-detail-dialog.tsx": 1,
-      "apps/web/app/(public)/(auth)/login/page.tsx": 2,
-      "apps/web/app/(public)/access-denied/layout.tsx": 1,
-      "apps/web/app/components/data-table/data-table.tsx": 1,
-    },
+    allowlist: {},
   },
   {
     id: "gap-atypical-baseline",
@@ -1196,6 +1217,53 @@ const frozenPrimitiveImportBaselines = [
   },
 ];
 
+const frozenPrimitiveImportChecks = frozenPrimitiveImportBaselines.map(
+  (check) => ({
+    ...check,
+    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    pattern: new RegExp(
+      String.raw`from\s+["']@comtammatu/ui/components/${check.component}["']`,
+      "g",
+    ),
+  }),
+);
+
+function runLegacyDebtBudgetSelfTest() {
+  const selfTestId = "legacy-debt-budget-self-test";
+  const totalFailure = totalBudgetFailure(
+    { id: selfTestId, maxCount: 1 },
+    new Map([["sample.tsx", 2]]),
+  );
+  if (!totalFailure) throw new Error("total budget self-test did not fail");
+
+  const perFileFailures = perFileBudgetFailures(
+    { id: selfTestId, allowlist: { "sample.tsx": 1 } },
+    new Map([["sample.tsx", 2]]),
+  );
+  if (perFileFailures.length !== 1) {
+    throw new Error("per-file budget self-test did not fail");
+  }
+
+  const primitiveCheck = frozenPrimitiveImportChecks[0];
+  if (
+    !primitiveCheck ||
+    countMatches(
+      'import { Card } from "@comtammatu/ui/components/card";',
+      primitiveCheck.pattern,
+    ) !== 1
+  ) {
+    throw new Error("primitive import budget self-test did not match");
+  }
+}
+
+if (process.argv.includes("--self-test")) {
+  runLegacyDebtBudgetSelfTest();
+  console.log("UI legacy debt budget self-test: pass.");
+  process.exit(0);
+}
+
+const executedLegacyDebtGuardIds = new Set();
+
 for (const check of textChecks) {
   const filePath = path.join(REPO_ROOT, check.file);
   if (!fs.existsSync(filePath)) {
@@ -1227,32 +1295,33 @@ for (const check of forbiddenTextChecks) {
   }
 }
 
-for (const check of checks) {
+for (const check of countBudgets) {
+  executedLegacyDebtGuardIds.add(check.id);
+  const failure = totalBudgetFailure(check, collectPatternCounts(check));
+  if (failure) failures.push(failure);
+}
+
+for (const check of [
+  ...checks,
+  ...perFileCountBudgets,
+  ...frozenPrimitiveImportChecks,
+]) {
+  executedLegacyDebtGuardIds.add(check.id);
   if (typeof check.custom === "function") {
     check.custom();
     continue;
   }
 
-  const seen = new Map();
+  failures.push(...perFileBudgetFailures(check, collectPatternCounts(check)));
+}
 
-  for (const root of check.roots) {
-    for (const filePath of walkFiles(root.dir, root.extensions)) {
-      const normalized = toPosix(filePath);
-      const content = fs.readFileSync(filePath, "utf8");
-      const count = countMatches(content, check.pattern);
-      if (count === 0) continue;
-      seen.set(normalized, (seen.get(normalized) ?? 0) + count);
-    }
-  }
-
-  for (const [filePath, count] of seen) {
-    const allowed = check.allowlist[filePath] ?? 0;
-    if (count > allowed) {
-      failures.push(
-        `${check.id}: ${filePath} has ${count} hit(s), allowed ${allowed}`,
-      );
-    }
-  }
+const missingLegacyDebtExecutions = UI_CONTRACT_LINT_ONLY_GROUPS[
+  "legacy-debt-ratchet"
+].guardIds.filter((guardId) => !executedLegacyDebtGuardIds.has(guardId));
+if (missingLegacyDebtExecutions.length > 0) {
+  throw new Error(
+    `UI legacy debt guards are registered but not executed: ${missingLegacyDebtExecutions.join(", ")}`,
+  );
 }
 
 // route-manifest (Stage 0, design-system.md § C/D / D019): every protected page

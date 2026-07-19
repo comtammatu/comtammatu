@@ -194,13 +194,13 @@ export function NetworkConfigDialog({
             {messages.settings.network.activeTitle(activeRows.length)}
           </h3>
           {loading ? (
-            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+            <div className="flex min-h-16 items-center justify-center text-sm text-muted-foreground">
               <Spinner className="mr-2" />
               {STATES_VI.loading}
             </div>
           ) : activeRows.length === 0 ? (
             <AppEmptyState
-              className="border-dashed bg-transparent py-6"
+              className="border-dashed bg-transparent"
               title={messages.settings.network.emptyTrusted}
               compact
             />
