@@ -85,16 +85,15 @@ export function useGrnCreateController({
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return null;
     }
-    if (!locationId) {
-      setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
-      return null;
-    }
-
     const createPromise = (async () => {
+      const branchLocationCount = locationOptions.filter(
+        (location) => location.branchId === branchId,
+      ).length;
       const created = await createGrnDraft({
         supplierId: supplier.id,
         branchId,
-        locationId,
+        locationId:
+          branchLocationCount > 1 ? (locationId ?? undefined) : undefined,
       });
       if (!created.success) {
         setSubmitError(created.error ?? GRN_CREATE_COPY.toastCreateDraftFailed);
@@ -286,10 +285,6 @@ export function useGrnCreateController({
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return;
     }
-    if (!locationId) {
-      setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
-      return;
-    }
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -315,10 +310,6 @@ export function useGrnCreateController({
     }
     if (!branchId) {
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
-      return;
-    }
-    if (!locationId) {
-      setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
       return;
     }
     const ok = await confirm({

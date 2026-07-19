@@ -49,6 +49,19 @@ export type GrnCreatePageData = {
   canConfirm: boolean;
 };
 
+type SoleBranchWarehouseResolution =
+  | { kind: "resolved"; locationId: number }
+  | { kind: "missing" }
+  | { kind: "ambiguous" };
+
+export function resolveSoleBranchWarehouse(
+  locations: readonly { id: number }[],
+): SoleBranchWarehouseResolution {
+  if (locations.length === 0) return { kind: "missing" };
+  if (locations.length > 1) return { kind: "ambiguous" };
+  return { kind: "resolved", locationId: locations[0]!.id };
+}
+
 export type GrnLineEditState = {
   ingredient: GrnCreateIngredient;
   line: GrnDraftLine | null;

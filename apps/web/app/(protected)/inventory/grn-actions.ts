@@ -13,6 +13,7 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
 import { withAction } from "@/_lib/with-action";
+import { resolveSoleBranchWarehouse } from "@lib/inventory/grn-create-model";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
@@ -354,26 +355,37 @@ export const createGrnDraft = withAction(
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", targetBranchId)
         .eq("is_active", true)
+        .eq("location_kind", "warehouse")
         .maybeSingle();
       if (locationError || !location) {
         return { success: false, error: "Nơi nhập hàng không hợp lệ." };
       }
     } else {
-      const { data: location, error: locationError } = await supabase
+      const { data: locations, error: locationError } = await supabase
         .from("inventory_locations")
         .select("id")
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", targetBranchId)
         .eq("is_active", true)
-        .eq("is_default_receive", true)
+        .eq("location_kind", "warehouse")
         .order("sort_order", { ascending: true, nullsFirst: false })
         .order("id", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (locationError || !location) {
+        .limit(2);
+      if (locationError) {
+        return { success: false, error: "Không thể kiểm tra kho nhận hàng." };
+      }
+      const resolution = resolveSoleBranchWarehouse(locations ?? []);
+      if (resolution.kind === "missing") {
         return { success: false, error: "Chưa cấu hình nơi nhập hàng." };
       }
-      targetLocationId = location.id;
+      if (resolution.kind === "ambiguous") {
+        return {
+          success: false,
+          error:
+            "Chi nhánh có nhiều kho đang hoạt động. Vui lòng chọn nơi nhập hàng.",
+        };
+      }
+      targetLocationId = resolution.locationId;
     }
 
     const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
