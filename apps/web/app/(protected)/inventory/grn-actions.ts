@@ -12,6 +12,7 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
+import { resolveSoleGrnWarehouseLocation } from "@lib/inventory/grn-create-model";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
@@ -345,33 +346,52 @@ export const createGrnDraft = withAction(
       };
     }
 
-    let targetLocationId = data.locationId ?? null;
-    if (targetLocationId != null) {
+    let targetLocationId: number;
+    if (
+      isBranchScopedProcurementRole(claims.user_role) ||
+      data.locationId == null
+    ) {
+      const { data: locations, error: locationError } = await supabase
+        .from("inventory_locations")
+        .select("id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", targetBranchId)
+        .eq("is_active", true)
+        .eq("location_kind", "warehouse")
+        .order("sort_order", { ascending: true, nullsFirst: false })
+        .order("id", { ascending: true })
+        .limit(2);
+      if (locationError) {
+        return {
+          success: false,
+          error: messages.inventory.grn.warehouseLoadFailed,
+        };
+      }
+      const resolution = resolveSoleGrnWarehouseLocation(locations ?? []);
+      if (resolution.status === "missing") {
+        return {
+          success: false,
+          error: messages.inventory.grn.warehouseMissing,
+        };
+      }
+      if (resolution.status === "ambiguous") {
+        return {
+          success: false,
+          error: messages.inventory.grn.warehouseAmbiguous,
+        };
+      }
+      targetLocationId = resolution.locationId;
+    } else {
       const { data: location, error: locationError } = await supabase
         .from("inventory_locations")
         .select("id")
-        .eq("id", targetLocationId)
+        .eq("id", data.locationId)
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", targetBranchId)
         .eq("is_active", true)
         .maybeSingle();
       if (locationError || !location) {
         return { success: false, error: "Nơi nhập hàng không hợp lệ." };
-      }
-    } else {
-      const { data: location, error: locationError } = await supabase
-        .from("inventory_locations")
-        .select("id")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", targetBranchId)
-        .eq("is_active", true)
-        .eq("is_default_receive", true)
-        .order("sort_order", { ascending: true, nullsFirst: false })
-        .order("id", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (locationError || !location) {
-        return { success: false, error: "Chưa cấu hình nơi nhập hàng." };
       }
       targetLocationId = location.id;
     }

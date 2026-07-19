@@ -326,6 +326,10 @@ export const inventory = {
     detailLoadFailed: "Không thể tải chi tiết phiếu nhập.",
     activeDraftLoadFailed: "Không thể tải phiếu nhập đang nháp.",
     draftListLoadFailed: "Không thể tải danh sách phiếu nháp.",
+    warehouseLoadFailed: "Không thể xác định kho nhận.",
+    warehouseMissing: "Chi nhánh chưa có kho đang hoạt động để nhận hàng.",
+    warehouseAmbiguous:
+      "Chi nhánh có nhiều kho đang hoạt động. Vui lòng xử lý cấu hình kho trước khi tạo phiếu nhập.",
     confirmed: "Đã chốt nhập kho",
     confirmedWithReview:
       "Đã chốt nhập kho. {count} dòng cần kiểm tra giá lệch lớn.",
