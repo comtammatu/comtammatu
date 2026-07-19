@@ -20,6 +20,10 @@ const BRANCH_COMMAND_CONFIG =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx";
 const BRANCH_DATA =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts";
+const TODAY_WORK_STATE =
+  "apps/web/lib/staff-runtime/_lib/today-work-state.ts";
+const ATTENDANCE_POLICY_MIGRATION =
+  "supabase/migrations/20260719070350_align_attendance_checkout_read_policy.sql";
 const BACKTICK = "`";
 
 function literalWith(pattern: string, flags = "i"): RegExp {
@@ -192,21 +196,35 @@ test("branch command landing surfaces operations and readiness", () => {
   assert.doesNotMatch(surface, /\/employee\/checkout-approvals/);
 });
 
-test("branch day status service-client reads carry explicit tenant+branch filters", () => {
+test("branch runtime reads stay session-scoped with checkout RLS", () => {
   const data = read(BRANCH_DATA);
+  const todayWorkState = read(TODAY_WORK_STATE);
+  const attendancePolicy = read(ATTENDANCE_POLICY_MIGRATION);
 
   assert.match(data, /supabase\.rpc\("list_branch_menu_daily_limits"/);
   assert.match(data, /menuLimitAvailableItems/);
   assert.match(data, /available_to_sell/);
   assert.doesNotMatch(data, /setupActiveMenuItems/);
   assert.doesNotMatch(data, /\.from\("menu_items"\)/);
+  assert.doesNotMatch(data, /createServiceClient|\bservice\b/);
+  assert.doesNotMatch(todayWorkState, /createServiceClient|countReadClient/);
   assert.match(
-    data,
-    /service\s*\.from\("pos_sessions"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
+    todayWorkState,
+    /supabase\s*\.from\("inventory_count_assignments"\)[\s\S]{0,240}?\.eq\("employee_id", employeeId\)/,
   );
   assert.match(
     data,
-    /service\s*\.from\("attendance_records"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
+    /supabase\s*\.from\("pos_sessions"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
+  );
+  assert.match(
+    data,
+    /supabase\s*\.from\("attendance_records"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
+  );
+  assert.match(attendancePolicy, /ALTER POLICY "attendance_select"/i);
+  assert.match(attendancePolicy, /auth_tenant_id"?\(\)/);
+  assert.match(
+    attendancePolicy,
+    /has_permission"?\("branch_id", 'hr:approve_checkout'::text\)/,
   );
   assert.match(data, /fail-soft/i);
 });

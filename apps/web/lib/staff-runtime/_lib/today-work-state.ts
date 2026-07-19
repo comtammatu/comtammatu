@@ -4,7 +4,6 @@ import {
   resolveCurrentShiftContext,
   resolveShiftBusinessDate,
 } from "./default-shift";
-import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   addVNDateDays,
@@ -324,8 +323,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
 
   const countBranchId = attendance?.branchId ?? ctx.branchId;
   if (attendance && countBranchId !== null) {
-    const countReadClient = createServiceClient();
-    let countAssignmentsQuery = countReadClient
+    let countAssignmentsQuery = supabase
       .from("inventory_count_assignments")
       .select("location_id, ingredient_id, shift_id")
       .eq("tenant_id", claims.tenant_id)
@@ -341,7 +339,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     const { data: countAssignments } = await countAssignmentsQuery;
     const shiftSpecificCells = new Set<string>();
     if (currentShiftId !== null) {
-      const { data: shiftSpecificAssignments } = await countReadClient
+      const { data: shiftSpecificAssignments } = await supabase
         .from("inventory_count_assignments")
         .select("location_id, ingredient_id")
         .eq("tenant_id", claims.tenant_id)
