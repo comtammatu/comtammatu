@@ -97,9 +97,7 @@ async function expectHealthyRoute(
   if (options.ownerLinkCount === "some") {
     expect(state.ownerLinkCount).toBeGreaterThan(0);
   } else {
-    expect(state.ownerLinkCount).toBe(
-      options.ownerLinkCount ?? 0,
-    );
+    expect(state.ownerLinkCount).toBe(options.ownerLinkCount ?? 0);
   }
   expect(state.isLoginSurface).toBe(false);
   expect(state.isOwnerControl).toBe(false);
@@ -232,7 +230,6 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/stock/issues`,
       `/br/${branchId}/stock/reports`,
       `/br/${branchId}/stock/transfer`,
-      `/br/${branchId}/stock/transfer/new`,
       `/br/${branchId}/stock/count`,
       `/br/${branchId}/stock/count-slips`,
       `/br/${branchId}/stock/waste`,

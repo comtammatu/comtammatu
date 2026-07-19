@@ -124,19 +124,19 @@ an existing archetype better (a line-array create/edit flow is DOC-WORKFLOW;
 a single-entity RHF+Zod edit is SETTINGS-PANEL), so it folds into those two
 rather than staying a near-empty category.
 
-| #   | Archetype       | Job                                                                                |
-| --- | --------------- | ---------------------------------------------------------------------------------- |
-| 1   | LIST            | Browse/filter/search a collection, row actions, quick CRUD                         |
+| #   | Archetype       | Job                                                                              |
+| --- | --------------- | -------------------------------------------------------------------------------- |
+| 1   | LIST            | Browse/filter/search a collection, row actions, quick CRUD                       |
 | 2   | EMBED-WRAPPER   | Branch-runtime re-mount of a canonical Owner surface/staff-runtime `PageContent` |
-| 3   | DETAIL          | Single entity: metadata + lines/history + stage actions                            |
-| 4   | SETTINGS-PANEL  | Single-entity or list-shaped configuration form                                    |
-| 5   | DOC-WORKFLOW    | Create/edit a line-array business document                                         |
-| 6   | REDIRECT-SHIM   | No-JSX route selector to a canonical destination                                   |
-| 7   | LANDING             | Link-card menu into a group of capabilities                                        |
+| 3   | DETAIL          | Single entity: metadata + lines/history + stage actions                          |
+| 4   | SETTINGS-PANEL  | Single-entity or list-shaped configuration form                                  |
+| 5   | DOC-WORKFLOW    | Create/edit a line-array business document                                       |
+| 6   | REDIRECT-SHIM   | No-JSX route selector to a canonical destination                                 |
+| 7   | LANDING         | Link-card menu into a group of capabilities                                      |
 | 8   | REPORT          | Owner surface analytics or a fixed-scope Branch operational signal               |
-| 9   | DASHBOARD       | Home-surface KPI summary with drill-downs                                          |
-| 10  | GATE/AUTH       | Pre-context or terminal decision screen                                            |
-| 11  | BOARD           | Realtime operational queue (full-screen Operations chrome)                         |
+| 9   | DASHBOARD       | Home-surface KPI summary with drill-downs                                        |
+| 10  | GATE/AUTH       | Pre-context or terminal decision screen                                          |
+| 11  | BOARD           | Realtime operational queue (full-screen Operations chrome)                       |
 | 12  | PUBLIC-WORKFLOW | Token-scoped customer transaction without Owner surface chrome                   |
 
 ## 3. Shared Composition Recipes
@@ -501,29 +501,25 @@ allowlist, not a precedent for stretching another archetype's definition:
     in a bottom sheet, and a sticky action footer. Owner surface retains its desktop
     `WasteCreateClient`; neither plane imports the other's presenter. Classified
     **DOC-WORKFLOW** (Branch touch variant).
-20. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx`
-    — Branch-native transfer document. It retains touch rows, a tablet
-    two-panel composition, and sticky actions without importing an Owner surface
-    transfer form. Classified **DOC-WORKFLOW** (Branch touch variant).
-21. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx`
+20. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx`
     — Branch-runtime waste approval queue. It locks review to the route branch,
     presents one touch row per pending issue, and opens evidence, lines, review
     note, and approve/reject actions in a bottom sheet. Self-created rows remain
     readable but cannot mutate; the existing approval action remains the
     authority. Owner surface retains its desktop `WasteApprovalsClient`; neither plane
     imports the other's presenter. Classified **LIST** (Branch review variant).
-22. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx`
+21. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx`
     and `/stock/consumption/[id]` — Branch-native recorded-consumption list and
     typed detail. The list separates posted ledger consumption from manual
     documents, keeps source/status language explicit, and uses full-row touch
     navigation. Neither route imports the Owner surface list/detail presenter.
     Classified **LIST** and **DETAIL** respectively.
-23. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx`
+22. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx`
     and `/stock/count-slips` — Branch-native manager assignment and review
     queues. Rows remain touch actions at phone and tablet widths; slip review
     and approve/request-recount actions live in a bottom sheet with a sticky
     decision footer. Classified **LIST** (assignment/review variants).
-24. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx`
+23. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx`
     — fixed-branch leave review queue with status tabs, full-row touch items,
     and approve/reject in a bottom sheet. Owner surface retains its desktop HR table.
     Classified **LIST** (Branch review variant).

@@ -57,7 +57,7 @@ test("Owner surface Inventory entry surfaces use the shared field contract", () 
   assert.match(recipeDialog, /<SelectField[\s\S]*?id="recipe-menu-item"/);
   assert.match(
     transferDialog,
-    /<FormField[\s\S]*?controlId="owner-transfer-source"/,
+    /<FormField[\s\S]*?controlId="owner-transfer-source-location"/,
   );
   assert.match(transferDialog, /controlId="owner-transfer-notes"/);
 });

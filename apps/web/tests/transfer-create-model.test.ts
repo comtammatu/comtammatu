@@ -3,11 +3,9 @@ import { test } from "node:test";
 import {
   buildTransferLinesPayload,
   clampTransferLineForSource,
-  formatTransferOption,
   getTransferOutboundDestinationOptions,
   getTransferSelectableIngredients,
   getTransferSourceLocationOptions,
-  getTransferSourceBranchIds,
   parseTransferTargetValue,
   resolveTransferCreatePolicy,
   type BranchForTransfer,
@@ -74,33 +72,13 @@ function makeLine(patch: Partial<TransferDraftLine> = {}): TransferDraftLine {
   };
 }
 
-test("branch manager creates inbound requests only from self or central sites", () => {
-  const policy = resolveTransferCreatePolicy({
-    branches,
-    userBranchId: 10,
-    userRole: "branch_manager",
-  });
-
-  assert.equal(policy.canCreateInboundRequest, true);
-  assert.equal(policy.canCreateOutbound, false);
-  assert.equal(policy.requestDestinationBranchId, 10);
-  assert.deepEqual(
-    policy.inboundSourceOptions.map((branch) => branch.id),
-    [10, 20, 30],
-  );
-  assert.deepEqual(policy.outboundDestinationOptions, []);
-  assert.equal(formatTransferOption(branches[0]!, 10), "Chi nhanh A · Kho");
-});
-
 test("branch warehouse outbound destinations include Central Kitchen and active branches", () => {
   const policy = resolveTransferCreatePolicy({
     branches,
     userBranchId: 10,
-    userRole: "owner",
   });
 
   assert.equal(policy.canCreateOutbound, true);
-  assert.equal(policy.canCreateInboundRequest, false);
   assert.deepEqual(
     policy.outboundDestinationOptions.map((option) => option.value),
     ["30:warehouse", "40:warehouse"],
@@ -119,11 +97,10 @@ test("branch source has no same-branch kitchen destination after D078", () => {
   );
 });
 
-test("central operators can dispatch only to active branch warehouse or kitchen targets", () => {
+test("central owner source can dispatch only to active branch warehouses", () => {
   const policy = resolveTransferCreatePolicy({
     branches,
     userBranchId: 20,
-    userRole: "owner",
   });
 
   assert.equal(policy.canCreateOutbound, true);
@@ -189,25 +166,6 @@ test("Central Kitchen dispatches finished goods from its preferred output locati
       sourceBranchKind: "central_kitchen",
     }).map((item) => item.id),
     [101],
-  );
-});
-
-test("source stock loader scope follows the operator role", () => {
-  assert.deepEqual(
-    getTransferSourceBranchIds({
-      branches,
-      userBranchId: 10,
-      userRole: "branch_manager",
-    }),
-    [10, 20, 30],
-  );
-  assert.deepEqual(
-    getTransferSourceBranchIds({
-      branches,
-      userBranchId: 20,
-      userRole: "owner",
-    }),
-    [20],
   );
 });
 

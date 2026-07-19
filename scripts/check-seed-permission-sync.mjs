@@ -7,10 +7,17 @@ import fs from "node:fs";
 // kills every from-empty bring-up (SQLSTATE 23503) while prod keeps working —
 // this check fails it in the lint chain instead of in the e2e-smoke job.
 const SEED = "apps/web/tests/fixtures/supabase-e2e/tenant.sql";
-const MIGRATION =
+const DELEGABILITY_BASE_MIGRATION =
   "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql";
 const text = fs.readFileSync(SEED, "utf8");
-const migrationText = fs.readFileSync(MIGRATION, "utf8");
+const migrationFiles = fs
+  .readdirSync("supabase/migrations")
+  .filter((file) => file.endsWith(".sql"))
+  .sort()
+  .map((file) => `supabase/migrations/${file}`)
+  .filter((file) => file >= DELEGABILITY_BASE_MIGRATION);
+const migrationTexts = migrationFiles.map((file) => fs.readFileSync(file, "utf8"));
+const migrationText = migrationTexts[0];
 
 // End each INSERT block at a semicolon that closes a line — descriptions may
 // legitimately contain inline semicolons (e.g. "…HĐĐT); manager-gated").
@@ -61,6 +68,13 @@ const parseKeys = (block) =>
   new Set([...block.matchAll(/'([a-z_]+:[a-z_]+)'/g)].map((m) => m[1]));
 const seedDelegable = parseKeys(seedDelegableBlock);
 const migrationDelegable = parseKeys(migrationDelegableBlock);
+for (const forwardText of migrationTexts.slice(1)) {
+  for (const match of forwardText.matchAll(
+    /UPDATE public\.permission_keys\s+SET is_delegable_to_staff = false\s+WHERE key = '([a-z_]+:[a-z_]+)'/g,
+  )) {
+    migrationDelegable.delete(match[1]);
+  }
+}
 const missingDelegable = [...migrationDelegable]
   .filter((key) => !seedDelegable.has(key))
   .sort();
@@ -77,7 +91,7 @@ if (
   unknownDelegable.length > 0
 ) {
   console.error(
-    `[seed-permissions] staff-delegable permission drift between ${SEED} and ${MIGRATION}`,
+    `[seed-permissions] staff-delegable permission drift between ${SEED} and the active migration chain`,
   );
   for (const key of missingDelegable)
     console.error(`- missing from seed: ${key}`);
@@ -88,5 +102,5 @@ if (
 }
 
 console.log(
-  `[seed-permissions] ${granted.size} template-granted keys are catalogued and ${seedDelegable.size} staff-delegable keys match the canonical migration (${SEED}).`,
+  `[seed-permissions] ${granted.size} template-granted keys are catalogued and ${seedDelegable.size} staff-delegable keys match the active migration chain (${SEED}).`,
 );

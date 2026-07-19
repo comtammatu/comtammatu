@@ -314,13 +314,10 @@ Branch stock workflow áp dụng cùng ranh giới này:
   line editor trong `GrnCreateClient`; Owner surface và Branch chỉ chia sẻ loader,
   typed controller, line-editor primitive, và server action, không chia sẻ
   presentation mode hoặc route branching.
-- detail điều chuyển trong Branch chỉ giữ thao tác giao/nhận và số lượng từng
-  dòng; audit history và correction sau khi chốt thuộc Owner surface management.
-- tạo điều chuyển tại `/br/[branchId]/stock/transfer/new` là Branch-native
-  `DOC-WORKFLOW`: phone mở dần nơi đi/nơi nhận → mặt hàng → ghi chú, tablet tăng thành hai
-  cột, control tối thiểu 44px và CTA nằm trong `AppDetailFooter` sticky. Route
-  Owner surface `/inventory/transfers/new` giữ `DocumentFormFrame`; hai plane chỉ dùng
-  chung loader, model, controller và `createStockTransfer`.
+- Branch `/br/[branchId]/stock/transfer` chỉ giữ hàng chờ nhận, lịch sử và detail
+  điều chuyển; Branch không có route hoặc CTA tạo mới. Detail giữ số lượng từng
+  dòng và thao tác nhận được cấp quyền; audit history, correction sau chốt và tạo
+  phiếu tại `/inventory/transfers/new` thuộc Owner surface management.
 - EMBED-WRAPPER chỉ là transition cho deep workflow chưa tách presentation; khi
   route đã có native Branch presentation thì cập nhật `scripts/page-archetypes.mjs`
   khỏi `EMBED-WRAPPER` để guard không cho lùi lại.
