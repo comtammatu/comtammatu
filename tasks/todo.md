@@ -5,19 +5,6 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
-## Remove service-role reads from the Branch runtime
-
-State: doing
-Kind: defect
-Tier: T3
-Lane: auth/preview-runtime
-Exit: Normal authenticated Branch hub and command reads use the caller session with RLS/PBAC, checkout approvers can read only their authorized branch queue, and no `SUPABASE_SERVICE_ROLE_KEY` is required to open `/br/[branchId]`.
-Evidence: Focused source/RLS regression, Cloud DEV policy proof, authenticated Owner and Branch/cross-branch Preview smokes, Finance read-write canary, desktop/mobile capture, full verify, and green PR/Preview checks.
-
-- [x] Replace service-client reads in the Branch hub, command dashboard, and current employee work-state loader with session-client reads.
-- [x] Align `attendance_select` with `hr:approve_checkout` without weakening tenant or branch scope, then apply and verify on registered Cloud DEV only.
-- [ ] Run focused and full repository gates, publish a Preview, and complete the authenticated actor and Finance canaries.
-
 ## Prove Self-Order offline navigation isolation
 
 State: verify
