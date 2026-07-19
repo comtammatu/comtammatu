@@ -46,7 +46,6 @@ VALUES (
   jsonb_build_object(
     'provider', 'email',
     'providers', jsonb_build_array('email'),
-    'role', 'owner',
     'full_name', 'Owner (keeper)'
   ),
   jsonb_build_object('full_name', 'Owner (keeper)'),
@@ -239,12 +238,16 @@ WHERE template.tenant_id = tenant.id
 -- 6) Keeper profile + employee (handle_new_user is disabled, so build manually).
 INSERT INTO public.profiles (id, tenant_id, branch_id, position_id, full_name)
 SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, t.id,
-  (SELECT b.id FROM public.branches b WHERE b.tenant_id = t.id AND b.name = 'Chi nhánh Đất Đỏ' LIMIT 1),
+  NULL::bigint,
   (SELECT po.id FROM public.positions po WHERE po.tenant_id = t.id AND po.code = 'owner' LIMIT 1),
   'Owner (keeper)'
 FROM public.tenants t
 WHERE t.slug = 'comtammatu'
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE
+SET branch_id = NULL,
+    position_id = EXCLUDED.position_id,
+    is_active = true,
+    updated_at = now();
 
 INSERT INTO public.employees (tenant_id, profile_id, employee_code, is_active)
 SELECT t.id, 'a0000002-0000-4000-8000-000000000002'::uuid, 'EMP-KEEPER', true
