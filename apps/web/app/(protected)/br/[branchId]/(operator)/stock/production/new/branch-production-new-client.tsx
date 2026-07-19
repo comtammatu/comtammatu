@@ -745,16 +745,7 @@ export function BranchProductionNewClient({
               <BranchOperatorInlineState
                 tone="warning"
                 title="Thành phẩm chưa có công thức"
-                description="Cập nhật Công thức trước để kho trừ nguyên liệu đúng."
-                actions={
-                  <Button
-                    size="touch"
-                    variant="outline"
-                    render={<Link href={`${basePath}/recipes`} />}
-                  >
-                    Mở Công thức
-                  </Button>
-                }
+                description="Nhờ Chủ cửa hàng cập nhật Công thức trước để kho trừ nguyên liệu đúng."
               />
             )}
           </BranchOperatorPanel>
