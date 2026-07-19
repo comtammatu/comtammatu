@@ -70,6 +70,15 @@ test("expense payment state separates paid, unpaid, and bank-matched transfer ro
     }),
     "transfer_matched",
   );
+  assert.equal(
+    classifyExpensePaymentState({
+      payment_method: "transfer",
+      paid_at: "2026-07-09T01:00:00.000Z",
+      matchedEventIds: [],
+      matchedBankTransactionIds: [456],
+    }),
+    "transfer_matched",
+  );
 });
 
 test("bank matching shows only canonical candidates and the current evidence", () => {
@@ -116,6 +125,32 @@ test("bank matching shows only canonical candidates and the current evidence", (
         matchedEventIds: [10],
       },
       10,
+    ),
+    true,
+  );
+  assert.equal(
+    isExpenseVisibleForBankMatch(
+      {
+        ...base,
+        payment_method: "unpaid",
+        paid_at: null,
+        matchedBankTransactionIds: [],
+      },
+      null,
+      20,
+    ),
+    false,
+  );
+  assert.equal(
+    isExpenseVisibleForBankMatch(
+      {
+        ...base,
+        payment_method: "transfer",
+        paid_at: "2026-07-16T00:00:00.000Z",
+        matchedBankTransactionIds: [20],
+      },
+      null,
+      20,
     ),
     true,
   );

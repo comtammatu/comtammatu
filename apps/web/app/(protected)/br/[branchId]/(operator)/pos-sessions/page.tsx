@@ -63,6 +63,9 @@ export default async function BranchPosSessionsPage({
           note,
           variance_approval_note,
           variance_approver_user_id,
+          variance_resolution_type,
+          variance_settlement_amount,
+          variance_resolved_at,
           pos_terminals!pos_sessions_terminal_id_fkey (
             name
           ),
@@ -122,6 +125,13 @@ export default async function BranchPosSessionsPage({
           sides,
           note,
           status
+        ),
+        payments (
+          id,
+          amount,
+          method,
+          status,
+          paid_at
         )
       `,
       )
@@ -150,6 +160,7 @@ export default async function BranchPosSessionsPage({
         selectedSessionId={selectedSessionId}
         orders={orders}
         report={report}
+        canCorrectPaymentMethod={claims.user_role === "owner"}
       />
     </BranchOperatorPage>
   );

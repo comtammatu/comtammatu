@@ -69,9 +69,15 @@ test("finance basic landing only promotes direct-contract KPI cards", () => {
   );
   assert.equal((pageBody.match(/<FinanceAttentionSection/g) ?? []).length, 1);
   assert.match(copy, /title: "Sức khỏe tài chính"/);
-  assert.match(copy, /moneyCollected: "Tiền đã thu"/);
-  assert.match(copy, /netRevenue: "Doanh thu ròng"/);
-  assert.match(copy, /netRevenueHint: "Đã trừ giảm giá"/);
+  assert.match(copy, /moneyCollected: "Doanh thu"/);
+  assert.match(copy, /netRevenue: "Bán hàng sau giảm giá"/);
+  assert.match(copy, /netRevenueHint: "Tổng giá món − giảm giá · chưa gồm VAT"/);
+  assert.match(copy, /Tồn đầu kỳ/);
+  assert.match(copy, /số lượng kho × giá vốn chuyển động/);
+  assert.match(copy, /gồm đã trả\/chưa trả/);
+  assert.match(copy, /không gồm nhập hàng\/NCC/);
+  assert.match(copy, /Đối soát ngân hàng cần xử lý/);
+  assert.match(page, /FinanceAttentionSection/);
   assert.doesNotMatch(copy, /cashDeltaTitle:/);
   assert.doesNotMatch(copy, /netProfit:/);
   assert.doesNotMatch(copy, /netProfitHint/);
@@ -113,8 +119,8 @@ test("finance and admin copy keep domain vocabulary explicit", () => {
     assert.doesNotMatch(copy, term);
   }
 
-  assert.match(copy, /Tiền đã thu/);
-  assert.match(copy, /Doanh thu ròng/);
+  assert.match(copy, /Doanh thu/);
+  assert.match(copy, /Bán hàng sau giảm giá/);
   assert.match(copy, /Lãi gộp/);
   assert.match(copy, /Giá vốn món/);
   assert.doesNotMatch(copy, /Dòng tiền trong kỳ/);

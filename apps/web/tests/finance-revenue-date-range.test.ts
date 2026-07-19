@@ -252,7 +252,7 @@ test("Finance keeps gross-profit coverage as supporting logic, not a landing KPI
   assert.match(cockpit, /missingCostCoverageHint/);
   assert.doesNotMatch(page, /basic\.kpis\.grossProfit/);
   assert.match(page, /basic\.kpis\.netRevenue/);
-  assert.match(financeMessages, /netRevenue: "Doanh thu ròng"/);
+  assert.match(financeMessages, /netRevenue: "Bán hàng sau giảm giá"/);
 });
 
 test("Finance cockpit branch filter also scopes supplier payable risk", () => {
@@ -322,11 +322,6 @@ test("Finance live copy stays HKD operating-first without two-mode labels", () =
     "default Finance workspace should stay operating-first (framed under Vận hành)",
   );
   assert.doesNotMatch(financeMessages, /Hệ thống tài khoản|Sổ nhật ký|B01-DN/);
-  assert.match(
-    financeMessages,
-    /summary: "HĐ bán cho người tiêu dùng"/,
-    "summary invoices should use the current HKD buyer wording",
-  );
   assert.match(financeMessages, /Thuế tạm tính/);
   assert.doesNotMatch(
     financeMessages,

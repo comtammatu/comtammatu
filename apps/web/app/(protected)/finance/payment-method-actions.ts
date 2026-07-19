@@ -6,9 +6,8 @@
  * Fixes a wrongly-recorded payment method (e.g. customer paid by transfer but
  * "cash" was tapped). Resolves the order's single completed payment and calls
  * the correct_payment_method RPC (permission-gated, completed-payment only,
- * audited). Pure record fix: post-D020 there is no enterprise-accounting
- * ledger, and the HĐĐT payment field is hardcoded "TM/CK", so an issued
- * invoice is unaffected.
+ * audited). The RPC also synchronizes the order display mirror and recomputes
+ * a closed POS session from completed payments. HĐĐT remains unaffected.
  */
 
 import { z } from "zod";
@@ -16,6 +15,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 
@@ -99,8 +99,18 @@ export async function correctPaymentMethod(
     if (msg.includes("method_unchanged")) {
       return { success: false, error: "Thanh toán đã là phương thức này." };
     }
+    if (msg.includes("payment_has_bank_evidence")) {
+      return {
+        success: false,
+        error:
+          "Thanh toán đang gắn bằng chứng ngân hàng. Bỏ khớp tại Đối soát ngân hàng trước khi đổi sang Tiền mặt.",
+      };
+    }
     return { success: false, error: "Không thể sửa phương thức thanh toán." };
   }
+
+  revalidateSurfacePath("/finance");
+  revalidateSurfacePath(`/br/${String(payment.branch_id)}/pos-sessions`);
 
   return {
     success: true,

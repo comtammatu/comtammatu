@@ -75,6 +75,7 @@ type CashLedgerMovementRpcClient = {
       cash_refunds?: number;
       cash_expenses?: number;
       cash_supplier_payments?: number;
+      cash_variance_adjustments?: number;
     } | null;
     error: { code?: string } | null;
   }>;
@@ -88,6 +89,7 @@ async function fetchCashLedgerMovementSince(
   refunds: number;
   expenses: number;
   supplierPayments: number;
+  varianceAdjustments: number;
 }> {
   const { data, error } = await (
     supabase as unknown as CashLedgerMovementRpcClient
@@ -109,6 +111,7 @@ async function fetchCashLedgerMovementSince(
       data?.cash_supplier_payments,
       "cash_supplier_payments",
     ),
+    varianceAdjustments: toNumber(data?.cash_variance_adjustments),
   };
 }
 
@@ -147,11 +150,13 @@ export async function fetchCashSummary(): Promise<CashSummary> {
     fetchCashLedgerMovementSince(supabase, openingStart),
     fetchSepayBankMovementSince(supabase, openingStart),
   ]);
-  const cashInSince = cashMovement.collections;
+  const cashInSince =
+    cashMovement.collections + Math.max(cashMovement.varianceAdjustments, 0);
   const cashOutSince =
     cashMovement.expenses +
     cashMovement.supplierPayments +
-    cashMovement.refunds;
+    cashMovement.refunds +
+    Math.max(-cashMovement.varianceAdjustments, 0);
   const bankInSince = bankMovement.inAmount;
   const bankOutSince = bankMovement.outAmount;
 

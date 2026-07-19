@@ -18,6 +18,7 @@ import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
 import type { SepayRefundMatchOption } from "./_lib/sepay-bank-transaction-model";
 import {
+  fetchExpenseBankTransactionMatchMap,
   fetchExpenseMatchMap,
   type ExpenseRow,
 } from "./_lib/expense-match-options";
@@ -322,7 +323,9 @@ export async function fetchExpenses(params: {
 
   const { supabase, claims } = ctx;
   const pageSize = 500;
-  const rows: Array<Omit<ExpenseRow, "matchedEventIds">> = [];
+  const rows: Array<
+    Omit<ExpenseRow, "matchedEventIds" | "matchedBankTransactionIds">
+  > = [];
 
   for (let offset = 0; ; offset += pageSize) {
     let query = supabase
@@ -365,17 +368,23 @@ export async function fetchExpenses(params: {
 
     if ((data?.length ?? 0) < pageSize) break;
   }
-  const matchedByExpense = await fetchExpenseMatchMap(
-    supabase,
-    claims.tenant_id,
-    rows.map((r) => r.id),
-  );
+  const expenseIds = rows.map((row) => row.id);
+  const [matchedByExpense, matchedByBankTransaction] = await Promise.all([
+    fetchExpenseMatchMap(supabase, claims.tenant_id, expenseIds),
+    fetchExpenseBankTransactionMatchMap(
+      supabase,
+      claims.tenant_id,
+      expenseIds,
+    ),
+  ]);
 
   return {
     success: true,
     data: rows.map((row) => ({
       ...row,
       matchedEventIds: matchedByExpense.get(row.id) ?? [],
+      matchedBankTransactionIds:
+        matchedByBankTransaction.get(row.id) ?? [],
     })),
   };
 }
@@ -449,20 +458,35 @@ export async function fetchActualFoodCostSummary(params: {
   return { success: true, data: { total, orderCount: orderIds.size } };
 }
 
-const matchSepayExpensesSchema = z.object({
-  eventId: z.coerce.number().int().positive(),
-  expenseIds: z.array(z.coerce.number().int().positive()).max(20),
-});
+const bankReconciliationIdentityShape = {
+  bankTransactionId: z.number().int().positive().nullable(),
+  eventId: z.number().int().positive().nullable(),
+};
+const hasBankReconciliationIdentity = (input: {
+  bankTransactionId: number | null;
+  eventId: number | null;
+}) => input.bankTransactionId != null || input.eventId != null;
 
-const matchSepaySupplierPaymentsSchema = z.object({
-  eventId: z.coerce.number().int().positive(),
-  supplierPaymentIds: z.array(z.coerce.number().int().positive()).max(20),
-});
+const matchSepayExpensesSchema = z
+  .object({
+    ...bankReconciliationIdentityShape,
+    expenseIds: z.array(z.coerce.number().int().positive()).max(20),
+  })
+  .refine(hasBankReconciliationIdentity);
 
-const matchSepayRefundsSchema = z.object({
-  eventId: z.coerce.number().int().positive(),
-  refundIds: z.array(z.coerce.number().int().positive()).max(20),
-});
+const matchSepaySupplierPaymentsSchema = z
+  .object({
+    ...bankReconciliationIdentityShape,
+    supplierPaymentIds: z.array(z.coerce.number().int().positive()).max(20),
+  })
+  .refine(hasBankReconciliationIdentity);
+
+const matchSepayRefundsSchema = z
+  .object({
+    ...bankReconciliationIdentityShape,
+    refundIds: z.array(z.coerce.number().int().positive()).max(20),
+  })
+  .refine(hasBankReconciliationIdentity);
 
 const searchSepayRefundsSchema = z.object({
   query: z.string().trim().max(64).optional().default(""),
@@ -568,8 +592,37 @@ export async function searchSepayRefundOptions(input: {
     (row): row is RefundSearchRow & { approved_at: string } =>
       row.approved_at != null,
   );
+  const rawPageRows = rows.slice(0, SEPAY_REFUND_SEARCH_PAGE_SIZE);
+  const rawRefundIds = rawPageRows.map((row) => row.id);
+  const { data: canonicalMatchRows, error: canonicalMatchError } =
+    rawRefundIds.length === 0
+      ? { data: [], error: null }
+      : await supabase
+          .from("bank_transaction_reconciliation_matches")
+          .select("refund_id")
+          .eq("tenant_id", claims.tenant_id)
+          .in("refund_id", rawRefundIds);
+
+  if (
+    canonicalMatchError &&
+    !isExpenseMatchSchemaMissing(canonicalMatchError.code)
+  ) {
+    console.error(
+      "[finance:refund-search] failed to load canonical matches",
+      canonicalMatchError.code,
+    );
+    return { success: false, error: "Không tải được khoản hoàn tiền." };
+  }
+
+  const canonicalMatchedRefundIds = new Set(
+    (canonicalMatchRows ?? []).flatMap((row) =>
+      row.refund_id == null ? [] : [row.refund_id],
+    ),
+  );
   const hasMore = rows.length > SEPAY_REFUND_SEARCH_PAGE_SIZE;
-  const pageRows = rows.slice(0, SEPAY_REFUND_SEARCH_PAGE_SIZE);
+  const pageRows = rawPageRows.filter(
+    (row) => !canonicalMatchedRefundIds.has(row.id),
+  );
   const items = pageRows.map((row) => {
     const order = Array.isArray(row.orders) ? row.orders[0] : row.orders;
     return {
@@ -581,7 +634,7 @@ export async function searchSepayRefundOptions(input: {
       webhookEventId: row.webhook_event_id,
     };
   });
-  const last = pageRows.at(-1);
+  const last = rawPageRows.at(-1);
 
   return {
     success: true,
@@ -593,9 +646,16 @@ export async function searchSepayRefundOptions(input: {
   };
 }
 
-function mapMatchExpenseError(code?: string): string {
+function mapMatchExpenseError(code?: string, message?: string): string {
+  const normalized = message?.toLowerCase() ?? "";
   if (code === "P0002") return "Không tìm thấy giao dịch hoặc khoản chi.";
   if (code === "23505") return "Có dòng khớp bị trùng.";
+  if (
+    normalized.includes("bank_reconciliation_amount_mismatch") ||
+    normalized.includes("expense_amount_mismatch")
+  ) {
+    return "Tổng khoản chi không bằng số tiền trên sao kê.";
+  }
   if (code === "23514") return "Giao dịch này không thể khớp khoản chi.";
   if (isExpenseMatchSchemaMissing(code)) {
     return "Chưa cập nhật dữ liệu ghép nhiều khoản chi.";
@@ -623,11 +683,22 @@ export async function matchSepayTransactionWithExpenses(
 
   const { supabase } = ctx;
   const expenseIds = Array.from(new Set(parsed.data.expenseIds));
-
-  const { error } = await supabase.rpc("match_sepay_transaction_expenses", {
-    p_event_id: parsed.data.eventId,
-    p_expense_ids: expenseIds,
-  });
+  const canonicalResult =
+    parsed.data.bankTransactionId == null
+      ? null
+      : await supabase.rpc("reconcile_bank_transaction_targets", {
+          p_bank_transaction_id: parsed.data.bankTransactionId,
+          p_target_type: "expense",
+          p_target_ids: expenseIds,
+        });
+  const legacyResult =
+    canonicalResult != null || parsed.data.eventId == null
+      ? null
+      : await supabase.rpc("match_sepay_transaction_expenses", {
+          p_event_id: parsed.data.eventId,
+          p_expense_ids: expenseIds,
+        });
+  const error = canonicalResult?.error ?? legacyResult?.error ?? null;
 
   if (error) {
     if (!isExpenseMatchSchemaMissing(error.code)) {
@@ -636,15 +707,20 @@ export async function matchSepayTransactionWithExpenses(
         error.code,
       );
     }
-    return { success: false, error: mapMatchExpenseError(error.code) };
+    return {
+      success: false,
+      error: mapMatchExpenseError(error.code, error.message),
+    };
   }
 
-  await logAudit(supabase, {
-    action: "update",
-    entityType: "webhook_event",
-    entityId: parsed.data.eventId,
-    newData: { expense_ids: expenseIds },
-  });
+  if (canonicalResult == null && parsed.data.eventId != null) {
+    await logAudit(supabase, {
+      action: "update",
+      entityType: "webhook_event",
+      entityId: parsed.data.eventId,
+      newData: { expense_ids: expenseIds },
+    });
+  }
 
   return { success: true };
 }
@@ -668,12 +744,24 @@ export async function matchSepayTransactionWithSupplierPayments(
   const supplierPaymentIds = Array.from(
     new Set(parsed.data.supplierPaymentIds),
   );
-  const { error } = await (
-    ctx.supabase as unknown as SupplierPaymentMatchRpcClient
-  ).rpc("match_sepay_transaction_supplier_payments", {
-    p_event_id: parsed.data.eventId,
-    p_supplier_payment_ids: supplierPaymentIds,
-  });
+  const canonicalResult =
+    parsed.data.bankTransactionId == null
+      ? null
+      : await ctx.supabase.rpc("reconcile_bank_transaction_targets", {
+          p_bank_transaction_id: parsed.data.bankTransactionId,
+          p_target_type: "supplier_payment",
+          p_target_ids: supplierPaymentIds,
+        });
+  const legacyResult =
+    canonicalResult != null || parsed.data.eventId == null
+      ? null
+      : await (
+          ctx.supabase as unknown as SupplierPaymentMatchRpcClient
+        ).rpc("match_sepay_transaction_supplier_payments", {
+          p_event_id: parsed.data.eventId,
+          p_supplier_payment_ids: supplierPaymentIds,
+        });
+  const error = canonicalResult?.error ?? legacyResult?.error ?? null;
 
   if (error) {
     const message = error.message?.toLowerCase() ?? "";
@@ -687,13 +775,19 @@ export async function matchSepayTransactionWithSupplierPayments(
     if (error.code === "P0002") {
       return { success: false, error: "Không tìm thấy khoản trả NCC phù hợp." };
     }
-    if (message.includes("supplier_payment_amount_mismatch")) {
+    if (
+      message.includes("supplier_payment_amount_mismatch") ||
+      message.includes("bank_reconciliation_amount_mismatch")
+    ) {
       return {
         success: false,
         error: "Tổng khoản trả NCC không bằng số tiền trên sao kê.",
       };
     }
-    if (message.includes("webhook_event_already_linked")) {
+    if (
+      message.includes("webhook_event_already_linked") ||
+      message.includes("bank_reconciliation_target_already_matched")
+    ) {
       return { success: false, error: "Giao dịch đã được gắn chứng từ khác." };
     }
     if (error.code === "PGRST202") {
@@ -702,12 +796,14 @@ export async function matchSepayTransactionWithSupplierPayments(
     return { success: false, error: "Không thể khớp khoản trả NCC." };
   }
 
-  await logAudit(ctx.supabase, {
-    action: "update",
-    entityType: "webhook_event",
-    entityId: parsed.data.eventId,
-    newData: { supplier_payment_ids: supplierPaymentIds },
-  });
+  if (canonicalResult == null && parsed.data.eventId != null) {
+    await logAudit(ctx.supabase, {
+      action: "update",
+      entityType: "webhook_event",
+      entityId: parsed.data.eventId,
+      newData: { supplier_payment_ids: supplierPaymentIds },
+    });
+  }
 
   return { success: true };
 }
@@ -729,13 +825,25 @@ export async function matchSepayTransactionWithRefunds(
   }
 
   const refundIds = Array.from(new Set(parsed.data.refundIds));
-  const { error } = await (ctx.supabase as unknown as RefundMatchRpcClient).rpc(
-    "match_sepay_transaction_refunds",
-    {
-      p_event_id: parsed.data.eventId,
-      p_refund_ids: refundIds,
-    },
-  );
+  const canonicalResult =
+    parsed.data.bankTransactionId == null
+      ? null
+      : await ctx.supabase.rpc("reconcile_bank_transaction_targets", {
+          p_bank_transaction_id: parsed.data.bankTransactionId,
+          p_target_type: "refund",
+          p_target_ids: refundIds,
+        });
+  const legacyResult =
+    canonicalResult != null || parsed.data.eventId == null
+      ? null
+      : await (ctx.supabase as unknown as RefundMatchRpcClient).rpc(
+          "match_sepay_transaction_refunds",
+          {
+            p_event_id: parsed.data.eventId,
+            p_refund_ids: refundIds,
+          },
+        );
+  const error = canonicalResult?.error ?? legacyResult?.error ?? null;
 
   if (error) {
     const message = error.message?.toLowerCase() ?? "";
@@ -749,13 +857,19 @@ export async function matchSepayTransactionWithRefunds(
         error: "Không tìm thấy khoản hoàn tiền phù hợp.",
       };
     }
-    if (message.includes("refund_amount_mismatch")) {
+    if (
+      message.includes("refund_amount_mismatch") ||
+      message.includes("bank_reconciliation_amount_mismatch")
+    ) {
       return {
         success: false,
         error: "Tổng hoàn tiền không bằng số tiền trên sao kê.",
       };
     }
-    if (message.includes("webhook_event_already_linked")) {
+    if (
+      message.includes("webhook_event_already_linked") ||
+      message.includes("bank_reconciliation_target_already_matched")
+    ) {
       return { success: false, error: "Giao dịch đã được gắn chứng từ khác." };
     }
     if (error.code === "PGRST202") {
@@ -767,12 +881,14 @@ export async function matchSepayTransactionWithRefunds(
     return { success: false, error: "Không thể khớp khoản hoàn tiền." };
   }
 
-  await logAudit(ctx.supabase, {
-    action: "update",
-    entityType: "webhook_event",
-    entityId: parsed.data.eventId,
-    newData: { refund_ids: refundIds },
-  });
+  if (canonicalResult == null && parsed.data.eventId != null) {
+    await logAudit(ctx.supabase, {
+      action: "update",
+      entityType: "webhook_event",
+      entityId: parsed.data.eventId,
+      newData: { refund_ids: refundIds },
+    });
+  }
 
   return { success: true };
 }

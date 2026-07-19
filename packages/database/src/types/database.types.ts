@@ -655,6 +655,160 @@ export type Database = {
           },
         ]
       }
+      bank_transaction_reconciliation_matches: {
+        Row: {
+          bank_transaction_id: number
+          created_at: string
+          created_by: string | null
+          expense_id: number | null
+          id: number
+          matched_amount: number
+          payment_id: number | null
+          refund_id: number | null
+          supplier_payment_id: number | null
+          tenant_id: number
+        }
+        Insert: {
+          bank_transaction_id: number
+          created_at?: string
+          created_by?: string | null
+          expense_id?: number | null
+          id?: never
+          matched_amount: number
+          payment_id?: number | null
+          refund_id?: number | null
+          supplier_payment_id?: number | null
+          tenant_id: number
+        }
+        Update: {
+          bank_transaction_id?: number
+          created_at?: string
+          created_by?: string | null
+          expense_id?: number | null
+          id?: never
+          matched_amount?: number
+          payment_id?: number | null
+          refund_id?: number | null
+          supplier_payment_id?: number | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_transaction_reconciliation_matche_bank_transaction_id_fkey"
+            columns: ["bank_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "bank_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transaction_reconciliation_matche_supplier_payment_id_fkey"
+            columns: ["supplier_payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transaction_reconciliation_matches_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transaction_reconciliation_matches_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transaction_reconciliation_matches_refund_id_fkey"
+            columns: ["refund_id"]
+            isOneToOne: false
+            referencedRelation: "refunds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transaction_reconciliation_matches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_transactions: {
+        Row: {
+          account_number: string | null
+          amount: number
+          balance_after: number | null
+          code: string | null
+          content: string | null
+          created_at: string
+          id: number
+          ingest_source: string
+          occurred_at: string
+          provider_transaction_id: string
+          raw_payload: Json
+          reference_code: string | null
+          tenant_id: number
+          transfer_type: string
+          updated_at: string
+          webhook_event_id: number | null
+        }
+        Insert: {
+          account_number?: string | null
+          amount: number
+          balance_after?: number | null
+          code?: string | null
+          content?: string | null
+          created_at?: string
+          id?: never
+          ingest_source: string
+          occurred_at: string
+          provider_transaction_id: string
+          raw_payload: Json
+          reference_code?: string | null
+          tenant_id: number
+          transfer_type: string
+          updated_at?: string
+          webhook_event_id?: number | null
+        }
+        Update: {
+          account_number?: string | null
+          amount?: number
+          balance_after?: number | null
+          code?: string | null
+          content?: string | null
+          created_at?: string
+          id?: never
+          ingest_source?: string
+          occurred_at?: string
+          provider_transaction_id?: string
+          raw_payload?: Json
+          reference_code?: string | null
+          tenant_id?: number
+          transfer_type?: string
+          updated_at?: string
+          webhook_event_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_transactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transactions_webhook_event_id_fkey"
+            columns: ["webhook_event_id"]
+            isOneToOne: true
+            referencedRelation: "webhook_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_attendance_config: {
         Row: {
           attendance_secret: string
@@ -4311,6 +4465,9 @@ export type Database = {
           updated_at: string
           variance_approval_note: string | null
           variance_approver_user_id: string | null
+          variance_resolution_type: string | null
+          variance_resolved_at: string | null
+          variance_settlement_amount: number | null
         }
         Insert: {
           branch_id: number
@@ -4331,6 +4488,9 @@ export type Database = {
           updated_at?: string
           variance_approval_note?: string | null
           variance_approver_user_id?: string | null
+          variance_resolution_type?: string | null
+          variance_resolved_at?: string | null
+          variance_settlement_amount?: number | null
         }
         Update: {
           branch_id?: number
@@ -4351,6 +4511,9 @@ export type Database = {
           updated_at?: string
           variance_approval_note?: string | null
           variance_approver_user_id?: string | null
+          variance_resolution_type?: string | null
+          variance_resolved_at?: string | null
+          variance_settlement_amount?: number | null
         }
         Relationships: [
           {
@@ -9955,6 +10118,14 @@ export type Database = {
         Args: { p_since: string }
         Returns: Json
       }
+      get_cash_variance_action_target: {
+        Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
+        Returns: {
+          branch_id: number
+          cash_difference: number
+          session_id: number
+        }[]
+      }
       get_cash_variance_summary: {
         Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
         Returns: {
@@ -9995,6 +10166,17 @@ export type Database = {
           invoice_attention_count: number
           invoice_issued_count: number
           invoice_not_required_count: number
+        }[]
+      }
+      get_finance_reconciliation_attention: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          missing_vietqr_amount: number
+          missing_vietqr_count: number
+          unmatched_bank_amount: number
+          unmatched_bank_count: number
+          unmatched_money_in_count: number
+          unmatched_money_out_count: number
         }[]
       }
       get_food_cost: {
@@ -10049,6 +10231,14 @@ export type Database = {
         }[]
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
+      get_inventory_value_period: {
+        Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
+        Returns: {
+          branch_id: number
+          closing_value: number
+          opening_value: number
+        }[]
+      }
       get_leave_review_queue: {
         Args: { p_branch_id: number; p_include_rows?: boolean }
         Returns: {
@@ -10322,6 +10512,7 @@ export type Database = {
         }
         Returns: string
       }
+      import_sepay_bank_transactions: { Args: { p_rows: Json }; Returns: Json }
       inv_catalog_unit_to_base: {
         Args: { p_all_units: Json; p_base_unit_id: number; p_unit: Json }
         Returns: number
@@ -10636,6 +10827,14 @@ export type Database = {
         Args: { p_invoice_id: number }
         Returns: Json
       }
+      reconcile_bank_transaction_targets: {
+        Args: {
+          p_bank_transaction_id: number
+          p_target_ids: number[]
+          p_target_type: string
+        }
+        Returns: Json
+      }
       reconcile_sepay_order_evidence: {
         Args: { p_event_id: number; p_payment_code: string }
         Returns: Json
@@ -10798,6 +10997,14 @@ export type Database = {
           unit_price: number
           uom: string
         }[]
+      }
+      resolve_pos_session_variance: {
+        Args: {
+          p_note: string
+          p_resolution_type: string
+          p_session_id: number
+        }
+        Returns: Json
       }
       resolve_print_template_version: {
         Args: { p_branch_id: number; p_kind: string; p_tenant_id: number }

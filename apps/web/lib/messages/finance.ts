@@ -69,7 +69,7 @@ export const finance = {
     methodFix: "Sửa phương thức",
     methodFixDialogTitle: "Sửa phương thức thanh toán",
     methodFixWarning:
-      "Chỉ sửa bản ghi nội bộ để đối soát tiền đã thu theo phương thức. Không ảnh hưởng HĐĐT đã phát hành.",
+      "Sửa phương thức sẽ đồng bộ thanh toán, đơn và dự thu ca POS. Đổi sang VietQR phải đối soát với giao dịch ngân hàng; giao dịch đã có bằng chứng ngân hàng không thể đổi sang Tiền mặt. Không ảnh hưởng HĐĐT đã phát hành.",
     methodFixNewLabel: "Phương thức đúng",
     methodFixReasonLabel: (min: number) => `Lý do sửa (tối thiểu ${min} ký tự)`,
     methodFixReasonPlaceholder:
@@ -123,23 +123,24 @@ export const finance = {
     defaultPageTitle: "Tài chính",
     crumbLabel: "Vận hành · Tài chính",
     description:
-      "Theo dõi tiền đã thu, doanh thu ròng, tồn kho, chi vận hành và lãi gộp.",
+      "Theo dõi doanh thu, bán hàng sau giảm giá, tồn kho, chi vận hành và lãi gộp.",
   },
   page: {
     eyebrow: "Báo cáo vận hành",
     title: "Tài chính của quán",
     description:
-      "Bốn số cần nhìn trước: tiền đã thu, doanh thu ròng, giá trị tồn kho và chi vận hành.",
+      "Bốn số cần nhìn trước: doanh thu, bán hàng sau giảm giá, giá trị tồn kho và chi vận hành.",
   },
   powerLite: {
     eyebrow: "Báo cáo vận hành",
     title: "Sức khỏe tài chính",
     description:
-      "Một màn hình cho chủ quán: tiền đã thu, doanh thu ròng, giá trị tồn kho và chi vận hành.",
-    cashTitle: "Tiền đã thu",
-    cashDescription: "Chỉ theo dõi tiền đã thu và cách tiền đi vào quỹ.",
+      "Một màn hình cho chủ quán: doanh thu, bán hàng sau giảm giá, giá trị tồn kho và chi vận hành.",
+    cashTitle: "Doanh thu",
+    cashDescription: "Thanh toán hoàn tất và cách tiền đi vào quỹ.",
     profitTitle: "Lãi gộp",
-    profitDescription: "Lấy doanh thu ròng, trừ giá vốn món đã ghi nhận.",
+    profitDescription:
+      "Lấy bán hàng sau giảm giá, trừ giá vốn món đã ghi nhận.",
     inventoryCashTitle: "Giá trị tồn kho",
     inventoryCashDescription:
       "Tổng giá trị tồn kho hiện tại và nguyên liệu đang giữ nhiều vốn nhất.",
@@ -161,7 +162,7 @@ export const finance = {
     stageCompanyReporting: "Hỗ trợ kế toán để riêng",
     exceptionsTitle: "Điểm cần kiểm tra",
     exceptionsDescription:
-      "Chỉ đưa ra ngoại lệ vận hành: lệch quỹ, thiếu giá vốn, HĐĐT kẹt, công nợ NCC hoặc chi vận hành chưa ghi nhận.",
+      "Danh sách chốt ngày: lệch tiền mặt, đối soát ngân hàng, thanh toán, giá vốn, HĐĐT, công nợ và chi vận hành chưa đủ.",
     emptyInventoryRanking: "Chưa có tồn kho có giá trị để xếp hạng.",
     branchFallback: (branchId: number) => `Chi nhánh ${branchId}`,
     ingredientFallback: "Nguyên liệu chưa đặt tên",
@@ -189,13 +190,13 @@ export const finance = {
       ordersLine: (count: string) => `${count} đơn đã thanh toán`,
       cash: "Tiền mặt",
       vietqr: "VietQR",
-      revenueBeforeVat: "Doanh thu ròng",
+      revenueBeforeVat: "Bán hàng sau giảm giá",
       ingredientCost: "Giá vốn món",
       grossMargin: "Biên gộp",
       operatingExpense: "Chi vận hành",
       currentInventory: "Tồn kho hiện tại",
       inventoryQuantity: (quantity: string) => `${quantity} tồn`,
-      branchRevenue: "Doanh thu ròng",
+      branchRevenue: "Bán hàng sau giảm giá",
       branchGrossProfit: "Lãi gộp",
       branchInventory: "Tồn kho",
       branchCashVariance: "Lệch quỹ",
@@ -205,6 +206,14 @@ export const finance = {
       cashVarianceClosedSessions: (count: string) =>
         `${count} ca vượt ngưỡng chưa xử lý trong kỳ`,
       cashVarianceNoClosedSession: "Không còn ca lệch cần xử lý",
+      bankReconciliationLabel: "Đối soát ngân hàng cần xử lý",
+      bankReconciliationValue: (transactions: string, payments: string) =>
+        `${transactions} GD · ${payments} TT`,
+      bankReconciliationHint: (
+        transactionAmount: string,
+        paymentAmount: string,
+      ) =>
+        `Sao kê chưa gắn chứng từ ${transactionAmount} · VietQR thiếu bằng chứng ${paymentAmount}`,
       operatingExpenseLabel: "Chi vận hành",
       operatingExpenseRecorded: "Đã có chi vận hành ghi nhận trong kỳ",
       operatingExpenseMissing:
@@ -232,15 +241,19 @@ export const finance = {
     dateMeta: (date: string, branch: string) => `${date} · ${branch}`,
     periodMeta: (start: string, end: string) => `${start} → ${end}`,
     kpis: {
-      moneyCollected: "Tiền đã thu",
-      moneyCollectedHint: (orders: string) => `${orders} đơn đã thanh toán`,
-      netRevenue: "Doanh thu ròng",
-      netRevenueHint: "Đã trừ giảm giá",
+      moneyCollected: "Doanh thu",
+      moneyCollectedHint: (orders: string) =>
+        `${orders} đơn có thanh toán hoàn tất · gồm VAT nếu có`,
+      netRevenue: "Bán hàng sau giảm giá",
+      netRevenueHint: "Tổng giá món − giảm giá · chưa gồm VAT",
       inventoryValue: "Giá trị tồn kho",
-      inventoryValueHint: "Tồn hiện tại × giá vốn BQ hoặc giá nhập tham chiếu",
+      inventoryValueHint: (opening: string) =>
+        `Tồn đầu kỳ ${opening} · số lượng kho × giá vốn chuyển động`,
+      inventoryOpeningCompare: "so với tồn đầu kỳ",
       operatingExpense: "Chi vận hành",
-      operatingExpenseHint: "Đã ghi trong kỳ · không gồm giá vốn món",
-      cashOnHand: "Tiền mặt ở quán",
+      operatingExpenseHint:
+        "Theo ngày ghi nhận · gồm đã trả/chưa trả · không gồm nhập hàng/NCC",
+      cashOnHand: "Tiền mặt theo sổ",
       cashOnHandMissing: "Chưa đặt mốc tồn quỹ",
       bankOnHand: "Tiền trong ngân hàng",
       bankOnHandMissing: "Chưa đặt mốc ngân hàng",
@@ -255,7 +268,7 @@ export const finance = {
     items: {
       finance: "Tài chính",
       todayMoney: "Tổng quan",
-      revenue: "Doanh thu ròng",
+      revenue: "Doanh thu",
       bankTransactions: "Đối soát ngân hàng",
       expenses: "Chi vận hành",
       supplierPayables: "Phải trả NCC",
@@ -402,7 +415,9 @@ export const finance = {
       "Hóa đơn không tồn tại hoặc không thuộc phạm vi chi nhánh đang xem.",
   },
   cash: {
-    onHandTitle: "Tiền mặt toàn quán",
+    onHandTitle: "Tiền hiện có theo sổ",
+    onHandDescription:
+      "Toàn quán · tính từ mốc đầu kỳ; tiền đếm thực tế được giữ ở từng ca POS.",
     setOpening: "Đặt tồn quỹ",
     editOpening: "Cập nhật tồn quỹ",
     noOpening:
@@ -425,7 +440,7 @@ export const finance = {
     ) => `Tồn ${date}: ${opening} + thu CK ${bankIn} − chi CK ${bankOut}`,
     openingTitle: "Tồn quỹ đầu kỳ",
     openingDescription:
-      "Đếm tiền mặt thực tế và số dư tài khoản ngân hàng cùng một ngày làm mốc. Hệ cộng tiền thu và trừ tiền chi từ ngày này để ra số dư hiện tại.",
+      "Đếm tiền mặt thực tế và số dư tài khoản ngân hàng cùng một ngày làm mốc. Hệ cộng tiền thu và trừ tiền chi từ ngày này để ra số dư hiện tại. Sửa số đầu kỳ chỉ thay đổi mốc, không xóa giao dịch đã có.",
     openingBalanceLabel: "Số tiền mặt đếm được",
     openingBankLabel: "Số dư tài khoản ngân hàng",
     openingDateLabel: "Ngày đếm đủ hai số dư",
@@ -445,6 +460,16 @@ export const finance = {
     title: "Đối soát ngân hàng",
     description:
       "Xử lý sao kê SePay và thanh toán VietQR thiếu bằng chứng ngân hàng.",
+    importAction: "Nhập file SePay",
+    importTitle: "Nhập lịch sử giao dịch SePay",
+    importDescription:
+      "Chọn file CSV xuất trực tiếp từ SePay. Giao dịch đã có sẽ không bị cộng lại.",
+    importFileLabel: "File CSV SePay",
+    importHint: "Tối đa 5.000 giao dịch mỗi lần nhập.",
+    importSubmit: "Nhập giao dịch",
+    importPending: "Đang nhập",
+    importSuccess: (inserted: number, existing: number) =>
+      `Đã thêm ${inserted} giao dịch; ${existing} giao dịch đã có.`,
     reconciliation: {
       matched: "Đã khớp",
       matchedHint:
@@ -650,7 +675,7 @@ export const finance = {
     taxCodeNotRequired: (count: string) =>
       `${count} lượt bán cho người tiêu dùng`,
     recentDays: "7 ngày gần nhất",
-    noRecentRevenue: "Chưa có doanh thu ròng trong khoảng này.",
+    noRecentRevenue: "Chưa có bán hàng sau giảm giá trong khoảng này.",
     orders: (count: string) => `${count} đơn`,
     todayPayments: "Thanh toán hôm nay",
     cash: "Tiền mặt",
@@ -660,21 +685,21 @@ export const finance = {
     noItemData: "Chưa có dữ liệu món.",
     portions: (count: string) => `${count} phần`,
     currentMonth: "Tháng hiện tại",
-    monthRevenue: "Doanh thu ròng tháng",
+    monthRevenue: "Bán hàng sau giảm giá tháng",
     discount: "Giảm giá",
     outputVat: "Thuế tạm tính",
     voidedAmount: "Hoàn / hủy",
     featureCta: "Mở",
     workflowTitle: "Luồng nghiệp vụ",
     workflowDescription:
-      "Các khu vực vận hành dùng để kiểm tra tiền đã thu, hóa đơn và đối soát.",
+      "Các khu vực vận hành dùng để kiểm tra doanh thu, hóa đơn và đối soát.",
     tabs: {
-      revenue: "Doanh thu ròng",
+      revenue: "Doanh thu",
       invoices: (count: number) => `Hóa đơn điện tử (${formatCount(count)})`,
     },
     workQueue: {
       title: "Việc cần kiểm tra",
-      description: "Các điểm vận hành cần nhìn sau báo cáo tiền đã thu.",
+      description: "Các điểm vận hành cần nhìn sau báo cáo doanh thu.",
       period: "Kỳ khóa sổ",
       invoicesAttention: "HĐĐT cần xử lý",
       invoicesAttentionHint: "Nháp, đang ký hoặc đã gửi nhưng chưa có mã CQT",
@@ -749,9 +774,10 @@ export const finance = {
   },
   revenue: {
     page: {
-      eyebrow: "Báo cáo doanh thu ròng",
-      title: "Doanh thu ròng",
-      description: "Theo dõi tiền đã thu, doanh thu ròng và số đơn theo kỳ.",
+      eyebrow: "Báo cáo doanh thu",
+      title: "Doanh thu",
+      description:
+        "Theo dõi thanh toán hoàn tất, bán hàng sau giảm giá và số đơn theo kỳ.",
       meta: (branch: string, range: string, granularity: string) =>
         `${branch} · ${range} · ${granularity}`,
     },
@@ -761,16 +787,16 @@ export const finance = {
       control: "Kiểm soát",
     },
     kpi: {
-      netRevenue: "Doanh thu ròng",
-      netRevenueHint: "Đã trừ giảm giá",
+      netRevenue: "Bán hàng sau giảm giá",
+      netRevenueHint: "Tổng giá món − giảm giá · chưa gồm VAT",
       orderCount: "Số đơn hoàn thành",
       orderCountHint: "Đơn đã thanh toán trong kỳ",
       aovOrder: "Bình quân/đơn",
-      aovOrderHint: "Doanh thu ròng / đơn",
+      aovOrderHint: "Bán hàng sau giảm giá / đơn",
       discountRate: "Tỷ lệ giảm giá",
       voidRate: "Tỷ lệ hủy",
       voidHint: (amount: string, count: string) => `${amount} · ${count} đơn`,
-      totalCollected: "Tổng tiền đã thu",
+      totalCollected: "Doanh thu",
       totalCollectedHint: (vat: string) => `Gồm thuế tạm tính ${vat}`,
       invoices: "Hóa đơn điện tử",
       invoicesAttention: (count: number) => `${formatCount(count)} chờ xử lý`,
@@ -781,30 +807,30 @@ export const finance = {
       noPrevData: " · Chưa có dữ liệu kỳ trước.",
     },
     trendChart: {
-      title: "Xu hướng doanh thu ròng",
+      title: "Xu hướng bán hàng sau giảm giá",
       description: (start: string, end: string, gran: string) =>
         `${start} → ${end} · ${gran.toLowerCase()}`,
-      sparklineLabel: "Xu hướng doanh thu ròng",
-      tooltipLabel: "Doanh thu ròng",
+      sparklineLabel: "Xu hướng bán hàng sau giảm giá",
+      tooltipLabel: "Bán hàng sau giảm giá",
     },
     heatmap: {
       title: "Khung giờ cao điểm",
       description:
-        "Doanh thu ròng theo ngày trong tuần và giờ. Chọn ô để xem chi tiết.",
+        "Bán hàng sau giảm giá theo ngày trong tuần và giờ. Chọn ô để xem chi tiết.",
       tooLargeRange:
         "Khoảng đang xem vượt quá 90 ngày — chọn khoảng nhỏ hơn để xem khung giờ.",
       empty: "Chưa có đơn nào trong khoảng này.",
       tooLargeEmpty: "Chọn khoảng ≤ 90 ngày để xem khung giờ.",
     },
     periodTable: {
-      title: "Bảng doanh thu ròng theo kỳ",
+      title: "Bảng bán hàng sau giảm giá theo kỳ",
       descriptionAll:
         "Tổng hợp toàn bộ chi nhánh — bấm vào ngày để xem chi tiết.",
       descriptionSingle: "Bấm vào ngày để xem danh sách đơn trong ngày.",
       empty: "Chưa có dữ liệu trong khoảng này.",
       colPeriod: "Kỳ",
       colOrders: "Đơn",
-      colNetRevenue: "Doanh thu ròng",
+      colNetRevenue: "Bán hàng sau giảm giá",
       colCash: "Tiền mặt",
       colVat: "Thuế tạm tính",
       total: "Tổng",
@@ -812,14 +838,14 @@ export const finance = {
     cashierTable: {
       title: "Năng suất thu ngân",
       description:
-        "Top thu ngân theo doanh thu ròng — đối chiếu với bảng lệch quỹ bên dưới.",
+        "Top thu ngân theo bán hàng sau giảm giá — đối chiếu với bảng lệch quỹ bên dưới.",
       tooLargeRange:
         "Khoảng đang xem vượt quá 90 ngày — chọn khoảng nhỏ hơn để xem theo thu ngân.",
       empty: "Chưa có dữ liệu thu ngân.",
       tooLargeEmpty: "Chọn khoảng ≤ 90 ngày để xem theo thu ngân.",
       colCashier: "Thu ngân",
       colOrders: "Đơn",
-      colNetRevenue: "Doanh thu ròng",
+      colNetRevenue: "Bán hàng sau giảm giá",
       colCash: "Tiền mặt",
     },
     topItems: {
@@ -829,14 +855,14 @@ export const finance = {
       empty: "Chưa có dữ liệu món.",
       colName: "Tên món",
       colQty: "SL",
-      colRevenue: "Doanh thu ròng",
+      colRevenue: "Bán hàng sau giảm giá",
     },
     csvHeaders: {
-      periodSection: "Doanh thu ròng theo kỳ",
-      cashierSection: "Doanh thu ròng theo thu ngân",
+      periodSection: "Bán hàng sau giảm giá theo kỳ",
+      cashierSection: "Bán hàng sau giảm giá theo thu ngân",
       colPeriod: "Kỳ",
       colOrders: "Số đơn",
-      colNetRevenue: "Doanh thu ròng",
+      colNetRevenue: "Bán hàng sau giảm giá",
       colCash: "Tiền mặt",
       colVietqr: "VietQR",
       colVat: "Thuế tạm tính",
@@ -880,9 +906,9 @@ export const finance = {
   },
   links: {
     revenue: {
-      label: "Báo cáo doanh thu ròng",
+      label: "Báo cáo doanh thu",
       description:
-        "Tiền đã thu, doanh thu ròng theo kỳ, chi nhánh và phương thức thanh toán.",
+        "Doanh thu và bán hàng sau giảm giá theo kỳ, chi nhánh và phương thức thanh toán.",
     },
     foodCost: {
       label: "Giá vốn món",
@@ -920,7 +946,7 @@ export const finance = {
       "Định mức dùng để tham chiếu; số đã ghi nhận lấy từ tiêu hao kho.",
     itemCount: (count: string) => `${count} món`,
     quantitySold: "SL bán",
-    revenueCurrency: "Doanh thu ròng (₫)",
+    revenueCurrency: "Bán hàng sau giảm giá (₫)",
     foodCostCurrency: "Giá vốn định mức (₫)",
     margin: "Biên lãi định mức",
     emptyTitle: "Không có dữ liệu giá vốn món",

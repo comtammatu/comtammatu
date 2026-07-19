@@ -475,6 +475,39 @@ test("SePay outgoing transactions can match supplier AP payments by reference", 
   assert.deepEqual(ambiguous[0]?.supplierPaymentMatches, []);
 });
 
+test("export-only bank rows do not treat null webhook IDs as confirmed matches", () => {
+  const transaction: SepayBankTransaction = {
+    ...tx(
+      row(10, {
+        transactionDate: "2026-07-01 09:05:00",
+        transferType: "out",
+        transferAmount: 60000,
+      }),
+    ),
+    bankTransactionId: 99,
+    eventId: null,
+  };
+  const unmatched = attachSupplierPaymentMatches(
+    [transaction],
+    [supplierPayment(501, 60000, null)],
+  );
+
+  assert.equal(unmatched[0]?.supplierPaymentMatchConfirmed, false);
+  assert.deepEqual(unmatched[0]?.supplierPaymentMatches, []);
+
+  const canonicalMatch = supplierPayment(501, 60000, null);
+  canonicalMatch.bankTransactionId = 99;
+  const confirmed = attachSupplierPaymentMatches(
+    [transaction],
+    [canonicalMatch],
+  );
+  assert.equal(confirmed[0]?.supplierPaymentMatchConfirmed, true);
+  assert.deepEqual(
+    confirmed[0]?.supplierPaymentMatches.map((payment) => payment.id),
+    [501],
+  );
+});
+
 test("SePay unmatched money-in classifier explains why no order is attached", () => {
   assert.equal(
     classifySepayUnmatchedMoneyIn(
@@ -601,6 +634,9 @@ test("SePay money-in manual link stays guarded by RPC", () => {
   const table = read(
     "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
   );
+  const canonicalMigration = read(
+    "supabase/migrations/20260719220000_create_bank_reconciliation_matches.sql",
+  );
 
   assert.match(
     migration,
@@ -614,8 +650,27 @@ test("SePay money-in manual link stays guarded by RPC", () => {
   assert.match(migration, /PERFORM public\.log_audit/);
   assert.match(action, /linkSepayTransactionToPayment/);
   assert.match(action, /link_sepay_transaction_to_payment/);
+  assert.match(action, /reconcile_bank_transaction_targets/);
   assert.match(table, /LinkPaymentCell/);
   assert.match(table, /linkSepayTransactionToPayment/);
+  assert.match(
+    canonicalMigration,
+    /CREATE TABLE public\.bank_transaction_reconciliation_matches/,
+  );
+  assert.match(
+    canonicalMigration,
+    /COMMENT ON TABLE public\.bank_transaction_reconciliation_matches IS[\s\S]*never change bank balance/,
+  );
+  assert.match(
+    canonicalMigration,
+    /CREATE OR REPLACE FUNCTION public\.reconcile_bank_transaction_targets/,
+  );
+  assert.doesNotMatch(
+    canonicalMigration.match(
+      /CREATE OR REPLACE FUNCTION public\.reconcile_bank_transaction_targets[\s\S]*?COMMENT ON FUNCTION public\.reconcile_bank_transaction_targets/,
+    )?.[0] ?? "",
+    /UPDATE public\.bank_transactions|SET amount =|SET transfer_type =/,
+  );
 });
 
 test("SePay conflict hardening gates automatic settlement and Owner recovery", () => {

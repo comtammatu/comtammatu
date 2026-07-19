@@ -19,17 +19,28 @@ test("bank balance counts each signed SePay movement once", () => {
 
 test("finance landing shows current cash and bank balances", () => {
   const page = read("apps/web/app/(protected)/finance/page.tsx");
+  const currentFunds = read(
+    "apps/web/app/(protected)/finance/components/current-funds-section.tsx",
+  );
   const copy = read("apps/web/lib/messages/finance.ts");
 
   assert.match(page, /fetchCashSummary\(\)/);
-  assert.match(page, /cash\.hasOpening[\s\S]*formatVND\(cash\.cashOnHand\)/);
+  assert.match(page, /CurrentFundsSection cash=\{cash\}/);
   assert.match(
-    page,
+    currentFunds,
+    /cash\.hasOpening[\s\S]*formatVND\(cash\.cashOnHand\)/,
+  );
+  assert.match(
+    currentFunds,
     /cash\.hasBankOpening[\s\S]*formatVND\(cash\.bankOnHand\)/,
   );
-  assert.match(copy, /cashOnHand: "Tiền mặt ở quán"/);
+  assert.match(copy, /cashOnHand: "Tiền mặt theo sổ"/);
   assert.match(copy, /bankOnHand: "Tiền trong ngân hàng"/);
-  assert.match(copy, /currentFundsScope: "Toàn quán"/);
+  assert.match(
+    copy,
+    /Sửa số đầu kỳ chỉ thay đổi mốc, không xóa giao dịch đã có/,
+  );
+  assert.match(currentFunds, /setCashOpening/);
 });
 
 // The bank fund follows the signed SePay account ledger; the cash fund follows
@@ -39,8 +50,14 @@ test("bank fund pulls SePay in and out with the right sign", () => {
   const bankLoader = read(
     "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
   );
-  const migration = read(
+  const cashMigration = read(
     "supabase/migration-archive/20260714031027_20260713160248_persist_sepay_refund_match.sql",
+  );
+  const bankMigration = read(
+    "supabase/migrations/20260719210000_create_canonical_bank_transactions.sql",
+  );
+  const financeAclMigration = read(
+    "supabase/migrations/20260719213000_harden_finance_function_execute_acl.sql",
   );
   const periodMigration = read(
     "supabase/migration-archive/20260716100000_close_expense_payment_state_machine.sql",
@@ -59,8 +76,8 @@ test("bank fund pulls SePay in and out with the right sign", () => {
   );
   assert.match(
     cockpit,
-    /cashInSince\s*=\s*cashMovement\.collections/,
-    "cash-in must retain original completed and refunded cash collections",
+    /cashMovement\.collections\s*\+\s*Math\.max\(cashMovement\.varianceAdjustments, 0\)/,
+    "cash-in must include accepted POS overage adjustments",
   );
   assert.match(
     cockpit,
@@ -74,8 +91,8 @@ test("bank fund pulls SePay in and out with the right sign", () => {
   );
   assert.match(
     cockpit,
-    /cashMovement\.expenses\s*\+\s*cashMovement\.supplierPayments\s*\+\s*cashMovement\.refunds/,
-    "one aggregate must include every cash outflow since opening",
+    /cashMovement\.expenses\s*\+\s*cashMovement\.supplierPayments\s*\+\s*cashMovement\.refunds\s*\+\s*Math\.max\(-cashMovement\.varianceAdjustments, 0\)/,
+    "one aggregate must include cash payouts and accepted POS shortages",
   );
   assert.doesNotMatch(
     cockpit,
@@ -106,14 +123,46 @@ test("bank fund pulls SePay in and out with the right sign", () => {
     "running bank balance must not depend on a capped webhook list",
   );
   assert.match(
-    migration,
+    cashMigration,
     /'cash_expenses',\s*v_cash_expenses[\s\S]*'cash_supplier_payments',\s*v_cash_supplier_payments/,
     "cash aggregate must cover expenses and supplier payments",
   );
   assert.match(
-    migration,
-    /CREATE OR REPLACE FUNCTION public\.get_bank_ledger_movement_since/,
-    "database must aggregate every signed SePay movement after the anchor",
+    bankMigration,
+    /CREATE TABLE public\.bank_transactions[\s\S]*UNIQUE \(tenant_id, provider_transaction_id\)/,
+    "database must own one canonical row per SePay transaction and tenant",
+  );
+  assert.match(
+    bankMigration,
+    /CREATE TRIGGER sync_sepay_bank_transaction_from_webhook[\s\S]*EXECUTE FUNCTION private\.sync_sepay_bank_transaction_from_webhook/,
+    "signed SePay webhooks must enter the canonical ledger",
+  );
+  assert.match(
+    bankMigration,
+    /CREATE OR REPLACE FUNCTION public\.import_sepay_bank_transactions[\s\S]*bank_transaction_conflict[\s\S]*inserted_count[\s\S]*existing_count/,
+    "SePay exports must import atomically and reject conflicting facts",
+  );
+  assert.match(
+    bankMigration,
+    /CREATE OR REPLACE FUNCTION public\.get_bank_ledger_movement_since[\s\S]*FROM public\.bank_transactions transaction[\s\S]*transaction\.occurred_at >= p_since/,
+    "bank balance must aggregate the canonical ledger after the anchor",
+  );
+  assert.doesNotMatch(
+    bankMigration.match(
+      /CREATE OR REPLACE FUNCTION public\.get_bank_ledger_movement_since[\s\S]*?COMMENT ON FUNCTION public\.get_bank_ledger_movement_since/,
+    )?.[0] ?? "",
+    /webhook_events/,
+    "matching or webhook delivery state must not move bank balance",
+  );
+  assert.match(
+    financeAclMigration,
+    /REVOKE ALL ON FUNCTION public\.import_sepay_bank_transactions\(jsonb\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role;[\s\S]*GRANT EXECUTE ON FUNCTION public\.import_sepay_bank_transactions\(jsonb\)[\s\S]*TO authenticated;/,
+    "anonymous and service roles must not execute the owner-only SePay import RPC",
+  );
+  assert.match(
+    financeAclMigration,
+    /REVOKE ALL ON FUNCTION public\.resolve_pos_session_variance\(bigint, text, text\)[\s\S]*FROM PUBLIC, anon;[\s\S]*REVOKE ALL ON FUNCTION public\.get_inventory_value_period\(date, date, bigint\)[\s\S]*FROM PUBLIC, anon;/,
+    "new Finance SECURITY DEFINER RPCs must explicitly revoke anonymous execution",
   );
   assert.match(
     periodMigration,

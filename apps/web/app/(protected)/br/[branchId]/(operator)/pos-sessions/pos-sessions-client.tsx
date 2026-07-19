@@ -22,7 +22,6 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@comtammatu/ui/components/drawer";
-import {} from "@/components/data-table/data-table";
 import {
   formatCount,
   formatPercent,
@@ -44,6 +43,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import {
   Item,
   ItemContent,
@@ -55,10 +55,10 @@ import {
 } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
-import {} from "@comtammatu/ui/components/sheet";
 import type { CartModifier, CartSide } from "../../pos/types";
 import type { PosSessionReport } from "./report-actions";
 import { resolvePosSessionVariance } from "./actions";
+import { correctPaymentMethod } from "@/(protected)/finance/payment-method-actions";
 import { messages } from "@lib/messages";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -80,6 +80,9 @@ export interface PosSessionRow {
   note: string | null;
   variance_approval_note: string | null;
   variance_approver_user_id: string | null;
+  variance_resolution_type: "staff_repaid" | "accepted_adjustment" | null;
+  variance_settlement_amount: number | null;
+  variance_resolved_at: string | null;
   pos_terminals: { name: string } | null;
   opened_by_profile: { full_name: string } | null;
   closed_by_profile: { full_name: string } | null;
@@ -105,6 +108,14 @@ interface PosSessionOrderItem {
   status: string;
 }
 
+interface PosSessionPayment {
+  id: number;
+  amount: number;
+  method: string;
+  status: string;
+  paid_at: string | null;
+}
+
 export interface PosSessionOrder {
   id: number;
   order_number: string;
@@ -122,6 +133,7 @@ export interface PosSessionOrder {
   table_id: number | null;
   tables: { number: number } | null;
   order_items: PosSessionOrderItem[];
+  payments: PosSessionPayment[];
 }
 
 interface PosSessionsClientProps {
@@ -130,6 +142,7 @@ interface PosSessionsClientProps {
   selectedSessionId: number | null;
   orders: PosSessionOrder[];
   report: PosSessionReport | null;
+  canCorrectPaymentMethod: boolean;
 }
 
 function paymentMethodLabel(method: string | null): string {
@@ -150,7 +163,11 @@ function isVarianceBreached(session: PosSessionRow): boolean {
 }
 
 function isVarianceResolved(session: PosSessionRow): boolean {
-  return Boolean(session.variance_approval_note);
+  return (
+    session.variance_resolution_type != null &&
+    session.variance_resolved_at != null &&
+    session.variance_approval_note != null
+  );
 }
 
 export function PosSessionsClient({
@@ -159,6 +176,7 @@ export function PosSessionsClient({
   selectedSessionId,
   orders,
   report,
+  canCorrectPaymentMethod,
 }: PosSessionsClientProps) {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const selectedSession =
@@ -269,6 +287,7 @@ export function PosSessionsClient({
 
       <OrderDetailDrawer
         order={selectedOrder}
+        canCorrectPaymentMethod={canCorrectPaymentMethod}
         open={selectedOrder !== null}
         onOpenChange={(next) => {
           if (!next) setSelectedOrderId(null);
@@ -400,23 +419,29 @@ function SessionDetailCard({
   const threshold = computeVarianceThreshold(session.expected_cash);
   const isOpen = session.status === "open";
   const [resolutionNote, setResolutionNote] = useState("");
+  const [resolutionType, setResolutionType] = useState<
+    "staff_repaid" | "accepted_adjustment" | null
+  >(null);
   const [isResolving, startResolving] = useTransition();
   const trimmedResolutionNote = resolutionNote.trim();
   const canResolve =
     breached &&
     !isOpen &&
     !resolved &&
+    resolutionType != null &&
     trimmedResolutionNote.length >= 10 &&
     trimmedResolutionNote.length <= 500 &&
     !isResolving;
 
   function handleResolveVariance() {
-    if (!canResolve) return;
+    if (!canResolve || resolutionType == null) return;
+    const selectedResolutionType = resolutionType;
 
     startResolving(async () => {
       const result = await resolvePosSessionVariance(
         branchId,
         session.id,
+        selectedResolutionType,
         trimmedResolutionNote,
       );
       if (!result.success) {
@@ -428,6 +453,7 @@ function SessionDetailCard({
 
       toast.success(messages.settings.posSessions.resolveSuccess);
       setResolutionNote("");
+      setResolutionType(null);
       router.refresh();
     });
   }
@@ -502,6 +528,21 @@ function SessionDetailCard({
                 )}
               </span>
             ) : null}
+            {resolved && session.variance_resolution_type === "staff_repaid" ? (
+              <span className="mt-1 block text-sm">
+                {messages.settings.posSessions.staffRepaidResult(
+                  formatVND(session.variance_settlement_amount ?? 0),
+                )}
+              </span>
+            ) : null}
+            {resolved &&
+            session.variance_resolution_type === "accepted_adjustment" ? (
+              <span className="mt-1 block text-sm">
+                {messages.settings.posSessions.acceptedAdjustmentResult(
+                  formatVND(session.cash_difference ?? 0),
+                )}
+              </span>
+            ) : null}
           </AlertDescription>
         </Alert>
       ) : !isOpen && (session.cash_difference ?? 0) === 0 ? (
@@ -515,6 +556,49 @@ function SessionDetailCard({
 
       {breached && !isOpen && !resolved ? (
         <div className="flex flex-col gap-2">
+          <Label>{messages.settings.posSessions.varianceResolutionType}</Label>
+          <div className="grid gap-2 lg:grid-cols-2">
+            {(session.cash_difference ?? 0) < 0 ? (
+              <Button
+                type="button"
+                variant={
+                  resolutionType === "staff_repaid" ? "secondary" : "outline"
+                }
+                className="h-auto justify-start whitespace-normal py-3 text-left"
+                onClick={() => setResolutionType("staff_repaid")}
+              >
+                <span>
+                  <span className="block font-medium">
+                    {messages.settings.posSessions.staffRepaid}
+                  </span>
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {messages.settings.posSessions.staffRepaidHint(
+                      formatVND(Math.abs(session.cash_difference ?? 0)),
+                    )}
+                  </span>
+                </span>
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant={
+                resolutionType === "accepted_adjustment"
+                  ? "secondary"
+                  : "outline"
+              }
+              className="h-auto justify-start whitespace-normal py-3 text-left"
+              onClick={() => setResolutionType("accepted_adjustment")}
+            >
+              <span>
+                <span className="block font-medium">
+                  {messages.settings.posSessions.acceptedAdjustment}
+                </span>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  {messages.settings.posSessions.acceptedAdjustmentHint}
+                </span>
+              </span>
+            </Button>
+          </div>
           <Label htmlFor={`variance-resolution-${String(session.id)}`}>
             {messages.settings.posSessions.varianceResolutionLabel}
           </Label>
@@ -604,6 +688,9 @@ function SessionDetailCard({
           value={session.closing_cash}
         />
       </div>
+      <p className="text-xs text-muted-foreground">
+        {messages.settings.posSessions.cashFormula}
+      </p>
 
       <Separator />
 
@@ -900,226 +987,307 @@ function AddOnLine({
 
 function OrderDetailDrawer({
   order,
+  canCorrectPaymentMethod,
   open,
   onOpenChange,
 }: {
   order: PosSessionOrder | null;
+  canCorrectPaymentMethod: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const router = useRouter();
+  const [methodFixReason, setMethodFixReason] = useState("");
+  const [methodFixOpen, setMethodFixOpen] = useState(false);
+  const [isMethodFixPending, startMethodFix] = useTransition();
+  const targetMethod = order?.payment_method === "cash" ? "vietqr" : "cash";
+  const canOfferMethodFix =
+    canCorrectPaymentMethod &&
+    order?.payment_status === "paid" &&
+    (order.payment_method === "cash" || order.payment_method === "vietqr");
+  const trimmedMethodFixReason = methodFixReason.trim();
+
+  function handleMethodFix() {
+    if (!order || trimmedMethodFixReason.length < 5) return;
+    startMethodFix(async () => {
+      const result = await correctPaymentMethod({
+        orderId: order.id,
+        newMethod: targetMethod,
+        reason: trimmedMethodFixReason,
+      });
+      if (!result.success) {
+        toast.error(
+          result.error ?? messages.finance.invoiceList.methodFixFailed,
+        );
+        return;
+      }
+      toast.success(messages.finance.invoiceList.methodFixSuccess);
+      setMethodFixOpen(false);
+      setMethodFixReason("");
+      onOpenChange(false);
+      router.refresh();
+    });
+  }
+
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="flex flex-col overflow-hidden">
-        <DrawerHeader>
-          <div className="flex flex-col gap-1">
-            <DrawerTitle className="text-base font-semibold">
-              {order?.order_number ?? ""}
-            </DrawerTitle>
-            {order ? (
-              <DrawerDescription>
-                {order.order_type === "dine_in"
-                  ? messages.settings.posSessions.tableContext(
-                      order.tables?.number ?? "-",
-                    )
-                  : messages.settings.posSessions.takeaway}
-                {" · "}
-                {formatDateTime(order.created_at)}
-              </DrawerDescription>
-            ) : null}
-          </div>
-        </DrawerHeader>
-
-        <ScrollArea className="min-h-0 flex-1">
-          {order ? (
-            <div className="flex flex-col gap-4">
-              <div className="grid gap-2 lg:grid-cols-2">
-                <DetailFact
-                  label={messages.settings.posSessions.orderNumber}
-                  value={order.order_number}
-                  mono
-                />
-                <DetailFact
-                  label={messages.settings.posSessions.orderContext}
-                  value={
-                    order.order_type === "dine_in"
-                      ? messages.settings.posSessions.tableContext(
-                          order.tables?.number ?? "-",
-                        )
-                      : messages.settings.posSessions.takeaway
-                  }
-                />
-                <DetailFact
-                  label={messages.settings.posSessions.orderCreatedAt}
-                  value={formatDateTime(order.created_at)}
-                  mono
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <StatusBadge
-                  domain="order"
-                  value={order.status}
-                  label={`${messages.settings.posSessions.orderStatus}: ${
-                    getStatusBadgeMeta("order", order.status).label
-                  }`}
-                />
-                <Badge
-                  variant={
-                    order.payment_status === "paid" ? "secondary" : "outline"
-                  }
-                >
-                  {messages.settings.posSessions.payment}:{" "}
-                  {order.payment_status === "paid"
-                    ? messages.settings.posSessions.paidWithMethod(
-                        paymentMethodLabel(order.payment_method),
+    <>
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="flex flex-col overflow-hidden">
+          <DrawerHeader>
+            <div className="flex flex-col gap-1">
+              <DrawerTitle className="text-base font-semibold">
+                {order?.order_number ?? ""}
+              </DrawerTitle>
+              {order ? (
+                <DrawerDescription>
+                  {order.order_type === "dine_in"
+                    ? messages.settings.posSessions.tableContext(
+                        order.tables?.number ?? "-",
                       )
-                    : messages.settings.posSessions.unpaid}
-                </Badge>
-              </div>
-
-              <div>
-                <SectionLabel>
-                  {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */}
-                  <span>Món ăn</span>
-                </SectionLabel>
-                <BranchOperatorFrame className="mt-2 divide-y">
-                  {order.order_items.map((item) => {
-                    const hasAddOns =
-                      item.modifiers.length > 0 || item.sides.length > 0;
-                    const modifierUnit = item.modifiers.reduce(
-                      (sum, modifier) => sum + modifier.price,
-                      0,
-                    );
-                    const sideUnit = item.sides.reduce(
-                      (sum, side) => sum + side.price * side.quantity,
-                      0,
-                    );
-                    const baseUnit = Math.max(
-                      0,
-                      item.unit_price - modifierUnit - sideUnit,
-                    );
-
-                    return (
-                      <div key={item.id} className="flex gap-3 px-3 py-2">
-                        <span className="w-10 shrink-0 font-medium tabular-nums">
-                          {messages.settings.posSessions.quantityPrefix(
-                            item.quantity,
-                          )}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium">
-                            {item.item_name}
-                            {item.variant_name ? (
-                              <span className="text-muted-foreground">
-                                {" "}
-                                ({item.variant_name})
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="text-xs text-muted-foreground tabular-nums">
-                            {messages.settings.posSessions.linePrice(
-                              formatVND(hasAddOns ? baseUnit : item.unit_price),
-                              item.quantity,
-                            )}
-                            {item.status === "cancelled" ? (
-                              <span className="ml-2 text-destructive">
-                                {messages.settings.posSessions.cancelledItem}
-                              </span>
-                            ) : null}
-                          </div>
-                          {hasAddOns ? (
-                            <div className="mt-1 flex flex-col gap-1">
-                              {item.modifiers.map((modifier) => (
-                                <AddOnLine
-                                  key={`modifier-${String(modifier.modifier_id)}`}
-                                  label={messages.settings.posSessions.modifier}
-                                  name={modifier.name}
-                                  amount={modifier.price * item.quantity}
-                                />
-                              ))}
-                              {item.sides.map((side) => {
-                                const totalQuantity =
-                                  side.quantity * item.quantity;
-                                const name =
-                                  totalQuantity > 1
-                                    ? `${side.name} ×${String(totalQuantity)}`
-                                    : side.name;
-
-                                return (
-                                  <AddOnLine
-                                    key={`side-${String(side.side_item_id)}`}
-                                    label={messages.settings.posSessions.side}
-                                    name={name}
-                                    amount={side.price * totalQuantity}
-                                  />
-                                );
-                              })}
-                            </div>
-                          ) : null}
-                          {item.note ? (
-                            <div className="mt-1 text-xs italic text-muted-foreground">
-                              {messages.settings.posSessions.itemNote}:{" "}
-                              {item.note}
-                            </div>
-                          ) : null}
-                        </div>
-                        <span
-                          className={cn(
-                            "text-sm font-medium tabular-nums",
-                            item.status === "cancelled" &&
-                              "text-muted-foreground line-through",
-                          )}
-                        >
-                          {formatVND(item.subtotal)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </BranchOperatorFrame>
-              </div>
-
-              <BranchOperatorFrame className="flex flex-col gap-1.5 px-3 py-2 text-sm">
-                <KVRow
-                  label={messages.settings.posSessions.subtotal}
-                  value={formatVND(order.subtotal)}
-                />
-                {order.discount_amount > 0 ? (
-                  <KVRow
-                    label={messages.settings.posSessions.discount}
-                    value={`-${formatVND(order.discount_amount)}`}
-                    tone="success"
-                  />
-                ) : null}
-                {order.service_charge > 0 ? (
-                  <KVRow
-                    label={messages.settings.posSessions.serviceCharge}
-                    value={formatVND(order.service_charge)}
-                  />
-                ) : null}
-                {order.tax_amount > 0 ? (
-                  <KVRow
-                    label={messages.settings.posSessions.tax}
-                    value={formatVND(order.tax_amount)}
-                  />
-                ) : null}
-                <Separator />
-                <KVRow
-                  label={messages.settings.posSessions.total}
-                  value={formatVND(order.total_amount)}
-                  bold
-                />
-              </BranchOperatorFrame>
-
-              {order.note ? (
-                <NoteCallout label={messages.settings.posSessions.billNote}>
-                  {order.note}
-                </NoteCallout>
+                    : messages.settings.posSessions.takeaway}
+                  {" · "}
+                  {formatDateTime(order.created_at)}
+                </DrawerDescription>
               ) : null}
             </div>
-          ) : null}
-        </ScrollArea>
-      </DrawerContent>
-    </Drawer>
+          </DrawerHeader>
+
+          <ScrollArea className="min-h-0 flex-1">
+            {order ? (
+              <div className="flex flex-col gap-4">
+                <div className="grid gap-2 lg:grid-cols-2">
+                  <DetailFact
+                    label={messages.settings.posSessions.orderNumber}
+                    value={order.order_number}
+                    mono
+                  />
+                  <DetailFact
+                    label={messages.settings.posSessions.orderContext}
+                    value={
+                      order.order_type === "dine_in"
+                        ? messages.settings.posSessions.tableContext(
+                            order.tables?.number ?? "-",
+                          )
+                        : messages.settings.posSessions.takeaway
+                    }
+                  />
+                  <DetailFact
+                    label={messages.settings.posSessions.orderCreatedAt}
+                    value={formatDateTime(order.created_at)}
+                    mono
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <StatusBadge
+                    domain="order"
+                    value={order.status}
+                    label={`${messages.settings.posSessions.orderStatus}: ${
+                      getStatusBadgeMeta("order", order.status).label
+                    }`}
+                  />
+                  <Badge
+                    variant={
+                      order.payment_status === "paid" ? "secondary" : "outline"
+                    }
+                  >
+                    {messages.settings.posSessions.payment}:{" "}
+                    {order.payment_status === "paid"
+                      ? messages.settings.posSessions.paidWithMethod(
+                          paymentMethodLabel(order.payment_method),
+                        )
+                      : messages.settings.posSessions.unpaid}
+                  </Badge>
+                  {canOfferMethodFix ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMethodFixOpen(true)}
+                    >
+                      {messages.finance.invoiceList.methodFix}:{" "}
+                      {paymentMethodLabel(targetMethod)}
+                    </Button>
+                  ) : null}
+                </div>
+
+                <div>
+                  <SectionLabel>
+                    {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */}
+                    <span>Món ăn</span>
+                  </SectionLabel>
+                  <BranchOperatorFrame className="mt-2 divide-y">
+                    {order.order_items.map((item) => {
+                      const hasAddOns =
+                        item.modifiers.length > 0 || item.sides.length > 0;
+                      const modifierUnit = item.modifiers.reduce(
+                        (sum, modifier) => sum + modifier.price,
+                        0,
+                      );
+                      const sideUnit = item.sides.reduce(
+                        (sum, side) => sum + side.price * side.quantity,
+                        0,
+                      );
+                      const baseUnit = Math.max(
+                        0,
+                        item.unit_price - modifierUnit - sideUnit,
+                      );
+
+                      return (
+                        <div key={item.id} className="flex gap-3 px-3 py-2">
+                          <span className="w-10 shrink-0 font-medium tabular-nums">
+                            {messages.settings.posSessions.quantityPrefix(
+                              item.quantity,
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium">
+                              {item.item_name}
+                              {item.variant_name ? (
+                                <span className="text-muted-foreground">
+                                  {" "}
+                                  ({item.variant_name})
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="text-xs text-muted-foreground tabular-nums">
+                              {messages.settings.posSessions.linePrice(
+                                formatVND(
+                                  hasAddOns ? baseUnit : item.unit_price,
+                                ),
+                                item.quantity,
+                              )}
+                              {item.status === "cancelled" ? (
+                                <span className="ml-2 text-destructive">
+                                  {messages.settings.posSessions.cancelledItem}
+                                </span>
+                              ) : null}
+                            </div>
+                            {hasAddOns ? (
+                              <div className="mt-1 flex flex-col gap-1">
+                                {item.modifiers.map((modifier) => (
+                                  <AddOnLine
+                                    key={`modifier-${String(modifier.modifier_id)}`}
+                                    label={
+                                      messages.settings.posSessions.modifier
+                                    }
+                                    name={modifier.name}
+                                    amount={modifier.price * item.quantity}
+                                  />
+                                ))}
+                                {item.sides.map((side) => {
+                                  const totalQuantity =
+                                    side.quantity * item.quantity;
+                                  const name =
+                                    totalQuantity > 1
+                                      ? `${side.name} ×${String(totalQuantity)}`
+                                      : side.name;
+
+                                  return (
+                                    <AddOnLine
+                                      key={`side-${String(side.side_item_id)}`}
+                                      label={messages.settings.posSessions.side}
+                                      name={name}
+                                      amount={side.price * totalQuantity}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                            {item.note ? (
+                              <div className="mt-1 text-xs italic text-muted-foreground">
+                                {messages.settings.posSessions.itemNote}:{" "}
+                                {item.note}
+                              </div>
+                            ) : null}
+                          </div>
+                          <span
+                            className={cn(
+                              "text-sm font-medium tabular-nums",
+                              item.status === "cancelled" &&
+                                "text-muted-foreground line-through",
+                            )}
+                          >
+                            {formatVND(item.subtotal)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </BranchOperatorFrame>
+                </div>
+
+                <BranchOperatorFrame className="flex flex-col gap-1.5 px-3 py-2 text-sm">
+                  <KVRow
+                    label={messages.settings.posSessions.subtotal}
+                    value={formatVND(order.subtotal)}
+                  />
+                  {order.discount_amount > 0 ? (
+                    <KVRow
+                      label={messages.settings.posSessions.discount}
+                      value={`-${formatVND(order.discount_amount)}`}
+                      tone="success"
+                    />
+                  ) : null}
+                  {order.service_charge > 0 ? (
+                    <KVRow
+                      label={messages.settings.posSessions.serviceCharge}
+                      value={formatVND(order.service_charge)}
+                    />
+                  ) : null}
+                  {order.tax_amount > 0 ? (
+                    <KVRow
+                      label={messages.settings.posSessions.tax}
+                      value={formatVND(order.tax_amount)}
+                    />
+                  ) : null}
+                  <Separator />
+                  <KVRow
+                    label={messages.settings.posSessions.total}
+                    value={formatVND(order.total_amount)}
+                    bold
+                  />
+                </BranchOperatorFrame>
+
+                {order.note ? (
+                  <NoteCallout label={messages.settings.posSessions.billNote}>
+                    {order.note}
+                  </NoteCallout>
+                ) : null}
+              </div>
+            ) : null}
+          </ScrollArea>
+        </DrawerContent>
+      </Drawer>
+
+      <ReasonConfirmDialog
+        open={methodFixOpen}
+        onOpenChange={(next) => {
+          setMethodFixOpen(next);
+          if (!next) setMethodFixReason("");
+        }}
+        title={messages.finance.invoiceList.methodFixDialogTitle}
+        description={messages.finance.invoiceList.methodFixWarning}
+        reasonId={`pos-order-method-fix-${String(order?.id ?? "none")}`}
+        reason={methodFixReason}
+        onReasonChange={setMethodFixReason}
+        reasonLabel={messages.finance.invoiceList.methodFixReasonLabel(5)}
+        reasonPlaceholder={
+          messages.finance.invoiceList.methodFixReasonPlaceholder
+        }
+        reasonMinLength={5}
+        reasonTextareaProps={{
+          rows: 3,
+          maxLength: 500,
+          disabled: isMethodFixPending,
+        }}
+        cancelLabel={messages.finance.invoiceList.methodFixCancel}
+        cancelDisabled={isMethodFixPending}
+        confirmLabel={messages.finance.invoiceList.methodFixConfirm}
+        canConfirm={trimmedMethodFixReason.length >= 5}
+        isPending={isMethodFixPending}
+        onConfirm={handleMethodFix}
+      />
+    </>
   );
 }
 
@@ -1214,17 +1382,20 @@ function KVRow({
 function buildSummary(orders: PosSessionOrder[]): SessionSummary {
   const activeOrders = orders.filter((order) => order.status !== "cancelled");
   const paid = activeOrders.filter((o) => o.payment_status === "paid");
+  const completedPayments = paid.flatMap((order) =>
+    order.payments.filter((payment) => payment.status === "completed"),
+  );
   const breakdownMap = new Map<string, { count: number; amount: number }>();
   let cashRevenue = 0;
   let noncashRevenue = 0;
-  for (const order of paid) {
-    const method = order.payment_method ?? "unknown";
+  for (const payment of completedPayments) {
+    const method = payment.method || "unknown";
     const entry = breakdownMap.get(method) ?? { count: 0, amount: 0 };
     entry.count += 1;
-    entry.amount += order.total_amount;
+    entry.amount += payment.amount;
     breakdownMap.set(method, entry);
-    if (method === "cash") cashRevenue += order.total_amount;
-    else noncashRevenue += order.total_amount;
+    if (method === "cash") cashRevenue += payment.amount;
+    else noncashRevenue += payment.amount;
   }
   const paymentBreakdown = Array.from(breakdownMap.entries())
     .map(([method, v]) => ({ method, count: v.count, amount: v.amount }))
@@ -1232,7 +1403,10 @@ function buildSummary(orders: PosSessionOrder[]): SessionSummary {
 
   return {
     billCount: activeOrders.length,
-    revenue: paid.reduce((sum, o) => sum + o.total_amount, 0),
+    revenue: completedPayments.reduce(
+      (sum, payment) => sum + payment.amount,
+      0,
+    ),
     servedItems: activeOrders.reduce((sum, o) => sum + countItems(o), 0),
     cashRevenue,
     noncashRevenue,

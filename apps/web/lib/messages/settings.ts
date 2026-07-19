@@ -598,6 +598,17 @@ export const settings = {
     varianceResolved: (difference: string) =>
       ` Chênh lệch lúc chốt ca: ${difference}.`,
     varianceApprovalNote: (note: string) => `Hướng xử lý: ${note}`,
+    varianceResolutionType: "Cách xử lý chênh lệch",
+    staffRepaid: "Nhân viên bù đủ tiền thiếu",
+    staffRepaidHint: (amount: string) =>
+      `Quản lý đã nhận đủ ${amount}; số đếm lúc chốt ca không bị sửa.`,
+    staffRepaidResult: (amount: string) =>
+      `Kết quả: nhân viên đã bù ${amount}; lệch lúc chốt vẫn được giữ để đối chiếu.`,
+    acceptedAdjustment: "Chấp nhận chênh lệch",
+    acceptedAdjustmentHint:
+      "Giữ nguyên số đếm và điều chỉnh tiền mặt theo sổ đúng phần thừa/thiếu.",
+    acceptedAdjustmentResult: (difference: string) =>
+      `Kết quả: tiền mặt theo sổ được điều chỉnh ${difference}; lệch lúc chốt vẫn được giữ để đối chiếu.`,
     varianceResolutionLabel: "Hướng xử lý",
     varianceResolutionPlaceholder:
       "VD: Thu ngân đã bù đủ tiền thiếu, quản lý đã nhận.",
@@ -610,11 +621,13 @@ export const settings = {
     totalBills: "Tổng bill",
     paidRevenue: "Doanh thu (đã thanh toán)",
     servedItems: "Món đã phục vụ",
-    cashVariance: "Chênh lệch quỹ",
+    cashVariance: "Lệch tiền mặt",
     notClosed: "Chưa chốt",
-    openingCash: "Tiền đầu ca",
-    expectedCash: "Tiền kỳ vọng (cash)",
-    countedCash: "Tiền thực đếm",
+    openingCash: "Tiền mặt đầu ca",
+    expectedCash: "Tiền mặt dự thu",
+    countedCash: "Tiền mặt đếm lúc chốt",
+    cashFormula:
+      "Dự thu = đầu ca + tiền mặt của các thanh toán hoàn tất trong ca. Lệch = tiền đếm − dự thu; âm là thiếu, dương là thừa. Tiền đếm lúc chốt không cộng doanh thu lần hai.",
     noValue: "Chưa có",
     cashCollected: "Tiền mặt thu được",
     bankTransfer: "Chuyển khoản",
@@ -622,7 +635,7 @@ export const settings = {
     unpaidOrders: "Đơn chưa thanh toán",
     paymentBreakdown: "Chi tiết phương thức thanh toán",
     methodCount: (method: string, count: number) =>
-      `${method} · ${formatCount(count)} đơn`,
+      `${method} · ${formatCount(count)} khoản`,
     cancelledOrders: (count: number) =>
       `${formatCount(count)} đơn đã hủy (không tính vào doanh thu).`,
     sessionNote: "Ghi chú ca",
