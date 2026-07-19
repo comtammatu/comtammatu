@@ -73,13 +73,6 @@ function enforceTransferActionScope(
     }
 
     if (
-      requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE &&
-      transfer.from_branch_id !== transfer.to_branch_id
-    ) {
-      return BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR;
-    }
-
-    if (
       requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE &&
       transfer.to_branch_id !== ownBranchId
     ) {
@@ -374,6 +367,9 @@ export async function createStockTransfer(
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
+  if (claims.user_role !== "owner") {
+    return { success: false, error: BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR };
+  }
 
   const isIntraBranch = fromBranchId === toBranchId;
 
@@ -399,52 +395,15 @@ export async function createStockTransfer(
         "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ Kho Tổng/Bếp Trung Tâm cấp chi nhánh hoặc điều chuyển giữa các chi nhánh.",
     };
   }
-  if (claims.user_role === "branch_manager") {
-    if (
-      claims.branch_id == null ||
-      toBranchId !== claims.branch_id ||
-      (isIntraBranch && fromBranchId !== claims.branch_id)
-    ) {
-      return {
-        success: false,
-        error: "Quản lý chi nhánh chỉ được yêu cầu hàng về chi nhánh của mình.",
-      };
-    }
-    if (
-      !isIntraBranch &&
-      fromKind !== "central_supply" &&
-      fromKind !== "central_kitchen"
-    ) {
-      return {
-        success: false,
-        error:
-          "Quản lý chi nhánh chỉ được yêu cầu hàng từ Kho Tổng hoặc Bếp Trung Tâm.",
-      };
-    }
-  }
-
-  const permissionBranchId =
-    claims.user_role === "branch_manager" ? toBranchId : fromBranchId;
   const { data: canCreate, error: canCreateError } = await supabase.rpc(
     "has_permission",
     {
-      p_branch_id: permissionBranchId,
+      p_branch_id: fromBranchId,
       p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
     },
   );
   if (canCreateError || canCreate !== true) {
     return { success: false, error: "Không có quyền tạo phiếu chuyển." };
-  }
-
-  // Branch-scoped role check
-  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
-    const my = claims.branch_id;
-    if (fromBranchId !== my && toBranchId !== my) {
-      return {
-        success: false,
-        error: "Bạn chỉ được tạo phiếu chuyển liên quan đến kho của mình.",
-      };
-    }
   }
 
   const transferNumber = `TRF-${randomUUID().slice(0, 8)}`;

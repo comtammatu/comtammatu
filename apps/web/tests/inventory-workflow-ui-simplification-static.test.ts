@@ -174,7 +174,7 @@ test("operations embedded lists keep management density instead of touch sizing"
 
   assert.doesNotMatch(grn, /basePath\.startsWith\("\/br\/"\)/);
   assert.match(issues, /listBasePath\.startsWith\("\/br\/"\)/);
-  assert.match(transfers, /basePath\.startsWith\("\/br\/"\)/);
+  assert.doesNotMatch(transfers, /basePath\.startsWith\("\/br\/"\)/);
 
   for (const source of [grn, issues, transfers]) {
     assert.doesNotMatch(source, /embedded \? "touch"/);

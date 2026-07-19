@@ -1,4 +1,3 @@
-import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatInventoryLocationLabelVi } from "@comtammatu/shared/labels";
 import type { IngredientUnitRow } from "@/(protected)/inventory/_lib/types";
 import {
@@ -52,15 +51,11 @@ export interface TransferTargetOption {
 }
 
 export interface TransferCreatePolicy {
-  isBranchManager: boolean;
   currentBranch: BranchForTransfer | null;
   currentBranchKind: string | null;
   outboundSourceBranchId: number | null;
   canCreateOutbound: boolean;
-  requestDestinationBranchId: number | null;
-  canCreateInboundRequest: boolean;
   outboundDestinationOptions: TransferTargetOption[];
-  inboundSourceOptions: BranchForTransfer[];
 }
 
 export type TransferLinesPayloadResult =
@@ -96,10 +91,6 @@ export function isTransferSourceKind(kind: string | null | undefined): boolean {
   );
 }
 
-export function formatTransferSiteLabel(branch: BranchForTransfer): string {
-  return branch.name;
-}
-
 export function formatTransferLocationLabel(
   branch: BranchForTransfer,
   kind: TransferSourceKind,
@@ -109,16 +100,6 @@ export function formatTransferLocationLabel(
     siteKind: branch.branch_kind,
     locationKind: kind,
   });
-}
-
-export function formatTransferOption(
-  branch: BranchForTransfer,
-  homeBranchId: number | null,
-): string {
-  if (homeBranchId != null && branch.id === homeBranchId) {
-    return formatTransferLocationLabel(branch, "warehouse");
-  }
-  return formatTransferSiteLabel(branch);
 }
 
 export function transferTargetValue(
@@ -241,13 +222,10 @@ export function getTransferOutboundDestinationOptions({
 export function resolveTransferCreatePolicy({
   branches,
   userBranchId,
-  userRole,
 }: {
   branches: BranchForTransfer[];
   userBranchId: number | null;
-  userRole: StaffRole;
 }): TransferCreatePolicy {
-  const isBranchManager = userRole === "branch_manager";
   const currentBranch =
     userBranchId == null
       ? null
@@ -255,12 +233,7 @@ export function resolveTransferCreatePolicy({
   const currentBranchKind = currentBranch?.branch_kind ?? null;
   const outboundSourceBranchId = userBranchId;
   const canCreateOutbound =
-    !isBranchManager &&
-    outboundSourceBranchId != null &&
-    isTransferSourceKind(currentBranchKind);
-  const requestDestinationBranchId =
-    isBranchManager && currentBranchKind === "branch" ? userBranchId : null;
-  const canCreateInboundRequest = requestDestinationBranchId != null;
+    outboundSourceBranchId != null && isTransferSourceKind(currentBranchKind);
   const outboundDestinationOptions = canCreateOutbound
     ? getTransferOutboundDestinationOptions({
         branches,
@@ -269,52 +242,14 @@ export function resolveTransferCreatePolicy({
         sourceLocationKind: "warehouse",
       })
     : [];
-  const inboundSourceOptions = canCreateInboundRequest
-    ? branches.filter((branch) => {
-        if (!branch.is_active) return false;
-        const kind = branch.branch_kind ?? "branch";
-        if (branch.id === requestDestinationBranchId) return kind === "branch";
-        return kind === "central_supply" || kind === "central_kitchen";
-      })
-    : [];
 
   return {
-    isBranchManager,
     currentBranch,
     currentBranchKind,
     outboundSourceBranchId,
     canCreateOutbound,
-    requestDestinationBranchId,
-    canCreateInboundRequest,
     outboundDestinationOptions,
-    inboundSourceOptions,
   };
-}
-
-export function getTransferSourceBranchIds({
-  branches,
-  userBranchId,
-  userRole,
-}: {
-  branches: BranchForTransfer[];
-  userBranchId: number | null;
-  userRole: StaffRole;
-}): number[] {
-  if (userRole !== "branch_manager") {
-    return userBranchId == null ? [] : [userBranchId];
-  }
-
-  return branches
-    .filter((branch) => {
-      if (!branch.is_active) return false;
-      const kind = branch.branch_kind ?? "branch";
-      return (
-        branch.id === userBranchId ||
-        kind === "central_supply" ||
-        kind === "central_kitchen"
-      );
-    })
-    .map((branch) => branch.id);
 }
 
 export function createTransferDraftLine(

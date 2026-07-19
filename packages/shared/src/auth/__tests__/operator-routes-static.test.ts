@@ -78,7 +78,6 @@ test("branch route families use branch bottom nav", () => {
     ["/br/7/stock/receive/123", "branch-stock"],
     ["/br/7/stock/transfer", "branch-stock"],
     ["/br/7/stock/transfer/123", "branch-stock"],
-    ["/br/7/stock/transfer/new", "branch-stock"],
     ["/br/7/stock/waste", "branch-stock"],
     ["/br/7/pos-sessions", "branch-pos-sessions"],
   ] as const) {
@@ -114,10 +113,7 @@ test("active branch position codes resolve to branch scope", () => {
 
 test("post-login fallback follows role and branch scope", () => {
   assert.equal(resolvePostLoginRedirect(claims("owner", null), null), "/");
-  assert.equal(
-    resolvePostLoginRedirect(claims("cashier", 7), null),
-    "/br/7",
-  );
+  assert.equal(resolvePostLoginRedirect(claims("cashier", 7), null), "/br/7");
 });
 
 test("post-login returnTo cannot cross branch-scoped operator routes", () => {
@@ -131,10 +127,7 @@ test("post-login returnTo cannot cross branch-scoped operator routes", () => {
   );
   // Unassigned/tenant-level operational claims (branch_id null) fail closed.
   assert.equal(
-    resolvePostLoginRedirect(
-      claims("branch_staff", null),
-      "/br/8/stock",
-    ),
+    resolvePostLoginRedirect(claims("branch_staff", null), "/br/8/stock"),
     "/access-denied?reason=branch-scope-mismatch",
   );
 });

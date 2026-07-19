@@ -5,7 +5,6 @@ import {
   ChevronRight as IconChevronRight,
   CircleCheck as IconCircleCheck,
   PackagePlus as IconPackageImport,
-  Plus as IconPlus,
   Send as IconSend,
 } from "lucide-react";
 import type { ElementType } from "react";
@@ -25,10 +24,7 @@ import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
-import {
-  fetchBranchesForTransfer,
-  fetchStockTransfers,
-} from "@/(protected)/inventory/transfer-actions";
+import { fetchStockTransfers } from "@/(protected)/inventory/transfer-actions";
 import {
   classifyTransfer,
   compareTransferQueue,
@@ -37,7 +33,6 @@ import {
 } from "@/(protected)/inventory/transfers/transfer-list-model";
 import { isTransferReceiveReady } from "@lib/inventory/transfer-detail-model";
 import {
-  BranchOperatorActionSection,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -47,13 +42,6 @@ import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
 interface PageProps {
   params: Promise<{ branchId: string }>;
   searchParams: Promise<{ queue?: string | string[] }>;
-}
-
-interface BranchForTransfer {
-  id: number;
-  name: string;
-  branch_kind?: string | null;
-  is_active: boolean;
 }
 
 const copy = messages.inventory.transfer;
@@ -123,18 +111,6 @@ function groupTransfers({
   }
 
   return groups;
-}
-
-function canCreateTransfer({
-  branchKind,
-  branchId,
-  branches,
-}: {
-  branchKind: string | null;
-  branchId: number;
-  branches: BranchForTransfer[];
-}) {
-  return branchId > 0 && branchKind === "branch" && branches.length >= 2;
 }
 
 function TransferCard({
@@ -241,32 +217,17 @@ export default async function OperatorStockTransferPage({
   const receiveOnly = queueParam === "receive";
 
   const { supabase, claims } = await loadAuthState();
-  const context = await resolveBranchContext(supabase, claims, branchId);
-  if (!context) notFound();
+  if (!(await resolveBranchContext(supabase, claims, branchId))) notFound();
 
-  const [transferResult, branchResult] = await Promise.all([
-    fetchStockTransfers(branchId),
-    fetchBranchesForTransfer(),
-  ]);
+  const transferResult = await fetchStockTransfers(branchId);
   const rows: TransferListRow[] = transferResult.success
     ? ((transferResult.data ?? []) as TransferListRow[])
     : [];
-  const branches: BranchForTransfer[] = branchResult.success
-    ? ((branchResult.data ?? []) as BranchForTransfer[])
-    : [];
-  const branchKind = context.branch.branch_kind ?? null;
   const groups = groupTransfers({
     rows,
     branchId,
     userRole: claims.user_role,
   });
-  const createEnabled = canCreateTransfer({
-    branchKind,
-    branchId,
-    branches,
-  });
-  const createLabel =
-    claims.user_role === "branch_manager" ? copy.requestGoods : copy.createSlip;
 
   return (
     <BranchOperatorPage
@@ -282,26 +243,6 @@ export default async function OperatorStockTransferPage({
     >
       {transferResult.success ? (
         <>
-          {createEnabled && !receiveOnly ? (
-            <BranchOperatorActionSection
-              title={messages.inventory.operatorFlow.transferCreateTitle}
-              description={
-                messages.inventory.operatorFlow.transferCreateDescription
-              }
-              links={[
-                {
-                  key: "create-transfer",
-                  href: `/br/${branchId}/stock/transfer/new`,
-                  icon: IconPlus,
-                  title: createLabel,
-                  description: copy.transferDescription,
-                },
-              ]}
-              columns={1}
-              mobileColumns={1}
-            />
-          ) : null}
-
           <TransferSection
             tab="receive"
             rows={groups.receive}

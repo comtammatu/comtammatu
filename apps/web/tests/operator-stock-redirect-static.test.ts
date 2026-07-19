@@ -930,17 +930,6 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
   assert.doesNotMatch(branchGrnCreateClient, /controlSize="field"/);
 });
 
-test("branch transfer create action stays inside the Branch shell", () => {
-  const transfersPage = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx",
-  );
-  assert.match(
-    transfersPage,
-    /href: `\/br\/\$\{branchId\}\/stock\/transfer\/new`/,
-    "branch transfer create action must stay under /br/[branchId]/stock",
-  );
-});
-
 test("transfer receive full receipt stays one-click on the existing atomic action", () => {
   // Receive happens inline on the detail page (action: "receive"); the
   // standalone [id]/receive sub-route was an unreachable orphan and was
@@ -1159,12 +1148,9 @@ test("operator stocktake routes keep session stocktake native to Branch", () => 
   assert.match(stocktakeModel, /canCompleteBranchStocktake/);
 });
 
-test("operator transfer routes keep list, create, detail, and form actions branch-scoped", () => {
+test("operator transfer routes keep list and detail Branch-scoped while Owner owns create", () => {
   const transferRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx",
-  );
-  const transferNewRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx",
   );
   const transferDetailRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx",
@@ -1183,9 +1169,6 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   );
   const branchTransferDetailClient = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/branch-transfer-detail-client.tsx",
-  );
-  const branchTransferCreateClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
   );
   const transferCreateData = read(
     "apps/web/lib/inventory/transfer-create-data.ts",
@@ -1216,16 +1199,13 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   );
   assert.match(transferRoute, /BranchOperatorPage/);
   assert.match(transferRoute, /BranchOperatorPanel/);
-  assert.match(transferRoute, /BranchOperatorActionSection/);
   assert.match(transferRoute, /fetchStockTransfers\(branchId\)/);
-  assert.match(transferRoute, /fetchBranchesForTransfer\(\)/);
   assert.match(
     transferRoute,
     /resolveBranchContext\(supabase, claims, branchId\)/,
   );
   assert.match(transferRoute, /classifyTransfer/);
   assert.match(transferRoute, /compareTransferQueue/);
-  assert.match(transferRoute, /copy\.requestGoods/);
   assert.match(transferRoute, /isTransferReceiveReady\(row\.status\)/);
   assert.match(
     transferRoute,
@@ -1235,51 +1215,15 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     transferRoute,
     /`\/br\/\$\{branchId\}\/stock\/transfer\/\$\{row\.id\}`/,
   );
-  assert.match(
+  assert.doesNotMatch(
     transferRoute,
-    /href: `\/br\/\$\{branchId\}\/stock\/transfer\/new`/,
+    /BranchOperatorActionSection|fetchBranchesForTransfer|stock\/transfer\/new/,
   );
   assert.doesNotMatch(transferRoute, /TransfersPageContent/);
   assert.doesNotMatch(transferRoute, /TransfersListClient/);
   assert.doesNotMatch(transferRoute, /DataTable/);
   assert.doesNotMatch(transferRoute, /embedded/);
 
-  assert.match(
-    transferNewRoute,
-    /const basePath = `\/br\/\$\{branchId\}\/stock\/transfer`/,
-  );
-  assert.match(
-    transferNewRoute,
-    /loadTransferCreatePageData\(\{ routeBranchId: branchId \}\)/,
-  );
-  assert.match(transferNewRoute, /<BranchOperatorPage/);
-  assert.match(transferNewRoute, /<BranchTransferCreateClient/);
-  assert.match(transferNewRoute, /operatorFlow\.transferCreateTitle/);
-  assert.match(transferNewRoute, /operatorFlow\.transferCreateDescription/);
-  assert.doesNotMatch(
-    transferNewRoute,
-    /NewTransferPageContent|DocumentFormFrame|CreateTransferForm|embedded/,
-  );
-  assert.doesNotMatch(transferNewRoute, /href=\{?["'`]\/inventory\/transfers/);
-
-  assert.match(branchTransferCreateClient, /useTransferCreateController/);
-  assert.match(branchTransferCreateClient, /branchScopeInPath: true/);
-  assert.match(branchTransferCreateClient, /BranchOperatorPanel/);
-  assert.match(
-    branchTransferCreateClient,
-    /lg:grid-cols-\[minmax\(0,0\.85fr\)_minmax\(0,1\.15fr\)\]/,
-  );
-  assert.match(branchTransferCreateClient, /size="touch"/);
-  assert.match(branchTransferCreateClient, /size="touch-lg"/);
-  assert.match(branchTransferCreateClient, /copy\.kitchenDispatchNative/);
-  assert.match(branchTransferCreateClient, /className="min-h-11 py-2\.5"/);
-  assert.match(branchTransferCreateClient, /className="h-11 min-w-11 px-2"/);
-  assert.match(branchTransferCreateClient, /<AppDetailFooter[\s\S]*sticky/);
-  assert.match(branchTransferCreateClient, /inputMode="decimal"/);
-  assert.doesNotMatch(
-    branchTransferCreateClient,
-    /DocumentFormFrame|DataTable|CreateTransferForm|embedded/,
-  );
   assert.match(transferCreateData, /"production_storage"/);
   assert.match(transferCreateData, /itemKind: ingredient\.item_kind \?\? null/);
   assert.match(transferCreateModel, /getTransferSourceLocationOptions/);
@@ -1334,7 +1278,7 @@ test("operator transfer routes keep list, create, detail, and form actions branc
 
   assert.match(transfersPage, /basePath = "\/inventory\/transfers"/);
   assert.match(transfersPage, /basePath=\{basePath\}/);
-  assert.match(transfersPage, /createBasePath=\{createBasePath\}/);
+  assert.doesNotMatch(transfersPage, /createBasePath|supplierGrnBasePath/);
   assert.match(transferNewPage, /basePath=\{basePath\}/);
   assert.match(transferNewPage, /<DocumentFormFrame/);
   assert.match(transferNewPage, /loadTransferCreatePageData/);
@@ -1355,7 +1299,10 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   assert.match(transferCreateModel, /resolveTransferCreatePolicy/);
   assert.match(transferCreateModel, /buildTransferLinesPayload/);
   assert.match(transferCreateController, /createStockTransfer/);
-  assert.match(transferCreateController, /branchScopeInPath/);
+  assert.doesNotMatch(
+    transferCreateController,
+    /branchScopeInPath|canCreateInboundRequest|inboundFromBranchId|isBranchManager/,
+  );
   assert.match(transferCreateController, /selectedSourceLocationId/);
   assert.match(transferCreateController, /router\.refresh\(\)/);
   assert.match(
@@ -1376,18 +1323,14 @@ test("operator transfer routes keep list, create, detail, and form actions branc
     transferDetailClient,
     /<AppDetailFooter[\s\S]*sticky=\{embedded\}/,
   );
-  assert.match(transferCreateModel, /canCreateInboundRequest/);
-  assert.match(transferCreateModel, /requestDestinationBranchId/);
-  assert.match(transferCreateModel, /inboundSourceOptions/);
-  assert.match(
-    transferCreateController,
-    /fromBranchId = Number\(inboundFromBranchId\)/,
-  );
-  assert.match(transfersListClient, /canCreateInboundRequest/);
-  assert.match(transfersListClient, /isBranchManager \? copy\.requestGoods/);
+  assert.match(transfersListClient, /const isOwner = userRole === "owner"/);
   assert.match(
     transfersListClient,
-    /createPathBase = createBasePath \?\? basePath/,
+    /const canCreate = createEnabled && canCreateOutbound/,
+  );
+  assert.doesNotMatch(
+    transfersListClient,
+    /createBasePath|supplierGrnBasePath|canCreateInboundRequest|requestGoods|isOperator/,
   );
   assert.match(
     transferListModel,
@@ -1395,17 +1338,9 @@ test("operator transfer routes keep list, create, detail, and form actions branc
   );
   assert.match(transfersListClient, /classifyTransfer/);
   assert.match(transfersListClient, /compareTransferQueue/);
-  assert.match(transfersListClient, /if \(isOperator\) \{/);
   assert.match(transfersListClient, /<AppToolbar\s+variant="inline"/);
   assert.doesNotMatch(transfersListClient, /<AppToolbar\s+variant="card"/);
-  assert.match(
-    transferActions,
-    /claims\.user_role === "branch_manager"[\s\S]*toBranchId !== claims\.branch_id/,
-  );
-  assert.match(
-    transferActions,
-    /fromKind !== "central_supply"\s*&&\s*fromKind !== "central_kitchen"/,
-  );
+  assert.match(transferActions, /claims\.user_role !== "owner"/);
   assert.match(
     transferActions,
     /\.array\(transferLineInputSchema\)\s*\.min\(1/,
@@ -1456,10 +1391,7 @@ test("operator count assignments render branch-native inside the branch operator
   assert.match(branchData, /resolveInventoryListScope/);
   assert.match(branchData, /PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN/);
 
-  assert.match(
-    ownerPage,
-    /export async function CountAssignmentsPageContent/,
-  );
+  assert.match(ownerPage, /export async function CountAssignmentsPageContent/);
   assert.doesNotMatch(ownerPage, /routeBranchId|embedded/);
   assert.doesNotMatch(client, /embedded/);
   assert.match(client, /<AppPage width="xwide"/);
@@ -1515,10 +1447,7 @@ test("operator production renders branch-native inside the production operator s
   assert.doesNotMatch(route, /ProductionPageContent/);
   assert.doesNotMatch(route, /redirect\(`\/inventory\/production/);
 
-  assert.match(
-    ownerPage,
-    /export async function ProductionPageContent/,
-  );
+  assert.match(ownerPage, /export async function ProductionPageContent/);
   assert.match(ownerPage, /routeBranchId\?: number/);
   assert.match(ownerPage, /embedded\?: boolean/);
   assert.match(ownerPage, /embedded=\{embedded\}/);

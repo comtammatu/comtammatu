@@ -37,14 +37,12 @@ import {
 import { matchesSearch } from "@lib/search";
 import type { BranchForTransfer } from "@lib/inventory/transfer-create-model";
 import {
-  AppEmptyState,
   AppPage,
   AppPageHeader,
   AppSection,
   AppToolbar,
 } from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { ItemGroup } from "@comtammatu/ui/components/item";
 import { useLongPress } from "@lib/hooks/use-long-press";
 import {
   Drawer,
@@ -54,7 +52,6 @@ import {
   DrawerDescription,
 } from "@comtammatu/ui/components/drawer";
 import { StatusBadge } from "@/components/status-badge";
-import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import { messages } from "@lib/messages";
 import {
   classifyTransfer,
@@ -63,7 +60,7 @@ import {
   type TransferTab,
 } from "./transfer-list-model";
 
-import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer };
 export type { TransferListRow, TransferTab };
 
@@ -84,8 +81,6 @@ export function TransfersListClient({
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
-  createBasePath,
-  supplierGrnBasePath,
   createEnabled = true,
   initialTab = "receive",
   pageTitle: pageTitleOverride,
@@ -96,66 +91,38 @@ export function TransfersListClient({
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
-  createBasePath?: string;
-  supplierGrnBasePath?: string;
   createEnabled?: boolean;
   initialTab?: TransferTab;
   pageTitle?: string;
   embedded?: boolean;
 }) {
-  const isOperator = basePath.startsWith("/br/");
-  const isBranchManager = userRole === "branch_manager";
+  const isOwner = userRole === "owner";
   const userBranchKind =
     userBranchId == null
       ? null
       : (branches.find((branch) => branch.id === userBranchId)?.branch_kind ??
         null);
   const canCreateOutbound =
-    !isBranchManager &&
+    isOwner &&
     userBranchId != null &&
     (userBranchKind === "branch" ||
       userBranchKind === "central_supply" ||
       userBranchKind === "central_kitchen") &&
     branches.length >= 2;
-  const canCreateInboundRequest =
-    isBranchManager &&
-    userBranchId != null &&
-    userBranchKind === "branch" &&
-    branches.some(
-      (branch) =>
-        branch.is_active &&
-        (branch.branch_kind === "central_supply" ||
-          branch.branch_kind === "central_kitchen"),
-    );
-  const canCreate =
-    createEnabled && (canCreateOutbound || canCreateInboundRequest);
+  const canCreate = createEnabled && canCreateOutbound;
   const rows = initial;
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<TransferTab>(initialTab);
   const [drawerRow, setDrawerRow] = useState<TransferListRow | null>(null);
   const router = useRouter();
 
-  const createLabel = isBranchManager ? copy.requestGoods : copy.createSlip;
+  const createLabel = copy.createSlip;
   const pageTitle = pageTitleOverride ?? copy.internalTransferTitle;
   const tabLabels: Record<TransferTab, string> = TAB_LABELS;
-  const createPathBase = createBasePath ?? basePath;
-  const operatorFlow = messages.inventory.operatorFlow;
   const createHref =
     userBranchId == null
-      ? `${createPathBase}/new`
-      : `${createPathBase}/new?branchId=${userBranchId}`;
-
-  // Branch operators receive directly from a supplier (GRN) in addition to
-  // requesting stock from a central site (D068). Surfaced only when the route
-  // provides the GRN base path for branch receiving.
-  const canReceiveSupplier =
-    isBranchManager &&
-    userBranchKind === "branch" &&
-    supplierGrnBasePath != null;
-  const supplierGrnHref =
-    userBranchId == null
-      ? `${supplierGrnBasePath}/new`
-      : `${supplierGrnBasePath}/new?branchId=${userBranchId}`;
+      ? `${basePath}/new`
+      : `${basePath}/new?branchId=${userBranchId}`;
 
   const tabGroups = useMemo(() => {
     const groups: Record<TransferTab, TransferListRow[]> = {
@@ -324,91 +291,8 @@ export function TransfersListClient({
     </Drawer>
   );
 
-  if (isOperator) {
-    return (
-      <div className="flex w-full flex-col gap-3">
-        <OperatorFlowSteps
-          title={operatorFlow.transferListTitle}
-          description={operatorFlow.transferListDescription}
-          steps={operatorFlow.transferSteps}
-          currentStep={1}
-        />
-
-        {canReceiveSupplier || canCreate ? (
-          <div className="flex justify-end gap-2">
-            {canReceiveSupplier ? (
-              <Button size="touch" render={<Link href={supplierGrnHref} />}>
-                <IconPackageImport data-icon="inline-start" />
-                {INVENTORY_VI.receivingEyebrow}
-              </Button>
-            ) : null}
-            {canCreate ? (
-              <Button
-                size="touch"
-                variant={canReceiveSupplier ? "outline" : "default"}
-                render={<Link href={createHref} />}
-              >
-                <IconPlus data-icon="inline-start" />
-                {createLabel}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
-        <AppToolbar
-          variant="inline"
-          className="items-stretch sm:items-center"
-          search={
-            <InputGroup className="min-h-12 w-full">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="search"
-                placeholder={copy.list.searchPlaceholder}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <InputGroupAddon align="inline-end">
-                <InputGroupText>
-                  {searchFiltered.length} / {rows.length}
-                </InputGroupText>
-              </InputGroupAddon>
-            </InputGroup>
-          }
-        />
-
-        {searchFiltered.length === 0 ? (
-          <AppEmptyState
-            compact
-            title={emptyTitle}
-            description={emptyDescription}
-            icon={emptyIcon}
-          />
-        ) : (
-          <ItemGroup className="gap-2 p-0 rounded-none border-0">
-            {searchFiltered.map((r) => (
-              <MobileTransferCard
-                key={r.id}
-                row={r}
-                tab={activeTab}
-                href={detailHref(r.id)}
-                onOpenDrawer={setDrawerRow}
-              />
-            ))}
-          </ItemGroup>
-        )}
-
-        {transferDrawer}
-      </div>
-    );
-  }
-
   const desktopCreateAction = canCreate ? (
-    <Button
-      size={isOperator ? "touch" : "sm"}
-      render={<Link href={createHref} />}
-    >
+    <Button size="sm" render={<Link href={createHref} />}>
       <IconPlus data-icon="inline-start" />
       {createLabel}
     </Button>
@@ -419,13 +303,7 @@ export function TransfersListClient({
       variant="inline"
       className="items-stretch sm:items-center"
       search={
-        <InputGroup
-          className={
-            isOperator
-              ? "min-h-12 w-full sm:h-10 sm:flex-1"
-              : "min-h-10 w-full sm:h-10 sm:flex-1"
-          }
-        >
+        <InputGroup className="min-h-10 w-full sm:h-10 sm:flex-1">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -448,10 +326,8 @@ export function TransfersListClient({
           onValueChange={(value) => setActiveTab(value as TransferTab)}
         >
           <SelectTrigger
-            size={isOperator ? "touch" : "default"}
-            className={
-              isOperator ? "w-full sm:w-56" : "min-h-10 w-full sm:h-10 sm:w-56"
-            }
+            size="default"
+            className="min-h-10 w-full sm:h-10 sm:w-56"
           >
             <SelectValue />
           </SelectTrigger>

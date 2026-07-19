@@ -34,7 +34,6 @@ import {
 import type { TransferCreatePageData } from "@lib/inventory/transfer-create-data";
 import {
   formatTransferLocationLabel,
-  formatTransferOption,
   formatTransferTargetOption,
   getTransferWarehouseUnit,
 } from "@lib/inventory/transfer-create-model";
@@ -67,57 +66,7 @@ export function CreateTransferForm({
         />
       ) : null}
       <AppSection title={copy.createTransferTitle}>
-        {controller.canCreateInboundRequest ? (
-          <div className="flex flex-col gap-3">
-            <DescriptionList
-              className="grid gap-2 sm:grid-cols-2"
-              descriptionClassName="font-semibold"
-              items={[
-                {
-                  term: copy.sourceBranchLabel,
-                  description:
-                    controller.inboundSourceName ?? copy.chooseSendingWarehouse,
-                },
-                {
-                  term: copy.targetBranchLabel,
-                  description:
-                    controller.inboundDestinationName ?? copy.inboundToSelected,
-                },
-              ]}
-            />
-            <FormField
-              controlId="owner-transfer-source"
-              label={copy.sendingWarehouseRequired}
-              required
-            >
-              <Select
-                value={controller.inboundFromBranchId}
-                onValueChange={controller.handleInboundSourceChange}
-              >
-                <SelectTrigger
-                  id="owner-transfer-source"
-                  size="field"
-                  className="w-full"
-                  aria-required
-                >
-                  <SelectValue placeholder={copy.chooseSendingWarehouse} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {controller.inboundSourceOptions.map((branch) => (
-                      <SelectItem key={branch.id} value={String(branch.id)}>
-                        {formatTransferOption(
-                          branch,
-                          controller.requestDestinationBranchId,
-                        )}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </FormField>
-          </div>
-        ) : controller.canCreateOutbound ? (
+        {controller.canCreateOutbound ? (
           <div className="flex flex-col gap-3">
             <DescriptionList
               className="grid gap-2 sm:grid-cols-2"
@@ -373,20 +322,14 @@ export function CreateTransferForm({
       </AppSection>
 
       <AppSection title={FORM_VI.notes}>
-        <FormField
-          controlId="owner-transfer-vehicle"
-          label={copy.vehicleInfo}
-        >
+        <FormField controlId="owner-transfer-vehicle" label={copy.vehicleInfo}>
           <Input
             id="owner-transfer-vehicle"
             name="vehicleInfo"
             className="h-10"
           />
         </FormField>
-        <FormField
-          controlId="owner-transfer-notes"
-          label={FORM_VI.notes}
-        >
+        <FormField controlId="owner-transfer-notes" label={FORM_VI.notes}>
           <Textarea
             id="owner-transfer-notes"
             name="notes"

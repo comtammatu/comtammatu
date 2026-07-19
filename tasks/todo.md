@@ -83,17 +83,6 @@ Evidence: Focused static contract plus runtime QA at `390x844`, `768x1024`, `102
 
 - [ ] Replace the current oversized row/gap treatment, add separators, and verify touch and scroll behavior at the named viewports.
 
-## Disable new Branch stock transfers
-
-State: ready
-Kind: defect
-Tier: T2
-Lane: inventory
-Exit: Branch users cannot open or submit a new stock transfer, while historical transfer detail and receive evidence remain read-only and reachable where required.
-Evidence: Route/navigation coverage plus a Server Action denial test proving direct invocation cannot call the transfer RPC.
-
-- [ ] Remove the create entry point and fail closed in the Server Action without deleting historical transfer data, detail, or receipt evidence.
-
 ## Verify the Finance payment cutover
 
 State: verify

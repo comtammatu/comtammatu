@@ -22,10 +22,6 @@ test("operator inventory work routes expose touch progress steps", () => {
       /grnCopy\.inspectionItemsTitle/,
     ],
     [
-      "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx",
-      /operatorFlow\.transferListTitle/,
-    ],
-    [
       "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
       /operatorFlow\.stocktakeListTitle/,
     ],
@@ -87,60 +83,6 @@ test("operator inventory work routes expose touch progress steps", () => {
   assert.doesNotMatch(branchProductionNew, /await createProductionRun/);
   assert.doesNotMatch(branchProductionNew, /await confirmProductionRun/);
   assert.doesNotMatch(branchProductionNew, /createdRunId/);
-
-});
-
-test("transfer create gates embedded sections by touch workflow state", () => {
-  const source = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
-  );
-  const dataSource = read("apps/web/lib/inventory/transfer-create-data.ts");
-  const modelSource = read("apps/web/lib/inventory/transfer-create-model.ts");
-  const controllerSource = read(
-    "apps/web/lib/inventory/use-transfer-create-controller.ts",
-  );
-
-  assert.doesNotMatch(source, /<OperatorFlowSteps/);
-  assert.match(source, /@comtammatu\/ui\/components\/progress/);
-  assert.match(source, /controller\.flowProgressValue/);
-  assert.match(source, /controller\.selectedBranch \? \(/);
-  assert.match(source, /controller\.draftLines\.length > 0 \? \(/);
-  assert.match(modelSource, /export interface TransferIngredientOption/);
-  assert.match(dataSource, /function toTransferIngredientOption/);
-  assert.match(dataSource, /id: ingredient\.id/);
-  assert.match(dataSource, /itemKind: ingredient\.item_kind \?\? null/);
-  assert.match(dataSource, /units: ingredient\.units/);
-  assert.match(dataSource, /"production_storage"/);
-  assert.match(modelSource, /getTransferSourceLocationOptions/);
-  assert.match(modelSource, /location\.kind === "production_storage"/);
-  assert.match(modelSource, /getTransferSelectableIngredients/);
-  assert.match(modelSource, /ingredient\.itemKind === "finished_good"/);
-  assert.match(controllerSource, /selectedSourceBranch\?\.branch_kind/);
-  assert.doesNotMatch(source, /IngredientRow/);
-});
-
-test("transfer create uses compact branch-location labels", () => {
-  const source = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
-  );
-  const modelSource = read("apps/web/lib/inventory/transfer-create-model.ts");
-
-  assert.match(modelSource, /export function formatTransferSiteLabel/);
-  assert.match(modelSource, /return branch\.name/);
-  assert.match(modelSource, /export function formatTransferLocationLabel/);
-  assert.match(
-    modelSource,
-    /formatTransferLocationLabel\(option\.branch, option\.kind\)/,
-  );
-  assert.match(
-    source,
-    /formatTransferOption\(\s*branch,\s*controller\.requestDestinationBranchId/,
-  );
-  assert.match(
-    modelSource,
-    /formatTransferLocationLabel\(branch, "warehouse"\)/,
-  );
-  assert.doesNotMatch(modelSource, /default(?:Warehouse|Kitchen)Suffix/);
 });
 
 test("transfer receive keeps the phone first viewport on line receiving", () => {

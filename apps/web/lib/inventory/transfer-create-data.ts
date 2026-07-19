@@ -1,14 +1,12 @@
 import "server-only";
 
 import { notFound } from "next/navigation";
-import type { StaffRole } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchBranchesForTransfer } from "@/(protected)/inventory/transfer-actions";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import type { IngredientRow } from "@/(protected)/inventory/page";
 import {
-  getTransferSourceBranchIds,
   type BranchForTransfer,
   type TransferIngredientOption,
   type TransferSourceLocation,
@@ -25,7 +23,6 @@ export interface TransferCreatePageData {
   sourceLocationsByBranch: Record<number, TransferSourceLocation[]>;
   sourceStockByLocation: Record<number, Record<number, number>>;
   userBranchId: number | null;
-  userRole: StaffRole;
   loadFailed: boolean;
 }
 
@@ -66,11 +63,7 @@ export async function loadTransferCreatePageData({
       )
     : [];
   let loadFailed = !branchResult.success || !ingredientResult.success;
-  const sourceBranchIds = getTransferSourceBranchIds({
-    branches,
-    userBranchId,
-    userRole: claims.user_role,
-  });
+  const sourceBranchIds = userBranchId == null ? [] : [userBranchId];
   const sourceLocationsByBranch: Record<number, TransferSourceLocation[]> = {};
   const sourceStockByLocation: Record<number, Record<number, number>> = {};
 
@@ -116,7 +109,6 @@ export async function loadTransferCreatePageData({
         sourceLocationsByBranch,
         sourceStockByLocation,
         userBranchId,
-        userRole: claims.user_role,
         loadFailed,
       };
     }
@@ -141,7 +133,6 @@ export async function loadTransferCreatePageData({
     sourceLocationsByBranch,
     sourceStockByLocation,
     userBranchId,
-    userRole: claims.user_role,
     loadFailed,
   };
 }

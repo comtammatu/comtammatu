@@ -25,7 +25,8 @@ export const PAGE_ARCHETYPES = {
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx":
     "SETTINGS-PANEL",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx": "LANDING",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx":
+    "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx":
     "REPORT",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx":
@@ -108,8 +109,6 @@ export const PAGE_ARCHETYPES = {
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx":
     "DETAIL",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx":
-    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx":

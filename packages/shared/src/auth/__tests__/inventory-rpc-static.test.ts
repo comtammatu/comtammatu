@@ -64,30 +64,42 @@ test("stocktake heartbeat lock RPC rechecks ttl and branch permission", () => {
   );
 });
 
-test("branch manager transfer request RPC gates inbound requests by receiving branch", () => {
+test("stock transfer draft creation is owner-only at the RPC boundary", () => {
   const source = readRepoFile(
-    "supabase/migration-archive/20260702094500_branch_stock_operator_actions.sql",
+    "supabase/migrations/20260719165715_restrict_stock_transfer_creation_to_owner.sql",
   );
 
   assert.match(
     source,
-    /CREATE OR REPLACE FUNCTION public\.create_stock_transfer_draft/,
-  );
-  assert.match(source, /v_branch_claim BIGINT := public\.auth_branch_id\(\)/);
-  assert.match(
-    source,
-    /v_role = 'branch_manager'[\s\S]*p_to_branch_id <> v_branch_claim/,
+    /CREATE OR REPLACE FUNCTION "public"\."create_stock_transfer_draft"/,
   );
   assert.match(
     source,
-    /v_from_kind NOT IN \('central_supply', 'central_kitchen'\)/,
+    /v_role IS DISTINCT FROM 'owner'[\s\S]*stock_transfer_create_owner_only[\s\S]*ERRCODE = '42501'/,
   );
   assert.match(
     source,
-    /public\.has_permission\(p_to_branch_id, 'inventory:transfer_create'\)/,
+    /UPDATE public\.permission_keys[\s\S]*is_delegable_to_staff = false[\s\S]*inventory:transfer_create/,
   );
   assert.match(
     source,
-    /COALESCE\(permission_keys, ARRAY\[\]::text\[\]\) \|\| ARRAY\['inventory:writeoff'\]/,
+    /UPDATE public\.role_templates[\s\S]*array_remove\(permission_keys, 'inventory:transfer_create'\)[\s\S]*position_code IS DISTINCT FROM 'owner'/,
+  );
+  assert.match(
+    source,
+    /INSERT INTO public\.permission_audit_log[\s\S]*DELETE FROM public\.staff_permissions/,
+  );
+  assert.match(
+    source,
+    /public\.has_permission\(p_from_branch_id, 'inventory:transfer_create'\)/,
+  );
+  assert.doesNotMatch(source, /v_branch_claim|branch_manager/);
+  assert.match(
+    source,
+    /REVOKE ALL ON FUNCTION[\s\S]*create_stock_transfer_draft[\s\S]*FROM PUBLIC/,
+  );
+  assert.match(
+    source,
+    /GRANT ALL ON FUNCTION[\s\S]*create_stock_transfer_draft[\s\S]*TO "authenticated"/,
   );
 });

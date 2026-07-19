@@ -21,7 +21,6 @@ import {
   getTransferSourceLocationOptions,
   getTransferOutboundDestinationOptions,
   formatTransferLocationLabel,
-  formatTransferOption,
   formatTransferTargetOption,
   getTransferLineMaxEntryQuantity,
   parseTransferTargetValue,
@@ -39,10 +38,8 @@ interface UseTransferCreateControllerOptions {
   sourceLocationsByBranch: Record<number, TransferSourceLocation[]>;
   sourceStockByLocation: Record<number, Record<number, number>>;
   userBranchId: number | null;
-  userRole: Parameters<typeof resolveTransferCreatePolicy>[0]["userRole"];
   loadFailed: boolean;
   basePath: string;
-  branchScopeInPath?: boolean;
 }
 
 export function useTransferCreateController({
@@ -51,25 +48,20 @@ export function useTransferCreateController({
   sourceLocationsByBranch,
   sourceStockByLocation,
   userBranchId,
-  userRole,
   loadFailed,
   basePath,
-  branchScopeInPath = false,
 }: UseTransferCreateControllerOptions) {
   const router = useRouter();
   const policy = useMemo(
-    () => resolveTransferCreatePolicy({ branches, userBranchId, userRole }),
-    [branches, userBranchId, userRole],
+    () => resolveTransferCreatePolicy({ branches, userBranchId }),
+    [branches, userBranchId],
   );
   const [outboundToBranchId, setOutboundToBranchId] = useState("");
-  const [inboundFromBranchId, setInboundFromBranchId] = useState("");
   const [outboundSourceLocationId, setOutboundSourceLocationId] = useState("");
   const [draftLines, setDraftLines] = useState<TransferDraftLine[]>([]);
   const [pickerIngredientId, setPickerIngredientId] = useState("");
   const [isPending, startTransition] = useTransition();
-  const selectedSourceBranchId = policy.isBranchManager
-    ? Number(inboundFromBranchId) || null
-    : policy.outboundSourceBranchId;
+  const selectedSourceBranchId = policy.outboundSourceBranchId;
   const selectedSourceBranch =
     selectedSourceBranchId == null
       ? null
@@ -119,79 +111,16 @@ export function useTransferCreateController({
         selectedSourceLocation?.kind ?? "warehouse",
       )
     : null;
-  const sourceContextLabel = useMemo(() => {
-    if (policy.isBranchManager) {
-      const source = branches.find(
-        (branch) => String(branch.id) === inboundFromBranchId,
-      );
-      if (!source) return null;
-      return selectedSourceLocation
-        ? formatTransferLocationLabel(source, selectedSourceLocation.kind)
-        : formatTransferOption(source, policy.requestDestinationBranchId);
-    }
-    return myBranchName;
-  }, [
-    branches,
-    inboundFromBranchId,
-    myBranchName,
-    policy.isBranchManager,
-    policy.requestDestinationBranchId,
-    selectedSourceLocation,
-  ]);
   const outboundDestinationName = useMemo(() => {
     const option = outboundDestinationOptions.find(
       (item) => item.value === outboundToBranchId,
     );
     return option ? formatTransferTargetOption(option) : null;
   }, [outboundDestinationOptions, outboundToBranchId]);
-  const inboundSourceName = useMemo(() => {
-    const branch = branches.find(
-      (item) => String(item.id) === inboundFromBranchId,
-    );
-    if (!branch) return null;
-    return selectedSourceLocation
-      ? formatTransferLocationLabel(branch, selectedSourceLocation.kind)
-      : formatTransferOption(branch, policy.requestDestinationBranchId);
-  }, [
-    branches,
-    inboundFromBranchId,
-    policy.requestDestinationBranchId,
-    selectedSourceLocation,
-  ]);
-  const inboundDestinationName = policy.currentBranch
-    ? formatTransferLocationLabel(
-        policy.currentBranch,
-        Number(inboundFromBranchId) === policy.requestDestinationBranchId
-          ? "kitchen"
-          : "warehouse",
-      )
-    : null;
-
-  const selectedBranch = policy.isBranchManager
-    ? Boolean(inboundFromBranchId)
-    : Boolean(outboundToBranchId);
-  const isKitchenDispatch =
-    !policy.isBranchManager && policy.currentBranchKind === "central_kitchen";
-  const flowSteps = isKitchenDispatch
-    ? messages.inventory.operatorFlow.kitchenDispatchSteps
-    : messages.inventory.operatorFlow.transferCreateSteps;
-  const flowStep = draftLines.length > 0 ? 3 : selectedBranch ? 2 : 1;
-  const flowStepMeta = flowSteps[flowStep - 1] ?? {
-    label: isKitchenDispatch
-      ? messages.inventory.operatorFlow.kitchenDispatchTitle
-      : messages.inventory.operatorFlow.transferCreateTitle,
-    hint: isKitchenDispatch
-      ? messages.inventory.operatorFlow.kitchenDispatchDescription
-      : messages.inventory.operatorFlow.transferCreateDescription,
-  };
-  const flowProgressValue = Math.round((flowStep / flowSteps.length) * 100);
-  const listHref = branchScopeInPath
-    ? basePath
-    : withTransferBranchQuery(basePath, userBranchId);
+  const listHref = withTransferBranchQuery(basePath, userBranchId);
 
   function resetForm() {
     setOutboundToBranchId("");
-    setInboundFromBranchId("");
     setOutboundSourceLocationId("");
     setDraftLines([]);
     setPickerIngredientId("");
@@ -216,27 +145,6 @@ export function useTransferCreateController({
 
   function getLineMaxQuantityValue(line: TransferDraftLine): string {
     return formatIssueMaxEntryQuantity(getLineMaxQuantity(line));
-  }
-
-  function handleInboundSourceChange(value: string) {
-    const nextSourceBranchId = Number(value) || null;
-    const nextSourceLocation = getDefaultTransferSourceLocation(
-      nextSourceBranchId == null
-        ? []
-        : (sourceLocationsByBranch[nextSourceBranchId] ?? []),
-    );
-    setInboundFromBranchId(value);
-    setOutboundSourceLocationId("");
-    setDraftLines((current) =>
-      current.map((line) =>
-        clampTransferLineForSource({
-          line,
-          ingredients,
-          sourceStockByLocation,
-          sourceLocationId: nextSourceLocation?.id ?? null,
-        }),
-      ),
-    );
   }
 
   function handleOutboundSourceLocationChange(value: string) {
@@ -362,44 +270,22 @@ export function useTransferCreateController({
       return;
     }
 
-    if (!policy.canCreateOutbound && !policy.canCreateInboundRequest) {
+    if (!policy.canCreateOutbound) {
       toast.error(messages.inventory.transfer.createForbidden);
       return;
     }
 
-    let fromBranchId = policy.outboundSourceBranchId ?? undefined;
-    let toBranchId: number | undefined;
-    let toLocationKind: "default_receive" | "branch_kitchen" | undefined;
-
-    if (policy.isBranchManager) {
-      fromBranchId = Number(inboundFromBranchId) || undefined;
-      toBranchId = policy.requestDestinationBranchId ?? undefined;
-      if (!fromBranchId) {
-        toast.error(messages.inventory.transfer.chooseSourceError);
-        return;
-      }
-      if (fromBranchId === toBranchId) {
-        toast.error(
-          "Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.",
-        );
-        return;
-      }
-      toLocationKind = "default_receive";
-    } else {
-      const target = parseTransferTargetValue(outboundToBranchId);
-      if (!target) {
-        toast.error(messages.inventory.transfer.chooseTargetError);
-        return;
-      }
-      if (target.kind === "kitchen" || target.branchId === fromBranchId) {
-        toast.error(
-          "Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.",
-        );
-        return;
-      }
-      toBranchId = target.branchId;
-      toLocationKind = "default_receive";
+    const fromBranchId = policy.outboundSourceBranchId ?? undefined;
+    const target = parseTransferTargetValue(outboundToBranchId);
+    if (!target) {
+      toast.error(messages.inventory.transfer.chooseTargetError);
+      return;
     }
+    if (target.kind === "kitchen" || target.branchId === fromBranchId) {
+      toast.error("Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.");
+      return;
+    }
+    const toBranchId = target.branchId;
     if (!fromBranchId || !toBranchId || selectedSourceLocationId == null) {
       toast.error(messages.inventory.transfer.chooseSourceError);
       return;
@@ -429,7 +315,7 @@ export function useTransferCreateController({
         fromLocationId: selectedSourceLocationId,
         notes,
         vehicleInfo,
-        toLocationKind,
+        toLocationKind: "default_receive",
         lines: linesResult.lines,
       });
       if (!result.success || !result.data) {
@@ -440,11 +326,7 @@ export function useTransferCreateController({
       resetForm();
       const id = (result.data as { id: number }).id;
       const detailPath = `${basePath}/${id}`;
-      router.push(
-        branchScopeInPath
-          ? detailPath
-          : withTransferBranchQuery(detailPath, userBranchId),
-      );
+      router.push(withTransferBranchQuery(detailPath, userBranchId));
       router.refresh();
     });
   }
@@ -452,8 +334,8 @@ export function useTransferCreateController({
   const submitDisabled =
     isPending ||
     loadFailed ||
-    (!policy.canCreateOutbound && !policy.canCreateInboundRequest) ||
-    (policy.isBranchManager ? !inboundFromBranchId : !outboundToBranchId) ||
+    !policy.canCreateOutbound ||
+    !outboundToBranchId ||
     selectedSourceLocationId == null ||
     draftLines.length === 0;
 
@@ -464,19 +346,9 @@ export function useTransferCreateController({
     addIngredientLine,
     draftLines,
     fillLineMax,
-    flowProgressValue,
-    flowStep,
-    flowStepMeta,
-    flowSteps,
-    getLineMaxQuantity,
     getLineMaxQuantityValue,
     getLineUnitOptions,
-    handleInboundSourceChange,
     handleOutboundSourceLocationChange,
-    inboundFromBranchId,
-    inboundDestinationName,
-    inboundSourceName,
-    isKitchenDispatch,
     isPending,
     listHref,
     loadFailed,
@@ -488,12 +360,9 @@ export function useTransferCreateController({
     outboundToBranchId,
     pickerIngredientId,
     removeLine,
-    selectedBranch,
-    selectedSourceBranchId,
     selectedSourceLocationId,
     setOutboundToBranchId,
     setPickerIngredientId,
-    sourceContextLabel,
     submit,
     submitDisabled,
     updateLineQuantity,
