@@ -61,17 +61,6 @@ Evidence: Import-boundary guard plus focused inventory tests and a source search
 
 - [ ] Move the five shared modules without forking behavior, update both planes, and tighten the allowlist to action boundaries only.
 
-## Remove the retired Branch recipe affordance
-
-State: ready
-Kind: defect
-Tier: T2
-Lane: inventory
-Exit: No Branch operator surface links to the retired recipe route, while recipe administration remains available only through its approved Owner surface surface.
-Evidence: Route/link guard covering navigation config and operator stock surfaces.
-
-- [ ] Delete the surviving `${basePath}/recipes` affordance and add a deterministic guard against links to the retired operator route.
-
 ## Densify the Branch on-hand list
 
 State: ready
