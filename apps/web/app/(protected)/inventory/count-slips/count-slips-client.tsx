@@ -268,11 +268,12 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
         title={INVENTORY_VI.countSlipTitle}
         description={INVENTORY_VI.countSlipDescription}
         actions={
-          <Button asChild variant="outline">
-            <Link href="/inventory/count-assignments">
-              <IconClipboardList aria-hidden="true" />
-              {INVENTORY_VI.countAssignTitle}
-            </Link>
+          <Button
+            variant="outline"
+            render={<Link href="/inventory/count-assignments" />}
+          >
+            <IconClipboardList aria-hidden="true" />
+            {INVENTORY_VI.countAssignTitle}
           </Button>
         }
         badge={{

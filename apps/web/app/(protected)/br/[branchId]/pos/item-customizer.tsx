@@ -13,11 +13,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FieldLabel } from "@comtammatu/ui/components/field";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import {
   Sheet,
   SheetClose,
@@ -339,17 +335,19 @@ export function ItemCustomizer({
                 <SheetTitle className="min-w-0 flex-1 truncate text-left">
                   {item.name}
                 </SheetTitle>
-                <SheetClose asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="shrink-0 text-muted-foreground"
-                    aria-label={messages.pos.customizer.closeAria}
-                  >
-                    <IconX />
-                  </Button>
-                </SheetClose>
+                <SheetClose
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="shrink-0 text-muted-foreground"
+                      aria-label={messages.pos.customizer.closeAria}
+                    >
+                      <IconX />
+                    </Button>
+                  }
+                />
               </div>
               <SheetDescription
                 className={cn(
@@ -372,278 +370,276 @@ export function ItemCustomizer({
             </SheetHeader>
 
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">
-                {item.menu_item_variants.length > 0 && (
-                  <div>
-                    <h3 className="font-heading mb-2 text-base font-semibold">
-                      {FORM_VI.type}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {item.menu_item_variants.map((v) => {
-                        const isSelected = selectedVariant?.id === v.id;
-                        const price = item.base_price + v.price_adjustment;
-                        return (
-                          <Button
-                            key={v.id}
-                            type="button"
-                            variant={isSelected ? "default" : "outline"}
-                            size="touch"
-                            className={cn(
-                              "justify-start text-base whitespace-normal",
-                              isSelected ? "font-medium" : "hover:bg-accent",
-                            )}
-                            onClick={() => setSelectedVariant(v)}
-                          >
-                            <span>{v.name}</span>
-                            <span className="ml-1.5 text-sm opacity-70">
-                              {formatVND(price)}
-                            </span>
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {item.menu_item_modifiers.length > 0 && (
-                  <div>
-                    <h3 className="font-heading mb-2 text-base font-semibold">
-                      {ACTIONS_VI.add}
-                    </h3>
-                    <ItemGroup className="gap-2">
-                      {item.menu_item_modifiers.map((m) => (
-                        <Item
-                          key={m.id}
-                          asChild
-                          variant="outline"
-                          className="cursor-pointer hover:bg-accent"
+              {item.menu_item_variants.length > 0 && (
+                <div>
+                  <h3 className="font-heading mb-2 text-base font-semibold">
+                    {FORM_VI.type}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {item.menu_item_variants.map((v) => {
+                      const isSelected = selectedVariant?.id === v.id;
+                      const price = item.base_price + v.price_adjustment;
+                      return (
+                        <Button
+                          key={v.id}
+                          type="button"
+                          variant={isSelected ? "default" : "outline"}
+                          size="touch"
+                          className={cn(
+                            "justify-start text-base whitespace-normal",
+                            isSelected ? "font-medium" : "hover:bg-accent",
+                          )}
+                          onClick={() => setSelectedVariant(v)}
                         >
+                          <span>{v.name}</span>
+                          <span className="ml-1.5 text-sm opacity-70">
+                            {formatVND(price)}
+                          </span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {item.menu_item_modifiers.length > 0 && (
+                <div>
+                  <h3 className="font-heading mb-2 text-base font-semibold">
+                    {ACTIONS_VI.add}
+                  </h3>
+                  <ItemGroup className="gap-2">
+                    {item.menu_item_modifiers.map((m) => (
+                      <Item
+                        key={m.id}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-accent"
+                        render={
                           <FieldLabel
                             htmlFor={`modifier-${m.id}`}
                             className="flex items-center gap-3 w-full font-normal cursor-pointer"
-                          >
-                            <Checkbox
-                              id={`modifier-${m.id}`}
-                              size="touch"
-                              checked={selectedModifierIds.has(m.id)}
-                              onCheckedChange={() => toggleModifier(m.id)}
-                            />
-                            <ItemContent>
-                              <ItemTitle className="text-base">
-                                {m.name}
-                              </ItemTitle>
-                            </ItemContent>
-                            <ItemActions>
-                              <span className="text-base text-muted-foreground">
-                                +{formatVND(m.price)}
-                              </span>
-                            </ItemActions>
-                          </FieldLabel>
-                        </Item>
-                      ))}
-                    </ItemGroup>
-                  </div>
-                )}
-
-                {item.menu_item_available_sides.length > 0 && (
-                  <div>
-                    <h3 className="font-heading mb-2 text-base font-semibold">
-                      {messages.pos.customizer.sides}
-                    </h3>
-                    <ItemGroup className="gap-2">
-                      {item.menu_item_available_sides.map((s) => {
-                        const sideQuantity = selectedSideQuantities.get(
-                          s.side_item.id,
-                        );
-                        const isSelected = sideQuantity != null;
-                        const displaySideQuantity = sideQuantity ?? 0;
-                        const sideLineTotal =
-                          s.side_item.base_price * displaySideQuantity;
-
-                        return (
-                          <Item
-                            key={s.id}
-                            variant="outline"
-                            className="flex-nowrap items-start gap-3 hover:bg-accent"
-                          >
-                            <Checkbox
-                              id={`side-${String(s.id)}`}
-                              className="mt-1.5"
-                              size="touch"
-                              checked={isSelected}
-                              onCheckedChange={() => toggleSide(s.side_item.id)}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <FieldLabel
-                                htmlFor={`side-${String(s.id)}`}
-                                className="block cursor-pointer text-base leading-snug font-normal whitespace-normal"
-                              >
-                                <span className="break-words">
-                                  {s.side_item.name}
-                                </span>
-                                {s.is_default && (
-                                  <span className="ml-1 text-sm text-muted-foreground">
-                                    {messages.pos.customizer.defaultSide}
-                                  </span>
-                                )}
-                              </FieldLabel>
-                              <span className="mt-1 block text-base font-medium tabular-nums text-muted-foreground">
-                                +{formatVND(sideLineTotal)}
-                              </span>
-                            </div>
-                            <div className="flex shrink-0 items-center justify-end gap-1 self-center">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="touch"
-                                className="min-w-12 px-0"
-                                aria-label={messages.pos.customizer.decreaseSideAria(
-                                  s.side_item.name,
-                                )}
-                                onClick={() =>
-                                  updateSideQuantity(s.side_item.id, -1)
-                                }
-                              >
-                                -
-                              </Button>
-                              <span
-                                className={cn(
-                                  "w-6 text-center text-base font-semibold tabular-nums",
-                                  !isSelected && "text-muted-foreground",
-                                )}
-                              >
-                                {displaySideQuantity}
-                              </span>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="touch"
-                                className="min-w-12 px-0"
-                                aria-label={messages.pos.customizer.increaseSideAria(
-                                  s.side_item.name,
-                                )}
-                                onClick={() =>
-                                  updateSideQuantity(s.side_item.id, 1)
-                                }
-                              >
-                                +
-                              </Button>
-                            </div>
-                          </Item>
-                        );
-                      })}
-                    </ItemGroup>
-                  </div>
-                )}
-
-                <div>
-                  <FieldLabel
-                    htmlFor="item-note"
-                    className="mb-2 text-base font-semibold"
-                  >
-                    {FORM_VI.notes}
-                  </FieldLabel>
-                  <QuickReasonChips
-                    presets={ITEM_NOTE_PRESETS}
-                    value={note}
-                    onChange={setNote}
-                    ariaLabel={messages.pos.customizer.noteSuggestionsAria}
-                    className="mb-2"
-                  />
-                  <Textarea
-                    id="item-note"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder={messages.pos.customizer.notePlaceholder}
-                    rows={2}
-                    maxLength={200}
-                  />
-                </div>
-
-                {/* Per-item discount stays out of edit-sent; sent items use the post-hoc item-discount flow. */}
-                {mode !== "edit-sent" && (
-                  <div>
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <FieldLabel
-                        htmlFor="item-discount-toggle"
-                        className="text-base font-semibold"
+                          />
+                        }
                       >
-                        {messages.pos.customizer.discountLabel}
-                      </FieldLabel>
-                      <Checkbox
-                        id="item-discount-toggle"
-                        size="touch"
-                        checked={discountEnabled}
-                        onCheckedChange={(checked) =>
-                          setDiscountEnabled(checked === true)
+                        <Checkbox
+                          id={`modifier-${m.id}`}
+                          size="touch"
+                          checked={selectedModifierIds.has(m.id)}
+                          onCheckedChange={() => toggleModifier(m.id)}
+                        />
+                        <ItemContent>
+                          <ItemTitle className="text-base">{m.name}</ItemTitle>
+                        </ItemContent>
+                        <ItemActions>
+                          <span className="text-base text-muted-foreground">
+                            +{formatVND(m.price)}
+                          </span>
+                        </ItemActions>
+                      </Item>
+                    ))}
+                  </ItemGroup>
+                </div>
+              )}
+
+              {item.menu_item_available_sides.length > 0 && (
+                <div>
+                  <h3 className="font-heading mb-2 text-base font-semibold">
+                    {messages.pos.customizer.sides}
+                  </h3>
+                  <ItemGroup className="gap-2">
+                    {item.menu_item_available_sides.map((s) => {
+                      const sideQuantity = selectedSideQuantities.get(
+                        s.side_item.id,
+                      );
+                      const isSelected = sideQuantity != null;
+                      const displaySideQuantity = sideQuantity ?? 0;
+                      const sideLineTotal =
+                        s.side_item.base_price * displaySideQuantity;
+
+                      return (
+                        <Item
+                          key={s.id}
+                          variant="outline"
+                          className="flex-nowrap items-start gap-3 hover:bg-accent"
+                        >
+                          <Checkbox
+                            id={`side-${String(s.id)}`}
+                            className="mt-1.5"
+                            size="touch"
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSide(s.side_item.id)}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <FieldLabel
+                              htmlFor={`side-${String(s.id)}`}
+                              className="block cursor-pointer text-base leading-snug font-normal whitespace-normal"
+                            >
+                              <span className="break-words">
+                                {s.side_item.name}
+                              </span>
+                              {s.is_default && (
+                                <span className="ml-1 text-sm text-muted-foreground">
+                                  {messages.pos.customizer.defaultSide}
+                                </span>
+                              )}
+                            </FieldLabel>
+                            <span className="mt-1 block text-base font-medium tabular-nums text-muted-foreground">
+                              +{formatVND(sideLineTotal)}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 items-center justify-end gap-1 self-center">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="touch"
+                              className="min-w-12 px-0"
+                              aria-label={messages.pos.customizer.decreaseSideAria(
+                                s.side_item.name,
+                              )}
+                              onClick={() =>
+                                updateSideQuantity(s.side_item.id, -1)
+                              }
+                            >
+                              -
+                            </Button>
+                            <span
+                              className={cn(
+                                "w-6 text-center text-base font-semibold tabular-nums",
+                                !isSelected && "text-muted-foreground",
+                              )}
+                            >
+                              {displaySideQuantity}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="touch"
+                              className="min-w-12 px-0"
+                              aria-label={messages.pos.customizer.increaseSideAria(
+                                s.side_item.name,
+                              )}
+                              onClick={() =>
+                                updateSideQuantity(s.side_item.id, 1)
+                              }
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </Item>
+                      );
+                    })}
+                  </ItemGroup>
+                </div>
+              )}
+
+              <div>
+                <FieldLabel
+                  htmlFor="item-note"
+                  className="mb-2 text-base font-semibold"
+                >
+                  {FORM_VI.notes}
+                </FieldLabel>
+                <QuickReasonChips
+                  presets={ITEM_NOTE_PRESETS}
+                  value={note}
+                  onChange={setNote}
+                  ariaLabel={messages.pos.customizer.noteSuggestionsAria}
+                  className="mb-2"
+                />
+                <Textarea
+                  id="item-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={messages.pos.customizer.notePlaceholder}
+                  rows={2}
+                  maxLength={200}
+                />
+              </div>
+
+              {/* Per-item discount stays out of edit-sent; sent items use the post-hoc item-discount flow. */}
+              {mode !== "edit-sent" && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <FieldLabel
+                      htmlFor="item-discount-toggle"
+                      className="text-base font-semibold"
+                    >
+                      {messages.pos.customizer.discountLabel}
+                    </FieldLabel>
+                    <Checkbox
+                      id="item-discount-toggle"
+                      size="touch"
+                      checked={discountEnabled}
+                      onCheckedChange={(checked) =>
+                        setDiscountEnabled(checked === true)
+                      }
+                    />
+                  </div>
+                  {discountEnabled && (
+                    <div className="flex flex-col gap-3">
+                      <Tabs
+                        value={discountType}
+                        onValueChange={(v) => {
+                          setDiscountType(v as "pct" | "vnd");
+                          setDiscountValueText("");
+                        }}
+                      >
+                        <TabsList className="w-full">
+                          <TabsTrigger value="pct" className="flex-1">
+                            {messages.pos.customizer.discountByPercent}
+                          </TabsTrigger>
+                          <TabsTrigger value="vnd" className="flex-1">
+                            {messages.pos.customizer.discountByVnd}
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                      <FormattedNumberInput
+                        id="item-discount-value"
+                        maxFractionDigits={discountType === "pct" ? 2 : 0}
+                        value={discountValueText}
+                        onValueChange={setDiscountValueText}
+                        placeholder={
+                          discountType === "pct"
+                            ? messages.pos.customizer
+                                .discountValuePlaceholderPct
+                            : messages.pos.customizer
+                                .discountValuePlaceholderVnd
                         }
                       />
+                      <QuickReasonChips
+                        presets={ITEM_DISCOUNT_PRESETS}
+                        value={discountNote}
+                        onChange={setDiscountNote}
+                        ariaLabel={
+                          messages.pos.customizer.discountReasonSuggestionsAria
+                        }
+                      />
+                      <Textarea
+                        id="item-discount-note"
+                        value={discountNote}
+                        onChange={(e) => setDiscountNote(e.target.value)}
+                        placeholder={
+                          messages.pos.customizer.discountNotePlaceholder
+                        }
+                        rows={2}
+                        maxLength={200}
+                        aria-invalid={
+                          discountEnabled && discountNoteTrimLen > 0
+                            ? !discountValid
+                            : undefined
+                        }
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        {discountAmount > 0
+                          ? messages.pos.customizer.discountPreview(
+                              formatVND(discountAmount),
+                              formatVND(netTotalPrice),
+                            )
+                          : messages.pos.customizer.discountHint}
+                      </p>
                     </div>
-                    {discountEnabled && (
-                      <div className="flex flex-col gap-3">
-                        <Tabs
-                          value={discountType}
-                          onValueChange={(v) => {
-                            setDiscountType(v as "pct" | "vnd");
-                            setDiscountValueText("");
-                          }}
-                        >
-                          <TabsList className="w-full">
-                            <TabsTrigger value="pct" className="flex-1">
-                              {messages.pos.customizer.discountByPercent}
-                            </TabsTrigger>
-                            <TabsTrigger value="vnd" className="flex-1">
-                              {messages.pos.customizer.discountByVnd}
-                            </TabsTrigger>
-                          </TabsList>
-                        </Tabs>
-                        <FormattedNumberInput
-                          id="item-discount-value"
-                          maxFractionDigits={discountType === "pct" ? 2 : 0}
-                          value={discountValueText}
-                          onValueChange={setDiscountValueText}
-                          placeholder={
-                            discountType === "pct"
-                              ? messages.pos.customizer
-                                  .discountValuePlaceholderPct
-                              : messages.pos.customizer
-                                  .discountValuePlaceholderVnd
-                          }
-                        />
-                        <QuickReasonChips
-                          presets={ITEM_DISCOUNT_PRESETS}
-                          value={discountNote}
-                          onChange={setDiscountNote}
-                          ariaLabel={
-                            messages.pos.customizer.discountReasonSuggestionsAria
-                          }
-                        />
-                        <Textarea
-                          id="item-discount-note"
-                          value={discountNote}
-                          onChange={(e) => setDiscountNote(e.target.value)}
-                          placeholder={
-                            messages.pos.customizer.discountNotePlaceholder
-                          }
-                          rows={2}
-                          maxLength={200}
-                          aria-invalid={
-                            discountEnabled && discountNoteTrimLen > 0
-                              ? !discountValid
-                              : undefined
-                          }
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          {discountAmount > 0
-                            ? messages.pos.customizer.discountPreview(
-                                formatVND(discountAmount),
-                                formatVND(netTotalPrice),
-                              )
-                            : messages.pos.customizer.discountHint}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
             </div>
 
             <SheetFooter className="shrink-0 flex-row items-center justify-between gap-3 pos-safe-bottom sm:flex-row">

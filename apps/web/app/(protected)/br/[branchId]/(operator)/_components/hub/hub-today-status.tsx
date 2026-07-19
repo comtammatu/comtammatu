@@ -29,11 +29,7 @@ function getWorkTitle(state: TodayWorkState): string {
   return copy.statusDone;
 }
 
-export async function HubTodayStatus({
-  branchId,
-}: {
-  branchId: number;
-}) {
+export async function HubTodayStatus({ branchId }: { branchId: number }) {
   const state = await getTodayWorkState();
   const title = getWorkTitle(state);
   const currentShiftName = state.attendance?.shiftName ?? null;
@@ -51,11 +47,12 @@ export async function HubTodayStatus({
         <p className="truncate text-xs text-muted-foreground">{todayMeta}</p>
       </div>
       {state.status === "not_started" ? (
-        <Button asChild size="touch">
-          <Link href={`/br/${branchId}/shift/clock`}>
-            <IconCamera data-icon="inline-start" />
-            {copy.clockIn}
-          </Link>
+        <Button
+          size="touch"
+          render={<Link href={`/br/${branchId}/shift/clock`} />}
+        >
+          <IconCamera data-icon="inline-start" />
+          {copy.clockIn}
         </Button>
       ) : null}
     </BranchOperatorControlBar>

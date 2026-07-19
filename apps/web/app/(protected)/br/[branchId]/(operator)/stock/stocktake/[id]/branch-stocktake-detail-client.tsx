@@ -71,7 +71,9 @@ export function BranchStocktakeDetailClient({
   const stocktakeBasePath = `${stockBasePath}/stocktake`;
   const { session, lines } = data;
   const statusBadge = getStatusBadgeMeta("inventory", session.status);
-  const countedItems = lines.filter((line) => line.countedQuantity !== null).length;
+  const countedItems = lines.filter(
+    (line) => line.countedQuantity !== null,
+  ).length;
   const progress = getBranchStocktakeProgress({
     totalItems: lines.length,
     countedItems,
@@ -161,8 +163,9 @@ export function BranchStocktakeDetailClient({
                       {line.ingredientName}
                     </ItemTitle>
                     <ItemDescription className="line-clamp-none text-xs">
-                      Hệ thống {formatQty(line.systemQuantity ?? 0)} {line.unit} ·
-                      thực đếm {formatQty(line.countedQuantity ?? 0)} {line.unit}
+                      Hệ thống {formatQty(line.systemQuantity ?? 0)} {line.unit}{" "}
+                      · thực đếm {formatQty(line.countedQuantity ?? 0)}{" "}
+                      {line.unit}
                     </ItemDescription>
                   </ItemContent>
                   <Badge
@@ -246,13 +249,19 @@ export function BranchStocktakeDetailClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê">
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link href={stocktakeBasePath} aria-label="Quay lại kiểm kê" />
+            }
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold">KK-{session.id}</p>
+            <p className="truncate font-mono text-sm font-semibold">
+              KK-{session.id}
+            </p>
             <p className="truncate text-xs text-muted-foreground">
               {formatVNDateTime(session.startedAt ?? session.createdAt)}
             </p>
@@ -263,7 +272,11 @@ export function BranchStocktakeDetailClient({
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel
-              title={session.status === "completed" ? "Kết quả kiểm kê" : "Tiến độ kiểm kê"}
+              title={
+                session.status === "completed"
+                  ? "Kết quả kiểm kê"
+                  : "Tiến độ kiểm kê"
+              }
               icon={IconClipboardCheck}
               size="sm"
               contentClassName="gap-3"
@@ -271,10 +284,13 @@ export function BranchStocktakeDetailClient({
                 session.status === "in_progress" &&
                 data.canCancel &&
                 !countUnavailable ? (
-                  <Button asChild size="touch">
-                    <Link href={`${stocktakeBasePath}/${session.id}/count`}>
-                      Tiếp tục đếm
-                    </Link>
+                  <Button
+                    size="touch"
+                    render={
+                      <Link href={`${stocktakeBasePath}/${session.id}/count`} />
+                    }
+                  >
+                    Tiếp tục đếm
                   </Button>
                 ) : null
               }
@@ -314,7 +330,9 @@ export function BranchStocktakeDetailClient({
                 rows={[
                   {
                     label: "Bắt đầu",
-                    value: formatVNDateTime(session.startedAt ?? session.createdAt),
+                    value: formatVNDateTime(
+                      session.startedAt ?? session.createdAt,
+                    ),
                   },
                   ...(session.completedAt
                     ? [
@@ -335,10 +353,11 @@ export function BranchStocktakeDetailClient({
                 ]}
               />
               {session.notes ? (
-                <p className="mt-3 text-sm text-muted-foreground">{session.notes}</p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {session.notes}
+                </p>
               ) : null}
             </BranchOperatorPanel>
-
           </div>
         </div>
 

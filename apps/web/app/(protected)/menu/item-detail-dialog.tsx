@@ -266,7 +266,7 @@ export function ItemDetailDialog({
       title={MENU_VI.itemDetailTitle(item.name)}
     >
       {isLoading ? (
-        <div className="flex justify-center py-6">
+        <div className="flex min-h-16 items-center justify-center">
           <Spinner className="size-6 text-muted-foreground" />
         </div>
       ) : loadError ? (

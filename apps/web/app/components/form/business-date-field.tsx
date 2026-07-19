@@ -96,24 +96,26 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
         {required ? " *" : null}
       </FieldLabel>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            id={fieldId}
-            type="button"
-            variant="outline"
-            size="field"
-            aria-invalid={hasError}
-            disabled={disabled}
-            className={cn(
-              "justify-start text-left font-normal",
-              !rawValue && "text-muted-foreground",
-              className,
-            )}
-          >
-            <IconCalendarEvent data-icon="inline-start" />
-            {rawValue ? formatVNBusinessDate(rawValue) : placeholder}
-          </Button>
-        </PopoverTrigger>
+        <PopoverTrigger
+          render={
+            <Button
+              id={fieldId}
+              type="button"
+              variant="outline"
+              size="field"
+              aria-invalid={hasError}
+              disabled={disabled}
+              className={cn(
+                "justify-start text-left font-normal",
+                !rawValue && "text-muted-foreground",
+                className,
+              )}
+            >
+              <IconCalendarEvent data-icon="inline-start" />
+              {rawValue ? formatVNBusinessDate(rawValue) : placeholder}
+            </Button>
+          }
+        />
         <PopoverContent align="start" className="w-auto p-0">
           <Calendar
             mode="single"

@@ -248,10 +248,14 @@ export function BranchProductionDetailClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={basePath} aria-label="Quay lại danh sách sản xuất">
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link href={basePath} aria-label="Quay lại danh sách sản xuất" />
+            }
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-sm font-semibold tabular-nums">

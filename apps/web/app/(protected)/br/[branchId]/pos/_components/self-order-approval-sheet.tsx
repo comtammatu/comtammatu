@@ -305,48 +305,51 @@ export function SelfOrderApprovalSheet({
                                 return (
                                   <Item
                                     key={order.id}
-                                    asChild
                                     variant="outline"
-                                  >
-                                    <FieldLabel
-                                      htmlFor={`self-order-target-${request.id}-${order.id}`}
-                                      className="w-full cursor-pointer items-center gap-3 font-normal"
-                                    >
-                                      <RadioGroupItem
-                                        id={`self-order-target-${request.id}-${order.id}`}
-                                        value={value}
-                                        size="touch"
+                                    render={
+                                      <FieldLabel
+                                        htmlFor={`self-order-target-${request.id}-${order.id}`}
+                                        className="w-full cursor-pointer items-center gap-3 font-normal"
                                       />
-                                      <ItemContent>
-                                        <ItemTitle>
-                                          {SELF_ORDER_VI.staffOrderLabel(
-                                            order.order_number,
-                                          )}
-                                        </ItemTitle>
-                                      </ItemContent>
-                                      <ItemActions>
-                                        {formatVND(order.total_amount)}
-                                      </ItemActions>
-                                    </FieldLabel>
+                                    }
+                                  >
+                                    <RadioGroupItem
+                                      id={`self-order-target-${request.id}-${order.id}`}
+                                      value={value}
+                                      size="touch"
+                                    />
+                                    <ItemContent>
+                                      <ItemTitle>
+                                        {SELF_ORDER_VI.staffOrderLabel(
+                                          order.order_number,
+                                        )}
+                                      </ItemTitle>
+                                    </ItemContent>
+                                    <ItemActions>
+                                      {formatVND(order.total_amount)}
+                                    </ItemActions>
                                   </Item>
                                 );
                               })}
-                              <Item asChild variant="outline">
-                                <FieldLabel
-                                  htmlFor={`self-order-target-${request.id}-new`}
-                                  className="w-full cursor-pointer items-center gap-3 font-normal"
-                                >
-                                  <RadioGroupItem
-                                    id={`self-order-target-${request.id}-new`}
-                                    value="new"
-                                    size="touch"
+                              <Item
+                                variant="outline"
+                                render={
+                                  <FieldLabel
+                                    htmlFor={`self-order-target-${request.id}-new`}
+                                    className="w-full cursor-pointer items-center gap-3 font-normal"
                                   />
-                                  <ItemContent>
-                                    <ItemTitle>
-                                      {SELF_ORDER_VI.staffApproveNewOrder}
-                                    </ItemTitle>
-                                  </ItemContent>
-                                </FieldLabel>
+                                }
+                              >
+                                <RadioGroupItem
+                                  id={`self-order-target-${request.id}-new`}
+                                  value="new"
+                                  size="touch"
+                                />
+                                <ItemContent>
+                                  <ItemTitle>
+                                    {SELF_ORDER_VI.staffApproveNewOrder}
+                                  </ItemTitle>
+                                </ItemContent>
                               </Item>
                             </RadioGroup>
                           </FieldSet>

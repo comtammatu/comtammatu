@@ -24,7 +24,11 @@ import {
   importIngredients,
 } from "../ingredient-actions";
 
-import { ACTIONS_VI, INVENTORY_VI, TOAST_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  INVENTORY_VI,
+  TOAST_VI,
+} from "@comtammatu/shared/messages";
 export function IngredientImportExportMenu({
   onImported,
 }: {
@@ -64,16 +68,18 @@ export function IngredientImportExportMenu({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" disabled={isExporting}>
-            {isExporting ? (
-              <Spinner className="mr-2" />
-            ) : (
-              <IconFileSpreadsheet className="mr-2 size-4" />
-            )}
-            Import / Export
-          </Button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" disabled={isExporting}>
+              {isExporting ? (
+                <Spinner className="mr-2" />
+              ) : (
+                <IconFileSpreadsheet className="mr-2 size-4" />
+              )}
+              Import / Export
+            </Button>
+          }
+        />
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={() => setImportOpen(true)}>
             <IconUpload className="mr-2 size-4" />
@@ -127,7 +133,9 @@ function IngredientImportDialog({
       }
       inputId="ing-import-file"
       chooseFileLabel={INVENTORY_VI.chooseFileLabel}
-      selectedFileLabel={(fileName) => INVENTORY_VI.importSelectedFile(fileName)}
+      selectedFileLabel={(fileName) =>
+        INVENTORY_VI.importSelectedFile(fileName)
+      }
       selectFileError={INVENTORY_VI.selectFile}
       resultTitle={INVENTORY_VI.importResultHeading}
       submitLabel="Import"

@@ -302,32 +302,32 @@ export function BranchConsumptionListClient({
               {filteredRecorded.map((movement) => (
                 <Item
                   key={movement.id}
-                  asChild
                   variant="outline"
                   className="min-h-20 touch-manipulation"
+                  render={
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMovement(movement)}
+                    />
+                  }
                 >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMovement(movement)}
-                  >
-                    <ItemContent className="min-w-0 gap-1 text-left">
-                      <ItemTitle size="heading">
-                        {movement.ingredientName}
-                      </ItemTitle>
-                      <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="font-mono tabular-nums">
-                          {movement.quantity} {movement.unit}
-                        </span>
-                        <span>{formatVNDateTime(movement.recordedAt)}</span>
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                      <Badge variant={sourceBadgeVariant(movement.sourceKind)}>
-                        {movement.sourceLabel}
-                      </Badge>
-                      <IconChevronRight className="size-4 text-muted-foreground" />
-                    </ItemActions>
-                  </button>
+                  <ItemContent className="min-w-0 gap-1 text-left">
+                    <ItemTitle size="heading">
+                      {movement.ingredientName}
+                    </ItemTitle>
+                    <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-mono tabular-nums">
+                        {movement.quantity} {movement.unit}
+                      </span>
+                      <span>{formatVNDateTime(movement.recordedAt)}</span>
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Badge variant={sourceBadgeVariant(movement.sourceKind)}>
+                      {movement.sourceLabel}
+                    </Badge>
+                    <IconChevronRight className="size-4 text-muted-foreground" />
+                  </ItemActions>
                 </Item>
               ))}
             </ItemGroup>
@@ -360,33 +360,31 @@ export function BranchConsumptionListClient({
             {filteredManual.map((issue) => (
               <Item
                 key={issue.id}
-                asChild
                 variant="outline"
                 className="min-h-20 touch-manipulation"
+                render={<Link href={`${basePath}/${issue.id}`} />}
               >
-                <Link href={`${basePath}/${issue.id}`}>
-                  <ItemContent className="min-w-0 gap-1">
-                    <ItemTitle size="heading" className="font-mono">
-                      {issue.code}
-                    </ItemTitle>
-                    <ItemDescription className="line-clamp-none">
-                      {formatVNDateTime(issue.issuedAt)}
+                <ItemContent className="min-w-0 gap-1">
+                  <ItemTitle size="heading" className="font-mono">
+                    {issue.code}
+                  </ItemTitle>
+                  <ItemDescription className="line-clamp-none">
+                    {formatVNDateTime(issue.issuedAt)}
+                  </ItemDescription>
+                  {issue.notes ? (
+                    <ItemDescription className="line-clamp-2 break-words">
+                      {issue.notes}
                     </ItemDescription>
-                    {issue.notes ? (
-                      <ItemDescription className="line-clamp-2 break-words">
-                        {issue.notes}
-                      </ItemDescription>
-                    ) : null}
-                  </ItemContent>
-                  <ItemActions>
-                    <StatusBadge
-                      domain="inventory"
-                      value={issue.status}
-                      size="sm"
-                    />
-                    <IconChevronRight className="size-4 text-muted-foreground" />
-                  </ItemActions>
-                </Link>
+                  ) : null}
+                </ItemContent>
+                <ItemActions>
+                  <StatusBadge
+                    domain="inventory"
+                    value={issue.status}
+                    size="sm"
+                  />
+                  <IconChevronRight className="size-4 text-muted-foreground" />
+                </ItemActions>
               </Item>
             ))}
           </ItemGroup>
@@ -498,10 +496,13 @@ export function BranchConsumptionListClient({
               </div>
               <SheetFooter className="workflow-safe-pb">
                 {selectedMovement.issueId != null ? (
-                  <Button asChild size="touch-lg">
-                    <Link href={`${basePath}/${selectedMovement.issueId}`}>
-                      {ACTIONS_VI.viewDetails}
-                    </Link>
+                  <Button
+                    size="touch-lg"
+                    render={
+                      <Link href={`${basePath}/${selectedMovement.issueId}`} />
+                    }
+                  >
+                    {ACTIONS_VI.viewDetails}
                   </Button>
                 ) : null}
                 <Button

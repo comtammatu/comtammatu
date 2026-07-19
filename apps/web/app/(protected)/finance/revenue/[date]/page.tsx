@@ -39,11 +39,14 @@ function summarizeByHour(orders: OrderRow[]): HourSummary[] {
 
 function BackToRevenue() {
   return (
-    <Button asChild variant="ghost" size="sm" className="-ml-2">
-      <Link href="/finance/revenue" className="gap-2">
-        <IconArrowLeft className="size-4" />
-        {copy.back}
-      </Link>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-2"
+      render={<Link href="/finance/revenue" className="gap-2" />}
+    >
+      <IconArrowLeft className="size-4" />
+      {copy.back}
     </Button>
   );
 }
@@ -92,19 +95,23 @@ export default async function RevenueDrillPage({
         />
         <AppSection title={copy.selectBranchSectionTitle}>
           {branches.length === 0 ? (
-            <AppEmptyState compact mode="no-access" title={copy.noBranchAccess} />
+            <AppEmptyState
+              compact
+              mode="no-access"
+              title={copy.noBranchAccess}
+            />
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {branches.map((b) => (
                 <li key={b.id}>
                   <Button
-                    asChild
                     variant="outline"
                     className="w-full justify-start"
+                    render={
+                      <Link href={`/finance/revenue/${date}?branch=${b.id}`} />
+                    }
                   >
-                    <Link href={`/finance/revenue/${date}?branch=${b.id}`}>
-                      {b.name}
-                    </Link>
+                    {b.name}
                   </Button>
                 </li>
               ))}

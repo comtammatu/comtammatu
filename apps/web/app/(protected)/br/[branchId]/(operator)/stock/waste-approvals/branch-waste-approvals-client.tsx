@@ -249,18 +249,22 @@ export function BranchWasteApprovalsClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-4">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link
-              href={stockBasePath}
-              aria-label="Quay lại kho"
-              aria-disabled={isSubmitting || undefined}
-              className={
-                isSubmitting ? "pointer-events-none opacity-50" : undefined
-              }
-              onClick={handleLeaveClick}
-            >
-              <IconArrowLeft aria-hidden="true" />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link
+                href={stockBasePath}
+                aria-label="Quay lại kho"
+                aria-disabled={isSubmitting || undefined}
+                className={
+                  isSubmitting ? "pointer-events-none opacity-50" : undefined
+                }
+                onClick={handleLeaveClick}
+              />
+            }
+          >
+            <IconArrowLeft aria-hidden="true" />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{copy.title}</p>
@@ -293,45 +297,44 @@ export function BranchWasteApprovalsClient({
                 return (
                   <div key={row.issueId} role="listitem">
                     <Item
-                      asChild
                       variant="outline"
                       className="min-h-20 touch-manipulation"
+                      render={
+                        <button
+                          type="button"
+                          className="w-full text-left"
+                          onClick={() => setSelectedIssueId(row.issueId)}
+                          disabled={isSubmitting}
+                        />
+                      }
                     >
-                      <button
-                        type="button"
-                        className="w-full text-left"
-                        onClick={() => setSelectedIssueId(row.issueId)}
-                        disabled={isSubmitting}
-                      >
-                        <ItemContent className="min-w-0 gap-1">
-                          <ItemTitle className="line-clamp-none break-words text-sm font-semibold">
-                            {row.issueNumber}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none break-words text-xs">
-                            {row.createdByName} ·{" "}
-                            {formatVNDateTime(row.issuedAt)}
-                          </ItemDescription>
-                          <ItemDescription className="line-clamp-none text-xs">
-                            {row.shiftKey || "Chưa có ca"} ·{" "}
-                            {copy.lineCount(row.items.length)}
-                          </ItemDescription>
-                          {row.isSelfCreated ? (
-                            <Badge variant="outline" className="w-fit text-xs">
-                              {copy.selfCreatedBadge}
-                            </Badge>
-                          ) : null}
-                        </ItemContent>
-                        <ItemActions className="shrink-0">
-                          <div className="text-right font-mono text-sm font-semibold tabular-nums">
-                            {formatVND(row.totalValue)}
-                          </div>
-                          <WasteTierBadge tier={highestTier} compact />
-                          <IconChevronRight
-                            aria-hidden="true"
-                            className="size-4 text-muted-foreground"
-                          />
-                        </ItemActions>
-                      </button>
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle className="line-clamp-none break-words text-sm font-semibold">
+                          {row.issueNumber}
+                        </ItemTitle>
+                        <ItemDescription className="line-clamp-none break-words text-xs">
+                          {row.createdByName} · {formatVNDateTime(row.issuedAt)}
+                        </ItemDescription>
+                        <ItemDescription className="line-clamp-none text-xs">
+                          {row.shiftKey || "Chưa có ca"} ·{" "}
+                          {copy.lineCount(row.items.length)}
+                        </ItemDescription>
+                        {row.isSelfCreated ? (
+                          <Badge variant="outline" className="w-fit text-xs">
+                            {copy.selfCreatedBadge}
+                          </Badge>
+                        ) : null}
+                      </ItemContent>
+                      <ItemActions className="shrink-0">
+                        <div className="text-right font-mono text-sm font-semibold tabular-nums">
+                          {formatVND(row.totalValue)}
+                        </div>
+                        <WasteTierBadge tier={highestTier} compact />
+                        <IconChevronRight
+                          aria-hidden="true"
+                          className="size-4 text-muted-foreground"
+                        />
+                      </ItemActions>
                     </Item>
                   </div>
                 );

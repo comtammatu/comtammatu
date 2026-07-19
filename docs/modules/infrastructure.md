@@ -100,6 +100,34 @@ GitHub Actions runs the standard gates on pull requests and `main`. Conditional
 jobs replay the from-empty database baseline and run the POS → payment → KDS
 smoke against the CI-only isolated Supabase stack.
 
+### Dependency maintenance boundaries
+
+Package manifests and the lockfile remain the version source of truth. The
+following compatibility boundaries explain why a dependency can intentionally
+remain below the registry's latest major:
+
+| Dependency family | Owner             | Retention reason                                                                                                            | Revisit trigger                                                                                                                                           |
+| ----------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TypeScript        | Platform tooling  | The ESLint TypeScript integration still requires the TypeScript 6 programmatic API; TypeScript 7 does not expose that API.  | Upgrade when `typescript-eslint` supports the stable TypeScript 7 API, or when TypeScript 7.1 provides the API and the full lint/typecheck matrix passes. |
+| Node.js types     | Runtime platform  | CI, Vercel, and the branch bundle target Node.js 24, so declarations must model that runtime instead of a newer major.      | Upgrade only with an explicit Node.js 26 runtime migration across CI, Vercel, and branch agents.                                                          |
+| pnpm              | Workspace tooling | The next major changes install trust and lockfile behavior, which requires a dedicated clean-install and remote-CI rollout. | Revisit in an isolated package-manager wave with clean Linux/macOS installs and all CI jobs available.                                                    |
+
+The workspace keeps only three transitive overrides:
+
+| Override             | Owner               | Reason                                                                                                                                                                                       | Revisit trigger                                                                                                                     |
+| -------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| ExcelJS unzip reader | Spreadsheet runtime | Replaces ExcelJS's legacy unzip chain, removing unlicensed and obsolete packages; ExcelJS stays external to the Next server bundle because the reader exposes an unused optional S3 adapter. | Remove when ExcelJS declares a current unzip reader; the XLSX round-trip and Next external-boundary contract tests must stay green. |
+| ExcelJS UUID helper  | Spreadsheet runtime | Keeps the last CommonJS-compatible UUID line behind ExcelJS's CommonJS call site.                                                                                                            | Remove when ExcelJS updates its UUID dependency or becomes ESM-compatible.                                                          |
+| Next.js PostCSS      | Web build           | Aligns Next.js's exact legacy declaration with the audited PostCSS used by the Tailwind build, avoiding two installed copies.                                                                | Remove when Next.js declares the same or newer PostCSS line.                                                                        |
+
+Four deprecated transitive packages remain upstream-owned: `glob`, `inflight`,
+and `lodash.isequal` under ExcelJS's archive writer, plus the beta `source-map`
+under Serwist. Spreadsheet runtime owns the first group and must recheck every
+ExcelJS release or before expanding XLSX features. Web/PWA owns `source-map` and
+must recheck every Serwist release. New deprecated or unresolved-license groups
+are not accepted silently; dependency inventory and `deps:audit` must classify
+them before merge.
+
 ## Development Setup
 
 ```bash

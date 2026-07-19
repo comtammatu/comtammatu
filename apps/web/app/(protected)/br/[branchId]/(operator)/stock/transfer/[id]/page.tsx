@@ -52,11 +52,13 @@ export default async function OperatorTransferDetailPage({
         variant: statusBadge.variant,
       }}
       action={
-        <Button variant="outline" size="touch" asChild>
-          <Link href={listHref}>
-            <IconArrowLeft data-icon="inline-start" />
-            {ACTIONS_VI.back}
-          </Link>
+        <Button
+          variant="outline"
+          size="touch"
+          render={<Link href={listHref} />}
+        >
+          <IconArrowLeft data-icon="inline-start" />
+          {ACTIONS_VI.back}
         </Button>
       }
     >

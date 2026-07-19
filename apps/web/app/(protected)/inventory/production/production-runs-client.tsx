@@ -142,13 +142,16 @@ export function ProductionRunsClient({
         variant: "secondary",
       }}
       action={
-        <Button asChild size={embedded ? "touch" : "default"}>
-          <Link
-            href={`${basePath}/new${branchId ? `?branchId=${branchId}` : ""}`}
-          >
-            <IconPlus data-icon="inline-start" />
-            {INVENTORY_VI.createOrderShort}
-          </Link>
+        <Button
+          size={embedded ? "touch" : "default"}
+          render={
+            <Link
+              href={`${basePath}/new${branchId ? `?branchId=${branchId}` : ""}`}
+            />
+          }
+        >
+          <IconPlus data-icon="inline-start" />
+          {INVENTORY_VI.createOrderShort}
         </Button>
       }
     >
@@ -230,31 +233,31 @@ function ProductionRunCard({
   const unit = row.entry_unit_name ?? "";
 
   return (
-    <InteractiveCard asChild minHeight="mobile" padding="default">
-      <Link href={href} className="min-w-0">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <p className="truncate font-mono text-sm font-semibold">
-              {row.production_number}
-            </p>
-            <StatusBadge domain="inventory" value={row.status} size="sm" />
-          </div>
-          <p className="truncate text-sm font-medium">
-            {row.finished_good_name}
+    <InteractiveCard
+      minHeight="mobile"
+      padding="default"
+      render={<Link href={href} className="min-w-0" />}
+    >
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <p className="truncate font-mono text-sm font-semibold">
+            {row.production_number}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {formatVNDate(row.created_at)} · {row.planned_quantity} {unit}
-          </p>
-          <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-            <ProductionRoute
-              from={row.branch_name}
-              to={row.target_branch_name}
-              sameBranch={row.branch_id === row.target_branch_id}
-            />
-          </p>
+          <StatusBadge domain="inventory" value={row.status} size="sm" />
         </div>
-        <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
-      </Link>
+        <p className="truncate text-sm font-medium">{row.finished_good_name}</p>
+        <p className="text-xs text-muted-foreground">
+          {formatVNDate(row.created_at)} · {row.planned_quantity} {unit}
+        </p>
+        <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+          <ProductionRoute
+            from={row.branch_name}
+            to={row.target_branch_name}
+            sameBranch={row.branch_id === row.target_branch_id}
+          />
+        </p>
+      </div>
+      <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
     </InteractiveCard>
   );
 }

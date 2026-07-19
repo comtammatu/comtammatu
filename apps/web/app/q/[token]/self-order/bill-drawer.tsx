@@ -70,17 +70,19 @@ export function BillDrawer({
             <SheetTitle className="flex-1">
               {paymentView ? SELF_ORDER_VI.paymentTitle : SELF_ORDER_VI.billTab}
             </SheetTitle>
-            <SheetClose asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-touch"
-                className="-mr-2 shrink-0"
-              >
-                <IconX />
-                <span className="sr-only">{ACTIONS_VI.close}</span>
-              </Button>
-            </SheetClose>
+            <SheetClose
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-touch"
+                  className="-mr-2 shrink-0"
+                >
+                  <IconX />
+                  <span className="sr-only">{ACTIONS_VI.close}</span>
+                </Button>
+              }
+            />
           </div>
         </SheetHeader>
         <ScrollArea className="min-h-0 flex-1">
@@ -132,14 +134,14 @@ export function BillDrawer({
               </div>
             </div>
             {canPay ? (
-            <Button
-              type="button"
-              size="touch"
-              className="w-full"
-              onClick={onOpenPayment}
-            >
-              {SELF_ORDER_VI.paymentTitle}
-            </Button>
+              <Button
+                type="button"
+                size="touch"
+                className="w-full"
+                onClick={onOpenPayment}
+              >
+                {SELF_ORDER_VI.paymentTitle}
+              </Button>
             ) : null}
           </SheetFooter>
         ) : null}

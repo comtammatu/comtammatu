@@ -76,10 +76,17 @@ export function BranchGrnCreateClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={sourceBasePath} aria-label={GRN_CREATE_COPY.changeSupplier}>
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link
+                href={sourceBasePath}
+                aria-label={GRN_CREATE_COPY.changeSupplier}
+              />
+            }
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">
@@ -170,47 +177,49 @@ export function BranchGrnCreateClient({
                   {controller.draft.lines.map((line) => (
                     <div key={line.ingredientId} role="listitem">
                       <Item
-                        asChild
                         variant="outline"
                         className="min-h-20 touch-manipulation"
+                        render={
+                          <button
+                            type="button"
+                            className="w-full text-left"
+                            onClick={() =>
+                              controller.openEdit(line.ingredientId)
+                            }
+                          />
+                        }
                       >
-                        <button
-                          type="button"
-                          className="w-full text-left"
-                          onClick={() => controller.openEdit(line.ingredientId)}
-                        >
-                          <ItemContent className="min-w-0 gap-1">
-                            <ItemTitle className="line-clamp-none text-sm font-semibold">
-                              {line.ingredientName}
-                            </ItemTitle>
-                            <ItemDescription className="line-clamp-none text-xs">
-                              {line.unitCost != null && line.unitCost > 0 ? (
-                                <>
-                                  {GRN_CREATE_COPY.lineUnitCost(
-                                    line.quantity,
-                                    line.unit,
-                                    line.unitCost,
-                                  )}{" "}
-                                  <span className="font-semibold text-foreground">
-                                    {GRN_CREATE_COPY.moneyVnd(
-                                      line.quantity * line.unitCost,
-                                    )}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="font-medium text-warning">
-                                  {GRN_CREATE_COPY.linePriceRequired(
-                                    line.quantity,
-                                    line.unit,
+                        <ItemContent className="min-w-0 gap-1">
+                          <ItemTitle className="line-clamp-none text-sm font-semibold">
+                            {line.ingredientName}
+                          </ItemTitle>
+                          <ItemDescription className="line-clamp-none text-xs">
+                            {line.unitCost != null && line.unitCost > 0 ? (
+                              <>
+                                {GRN_CREATE_COPY.lineUnitCost(
+                                  line.quantity,
+                                  line.unit,
+                                  line.unitCost,
+                                )}{" "}
+                                <span className="font-semibold text-foreground">
+                                  {GRN_CREATE_COPY.moneyVnd(
+                                    line.quantity * line.unitCost,
                                   )}
                                 </span>
-                              )}
-                            </ItemDescription>
-                          </ItemContent>
-                          <ItemActions className="shrink-0">
-                            <IconChevronRight className="size-4 text-muted-foreground" />
-                          </ItemActions>
-                        </button>
+                              </>
+                            ) : (
+                              <span className="font-medium text-warning">
+                                {GRN_CREATE_COPY.linePriceRequired(
+                                  line.quantity,
+                                  line.unit,
+                                )}
+                              </span>
+                            )}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemActions className="shrink-0">
+                          <IconChevronRight className="size-4 text-muted-foreground" />
+                        </ItemActions>
                       </Item>
                     </div>
                   ))}
@@ -254,32 +263,32 @@ export function BranchGrnCreateClient({
                   return (
                     <div key={ingredient.id} role="listitem">
                       <Item
-                        asChild
                         variant="outline"
                         className="min-h-16 touch-manipulation"
+                        render={
+                          <button
+                            type="button"
+                            className="w-full text-left"
+                            onClick={() => controller.openEdit(ingredient.id)}
+                          />
+                        }
                       >
-                        <button
-                          type="button"
-                          className="w-full text-left"
-                          onClick={() => controller.openEdit(ingredient.id)}
-                        >
-                          <ItemContent className="min-w-0 gap-1">
-                            <ItemTitle className="line-clamp-none text-sm font-semibold">
-                              {ingredient.name}
-                            </ItemTitle>
-                            <ItemDescription className="line-clamp-none text-xs">
-                              {ingredient.sku ? `${ingredient.sku} · ` : ""}
-                              {ingredient.unit}
-                            </ItemDescription>
-                          </ItemContent>
-                          <ItemActions className="shrink-0">
-                            {added ? (
-                              <IconCircleCheck className="size-5 text-success" />
-                            ) : (
-                              <IconChevronRight className="size-4 text-muted-foreground" />
-                            )}
-                          </ItemActions>
-                        </button>
+                        <ItemContent className="min-w-0 gap-1">
+                          <ItemTitle className="line-clamp-none text-sm font-semibold">
+                            {ingredient.name}
+                          </ItemTitle>
+                          <ItemDescription className="line-clamp-none text-xs">
+                            {ingredient.sku ? `${ingredient.sku} · ` : ""}
+                            {ingredient.unit}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemActions className="shrink-0">
+                          {added ? (
+                            <IconCircleCheck className="size-5 text-success" />
+                          ) : (
+                            <IconChevronRight className="size-4 text-muted-foreground" />
+                          )}
+                        </ItemActions>
                       </Item>
                     </div>
                   );
@@ -317,11 +326,13 @@ export function BranchGrnCreateClient({
         <AppDetailFooter
           sticky
           leading={
-            <Button variant="outline" size="touch" asChild>
-              <Link href={sourceBasePath}>
-                <IconArrowLeft data-icon="inline-start" />
-                {GRN_CREATE_COPY.changeSupplier}
-              </Link>
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href={sourceBasePath} />}
+            >
+              <IconArrowLeft data-icon="inline-start" />
+              {GRN_CREATE_COPY.changeSupplier}
             </Button>
           }
           trailing={

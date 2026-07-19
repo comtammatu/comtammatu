@@ -4,7 +4,11 @@ import { useMemo, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemContent,
@@ -184,16 +188,17 @@ export function BlindCountingGrid({
       className={cn("flex flex-col gap-3", className)}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-56">
-          <IconSearch className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
+        <InputGroup className="min-w-56 flex-1">
+          <InputGroupAddon>
+            <IconSearch aria-hidden />
+          </InputGroupAddon>
+          <InputGroupInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={INVENTORY_VI.searchIngredientPlaceholder}
-            className="h-10 pl-8"
             data-slot="blind-counting-grid-search"
           />
-        </div>
+        </InputGroup>
         <Badge variant="outline" className="gap-1">
           {INVENTORY_VI.rowRatio(filtered.length, lines.length)}
         </Badge>

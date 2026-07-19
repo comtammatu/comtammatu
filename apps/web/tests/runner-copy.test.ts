@@ -464,7 +464,7 @@ test("Runner board uses responsive design-system text and Tailwind grid tokens",
   assert.match(runnerPageSource, /return "col-span-1"/);
   assert.match(
     runnerPageSource,
-    /text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:px-8 xl:py-4/,
+    /text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:py-4/,
   );
   assert.doesNotMatch(runnerPageSource, /brand-pattern-vong-to/);
   assert.doesNotMatch(runnerPageSource, /brand-strip brand-pattern-vong-to/);

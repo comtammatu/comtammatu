@@ -27,7 +27,10 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
   assert.match(data, /import "server-only"/);
   assert.match(data, /PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN/);
   assert.match(data, /scope\.selectedBranchId !== routeBranchId/);
-  assert.match(client, /<button type="button" onClick=\{\(\) => openEmployee/);
+  assert.match(
+    client,
+    /render=\{\s*<button\s+type="button"\s+onClick=\{\(\) => openEmployee/,
+  );
   assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
   assert.match(client, /size="touch"/);
   assert.match(client, /md:grid-cols-2/);

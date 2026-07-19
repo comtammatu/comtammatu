@@ -314,7 +314,7 @@ function ActiveOrdersListComponent({
       <AppEmptyState
         title={messages.pos.orderHistory.empty}
         icon={<IconReceipt />}
-        className="flex-1 px-6"
+        className="flex-1"
       />
     );
   }
@@ -322,7 +322,7 @@ function ActiveOrdersListComponent({
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-        <div className="flex flex-col gap-3 px-3 pb-24 pt-2 md:p-2">
+        <div className="flex flex-col gap-3 px-3 pb-4 pt-2 md:p-2">
           <ItemGroup className="gap-2">
             {activeOrders.map((order) => (
               <OrderCard

@@ -112,27 +112,27 @@ export function SupplierPicker({
 
       {needle && !hasExactMatch && canCreate ? (
         <InteractiveCard
-          asChild
           minHeight="mobile"
           padding="default"
           className="border-primary/20 bg-primary/10 text-left"
+          render={
+            <button type="button" onClick={handleCreate} disabled={creating} />
+          }
         >
-          <button type="button" onClick={handleCreate} disabled={creating}>
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-              {creating ? (
-                <Spinner className="size-5" />
-              ) : (
-                <IconPlus className="size-5" />
-              )}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-base font-semibold leading-tight text-primary">
-                {creating
-                  ? INVENTORY_VI.grnCreateSupplierPending
-                  : INVENTORY_VI.grnCreateSupplierInline(needle)}
-              </p>
-            </div>
-          </button>
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            {creating ? (
+              <Spinner className="size-5" />
+            ) : (
+              <IconPlus className="size-5" />
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base font-semibold leading-tight text-primary">
+              {creating
+                ? INVENTORY_VI.grnCreateSupplierPending
+                : INVENTORY_VI.grnCreateSupplierInline(needle)}
+            </p>
+          </div>
         </InteractiveCard>
       ) : null}
 
@@ -155,37 +155,37 @@ export function SupplierPicker({
           return (
             <InteractiveCard
               key={supplier.id}
-              asChild
               minHeight="mobile"
               padding="default"
               className="h-auto"
+              render={<Link href={supplierHref(supplier.id)} />}
             >
-              <Link href={supplierHref(supplier.id)}>
-                <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold uppercase text-muted-foreground">
-                  {initials}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-semibold leading-tight">
-                    {supplier.name}
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    {supplier.phone ? (
-                      <span className="inline-flex items-center gap-1">
-                        <IconPhone className="size-3" />
-                        {supplier.phone}
-                      </span>
-                    ) : null}
-                    {supplier.recentLabel ? (
-                      <span className="inline-flex items-center gap-1">
-                        <IconReceipt className="size-3" />
-                        {supplier.recentLabel}
-                      </span>
-                    ) : null}
-                    {supplier.lastLabel ? <span>{supplier.lastLabel}</span> : null}
-                  </div>
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold uppercase text-muted-foreground">
+                {initials}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-semibold leading-tight">
+                  {supplier.name}
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  {supplier.phone ? (
+                    <span className="inline-flex items-center gap-1">
+                      <IconPhone className="size-3" />
+                      {supplier.phone}
+                    </span>
+                  ) : null}
+                  {supplier.recentLabel ? (
+                    <span className="inline-flex items-center gap-1">
+                      <IconReceipt className="size-3" />
+                      {supplier.recentLabel}
+                    </span>
+                  ) : null}
+                  {supplier.lastLabel ? (
+                    <span>{supplier.lastLabel}</span>
+                  ) : null}
                 </div>
-                <IconChevronRight className="size-5 shrink-0 text-muted-foreground" />
-              </Link>
+              </div>
+              <IconChevronRight className="size-5 shrink-0 text-muted-foreground" />
             </InteractiveCard>
           );
         })

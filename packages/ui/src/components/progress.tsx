@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Progress as ProgressPrimitive } from "radix-ui";
+import { Progress as ProgressPrimitive } from "@base-ui/react/progress";
 
 import { cn } from "../lib/utils";
 
@@ -19,13 +19,15 @@ function Progress({
   value,
   tone = "default",
   ...props
-}: React.ComponentProps<typeof ProgressPrimitive.Root> & {
+}: Omit<React.ComponentProps<typeof ProgressPrimitive.Root>, "value"> & {
+  value?: number | null;
   tone?: ProgressTone;
 }) {
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
       data-tone={tone}
+      value={value ?? null}
       className={cn(
         "relative flex h-1 w-full items-center overflow-x-hidden rounded-md bg-muted",
         className,

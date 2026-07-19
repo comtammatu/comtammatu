@@ -271,10 +271,12 @@ export function BranchStockIssuesListClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={stockBasePath} aria-label="Quay lại kho">
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={<Link href={stockBasePath} aria-label="Quay lại kho" />}
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">
@@ -366,35 +368,33 @@ export function BranchStockIssuesListClient({
               {filteredIssues.map((issue) => (
                 <div key={issue.id} role="listitem">
                   <Item
-                    asChild
                     variant="outline"
                     className={
                       issue.status === "cancelled"
                         ? "min-h-16 touch-manipulation opacity-60"
                         : "min-h-16 touch-manipulation"
                     }
+                    render={<Link href={`${issuesBasePath}/${issue.id}`} />}
                   >
-                    <Link href={`${issuesBasePath}/${issue.id}`}>
-                      <ItemContent className="min-w-0 gap-1">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <ItemTitle className="truncate font-mono text-sm font-semibold">
-                            {issue.code}
-                          </ItemTitle>
-                          <StatusBadge
-                            domain="inventory"
-                            value={issue.status}
-                            size="sm"
-                          />
-                        </div>
-                        <ItemDescription className="line-clamp-none flex flex-wrap gap-x-2 gap-y-1 text-xs">
-                          <span>{issueTypeLabel(issue.type)}</span>
-                          <span>{formatVNDateTime(issue.issuedAt)}</span>
-                        </ItemDescription>
-                      </ItemContent>
-                      <ItemActions className="self-center text-muted-foreground">
-                        <IconChevronRight />
-                      </ItemActions>
-                    </Link>
+                    <ItemContent className="min-w-0 gap-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <ItemTitle className="truncate font-mono text-sm font-semibold">
+                          {issue.code}
+                        </ItemTitle>
+                        <StatusBadge
+                          domain="inventory"
+                          value={issue.status}
+                          size="sm"
+                        />
+                      </div>
+                      <ItemDescription className="line-clamp-none flex flex-wrap gap-x-2 gap-y-1 text-xs">
+                        <span>{issueTypeLabel(issue.type)}</span>
+                        <span>{formatVNDateTime(issue.issuedAt)}</span>
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemActions className="self-center text-muted-foreground">
+                      <IconChevronRight />
+                    </ItemActions>
                   </Item>
                 </div>
               ))}

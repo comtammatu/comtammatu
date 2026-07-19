@@ -126,11 +126,11 @@ function unitsSummary(item: IngredientRow): string {
   return units
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
-	    .map((u) =>
-	      u.is_base
-	        ? `${u.unit_code} (${ingredientFormCopy.units.baseTag})`
-	        : `${u.unit_code} ×${formatDecimal(u.to_base_factor, 6)}`,
-	    )
+    .map((u) =>
+      u.is_base
+        ? `${u.unit_code} (${ingredientFormCopy.units.baseTag})`
+        : `${u.unit_code} ×${formatDecimal(u.to_base_factor, 6)}`,
+    )
     .join(" · ");
 }
 
@@ -596,17 +596,19 @@ export function IngredientsClient({
       className: "w-12 text-right",
       render: (item) => (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label={ingredientListCopy.rowActionsAria(item.name)}
-              disabled={isPending}
-            >
-              <IconDots className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label={ingredientListCopy.rowActionsAria(item.name)}
+                disabled={isPending}
+              >
+                <IconDots className="size-4" />
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => openEdit(item)}>
               <IconPencil className="mr-2 size-4" />

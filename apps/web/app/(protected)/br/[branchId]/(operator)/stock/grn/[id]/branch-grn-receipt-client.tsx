@@ -49,10 +49,12 @@ export function BranchGrnReceiptClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={grnListBasePath} aria-label={grnCopy.back}>
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={<Link href={grnListBasePath} aria-label={grnCopy.back} />}
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-sm font-semibold tabular-nums">
@@ -151,11 +153,9 @@ export function BranchGrnReceiptClient({
         <AppDetailFooter
           sticky
           trailing={
-            <Button size="touch-lg" asChild>
-              <Link href={grnListBasePath}>
-                <IconArrowLeft data-icon="inline-start" />
-                {grnCopy.back}
-              </Link>
+            <Button size="touch-lg" render={<Link href={grnListBasePath} />}>
+              <IconArrowLeft data-icon="inline-start" />
+              {grnCopy.back}
             </Button>
           }
         />

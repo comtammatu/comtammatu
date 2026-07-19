@@ -49,23 +49,23 @@ export async function StaffClockPageContent({
       hideHeaderOnMobile
       action={
         <Button
-          asChild
           variant="outline"
           size="touch"
           className="w-full sm:w-fit"
+          render={
+            <Link
+              href={
+                state.managerAttendanceOnly ? routes.managerHr : routes.tasks
+              }
+            />
+          }
         >
-          <Link
-            href={state.managerAttendanceOnly ? routes.managerHr : routes.tasks}
-          >
-            {state.managerAttendanceOnly ? (
-              <IconCalendarDays data-icon="inline-start" />
-            ) : (
-              <IconListChecks data-icon="inline-start" />
-            )}
-            {state.managerAttendanceOnly
-              ? copy.managerHrTitle
-              : copy.shiftTasks}
-          </Link>
+          {state.managerAttendanceOnly ? (
+            <IconCalendarDays data-icon="inline-start" />
+          ) : (
+            <IconListChecks data-icon="inline-start" />
+          )}
+          {state.managerAttendanceOnly ? copy.managerHrTitle : copy.shiftTasks}
         </Button>
       }
     >

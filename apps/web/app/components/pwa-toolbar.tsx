@@ -373,14 +373,12 @@ export function PwaToolbarEntryLink({
 }) {
   return (
     <Button
-      asChild
       variant="ghost"
       size="icon-touch"
       className="shrink-0 text-muted-foreground"
+      render={<Link href={href} aria-label={label} />}
     >
-      <Link href={href} aria-label={label}>
-        <IconLayoutGrid />
-      </Link>
+      <IconLayoutGrid />
     </Button>
   );
 }

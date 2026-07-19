@@ -145,11 +145,14 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
         title={copy.title}
         description={copy.description}
         breadcrumb={
-          <Button asChild variant="ghost" size="sm" className="-ml-3">
-            <Link href="/hr/staff">
-              <IconArrowLeft className="mr-1 size-4" />
-              {copy.backToStaff}
-            </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-3"
+            render={<Link href="/hr/staff" />}
+          >
+            <IconArrowLeft className="mr-1 size-4" />
+            {copy.backToStaff}
           </Button>
         }
       />

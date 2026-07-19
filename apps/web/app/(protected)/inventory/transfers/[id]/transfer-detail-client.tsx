@@ -752,13 +752,18 @@ export function TransferDetailClient({
   const content = embedded ? (
     <>
       <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="icon" className="shrink-0">
-          <Link
-            href={transferListHref}
-            aria-label={tRoute("/inventory/transfers")}
-          >
-            <IconArrowLeft className="size-4" />
-          </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0"
+          render={
+            <Link
+              href={transferListHref}
+              aria-label={tRoute("/inventory/transfers")}
+            />
+          }
+        >
+          <IconArrowLeft className="size-4" />
         </Button>
         <div className="min-w-0 flex-1">
           <p className="truncate font-mono text-sm font-semibold">

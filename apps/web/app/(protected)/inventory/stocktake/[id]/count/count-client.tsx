@@ -284,13 +284,13 @@ export function StocktakeCountClient({
             type="button"
             variant="outline"
             size={embedded ? "touch" : "sm"}
-            asChild
+            render={
+              <Link
+                href={`${routeBase}/${sessionId}?branchId=${branchId}&view=detail`}
+              />
+            }
           >
-            <Link
-              href={`${routeBase}/${sessionId}?branchId=${branchId}&view=detail`}
-            >
-              {messages.inventory.stocktake.detail.completeAction}
-            </Link>
+            {messages.inventory.stocktake.detail.completeAction}
           </Button>
           {!editable ? (
             <Button variant="outline" size={embedded ? "touch" : "sm"} disabled>

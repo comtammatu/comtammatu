@@ -235,7 +235,7 @@ export function CreateTransferForm({
                       <SelectItem
                         key={ingredient.id}
                         value={String(ingredient.id)}
-                        textValue={`${ingredient.name} ${getTransferWarehouseUnit(
+                        label={`${ingredient.name} ${getTransferWarehouseUnit(
                           ingredient,
                         )} ${ingredient.id}`}
                       >
@@ -398,8 +398,8 @@ export function CreateTransferForm({
       </AppSection>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="outline" asChild>
-          <Link href={controller.listHref}>{ACTIONS_VI.cancel}</Link>
+        <Button variant="outline" render={<Link href={controller.listHref} />}>
+          {ACTIONS_VI.cancel}
         </Button>
         <Button type="submit" disabled={controller.submitDisabled}>
           {controller.isPending ? copy.creating : copy.createSlip}

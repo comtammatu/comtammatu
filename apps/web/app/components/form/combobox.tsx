@@ -1,157 +1,28 @@
 "use client";
 
-import { forwardRef, useMemo, useState, type ComponentProps } from "react";
+import { forwardRef } from "react";
 import {
-  Check as IconCheck,
-  ChevronDown as IconSelector,
-} from "lucide-react";
-import { cn } from "@comtammatu/ui";
-import { fieldTriggerChrome } from "@comtammatu/ui/lib/field-trigger";
+  Combobox as SharedCombobox,
+  type ComboboxOption,
+  type ComboboxProps as SharedComboboxProps,
+} from "@comtammatu/ui/components/combobox";
 import { matchesSearch } from "@lib/search";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@comtammatu/ui/components/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@comtammatu/ui/components/popover";
-import type { ComboboxFieldOption } from "./combobox-field";
 
-export interface ComboboxProps {
-  value: string;
-  onValueChange: (value: string) => void;
-  options: readonly ComboboxFieldOption[];
-  placeholder?: string;
-  searchPlaceholder?: string;
-  emptyMessage?: string;
-  disabled?: boolean;
-  className?: string;
-  triggerClassName?: string;
-  size?: ComponentProps<typeof Button>["size"];
-  id?: string;
-  onBlur?: ComponentProps<typeof Button>["onBlur"];
-  "aria-label"?: string;
-  "aria-invalid"?: boolean;
-  "aria-describedby"?: string;
-  "aria-errormessage"?: string;
-  "aria-required"?: boolean;
-}
+export type ComboboxProps = Omit<SharedComboboxProps, "filter">;
 
-/** Standalone controlled Combobox (no RHF). Shared UI primitive. */
 export const Combobox = forwardRef<HTMLButtonElement, ComboboxProps>(
-  function Combobox(
-    {
-      value,
-      onValueChange,
-      options,
-      placeholder = "Chọn...",
-      searchPlaceholder = "Tìm...",
-      emptyMessage = "Không tìm thấy.",
-      disabled,
-      className,
-      triggerClassName,
-      size = "field",
-      id,
-      onBlur,
-      "aria-label": ariaLabel,
-      "aria-invalid": ariaInvalid,
-      "aria-describedby": ariaDescribedBy,
-      "aria-errormessage": ariaErrorMessage,
-      "aria-required": ariaRequired,
-    },
-    ref,
-  ) {
-    const [open, setOpen] = useState(false);
-
-    const selected = useMemo(
-      () => options.find((opt) => opt.value === value),
-      [options, value],
-    );
-
+  function Combobox(props, ref) {
     return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            ref={ref}
-            id={id}
-            type="button"
-            variant="outline"
-            size={size}
-            role="combobox"
-            aria-expanded={open}
-            aria-invalid={ariaInvalid}
-            aria-label={ariaLabel}
-            aria-describedby={ariaDescribedBy}
-            aria-errormessage={ariaErrorMessage}
-            aria-required={ariaRequired}
-            onBlur={onBlur}
-            disabled={disabled}
-            className={cn(
-              "w-full justify-between font-normal",
-              fieldTriggerChrome,
-              "hover:bg-input/20 aria-expanded:bg-input/30",
-              !selected && "text-muted-foreground",
-              triggerClassName ?? className,
-            )}
-          >
-            <span className="truncate">
-              {selected ? selected.label : placeholder}
-            </span>
-            <IconSelector className="ml-2 size-3.5 shrink-0 text-muted-foreground" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-(--radix-popover-trigger-width) p-0"
-          align="start"
-        >
-          <Command
-            filter={(v, search, keywords) => {
-              return matchesSearch([v, ...(keywords ?? [])], search) ? 1 : 0;
-            }}
-          >
-            <CommandInput placeholder={searchPlaceholder} />
-            <CommandList>
-              <CommandEmpty>{emptyMessage}</CommandEmpty>
-              <CommandGroup>
-                {options.map((opt) => (
-                  <CommandItem
-                    key={opt.value}
-                    value={opt.label}
-                    keywords={opt.keywords}
-                    disabled={opt.disabled}
-                    onSelect={() => {
-                      onValueChange(opt.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate">{opt.label}</span>
-                      {opt.hint ? (
-                        <span className="truncate text-xs text-muted-foreground">
-                          {opt.hint}
-                        </span>
-                      ) : null}
-                    </div>
-                    <IconCheck
-                      className={cn(
-                        "ml-2 size-4 shrink-0",
-                        value === opt.value ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <SharedCombobox
+        {...props}
+        ref={ref}
+        filter={(option: ComboboxOption, query) =>
+          matchesSearch(
+            [option.label, option.value, ...(option.keywords ?? [])],
+            query,
+          )
+        }
+      />
     );
   },
 );

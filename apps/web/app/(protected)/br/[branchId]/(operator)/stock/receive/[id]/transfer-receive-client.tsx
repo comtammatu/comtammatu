@@ -131,10 +131,12 @@ export function TransferReceiveClient({
       >
         <div className="flex min-w-0 touch-manipulation flex-col gap-3">
           <BranchOperatorControlBar className="sm:hidden">
-            <Button asChild variant="ghost" size="icon-touch">
-              <Link href={backHref} aria-label={ACTIONS_VI.back}>
-                <IconArrowLeft />
-              </Link>
+            <Button
+              variant="ghost"
+              size="icon-touch"
+              render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
+            >
+              <IconArrowLeft />
             </Button>
             <div className="min-w-0 flex-1">
               <p className="truncate font-mono text-sm font-semibold tabular-nums">
@@ -160,12 +162,16 @@ export function TransferReceiveClient({
             }
             symbol="riceGrain"
           >
-            <Button asChild variant="outline" size="sm">
-              <Link href={isWaitingForTransit ? backHref : detailHref}>
-                {isWaitingForTransit
-                  ? receiveCopy.receiveBackToList
-                  : receiveCopy.receiveOpenDetail}
-              </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              render={
+                <Link href={isWaitingForTransit ? backHref : detailHref} />
+              }
+            >
+              {isWaitingForTransit
+                ? receiveCopy.receiveBackToList
+                : receiveCopy.receiveOpenDetail}
             </Button>
           </AppEmptyState>
         </div>
@@ -181,10 +187,13 @@ export function TransferReceiveClient({
     >
       <div className="flex w-full touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch" className="shrink-0">
-            <Link href={backHref} aria-label={ACTIONS_VI.back}>
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            className="shrink-0"
+            render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-sm font-semibold tabular-nums">
@@ -196,30 +205,31 @@ export function TransferReceiveClient({
           </div>
         </BranchOperatorControlBar>
 
-      <div className="rounded-md bg-muted/50 p-2.5">
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary transition-[width]"
-              style={{ width: `${Math.round(progress * 100)}%` }}
-            />
+        <div className="rounded-md bg-muted/50 p-2.5">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-[width]"
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground tabular-nums">
+              {receiveCopy.receiveProgress(confirmed.size, total)}
+            </span>
           </div>
-          <span className="text-xs font-medium text-muted-foreground tabular-nums">
-            {receiveCopy.receiveProgress(confirmed.size, total)}
-          </span>
-        </div>
 
-        {nextItem ? (
-          <InteractiveCard
-            asChild
-            padding="compact"
-            minHeight="tap"
-            className="mt-2"
-          >
-            <button
-              type="button"
-              className="w-full flex-col items-start justify-center text-left"
-              onClick={() => setSheetId(nextItem.ingredientId)}
+          {nextItem ? (
+            <InteractiveCard
+              padding="compact"
+              minHeight="tap"
+              className="mt-2"
+              render={
+                <button
+                  type="button"
+                  className="w-full flex-col items-start justify-center text-left"
+                  onClick={() => setSheetId(nextItem.ingredientId)}
+                />
+              }
             >
               <SectionLabel>{receiveCopy.receiveNextLine}</SectionLabel>
               <span className="flex min-w-0 items-center gap-2">
@@ -230,24 +240,28 @@ export function TransferReceiveClient({
                   {receiveCopy.receiveSent(String(nextItem.qty), nextItem.unit)}
                 </span>
               </span>
-            </button>
-          </InteractiveCard>
-        ) : null}
-      </div>
+            </InteractiveCard>
+          ) : null}
+        </div>
 
-      <ItemGroup className="gap-2">
-        {items.map((item) => {
-          const isConfirmed = confirmed.has(item.ingredientId);
-          const isNext = nextItem?.ingredientId === item.ingredientId;
-          const value = values[item.ingredientId] ?? item.qty;
-          const isShortage = isConfirmed && value < item.qty;
-          return (
-            <div key={item.ingredientId} className="flex flex-col gap-2">
-              <InteractiveCard asChild padding="compact" minHeight="tap">
-                <button
-                  type="button"
-                  onClick={() => setSheetId(item.ingredientId)}
-                  className="flex w-full items-center gap-3 text-left"
+        <ItemGroup className="gap-2">
+          {items.map((item) => {
+            const isConfirmed = confirmed.has(item.ingredientId);
+            const isNext = nextItem?.ingredientId === item.ingredientId;
+            const value = values[item.ingredientId] ?? item.qty;
+            const isShortage = isConfirmed && value < item.qty;
+            return (
+              <div key={item.ingredientId} className="flex flex-col gap-2">
+                <InteractiveCard
+                  padding="compact"
+                  minHeight="tap"
+                  render={
+                    <button
+                      type="button"
+                      onClick={() => setSheetId(item.ingredientId)}
+                      className="flex w-full items-center gap-3 text-left"
+                    />
+                  }
                 >
                   {isConfirmed ? (
                     <IconCheckCircle className="size-5 shrink-0 text-primary" />
@@ -274,15 +288,13 @@ export function TransferReceiveClient({
                   >
                     {isConfirmed ? value : receiveCopy.receiveTapToEnter}
                   </span>
-                </button>
-              </InteractiveCard>
-              {isShortage ? (
-                <Item
-                  asChild
-                  variant="outline"
-                  className="flex-col items-stretch gap-1.5"
-                >
-                  <label data-vaul-no-drag>
+                </InteractiveCard>
+                {isShortage ? (
+                  <Item
+                    variant="outline"
+                    className="flex-col items-stretch gap-1.5"
+                    render={<label />}
+                  >
                     <span className="text-xs font-medium text-destructive">
                       {copy.shortageNoteTitle}
                     </span>
@@ -299,61 +311,62 @@ export function TransferReceiveClient({
                       maxLength={300}
                       disabled={isPending}
                     />
-                  </label>
-                </Item>
-              ) : null}
-            </div>
-          );
-        })}
-      </ItemGroup>
+                  </Item>
+                ) : null}
+              </div>
+            );
+          })}
+        </ItemGroup>
 
-      <AppDetailFooter
-        sticky
-        leading={
-          <Button variant="outline" size="touch" asChild>
-            <Link href={backHref}>
+        <AppDetailFooter
+          sticky
+          leading={
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href={backHref} />}
+            >
               <IconArrowLeft data-icon="inline-start" />
               {ACTIONS_VI.back}
-            </Link>
-          </Button>
-        }
-        trailing={
-          <Button
-            type="button"
-            size="touch-lg"
-            variant={remaining > 0 ? "outline" : "default"}
-            disabled={isPending}
-            onClick={handleConfirm}
-          >
-            {isPending ? <Spinner className="size-5" /> : null}
-            {remaining > 0
-              ? receiveCopy.receiveConfirmRemaining(remaining)
-              : receiveCopy.receiveConfirmAll}
-          </Button>
-        }
-      />
+            </Button>
+          }
+          trailing={
+            <Button
+              type="button"
+              size="touch-lg"
+              variant={remaining > 0 ? "outline" : "default"}
+              disabled={isPending}
+              onClick={handleConfirm}
+            >
+              {isPending ? <Spinner className="size-5" /> : null}
+              {remaining > 0
+                ? receiveCopy.receiveConfirmRemaining(remaining)
+                : receiveCopy.receiveConfirmAll}
+            </Button>
+          }
+        />
 
-      <NumberPadSheet
-        open={sheetItem != null}
-        onOpenChange={(next) => {
-          if (!next) setSheetId(null);
-        }}
-        title={
-          sheetItem
-            ? `${sheetItem.name} · ${receiveCopy.receiveSent(String(sheetItem.qty), sheetItem.unit)}`
-            : ""
-        }
-        suffix={sheetItem?.unit}
-        initialValue={
-          sheetItem
-            ? confirmed.has(sheetItem.ingredientId)
-              ? (values[sheetItem.ingredientId] ?? sheetItem.qty)
+        <NumberPadSheet
+          open={sheetItem != null}
+          onOpenChange={(next) => {
+            if (!next) setSheetId(null);
+          }}
+          title={
+            sheetItem
+              ? `${sheetItem.name} · ${receiveCopy.receiveSent(String(sheetItem.qty), sheetItem.unit)}`
+              : ""
+          }
+          suffix={sheetItem?.unit}
+          initialValue={
+            sheetItem
+              ? confirmed.has(sheetItem.ingredientId)
+                ? (values[sheetItem.ingredientId] ?? sheetItem.qty)
+                : null
               : null
-            : null
-        }
-        onConfirm={handleSheetConfirm}
-        allowDecimal
-      />
+          }
+          onConfirm={handleSheetConfirm}
+          allowDecimal
+        />
       </div>
     </BranchOperatorPage>
   );

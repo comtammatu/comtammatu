@@ -1,10 +1,10 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.15.0 | Updated: 2026-07-05 | Status: locked single source for UI agents
+> Version: 15.0.0 | Updated: 2026-07-18 | Status: Má Tư visual contract
 
 ## Mục lục / Decision Index
 
-- [Single Source Decision](#single-source-decision)
+- [Visual Contract And Authority Map](#visual-contract-and-authority-map)
 - [Authority Order](#authority-order)
 - [Product UX Thesis](#product-ux-thesis)
 - [Token Contract](#token-contract)
@@ -13,40 +13,35 @@
 - [Elevation / Shadow](#elevation--shadow)
 - [Component Authority & Roles](#component-authority)
 
-## Single Source Decision
+## Visual Contract And Authority Map
 
-This file is the single design-system contract for agents building or reviewing
-UI in this repo. It defines the Com Tam Ma Tu Custom Theme: Ma Tu Concept 01
-semantic tokens, typography, rhythm, brand usage, primitive roles, and app
-surface adapters. Runtime files prove whether the contract is implemented, but
-they do not authorize a second visual language.
+This file owns the Má Tư visual language: semantic tokens, typography, density,
+brand, visual states, elevation, and motion recipes. It is the visual source of
+truth; it does not own every behavioral or workflow decision in the UI system.
 
-If a runtime file, package description, generated token file, or external
-reference disagrees with this file, treat that as drift. Do not copy the
-exception into new UI. Either update this contract first or migrate the runtime
-back to the contract.
+| Concern | Owner | Role |
+| --- | --- | --- |
+| Visual language | This file + `packages/ui/src/styles/globals.css` | Má Tư tokens and recipes |
+| Primitive behavior | `packages/ui/src/components/*` | Base UI accessibility and interaction behavior |
+| Workflow composition | `docs/spec/page-archetypes.md` + target route | job, state, navigation, responsive IA |
+| Runtime integration | `docs/modules/ui.md` | migration and adapter map |
+| Regression proof | guards, focused tests, browser evidence | verify outcomes, not prose wording |
 
-This is intentionally **one source of truth**, not a source-of-truth bundle.
-`docs/modules/ui.md`, `docs/agent/rules/ui.md`, `tasks/regressions.md`,
-`globals.css`, primitives, and app adapters are supporting
-evidence or enforcement. They must point back to this contract. If they conflict
-with it, the conflict is a bug to resolve, not permission to choose whichever
-file is convenient.
+When owners disagree, resolve the decision at the concern that owns it. Do not
+copy an exception into a new route and do not create a second visual language.
 
 ## Decision
 
-The design system is the Com Tam Ma Tu Custom Theme contract implemented by
-Má Tư Design System primitives in `@comtammatu/ui`. Radix, lucide, Tailwind, and
-class-variance-authority are implementation dependencies, not design-system
-authorities. External scaffold output is not part of the runtime contract and
-must never be used to overrule this file.
+The design system is the Com Tam Ma Tu Custom Theme implemented through Má Tư
+primitives in `@comtammatu/ui`. Base UI supplies primitive behavior; lucide,
+Tailwind, and class-variance-authority are implementation dependencies. They do
+not own Má Tư visual decisions.
 
-shadcn-ui and Web Interface Guidelines are advisory checklists only. They can
-surface missing accessibility, interaction, or component-selection signals, but
-they cannot create a second preset, scaffold config, token source, or primitive
-authority for this repo.
+Shadcn and Web Interface Guidelines are explicit comparison inputs. They may
+identify missing component anatomy, accessibility, states, UX, or CSS motion.
+They never create a preset, token source, or visual authority for this repo.
 
-Custom Theme means the locked Ma Tu Concept 01 semantic tokens, typography,
+Custom Theme means the established Ma Tu Concept 01 semantic tokens, typography,
 spacing rhythm, component roles, brand primitives, and app surface adapters
 documented here. It does not mean a route-local theme layer, a new component
 library outside `@comtammatu/ui`, or a parallel visual language.
@@ -56,7 +51,8 @@ Active runtime:
 - custom theme: Com Tam Ma Tu Custom Theme / Ma Tu Concept 01
 - token source: `packages/ui/src/styles/globals.css`
 - primitive source: `packages/ui/src/components/*`
-- primitive dependencies: Radix (`radix-ui`), lucide, Tailwind CSS 4, CVA
+- primitive behavior: Base UI
+- primitive dependencies: lucide, Tailwind CSS 4, CVA
 - brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`, `/brand/mascot/be-suon-tuoi-runner.png`, `/brand/mascot/cotlet.png`, `/brand/mascot/cotlet.spritesheet.webp`, `/brand/mascot/cotlet.pet.json`, `/brand/symbols/*.svg`
 - web brand primitive: `apps/web/app/components/brand.tsx`
 - web app surface adapters: `apps/web/app/components/surface.tsx`
@@ -65,18 +61,11 @@ Agents must preserve this decision unless the task explicitly asks to change the
 
 ## Authority Order
 
-When deciding how to build UI, use this order:
-
-1. Custom Theme contract: `docs/spec/design-system.md`
-2. Runtime token evidence that must conform to it: `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
-3. Primitive implementation that must conform to it: `packages/ui/src/components/*`
-4. App adapter implementation that must conform to it: `apps/web/app/components/surface.tsx`
-5. Implementation guide: `docs/modules/ui.md`
-6. Negative rules: `tasks/regressions.md`
-7. Product copy and terminology: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
-
-After this contract selects a pattern, build from the current Má Tư DS
-primitive layer. Update this file only for a real contract change.
+Choose the owner for the decision first, then read the implementation evidence.
+The visual contract selects Má Tư expression; primitive implementation selects
+Base behavior; archetypes and routes select the workflow; tests and browser
+evidence prove the result. Product copy remains owned by `docs/ref/glossary.md`,
+`packages/shared/src/labels/vi.ts`, and domain dictionaries.
 
 ## Product UX Thesis
 
@@ -181,7 +170,8 @@ Brand Concept 01 runtime mapping:
 
 ### Tint Opacity Scale
 
-Status-token tints use a locked three-step opacity scale so a "10% surface tint" reads the same everywhere instead of drifting across `/8`, `/12`, `/25`, `/35` …:
+Status-token tints start from a three-step opacity scale so a "10% surface tint"
+reads consistently across the app:
 
 | Step              | Opacity | Role                                           |
 | ----------------- | ------- | ---------------------------------------------- |
@@ -190,10 +180,10 @@ Status-token tints use a locked three-step opacity scale so a "10% surface tint"
 | `hairline-border` | `/20`   | Hairline border/ring on a tint (`border-…/20`) |
 
 - Applies to `(bg|border|ring|text|fill|stroke)-(warning|success|destructive|info|primary|accent|secondary)`.
-- Neutral muted fills are limited to `/30` and `/50` ONLY (`bg-muted/30`, `bg-muted/50`).
-- Every other step is forbidden: `/5`, `/8`, `/12`, `/25`, `/35`, `/45`, `/55`, `/60`, `/90`, `/95` (and any other value not in the locked set).
-- A solid status background uses the bare token (`bg-success`), never `bg-success/95`.
-- Enforced by the `tint-opacity` gate (status token `/N` where `N ∉ {10,15,20}`, `-muted/N` where `N ∉ {30,50}`), frozen per file and burning down.
+- Prefer `/30` or `/50` for neutral muted fills (`bg-muted/30`, `bg-muted/50`).
+- Start solid status backgrounds from the bare token (`bg-success`). A different
+  opacity is valid when it has a semantic role and preserves contrast in both
+  themes; review the rendered state instead of maintaining a class allowlist.
 
 ### Callout / tint chrome routing
 
@@ -271,13 +261,19 @@ A module that needs to deviate must update this contract first, not patch a sing
 | Tight icon-label gap         | `gap-1`                              | Icon + 1–2 word label only            |
 | Sticky operator action bar   | `gap-2`                              | Touch CTA stack in a sticky footer    |
 
-Allowed gap scale in app code: `1`, `1.5`, `2`, `3`, `4`, `6`. Avoid `5`, `7`, `8` for horizontal flow — they break vertical rhythm with the heading scale below.
+The values above are the default rhythm recipes, not a static utility allowlist.
+Use the smallest named spacing token that preserves hierarchy, touch targets and
+scanability; review rendered density when a route needs another value.
 
-Section-stack density is single-sourced on `AppPage`, not re-opened by page code. An operator client-root / page return MUST NOT open a fresh `flex flex-col gap-*` stack — sections are direct children of `AppPage`, so density (`gap-3` compact / `gap-4` default) is owned in exactly one place. A wrapper is permitted ONLY when a sticky-footer sibling requires it, and that wrapper MUST reuse `gap-3` verbatim (never `gap-2` / `gap-4`). Card / tap-target lists compose `gap-2` through `ItemGroup`; dense metadata lines use `gap-1`; never `space-y-*` for a section stack.
+`AppPage` owns the default outer rhythm and `Card` owns its default inner
+rhythm. Route-local composition may differ when it has a distinct workflow or
+responsive need; review the rendered hierarchy, touch targets, and density
+instead of comparing utility strings. Prefer `gap` for compositional stacks,
+but do not treat a utility name or a local wrapper as a defect by itself.
 
-Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card padding MUST come from `Card` / `Card size="sm"` (not ad-hoc on `<CardContent>`). When a card body needs table-edge alignment or horizontal table scrolling, use the named primitive props `CardContent flush` and/or `CardContent scroll` instead of local `p-0` / `overflow-x-auto` overrides.
-
-Vertical rhythm uses flex gap, not `space-y-*`. Section / page / dialog / client-root stacks compose `flex flex-col gap-4` (compact `gap-3`); AppSection content uses `gap-3`. Do NOT use `space-y-*` for these stacks — gap keeps the spacing on the container (one knob, density-aware) instead of leaking margins onto children. Existing `space-y-*` usage is frozen per file by the `space-y-baseline` gate and only burns down.
+Use `CardContent flush` and `CardContent scroll` when they express the job. A
+route may compose equivalent spacing or overflow when the shared recipe does
+not fit its content, provided it does not create competing visual chrome.
 
 ### B. Heading Scale (locked per role)
 
@@ -298,7 +294,11 @@ Vertical rhythm uses flex gap, not `space-y-*`. Section / page / dialog / client
 | Runner board footer                     | `text-runner-footer font-semibold`                                                                                                      | Runner/KDS order board footer, height-responsive display token                                     |
 | Display call target                     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums`                                                                 | Customer-facing runner / queue display only                                                        |
 
-One role = one size (uppercase labels never scale by viewport). An uppercase eyebrow / panel / field / section label is a single locked role: `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome variant `text-2xs font-medium uppercase tracking-wider`). It is NEVER scaled by viewport — no `sm:text-sm` on eyebrows — and it NEVER uses `text-sm uppercase` / `text-base uppercase`. Every `text-sm uppercase` / `text-base uppercase` label is retired to this role. Enforced by the `uppercase-label-scale` gate (`uppercase` co-occurring with `text-sm` / `text-base`), frozen per file and burning down.
+Uppercase eyebrow, panel, field, and section labels default to
+`text-xs font-medium uppercase tracking-wide text-muted-foreground`; dense KDS
+chrome may use `text-2xs font-medium uppercase tracking-wider`. Change the
+scale only when the route's reading distance or hierarchy needs it, then review
+the rendered label rather than policing a utility pair.
 
 `text-4xl`, `text-5xl` are NOT allowed in app surfaces. They live only in marketing/login splash. `text-3xl` is reserved for the numeric-input-echo role above (cashier number pad, scale display) and MUST be paired with `tabular-nums`. `text-3xs` is reserved for SVG axis labels and dense table micro-meta.
 
@@ -308,7 +308,10 @@ Runner/KDS customer boards must use Tailwind's built-in 12-column grid, not a cu
 
 Heading-weight lock: the default heading weight is `font-semibold`. `font-bold` is reserved for receipt totals and print-mode page headers ONLY. One owner-approved named exception: **POS menu item-name over photo → `font-bold` permitted** (legibility over the `pos-text-overlay` drop-shadow). Emphasis inside body copy may still use `font-bold` inline. `font-black` is not allowed in the app.
 
-Eyebrow tracking is locked per surface: `tracking-wide` for the single page-header eyebrow, `tracking-wider` for repeated dense / table / grid eyebrows. `tracking-tight` is allowed ONLY on `font-heading` titles — never on body, eyebrow, or `font-mono` text. Page H1 MUST come from `AppPageHeader`; hand-rolled `<h1>` headers (especially `sm:text-3xl`, which collides with the `text-3xl` numeric-echo reservation) are forbidden — route them through `AppPageHeader`.
+Prefer `tracking-wide` for the page-header eyebrow and `tracking-wider` for
+repeated dense/table/grid eyebrows. `AppPageHeader` is the default management
+page H1 because it keeps context and actions coordinated; a bespoke header must
+keep one semantic H1, a clear hierarchy, and responsive action behavior.
 
 ### C. Icon Size by Role
 
@@ -369,9 +372,9 @@ Radius is a tier, not a free choice. Pick the token from the element's role:
 | Pill                  | `rounded-full` | Avatar, pill badge, circular (truly round) icon container                                |
 | Reset                 | `rounded-none` | Explicit reset only (table cell internals, edge-bleed media)                             |
 
-`rounded` (no suffix), `rounded-sm`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-4xl` are NOT allowed in app code. The radius primitive token surface (`--radius-sm/md/lg`) exists in `globals.css` for primitive compatibility — app surfaces consume them indirectly through Card/Sheet/etc., not directly.
-
-Tier misalignment is mostly a review concern, but two unambiguous cases are enforced by the `radius-tier-baseline` gate: a `rounded-full` on a sized icon-box (`size-8/10/12/14/16` — that is a square control, so it should be `rounded-md`), and `rounded-lg` on a small inset (`size-8/10/12` — control tier, so `rounded-md`). The gate is a detectable subset only; full tier-correctness comes from this table plus review.
+These tiers are visual recipes, not a static class allowlist. Preserve a
+component's semantic role and visual hierarchy; review non-standard radii in
+the rendered surface instead of blocking a utility name in isolation.
 
 ### F. Density Modes
 
@@ -379,47 +382,52 @@ Tier misalignment is mostly a review concern, but two unambiguous cases are enfo
 
 ### G. Motion Contract
 
-Motion is functional only — it signals state change (loading, enter/exit, focus, attention), never decorates. The app uses Tailwind + Radix / `tw-animate-css` defaults; there is no animation library and none may be added.
+Motion defaults to functional feedback: loading, enter/exit, focus and state
+change. Má Tư may also use restrained brand expression where it does not hide
+operational state or slow an operator task. Base UI supplies the behavior beneath
+these recipes.
 
-**Duration.** App surfaces author only two transition durations; everything else is owned by the Radix / `tw-animate-css` primitive layer and must not be hand-set per page.
+**Timing and easing.** Prefer Má Tư's shared `--motion-*` / `--ease-*` tokens
+for reusable primitives and repeated feedback. A route may add a distinct timing
+or easing when it has a clear interaction or brand-feedback role and the
+rendered state is reviewed; move the recipe into the visual layer once it is
+reused. Do not add arbitrary timing merely as decoration.
 
-| Duration                                  | Locked use                                                                                                                                         | Layer           |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| `duration-150`                            | `transition-colors` / focus-ring / border feedback on interactive controls                                                                         | app + primitive |
-| `duration-300`                            | Overlay / dialog / sheet enter–exit (Radix `animate-in` / `animate-out`)                                                                           | app + primitive |
-| `duration-120`/`200`/`240` (`--motion-*`) | Primitive-layer overlay/drawer enter–exit timings inside `packages/ui/*` only, sourced from the `--motion-*` tokens — do not introduce in app code | primitive only  |
-| `duration-500`                            | Full-screen idle/empty visuals only (Runner idle board); never on interactive controls                                                             | app (exception) |
-
-The primitive layer's finer timings are the **`--motion-*` / `--ease-*` token family** (Má Tư Design System; `globals.css`): `--motion-fast 120ms` / `base 150` / `overlay 200` / `drawer 240` / `progress 300`, the loop rung `spinner 700`, and `--ease-move` / `--ease-linear`. `packages/ui` primitives consume them as `duration-[var(--motion-*)]` / `ease-[var(--ease-*)]` (Tailwind v4 has no `--duration-*` / `--ease-*` utility namespace); the global spinner is retimed to `--motion-spinner` (700ms) via the `--animate-spin` rebind. App surfaces still author only `duration-150` / `duration-300` (== `--motion-base` / `--motion-progress`).
-
-Arbitrary `duration-[…]` is NOT allowed in app code.
-
-**Easing.** Use Tailwind defaults: bare `transition*` (default ease), `ease-out` for enter, `ease-linear` only for continuous indicators (spinner, progress). Arbitrary `ease-[cubic-bezier(…)]` is reserved for the shared primitive layer and is not allowed in app surfaces.
-
-**Allowed animations.** `animate-spin` (only via `Spinner`), `animate-pulse` (skeleton / loading placeholders), `animate-in` / `animate-out` and `animate-accordion-*` (Radix-driven, via primitives), `animate-caret-blink` (input caret), `motion-safe:animate-cotlet-idle` / `motion-safe:animate-cotlet-waiting` / `motion-safe:animate-cotlet-waving` (runner idle mascot only — the § G full-screen idle exception). No custom `@keyframes` outside `globals.css`.
+**Animation.** The visual layer may add CSS keyframes and one-shot motion for
+feedback, transitions, and restrained brand expression. Keep continuous motion
+off operational queues and next-action controls unless it conveys live state.
+Profile motion on scrolling or high-frequency surfaces before broad rollout.
 
 **Press feedback.** `active:scale-[…]` (≥ `0.97`) is allowed on tap targets for tactile press feedback. `hover:scale-*` grow/shrink on hover is forbidden on ERP surfaces — it reads as decorative.
 
-**Reduced motion (locked).** A global `@media (prefers-reduced-motion: reduce)` reset in `packages/ui/src/styles/globals.css` neutralizes all animation and transition app-wide when the OS requests reduced motion — including one-shot Radix enter/exit (`animate-in` / `animate-out`), the loading `Spinner`, and `tw-animate-css` `data-state` animations. No animation is exempt at runtime; the reset is the backstop. Looping or attention-drawing animation (`animate-pulse` on non-skeleton elements, `animate-bounce`, urgency/age pulses, kinetic idle visuals) MUST still also be gated with `motion-safe:` as defense-in-depth and intent signalling. Prefer `motion-safe:` on the animated class over `motion-reduce:animate-none` on the static one.
+**Reduced motion (locked).** A global `@media (prefers-reduced-motion: reduce)` reset in `packages/ui/src/styles/globals.css` neutralizes all animation and transition app-wide when the OS requests reduced motion — including one-shot primitive enter/exit (`animate-in` / `animate-out` or Base UI transition states), the loading `Spinner`, and `tw-animate-css` state animations. No animation is exempt at runtime; the reset is the backstop. Looping or attention-drawing animation (`animate-pulse` on non-skeleton elements, `animate-bounce`, urgency/age pulses, kinetic idle visuals) MUST still also be gated with `motion-safe:` as defense-in-depth and intent signalling. Prefer `motion-safe:` on the animated class over `motion-reduce:animate-none` on the static one.
 
-**Forbidden:**
+**Performance and accessibility rules:**
 
-- Decorative, looping, kinetic, parallax, or scroll-reveal motion on any ERP surface (POS / KDS / Admin / Inventory / Employee).
-- Animating layout/size properties that thrash (`width` / `height` / `top` / `left`); animate `transform` / `opacity` / `box-shadow` / `color` instead.
-- `transition-all` in app or primitive source. Name the transitioned properties explicitly.
-- Any third-party animation library (framer-motion, gsap, react-spring), or the reference's marketing-layer reveal curves (600–820 ms) and kinetic-text keyframes.
+- Prefer `transform`, `opacity`, `filter`, `color`, and named transition
+  properties; do not animate layout properties on a hot operational path.
+- Honor the global reduced-motion reset. Continuous or attention-drawing motion
+  needs `motion-safe:` and must not conceal status or the next action.
+- `transition-all` remains prohibited because its cost and affected properties
+  are unknown at review time.
+- A motion dependency or custom keyframe is acceptable only when it has a
+  component-level reason, reduced-motion behavior, and a measured route impact.
 
 ## Elevation / Shadow
 
-The system is **border-first**: resting surfaces are separated by `--border`, not by shadow. Shadow is reserved for surfaces that genuinely float above the page. Float elevation is the named **`--effect-*` depth token family** (Má Tư Design System; defined in `globals.css` ZONE B as rgba-by-design — an explicit exception to the OKLCH-only token rule — and consumed as `shadow-effect-*` utilities plus `bg-effect-scrim` / `drawer-scrim`). Sticky-CTA and POS/KDS ceiling surfaces still use the Tailwind `shadow-lg` / `shadow-xl` / `shadow-2xl` rungs. Each is locked per role below. Arbitrary `box-shadow`, retired `--shadow-*` vars, and unnamed `--effect-*` values remain forbidden.
+The system is **border-first**: a resting surface normally separates through
+`--border`; elevation communicates a real layering relationship. The named
+`--effect-*` depth tokens are Má Tư's default elevation recipes. A component may
+use a different named recipe when its layered state is clear in the rendered UI
+and does not make a resting data surface look interactive.
 
 | Rung           | Utility                            | Locked role                                                                                                                                                                                  |
 | -------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rest           | `shadow-effect-card-resting`       | Base `Card` carries a light resting shadow. Page sections, table rows, resting tiles are border-only.                                                                                        |
+| Rest           | border                                 | Resting data surfaces are border-first. Elevation starts when a surface becomes interactive or floats above other content.                                                                  |
 | Hover          | `shadow-effect-card-hover`         | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` + `OperationalBoardCard` (`surface.tsx`). Hairline ring + `0 1px 3px` drop. |
 | Overlay        | `shadow-effect-popover`            | Popover-family floating layers: `popover`, `dropdown-menu`, `select`. Bakes the `--effect-ring-border` hairline + soft drop (replaces the old `shadow-md ring-1 ring-foreground/10`).        |
 | Modal          | `shadow-effect-dialog`             | `dialog` content.                                                                                                                                                                            |
-| Sheet / Drawer | `shadow-effect-drawer`             | `sheet` content and `drawer` (vaul `before:`) panel.                                                                                                                                         |
+| Sheet / Drawer | `shadow-effect-drawer`             | `sheet` content and `drawer` panel.                                                                                                                                                           |
 | Tooltip        | `shadow-effect-tooltip`            | `tooltip` content.                                                                                                                                                                           |
 | Toast          | `--effect-toast` (on `.cn-toast`)  | Sonner toasts — `box-shadow: var(--effect-toast)` is applied directly on `.cn-toast` in `globals.css`; there is no separate utility class.                                                   |
 | Sticky CTA     | `shadow-lg`                        | CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky bottom-0 chrome-safe-pb` footers).                                                         |
@@ -428,12 +436,10 @@ The system is **border-first**: resting surfaces are separated by `--border`, no
 
 **Non-elevation override.** `pos-text-overlay` (`globals.css`, `filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6))`) and `drop-shadow-*` image filters (e.g. the runner mascot) are text/image legibility effects, **not** part of the elevation ladder, and must not be reused as surface shadows.
 
-**Forbidden:**
-
-- No drop shadow on a resting `Card`, section, or table row — separate with `--border` instead.
-- No ad-hoc `box-shadow`, no retired `--shadow-*` vars, and no unnamed `--effect-*` value — use the approved `shadow-effect-*` / `bg-effect-scrim` / `drawer-scrim` set, or the Tailwind sticky/ceiling rungs, only.
-- No `shadow-effect-dialog` / `shadow-effect-drawer` / `shadow-lg`+ on a non-floating surface (e.g. a CTA in a non-sticky resting footer) to "make it pop."
-- One rung per role: a popover is `shadow-effect-popover`, not `shadow-effect-dialog`.
+Avoid elevation that implies a false interactive or floating state. Use the
+named recipes before adding a custom value; a custom shadow needs a component
+reason and visual review. Dialog, drawer, popover and tooltip keep their own
+layering semantics rather than borrowing a heavier role only to add emphasis.
 
 ## Component Authority
 
@@ -493,14 +499,13 @@ Toast and durable notification behavior is specified in `docs/spec/toast-notific
 
 ### List Surface contract (lock to DataTable)
 
-Responsive list/table surfaces use the shared `DataTable`
+Responsive list/table surfaces normally use the shared `DataTable`
 (`apps/web/app/components/data-table/data-table.tsx`): `mobileCardRender` for
 the phone card list, the `Table` primitive for desktop, `AppEmptyState` /
-`TableEmptyStateRow` for empty states, and shared pagination. Hand-maintained
-twin JSX trees (`md:hidden` card list + `hidden … md:block` table) are frozen
-by the `responsive-double-render` ratchet and migrate to `DataTable` per
-route family. Mobile and desktop MUST expose the same fields, status colors,
-and actions for the same row. Route-local data-table suites are not allowed.
+`TableEmptyStateRow` for empty states, and shared pagination. Avoid
+hand-maintained twin JSX trees (`md:hidden` card list + `hidden … md:block`
+table): they duplicate state and can drift. Mobile and desktop MUST expose the
+same fields, status colors, and actions for the same row.
 
 ### Table component system (one hierarchy, no V2)
 
@@ -557,40 +562,39 @@ through `desktopFooter` (TableFooter rows) + `mobileFooter` (block under the
 card list). Line inputs MUST be controlled (value from parent state) so the
 breakpoint switch can remount them safely.
 
-### Empty / Confirm (lock to adapters)
+### Empty / Confirm
 
-- Empty states render through `AppEmptyState` (page/section) or
-  `TableEmptyStateRow` (inside a `Table`); the raw `Empty*` primitives are
-  reserved for approved wrappers (`surface.tsx`, employee surface layer).
-  Route-local empty wrappers such as `EmptyStatePanel` or `MobileEmptyState`
-  are not allowed.
+- Empty states normally render through `AppEmptyState` (page/section) or
+  `TableEmptyStateRow` (inside a `Table`); the raw `Empty*` primitives remain
+  available to a wrapper with a distinct workflow role.
 - A list surface renders ONE empty treatment per breakpoint — never a panel
   and a table row stacked on the same viewport.
 - Simple yes/no destructive confirmation uses `confirm()` from
   `@comtammatu/ui/components/confirm-dialog` (provider mounted in the root
-  layout). Native `window.confirm` / `window.alert` are forbidden (ratchet
+  layout). Native `window.confirm` / `window.alert` are blocked by the
   `no-native-dialog`). Hand-rolled `AlertDialog` stays only for flows that
   collect input (reason, quantity) before confirming.
 
-### Status vocabulary (lock to StatusBadge)
+### Status vocabulary
 
 Business-state labels and badge colors are single-sourced:
 
 - Labels: `packages/shared/src/labels/vi.ts` (`*_STATUS_LABELS_VI`; keys are the DB CHECK vocabulary, never invented states).
 - Variant + rendering: `apps/web/app/components/status-badge.tsx` (`StatusBadge`, `getStatusBadgeMeta`).
-- New page-local `STATUS_*` label/variant maps are forbidden (ratchet `status-label-ssot`); register the domain instead.
-- New page-local `*StatusBadge` components and `*_BADGE_VARIANT` maps are forbidden (ratchet `status-chip-wrapper-baseline`); reuse `StatusBadge`, `getStatusBadgeMeta`, or register the missing domain in `status-badge.tsx`.
+- Reuse `StatusBadge` and `getStatusBadgeMeta` when the workflow maps to an
+  existing domain. A distinct workflow may compose its own presentation after
+  verifying the shared DB vocabulary, contrast, and unknown-value state.
 - Unknown values render as the raw key with `outline` — never throw on DB data.
 - Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier 5-label collapse; variants must still match the registry), `kds/lib/status-config.ts` (hot path), `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts` (per-entity re-model is a later wave).
 
-### Metric Card Role (lock KPI/stat values to KpiCard)
+### Metric Card Role
 
 Dashboard and report metric values render through `KpiCard`
 (`apps/web/app/components/kpi/kpi-card.tsx`): uppercase 2xs label, value
 `text-2xl font-bold tabular-nums`, optional `CompareChip` delta and sparkline,
-and a drill-down `href` per the owner Q-spec. Page-local
-StatCard/SummaryCard/MetricCard definitions are ratcheted by `stat-card-ssot`;
-register a variant on `KpiCard` instead of cloning the card.
+and a drill-down `href` per the owner Q-spec. Prefer a `KpiCard` variant when
+the reading task matches; a different workflow should compose its own metric
+treatment only when it improves the rendered hierarchy.
 
 This lock applies only to numeric/stat-value cards. Actions, exceptions,
 documents, people, menu items, setup tasks, or narrative states are not KPI
@@ -606,9 +610,9 @@ Money, quantity, unit-price, tax-rate, ID/code, and timestamp cells render with 
 | ID / code / order / receipt no. | `font-mono tabular-nums` (left-aligned allowed) |
 | Right-aligned non-numeric label | `text-right` (no `tabular-nums`)                |
 
-Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); counts through `formatCount`; quantities/decimals through `formatQuantity` / `formatDecimal`; and percentage points through `formatPercent` (`12,5%`). Page-local VND formatters and raw `toLocaleString("vi-VN")` money calls are ratcheted by `vnd-format-ssot`. App-local `Intl.NumberFormat` / `toLocaleString` number formatters are blocked by `app-page-local-number-formatter`; Finance route-local `Intl`/`toLocale*` formatters are also blocked by `finance-page-local-formatter`; raw decimal-dot percentage output is blocked by `percent-format-ssot`. Typed number drafts use `parseVietnameseNumericInput`; spreadsheet imports use the stricter `parseVietnameseNumericImport`, which accepts supported locale variants only when their magnitude is unambiguous and rejects unsafe integers rather than rounding an ID or amount. `scripts/audit-ui-components.mjs` reports the UI formatter family as `pageLocalFormatter`, bound to the `formatterGuardBaselines` guard group (`finance-page-local-formatter`, `app-page-local-number-formatter`, `vnd-format-ssot`, `percent-format-ssot`, `date-format-ssot`) so audit coverage and lint enforcement stay in lockstep. `font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — Geist Mono is the locked operational-data face, not Geist sans. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
+Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); counts through `formatCount`; quantities/decimals through `formatQuantity` / `formatDecimal`; and percentage points through `formatPercent` (`12,5%`). Shared formatting guards keep currency, dates, and percentages semantically consistent while `scripts/audit-ui-components.mjs` reports the formatter family as `pageLocalFormatter`. Typed number drafts use `parseVietnameseNumericInput`; spreadsheet imports use the stricter `parseVietnameseNumericImport`, which accepts supported locale variants only when their magnitude is unambiguous and rejects unsafe integers rather than rounding an ID or amount. `font-mono` is required on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` without `font-mono` loses the operational-data reading role. These classes go on `TableCell` / `TableHead`; a shared numeric-cell wrapper is valid when it renders the shared `Table` primitive and preserves this semantic treatment. Avoid `text-left` money columns, numeric columns missing `tabular-nums`, and money/quantity cells missing `font-mono`.
 
-Date and time values render through `@comtammatu/shared/time` (`formatVNBusinessDate`, `formatVNDate`, `formatVNDateTime`, `formatVNTime`, `getVNDateString`, …), which pin `Asia/Ho_Chi_Minh` so server-rendered receipts and reports never drift to the host zone. Page-local `Intl.DateTimeFormat` / `toLocaleDateString` / `toLocaleTimeString` in app code are ratcheted by `date-format-ssot`. `BusinessDateField` displays `dd/mm/yyyy` and gives its calendar the `vi` locale; the shared chart tooltip defaults to `vi-VN`; print rendering uses the same shared money/time helpers and its own `print-format-ssot` guard.
+Date and time values render through `@comtammatu/shared/time` (`formatVNBusinessDate`, `formatVNDate`, `formatVNDateTime`, `formatVNTime`, `getVNDateString`, …), which pin `Asia/Ho_Chi_Minh` so server-rendered receipts and reports never drift to the host zone. `BusinessDateField` displays `dd/mm/yyyy` and gives its calendar the `vi` locale; the shared chart tooltip defaults to `vi-VN`; print rendering uses the same shared money/time helpers and its `print-format-ssot` guard.
 
 Allowed app wrappers:
 
@@ -629,9 +633,10 @@ Forbidden wrappers:
 ### High-level primitive import governance
 
 `Card`, `Table`, `Dialog`, and `AlertDialog` are high-level composition
-primitives. Route code must pick the owning adapter first. Direct app imports
-are blocked except for the exact registered adapter implementations that own
-the corresponding composition contract:
+primitives. Routes should reuse a matching adapter where one exists. A direct
+primitive is valid for a unique semantic composition that would be less clear
+through an adapter; it must still use Má Tư tokens and prove the relevant
+behavior and states.
 
 | Primitive import                         | Default route for new app code                                                                                                               |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -640,16 +645,9 @@ the corresponding composition contract:
 | `@comtammatu/ui/components/dialog`       | `AppDialog` for short non-form detail/task overlays, `FormDialog` for CRUD forms, `Sheet`, Page flow, or an approved exceptional dialog      |
 | `@comtammatu/ui/components/alert-dialog` | shared `confirm()`, `FormDialog` with reason input, or an approved destructive flow                                                          |
 
-`scripts/check-ui-contract.mjs` enforces this with the
-`raw-*-import-file-baseline` gates. The remaining allowlist is a closed set of
-named adapter implementation exceptions, not route debt or a pattern that can
-grow. Adding or replacing an implementation requires a contract-level reason
-here or in the relevant module doc plus a matching component-registry update;
-do not add a one-off allowlist entry just to make a route compile.
-`scripts/audit-ui-components.mjs` reports the same family as
-`rawPrimitiveImportBaseline`, bound to the `frozenPrimitiveImportBaselines`
-guard group with `blocking-exception` status and an exact guard-matched
-allowlist, so audit coverage and lint enforcement stay in lockstep.
+Adapters remain the default for repeated page patterns. Direct composition is
+reviewed by its workflow, accessibility and visual result, not by a frozen file
+allowlist.
 
 ## Surface Contracts
 
@@ -661,9 +659,8 @@ allowlist, so audit coverage and lint enforcement stay in lockstep.
 - After submit, mutations happen through order detail or order history flows.
 - Session, table, and branch context must compact after selection.
 - Payment/destructive flows require confirmation or safe recovery.
-- POS/KDS touch surfaces must not introduce hover-only reveal mechanisms:
-  native `title=` on lowercase HTML content and new `<Tooltip>` usage are frozen
-  by `pos-kds-touch-reveal-baseline`. Use visible copy, `NoteCallout`,
+- POS/KDS touch surfaces must not introduce hover-only reveal mechanisms. Use
+  visible copy, `NoteCallout`,
   tap-to-expand Sheet/Drawer, or multi-line layout instead.
 
 ### KDS
@@ -726,18 +723,17 @@ allowlist, so audit coverage and lint enforcement stay in lockstep.
 
 Everything above governs how a surface looks. This section governs how a surface
 is assembled: which chrome shell it mounts, where its route lives, where its
-navigation comes from, and who owns page padding. These rules were prose-only
-until now; per `D014` (W5) and `D019` they become contract, enforced by
-frozen-baseline ratchets in `scripts/check-ui-contract.mjs` — the same
-contract-plus-ratchet pattern used for the W1–W4 molecule waves.
+navigation comes from, and who owns page padding. The contract is outcome-led:
+the enforcement script protects measurable navigation, route, accessibility,
+and plane boundaries without freezing filenames, utility strings, or one narrow
+layout recipe.
 
 Route IA ownership (which family owns which capability, role gating) is governed
 by `docs/spec/role-route-matrix.md`; navigation data is single-sourced in
 `packages/shared/src/auth/nav-config.ts`. This section does not restate those —
-it locks the UI assembly contract on top of them, and the gates that keep all
-three in sync. The gates land incrementally in Stage 0; until a rule's gate
-ships it stays prose-only and held by review. Live vs prose-only status is
-tracked by the machine-owned enforcement scripts below.
+it defines the UI assembly contract on top of them. Guards and browser review
+prove the observable outcomes; they do not turn implementation detail into a
+second source of truth.
 
 ### A. Chrome Archetypes (approved families)
 
@@ -782,31 +778,19 @@ contract change; route-local chrome outside this list is drift.
    general-purpose chrome family for cross-plane utility pages remains drift —
    new candidates for this exception need an owner decision and a name here.
 
-A surface that is neither is drift: a route may not invent another chrome (a
-hand-rolled `<main>` + back-button container, a per-page header lockup, or a
-second sidebar idiom).
+A new chrome composition needs a clear plane, a distinct operator or customer
+job, and a review of navigation ownership. It must not duplicate another
+plane's authority or turn navigation into route-local data.
 
-### B. Shell Registry
+### B. Shell Composition
 
 "Shell" means a component that owns chrome (sidebar, header, full-screen frame,
-or outer padding). It is governed by an allowlist, not by the `-shell` filename.
+or outer padding). Existing `AppShell`, Branch runtime, Operations, and public
+frames are the reference implementations, not a frozen filename registry.
 
-- The only chrome shells permitted are: `app-shell.tsx` (canonical Admin
-  Dashboard chrome); `admin-dashboard-module-shell.tsx`, the generic wrapper
-  that projects the shared Owner nav for modules with no shell-scoped client state
-  (admin/hr/menu/orders, keyed by a serializable module id); the two domain
-  wrappers `finance-shell.tsx` / `inventory-shell.tsx`, which keep a wrapper
-  only because they own shell-scoped client state `AppShell` cannot absorb
-  (finance: a lifted realtime channel; inventory: branch-reactive nav plus the
-  branch-filter / mobile-top-bar header chrome) — this is the end state, not a
-  transitional split; the approved Branch runtime chrome under
-  `(protected)/br/[branchId]/(operator)/layout.tsx`; and the approved Operations
-  chrome (the POS desktop shell, the operational PWA toolbar, the employee
-  header + bottom-nav). The baseline only shrinks.
-- The canonical standalone header lockup and bottom-nav MUST be exported
-  primitives (`AppHeader`, `AppBottomNav`) that approved non-sidebar chrome
-  families consume, not re-implemented per surface. `AppShell` keeps its own
-  sidebar utility bar.
+- Prefer `AppHeader` and `AppBottomNav` for repeated non-sidebar chrome. Create
+  another shared chrome composition only when its job cannot be expressed by an
+  existing frame and its navigation owner is explicit.
 - Branch runtime, Operations, and employee-lib surfaces MUST NOT import or render
   Admin Dashboard chrome (`AppShell`, `AdminDashboardModuleShell`,
   `resolveAdminDashboard*`, `admin-dashboard-nav`, `finance-shell`,
@@ -814,16 +798,9 @@ or outer padding). It is governed by an allowlist, not by the `-shell` filename.
   use the approved operator/operations chrome, shared `AppHeader` /
   `AppBottomNav`, `EmployeePage`, or an `embedded` branch of the canonical
   `PageContent`.
-- Naming: reserve the `*-shell` suffix for components in the allowlist above. A
-  component that only composes `AppPageHeader` / `AppEmptyState` inside an
-  existing shell is a page section, not a shell, and must not carry the suffix.
-- Gate (Stage 0): a `shell-registry` ratchet freezes the current chrome-shell
-  set as baseline; a new `*-shell` file or new bespoke chrome
-  (`SidebarProvider` / page-owned `<main>`) outside the allowlist fails CI. The
-  baseline only decreases. Admin Dashboard navigation stays inside the one
-  allowlisted `app-shell.tsx` with one `SidebarProvider` and one `Sidebar`;
-  module-level sub-nav must not spread into a second shell family or route-local
-  chrome.
+- File naming and the use of `<main>` or `SidebarProvider` are implementation
+  details, not CI policy. Verify the rendered navigation source, responsive IA,
+  and plane boundary instead.
 
 ### C. Route Home + IA
 
@@ -867,7 +844,7 @@ drift.
   comes from `resolveAdminDashboardDeepNav`, `resolveBranchDeepNav`, or module-local
   resolvers (`finance/components/finance-nav.ts`, `inventory/_lib/inventory-nav.ts`).
   Inline `ShellNavGroup[]` literals inside a shell are forbidden (gate
-  `nav-shell-inline-literal`, baseline 0).
+  `nav-shell-inline-literal`).
 - Tablet/desktop sidebar and mobile bottom-nav render from the same resolved
   model for a role; they may differ in density and item count, never in
   membership source.
@@ -881,26 +858,22 @@ drift.
 
 ### E. Page Padding Authority
 
-- Outer page padding is applied exactly once and never compounds. `AppPage`
-  (`apps/web/app/components/surface.tsx`) owns the page-padding scale (`p-4`,
-  `p-3` compact — per the Rhythm Contract above) and is nesting-aware.
+- Outer page padding is applied once and should not compound. `AppPage`
+  (`apps/web/app/components/surface.tsx`) supplies the default scale and is
+  nesting-aware.
 - The Admin Dashboard frame padding is applied once by `AppShell` `<main>`;
   `AppPage` defers to it through `AppShellPaddingBoundary`. An `AppPage` mounted
   inside `AppShell` main drops its own padding while keeping its centered
   max-width; an `AppPage` mounted inside another `AppPage` drops both padding and
   max-width; a standalone `AppPage` (operations, employee, public) applies both
   itself. Surfaces therefore never double-pad.
-- Leaf pages MUST NOT set ad-hoc root padding (`p-*` / `px-*` / `py-*` on the
-  page root); route spacing through `AppPage` density.
-- Gate (Stage 0): a page-padding ratchet baselines the current ad-hoc
-  page-container offenders under `**/page.tsx` (a centered `max-w-*` + `p-*`
-  outer container that clones `AppPage`) and fails new ones; `AppPage`
-  nesting-awareness is what keeps padding from compounding, so no surface owns it
-  twice.
+- A page can compose local padding or width when the workflow needs it. Review
+  the rendered outer edge and ensure it does not visually duplicate a parent
+  container; do not enforce this with a class-string or file allowlist.
 
 ### F. Page Archetypes
 
-Every `apps/web/app/**/page.tsx` renders exactly one page archetype — a locked
+Every `apps/web/app/**/page.tsx` renders exactly one page archetype — a shared
 recipe for its layout skeleton, data-display idiom, states, and shared
 status/money/date/navigation vocabulary. The archetype taxonomy and
 per-archetype recipes live in `docs/spec/page-archetypes.md`, a subordinate
@@ -921,11 +894,11 @@ for current counts and findings. This contract does not preserve dated audit
 results, guard inventories, exception history, or open-debt snapshots; use the
 scripts, current source, task tracker, and git history.
 
-#### Ratchet allowlist semantics
+#### Measured exception semantics
 
-An allowlist is a measured false-positive floor, not a backlog target. Never
-lower a guard below the current actual count or chase every allowed match to
-zero. Dynamic counts and debt/permanent classification belong to
+An exception is valid only when a guard measures a real outcome and the source
+has a documented reason. It is not entitlement to preserve an implementation.
+Dynamic counts and the current classification belong to
 `scripts/ui-contract-guard-reporting.mjs` and `corepack pnpm audit:ui-components`.
 
 ## Loading / Error / Not-found Frame
@@ -937,7 +910,7 @@ Route-level transition states are part of the design system, not per-page improv
 - Every route family exposes `error.tsx` delegating to `ErrorPanel` (`apps/web/app/components/error-panel.tsx`): `AppEmptyState mode="error"`, retry via `reset()`, and the error digest in small mono print. `apps/web/app/global-error.tsx` is the single surface allowed to use inline styles, because root CSS may be unavailable when it renders.
 - Not-found renders through `NotFoundPanel` (`apps/web/app/components/not-found-panel.tsx`); `apps/web/app/not-found.tsx` covers the app, and per-family `not-found.tsx` exists only where `notFound()` is called and a shell is worth preserving.
 - Copy for these frames comes from `@comtammatu/shared/messages` (`ACTIONS_VI`, `STATES_VI`, `ERRORS_VI`); do not inline new Vietnamese strings here.
-- App presentation surfaces have a zero baseline for route-local loading/empty/error copy; `app-presentation-state-copy` keeps those states in shared messages/adapters across `apps/web/app/**/*.tsx`. Payment/action/data `.ts` copy is reported as `actionDataStateCopy` by `audit:ui-components` and blocked by the zero-baseline `app-action-data-state-copy` guard.
+- `app-presentation-state-copy` keeps route-local loading/empty/error copy in shared messages/adapters across `apps/web/app/**/*.tsx`. Payment/action/data `.ts` copy is reported as `actionDataStateCopy` by `audit:ui-components` and blocked by `app-action-data-state-copy`.
 
 ## Copy Contract
 

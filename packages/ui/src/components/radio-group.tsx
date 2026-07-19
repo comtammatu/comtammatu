@@ -1,16 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
+import { Radio as RadioPrimitive } from "@base-ui/react/radio";
+import {
+  RadioGroup as RadioGroupPrimitive,
+  type RadioGroupProps,
+} from "@base-ui/react/radio-group";
 
 import { cn } from "../lib/utils";
 
-function RadioGroup({
-  className,
-  ...props
-}: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {
+function RadioGroup({ className, ...props }: RadioGroupProps<string>) {
   return (
-    <RadioGroupPrimitive.Root
+    <RadioGroupPrimitive
       data-slot="radio-group"
       className={cn("grid w-full gap-3", className)}
       {...props}
@@ -22,11 +23,11 @@ function RadioGroupItem({
   className,
   size = "default",
   ...props
-}: React.ComponentProps<typeof RadioGroupPrimitive.Item> & {
+}: React.ComponentProps<typeof RadioPrimitive.Root> & {
   size?: "default" | "touch";
 }) {
   return (
-    <RadioGroupPrimitive.Item
+    <RadioPrimitive.Root
       data-slot="radio-group-item"
       data-size={size}
       className={cn(
@@ -35,13 +36,13 @@ function RadioGroupItem({
       )}
       {...props}
     >
-      <RadioGroupPrimitive.Indicator
+      <RadioPrimitive.Indicator
         data-slot="radio-group-indicator"
         className="flex size-4 items-center justify-center group-data-[size=touch]/radio-group-item:size-5"
       >
         <span className="absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-foreground group-data-[size=touch]/radio-group-item:size-2.5" />
-      </RadioGroupPrimitive.Indicator>
-    </RadioGroupPrimitive.Item>
+      </RadioPrimitive.Indicator>
+    </RadioPrimitive.Root>
   );
 }
 

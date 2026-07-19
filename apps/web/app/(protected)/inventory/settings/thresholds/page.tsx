@@ -51,11 +51,9 @@ export default async function InventoryThresholdsPage() {
         description={copy.description}
       />
 
-      <AppSection contentFlush>
+      <AppSection contentFlush={rows.length > 0}>
         {rows.length === 0 ? (
-          <div className="px-4 py-6">
-            <AppEmptyState title={copy.empty} symbol="riceGrain" />
-          </div>
+          <AppEmptyState title={copy.empty} symbol="riceGrain" />
         ) : (
           <ThresholdsClient rows={rows} />
         )}

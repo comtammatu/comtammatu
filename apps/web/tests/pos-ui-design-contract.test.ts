@@ -138,8 +138,13 @@ test("POS append draft item rows stay on Item composition instead of Button heig
   assert.match(appendDraftSource, /messages\.pos\.appendDraft\.title/);
   assert.doesNotMatch(appendDraftSource, /appendDraft\.description/);
   assert.doesNotMatch(appendDraftSource, /orderNumber=/);
-  assert.match(appendDraftSource, /<Item\s+asChild[\s\S]*variant="outline"/);
-  assert.match(appendDraftSource, /<Item\s+asChild[\s\S]*size="sm"/);
+  assert.match(appendDraftSource, /<Item[\s\S]*variant="outline"/);
+  assert.match(appendDraftSource, /<Item[\s\S]*size="sm"/);
+  assert.match(
+    appendDraftSource,
+    /render=\{[\s\S]*<Button[\s\S]*onClick=\{\(\) => onEditItem\(item\)\}/,
+  );
+  assert.doesNotMatch(appendDraftSource, /asChild/);
   assert.match(appendDraftSource, /size="icon-touch"/);
 
   assert.doesNotMatch(appendDraftSource, /<Button[\s\S]*min-h-24/);

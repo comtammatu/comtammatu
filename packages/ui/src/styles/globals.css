@@ -383,8 +383,8 @@
     }
     to {
       height: var(
-        --radix-accordion-content-height,
-        var(--accordion-panel-height, auto)
+        --accordion-panel-height,
+        auto
       );
     }
   }
@@ -392,8 +392,8 @@
   @keyframes accordion-up {
     from {
       height: var(
-        --radix-accordion-content-height,
-        var(--accordion-panel-height, auto)
+        --accordion-panel-height,
+        auto
       );
     }
     to {
@@ -750,7 +750,7 @@
 }
 
 /* Reduced motion: when the OS requests reduced motion, neutralize all
- * animation and transition app-wide — including one-shot Radix enter/exit
+ * animation and transition app-wide — including one-shot enter/exit
  * (dialog/sheet/drawer) and tw-animate-css data-state animations, which the
  * motion-safe: opt-in does not cover. WCAG 2.2 2.3.3. This is the backstop;
  * looping/attention motion should still also carry motion-safe: per the

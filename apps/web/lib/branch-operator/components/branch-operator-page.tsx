@@ -581,7 +581,6 @@ function BranchOperatorActionItem({
 
   return (
     <Item
-      asChild
       variant="outline"
       size={size}
       className={cn(
@@ -591,38 +590,37 @@ function BranchOperatorActionItem({
           : "min-h-14 lg:items-center",
         presentation !== "stations" && size === "sm" && "min-h-12",
       )}
+      render={<Link href={href} />}
     >
-      <Link href={href}>
-        {Icon ? (
-          <ItemMedia
-            variant="icon"
+      {Icon ? (
+        <ItemMedia
+          variant="icon"
+          className={cn(
+            "rounded-md p-2 text-primary transition-colors duration-150 group-hover/branch-operator-action:bg-primary/10 group-active/branch-operator-action:bg-primary/10",
+            presentation === "stations" ? "bg-primary/10" : "bg-muted",
+          )}
+        >
+          <Icon />
+        </ItemMedia>
+      ) : null}
+      <ItemContent className="min-w-0">
+        <ItemTitle size="heading" className="line-clamp-none w-full">
+          {title}
+        </ItemTitle>
+        {description ? (
+          <ItemDescription
             className={cn(
-              "rounded-md p-2 text-primary transition-colors duration-150 group-hover/branch-operator-action:bg-primary/10 group-active/branch-operator-action:bg-primary/10",
-              presentation === "stations" ? "bg-primary/10" : "bg-muted",
+              "line-clamp-none",
+              presentation !== "stations" && "text-sm leading-6",
             )}
           >
-            <Icon />
-          </ItemMedia>
+            {description}
+          </ItemDescription>
         ) : null}
-        <ItemContent className="min-w-0">
-          <ItemTitle size="heading" className="line-clamp-none w-full">
-            {title}
-          </ItemTitle>
-          {description ? (
-            <ItemDescription
-              className={cn(
-                "line-clamp-none",
-                presentation !== "stations" && "text-sm leading-6",
-              )}
-            >
-              {description}
-            </ItemDescription>
-          ) : null}
-        </ItemContent>
-        <ItemActions className="self-center text-muted-foreground">
-          <IconChevronRight />
-        </ItemActions>
-      </Link>
+      </ItemContent>
+      <ItemActions className="self-center text-muted-foreground">
+        <IconChevronRight />
+      </ItemActions>
     </Item>
   );
 }

@@ -11,7 +11,7 @@ export default function LoginPage() {
       <div className="brand-pattern-caro absolute inset-0 opacity-10 pointer-events-none" />
 
       {/* Brand — compact on mobile, full-height panel on desktop */}
-      <div className="relative z-10 flex flex-col items-center gap-3 px-6 pt-10 pb-4 lg:justify-between lg:p-12 lg:bg-primary/10">
+      <div className="relative z-10 flex flex-col items-center gap-3 p-4 lg:justify-between lg:bg-primary/10">
         <span aria-hidden="true" className="hidden lg:block" />
         <div className="flex flex-col items-center gap-6 lg:flex-1 lg:justify-center">
           <Frame className="border-border/20 bg-card/90 p-3 shadow-effect-card-resting">
@@ -35,7 +35,7 @@ export default function LoginPage() {
       </div>
 
       {/* Login form */}
-      <section className="relative z-10 flex flex-1 items-center justify-center p-6 sm:p-8">
+      <section className="relative z-10 flex flex-1 items-center justify-center p-4">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center justify-center h-20 w-20 mb-4 lg:hidden">
             <BrandMascot

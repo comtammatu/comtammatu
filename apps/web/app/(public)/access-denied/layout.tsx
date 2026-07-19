@@ -8,7 +8,7 @@ export default function AccessDeniedLayout({
   return (
     <main
       id="main-content"
-      className="flex min-h-dvh w-full items-center justify-center p-4 sm:p-6"
+      className="flex min-h-dvh w-full items-center justify-center p-4"
     >
       {children}
     </main>

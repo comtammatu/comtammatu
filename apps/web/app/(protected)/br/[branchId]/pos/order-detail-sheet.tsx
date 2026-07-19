@@ -231,17 +231,20 @@ function OrderDetailSheetSkeletonFallback() {
           aria-label={ORDER_DETAIL_LOADING_TEXT.aria}
         >
           {Array.from({ length: 5 }).map((_, index) => (
-            <Item key={index} asChild variant="outline" className="px-3 py-2">
-              <li>
-                <div className="flex items-start gap-3">
-                  <Skeleton className="mt-1 size-4" />
-                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <Skeleton className="h-5 w-4/5" />
-                    <Skeleton className="h-4 w-3/5" />
-                    <Skeleton className="h-4 w-2/5" />
-                  </div>
+            <Item
+              key={index}
+              variant="outline"
+              className="px-3 py-2"
+              render={<li />}
+            >
+              <div className="flex items-start gap-3">
+                <Skeleton className="mt-1 size-4" />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-5 w-4/5" />
+                  <Skeleton className="h-4 w-3/5" />
+                  <Skeleton className="h-4 w-2/5" />
                 </div>
-              </li>
+              </div>
             </Item>
           ))}
         </ul>
@@ -1228,20 +1231,18 @@ export function OrderDetailSheet({
                   {Array.from({ length: 5 }).map((_, index) => (
                     <Item
                       key={index}
-                      asChild
                       variant="outline"
                       className="px-3 py-2"
+                      render={<li />}
                     >
-                      <li>
-                        <div className="flex items-start gap-3">
-                          <Skeleton className="mt-1 size-4" />
-                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                            <Skeleton className="h-5 w-4/5" />
-                            <Skeleton className="h-4 w-3/5" />
-                            <Skeleton className="h-4 w-2/5" />
-                          </div>
+                      <div className="flex items-start gap-3">
+                        <Skeleton className="mt-1 size-4" />
+                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                          <Skeleton className="h-5 w-4/5" />
+                          <Skeleton className="h-4 w-3/5" />
+                          <Skeleton className="h-4 w-2/5" />
                         </div>
-                      </li>
+                      </div>
                     </Item>
                   ))}
                 </ul>
@@ -1352,28 +1353,30 @@ export function OrderDetailSheet({
                     )}
                     {canShowMoreMenu && (
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="touch"
-                            aria-label={
-                              messages.pos.orderDetail.moreActionsAria
-                            }
-                            className={
-                              canAppendOrderStatus(data.status)
-                                ? "min-w-12 shrink-0 px-0"
-                                : "flex-1"
-                            }
-                          >
-                            <IconDots />
-                            {!canAppendOrderStatus(data.status) && (
-                              <span className="ml-1.5">
-                                {messages.pos.orderDetail.moreActions}
-                              </span>
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="touch"
+                              aria-label={
+                                messages.pos.orderDetail.moreActionsAria
+                              }
+                              className={
+                                canAppendOrderStatus(data.status)
+                                  ? "min-w-12 shrink-0 px-0"
+                                  : "flex-1"
+                              }
+                            >
+                              <IconDots />
+                              {!canAppendOrderStatus(data.status) && (
+                                <span className="ml-1.5">
+                                  {messages.pos.orderDetail.moreActions}
+                                </span>
+                              )}
+                            </Button>
+                          }
+                        />
                         <DropdownMenuContent align="end" className="w-56">
                           <DropdownMenuGroup>
                             {canShowBillInMenu && (

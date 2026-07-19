@@ -141,15 +141,13 @@ export async function StaffCheckoutApprovalsPageContent({
         hideHeaderOnMobile={hideHeaderOnMobile}
         action={
           <Button
-            asChild
             variant="outline"
             size="touch"
             className="w-full sm:w-fit"
+            render={<Link href={homeLink.href} />}
           >
-            <Link href={homeLink.href}>
-              <IconHome data-icon="inline-start" />
-              {homeLink.label}
-            </Link>
+            <IconHome data-icon="inline-start" />
+            {homeLink.label}
           </Button>
         }
       >
@@ -276,15 +274,13 @@ export async function StaffCheckoutApprovalsPageContent({
       action={
         plane === "employee" ? (
           <Button
-            asChild
             variant="outline"
             size="touch"
             className="w-full sm:w-fit"
+            render={<Link href={homeLink.href} />}
           >
-            <Link href={homeLink.href}>
-              <IconHome data-icon="inline-start" />
-              {homeLink.label}
-            </Link>
+            <IconHome data-icon="inline-start" />
+            {homeLink.label}
           </Button>
         ) : undefined
       }

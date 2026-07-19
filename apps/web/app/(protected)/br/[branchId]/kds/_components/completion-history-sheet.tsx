@@ -182,63 +182,61 @@ export function KdsCompletionHistorySheet({
               <ItemGroup>
                 {history.map((entry) => (
                   <Item
-                    asChild
                     key={entry.groupKey}
                     role="listitem"
                     variant="outline"
                     className="items-start bg-card p-3 text-sm"
+                    render={<article />}
                   >
-                    <article>
-                      <ItemContent>
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="font-mono text-base leading-6 font-semibold">
-                              {entry.kitchenTicketNumber}
-                            </p>
-                            <p className="min-w-0 break-words text-xs text-muted-foreground">
-                              {getEntryContext(entry)}
-                            </p>
-                          </div>
-                          <Badge variant="success" className="shrink-0">
-                            <IconCheckCheck
-                              data-icon="inline-start"
-                              aria-hidden
-                            />
-                            {KDS_COMPLETION_HISTORY_COPY.done}
-                          </Badge>
+                    <ItemContent>
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-mono text-base leading-6 font-semibold">
+                            {entry.kitchenTicketNumber}
+                          </p>
+                          <p className="min-w-0 break-words text-xs text-muted-foreground">
+                            {getEntryContext(entry)}
+                          </p>
                         </div>
+                        <Badge variant="success" className="shrink-0">
+                          <IconCheckCheck
+                            data-icon="inline-start"
+                            aria-hidden
+                          />
+                          {KDS_COMPLETION_HISTORY_COPY.done}
+                        </Badge>
+                      </div>
 
-                        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
-                          <time className="font-mono text-xs text-muted-foreground">
-                            {formatVNDateTime(entry.completedAt)}
-                          </time>
-                          <Badge variant="outline">
-                            {formatCount(entry.itemCount)}{" "}
-                            {KDS_COMPLETION_HISTORY_COPY.itemUnit}
-                          </Badge>
-                          <Badge variant="outline">
-                            {entry.itemQuantity}{" "}
-                            {KDS_COMPLETION_HISTORY_COPY.portionUnit}
-                          </Badge>
-                        </div>
+                      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
+                        <time className="font-mono text-xs text-muted-foreground">
+                          {formatVNDateTime(entry.completedAt)}
+                        </time>
+                        <Badge variant="outline">
+                          {formatCount(entry.itemCount)}{" "}
+                          {KDS_COMPLETION_HISTORY_COPY.itemUnit}
+                        </Badge>
+                        <Badge variant="outline">
+                          {entry.itemQuantity}{" "}
+                          {KDS_COMPLETION_HISTORY_COPY.portionUnit}
+                        </Badge>
+                      </div>
 
-                        <ItemGroup className="mt-2 gap-1">
-                          {getItemPreview(entry).map((item, index) => (
-                            <Item
-                              key={index}
-                              role="listitem"
-                              size="xs"
-                              variant="muted"
-                              className="min-w-0 px-2 py-1"
-                            >
-                              <ItemContent className="min-w-0 break-words leading-5">
-                                {item}
-                              </ItemContent>
-                            </Item>
-                          ))}
-                        </ItemGroup>
-                      </ItemContent>
-                    </article>
+                      <ItemGroup className="mt-2 gap-1">
+                        {getItemPreview(entry).map((item, index) => (
+                          <Item
+                            key={index}
+                            role="listitem"
+                            size="xs"
+                            variant="muted"
+                            className="min-w-0 px-2 py-1"
+                          >
+                            <ItemContent className="min-w-0 break-words leading-5">
+                              {item}
+                            </ItemContent>
+                          </Item>
+                        ))}
+                      </ItemGroup>
+                    </ItemContent>
                   </Item>
                 ))}
               </ItemGroup>

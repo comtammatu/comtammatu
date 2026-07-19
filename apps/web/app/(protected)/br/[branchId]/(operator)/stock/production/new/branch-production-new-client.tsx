@@ -408,10 +408,12 @@ export function BranchProductionNewClient({
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
-          <Button asChild variant="ghost" size="icon-touch">
-            <Link href={basePath} aria-label="Quay lại Sản xuất">
-              <IconArrowLeft />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={<Link href={basePath} aria-label="Quay lại Sản xuất" />}
+          >
+            <IconArrowLeft />
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">
@@ -465,8 +467,7 @@ export function BranchProductionNewClient({
                       size="touch"
                       onClick={handleSetMaxQuantity}
                       disabled={
-                        isLoadingContext ||
-                        maxProductionInSelectedUnit == null
+                        isLoadingContext || maxProductionInSelectedUnit == null
                       }
                     >
                       Tối đa theo tồn
@@ -746,8 +747,12 @@ export function BranchProductionNewClient({
                 title="Thành phẩm chưa có công thức"
                 description="Cập nhật Công thức trước để kho trừ nguyên liệu đúng."
                 actions={
-                  <Button asChild size="touch" variant="outline">
-                    <Link href={`${basePath}/recipes`}>Mở Công thức</Link>
+                  <Button
+                    size="touch"
+                    variant="outline"
+                    render={<Link href={`${basePath}/recipes`} />}
+                  >
+                    Mở Công thức
                   </Button>
                 }
               />

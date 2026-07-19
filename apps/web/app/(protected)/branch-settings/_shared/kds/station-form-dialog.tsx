@@ -163,7 +163,7 @@ export function StationFormDialog({
                     ))}
                     {categories.length === 0 && (
                       <AppEmptyState
-                        className="border-0 bg-transparent py-6"
+                        className="border-0 bg-transparent"
                         title="Chưa có danh mục nào"
                         compact
                       />

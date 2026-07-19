@@ -82,8 +82,7 @@ export function InventoryBranchFilter({
             <SelectItem
               key={branch.id}
               value={String(branch.id)}
-              textValue={branch.name}
-              className="pr-8"
+              label={branch.name}
             >
               <span className="flex min-w-0 items-center gap-1.5">
                 <span className="min-w-0 truncate text-sm">{branch.name}</span>

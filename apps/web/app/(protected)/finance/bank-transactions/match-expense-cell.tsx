@@ -219,16 +219,14 @@ export function MatchExpenseCell({
         {supplierPaymentMatches.map((match) => (
           <Button
             key={match.id}
-            asChild
             variant="outline"
             size="touch"
             className="w-fit text-success font-normal"
+            render={<Link href={supplierInvoiceHref(match.invoiceId)} />}
           >
-            <Link href={supplierInvoiceHref(match.invoiceId)}>
-              {copy.openSupplierInvoice(
-                match.invoiceNumber ?? `#${match.invoiceId}`,
-              )}
-            </Link>
+            {copy.openSupplierInvoice(
+              match.invoiceNumber ?? `#${match.invoiceId}`,
+            )}
           </Button>
         ))}
         <span className="truncate text-xs text-muted-foreground">
@@ -410,16 +408,18 @@ export function MatchExpenseCell({
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="outline"
-          size="touch"
-          className="w-full max-w-64 justify-between gap-2"
-        >
-          <span className="truncate">{triggerLabel}</span>
-          <IconChevronRight className="size-3.5 shrink-0" aria-hidden />
-        </Button>
-      </SheetTrigger>
+      <SheetTrigger
+        render={
+          <Button
+            variant="outline"
+            size="touch"
+            className="w-full max-w-64 justify-between gap-2"
+          >
+            <span className="truncate">{triggerLabel}</span>
+            <IconChevronRight className="size-3.5 shrink-0" aria-hidden />
+          </Button>
+        }
+      />
       <SheetContent>
         <SheetHeader>
           <SheetTitle>{copy.matchSheetTitle}</SheetTitle>
@@ -786,13 +786,13 @@ export function MatchExpenseCell({
               <div className="flex flex-col items-stretch gap-2 border-t pt-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                   <Button
-                    asChild
                     type="button"
                     variant="ghost"
                     size="touch"
                     className="w-full sm:w-auto"
+                    render={<Link href="/finance/expenses" />}
                   >
-                    <Link href="/finance/expenses">{copy.openExpenses}</Link>
+                    {copy.openExpenses}
                   </Button>
                   <Button
                     type="button"

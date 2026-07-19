@@ -553,6 +553,7 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   const appSurface = read("apps/web/app/components/surface.tsx");
   const formDialog = read("apps/web/app/components/form/form-dialog.tsx");
   const formCombobox = read("apps/web/app/components/form/combobox.tsx");
+  const sharedCombobox = read("packages/ui/src/components/combobox.tsx");
 
   assert.match(issueRoute, /loadBranchStockIssueListData\(branchId\)/);
   assert.match(issueRoute, /<BranchStockIssuesListClient/);
@@ -676,10 +677,11 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
     2,
     "FormDialog action buttons must keep opt-in touch sizing",
   );
-  assert.match(formCombobox, /size\?: ComponentProps<typeof Button>\["size"\]/);
-  assert.match(formCombobox, /size=\{size\}/);
-  assert.match(formCombobox, /size = "field"/);
-  assert.match(formCombobox, /<Button[\s\S]*size=\{size\}/);
+  assert.match(formCombobox, /Combobox as SharedCombobox/);
+  assert.match(sharedCombobox, /React\.ComponentProps<typeof Button>/);
+  assert.match(sharedCombobox, /size=\{size\}/);
+  assert.match(sharedCombobox, /size = "field"/);
+  assert.match(sharedCombobox, /<Button[\s\S]*size=\{size\}/);
 
   assert.match(grnPage, /loadGrnListPageData/);
   assert.match(grnPage, /includeDrafts: showDrafts/);
@@ -1030,7 +1032,10 @@ test("operator waste approvals own a native Branch review queue", () => {
     /wasteApprovals: `\/br\/\$\{branchId\}\/stock\/waste-approvals`/,
   );
   assert.match(employeeHome, /routes: EmployeeHomeRoutes/);
-  assert.doesNotMatch(employeeHome, /DEFAULT_HOME_ROUTES|"\/inventory\/waste\/approvals"/);
+  assert.doesNotMatch(
+    employeeHome,
+    /DEFAULT_HOME_ROUTES|"\/inventory\/waste\/approvals"/,
+  );
 });
 
 test("operator stock issues keep internal issue workflow native to Branch", () => {

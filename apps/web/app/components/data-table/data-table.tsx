@@ -10,7 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Select,
   SelectContent,
@@ -195,15 +199,16 @@ export function DataTable<T>({
       variant="inline"
       search={
         searchable === true ? (
-          <div className="relative min-w-0 flex-1 sm:min-w-64">
-            <IconSearch className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
+          <InputGroup className="min-w-0 flex-1 sm:min-w-64">
+            <InputGroupAddon>
+              <IconSearch aria-hidden />
+            </InputGroupAddon>
+            <InputGroupInput
               value={searchValue ?? ""}
               onChange={(event) => onSearchChange?.(event.target.value)}
               placeholder={searchPlaceholder}
-              className="pl-9"
             />
-          </div>
+          </InputGroup>
         ) : null
       }
       filters={
@@ -344,7 +349,7 @@ export function DataTable<T>({
                     setOpenContextRowKey(open ? rowKey : null)
                   }
                 >
-                  <ContextMenuTrigger asChild>{rowElement}</ContextMenuTrigger>
+                  <ContextMenuTrigger render={rowElement} />
                   <ContextMenuContent>{rowContextMenu}</ContextMenuContent>
                 </ContextMenu>
               );

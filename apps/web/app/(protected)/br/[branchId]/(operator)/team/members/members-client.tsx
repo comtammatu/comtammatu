@@ -173,26 +173,26 @@ function MemberCard({
 }) {
   return (
     <InteractiveCard
-      asChild
       padding="compact"
       className="h-full min-h-24 flex-col justify-center text-center"
+      render={
+        <button
+          type="button"
+          className="w-full"
+          onClick={() => onOpenDrawer(member)}
+          aria-label={`Mở hồ sơ ${member.name}`}
+        />
+      }
     >
-      <button
-        type="button"
-        className="w-full"
-        onClick={() => onOpenDrawer(member)}
-        aria-label={`Mở hồ sơ ${member.name}`}
-      >
-        <MemberAvatar member={member} size="lg" />
-        <div className="grid min-w-0 gap-1">
-          <p className="truncate text-sm font-semibold leading-5">
-            {member.name}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {member.code ? `(${member.code})` : "Chưa có mã NV"}
-          </p>
-        </div>
-      </button>
+      <MemberAvatar member={member} size="lg" />
+      <div className="grid min-w-0 gap-1">
+        <p className="truncate text-sm font-semibold leading-5">
+          {member.name}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">
+          {member.code ? `(${member.code})` : "Chưa có mã NV"}
+        </p>
+      </div>
     </InteractiveCard>
   );
 }
@@ -397,10 +397,7 @@ export function MembersClient({
               </DrawerHeader>
 
               <ScrollArea className="min-h-0 flex-1 px-4">
-                <div
-                  className="workflow-safe-pb flex flex-col gap-4 pr-2"
-                  data-vaul-no-drag
-                >
+                <div className="workflow-safe-pb flex flex-col gap-4 pr-2">
                   <MemberDetailBlock title="Hồ sơ">
                     <div className="grid gap-2 sm:grid-cols-2">
                       <InfoTile

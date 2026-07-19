@@ -9,9 +9,7 @@ export function NotFoundPanel({ homeHref = "/" }: { homeHref?: string }) {
       title={ERRORS_VI.pageNotFound}
       description={ERRORS_VI.pageNotFoundHint}
     >
-      <Button asChild>
-        <Link href={homeHref}>{ACTIONS_VI.goHome}</Link>
-      </Button>
+      <Button render={<Link href={homeHref} />}>{ACTIONS_VI.goHome}</Button>
     </AppEmptyState>
   );
 }

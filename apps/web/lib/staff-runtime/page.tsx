@@ -595,61 +595,61 @@ export async function StaffWorkdayPageContent({
   const primaryAction =
     state.status === "missing_profile" ? (
       <Button
-        asChild
         variant="outline"
         size="touch-lg"
         className={primaryActionClassName}
+        render={<Link href={routes.profile} />}
       >
-        <Link href={routes.profile}>
-          <IconUserCircle data-icon="inline-start" />
-          {copy.profileTitle}
-        </Link>
+        <IconUserCircle data-icon="inline-start" />
+        {copy.profileTitle}
       </Button>
     ) : state.status === "missing_branch" ? (
       <Button
-        asChild
         variant="outline"
         size="touch-lg"
         className={primaryActionClassName}
+        render={<Link href={routes.profile} />}
       >
-        <Link href={routes.profile}>
-          <IconUserCircle data-icon="inline-start" />
-          {copy.profileTitle}
-        </Link>
+        <IconUserCircle data-icon="inline-start" />
+        {copy.profileTitle}
       </Button>
     ) : state.status === "not_required" ? (
       <Button
-        asChild
         variant="outline"
         size="touch-lg"
         className={primaryActionClassName}
+        render={<Link href={routes.schedule} />}
       >
-        <Link href={routes.schedule}>
-          <IconClock data-icon="inline-start" />
-          {copy.viewSchedule}
-        </Link>
+        <IconClock data-icon="inline-start" />
+        {copy.viewSchedule}
       </Button>
     ) : state.status === "not_started" ? (
-      <Button asChild size="touch-lg" className={primaryActionClassName}>
-        <Link href={routes.clock}>
-          <IconCamera data-icon="inline-start" />
-          {copy.clockIn}
-        </Link>
+      <Button
+        size="touch-lg"
+        className={primaryActionClassName}
+        render={<Link href={routes.clock} />}
+      >
+        <IconCamera data-icon="inline-start" />
+        {copy.clockIn}
       </Button>
     ) : state.status === "working" ? (
       canRequestCheckout(state) ? (
-        <Button asChild size="touch-lg" className={primaryActionClassName}>
-          <Link href={routes.clock}>
-            <IconLogout data-icon="inline-start" />
-            {state.managerAttendanceOnly ? copy.clockOutDirect : copy.clockOut}
-          </Link>
+        <Button
+          size="touch-lg"
+          className={primaryActionClassName}
+          render={<Link href={routes.clock} />}
+        >
+          <IconLogout data-icon="inline-start" />
+          {state.managerAttendanceOnly ? copy.clockOutDirect : copy.clockOut}
         </Button>
       ) : (
-        <Button asChild size="touch-lg" className={primaryActionClassName}>
-          <Link href={routes.tasks}>
-            <IconListChecks data-icon="inline-start" />
-            {copy.shiftTasks}
-          </Link>
+        <Button
+          size="touch-lg"
+          className={primaryActionClassName}
+          render={<Link href={routes.tasks} />}
+        >
+          <IconListChecks data-icon="inline-start" />
+          {copy.shiftTasks}
         </Button>
       )
     ) : state.status === "checkout_pending" ? (
@@ -712,11 +712,9 @@ export async function StaffWorkdayPageContent({
   if (mode === "compact-status") {
     const compactCta =
       state.status === "not_started" ? (
-        <Button asChild size="touch">
-          <Link href={routes.clock}>
-            <IconCamera data-icon="inline-start" />
-            {copy.clockIn}
-          </Link>
+        <Button size="touch" render={<Link href={routes.clock} />}>
+          <IconCamera data-icon="inline-start" />
+          {copy.clockIn}
         </Button>
       ) : null;
 
@@ -833,24 +831,24 @@ export async function StaffWorkdayPageContent({
       >
         <div className="flex w-full flex-col gap-2 sm:flex-row">
           {pendingCheckouts > 0 ? (
-            <Button asChild size="touch" className="w-full sm:w-fit">
-              <Link href={routes.checkoutApprovals}>
-                <IconClipboardCheck data-icon="inline-start" />
-                {copy.checkoutApprovalsTitle}
-              </Link>
+            <Button
+              size="touch"
+              className="w-full sm:w-fit"
+              render={<Link href={routes.checkoutApprovals} />}
+            >
+              <IconClipboardCheck data-icon="inline-start" />
+              {copy.checkoutApprovalsTitle}
             </Button>
           ) : null}
           {pendingWaste > 0 ? (
             <Button
-              asChild
               size="touch"
               variant="outline"
               className="w-full sm:w-fit"
+              render={<Link href={routes.wasteApprovals} />}
             >
-              <Link href={routes.wasteApprovals}>
-                <IconClipboardCheck data-icon="inline-start" />
-                {copy.wasteApprovalsTitle}
-              </Link>
+              <IconClipboardCheck data-icon="inline-start" />
+              {copy.wasteApprovalsTitle}
             </Button>
           ) : null}
         </div>
@@ -880,22 +878,23 @@ export async function StaffWorkdayPageContent({
   const managerPendingTotal =
     pendingCheckouts + pendingCountSlips + pendingWaste;
   const managerActionPanel = isBranchManager ? (
-    <Item asChild variant="outline" size="sm" className="bg-card">
-      <Link href={teamRoute}>
-        <ItemContent>
-          <ItemTitle size="heading">
-            Quản lý đội chi nhánh
-          </ItemTitle>
-          <ItemDescription className="text-xs text-muted-foreground">
-            Mở màn hình đội để duyệt ca, kho, nhân sự và phân công.
-          </ItemDescription>
-        </ItemContent>
-        {managerPendingTotal > 0 ? (
-          <ItemActions>
-            <Badge variant="warning">{managerPendingTotal}</Badge>
-          </ItemActions>
-        ) : null}
-      </Link>
+    <Item
+      variant="outline"
+      size="sm"
+      className="bg-card"
+      render={<Link href={teamRoute} />}
+    >
+      <ItemContent>
+        <ItemTitle size="heading">Quản lý đội chi nhánh</ItemTitle>
+        <ItemDescription className="text-xs text-muted-foreground">
+          Mở màn hình đội để duyệt ca, kho, nhân sự và phân công.
+        </ItemDescription>
+      </ItemContent>
+      {managerPendingTotal > 0 ? (
+        <ItemActions>
+          <Badge variant="warning">{managerPendingTotal}</Badge>
+        </ItemActions>
+      ) : null}
     </Item>
   ) : null;
 
@@ -921,11 +920,13 @@ export async function StaffWorkdayPageContent({
   const checkoutActive =
     hasClockedIn && state.status === "working" && canRequestCheckout(state);
   const checkoutAction = checkoutActive ? (
-    <Button asChild size="touch-lg" className={primaryActionClassName}>
-      <Link href={routes.clock}>
-        <IconLogout data-icon="inline-start" />
-        {state.managerAttendanceOnly ? copy.clockOutDirect : copy.clockOut}
-      </Link>
+    <Button
+      size="touch-lg"
+      className={primaryActionClassName}
+      render={<Link href={routes.clock} />}
+    >
+      <IconLogout data-icon="inline-start" />
+      {state.managerAttendanceOnly ? copy.clockOutDirect : copy.clockOut}
     </Button>
   ) : undefined;
 

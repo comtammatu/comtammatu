@@ -29,7 +29,7 @@ const countAssignmentWarehouseRepairMigrationSource = readWeb(
 test("count assignment checklist uses one labeled hit target", () => {
   assert.match(
     countAssignmentsClientSource,
-    /<Item[\s\S]*asChild[\s\S]*<Label[\s\S]*htmlFor=\{checkboxId\}[\s\S]*<Checkbox[\s\S]*id=\{checkboxId\}[\s\S]*onCheckedChange=\{\(\)\s*=>\s*toggleIngredient\(\s*ingredient\.id,?\s*\)\s*\}/,
+    /<Item[\s\S]*render=\{<Label htmlFor=\{checkboxId\} \/>\}[\s\S]*<Checkbox[\s\S]*id=\{checkboxId\}[\s\S]*onCheckedChange=\{\(\)\s*=>\s*toggleIngredient\(\s*ingredient\.id,?\s*\)\s*\}/,
     "Ingredient checkbox should keep one DS item and labeled hit target",
   );
   assert.doesNotMatch(

@@ -657,12 +657,10 @@ export function ProductionRecipePanel({
           variant="ghost"
           size="touch"
           className="self-start px-2"
-          asChild
+          render={<Link href={backHref} />}
         >
-          <Link href={backHref}>
-            <IconArrowLeft data-icon="inline-start" />
-            {INVENTORY_VI.productionBackToHub}
-          </Link>
+          <IconArrowLeft data-icon="inline-start" />
+          {INVENTORY_VI.productionBackToHub}
         </Button>
       ) : null}
 
