@@ -77,11 +77,13 @@ BEGIN
     INTO v_permission
   FROM public.permission_keys pk
   WHERE pk.scope IN ('tenant', 'either')
+    AND pk.is_delegable_to_staff IS TRUE
   ORDER BY pk.key
   LIMIT 1;
 
   IF v_permission IS NULL THEN
-    RAISE EXCEPTION 'TEST FAILED: no tenant-capable permission key found';
+    RAISE EXCEPTION
+      'TEST FAILED: no staff-delegable tenant-capable permission key found';
   END IF;
 
   INSERT INTO public.staff_permissions (

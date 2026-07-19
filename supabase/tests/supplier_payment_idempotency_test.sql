@@ -171,16 +171,6 @@ BEGIN
     AND permission_key IN ('finance:ap_pay', 'finance:view')
     AND branch_id IS NULL;
 
-  INSERT INTO public.staff_permissions (
-    user_id,
-    tenant_id,
-    branch_id,
-    permission_key,
-    granted_by
-  ) VALUES
-    (v_non_owner, v_tenant, NULL, 'finance:ap_pay', v_owner),
-    (v_non_owner, v_tenant, NULL, 'finance:view', v_owner);
-
   INSERT INTO public.suppliers (tenant_id, name)
   VALUES (
     v_tenant,
@@ -261,10 +251,10 @@ BEGIN
     true
   );
 
-  IF NOT public.has_permission_any('finance:ap_pay')
-    OR NOT public.has_permission_any('finance:view')
+  IF public.has_permission_any('finance:ap_pay')
+    OR public.has_permission_any('finance:view')
     OR public.auth_is_owner(v_non_owner) THEN
-    RAISE EXCEPTION 'non-owner permission fixture is invalid';
+    RAISE EXCEPTION 'non-owner denial fixture is invalid';
   END IF;
 
   BEGIN
