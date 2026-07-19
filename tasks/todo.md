@@ -5,6 +5,17 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Isolate Vercel Preview from Production Supabase
+
+State: doing
+Kind: release
+Tier: T3
+Lane: platform/preview-infra
+Exit: Every Vercel Preview build fails closed for Production, do-not-touch, unregistered, mismatched, or unverifiable privileged Supabase bindings; the default Preview target is registered Cloud DEV and an authenticated read-write canary passes there.
+Evidence: Preview guard self-test matrix, sanitized Vercel environment proof before and after cutover, repository verify, Vercel deployment logs, and authenticated desktop/mobile canary.
+
+- [ ] Land the build guard, cut Preview over to registered Cloud DEV without changing Production, and complete CI, deployment, and browser evidence.
+
 ## Prove Self-Order offline navigation isolation
 
 State: verify

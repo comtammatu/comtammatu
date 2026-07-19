@@ -7,7 +7,7 @@
     "dev": "dotenv -e ../../.env.local -e .env.local -- next dev",
     "dev:webpack": "dotenv -e ../../.env.local -e .env.local -- next dev --webpack",
     "dev:clean": "rm -rf .next && dotenv -e ../../.env.local -e .env.local -- next dev",
-    "build": "dotenv -e ../../.env.local -e .env.local -- next build && serwist build",
+    "build": "node ../../scripts/check-preview-supabase-env.mjs && dotenv -e ../../.env.local -e .env.local -- next build && serwist build",
     "build:e2e": "dotenv -e .env.test.local -- next build && serwist build",
     "build:webpack": "dotenv -e ../../.env.local -e .env.local -- next build --webpack && serwist build",
     "start": "next start",
