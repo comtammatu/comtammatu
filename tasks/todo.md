@@ -79,11 +79,11 @@ Blocker: Destructive cleanup depends on “Verify the Finance payment cutover”
 
 ## Align KDS history authorization with route access
 
-State: triage
+State: verify
 Kind: defect
 Tier: T3
 Lane: auth/kds
 Exit: An authenticated Owner who can open Branch KDS receives the intended completion-history result, or the UI and route intentionally hide or deny the history affordance according to the canonical ACL.
 Evidence: Authority decision against the route/surface contract, focused authorization coverage for Owner and allowed KDS roles, and an authenticated Preview smoke at `/br/3/kds`.
 
-- [ ] Reproduce the Owner-only `Không có quyền` completion-history result, trace the Server Action permission against route and surface access, then decide allow versus hide before implementation.
+- [ ] Smoke the completion-history affordance as an authenticated Owner at Preview `/br/3/kds`.
