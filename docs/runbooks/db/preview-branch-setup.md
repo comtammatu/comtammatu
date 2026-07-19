@@ -69,6 +69,14 @@ Vercel Preview có thể được nối thủ công với credential của Previ
 runtime. Ghi rõ preview host và Supabase ref; không cho preview deploy nhận
 production service-role key.
 
+Trước khi deploy, cấu hình `NEXT_PUBLIC_SUPABASE_URL`,
+`SUPABASE_PROJECT_ID` và publishable/anon key cùng thuộc target đã đăng ký.
+`scripts/check-preview-supabase-env.mjs` chạy trước `next build` và hiện chỉ chấp
+nhận persistent Cloud DEV; Preview Branch throwaway chỉ được mở lại sau khi có
+trusted registration path mà guard có thể kiểm chứng. Nếu chưa cấp được
+service-role key đúng target qua đường tin cậy, bỏ biến đó khỏi scope Preview;
+không sao chép service-role key của Production để giữ feature parity.
+
 ## Automation hiện hành
 
 Supabase GitHub App và Vercel integration chạy ngoài repo guard. PR update có thể
