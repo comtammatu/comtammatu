@@ -7,8 +7,8 @@ function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-const hubQueueSource = readWeb(
-  "app/(protected)/br/[branchId]/(operator)/_components/hub/hub-queue-section.tsx",
+const branchQueueSource = readWeb(
+  "app/(protected)/br/[branchId]/(operator)/_components/home/branch-queue-section.tsx",
 );
 const receiveClientSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx",
@@ -26,14 +26,14 @@ const countAssignmentsSource = readWeb(
   "app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
 );
 
-test("operator hub queue only renders positive pending work", () => {
+test("branch home queue only renders positive pending work", () => {
   assert.match(
-    hubQueueSource,
+    branchQueueSource,
     /buildQueueRows\(basePath, queueCounts\)\.filter\(\s*\(row\) => row\.count > 0/,
   );
-  assert.match(hubQueueSource, /if \(queueRows\.length === 0\) return null/);
-  assert.match(hubQueueSource, /\{rows\.map\(\(row\) => \(/);
-  assert.match(hubQueueSource, /<Badge variant="warning">/);
+  assert.match(branchQueueSource, /if \(queueRows\.length === 0\) return null/);
+  assert.match(branchQueueSource, /\{rows\.map\(\(row\) => \(/);
+  assert.match(branchQueueSource, /<Badge variant="warning">/);
 });
 
 test("operator transfer receive requires shortage notes and accepts transit state", () => {
@@ -86,7 +86,7 @@ test("stocktake list uses styled confirm dialog instead of browser confirm", () 
   assert.doesNotMatch(stocktakeListSource, /confirm\("/);
 });
 
-test("Office count assignment dialog has a searchable ingredient list", () => {
+test("Owner surface count assignment dialog has a searchable ingredient list", () => {
   assert.match(countAssignmentsSource, /Search as IconSearch/);
   assert.match(
     countAssignmentsSource,

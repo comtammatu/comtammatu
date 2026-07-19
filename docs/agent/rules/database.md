@@ -127,13 +127,14 @@ Preview Branch setup: `docs/runbooks/db/preview-branch-setup.md`.
 
 - The auth hook must be `SECURITY DEFINER` or custom claims may fail silently.
 - JWT claim shape is owned by `packages/shared/src/auth/types.ts`; runtime and SQL
-  hook output must remain aligned. Current claims include `tenant_id`,
-  `branch_id`, `user_role`, `access_bucket`, `position`, and `position_code`.
+  hook output must remain aligned. Authorization claims are exactly `tenant_id`,
+  `branch_id`, `user_role`, and `position_code`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`. Do not create a
   second authorization layer in UI helpers.
 - Position codes are canonical English `lower_snake_case`. Update
   `POSITION_CODE_TO_STAFF_ROLE` and `private.staff_role_from_position_code`
   together; unknown codes fail closed. `waiter` is legacy-only.
-- `notifications.target_roles` contains access buckets, never position codes.
+- `notifications.target_roles` contains canonical application roles, never HR
+  position codes.
 
 Read targeted rows from `tasks/regressions.md` before database/auth work.

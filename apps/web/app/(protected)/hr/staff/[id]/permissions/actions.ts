@@ -11,7 +11,7 @@ function rpcBranchId(branchId: number | null): number {
   return branchId as number;
 }
 
-const STAFF_ADMIN_ROLES = MODULE_ACL.staff.allowedRoles;
+const OWNER_STAFF_ROLES = MODULE_ACL.staff.allowedRoles;
 
 /* ─── Schemas ─── */
 
@@ -49,7 +49,7 @@ export async function grantPermissionAction(
     };
   }
   const ctx = await getAuthContextWithPermission(
-    STAFF_ADMIN_ROLES,
+    OWNER_STAFF_ROLES,
     PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
     parsed.data.branch_id,
   );
@@ -81,7 +81,7 @@ export async function revokePermissionAction(
     };
   }
   const ctx = await getAuthContextWithPermission(
-    STAFF_ADMIN_ROLES,
+    OWNER_STAFF_ROLES,
     PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
     parsed.data.branch_id,
   );
@@ -111,7 +111,7 @@ export async function applyTemplateAction(
     };
   }
   const ctx = await getAuthContextWithPermission(
-    STAFF_ADMIN_ROLES,
+    OWNER_STAFF_ROLES,
     PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
     parsed.data.branch_id,
   );
@@ -146,6 +146,10 @@ function mapRpcError(msg: string): string {
     return "Permission key không hợp lệ.";
   if (msg.includes("template_not_in_tenant"))
     return "Template không thuộc tenant.";
+  if (msg.includes("owner_template_cannot_be_applied_to_staff"))
+    return "Không thể áp template Owner cho nhân sự.";
+  if (msg.includes("owner_only_permission_cannot_be_delegated"))
+    return "Quyền này chỉ dành cho Owner.";
   if (msg.includes("permission_scope_requires_branch"))
     return "Quyền này cần chọn chi nhánh.";
   if (msg.includes("permission_scope_requires_tenant"))

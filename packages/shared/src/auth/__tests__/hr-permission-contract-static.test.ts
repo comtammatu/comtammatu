@@ -15,7 +15,7 @@ const extractTemplateConst = (source: string, name: string) => {
   return value;
 };
 
-test("Admin Dashboard HR route ACL is owner-only", () => {
+test("Owner surface HR route ACL is owner-only", () => {
   assert.deepEqual(MODULE_ACL.staff.allowedRoles, ["owner"]);
   assert.deepEqual(MODULE_ACL.hr_payroll.allowedRoles, ["owner"]);
   assert.deepEqual(MODULE_ACL.hr.allowedRoles, ["owner"]);
@@ -63,12 +63,10 @@ test("HR Server Action gates match the route contract", () => {
     /const MANAGER_ROLES = MODULE_ACL\.staff\.allowedRoles/,
   );
   assert.match(staffActions, /function validateStaffAssignment\(/);
-  assert.match(staffActions, /function branchManagerCanAssignPosition\(/);
-  assert.match(staffActions, /role === "cashier" \|\|\s*role === "chef"/);
-  assert.match(staffActions, /positionCode === "guard"/);
-  assert.match(staffActions, /positionCode === "cleaner"/);
-  assert.match(staffActions, /positionCode === "waiter"/);
-  assert.match(staffActions, /targetBranchId !== actorBranchId/);
+  assert.match(staffActions, /if \(actorRole === "owner"\) return null/);
+  assert.doesNotMatch(staffActions, /branchManagerCanAssignPosition/);
+  assert.doesNotMatch(staffActions, /positionCode === "waiter"/);
+  assert.match(staffActions, /PERMISSION_KEYS\.HR_MANAGE_EMPLOYEE/);
   assert.match(
     staffActions,
     /getAuthContextWithPermissions\(\s*MANAGER_ROLES,\s*POSITION_ASSIGN_PERMISSIONS,\s*effectiveBranchId \?\? null,\s*\)/,
@@ -83,11 +81,11 @@ test("HR Server Action gates match the route contract", () => {
   );
   assert.match(
     permissionActions,
-    /const STAFF_ADMIN_ROLES = MODULE_ACL\.staff\.allowedRoles/,
+    /const OWNER_STAFF_ROLES = MODULE_ACL\.staff\.allowedRoles/,
   );
   assert.match(
     permissionPage,
-    /const STAFF_ADMIN_ROLES = MODULE_ACL\.staff\.allowedRoles/,
+    /const OWNER_STAFF_ROLES = MODULE_ACL\.staff\.allowedRoles/,
   );
   assert.doesNotMatch(permissionActions, /\["owner", "branch_manager"\]/);
   assert.doesNotMatch(permissionPage, /\["owner", "branch_manager"\]/);
@@ -141,12 +139,9 @@ test("HR Server Action gates match the route contract", () => {
   assert.match(leaveActions, /requireBranchScope: true/);
   assert.match(
     leaveActions,
-    /fetchApprovedLeaveMonth = withAction\([\s\S]*?permissionBranchId: \(data\) => data\.branchId,[\s\S]*?requireBranchScope: true,[\s\S]*?claims\.user_role === "branch_manager" &&[\s\S]*?claims\.branch_id !== data\.branchId/,
+    /const REVIEW_ROLES: readonly StaffRole\[\] = \["owner", "branch_manager"\]/,
   );
-  assert.match(
-    leaveActions,
-    /fetchLeaveRequests = withAction\([\s\S]*?permissionBranchId: \(data\) => data\.branchId,[\s\S]*?requireBranchScope: true,[\s\S]*?claims\.user_role === "branch_manager" &&[\s\S]*?claims\.branch_id !== data\.branchId/,
-  );
+  assert.doesNotMatch(leaveActions, /createServiceClient/);
   assert.match(
     leaveActions,
     /approveLeaveRequest = withAction\([\s\S]*?schema: requestIdSchema,[\s\S]*?permission: PERMISSION_KEYS\.HR_APPROVE_LEAVE_REQUEST,[\s\S]*?permissionBranchId: \(data\) => data\.branchId,[\s\S]*?requireBranchScope: true/,
@@ -186,14 +181,8 @@ test("HR routes keep employee, attendance and setup surfaces separate", () => {
   );
   const setupPage = read("apps/web/app/(protected)/hr/setup/page.tsx");
 
-  assert.match(
-    hrPage,
-    /from\("positions"\)/,
-  );
-  assert.match(
-    hrClient,
-    /<EmployeeTable[\s\S]*canManage/,
-  );
+  assert.match(hrPage, /from\("positions"\)/);
+  assert.match(hrClient, /<EmployeeTable[\s\S]*canManage/);
   assert.doesNotMatch(
     hrClient,
     /AppPageTabs|AttendanceTable|ShiftsTable|PositionTasksClient/,
@@ -275,6 +264,55 @@ test("HR branch-manager employee payload stays branch-safe", () => {
   );
 });
 
+test("Owner HR administration and branch approval authority fail closed below the application ACL", () => {
+  const migration = read(
+    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+  );
+  const localSeed = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
+  const ownerOnlyKeys = [
+    "hr:manage_employee",
+    "staff:manage",
+    "staff:assign_position",
+    "staff:assign_permission",
+  ];
+  const branchApprovalKeys = [
+    "hr:approve_leave_request",
+    "hr:approve_checkout",
+  ];
+
+  assert.match(migration, /WHERE rt\.position_code IS DISTINCT FROM 'owner'/);
+  assert.match(migration, /DELETE FROM public\.staff_permissions/);
+  assert.match(migration, /po\.code = 'branch_manager'/);
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.has_permission\(/,
+  );
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.has_permission_any\(/,
+  );
+  assert.match(migration, /is_delegable_to_staff/);
+  assert.match(migration, /pk\.is_delegable_to_staff = true/);
+  for (const key of branchApprovalKeys) {
+    assert.match(migration, new RegExp(`'${key}'`), key);
+  }
+
+  const branchManagerTemplate =
+    /\('branch_manager', 'branch_manager', ARRAY\[([^\]]*)\]\)/.exec(localSeed);
+  assert.ok(
+    branchManagerTemplate,
+    "expected branch_manager local role template",
+  );
+  const branchManagerPermissions = branchManagerTemplate[1] ?? "";
+  assert.match(branchManagerPermissions, /'hr:view_employee'/);
+  for (const key of branchApprovalKeys) {
+    assert.match(branchManagerPermissions, new RegExp(`'${key}'`), key);
+  }
+  for (const key of ownerOnlyKeys) {
+    assert.doesNotMatch(branchManagerPermissions, new RegExp(`'${key}'`), key);
+  }
+});
+
 test("retired employee route has no standalone module ACL key", () => {
   const moduleAcl = read("packages/shared/src/auth/module-acl.ts");
   const routeResolution = read("packages/shared/src/auth/route-resolution.ts");
@@ -289,12 +327,12 @@ test("retired employee route has no standalone module ACL key", () => {
   assert.doesNotMatch(proxy, /moduleKey === "employee"/);
   assert.ok(
     routeResolution.includes(
-      'if (/^\\/br\\/\\d+\\/shift(?:\\/|$)/.test(pathname)) return "operator_home";',
+      'if (/^\\/br\\/\\d+\\/shift(?:\\/|$)/.test(pathname)) return "branch_home";',
     ),
   );
   assert.ok(
     routeResolution.includes(
-      'if (/^\\/br\\/\\d+\\/profile(?:\\/|$)/.test(pathname)) return "operator_home";',
+      'if (/^\\/br\\/\\d+\\/profile(?:\\/|$)/.test(pathname)) return "branch_home";',
     ),
   );
 });
@@ -385,7 +423,7 @@ test("auth docs define the HR permission contract layers", () => {
     "Employee record, salary, HĐLĐ",
     "Global shift and position-task setup",
     "Payroll",
-    "Branch manager only gets branch-safe attendance/leave oversight",
+    "Branch Manager gets branch-safe employee, attendance, and leave visibility plus",
   ]) {
     assert.ok(
       authDoc.includes(expected) || routeMatrix.includes(expected),

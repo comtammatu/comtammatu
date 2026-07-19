@@ -23,12 +23,12 @@ import {
 } from "./_lib/operator-home-contract";
 import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
-import { HubQueueSection } from "./_components/hub/hub-queue-section";
-import { HubTodayStatus } from "./_components/hub/hub-today-status";
+import { BranchQueueSection } from "./_components/home/branch-queue-section";
+import { BranchTodayStatus } from "./_components/home/branch-today-status";
 import {
-  HubTodayStatusPending,
-  HubQueuePending,
-} from "./_components/hub/hub-skeletons";
+  BranchTodayStatusPending,
+  BranchQueuePending,
+} from "./_components/home/branch-home-skeletons";
 
 const homeCopy = messages.operator.home;
 const stationDescriptions: Record<string, string> = {
@@ -109,27 +109,27 @@ export default async function OperatorHomePage({
       ]
     : [];
 
-  const ownerAdminLinks = canAccess(claims.user_role, "admin_dashboard")
+  const ownerLinks = claims.user_role === "owner"
     ? [
         {
-          key: "owner-admin-dashboard",
-          href: MODULE_ACL.admin_dashboard.path,
+          key: "owner-home",
+          href: "/",
           icon: resolveOperatorTileIcon("LayoutDashboard"),
-          title: APP_COPY_VI.adminDashboardTitle,
+          title: APP_COPY_VI.ownerTitle,
         },
       ]
     : [];
 
   return (
-    <BranchOperatorPage title={APP_COPY_VI.operatorHome}>
+    <BranchOperatorPage title={APP_COPY_VI.branchHome}>
       {claims.user_role !== "owner" ? (
-        <Suspense fallback={<HubTodayStatusPending />}>
-          <HubTodayStatus branchId={context.branchId} />
+        <Suspense fallback={<BranchTodayStatusPending />}>
+          <BranchTodayStatus branchId={context.branchId} />
         </Suspense>
       ) : null}
 
-      <Suspense fallback={<HubQueuePending />}>
-        <HubQueueSection branchId={context.branchId} />
+      <Suspense fallback={<BranchQueuePending />}>
+        <BranchQueueSection branchId={context.branchId} />
       </Suspense>
 
       {groups.map((group) => {
@@ -187,8 +187,8 @@ export default async function OperatorHomePage({
       />
 
       <BranchOperatorActionSection
-        title={APP_COPY_VI.adminDashboardTitle}
-        links={ownerAdminLinks}
+        title={APP_COPY_VI.ownerTitle}
+        links={ownerLinks}
         columns={2}
         mobileColumns={2}
         wideColumns

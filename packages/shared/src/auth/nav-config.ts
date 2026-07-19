@@ -5,8 +5,8 @@ import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 /**
  * Sidebar navigation configuration — derived from MODULE_ACL.
  * Icon names reference Lucide React (resolved in the UI layer).
- * This is the SINGLE source of nav structure — the Management shells project
- * from here via `resolveAdminDashboardPrimaryTabs` plus deep-nav resolvers.
+ * This is the SINGLE source of nav structure — the Owner shell projects
+ * from here via `resolveOwnerPrimaryTabs` plus deep-nav resolvers.
  */
 
 export interface NavItemConfig {
@@ -44,14 +44,14 @@ export interface OperatorTileConfig extends BranchScopedNavItemConfig {
 }
 
 /** Owner-only tenant control plane. Branch work stays under `/br/[branchId]`. */
-export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
+export const OWNER_NAV_GROUPS: NavGroupConfig[] = [
   {
-    title: NAV_GROUP_LABELS_VI.adminOperations,
+    title: NAV_GROUP_LABELS_VI.ownerOperations,
     items: [
       {
-        moduleKey: "admin_dashboard",
+        moduleKey: "owner",
         icon: "LayoutDashboard",
-        label: APP_COPY_VI.adminDashboardTitle,
+        label: APP_COPY_VI.ownerTitle,
       },
       { moduleKey: "finance", icon: "Wallet", label: "Tài chính" },
       { moduleKey: "orders", icon: "ClipboardList", label: "Đơn hàng" },
@@ -135,14 +135,14 @@ export const OPERATOR_TILE_GROUP_ORDER: readonly OperatorTileGroupId[] = [
 
 export const OPERATOR_TILE_ITEMS = [
   {
-    moduleKey: "operator_home",
+    moduleKey: "branch_home",
     icon: "Clock",
     group: "my_shift",
     hrefTemplate: "/br/{branchId}/shift/clock",
     label: "Chấm công",
   },
   {
-    moduleKey: "operator_home",
+    moduleKey: "branch_home",
     icon: "ListChecks",
     group: "my_shift",
     hrefTemplate: "/br/{branchId}/shift",
@@ -170,14 +170,14 @@ export const OPERATOR_TILE_ITEMS = [
     label: "Duyệt nghỉ phép",
   },
   {
-    moduleKey: "inventory",
+    moduleKey: "branch_stock",
     icon: "ClipboardCheck",
     group: "approvals",
     hrefTemplate: "/br/{branchId}/stock/count-slips",
     label: "Duyệt kiểm kê",
   },
   {
-    moduleKey: "employee_checkout_approvals",
+    moduleKey: "branch_stock",
     icon: "CheckCircle",
     group: "approvals",
     hrefTemplate: "/br/{branchId}/stock/waste-approvals",
@@ -214,7 +214,7 @@ export const OPERATOR_TILE_ITEMS = [
     kinds: ["branch"],
   },
   {
-    moduleKey: "orders",
+    moduleKey: "branch_orders",
     icon: "ClipboardList",
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/orders",
@@ -222,7 +222,7 @@ export const OPERATOR_TILE_ITEMS = [
     kinds: ["branch"],
   },
   {
-    moduleKey: "inventory_procurement",
+    moduleKey: "branch_stock",
     icon: "ChefHat",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/production",
@@ -230,21 +230,21 @@ export const OPERATOR_TILE_ITEMS = [
     kinds: ["branch"],
   },
   {
-    moduleKey: "inventory",
+    moduleKey: "branch_stock",
     icon: "Package",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock",
     label: "Tồn kho",
   },
   {
-    moduleKey: "inventory",
+    moduleKey: "branch_stock",
     icon: "ClipboardCheck",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/stocktake",
     label: "Kiểm kê",
   },
   {
-    moduleKey: "employee_checkout_approvals",
+    moduleKey: "branch_stock",
     icon: "ClipboardList",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/count-assignments",
@@ -252,28 +252,28 @@ export const OPERATOR_TILE_ITEMS = [
     kinds: ["branch"],
   },
   {
-    moduleKey: "inventory",
+    moduleKey: "branch_stock",
     icon: "Package",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/waste",
     label: "Hao hụt",
   },
   {
-    moduleKey: "inventory",
+    moduleKey: "branch_stock",
     icon: "ChartBar",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/consumption",
     label: "Tiêu hao",
   },
   {
-    moduleKey: "inventory",
+    moduleKey: "branch_stock",
     icon: "FileText",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/grn",
     label: "Nhập hàng",
   },
   {
-    moduleKey: "inventory",
+    moduleKey: "branch_stock",
     icon: "Tags",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/catalog",

@@ -24,7 +24,7 @@ export type InventoryListScope = ListScopeResolution;
 /**
  * Single scope-read path for shared inventory `*PageContent` list/report
  * surfaces (D058 W3b). `routeBranchId` (validated URL segment, embedded
- * runtime) always wins over `queryBranchId` (raw `?branchId=`, Admin Dashboard
+ * runtime) always wins over `queryBranchId` (raw `?branchId=`, Owner surface
  * display filter). Callers apply exactly one guard:
  * `if (scope.outOfScope) notFound();` — no more hand-rolled
  * `routeBranchId ?? resolveRequestedBranchId(...)` branching per page.
@@ -52,7 +52,7 @@ export const resolveInventoryListScope = cache(
  * detail pages, Server Actions, and the layout, which each already have
  * their own requested branch id and only need the allowed-branches /
  * default-selection lookup. List/report `*PageContent` surfaces that face
- * both an embedded segment and an Admin Dashboard query param use
+ * both an embedded segment and an Owner surface query param use
  * `resolveInventoryListScope` instead.
  */
 export const resolveInventoryBranchScope = cache(

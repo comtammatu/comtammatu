@@ -300,7 +300,7 @@ export const PRIMITIVE_COMPONENT_REGISTRY = {
   ),
   "sidebar.tsx": adapterOnly(
     "management navigation chrome internals",
-    "AppShell or AdminDashboardModuleShell",
+    "AppShell or OwnerModuleShell",
     "AppBottomNav for operator navigation",
     "route-local SidebarProvider or third shell",
     "management shell",
@@ -828,7 +828,7 @@ export const APP_ADAPTER_REGISTRY = {
     "SettingsFormSection",
     "AppSection for non-settings content",
     "settings-specific card clone",
-    "admin settings",
+    "owner settings",
     true,
   ),
   AppPageTabs: adapter(

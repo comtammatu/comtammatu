@@ -72,7 +72,7 @@ evidence prove the result. Product copy remains owned by `docs/ref/glossary.md`,
 Com Tam Ma Tu is an operational restaurant system. The UI should feel calm, fast, touch-safe, and business-specific.
 
 - POS and KDS are frontline tools. The first viewport must expose the next safe action or live queue.
-- Admin surfaces are dense management workspaces. They should prioritize tables, filters, forms, and review states over decorative summary chrome.
+- Owner surfaces are dense management workspaces. They should prioritize tables, filters, forms, and review states over decorative summary chrome.
 - Inventory surfaces are workflow-first. The user should see pending tasks, required documents, and exception states before secondary analytics.
 - Employee surfaces are lightweight task portals. Keep them narrow, direct, and consistent with the shared shell.
 
@@ -530,7 +530,7 @@ wrapper that recreates the same responsibilities.
 | Document lines           | `DataTable` with `render(row, index)`, `mobileCardRender`, and `desktopFooterRows` / `mobileFooter`                                                                    | Document controller owns line mutation by index; finite document lines do not need list pagination         |
 | Report breakdown         | `DataTable`, optionally with read-only footer totals                                                                                                                   | Report query owns period/branch and ordering; totals never replace row-level values                        |
 | Local inline table       | `DataTable` may use its inline search/filter/action slots only when the state is local to that one table and there is no page-level `AppToolbar` for the same controls | Do not duplicate a page toolbar inside the table                                                           |
-| Branch-native touch list | `Item` / `ItemGroup`, not `DataTable`, where a named Branch exception requires one phone/tablet information architecture                                               | Shares loader, model, status vocabulary, and mutation authority with the Admin Dashboard counterpart       |
+| Branch-native touch list | `Item` / `ItemGroup`, not `DataTable`, where a named Branch exception requires one phone/tablet information architecture                                               | Shares loader, model, status vocabulary, and mutation authority with the Owner surface counterpart       |
 
 Each `DataTableColumn` is an operational field, not layout filler: it has a
 stable non-empty header (an action column uses visually hidden `Thao tác`), a
@@ -549,10 +549,10 @@ presentations rather than a hidden-column desktop table.
 
 Branch runtime has one explicit presentation-plane exception: a declared
 Branch-native touch `LIST` under `/br/[branchId]/*` may use `Item`/`ItemGroup`
-at every supported phone/tablet width when the corresponding Admin Dashboard route owns
+at every supported phone/tablet width when the corresponding Owner surface route owns
 the dense `DataTable`. The two planes MUST share the server loader, pure model,
 status vocabulary, and mutation authority; Branch MUST NOT maintain separate
-mobile/tablet JSX trees or switch to the Admin Dashboard table at tablet landscape.
+mobile/tablet JSX trees or switch to the Owner surface table at tablet landscape.
 Each exception is named in `docs/spec/page-archetypes.md` § Named Exceptions.
 
 Inline-edit document sheets (PO/transfer/issue lines) use the same adapter:
@@ -671,7 +671,7 @@ allowlist.
 - Use semantic state tokens; operational mode colors must still come from shared tokens.
 - Bump/complete actions need large touch targets and clear focus states.
 
-### Admin
+### Owner
 
 - Use the shared admin shell, sidebar, breadcrumb, page heading rhythm, table/list/detail forms, and empty states.
 - Prefer filters plus table/list views over dashboard-card mosaics.
@@ -740,13 +740,13 @@ second source of truth.
 Every route mounts exactly one approved chrome family. A new chrome family is a
 contract change; route-local chrome outside this list is drift.
 
-1. Admin Dashboard chrome — the shared `AppShell`
+1. Owner surface chrome — the shared `AppShell`
    (`apps/web/app/components/app-shell.tsx`) with an Owner-only multi-group
-   sidebar and one top header. Covers `/admin`, `/inventory`, `/orders`, `/hr`,
+   sidebar and one top header. Covers `/`, `/inventory`, `/orders`, `/hr`,
    `/finance`, `/menu`, and `/branches`. One shell, one sidebar, one header.
-   The single Admin Dashboard sidebar renders primary module tabs
+   The single Owner surface sidebar renders primary module tabs
    first and nests the active module's deep nav as sub-tabs under that active
-   primary tab. Admin Dashboard bottom nav shows on phone and tablet portrait (`<lg`); only
+   primary tab. Owner surface bottom nav shows on phone and tablet portrait (`<lg`); only
    desktop (`≥lg`) uses the fixed sidebar. Tablet portrait therefore gets the
    bottom nav + `Mô-đun` drawer instead of a desktop sidebar crammed onto a
    narrow width. The
@@ -755,21 +755,21 @@ contract change; route-local chrome outside this list is drift.
    DataTable/toaster/POS is unchanged.
 2. Branch runtime chrome — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
-   branch hub, staff daily work under `/br/[branchId]/shift/*`, stock action
+   branch home, staff daily work under `/br/[branchId]/shift/*`, stock action
    entry points under `/br/[branchId]/stock/*`, and branch management
    (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`) when reached from
    the branch runtime. It uses the shared brand primitives, compact `AppPage`,
    and `AppBottomNav`; `branch_management` is a route family inside this chrome,
-   not a reason to enter Admin Dashboard chrome or add another shell.
+   not a reason to enter Owner surface chrome or add another shell.
 3. Operations chrome — purpose-built, full-screen, single-job surfaces that
    legitimately cannot wear the management sidebar: POS (`/br/[branchId]/pos`),
    KDS and Runner (`/br/[branchId]/{kds,runner}`). These keep bespoke layout,
    but consume the same tokens,
    typography, status vocabulary, header lockup, and bottom-nav primitives as
-   Admin Dashboard — a different layout, never a second visual language.
+   Owner surface — a different layout, never a second visual language.
 4. Standalone chrome-less surfaces — a named, closed exception, not a fourth
    general-purpose shell: `/notifications` and `/br` (the branch picker). Both
-   are reachable from more than one plane (`/notifications` from Admin Dashboard,
+   are reachable from more than one plane (`/notifications` from Owner surface,
    Branch runtime, and Operations via `?returnTo=`; `/br` is reached before any
    branch context — and therefore any Branch runtime chrome — exists) so they
    deliberately mount no sidebar, header lockup, or bottom nav; they render
@@ -792,8 +792,8 @@ frames are the reference implementations, not a frozen filename registry.
   another shared chrome composition only when its job cannot be expressed by an
   existing frame and its navigation owner is explicit.
 - Branch runtime, Operations, and employee-lib surfaces MUST NOT import or render
-  Admin Dashboard chrome (`AppShell`, `AdminDashboardModuleShell`,
-  `resolveAdminDashboard*`, `admin-dashboard-nav`, `finance-shell`,
+  Owner surface chrome (`AppShell`, `OwnerModuleShell`,
+  `resolveOwner*`, `owner-nav`, `finance-shell`,
   `inventory-shell`). They must
   use the approved operator/operations chrome, shared `AppHeader` /
   `AppBottomNav`, `EmployeePage`, or an `embedded` branch of the canonical
@@ -807,7 +807,7 @@ frames are the reference implementations, not a frozen filename registry.
 - One capability has exactly one route home; the home per family is defined in
   `docs/spec/role-route-matrix.md`. A second page rendering another family's
   client is drift (e.g. a `/br/[branchId]/settings/*` page importing an
-  `/admin/settings/*` client, or a duplicate periods page).
+  `/settings/*` client, or a duplicate periods page).
 - A route that loses its single home must not keep a parallel copy or stub.
 - Every `(protected)/**/page.tsx` MUST resolve to exactly one route family and
   be reachable from at least one navigation entry. Orphan routes (live page,
@@ -821,27 +821,27 @@ frames are the reference implementations, not a frozen filename registry.
 
 #### Canonical operator-home skeleton (no KPI)
 
-The Branch operator hub — the only operator hub kind — uses ONE ordered home
+The Branch branch home — the only branch home kind — uses ONE ordered home
 recipe (owner-approved):
 
-1. **Primary CTA** — the single next safe action for this hub.
-2. **Live queue panel** — the hub's active work, live.
-3. **Curated job tiles** — the hub's next jobs, as tiles.
+1. **Primary CTA** — the single next safe action for this landing.
+2. **Live queue panel** — the landing's active work, live.
+3. **Curated job tiles** — the landing's next jobs, as tiles.
 
 The recipe varies only in which slots and data populate it, never in the
 structure. Numbers appear as **badges on tiles / sections ONLY** — there are NO
 KPI / stat cards on operator surfaces (reaffirms the operator no-KPI rule: an
-operator home is job-first, not a dashboard). A hub that opens with a stat-card
+operator home is job-first, not a dashboard). A landing that opens with a stat-card
 mosaic instead of `[primary CTA] → [live queue panel] → [curated job tiles]` is
 drift.
 
 ### D. Navigation Single-Source
 
-- Navigation is data, not per-shell code. Every Admin Dashboard route renders
-  the same Owner-filtered primary tabs from `resolveAdminDashboardPrimaryTabs`
-  (`apps/web/app/lib/admin-dashboard-nav.ts`, projected from
-  `packages/shared/src/auth/nav-config.ts` via `resolveAdminNavGroups`). Deep nav
-  comes from `resolveAdminDashboardDeepNav`, `resolveBranchDeepNav`, or module-local
+- Navigation is data, not per-shell code. Every Owner surface route renders
+  the same Owner-filtered primary tabs from `resolveOwnerPrimaryTabs`
+  (`apps/web/app/lib/owner-nav.ts`, projected from
+  `packages/shared/src/auth/nav-config.ts` via `resolveOwnerNavGroups`). Deep nav
+  comes from `resolveOwnerDeepNav`, `resolveBranchDeepNav`, or module-local
   resolvers (`finance/components/finance-nav.ts`, `inventory/_lib/inventory-nav.ts`).
   Inline `ShellNavGroup[]` literals inside a shell are forbidden (gate
   `nav-shell-inline-literal`).
@@ -861,7 +861,7 @@ drift.
 - Outer page padding is applied once and should not compound. `AppPage`
   (`apps/web/app/components/surface.tsx`) supplies the default scale and is
   nesting-aware.
-- The Admin Dashboard frame padding is applied once by `AppShell` `<main>`;
+- The Owner surface frame padding is applied once by `AppShell` `<main>`;
   `AppPage` defers to it through `AppShellPaddingBoundary`. An `AppPage` mounted
   inside `AppShell` main drops its own padding while keeping its centered
   max-width; an `AppPage` mounted inside another `AppPage` drops both padding and

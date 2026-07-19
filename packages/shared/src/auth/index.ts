@@ -1,12 +1,5 @@
-export type {
-  AccessBucket,
-  BranchKind,
-  StaffRole,
-  JwtClaims,
-  ScopeIds,
-} from "./types";
+export type { BranchKind, StaffRole, JwtClaims, ScopeIds } from "./types";
 export {
-  ACCESS_BUCKETS,
   STAFF_ROLES,
   BRANCH_ROLES,
   TENANT_LEVEL_ROLES,
@@ -22,8 +15,6 @@ export {
 } from "./types";
 export type { ModuleKey } from "./module-acl";
 export { MODULE_ACL, canAccess } from "./module-acl";
-export type { BranchHubContext, StationKind } from "./branch-hub";
-export { resolveBranchHubDestination } from "./branch-hub";
 export type { PermissionKey } from "./permissions";
 export {
   PERMISSION_KEYS,
@@ -58,7 +49,7 @@ export type {
   OperatorTileGroupId,
 } from "./nav-config";
 export {
-  ADMIN_NAV_GROUPS,
+  OWNER_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
   BRANCH_OPERATION_ITEMS,
   OPERATOR_TILE_GROUP_ORDER,
@@ -77,7 +68,7 @@ export type {
   ResolvedNavLink,
 } from "./nav-resolution";
 export {
-  resolveAdminNavGroups,
+  resolveOwnerNavGroups,
   resolveBranchManagementItems,
   resolveBranchOperationItems,
   resolveNavLink,
@@ -92,7 +83,7 @@ export type {
   DiscoveredAppLink,
 } from "./app-discovery";
 export {
-  resolveAdminDiscoveryGroups,
+  resolveOwnerDiscoveryGroups,
   resolveBranchManagementDiscoveryGroup,
   resolveBranchOperationDiscoveryGroup,
   resolveDiscoveredAppGroups,
@@ -109,11 +100,11 @@ export {
   resolveRouteFamilyContract,
 } from "./route-map";
 export {
-  ADMIN_DASHBOARD_ROUTE_PREFIXES,
+  OWNER_ROUTE_PREFIXES,
   INVENTORY_PROCUREMENT_PREFIXES,
   INVENTORY_ROUTE_PREFIXES,
   PUBLIC_APP_PATHS,
-  isAdminDashboardRoutePath,
+  isOwnerRoutePath,
   isPublicAppPath,
   isRunnerPublicDisplayPath,
   resolveModuleFromPath,

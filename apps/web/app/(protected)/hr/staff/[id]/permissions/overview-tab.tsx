@@ -21,34 +21,34 @@ export function OverviewTab({
   isActive,
 }: OverviewTabProps) {
   const statusLabel = isActive
-    ? messages.admin.staffPermissions.statusActive
-    : messages.admin.staffPermissions.statusInactive;
+    ? messages.owner.staffPermissions.statusActive
+    : messages.owner.staffPermissions.statusInactive;
 
   return (
-    <AppSection title={messages.admin.staffPermissions.staffInfoTitle}>
+    <AppSection title={messages.owner.staffPermissions.staffInfoTitle}>
       <DescriptionList
         className="sm:grid sm:grid-cols-2 sm:gap-3"
         items={[
           {
-            term: messages.admin.staffPermissions.fieldFullName,
+            term: messages.owner.staffPermissions.fieldFullName,
             description: fullName,
           },
           {
-            term: messages.admin.staffPermissions.fieldPhone,
+            term: messages.owner.staffPermissions.fieldPhone,
             description: (
               <span className="font-mono">{phone ?? "—"}</span>
             ),
           },
           {
-            term: messages.admin.staffPermissions.fieldPosition,
+            term: messages.owner.staffPermissions.fieldPosition,
             description: positionLabel,
           },
           {
-            term: messages.admin.staffPermissions.fieldDefaultBranch,
+            term: messages.owner.staffPermissions.fieldDefaultBranch,
             description: defaultBranchName,
           },
           {
-            term: messages.admin.staffPermissions.fieldRole,
+            term: messages.owner.staffPermissions.fieldRole,
             description: (
               <span className="font-mono">
                 {staffRoleFromPositionCode(positionCode)}
@@ -56,7 +56,7 @@ export function OverviewTab({
             ),
           },
           {
-            term: messages.admin.staffPermissions.fieldStatus,
+            term: messages.owner.staffPermissions.fieldStatus,
             description: (
               <Badge variant={isActive ? "success" : "secondary"}>
                 {statusLabel}

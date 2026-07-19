@@ -49,7 +49,7 @@ export const createPaymentSchema = z.object({
 /**
  * Shared schema for branch-only read actions:
  *   - `fetchPaymentMethodsForPos(branchId)` — RSC seed for POS bill sheet.
- *   - `fetchVietQrConfig(branchId)` — RSC seed for Admin VietQR config.
+ *   - `fetchVietQrConfig(branchId)` — RSC seed for Owner VietQR config.
  *
  * Both reads check `claims.branch_id === input.branchId` inline (different
  * error copy "Không có quyền truy cập chi nhánh này" — kept inside handler

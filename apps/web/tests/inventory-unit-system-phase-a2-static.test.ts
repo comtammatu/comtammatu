@@ -21,8 +21,8 @@ test("A2 redefines the catalog upsert to derive to_base_factor from anchors", ()
     migration,
     /CREATE OR REPLACE FUNCTION public\.upsert_ingredient_catalog\(/,
   );
-  // Persisted factor and legacy purchase_to_measure_factor both flow through the
-  // shared resolver, never a raw client to_base_factor for anchored rows.
+  // The Phase A2 persisted factor and purchase_to_measure_factor migration
+  // path both flow through the shared resolver for anchored rows.
   assert.match(
     migration,
     /public\.inv_catalog_unit_to_base\(v_base_unit_id, e, p_units\)/,
@@ -31,7 +31,7 @@ test("A2 redefines the catalog upsert to derive to_base_factor from anchors", ()
   assert.match(
     migration,
     /v_factor := 1\.0 \/ public\.inv_catalog_unit_to_base\(v_base_unit_id, v_secondary, p_units\)/,
-    "legacy purchase_to_measure_factor must use the derived secondary factor",
+    "purchase_to_measure_factor must use the derived secondary factor",
   );
 });
 
@@ -57,7 +57,7 @@ test("A2 resolver derives anchored rows via the tenant-scoped Phase A helper", (
   );
 });
 
-test("A2 resolver keeps a positive-guarded legacy fallback for anchorless rows", () => {
+test("A2 resolver keeps a positive-guarded factor for anchorless rows", () => {
   // A non-base packaging row without an anchor keeps its client factor so the
   // currently-deployed dialog still saves during the apply -> deploy window.
   assert.match(

@@ -63,7 +63,7 @@ export const settings = {
     printTemplatesEntry: "Mẫu phiếu",
     printJobsTitle: "Giám sát in",
     printJobsDescription: "Trạng thái hàng đợi in và máy in đang kết nối",
-    printHubDescription:
+    printLandingDescription:
       "Mẫu phiếu, giám sát job in, và cấu hình máy in theo từng chi nhánh.",
     printBranchConfigTitle: "Cấu hình theo chi nhánh",
     tablesTitle: "Sơ đồ bàn",
@@ -278,7 +278,7 @@ export const settings = {
       "POS ghép phần này với mã đối soát cho từng đơn rồi đưa vào QR và bill thanh toán.",
     codePrefixHelp:
       "Hệ thống tự thêm một khoảng trắng và 12 ký tự đối soát cho từng đơn. Chỉ chữ, số và khoảng trắng.",
-    codeModelAdminLabel: "Admin lưu",
+    codeModelOwnerLabel: "Owner lưu",
     codeModelSuffixLabel: "Hệ thống tự thêm",
     codeModelFinalLabel: "Nội dung QR POS",
     codePreviewEmpty: "Nhập nội dung cố định để xem ví dụ.",
@@ -509,11 +509,11 @@ export const settings = {
     posBack: "Về POS",
     employeeBack: "Về Cổng",
     branchSettingsBack: "Cài đặt chi nhánh",
-    hubTitle: "Thiết lập vận hành chi nhánh",
-    hubDescription: (branchName: string) =>
+    landingTitle: "Thiết lập vận hành chi nhánh",
+    landingDescription: (branchName: string) =>
       `${branchName} · Bàn, POS, bếp và in`,
-    hubEmptyTitle: "Không có mục thiết lập khả dụng",
-    hubEmptyDescription:
+    landingEmptyTitle: "Không có mục thiết lập khả dụng",
+    landingEmptyDescription:
       "Tài khoản của bạn chưa được cấp quyền cho các mục thiết lập của chi nhánh này. Liên hệ chủ/quản lý nếu cần truy cập.",
     infoTitle: "Thông tin",
     tablesSetupTitle: "Bàn & khu vực",

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 
@@ -21,9 +21,6 @@ const grnListData = readRepo("apps/web/lib/inventory/grn-list-data.ts");
 const grnSourceData = readRepo("apps/web/lib/inventory/grn-source-data.ts");
 const grnSourceModel = readRepo("apps/web/lib/inventory/grn-source-model.ts");
 const grnListPage = readRepo("apps/web/app/(protected)/inventory/grn/page.tsx");
-const draftsPage = readRepo(
-  "apps/web/app/(protected)/inventory/drafts/page.tsx",
-);
 const branchGrnListClient = readRepo(
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
 );
@@ -198,19 +195,13 @@ test("GRN list creation and drafts follow the resolved branch grant", () => {
   assert.match(grnListClient, /const desktopActions = canCreate \?/);
 });
 
-test("GRN drafts route keeps the branch scope in the canonical queue", () => {
-  assert.match(
-    draftsPage,
-    /searchParams: Promise<\{ branchId\?: string \| string\[\] \}>/,
+test("GRN drafts have no retired compatibility route", () => {
+  assert.equal(
+    existsSync(
+      resolve(repoRoot, "apps/web/app/(protected)/inventory/drafts/page.tsx"),
+    ),
+    false,
   );
-  assert.match(draftsPage, /new URLSearchParams\(\{ tab: "grn" \}\)/);
-  assert.match(draftsPage, /qParams\.append\("branchId", id\)/);
-  assert.match(draftsPage, /qParams\.set\("branchId", params\.branchId\)/);
-  assert.match(
-    draftsPage,
-    /redirect\(`\/inventory\/operations\?\$\{qParams\.toString\(\)\}`\)/,
-  );
-  assert.doesNotMatch(draftsPage, /\/inventory\/grn\?tab=drafts/);
 });
 
 test("GRN source stays supplier-first and follows the selected receiving branch", () => {

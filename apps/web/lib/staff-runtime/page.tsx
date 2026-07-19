@@ -371,32 +371,27 @@ export async function StaffWorkdayPageContent({
   // already open, instead of three taps deep behind Profile.
   let pendingCheckouts = 0;
   if (CHECKOUT_APPROVER_ROLES.includes(claims.user_role)) {
-    const service = createServiceClient();
-    let countQuery = service
-      .from("attendance_records")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .contains("checkout_approval_target_roles", [claims.user_role])
-      .is("check_out", null)
-      .not("checkout_requested_at", "is", null);
-    if (claims.user_role === "branch_manager") {
-      countQuery = countQuery.eq("branch_id", claims.branch_id ?? -1);
-    }
+    const approvalBranchId = claims.branch_id ?? state.branchId;
     const permissionPromise =
-      typeof claims.branch_id === "number"
+      typeof approvalBranchId === "number"
         ? supabase.rpc("has_permission", {
-            p_branch_id: claims.branch_id,
+            p_branch_id: approvalBranchId,
             p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
           })
-        : supabase.rpc("has_permission_any", {
-            p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-          });
+        : Promise.resolve({ data: false });
+    const countPromise =
+      typeof approvalBranchId === "number"
+        ? supabase.rpc("get_checkout_review_queue", {
+            p_branch_id: approvalBranchId,
+            p_include_rows: false,
+          })
+        : Promise.resolve({ data: [] });
     const [permissionResult, countResult] = await Promise.all([
       permissionPromise,
-      countQuery,
+      countPromise,
     ]);
     if (permissionResult.data === true) {
-      pendingCheckouts = countResult.count ?? 0;
+      pendingCheckouts = countResult.data?.[0]?.pending_count ?? 0;
     }
   }
 
@@ -740,6 +735,7 @@ export async function StaffWorkdayPageContent({
           searchParams={Promise.resolve({})}
           routeBranchId={state.branchId ?? undefined}
           baseHref={routes.tasks}
+          profileHref={routes.profile}
           plane={plane}
         />
       </div>

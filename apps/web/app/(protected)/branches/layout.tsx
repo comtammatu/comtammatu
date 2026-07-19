@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { canAccess } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
-import { AdminDashboardModuleShell } from "@/components/admin-dashboard-module-shell";
+import { OwnerModuleShell } from "@/components/owner-module-shell";
 
 export default async function BranchesLayout({
   children,
@@ -16,7 +16,7 @@ export default async function BranchesLayout({
   }
 
   return (
-    <AdminDashboardModuleShell
+    <OwnerModuleShell
       module="branches"
       user={{
         name:
@@ -28,6 +28,6 @@ export default async function BranchesLayout({
       branchId={claims.branch_id}
     >
       {children}
-    </AdminDashboardModuleShell>
+    </OwnerModuleShell>
   );
 }

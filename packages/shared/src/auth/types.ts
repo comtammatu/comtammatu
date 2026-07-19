@@ -1,14 +1,12 @@
 /**
- * Access buckets — ordered by privilege level (highest to lowest).
- * These are compatibility auth buckets, not mutable HR position labels.
+ * Application authorization roles, ordered by privilege level.
  *
- * D076: `office`, `warehouse_manager`, and `production_manager` are retired.
- * Admin Dashboard routes are owner-only. `MODULE_ACL` still describes reusable
+ * Owner surface routes are owner-only. `MODULE_ACL` still describes reusable
  * capabilities because Branch-native routes share keys such as `inventory` and
  * `orders`. Central-site soft-routing is gone; `BranchKind` enum values remain
  * for historical inventory rows only.
  */
-export const ACCESS_BUCKETS = [
+export const STAFF_ROLES = [
   "owner",
   "branch_manager",
   "cashier",
@@ -16,11 +14,7 @@ export const ACCESS_BUCKETS = [
   "branch_staff",
 ] as const;
 
-export type AccessBucket = (typeof ACCESS_BUCKETS)[number];
-
-/** Compatibility alias while app code moves from StaffRole to AccessBucket. */
-export const STAFF_ROLES = ACCESS_BUCKETS;
-export type StaffRole = AccessBucket;
+export type StaffRole = (typeof STAFF_ROLES)[number];
 
 /** Roles that operate at branch level (POS/KDS) */
 export const BRANCH_ROLES: readonly StaffRole[] = ["cashier", "chef"] as const;
@@ -71,7 +65,7 @@ export function canManageTenantStrategySettings(role: StaffRole): boolean {
 }
 
 /**
- * Vietnamese labels for compatibility access buckets.
+ * Vietnamese labels for application authorization roles.
  * Staff/HR UI should display `positions.label_vi` instead.
  */
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
@@ -86,8 +80,8 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
  * Canonical HR position code → StaffRole bucket. TS mirror of the SQL
  * `private.staff_role_from_position_code()` — change both in the same PR
  * (the SQL twin is the latest position-mapper migration). Unknown codes return
- * "unassigned" (fail-safe). Retired office/central codes are intentionally
- * absent so they resolve to unassigned.
+ * "unassigned" (fail-safe). Codes outside this map never gain an access
+ * bucket implicitly.
  */
 const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   owner: "owner",
@@ -99,8 +93,6 @@ const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   grill_counter: "chef",
   chef: "chef",
   cashier: "cashier",
-  cashier_server: "cashier",
-  waiter: "cashier",
 };
 
 export type BranchKind = "branch" | "central_supply" | "central_kitchen";
@@ -110,14 +102,12 @@ const POSITION_CODE_TO_REQUIRED_BRANCH_KIND: Record<string, BranchKind | null> =
     owner: null,
     branch_manager: "branch",
     cashier: "branch",
-    cashier_server: "branch",
     chef: "branch",
     kitchen_counter: "branch",
     kitchen_helper: "branch",
     grill_counter: "branch",
     cleaner: "branch",
     guard: "branch",
-    waiter: "branch",
   };
 
 export function staffRoleFromPositionCode(
@@ -140,13 +130,11 @@ export interface JwtClaims {
   tenant_id: number;
   branch_id: number | null;
   user_role: StaffRole;
-  access_bucket?: AccessBucket;
   /**
    * Canonical HR position code (source of truth). `user_role` is derived from
    * it via the role-bridge mapper (`staffRoleFromPositionCode` / the SQL twin).
    */
-  position?: string;
-  position_code?: string;
+  position_code: string;
 }
 
 /** Scope IDs extracted from URL or JWT */

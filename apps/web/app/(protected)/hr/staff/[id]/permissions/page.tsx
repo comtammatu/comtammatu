@@ -11,7 +11,7 @@ import { PermissionsClient } from "./permissions-client";
 import { OverviewTab } from "./overview-tab";
 import { HistoryTab } from "./history-tab";
 
-const STAFF_ADMIN_ROLES = MODULE_ACL.staff.allowedRoles;
+const OWNER_STAFF_ROLES = MODULE_ACL.staff.allowedRoles;
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -20,7 +20,7 @@ interface Props {
 export default async function StaffPermissionsPage({ params }: Props) {
   const { id } = await params;
   const ctx = await getAuthContextWithPermission(
-    STAFF_ADMIN_ROLES,
+    OWNER_STAFF_ROLES,
     PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
   );
   if (!ctx) notFound();
@@ -54,11 +54,13 @@ export default async function StaffPermissionsPage({ params }: Props) {
     supabase
       .from("permission_keys")
       .select("key, module, description, scope")
+      .eq("is_delegable_to_staff", true)
       .order("module")
       .order("key"),
     supabase
       .from("role_templates")
       .select("id, name, position_code, permission_keys")
+      .or("position_code.is.null,position_code.neq.owner")
       .order("name"),
     supabase
       .from("staff_permissions")
@@ -96,7 +98,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
   const auditList = recentAudit ?? [];
   const positionLabel = position
     ? `${position.label_vi} (${position.code})`
-    : messages.admin.staffPermissions.positionUnassigned;
+    : messages.owner.staffPermissions.positionUnassigned;
 
   // Resolve actor names for the "Lịch sử" tab
   const actorIds = Array.from(
@@ -115,13 +117,13 @@ export default async function StaffPermissionsPage({ params }: Props) {
 
   const defaultBranchName = profile.branch_id
     ? (branchNameById.get(profile.branch_id) ?? String(profile.branch_id))
-    : messages.admin.staffPermissions.tenantWide;
+    : messages.owner.staffPermissions.tenantWide;
 
   return (
     <AppPage width="wide" density="compact">
       <AppPageHeader
         title={profile.full_name}
-        description={messages.admin.staffPermissions.headerDescription(
+        description={messages.owner.staffPermissions.headerDescription(
           positionLabel,
           defaultBranchName,
         )}
@@ -133,17 +135,17 @@ export default async function StaffPermissionsPage({ params }: Props) {
             render={<Link href="/hr/staff" />}
           >
             <IconArrowLeft className="mr-1 size-4" />
-            {messages.admin.staffPermissions.backToList}
+            {messages.owner.staffPermissions.backToList}
           </Button>
         }
         badge={
           profile.is_active
             ? {
-                children: messages.admin.staffPermissions.statusActive,
+                children: messages.owner.staffPermissions.statusActive,
                 variant: "success" as const,
               }
             : {
-                children: messages.admin.staffPermissions.statusInactive,
+                children: messages.owner.staffPermissions.statusInactive,
                 variant: "secondary" as const,
               }
         }
@@ -152,15 +154,15 @@ export default async function StaffPermissionsPage({ params }: Props) {
         items={[
           {
             value: "overview",
-            label: messages.admin.staffPermissions.tabOverview,
+            label: messages.owner.staffPermissions.tabOverview,
           },
           {
             value: "permissions",
-            label: messages.admin.staffPermissions.tabPermissions,
+            label: messages.owner.staffPermissions.tabPermissions,
           },
           {
             value: "history",
-            label: messages.admin.staffPermissions.tabHistory,
+            label: messages.owner.staffPermissions.tabHistory,
           },
         ]}
         defaultValue="overview"

@@ -42,12 +42,12 @@ test("count-slip RPCs emit durable notifications with review links", () => {
   assert.match(
     approvedBlock,
     /'inventory\.count_slip_approved'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:approved', p_slip_id\)/,
-    "approved count slips must notify the Branch Hub count page",
+    "approved count slips must notify the Branch home count page",
   );
   assert.match(
     recountBlock,
     /'inventory\.count_slip_recount'[\s\S]*format\('\/br\/%s\/stock\/count', v_slip\.branch_id\)[\s\S]*format\('inventory\.count_slip:%s:recount', p_slip_id\)/,
-    "recount requests must notify the Branch Hub count page",
+    "recount requests must notify the Branch home count page",
   );
 
   for (const kind of [

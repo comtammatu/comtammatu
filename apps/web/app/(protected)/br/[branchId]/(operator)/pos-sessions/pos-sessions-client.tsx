@@ -979,7 +979,7 @@ function OrderDetailDrawer({
 
               <div>
                 <SectionLabel>
-                  {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: operator hub uses vietnamese */}
+                  {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */}
                   <span>Món ăn</span>
                 </SectionLabel>
                 <BranchOperatorFrame className="mt-2 divide-y">

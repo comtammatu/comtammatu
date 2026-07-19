@@ -8,7 +8,6 @@ import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
 import { fetchTeamBoard, type TeamBoardRow } from "./data";
 import { TeamBoardClient } from "./team-board-client";
-import { TeamAssignmentsContent } from "./assignments/assignments-content";
 import { TeamMembersContent } from "./members/members-content";
 import {
   TeamWorkspaceTabs,
@@ -19,7 +18,6 @@ const copy = messages.operator.teamBoard;
 const validTabs = new Set<TeamWorkspaceTabValue>([
   "board",
   "members",
-  "assignments",
 ]);
 
 export default async function TeamBoardPage({
@@ -53,16 +51,11 @@ export default async function TeamBoardPage({
     );
   }
 
-  const [canViewTeam, canAssignCount, canApproveCheckout, canApproveCount] =
+  const [canViewTeam, canApproveCheckout, canApproveCount] =
     await Promise.all([
       probePermission(
         { supabase, claims },
         PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
-        context.branchId,
-      ),
-      probePermission(
-        { supabase, claims },
-        PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
         context.branchId,
       ),
       probePermission(
@@ -96,6 +89,7 @@ export default async function TeamBoardPage({
             checkoutApprovalsHref={`${basePath}/shift/checkout-approvals`}
             canApproveCheckout={canApproveCheckout}
             canApproveCount={canApproveCount}
+            approverRole={claims.user_role}
           />
         ) : (
           <AppEmptyState mode="error" description={result.error} />
@@ -104,13 +98,6 @@ export default async function TeamBoardPage({
       members={
         canViewTeam ? (
           <TeamMembersContent branchId={context.branchId} />
-        ) : (
-          <AppEmptyState mode="no-access" />
-        )
-      }
-      assignments={
-        canAssignCount ? (
-          <TeamAssignmentsContent branchId={context.branchId} />
         ) : (
           <AppEmptyState mode="no-access" />
         )

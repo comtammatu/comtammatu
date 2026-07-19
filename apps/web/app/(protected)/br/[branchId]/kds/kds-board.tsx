@@ -6,7 +6,6 @@ import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
 import {
   cycleAudioMode,
   getKdsAudioModeKey,
-  getKdsSoundPrefKey,
   KDS_TONE_TO_ALERT_KIND,
   playOperationalAlert,
   resolveAudioMode,
@@ -174,13 +173,8 @@ export function KdsBoard({
   const [audioMode, setAudioMode] = useState<OperationalAudioMode>("off");
   const audioModeKey = getKdsAudioModeKey(branchId);
   useEffect(() => {
-    setAudioMode(
-      resolveAudioMode(
-        readDevicePref(audioModeKey),
-        readDevicePref(getKdsSoundPrefKey(branchId)),
-      ),
-    );
-  }, [audioModeKey, branchId]);
+    setAudioMode(resolveAudioMode(readDevicePref(audioModeKey)));
+  }, [audioModeKey]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [completionHistoryOpen, setCompletionHistoryOpen] = useState(false);
   const boardRootRef = useRef<HTMLDivElement | null>(null);

@@ -48,7 +48,7 @@ export function PermissionAuditTable({
 }: {
   rows: PermissionAuditDisplayRow[];
 }) {
-  const copy = messages.admin.staffAudit;
+  const copy = messages.owner.staffAudit;
   const columns: DataTableColumn<PermissionAuditDisplayRow>[] = [
     {
       key: "time",

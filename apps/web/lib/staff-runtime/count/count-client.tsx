@@ -130,7 +130,7 @@ const BRANCH_COUNT_PRIMITIVES: CountRenderPrimitives = {
 interface CountSlipClientProps {
   branchId: number;
   shiftId: number | null;
-  baseHref?: string;
+  baseHref: string;
   plane?: CountPlane;
   groups: CountLocationGroup[];
   selectedLocationId: number | null;
@@ -210,7 +210,7 @@ function buildDraftSummary({
 export function CountSlipClient({
   branchId,
   shiftId,
-  baseHref = "/br",
+  baseHref,
   plane = "employee",
   groups,
   selectedLocationId,

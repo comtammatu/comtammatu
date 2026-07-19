@@ -99,7 +99,7 @@ export function BranchTable({ branches }: BranchTableProps) {
             ? [
                 {
                   key: "settings",
-                  label: messages.settings.branch.hubTitle,
+                  label: messages.settings.branch.landingTitle,
                   icon: <IconSliders data-icon="inline-start" />,
                   href: `/br/${branch.id}/settings`,
                 },

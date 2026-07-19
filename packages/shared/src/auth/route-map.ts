@@ -3,14 +3,14 @@ import { MODULE_ACL, type ModuleKey } from "./module-acl";
 import { isPublicAppPath, resolveModuleFromPath } from "./route-resolution";
 
 export type RouteSurface =
-  | "admin_dashboard"
+  | "owner"
   | "branch_management"
   | "branch_operation"
   | "utility"
   | "public";
 
 export type RoutePrimaryNav =
-  | "admin-dashboard-sidebar"
+  | "owner-sidebar"
   | "management-sidebar"
   | "operator-bottom-nav"
   | "operational-chrome"
@@ -52,90 +52,102 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: false,
   },
   {
-    id: "admin",
-    label: APP_COPY_VI.adminDashboardTitle,
-    surface: "admin_dashboard",
-    entryPath: "/admin",
-    matchPrefixes: ["/admin"],
-    moduleKeys: ["admin_dashboard", "settings"],
-    primaryNav: "admin-dashboard-sidebar",
+    id: "owner",
+    label: APP_COPY_VI.ownerTitle,
+    surface: "owner",
+    entryPath: "/",
+    matchPrefixes: ["/"],
+    moduleKeys: ["owner"],
+    primaryNav: "owner-sidebar",
     backBehavior: "none",
-    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
+    requiresBranchId: false,
+  },
+  {
+    id: "settings",
+    label: MODULE_ACL.settings.label,
+    surface: "owner",
+    entryPath: MODULE_ACL.settings.path,
+    matchPrefixes: [MODULE_ACL.settings.path],
+    moduleKeys: ["settings"],
+    primaryNav: "owner-sidebar",
+    backBehavior: "role-home",
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
     requiresBranchId: false,
   },
   {
     id: "menu",
     label: MODULE_ACL.menu.label,
-    surface: "admin_dashboard",
+    surface: "owner",
     entryPath: MODULE_ACL.menu.path,
     matchPrefixes: [MODULE_ACL.menu.path],
     moduleKeys: ["menu"],
-    primaryNav: "admin-dashboard-sidebar",
+    primaryNav: "owner-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
     requiresBranchId: false,
   },
   {
     id: "orders",
     label: MODULE_ACL.orders.label,
-    surface: "admin_dashboard",
+    surface: "owner",
     entryPath: MODULE_ACL.orders.path,
     matchPrefixes: [MODULE_ACL.orders.path],
     moduleKeys: ["orders"],
-    primaryNav: "admin-dashboard-sidebar",
+    primaryNav: "owner-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
     requiresBranchId: false,
   },
   {
     id: "inventory",
     label: MODULE_ACL.inventory.label,
-    surface: "admin_dashboard",
+    surface: "owner",
     entryPath: MODULE_ACL.inventory.path,
     // MODULE_ACL.inventory.path ("/inventory") prefix-matches every
     // /inventory/* sub-route already; the INVENTORY_ROUTE_PREFIXES spread
     // here was fully redundant (D058 W3).
     matchPrefixes: [MODULE_ACL.inventory.path],
-    moduleKeys: ["inventory", "inventory_procurement"],
-    primaryNav: "admin-dashboard-sidebar",
+    moduleKeys: ["inventory"],
+    primaryNav: "owner-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
     requiresBranchId: false,
   },
   {
     id: "finance",
     label: MODULE_ACL.finance.label,
-    surface: "admin_dashboard",
+    surface: "owner",
     entryPath: MODULE_ACL.finance.path,
     matchPrefixes: [MODULE_ACL.finance.path],
     moduleKeys: ["finance"],
-    primaryNav: "admin-dashboard-sidebar",
+    primaryNav: "owner-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
     requiresBranchId: false,
   },
   {
     id: "branches",
     label: MODULE_ACL.branches.label,
-    surface: "admin_dashboard",
+    surface: "owner",
     entryPath: MODULE_ACL.branches.path,
     matchPrefixes: [MODULE_ACL.branches.path],
     moduleKeys: ["branches"],
-    primaryNav: "admin-dashboard-sidebar",
+    primaryNav: "owner-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
     requiresBranchId: false,
   },
   {
     id: "hr",
     label: MODULE_ACL.hr.label,
-    surface: "admin_dashboard",
+    surface: "owner",
     entryPath: MODULE_ACL.hr.path,
     matchPrefixes: [MODULE_ACL.hr.path],
     moduleKeys: ["hr", "hr_payroll", "staff"],
-    primaryNav: "admin-dashboard-sidebar",
+    primaryNav: "owner-sidebar",
     backBehavior: "role-home",
-    breadcrumbRoot: APP_COPY_VI.adminDashboardTitle,
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
     requiresBranchId: false,
   },
   {
@@ -151,34 +163,20 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: false,
   },
   {
-    id: "branch-picker",
-    label: MODULE_ACL.branch_picker.label,
-    surface: "branch_operation",
-    entryPath: MODULE_ACL.branch_picker.path,
-    matchPrefixes: ["/", "/br"],
-    moduleKeys: ["branch_picker"],
-    primaryNav: "none",
-    backBehavior: "role-home",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
-    requiresBranchId: false,
-  },
-  {
-    id: "operator-home",
-    label: MODULE_ACL.operator_home.label,
+    id: "branch-home",
+    label: MODULE_ACL.branch_home.label,
     surface: "branch_operation",
     entryPath: "/br/[branchId]",
     matchPrefixes: ["/br/[branchId]"],
-    moduleKeys: ["operator_home"],
+    moduleKeys: ["branch_home"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
   },
   {
-    // First-match: checkout-approvals is re-keyed to its own module (D058 §5),
-    // so it MUST precede the broader operator-shift family or that
-    // less-specific prefix wins.
-    id: "operator-shift-checkout-approvals",
+    // Approval routes must precede the broader shift family.
+    id: "branch-shift-checkout-approvals",
     label: MODULE_ACL.employee_checkout_approvals.label,
     surface: "branch_operation",
     entryPath: "/br/[branchId]/shift/checkout-approvals",
@@ -190,10 +188,8 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // First-match: leave-approvals is re-keyed to its own module (D059 §4),
-    // so it MUST precede the broader operator-shift family or that
-    // less-specific prefix wins.
-    id: "operator-shift-leave-approvals",
+    // Approval routes must precede the broader shift family.
+    id: "branch-shift-leave-approvals",
     label: MODULE_ACL.employee_leave_approvals.label,
     surface: "branch_operation",
     entryPath: "/br/[branchId]/shift/leave-approvals",
@@ -205,48 +201,48 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    id: "operator-shift",
+    id: "branch-shift",
     label: APP_COPY_VI.employeePortal,
     surface: "branch_operation",
     entryPath: "/br/[branchId]/shift",
     matchPrefixes: ["/br/[branchId]/shift"],
-    moduleKeys: ["operator_home"],
+    moduleKeys: ["branch_home"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
   },
   {
-    id: "operator-profile",
+    id: "branch-profile",
     label: APP_COPY_VI.employeePortal,
     surface: "branch_operation",
     entryPath: "/br/[branchId]/profile",
     matchPrefixes: ["/br/[branchId]/profile"],
-    moduleKeys: ["operator_home"],
+    moduleKeys: ["branch_home"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
   },
   {
-    id: "operator-stock",
-    label: MODULE_ACL.inventory.label,
+    id: "branch-stock",
+    label: MODULE_ACL.branch_stock.label,
     surface: "branch_operation",
     entryPath: "/br/[branchId]/stock",
     matchPrefixes: ["/br/[branchId]/stock"],
-    moduleKeys: ["inventory"],
+    moduleKeys: ["branch_stock"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
     requiresBranchId: true,
   },
   {
-    id: "operator-orders",
-    label: MODULE_ACL.orders.label,
+    id: "branch-orders",
+    label: MODULE_ACL.branch_orders.label,
     surface: "branch_operation",
     entryPath: "/br/[branchId]/orders",
     matchPrefixes: ["/br/[branchId]/orders"],
-    moduleKeys: ["orders"],
+    moduleKeys: ["branch_orders"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
@@ -359,10 +355,6 @@ function escapeRegex(input: string): string {
 }
 
 function matchesRoutePrefix(pathname: string, prefix: string): boolean {
-  if (prefix === "/br") {
-    return pathname === "/br" || pathname === "/br/";
-  }
-
   if (prefix.includes("[branchId]")) {
     const expression = escapeRegex(prefix).replace("\\[branchId\\]", "\\d+");
     if (prefix === "/br/[branchId]") {

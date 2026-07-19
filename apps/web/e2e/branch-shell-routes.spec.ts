@@ -14,8 +14,9 @@ const TABLET_PORTRAIT = { width: 768, height: 1024 };
 const TABLET_LANDSCAPE = { width: 1024, height: 768 };
 const DESKTOP = { width: 1440, height: 900 };
 
-const ADMIN_DASHBOARD_PREFIXES = [
-  "/admin",
+const OWNER_PREFIXES = [
+  "/",
+  "/settings",
   "/branches",
   "/finance",
   "/hr",
@@ -57,13 +58,13 @@ function watchPageHealth(page: Page) {
 async function expectHealthyRoute(
   page: Page,
   path: string,
-  options: { adminDashboardLinkCount?: number | "some" } = {},
+  options: { ownerLinkCount?: number | "some" } = {},
 ) {
   await page.goto(path, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("load");
   await page.waitForTimeout(800);
 
-  const state = await page.evaluate((adminDashboardPrefixes) => {
+  const state = await page.evaluate((ownerPrefixes) => {
     const links = Array.from(document.querySelectorAll("a[href]")).map(
       (link) => link.getAttribute("href") ?? "",
     );
@@ -75,8 +76,8 @@ async function expectHealthyRoute(
           document.documentElement.scrollWidth,
           document.body.scrollWidth,
         ) - window.innerWidth,
-      adminDashboardLinkCount: links.filter((href) =>
-        adminDashboardPrefixes.some(
+      ownerLinkCount: links.filter((href) =>
+        ownerPrefixes.some(
           (prefix) =>
             href === prefix ||
             href.startsWith(`${prefix}/`) ||
@@ -87,21 +88,21 @@ async function expectHealthyRoute(
       isLoginSurface: /Đăng nhập|Log in to Vercel|Continue with Email/.test(
         text,
       ),
-      isAdminSurface: /Tổng quan quản trị|Điều hướng quản trị/.test(text),
+      isOwnerControl: /Tổng quan quản trị|Điều hướng quản trị/.test(text),
     };
-  }, ADMIN_DASHBOARD_PREFIXES);
+  }, OWNER_PREFIXES);
 
   expect(state.pathname).toBe(path);
   expect(state.overflowX).toBeLessThanOrEqual(2);
-  if (options.adminDashboardLinkCount === "some") {
-    expect(state.adminDashboardLinkCount).toBeGreaterThan(0);
+  if (options.ownerLinkCount === "some") {
+    expect(state.ownerLinkCount).toBeGreaterThan(0);
   } else {
-    expect(state.adminDashboardLinkCount).toBe(
-      options.adminDashboardLinkCount ?? 0,
+    expect(state.ownerLinkCount).toBe(
+      options.ownerLinkCount ?? 0,
     );
   }
   expect(state.isLoginSurface).toBe(false);
-  expect(state.isAdminSurface).toBe(false);
+  expect(state.isOwnerControl).toBe(false);
 }
 
 function expectedOwnerBottomNavCurrentCount(path: string, branchId: number) {
@@ -125,7 +126,7 @@ test.describe("branch route shell ownership", () => {
       viewports: [MOBILE],
     },
   ] as const) {
-    test(`${actor.label} stays in Branch and cannot enter Admin Dashboard URLs`, async ({
+    test(`${actor.label} stays in Branch and cannot enter Owner surface URLs`, async ({
       browser,
     }) => {
       const context = await browser.newContext({
@@ -137,21 +138,21 @@ test.describe("branch route shell ownership", () => {
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await page.waitForLoadState("load");
       await page.waitForURL((url) => /^\/br\/\d+$/.test(url.pathname));
-      const hubPath = new URL(page.url()).pathname;
-      expect(hubPath).toMatch(/^\/br\/\d+$/);
+      const branchPath = new URL(page.url()).pathname;
+      expect(branchPath).toMatch(/^\/br\/\d+$/);
 
       for (const viewport of actor.viewports) {
         await page.setViewportSize(viewport);
-        await expectHealthyRoute(page, hubPath);
+        await expectHealthyRoute(page, branchPath);
       }
 
-      for (const path of ADMIN_DASHBOARD_PREFIXES) {
+      for (const path of OWNER_PREFIXES) {
         await page.goto(path, { waitUntil: "domcontentloaded" });
         await page.waitForLoadState("load");
-        await expect(page).toHaveURL(hubPath);
+        await expect(page).toHaveURL(branchPath);
       }
 
-      await expectHealthyRoute(page, `${hubPath}/orders`);
+      await expectHealthyRoute(page, `${branchPath}/orders`);
 
       expect(health.consoleErrors).toEqual([]);
       expect(health.pageErrors).toEqual([]);
@@ -160,18 +161,18 @@ test.describe("branch route shell ownership", () => {
     });
   }
 
-  test("owner opens the Admin Dashboard launcher across breakpoints", async ({
+  test("owner opens the Owner surface launcher across breakpoints", async ({
     page,
   }) => {
     const health = watchPageHealth(page);
 
     for (const viewport of [MOBILE, TABLET_PORTRAIT, DESKTOP]) {
       await page.setViewportSize(viewport);
-      await expectHealthyRoute(page, "/admin", {
-        adminDashboardLinkCount: "some",
+      await expectHealthyRoute(page, "/", {
+        ownerLinkCount: "some",
       });
       await expect(
-        page.getByRole("heading", { name: "Admin Dashboard", exact: true }),
+        page.getByRole("heading", { name: "Quản trị", exact: true }),
       ).toBeVisible();
       await expect(page.getByText("Chỉ dành cho Owner")).toBeVisible();
       await expect(
@@ -274,13 +275,13 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/shift/checkout-approvals`,
     ]) {
       await expectHealthyRoute(page, path, {
-        adminDashboardLinkCount: path === `/br/${branchId}` ? 1 : 0,
+        ownerLinkCount: path === `/br/${branchId}` ? 1 : 0,
       });
       if (path === `/br/${branchId}`) {
         await expect(page.getByText("Cần xử lý")).toBeVisible();
         await expect(page.getByText("Trạm vận hành")).toBeVisible();
         await expect(page.getByText("Cấu hình chi nhánh")).toBeVisible();
-        await expect(page.locator('a[href="/admin"]')).toHaveCount(1);
+        await expect(page.locator('a[href="/"]')).toHaveCount(1);
         await expect(page.locator('a[href="/finance"]')).toHaveCount(0);
         await expect(page.locator('a[href="/hr"]')).toHaveCount(0);
         await expect(page.locator('a[href="/hr/payroll"]')).toHaveCount(0);
@@ -334,7 +335,7 @@ test.describe("branch route shell ownership", () => {
     expect(health.serverErrors).toEqual([]);
   });
 
-  test("Admin Dashboard count management keeps desktop tables or an explicit empty state", async ({
+  test("Owner surface count management keeps desktop tables or an explicit empty state", async ({
     page,
   }) => {
     test.setTimeout(90_000);

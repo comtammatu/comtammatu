@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 
@@ -21,11 +21,13 @@ test("proxy no longer soft-routes central-site roles", () => {
   assert.doesNotMatch(proxy, /resolveCentralSiteHomeBranchId/);
 });
 
-test("branch-hub-device no longer resolves a central-site home branch", () => {
-  const branchHubDevice = read("apps/web/app/_lib/branch-hub-device.ts");
-
-  assert.doesNotMatch(branchHubDevice, /resolveCentralSiteHomeBranchId/);
-  assert.doesNotMatch(branchHubDevice, /centralSiteBranchKindForRole/);
+test("branch routing has no device-context resolver", () => {
+  for (const path of [
+    "apps/web/app/_lib/branch-home-device.ts",
+    "apps/web/app/_lib/login-destination-context.ts",
+  ]) {
+    assert.equal(existsSync(resolve(repoRoot, path)), false, path);
+  }
 });
 
 test("HR actions no longer branch on centralSiteBranchKindForRole", () => {
@@ -45,7 +47,7 @@ test("shared auth package no longer exports centralSiteBranchKindForRole", () =>
   assert.doesNotMatch(indexSource, /centralSiteBranchKindForRole/);
 });
 
-test("retired warehouse_manager/production_manager buckets are absent from ACCESS_BUCKETS", () => {
+test("retired warehouse_manager/production_manager roles are absent", () => {
   const typesSource = read("packages/shared/src/auth/types.ts");
 
   assert.doesNotMatch(typesSource, /"warehouse_manager"/);

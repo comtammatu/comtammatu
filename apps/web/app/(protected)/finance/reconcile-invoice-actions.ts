@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Admin manual force-resync for a single HĐĐT row.
+ * Owner manual force-resync for a single HĐĐT row.
  *
  * Counterpart to /api/cron/hddt-reconcile. Both share
  * apps/web/lib/hddt-reconcile.ts::reconcileSingleInvoice().

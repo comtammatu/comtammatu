@@ -18,7 +18,6 @@ export interface BranchScopeSelection {
   allowedBranches: OperatorBranchOption[];
   currentBranchId: number | null;
   defaultBranchId: number | null;
-  canSwitchBranch: boolean;
 }
 
 export interface BranchContext extends BranchScopeSelection {
@@ -104,7 +103,7 @@ export function selectBranchScope(
 }
 
 /**
- * Branch Hub scope is tenant-wide for privileged roles, but every role only
+ * Branch home scope is tenant-wide for privileged roles, but every role only
  * operates active sites whose branch_kind is "branch" (D077).
  */
 export function selectOperatorBranchScope(
@@ -124,7 +123,6 @@ export function selectOperatorBranchScope(
     allowedBranches: scope.allowedBranches,
     currentBranchId: scope.selectedBranchId,
     defaultBranchId: scope.defaultBranchId,
-    canSwitchBranch: scope.allowedBranches.length > 1,
   };
 }
 
@@ -170,7 +168,7 @@ export interface ListScopeResolution extends BranchScope {
  * surfaces (D058 W3b). Embedded callers pass the validated `routeBranchId`
  * from the URL segment; it always wins, and a mismatch against the
  * resolved scope means the branch is not allowed for this user — the
- * caller must `notFound()`. Admin Dashboard callers pass the raw `?branchId=` query
+ * caller must `notFound()`. Owner surface callers pass the raw `?branchId=` query
  * value instead; it survives ONLY as a display filter/default — never as
  * write authority. Writes MUST re-derive their own scope from
  * claims/RLS/RPC permission checks, not from this resolution.

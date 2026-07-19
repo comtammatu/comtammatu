@@ -58,7 +58,7 @@ export async function StaffProfilePageContent({
 }: StaffProfilePageContentProps = {}) {
   const { session, claims, supabase } = await loadAuthState();
   const ctx = await getEmployeeContext();
-  const positionCode = claims.position ?? claims.position_code ?? null;
+  const positionCode = claims.position_code;
   const effectiveBranchId = ctx?.branchId ?? claims.branch_id ?? null;
 
   const [profileResult, employeeResult, positionResult] = await Promise.all([
@@ -352,4 +352,3 @@ export async function StaffProfilePageContent({
     </EmployeePage>
   );
 }
-

@@ -521,7 +521,7 @@ const checks = [
   {
     id: "operator-no-stat-metric",
     description:
-      "Operator surfaces are job-first, not dashboards: numbers appear as badges on tiles/sections ONLY (design-system.md § Structural C -> Canonical operator-home skeleton). AppLinkCard's `metric` slot renders a mono stat readout and belongs to Admin Dashboard surfaces; under /br/ route the count through the `badge` slot.",
+      "Operator surfaces are job-first, not dashboards: numbers appear as badges on tiles/sections ONLY (design-system.md § Structural C -> Canonical operator-home skeleton). AppLinkCard's `metric` slot renders a mono stat readout and belongs to Owner surface surfaces; under /br/ route the count through the `badge` slot.",
     roots: [{ dir: "apps/web/app/(protected)/br", extensions: [".tsx"] }],
     pattern: /\bmetric=\{/g,
     allowlist: {},
@@ -649,9 +649,9 @@ const checks = [
     allowlist: {},
   },
   {
-    id: "operator-admin-dashboard-shell-boundary",
+    id: "operator-owner-shell-boundary",
     description:
-      "Branch runtime, Operations, and employee-lib surfaces must not import or render Admin Dashboard chrome. Use the operator layout, AppHeader/AppBottomNav, EmployeePage, or embedded PageContent branches instead.",
+      "Branch runtime, Operations, and employee-lib surfaces must not import or render Owner surface chrome. Use the operator layout, AppHeader/AppBottomNav, EmployeePage, or embedded PageContent branches instead.",
     roots: [
       {
         dir: "apps/web/app/(protected)/br/[branchId]",
@@ -660,7 +660,7 @@ const checks = [
       { dir: "apps/web/lib/staff-runtime", extensions: [".ts", ".tsx"] },
     ],
     pattern:
-      /\b(?:AdminDashboardModuleShell|OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveAdminDashboard(?:PrimaryTabs|DeepNav)|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:admin-dashboard-module-shell|office-module-shell|management-chrome|app-shell|admin-dashboard-nav|office-nav|finance-shell|inventory-shell)["']|from\s+["']@\/\(protected\)\/inventory\/(?!_lib\/)(?!(?:[^"']*\/)?[^/"']*actions(?:\.ts)?["'])[^"']+["']/g,
+      /\b(?:OwnerModuleShell|OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveOwner(?:PrimaryTabs|DeepNav)|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:owner-module-shell|office-module-shell|management-chrome|app-shell|owner-nav|office-nav|finance-shell|inventory-shell)["']|from\s+["']@\/\(protected\)\/inventory\/(?!_lib\/)(?!(?:[^"']*\/)?[^/"']*actions(?:\.ts)?["'])[^"']+["']/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/catalog-ingredients-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/suppliers/catalog-suppliers-client.tsx": 1,
@@ -680,9 +680,9 @@ const checks = [
     },
   },
   {
-    id: "operator-admin-dashboard-route-boundary",
+    id: "operator-owner-route-boundary",
     description:
-      "Branch operator routes must not link or redirect into Admin Dashboard route roots; keep work inside /br/[branchId] or an approved utility surface.",
+      "Branch operator routes must not link or redirect into Owner surface route roots; keep work inside /br/[branchId] or an approved utility surface.",
     roots: [
       {
         dir: "apps/web/app/(protected)/br/[branchId]/(operator)",
@@ -694,7 +694,7 @@ const checks = [
       },
     ],
     pattern:
-      /["'`]\/(?:admin|finance|inventory|menu|orders|branches|hr)(?:\/|["'`?#])/g,
+      /["'`]\/(?:finance|inventory|menu|orders|branches|hr|settings)(?:\/|["'`?#])/g,
     allowlist: {},
   },
   {
@@ -1336,8 +1336,8 @@ const ACL_PATHS = [
     .matchAll(/\bpath:\s*"([^"]+)"/g),
 ].map((match) => match[1]);
 
-// Redirect shims legitimately resolve to no family (they only call redirect()).
-const ROUTE_MANIFEST_SHIM_ROUTES = new Set(["/br", "/inventory/drafts"]);
+// Canonical route selectors may resolve to no family when they only redirect.
+const ROUTE_MANIFEST_SELECTOR_ROUTES = new Set();
 // ACL family roots without a landing page still resolve through shared ACL.
 const ROUTE_MANIFEST_NO_PAGE_ACL = new Set();
 
@@ -1375,7 +1375,7 @@ const landingRouteSet = new Set(routeManifestPages.map(routePathFromPageFile));
 
 for (const file of protectedPages) {
   const route = routePathFromPageFile(file);
-  if (!resolveFamilyPath(route) && !ROUTE_MANIFEST_SHIM_ROUTES.has(route)) {
+  if (!resolveFamilyPath(route) && !ROUTE_MANIFEST_SELECTOR_ROUTES.has(route)) {
     failures.push(
       `route-manifest: ${file} (${route}) resolves to no MODULE_ACL family. Place it under a declared family in ${MODULE_ACL_SOURCE} or make it a redirect shim (design-system.md § C / D019).`,
     );
@@ -1429,7 +1429,7 @@ const VALID_ARCHETYPES = new Set([
   "SETTINGS-PANEL",
   "DOC-WORKFLOW",
   "REDIRECT-SHIM",
-  "HUB",
+  "LANDING",
   "REPORT",
   "DASHBOARD",
   "GATE/AUTH",
@@ -1553,7 +1553,7 @@ const LIST_WIDTH_TIER_PINNED_PAGES = [
 // Read the width tier declared on the non-embedded page shell for a LIST page.
 // The shell (AppPage / InventoryPageContent) lives in a client co-located in the
 // page's own directory; the `embedded` return path is a bare <div>, so any shell
-// opening tag in that directory is the Admin Dashboard LIST shell. Returns the set
+// opening tag in that directory is the Owner surface LIST shell. Returns the set
 // of tiers seen ("(default)" for a shell with no explicit width prop) so the
 // gate can flag any tier that is not exactly `xwide`.
 function readListShellWidthTiers(pageFile) {

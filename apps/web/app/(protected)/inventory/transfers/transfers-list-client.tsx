@@ -147,7 +147,7 @@ export function TransfersListClient({
 
   // Branch operators receive directly from a supplier (GRN) in addition to
   // requesting stock from a central site (D068). Surfaced only when the route
-  // provides the GRN base path (the branch "Nhận hàng" hub).
+  // provides the GRN base path for branch receiving.
   const canReceiveSupplier =
     isBranchManager &&
     userBranchKind === "branch" &&

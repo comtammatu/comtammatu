@@ -39,7 +39,7 @@ export const operator = {
     statusNoProfile: "Thiếu hồ sơ nhân viên",
     statusNoBranch: "Thiếu chi nhánh",
     descriptionCheckoutPending:
-      "Yêu cầu kết ca đã gửi, chờ quản lý chi nhánh duyệt.",
+      "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     checkInShort: "Vào",
     checkOutShort: "Ra",

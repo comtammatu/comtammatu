@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("Branch waste is a native touch document workflow with an isolated Office form", () => {
+test("Branch waste is a native touch document workflow with an isolated Owner surface form", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx",
   );

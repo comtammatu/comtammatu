@@ -7,27 +7,27 @@ import { getModuleLabelVi } from "../labels";
  */
 
 export type ModuleKey =
-  | "admin_dashboard"
+  | "owner"
   | "menu"
   | "inventory"
-  | "inventory_procurement"
   | "orders"
   | "staff"
   | "hr"
   | "hr_payroll"
   | "finance"
   | "branches"
-  | "branch_picker"
   | "settings"
   | "pos"
   | "kds"
   | "runner"
-  | "operator_home"
+  | "branch_home"
   | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
   | "branch_pos_sessions"
   | "branch_team"
+  | "branch_stock"
+  | "branch_orders"
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
   | "notifications";
@@ -39,10 +39,10 @@ interface ModuleAcl {
 }
 
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
-  admin_dashboard: {
-    path: "/admin",
+  owner: {
+    path: "/",
     allowedRoles: ["owner"],
-    label: getModuleLabelVi("admin_dashboard"),
+    label: getModuleLabelVi("owner"),
   },
   menu: {
     path: "/menu",
@@ -51,23 +51,12 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   inventory: {
     path: "/inventory",
-    allowedRoles: ["owner", "branch_manager"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("inventory"),
-  },
-  /**
-   * NCC, GRN, HĐ NCC, công thức — branch-scoped inventory. `branch_manager`
-   * added (D068) so a branch reaches the GRN/production operator routes and the
-   * `GrnNewPageContent` canAccess gate. Invoice matching remains permission-key
-   * gated independently from this route-level module bucket.
-   */
-  inventory_procurement: {
-    path: "/inventory/suppliers",
-    allowedRoles: ["owner", "branch_manager"],
-    label: getModuleLabelVi("inventory_procurement"),
   },
   orders: {
     path: "/orders",
-    allowedRoles: ["owner", "branch_manager", "cashier"],
+    allowedRoles: ["owner"],
     label: getModuleLabelVi("orders"),
   },
   staff: {
@@ -95,19 +84,8 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: ["owner"],
     label: getModuleLabelVi("branches"),
   },
-  branch_picker: {
-    path: "/",
-    allowedRoles: [
-      "owner",
-      "branch_manager",
-      "cashier",
-      "chef",
-      "branch_staff",
-    ],
-    label: getModuleLabelVi("branch_picker"),
-  },
   settings: {
-    path: "/admin/settings",
+    path: "/settings",
     allowedRoles: ["owner"],
     label: getModuleLabelVi("settings"),
   },
@@ -126,7 +104,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: ["owner", "cashier", "chef", "branch_manager"],
     label: getModuleLabelVi("runner"),
   },
-  operator_home: {
+  branch_home: {
     path: "/br/*",
     allowedRoles: [
       "owner",
@@ -135,7 +113,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
       "chef",
       "branch_staff",
     ],
-    label: getModuleLabelVi("operator_home"),
+    label: getModuleLabelVi("branch_home"),
   },
   branch_dashboard: {
     path: "/br/*/dashboard",
@@ -161,27 +139,27 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_pos_sessions"),
   },
-  /**
-   * "Đội hôm nay" branch team board (D059). Scoped to owner/branch_manager
-   * only — the underlying aggregate read (attendance, checklist, leave)
-   * relies on `hr:view_employee` / `hr:approve_leave_request`.
-   */
+  /** Branch-safe people, attendance, and leave visibility. */
   branch_team: {
     path: "/br/*/team",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_team"),
+  },
+  branch_stock: {
+    path: "/br/*/stock",
+    allowedRoles: ["owner", "branch_manager"],
+    label: getModuleLabelVi("branch_stock"),
+  },
+  branch_orders: {
+    path: "/br/*/orders",
+    allowedRoles: ["owner", "branch_manager", "cashier"],
+    label: getModuleLabelVi("branch_orders"),
   },
   employee_checkout_approvals: {
     path: "/br/*/shift/checkout-approvals",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("employee_checkout_approvals"),
   },
-  /**
-   * Branch-native leave-request approval (D059 §4). Backing reads/writes
-   * (`fetchLeaveRequests`, `approveLeaveRequest`, `rejectLeaveRequest`) still
-   * gate on `hr:approve_leave_request` + branch scope — this module key only
-   * fast-gates the route, matching `employee_checkout_approvals`.
-   */
   employee_leave_approvals: {
     path: "/br/*/shift/leave-approvals",
     allowedRoles: ["owner", "branch_manager"],

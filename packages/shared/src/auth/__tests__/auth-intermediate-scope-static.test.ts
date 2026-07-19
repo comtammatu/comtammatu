@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve, relative } from "node:path";
 
-import { ACCESS_BUCKETS, STAFF_ROLES, type AccessBucket } from "../types";
+import { STAFF_ROLES, type StaffRole } from "../types";
 import { canAccess, type ModuleKey } from "../module-acl";
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
@@ -84,9 +84,8 @@ function readRepoFile(path: string): string {
   return readFileSync(resolve(repoRoot, path), "utf8");
 }
 
-test("access buckets and route ACL do not include retired intermediate scope", () => {
-  assert.equal(ACCESS_BUCKETS.includes(retiredRole as AccessBucket), false);
-  assert.equal(STAFF_ROLES.includes(retiredRole as AccessBucket), false);
+test("roles and route ACL do not include retired intermediate scope", () => {
+  assert.equal(STAFF_ROLES.includes(retiredRole as StaffRole), false);
 
   for (const moduleKey of [
     "inventory",
@@ -95,7 +94,7 @@ test("access buckets and route ACL do not include retired intermediate scope", (
     "employee_checkout_approvals",
   ] satisfies ModuleKey[]) {
     assert.equal(
-      canAccess(retiredRole as AccessBucket, moduleKey),
+      canAccess(retiredRole as StaffRole, moduleKey),
       false,
       `${retiredRole} must not access ${moduleKey}`,
     );

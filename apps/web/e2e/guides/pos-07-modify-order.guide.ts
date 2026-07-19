@@ -1,7 +1,7 @@
 /**
  * POS-07 Modify order — transfer / cancel / split / merge — capture spec.
  *
- * Hub for the order-modification actions:
+ * Landing for the order-modification actions:
  *   - "Chuyển bàn" — move the order to another table
  *   - "Hủy đơn" — cancel the whole order (reason required)
  *   - "Tách hóa đơn" — split one order into two (split the bill)

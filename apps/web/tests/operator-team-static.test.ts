@@ -133,7 +133,7 @@ test("operator team board exposes a real status filter", () => {
   );
 });
 
-test("operator team opens the workspace tabs without a duplicate entry hub", () => {
+test("operator team opens the workspace tabs without a duplicate entry landing", () => {
   assert.match(teamPageSource, /<TeamWorkspaceTabs/);
   assert.doesNotMatch(
     teamPageSource,
@@ -216,7 +216,11 @@ test("operator team can force-close a shift only after its scheduled end", () =>
     teamBoardSource,
     /isShiftEndedForBusinessDate\(shift\.businessDate/,
   );
-  assert.match(teamBoardSource, /canApproveCheckout && isPastShiftEnd/);
+  assert.match(teamBoardSource, /canApproveCheckoutForRow/);
+  assert.match(
+    teamBoardSource,
+    /row\.positionRole === "cashier"[\s\S]*?row\.positionRole === "chef"[\s\S]*?row\.positionRole === "branch_staff"/,
+  );
   assert.match(
     teamBoardSource,
     /forceCloseStaleAttendance\(\{\s*attendanceId: shift\.attendanceId,\s*branchId,\s*\}\)/,
@@ -319,13 +323,13 @@ test("operator team members use a roster grid with real profile fields", () => {
   assert.doesNotMatch(teamMembersSource, /birthDate|startDate|profileId/);
 });
 
-test("operator team isolates assignment and focused actions by permission", () => {
-  assert.match(teamPageSource, /PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN/);
+test("operator team stays read-only for HR and keeps focused status actions", () => {
   assert.match(
-    teamPageSource,
-    /canAssignCount \? \([\s\S]*<TeamAssignmentsContent[\s\S]*<AppEmptyState mode="no-access"/,
+    teamTabsSource,
+    /TeamWorkspaceTabValue = "board" \| "members"/,
   );
   assert.match(teamPageSource, /canApproveCheckout=\{canApproveCheckout\}/);
+  assert.match(teamPageSource, /approverRole=\{claims\.user_role\}/);
   assert.match(teamPageSource, /canApproveCount=\{canApproveCount\}/);
   assert.match(
     teamBoardSource,
@@ -349,22 +353,12 @@ test("team state is revalidated after its source workflows mutate", () => {
   }
 });
 
-test("embedded count assignments does not add an extra team tab wrapper", () => {
-  const teamAssignmentsContentSource = readWeb(
-    "app/(protected)/br/[branchId]/(operator)/team/assignments/assignments-content.tsx",
-  );
+test("count assignments remain in the Branch stock module", () => {
   const branchCountAssignmentsSource = readWeb(
     "app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
   );
 
-  assert.match(
-    teamAssignmentsContentSource,
-    /<BranchCountAssignmentsClient data=\{data\} embeddedInTeam \/>/,
-  );
-  assert.match(
-    branchCountAssignmentsSource,
-    /const page = embeddedInTeam \? \(\s*panel\s*\) : \(\s*<BranchOperatorPage/,
-  );
+  assert.match(branchCountAssignmentsSource, /<BranchOperatorPage/);
   assert.match(branchCountAssignmentsSource, /const orderedEmployees =/);
   assert.match(
     branchCountAssignmentsSource,

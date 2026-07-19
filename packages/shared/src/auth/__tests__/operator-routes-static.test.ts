@@ -18,14 +18,15 @@ function claims(
     tenant_id: 1,
     branch_id: branchId,
     user_role: role,
+    position_code: role === "branch_staff" ? "cleaner" : role,
   };
 }
 
 test("operator routes resolve to ACL modules", () => {
-  assert.equal(resolveModuleFromPath("/"), "branch_picker");
-  assert.equal(resolveModuleFromPath("/br"), "branch_picker");
-  assert.equal(resolveModuleFromPath("/br/7"), "operator_home");
-  assert.equal(resolveModuleFromPath("/br/7/shift"), "operator_home");
+  assert.equal(resolveModuleFromPath("/"), "owner");
+  assert.equal(resolveModuleFromPath("/br"), null);
+  assert.equal(resolveModuleFromPath("/br/7"), "branch_home");
+  assert.equal(resolveModuleFromPath("/br/7/shift"), "branch_home");
   assert.equal(
     resolveModuleFromPath("/br/7/shift/checkout-approvals"),
     "employee_checkout_approvals",
@@ -34,9 +35,12 @@ test("operator routes resolve to ACL modules", () => {
     resolveModuleFromPath("/br/7/shift/leave-approvals"),
     "employee_leave_approvals",
   );
-  assert.equal(resolveModuleFromPath("/br/7/stock"), "inventory");
-  assert.equal(resolveModuleFromPath("/br/7/stock/count"), "operator_home");
-  assert.equal(resolveModuleFromPath("/br/7/stock/count-slips"), "inventory");
+  assert.equal(resolveModuleFromPath("/br/7/stock"), "branch_stock");
+  assert.equal(resolveModuleFromPath("/br/7/stock/count"), "branch_home");
+  assert.equal(
+    resolveModuleFromPath("/br/7/stock/count-slips"),
+    "branch_stock",
+  );
   assert.equal(
     resolveModuleFromPath("/br/7/pos-sessions"),
     "branch_pos_sessions",
@@ -49,33 +53,33 @@ test("operator routes resolve to ACL modules", () => {
   assert.equal(resolveModuleFromPath("/br/7/pos-terminal"), null);
 });
 
-test("operator stock count does not require full inventory access", () => {
-  assert.equal(canAccess("cashier", "operator_home"), true);
-  assert.equal(canAccess("chef", "operator_home"), true);
-  assert.equal(canAccess("branch_staff", "operator_home"), true);
-  assert.equal(canAccess("cashier", "inventory"), false);
-  assert.equal(canAccess("chef", "inventory"), false);
-  assert.equal(canAccess("branch_staff", "inventory"), false);
+test("operator stock count does not require branch stock access", () => {
+  assert.equal(canAccess("cashier", "branch_home"), true);
+  assert.equal(canAccess("chef", "branch_home"), true);
+  assert.equal(canAccess("branch_staff", "branch_home"), true);
+  assert.equal(canAccess("cashier", "branch_stock"), false);
+  assert.equal(canAccess("chef", "branch_stock"), false);
+  assert.equal(canAccess("branch_staff", "branch_stock"), false);
 });
 
-test("operator route families use operator bottom nav", () => {
-  assert.equal(resolveRouteFamilyContract("/")?.id, "branch-picker");
-  assert.equal(resolveRouteFamilyContract("/br")?.id, "branch-picker");
+test("branch route families use branch bottom nav", () => {
+  assert.equal(resolveRouteFamilyContract("/")?.id, "owner");
+  assert.equal(resolveRouteFamilyContract("/br"), null);
 
   for (const [path, id] of [
-    ["/br/7", "operator-home"],
-    ["/br/7/shift", "operator-shift"],
-    ["/br/7/shift/checkout-approvals", "operator-shift-checkout-approvals"],
-    ["/br/7/shift/leave-approvals", "operator-shift-leave-approvals"],
-    ["/br/7/stock", "operator-stock"],
-    ["/br/7/stock/count", "operator-stock"],
-    ["/br/7/stock/count-slips", "operator-stock"],
-    ["/br/7/stock/receive", "operator-stock"],
-    ["/br/7/stock/receive/123", "operator-stock"],
-    ["/br/7/stock/transfer", "operator-stock"],
-    ["/br/7/stock/transfer/123", "operator-stock"],
-    ["/br/7/stock/transfer/new", "operator-stock"],
-    ["/br/7/stock/waste", "operator-stock"],
+    ["/br/7", "branch-home"],
+    ["/br/7/shift", "branch-shift"],
+    ["/br/7/shift/checkout-approvals", "branch-shift-checkout-approvals"],
+    ["/br/7/shift/leave-approvals", "branch-shift-leave-approvals"],
+    ["/br/7/stock", "branch-stock"],
+    ["/br/7/stock/count", "branch-stock"],
+    ["/br/7/stock/count-slips", "branch-stock"],
+    ["/br/7/stock/receive", "branch-stock"],
+    ["/br/7/stock/receive/123", "branch-stock"],
+    ["/br/7/stock/transfer", "branch-stock"],
+    ["/br/7/stock/transfer/123", "branch-stock"],
+    ["/br/7/stock/transfer/new", "branch-stock"],
+    ["/br/7/stock/waste", "branch-stock"],
     ["/br/7/pos-sessions", "branch-pos-sessions"],
   ] as const) {
     const family = resolveRouteFamilyContract(path);
@@ -93,30 +97,11 @@ test("operator home includes every surviving role", () => {
     "chef",
     "branch_staff",
   ] as const) {
-    assert.equal(canAccess(role, "operator_home"), true, role);
+    assert.equal(canAccess(role, "branch_home"), true, role);
   }
 });
 
-test("retired central/office position codes resolve to unassigned", () => {
-  assert.equal(
-    requiredBranchKindForPositionCode("warehouse_manager"),
-    "unassigned",
-  );
-  assert.equal(
-    requiredBranchKindForPositionCode("central_supply_manager"),
-    "unassigned",
-  );
-  assert.equal(
-    requiredBranchKindForPositionCode("production_manager"),
-    "unassigned",
-  );
-  assert.equal(
-    requiredBranchKindForPositionCode("central_kitchen_manager"),
-    "unassigned",
-  );
-  assert.equal(requiredBranchKindForPositionCode("head_chef"), "unassigned");
-  assert.equal(requiredBranchKindForPositionCode("office"), "unassigned");
-
+test("active branch position codes resolve to branch scope", () => {
   assert.equal(requiredBranchKindForPositionCode("branch_manager"), "branch");
   assert.equal(requiredBranchKindForPositionCode("cashier"), "branch");
   assert.equal(requiredBranchKindForPositionCode("chef"), "branch");
@@ -124,37 +109,24 @@ test("retired central/office position codes resolve to unassigned", () => {
   assert.equal(requiredBranchKindForPositionCode("cleaner"), "branch");
   assert.equal(staffRoleFromPositionCode("guard"), "branch_staff");
   assert.equal(staffRoleFromPositionCode("cleaner"), "branch_staff");
-  assert.equal(staffRoleFromPositionCode("warehouse_manager"), "unassigned");
-  assert.equal(staffRoleFromPositionCode("office"), "unassigned");
+  assert.equal(staffRoleFromPositionCode("unknown_position"), "unassigned");
 });
 
-test("post-login hub fallback promotes Branch entry on every device", () => {
-  const phone = { standaloneStation: null, isDesktop: false } as const;
-  const desktop = { standaloneStation: null, isDesktop: true } as const;
-
+test("post-login fallback follows role and branch scope", () => {
+  assert.equal(resolvePostLoginRedirect(claims("owner", null), null), "/");
   assert.equal(
-    resolvePostLoginRedirect(claims("owner", null), null, phone),
-    "/",
-  );
-  assert.equal(
-    resolvePostLoginRedirect(claims("owner", null), null, desktop),
-    "/",
-  );
-  assert.equal(
-    resolvePostLoginRedirect(claims("cashier", 7), null, phone),
+    resolvePostLoginRedirect(claims("cashier", 7), null),
     "/br/7",
   );
 });
 
 test("post-login returnTo cannot cross branch-scoped operator routes", () => {
-  const phone = { standaloneStation: null, isDesktop: false } as const;
-
   assert.equal(
-    resolvePostLoginRedirect(claims("cashier", 7), "/br/8", phone),
+    resolvePostLoginRedirect(claims("cashier", 7), "/br/8"),
     "/br/7",
   );
   assert.equal(
-    resolvePostLoginRedirect(claims("cashier", 7), "/br/8/shift", phone),
+    resolvePostLoginRedirect(claims("cashier", 7), "/br/8/shift"),
     "/br/7",
   );
   // Unassigned/tenant-level operational claims (branch_id null) fail closed.
@@ -162,7 +134,6 @@ test("post-login returnTo cannot cross branch-scoped operator routes", () => {
     resolvePostLoginRedirect(
       claims("branch_staff", null),
       "/br/8/stock",
-      phone,
     ),
     "/access-denied?reason=branch-scope-mismatch",
   );

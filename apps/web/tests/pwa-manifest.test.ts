@@ -93,7 +93,7 @@ test("KDS PWA manifest requests landscape orientation per branch", async () => {
   assert.equal(manifest.orientation, "landscape");
 });
 
-test("operator PWA manifest shares the root app identity from branch routes", async () => {
+test("operator PWA manifest keeps branch identity in its start route", async () => {
   const response = await getOperatorManifest(
     new Request("https://app.test/br/3/manifest.webmanifest") as Parameters<
       typeof getOperatorManifest
@@ -116,11 +116,9 @@ test("operator PWA manifest shares the root app identity from branch routes", as
     response.headers.get("Content-Type"),
     "application/manifest+json; charset=utf-8",
   );
-  assert.equal(manifest.id, "/");
+  assert.equal(manifest.id, "/br/3");
   assert.equal(manifest.name, "Cơm Tấm Má Tư - Cổng vận hành");
-  assert.equal(manifest.start_url, "/");
-  // Branch routes must advertise the same operator app identity as the root
-  // manifest; otherwise the browser can treat them as distinct installed apps.
+  assert.equal(manifest.start_url, "/br/3");
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.short_name, "Cổng Má Tư");
@@ -334,7 +332,6 @@ test("Serwist precache keeps install assets but skips mascot art", () => {
 // and can't be imported directly from a Node test.
 const BRANCH_STATION_SEGMENTS = ["pos", "kds", "runner"];
 function isOperatorShellPath(pathname: string) {
-  if (pathname === "/") return true;
   if (!pathname.startsWith("/br/")) return false;
   const segments = pathname.split("/").filter(Boolean);
   const stationSegment = segments[2];
@@ -344,14 +341,13 @@ function isOperatorShellPath(pathname: string) {
 }
 
 test("isOperatorShellPath matches the operator entry/root and excludes POS/KDS/Runner", () => {
-  assert.equal(isOperatorShellPath("/"), true);
   assert.equal(isOperatorShellPath("/br/3"), true);
   assert.equal(isOperatorShellPath("/br/3/dashboard"), true);
   assert.equal(isOperatorShellPath("/br/3/stock/on-hand"), true);
   assert.equal(isOperatorShellPath("/br/3/pos"), false);
   assert.equal(isOperatorShellPath("/br/3/kds"), false);
   assert.equal(isOperatorShellPath("/br/3/runner"), false);
-  assert.equal(isOperatorShellPath("/admin"), false);
+  assert.equal(isOperatorShellPath("/"), false);
   assert.equal(isOperatorShellPath("/employee"), false);
 });
 

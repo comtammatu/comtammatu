@@ -29,7 +29,7 @@ may skip it with the skip reason.
 
 ```text
 UI Advisor Gate
-- Surface: <route>; route family: <id>; plane: <Branch | Admin Dashboard | station | public>; change: <visual | flow | copy | behavior>
+- Surface: <route>; route family: <id>; plane: <Branch | Owner surface | station | public>; change: <visual | flow | copy | behavior>
 - Context: <screen-context-map entry or nearest parent workflow>; actor: <role>; job: <outcome>
 - Journey: <entry state> -> <decision> -> <primary action> -> <success>; recovery: <safe retry/undo/exit>
 - Information order: 1) <first viewport> 2) <decision context> 3) <secondary detail>; exclude: <out-of-scope data>
@@ -86,7 +86,7 @@ export default async function XPage({ searchParams }: { searchParams?: ... }) {
   extra logic lives in the default export.
 - `routeBranchId` / `basePath` / `embedded` are optional only where a Branch
   route deliberately re-mounts a shared staff-runtime `PageContent`. They do
-  not authorize a Branch management workflow to reuse an Admin Dashboard presenter;
+  not authorize a Branch management workflow to reuse an Owner surface presenter;
   those routes share loaders/models/actions and own a touch-native composition.
 - Exemplars: `apps/web/app/(protected)/inventory/grn/page.tsx`,
   `apps/web/app/(protected)/inventory/grn/[id]/page.tsx`,
@@ -127,17 +127,17 @@ rather than staying a near-empty category.
 | #   | Archetype       | Job                                                                                |
 | --- | --------------- | ---------------------------------------------------------------------------------- |
 | 1   | LIST            | Browse/filter/search a collection, row actions, quick CRUD                         |
-| 2   | EMBED-WRAPPER   | Branch-runtime re-mount of a canonical Admin Dashboard/staff-runtime `PageContent` |
+| 2   | EMBED-WRAPPER   | Branch-runtime re-mount of a canonical Owner surface/staff-runtime `PageContent` |
 | 3   | DETAIL          | Single entity: metadata + lines/history + stage actions                            |
 | 4   | SETTINGS-PANEL  | Single-entity or list-shaped configuration form                                    |
 | 5   | DOC-WORKFLOW    | Create/edit a line-array business document                                         |
-| 6   | REDIRECT-SHIM   | No-JSX route alias to the canonical home                                           |
-| 7   | HUB             | Link-card menu into a group of capabilities                                        |
-| 8   | REPORT          | Admin Dashboard analytics or a fixed-scope Branch operational signal               |
+| 6   | REDIRECT-SHIM   | No-JSX route selector to a canonical destination                                   |
+| 7   | LANDING             | Link-card menu into a group of capabilities                                        |
+| 8   | REPORT          | Owner surface analytics or a fixed-scope Branch operational signal               |
 | 9   | DASHBOARD       | Home-surface KPI summary with drill-downs                                          |
 | 10  | GATE/AUTH       | Pre-context or terminal decision screen                                            |
 | 11  | BOARD           | Realtime operational queue (full-screen Operations chrome)                         |
-| 12  | PUBLIC-WORKFLOW | Token-scoped customer transaction without Admin Dashboard chrome                   |
+| 12  | PUBLIC-WORKFLOW | Token-scoped customer transaction without Owner surface chrome                   |
 
 ## 3. Shared Composition Recipes
 
@@ -170,11 +170,11 @@ This is the repo's second-largest archetype (32 of the 135 pages) and its
 hard rules are stricter than the other archetypes because its only job is
 delegation:
 
-- Branch runtime landing pages and hub roots MUST NOT use this archetype. A
+- Branch runtime landing pages and landing roots MUST NOT use this archetype. A
   Branch plane entry such as `/br/[branchId]`, `/br/[branchId]/stock`, or
   `/br/[branchId]/orders` owns a native operator presentation first, then links
   into deeper workflow screens. Sharing data loaders is fine; wrapping the
-  Admin Dashboard screen as the Branch entry UI is drift.
+  Owner surface screen as the Branch entry UI is drift.
 - Keep the wrapper delegation-only; its size is a review signal, not a line-count
   gate.
 - Parse and validate `branchId` from `params`; `notFound()` on a bad id.
@@ -191,17 +191,17 @@ delegation:
 
 #### Operator Embedded Presentation Contract
 
-EMBED-WRAPPER re-mounts an Admin Dashboard/staff-runtime `PageContent` inside Branch
+EMBED-WRAPPER re-mounts an Owner surface/staff-runtime `PageContent` inside Branch
 runtime chrome (`design-system.md` § Structural Governance § A.2). The
 wrapper itself is delegation-only (above); this contract is what the
 re-mounted `PageContent`'s own `embedded` branch must do so the operator
-plane reads as one coherent V2 operator surface instead of Admin Dashboard chrome
+plane reads as one coherent V2 operator surface instead of Owner surface chrome
 leaking through a branch-scoped shell. It is subordinate to
 `design-system.md` — it does not add tokens, rhythm, or primitives, it only
 clarifies which existing contract choices apply inside an `embedded` branch.
 The fix for every rule below lives **inside the shared `PageContent`/client
 component via the `embedded` branch**, never as a forked operator-only
-component — the same branch benefits both planes, and the Admin Dashboard plane
+component — the same branch benefits both planes, and the Owner surface plane
 (`embedded=false`) must stay byte-identical.
 
 - **R1 — No nested page header.** An embedded branch MUST NOT render
@@ -236,11 +236,11 @@ density="compact"` already owns width/padding. Return a bare flex
   a second, operator-only toolbar implementation.
 - **R6 — Back-link and breadcrumb target the operator section root.** Any
   back link, breadcrumb, or "list" href an embedded branch renders MUST use
-  the branch-scoped `basePath` the wrapper passed down, not an Admin Dashboard module
+  the branch-scoped `basePath` the wrapper passed down, not an Owner surface module
   path. This is the EMBED-WRAPPER navigation rule above, restated for the
   presentation layer: the `basePath` prop IS the navigation contract inside
   `embedded`, so any hand-rolled back/list link must build off `basePath`,
-  never off `ROUTE_FAMILY_CONTRACTS`' Admin Dashboard plane `breadcrumbRoot`.
+  never off `ROUTE_FAMILY_CONTRACTS`' Owner surface plane `breadcrumbRoot`.
 
 ### DETAIL
 
@@ -278,10 +278,10 @@ density="compact"` already owns width/padding. Return a bare flex
   `BranchOperatorPanel` sections and a sticky `AppDetailFooter`. The Branch
   variant uses progressive disclosure on phone, may expand to a two-column
   touch layout on tablet, keeps controls at least 44px high, and does not
-  import `DocumentFormFrame`, `DataTable`, or an Admin Dashboard form presentation.
+  import `DocumentFormFrame`, `DataTable`, or an Owner surface form presentation.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
-- **Composition note:** Admin Dashboard uses the `DocumentFormFrame` recipe;
+- **Composition note:** Owner surface uses the `DocumentFormFrame` recipe;
   Branch uses the touch recipe above in the route page and its direct client
   owner. A distinct workflow may compose directly when it preserves its plane,
   touch behavior, accessibility, and visual hierarchy.
@@ -291,42 +291,44 @@ density="compact"` already owns width/padding. Return a bare flex
 
 ### REDIRECT-SHIM
 
-**Exemplar:** `apps/web/app/(protected)/br/page.tsx`.
+**Exemplar:**
+`apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx`.
 
-- `redirect()` only. No JSX, no data fetch beyond what a guard clause needs.
+- A redirect primitive only. No JSX, no data fetch beyond what a guard clause
+  needs.
 - Keep it small — the existing shims in this repo are all ≤ 25 lines.
-- Must be registered in `ROUTE_MANIFEST_SHIM_ROUTES`
-  (`scripts/check-ui-contract.mjs`) so the route-manifest gate does not
-  demand a `MODULE_ACL` family for a route that intentionally has none.
+- A selector outside every declared `MODULE_ACL` family must be registered in
+  `ROUTE_MANIFEST_SELECTOR_ROUTES` (`scripts/check-ui-contract.mjs`). Selectors
+  already inside an ACL family do not need that exception.
 
-### HUB
+### LANDING
 
-**Exemplars:** `apps/web/app/(protected)/admin/page.tsx` and
-`apps/web/app/(protected)/admin/settings/printers/page.tsx`.
+**Exemplars:** `apps/web/app/(protected)/page.tsx` and
+`apps/web/app/(protected)/settings/printers/page.tsx`.
 
 - Skeleton: `AppPage width="wide"` → `AppPageHeader` → `AppSection` per group
   → `LinkCardGrid` of `AppLinkCard` (`{title, description, href, icon, tone,
 badge}`).
 - No data tables. No KPI values beyond a small count badge on a link card.
 - Operator variant: `apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx`
-  (`buildHubTiles`) uses the Branch plane recipe:
+  (`buildSettingsLinks`) uses the Branch plane recipe:
   `BranchOperatorPage` → `BranchOperatorActionSection` from
   `@lib/branch-operator/components/branch-operator-page`. It does not render
-  `AppPageHeader`, `AppSection`, `AppLinkCard`, or an Admin Dashboard `*PageContent`
-  wrapper at the Branch hub/root level.
+  `AppPageHeader`, `AppSection`, `AppLinkCard`, or an Owner surface `*PageContent`
+  wrapper at the Branch landing/root level.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
 ### REPORT
 
 **Exemplar:** `apps/web/app/(protected)/finance/revenue/page.tsx`.
 
-- Admin Dashboard skeleton: `AppPage` → `AppPageHeader` → `AppToolbar` (period/branch filters)
+- Owner surface skeleton: `AppPage` → `AppPageHeader` → `AppToolbar` (period/branch filters)
   → `KpiRow` summary → chart (`chart-1`..`chart-5` tokens only) → `DataTable`
   breakdown → export action.
 - Branch operator variant: `BranchOperatorPage` → mobile
   `BranchOperatorControlBar` → `BranchOperatorPanel` + full-row `ItemGroup`
   drill-ins. It is a fixed branch/current-period operational signal, not a
-  compact Admin Dashboard dashboard: no branch or date picker, KPI aggregation, chart,
+  compact Owner surface dashboard: no branch or date picker, KPI aggregation, chart,
   `DataTable`, export, financial values, or audit history. Every quantity stays
   paired with the unit of its ingredient; quantities from different ingredients
   must never be aggregated.
@@ -378,22 +380,22 @@ badge}`).
 
 **Exemplar:** `apps/web/app/q/[token]/page.tsx` + `self-order-client.tsx`.
 
-- Standalone, mobile-first customer workflow with no Admin Dashboard or Operations
+- Standalone, mobile-first customer workflow with no Owner surface or Operations
   chrome. The route token establishes the workflow context; invalid or expired
   tokens fail closed through `notFound()` or one shared unavailable state.
 - Skeleton: `AppPage mobile` or an equivalent full-height standalone frame;
   touch-sized controls; one visible primary action per decision step.
-- Data display follows the transaction journey rather than a Admin Dashboard list:
+- Data display follows the transaction journey rather than a Owner surface list:
   browse/select → review cart → submit → success or recoverable failure. Reuse
   `Item`, shared form controls, money/date helpers, and status vocabulary; do
-  not copy Admin Dashboard `DataTable`, page header, or shell composition into it.
+  not copy Owner surface `DataTable`, page header, or shell composition into it.
 - Loading/error/offline behavior must preserve the in-progress transaction and
   expose an explicit retry or safe exit. Route-local status, formatter, and
   empty/loading implementations remain forbidden by the shared guards.
 
 ### SETTINGS-PANEL
 
-**Exemplar:** `apps/web/app/(protected)/admin/settings/(tenant)/general/page.tsx`.
+**Exemplar:** `apps/web/app/(protected)/settings/(tenant)/general/page.tsx`.
 
 - Route-scoped settings frame (e.g. `SettingsPageFrame` /
   `SettingsFormSection`) + RHF + Zod `form/*` wrappers (§ 1 form layer).
@@ -411,10 +413,10 @@ These 24 pages do not fit a single archetype cleanly. They are an explicit
 allowlist, not a precedent for stretching another archetype's definition:
 
 1. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx` — staff
-   day-flow home; a HUB/DASHBOARD hybrid. Classified **HUB**.
+   day-flow home; a LANDING/DASHBOARD hybrid. Classified **LANDING**.
 2. `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` — branch
-   portal home; the same HUB/DASHBOARD hybrid inside Branch runtime chrome.
-   Classified **HUB**.
+   portal home; the same LANDING/DASHBOARD hybrid inside Branch runtime chrome.
+   Classified **LANDING**.
 3. `apps/web/app/(protected)/inventory/page.tsx` — `KpiRow` + `LinkCardGrid`
    overview hybrid. Classified **DASHBOARD**.
 4. `apps/web/app/(protected)/inventory/stock/page.tsx` — master half of a
@@ -426,7 +428,7 @@ allowlist, not a precedent for stretching another archetype's definition:
 7. `apps/web/app/(protected)/notifications/page.tsx` — feed list without
    `DataTable` (a chronological notification feed does not have tabular
    columns to display). Classified **LIST**.
-8. `apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx` — a LIST
+8. `apps/web/app/(protected)/settings/printers/jobs/page.tsx` — a LIST
    living inside the printers SETTINGS-PANEL family with an added `KpiRow`
    summary. Classified **LIST**.
 9. `apps/web/app/(protected)/inventory/waste/approvals/page.tsx` — 4-eye waste
@@ -438,83 +440,83 @@ allowlist, not a precedent for stretching another archetype's definition:
     — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
     `BranchOperatorPanel`, and full-row `Item` links because the supported
     phone/tablet runtime must keep one touch information architecture in both
-    orientations. Classified **LIST** (Branch touch variant); the Admin Dashboard
+    orientations. Classified **LIST** (Branch touch variant); the Owner surface
     transfer route remains the canonical desktop `DataTable` LIST.
 11. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx`
     — Branch-runtime on-hand lookup. It shares the stock loader and pure filter
-    model with Admin Dashboard but owns a full-row touch list that never changes into a
+    model with Owner surface but owns a full-row touch list that never changes into a
     desktop table at tablet landscape widths. Classified **LIST** (Branch touch
-    variant); the Admin Dashboard stock route retains its responsive management LIST.
+    variant); the Owner surface stock route retains its responsive management LIST.
 12. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx`
     — Branch-runtime GRN queue. It shares the GRN list loader and pure filter
-    model with Admin Dashboard but orders the operator's drafts before the touch queue,
+    model with Owner surface but orders the operator's drafts before the touch queue,
     keeps delete as an explicit confirmed action, and never changes into the
-    Admin Dashboard table at tablet landscape widths. Classified **LIST** (Branch touch
-    variant); Admin Dashboard retains the management `DataTable` LIST.
+    Owner surface table at tablet landscape widths. Classified **LIST** (Branch touch
+    variant); Owner surface retains the management `DataTable` LIST.
 13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx`
     — Branch-runtime GRN source selection. It shares the source loader and
-    pure supplier model with Admin Dashboard, but presents suppliers as full-row touch
+    pure supplier model with Owner surface, but presents suppliers as full-row touch
     actions and canonicalizes supplier selection into the Branch route.
     Purchase orders are retired from daily use; GRN is supplier-first.
     Classified **LIST** (Branch touch source variant); the
     document-line form remains a separate workflow stage.
 14. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`
     — Branch-runtime GRN receipt entry. It shares the create loader, draft
-    controller, line-editor primitive, and mutation authority with Admin Dashboard, but
+    controller, line-editor primitive, and mutation authority with Owner surface, but
     owns a fixed-branch touch workflow with progressive line editing and a
     sticky action footer. Classified **DOC-WORKFLOW** (Branch touch variant);
-    it never imports the Admin Dashboard page/client, `DocumentFormFrame`, desktop edit
+    it never imports the Owner surface page/client, `DocumentFormFrame`, desktop edit
     panel, or cross-branch picker.
 15. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx`
     — Branch-runtime GRN review and receipt. It shares the detail loader,
-    model, action hooks, and mutations with Admin Dashboard, but owns draft line review
+    model, action hooks, and mutations with Owner surface, but owns draft line review
     through touch sheets and renders confirmed documents as a read-only receipt.
     Audit history, post-confirm correction, stock correction, invoice linkage,
-    and the Admin Dashboard `GRNDetailClient` remain outside the Branch route. Classified
+    and the Owner surface `GRNDetailClient` remain outside the Branch route. Classified
     **DETAIL** (Branch touch variant).
 16. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx`
     — Branch-runtime ingredient lookup. It shares the scoped detail loader and
-    pure stock movement/status model with Admin Dashboard, but loads no valuation and
+    pure stock movement/status model with Owner surface, but loads no valuation and
     owns a touch detail composition for current stock, locations, recent
-    movements, thresholds, and route-scoped actions. The Admin Dashboard management
+    movements, thresholds, and route-scoped actions. The Owner surface management
     detail retains WAC/value, dense desktop controls, and its own presentation.
     Classified **DETAIL** (Branch touch variant).
 17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
     — Branch production work queue. It uses the Branch operator shell,
     status strip, full-row run links, and one create action. It never switches
-    to an Admin Dashboard table/card mosaic at tablet widths.
-    Classified **HUB** (Branch touch variant).
+    to an Owner surface table/card mosaic at tablet widths.
+    Classified **LANDING** (Branch touch variant).
 18. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
     and `/stock/production/[id]/page.tsx` — Branch-native production create and
     detail workflows. They share loaders, unit models, recipe-context reads, and
-    Server Actions with Admin Dashboard while owning their `BranchOperator*` presentation,
+    Server Actions with Owner surface while owning their `BranchOperator*` presentation,
     touch ingredient rows, tablet-landscape two-panel layout, and sticky actions.
     Production output remains at the branch's own inventory location.
     Classified **DOC-WORKFLOW** and **DETAIL** respectively; neither imports the
-    Admin Dashboard `ProductionNewClient`, `ProductionDetailClient`, or `DataTable`.
+    Owner surface `ProductionNewClient`, `ProductionDetailClient`, or `DataTable`.
 19. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx`
     — Branch-runtime waste entry. It preserves the scoped location, tier,
     evidence, rolling-meter, and submit authority but owns a compact touch
     document workflow: line summaries in `ItemGroup`, one line editor at a time
-    in a bottom sheet, and a sticky action footer. Admin Dashboard retains its desktop
+    in a bottom sheet, and a sticky action footer. Owner surface retains its desktop
     `WasteCreateClient`; neither plane imports the other's presenter. Classified
     **DOC-WORKFLOW** (Branch touch variant).
 20. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx`
     — Branch-native transfer document. It retains touch rows, a tablet
-    two-panel composition, and sticky actions without importing an Admin Dashboard
+    two-panel composition, and sticky actions without importing an Owner surface
     transfer form. Classified **DOC-WORKFLOW** (Branch touch variant).
 21. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx`
     — Branch-runtime waste approval queue. It locks review to the route branch,
     presents one touch row per pending issue, and opens evidence, lines, review
     note, and approve/reject actions in a bottom sheet. Self-created rows remain
     readable but cannot mutate; the existing approval action remains the
-    authority. Admin Dashboard retains its desktop `WasteApprovalsClient`; neither plane
+    authority. Owner surface retains its desktop `WasteApprovalsClient`; neither plane
     imports the other's presenter. Classified **LIST** (Branch review variant).
 22. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx`
     and `/stock/consumption/[id]` — Branch-native recorded-consumption list and
     typed detail. The list separates posted ledger consumption from manual
     documents, keeps source/status language explicit, and uses full-row touch
-    navigation. Neither route imports the Admin Dashboard list/detail presenter.
+    navigation. Neither route imports the Owner surface list/detail presenter.
     Classified **LIST** and **DETAIL** respectively.
 23. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx`
     and `/stock/count-slips` — Branch-native manager assignment and review
@@ -523,7 +525,7 @@ allowlist, not a precedent for stretching another archetype's definition:
     decision footer. Classified **LIST** (assignment/review variants).
 24. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx`
     — fixed-branch leave review queue with status tabs, full-row touch items,
-    and approve/reject in a bottom sheet. Admin Dashboard retains its desktop HR table.
+    and approve/reject in a bottom sheet. Owner surface retains its desktop HR table.
     Classified **LIST** (Branch review variant).
 
 ## 5. Agent Lookup Flow

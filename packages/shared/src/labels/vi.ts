@@ -3,27 +3,27 @@ export type SiteKind = "branch" | "central_supply" | "central_kitchen";
 export type InventoryLocationLabelLength = "short" | "long";
 
 export type ModuleLabelKey =
-  | "admin_dashboard"
+  | "owner"
   | "menu"
   | "inventory"
-  | "inventory_procurement"
   | "orders"
   | "staff"
   | "hr"
   | "hr_payroll"
   | "finance"
   | "branches"
-  | "branch_picker"
   | "settings"
   | "pos"
   | "kds"
   | "runner"
-  | "operator_home"
+  | "branch_home"
   | "branch_dashboard"
   | "branch_settings"
   | "branch_menu_limits"
   | "branch_pos_sessions"
   | "branch_team"
+  | "branch_stock"
+  | "branch_orders"
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
   | "notifications";
@@ -33,27 +33,27 @@ type SiteLike = {
 };
 
 export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
-  admin_dashboard: "Admin Dashboard",
+  owner: "Tổng quan",
   menu: "Thực đơn",
   inventory: "Kho hàng",
-  inventory_procurement: "Kho hàng — NCC & công thức",
   orders: "Đơn hàng bán",
   staff: "Nhân viên",
   hr: "Nhân sự",
   hr_payroll: "Lương",
   finance: "Tài chính",
   branches: "Chi nhánh",
-  branch_picker: "Vào việc",
   settings: "Cài đặt",
   pos: "POS",
   kds: "KDS",
   runner: "Màn gọi số",
-  operator_home: "Nay",
+  branch_home: "Nay",
   branch_dashboard: "Điều hành chi nhánh",
   branch_settings: "Cài đặt chi nhánh",
   branch_menu_limits: "Giới hạn bán",
   branch_pos_sessions: "Đối soát ca POS",
   branch_team: "Đội hôm nay",
+  branch_stock: "Kho chi nhánh",
+  branch_orders: "Đơn hàng chi nhánh",
   employee_checkout_approvals: "Duyệt kết ca",
   employee_leave_approvals: "Duyệt nghỉ phép",
   notifications: "Thông báo",
@@ -61,14 +61,14 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
 
 export const NAV_GROUP_LABELS_VI = {
   operations: "Điều hành",
-  adminOperations: "Điều hành toàn hệ thống",
+  ownerOperations: "Quản trị",
   foundation: "Nền tảng & thiết lập",
   branchManagement: "Quản lý chi nhánh",
   branchOperations: "Theo chi nhánh",
 } as const;
 
 export const APP_COPY_VI = {
-  adminSurface: "Quản trị",
+  ownerSurface: "Quản trị",
   storeManagement: "Quản lý cửa hàng",
   reportsLabel: "Báo cáo",
   ownerHome: "Điều hành hôm nay",
@@ -83,7 +83,7 @@ export const APP_COPY_VI = {
   branchOperationsKds: "Bếp (KDS)",
   branchOperationsRunner: "Màn gọi số",
   branchCommand: "Điều hành chi nhánh",
-  operatorHome: "Nay",
+  branchHome: "Hôm nay",
   operatorRuntimeActions: "Vận hành chi nhánh",
   operatorOpsActions: "Cấu hình chi nhánh",
   operatorShift: "Ca",
@@ -94,10 +94,10 @@ export const APP_COPY_VI = {
   refresh: "Làm mới",
   noAreaData: "Không có dữ liệu khu vực",
   noScopedBranches: "Không có nơi làm việc trong phạm vi",
-  adminDashboardTitle: "Admin Dashboard",
-  adminDashboardDescription:
+  ownerTitle: "Quản trị",
+  ownerDescription:
     "Điều hành, kiểm soát và thiết lập toàn hệ thống dành cho Owner",
-  adminDashboardCta: "Mở Admin Dashboard",
+  ownerCta: "Mở Quản trị",
 } as const;
 
 const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
@@ -393,7 +393,7 @@ export function getWasteReasonLabelVi(code: string): string {
 // ─── Payment method labels ────────────────────────────────────────────────
 //
 // Canonical Vietnamese labels for `orders.payment_method`. Source of truth
-// for POS UI + finance reports + admin surfaces.
+// for POS UI + finance reports + Owner surfaces.
 //
 // MIRRORED in apps/print-agent/src/escpos.ts and escpos-bitmap.ts because
 // print-agent ships as a standalone .exe (@yao-pkg/pkg) and cannot import
@@ -414,7 +414,7 @@ export const PAYMENT_METHOD_LABELS_FULL_VI = {
   unknown: "Khác",
 } as const;
 
-/** orders.status (DB orders_status_check) — full Admin Dashboard vocabulary.
+/** orders.status (DB orders_status_check) — full Owner vocabulary.
  * POS cashier view intentionally collapses these states
  * (apps/web pos/_lib/order-status-display.ts). */
 export const ORDER_STATUS_LABELS_VI = {

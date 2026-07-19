@@ -6,12 +6,12 @@ import { STAFF_ROLES } from "../types";
 import { ROUTE_FAMILY_CONTRACTS } from "../route-map";
 import { resolveModuleFromPath } from "../route-resolution";
 import {
-  ADMIN_NAV_GROUPS,
+  OWNER_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
   OPERATOR_TILE_ITEMS,
 } from "../nav-config";
 import {
-  resolveAdminNavGroups,
+  resolveOwnerNavGroups,
   resolveBranchManagementItems,
 } from "../nav-resolution";
 
@@ -25,11 +25,11 @@ const BRANCH_ID = "7";
 
 // A realistic one-level-deeper path for families whose matchPrefixes root
 // implies real sub-routes, grounded in actual page.tsx directories rather
-// than a synthetic segment (some roots, e.g. "/admin", only resolve their
+// than a synthetic segment (some roots only resolve their
 // own explicit sub-prefixes — an arbitrary child would fall through to
 // null and is not representative of the family's real route space).
 const DEEPER_SUBPATH_BY_PREFIX: Record<string, string> = {
-  "/admin": "/admin/settings/general",
+  "/settings": "/settings/general",
   "/menu": "/menu/categories",
   "/orders": "/orders/history",
   "/inventory": "/inventory/stock",
@@ -112,20 +112,20 @@ function assertHrefResolvesForAudience(
   }
 }
 
-test("resolveAdminNavGroups hrefs resolve to a module reachable by an admin-audience role", () => {
+test("resolveOwnerNavGroups hrefs resolve to a module reachable by an owner audience", () => {
   const failures: string[] = [];
 
-  for (const group of ADMIN_NAV_GROUPS) {
+  for (const group of OWNER_NAV_GROUPS) {
     for (const item of group.items) {
       const audienceRoles = STAFF_ROLES.filter((role) =>
-        resolveAdminNavGroups(role).some((resolvedGroup) =>
+        resolveOwnerNavGroups(role).some((resolvedGroup) =>
           resolvedGroup.items.some((link) => link.moduleKey === item.moduleKey),
         ),
       );
       if (audienceRoles.length === 0) continue;
 
       const sampleRole = audienceRoles[0]!;
-      const link = resolveAdminNavGroups(sampleRole)
+      const link = resolveOwnerNavGroups(sampleRole)
         .flatMap((resolvedGroup) => resolvedGroup.items)
         .find((navLink) => navLink.moduleKey === item.moduleKey);
       assert.ok(link, `expected a resolved link for ${item.moduleKey}`);

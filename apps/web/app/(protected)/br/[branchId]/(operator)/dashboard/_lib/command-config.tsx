@@ -85,7 +85,7 @@ function buildTileGroups(
         icon: <IconUtensils />,
       },
       {
-        moduleKey: "orders",
+        moduleKey: "branch_orders",
         href: `/br/${branchId}/orders`,
         title: "Đơn hàng",
         description: copy.commandOrdersDescription,
@@ -103,7 +103,7 @@ function buildTileGroups(
     ],
     drilldown: [
       {
-        moduleKey: "inventory",
+        moduleKey: "branch_stock",
         href: `/br/${branchId}/stock`,
         title: "Kho chi nhánh",
         description: copy.commandInventoryDescription,

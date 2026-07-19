@@ -29,9 +29,9 @@ export function HistoryTab({
   const logs: AuditLogRow[] = entries.map((entry) => {
     const branchLabel =
       entry.branchId === null
-        ? messages.admin.staffPermissions.tenantWide
+        ? messages.owner.staffPermissions.tenantWide
         : (branchNameById.get(entry.branchId) ??
-          messages.admin.staffPermissions.branchFallback(entry.branchId));
+          messages.owner.staffPermissions.branchFallback(entry.branchId));
     return {
       id: entry.id,
       action: `${entry.action} · ${entry.permissionKey} · ${branchLabel}`,
@@ -44,7 +44,7 @@ export function HistoryTab({
 
   return (
     <AppSection
-      title={messages.admin.staffPermissions.historyTitle(entries.length)}
+      title={messages.owner.staffPermissions.historyTitle(entries.length)}
     >
       <AuditHistoryList logs={logs} />
     </AppSection>

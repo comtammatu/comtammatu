@@ -93,7 +93,7 @@ function StockMetric({
   );
 }
 
-function AdminDashboardStockIngredientDetail({
+function OwnerStockIngredientDetail({
   data,
 }: {
   data: StockIngredientDetailData;
@@ -438,7 +438,7 @@ export async function StockIngredientDetailPageContent({
     queryBranchId: params.branchId,
   });
 
-  return <AdminDashboardStockIngredientDetail data={data} />;
+  return <OwnerStockIngredientDetail data={data} />;
 }
 
 export default async function StockIngredientDetailPage({

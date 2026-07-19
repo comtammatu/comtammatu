@@ -239,7 +239,7 @@ export function getPresetRange(
 //   prev_period  = same length, immediately preceding
 //   prev_week    = shift exactly 7 days back
 //   prev_month   = shift to same DOM in previous month, pad if missing (default
-//                  — matches the admin dashboard overview's MoM comparison)
+//                  — matches the Owner overview's MoM comparison)
 //   prev_year    = shift exactly 1 year back
 //
 // Returns null when mode = none or current range is empty.

@@ -23,7 +23,7 @@ export function OperatorBottomNav({
   const items: ShellNavItem[] = [
     {
       href: `/br/${branchId}`,
-      label: APP_COPY_VI.operatorHome,
+      label: APP_COPY_VI.branchHome,
       icon: Home,
       exact: true,
     },

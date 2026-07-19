@@ -90,9 +90,9 @@ Do not add voice for every POS ping. Routine cart/sync noise stays beep-only or 
 | `voice`      | no   | yes   | no                                   |
 | `beep+voice` | yes  | yes   | no — opt-in after kitchen validation |
 
-Operational audio is never auto-enabled for a device. Missing new-mode and
-legacy prefs resolve to `off`; when an operator enables audio for the first time,
-the enabled default is `beep`.
+Operational audio is never auto-enabled for a device. A missing mode resolves
+to `off`; when an operator enables audio for the first time, the enabled
+default is `beep`.
 
 ### Preference keys
 
@@ -100,15 +100,6 @@ Device-local only:
 
 - KDS mode: `kds:audio-mode:{branchId}` → one of `off|beep|voice|beep+voice`
 - POS mode: `pos:audio-mode:{branchId}` → same enum
-
-Compatibility with legacy boolean prefs:
-
-| Legacy key                                      | Legacy value    | Resolved mode |
-| ----------------------------------------------- | --------------- | ------------- |
-| `kds:sound:{branchId}` / `pos:sound:{branchId}` | `"1"`           | `beep`        |
-| same                                            | missing / other | `off`         |
-
-When writing the new mode key, implementations MAY leave or clear the legacy key, but reads MUST prefer `*:audio-mode:*` when present.
 
 KDS chrome exposes the mode through one cycling button: `off → beep → beep+voice → off`. `voice`-only is a valid stored mode (reads resolve it, playback honors it) but the chrome does not offer it; a dedicated mode control may expose it later. Enabling audio still requires a user gesture so `AudioContext` / `speechSynthesis` can start — the cycle button previews the newly selected mode, which doubles as that gesture.
 
@@ -149,7 +140,7 @@ KDS chrome exposes the mode through one cycling button: `off → beep → beep+v
 
 ### Other surfaces
 
-- Admin, inventory, employee hub, Runner: no operational audio under this contract.
+- Owner, inventory, employee landing, Runner: no operational audio under this contract.
 
 ## API Shape (normative intent)
 
@@ -195,7 +186,6 @@ Exact module path is an implementation detail; keep it under `apps/web/lib/` nex
 - [x] Burst of tickets in one tick does not stack overlapping full utterances.
 - [x] Sustained KDS bursts speak at most once per 15 seconds and never queue delayed narration.
 - [x] In `beep+voice`, the beep finishes before TTS starts at browser-maximum volume.
-- [x] Legacy `kds:sound=1` still enables beep after upgrade before the new key is written.
 - [x] Unit tests cover kind classification, priority, coalesce, and mode resolution.
 - [x] No inserts into `public.notifications` from the audio path.
 
@@ -203,7 +193,6 @@ Exact module path is an implementation detail; keep it under `apps/web/lib/` nex
 
 - [x] Only the reserved POS kinds speak.
 - [x] Existing POS routine beep call sites keep working under mode `beep`.
-- [x] Legacy `pos:sound=1` resolves to `beep` before the new mode key is written.
 
 ## Verification
 

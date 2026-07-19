@@ -8,6 +8,7 @@ import {
   Users as IconUsers,
 } from "lucide-react";
 import { formatVNTime } from "@comtammatu/shared/time";
+import type { StaffRole } from "@comtammatu/shared/auth";
 
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -41,6 +42,7 @@ type TeamBoardFilter = "all" | "working" | "needs_action" | "count_missing";
 type TeamBoardCapabilities = {
   canApproveCheckout: boolean;
   canApproveCount: boolean;
+  approverRole: StaffRole;
 };
 
 export interface TeamBoardDisplayRow {
@@ -49,6 +51,7 @@ export interface TeamBoardDisplayRow {
   employeeCode: string | null;
   fullName: string;
   positionLabel: string | null;
+  positionRole: StaffRole | "unassigned";
   shift: TeamBoardShiftAttendance | null;
   countStatus: TeamBoardCountStatus;
   onApprovedLeave: boolean;
@@ -71,6 +74,7 @@ function buildDisplayRows(rows: TeamBoardRow[]): TeamBoardDisplayRow[] {
           employeeCode: row.employeeCode,
           fullName: row.fullName,
           positionLabel: row.positionLabel,
+          positionRole: row.positionRole,
           shift: null,
           countStatus: row.countStatus,
           onApprovedLeave: row.onApprovedLeave,
@@ -84,6 +88,7 @@ function buildDisplayRows(rows: TeamBoardRow[]): TeamBoardDisplayRow[] {
       employeeCode: row.employeeCode,
       fullName: row.fullName,
       positionLabel: row.positionLabel,
+      positionRole: row.positionRole,
       shift,
       countStatus: shift.countStatus,
       onApprovedLeave: row.onApprovedLeave,
@@ -199,10 +204,24 @@ function rowNeedsAction(
 ) {
   if (row.onApprovedLeave) return false;
   return (
-    (capabilities.canApproveCheckout &&
+    (canApproveCheckoutForRow(row, capabilities) &&
       (isPastShiftEnd(row.shift) ||
         attendanceState(row.shift) === "checkout_pending")) ||
     (capabilities.canApproveCount && row.countStatus === "submitted")
+  );
+}
+
+function canApproveCheckoutForRow(
+  row: TeamBoardDisplayRow,
+  capabilities: TeamBoardCapabilities,
+) {
+  if (!capabilities.canApproveCheckout) return false;
+  if (capabilities.approverRole === "owner") return true;
+  return (
+    capabilities.approverRole === "branch_manager" &&
+    (row.positionRole === "cashier" ||
+      row.positionRole === "chef" ||
+      row.positionRole === "branch_staff")
   );
 }
 
@@ -422,6 +441,7 @@ export function TeamBoardClient({
   checkoutApprovalsHref,
   canApproveCheckout,
   canApproveCount,
+  approverRole,
 }: {
   rows: TeamBoardRow[];
   branchId: number;
@@ -429,9 +449,14 @@ export function TeamBoardClient({
   checkoutApprovalsHref: string;
   canApproveCheckout: boolean;
   canApproveCount: boolean;
+  approverRole: StaffRole;
 }) {
   const displayRows = buildDisplayRows(rows);
-  const capabilities = { canApproveCheckout, canApproveCount };
+  const capabilities = {
+    canApproveCheckout,
+    canApproveCount,
+    approverRole,
+  };
   const [filter, setFilter] = useState<TeamBoardFilter>(() =>
     initialTeamBoardFilter(displayRows, capabilities),
   );
@@ -576,7 +601,8 @@ export function TeamBoardClient({
                   )}
 
                   <div className="workflow-safe-pb grid gap-2">
-                    {canApproveCheckout && isPastShiftEnd(drawerRow.shift) ? (
+                    {canApproveCheckoutForRow(drawerRow, capabilities) &&
+                    isPastShiftEnd(drawerRow.shift) ? (
                       <Button
                         variant="destructive"
                         size="touch"
@@ -587,7 +613,7 @@ export function TeamBoardClient({
                         {copy.drawerActionForceClose}
                       </Button>
                     ) : null}
-                    {canApproveCheckout &&
+                    {canApproveCheckoutForRow(drawerRow, capabilities) &&
                     attendanceState(drawerRow.shift) === "checkout_pending" ? (
                       <Button
                         variant="default"

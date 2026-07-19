@@ -14,18 +14,18 @@ const copy = messages.employee.leave;
 type LeavePlane = "employee" | "branch";
 
 export async function EmployeeLeavePageContent({
-  returnHref = "/br",
+  returnHref,
   routeBranchId,
   hideHeaderOnMobile,
   profileHref,
   plane = "employee",
 }: {
-  returnHref?: string;
+  returnHref: string;
   routeBranchId?: number;
   hideHeaderOnMobile?: boolean;
-  profileHref?: string;
+  profileHref: string;
   plane?: LeavePlane;
-} = {}) {
+}) {
   const ctx = await getEmployeeContext();
   const Page = plane === "branch" ? BranchOperatorPage : EmployeePage;
 

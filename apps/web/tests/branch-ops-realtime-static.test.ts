@@ -36,9 +36,9 @@ const operatorChildPages = [
   "../app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx",
 ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
 
-const hubTodayStatus = readFileSync(
+const branchTodayStatus = readFileSync(
   new URL(
-    "../app/(protected)/br/[branchId]/(operator)/_components/hub/hub-today-status.tsx",
+    "../app/(protected)/br/[branchId]/(operator)/_components/home/branch-today-status.tsx",
     import.meta.url,
   ),
   "utf8",
@@ -137,7 +137,7 @@ test("operator layout owns the branch ops subscriber without child duplicates", 
       assert.match(page, /enableBranchOpsRefresh=\{false\}/);
     }
   }
-  assert.doesNotMatch(hubTodayStatus, /<BranchOpsRefresh/);
+  assert.doesNotMatch(branchTodayStatus, /<BranchOpsRefresh/);
 });
 
 test("operator leave approvals owns its realtime subscriber without layout duplication", () => {

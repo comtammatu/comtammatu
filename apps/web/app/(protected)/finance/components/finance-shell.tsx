@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { AppShell } from "@/components/app-shell";
-import { resolveAdminDashboardPrimaryTabs } from "@/lib/admin-dashboard-nav";
+import { resolveOwnerPrimaryTabs } from "@/lib/owner-nav";
 import { resolveFinanceNav } from "./finance-nav";
 import { useFinanceRealtimeRefresh } from "../use-finance-realtime-refresh";
 
@@ -43,7 +43,7 @@ export function FinanceShell({
     <AppShell
       user={user}
       role={role}
-      tier1={resolveAdminDashboardPrimaryTabs(role, homeBranchId)}
+      tier1={resolveOwnerPrimaryTabs(role, homeBranchId)}
       tier2={resolveFinanceNav({
         showInvoices,
         showSummary,

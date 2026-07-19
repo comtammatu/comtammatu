@@ -119,19 +119,9 @@ test("active auth templates and target-role lists use canonical access names", (
   assert.match(canonicalTemplateMigration, /ARRAY\['owner','branch_manager'\]::TEXT\[\]/);
 });
 
-test("compatibility service position remains an alias, not an access bucket", () => {
-  const compatibilityServicePosition = ["wait", "er"].join("");
-  const accessBuckets = authTypes.match(
-    /export const ACCESS_BUCKETS = \[[\s\S]*?\] as const;/,
-  )?.[0];
-
-  assert.ok(accessBuckets, "missing ACCESS_BUCKETS block");
-  assert.doesNotMatch(accessBuckets, new RegExp(`"${compatibilityServicePosition}"`));
-  assert.match(
-    authTypes,
-    new RegExp(`${compatibilityServicePosition}:\\s*"cashier"`),
-    "compatibility service position must map to cashier for prior tokens/data",
-  );
+test("retired service position is absent from the active auth contract", () => {
+  const retiredServicePosition = ["wait", "er"].join("");
+  assert.doesNotMatch(authTypes, new RegExp(retiredServicePosition));
 });
 
 test("staff permission rows are read-only to authenticated clients through one policy", () => {

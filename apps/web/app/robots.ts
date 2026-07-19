@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-// Public surface of comtammatu.com is the marketing site (none yet). Admin,
+// Public surface of comtammatu.com is the marketing site (none yet). Protected,
 // API, auth, and operational pages are auth-gated and have no SEO value.
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -8,7 +8,6 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         disallow: [
-          "/admin/",
           "/api/",
           "/login",
           "/access-denied",

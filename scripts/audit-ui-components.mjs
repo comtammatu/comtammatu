@@ -13,7 +13,18 @@ import { PAGE_ARCHETYPES } from "./page-archetypes.mjs";
 const REPO_ROOT = process.cwd();
 const DEFAULT_LIMIT = 60;
 const ROUTE_FAMILIES = [
-  ["admin", (file) => file.includes("/(protected)/admin/")],
+  [
+    "owner",
+    (file) =>
+      file === "apps/web/app/page.tsx" ||
+      file.includes("/(protected)/settings/") ||
+      file.includes("/(protected)/branches/") ||
+      file.includes("/(protected)/finance/") ||
+      file.includes("/(protected)/hr/") ||
+      file.includes("/(protected)/inventory/") ||
+      file.includes("/(protected)/menu/") ||
+      file.includes("/(protected)/orders/"),
+  ],
   [
     "branch-settings-shared",
     (file) => file.includes("/(protected)/branch-settings/"),

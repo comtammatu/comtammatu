@@ -132,7 +132,7 @@ interface EmployeeCountSurfaceProps {
   searchParams: Promise<{ location?: string }>;
   routeBranchId?: number;
   baseHref?: string;
-  profileHref?: string;
+  profileHref: string;
   plane?: CountPlane;
 }
 
@@ -384,9 +384,7 @@ async function buildEmployeeCountSurface({
         branchId={branchId}
         shiftId={currentShiftId}
         plane={plane}
-        baseHref={
-          baseHref ?? (routeBranchId ? `/br/${branchId}/stock/count` : "/br")
-        }
+        baseHref={baseHref ?? `/br/${branchId}/stock/count`}
         groups={groups}
         selectedLocationId={selectedLocationId}
         slipByLocation={Object.fromEntries(slipByLocation)}
@@ -405,7 +403,7 @@ function CountUnavailableState({
   plane: CountPlane;
   title?: string;
   description?: string;
-  profileHref?: string;
+  profileHref: string;
 }) {
   if (plane === "employee") {
     return (
@@ -444,7 +442,7 @@ function renderCountUnavailableState(props: {
   plane: CountPlane;
   title?: string;
   description?: string;
-  profileHref?: string;
+  profileHref: string;
 }) {
   return <CountUnavailableState {...props} />;
 }

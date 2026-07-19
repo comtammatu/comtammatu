@@ -15,7 +15,6 @@ import { TransfersListClient } from "./transfers-list-client";
 interface TransfersPageContentProps {
   searchParams?: Promise<{
     branchId?: string | string[];
-    create?: string | string[];
   }>;
   routeBranchId?: number;
   basePath?: string;
@@ -50,17 +49,6 @@ export async function TransfersPageContent({
   // (URL ?branchId=).
   const userBranchId = scope.selectedBranchId;
   const branchFilter = userBranchId ?? undefined;
-  const createParam = Array.isArray(params.create)
-    ? params.create[0]
-    : params.create;
-
-  if (createParam === "cap-bep") {
-    if (routeBranchId != null) {
-      redirect(`/br/${routeBranchId}/stock/transfer/new`);
-    }
-    const scopeQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
-    redirect(`/inventory/transfers/new${scopeQuery}`);
-  }
 
   const [trRes, brRes] = await Promise.all([
     fetchStockTransfers(branchFilter),
@@ -96,7 +84,6 @@ export default async function TransfersPage({
 }: {
   searchParams: Promise<{
     branchId?: string | string[];
-    create?: string | string[];
   }>;
 }) {
   const params = await searchParams;
@@ -108,10 +95,6 @@ export default async function TransfersPage({
     } else {
       qParams.set("branchId", params.branchId);
     }
-  }
-  if (params.create) {
-    const c = Array.isArray(params.create) ? params.create[0] : params.create;
-    if (c) qParams.set("create", c);
   }
   redirect(`/inventory/operations?${qParams.toString()}`);
 }

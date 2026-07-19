@@ -3,7 +3,7 @@
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "./auth";
 
-// Receiving-hub badge counts. The hub previously fetched the full PO / GRN /
+// Receiving badge counts. The landing page previously fetched the full PO / GRN /
 // supplier-invoice lists (with eager joins) only to count a filtered subset and
 // discard the rest. These count-only queries (head: true) return just the
 // number, scoped to tenant + optional branch, matching each list's open filter.

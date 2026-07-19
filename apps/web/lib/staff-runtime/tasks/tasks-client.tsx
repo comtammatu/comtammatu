@@ -29,7 +29,7 @@ const CHECKLIST_PHASES = ["start_of_shift", "end_of_shift"] as const;
 interface TasksClientProps {
   items: TodayChecklistItem[];
   disabled?: boolean;
-  countHref?: string;
+  countHref: string;
   checkoutHref?: string;
   checkoutLabel?: string;
   hideCountTask?: boolean;
@@ -46,7 +46,7 @@ function sortPhaseItems(items: TodayChecklistItem[]) {
 export function TasksClient({
   items,
   disabled = false,
-  countHref = "/br",
+  countHref,
   checkoutHref,
   checkoutLabel = homeCopy.clockOut,
   hideCountTask = false,

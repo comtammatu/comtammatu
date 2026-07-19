@@ -417,7 +417,7 @@ export function BillReceipt({
   const [order, setOrder] = useState<OrderData | null>(null);
   // Methods + VietQR config are tenant-stable for the entire shift; seeded
   // from RSC props so opening the bill no longer waits on 2 settings round-
-  // trips. Admin saves trigger `revalidatePath('/br/[branchId]/pos', 'page')`
+  // trips. Owner saves trigger `revalidatePath('/br/[branchId]/pos', 'page')`
   // so a config change refreshes the seed on next navigation.
   const methods = useMemo<PaymentMethod[]>(
     () =>

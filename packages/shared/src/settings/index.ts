@@ -3,7 +3,7 @@
  * Never hardcode key strings elsewhere.
  */
 export const SYSTEM_SETTING_KEYS = {
-  /** "true" | "false" — POS shows VietQR when Admin bank settings exist */
+  /** "true" | "false" — POS shows VietQR when Owner bank settings exist */
   PAYMENT_ENABLE_VIETQR: "payment_enable_vietqr",
   /** Bank shortcode (e.g. "TCB", "VCB"). */
   PAYMENT_VIETQR_BANK_CODE: "payment_vietqr_bank_code",

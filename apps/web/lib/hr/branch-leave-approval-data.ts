@@ -7,7 +7,10 @@ import { resolveBranchContext } from "@/_lib/branch-context";
 import { fetchLeaveRequestRows } from "./leave-request-data";
 import type { LeaveRequestRow } from "./leave-request-model";
 
-const LEAVE_APPROVER_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
+const LEAVE_APPROVER_ROLES: readonly StaffRole[] = [
+  "owner",
+  "branch_manager",
+];
 
 export type BranchLeaveApprovalData = {
   branchId: number;
@@ -44,7 +47,6 @@ export async function loadBranchLeaveApprovalData(
 
   const result = await fetchLeaveRequestRows({
     supabase,
-    claims,
     branchId: routeBranchId,
   });
 

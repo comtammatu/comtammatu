@@ -15,7 +15,6 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
   "/inventory/ingredients",
   "/inventory/settings",
   "/inventory/suppliers",
-  "/inventory/purchase-orders",
   "/inventory/grn",
   "/inventory/supplier-invoices",
   "/inventory/recipes",
@@ -24,11 +23,9 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
 // Entries already matched by INVENTORY_PROCUREMENT_PREFIXES (checked first in
 // resolveModuleFromPath) are omitted here — they would never be reached.
 export const INVENTORY_ROUTE_PREFIXES = [
-  "/inventory/dashboard",
   "/inventory/consumption",
   "/inventory/count-assignments",
   "/inventory/count-slips",
-  "/inventory/drafts",
   "/inventory/issues",
   "/inventory/operations",
   "/inventory/production",
@@ -39,8 +36,9 @@ export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/waste",
 ] as const;
 
-export const ADMIN_DASHBOARD_ROUTE_PREFIXES = [
-  "/admin",
+export const OWNER_ROUTE_PREFIXES = [
+  "/",
+  "/settings",
   "/menu",
   "/orders",
   "/inventory",
@@ -60,7 +58,7 @@ export function isRunnerPublicDisplayPath(pathname: string): boolean {
 export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;
-  // Operational PWA manifests (hub `/br/{id}`, plus pos/kds/runner stations).
+  // Operational PWA manifests (Branch home plus POS/KDS/Runner stations).
   // Browsers fetch `<link rel="manifest">` without credentials, so a gated
   // manifest 302s to /login and the PWA becomes uninstallable. The manifest
   // body carries no sensitive data (name/icons/colors only).
@@ -77,21 +75,21 @@ export function isPublicAppPath(pathname: string): boolean {
   );
 }
 
-export function isAdminDashboardRoutePath(pathname: string): boolean {
-  return ADMIN_DASHBOARD_ROUTE_PREFIXES.some((prefix) =>
+export function isOwnerRoutePath(pathname: string): boolean {
+  return OWNER_ROUTE_PREFIXES.some((prefix) =>
     matchesPathPrefix(pathname, prefix),
   );
 }
 
 export function resolveModuleFromPath(pathname: string): ModuleKey | null {
-  if (pathname === "/admin" || pathname === "/admin/") {
-    return "admin_dashboard";
+  if (pathname === "/") {
+    return "owner";
   }
-  if (matchesPathPrefix(pathname, "/admin/settings")) return "settings";
+  if (matchesPathPrefix(pathname, "/settings")) return "settings";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (matchesPathPrefix(pathname, prefix)) {
-      return "inventory_procurement";
+      return "inventory";
     }
   }
 
@@ -106,24 +104,20 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (matchesPathPrefix(pathname, "/hr/staff")) return "staff";
   if (matchesPathPrefix(pathname, "/hr/payroll")) return "hr_payroll";
   if (matchesPathPrefix(pathname, "/hr")) return "hr";
-  if (pathname === "/" || pathname === "/br" || pathname === "/br/")
-    return "branch_picker";
-  if (/^\/br\/\d+\/?$/.test(pathname)) return "operator_home";
-  // checkout-approvals gets its own module key (D058 §5) — must precede the
-  // generic /shift prefix match below so cashier/chef fail the route gate.
+  if (/^\/br\/\d+\/?$/.test(pathname)) return "branch_home";
+  // Approval routes use dedicated module keys and must precede the generic
+  // shift prefix so only explicit approver roles pass the route gate.
   if (/^\/br\/\d+\/shift\/checkout-approvals(?:\/|$)/.test(pathname)) {
     return "employee_checkout_approvals";
   }
-  // leave-approvals gets its own module key (D059 §4) for the same reason —
-  // must precede the generic /shift prefix match below.
   if (/^\/br\/\d+\/shift\/leave-approvals(?:\/|$)/.test(pathname)) {
     return "employee_leave_approvals";
   }
-  if (/^\/br\/\d+\/shift(?:\/|$)/.test(pathname)) return "operator_home";
-  if (/^\/br\/\d+\/profile(?:\/|$)/.test(pathname)) return "operator_home";
-  if (/^\/br\/\d+\/stock\/count(?:\/|$)/.test(pathname)) return "operator_home";
-  if (/^\/br\/\d+\/stock(?:\/|$)/.test(pathname)) return "inventory";
-  if (/^\/br\/\d+\/orders(?:\/|$)/.test(pathname)) return "orders";
+  if (/^\/br\/\d+\/shift(?:\/|$)/.test(pathname)) return "branch_home";
+  if (/^\/br\/\d+\/profile(?:\/|$)/.test(pathname)) return "branch_home";
+  if (/^\/br\/\d+\/stock\/count(?:\/|$)/.test(pathname)) return "branch_home";
+  if (/^\/br\/\d+\/stock(?:\/|$)/.test(pathname)) return "branch_stock";
+  if (/^\/br\/\d+\/orders(?:\/|$)/.test(pathname)) return "branch_orders";
   if (/^\/br\/\d+\/dashboard(?:\/|$)/.test(pathname)) return "branch_dashboard";
   if (/^\/br\/\d+\/team(?:\/|$)/.test(pathname)) return "branch_team";
   if (/^\/br\/\d+\/menu-limits(?:\/|$)/.test(pathname))

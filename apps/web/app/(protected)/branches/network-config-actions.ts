@@ -7,7 +7,7 @@ import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { type ActionContext, withAction } from "@/_lib/with-action";
 import { getClientIp } from "@lib/network/client-ip";
 
-const NETWORK_ADMIN_ROLES: StaffRole[] = ["owner"];
+const OWNER_NETWORK_ROLES: StaffRole[] = ["owner"];
 
 const branchIdSchema = z.object({
   branchId: z.coerce.number().int().positive(),
@@ -49,7 +49,7 @@ async function branchBelongsToTenant(
 
 export const listTrustedIps = withAction(
   {
-    roles: NETWORK_ADMIN_ROLES,
+    roles: OWNER_NETWORK_ROLES,
     schema: branchIdSchema,
     permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
     permissionBranchId: (data) => data.branchId,
@@ -85,13 +85,13 @@ export const listTrustedIps = withAction(
 /**
  * Bootstrap: trust the IP that the admin's request is currently coming from.
  * Use case: setting up a new branch BEFORE the print-agent has registered
- * its first heartbeat. Admin must be physically on the branch wifi when
+ * its first heartbeat. Owner must be physically on the branch wifi when
  * clicking — the IP is read server-side from the request headers, not the
  * body.
  */
 export const trustCurrentIp = withAction(
   {
-    roles: NETWORK_ADMIN_ROLES,
+    roles: OWNER_NETWORK_ROLES,
     schema: branchIdSchema,
     permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
     permissionBranchId: (data) => data.branchId,
@@ -146,7 +146,7 @@ export const trustCurrentIp = withAction(
  */
 export const revokeTrustedIp = withAction(
   {
-    roles: NETWORK_ADMIN_ROLES,
+    roles: OWNER_NETWORK_ROLES,
     schema: revokeSchema,
     permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
     permissionBranchId: (data) => data.branchId,

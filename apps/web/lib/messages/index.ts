@@ -1,7 +1,7 @@
 import { interpolate } from "@comtammatu/shared/messages";
 
 import { auth } from "./auth";
-import { admin } from "./admin";
+import { owner } from "./owner";
 import { catalog } from "./catalog";
 import { common } from "./common";
 import { employee } from "./employee";
@@ -19,7 +19,7 @@ import { pos } from "./pos";
 import { settings } from "./settings";
 
 export const messages = {
-  admin,
+  owner,
   catalog,
   common,
   auth,

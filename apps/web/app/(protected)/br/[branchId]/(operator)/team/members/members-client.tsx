@@ -1,4 +1,4 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator hub uses vietnamese */
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";

@@ -4,14 +4,14 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   addVNDateDays,
   getVNDateString,
   getVNMinutesOfDay,
 } from "@comtammatu/shared/time";
-import { getAuthContext, probePermission } from "@/_lib/auth";
+import { getAuthContext } from "@/_lib/auth";
 import { resolveCurrentShiftContext } from "../_lib/default-shift";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 
@@ -97,7 +97,6 @@ async function resolveCurrentShiftForEmployee(
 }
 
 function revalidateEmployeeWorkPaths(branchId?: number | null) {
-  revalidatePath("/br");
   if (typeof branchId !== "number") return;
   revalidatePath(`/br/${branchId}`);
   revalidatePath(`/br/${branchId}/shift`);
@@ -186,16 +185,16 @@ function mapCheckoutError(message: string | undefined): string {
     return "Không thể tự duyệt kết ca của mình.";
   }
   if (message?.includes("checkout_requires_upper_manager")) {
-    return "Yêu cầu kết ca của Quản lý chi nhánh cần quản lý cấp trên duyệt.";
-  }
-  if (message?.includes("branch_manager_can_only_approve_branch_staff")) {
-    return "Quản lý chi nhánh chỉ duyệt kết ca cho nhân viên ca sàn.";
+    return "Yêu cầu kết ca của Quản lý chi nhánh cần Chủ sở hữu duyệt.";
   }
   if (message?.includes("checkout_approver_not_allowed")) {
     return "Tài khoản này không có quyền duyệt kết ca.";
   }
   if (message?.includes("checkout_approver_wrong_branch")) {
     return "Không có quyền duyệt kết ca tại chi nhánh này.";
+  }
+  if (message?.includes("branch_manager_can_only_approve_branch_staff")) {
+    return "Quản lý chi nhánh chỉ duyệt kết ca cho nhân viên thuộc chi nhánh.";
   }
   return "Không thể kết ca. Vui lòng thử lại.";
 }
@@ -326,7 +325,6 @@ export async function clockInWithPhoto(
         check_in: now.toISOString(),
         status: "present",
         method: "pwa",
-        code_verified: false,
         check_in_photo_path: photoPath,
       })
       .select("id, check_in")
@@ -659,7 +657,6 @@ export async function clockOutManagerShift(
     .from("attendance_records")
     .update({
       check_out: checkOutTime,
-      check_out_code_verified: false,
       checkout_requested_at: null,
       checkout_requested_by_role: null,
       checkout_approval_target_roles: [],
@@ -710,58 +707,16 @@ export async function approveCheckoutRequest(input: {
   const ctx = await getAuthContext(CHECKOUT_APPROVAL_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const service = createServiceClient();
-  const { data: request } = await service
-    .from("attendance_records")
-    .select("id, branch_id")
-    .eq("id", parsed.data.attendanceId)
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .is("check_out", null)
-    .not("checkout_requested_at", "is", null)
-    .maybeSingle();
-
-  if (!request) {
-    return {
-      success: false,
-      error: "Yêu cầu kết ca không còn ở trạng thái chờ duyệt.",
-    };
-  }
-
-  const branchId = request.branch_id;
-  if (
-    ctx.claims.user_role === "branch_manager" &&
-    ctx.claims.branch_id !== branchId
-  ) {
-    return {
-      success: false,
-      error: "Không có quyền duyệt kết ca tại chi nhánh này.",
-    };
-  }
-
-  const canApprove = await probePermission(
-    ctx,
-    PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-    branchId,
-  );
-  if (!canApprove) {
-    return {
-      success: false,
-      error: "Không có quyền duyệt kết ca tại chi nhánh này.",
-    };
-  }
-
-  const { data: checkOutTime, error } = await service.rpc(
-    "branch_manager_approve_employee_clock_out",
+  const { data: result, error } = await ctx.supabase.rpc(
+    "approve_employee_clock_out",
     {
-      p_tenant_id: ctx.claims.tenant_id,
-      p_branch_id: branchId,
       p_attendance_id: parsed.data.attendanceId,
-      p_approved_by: ctx.user.id,
       p_note: parsed.data.note ?? undefined,
     },
   );
+  const review = result?.[0];
 
-  if (error || !checkOutTime) {
+  if (error || !review?.check_out || !review.branch_id) {
     if (error) {
       console.error("[employee/clock] approve checkout rpc failed", {
         code: error.code,
@@ -773,8 +728,8 @@ export async function approveCheckoutRequest(input: {
     };
   }
 
-  revalidateEmployeeWorkPaths(branchId);
-  return { success: true, data: { checkOutTime } };
+  revalidateEmployeeWorkPaths(review.branch_id);
+  return { success: true, data: { checkOutTime: review.check_out } };
 }
 
 const rejectCheckoutSchema = z.object({
@@ -797,58 +752,16 @@ export async function rejectCheckoutRequest(input: {
   const ctx = await getAuthContext(CHECKOUT_APPROVAL_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const service = createServiceClient();
-  const { data: request } = await service
-    .from("attendance_records")
-    .select("id, branch_id")
-    .eq("id", parsed.data.attendanceId)
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .is("check_out", null)
-    .not("checkout_requested_at", "is", null)
-    .maybeSingle();
-
-  if (!request) {
-    return {
-      success: false,
-      error: "Yêu cầu kết ca không còn ở trạng thái chờ duyệt.",
-    };
-  }
-
-  const branchId = request.branch_id;
-  if (
-    ctx.claims.user_role === "branch_manager" &&
-    ctx.claims.branch_id !== branchId
-  ) {
-    return {
-      success: false,
-      error: "Không có quyền từ chối kết ca tại chi nhánh này.",
-    };
-  }
-
-  const canApprove = await probePermission(
-    ctx,
-    PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-    branchId,
-  );
-  if (!canApprove) {
-    return {
-      success: false,
-      error: "Không có quyền từ chối kết ca tại chi nhánh này.",
-    };
-  }
-
-  const { data: result, error } = await service.rpc(
-    "branch_manager_reject_employee_clock_out",
+  const { data: result, error } = await ctx.supabase.rpc(
+    "reject_employee_clock_out",
     {
-      p_tenant_id: ctx.claims.tenant_id,
-      p_branch_id: branchId,
       p_attendance_id: parsed.data.attendanceId,
-      p_rejected_by: ctx.user.id,
       p_note: parsed.data.note ?? undefined,
     },
   );
+  const review = result?.[0];
 
-  if (error || !result) {
+  if (error || !review?.rejected || !review.branch_id) {
     if (error) {
       console.error("[employee/clock] reject checkout request failed", {
         code: error.code,
@@ -860,6 +773,6 @@ export async function rejectCheckoutRequest(input: {
     };
   }
 
-  revalidateEmployeeWorkPaths(branchId);
+  revalidateEmployeeWorkPaths(review.branch_id);
   return { success: true, data: { rejected: true } };
 }

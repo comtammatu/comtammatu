@@ -3,20 +3,20 @@
 // docs/spec/page-archetypes.md. Pure data — the enforcement gate lives in
 // scripts/check-ui-contract.mjs, which imports this map.
 export const PAGE_ARCHETYPES = {
-  "apps/web/app/(protected)/admin/page.tsx": "HUB",
-  "apps/web/app/(protected)/admin/settings/(tenant)/general/page.tsx":
+  "apps/web/app/page.tsx": "LANDING",
+  "apps/web/app/(protected)/settings/(tenant)/general/page.tsx":
     "SETTINGS-PANEL",
-  "apps/web/app/(protected)/admin/settings/(tenant)/payments/page.tsx":
+  "apps/web/app/(protected)/settings/(tenant)/payments/page.tsx":
     "SETTINGS-PANEL",
-  "apps/web/app/(protected)/admin/settings/page.tsx": "HUB",
-  "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx": "LIST",
-  "apps/web/app/(protected)/admin/settings/printers/page.tsx": "HUB",
-  "apps/web/app/(protected)/admin/settings/printers/templates/page.tsx":
+  "apps/web/app/(protected)/settings/page.tsx": "LANDING",
+  "apps/web/app/(protected)/settings/printers/jobs/page.tsx": "LIST",
+  "apps/web/app/(protected)/settings/printers/page.tsx": "LANDING",
+  "apps/web/app/(protected)/settings/printers/templates/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx":
     "DASHBOARD",
   "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx": "LIST",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": "HUB",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/profile/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/profile/payslip/page.tsx":
@@ -25,7 +25,7 @@ export const PAGE_ARCHETYPES = {
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx":
     "SETTINGS-PANEL",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx": "HUB",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx": "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx":
     "REPORT",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx":
@@ -47,7 +47,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/page.tsx":
-    "HUB",
+    "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/categories/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/page.tsx":
@@ -84,14 +84,14 @@ export const PAGE_ARCHETYPES = {
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx":
     "LIST",
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": "HUB",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": "LANDING",
 
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx":
     "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx":
-    "HUB",
+    "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx":
@@ -120,7 +120,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/pos/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": "BOARD",
-  "apps/web/app/(protected)/br/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/branches/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/bank-transactions/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/expenses/page.tsx": "LIST",
@@ -143,8 +142,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/consumption/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/count-assignments/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/count-slips/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/dashboard/page.tsx": "REDIRECT-SHIM",
-  "apps/web/app/(protected)/inventory/drafts/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx":
     "DOC-WORKFLOW",
@@ -155,15 +152,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/issues/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/operations/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD",
-  "apps/web/app/(protected)/inventory/production/page.tsx": "HUB",
+  "apps/web/app/(protected)/inventory/production/page.tsx": "LANDING",
   "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "DETAIL",
-  "apps/web/app/(protected)/inventory/purchase-orders/[id]/page.tsx":
-    "REDIRECT-SHIM",
-  "apps/web/app/(protected)/inventory/purchase-orders/new/page.tsx":
-    "REDIRECT-SHIM",
-  "apps/web/app/(protected)/inventory/purchase-orders/page.tsx":
-    "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/recipes/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/reports/page.tsx": "REPORT",
   "apps/web/app/(protected)/inventory/settings/categories/page.tsx":
@@ -194,6 +185,5 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(public)/(auth)/login/page.tsx": "GATE/AUTH",
   "apps/web/app/(public)/access-denied/page.tsx": "GATE/AUTH",
   "apps/web/app/offline/page.tsx": "GATE/AUTH",
-  "apps/web/app/page.tsx": "GATE/AUTH",
   "apps/web/app/q/[token]/page.tsx": "PUBLIC-WORKFLOW",
 };

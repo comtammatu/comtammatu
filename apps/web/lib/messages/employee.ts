@@ -63,9 +63,9 @@ export const employee = {
     statusNoBranch: "Thiếu chi nhánh",
     descriptionWorking: "Hoàn thành checklist trong ca, sau đó gửi kết ca.",
     descriptionReadyToCheckout:
-      "Checklist đã xong, gửi quản lý chi nhánh duyệt kết ca.",
+      "Checklist đã xong, gửi quản lý duyệt kết ca.",
     descriptionCheckoutPending:
-      "Yêu cầu kết ca đã gửi, chờ quản lý chi nhánh duyệt.",
+      "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     descriptionDone: "Chấm công hôm nay đã đủ giờ vào và giờ ra.",
     descriptionNotStarted: "Chụp ảnh để chấm công vào ca.",
@@ -168,13 +168,13 @@ export const employee = {
     shiftPending: "Chờ duyệt",
     shiftNotStarted: "Chưa vào",
     checkoutApprovalsDescription:
-      "Yêu cầu kết ca đang chờ quản lý chi nhánh duyệt.",
+      "Yêu cầu kết ca đang chờ quản lý duyệt.",
     checkoutApprovalsDescriptionAll:
       "Yêu cầu kết ca đang chờ duyệt theo phạm vi quyền hiện tại.",
     checkoutApprovalEscalatedDescription:
-      "Quản lý chi nhánh gửi kết ca cho quản lý cấp trên duyệt.",
+      "Quản lý chi nhánh gửi kết ca cho Chủ sở hữu duyệt.",
     checkoutApprovalBranchDescription:
-      "Nhân viên chi nhánh gửi kết ca cho quản lý chi nhánh duyệt.",
+      "Nhân viên chi nhánh gửi kết ca cho Quản lý chi nhánh hoặc Chủ sở hữu duyệt.",
   },
   clock: {
     cannotContinueTitle: "Chưa thể tiếp tục",
@@ -404,7 +404,7 @@ export const employee = {
     title: "Nghỉ phép",
     description: "Gửi yêu cầu nghỉ và theo dõi trạng thái duyệt.",
     newRequestTitle: "Yêu cầu mới",
-    newRequestDescription: "Chọn ngày nghỉ để quản lý chi nhánh duyệt.",
+    newRequestDescription: "Chọn ngày nghỉ để quản lý duyệt.",
     newRequestButton: "Xin nghỉ",
     myRequestsTitle: "Yêu cầu của tôi",
     myRequestsDescription: "Các yêu cầu nghỉ gần đây.",

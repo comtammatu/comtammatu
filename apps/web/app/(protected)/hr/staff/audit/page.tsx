@@ -91,7 +91,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   const branchNameById = new Map<number, string>(
     (branches ?? []).map((b) => [b.id, b.name]),
   );
-  const copy = messages.admin.staffAudit;
+  const copy = messages.owner.staffAudit;
 
   // Target filter options derived from the visible rows. The active target is
   // appended even when no row surfaces it, so the Select can echo its value.

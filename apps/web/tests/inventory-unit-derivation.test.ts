@@ -246,8 +246,8 @@ test("standard secondary on a packaging base is rejected (A2 RPC keeps the clien
   // base = chai (packaging), secondary = ml (standard volume), no anchor. A
   // standard unit needs a same-dimension standard base, so the derivation
   // rejects this shape. The A2 resolver therefore keeps the anchorless client
-  // to_base_factor rather than force-deriving, which is why such legacy
-  // ingredients still save unchanged.
+  // to_base_factor rather than force-deriving, which is why historical
+  // anchorless ingredients still save unchanged.
   const ML = 8;
   const CHAI = 9;
   const units = new Map<number, DerivationUnitInfo>([

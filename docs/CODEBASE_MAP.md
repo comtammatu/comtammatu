@@ -10,7 +10,7 @@
 - **Operating track:** production đang vận hành in-place trên repo `comtammatu`.
   Current work lives in `tasks/todo.md`; durable architecture choices live in
   active ADRs or the owning spec/ref/rule doc.
-- **Current surface:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS,
+- **Current surface:** Auth, Owner, Master Data, Inventory, Orders, POS, KDS,
   Print, Payments (Cash + VietQR), Finance Basic, HR/payroll basics, and
   HĐĐT via Viettel S-invoice are the current production surface.
 - **Tech stack:** Next.js, React, TypeScript, Tailwind, Zod, Supabase, and
@@ -86,7 +86,7 @@ flowchart LR
     warehouse -->|approved consumption| pos["POS / KDS / completed orders"]
 ```
 
-## Hub Files (High Blast Radius)
+## Landing Files (High Blast Radius)
 
 Đây là các file có nhiều chỗ phụ thuộc nhất. Mọi thay đổi ở đây sẽ tác động rộng trong hệ thống.
 

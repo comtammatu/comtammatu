@@ -122,7 +122,7 @@ Không dùng label lai trong UI hoặc copy vận hành:
 
 Chỉ giữ English trong một trong các nhóm sau:
 
-- Acronym hoặc thuật ngữ chuyên ngành đã chốt: `POS`, `KDS`, `Admin Dashboard`, `tenant`, `ERP`,
+- Acronym hoặc thuật ngữ chuyên ngành đã chốt: `POS`, `KDS`, `Owner surface`, `tenant`, `ERP`,
   `PO`, `GRN`, `WAC`, `PIT`, `AOV`, `COGS`.
 - Tên công nghệ, framework, hoặc vendor: `Supabase`, `Next.js`, `React`,
   `Tailwind`, `TypeScript`, `VietQR`, `Viettel S-invoice`.
@@ -139,8 +139,8 @@ và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán h
 | Drift term                                       | Dùng thay                                                                                        |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
 | `Employee Portal`                                | `Trang nhân viên`                                                                                |
-| `Admin Shell`                                    | `Khung quản trị` hoặc `nền tảng quản trị` tùy ngữ cảnh                                           |
-| `Dashboard` đứng riêng                           | `Tổng quan` hoặc `buồng lái` tùy ngữ cảnh; `Admin Dashboard` là tên product surface đã chốt      |
+| `Owner Shell`                                    | `Khung quản trị` hoặc `nền tảng quản trị` tùy ngữ cảnh                                           |
+| `Dashboard` đứng riêng                           | `Tổng quan` hoặc `buồng lái` tùy ngữ cảnh; `Owner surface` là tên product surface đã chốt      |
 | `Stock`                                          | `Kho hàng` hoặc `tồn kho` tùy ngữ cảnh                                                           |
 | `Finance`                                        | `Tài chính` hoặc `Kế toán` tùy ngữ cảnh                                                          |
 | `Shipped`                                        | `Hoàn thành`                                                                                     |
@@ -154,15 +154,15 @@ và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán h
 | `food cost` trong UI thường                      | `giá vốn món` hoặc `chi phí nguyên liệu`                                                         |
 | `webhook`, `drill-down`, `hover` trong UI thường | `lỗi đồng bộ`, `xem chi tiết`, `rê chuột` hoặc hướng dẫn thao tác phù hợp                        |
 
-### Admin Dashboard
+### Owner surface
 
 | Trường           | Giá trị                                                                 |
 | ---------------- | ----------------------------------------------------------------------- |
-| `canonical_term` | `admin_dashboard`                                                       |
-| `label_vi`       | `Admin Dashboard`                                                       |
+| `canonical_term` | `owner`                                                       |
+| `label_vi`       | `Owner surface`                                                       |
 | `definition`     | Mặt điều hành và thiết lập toàn hệ thống, chỉ Chủ sở hữu được truy cập. |
 
-Admin Dashboard gồm `/admin`, `/menu`, `/orders`, `/inventory`, `/finance`,
+Owner surface gồm `/`, `/menu`, `/orders`, `/inventory`, `/finance`,
 `/branches` và `/hr`. Công việc hằng ngày của Quản lý chi nhánh và Nhân viên
 thuộc Branch tại `/br/[branchId]/*`. Không dùng lại nhãn `Văn phòng` cho mặt
 sản phẩm này.
@@ -192,7 +192,7 @@ Thuật ngữ nghiệp vụ mới phải đủ các trường sau khi rủi ro n
 | `label_vi`             | Nhãn tiếng Việt chuẩn                                            |
 | `definition`           | Nghĩa đúng trong Cơm Tấm Má Tư                                   |
 | `not_this`             | Những thứ không được lẫn                                         |
-| `scope`                | POS, Finance, Inventory, Admin, HKD/legal, HR, hoặc cross-module |
+| `scope`                | POS, Finance, Inventory, Owner, HKD/legal, HR, hoặc cross-module |
 | `source_of_truth`      | Doc/code/schema/RPC sở hữu dữ liệu hoặc rule                     |
 | `allowed_variants`     | Long/short/acronym được phép dùng                                |
 | `forbidden_synonyms`   | Cách gọi bị cấm hoặc chỉ dùng trong context hẹp                  |
@@ -795,16 +795,16 @@ viết tắt tiếng Việt chính thức. UI chỉ được dùng một biến 
 
 ## Quy tắc theo bề mặt
 
-### Admin Tổng Quan
+### Owner Tổng Quan
 
-Admin Tổng Quan không phải finance cockpit. Nó chỉ hiển thị:
+Owner Tổng Quan không phải finance cockpit. Nó chỉ hiển thị:
 
 1. Tình trạng vận hành cần chú ý: lỗi HĐĐT, print-agent offline, payment mismatch,
    stock alert, cash variance.
 2. Công việc chờ xử lý: phiếu, duyệt, đối soát, thiết lập còn thiếu.
 3. Lối vào module: Finance, Inventory, HR, POS/KDS settings, Reports.
 
-Card Admin có số tiền hoặc tính toán tài chính phải dùng `finance.*`. Card Admin
+Card Owner có số tiền hoặc tính toán tài chính phải dùng `finance.*`. Card Owner
 có tồn kho hoặc phiếu kho phải dùng `inventory.*`. Nếu chỉ là link điều hướng,
 không đặt title như một KPI.
 
@@ -866,7 +866,7 @@ label phải dùng canonical metric vocabulary và nêu rõ denominator/scope.
   <https://get.apicbase.com/essential-restaurant-metrics/>
 - FIXE, restaurant bookkeeping glossary:
   <https://www.getmyfixe.com/fixe-restaurant-bookkeeping-glossary/>
-- BEP Back Office, restaurant back-office glossary:
+- BEP Back Owner control, restaurant back-office glossary:
   <https://bepbackoffice.com/glossary/>
 - Restaurant365, prime cost / COGS / labor:
   <https://www.restaurant365.com/blog/how-to-calculate-prime-cost-in-a-restaurant/>

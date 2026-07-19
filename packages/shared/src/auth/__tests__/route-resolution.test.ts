@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 
 import { isPublicAppPath } from "../route-resolution";
 
-// Regression: the hub (`/br/{id}`) and runner PWA manifests were gated, so the
+// Regression: the landing (`/br/{id}`) and runner PWA manifests were gated, so the
 // proxy 302'd the browser's uncredentialed manifest fetch to /login and the
-// operator hub PWA became uninstallable (Android Chrome, HTTPS). Only pos/kds
+// branch home PWA became uninstallable (Android Chrome, HTTPS). Only pos/kds
 // were whitelisted. All four operational manifests must be public.
 test("all operational PWA manifests are public", () => {
   assert.equal(isPublicAppPath("/br/3/manifest.webmanifest"), true);

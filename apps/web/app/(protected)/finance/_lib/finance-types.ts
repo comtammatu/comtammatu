@@ -2,7 +2,7 @@
 // page can become a thin redirect without breaking importers.
 //
 // Keep this file in `_lib/` (private to the finance module) per the
-// `apps/web/app/_lib`, `apps/web/app/(protected)/admin/_lib` convention.
+// Shared route helpers live under `apps/web/app/_lib`.
 
 export interface TopItemRow {
   period_start: string;

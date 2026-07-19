@@ -205,7 +205,7 @@ test("Generated types expose only the current Self-Order request model", () => {
 
   const paymentRequests =
     databaseTypes.match(
-      /self_order_payment_requests: \{[\s\S]*?\n {6}\}\n {6}self_order_rate_buckets:/,
+      /self_order_payment_requests: \{[\s\S]*?\n {6}\};?\n {6}self_order_rate_buckets:/,
     )?.[0] ?? "";
   assert.notEqual(paymentRequests, "");
   assert.doesNotMatch(paymentRequests, /session_id/);

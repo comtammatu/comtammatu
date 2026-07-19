@@ -26,7 +26,7 @@ const retiredPaths = [
   "apps/web/lib/inventory/supplier-return-model.ts",
 ];
 
-test("supplier returns have no Branch or Office daily-use surface", () => {
+test("supplier returns have no Branch or Owner surface daily-use surface", () => {
   for (const path of retiredPaths) {
     assert.equal(existsSync(resolve(repoRoot, path)), false, path);
   }

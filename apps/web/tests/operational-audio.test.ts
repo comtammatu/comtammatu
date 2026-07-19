@@ -10,9 +10,7 @@ import {
   buildAlertUtterance,
   cycleAudioMode,
   getKdsAudioModeKey,
-  getKdsSoundPrefKey,
   getPosAudioModeKey,
-  getPosSoundPrefKey,
   KDS_VOICE_COOLDOWN_MS,
   KDS_TONE_TO_ALERT_KIND,
   resolveAudioMode,
@@ -20,20 +18,14 @@ import {
 } from "../lib/operational-audio";
 
 test("resolveAudioMode prefers the stored mode key", () => {
-  assert.equal(resolveAudioMode("beep+voice", "1"), "beep+voice");
-  assert.equal(resolveAudioMode("voice", null), "voice");
-  assert.equal(resolveAudioMode("off", "1"), "off");
-});
-
-test("resolveAudioMode maps the boolean sound pref", () => {
-  assert.equal(resolveAudioMode(null, "1"), "beep");
-  assert.equal(resolveAudioMode(null, "0"), "off");
-  assert.equal(resolveAudioMode(null, null), "off");
+  assert.equal(resolveAudioMode("beep+voice"), "beep+voice");
+  assert.equal(resolveAudioMode("voice"), "voice");
+  assert.equal(resolveAudioMode("off"), "off");
 });
 
 test("resolveAudioMode ignores an unknown stored mode", () => {
-  assert.equal(resolveAudioMode("loud", "1"), "beep");
-  assert.equal(resolveAudioMode("loud", null), "off");
+  assert.equal(resolveAudioMode("loud"), "off");
+  assert.equal(resolveAudioMode(null), "off");
 });
 
 test("cycleAudioMode walks off -> beep -> beep+voice", () => {
@@ -83,9 +75,7 @@ test("KDS tones map onto the alert kind namespace", () => {
 
 test("device pref keys are branch scoped", () => {
   assert.equal(getKdsAudioModeKey(3), "kds:audio-mode:3");
-  assert.equal(getKdsSoundPrefKey(3), "kds:sound:3");
   assert.equal(getPosAudioModeKey(3), "pos:audio-mode:3");
-  assert.equal(getPosSoundPrefKey(3), "pos:sound:3");
 });
 
 test("POS QR guest tones stay distinct from the POS order ping", () => {

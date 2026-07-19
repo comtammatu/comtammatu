@@ -125,7 +125,7 @@ export async function loadGrnSourcePageData({
   const { supabase, claims } = auth;
   if (
     !PROCUREMENT_ROLES.includes(claims.user_role) ||
-    !canAccess(claims.user_role, "inventory_procurement")
+    !canAccess(claims.user_role, "branch_stock")
   ) {
     redirect("/access-denied?reason=insufficient-permission");
   }

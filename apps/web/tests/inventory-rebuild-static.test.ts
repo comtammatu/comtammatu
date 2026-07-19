@@ -129,7 +129,6 @@ test.skip("transfer UI and action surface can create branch kitchen transfers", 
   const transferForm = readWeb(
     "app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
   );
-  const transferPage = readWeb("app/(protected)/inventory/transfers/page.tsx");
   const transferList = readWeb(
     "app/(protected)/inventory/transfers/transfers-list-client.tsx",
   );
@@ -193,8 +192,6 @@ test.skip("transfer UI and action surface can create branch kitchen transfers", 
     readWeb("lib/messages/inventory.ts"),
     /transferAllStock: "Chuyển toàn bộ"/,
   );
-  assert.match(transferPage, /createParam === "cap-bep"/);
-  assert.match(transferPage, /\/inventory\/transfers\/new/);
   assert.match(transferList, /central_supply/);
   assert.match(transferList, /central_kitchen/);
   assert.match(issueActions, /resolveIssueSourceLocation/);
@@ -472,4 +469,3 @@ test.skip("legacy kitchen backfill stays dry-run and read-only", () => {
   );
   assert.match(output, /self-test ok/);
 });
-

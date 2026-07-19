@@ -10,7 +10,7 @@ luật hiện hành, đọc `legal-framework-2026.md`, `einvoice-tax.md`,
 ## Cách dùng
 
 - Agent phải tự nắm các khái niệm phổ quát trong tài liệu này trước khi sửa
-  Admin, Finance, Inventory, POS, KDS, HR, payroll, tax, hoặc report.
+  Owner, Finance, Inventory, POS, KDS, HR, payroll, tax, hoặc report.
 - Không hỏi owner định nghĩa thuật ngữ ngành phổ quát. Chỉ hỏi khi đó là policy
   riêng của Má Tư, cấu hình pháp lý, hoặc quyết định sản phẩm chưa có contract.
 - UI không dùng label song ngữ. `term_en` dùng cho code/contract. `label_vi`
@@ -316,7 +316,7 @@ Số luật về giảm trừ, biểu thuế, mức đóng, trần bảo hiểm 
   <https://get.apicbase.com/essential-restaurant-metrics/>
 - FIXE, restaurant bookkeeping glossary:
   <https://www.getmyfixe.com/fixe-restaurant-bookkeeping-glossary/>
-- BEP Back Office, restaurant glossary:
+- BEP Back Owner control, restaurant glossary:
   <https://bepbackoffice.com/glossary/>
 - Black Box Intelligence, COGS and RevPASH glossary:
   <https://blackboxintelligence.com/resources/restaurant-glossary/cost-of-goods-sold-cogs/>,

@@ -476,7 +476,7 @@ export async function listMyGrnDrafts(
     .eq("created_by", user.id)
     .eq("status", "draft");
   // Branch-scope drafts on the operator plane so a multi-branch user does not
-  // see (and Continue into) another branch's draft; Admin Dashboard (branchId omitted)
+  // see (and Continue into) another branch's draft; Owner surface (branchId omitted)
   // keeps the cross-branch view.
   if (branchId != null) query = query.eq("branch_id", branchId);
   const { data, error } = await query.order("updated_at", {

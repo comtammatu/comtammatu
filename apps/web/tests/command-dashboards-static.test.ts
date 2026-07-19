@@ -6,14 +6,14 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-const ADMIN_COPY = "apps/web/lib/messages/admin.ts";
+const ADMIN_COPY = "apps/web/lib/messages/owner.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
 const FINANCE_COPY = "apps/web/lib/messages/finance.ts";
 const INVENTORY_COPY = "apps/web/lib/messages/inventory.ts";
 const PRINT_JOBS_PAGE =
-  "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx";
+  "apps/web/app/(protected)/settings/printers/jobs/page.tsx";
 const PRINT_JOBS_CLIENT =
-  "apps/web/app/(protected)/admin/settings/printers/jobs/print-jobs-client.tsx";
+  "apps/web/app/(protected)/settings/printers/jobs/print-jobs-client.tsx";
 const BRANCH_PAGE =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx";
 const BRANCH_COMMAND_CONFIG =
@@ -192,7 +192,7 @@ test("branch command landing surfaces operations and readiness", () => {
   assert.doesNotMatch(surface, /\/employee\/checkout-approvals/);
 });
 
-test("branch day status service-client reads carry explicit tenant+branch filters", () => {
+test("branch day status uses scoped reads and the hierarchy-aware checkout projection", () => {
   const data = read(BRANCH_DATA);
 
   assert.match(data, /supabase\.rpc\("list_branch_menu_daily_limits"/);
@@ -206,7 +206,7 @@ test("branch day status service-client reads carry explicit tenant+branch filter
   );
   assert.match(
     data,
-    /service\s*\.from\("attendance_records"\)[\s\S]{0,200}?\.eq\("tenant_id", claims\.tenant_id\)\s*\.eq\("branch_id", branchId\)/,
+    /supabase\.rpc\("get_checkout_review_queue", \{[\s\S]{0,120}?p_branch_id: branchId,[\s\S]{0,120}?p_include_rows: false/,
   );
   assert.match(data, /fail-soft/i);
 });

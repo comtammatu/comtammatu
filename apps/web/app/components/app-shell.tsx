@@ -34,7 +34,7 @@ import {
 } from "@/lib/shell-primitives";
 import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
-import { AdminDashboardBottomNav } from "@/components/admin-dashboard-bottom-nav";
+import { OwnerBottomNav } from "@/components/owner-bottom-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
@@ -58,8 +58,8 @@ export interface AppShellProps {
   tier2: ShellNavGroup[];
   shellHeader?: AppShellHeaderConfig;
   /**
-   * Mobile-only Admin Dashboard bottom navbar (same nav model as the sidebar +
-   * drawer trigger). Default true for all Admin Dashboard shells.
+   * Mobile-only Owner bottom navbar (same nav model as the sidebar + drawer
+   * trigger). Default true for all Owner shells.
    */
   bottomNav?: boolean;
 }
@@ -91,7 +91,7 @@ export function AppShell({
     () => findActivePrimaryNavItem(tier1, pathname),
     [tier1, pathname],
   );
-  const showBottomNav = bottomNav && pathname !== "/admin";
+  const showBottomNav = bottomNav && pathname !== "/";
 
   return (
     <SidebarProvider open={true}>
@@ -244,7 +244,7 @@ export function AppShell({
         </div>
       </SidebarInset>
       {showBottomNav ? (
-        <AdminDashboardBottomNav tier1={tier1} tier2={tier2} />
+        <OwnerBottomNav tier1={tier1} tier2={tier2} />
       ) : null}
     </SidebarProvider>
   );

@@ -37,12 +37,18 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
   );
 });
 
-test("leave data is neutral while Office keeps its desktop presenter", () => {
+test("leave data is neutral while Owner surface keeps its desktop presenter", () => {
   const action = read(
     "apps/web/app/(protected)/hr/leave-request-actions.ts",
   );
   const service = read("apps/web/lib/hr/leave-request-data.ts");
-  const office = read(
+  const dashboardData = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts",
+  );
+  const migration = read(
+    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+  );
+  const ownerSurface = read(
     "apps/web/app/(protected)/hr/leave-requests-table.tsx",
   );
 
@@ -53,8 +59,34 @@ test("leave data is neutral while Office keeps its desktop presenter", () => {
   );
   assert.match(service, /fetchLeaveRequestRows/);
   assert.match(service, /annual_leave_balance/);
-  assert.match(office, /DataTable/);
-  assert.match(office, /@lib\/hr\/leave-request-model/);
+  assert.match(service, /get_leave_review_queue/);
+  assert.match(service, /leaveReviewQueueRowSchema/);
+  assert.doesNotMatch(service, /createServiceClient|staffRoleFromPositionCode/);
+  assert.match(dashboardData, /get_leave_review_queue/);
+  assert.doesNotMatch(
+    dashboardData,
+    /\.from\("leave_requests"\)|staffRoleFromPositionCode/,
+  );
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.get_leave_review_queue\([\s\S]*?SECURITY DEFINER[\s\S]*?SET search_path TO ''/,
+  );
+  assert.match(
+    migration,
+    /requester_profile\.branch_id = p_branch_id[\s\S]*?IN \('cashier', 'chef', 'branch_staff'\)/,
+  );
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.get_leave_review_queue\(bigint, boolean\)\s+TO authenticated/,
+  );
+  assert.doesNotMatch(
+    migration.match(
+      /CREATE OR REPLACE FUNCTION public\.get_leave_review_queue\([\s\S]*?COMMENT ON FUNCTION public\.get_leave_review_queue\(bigint, boolean\)/,
+    )?.[0] ?? "",
+    /base_salary|bank_account|contract_type|insurance_base|id_number/,
+  );
+  assert.match(ownerSurface, /DataTable/);
+  assert.match(ownerSurface, /@lib\/hr\/leave-request-model/);
   assert.equal(
     existsSync(
       resolve(

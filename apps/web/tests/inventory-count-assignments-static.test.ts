@@ -206,7 +206,7 @@ test("count assignment location picker is warehouse-only (D078)", () => {
   );
 });
 
-test("Branch stays touch-native while Office uses a management table and dialog", () => {
+test("Branch stays touch-native while Owner surface uses a management table and dialog", () => {
   const branchClientSource = readWeb(
     "app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
   );
@@ -231,7 +231,7 @@ test("Branch stays touch-native while Office uses a management table and dialog"
   assert.doesNotMatch(
     countAssignmentsClientSource,
     /useSwipeReveal|useLongPress|<Drawer/,
-    "Office count assignment must not carry hidden touch gestures or a mobile drawer",
+    "Owner surface count assignment must not carry hidden touch gestures or a mobile drawer",
   );
 });
 

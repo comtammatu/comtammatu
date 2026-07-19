@@ -77,25 +77,15 @@ export function getKdsAudioModeKey(branchId: number): string {
   return `kds:audio-mode:${String(branchId)}`;
 }
 
-export function getKdsSoundPrefKey(branchId: number): string {
-  return `kds:sound:${String(branchId)}`;
-}
-
 export function getPosAudioModeKey(branchId: number): string {
   return `pos:audio-mode:${String(branchId)}`;
 }
 
-export function getPosSoundPrefKey(branchId: number): string {
-  return `pos:sound:${String(branchId)}`;
-}
-
 export function resolveAudioMode(
   storedMode: string | null,
-  legacySound: string | null,
 ): OperationalAudioMode {
   const known = AUDIO_MODES.find((mode) => mode === storedMode);
-  if (known !== undefined) return known;
-  return legacySound === "1" ? "beep" : "off";
+  return known ?? "off";
 }
 
 export function cycleAudioMode(

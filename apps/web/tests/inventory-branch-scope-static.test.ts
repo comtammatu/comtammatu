@@ -35,6 +35,7 @@ function claims(
     tenant_id: 1,
     branch_id: branchId,
     user_role: role,
+    position_code: role === "branch_staff" ? "cleaner" : role,
   };
 }
 

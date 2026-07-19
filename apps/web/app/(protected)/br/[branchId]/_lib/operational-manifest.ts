@@ -29,9 +29,9 @@ const APP_LABELS: Record<
   },
 };
 
-// The operator app is one installable app for the whole operator plane. Its
-// identity/start URL stay on the root work-location picker; branch remains URL
-// state. Single-job stations still keep route-specific install identities.
+// The operator app is one installable app per branch runtime. Its identity and
+// start URL keep branch scope in the URL. Single-job stations keep their own
+// route-specific install identities.
 const OPERATOR_APP: OperationalApp = "operator";
 
 const OPERATIONAL_MANIFEST_REVALIDATE_SECONDS = 3600;
@@ -55,7 +55,7 @@ function buildOperationalManifest(app: OperationalApp, branchId: string) {
   const appConfig = APP_LABELS[app];
   const isOperator = app === OPERATOR_APP;
   const rootUrl = `/br/${branchId}`;
-  const appUrl = isOperator ? "/" : `${rootUrl}/${app}`;
+  const appUrl = isOperator ? rootUrl : `${rootUrl}/${app}`;
 
   return {
     id: appUrl,

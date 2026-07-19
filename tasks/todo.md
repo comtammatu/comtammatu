@@ -50,14 +50,14 @@ Evidence: Focused server/action coverage for one active warehouse, no active war
 
 - [ ] Move sole-location resolution to the server boundary, keep the receiving-location card hidden for one location, and add focused coverage.
 
-## Move shared inventory logic out of the Office route tree
+## Move shared inventory logic out of the Owner surface route tree
 
 State: ready
 Kind: debt
 Tier: T2
 Lane: inventory
-Exit: Branch and Office import `format`, `purchase-units`, `reference-cost`, `grn-draft`, and `types` from `apps/web/lib/inventory/`, and the operator/Office boundary allowlist is narrowed.
-Evidence: Import-boundary guard plus focused inventory tests and a source search showing no shared pure-logic imports from the Office route tree.
+Exit: Branch and Owner surface import `format`, `purchase-units`, `reference-cost`, `grn-draft`, and `types` from `apps/web/lib/inventory/`, and the operator/Owner surface boundary allowlist is narrowed.
+Evidence: Import-boundary guard plus focused inventory tests and a source search showing no shared pure-logic imports from the Owner surface route tree.
 
 - [ ] Move the five shared modules without forking behavior, update both planes, and tighten the allowlist to action boundaries only.
 
@@ -67,7 +67,7 @@ State: ready
 Kind: defect
 Tier: T2
 Lane: inventory
-Exit: No Branch operator surface links to the retired recipe route, while recipe administration remains available only through its approved Office surface.
+Exit: No Branch operator surface links to the retired recipe route, while recipe administration remains available only through its approved Owner surface surface.
 Evidence: Route/link guard covering navigation config and operator stock surfaces.
 
 - [ ] Delete the surviving `${basePath}/recipes` affordance and add a deterministic guard against links to the retired operator route.

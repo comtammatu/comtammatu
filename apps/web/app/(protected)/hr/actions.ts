@@ -240,10 +240,8 @@ export async function fetchEmployees(): Promise<ActionResult> {
     branchManagerBranchId = profileBranch?.branch_id ?? null;
   }
 
-  // Branch manager read path is intentionally service-role backed:
-  // 1) supports older role-template states where `hr:view_employee`
-  //    has not been backfilled yet,
-  // 2) keeps tenant/branch scoping enforced in code for explicit safety.
+  // Employee rows contain Owner-only payroll and identity fields, so the
+  // Branch Manager projection stays limited and exact-branch here.
   const employeeClient = isBranchManager
     ? createServiceClient()
     : baseCtx.supabase;
@@ -285,7 +283,7 @@ export const createEmployeeAccount = withAction(
     schema: createEmployeeAccountSchema,
     permission: PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
   },
-  async (data, { claims, supabase }) => {
+  async (data, { claims, supabase, user }) => {
     const role = staffRoleFromPositionCode(data.positionCode);
     if (role === "unassigned" || role === "owner") {
       return {
@@ -366,12 +364,9 @@ export const createEmployeeAccount = withAction(
         app_metadata: {
           tenant_id: claims.tenant_id,
           branch_id: effectiveBranchId ?? null,
-          role,
-          user_role: role,
-          access_bucket: role,
-          position: data.positionCode,
           position_code: data.positionCode,
           full_name: data.fullName,
+          provisioned_by: user.id,
         },
         user_metadata: { full_name: data.fullName },
       });
@@ -596,7 +591,7 @@ export const updateEmployee = withAction(
           : (employee.profiles?.branch_id ?? undefined);
 
       const { error: profileError } = await supabase.rpc(
-        "admin_update_profile",
+        "update_staff_profile",
         {
           p_target_id: employee.profile_id,
           p_full_name:
@@ -607,7 +602,7 @@ export const updateEmployee = withAction(
             data.phone !== undefined
               ? data.phone || undefined
               : (employee.profiles?.phone ?? undefined),
-          p_role: finalPositionCode ?? undefined,
+          p_position_code: finalPositionCode ?? undefined,
           p_branch_id: targetBranchId,
           p_is_active:
             data.isActive !== undefined
@@ -1061,7 +1056,11 @@ function mapForceCloseAttendanceError(message: string | undefined): string {
   }
   if (
     message?.includes("forbidden_checkout_approval") ||
-    message?.includes("not_authenticated_or_mismatch")
+    message?.includes("not_authenticated_or_mismatch") ||
+    message?.includes("force_close_scope_mismatch") ||
+    message?.includes("cannot_force_close_own_attendance") ||
+    message?.includes("force_close_hierarchy_not_allowed") ||
+    message?.includes("force_close_approver_not_allowed")
   ) {
     return "Không có quyền đóng ca tại chi nhánh này.";
   }
@@ -1093,7 +1092,7 @@ export const forceCloseStaleAttendance = withAction(
         : "Force closed: Quên kết ca trong ngày (không tính công)";
 
     const { data: checkOutTime, error } = await supabase.rpc(
-      "admin_force_close_attendance",
+      "force_close_stale_attendance",
       {
         p_tenant_id: claims.tenant_id,
         p_branch_id: data.branchId,

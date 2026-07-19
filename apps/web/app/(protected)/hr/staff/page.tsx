@@ -11,7 +11,7 @@ import type { StaffRow } from "./staff-table";
 
 interface StaffPageProps {
   searchParams: Promise<{
-    role?: string;
+    position?: string;
     branch?: string;
     status?: string;
   }>;
@@ -34,8 +34,8 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
       .order("label_vi"),
   ]);
 
-  // Build staff query — role is derived from positions.code via the role-bridge mapper.
-  // Role/owner filtering happens in JS below (position→role bucket is a
+  // Build staff query — role is derived from positions.code via the role mapper.
+  // Role/owner filtering happens in JS below (position→role is a
   // mapping table, not a column), so bound the fetch itself instead.
   let query = supabase
     .from("profiles")
@@ -80,7 +80,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     if (
       bucket === "unassigned" ||
       bucket === "owner" ||
-      position.code === "waiter"
+      position.code === "archived_staff"
     ) {
       return [];
     }
@@ -95,10 +95,10 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   const staff: StaffRow[] = allStaff.filter((s) => {
     if (s.role === "owner") return false;
     if (
-      params.role &&
-      positionOptions.some((option) => option.value === params.role)
+      params.position &&
+      positionOptions.some((option) => option.value === params.position)
     ) {
-      return s.position_code === params.role;
+      return s.position_code === params.position;
     }
     return true;
   });
@@ -106,8 +106,8 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   return (
     <AppPage width="xwide">
       <AppPageHeader
-        title={messages.admin.staffPage.title}
-        description={messages.admin.staffPage.description}
+        title={messages.owner.staffPage.title}
+        description={messages.owner.staffPage.description}
         actions={
           <>
             <AddStaffButton

@@ -44,7 +44,7 @@ test("section item stays lit across its own sub-routes", () => {
   assert.equal(isNavItemActive(revenue, "/finance"), false);
 });
 
-test("Admin Dashboard module switcher stays lit across its module", () => {
+test("Owner surface module switcher stays lit across its module", () => {
   const adminModule = navItem("/finance");
 
   assert.equal(isNavItemActive(adminModule, "/finance/revenue"), true);
@@ -70,15 +70,15 @@ test("finance deep-nav landing is wired exact, mirroring inventory", () => {
   );
 });
 
-test("mobile Admin Dashboard bottom nav reuses the shell nav model", () => {
+test("mobile Owner surface bottom nav reuses the shell nav model", () => {
   const appShell = read("apps/web/app/components/app-shell.tsx");
   const bottomNav = read(
-    "apps/web/app/components/admin-dashboard-bottom-nav.tsx",
+    "apps/web/app/components/owner-bottom-nav.tsx",
   );
 
   assert.match(
     appShell,
-    /<AdminDashboardBottomNav tier1=\{tier1\} tier2=\{tier2\}/,
+    /<OwnerBottomNav tier1=\{tier1\} tier2=\{tier2\}/,
     "AppShell must pass the shared nav model to the mobile bottom nav",
   );
   assert.match(bottomNav, /tier2: ShellNavGroup\[\]/);
@@ -95,8 +95,8 @@ test("mobile Admin Dashboard bottom nav reuses the shell nav model", () => {
   );
   assert.match(
     appShell,
-    /bottomNav && pathname !== "\/admin"/,
-    "the Admin Dashboard launcher owns its module grid and must not duplicate Settings deep-nav in the mobile bottom bar",
+    /bottomNav && pathname !== "\/"/,
+    "the Owner surface launcher owns its module grid and must not duplicate Settings deep-nav in the mobile bottom bar",
   );
   assert.doesNotMatch(
     bottomNav,
@@ -110,7 +110,7 @@ test("mobile Admin Dashboard bottom nav reuses the shell nav model", () => {
   );
 });
 
-test("Admin Dashboard shell renders one sidebar with nested active-tab sub-nav", () => {
+test("Owner surface shell renders one sidebar with nested active-tab sub-nav", () => {
   const appShell = read("apps/web/app/components/app-shell.tsx");
 
   assert.equal(
@@ -126,27 +126,27 @@ test("Admin Dashboard shell renders one sidebar with nested active-tab sub-nav",
   assert.match(
     appShell,
     /<SidebarProvider open=\{true\}>/,
-    "Admin Dashboard sidebar must default open and remain controlled open",
+    "Owner surface sidebar must default open and remain controlled open",
   );
   assert.match(
     appShell,
     /collapsible="offcanvas"/,
-    "desktop Admin Dashboard sidebar must not use collapsed icon mode",
+    "desktop Owner surface sidebar must not use collapsed icon mode",
   );
   assert.doesNotMatch(
     appShell,
     /<SidebarRail|collapsible="icon"/,
-    "Admin Dashboard sidebar must not expose the desktop collapsed rail mode",
+    "Owner surface sidebar must not expose the desktop collapsed rail mode",
   );
   assert.doesNotMatch(
     appShell,
     /BranchSwitcher|branchOptions|showBackLink|resolveRoleHomeLink|brand\./,
-    "Admin Dashboard sidebar chrome must stay fixed and must not accept module branch/back/brand state",
+    "Owner surface sidebar chrome must stay fixed and must not accept module branch/back/brand state",
   );
   assert.match(
     appShell,
     /<BrandMark\s+variant="seal"/,
-    "Admin Dashboard sidebar brand must render the fixed tenant seal",
+    "Owner surface sidebar brand must render the fixed tenant seal",
   );
   assert.match(
     appShell,

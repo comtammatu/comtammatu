@@ -49,7 +49,7 @@ test("growth lists opted in", () => {
     "../app/(protected)/orders/refunds-client.tsx",
     "../app/(protected)/inventory/grn/grn-list-client.tsx",
     "../app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
-    "../app/(protected)/admin/settings/printers/jobs/print-jobs-client.tsx",
+    "../app/(protected)/settings/printers/jobs/print-jobs-client.tsx",
     "../app/(protected)/hr/staff/audit/permission-audit-table.tsx",
   ]) {
     const client = readFileSync(join(import.meta.dirname, rel), "utf8");

@@ -8,7 +8,6 @@ import {
 } from "react";
 import {
   CalendarCheck as IconCalendarCheck,
-  ClipboardList as IconClipboardList,
   UsersRound as IconUsersRound,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
@@ -22,7 +21,7 @@ import { messages } from "@lib/messages";
 
 const copy = messages.operator.teamBoard;
 
-export type TeamWorkspaceTabValue = "board" | "members" | "assignments";
+export type TeamWorkspaceTabValue = "board" | "members";
 
 type TeamWorkspaceTabItem = {
   value: TeamWorkspaceTabValue;
@@ -44,11 +43,6 @@ const tabItems: TeamWorkspaceTabItem[] = [
     label: copy.tabs.members.label,
     Icon: IconUsersRound,
   },
-  {
-    value: "assignments",
-    label: copy.tabs.assignments.label,
-    Icon: IconClipboardList,
-  },
 ];
 
 function replaceTabInUrl(value: TeamWorkspaceTabValue) {
@@ -66,12 +60,10 @@ export function TeamWorkspaceTabs({
   initialValue,
   board,
   members,
-  assignments,
 }: {
   initialValue: TeamWorkspaceTabValue;
   board: ReactNode;
   members: ReactNode;
-  assignments: ReactNode;
 }) {
   const [value, setValue] = useState<TeamWorkspaceTabValue>(initialValue);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
@@ -79,8 +71,7 @@ export function TeamWorkspaceTabs({
     0,
     tabItems.findIndex((item) => item.value === value),
   );
-  const activeContent =
-    value === "board" ? board : value === "members" ? members : assignments;
+  const activeContent = value === "board" ? board : members;
 
   function handleValueChange(nextValue: string) {
     const nextTab = nextValue as TeamWorkspaceTabValue;
@@ -97,11 +88,11 @@ export function TeamWorkspaceTabs({
     <Tabs value={value} onValueChange={handleValueChange} className="gap-3">
       <TabsList
         aria-label={copy.tabsAriaLabel}
-        className="sticky top-0 z-20 grid h-12 min-h-12 w-full grid-cols-3 items-center overflow-hidden rounded-md bg-background/95 p-1 backdrop-blur group-data-horizontal/tabs:!h-12"
+        className="sticky top-0 z-20 grid h-12 min-h-12 w-full grid-cols-2 items-center overflow-hidden rounded-md bg-background/95 p-1 backdrop-blur group-data-horizontal/tabs:!h-12"
       >
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-1 left-1 right-1 grid grid-cols-3"
+          className="pointer-events-none absolute inset-y-1 left-1 right-1 grid grid-cols-2"
         >
           <span
             className="rounded-md bg-background transition-transform duration-150 motion-reduce:transition-none"

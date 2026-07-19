@@ -14,10 +14,7 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
   );
   const data = read("apps/web/lib/inventory/branch-count-assignment-data.ts");
-  const team = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/team/assignments/assignments-content.tsx",
-  );
-  const officeClient = read(
+  const ownerClient = read(
     "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   );
 
@@ -38,9 +35,7 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
     client,
     /DataTable|Drawer|buildBranchCountHref|openCountScreen/,
   );
-  assert.match(team, /BranchCountAssignmentsClient/);
-  assert.doesNotMatch(team, /CountAssignmentsPageContent/);
-  assert.doesNotMatch(officeClient, /buildBranchCountHref|openCountScreen/);
+  assert.doesNotMatch(ownerClient, /buildBranchCountHref|openCountScreen/);
 });
 
 test("Branch count slip review owns a touch queue and Branch revalidation", () => {
@@ -85,7 +80,7 @@ test("Branch count slip review owns a touch queue and Branch revalidation", () =
   );
 });
 
-test("Office count management keeps desktop-responsive presenters", () => {
+test("Owner surface count management keeps desktop-responsive presenters", () => {
   const assignments = read(
     "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
   );

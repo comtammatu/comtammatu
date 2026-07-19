@@ -29,7 +29,7 @@ declare const self: ServiceWorkerGlobalScope;
 // Protected route prefixes. Their SSR'd HTML embeds user identity, so the
 // service worker must never persist a navigation response for them.
 const AUTHED_NAV_PREFIXES = [
-  "/admin",
+  "/",
   "/br",
   "/inventory",
   "/finance",
@@ -45,13 +45,12 @@ const isAuthedPath = (pathname: string) =>
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
 
-// Operator entry and shell only (PWA-2, D062) — `/` plus the operator plane's
-// own routes under `/br/{branchId}` (dashboard/orders/profile/settings/shift/
+// Branch shell only (PWA-2, D062) — branch-scoped routes under
+// `/br/{branchId}` (dashboard/orders/profile/settings/shift/
 // stock/team), excluding the POS/KDS/Runner station apps. Stations keep their
 // existing offline handling untouched.
 const BRANCH_STATION_SEGMENTS = ["pos", "kds", "runner"];
 const isOperatorShellPath = (pathname: string) => {
-  if (pathname === "/") return true;
   if (!pathname.startsWith("/br/")) return false;
   const segments = pathname.split("/").filter(Boolean);
   const stationSegment = segments[2];

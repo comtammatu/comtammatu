@@ -113,7 +113,7 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 Inventory owns the detailed stock-value workspace. Finance displays only the
 current inventory-value card and does not expose a duplicate inventory route.
 
-There is no current `/admin/accounting/*` app surface.
+There is no current `/accounting/*` app surface.
 
 ## Acceptance Criteria
 
