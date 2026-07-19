@@ -202,6 +202,62 @@ VALUES
   ('supplier_return:read','inventory_procurement','Xem phiếu trả hàng nhà cung cấp','either')
 ON CONFLICT (key) DO NOTHING;
 
+UPDATE public.permission_keys
+SET is_delegable_to_staff = key = ANY (ARRAY[
+  'dashboard:view',
+  'hr:approve_checkout',
+  'hr:approve_leave_request',
+  'hr:request_leave',
+  'hr:view_employee',
+  'inventory:adjust_approve',
+  'inventory:count_approve',
+  'inventory:count_assign',
+  'inventory:grn_express_extend',
+  'inventory:item_review_override_set',
+  'inventory:production_confirm',
+  'inventory:production_create',
+  'inventory:read',
+  'inventory:stocktake_complete',
+  'inventory:stocktake_create',
+  'inventory:stocktake_recount',
+  'inventory:transfer_create',
+  'inventory:transfer_receive',
+  'inventory:waste_approve',
+  'inventory:write',
+  'inventory:writeoff',
+  'kds:mark_ready',
+  'kds:recall',
+  'kds:use',
+  'menu:read',
+  'orders:read',
+  'orders:void',
+  'orders:write',
+  'pos:apply_discount',
+  'pos:close_shift',
+  'pos:close_shift_variance_override',
+  'pos:confirm_payment',
+  'pos:open_cashbox',
+  'pos:print',
+  'pos:reprint_receipt',
+  'pos:send_kitchen',
+  'pos:use',
+  'pos:void_order',
+  'printer:manage',
+  'procurement:grn_confirm',
+  'procurement:grn_create',
+  'procurement:override_code_rotate',
+  'procurement:price_list_read',
+  'procurement:read',
+  'procurement:supplier_manage',
+  'reports:export',
+  'reports:view_branch',
+  'settings:branch',
+  'staff:view',
+  'supplier_return:confirm',
+  'supplier_return:create',
+  'supplier_return:read'
+]::text[]);
+
 -- 5) Role templates (mirrored from prod permission_keys; one per position_code).
 INSERT INTO public.role_templates (tenant_id, name, position_code, permission_keys, is_system)
 SELECT t.id, v.name, v.position_code, v.permission_keys::text[], true
