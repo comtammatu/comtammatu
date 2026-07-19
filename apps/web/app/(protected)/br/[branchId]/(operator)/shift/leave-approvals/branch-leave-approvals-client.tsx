@@ -248,7 +248,11 @@ export function BranchLeaveApprovalsClient({
       </Tabs>
 
       <BranchOperatorPanel
-        title={view === "pending" ? copy.approvalsTitle : copy.historyTab(0)}
+        title={
+          view === "pending"
+            ? copy.approvalsTitle
+            : copy.historyTab(historyRows.length)
+        }
         description={copy.summary(pendingRows.length, rows.length)}
         icon={view === "pending" ? IconCalendarCheck : IconCalendarX}
         badge={{ children: visibleRows.length }}

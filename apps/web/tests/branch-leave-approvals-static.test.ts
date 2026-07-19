@@ -28,6 +28,10 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
   assert.match(client, /<button[\s\S]*type="button"[\s\S]*setSelectedId/);
   assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
   assert.match(client, /useBranchOpsEvents\(\{[\s\S]*branchId/);
+  assert.match(
+    client,
+    /view === "pending"[\s\S]*copy\.historyTab\(historyRows\.length\)/,
+  );
   assert.match(client, /md:grid-cols-2/);
   assert.match(client, /size="touch(?:-lg)?"/);
   assert.match(client, /sticky bottom-0/);
