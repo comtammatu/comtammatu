@@ -47,6 +47,24 @@ const databaseTypes = read("packages/database/src/types/database.types.ts");
 const loader = read(
   "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
 );
+const expenseOptionsLoader = read(
+  "apps/web/app/(protected)/finance/_lib/expense-match-options.ts",
+);
+const bankTransactionsPage = read(
+  "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
+);
+
+test("bank transaction initial reads share the proxy-authenticated RSC session", () => {
+  assert.match(expenseOptionsLoader, /loadAuthState\(\)/);
+  assert.doesNotMatch(expenseOptionsLoader, /getAuthContextWithPermission/);
+  assert.match(bankTransactionsPage, /loadExpenseMatchOptions\(/);
+  assert.doesNotMatch(bankTransactionsPage, /fetchExpenseMatchOptions/);
+  assert.doesNotMatch(
+    actions,
+    /export async function fetchExpenseMatchOptions/,
+  );
+  assert.match(actions, /getAuthContextWithPermission\(/);
+});
 
 test("SePay expense matching preserves exact whole-document allocation", () => {
   assert.match(
@@ -264,7 +282,7 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
     /targetMethod === "transfer" && !updated\.transfer_content[\s\S]*Không thể tạo nội dung chuyển khoản/,
   );
   assert.match(
-    actions,
+    expenseOptionsLoader,
     /payment_method\.eq\.unpaid,payment_method\.eq\.transfer,transfer_content\.not\.is\.null/,
   );
   assert.match(expenseClient, /copy\.transferInstruction\.copy/);
@@ -345,18 +363,21 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
 });
 
 test("SePay expense matching handles unapplied migration schema errors", () => {
-  assert.match(actions, /PGRST205/);
-  assert.match(actions, /isExpenseMatchSchemaMissing\(matchErr\.code\)/);
+  assert.match(expenseOptionsLoader, /PGRST205/);
+  assert.match(
+    expenseOptionsLoader,
+    /isExpenseMatchSchemaMissing\(matchErr\.code\)/,
+  );
   assert.match(loader, /PGRST205/);
 });
 
 test("SePay expense loaders never return partial reconciliation evidence", () => {
   assert.match(
-    actions,
+    expenseOptionsLoader,
     /if \(matchErr\) \{[\s\S]*?if \(isExpenseMatchSchemaMissing\(matchErr\.code\)\) \{[\s\S]*?break;[\s\S]*?throw new Error\("Unable to load bank transaction expense matches"\)/,
   );
   assert.match(
-    actions,
+    expenseOptionsLoader,
     /if \(webhookErr\) \{[\s\S]*?throw new Error\("Unable to load webhook expense matches"\)/,
   );
 });

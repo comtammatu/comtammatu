@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight as IconArrowRight,
   Boxes as IconBoxes,
+  Landmark as IconBank,
   ReceiptText as IconReceiptText,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
@@ -35,6 +36,7 @@ import {
   fetchFinanceCockpit,
   type FinanceException,
 } from "./_lib/finance-cockpit";
+import { fetchCashSummary } from "./_lib/cash-cockpit";
 import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
 
 const financeCopy = messages.finance;
@@ -103,7 +105,10 @@ export default async function FinancePage({
   const rawParams = searchParams ? await searchParams : {};
   const params = parseFinanceParams(rawParams);
   const resolved = resolveFinanceRange(params);
-  const cockpit = await fetchFinanceCockpit(params, resolved);
+  const [cockpit, cash] = await Promise.all([
+    fetchFinanceCockpit(params, resolved),
+    fetchCashSummary(),
+  ]);
 
   return (
     <AppPage width="wide" density="compact">
@@ -172,6 +177,39 @@ export default async function FinancePage({
           value={formatVND(cockpit.kpis.operatingExpense)}
           hint={financeCopy.basic.kpis.operatingExpenseHint}
           href="/finance/expenses"
+        />
+      </KpiRow>
+
+      <KpiRow density="compact" className="lg:grid-cols-2 xl:grid-cols-2">
+        <KpiCard
+          icon={<IconWallet className="size-4 text-muted-foreground" />}
+          label={financeCopy.basic.kpis.cashOnHand}
+          value={
+            cash.hasOpening
+              ? formatVND(cash.cashOnHand)
+              : financeCopy.common.noValue
+          }
+          hint={
+            cash.hasOpening
+              ? financeCopy.basic.kpis.currentFundsScope
+              : financeCopy.basic.kpis.cashOnHandMissing
+          }
+        />
+
+        <KpiCard
+          icon={<IconBank className="size-4 text-muted-foreground" />}
+          label={financeCopy.basic.kpis.bankOnHand}
+          value={
+            cash.hasBankOpening
+              ? formatVND(cash.bankOnHand)
+              : financeCopy.common.noValue
+          }
+          hint={
+            cash.hasBankOpening
+              ? financeCopy.basic.kpis.currentFundsScope
+              : financeCopy.basic.kpis.bankOnHandMissing
+          }
+          href="/finance/bank-transactions"
         />
       </KpiRow>
 

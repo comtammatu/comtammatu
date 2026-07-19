@@ -7,13 +7,13 @@ import {
   fetchSepayBankTransactions,
   fetchSepayPaymentWebhookSummary,
 } from "../_lib/sepay-bank-transactions";
+import { loadExpenseMatchOptions } from "../_lib/expense-match-options";
 import { FilterBar } from "../components/filter-bar";
 import {
   type FinanceParams,
   parseFinanceParams,
   resolveFinanceRange,
 } from "../_lib/finance-params";
-import { fetchExpenseMatchOptions } from "../expense-actions";
 import { BankTransactionsTable } from "./bank-transactions-table";
 
 const copy = messages.finance.bankTransactions;
@@ -39,16 +39,9 @@ export default async function BankTransactionsPage({
     fetchSepayBankTransactions(range),
     fetchSepayPaymentWebhookSummary(range),
   ]);
-  const expenseOptionsRes = await fetchExpenseMatchOptions({
-    includeExpenseIds: Array.from(
-      new Set(transactions.flatMap((transaction) => transaction.expenseIds)),
-    ),
-  });
-
-  if (!expenseOptionsRes.success || !expenseOptionsRes.data) {
-    throw new Error("Unable to load expense match options");
-  }
-  const expenseOptions = expenseOptionsRes.data;
+  const expenseOptions = await loadExpenseMatchOptions(
+    transactions.flatMap((transaction) => transaction.expenseIds),
+  );
   const canLinkPayments = authState.claims.user_role === "owner";
 
   return (

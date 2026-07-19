@@ -5,13 +5,21 @@
 Enterprise accounting is outside the current Finance product boundary.
 
 Finance Basic is the default Finance experience when `/finance` opens as
-`Sức khỏe tài chính` and shows four decision cards without ambiguous revenue
-labels:
+`Sức khỏe tài chính` and shows four primary decision cards without ambiguous
+revenue labels:
 
 - **Tiền đã thu**: kỳ này đã thu bao nhiêu tiền?
 - **Doanh thu ròng**: doanh thu sau giảm giá và trước VAT là bao nhiêu?
 - **Giá trị tồn kho**: hiện đang giữ bao nhiêu tiền trong kho?
 - **Chi vận hành**: kỳ này đã ghi nhận bao nhiêu chi phí vận hành?
+
+Below those period cards, keep the tenant-wide current-funds row:
+
+- **Tiền mặt ở quán**: opening cash plus actual cash collections minus payouts.
+- **Tiền trong ngân hàng**: opening bank balance plus signed SePay movement.
+
+These two balances do not follow the page's period or branch filter. Show `—`
+until the owner has set the applicable opening anchor.
 
 Gross profit and food-cost coverage remain supporting analysis in
 `/finance/food-cost`; they are not default landing cards.

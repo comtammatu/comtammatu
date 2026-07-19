@@ -18,6 +18,10 @@ import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
 import type { SepayRefundMatchOption } from "./_lib/sepay-bank-transaction-model";
 import {
+  fetchExpenseMatchMap,
+  type ExpenseRow,
+} from "./_lib/expense-match-options";
+import {
   EXPENSE_CATEGORIES_BY_GROUP,
   EXPENSE_CATEGORY_VALUES,
   EXPENSE_PAYMENT_METHODS,
@@ -27,22 +31,10 @@ const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export interface ExpenseRow {
-  id: number;
-  branch_id: number | null;
-  expense_date: string;
-  category: string;
-  amount: number;
-  payment_method: string;
-  paid_at: string | null;
-  transfer_content: string | null;
-  vendor_name: string | null;
-  note: string | null;
-  created_at: string;
-  matchedEventIds: number[];
-}
-
-export type ExpenseMatchOption = ExpenseRow;
+export type {
+  ExpenseMatchOption,
+  ExpenseRow,
+} from "./_lib/expense-match-options";
 
 export interface CreateExpenseResult {
   id: number;
@@ -73,16 +65,6 @@ interface RefundSearchRow {
     | { order_number: string | null }
     | { order_number: string | null }[]
     | null;
-}
-
-interface ExpenseMatchRow {
-  webhook_event_id: number;
-  expense_id: number;
-}
-
-interface WebhookExpenseMatchRow {
-  id: number;
-  expense_id: number | null;
 }
 
 const createExpenseSchema = z.object({
@@ -793,189 +775,4 @@ export async function matchSepayTransactionWithRefunds(
   });
 
   return { success: true };
-}
-
-async function fetchExpenseMatchMap(
-  supabase: NonNullable<
-    Awaited<ReturnType<typeof getAuthContextWithPermission>>
-  >["supabase"],
-  tenantId: number,
-  expenseIds?: readonly number[],
-): Promise<Map<number, number[]>> {
-  const matchedByExpense = new Map<number, Set<number>>();
-  const addMatch = (expenseId: number, eventId: number) => {
-    const current = matchedByExpense.get(expenseId) ?? new Set<number>();
-    current.add(eventId);
-    matchedByExpense.set(expenseId, current);
-  };
-  const toEventIdMap = () =>
-    new Map(
-      Array.from(matchedByExpense, ([expenseId, eventIds]) => [
-        expenseId,
-        Array.from(eventIds),
-      ]),
-    );
-  if (expenseIds?.length === 0) return new Map();
-
-  const idBatches: Array<readonly number[] | null> =
-    expenseIds == null
-      ? [null]
-      : Array.from({ length: Math.ceil(expenseIds.length / 500) }, (_, index) =>
-          expenseIds.slice(index * 500, (index + 1) * 500),
-        );
-  const resultPageSize = 1_000;
-  let matchSchemaAvailable = true;
-
-  for (const idBatch of idBatches) {
-    if (!matchSchemaAvailable) break;
-    for (let offset = 0; ; offset += resultPageSize) {
-      let matchQuery = supabase
-        .from("bank_transaction_expense_matches")
-        .select("webhook_event_id, expense_id")
-        .eq("tenant_id", tenantId)
-        .range(offset, offset + resultPageSize - 1);
-      if (idBatch != null) {
-        matchQuery = matchQuery.in("expense_id", [...idBatch]);
-      }
-      const { data: matchRows, error: matchErr } = await matchQuery;
-
-      if (matchErr) {
-        if (isExpenseMatchSchemaMissing(matchErr.code)) {
-          matchSchemaAvailable = false;
-          break;
-        }
-        console.error(
-          "[finance:expense-match] failed to load bank_transaction_expense_matches",
-          matchErr.code,
-        );
-        throw new Error("Unable to load bank transaction expense matches");
-      }
-
-      for (const row of (matchRows ?? []) as ExpenseMatchRow[]) {
-        addMatch(row.expense_id, row.webhook_event_id);
-      }
-      if ((matchRows?.length ?? 0) < resultPageSize) break;
-    }
-  }
-
-  for (const idBatch of idBatches) {
-    for (let offset = 0; ; offset += resultPageSize) {
-      let webhookQuery = supabase
-        .from("webhook_events")
-        .select("id, expense_id")
-        .eq("tenant_id", tenantId)
-        .eq("provider", "sepay")
-        .not("expense_id", "is", null)
-        .range(offset, offset + resultPageSize - 1);
-      if (idBatch != null) {
-        webhookQuery = webhookQuery.in("expense_id", [...idBatch]);
-      }
-      const { data: webhookRows, error: webhookErr } = await webhookQuery;
-
-      if (webhookErr) {
-        console.error(
-          "[finance:expense-match] failed to load webhook_event expense matches",
-          webhookErr.code,
-        );
-        throw new Error("Unable to load webhook expense matches");
-      }
-
-      for (const row of (webhookRows ?? []) as WebhookExpenseMatchRow[]) {
-        if (row.expense_id != null) {
-          addMatch(row.expense_id, row.id);
-        }
-      }
-      if ((webhookRows?.length ?? 0) < resultPageSize) break;
-    }
-  }
-
-  return toEventIdMap();
-}
-
-const fetchExpenseMatchOptionsSchema = z.object({
-  includeExpenseIds: z.array(z.number().int().positive()).max(500).optional(),
-});
-
-export async function fetchExpenseMatchOptions(
-  input?: z.infer<typeof fetchExpenseMatchOptionsSchema>,
-): Promise<ActionResult<ExpenseMatchOption[]>> {
-  const parsed = fetchExpenseMatchOptionsSchema.safeParse(input ?? {});
-  if (!parsed.success) {
-    return { success: false, error: "Dữ liệu không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
-
-  const { supabase, claims } = ctx;
-  const includeExpenseIds = Array.from(
-    new Set(parsed.data.includeExpenseIds ?? []),
-  );
-
-  const { data: candidateRows, error } = await supabase
-    .from("expenses")
-    .select(
-      "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
-    .or(
-      "payment_method.eq.unpaid,payment_method.eq.transfer,transfer_content.not.is.null",
-    )
-    .order("expense_date", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(150);
-
-  if (error) {
-    return { success: false, error: "Không tải được danh sách chi phí." };
-  }
-
-  let includedRows: NonNullable<typeof candidateRows> = [];
-  if (includeExpenseIds.length > 0) {
-    const includedResult = await supabase
-      .from("expenses")
-      .select(
-        "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
-      .in("id", includeExpenseIds);
-
-    if (includedResult.error) {
-      return { success: false, error: "Không tải được khoản chi đã khớp." };
-    }
-    includedRows = includedResult.data ?? [];
-  }
-
-  const rowsById = new Map(
-    (candidateRows ?? []).map((row) => [row.id, row] as const),
-  );
-  for (const row of includedRows) rowsById.set(row.id, row);
-  const rows = Array.from(rowsById.values());
-  const matchedByExpense = await fetchExpenseMatchMap(
-    supabase,
-    claims.tenant_id,
-    rows.map((row) => row.id),
-  );
-
-  return {
-    success: true,
-    data: rows.map((r) => ({
-      id: r.id,
-      branch_id: r.branch_id,
-      expense_date: r.expense_date,
-      category: r.category,
-      amount: Number(r.amount),
-      payment_method: r.payment_method,
-      paid_at: r.paid_at,
-      transfer_content: r.transfer_content,
-      vendor_name: r.vendor_name,
-      note: r.note,
-      created_at: r.created_at,
-      matchedEventIds: matchedByExpense.get(r.id) ?? [],
-    })),
-  };
 }

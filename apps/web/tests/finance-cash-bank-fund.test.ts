@@ -17,6 +17,21 @@ test("bank balance counts each signed SePay movement once", () => {
   );
 });
 
+test("finance landing shows current cash and bank balances", () => {
+  const page = read("apps/web/app/(protected)/finance/page.tsx");
+  const copy = read("apps/web/lib/messages/finance.ts");
+
+  assert.match(page, /fetchCashSummary\(\)/);
+  assert.match(page, /cash\.hasOpening[\s\S]*formatVND\(cash\.cashOnHand\)/);
+  assert.match(
+    page,
+    /cash\.hasBankOpening[\s\S]*formatVND\(cash\.bankOnHand\)/,
+  );
+  assert.match(copy, /cashOnHand: "Tiền mặt ở quán"/);
+  assert.match(copy, /bankOnHand: "Tiền trong ngân hàng"/);
+  assert.match(copy, /currentFundsScope: "Toàn quán"/);
+});
+
 // The bank fund follows the signed SePay account ledger; the cash fund follows
 // actual cash collections and payouts.
 test("bank fund pulls SePay in and out with the right sign", () => {

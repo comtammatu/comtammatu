@@ -240,6 +240,11 @@ export const finance = {
       inventoryValueHint: "Tồn hiện tại × giá vốn BQ hoặc giá nhập tham chiếu",
       operatingExpense: "Chi vận hành",
       operatingExpenseHint: "Đã ghi trong kỳ · không gồm giá vốn món",
+      cashOnHand: "Tiền mặt ở quán",
+      cashOnHandMissing: "Chưa đặt mốc tồn quỹ",
+      bankOnHand: "Tiền trong ngân hàng",
+      bankOnHandMissing: "Chưa đặt mốc ngân hàng",
+      currentFundsScope: "Toàn quán",
     },
   },
   nav: {
