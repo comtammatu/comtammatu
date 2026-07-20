@@ -367,7 +367,7 @@ export function BranchStockOnHandClient({
                       <SelectItem
                         key={option.value}
                         value={option.value}
-                        className="min-h-11 py-2.5"
+                        size="touch"
                       >
                         {option.label}
                       </SelectItem>
@@ -392,7 +392,7 @@ export function BranchStockOnHandClient({
                         <SelectItem
                           key={option.value}
                           value={option.value}
-                          className="min-h-11 py-2.5"
+                          size="touch"
                         >
                           {option.label}
                         </SelectItem>
@@ -408,26 +408,16 @@ export function BranchStockOnHandClient({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem
-                      value={STOCK_ALL_CATEGORY_VALUE}
-                      className="min-h-11 py-2.5"
-                    >
+                    <SelectItem value={STOCK_ALL_CATEGORY_VALUE} size="touch">
                       {stockCopy.filters.allCategories}
                     </SelectItem>
                     {categories.map((item) => (
-                      <SelectItem
-                        key={item}
-                        value={item}
-                        className="min-h-11 py-2.5"
-                      >
+                      <SelectItem key={item} value={item} size="touch">
                         {item}
                       </SelectItem>
                     ))}
                     {hasUncategorized ? (
-                      <SelectItem
-                        value={STOCK_NO_CATEGORY_VALUE}
-                        className="min-h-11 py-2.5"
-                      >
+                      <SelectItem value={STOCK_NO_CATEGORY_VALUE} size="touch">
                         {stockCopy.filters.noCategory}
                       </SelectItem>
                     ) : null}

@@ -158,6 +158,7 @@ export function ProductionRunsClient({
       <DataTable
         data={filteredItems}
         columns={columns}
+        pageSize={50}
         getRowKey={(row) => row.id.toString()}
         searchable
         searchPlaceholder="Tìm số lệnh, thành phẩm, chi nhánh..."

@@ -23,7 +23,7 @@ interface WasteReasonDropdownProps {
   manualOnly?: boolean;
   disabled?: boolean;
   id?: string;
-  size?: "sm" | "default" | "touch";
+  size?: "sm" | "default" | "field" | "touch";
   className?: string;
 }
 
@@ -67,7 +67,11 @@ export function WasteReasonDropdown({
           const isAlwaysT2 = isAlwaysTier2WasteReason(key);
           const isRisky = isRiskyWasteReason(key);
           return (
-            <SelectItem key={key} value={key}>
+            <SelectItem
+              key={key}
+              value={key}
+              size={size === "touch" ? "touch" : "default"}
+            >
               {WASTE_REASON_LABELS_VI[key]}
               {isAlwaysT2 ? " ⚠" : isRisky ? " ⚠" : ""}
             </SelectItem>

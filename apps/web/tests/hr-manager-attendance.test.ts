@@ -31,6 +31,10 @@ const leaveRequestActionsSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/leave-request-actions.ts"),
   "utf8",
 );
+const leaveRequestsTableSource = readFileSync(
+  join(process.cwd(), "app/(protected)/hr/leave-requests-table.tsx"),
+  "utf8",
+);
 
 test("HR attendance is a dedicated owner surface for clock in and clock out", () => {
   assert.doesNotMatch(
@@ -143,6 +147,67 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
       `HR actions must not expose ${forbidden}`,
     );
   }
+});
+
+test("attendance and leave approval data stay in their respective tabs", () => {
+  assert.doesNotMatch(
+    attendancePageSource,
+    /<AppSection title=\{copy\.attendanceTitle\}/,
+  );
+  assert.ok(
+    attendanceTableSource.indexOf("<AppToolbar") <
+      attendanceTableSource.indexOf("<SummaryView data={summary} />"),
+    "the filter toolbar must precede the data table",
+  );
+  assert.match(
+    attendanceTableSource,
+    /<AppSection\s+title=\{messages\.hr\.client\.attendanceTitle\}[\s\S]*<SummaryView data=\{summary\} \/>/,
+    "attendance data must render in its own section",
+  );
+  assert.doesNotMatch(
+    attendanceTableSource,
+    /fetchApprovedLeaveMonth|ApprovedLeavePanel/,
+    "attendance must not render approved leave data",
+  );
+  assert.match(
+    leaveRequestsTableSource,
+    /const approvedMonthRows = useMemo\([\s\S]*request\.status === "approved"[\s\S]*request\.start_date <= endDate[\s\S]*request\.end_date >= startDate/,
+    "leave approval history must derive approved rows for the selected month",
+  );
+  assert.match(
+    leaveRequestsTableSource,
+    /value: "approved-month",[\s\S]*copy\.approvedMonthTab[\s\S]*<TabsContent value="approved-month">[\s\S]*<AppToolbar[\s\S]*<AppSection title=\{copy\.approvedMonthTitle\}[\s\S]*data=\{approvedMonthRows\}/,
+    "approved monthly leave needs its own view, with filters before its data section",
+  );
+  assert.match(
+    leaveRequestsTableSource,
+    /<AppPageTabs\s+defaultValue="pending"\s+paramKey="leave-view"/,
+    "leave views must not overwrite the attendance tab URL state",
+  );
+  assert.doesNotMatch(
+    attendancePageSource,
+    /<TabsContent value="leave">[\s\S]*<AppSection/,
+    "leave filters must not be enclosed by a page-level data section",
+  );
+  assert.doesNotMatch(
+    leaveRequestActionsSource,
+    /fetchApprovedLeaveMonth/,
+    "leave approval tab should reuse its loaded history rather than fetch a duplicate dataset",
+  );
+  assert.match(
+    attendanceTableSource,
+    /key: "index",\s*header: "#"[\s\S]*key: "employee",\s*header: "Họ tên"[\s\S]*key: "workdays",\s*header: "Số ngày công"[\s\S]*key: "work_hours",\s*header: "Số giờ công"/,
+  );
+  assert.match(
+    attendanceTableSource,
+    /row\.full_name[\s\S]*row\.employee_code/,
+    "employee name and code should remain a two-line identity cell",
+  );
+  assert.doesNotMatch(attendanceTableSource, /header: "Ca chưa kết"/);
+  assert.match(
+    hrActionsSource,
+    /employee_id, date, check_in, check_out,[\s\S]*calculateAttendanceWorkHours\([\s\S]*record\.check_in,[\s\S]*record\.check_out/,
+  );
 });
 
 test("branch manager attendance and leave reviews remain branch-scoped", () => {

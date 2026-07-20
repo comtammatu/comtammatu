@@ -198,7 +198,11 @@ export function BranchCountAssignmentsClient({
               </SelectTrigger>
               <SelectContent>
                 {data.locationOptions.map((location) => (
-                  <SelectItem key={location.id} value={String(location.id)}>
+                  <SelectItem
+                    key={location.id}
+                    value={String(location.id)}
+                    size="touch"
+                  >
                     {location.label}
                   </SelectItem>
                 ))}
@@ -233,11 +237,15 @@ export function BranchCountAssignmentsClient({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_SHIFTS_VALUE}>
+                <SelectItem value={ALL_SHIFTS_VALUE} size="touch">
                   {INVENTORY_VI.countAssignAllShifts}
                 </SelectItem>
                 {data.shiftOptions.map((shift) => (
-                  <SelectItem key={shift.id} value={String(shift.id)}>
+                  <SelectItem
+                    key={shift.id}
+                    value={String(shift.id)}
+                    size="touch"
+                  >
                     {shift.name} · {formatVNClockTime(shift.startTime)}-
                     {formatVNClockTime(shift.endTime)}
                   </SelectItem>
@@ -440,7 +448,7 @@ export function BranchCountAssignmentsClient({
               )}
             </div>
           </ScrollArea>
-          <SheetFooter className="workflow-safe-pb">
+          <SheetFooter>
             <Button
               type="button"
               variant="outline"

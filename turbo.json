@@ -42,10 +42,7 @@
         "CRON_SECRET",
         "SEPAY_WEBHOOK_SECRET",
         "DISABLE_LOGIN_RATE_LIMIT",
-        "ENABLE_DEBUG_CLAIMS",
-        "HDDT_ARCHIVE_ENABLED",
-        "HDDT_DAILY_SUMMARY_ENABLED",
-        "HDDT_RECONCILE_ENABLED"
+        "ENABLE_DEBUG_CLAIMS"
       ],
       "outputs": [
         ".next/**",

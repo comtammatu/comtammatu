@@ -68,6 +68,7 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
     ref,
   ) {
     const [open, setOpen] = React.useState(false);
+    const isTouchSize = size === "touch" || size === "touch-lg";
     const selected = React.useMemo(
       () => options.find((option) => option.value === value),
       [options, value],
@@ -135,7 +136,12 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
               aria-label={ariaLabel ?? placeholder}
             >
               <BaseCombobox.Input
-                className="h-8 w-full rounded-md bg-input/20 px-2 text-xs/relaxed outline-hidden placeholder:text-muted-foreground dark:bg-input/30"
+                className={cn(
+                  "w-full rounded-md bg-input/20 outline-hidden placeholder:text-muted-foreground dark:bg-input/30",
+                  isTouchSize
+                    ? "min-h-12 px-3 text-sm"
+                    : "h-8 px-2 text-xs/relaxed",
+                )}
                 placeholder={searchPlaceholder}
               />
               <BaseCombobox.Empty className="py-4 text-center text-xs/relaxed">
@@ -147,7 +153,12 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
                     key={option.value}
                     value={option}
                     disabled={option.disabled}
-                    className="flex min-h-7 cursor-default items-center gap-2 rounded-md px-2.5 py-1.5 text-xs/relaxed outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-muted data-[highlighted]:text-foreground"
+                    className={cn(
+                      "flex cursor-default items-center gap-2 rounded-md px-2.5 outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-muted data-[highlighted]:text-foreground",
+                      isTouchSize
+                        ? "min-h-12 py-2 text-sm"
+                        : "min-h-7 py-1.5 text-xs/relaxed",
+                    )}
                   >
                     <div className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate">{option.label}</span>

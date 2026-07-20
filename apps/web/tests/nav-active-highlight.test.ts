@@ -125,7 +125,7 @@ test("Owner surface shell renders one sidebar with nested active-tab sub-nav", (
   );
   assert.match(
     appShell,
-    /<SidebarProvider open=\{true\}>/,
+    /<SidebarProvider\s+open=\{true\}[\s\S]*?>/,
     "Owner surface sidebar must default open and remain controlled open",
   );
   assert.match(

@@ -518,15 +518,6 @@ export const TAX_INVOICE_STATUS_LABELS_VI = {
   not_required: "Không bắt buộc",
 } as const;
 
-/** summary_run_queue.status (DB summary_run_queue_status_check). */
-export const SUMMARY_RUN_STATUS_LABELS_VI = {
-  queued: "Đang chờ",
-  running: "Đang chạy",
-  issued: "Đã phát hành",
-  failed: "Thất bại",
-  skipped: "Bỏ qua",
-} as const;
-
 /** stocktake_sessions.status (DB stocktake_sessions_status_check). */
 export const STOCKTAKE_SESSION_STATUS_LABELS_VI = {
   in_progress: "Đang thực hiện",

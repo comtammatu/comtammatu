@@ -19,19 +19,32 @@ const inputVariants = cva(
   },
 );
 
-type InputProps = Omit<React.ComponentProps<"input">, "size"> &
-  VariantProps<typeof inputVariants>;
+export type InputControlSize = "default" | "field" | "touch";
 
-function Input({ className, type, size, ...props }: InputProps) {
+export interface InputProps
+  extends Omit<React.ComponentProps<"input">, "size">,
+    VariantProps<typeof inputVariants> {
+  controlSize?: InputControlSize;
+}
+
+function Input({
+  className,
+  type,
+  size,
+  controlSize,
+  ...props
+}: InputProps) {
+  const resolvedControlSize = controlSize ?? size ?? "default";
+
   return (
     <input
       type={type}
       data-slot="input"
-      data-size={size ?? "default"}
-      className={cn(inputVariants({ size }), className)}
+      data-control-size={resolvedControlSize}
+      className={cn(inputVariants({ size: resolvedControlSize }), className)}
       {...props}
     />
   );
 }
 
-export { Input, inputVariants, type InputProps };
+export { Input, inputVariants };

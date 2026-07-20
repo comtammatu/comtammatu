@@ -62,6 +62,16 @@ test("decimal input keeps a comma visible while accepting either keyboard separa
   );
 });
 
+test("decimal aliases do not depend on a browser input type", () => {
+  const source = readFileSync(
+    "app/components/form/formatted-number-input.tsx",
+    "utf8",
+  );
+
+  assert.match(source, /nativeEvent\.data === "\."/);
+  assert.doesNotMatch(source, /nativeEvent\.inputType === "insertText"/);
+});
+
 test("decimal fields distinguish Vietnamese grouping from a typed dot alias", () => {
   assert.deepEqual(
     parseVietnameseNumericInput("1.234", { maxFractionDigits: 3 }),

@@ -253,7 +253,8 @@ export function LeaveRequestClient({
                       {days ? ` · ${days} ngày` : null}
                       {request.reason ? ` · ${request.reason}` : null}
                     </ItemDescription>
-                    {request.status === "rejected" && request.rejected_reason ? (
+                    {request.status === "rejected" &&
+                    request.rejected_reason ? (
                       <p className="text-destructive text-sm">
                         {copy.rejectedReason}: {request.rejected_reason}
                       </p>
@@ -264,7 +265,7 @@ export function LeaveRequestClient({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon-touch"
                         disabled={isPending}
                         onClick={() => handleCancel(request)}
                         aria-label={copy.cancelRequest}

@@ -241,6 +241,8 @@ export const SELF_ORDER_VI = {
   billQuantityColumn: "SL",
   billUnitPriceColumn: "Đơn giá",
   billLineTotalColumn: "Thành tiền",
+  billLineItemSummary: (quantity: number, unitPrice: string) =>
+    `${String(quantity)} × ${unitPrice}`,
   billEmptyTitle: "Chưa có hoá đơn",
   billEmptyDescription:
     "Gửi món từ thực đơn để xem hoá đơn ở đây. Thanh toán mở sau khi nhân viên duyệt.",

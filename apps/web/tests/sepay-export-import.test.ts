@@ -90,11 +90,15 @@ test("canonical bank ledger import is atomic and idempotent", () => {
   const page = read(
     "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
   );
-
   assert.match(
     migration,
     /UNIQUE \(tenant_id, provider_transaction_id\)/,
   );
+  const dialog = read(
+    "apps/web/app/(protected)/finance/bank-transactions/sepay-import-dialog.tsx",
+  );
+
+  assert.match(migration, /UNIQUE \(tenant_id, provider_transaction_id\)/);
   assert.match(
     migration,
     /CREATE OR REPLACE FUNCTION public\.import_sepay_bank_transactions[\s\S]*FOR v_row IN[\s\S]*bank_transaction_conflict/,
@@ -109,4 +113,7 @@ test("canonical bank ledger import is atomic and idempotent", () => {
   assert.match(action, /\.rpc\(\s*"import_sepay_bank_transactions"/);
   assert.match(action, /revalidateSurfacePath\("\/finance"\)/);
   assert.match(page, /canLinkPayments \? <SepayImportDialog \/>/);
+  assert.match(page, /flex flex-wrap items-center gap-2/);
+  assert.equal(dialog.match(/size="touch"/g)?.length, 3);
+  assert.match(dialog, /<InputGroupInput[\s\S]*type="file"/);
 });

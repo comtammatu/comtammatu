@@ -77,12 +77,14 @@ export function TransferTableDialog({
           <Button
             type="button"
             variant="outline"
+            size="touch"
             onClick={() => handleOpenChange(false)}
           >
             {POS_VI.keepCurrentTable}
           </Button>
           <Button
             type="button"
+            size="touch"
             disabled={!canConfirm}
             onClick={() => {
               if (!canConfirm) return;
@@ -100,7 +102,7 @@ export function TransferTableDialog({
             {POS_VI.transferTargetLabel}
           </FieldLabel>
           <Select value={tableId} onValueChange={onTableIdChange}>
-            <SelectTrigger id="transfer-table">
+            <SelectTrigger id="transfer-table" size="touch">
               <SelectValue placeholder={POS_VI.transferSelectPlaceholder} />
             </SelectTrigger>
             <SelectContent>

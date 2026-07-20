@@ -127,7 +127,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/finance/page.tsx": "DASHBOARD",
   "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": "REPORT",
   "apps/web/app/(protected)/finance/revenue/page.tsx": "REPORT",
-  "apps/web/app/(protected)/finance/summary/page.tsx": "REPORT",
   "apps/web/app/(protected)/finance/supplier-invoices/page.tsx": "LIST",
   "apps/web/app/(protected)/hr/page.tsx": "LIST",
   "apps/web/app/(protected)/hr/attendance/page.tsx": "LIST",

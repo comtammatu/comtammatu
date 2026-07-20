@@ -75,9 +75,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
         toast.error(result.error);
         return;
       }
-      toast.success(
-        item.is_active ? "Đã vô hiệu hóa món" : "Đã kích hoạt món",
-      );
+      toast.success(item.is_active ? "Đã vô hiệu hóa món" : "Đã kích hoạt món");
     });
   }
 
@@ -98,11 +96,11 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
     );
   }
 
-  function renderActions(item: ItemRow) {
+  function renderActions(item: ItemRow, touch = false) {
     return (
       <RowActionsMenu
         label="Menu"
-        triggerSize="icon"
+        triggerSize={touch ? "icon-touch" : "icon"}
         triggerClassName="rounded-full"
         items={[
           {
@@ -152,7 +150,9 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
             </p>
           )}
           <div className="mt-1 flex flex-col gap-1 sm:hidden">
-            <p className="text-xs text-muted-foreground">{item.category_name}</p>
+            <p className="text-xs text-muted-foreground">
+              {item.category_name}
+            </p>
             <p className="text-xs font-medium text-foreground">
               {formatVND(item.base_price)}
             </p>
@@ -196,9 +196,12 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
       <DataTable
         columns={columns}
         data={items}
+        pageSize={25}
         getRowKey={(item) => item.id}
         emptyTitle="Chưa có món ăn nào"
-        emptyIcon={<IconToolsKitchen className="size-8 text-muted-foreground" />}
+        emptyIcon={
+          <IconToolsKitchen className="size-8 text-muted-foreground" />
+        }
         rowClassName={() => (isPending ? "opacity-60" : undefined)}
         mobileCardRender={(item) => (
           <Item variant="outline">
@@ -218,7 +221,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                   ? ACTIVE_STATE_LABELS_VI.active
                   : ACTIVE_STATE_LABELS_VI.inactive}
               </Badge>
-              <ItemActions>{renderActions(item)}</ItemActions>
+              <ItemActions>{renderActions(item, true)}</ItemActions>
             </ItemFooter>
           </Item>
         )}

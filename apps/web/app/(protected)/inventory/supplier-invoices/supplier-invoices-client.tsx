@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import {
@@ -48,7 +55,7 @@ import {
   TextareaField,
   TextField,
 } from "@/components/form";
-import { matchesSearch } from "@lib/search";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   AppEmptyState,
   AppPage,
@@ -70,6 +77,18 @@ import {
   resolveSupplierPaymentIntentKey,
   type SupplierInvoiceRow,
 } from "./supplier-invoice-row";
+import {
+  getSupplierInvoiceDisplayMatchStatus as getDisplayMatchStatus,
+  getSupplierInvoiceGroupId,
+  hasSupplierInvoiceListFilters,
+  isSupplierInvoiceOverdue as isInvoiceOverdue,
+  supplierInvoiceFiltersKey,
+  SUPPLIER_INVOICE_MATCH_STATUSES,
+  SUPPLIER_INVOICE_PAYMENT_STATUSES,
+  type SupplierInvoiceGroup as SupplierInvoiceAggregateGroup,
+  type SupplierInvoiceListFilters,
+  type SupplierInvoiceViewMode,
+} from "./supplier-invoice-list-model";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 
 import { formatPercent } from "@comtammatu/shared/format";
@@ -94,39 +113,24 @@ type GrnOption = {
   supplierName: string;
 };
 
-type SupplierInvoiceViewMode = "supplier" | "po";
-
-type SupplierInvoiceGroup = {
-  id: string;
+type SupplierInvoiceGroup = SupplierInvoiceAggregateGroup & {
   title: string;
   subtitle: string;
-  invoices: SupplierInvoiceRow[];
-  invoiceCount: number;
-  totalAmount: number;
-  paidAmount: number;
-  creditAppliedAmount: number;
-  outstandingAmount: number;
-  overdueAmount: number;
-  overdueCount: number;
-  nextDueDate: string | null;
 };
 
 const ALL_FILTER_VALUE = "_all";
 
-const MATCH_FILTER_OPTIONS = [
-  "pending",
-  "matched",
-  "discrepancy",
-  "approved",
-].map((value) => ({
+const MATCH_FILTER_OPTIONS = SUPPLIER_INVOICE_MATCH_STATUSES.map((value) => ({
   value,
   label: getStatusBadgeMeta("inventory", value).label,
 }));
 
-const PAYMENT_FILTER_OPTIONS = ["unpaid", "partial", "paid"].map((value) => ({
-  value,
-  label: getStatusBadgeMeta("inventory", value).label,
-}));
+const PAYMENT_FILTER_OPTIONS = SUPPLIER_INVOICE_PAYMENT_STATUSES.map(
+  (value) => ({
+    value,
+    label: getStatusBadgeMeta("inventory", value).label,
+  }),
+);
 
 const supplierInvoiceSchema = z.object({
   grnId: z.string(),
@@ -190,41 +194,7 @@ function formatDate(value: string | null) {
 }
 
 function getPrimaryInvoice(group: SupplierInvoiceGroup) {
-  return (
-    group.invoices.find(
-      (invoice) => getSupplierInvoiceOutstandingAmount(invoice) > 0,
-    ) ??
-    group.invoices[0] ??
-    null
-  );
-}
-
-function sortSupplierInvoices(
-  left: SupplierInvoiceRow,
-  right: SupplierInvoiceRow,
-) {
-  const leftDate = left.invoiceDate ?? "";
-  const rightDate = right.invoiceDate ?? "";
-
-  if (leftDate !== rightDate) {
-    return rightDate.localeCompare(leftDate);
-  }
-
-  return right.id - left.id;
-}
-
-function isInvoiceOverdue(invoice: SupplierInvoiceRow) {
-  if (!invoice.dueDate || getSupplierInvoiceOutstandingAmount(invoice) <= 0) {
-    return false;
-  }
-
-  return diffVNDateDays(invoice.dueDate, getVNDateString()) > 0;
-}
-
-function getDisplayMatchStatus(invoice: SupplierInvoiceRow) {
-  return invoice.matchStatus === "matched" && invoice.grnId == null
-    ? "pending"
-    : invoice.matchStatus;
+  return group.primaryInvoice;
 }
 
 function isMissingMatchingEvidence(invoice: SupplierInvoiceRow) {
@@ -451,6 +421,9 @@ export function SupplierInvoicesClient({
   grns,
   initialHasMore = false,
   initialNextCursor = null,
+  initialGroups,
+  initialTotalCount,
+  filters,
   branchId,
   grnBasePath = "/inventory/grn",
   eyebrow = "Kho hàng",
@@ -462,6 +435,9 @@ export function SupplierInvoicesClient({
   grns: GrnOption[];
   initialHasMore?: boolean;
   initialNextCursor?: SupplierInvoiceCursor | null;
+  initialGroups: SupplierInvoiceAggregateGroup[];
+  initialTotalCount: number;
+  filters: SupplierInvoiceListFilters;
   branchId?: number;
   grnBasePath?: string;
   eyebrow?: string;
@@ -469,6 +445,8 @@ export function SupplierInvoicesClient({
   canPaySupplier?: boolean;
 }) {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const invoiceIdParam = searchParams.get("invoiceId");
   const grnIdParam = searchParams.get("grnId");
   const preselectInvoiceId = invoiceIdParam ? Number(invoiceIdParam) : null;
@@ -480,14 +458,16 @@ export function SupplierInvoicesClient({
   const [nextCursor, setNextCursor] = useState<SupplierInvoiceCursor | null>(
     initialNextCursor,
   );
+  const [aggregateGroups, setAggregateGroups] = useState(initialGroups);
+  const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [search, setSearch] = useState("");
-  const [supplierFilter, setSupplierFilter] = useState(ALL_FILTER_VALUE);
-  const [matchStatusFilter, setMatchStatusFilter] = useState(ALL_FILTER_VALUE);
-  const [paymentStatusFilter, setPaymentStatusFilter] =
-    useState(ALL_FILTER_VALUE);
-  const [viewMode, setViewMode] = useState<SupplierInvoiceViewMode>("supplier");
-  const [showOnlyOverdue, setShowOnlyOverdue] = useState(false);
+  const [search, setSearch] = useState(filters.query);
+  const supplierFilter =
+    filters.supplierId != null ? String(filters.supplierId) : ALL_FILTER_VALUE;
+  const matchStatusFilter = filters.matchStatus ?? ALL_FILTER_VALUE;
+  const paymentStatusFilter = filters.paymentStatus ?? ALL_FILTER_VALUE;
+  const viewMode: SupplierInvoiceViewMode = filters.viewMode;
+  const showOnlyOverdue = filters.overdueOnly;
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
     preselectInvoiceId ?? invoices[0]?.id ?? null,
   );
@@ -497,151 +477,118 @@ export function SupplierInvoicesClient({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const paymentIntentKeyRef = useRef<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const controlSize = useFormControlSize();
   const copy = messages.inventory.supplierInvoices;
   const createDefaultValues = useMemo(
     () => createSupplierInvoiceDefaultValues(preselectGrnId),
     [createOpen, preselectGrnId],
   );
+  const listKey = supplierInvoiceFiltersKey(filters);
+  const actionFilters = useMemo(
+    () => ({
+      query: filters.query,
+      supplierId: filters.supplierId ?? undefined,
+      matchStatus: filters.matchStatus ?? undefined,
+      paymentStatus: filters.paymentStatus ?? undefined,
+      overdueOnly: filters.overdueOnly,
+      viewMode: filters.viewMode,
+    }),
+    [filters],
+  );
 
-  const supplierOptions = useMemo(() => {
-    return Array.from(
-      new Set(
-        rows
-          .map((invoice) => invoice.supplierName)
-          .filter((supplierName) => supplierName.trim().length > 0),
-      ),
-    )
-      .sort((left, right) => left.localeCompare(right, "vi"))
-      .map((supplierName) => ({
-        label: supplierName,
-        value: supplierName,
-      }));
-  }, [rows]);
-
-  const filteredInvoices = useMemo(() => {
-    const query = search.trim();
-
-    return rows.filter((invoice) => {
-      if (
-        supplierFilter !== ALL_FILTER_VALUE &&
-        invoice.supplierName !== supplierFilter
-      ) {
-        return false;
-      }
-
-      if (
-        matchStatusFilter !== ALL_FILTER_VALUE &&
-        getDisplayMatchStatus(invoice) !== matchStatusFilter
-      ) {
-        return false;
-      }
-
-      if (
-        paymentStatusFilter !== ALL_FILTER_VALUE &&
-        invoice.paymentStatus !== paymentStatusFilter
-      ) {
-        return false;
-      }
-
-      if (showOnlyOverdue && !isInvoiceOverdue(invoice)) {
-        return false;
-      }
-
-      if (!query) {
-        return true;
-      }
-
-      return matchesSearch(
-        [invoice.code, invoice.supplierName, invoice.poCode, invoice.grnCode],
-        query,
-      );
-    });
+  useEffect(() => {
+    setRows(invoices);
+    setHasMore(initialHasMore);
+    setNextCursor(initialNextCursor);
+    setAggregateGroups(initialGroups);
+    setTotalCount(initialTotalCount);
+    setSearch(filters.query);
+    setSelectedInvoiceId(preselectInvoiceId ?? invoices[0]?.id ?? null);
   }, [
-    rows,
-    matchStatusFilter,
-    paymentStatusFilter,
-    search,
-    showOnlyOverdue,
-    supplierFilter,
+    filters.query,
+    initialGroups,
+    initialHasMore,
+    initialNextCursor,
+    initialTotalCount,
+    invoices,
+    listKey,
+    preselectInvoiceId,
   ]);
 
-  const invoiceGroups = useMemo(() => {
-    const groups = new Map<string, SupplierInvoiceGroup>();
-
-    for (const invoice of filteredInvoices) {
-      const groupId =
-        viewMode === "supplier"
-          ? `supplier:${invoice.supplierId}`
-          : invoice.poId != null
-            ? `po:${invoice.poId}`
-            : `supplier:${invoice.supplierId}:no-po`;
-      let group = groups.get(groupId);
-
-      if (!group) {
-        group = {
-          id: groupId,
-          title:
-            viewMode === "supplier"
-              ? invoice.supplierName
-              : (invoice.poCode ?? copy.noLinkedPo),
-          subtitle:
-            viewMode === "supplier"
-              ? copy.invoiceGroupSummary(0)
-              : invoice.supplierName,
-          invoices: [],
-          invoiceCount: 0,
-          totalAmount: 0,
-          paidAmount: 0,
-          creditAppliedAmount: 0,
-          outstandingAmount: 0,
-          overdueAmount: 0,
-          overdueCount: 0,
-          nextDueDate: null,
-        };
-        groups.set(groupId, group);
+  const replaceListParam = useCallback(
+    (key: string, value: string | null) => {
+      const next = new URLSearchParams(searchParams.toString());
+      if (key !== "q") {
+        const pendingQuery = search.trim().slice(0, 200);
+        if (pendingQuery) next.set("q", pendingQuery);
+        else next.delete("q");
       }
+      if (value == null || value === "") next.delete(key);
+      else next.set(key, value);
+      const query = next.toString();
+      startTransition(() => {
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      });
+    },
+    [pathname, router, search, searchParams, startTransition],
+  );
 
-      const outstandingAmount = getSupplierInvoiceOutstandingAmount(invoice);
-      group.invoices.push(invoice);
-      group.invoiceCount += 1;
-      group.totalAmount += invoice.amount;
-      group.paidAmount += invoice.paidAmount;
-      group.creditAppliedAmount += invoice.creditAppliedAmount;
-      group.outstandingAmount += outstandingAmount;
-      if (outstandingAmount > 0 && invoice.dueDate) {
-        group.nextDueDate =
-          group.nextDueDate == null || invoice.dueDate < group.nextDueDate
-            ? invoice.dueDate
-            : group.nextDueDate;
-      }
-      if (isInvoiceOverdue(invoice)) {
-        group.overdueCount += 1;
-        group.overdueAmount += outstandingAmount;
-      }
-    }
+  useEffect(() => {
+    const normalized = search.trim().slice(0, 200);
+    if (normalized === filters.query) return;
 
-    return Array.from(groups.values())
-      .map((group) => ({
+    const timeout = window.setTimeout(() => {
+      replaceListParam("q", normalized || null);
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [filters.query, replaceListParam, search]);
+
+  const supplierOptions = useMemo(() => {
+    return suppliers
+      .filter((supplier) => supplier.id > 0 && supplier.name.trim().length > 0)
+      .sort((left, right) => left.name.localeCompare(right.name, "vi"))
+      .map((supplier) => ({
+        label: supplier.name,
+        value: String(supplier.id),
+      }));
+  }, [suppliers]);
+
+  const allInvoiceGroups = useMemo<SupplierInvoiceGroup[]>(
+    () =>
+      aggregateGroups.map((group) => ({
         ...group,
-        invoices: [...group.invoices].sort(sortSupplierInvoices),
+        title:
+          viewMode === "supplier"
+            ? group.supplierName
+            : (group.poCode ?? copy.noLinkedPo),
         subtitle:
           viewMode === "supplier"
             ? copy.invoiceGroupSummary(group.invoiceCount)
-            : `${group.subtitle} · ${copy.invoiceGroupSummary(group.invoiceCount)}`,
-      }))
-      .sort((left, right) => {
-        const amountDiff = right.outstandingAmount - left.outstandingAmount;
-        if (amountDiff !== 0) {
-          return amountDiff;
-        }
-
-        return left.title.localeCompare(right.title, "vi");
-      });
-  }, [copy, filteredInvoices, viewMode]);
+            : `${group.supplierName} · ${copy.invoiceGroupSummary(group.invoiceCount)}`,
+      })),
+    [aggregateGroups, copy, viewMode],
+  );
+  const loadedGroupIds = useMemo(
+    () =>
+      new Set(
+        rows.map((invoice) => getSupplierInvoiceGroupId(invoice, viewMode)),
+      ),
+    [rows, viewMode],
+  );
+  const invoiceGroups = useMemo(
+    () => allInvoiceGroups.filter((group) => loadedGroupIds.has(group.id)),
+    [allInvoiceGroups, loadedGroupIds],
+  );
 
   const selectedInvoice =
-    filteredInvoices.find((invoice) => invoice.id === selectedInvoiceId) ??
-    filteredInvoices[0] ??
+    rows.find((invoice) => invoice.id === selectedInvoiceId) ??
+    allInvoiceGroups.find(
+      (group) => group.primaryInvoice.id === selectedInvoiceId,
+    )?.primaryInvoice ??
+    rows[0] ??
+    allInvoiceGroups[0]?.primaryInvoice ??
     null;
   const selectedOutstandingAmount = selectedInvoice
     ? getSupplierInvoiceOutstandingAmount(selectedInvoice)
@@ -655,16 +602,11 @@ export function SupplierInvoicesClient({
   );
 
   const showEmptyResults =
-    filteredInvoices.length === 0 &&
-    (search.trim().length > 0 ||
-      supplierFilter !== ALL_FILTER_VALUE ||
-      matchStatusFilter !== ALL_FILTER_VALUE ||
-      paymentStatusFilter !== ALL_FILTER_VALUE ||
-      showOnlyOverdue);
+    totalCount === 0 && hasSupplierInvoiceListFilters(filters);
 
   async function reloadInvoices(nextSelectedId?: number | null) {
     const [again, exactSelected] = await Promise.all([
-      fetchSupplierInvoicesPage({ branchId }),
+      fetchSupplierInvoicesPage({ branchId, ...actionFilters }),
       typeof nextSelectedId === "number"
         ? fetchSupplierInvoicesPage({
             branchId,
@@ -675,7 +617,13 @@ export function SupplierInvoicesClient({
     ]);
     if (!again.success || !again.data) return;
 
-    const { items, hasMore: more, nextCursor: cursor } = again.data;
+    const {
+      items,
+      hasMore: more,
+      nextCursor: cursor,
+      groups: nextGroups,
+      totalCount: nextTotalCount,
+    } = again.data;
     let nextRows = (items as Array<Record<string, unknown>>).map(
       mapSupplierInvoiceRow,
     );
@@ -701,6 +649,8 @@ export function SupplierInvoicesClient({
     // mirroring how the SSR initial load wires hasMore/nextCursor.
     setHasMore(more);
     setNextCursor(cursor);
+    setAggregateGroups(nextGroups);
+    setTotalCount(nextTotalCount);
     if (typeof nextSelectedId === "number") {
       setSelectedInvoiceId(nextSelectedId);
     }
@@ -713,13 +663,20 @@ export function SupplierInvoicesClient({
       try {
         const result = await fetchSupplierInvoicesPage({
           branchId,
+          ...actionFilters,
           before: nextCursor,
         });
         if (!result.success || !result.data) {
           toast.error(result.error ?? copy.loadMoreFailed);
           return;
         }
-        const { items, hasMore: more, nextCursor: cursor } = result.data;
+        const {
+          items,
+          hasMore: more,
+          nextCursor: cursor,
+          groups: nextGroups,
+          totalCount: nextTotalCount,
+        } = result.data;
         const mapped = (items as Array<Record<string, unknown>>).map(
           mapSupplierInvoiceRow,
         );
@@ -730,6 +687,8 @@ export function SupplierInvoicesClient({
         });
         setHasMore(more);
         setNextCursor(cursor);
+        setAggregateGroups(nextGroups);
+        setTotalCount(nextTotalCount);
       } finally {
         setLoadingMore(false);
       }
@@ -835,7 +794,7 @@ export function SupplierInvoicesClient({
     const primaryInvoice = getPrimaryInvoice(group);
     const isActive =
       selectedInvoice != null &&
-      group.invoices.some((invoice) => invoice.id === selectedInvoice.id);
+      group.id === getSupplierInvoiceGroupId(selectedInvoice, viewMode);
 
     return (
       <InteractiveCard
@@ -941,7 +900,7 @@ export function SupplierInvoicesClient({
       className: "min-w-56",
       render: (group) => (
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="truncate font-semibold text-foreground">
+          <p className="truncate text-foreground">
             {group.title}
           </p>
           <p className="text-xs text-muted-foreground">{group.subtitle}</p>
@@ -973,7 +932,7 @@ export function SupplierInvoicesClient({
           <span
             className={cn(
               "font-mono text-sm tabular-nums",
-              group.overdueAmount > 0 && "font-semibold text-destructive",
+              group.overdueAmount > 0 && "text-destructive",
             )}
           >
             {group.overdueAmount > 0
@@ -1033,7 +992,7 @@ export function SupplierInvoicesClient({
       header: copy.outstandingPayable,
       className: "min-w-40 text-right",
       render: (group) => (
-        <span className="font-mono text-sm font-semibold tabular-nums">
+        <span className="font-mono text-sm tabular-nums">
           {messages.inventory.common.currencyCompact(
             formatVND(group.outstandingAmount),
           )}
@@ -1048,7 +1007,7 @@ export function SupplierInvoicesClient({
         const primaryInvoice = getPrimaryInvoice(group);
         const isActive =
           selectedInvoice != null &&
-          group.invoices.some((invoice) => invoice.id === selectedInvoice.id);
+          group.id === getSupplierInvoiceGroupId(selectedInvoice, viewMode);
 
         return (
           <Button
@@ -1070,27 +1029,29 @@ export function SupplierInvoicesClient({
     <div className="flex flex-wrap gap-2">
       <Button
         type="button"
-        size="sm"
+        size={controlSize}
         variant={viewMode === "supplier" ? "default" : "outline"}
-        onClick={() => setViewMode("supplier")}
+        onClick={() => replaceListParam("view", null)}
         aria-pressed={viewMode === "supplier"}
       >
         {copy.viewBySupplier}
       </Button>
       <Button
         type="button"
-        size="sm"
+        size={controlSize}
         variant={viewMode === "po" ? "default" : "outline"}
-        onClick={() => setViewMode("po")}
+        onClick={() => replaceListParam("view", "po")}
         aria-pressed={viewMode === "po"}
       >
         {copy.viewByPo}
       </Button>
       <Button
         type="button"
-        size="sm"
+        size={controlSize}
         variant={showOnlyOverdue ? "default" : "outline"}
-        onClick={() => setShowOnlyOverdue((current) => !current)}
+        onClick={() =>
+          replaceListParam("overdue", showOnlyOverdue ? null : "1")
+        }
         aria-pressed={showOnlyOverdue}
       >
         <IconAlertTriangle data-icon="inline-start" />
@@ -1107,8 +1068,9 @@ export function SupplierInvoicesClient({
       : copy.noInvoiceSelected;
 
   const selectedGroup = selectedInvoice
-    ? (invoiceGroups.find((group) =>
-        group.invoices.some((invoice) => invoice.id === selectedInvoice.id),
+    ? (allInvoiceGroups.find(
+        (group) =>
+          group.id === getSupplierInvoiceGroupId(selectedInvoice, viewMode),
       ) ?? null)
     : null;
 
@@ -1132,7 +1094,11 @@ export function SupplierInvoicesClient({
         title={copy.title}
         description={description}
         actions={
-          <Button type="button" onClick={() => setCreateOpen(true)}>
+          <Button
+            type="button"
+            size="touch"
+            onClick={() => setCreateOpen(true)}
+          >
             {copy.createAction}
           </Button>
         }
@@ -1146,8 +1112,9 @@ export function SupplierInvoicesClient({
           )}
         >
           <AppToolbar
+            className="[&>[data-slot=toolbar-group]:first-child]:min-w-64"
             search={
-              <InputGroup className="min-w-0 flex-1">
+              <InputGroup size={controlSize} className="min-w-0 flex-1">
                 <InputGroupAddon>
                   <IconSearch />
                 </InputGroupAddon>
@@ -1155,6 +1122,7 @@ export function SupplierInvoicesClient({
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={copy.searchPlaceholder}
+                  aria-label={copy.searchPlaceholder}
                 />
               </InputGroup>
             }
@@ -1162,7 +1130,12 @@ export function SupplierInvoicesClient({
               <>
                 <Combobox
                   value={supplierFilter}
-                  onValueChange={setSupplierFilter}
+                  onValueChange={(value) =>
+                    replaceListParam(
+                      "supplierId",
+                      value === ALL_FILTER_VALUE ? null : value,
+                    )
+                  }
                   options={[
                     { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
                     ...supplierOptions,
@@ -1170,23 +1143,35 @@ export function SupplierInvoicesClient({
                   placeholder={copy.supplierPlaceholder}
                   searchPlaceholder={copy.supplierSearchPlaceholder}
                   aria-label={copy.supplierFilterAria}
-                  size="sm"
+                  size={controlSize}
                   triggerClassName="w-48"
                 />
 
                 <Select
                   value={matchStatusFilter}
-                  onValueChange={setMatchStatusFilter}
+                  onValueChange={(value) =>
+                    replaceListParam(
+                      "matchStatus",
+                      value === ALL_FILTER_VALUE ? null : value,
+                    )
+                  }
                 >
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger size={controlSize} className="w-48">
                     <SelectValue placeholder={copy.matchingPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_FILTER_VALUE}>
+                    <SelectItem
+                      value={ALL_FILTER_VALUE}
+                      size={controlSize === "touch" ? "touch" : "default"}
+                    >
                       {copy.allMatching}
                     </SelectItem>
                     {MATCH_FILTER_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        size={controlSize === "touch" ? "touch" : "default"}
+                      >
                         {option.label}
                       </SelectItem>
                     ))}
@@ -1195,17 +1180,29 @@ export function SupplierInvoicesClient({
 
                 <Select
                   value={paymentStatusFilter}
-                  onValueChange={setPaymentStatusFilter}
+                  onValueChange={(value) =>
+                    replaceListParam(
+                      "paymentStatus",
+                      value === ALL_FILTER_VALUE ? null : value,
+                    )
+                  }
                 >
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger size={controlSize} className="w-48">
                     <SelectValue placeholder={copy.paymentPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_FILTER_VALUE}>
+                    <SelectItem
+                      value={ALL_FILTER_VALUE}
+                      size={controlSize === "touch" ? "touch" : "default"}
+                    >
                       {copy.allPayments}
                     </SelectItem>
                     {PAYMENT_FILTER_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        size={controlSize === "touch" ? "touch" : "default"}
+                      >
                         {option.label}
                       </SelectItem>
                     ))}
@@ -1220,10 +1217,7 @@ export function SupplierInvoicesClient({
             title={
               viewMode === "supplier" ? copy.viewBySupplier : copy.viewByPo
             }
-            headerHint={copy.groupCount(
-              invoiceGroups.length,
-              filteredInvoices.length,
-            )}
+            headerHint={copy.groupCount(allInvoiceGroups.length, totalCount)}
             contentFlush
             contentScroll
           >

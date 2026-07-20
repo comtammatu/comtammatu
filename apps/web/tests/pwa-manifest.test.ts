@@ -17,6 +17,19 @@ test("protected Vercel previews do not register a service worker", () => {
   );
 });
 
+test("dynamic viewport preserves device sizing and safe-area coverage", () => {
+  const rootLayoutSource = readFileSync(
+    new URL("../app/layout.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(rootLayoutSource, /export const viewport/);
+  assert.match(
+    rootLayoutSource,
+    /generateViewport\(\)[\s\S]*width: "device-width",[\s\S]*initialScale: 1,[\s\S]*viewportFit: "cover",[\s\S]*themeColor:/,
+  );
+});
+
 test("root PWA manifest opens the operator entry instead of the retired employee app", () => {
   const manifest = JSON.parse(
     readFileSync(
@@ -246,6 +259,28 @@ test("station layouts mount the branch-scoped PWA toolbars", () => {
     layoutSource("runner"),
     /<RunnerPwaToolbar branchId=\{branchId\} \/>/,
   );
+});
+
+test("authenticated shell roots own top safe-area padding", () => {
+  const sources = [
+    "../app/components/app-shell.tsx",
+    "../app/(protected)/br/[branchId]/(operator)/layout.tsx",
+    "../app/(protected)/br/[branchId]/pos/layout.tsx",
+    "../app/(protected)/br/[branchId]/kds/layout.tsx",
+    "../app/(protected)/br/[branchId]/runner/layout.tsx",
+  ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
+  const uiStyles = readFileSync(
+    new URL("../../../packages/ui/src/styles/globals.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    uiStyles,
+    /@utility chrome-safe-pt \{\s*padding-top: env\(safe-area-inset-top\);\s*\}/,
+  );
+  for (const source of sources) {
+    assert.match(source, /chrome-safe-pt/);
+  }
 });
 
 test("operator layout mounts its manifest link and install toolbar", () => {

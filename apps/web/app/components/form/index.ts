@@ -1,5 +1,6 @@
 export { TextField } from "./text-field";
 export { FormattedNumberInput } from "./formatted-number-input";
+export { PhotoUploadInput } from "./photo-upload-input";
 export { NumberField } from "./number-field";
 export { NumberPadSheet } from "./number-pad-sheet";
 export {

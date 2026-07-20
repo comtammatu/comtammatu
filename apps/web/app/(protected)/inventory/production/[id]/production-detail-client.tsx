@@ -11,6 +11,8 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   Item,
   ItemContent,
@@ -58,6 +60,7 @@ export function ProductionDetailClient({
   embedded = false,
 }: ProductionDetailClientProps) {
   const router = useRouter();
+  const isTouchLayout = useIsMobile(1024);
   const [isPending, startTransition] = useTransition();
   const [actualQuantity, setActualQuantity] = useState<string>(
     run.actual_quantity?.toString() || "",
@@ -186,8 +189,15 @@ export function ProductionDetailClient({
     });
   };
 
-  const handleCancel = () => {
-    if (!confirm("Bạn có chắc chắn muốn hủy lệnh này?")) return;
+  const handleCancel = async () => {
+    const shouldCancel = await confirm({
+      title: "Hủy lệnh sản xuất?",
+      description:
+        "Lệnh sẽ chuyển sang trạng thái đã hủy và không thể tiếp tục sản xuất.",
+      confirmText: "Hủy lệnh",
+      variant: "destructive",
+    });
+    if (!shouldCancel) return;
 
     startTransition(async () => {
       setActionError(null);
@@ -211,7 +221,7 @@ export function ProductionDetailClient({
     recipeContext != null &&
     recipeContextError == null &&
     run.entry_unit_to_base_factor != null;
-  const actionSize = embedded ? "touch" : "default";
+  const actionSize = embedded || isTouchLayout ? "touch" : "default";
   const ingredients = recipeContext?.ingredients ?? [];
   const branchSummary: ReactNode =
     run.branch_id === run.target_branch_id ? (

@@ -93,9 +93,7 @@ export const FormattedNumberInput = React.forwardRef<
       onChange={(event) => {
         const nativeEvent = event.nativeEvent as InputEvent;
         const inputValue =
-          maxFractionDigits > 0 &&
-          nativeEvent.inputType === "insertText" &&
-          nativeEvent.data === "."
+          maxFractionDigits > 0 && nativeEvent.data === "."
             ? normalizeTypedDecimalPointAlias(event.target.value)
             : event.target.value;
         const nextDraft = parseVietnameseNumericInput(inputValue, {

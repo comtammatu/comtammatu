@@ -203,7 +203,7 @@ test("operations table columns do not override table typography role", () => {
   for (const block of [
     between(grn, "const grnColumns", "const filtered"),
     between(issues, "const issueColumns", "const renderIssueCard"),
-    between(transfers, "const columns", "const transferDrawer"),
+    between(transfers, "const columns", "const desktopCreateAction"),
   ]) {
     assert.doesNotMatch(block, /className:\s*"[^"]*\btext-sm\b/);
     assert.doesNotMatch(block, /className="[^"]*\btext-sm\b/);

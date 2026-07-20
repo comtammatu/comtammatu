@@ -391,8 +391,8 @@ export function GrnCreateClient({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="h-8 gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            size="touch"
+            className="gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={controller.discardDraft}
           >
             <IconTrash className="size-4" />

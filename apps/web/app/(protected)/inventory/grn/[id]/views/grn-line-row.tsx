@@ -17,8 +17,7 @@ import {
   CircleCheck as IconCircleCheck,
   Trash as IconTrash,
 } from "lucide-react";
-import { PhotoUploadInput } from "../../../_components/photo-upload-input";
-import { FormattedNumberInput } from "@/components/form";
+import { FormattedNumberInput, PhotoUploadInput } from "@/components/form";
 import { formatPercent } from "@comtammatu/shared/format";
 import { formatVND } from "@lib/inventory/format";
 import {

@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation";
-import { AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { messages } from "@lib/messages";
@@ -28,9 +32,16 @@ export default async function InventoryCategoriesPage() {
         description={copy.page.description}
       />
 
-      <AppSection contentFlush>
-        <CategoriesClient rows={rows} />
-      </AppSection>
+      {res.success ? (
+        <AppSection contentFlush>
+          <CategoriesClient rows={rows} />
+        </AppSection>
+      ) : (
+        <AppEmptyState
+          mode="error"
+          title={messages.inventory.settings.categories.loadFailed}
+        />
+      )}
     </div>
   );
 }

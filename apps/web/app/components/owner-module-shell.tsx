@@ -32,7 +32,6 @@ export function OwnerModuleShell({
   return (
     <AppShell
       user={user}
-      role={role}
       tier1={resolveOwnerPrimaryTabs(role, branchId)}
       tier2={tier2}
     >

@@ -192,6 +192,7 @@ test("receipt render keeps compact item table with category total rows", () => {
   const ops = renderDocumentToOps(buildFallbackDocument(SAMPLE_PAYLOADS.receipt));
   const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
   const tableRules = ops.filter((op) => op.kind === "rule");
+  const hyphenDividers = lines.filter((line) => /^-+$/.test(line));
 
   assert.ok(lines.some((line) => line.includes("Đơn giá")), "missing unit price header");
   assert.ok(
@@ -232,9 +233,10 @@ test("receipt render keeps compact item table with category total rows", () => {
     lines.every((line) => !line.includes(" | ")),
     "receipt table should not use boxed column separators",
   );
+  assert.equal(tableRules.length, 0, "receipt should not use raster rules");
   assert.ok(
-    tableRules.length >= 4,
-    "receipt table should use raster rules instead of text borders",
+    hyphenDividers.length >= 8,
+    "receipt should use hyphen dividers for the table and total",
   );
   assert.ok(
     lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),

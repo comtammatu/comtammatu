@@ -217,7 +217,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
         return (
           <span
             className={cn(
-              "block font-mono font-semibold tabular-nums text-right",
+              "block font-mono tabular-nums text-right",
               varianceClassName(variance.total),
             )}
           >
@@ -241,6 +241,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
       <DataTable
         columns={columns}
         data={data}
+        pageSize={50}
         getRowKey={(row) => row.id}
         onRowClick={(row) => setSelectedSlipId(row.id)}
         getRowAriaLabel={(row) => `Xem phiếu đếm của ${row.employeeName}`}
@@ -270,6 +271,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
         actions={
           <Button
             variant="outline"
+            size="touch"
             render={<Link href="/inventory/count-assignments" />}
           >
             <IconClipboardList aria-hidden="true" />
@@ -447,7 +449,7 @@ function CountSlipReviewDialog({
       render: (line) => (
         <span
           className={cn(
-            "block whitespace-nowrap text-right font-mono font-semibold tabular-nums",
+            "block whitespace-nowrap text-right font-mono tabular-nums",
             varianceClassName(line.variance),
           )}
         >

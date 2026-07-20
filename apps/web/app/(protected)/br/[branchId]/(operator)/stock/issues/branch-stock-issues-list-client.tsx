@@ -176,7 +176,7 @@ function BranchStockIssueCreateSheet({
                 </SelectTrigger>
                 <SelectContent>
                   {createTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
+                    <SelectItem key={type} value={type} size="touch">
                       {issueTypeLabel(type)}
                     </SelectItem>
                   ))}
@@ -335,7 +335,11 @@ export function BranchStockIssuesListClient({
               </SelectTrigger>
               <SelectContent>
                 {statusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    size="touch"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}

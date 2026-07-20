@@ -61,6 +61,7 @@ export function VoidPaidOrderDialog({
       cancelLabel={messages.pos.order.voidPaidKeep}
       confirmLabel={messages.pos.order.voidPaidConfirm}
       confirmVariant="destructive"
+      actionSize="touch"
       canConfirm={payoutMethod != null}
       isPending={isPending}
       onCancelClick={() => onReasonChange("")}
@@ -77,7 +78,7 @@ export function VoidPaidOrderDialog({
           }
           disabled={isPending}
         >
-          <SelectTrigger id="void-paid-payout-method">
+          <SelectTrigger id="void-paid-payout-method" className="min-h-12">
             <SelectValue
               placeholder={messages.pos.order.refundPayoutMethodPlaceholder}
             />

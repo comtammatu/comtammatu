@@ -38,8 +38,12 @@ test("operator stock sticky action bars route through AppDetailFooter", () => {
   assert.deepEqual(rawStickyCallSites, []);
   assert.deepEqual(redundantBottomNavPadding, []);
   assert.deepEqual(nestedFooterCallSites, []);
-  assert.match(appSurface, /sticky bottom-0/);
-  assert.match(appSurface, /chrome-safe-pb/);
+  assert.match(
+    appSurface,
+    /sticky bottom-\[var\(--app-bottom-nav-offset,0px\)\]/,
+  );
+  assert.match(appSurface, /lg:bottom-0/);
+  assert.doesNotMatch(appSurface, /chrome-safe-pb/);
   assert.match(appSurface, /shadow-lg/);
   assert.match(appSurface, /data-slot=button/);
 });
@@ -662,8 +666,12 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   assert.doesNotMatch(issuesClient, /router\.push\(`\/inventory\/consumption/);
   assert.match(issueDetailClient, /listBasePath = "\/inventory\/consumption"/);
   assert.match(issueDetailClient, /href=\{listBasePath\}/);
-  assert.match(appSurface, /sticky bottom-0/);
-  assert.match(appSurface, /chrome-safe-pb/);
+  assert.match(
+    appSurface,
+    /sticky bottom-\[var\(--app-bottom-nav-offset,0px\)\]/,
+  );
+  assert.match(appSurface, /lg:bottom-0/);
+  assert.doesNotMatch(appSurface, /chrome-safe-pb/);
   assert.match(appSurface, /border-t border-border/);
   assert.match(appSurface, /shadow-lg/);
   assert.match(appSurface, /data-slot=button/);
@@ -675,8 +683,9 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   assert.equal(
     (formDialog.match(/size=\{actionSize\}/g) ?? []).length,
     2,
-    "FormDialog action buttons must keep opt-in touch sizing",
+    "FormDialog action buttons must share one touch-safe size",
   );
+  assert.match(formDialog, /actionSize = "touch"/);
   assert.match(formCombobox, /Combobox as SharedCombobox/);
   assert.match(sharedCombobox, /React\.ComponentProps<typeof Button>/);
   assert.match(sharedCombobox, /size=\{size\}/);
@@ -733,7 +742,12 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
     branchGrnListClient,
     /\bDataTable\b|\bGrnListClient\b|\bembedded\b|\buseLongPress\b|\bformatVND\b|overflow-x-auto/,
   );
-  assert.match(grnListClient, /touch-manipulation select-none cursor-pointer/);
+  assert.match(
+    grnListClient,
+    /render=\{<Link href=\{grnDetailHref\(basePath, grn\.id\)\} \/>\}/,
+  );
+  assert.match(grnListClient, /touch-manipulation cursor-pointer/);
+  assert.doesNotMatch(grnListClient, /useLongPress/);
   assert.doesNotMatch(grnListClient, /touch-none/);
   assert.match(grnDetailClient, /embedded\?: boolean/);
   assert.match(grnDetailClient, /embedded = false/);

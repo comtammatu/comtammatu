@@ -162,7 +162,7 @@ export function DiscountSheet({
               setValueText("");
             }}
           >
-            <TabsList className="w-full">
+            <TabsList size="touch" className="w-full">
               <TabsTrigger value="pct" className="flex-1">
                 {POS_VI.discountPctTab}
               </TabsTrigger>
@@ -251,6 +251,7 @@ export function DiscountSheet({
             <Button
               type="button"
               variant="destructive"
+              size="touch"
               disabled={!canClear}
               onClick={handleClear}
               title={!noteValid ? POS_VI.clearDiscountReasonTitle : undefined}
@@ -265,12 +266,18 @@ export function DiscountSheet({
             <Button
               type="button"
               variant="outline"
+              size="touch"
               disabled={isPending}
               onClick={handleClose}
             >
               {ACTIONS_VI.cancel}
             </Button>
-            <Button type="button" disabled={!canApply} onClick={handleApply}>
+            <Button
+              type="button"
+              size="touch"
+              disabled={!canApply}
+              onClick={handleApply}
+            >
               {POS_VI.apply}
             </Button>
           </div>

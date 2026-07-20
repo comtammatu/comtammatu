@@ -23,6 +23,10 @@ export interface SwipeReveal {
   revealedKey: string | null;
   setRevealedKey: (key: string | null) => void;
   isRevealed: (key: string) => boolean;
+  actionRegionProps: (key: string) => {
+    "aria-hidden": boolean;
+    inert: boolean;
+  };
   clearReveal: () => void;
   consumeSuppression: (key: string) => boolean;
   bindings: (key: string) => {
@@ -54,6 +58,17 @@ export function useSwipeReveal({
 
   const isRevealed = useCallback(
     (key: string) => revealedKey === key,
+    [revealedKey],
+  );
+
+  const actionRegionProps = useCallback(
+    (key: string) => {
+      const hidden = revealedKey !== key;
+      return {
+        "aria-hidden": hidden,
+        inert: hidden,
+      };
+    },
     [revealedKey],
   );
 
@@ -111,7 +126,7 @@ export function useSwipeReveal({
             offset: nextOffset,
             dragging: true,
           };
-          
+
           const target = event.currentTarget;
           target.style.transition = "none";
           target.style.transform = `translate3d(${nextOffset}px, 0, 0)`;
@@ -131,7 +146,7 @@ export function useSwipeReveal({
           const target = event.currentTarget;
           target.style.transition = "";
           target.style.transform = "";
-          
+
           if (state.dragging) {
             const shouldReveal = state.offset <= -threshold;
             setRevealedKey(shouldReveal ? key : null);
@@ -162,6 +177,7 @@ export function useSwipeReveal({
     revealedKey,
     setRevealedKey,
     isRevealed,
+    actionRegionProps,
     clearReveal,
     consumeSuppression,
     bindings,

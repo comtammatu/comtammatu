@@ -1,7 +1,23 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
+
+type PointerPosition = { x: number; y: number };
+
+export function hasLongPressMoved(
+  start: PointerPosition,
+  current: PointerPosition,
+  threshold: number,
+): boolean {
+  return (
+    Math.abs(current.x - start.x) > threshold ||
+    Math.abs(current.y - start.y) > threshold
+  );
+}
 
 interface UseLongPressOptions {
   onLongPress: () => void;
@@ -17,8 +33,9 @@ export function useLongPress({
   moveThreshold = 10,
 }: UseLongPressOptions) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startPosRef = useRef<{ x: number; y: number } | null>(null);
+  const startPosRef = useRef<PointerPosition | null>(null);
   const isLongPressTriggeredRef = useRef(false);
+  const isCancelledRef = useRef(false);
 
   const clear = useCallback(() => {
     if (timeoutRef.current) {
@@ -32,7 +49,18 @@ export function useLongPress({
       if (!e.isPrimary) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
 
+      const interactiveTarget = (e.target as HTMLElement).closest(
+        "a, button, input, select, textarea, [role='button'], [contenteditable='true']",
+      );
+      if (interactiveTarget && interactiveTarget !== e.currentTarget) {
+        isCancelledRef.current = true;
+        startPosRef.current = null;
+        clear();
+        return;
+      }
+
       isLongPressTriggeredRef.current = false;
+      isCancelledRef.current = false;
       startPosRef.current = { x: e.clientX, y: e.clientY };
 
       clear();
@@ -41,49 +69,86 @@ export function useLongPress({
         onLongPress();
       }, delay);
     },
-    [onLongPress, delay, clear]
+    [onLongPress, delay, clear],
   );
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<HTMLElement>) => {
       if (!startPosRef.current) return;
-      const dx = Math.abs(e.clientX - startPosRef.current.x);
-      const dy = Math.abs(e.clientY - startPosRef.current.y);
-
-      if (dx > moveThreshold || dy > moveThreshold) {
+      if (
+        hasLongPressMoved(
+          startPosRef.current,
+          { x: e.clientX, y: e.clientY },
+          moveThreshold,
+        )
+      ) {
+        isCancelledRef.current = true;
+        startPosRef.current = null;
         clear();
       }
     },
-    [moveThreshold, clear]
+    [moveThreshold, clear],
   );
 
   const onPointerUp = useCallback(
     () => {
+      const shouldClick =
+        startPosRef.current !== null &&
+        !isCancelledRef.current &&
+        !isLongPressTriggeredRef.current;
       clear();
       startPosRef.current = null;
 
-      if (!isLongPressTriggeredRef.current && onClick) {
-        onClick();
-      }
+      if (shouldClick) onClick?.();
     },
-    [clear, onClick]
+    [clear, onClick],
   );
 
   const onPointerCancel = useCallback(() => {
+    isCancelledRef.current = true;
     clear();
     startPosRef.current = null;
   }, [clear]);
+
+  const onKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLElement>) => {
+      if (!onClick || e.target !== e.currentTarget) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onClick();
+      } else if (e.key === " ") {
+        e.preventDefault();
+      }
+    },
+    [onClick],
+  );
+
+  const onKeyUp = useCallback(
+    (e: ReactKeyboardEvent<HTMLElement>) => {
+      if (!onClick || e.target !== e.currentTarget || e.key !== " ") return;
+      e.preventDefault();
+      onClick();
+    },
+    [onClick],
+  );
 
   return {
     onPointerDown,
     onPointerMove,
     onPointerUp,
     onPointerCancel,
+    onPointerLeave: onPointerCancel,
+    onKeyDown,
+    onKeyUp,
+    role: onClick ? "button" : undefined,
+    tabIndex: onClick ? 0 : undefined,
     onContextMenu: useCallback((e: React.MouseEvent) => {
-      // Prevent default context menu if we triggered a long press
-      // Or if it's a touch device, to avoid system menus overlapping
       const nativeEvent = e.nativeEvent as PointerEvent;
-      if (isLongPressTriggeredRef.current || nativeEvent.pointerType === "touch" || ('touches' in nativeEvent)) {
+      if (
+        isLongPressTriggeredRef.current ||
+        nativeEvent.pointerType === "touch" ||
+        "touches" in nativeEvent
+      ) {
         e.preventDefault();
       }
     }, []),

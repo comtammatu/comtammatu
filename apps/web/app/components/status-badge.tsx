@@ -13,7 +13,6 @@ import {
   PAYMENT_RECORD_STATUS_LABELS_VI,
   PRINT_JOB_STATUS_LABELS_VI,
   REFUND_STATUS_LABELS_VI,
-  SUMMARY_RUN_STATUS_LABELS_VI,
   TABLE_STATUS_LABELS_VI,
   TAX_INVOICE_STATUS_LABELS_VI,
 } from "@comtammatu/shared/labels";
@@ -123,16 +122,6 @@ const STATUS_DOMAINS = {
       cancelled: "destructive",
       replaced: "secondary",
       not_required: "secondary",
-    },
-  },
-  "summary-run": {
-    labels: SUMMARY_RUN_STATUS_LABELS_VI,
-    variants: {
-      queued: "outline",
-      running: "secondary",
-      issued: "default",
-      failed: "destructive",
-      skipped: "secondary",
     },
   },
   attendance: {

@@ -147,13 +147,19 @@ export function MultiOrderTablePicker({
           <Button
             type="button"
             variant="default"
+            size="touch"
             className="w-full"
             onClick={onCreateNew}
           >
             <IconPlus data-icon="inline-start" />
             {messages.pos.multiOrderTablePicker.createNew(tableNumber)}
           </Button>
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="touch"
+            onClick={onClose}
+          >
             {ACTIONS_VI.close}
           </Button>
         </DrawerFooter>

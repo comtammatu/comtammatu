@@ -83,6 +83,12 @@ function annualBalance(request: LeaveRequestRow): string | null {
   );
 }
 
+function monthlyBalance(request: LeaveRequestRow): string | null {
+  const balance = request.monthly_leave_balance;
+  if (request.leave_type !== "annual" || !balance) return null;
+  return copy.monthlyBalance(balance.remainingDays, balance.entitlementDays);
+}
+
 export function BranchLeaveApprovalsClient({
   branchId,
   branchName,
@@ -237,11 +243,11 @@ export function BranchLeaveApprovalsClient({
       hideHeaderOnMobile
     >
       <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
-        <TabsList className="grid min-h-12 w-full grid-cols-2">
-          <TabsTrigger value="pending" className="min-h-11">
+        <TabsList size="touch" className="grid w-full grid-cols-2">
+          <TabsTrigger value="pending">
             {copy.pendingTab(pendingRows.length)}
           </TabsTrigger>
-          <TabsTrigger value="history" className="min-h-11">
+          <TabsTrigger value="history">
             {copy.historyTab(historyRows.length)}
           </TabsTrigger>
         </TabsList>
@@ -381,7 +387,11 @@ export function BranchLeaveApprovalsClient({
                       )} ${copy.dayUnit}`,
                     },
                     {
-                      label: copy.table.quota,
+                      label: copy.table.monthlyQuota,
+                      value: monthlyBalance(selected) ?? "—",
+                    },
+                    {
+                      label: copy.table.annualQuota,
                       value: annualBalance(selected) ?? "—",
                     },
                     {
@@ -430,7 +440,7 @@ export function BranchLeaveApprovalsClient({
                 ) : null}
               </div>
 
-              <SheetFooter className="workflow-safe-pb sticky bottom-0 border-t bg-background/95 backdrop-blur">
+              <SheetFooter className="sticky bottom-0 border-t bg-background/95 backdrop-blur">
                 {selected.status === "pending" ? (
                   rejecting ? (
                     <>

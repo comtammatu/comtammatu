@@ -1,9 +1,7 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowRight as IconArrowRight,
   CircleCheck as IconCircleCheck,
@@ -43,14 +41,6 @@ import {
   AppToolbar,
 } from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { useLongPress } from "@lib/hooks/use-long-press";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@comtammatu/ui/components/drawer";
 import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
 import {
@@ -113,8 +103,6 @@ export function TransfersListClient({
   const rows = initial;
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<TransferTab>(initialTab);
-  const [drawerRow, setDrawerRow] = useState<TransferListRow | null>(null);
-  const router = useRouter();
 
   const createLabel = copy.createSlip;
   const pageTitle = pageTitleOverride ?? copy.internalTransferTitle;
@@ -262,35 +250,6 @@ export function TransfersListClient({
     },
   ];
 
-  const transferDrawer = (
-    <Drawer
-      open={!!drawerRow}
-      onOpenChange={(open) => !open && setDrawerRow(null)}
-    >
-      <DrawerContent>
-        {drawerRow && (
-          <>
-            <DrawerHeader>
-              <DrawerTitle>{drawerRow.transfer_number}</DrawerTitle>
-              <DrawerDescription>
-                {drawerRow.from_branch_name} → {drawerRow.to_branch_name}
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="flex flex-col gap-3 p-4">
-              <Button
-                variant="default"
-                className="w-full"
-                onClick={() => router.push(detailHref(drawerRow.id))}
-              >
-                Xem chi tiết
-              </Button>
-            </div>
-          </>
-        )}
-      </DrawerContent>
-    </Drawer>
-  );
-
   const desktopCreateAction = canCreate ? (
     <Button size="sm" render={<Link href={createHref} />}>
       <IconPlus data-icon="inline-start" />
@@ -348,6 +307,7 @@ export function TransfersListClient({
     <DataTable
       columns={columns}
       data={searchFiltered}
+      pageSize={50}
       getRowKey={(r) => r.id}
       emptyTitle={emptyTitle}
       emptyDescription={emptyDescription}
@@ -358,7 +318,6 @@ export function TransfersListClient({
           row={r}
           tab={activeTab}
           href={detailHref(r.id)}
-          onOpenDrawer={setDrawerRow}
         />
       )}
     />
@@ -371,12 +330,7 @@ export function TransfersListClient({
   );
 
   if (embedded) {
-    return (
-      <div className="flex w-full flex-col gap-3">
-        {desktopList}
-        {transferDrawer}
-      </div>
-    );
+    return <div className="flex w-full flex-col gap-3">{desktopList}</div>;
   }
 
   return (
@@ -387,7 +341,6 @@ export function TransfersListClient({
         actions={desktopCreateAction}
       />
       {desktopList}
-      {transferDrawer}
     </AppPage>
   );
 }
@@ -396,14 +349,11 @@ function MobileTransferCard({
   row,
   tab,
   href,
-  onOpenDrawer,
 }: {
   row: TransferListRow;
   tab: TransferTab;
   href: string;
-  onOpenDrawer: (row: TransferListRow) => void;
 }) {
-  const router = useRouter();
   const Icon =
     tab === "receive"
       ? IconPackageImport
@@ -411,16 +361,11 @@ function MobileTransferCard({
         ? IconSend
         : IconCircleCheck;
 
-  const longPress = useLongPress({
-    onLongPress: () => onOpenDrawer(row),
-    onClick: () => router.push(href),
-  });
-
   return (
     <InteractiveCard
+      render={<Link href={href} />}
       minHeight="mobile"
-      className="h-auto touch-none select-none cursor-pointer"
-      {...longPress}
+      className="h-auto touch-manipulation cursor-pointer"
     >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary pointer-events-none">
         <Icon className="size-5" />

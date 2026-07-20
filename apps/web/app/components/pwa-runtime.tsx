@@ -83,20 +83,33 @@ export function PwaRuntimeProvider({ children }: { children: ReactNode }) {
       }
       markNewVersion();
     };
+    const checkForUpdate = async () => {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (cancelled || registration == null) return;
+        if (registration.waiting != null) markNewVersion();
+        await registration.update();
+        if (!cancelled && registration.waiting != null) markNewVersion();
+      } catch {
+        // Update checks are best-effort; the existing controller stays usable.
+      }
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void checkForUpdate();
+    };
     navigator.serviceWorker.addEventListener(
       "controllerchange",
       handleControllerChange,
     );
-    void navigator.serviceWorker.getRegistration().then((registration) => {
-      if (cancelled || !registration) return;
-      if (registration.waiting != null) markNewVersion();
-    });
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    void checkForUpdate();
     return () => {
       cancelled = true;
       navigator.serviceWorker.removeEventListener(
         "controllerchange",
         handleControllerChange,
       );
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 

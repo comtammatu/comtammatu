@@ -132,7 +132,7 @@ export function RecipesClient({
     {
       key: "name",
       header: INVENTORY_VI.recipeColMenuItem,
-      render: (recipe) => <span className="font-semibold">{recipe.name}</span>,
+      render: (recipe) => <span>{recipe.name}</span>,
     },
     {
       key: "category",
@@ -224,7 +224,7 @@ export function RecipesClient({
         eyebrow={messages.inventory.shell.moduleName}
         title={INVENTORY_VI.recipesPageTitle}
         actions={
-          <Button type="button" onClick={openCreate}>
+          <Button type="button" size="touch" onClick={openCreate}>
             <IconPlus data-icon="inline-start" />
             {INVENTORY_VI.recipeCreateAction}
           </Button>
@@ -257,6 +257,7 @@ export function RecipesClient({
             <DataTable
               columns={columns}
               data={filteredRecipes}
+              pageSize={25}
               getRowKey={(recipe) => recipe.id}
               emptyTitle={
                 showNoResults

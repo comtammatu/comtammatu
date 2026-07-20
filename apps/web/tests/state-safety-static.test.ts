@@ -1,0 +1,155 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { test } from "node:test";
+import { hasLongPressMoved } from "../lib/hooks/use-long-press";
+
+function read(path: string): string {
+  return readFileSync(
+    join(process.cwd(), path.replace(/^apps\/web\//, "")),
+    "utf8",
+  );
+}
+
+test("long press movement cancellation uses both axes and preserves the threshold edge", () => {
+  const start = { x: 10, y: 10 };
+
+  assert.equal(hasLongPressMoved(start, { x: 20, y: 10 }, 10), false);
+  assert.equal(hasLongPressMoved(start, { x: 21, y: 10 }, 10), true);
+  assert.equal(hasLongPressMoved(start, { x: 10, y: -1 }, 10), true);
+});
+
+test("long press cancels click after movement and exposes keyboard activation", () => {
+  const hook = read("apps/web/lib/hooks/use-long-press.ts");
+
+  assert.match(hook, /const isCancelledRef = useRef\(false\)/);
+  assert.match(
+    hook,
+    /isCancelledRef\.current = true;\s*startPosRef\.current = null;/,
+  );
+  assert.match(
+    hook,
+    /const shouldClick =\s*startPosRef\.current !== null &&\s*!isCancelledRef\.current &&\s*!isLongPressTriggeredRef\.current;/,
+  );
+  assert.match(hook, /e\.key === "Enter"/);
+  assert.match(hook, /e\.key === " "/);
+  assert.match(hook, /role: onClick \? "button" : undefined/);
+  assert.match(hook, /tabIndex: onClick \? 0 : undefined/);
+});
+
+test("long press cards preserve vertical scrolling and composed swipe cards keep keyboard handlers", () => {
+  const touchCardPaths = [
+    "apps/web/app/(protected)/hr/shifts-table.tsx",
+    "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
+  ];
+
+  for (const path of touchCardPaths) {
+    const source = read(path);
+    assert.match(source, /touch-pan-y/);
+    assert.doesNotMatch(source, /touch-none/);
+  }
+
+  for (const path of [
+    "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx",
+    "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
+  ]) {
+    const source = read(path);
+    assert.match(source, /<InteractiveCard\s+render=\{<Link href=/);
+    assert.doesNotMatch(source, /useLongPress/);
+    assert.doesNotMatch(source, /<Drawer/);
+  }
+
+  const stocktake = read(
+    "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
+  );
+  assert.match(stocktake, /size="icon-touch"/);
+  assert.match(stocktake, /onClick=\{\(\) => onOpenDrawer\(row\)\}/);
+
+  for (const path of [
+    "apps/web/lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
+  ]) {
+    const source = read(path);
+    assert.match(source, /onKeyDown: longPress\.onKeyDown/);
+    assert.match(source, /onKeyUp: longPress\.onKeyUp/);
+    assert.match(source, /tabIndex: longPress\.tabIndex/);
+  }
+});
+
+test("FormDialog resets only on open or entity transitions and confirms dirty dismissal", () => {
+  const source = read("apps/web/app/components/form/form-dialog.tsx");
+
+  assert.match(source, /const justOpened = open && !wasOpenRef\.current/);
+  assert.match(source, /const entityChanged =/);
+  assert.match(
+    source,
+    /if \(justOpened \|\| entityChanged\) \{\s*form\.reset\(defaultValues\)/,
+  );
+  assert.doesNotMatch(source, /if \(open\) \{\s*form\.reset\(defaultValues\)/);
+  assert.match(source, /const isDirty = form\.formState\.isDirty;/);
+  assert.match(source, /if \(!isDirty\)/);
+  assert.match(source, /const shouldDiscard = await confirm\(\{/);
+  assert.match(source, /const closeConfirmationPendingRef = useRef\(false\)/);
+  assert.match(
+    source,
+    /if \(isPending \|\| closeConfirmationPendingRef\.current\) return/,
+  );
+  assert.match(source, /closeConfirmationPendingRef\.current = true/);
+  assert.match(
+    source,
+    /finally \{\s*closeConfirmationPendingRef\.current = false/,
+  );
+  assert.match(
+    source,
+    /<Dialog open=\{open\} onOpenChange=\{handleOpenChange\}>/,
+  );
+  assert.match(source, /onClick=\{\(\) => void requestClose\(\)\}/);
+  assert.match(source, /actionSize = "touch"/);
+  assert.equal(source.match(/size="touch"/g)?.length, 2);
+});
+
+test("writable settings and finance pages fail closed when initial data cannot load", () => {
+  const general = read(
+    "apps/web/app/(protected)/settings/(tenant)/general/page.tsx",
+  );
+  const payments = read(
+    "apps/web/app/(protected)/settings/(tenant)/payments/page.tsx",
+  );
+  const foodCost = read("apps/web/app/(protected)/finance/food-cost/page.tsx");
+  const categories = read(
+    "apps/web/app/(protected)/inventory/settings/categories/page.tsx",
+  );
+  const units = read(
+    "apps/web/app/(protected)/inventory/settings/units/page.tsx",
+  );
+
+  assert.match(general, /data: tenant, error/);
+  assert.match(general, /error \|\| !identity/);
+  assert.match(payments, /data: rows, error/);
+  assert.match(payments, /\{error \? \(/);
+  assert.match(foodCost, /const loadFailed =/);
+  assert.match(foodCost, /!branchesRes\.success/);
+  assert.match(foodCost, /!foodRes\.success/);
+  assert.match(foodCost, /!actualRes\.success/);
+  assert.match(foodCost, /!revenueRes\.success/);
+  assert.match(categories, /\{res\.success \? \(/);
+  assert.match(units, /\{res\.success \? \(/);
+
+  for (const source of [general, payments, foodCost, categories, units]) {
+    assert.match(source, /<AppEmptyState/);
+    assert.match(source, /mode="error"/);
+  }
+});
+
+test("Owner sticky detail footer reserves the fixed bottom navigation", () => {
+  const shell = read("apps/web/app/components/app-shell.tsx");
+  const surface = read("apps/web/app/components/surface.tsx");
+
+  assert.match(shell, /"--app-bottom-nav-offset":/);
+  assert.match(
+    shell,
+    /calc\(3\.5rem \+ max\(0\.5rem, env\(safe-area-inset-bottom\)\)\)/,
+  );
+  assert.match(surface, /bottom-\[var\(--app-bottom-nav-offset,0px\)\]/);
+  assert.match(surface, /lg:bottom-0/);
+});

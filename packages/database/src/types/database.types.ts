@@ -10839,6 +10839,10 @@ export type Database = {
         Args: { p_event_id: number; p_payment_code: string }
         Returns: Json
       }
+      record_bank_transaction_cash_deposit: {
+        Args: { p_bank_transaction_id: number }
+        Returns: Json
+      }
       record_production_run: {
         Args: {
           p_actual_ingredients?: Json

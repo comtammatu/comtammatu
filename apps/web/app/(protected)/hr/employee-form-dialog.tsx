@@ -20,7 +20,7 @@ const NO_BRANCH = "none";
 const NO_CONTRACT = "none";
 const STATUS_ACTIVE = "active";
 const STATUS_INACTIVE = "inactive";
-const CONTRACT_TYPE_OPTIONS = [
+export const CONTRACT_TYPE_OPTIONS = [
   { value: NO_CONTRACT, label: "Chưa ghi nhận" },
   { value: "probation", label: "Thử việc" },
   { value: "fixed_term", label: "Xác định thời hạn" },

@@ -62,6 +62,7 @@ export function CancelOrderDialog({
       cancelLabel={POS_VI.keepOrder}
       confirmLabel={POS_VI.cancelOrder}
       confirmVariant="destructive"
+      actionSize="touch"
       isPending={isPending}
       onCancelClick={() => onReasonChange("")}
       onConfirm={onConfirm}

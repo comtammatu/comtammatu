@@ -150,10 +150,18 @@ export function BranchStocktakeListClient({
                 <SelectValue placeholder={stocktakeCopy.statusPlaceholder} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{stocktakeCopy.allStatuses}</SelectItem>
-                <SelectItem value="in_progress">Đang thực hiện</SelectItem>
-                <SelectItem value="completed">Đã hoàn tất</SelectItem>
-                <SelectItem value="cancelled">Đã hủy</SelectItem>
+                <SelectItem value="all" size="touch">
+                  {stocktakeCopy.allStatuses}
+                </SelectItem>
+                <SelectItem value="in_progress" size="touch">
+                  Đang thực hiện
+                </SelectItem>
+                <SelectItem value="completed" size="touch">
+                  Đã hoàn tất
+                </SelectItem>
+                <SelectItem value="cancelled" size="touch">
+                  Đã hủy
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

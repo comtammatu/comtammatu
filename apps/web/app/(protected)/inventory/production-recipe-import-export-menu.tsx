@@ -17,6 +17,7 @@ import {
 } from "@comtammatu/ui/components/dropdown-menu";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { FileImportDialog } from "@/components/form";
 import { downloadCsv, downloadXlsx } from "@/_lib/download-file";
 import {
@@ -37,6 +38,7 @@ export function ProductionRecipeImportExportMenu({
 }) {
   const [isExporting, startExport] = useTransition();
   const [importOpen, setImportOpen] = useState(false);
+  const isTouchLayout = useIsMobile(1024);
 
   function handleExport(format: "xlsx" | "csv") {
     startExport(async () => {
@@ -71,7 +73,11 @@ export function ProductionRecipeImportExportMenu({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="outline" disabled={isExporting}>
+            <Button
+              variant="outline"
+              size={isTouchLayout ? "touch" : "default"}
+              disabled={isExporting}
+            >
               {isExporting ? (
                 <Spinner data-icon="inline-start" />
               ) : (
@@ -83,22 +89,34 @@ export function ProductionRecipeImportExportMenu({
         />
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => setImportOpen(true)}>
+            <DropdownMenuItem
+              size={isTouchLayout ? "touch" : "default"}
+              onClick={() => setImportOpen(true)}
+            >
               <IconUpload data-icon="inline-start" />
               {INVENTORY_VI.importFromFile}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleTemplate}>
+            <DropdownMenuItem
+              size={isTouchLayout ? "touch" : "default"}
+              onClick={handleTemplate}
+            >
               <IconFileSpreadsheet data-icon="inline-start" />
               {INVENTORY_VI.downloadTemplate}
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => handleExport("xlsx")}>
+            <DropdownMenuItem
+              size={isTouchLayout ? "touch" : "default"}
+              onClick={() => handleExport("xlsx")}
+            >
               <IconDownload data-icon="inline-start" />
               Export .xlsx
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport("csv")}>
+            <DropdownMenuItem
+              size={isTouchLayout ? "touch" : "default"}
+              onClick={() => handleExport("csv")}
+            >
               <IconDownload data-icon="inline-start" />
               Export .csv
             </DropdownMenuItem>

@@ -261,7 +261,8 @@ const EMPTY_MONTH: ScheduleMonthData = {
   attendance: [],
   leaves: [],
   annualLeaveBalance: null,
-  monthlyAnnualLeaveDays: 0,
+  monthlyLeaveBalance: null,
+  standardWorkdays: 26,
 };
 const SCHEDULE_SKELETON_FIXTURE_MONTH = "2026-01-01";
 const SCHEDULE_SKELETON_FIXTURE_ATTENDANCE: ScheduleAttendance[] = [
@@ -291,7 +292,8 @@ const SCHEDULE_SKELETON_FIXTURE: ScheduleMonthData = {
   attendance: SCHEDULE_SKELETON_FIXTURE_ATTENDANCE,
   leaves: SCHEDULE_SKELETON_FIXTURE_LEAVES,
   annualLeaveBalance: null,
-  monthlyAnnualLeaveDays: 2,
+  monthlyLeaveBalance: null,
+  standardWorkdays: 26,
 };
 
 function ScheduleSkeletonFallback({
@@ -301,35 +303,37 @@ function ScheduleSkeletonFallback({
 }) {
   return (
     <Frame>
-      <div role="grid" className="overflow-hidden">
-        <div role="row" className="grid grid-cols-7 bg-muted/30">
-          {copy.monthWeekdays.map((day) => (
-            <div
-              key={day}
-              role="columnheader"
-              className="flex h-8 items-center justify-center border-l text-center text-xs font-medium whitespace-normal first:border-l-0 sm:h-9"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-        {Array.from({ length: 5 }).map((_, rowIndex) => (
-          <div key={rowIndex} role="row" className="grid grid-cols-7">
-            {Array.from({ length: 7 }).map((_, cellIndex) => (
+      <div className="overflow-x-auto overscroll-x-contain">
+        <div role="grid" className="min-w-[28rem] overflow-hidden">
+          <div role="row" className="grid grid-cols-7 bg-muted/30">
+            {copy.monthWeekdays.map((day) => (
               <div
-                key={cellIndex}
-                role="gridcell"
-                className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
+                key={day}
+                role="columnheader"
+                className="flex h-8 items-center justify-center border-l text-center text-xs font-medium whitespace-normal first:border-l-0 sm:h-9"
               >
-                <div className="flex aspect-square flex-col gap-2 rounded-md p-1 sm:aspect-video sm:p-2">
-                  <Skeleton className="h-4 w-6" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="hidden h-3 w-3/4 sm:block" />
-                </div>
+                {day}
               </div>
             ))}
           </div>
-        ))}
+          {Array.from({ length: 5 }).map((_, rowIndex) => (
+            <div key={rowIndex} role="row" className="grid grid-cols-7">
+              {Array.from({ length: 7 }).map((_, cellIndex) => (
+                <div
+                  key={cellIndex}
+                  role="gridcell"
+                  className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
+                >
+                  <div className="flex aspect-square flex-col gap-2 rounded-md p-1 sm:aspect-video sm:p-2">
+                    <Skeleton className="h-4 w-6" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="hidden h-3 w-3/4 sm:block" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </Frame>
   );
@@ -378,6 +382,7 @@ function CalendarCellContent({
     <Button
       type="button"
       variant="ghost"
+      size="touch"
       aria-label={ariaParts.join(". ")}
       aria-pressed={selected}
       onClick={() => {
@@ -459,43 +464,45 @@ function ScheduleMonthCalendarGrid({
 
   return (
     <Frame className="overflow-hidden">
-      <div role="grid" className="overflow-hidden">
-        <div role="row" className="grid grid-cols-7 bg-muted/30">
-          {copy.monthWeekdays.map((day) => (
-            <div
-              key={day}
-              role="columnheader"
-              className="flex h-8 items-center justify-center border-l text-center text-xs font-medium whitespace-normal first:border-l-0 sm:h-9"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-        {rows.map((row, rowIndex) => (
-          <div key={rowIndex} role="row" className="grid grid-cols-7">
-            {row.map((cell, cellIndex) => (
+      <div className="overflow-x-auto overscroll-x-contain">
+        <div role="grid" className="min-w-[28rem] overflow-hidden">
+          <div role="row" className="grid grid-cols-7 bg-muted/30">
+            {copy.monthWeekdays.map((day) => (
               <div
-                key={cell.dateStr ?? `${rowIndex}-${cellIndex}`}
-                role="gridcell"
-                className="border-l border-t p-1.5 align-top whitespace-normal first:border-l-0 sm:p-2"
+                key={day}
+                role="columnheader"
+                className="flex h-8 items-center justify-center border-l text-center text-xs font-medium whitespace-normal first:border-l-0 sm:h-9"
               >
-                <CalendarCellContent
-                  attendances={
-                    cell.dateStr
-                      ? (attendanceByDate.get(cell.dateStr) ?? [])
-                      : []
-                  }
-                  cell={cell}
-                  leave={
-                    cell.dateStr ? leaveByDate.get(cell.dateStr) : undefined
-                  }
-                  onSelectDate={onSelectDate}
-                  selected={cell.dateStr === selectedDate}
-                />
+                {day}
               </div>
             ))}
           </div>
-        ))}
+          {rows.map((row, rowIndex) => (
+            <div key={rowIndex} role="row" className="grid grid-cols-7">
+              {row.map((cell, cellIndex) => (
+                <div
+                  key={cell.dateStr ?? `${rowIndex}-${cellIndex}`}
+                  role="gridcell"
+                  className="border-l border-t p-1.5 align-top whitespace-normal first:border-l-0 sm:p-2"
+                >
+                  <CalendarCellContent
+                    attendances={
+                      cell.dateStr
+                        ? (attendanceByDate.get(cell.dateStr) ?? [])
+                        : []
+                    }
+                    cell={cell}
+                    leave={
+                      cell.dateStr ? leaveByDate.get(cell.dateStr) : undefined
+                    }
+                    onSelectDate={onSelectDate}
+                    selected={cell.dateStr === selectedDate}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </Frame>
   );
@@ -655,10 +662,10 @@ export function ScheduleClient({
   for (const count of shiftCountByDate.values()) {
     workdaysCount += countCompletedShiftWorkdays(count);
   }
-  const leaveDaysCount = monthData.monthlyAnnualLeaveDays;
+  const monthlyLeaveBalance = monthData.monthlyLeaveBalance;
   const hasMonthlySalary = monthlySalary > 0;
   const estimatedPay = hasMonthlySalary
-    ? (workdaysCount * monthlySalary) / 27
+    ? (workdaysCount * monthlySalary) / monthData.standardWorkdays
     : null;
   const annualLeaveBalance = monthData.annualLeaveBalance;
 
@@ -715,8 +722,10 @@ export function ScheduleClient({
             },
             {
               label: copy.summaryMonthlyLeaveDays,
-              value: formatDayCount(leaveDaysCount),
-              muted: leaveDaysCount === 0,
+              value: monthlyLeaveBalance
+                ? `${formatDayCount(monthlyLeaveBalance.remainingDays)}/${formatDayCount(monthlyLeaveBalance.entitlementDays)}`
+                : "—",
+              muted: !monthlyLeaveBalance,
               mono: true,
             },
             {

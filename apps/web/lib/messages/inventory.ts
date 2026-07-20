@@ -836,6 +836,7 @@ export const inventory = {
     lineIngredientRequired: "Chọn nguyên liệu cần xuất.",
     lineQuantityRequired: "Nhập số lượng xuất.",
     lineQuantityPositive: "Số lượng xuất phải lớn hơn 0.",
+    evidencePhotoLabel: "Ảnh đính kèm",
     lineUnitRequired: "Đơn vị không được để trống.",
     lineReasonRequired: "Lý do xuất là bắt buộc để lưu vết.",
     surface: {
@@ -931,6 +932,9 @@ export const inventory = {
     movementTitle: "Biến động kho theo nhóm",
     inbound: "Nhập kho",
     transferIn: "Chuyển vào",
+    transferOut: "Chuyển ra",
+    consumption: "Tiêu hao",
+    productionConsumption: "Tiêu hao sản xuất",
     outboundConsumption: "Xuất / tiêu hao",
     production: "Sản xuất",
     currentMonthSnapshot: "Đang xem tháng này",

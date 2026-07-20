@@ -88,7 +88,7 @@ function StaffActionsMenu({
   return (
     <RowActionsMenu
       label={messages.owner.staffPage.actions}
-      triggerSize={variant === "card" ? "sm" : "icon-lg"}
+      triggerSize={variant === "card" ? "touch" : "icon-lg"}
       triggerClassName={variant === "card" ? "rounded-full" : undefined}
       triggerLabel={
         variant === "card" ? messages.owner.staffPage.actions : undefined
@@ -235,6 +235,7 @@ export function StaffTable({
       <DataTable
         columns={columns}
         data={filtered}
+        pageSize={25}
         getRowKey={(member) => member.id}
         emptyTitle={
           search.trim() ? staffCopy.emptySearchTitle : "Chưa có nhân viên nào"

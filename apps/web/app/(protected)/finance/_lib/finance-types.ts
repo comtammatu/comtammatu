@@ -29,7 +29,6 @@ export interface InvoiceRow {
   total_amount: number;
   issued_at: string | null;
   cancelled_at: string | null;
-  archived_at: string | null;
   created_at: string;
   orders: { order_number: string } | null;
 }
@@ -48,7 +47,7 @@ export interface ManualInvoiceOrderPreview {
   existingInvoiceNumber: string | null;
   isDraftRetry: boolean;
   hasActiveItems: boolean;
-  summaryDate: string | null;
+  historicalAggregateDate: string | null;
   issuable: boolean;
 }
 

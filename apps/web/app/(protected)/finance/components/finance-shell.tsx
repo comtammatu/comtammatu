@@ -14,7 +14,6 @@ export interface FinanceShellProps {
   role: StaffRole;
   branchId?: number | null;
   showInvoices: boolean;
-  showSummary: boolean;
   showSupplierPayables: boolean;
 }
 
@@ -24,7 +23,6 @@ export function FinanceShell({
   role,
   branchId: homeBranchId,
   showInvoices,
-  showSummary,
   showSupplierPayables,
 }: FinanceShellProps) {
   // Lift the realtime subscription up to the shell so every Finance
@@ -42,11 +40,9 @@ export function FinanceShell({
   return (
     <AppShell
       user={user}
-      role={role}
       tier1={resolveOwnerPrimaryTabs(role, homeBranchId)}
       tier2={resolveFinanceNav({
         showInvoices,
-        showSummary,
         showSupplierPayables,
       })}
     >

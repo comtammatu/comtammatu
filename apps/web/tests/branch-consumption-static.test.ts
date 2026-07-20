@@ -21,6 +21,10 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   );
   const data = read("apps/web/lib/inventory/branch-consumption-data.ts");
   const issueData = read("apps/web/lib/inventory/branch-stock-issue-data.ts");
+  const issueActions = read("apps/web/app/(protected)/inventory/issue-actions.ts");
+  const ownerDetail = read(
+    "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
+  );
   const nav = read("packages/shared/src/auth/nav-config.ts");
 
   assert.match(listRoute, /loadBranchConsumptionListData/);
@@ -49,6 +53,13 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   assert.doesNotMatch(listClient, /DataTable|DocumentFormFrame|AppToolbar/);
   assert.match(detailClient, /listBasePath/);
   assert.match(detailClient, /size="icon-touch"/);
+  assert.match(detailClient, /PhotoUploadInput/);
+  assert.match(detailClient, /showConsumptionPhoto/);
+  assert.match(ownerDetail, /PhotoUploadInput/);
+  assert.match(ownerDetail, /showConsumptionPhoto/);
+  assert.match(issueData, /photo_urls/);
+  assert.match(issueActions, /photoUrls: z\.array\(z\.string\(\)\.url\(\)\)\.max\(1\)\.optional\(\)/);
+  assert.match(issueActions, /photo_urls: d\.photoUrls/);
   assert.match(nav, /\/br\/\{branchId\}\/stock\/consumption/);
 });
 

@@ -16,7 +16,8 @@ const EMPTY_SCHEDULE: ScheduleMonthData = {
   attendance: [],
   leaves: [],
   annualLeaveBalance: null,
-  monthlyAnnualLeaveDays: 0,
+  monthlyLeaveBalance: null,
+  standardWorkdays: 26,
 };
 
 type StaffSchedulePageContentProps = {

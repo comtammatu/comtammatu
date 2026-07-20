@@ -8,15 +8,22 @@ import fs from "node:fs";
 // this check fails it in the lint chain instead of in the e2e-smoke job.
 const SEED = "apps/web/tests/fixtures/supabase-e2e/tenant.sql";
 const DELEGABILITY_BASE_MIGRATION =
-  "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql";
+  "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql";
 const text = fs.readFileSync(SEED, "utf8");
-const migrationFiles = fs
-  .readdirSync("supabase/migrations")
-  .filter((file) => file.endsWith(".sql"))
-  .sort()
-  .map((file) => `supabase/migrations/${file}`)
-  .filter((file) => file >= DELEGABILITY_BASE_MIGRATION);
-const migrationTexts = migrationFiles.map((file) => fs.readFileSync(file, "utf8"));
+const DELEGABILITY_BASE_FILE = DELEGABILITY_BASE_MIGRATION.split("/").at(-1);
+const migrationFiles = [
+  ...fs
+    .readdirSync("supabase/migration-archive")
+    .filter((file) => file.endsWith(".sql") && file >= DELEGABILITY_BASE_FILE)
+    .map((file) => `supabase/migration-archive/${file}`),
+  ...fs
+    .readdirSync("supabase/migrations")
+    .filter((file) => file.endsWith(".sql") && !file.endsWith("_baseline.sql"))
+    .map((file) => `supabase/migrations/${file}`),
+].sort((left, right) => left.slice(left.lastIndexOf("/") + 1).localeCompare(right.slice(right.lastIndexOf("/") + 1)));
+const migrationTexts = migrationFiles.map(
+  (file) => fs.readFileSync(file, "utf8"),
+);
 const migrationText = migrationTexts[0];
 
 // End each INSERT block at a semicolon that closes a line — descriptions may
@@ -59,7 +66,7 @@ const seedDelegableBlock = text.match(delegablePattern)?.[1];
 const migrationDelegableBlock = migrationText.match(delegablePattern)?.[1];
 if (!seedDelegableBlock || !migrationDelegableBlock) {
   console.error(
-    `[seed-permissions] could not locate canonical staff delegability in ${SEED} and ${MIGRATION}`,
+    `[seed-permissions] could not locate canonical staff delegability in ${SEED} and ${DELEGABILITY_BASE_MIGRATION}`,
   );
   process.exit(1);
 }
@@ -91,7 +98,7 @@ if (
   unknownDelegable.length > 0
 ) {
   console.error(
-    `[seed-permissions] staff-delegable permission drift between ${SEED} and the active migration chain`,
+    `[seed-permissions] staff-delegable permission drift between ${SEED} and the current migration source`,
   );
   for (const key of missingDelegable)
     console.error(`- missing from seed: ${key}`);

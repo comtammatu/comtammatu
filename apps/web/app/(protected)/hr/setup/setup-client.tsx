@@ -7,18 +7,38 @@ import { PositionTasksClient } from "../position-tasks-client";
 import type { PositionTasksData } from "../position-tasks-actions";
 import { ShiftsTable } from "../shifts-table";
 import type { ShiftRow } from "../_types";
+import type { HrLeavePolicy } from "@lib/hr/leave-policy-model";
+import { LeavePolicyForm } from "./leave-policy-form";
 
 interface Props {
   initialShifts: ShiftRow[];
   positionTasksData: PositionTasksData;
+  leavePolicy: HrLeavePolicy | null;
 }
 
-export function HrSetupClient({ initialShifts, positionTasksData }: Props) {
+export function HrSetupClient({
+  initialShifts,
+  positionTasksData,
+  leavePolicy,
+}: Props) {
   const [shifts, setShifts] = useState(initialShifts);
   const copy = messages.hr.client;
 
   return (
     <>
+      <AppSection
+        title={copy.setupSteps.leavePolicy.title}
+        description={copy.setupSteps.leavePolicy.description}
+        headerHint={copy.setupSteps.leavePolicy.hint}
+      >
+        {leavePolicy ? (
+          <LeavePolicyForm policy={leavePolicy} />
+        ) : (
+          <p className="text-sm text-destructive" role="alert">
+            {copy.leavePolicy.loadFailed}
+          </p>
+        )}
+      </AppSection>
       <AppSection
         title={copy.setupSteps.shifts.title}
         description={copy.setupSteps.shifts.description}

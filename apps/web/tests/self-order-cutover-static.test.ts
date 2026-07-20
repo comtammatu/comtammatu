@@ -183,14 +183,23 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   );
   assert.match(
     cart,
-    /data-\[side=bottom\]:h-dvh data-\[side=bottom\]:max-h-dvh/,
+    /className="mx-auto flex w-full max-w-2xl flex-col overflow-hidden p-0"/,
   );
+  assert.doesNotMatch(cart, /\bh-dvh\b|\bmax-h-dvh\b/);
   assert.match(cart, /<ScrollArea className="min-h-0 flex-1">/);
   assert.match(cart, /SELF_ORDER_VI\.editCartItem/);
   assert.match(cart, /onReplace/);
   assert.match(cart, /SelfOrderItemSheet/);
   assert.match(cart, /initialDraft=\{editingCartItem\}/);
   assert.match(cart, /ItemSeparator/);
+  const cartLine = cart.slice(
+    cart.indexOf("function CartLine"),
+    cart.indexOf("export function CartSheet"),
+  );
+  assert.match(cartLine, /ItemActions className="[^"]*flex-wrap/);
+  assert.match(cartLine, /size="touch"/);
+  assert.equal(cartLine.match(/size="icon-touch"/g)?.length, 3);
+  assert.doesNotMatch(cartLine, /size="(?:sm|icon-sm)"/);
   assert.match(
     cart,
     /workflow-safe-pb flex shrink-0[\s\S]*onClick=\{props\.onSubmit\}/,
@@ -229,7 +238,15 @@ test("item sheet supports add and cart-edit commit paths", () => {
   assert.match(itemSheet, /SELF_ORDER_VI\.updateCartItem/);
   assert.match(itemSheet, /onCommit/);
   assert.match(itemSheet, /hydrateFromDraft/);
-  assert.match(itemSheet, /data-\[side=bottom\]:h-dvh/);
+  assert.match(
+    itemSheet,
+    /className="mx-auto w-full max-w-2xl overflow-hidden p-0"/,
+  );
+  assert.match(
+    itemSheet,
+    /className="flex min-h-0 flex-1 flex-col overflow-hidden"/,
+  );
+  assert.doesNotMatch(itemSheet, /\bh-dvh\b|\bmax-h-dvh\b/);
   assert.match(itemSheet, /h-52 w-full/);
   assert.match(
     itemSheet,
@@ -244,7 +261,7 @@ test("item sheet supports add and cart-edit commit paths", () => {
   );
   assert.match(
     itemSheet,
-    /flex shrink-0 items-center gap-2 p-3[\s\S]*commitCustomizedItem/,
+    /flex shrink-0 flex-wrap items-center gap-2 p-3 sm:flex-nowrap[\s\S]*max-sm:basis-full[\s\S]*commitCustomizedItem/,
   );
 });
 
@@ -295,7 +312,10 @@ test("S5 routes pending QR requests through the table and bill surfaces", () => 
   assert.match(desktop, /knownSelfOrderPaymentRequestIdsRef/);
   assert.match(desktop, /5_000/);
   assert.match(desktop, /pendingSelfOrderRequestByTable\.get/);
-  assert.match(desktop, /fixed right-3 bottom-20 z-40 lg:bottom-4/);
+  assert.match(desktop, /const selfOrderActionVisible/);
+  assert.match(desktop, /sessionAction=\{desktopSelfOrderAction\}/);
+  assert.match(desktop, /selfOrderRequestCount=\{/);
+  assert.doesNotMatch(desktop, /fixed right-3 bottom-20/);
   assert.match(desktop, /SELF_ORDER_VI\.staffApprove/);
   assert.match(desktop, /setSelfOrderApprovalOpen\(true\)/);
   assert.match(desktop, /setSelectedSelfOrderRequestId\(null\)/);

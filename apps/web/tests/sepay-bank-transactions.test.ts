@@ -606,10 +606,7 @@ test("signed SePay business mismatches stay reviewable without exposing conflict
   assert.equal(classifySepayReconciliationState(recoverable), "needs_review");
   assert.equal(classifySepayUnmatchedMoneyIn(recoverable), "missing_reference");
   assert.equal(canManuallyLinkSepayPayment(recoverable), true);
-  assert.equal(
-    isSepayPaymentConflictReviewCode(recoverable.errorCode),
-    false,
-  );
+  assert.equal(isSepayPaymentConflictReviewCode(recoverable.errorCode), false);
 
   assert.equal(
     classifySepayReconciliationState(paymentConflict),
@@ -621,9 +618,7 @@ test("signed SePay business mismatches stay reviewable without exposing conflict
     true,
   );
   assert.equal(
-    isSepayPaymentConflictReviewCode(
-      "payment_state_conflict_needs_review",
-    ),
+    isSepayPaymentConflictReviewCode("payment_state_conflict_needs_review"),
     true,
   );
   assert.equal(
@@ -810,6 +805,7 @@ test("SePay bank page uses one filtered reconciliation table", () => {
 
   assert.match(page, /<BankTransactionsTable/);
   assert.match(page, /<AppPage width="xwide"/);
+  assert.doesNotMatch(page, /meta=\{messages\.finance\.basic\.periodMeta/);
   assert.doesNotMatch(
     page,
     /KpiCard|KpiRow|needsReviewAmount|buildSepayReconciliationSummary/,
@@ -817,13 +813,40 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /type BankReconciliationRow/);
   assert.match(table, /rowMatchesFilter/);
   assert.match(table, /useState<BankReconciliationFilter>\("needs_review"\)/);
-  assert.match(table, /filters=\{/);
+  assert.match(table, /<FilterBar/);
+  assert.match(table, /trailing=\{/);
+  assert.match(table, /aria-label=\{copy\.filters\.label\}/);
+  assert.match(table, /TooltipTrigger/);
+  assert.match(table, /SheetTrigger/);
+  assert.match(table, /SheetContent/);
+  assert.match(table, /key: "index"/);
+  assert.match(table, /sticky left-0/);
+  assert.match(table, /sticky left-12/);
+  assert.match(table, /sticky left-44/);
+  assert.equal(table.match(/bg-card/g)?.length, 3);
+  assert.doesNotMatch(table, /bg-background/);
+  assert.match(
+    table,
+    /\{isTouchLayout \? \(\s*table\s*\) : \(\s*<AppSection className="overflow-hidden" contentFlush>/,
+  );
+  assert.doesNotMatch(table, /rounded-lg border bg-card/);
+  assert.match(table, /copy\.matchedPayment\(tx\.paymentId\)/);
+  assert.match(table, /function displayBankContent/);
+  assert.doesNotMatch(table, /function reasonDetail/);
+  assert.doesNotMatch(table, /key: "match"/);
   assert.match(table, /queueCount\(formatCount\(openQueueCount\)\)/);
   assert.match(table, /const hasRows = rows\.length > 0/);
   assert.match(table, /const isQueueView = filter === "needs_review"/);
   assert.match(table, /copy\.queueEmptyTitle/);
   assert.match(table, /emptyMode=\{hasRows \? "no-results" : "no-data"\}/);
   assert.match(table, /mobileBreakpoint=\{1024\}/);
+  assert.match(table, /const isTouchLayout = useIsMobile\(1024\)/);
+  assert.match(table, /InputGroup size=\{touch \? "touch" : "default"\}/);
+  assert.match(table, /size=\{touch \? "touch" : "sm"\}/);
+  assert.ok(
+    (table.match(/size=\{touch \? "touch" : "default"\}/g)?.length ?? 0) >= 4,
+  );
+  assert.doesNotMatch(table, /className="h-8 w-(?:24|40)/);
   assert.match(table, /formatVNDateTime/);
   assert.match(table, /resolveSepayTransactionInstant/);
   assert.match(table, /isSepayPaymentConflictReviewCode\(tx\.errorCode\)/);
@@ -831,7 +854,7 @@ test("SePay bank page uses one filtered reconciliation table", () => {
     table,
     /\? hasPaymentConflictDetail\s*\?\s*null\s*:\s*reasonLabel\(classifySepayUnmatchedMoneyIn\(tx\)\)/,
   );
-  assert.match(table, /const conflictOrder[\s\S]*row\.tx\.orderNumber/);
+  assert.match(table, /const conflictOrder[\s\S]*tx\.orderNumber/);
   assert.match(
     table,
     /href=\{`\/orders\?orderId=\$\{String\(conflictOrder\.id\)\}`\}/,
@@ -856,16 +879,22 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   const ordersClient = read(
     "apps/web/app/(protected)/orders/orders-client.tsx",
   );
+  assert.match(loader, /orders!webhook_events_order_id_fkey\(order_number\)/);
   assert.match(
-    loader,
-    /orders!webhook_events_order_id_fkey\(order_number\)/,
+    ordersActions,
+    /orderId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/,
   );
-  assert.match(ordersActions, /orderId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/);
-  assert.match(ordersActions, /query = query\.eq\("id", parsed\.data\.orderId\)/);
+  assert.match(
+    ordersActions,
+    /query = query\.eq\("id", parsed\.data\.orderId\)/,
+  );
   assert.match(ordersPage, /fetchOrders\(\{[\s\S]*orderId: requestedOrderId/);
   assert.match(ordersPage, /initialSelectedOrder == null\) notFound\(\)/);
   assert.match(ordersBody, /initialSelectedOrder=\{initialSelectedOrder\}/);
-  assert.match(ordersClient, /useState<OrderRow \| null>\([\s\S]*initialSelectedOrder/);
+  assert.match(
+    ordersClient,
+    /useState<OrderRow \| null>\([\s\S]*initialSelectedOrder/,
+  );
   assert.doesNotMatch(table, /\.replace\("T", " "\)\.slice/);
   assert.match(table, /return state === "needs_review"/);
   assert.match(table, /evidence=\{\{/);
@@ -873,8 +902,10 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /missing_webhook/);
   assert.doesNotMatch(page, /outgoingMoneyReviewTransactions/);
   assert.match(messages, /Lọc đối soát/);
+  assert.match(messages, /label: "Lọc"/);
   assert.match(messages, /Đối soát ngân hàng/);
   assert.match(messages, /Thanh toán #\$\{id\}/);
+  assert.match(messages, /linkTitle: "Khớp giao dịch tiền vào"/);
 
   const matchCell = read(
     "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
@@ -890,6 +921,24 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(messages, /Chưa có bằng chứng ngân hàng/);
   assert.match(messages, /Nộp tiền mặt vào tài khoản/);
   assert.match(messages, /Không còn việc đối soát cần xử lý/);
+});
+
+test("SePay content keeps reconciliation metadata outside transfer tooltips", () => {
+  const table = read(
+    "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
+  );
+
+  assert.match(table, /const occurredAt = formatVNDateTime/);
+  assert.match(table, /const reference = referenceCode\(row\.tx\)/);
+  assert.match(table, /const isLongContent = content\.length > 80/);
+  assert.doesNotMatch(table, /showMetadata/);
+  assert.doesNotMatch(table, /text-background\/75/);
+  assert.match(
+    table,
+    /<TooltipContent side="top" className="max-w-sm whitespace-normal">\s*<p className="break-words font-medium">\{content\}<\/p>/,
+  );
+  assert.doesNotMatch(table, /\[tr:nth-child\(even\)_&\]/);
+  assert.doesNotMatch(table, /\[tr:nth-child\(even\)_&\]:bg-secondary\/15/);
 });
 
 test("SePay default review queue keeps only open webhook evidence", () => {

@@ -12,6 +12,10 @@ const payrollMessagesSource = readFileSync(
   join(process.cwd(), "lib/messages/hr.ts"),
   "utf8",
 );
+const leavePolicyActionsSource = readFileSync(
+  join(process.cwd(), "app/(protected)/hr/setup/leave-policy-actions.ts"),
+  "utf8",
+);
 const annualLeaveMigrationSource = readFileSync(
   join(
     process.cwd(),
@@ -83,9 +87,10 @@ test("Payroll live preview: attendance, leave and adjustments feed the atomic sn
   for (const expected of [
     '.select("employee_id, date, check_out")',
     "buildCompletedWorkdays",
-    "countAnnualLeaveAccruedThroughMonth",
+    "fetchTenantHrLeavePolicy",
     "calculateAnnualLeaveUsedThroughMonth",
     "splitAnnualLeaveByQuota",
+    "annualEntitlementByEmployee",
     "calculatePayableDays",
     "paid_leave_days: entry.paidLeaveDays",
     "unpaid_leave_days: entry.unpaidLeaveDays",
@@ -98,10 +103,10 @@ test("Payroll live preview: attendance, leave and adjustments feed the atomic sn
       `expected calculatePayroll to include ${expected}`,
     );
   }
-  assert.doesNotMatch(
+  assert.match(
     payrollActionsSource,
     /\.from\("annual_leave_entitlements"\)/,
-    "payroll leave accrual must not read stale year-level annual entitlement rows",
+    "employee/year annual entitlement rows must determine annual leave allocation",
   );
 });
 
@@ -121,6 +126,25 @@ test("Payroll snapshot keeps finalized values separate from live estimates", () 
     /finalizedNet: "Thực lĩnh đã chốt"/,
     "the UI must label the finalized number differently from the live estimate",
   );
+});
+
+test("Payroll UI uses operator terms for the unclosed and closed states", () => {
+  const payrollCopyStrings = [
+    ...(payrollMessagesSource.match(/"(?:\\.|[^"\\])*"/gs) ?? []),
+  ].join("\n");
+
+  assert.match(
+    payrollMessagesSource,
+    /Bảng lương tạm tính theo ngày công, nghỉ phép đã duyệt, mức lương trong hồ sơ\/HĐLĐ và các khoản điều chỉnh của tháng đã chọn\./,
+  );
+  assert.match(payrollMessagesSource, /Tình trạng tính lương/);
+  assert.match(payrollMessagesSource, /Đủ thông tin tính lương/);
+  assert.match(payrollMessagesSource, /Lương dự kiến/);
+  assert.doesNotMatch(
+    payrollCopyStrings,
+    /\b(?:snapshot|live|tenant|Finance)\b/i,
+  );
+  assert.doesNotMatch(payrollCopyStrings, /dữ liệu hiện tại|nguồn lương/i);
 });
 
 test("Payroll snapshot persists through one atomic RPC and never marks payment", () => {
@@ -177,6 +201,21 @@ test("HKD leave approval migration allows payroll to split unpaid overflow", () 
     monthlyAnnualLeaveMigrationSource,
     /annual leave quota exceeded/,
   );
+});
+
+test("tenant HR leave policy persists standard workdays and monthly leave", () => {
+  for (const expected of [
+    'from("system_settings")',
+    "HR_STANDARD_WORKDAYS",
+    "HR_MONTHLY_LEAVE_DAYS",
+    'onConflict: "key,tenant_id"',
+  ]) {
+    assert.ok(
+      payrollActionsSource.includes(expected) ||
+        leavePolicyActionsSource.includes(expected),
+      `expected tenant HR policy persistence to include ${expected}`,
+    );
+  }
 });
 
 test("Contract insurance migration opens HĐLĐ writes and syncs BHXH cache", () => {

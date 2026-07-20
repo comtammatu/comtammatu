@@ -372,7 +372,11 @@ export function BranchGrnListClient({
                 </SelectTrigger>
                 <SelectContent>
                   {statusFilterOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      size="touch"
+                    >
                       {option.label}
                     </SelectItem>
                   ))}

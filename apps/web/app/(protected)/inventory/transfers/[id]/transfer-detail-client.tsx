@@ -208,7 +208,7 @@ export function TransferDetailClient({
       header: tTerm("ingredient"),
       render: (item) => (
         <div className="flex flex-col whitespace-normal break-words min-w-48 max-w-80">
-          <span className="font-bold">{item.name}</span>
+          <span>{item.name}</span>
           <span className="text-xs text-muted-foreground">{item.sku}</span>
         </div>
       ),
@@ -216,7 +216,7 @@ export function TransferDetailClient({
     {
       key: "qty",
       header: copy.sentQty,
-      className: "text-right font-mono tabular-nums font-semibold",
+      className: "text-right font-mono tabular-nums",
       render: (item) => item.qty,
     },
     {

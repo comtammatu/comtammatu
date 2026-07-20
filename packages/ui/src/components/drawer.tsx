@@ -69,12 +69,12 @@ function DrawerContent({
           className={cn(
             "group/drawer-content fixed inset-x-0 bottom-0 z-50 mt-24 max-h-[80dvh] overscroll-contain bg-transparent p-2 text-xs/relaxed text-popover-foreground before:pointer-events-none before:absolute before:inset-2 before:bottom-0 before:-z-10 before:rounded-t-lg before:rounded-b-none before:border before:border-border before:bg-popover before:shadow-effect-drawer motion-reduce:animate-none motion-reduce:transition-none",
             responsiveFullscreen &&
-              "mt-0 h-dvh max-h-dvh p-0 before:inset-0 before:rounded-none before:border-0 before:bg-background sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-t-lg sm:before:rounded-b-none sm:before:border sm:before:bg-popover",
+              "mt-0 h-dvh max-h-dvh p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] before:inset-0 before:rounded-none before:border-0 before:bg-background sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-t-lg sm:before:rounded-b-none sm:before:border sm:before:bg-popover",
             className,
           )}
           {...props}
         >
-          <DrawerPrimitive.Content className="flex h-auto flex-col">
+          <DrawerPrimitive.Content className="flex h-full min-h-0 flex-col">
             {showHandle && (
               <div className="mx-auto mt-4 h-1.5 w-25 shrink-0 rounded-full bg-muted" />
             )}

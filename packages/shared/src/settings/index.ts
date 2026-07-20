@@ -34,6 +34,10 @@ export const SYSTEM_SETTING_KEYS = {
   BANK_OPENING_BALANCE: "bank_opening_balance",
   /** "true" | "false" — gates the POS split/merge-bill entries; the split/merge RPCs reject when "false". */
   POS_SPLIT_MERGE_ENABLED: "pos_split_merge_enabled",
+  /** Tenant-wide number of standard payable workdays in a payroll month. */
+  HR_STANDARD_WORKDAYS: "hr_standard_workdays",
+  /** Paid leave days allocated from the monthly leave bucket, per month. */
+  HR_MONTHLY_LEAVE_DAYS: "hr_monthly_leave_days",
 } as const;
 
 export type SystemSettingKey =
@@ -55,4 +59,6 @@ export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.CASH_OPENING_DATE]: "",
   [SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE]: "",
   [SYSTEM_SETTING_KEYS.POS_SPLIT_MERGE_ENABLED]: "true",
+  [SYSTEM_SETTING_KEYS.HR_STANDARD_WORKDAYS]: "26",
+  [SYSTEM_SETTING_KEYS.HR_MONTHLY_LEAVE_DAYS]: "2",
 };

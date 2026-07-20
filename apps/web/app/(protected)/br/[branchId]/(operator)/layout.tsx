@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   Bell as IconBell,
+  Ellipsis as IconEllipsis,
   House as IconHouse,
   LayoutDashboard as IconLayoutDashboard,
   User as IconUser,
@@ -11,6 +12,13 @@ import {
 import { canAccess, MODULE_ACL, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
 import { AppPage } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
 import { NotificationCountBadge } from "@/components/notification-count-badge";
@@ -23,6 +31,7 @@ import { parseOperatorBranchId } from "../_lib/parse-branch-id";
 import { BranchOpsRefresh } from "./branch-ops-refresh";
 import { OperatorBottomNav } from "./operator-bottom-nav";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
+import { ThemeMenuItem } from "@/components/theme-toggle";
 
 export function generateMetadata(): Metadata {
   return {
@@ -60,6 +69,7 @@ export default async function OperatorLayout({
     canAccess(claims.user_role, "branch_settings") ||
     canAccess(claims.user_role, "branch_pos_sessions");
   const canOpenOwnerHome = claims.user_role === "owner";
+  const usesHeaderOverflow = canOpenOwnerHome || canManageBranch;
   const unreadResult = await unreadPromise;
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
@@ -71,7 +81,7 @@ export default async function OperatorLayout({
         branchId={context.branchId}
         disabledPathPrefixes={[`/br/${context.branchId}/shift/leave-approvals`]}
       />
-      <div className="flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
+      <div className="chrome-safe-pt flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
         <AppHeader
           title={
             <>
@@ -83,34 +93,49 @@ export default async function OperatorLayout({
           subtitleHiddenOnMobile
           homeHref={`/br/${context.branchId}`}
           homeAriaLabel={APP_COPY_VI.branchHome}
+          showThemeToggle={!usesHeaderOverflow}
           wide
           actions={
             <>
-              {canOpenOwnerHome ? (
-                <Button
-                  variant="outline"
-                  size="touch"
-                  className="min-w-11"
-                  aria-label={APP_COPY_VI.ownerTitle}
-                  title={APP_COPY_VI.ownerTitle}
-                  render={<Link href={MODULE_ACL.owner.path} />}
-                >
-                  <IconHouse data-icon="inline-start" />
-                  <span className="hidden sm:inline">
-                    {APP_COPY_VI.ownerTitle}
-                  </span>
-                </Button>
-              ) : null}
-              {canManageBranch ? (
-                <Button
-                  variant="outline"
-                  size="icon-touch"
-                  aria-label={APP_COPY_VI.branchCommand}
-                  title={APP_COPY_VI.branchCommand}
-                  render={<Link href={`/br/${context.branchId}/dashboard`} />}
-                >
-                  <IconLayoutDashboard />
-                </Button>
+              {usesHeaderOverflow ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-touch"
+                        aria-label={messages.operator.header.moreActionsAria}
+                      >
+                        <IconEllipsis />
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent align="end">
+                    {canOpenOwnerHome ? (
+                      <DropdownMenuItem
+                        className="min-h-12 text-sm"
+                        render={<Link href={MODULE_ACL.owner.path} />}
+                      >
+                        <IconHouse data-icon="inline-start" />
+                        {APP_COPY_VI.ownerTitle}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canManageBranch ? (
+                      <DropdownMenuItem
+                        className="min-h-12 text-sm"
+                        render={
+                          <Link href={`/br/${context.branchId}/dashboard`} />
+                        }
+                      >
+                        <IconLayoutDashboard data-icon="inline-start" />
+                        {APP_COPY_VI.branchCommand}
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuSeparator />
+                    <ThemeMenuItem className="min-h-12 text-sm" />
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : null}
               <Button
                 variant="outline"

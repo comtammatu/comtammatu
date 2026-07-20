@@ -9,6 +9,7 @@ import {
 } from "../position-tasks-actions";
 import type { ShiftRow } from "../_types";
 import { HrSetupClient } from "./setup-client";
+import { fetchHrLeavePolicy } from "./leave-policy-actions";
 
 const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
   positions: [],
@@ -17,10 +18,12 @@ const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
 };
 
 export default async function HrSetupPage() {
-  const [shiftsResult, positionTasksResult] = await Promise.all([
-    fetchShifts(),
-    fetchPositionTasksData(),
-  ]);
+  const [shiftsResult, positionTasksResult, leavePolicyResult] =
+    await Promise.all([
+      fetchShifts(),
+      fetchPositionTasksData(),
+      fetchHrLeavePolicy(),
+    ]);
   const shifts = shiftsResult.success
     ? ((shiftsResult.data as ShiftRow[]) ?? [])
     : [];
@@ -36,7 +39,7 @@ export default async function HrSetupPage() {
         title={copy.tabs.setup}
         description={copy.setupDescription}
         actions={
-          <Button variant="outline" size="sm" render={<Link href="/hr" />}>
+          <Button variant="outline" size="touch" render={<Link href="/hr" />}>
             {messages.hr.payroll.backToHr}
           </Button>
         }
@@ -44,6 +47,7 @@ export default async function HrSetupPage() {
       <HrSetupClient
         initialShifts={shifts}
         positionTasksData={positionTasksData}
+        leavePolicy={leavePolicyResult.success ? leavePolicyResult.data : null}
       />
     </AppPage>
   );

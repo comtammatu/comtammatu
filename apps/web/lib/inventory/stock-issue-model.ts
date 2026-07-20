@@ -23,6 +23,7 @@ export type BranchStockIssueLine = {
   unit: string;
   entryUnitId: number | null;
   reason: string | null;
+  photoUrls: string[];
 };
 
 export type BranchStockIssueIngredient = {
@@ -41,6 +42,7 @@ export type BranchStockIssuePermissions = {
 };
 
 export type BranchStockIssueDetail = {
+  tenantId: number;
   issue: BranchStockIssue;
   lines: BranchStockIssueLine[];
   ingredients: BranchStockIssueIngredient[];

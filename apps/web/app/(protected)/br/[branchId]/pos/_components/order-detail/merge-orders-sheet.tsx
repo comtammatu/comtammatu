@@ -168,7 +168,7 @@ export function MergeOrdersSheet({
                 <AlertAction>
                   <Button
                     type="button"
-                    size="sm"
+                    size="touch"
                     variant="outline"
                     onClick={load}
                   >
@@ -237,6 +237,7 @@ export function MergeOrdersSheet({
             <Button
               type="button"
               variant="outline"
+              size="touch"
               className="flex-1"
               disabled={isPending}
               onClick={handleClose}
@@ -245,6 +246,7 @@ export function MergeOrdersSheet({
             </Button>
             <Button
               type="button"
+              size="touch"
               className="flex-1"
               disabled={!canSubmit}
               onClick={handleSubmit}

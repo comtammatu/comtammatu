@@ -126,8 +126,12 @@ export default async function FinancePage({
         compact
       />
 
-      <KpiRow density="compact" className="xl:grid-cols-4">
+      <KpiRow
+        density="compact"
+        className="grid-cols-1 min-[360px]:grid-cols-2 xl:grid-cols-4"
+      >
         <KpiCard
+          density="compact"
           icon={<IconWallet className="size-4 text-muted-foreground" />}
           label={financeCopy.basic.kpis.moneyCollected}
           value={formatVND(cockpit.kpis.totalCollected)}
@@ -148,6 +152,7 @@ export default async function FinancePage({
         />
 
         <KpiCard
+          density="compact"
           icon={<IconTrendingUp className="size-4 text-muted-foreground" />}
           label={financeCopy.basic.kpis.netRevenue}
           value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
@@ -165,6 +170,7 @@ export default async function FinancePage({
         />
 
         <KpiCard
+          density="compact"
           icon={<IconBoxes className="size-4 text-muted-foreground" />}
           label={financeCopy.basic.kpis.inventoryValue}
           value={formatVND(cockpit.kpis.inventoryValue)}
@@ -183,6 +189,7 @@ export default async function FinancePage({
         />
 
         <KpiCard
+          density="compact"
           icon={<IconReceiptText className="size-4 text-muted-foreground" />}
           label={financeCopy.basic.kpis.operatingExpense}
           value={formatVND(cockpit.kpis.operatingExpense)}

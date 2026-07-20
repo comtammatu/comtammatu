@@ -8,6 +8,10 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { BreadcrumbLink } from "@comtammatu/ui/components/breadcrumb";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
+import {
+  InputGroup,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { Label } from "@comtammatu/ui/components/label";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
@@ -60,12 +64,23 @@ test("app metrics use KpiCard without the retired Stat primitive", () => {
   assert.doesNotMatch(supplierInvoices, /components\/stat["']|<Stat(?:\s|>)/);
 });
 
+test("linked KpiCard applies hover feedback to its full card surface", () => {
+  const kpiCard = read("apps/web/app/components/kpi/kpi-card.tsx");
+
+  assert.doesNotMatch(kpiCard, /hover:bg-muted\/50" : undefined/);
+  assert.match(kpiCard, /transition-\[background-color,box-shadow\]/);
+  assert.match(kpiCard, /hover:bg-muted\/50 hover:shadow-effect-card-hover/);
+});
+
 test("shared primitives use Base UI behavior without Radix", () => {
   const badgeSource = read("packages/ui/src/components/badge.tsx");
   const buttonSource = read("packages/ui/src/components/button.tsx");
   const itemSource = read("packages/ui/src/components/item.tsx");
   const accordionSource = read("packages/ui/src/components/accordion.tsx");
   const alertDialogSource = read("packages/ui/src/components/alert-dialog.tsx");
+  const confirmDialogSource = read(
+    "packages/ui/src/components/confirm-dialog.tsx",
+  );
   const avatarSource = read("packages/ui/src/components/avatar.tsx");
   const breadcrumbSource = read("packages/ui/src/components/breadcrumb.tsx");
   const checkboxSource = read("packages/ui/src/components/checkbox.tsx");
@@ -80,8 +95,8 @@ test("shared primitives use Base UI behavior without Radix", () => {
   const radioGroupSource = read("packages/ui/src/components/radio-group.tsx");
   const selectSource = read("packages/ui/src/components/select.tsx");
   const sidebarSource = read("packages/ui/src/components/sidebar.tsx");
-  const switchSource = read("packages/ui/src/components/switch.tsx");
   const scrollAreaSource = read("packages/ui/src/components/scroll-area.tsx");
+  const switchSource = read("packages/ui/src/components/switch.tsx");
   const sheetSource = read("packages/ui/src/components/sheet.tsx");
   const tabsSource = read("packages/ui/src/components/tabs.tsx");
   const tagInputSource = read("packages/ui/src/components/tag-input.tsx");
@@ -99,6 +114,9 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(buttonSource, /@base-ui\/react\/use-render/);
   assert.match(buttonSource, /useRender\.ComponentProps<"button">/);
   assert.match(buttonSource, /defaultTagName: "button"/);
+  assert.match(buttonSource, /hover:brightness-90/);
+  assert.match(buttonSource, /hover:brightness-95/);
+  assert.match(buttonSource, /box-shadow,filter,transform/);
   assert.doesNotMatch(buttonSource, /radix-ui|Slot|asChild/);
   assert.match(itemSource, /@base-ui\/react\/use-render/);
   assert.match(itemSource, /useRender\.ComponentProps<"div">/);
@@ -114,6 +132,10 @@ test("shared primitives use Base UI behavior without Radix", () => {
     alertDialogSource,
     /radix-ui|AlertDialogPrimitive\.(?:Action|Cancel|Content|Overlay)/,
   );
+  assert.match(alertDialogSource, /max-w-\[calc\(100%-2rem\)\]/);
+  assert.match(alertDialogSource, /max-h-\[calc\(100dvh-2rem\)\]/);
+  assert.match(alertDialogSource, /overscroll-contain/);
+  assert.equal(confirmDialogSource.match(/size="touch"/g)?.length, 2);
   assert.match(avatarSource, /@base-ui\/react\/avatar/);
   assert.doesNotMatch(avatarSource, /radix-ui/);
   assert.match(breadcrumbSource, /@base-ui\/react\/use-render/);
@@ -136,6 +158,8 @@ test("shared primitives use Base UI behavior without Radix", () => {
   );
   assert.match(dialogSource, /@base-ui\/react\/dialog/);
   assert.match(dialogSource, /DialogPrimitive\.(?:Backdrop|Popup)/);
+  assert.match(dialogSource, /overscroll-contain/);
+  assert.match(dialogSource, /size="icon-touch"/);
   assert.doesNotMatch(
     dialogSource,
     /radix-ui|DialogPrimitive\.(?:Content|Overlay)|asChild/,
@@ -163,6 +187,9 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(selectSource, /@base-ui\/react\/select/);
   assert.match(selectSource, /SelectPrimitive\.(?:Positioner|Popup|List)/);
   assert.doesNotMatch(selectSource, /radix-ui|--radix-|asChild/);
+  assert.match(scrollAreaSource, /@base-ui\/react\/scroll-area/);
+  assert.match(scrollAreaSource, /ScrollAreaPrimitive\.(?:Viewport|Content)/);
+  assert.doesNotMatch(scrollAreaSource, /radix-ui/);
   assert.match(sidebarSource, /@base-ui\/react\/use-render/);
   assert.match(sidebarSource, /useRender\.ComponentProps<"button">/);
   assert.doesNotMatch(sidebarSource, /radix-ui|Slot|asChild/);
@@ -170,12 +197,14 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.doesNotMatch(switchSource, /radix-ui/);
   assert.match(sheetSource, /@base-ui\/react\/dialog/);
   assert.match(sheetSource, /SheetPrimitive\.(?:Backdrop|Popup)/);
+  assert.match(sheetSource, /data-\[side=bottom\]:max-h-dvh-95/);
+  assert.match(
+    sheetSource,
+    /data-\[side=bottom\]:pb-\[env\(safe-area-inset-bottom\)\]/,
+  );
   assert.doesNotMatch(
     sheetSource,
     /radix-ui|SheetPrimitive\.(?:Content|Overlay)|asChild/,
-  assert.match(scrollAreaSource, /@base-ui\/react\/scroll-area/);
-  assert.match(scrollAreaSource, /ScrollAreaPrimitive\.(?:Viewport|Content)/);
-  assert.doesNotMatch(scrollAreaSource, /radix-ui/);
   );
   assert.match(tabsSource, /@base-ui\/react\/tabs/);
   assert.match(tabsSource, /TabsPrimitive\.Panel/);
@@ -381,9 +410,17 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
   assert.match(drawerSource, /overscroll-contain/);
   assert.match(drawerSource, /motion-reduce:animate-none/);
   assert.match(drawerSource, /responsiveFullscreen = false/);
+  assert.match(drawerSource, /pt-\[env\(safe-area-inset-top\)\]/);
+  assert.match(drawerSource, /pb-\[env\(safe-area-inset-bottom\)\]/);
+  assert.match(drawerSource, /flex h-full min-h-0 flex-col/);
   assert.match(drawerSource, /before:inset-0/);
   assert.match(drawerSource, /sm:before:inset-2/);
   assert.match(posSource, /<DrawerContent showHandle responsiveFullscreen>/);
+  assert.match(archivedOrdersSource, /useIsMobile\(1280\)/);
+  assert.match(
+    archivedOrdersSource,
+    /<DrawerContent showHandle responsiveFullscreen>/,
+  );
   assert.doesNotMatch(drawerSource, /vaul|data-\[vaul/);
   assert.doesNotMatch(posSource, /data-\[vaul/);
   assert.doesNotMatch(archivedOrdersSource, /data-\[vaul/);
@@ -405,4 +442,40 @@ test("pagination items keep stable ellipsis windows", () => {
     10,
   ]);
   assert.deepEqual(getPaginationItems(99, 10), [1, PAGINATION_ELLIPSIS, 9, 10]);
+});
+
+test("InputGroup controls fill their owning field and touch variants stay named", () => {
+  const inputGroup = renderToStaticMarkup(
+    createElement(
+      InputGroup,
+      { size: "touch" },
+      createElement(InputGroupInput, { "aria-label": "Search" }),
+    ),
+  );
+  const selectSource = read("packages/ui/src/components/select.tsx");
+  const dropdownMenuSource = read(
+    "packages/ui/src/components/dropdown-menu.tsx",
+  );
+
+  assert.match(inputGroup, /data-slot="input-group"/);
+  assert.match(inputGroup, /data-size="touch"/);
+  assert.match(inputGroup, /class="[^"]*h-12/);
+  assert.match(inputGroup, /data-slot="input-group-control"/);
+  assert.match(inputGroup, /h-full/);
+  assert.match(selectSource, /size\?: "default" \| "touch"/);
+  assert.match(selectSource, /data-\[size=touch\]:min-h-12/);
+  assert.match(dropdownMenuSource, /size\?: "default" \| "touch"/);
+  assert.match(dropdownMenuSource, /data-\[size=touch\]:min-h-12/);
+});
+
+test("Item content regions can shrink inside responsive card layouts", () => {
+  const itemSource = read("packages/ui/src/components/item.tsx");
+
+  assert.match(itemSource, /flex min-w-0 flex-1 flex-col gap-1/);
+  assert.equal(
+    itemSource.match(
+      /flex min-w-0 basis-full items-center justify-between gap-2/g,
+    )?.length,
+    2,
+  );
 });

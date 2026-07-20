@@ -9,6 +9,7 @@ import {
 
 test.use({ storageState: E2E_AUTH_STORAGE_OWNER });
 
+const MOBILE_NARROW = { width: 320, height: 720 };
 const MOBILE = { width: 390, height: 844 };
 const TABLET_PORTRAIT = { width: 768, height: 1024 };
 const TABLET_LANDSCAPE = { width: 1024, height: 768 };
@@ -116,12 +117,18 @@ test.describe("branch route shell ownership", () => {
     {
       label: "manager",
       storageState: E2E_AUTH_STORAGE_MANAGER,
-      viewports: [MOBILE, TABLET_PORTRAIT, TABLET_LANDSCAPE, DESKTOP],
+      viewports: [
+        MOBILE_NARROW,
+        MOBILE,
+        TABLET_PORTRAIT,
+        TABLET_LANDSCAPE,
+        DESKTOP,
+      ],
     },
     {
       label: "cashier",
       storageState: E2E_AUTH_STORAGE,
-      viewports: [MOBILE],
+      viewports: [MOBILE_NARROW, MOBILE],
     },
   ] as const) {
     test(`${actor.label} stays in Branch and cannot enter Owner surface URLs`, async ({
@@ -164,7 +171,12 @@ test.describe("branch route shell ownership", () => {
   }) => {
     const health = watchPageHealth(page);
 
-    for (const viewport of [MOBILE, TABLET_PORTRAIT, DESKTOP]) {
+    for (const viewport of [
+      MOBILE_NARROW,
+      MOBILE,
+      TABLET_PORTRAIT,
+      DESKTOP,
+    ]) {
       await page.setViewportSize(viewport);
       await expectHealthyRoute(page, "/", {
         ownerLinkCount: "some",
@@ -194,7 +206,7 @@ test.describe("branch route shell ownership", () => {
     const { branchId } = await getCashierProfile();
     const health = watchPageHealth(page);
 
-    for (const viewport of [MOBILE, DESKTOP]) {
+    for (const viewport of [MOBILE_NARROW, MOBILE, DESKTOP]) {
       await page.setViewportSize(viewport);
       for (const station of ["pos", "kds"] as const) {
         await expectHealthyRoute(page, `/br/${branchId}/${station}`);
@@ -213,7 +225,7 @@ test.describe("branch route shell ownership", () => {
     page,
   }) => {
     test.setTimeout(120_000);
-    await page.setViewportSize(MOBILE);
+    await page.setViewportSize(MOBILE_NARROW);
     const { branchId } = await getCashierProfile();
     const health = watchPageHealth(page);
 
@@ -258,7 +270,7 @@ test.describe("branch route shell ownership", () => {
     page,
   }) => {
     test.setTimeout(120_000);
-    await page.setViewportSize(MOBILE);
+    await page.setViewportSize(MOBILE_NARROW);
     const { branchId } = await getCashierProfile();
     const health = watchPageHealth(page);
 
@@ -313,7 +325,12 @@ test.describe("branch route shell ownership", () => {
       `/br/${branchId}/shift/leave-approvals`,
     ];
 
-    for (const viewport of [MOBILE, TABLET_PORTRAIT, TABLET_LANDSCAPE]) {
+    for (const viewport of [
+      MOBILE_NARROW,
+      MOBILE,
+      TABLET_PORTRAIT,
+      TABLET_LANDSCAPE,
+    ]) {
       await page.setViewportSize(viewport);
       for (const path of paths) {
         await expectHealthyRoute(page, path);

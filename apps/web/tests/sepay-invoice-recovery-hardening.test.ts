@@ -61,10 +61,10 @@ test("SePay recovery and shared issuer fail closed before provider submission", 
 
   assert.match(
     recovery,
-    /activeInvoiceResult\.error \|\|\s*summaryLinkResult\.error \|\|\s*invoiceRequestResult\.error/,
+    /activeInvoiceResult\.error \|\|\s*historicalAggregateLinkResult\.error \|\|\s*invoiceRequestResult\.error/,
   );
   assert.match(issuer, /if \(existingErr\)/);
-  assert.match(issuer, /if \(summaryLinksErr\)/);
+  assert.match(issuer, /if \(aggregateLinksErr\)/);
   assert.match(
     issuer,
     /\.update\(\{[\s\S]*status: "signing"[\s\S]*\.eq\("status", "draft"\)/,
@@ -101,7 +101,7 @@ test("shared invoice recovery preserves the canonical no-buyer flag", () => {
   );
 });
 
-test("daily summary excludes saved buyer requests and shares the order lock", () => {
+test("historical aggregate guard excludes saved buyer requests and shares the order lock", () => {
   const migration = read(
     "supabase/migration-archive/20260714031034_20260714103000_harden_sepay_invoice_recovery.sql",
   );

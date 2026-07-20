@@ -37,6 +37,7 @@ type StockIssueListRow = {
 };
 
 type StockIssueDetailRow = {
+  tenantId: number;
   issue: {
     id: number;
     issue_number: string | null;
@@ -54,6 +55,7 @@ type StockIssueDetailRow = {
     unit: string | null;
     entry_unit_id: number | null;
     reason: string | null;
+    photo_urls: string[] | null;
     ingredients: { id: number; name: string; unit: string } | null;
   }>;
 };
@@ -95,6 +97,7 @@ function toBranchStockIssueLine(
     unit: row.unit ?? row.ingredients?.unit ?? "",
     entryUnitId: row.entry_unit_id,
     reason: row.reason,
+    photoUrls: row.photo_urls ?? [],
   };
 }
 
@@ -218,6 +221,7 @@ export async function loadBranchStockIssueDetailData(
       : permissions.canCreateOther;
 
   return {
+    tenantId: detail.tenantId,
     issue,
     lines: detail.lines.map(toBranchStockIssueLine),
     ingredients: ingredientRows.map((ingredient) =>

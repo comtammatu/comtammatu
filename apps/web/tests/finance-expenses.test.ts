@@ -178,3 +178,16 @@ test("expense period totals load every row and fail closed on missing evidence",
   assert.doesNotMatch(page, /expensesRes\.success \? \(expensesRes\.data/);
   assert.doesNotMatch(page, /fetchActualFoodCostTotal/);
 });
+
+test("expense list separates its KPI summary from the data table", () => {
+  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const page = readWeb("app/(protected)/finance/expenses/page.tsx");
+  const successPage = page.slice(page.indexOf("const todayBusinessDate"));
+
+  assert.match(
+    client,
+    /<KpiRow density="compact">[\s\S]*?<KpiCard[\s\S]*?label=\{copy\.totalLabel\}[\s\S]*?hint=\{copy\.totalHint\(formatCount\(rows\.length\)\)\}/,
+  );
+  assert.doesNotMatch(client, /<AppSection[\s\S]*?headerHint=/);
+  assert.doesNotMatch(successPage, /meta=/);
+});

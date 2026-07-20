@@ -69,11 +69,11 @@ export function CategoryTable({ categories }: CategoryTableProps) {
     });
   }
 
-  function renderActions(cat: CategoryRow) {
+  function renderActions(cat: CategoryRow, touch = false) {
     return (
       <RowActionsMenu
         label="Menu"
-        triggerSize="icon"
+        triggerSize={touch ? "icon-touch" : "icon"}
         triggerClassName="rounded-full"
         items={[
           {
@@ -174,7 +174,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                   ? ACTIVE_STATE_LABELS_VI.active
                   : ACTIVE_STATE_LABELS_VI.inactive}
               </Badge>
-              <ItemActions>{renderActions(cat)}</ItemActions>
+              <ItemActions>{renderActions(cat, true)}</ItemActions>
             </ItemFooter>
           </Item>
         )}

@@ -475,11 +475,11 @@ function UnitRowCells({
         <Button
           type="button"
           variant="ghost"
-          size="icon"
+          size="icon-touch"
           onClick={onRemove}
           disabled={!canRemove}
           aria-label={`${ACTIONS_VI.remove} ${copy.units.colUnit}`}
-          className="h-9 w-9 md:hidden flex-shrink-0"
+          className="md:hidden flex-shrink-0"
         >
           <IconTrash className="size-4 text-muted-foreground" />
         </Button>

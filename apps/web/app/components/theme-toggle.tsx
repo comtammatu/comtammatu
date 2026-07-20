@@ -38,11 +38,13 @@ export function ThemeToggle({
   );
 }
 
-export function ThemeMenuItem() {
+export function ThemeMenuItem({
+  className,
+}: Pick<ComponentProps<typeof DropdownMenuItem>, "className"> = {}) {
   const { theme, toggleTheme } = useTheme();
   const isNight = theme === "night";
   return (
-    <DropdownMenuItem onClick={toggleTheme}>
+    <DropdownMenuItem className={className} onClick={toggleTheme}>
       {isNight ? <Sun /> : <Moon />}
       {isNight
         ? messages.common.themeToggleToLight

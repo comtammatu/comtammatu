@@ -7,18 +7,6 @@
   "regions": ["sin1"],
   "crons": [
     {
-      "path": "/api/cron/hddt-daily-summary",
-      "schedule": "5 19 * * *"
-    },
-    {
-      "path": "/api/cron/hddt-reconcile",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/hddt-archive",
-      "schedule": "*/15 * * * *"
-    },
-    {
       "path": "/api/cron/kds-maintenance",
       "schedule": "0 5,11,17,23 * * *"
     }

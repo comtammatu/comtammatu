@@ -198,21 +198,30 @@ test("HR routes keep employee, attendance and setup surfaces separate", () => {
   );
 });
 
-test("HR employee salary-source and contract controls stay owner-only", () => {
+test("HR employee salary and contract controls stay owner-only", () => {
   const employeeTable = read("apps/web/app/(protected)/hr/employee-table.tsx");
   const employeeFormDialog = read(
     "apps/web/app/(protected)/hr/employee-form-dialog.tsx",
   );
 
-  assert.match(employeeTable, /\.\.\.\(canManage\s*\?\s*\[/);
-  assert.match(employeeTable, /key: "salarySource"/);
-  assert.match(employeeTable, /render: renderSalarySource/);
   assert.match(
     employeeTable,
-    /\{canManage \? renderSalarySource\(employee\) : null\}/,
+    /\.\.\.\(canManage\s*\?\s*\[[\s\S]*?key: "salary"[\s\S]*?render: renderSalary[\s\S]*?key: "contractType"[\s\S]*?render: renderContractType[\s\S]*?\]\s*:\s*\[\]\)/,
   );
-  assert.doesNotMatch(employeeTable, /formatVND|insurance_base_salary|Lương \/ HĐ/);
-  assert.match(employeeTable, /\{canManage \? renderEdit\(employee\) : null\}/);
+  assert.match(
+    employeeTable,
+    /\{canManage \? \(\s*<Badge[\s\S]*?renderContractType\(employee\)[\s\S]*?\) : null\}/,
+  );
+  assert.match(
+    employeeTable,
+    /\{canManage \? \(\s*<ItemDescription[\s\S]*?renderSalary\(employee\)[\s\S]*?\) : null\}/,
+  );
+  assert.match(employeeTable, /formatVND/);
+  assert.doesNotMatch(employeeTable, /insurance_base_salary|Lương \/ HĐ/);
+  assert.match(
+    employeeTable,
+    /\{canManage \? renderEdit\(employee, true\) : null\}/,
+  );
   assert.match(
     employeeTable,
     /\{canManage \? \(\s*<EmployeeFormDialog[\s\S]*?mode="edit"/,

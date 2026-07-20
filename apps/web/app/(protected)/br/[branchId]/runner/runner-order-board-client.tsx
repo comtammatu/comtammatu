@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatCount } from "@comtammatu/shared/format";
 import { cn } from "@comtammatu/ui";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { RunnerIdleVisual, type RunnerIdleState } from "./runner-idle-visual";
 import { RunnerWaitTime } from "./runner-wait-time";
 
@@ -13,11 +14,11 @@ const RUNNER_ROW_LIMIT_BASE = 4;
 const RUNNER_ROW_LIMIT_XL = 6;
 const RUNNER_OVERFLOW_TILE_LIMIT = 4;
 const RUNNER_OVERFLOW_PREVIEW_LIMIT = RUNNER_OVERFLOW_TILE_LIMIT - 1;
-const RUNNER_COLUMN_SPAN = {
-  order: 4,
-  quantity: 3,
-  status: 4,
-  wait: 1,
+const RUNNER_COLUMN_CLASS = {
+  order: "col-span-1 border-r sm:col-span-4",
+  quantity: "col-span-1 sm:col-span-3 sm:border-r",
+  status: "col-span-1 max-sm:border-t sm:col-span-4 sm:border-r",
+  wait: "col-span-1 max-sm:border-l max-sm:border-t sm:col-span-1",
 } as const;
 const RUNNER_BOARD_COPY = {
   pending: "Đang chờ",
@@ -45,8 +46,7 @@ export type RunnerBoardRow = {
   sortAt: string;
 };
 
-type RunnerColumnSpan =
-  (typeof RUNNER_COLUMN_SPAN)[keyof typeof RUNNER_COLUMN_SPAN];
+type RunnerColumn = keyof typeof RUNNER_COLUMN_CLASS;
 
 type DisplayRunnerBoardRow = RunnerBoardRow & {
   exiting?: boolean;
@@ -62,6 +62,7 @@ export function RunnerOrderBoardClient({
   idleState: RunnerIdleState | null;
 }) {
   const displayRows = useRunnerDisplayRows(rows);
+  const usesBaseRowLimit = useIsMobile(1280);
 
   if (displayRows.length === 0) {
     const resolvedIdleState = idleState ?? "empty";
@@ -86,23 +87,25 @@ export function RunnerOrderBoardClient({
     );
   }
 
-  const visibleRows = displayRows.slice(0, RUNNER_ROW_LIMIT_XL);
-  const overflowBaseRows = displayRows.slice(RUNNER_ROW_LIMIT_BASE);
-  const overflowXlRows = displayRows.slice(RUNNER_ROW_LIMIT_XL);
+  const rowLimit = usesBaseRowLimit
+    ? RUNNER_ROW_LIMIT_BASE
+    : RUNNER_ROW_LIMIT_XL;
+  const visibleRows = displayRows.slice(0, rowLimit);
+  const overflowRows = displayRows.slice(rowLimit);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="grid grid-cols-12 divide-x divide-border/70 border-b border-border bg-muted/50">
-        <RunnerColumnHeading span={RUNNER_COLUMN_SPAN.order}>
+      <div className="grid grid-cols-2 border-b border-border bg-muted/50 sm:grid-cols-12">
+        <RunnerColumnHeading column="order">
           {RUNNER_BOARD_COPY.tableHeaders.order}
         </RunnerColumnHeading>
-        <RunnerColumnHeading span={RUNNER_COLUMN_SPAN.quantity}>
+        <RunnerColumnHeading column="quantity">
           {RUNNER_BOARD_COPY.tableHeaders.quantity}
         </RunnerColumnHeading>
-        <RunnerColumnHeading span={RUNNER_COLUMN_SPAN.status}>
+        <RunnerColumnHeading column="status">
           {RUNNER_BOARD_COPY.tableHeaders.status}
         </RunnerColumnHeading>
-        <RunnerColumnHeading span={RUNNER_COLUMN_SPAN.wait} align="right">
+        <RunnerColumnHeading column="wait" align="right">
           {RUNNER_BOARD_COPY.tableHeaders.wait}
         </RunnerColumnHeading>
       </div>
@@ -115,24 +118,16 @@ export function RunnerOrderBoardClient({
             key={row.key}
             row={row}
             featured={!row.exiting && index === 0}
-            hiddenBelowXl={index >= RUNNER_ROW_LIMIT_BASE}
             nowMs={nowMs}
           />
         ))}
       </ItemGroup>
-      <RunnerOverflowRail rows={overflowBaseRows} className="xl:hidden" />
-      <RunnerOverflowRail rows={overflowXlRows} className="hidden xl:block" />
+      <RunnerOverflowRail rows={overflowRows} />
     </div>
   );
 }
 
-function RunnerOverflowRail({
-  rows,
-  className,
-}: {
-  rows: DisplayRunnerBoardRow[];
-  className?: string;
-}) {
+function RunnerOverflowRail({ rows }: { rows: DisplayRunnerBoardRow[] }) {
   const activeRows = rows.filter((row) => row.exiting !== true);
   const previewRows = activeRows.slice(0, RUNNER_OVERFLOW_PREVIEW_LIMIT);
   const remainingCount = activeRows.length - previewRows.length;
@@ -141,10 +136,7 @@ function RunnerOverflowRail({
 
   return (
     <div
-      className={cn(
-        "shrink-0 border-t border-border bg-muted/50 p-2",
-        className,
-      )}
+      className="shrink-0 border-t border-border bg-muted/50 p-2"
       data-runner-overflow-rail
     >
       <div
@@ -281,19 +273,19 @@ function RunnerIdleAtmosphere({ state }: { state: RunnerIdleState }) {
 
 function RunnerColumnHeading({
   children,
-  span,
+  column,
   align = "left",
 }: {
   children: ReactNode;
-  span: RunnerColumnSpan;
+  column: RunnerColumn;
   align?: "left" | "right";
 }) {
   return (
     <div
       className={cn(
-        "py-2 font-heading text-runner-header font-semibold text-foreground xl:py-4",
-        span === RUNNER_COLUMN_SPAN.wait ? "px-2 xl:px-4" : "px-4",
-        getRunnerColumnSpanClass(span),
+        "border-border/70 py-2 font-heading text-runner-header font-semibold text-foreground xl:py-4",
+        column === "wait" ? "px-2 xl:px-4" : "px-2 sm:px-4",
+        RUNNER_COLUMN_CLASS[column],
         align === "right" && "text-right",
       )}
     >
@@ -305,12 +297,10 @@ function RunnerColumnHeading({
 function RunnerOrderListRow({
   row,
   featured,
-  hiddenBelowXl,
   nowMs,
 }: {
   row: DisplayRunnerBoardRow;
   featured: boolean;
-  hiddenBelowXl: boolean;
   nowMs: number;
 }) {
   const statusLabel = getRunnerStatusLabel(row.status);
@@ -322,25 +312,24 @@ function RunnerOrderListRow({
       data-runner-exiting={row.exiting ? "true" : undefined}
       data-runner-featured={featured ? "true" : undefined}
       className={cn(
-        "grid h-full min-h-0 w-full grid-cols-12 items-stretch divide-x divide-border/70 border-b border-l-4 p-0 rounded-none border-x-0 motion-safe:transition-[background-color,border-color,opacity,transform] motion-safe:duration-300 motion-safe:ease-out",
+        "grid h-full min-h-0 w-full grid-cols-2 items-stretch border-b border-l-4 p-0 rounded-none border-x-0 motion-safe:transition-[background-color,border-color,opacity,transform] motion-safe:duration-300 motion-safe:ease-out sm:grid-cols-12",
         getRunnerRowClass(),
         featured && "border-l-primary",
         featured && "bg-warning/15 ring-1 ring-inset ring-warning/20",
-        hiddenBelowXl && "hidden xl:grid",
         row.exiting &&
           "pointer-events-none -translate-x-full opacity-0 motion-safe:scale-95",
       )}
     >
-      <RunnerOrderCell span={RUNNER_COLUMN_SPAN.order} mono>
+      <RunnerOrderCell column="order" mono>
         {row.orderLabel}
       </RunnerOrderCell>
-      <RunnerOrderCell span={RUNNER_COLUMN_SPAN.quantity} mono>
+      <RunnerOrderCell column="quantity" mono>
         {formatCount(row.itemQuantity)} {RUNNER_BOARD_COPY.itemUnit}
       </RunnerOrderCell>
-      <RunnerOrderCell span={RUNNER_COLUMN_SPAN.status} mono>
+      <RunnerOrderCell column="status" mono>
         {statusLabel}
       </RunnerOrderCell>
-      <RunnerOrderCell span={RUNNER_COLUMN_SPAN.wait} align="right" mono>
+      <RunnerOrderCell column="wait" align="right" mono>
         <RunnerWaitTime startIso={row.sortAt} initialNowMs={nowMs} />
       </RunnerOrderCell>
     </Item>
@@ -349,21 +338,21 @@ function RunnerOrderListRow({
 
 function RunnerOrderCell({
   children,
-  span,
+  column,
   align = "left",
   mono = false,
 }: {
   children: ReactNode;
-  span: RunnerColumnSpan;
+  column: RunnerColumn;
   align?: "left" | "right";
   mono?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "flex h-full min-w-0 flex-col justify-center py-2 xl:py-4",
-        span === RUNNER_COLUMN_SPAN.wait ? "px-2 xl:px-4" : "px-4",
-        getRunnerColumnSpanClass(span),
+        "flex h-full min-w-0 flex-col justify-center border-border/70 py-2 xl:py-4",
+        column === "wait" ? "px-2 xl:px-4" : "px-2 sm:px-4",
+        RUNNER_COLUMN_CLASS[column],
         align === "right" && "text-right",
       )}
     >
@@ -377,12 +366,6 @@ function RunnerOrderCell({
       </div>
     </div>
   );
-}
-
-function getRunnerColumnSpanClass(span: RunnerColumnSpan): string {
-  if (span === 4) return "col-span-4";
-  if (span === 3) return "col-span-3";
-  return "col-span-1";
 }
 
 function getRunnerStatusLabel(_status: RunnerBoardStatus): "Đang chờ" {

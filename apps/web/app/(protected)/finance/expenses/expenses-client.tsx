@@ -25,13 +25,15 @@ import {
 } from "@comtammatu/ui/components/item";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { StatusBadge } from "@/components/status-badge";
-import { AppSection } from "@/components/surface";
+import { AppSection, KpiRow } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -144,6 +146,7 @@ export function ExpensesClient({
   canManageExpenses,
 }: Props) {
   const router = useRouter();
+  const isTouchLayout = useIsMobile(1024);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transferInstruction, setTransferInstruction] = useState<string | null>(
     null,
@@ -439,16 +442,24 @@ export function ExpensesClient({
         hide={["compare", "granularity"]}
       />
 
+      <KpiRow density="compact">
+        <KpiCard
+          label={copy.totalLabel}
+          value={formatVND(totalAmount)}
+          hint={copy.totalHint(formatCount(rows.length))}
+          tone="primary"
+          density="compact"
+        />
+      </KpiRow>
+
       <AppSection
         title={copy.listTitle}
-        headerHint={`${copy.totalLabel}: ${formatVND(totalAmount)}`}
-        badge={{
-          children: copy.totalHint(formatCount(rows.length)),
-          variant: "secondary",
-        }}
         action={
           canManageExpenses ? (
-            <Button onClick={() => setDialogOpen(true)}>
+            <Button
+              size={isTouchLayout ? "touch" : "default"}
+              onClick={() => setDialogOpen(true)}
+            >
               <IconPlus data-icon="inline-start" />
               {copy.add}
             </Button>
@@ -460,6 +471,7 @@ export function ExpensesClient({
         <DataTable
           columns={columns}
           data={rows}
+          pageSize={50}
           getRowKey={(row) => row.id}
           emptyMode="no-data"
           emptyTitle={copy.empty.title}
@@ -592,6 +604,7 @@ export function ExpensesClient({
         footer={
           <Button
             variant="outline"
+            size="touch"
             onClick={() => setTransferInstruction(null)}
           >
             {copy.transferInstruction.close}
@@ -607,6 +620,7 @@ export function ExpensesClient({
               {transferInstruction}
             </code>
             <Button
+              size="touch"
               className="w-full"
               onClick={() => void copyTransferContent(transferInstruction)}
             >

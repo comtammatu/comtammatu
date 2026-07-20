@@ -17,9 +17,9 @@ export function BranchRuntimeBackControl({
   return (
     <Button
       variant="ghost"
-      size="sm"
+      size="touch"
       className={cn(
-        "h-9 min-h-9 shrink-0 gap-1.5 px-2 text-sm text-muted-foreground",
+        "shrink-0 text-muted-foreground",
         className,
       )}
       render={

@@ -151,6 +151,7 @@ export function BranchGrnCreateClient({
                         <SelectItem
                           key={location.id}
                           value={String(location.id)}
+                          size="touch"
                         >
                           {getGrnLocationKindLabel(location)}
                         </SelectItem>

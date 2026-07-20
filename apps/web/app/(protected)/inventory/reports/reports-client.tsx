@@ -7,7 +7,7 @@ import {
   ArrowLeftRight as IconArrowLeftRight,
   Package as IconPackage,
 } from "lucide-react";
-import { formatPercent } from "@comtammatu/shared/format";
+import { formatPercent, formatQuantity } from "@comtammatu/shared/format";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -37,12 +37,16 @@ export type VarianceItem = {
 export type ReportsProps = {
   movementSummary: Array<{
     label: string;
-    values: { value: number; color: InventorySemanticColor }[];
+    values: {
+      label: string;
+      value: number;
+      color: InventorySemanticColor;
+    }[];
   }>;
   apAging: ApAgingItem[];
   showSupplierPayables: boolean;
   consumptionVariance: VarianceItem[];
-  foodCostTrend: number[];
+  foodCostTrend: { label: string; value: number }[];
   foodCostTrendAvailable: boolean;
   foodCostTrendDeltaPct: number | null;
 };
@@ -124,7 +128,12 @@ export function ReportsClient({
             </div>
           </div>
           <div className="flex-1">
-            <SimpleBarChart data={movementSummary} height={220} />
+            <SimpleBarChart
+              data={movementSummary}
+              ariaLabel={messages.inventory.reports.movementTitle}
+              formatValue={formatQuantity}
+              height={220}
+            />
           </div>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{trendLabel}</p>
@@ -267,10 +276,13 @@ export function ReportsClient({
             <>
               <TrendSparkline
                 data={foodCostTrend}
+                ariaLabel={messages.inventory.reports.foodCostTrend}
+                formatValue={formatPercent}
                 width={400}
                 height={120}
                 color="primary"
                 target={30}
+                targetDescription={messages.inventory.reports.foodCostTarget}
               />
               <p className="mt-2 text-xs text-muted-foreground">
                 {messages.inventory.reports.foodCostByMonth}

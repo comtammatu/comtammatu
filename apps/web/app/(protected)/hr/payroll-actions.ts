@@ -13,11 +13,11 @@ import {
   buildCompletedWorkdays,
   calculateAnnualLeaveUsedThroughMonth,
   calculatePayableDays,
-  countAnnualLeaveAccruedThroughMonth,
   countOverlapDays,
   splitAnnualLeaveByQuota,
   type LeaveRange,
 } from "@lib/hr/payroll-day-math";
+import { fetchTenantHrLeavePolicy } from "@lib/hr/leave-policy-data";
 
 const PAYROLL_ROLES: readonly StaffRole[] = ["owner"];
 const payrollActionCopy = messages.hr.payroll.server;
@@ -25,7 +25,7 @@ const payrollActionCopy = messages.hr.payroll.server;
 const payrollMonthSchema = z.object({
   month: z.coerce.number().int().min(1).max(12),
   year: z.coerce.number().int().min(2020),
-  standardDays: z.coerce.number().positive().max(31),
+  standardDays: z.coerce.number().positive().max(31).optional(),
   branchId: z.coerce.number().int().positive().nullable().optional(),
 });
 
@@ -218,6 +218,15 @@ async function buildPayrollPreview(
 ): Promise<ActionResult<PayrollPreview>> {
   const startDate = firstDayOfMonth(input.year, input.month);
   const endDate = getVNMonthEndDateString(input.year, input.month);
+  const policyResult = await fetchTenantHrLeavePolicy({
+    supabase,
+    tenantId: claims.tenant_id,
+  });
+  if (!policyResult.success) {
+    return { success: false, error: payrollActionCopy.leavePolicyLoadFailed };
+  }
+  const policy = policyResult.data;
+  const standardDays = input.standardDays ?? policy.standardWorkdays;
 
   let employeesQuery = supabase
     .from("employees")
@@ -259,6 +268,7 @@ async function buildPayrollPreview(
     leaveResult,
     adjustmentsResult,
     periodResult,
+    entitlementsResult,
   ] = await Promise.all([
     supabase
       .from("employment_contracts")
@@ -303,6 +313,12 @@ async function buildPayrollPreview(
       .eq("period_year", input.year)
       .eq("period_month", input.month)
       .maybeSingle(),
+    supabase
+      .from("annual_leave_entitlements")
+      .select("employee_id, entitlement_days")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("year", input.year)
+      .in("employee_id", employeeIds),
   ]);
 
   if (contractsResult.error) {
@@ -348,6 +364,16 @@ async function buildPayrollPreview(
       periodResult.error.code,
     );
     return { success: false, error: payrollActionCopy.periodLoadFailed };
+  }
+  if (entitlementsResult.error) {
+    console.error(
+      "[hr/payroll-actions:buildPayrollPreview] annual entitlement query failed",
+      entitlementsResult.error.code,
+    );
+    return {
+      success: false,
+      error: payrollActionCopy.leaveEntitlementsLoadFailed,
+    };
   }
 
   const snapshot = periodResult.data
@@ -463,6 +489,14 @@ async function buildPayrollPreview(
     adjustmentsByEmployee.set(row.employee_id, current);
   }
 
+  const annualEntitlementByEmployee = new Map<number, number>();
+  for (const entitlement of entitlementsResult.data ?? []) {
+    annualEntitlementByEmployee.set(
+      entitlement.employee_id,
+      numberValue(entitlement.entitlement_days),
+    );
+  }
+
   const employeesForPreview = snapshotLocked
     ? employeeRows.filter((employee) => finalizedByEmployee.has(employee.id))
     : employeeRows.filter((employee) => employee.is_active);
@@ -487,18 +521,18 @@ async function buildPayrollPreview(
         unpaidLeaveDays: 0,
         annualLeaves: [],
       };
+      const annualEntitlementDays =
+        annualEntitlementByEmployee.get(employee.id) ?? 0;
       const annualSplit = splitAnnualLeaveByQuota({
-        entitlementDays: countAnnualLeaveAccruedThroughMonth(
-          employee.start_date,
-          input.year,
-          input.month,
-        ),
+        entitlementDays: annualEntitlementDays,
         usedBeforePeriodDays: calculateAnnualLeaveUsedThroughMonth({
           leaves: leave.annualLeaves,
-          employeeStartDate: employee.start_date,
+          entitlementDays: annualEntitlementDays,
+          monthlyLeaveDays: policy.monthlyLeaveDays,
           year: input.year,
           throughMonth: input.month - 1,
         }),
+        monthlyLeaveDays: policy.monthlyLeaveDays,
         annualLeaveDaysInPeriod: leave.annualLeaveDays,
       });
       const paidLeaveDays = annualSplit.paidLeaveDays;
@@ -507,10 +541,10 @@ async function buildPayrollPreview(
       const payableDays = calculatePayableDays({
         workingDays: workdays,
         paidLeaveDays,
-        standardDays: input.standardDays,
+        standardDays,
       });
       const proratedSalary = Math.round(
-        (monthlySalary * payableDays) / input.standardDays,
+        (monthlySalary * payableDays) / standardDays,
       );
       const adjustments = adjustmentsByEmployee.get(employee.id) ?? [];
       const adjustmentTotals = adjustments.reduce((total, adjustment) => {
@@ -556,7 +590,7 @@ async function buildPayrollPreview(
         paidLeaveDays,
         unpaidLeaveDays,
         payableDays,
-        standardDays: input.standardDays,
+        standardDays,
         proratedSalary,
         taxableAllowances: adjustmentTotals.taxableAllowances,
         taxExemptAllowances: adjustmentTotals.taxExemptAllowances,
@@ -595,7 +629,7 @@ async function buildPayrollPreview(
     data: {
       year: input.year,
       month: input.month,
-      standardDays: input.standardDays,
+      standardDays,
       snapshot,
       entries,
       missingSalaryEmployeeIds,
@@ -762,7 +796,7 @@ export const snapshotPayrollPreview = withAction(
       {
         p_period_year: data.year,
         p_period_month: data.month,
-        p_standard_days: data.standardDays,
+        p_standard_days: preview.standardDays,
         p_entries: entries,
       },
     );

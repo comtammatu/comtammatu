@@ -65,7 +65,7 @@ function MobileShiftCard({
   return (
     <InteractiveCard
       minHeight="mobile"
-      className={`h-auto touch-none select-none cursor-pointer ${isPending ? "opacity-60" : ""}`}
+      className={`h-auto touch-pan-y select-none cursor-pointer ${isPending ? "opacity-60" : ""}`}
       {...longPress}
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 pointer-events-none">

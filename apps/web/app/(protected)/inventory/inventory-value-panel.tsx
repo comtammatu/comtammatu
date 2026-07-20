@@ -126,7 +126,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           actions={
             <Button
               variant="ghost"
-              size="sm"
+              size="touch"
               onClick={refreshAll}
               disabled={isPending}
               className="gap-1.5 text-muted-foreground"
@@ -138,7 +138,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
         />
         <div className="flex items-center gap-2">
           {tabCount > 1 && (
-            <TabsList variant="toolbar" className="w-fit">
+            <TabsList variant="toolbar" size="touch" className="w-fit">
               {visibility.system && (
                 <TabsTrigger value="system">
                   {messages.inventory.value.tabs.system}

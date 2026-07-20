@@ -68,7 +68,6 @@ export function KpiCard({
       className={cn(
         "relative flex h-full flex-col",
         isCompact ? "min-h-24 gap-2" : "min-h-32 gap-3",
-        href ? "transition-colors hover:bg-muted/50" : undefined,
       )}
     >
       <div
@@ -158,7 +157,10 @@ export function KpiCard({
       )}
       aria-label={typeof value === "string" ? `${label}: ${value}` : label}
     >
-      <Card size={isCompact ? "sm" : "default"} className="h-full">
+      <Card
+        size={isCompact ? "sm" : "default"}
+        className="h-full transition-[background-color,box-shadow] hover:bg-muted/50 hover:shadow-effect-card-hover"
+      >
         {Body}
       </Card>
     </Link>

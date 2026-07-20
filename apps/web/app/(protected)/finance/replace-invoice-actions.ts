@@ -120,8 +120,7 @@ export async function replaceTaxInvoice(
   if (oldInvoice.invoice_kind !== "per_order") {
     return {
       success: false,
-      error:
-        "Chỉ hỗ trợ thay thế HĐ B2B (per_order). HĐ tổng hợp B2C sẽ hỗ trợ ở v2.",
+      error: "Chỉ hỗ trợ thay thế HĐĐT theo đơn (per_order).",
     };
   }
   if (

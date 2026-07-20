@@ -117,7 +117,7 @@ Supporting workflows remain available but are not the first screen:
 - Food-cost and gross-profit analysis.
 - Cash session reconciliation.
 - Payment/order desync recovery.
-- HĐĐT recovery and export.
+- HĐĐT issuance, cancellation, and replacement support.
 - Supplier payable review.
 - Accountant export.
 
@@ -194,7 +194,6 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                                        |
 | `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses                         |
 | `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                                     |
-| `/finance/summary`           | HĐĐT summary trigger         | Keep admin-only by action permission                                                         |
 
 Inventory owns the detailed stock-value workspace. Finance displays only the
 current inventory-value card and does not expose a duplicate inventory route.
@@ -228,8 +227,11 @@ Do not call the module "done" because enterprise-accounting objects exist in old
 
 - Chi vận hành is captured in `/finance/expenses`; keep it as single-entry HKD operating expense, not enterprise accounting.
 - Inventory value detail stays in Inventory; Finance shows only the current-value card.
-- HĐĐT is active through Viettel S-invoice, but recovery and archival workflows
-  are support workflows, not the Finance Basic landing.
+- HĐĐT is active through Viettel S-invoice. The app owns per-order issuance,
+  cancellation, and replacement; provider-side artifacts and status lookup stay
+  in Viettel S-invoice operations rather than becoming Finance product surfaces.
+  Recovery and archival workflows remain support operations, not Finance Basic
+  landing surfaces.
 - Period close/reopen is not an app workflow. Treat it as database-only support unless a new owner decision reopens it.
 
 ## Source Files

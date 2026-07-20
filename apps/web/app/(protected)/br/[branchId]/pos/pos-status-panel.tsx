@@ -6,6 +6,7 @@ export interface PosStatusPanelProps {
   icon: ReactNode;
   title: string;
   description: string;
+  children?: ReactNode;
   badge: {
     label: string;
     icon: ReactNode;
@@ -17,6 +18,7 @@ export function PosStatusPanel({
   icon,
   title,
   description,
+  children,
   badge,
 }: PosStatusPanelProps) {
   return (
@@ -33,6 +35,7 @@ export function PosStatusPanel({
         {badge.icon}
         <span>{badge.label}</span>
       </Badge>
+      {children}
     </AppEmptyState>
   );
 }

@@ -26,7 +26,7 @@ function PosPageSkeletonFallback() {
           <Skeleton className="h-9 w-9" />
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
         <div className="flex min-h-0 flex-col overflow-hidden p-3">
           <div className="mb-3 flex shrink-0 gap-2">
             <Skeleton className="h-10 flex-1" />
@@ -42,7 +42,7 @@ function PosPageSkeletonFallback() {
             ))}
           </div>
         </div>
-        <div className="hidden min-h-0 w-96 border-l border-border/60 p-3 md:flex md:flex-col">
+        <div className="hidden min-h-0 w-96 border-l border-border/60 p-3 xl:flex xl:flex-col">
           <Skeleton className="h-6 w-32" />
           <div className="mt-4 flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, index) => (
@@ -72,7 +72,7 @@ function PosPageSkeletonFixture() {
           <Skeleton className="h-9 w-9" />
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
         <div className="flex min-h-0 flex-col overflow-hidden p-3">
           <div className="mb-3 flex shrink-0 gap-2">
             <div className="flex h-10 flex-1 items-center border px-3 text-sm">
@@ -92,7 +92,7 @@ function PosPageSkeletonFixture() {
             ))}
           </div>
         </div>
-        <div className="hidden min-h-0 w-96 border-l border-border/60 p-3 md:flex md:flex-col">
+        <div className="hidden min-h-0 w-96 border-l border-border/60 p-3 xl:flex xl:flex-col">
           <p className="text-base font-semibold">Gio hang</p>
           <div className="mt-4 flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, index) => (

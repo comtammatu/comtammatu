@@ -167,11 +167,37 @@ export async function fetchFoodCost(
   const unitCosts = new Map<string, number>();
   const branchIds = [...new Set(saleLines.map((row) => row.branchId))];
   if (ingredientIds.size > 0 && branchIds.length > 0) {
+    const { data: locationData, error: locationError } = await supabase
+      .from("inventory_locations")
+      .select("id, branch_id")
+      .eq("tenant_id", tenantId)
+      .eq("location_kind", "warehouse")
+      .eq("is_active", true)
+      .in("branch_id", branchIds);
+
+    if (locationError) {
+      return { success: false, error: foodCostCopy.loadWacFailed };
+    }
+
+    const warehouseLocationIds = (locationData ?? []).map((row) => row.id);
+    if (warehouseLocationIds.length === 0) {
+      return {
+        success: true,
+        data: buildFoodCostRows({
+          saleLines,
+          recipeLines,
+          unitCosts,
+          periodStart: parsed.data.startDate ?? null,
+        }),
+      };
+    }
+
     const { data: stockData, error: stockError } = await supabase
       .from("stock_levels")
       .select("branch_id, ingredient_id, avg_unit_cost")
       .eq("tenant_id", tenantId)
       .in("branch_id", branchIds)
+      .in("location_id", warehouseLocationIds)
       .in("ingredient_id", [...ingredientIds])
       .not("avg_unit_cost", "is", null);
 
@@ -184,17 +210,10 @@ export async function fetchFoodCost(
       ingredient_id: number | null;
       avg_unit_cost: number | string | null;
     };
-    const accum = new Map<string, { sum: number; count: number }>();
     for (const row of (stockData ?? []) as StockCostRow[]) {
       if (row.branch_id == null || row.ingredient_id == null) continue;
       const key = foodCostUnitCostKey(row.branch_id, row.ingredient_id);
-      const current = accum.get(key) ?? { sum: 0, count: 0 };
-      current.sum += Number(row.avg_unit_cost ?? 0);
-      current.count += 1;
-      accum.set(key, current);
-    }
-    for (const [key, value] of accum) {
-      unitCosts.set(key, value.sum / value.count);
+      unitCosts.set(key, Number(row.avg_unit_cost ?? 0));
     }
   }
 

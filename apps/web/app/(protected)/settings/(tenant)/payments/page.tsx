@@ -3,11 +3,13 @@ import { SYSTEM_SETTING_DEFAULTS } from "@comtammatu/shared/settings";
 import { PaymentsForm } from "./payments-form";
 import { SettingsPageFrame } from "../../settings-page-frame";
 import { messages } from "@lib/messages";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { AppEmptyState } from "@/components/surface";
 
 export default async function PaymentSettingsPage() {
   const { supabase } = await loadAuthState();
 
-  const { data: rows } = await supabase
+  const { data: rows, error } = await supabase
     .from("system_settings")
     .select("key, value");
 
@@ -25,10 +27,18 @@ export default async function PaymentSettingsPage() {
       title={messages.settings.pages.paymentsTitle}
       description={messages.settings.pages.paymentsDescription}
     >
-      <PaymentsForm
-        settings={settings}
-        sepayEnvConfigured={sepayEnvConfigured}
-      />
+      {error ? (
+        <AppEmptyState
+          mode="error"
+          title={ERRORS_VI.loadFailed}
+          description={ERRORS_VI.fallback}
+        />
+      ) : (
+        <PaymentsForm
+          settings={settings}
+          sepayEnvConfigured={sepayEnvConfigured}
+        />
+      )}
     </SettingsPageFrame>
   );
 }

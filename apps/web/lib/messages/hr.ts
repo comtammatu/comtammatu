@@ -7,7 +7,7 @@ export const hr = {
     ownerTitle: "Hồ sơ nhân sự",
     branchManagerTitle: "Ngày công",
     ownerDescription:
-      "Quản lý hồ sơ nhân viên, HĐLĐ và nguồn tính lương; phân quyền truy cập được tách riêng.",
+      "Quản lý hồ sơ nhân viên, HĐLĐ và lương; phân quyền truy cập được tách riêng.",
     branchManagerDescription:
       "Theo dõi ca, ngày công, kết ca và nghỉ phép của chi nhánh được gán.",
   },
@@ -26,17 +26,38 @@ export const hr = {
     },
     attendanceTitle: "Chấm công và ngày công theo ca",
     attendanceDescription:
-      "Theo dõi vào/ra ca, checklist bắt buộc, mục tiêu hao bếp khi được giao, ca treo và nghỉ phép trong cùng một nơi.",
+      "Theo dõi vào/ra ca, checklist bắt buộc, mục tiêu hao bếp khi được giao và ca treo.",
     setupTitle: "Thiết lập ca làm và việc trong ca",
     setupDescription:
       "Ca làm là xương sống chấm công; mỗi vị trí có việc trong ca riêng để nhân viên nhận đúng danh sách khi vào ca.",
     setupSteps: {
+      leavePolicy: {
+        title: "Ngày công & phép",
+        description:
+          "Thiết lập ngày công chuẩn và phép tháng dùng chung cho toàn bộ nhân viên.",
+        hint: "Chính sách lương",
+      },
       shifts: {
         title: "Bước 1: Ca làm",
         description:
           "Tạo các khung ca để checklist và bảng công bám đúng thời điểm vào ca, trong ca, kết ca.",
         hint: "Nền vận hành",
       },
+    },
+    leavePolicy: {
+      standardWorkdaysLabel: "Ngày công chuẩn",
+      standardWorkdaysDescription:
+        "Số ngày dùng làm mẫu số khi tính lương tháng.",
+      monthlyLeaveDaysLabel: "Phép tháng",
+      monthlyLeaveDaysDescription:
+        "Mỗi tháng, số ngày nghỉ có lương được phân bổ trước từ quota này.",
+      allocationHint:
+        "Ví dụ: 27 ngày công và 2 phép tháng. Nhân viên còn 7 phép năm, nghỉ 3 ngày trong tháng sẽ tính 2 phép tháng + 1 phép năm.",
+      save: "Lưu chính sách",
+      saved: "Đã lưu ngày công và phép tháng.",
+      saveFailed: "Không thể lưu ngày công và phép tháng.",
+      loadFailed: "Không thể tải ngày công và phép tháng.",
+      invalid: "Kiểm tra lại ngày công và phép tháng.",
     },
     shiftBoundaries: {
       opening: "Ca mở",
@@ -117,12 +138,18 @@ export const hr = {
     employeeSearch: "Tìm tên, mã, chi nhánh hoặc chức danh",
     employeeEmpty: "Chưa có hồ sơ nhân viên phù hợp.",
     employmentStatus: "Tình trạng làm việc",
-    salarySource: {
-      header: "Nguồn lương",
-      contract: "HĐLĐ hiệu lực",
-      employee: "Hồ sơ nhân sự",
-      missing: "Thiếu nguồn lương",
-    },
+    allBranches: "Tất cả chi nhánh",
+    unassignedBranch: "Không thuộc chi nhánh",
+    allPositions: "Tất cả chức vụ",
+    unassignedPosition: "Chưa gán chức vụ",
+    salary: "Lương",
+    allSalaries: "Tất cả mức lương",
+    salaryRecorded: "Có lương",
+    salaryMissing: "Chưa có lương",
+    contractType: "Loại HĐ",
+    allContractTypes: "Tất cả loại HĐ",
+    showInactiveEmployees: "Hiện nhân viên tạm ngưng",
+    hideInactiveEmployees: "Ẩn nhân viên tạm ngưng",
     staffAccounts: "Tài khoản & quyền",
     addEmployee: "Thêm nhân viên",
   },
@@ -148,20 +175,22 @@ export const hr = {
     emptyHistoryTitle: "Chưa có lịch sử nghỉ phép",
     emptyHistoryDescription:
       "Yêu cầu đã duyệt, từ chối, hoặc đã huỷ sẽ hiện ở đây.",
-    monthLoadFailed: "Không thể tải nghỉ phép trong tháng.",
     loadFailed: "Không thể tải danh sách nghỉ phép",
-    quotaLoadFailed: "Không thể tải hạn mức phép năm.",
+    quotaLoadFailed: "Không thể tải hạn mức nghỉ phép.",
     table: {
       dateRange: "Khoảng nghỉ",
       employee: "Nhân viên",
       type: "Loại",
-      quota: "Phép năm",
+      monthlyQuota: "Phép tháng",
+      annualQuota: "Phép năm",
       reason: "Lý do",
       actions: "Hành động",
       status: "Trạng thái",
     },
     annualBalance: (remaining: number, entitlement: number, year: number) =>
       `Còn ${formatDecimal(remaining, 1)}/${formatDecimal(entitlement, 1)} ngày (${year})`,
+    monthlyBalance: (remaining: number, entitlement: number) =>
+      `Còn ${formatDecimal(remaining, 1)}/${formatDecimal(entitlement, 1)} ngày`,
     approveAria: "Duyệt nghỉ",
     rejectAria: "Từ chối nghỉ",
     rejectDialogTitle: "Từ chối yêu cầu nghỉ?",
@@ -171,6 +200,9 @@ export const hr = {
     approvalsTitle: "Duyệt nghỉ phép",
     approvalsDescription:
       "Duyệt hoặc từ chối yêu cầu nghỉ phép của nhân viên chi nhánh.",
+    approvedMonthTitle: "Nghỉ phép đã duyệt trong tháng",
+    approvedMonthTab: "Đã duyệt trong tháng",
+    approvedMonthMonthLabel: "Tháng nghỉ phép đã duyệt",
     approvalsHomeLabel: "Nay",
     approvalsNoAccessTitle: "Không có quyền duyệt nghỉ phép",
     approvalsNoAccessDescription:
@@ -183,6 +215,10 @@ export const hr = {
       forbidden: "Không có quyền",
       periodLoadFailed: "Không thể tải kỳ lương.",
       periodNotFound: "Kỳ lương không tồn tại.",
+      leavePolicyLoadFailed:
+        "Không thể tải ngày công và quota nghỉ phép để tính lương.",
+      leaveEntitlementsLoadFailed:
+        "Không thể tải hạn mức phép năm của nhân viên.",
       calculate: {
         employeesLoadFailed: "Không thể tải danh sách nhân viên.",
         contractsLoadFailed:
@@ -196,12 +232,12 @@ export const hr = {
       adjustmentsLoadFailed: "Không thể tải các khoản điều chỉnh lương.",
       adjustmentNotFound: "Không tìm thấy dữ liệu lương cần thao tác.",
       snapshotLocked:
-        "Bảng lương tháng này đã chốt, không thể sửa dữ liệu nguồn.",
+        "Bảng lương tháng này đã chốt, không thể sửa dữ liệu dùng để tính lương.",
       snapshotMissingSalary:
-        "Còn nhân viên thiếu nguồn lương; bổ sung hồ sơ hoặc HĐLĐ trước khi chốt.",
-      snapshotUnavailable: "Chưa có dữ liệu lương hợp lệ để chốt.",
+        "Còn nhân viên chưa có mức lương trong hồ sơ hoặc HĐLĐ; bổ sung trước khi chốt.",
+      snapshotUnavailable: "Chưa đủ dữ liệu để chốt bảng lương.",
       snapshotPaymentOwnedByFinance:
-        "Bảng lương tháng này đã chốt. Thanh toán và chứng từ thuộc Finance.",
+        "Bảng lương tháng này đã chốt. Thanh toán và chứng từ được xử lý tại phân hệ Tài chính.",
       adjustmentSaveFailed: "Không thể lưu điều chỉnh lương.",
       adjustmentDeleteFailed: "Không thể xóa điều chỉnh lương.",
       snapshotFailed: "Không thể chốt bảng lương.",
@@ -209,10 +245,10 @@ export const hr = {
     live: {
       title: "Lương",
       description:
-        "Tính lương dự kiến theo ngày công, phép, điều chỉnh và dữ liệu hiện tại; chỉ snapshot khi chốt.",
+        "Bảng lương tạm tính theo ngày công, nghỉ phép đã duyệt, mức lương trong hồ sơ/HĐLĐ và các khoản điều chỉnh của tháng đã chọn. Chốt sau khi kiểm tra.",
       loadFailedTitle: "Không thể tải bảng lương",
       loadFailedDescription:
-        "Dữ liệu lương chưa sẵn sàng. Hãy tải lại hoặc kiểm tra quyền truy cập.",
+        "Không tải được dữ liệu để tính lương. Hãy tải lại hoặc kiểm tra quyền truy cập.",
       retry: "Tải lại bảng lương",
       periodName: (month: number, year: number) => `Tháng ${month}/${year}`,
       month: "Tháng lương",
@@ -220,24 +256,24 @@ export const hr = {
       allBranches: "Tất cả chi nhánh",
       standardDays: "Ngày công chuẩn",
       search: "Tìm nhân viên",
-      salaryStatus: "Trạng thái dữ liệu",
+      salaryStatus: "Tình trạng tính lương",
       salaryStatusAll: "Tất cả",
-      salaryStatusCalculable: "Tính được",
-      salaryStatusMissing: "Thiếu nguồn lương",
+      salaryStatusCalculable: "Đủ thông tin tính lương",
+      salaryStatusMissing: "Chưa có mức lương",
       snapshot: "Chốt bảng lương",
       snapshotting: "Đang chốt",
       snapshotConfirmDescription:
-        "Bảng lương sẽ được snapshot và khóa. Finance sẽ xử lý thanh toán, không thao tác tại đây.",
+        "Bảng lương tháng này sẽ được chốt và khóa. Thanh toán và chứng từ được xử lý tại phân hệ Tài chính.",
       cancel: "Hủy",
       snapshotDescription:
-        "Sau khi chốt, bảng lương được khóa. Finance ghi nhận thanh toán và chứng từ riêng.",
+        "Sau khi chốt, bảng lương được khóa. Thanh toán và chứng từ được xử lý tại phân hệ Tài chính.",
       snapshotAllBranchesRequired:
-        "Chỉ có thể chốt khi đang xem tất cả chi nhánh để snapshot đủ bảng lương của tenant.",
+        "Chỉ có thể chốt khi đang xem tất cả chi nhánh để bảng lương gồm đủ toàn hệ thống.",
       snapshotLocked: "Đã chốt",
-      snapshotOpen: "Đang tính live",
-      missingSalaryTitle: "Còn nhân viên thiếu nguồn lương",
+      snapshotOpen: "Chưa chốt",
+      missingSalaryTitle: "Còn nhân viên chưa có mức lương",
       missingSalaryDescription: (count: number) =>
-        `${formatCount(count)} nhân viên chưa có lương ở hồ sơ hoặc HĐLĐ; bổ sung trước khi chốt.`,
+        `${formatCount(count)} nhân viên chưa có mức lương trong hồ sơ hoặc HĐLĐ; bổ sung trước khi chốt.`,
       missingSalaryAction: "Mở hồ sơ nhân sự",
       missingSalaryListAction: "Xem trong bảng",
       adjustment: "Điều chỉnh",
@@ -250,7 +286,7 @@ export const hr = {
       adjustmentDeleted: "Đã xoá điều chỉnh lương",
       adjustmentDeleteTitle: "Xóa khoản điều chỉnh?",
       adjustmentDeleteDescription:
-        "Khoản này sẽ không còn được tính trong lương live.",
+        "Khoản này sẽ không còn được tính trong bảng lương tạm tính.",
       adjustmentDelete: "Xóa khoản",
       adjustmentKinds: {
         bonus: "Thưởng bổ sung",
@@ -269,27 +305,24 @@ export const hr = {
       },
       adjustmentTargetMissing: "Không tìm thấy nhân viên cần điều chỉnh.",
       table: {
-        employee: "Nhân viên",
+        index: "#",
+        employee: "Họ tên",
         workingDays: "Công",
-        paidLeaveDays: "Phép",
-        unpaidLeaveDays: "Không lương",
-        adjustments: "Điều chỉnh",
-        gross: "Lương gộp",
-        deductions: "BHXH + TNCN",
+        leaveDays: "Nghỉ phép",
+        bonus: "Thưởng",
+        bhxh: "BHXH",
         net: "Lương dự kiến",
         finalizedNet: "Thực lĩnh đã chốt",
-        status: "Trạng thái",
-        calculable: "Tính được",
-        missingSalary: "Thiếu nguồn lương",
+        calculable: "Đủ thông tin tính lương",
+        missingSalary: "Chưa có mức lương",
         finalized: "Đã chốt",
-        actions: "Thao tác",
+        edit: "Chỉnh sửa",
         total: (count: number) => `Tổng ${formatCount(count)} nhân viên`,
         empty: "Không có nhân viên phù hợp bộ lọc.",
       },
       mobile: {
-        work: (working: number, paidLeave: number, unpaidLeave: number) =>
-          `Công ${formatDecimal(working, 1)} · phép ${formatDecimal(paidLeave, 1)} · không lương ${formatDecimal(unpaidLeave, 1)}`,
-        deductions: "Khấu trừ",
+        work: (working: number, leaveDays: number) =>
+          `Công ${formatDecimal(working, 1)} · nghỉ phép ${formatDecimal(leaveDays, 1)}`,
       },
     },
   },

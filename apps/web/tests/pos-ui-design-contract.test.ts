@@ -72,6 +72,37 @@ const mobileActionBarSource = readFileSync(
   "utf8",
 );
 
+const menuGridSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx"),
+  "utf8",
+);
+
+const orderDetailTouchSources = [
+  ["split-order-sheet.tsx", 2],
+  ["service-charge-sheet.tsx", 3],
+  ["discount-sheet.tsx", 4],
+  ["merge-orders-sheet.tsx", 3],
+  ["transfer-table-dialog.tsx", 3],
+] as const;
+
+test("POS order-detail overlays keep their footer controls touch-sized", () => {
+  for (const [file, expectedTouchControls] of orderDetailTouchSources) {
+    const source = readFileSync(
+      join(
+        process.cwd(),
+        "app/(protected)/br/[branchId]/pos/_components/order-detail",
+        file,
+      ),
+      "utf8",
+    );
+    assert.equal(
+      source.match(/size="touch"/g)?.length,
+      expectedTouchControls,
+      file,
+    );
+  }
+});
+
 const orderHistorySource = readFileSync(
   join(process.cwd(), "app/(protected)/br/[branchId]/pos/order-history.tsx"),
   "utf8",
@@ -153,6 +184,13 @@ test("POS append draft item rows stay on Item composition instead of Button heig
   assert.doesNotMatch(appendDraftSource, /line-clamp-2/);
 });
 
+test("POS menu mounts one responsive toolbar tree", () => {
+  assert.match(menuGridSource, /const isCompactMenu = useIsMobile\(\);/);
+  assert.match(menuGridSource, /\{isCompactMenu \? \(/);
+  assert.doesNotMatch(menuGridSource, /md:hidden/);
+  assert.doesNotMatch(menuGridSource, /hidden md:flex/);
+});
+
 test("POS takeaway mode uses a context grid before entering the new-order menu", () => {
   assert.match(posDesktopSource, /const \[takeawayDraftActive/);
   assert.match(
@@ -189,7 +227,15 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   assert.match(mobileActionBarSource, /messages\.pos\.appendDraft\.cancelAria/);
   assert.match(posDesktopSource, /const isTouchLayout = useIsMobile\(1280\);/);
   assert.match(posDesktopSource, /const sidebars = isTouchLayout \? null : \(/);
-  assert.match(posDesktopSource, /className="xl:hidden"/);
+  assert.match(posDesktopSource, /\{isTouchLayout \? \(\s*<PosSessionTopBar/);
+  assert.doesNotMatch(
+    posDesktopSource,
+    /<div className="xl:hidden">\s*<PosSessionTopBar/,
+  );
+  assert.match(posDesktopSource, /await confirm\(\{/);
+  assert.match(posDesktopSource, /messages\.pos\.appendDraft\.cancelTitle/);
+  assert.match(posDesktopSource, /setSelfOrderSyncFailed\(true\)/);
+  assert.match(posDesktopSource, /messages\.pos\.selfOrderSync\.failed/);
   assert.match(mobileActionBarSource, /isTouchLayout/);
   assert.match(mobileActionBarSource, /xl:hidden/);
   assert.match(sidebarVariantsSource, /bg-background xl:flex/);

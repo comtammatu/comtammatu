@@ -1152,7 +1152,8 @@ export function BillReceipt({
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
+                        size="touch"
+                        className="w-full sm:w-auto"
                         onClick={() => void handleCancelPendingPayment()}
                         disabled={actionPending || methodPending}
                       >
@@ -1317,7 +1318,8 @@ export function BillReceipt({
                               <Button
                                 type="button"
                                 variant="outline"
-                                size="sm"
+                                size="touch"
+                                className="w-full sm:w-auto"
                                 onClick={() =>
                                   handleSelectMethod(selectedMethod)
                                 }
@@ -1338,7 +1340,8 @@ export function BillReceipt({
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
+                            size="touch"
+                            className="w-full sm:w-auto sm:self-start"
                             onClick={() => void handleCancelPendingPayment()}
                             disabled={actionPending || methodPending}
                             title={messages.pos.payment.cancelPendingTitle}

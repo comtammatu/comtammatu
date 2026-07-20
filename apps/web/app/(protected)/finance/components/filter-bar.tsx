@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Select,
@@ -14,6 +20,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { cn } from "@comtammatu/ui/lib/utils";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
@@ -51,16 +58,13 @@ interface FilterBarProps {
   ranges?: ReadonlyArray<FinanceRange>;
   /** Hide controls that don't apply to a given route. Default: all visible. */
   hide?: ReadonlyArray<FilterBarControl>;
+  trailing?: ReactNode;
   compact?: boolean;
   className?: string;
 }
 
 type FilterBarControl =
-  | "branch"
-  | "range"
-  | "granularity"
-  | "compare"
-  | "payment";
+  "branch" | "range" | "granularity" | "compare" | "payment";
 
 const ALL_BRANCHES_VALUE = "all";
 
@@ -104,10 +108,12 @@ export function FilterBar({
   basePath,
   ranges = FINANCE_RANGES,
   hide = [],
+  trailing,
   compact = false,
   className,
 }: FilterBarProps) {
   const router = useRouter();
+  const isTouchLayout = useIsMobile(1024);
   const [isPending, startTransition] = useTransition();
 
   // Local draft for custom date range — only pushed on Apply click. All
@@ -195,7 +201,7 @@ export function FilterBar({
           className,
         )}
       >
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="flex flex-wrap items-center gap-2">
           {showBranch && (
             <Select
               value={branchValue}
@@ -204,16 +210,24 @@ export function FilterBar({
             >
               <SelectTrigger
                 aria-label={filterCopy.branch}
+                size={isTouchLayout ? "touch" : "default"}
                 className="w-full sm:w-48"
               >
                 <SelectValue placeholder={filterCopy.branchPlaceholder} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_BRANCHES_VALUE}>
+                <SelectItem
+                  value={ALL_BRANCHES_VALUE}
+                  size={isTouchLayout ? "touch" : "default"}
+                >
                   {messages.finance.common.allBranches}
                 </SelectItem>
                 {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
+                  <SelectItem
+                    key={b.id}
+                    value={String(b.id)}
+                    size={isTouchLayout ? "touch" : "default"}
+                  >
                     {b.name}
                   </SelectItem>
                 ))}
@@ -227,18 +241,27 @@ export function FilterBar({
               onValueChange={(v) => handleRangeChange(v as FinanceRange)}
               disabled={isPending}
             >
-              <SelectTrigger aria-label={filterCopy.range} className="w-full sm:w-40">
+              <SelectTrigger
+                aria-label={filterCopy.range}
+                size={isTouchLayout ? "touch" : "default"}
+                className="w-full sm:w-40"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {ranges.map((range) => (
-                  <SelectItem key={range} value={range}>
+                  <SelectItem
+                    key={range}
+                    value={range}
+                    size={isTouchLayout ? "touch" : "default"}
+                  >
                     {RANGE_LABEL[range]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
+          {trailing}
         </div>
         <p className="text-xs text-muted-foreground sm:ml-auto">
           {rangeSummary}
@@ -249,172 +272,200 @@ export function FilterBar({
 
   return (
     <AppToolbar className={cn("flex-col items-stretch", className)}>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {showBranch && (
-            <div className="grid gap-1.5">
-              <Label className="text-xs">{filterCopy.branch}</Label>
-              <Select
-                value={branchValue}
-                onValueChange={handleBranchChange}
-                disabled={isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={filterCopy.branchPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_BRANCHES_VALUE}>
-                    {messages.finance.common.allBranches}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {showBranch && (
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{filterCopy.branch}</Label>
+            <Select
+              value={branchValue}
+              onValueChange={handleBranchChange}
+              disabled={isPending}
+            >
+              <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+                <SelectValue placeholder={filterCopy.branchPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  value={ALL_BRANCHES_VALUE}
+                  size={isTouchLayout ? "touch" : "default"}
+                >
+                  {messages.finance.common.allBranches}
+                </SelectItem>
+                {branches.map((b) => (
+                  <SelectItem
+                    key={b.id}
+                    value={String(b.id)}
+                    size={isTouchLayout ? "touch" : "default"}
+                  >
+                    {b.name}
                   </SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {showRange && (
-            <div className="grid gap-1.5">
-              <Label className="text-xs">{filterCopy.range}</Label>
-              <Select
-                value={params.range}
-                onValueChange={(v) => handleRangeChange(v as FinanceRange)}
-                disabled={isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ranges.map((range) => (
-                    <SelectItem key={range} value={range}>
-                      {RANGE_LABEL[range]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {showGranularity && (
-            <div className="grid gap-1.5">
-              <Label className="text-xs">{filterCopy.granularity}</Label>
-              <Tabs
-                value={params.gran}
-                onValueChange={(v) =>
-                  pushParams({ gran: v as FinanceGranularity })
-                }
-              >
-                <TabsList className={cn("w-full", isPending && "opacity-60")}>
-                  <TabsTrigger value="day" className="flex-1">
-                    {GRANULARITY_LABEL.day}
-                  </TabsTrigger>
-                  <TabsTrigger value="week" className="flex-1">
-                    {GRANULARITY_LABEL.week}
-                  </TabsTrigger>
-                  <TabsTrigger value="month" className="flex-1">
-                    {GRANULARITY_LABEL.month}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          )}
-
-          {showCompare && (
-            <div className="grid gap-1.5">
-              <Label className="text-xs">{filterCopy.compare}</Label>
-              <Select
-                value={params.compare}
-                onValueChange={(v) =>
-                  pushParams({ compare: v as FinanceCompareMode })
-                }
-                disabled={isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(COMPARE_LABEL) as FinanceCompareMode[]).map(
-                    (mode) => (
-                      <SelectItem key={mode} value={mode}>
-                        {COMPARE_LABEL[mode]}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {showPayment && (
-            <div className="grid gap-1.5">
-              <Label className="text-xs">{filterCopy.payment}</Label>
-              <Select
-                value={params.payment}
-                onValueChange={(v) =>
-                  pushParams({ payment: v as FinancePayment })
-                }
-                disabled={isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(PAYMENT_LABEL) as FinancePayment[]).map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {PAYMENT_LABEL[p]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-
-        {showRange && params.range === "custom" ? (
-          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-            <div className="grid gap-1.5">
-              <Label htmlFor="finance-from" className="text-xs">
-                {filterCopy.fromDate}
-              </Label>
-              <Input
-                id="finance-from"
-                type="date"
-                value={draftFrom}
-                onChange={(e) => setDraftFrom(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="finance-to" className="text-xs">
-                {filterCopy.toDate}
-              </Label>
-              <Input
-                id="finance-to"
-                type="date"
-                value={draftTo}
-                onChange={(e) => setDraftTo(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                size="sm"
-                onClick={handleApplyCustom}
-                disabled={
-                  isPending ||
-                  (draftFrom === presetRange.start &&
-                    draftTo === presetRange.end)
-                }
-              >
-                {filterCopy.apply}
-              </Button>
-            </div>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        ) : null}
+        )}
 
-        <p className="border-t pt-3 text-xs text-muted-foreground">
-          {rangeSummary}
-        </p>
+        {showRange && (
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{filterCopy.range}</Label>
+            <Select
+              value={params.range}
+              onValueChange={(v) => handleRangeChange(v as FinanceRange)}
+              disabled={isPending}
+            >
+              <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ranges.map((range) => (
+                  <SelectItem
+                    key={range}
+                    value={range}
+                    size={isTouchLayout ? "touch" : "default"}
+                  >
+                    {RANGE_LABEL[range]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {showGranularity && (
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{filterCopy.granularity}</Label>
+            <Tabs
+              value={params.gran}
+              onValueChange={(v) =>
+                pushParams({ gran: v as FinanceGranularity })
+              }
+            >
+              <TabsList
+                size="touch"
+                className={cn("w-full", isPending && "opacity-60")}
+              >
+                <TabsTrigger value="day" className="flex-1">
+                  {GRANULARITY_LABEL.day}
+                </TabsTrigger>
+                <TabsTrigger value="week" className="flex-1">
+                  {GRANULARITY_LABEL.week}
+                </TabsTrigger>
+                <TabsTrigger value="month" className="flex-1">
+                  {GRANULARITY_LABEL.month}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
+
+        {showCompare && (
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{filterCopy.compare}</Label>
+            <Select
+              value={params.compare}
+              onValueChange={(v) =>
+                pushParams({ compare: v as FinanceCompareMode })
+              }
+              disabled={isPending}
+            >
+              <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(COMPARE_LABEL) as FinanceCompareMode[]).map(
+                  (mode) => (
+                    <SelectItem
+                      key={mode}
+                      value={mode}
+                      size={isTouchLayout ? "touch" : "default"}
+                    >
+                      {COMPARE_LABEL[mode]}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {showPayment && (
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{filterCopy.payment}</Label>
+            <Select
+              value={params.payment}
+              onValueChange={(v) =>
+                pushParams({ payment: v as FinancePayment })
+              }
+              disabled={isPending}
+            >
+              <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(PAYMENT_LABEL) as FinancePayment[]).map((p) => (
+                  <SelectItem
+                    key={p}
+                    value={p}
+                    size={isTouchLayout ? "touch" : "default"}
+                  >
+                    {PAYMENT_LABEL[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+      {trailing ? (
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+          {trailing}
+        </div>
+      ) : null}
+
+      {showRange && params.range === "custom" ? (
+        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <div className="grid gap-1.5">
+            <Label htmlFor="finance-from" className="text-xs">
+              {filterCopy.fromDate}
+            </Label>
+            <Input
+              id="finance-from"
+              type="date"
+              value={draftFrom}
+              controlSize={isTouchLayout ? "touch" : "default"}
+              onChange={(e) => setDraftFrom(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="finance-to" className="text-xs">
+              {filterCopy.toDate}
+            </Label>
+            <Input
+              id="finance-to"
+              type="date"
+              value={draftTo}
+              controlSize={isTouchLayout ? "touch" : "default"}
+              onChange={(e) => setDraftTo(e.target.value)}
+            />
+          </div>
+          <div className="flex items-end">
+            <Button
+              size={isTouchLayout ? "touch" : "sm"}
+              onClick={handleApplyCustom}
+              disabled={
+                isPending ||
+                (draftFrom === presetRange.start && draftTo === presetRange.end)
+              }
+            >
+              {filterCopy.apply}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <p className="border-t pt-3 text-xs text-muted-foreground">
+        {rangeSummary}
+      </p>
     </AppToolbar>
   );
 }

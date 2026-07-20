@@ -13,6 +13,13 @@ const source = readFileSync(
   join(import.meta.dirname, "../app/components/data-table/data-table.tsx"),
   "utf8",
 );
+const paginationSource = readFileSync(
+  join(
+    import.meta.dirname,
+    "../app/components/data-table/data-table-pagination.tsx",
+  ),
+  "utf8",
+);
 
 test("adapter slices only when totalCount does not signal server paging", () => {
   assert.match(source, /pageSize != null && totalCount == null/);
@@ -43,6 +50,43 @@ test("blank action headers retain an accessible table heading", () => {
   assert.doesNotMatch(source, /hideOnMobile/);
 });
 
+test("responsive tables follow the Owner touch-shell breakpoint by default", () => {
+  assert.match(source, /mobileBreakpoint = 1024/);
+  assert.match(source, /const isTouchLayout = useIsMobile\(mobileBreakpoint\)/);
+  assert.match(
+    source,
+    /const isMobile = isTouchLayout && mobileCardRender != null/,
+  );
+});
+
+test("table toolbar controls use touch sizing on mobile and tablet", () => {
+  assert.match(
+    source,
+    /<InputGroup[\s\S]{0,160}size=\{isTouchLayout \? "touch" : "default"\}/,
+  );
+  assert.doesNotMatch(source, /isTouchLayout \? "h-12" : "h-7"/);
+  assert.match(source, /size=\{isTouchLayout \? "touch" : "default"\}/);
+  assert.match(source, /isTouchLayout \? "min-h-12 text-sm" : undefined/);
+  assert.match(source, /type="search"/);
+  assert.match(
+    source,
+    /aria-label=\{searchPlaceholder \?\? ACTIONS_VI\.search\}/,
+  );
+  assert.equal(source.match(/touch=\{isTouchLayout\}/g)?.length, 2);
+  assert.match(paginationSource, /touch \? "icon-touch" : "icon-sm"/);
+});
+
+test("uncontrolled inline filters reset paging before applying a new query", () => {
+  assert.match(source, /function handleSearchValueChange/);
+  assert.match(source, /function handleFilterValueChange/);
+  assert.equal(
+    source.match(/currentPage == null\) setInternalPage\(1\)/g)?.length,
+    2,
+  );
+  assert.match(source, /handleSearchValueChange\(event\.target\.value\)/);
+  assert.match(source, /handleFilterValueChange\(filter\.key, value\)/);
+});
+
 test("growth lists opted in", () => {
   for (const rel of [
     "../app/(protected)/orders/orders-client.tsx",
@@ -55,4 +99,46 @@ test("growth lists opted in", () => {
     const client = readFileSync(join(import.meta.dirname, rel), "utf8");
     assert.match(client, /pageSize=\{50\}/, rel);
   }
+
+  const ingredients = readFileSync(
+    join(
+      import.meta.dirname,
+      "../app/(protected)/inventory/ingredients/ingredients-client.tsx",
+    ),
+    "utf8",
+  );
+  assert.match(ingredients, /pageSize=\{25\}/);
+  assert.match(ingredients, /currentPage=\{currentPage\}/);
+  assert.match(ingredients, /onPageChange=\{setCurrentPage\}/);
+  assert.match(ingredients, /useIsMobile\(1024\)/);
+  assert.match(ingredients, /isTouchLayout \? "touch" : "field"/);
+
+  for (const [rel, pageSize] of [
+    ["../app/(protected)/finance/expenses/expenses-client.tsx", 50],
+    ["../app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx", 50],
+    ["../app/(protected)/hr/attendance-table.tsx", 50],
+    ["../app/(protected)/hr/employee-table.tsx", 25],
+    ["../app/(protected)/hr/leave-requests-table.tsx", 25],
+    ["../app/(protected)/hr/staff/staff-table.tsx", 25],
+    ["../app/(protected)/inventory/count-slips/count-slips-client.tsx", 50],
+    ["../app/(protected)/inventory/production/production-runs-client.tsx", 50],
+    ["../app/(protected)/inventory/recipes/recipes-client.tsx", 25],
+    ["../app/(protected)/inventory/stock/stock-client.tsx", 25],
+    ["../app/(protected)/inventory/stocktake/stocktake-list-client.tsx", 50],
+    ["../app/(protected)/inventory/suppliers/suppliers-client.tsx", 25],
+    ["../app/(protected)/inventory/transfers/transfers-list-client.tsx", 50],
+    ["../app/(protected)/menu/item-table.tsx", 25],
+  ] as const) {
+    const client = readFileSync(join(import.meta.dirname, rel), "utf8");
+    assert.match(client, new RegExp(`pageSize=\\{${pageSize}\\}`), rel);
+  }
+
+  const issues = readFileSync(
+    join(
+      import.meta.dirname,
+      "../app/(protected)/inventory/issues/issues-client.tsx",
+    ),
+    "utf8",
+  );
+  assert.equal(issues.match(/pageSize=\{50\}/g)?.length, 2);
 });

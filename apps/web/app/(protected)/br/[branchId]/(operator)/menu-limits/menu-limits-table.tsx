@@ -166,14 +166,28 @@ function MenuLimitRowItem({
       swipeBindings.onPointerCancel(e);
       longPress.onPointerCancel();
     },
+    onPointerLeave: longPress.onPointerLeave,
+    onKeyDown: longPress.onKeyDown,
+    onKeyUp: longPress.onKeyUp,
+    role: longPress.role,
+    tabIndex: longPress.tabIndex,
     onContextMenu: longPress.onContextMenu,
   };
 
   return (
     <div className="relative overflow-hidden w-full bg-background border-b last:border-b-0">
-      <div className="absolute inset-y-0 right-0 flex">
+      <div
+        className="absolute inset-y-0 right-0 flex"
+        {...swipe.actionRegionProps(rowId)}
+      >
         <Button
           variant={row.is_disabled ? "default" : "destructive"}
+          size="icon-touch"
+          aria-label={
+            row.is_disabled
+              ? `Bật món ${row.item_name}`
+              : messages.pos.menu.disableItemAria(row.item_name)
+          }
           className="h-full rounded-none w-20"
           disabled={isPending}
           onClick={() => {

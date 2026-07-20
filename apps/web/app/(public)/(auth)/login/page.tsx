@@ -6,7 +6,7 @@ import { Frame } from "@comtammatu/ui/components/frame";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-dvh flex-col bg-gradient-to-br from-secondary/30 via-background to-primary/10 lg:grid lg:grid-cols-2">
+    <main className="relative flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] bg-gradient-to-br from-secondary/30 via-background to-primary/10 lg:grid lg:grid-cols-2">
       {/* Caro Pattern overlay */}
       <div className="brand-pattern-caro absolute inset-0 opacity-10 pointer-events-none" />
 

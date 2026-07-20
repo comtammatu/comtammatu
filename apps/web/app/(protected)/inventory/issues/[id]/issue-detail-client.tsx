@@ -46,6 +46,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   AppBackLink,
   AppDetailFooter,
@@ -56,6 +57,7 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
+import { PhotoUploadInput } from "@/components/form";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
@@ -113,6 +115,7 @@ type IssueLine = {
   unit_cost: number;
   total_cost: number;
   reason: string | null;
+  photo_urls: string[];
   ingredients: { id: number; name: string; unit: string } | null;
 };
 
@@ -120,6 +123,8 @@ type AddIssueLineDialogProps = {
   ingredients: IssueIngredientRow[];
   isOpen: boolean;
   issueId: number;
+  tenantId: number;
+  showConsumptionPhoto: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void>;
 };
@@ -136,6 +141,7 @@ const addIssueLineSchema = z.object({
   reason: z.string().trim().min(1, {
     error: ISSUES_VI.lineReasonRequired,
   }),
+  photoUrls: z.array(z.string().url()).max(1),
 });
 
 type AddIssueLineFormValues = z.infer<typeof addIssueLineSchema>;
@@ -183,6 +189,7 @@ function getIssueSourceLabel(issue: IssueRecord) {
 
 export function IssueDetailClient({
   issueId,
+  tenantId,
   initialIssue,
   initialLines,
   ingredients,
@@ -191,6 +198,7 @@ export function IssueDetailClient({
   listBasePath = "/inventory/consumption",
 }: {
   issueId: number;
+  tenantId: number;
   initialIssue: IssueRecord;
   initialLines: IssueLine[];
   ingredients: IssueIngredientRow[];
@@ -203,6 +211,7 @@ export function IssueDetailClient({
   const [lines, setLines] = useState(initialLines);
   const [isPending, startTransition] = useTransition();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const isTouchLayout = useIsMobile(1024);
   const isDraft = issue.status === "draft";
   const surface = getIssueSurface(
     issue.issue_type,
@@ -328,7 +337,7 @@ export function IssueDetailClient({
       header: tTerm("ingredient"),
       render: (line) => (
         <div className="flex flex-col">
-          <span className="font-bold">
+          <span>
             {line.ingredients?.name ?? `#${line.ingredient_id}`}
           </span>
           <span className="text-xs text-muted-foreground">
@@ -340,7 +349,7 @@ export function IssueDetailClient({
     {
       key: "qty",
       header: FORM_VI.quantity,
-      className: "text-right font-semibold",
+      className: "text-right",
       render: (line) => formatQty(Number(line.quantity ?? 0)),
     },
     {
@@ -361,7 +370,7 @@ export function IssueDetailClient({
     {
       key: "total",
       header: FORM_VI.amount,
-      className: "text-right font-bold",
+      className: "text-right",
       render: (line) => formatVND(lineAmount(line)),
     },
     {
@@ -799,12 +808,7 @@ export function IssueDetailClient({
     </div>
   );
 
-  const content = (
-    <>
-      <div className="lg:hidden">{mobileLayout}</div>
-      <div className="hidden lg:block">{pageLayout}</div>
-    </>
-  );
+  const content = isTouchLayout ? mobileLayout : pageLayout;
 
   return (
     <AppPage width="xwide" density="compact">
@@ -831,6 +835,8 @@ export function IssueDetailClient({
         ingredients={ingredients}
         isOpen={addDialogOpen}
         issueId={issueId}
+        tenantId={tenantId}
+        showConsumptionPhoto={issue.issue_type === "consumption"}
         onOpenChange={setAddDialogOpen}
         onSaved={reload}
       />
@@ -842,6 +848,8 @@ function AddIssueLineDialog({
   ingredients,
   isOpen,
   issueId,
+  tenantId,
+  showConsumptionPhoto,
   onOpenChange,
   onSaved,
 }: AddIssueLineDialogProps) {
@@ -851,6 +859,7 @@ function AddIssueLineDialog({
       quantity: "",
       entryUnitId: "",
       reason: "",
+      photoUrls: [],
     }),
     [],
   );
@@ -862,6 +871,7 @@ function AddIssueLineDialog({
       quantity: Number(values.quantity),
       entryUnitId: values.entryUnitId ? Number(values.entryUnitId) : null,
       reason: values.reason.trim(),
+      ...(showConsumptionPhoto ? { photoUrls: values.photoUrls } : {}),
     });
 
     if (!res.success) {
@@ -1111,6 +1121,22 @@ function AddIssueLineDialog({
               placeholder={ISSUES_VI.reasonPlaceholder}
               required
             />
+            {showConsumptionPhoto ? (
+              <Field>
+                <FieldLabel>{ISSUES_VI.evidencePhotoLabel}</FieldLabel>
+                <PhotoUploadInput
+                  tenantId={tenantId}
+                  folder={`stock-issues/${issueId}/consumption`}
+                  value={form.watch("photoUrls")[0] ?? null}
+                  onChange={(url) =>
+                    form.setValue("photoUrls", url ? [url] : [], {
+                      shouldDirty: true,
+                    })
+                  }
+                  acceptTypes="image"
+                />
+              </Field>
+            ) : null}
           </>
         );
       }}

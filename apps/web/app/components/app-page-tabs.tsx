@@ -29,11 +29,18 @@ export function AppPageTabs({
   children,
   className,
 }: AppPageTabsProps) {
-  const initial = defaultValue ?? items[0]?.value;
+  const initial = items.some((item) => item.value === defaultValue)
+    ? defaultValue
+    : items[0]?.value;
   if (!initial) return null;
   return (
-    <UrlTabs paramKey={paramKey} defaultValue={initial} className={className}>
-      <TabsList>
+    <UrlTabs
+      paramKey={paramKey}
+      defaultValue={initial}
+      validValues={items.map((item) => item.value)}
+      className={className}
+    >
+      <TabsList variant="toolbar" size="touch">
         {items.map((item) => (
           <TabsTrigger
             key={item.value}

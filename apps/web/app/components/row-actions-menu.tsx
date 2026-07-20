@@ -32,6 +32,7 @@ export type RowActionsMenuProps = {
   label?: string;
   align?: ComponentProps<typeof DropdownMenuContent>["align"];
   triggerSize?: ComponentProps<typeof Button>["size"];
+  itemSize?: ComponentProps<typeof DropdownMenuItem>["size"];
   triggerClassName?: string;
   triggerLabel?: ReactNode;
   open?: boolean;
@@ -43,11 +44,20 @@ export function RowActionsMenu({
   label = "Thao tác",
   align = "end",
   triggerSize = "icon-lg",
+  itemSize,
   triggerClassName,
   triggerLabel,
   open,
   onOpenChange,
 }: RowActionsMenuProps) {
+  const resolvedItemSize =
+    itemSize ??
+    (triggerSize === "touch" ||
+    triggerSize === "touch-lg" ||
+    triggerSize === "icon-touch"
+      ? "touch"
+      : "default");
+
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger
@@ -75,6 +85,7 @@ export function RowActionsMenu({
             {item.separatorBefore ? <DropdownMenuSeparator /> : null}
             {item.href ? (
               <DropdownMenuItem
+                size={resolvedItemSize}
                 variant={item.destructive ? "destructive" : "default"}
                 render={
                   <Link href={item.href}>
@@ -85,6 +96,7 @@ export function RowActionsMenu({
               ></DropdownMenuItem>
             ) : (
               <DropdownMenuItem
+                size={resolvedItemSize}
                 disabled={item.disabled}
                 variant={item.destructive ? "destructive" : "default"}
                 onClick={() => item.onSelect?.()}

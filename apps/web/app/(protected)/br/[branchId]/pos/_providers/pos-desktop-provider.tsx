@@ -11,6 +11,15 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import {
+  ReceiptText as IconReceipt,
+  RefreshCw as IconRefresh,
+  TriangleAlert as IconAlertTriangle,
+} from "lucide-react";
+import { ACTIONS_VI, POS_VI } from "@comtammatu/shared/messages";
+import { Button } from "@comtammatu/ui/components/button";
+import { PosPageSkeleton } from "../pos-page-skeleton";
+import { PosStatusPanel } from "../pos-status-panel";
 import type { ActiveSession, BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
 import {
@@ -39,6 +48,8 @@ import {
 import type { OrderType } from "../types";
 
 export type DailyLimitsMap = ReadonlyMap<number, MenuItemDailyLimit>;
+
+type OrdersBootstrapState = "loading" | "ready" | "error";
 
 // Matches the slim RPC RETURNS TABLE (PR-3) minus fields the client never
 // reads — see MenuItemDailyLimit.
@@ -205,9 +216,8 @@ interface PosDesktopProviderProps {
   initialOrders: SessionOrder[];
   /**
    * True when `initialOrders` is authoritative (RSC fetch succeeded).
-   * Forwarded to `useOrderSync` so the first SUBSCRIBED callback can
-   * skip its redundant catch-up refresh. Subsequent reconnects still
-   * refresh — only the very first mount-time SUBSCRIBED is skipped.
+   * Otherwise the provider fetches the first snapshot immediately and keeps
+   * the POS behind an explicit loading/error boundary until it succeeds.
    */
   initialOrdersSeeded: boolean;
   /**
@@ -232,6 +242,10 @@ export function PosDesktopProvider({
   children,
 }: PosDesktopProviderProps) {
   const [orders, setOrders] = useState<SessionOrder[]>(initialOrders);
+  const [ordersBootstrapState, setOrdersBootstrapState] =
+    useState<OrdersBootstrapState>(initialOrdersSeeded ? "ready" : "loading");
+  const ordersReadyRef = useRef(initialOrdersSeeded);
+  const initialOrdersLoadStartedRef = useRef(initialOrdersSeeded);
   const [tables, setTables] = useState<BranchTable[]>(initialTables);
   // External store (not React state) — see daily-limit-store.ts. Lazy
   // init mirrors `cartStoreRef` below; same instance for the lifetime of
@@ -314,12 +328,43 @@ export function PosDesktopProvider({
     dailyLimitStore.setAll(initialDailyLimits);
   }, [initialDailyLimits, dailyLimitStore]);
 
-  const loadOrders = useCallback(async () => {
-    const result = await fetchActiveOrders(branchId);
-    if (result.success && result.data) {
-      setOrders(result.data as SessionOrder[]);
+  const markOrdersLoadFailure = useCallback(() => {
+    if (!ordersReadyRef.current) {
+      setOrdersBootstrapState("error");
     }
-  }, [branchId]);
+  }, []);
+
+  const applyOrdersResult = useCallback(
+    (result: Awaited<ReturnType<typeof fetchActiveOrders>>) => {
+      if (!result.success || !Array.isArray(result.data)) {
+        markOrdersLoadFailure();
+        return;
+      }
+
+      ordersReadyRef.current = true;
+      setOrders(result.data as SessionOrder[]);
+      setOrdersBootstrapState("ready");
+    },
+    [markOrdersLoadFailure],
+  );
+
+  const loadOrders = useCallback(async () => {
+    if (!ordersReadyRef.current) {
+      setOrdersBootstrapState("loading");
+    }
+
+    try {
+      applyOrdersResult(await fetchActiveOrders(branchId));
+    } catch {
+      markOrdersLoadFailure();
+    }
+  }, [applyOrdersResult, branchId, markOrdersLoadFailure]);
+
+  useEffect(() => {
+    if (initialOrdersLoadStartedRef.current) return;
+    initialOrdersLoadStartedRef.current = true;
+    void loadOrders();
+  }, [loadOrders]);
 
   // Getter for this terminal's live hold token(s), registered by
   // `PosDesktopInner` via `registerDailyLimitHoldTokenGetter`. Called fresh
@@ -356,21 +401,23 @@ export function PosDesktopProvider({
 
   const refreshAll = useCallback(async () => {
     const [ordersResult, tablesResult] = await Promise.all([
-      fetchActiveOrders(branchId),
-      fetchTablesForBranch(branchId),
+      fetchActiveOrders(branchId).catch(() => null),
+      fetchTablesForBranch(branchId).catch(() => null),
     ]);
-    if (ordersResult.success && ordersResult.data) {
-      setOrders(ordersResult.data as SessionOrder[]);
+
+    if (ordersResult) {
+      applyOrdersResult(ordersResult);
+    } else {
+      markOrdersLoadFailure();
     }
-    if (tablesResult.success && tablesResult.data) {
+    if (tablesResult?.success && tablesResult.data) {
       setTables(tablesResult.data as BranchTable[]);
     }
-  }, [branchId]);
+  }, [applyOrdersResult, branchId, markOrdersLoadFailure]);
 
-  // Initial orders come from RSC seed (see `initialOrders` + `initialOrdersSeeded`
-  // props). Skipping the client-side mount refetch eliminates one round-trip on
-  // cold load; `useOrderSync`'s first SUBSCRIBED catch-up is also skipped when
-  // the seed is authoritative so there is no duplicate fetch on subscribe.
+  // The first order snapshot is either authoritative RSC data or the explicit
+  // mount load above. Realtime skips only its first SUBSCRIBED catch-up so that
+  // it does not duplicate either path; reconnects still refresh normally.
 
   // Single coalescer instance per (branchId, session.id) window — shared by
   // realtime / SUBSCRIBED / stale-poll / post-mutation shell paths so a
@@ -409,7 +456,7 @@ export function PosDesktopProvider({
     refreshAll: refreshAllDeduped,
     onArchivedInvalidate: bumpArchivedToken,
     audioMode,
-    skipFirstSubscribedRefresh: initialOrdersSeeded,
+    skipFirstSubscribedRefresh: true,
   });
 
   usePrintJobAlerts({ branchId, audioMode });
@@ -441,6 +488,29 @@ export function PosDesktopProvider({
     ],
   );
 
+  const content =
+    ordersBootstrapState === "loading" ? (
+      <PosPageSkeleton />
+    ) : ordersBootstrapState === "error" ? (
+      <PosStatusPanel
+        icon={<IconReceipt />}
+        title={POS_VI.shellOrdersErrorTitle}
+        description={POS_VI.shellOrdersErrorFallback}
+        badge={{
+          label: POS_VI.shellOrdersErrorBadge,
+          icon: <IconAlertTriangle className="size-3.5" />,
+          variant: "warning",
+        }}
+      >
+        <Button type="button" size="touch" onClick={() => void loadOrders()}>
+          <IconRefresh data-icon="inline-start" />
+          {ACTIONS_VI.retry}
+        </Button>
+      </PosStatusPanel>
+    ) : (
+      children
+    );
+
   return (
     <SessionContext.Provider value={sessionValue}>
       <PosSoundContext.Provider value={soundValue}>
@@ -450,7 +520,7 @@ export function PosDesktopProvider({
               <TablesContext.Provider value={tables}>
                 <DailyLimitStoreContext.Provider value={dailyLimitStore}>
                   <ArchivedInvalidationContext.Provider value={archivedToken}>
-                    {children}
+                    {content}
                   </ArchivedInvalidationContext.Provider>
                 </DailyLimitStoreContext.Provider>
               </TablesContext.Provider>

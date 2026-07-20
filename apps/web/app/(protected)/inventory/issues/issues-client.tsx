@@ -873,6 +873,7 @@ export function IssuesClient({
           <DataTable
             columns={recordedConsumptionColumns}
             data={visibleRecordedConsumptions}
+            pageSize={50}
             getRowKey={(item) => item.id}
             emptyTitle={INVENTORY_VI.recordedEmptyTitle}
             emptyDescription={INVENTORY_VI.recordedEmptyDescription}
@@ -891,6 +892,7 @@ export function IssuesClient({
         <DataTable
           columns={issueColumns}
           data={filtered}
+          pageSize={50}
           getRowKey={(item) => item.id}
           emptyTitle={
             hasActiveFilters

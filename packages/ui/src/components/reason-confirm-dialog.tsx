@@ -36,6 +36,7 @@ interface ReasonConfirmDialogProps {
   cancelDisabled?: boolean;
   confirmLabel: string;
   confirmVariant?: ComponentProps<typeof AlertDialogAction>["variant"];
+  actionSize?: ComponentProps<typeof AlertDialogAction>["size"];
   canConfirm?: boolean;
   isPending?: boolean;
   onCancelClick?: () => void;
@@ -62,6 +63,7 @@ export function ReasonConfirmDialog({
   cancelDisabled = false,
   confirmLabel,
   confirmVariant = "default",
+  actionSize = "default",
   canConfirm = true,
   isPending = false,
   onCancelClick,
@@ -103,11 +105,16 @@ export function ReasonConfirmDialog({
         </FieldGroup>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={cancelDisabled} onClick={onCancelClick}>
+          <AlertDialogCancel
+            size={actionSize}
+            disabled={cancelDisabled}
+            onClick={onCancelClick}
+          >
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             variant={confirmVariant}
+            size={actionSize}
             disabled={!canSubmit}
             onClick={(event) => {
               event.preventDefault();

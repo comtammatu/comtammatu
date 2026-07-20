@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Select,
@@ -12,6 +12,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import { useFormControlSize } from "@/components/form/control-size";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 
@@ -42,7 +43,14 @@ export function PermissionAuditFilters({
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
+  const controlSize = useFormControlSize();
+  const optionSize = controlSize === "touch" ? "touch" : "default";
+  const actionSize = controlSize === "touch" ? "touch" : "sm";
   const copy = messages.owner.staffAudit;
+  const filterIdPrefix = useId();
+  const actionFilterId = `${filterIdPrefix}-action`;
+  const targetFilterId = `${filterIdPrefix}-target`;
+  const sinceFilterId = `${filterIdPrefix}-since`;
 
   // `since` is a free-typed date; push on Apply rather than per keystroke.
   const [draftSince, setDraftSince] = useState(value.since ?? "");
@@ -72,7 +80,9 @@ export function PermissionAuditFilters({
       filters={
         <>
           <div className="grid gap-1.5">
-            <Label className="text-xs">{copy.action}</Label>
+            <Label htmlFor={actionFilterId} className="text-xs">
+              {copy.action}
+            </Label>
             <Select
               value={actionValue}
               onValueChange={(v) =>
@@ -80,15 +90,19 @@ export function PermissionAuditFilters({
               }
               disabled={isPending}
             >
-              <SelectTrigger className="min-w-40">
+              <SelectTrigger
+                id={actionFilterId}
+                size={controlSize}
+                className="min-w-40"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_VALUE}>
+                <SelectItem value={ALL_VALUE} size={optionSize}>
                   {copy.filterActionAll}
                 </SelectItem>
                 {ACTION_VALUES.map((action) => (
-                  <SelectItem key={action} value={action}>
+                  <SelectItem key={action} value={action} size={optionSize}>
                     {action}
                   </SelectItem>
                 ))}
@@ -97,7 +111,9 @@ export function PermissionAuditFilters({
           </div>
 
           <div className="grid gap-1.5">
-            <Label className="text-xs">{copy.target}</Label>
+            <Label htmlFor={targetFilterId} className="text-xs">
+              {copy.target}
+            </Label>
             <Select
               value={targetValue}
               onValueChange={(v) =>
@@ -105,15 +121,23 @@ export function PermissionAuditFilters({
               }
               disabled={isPending}
             >
-              <SelectTrigger className="min-w-48">
+              <SelectTrigger
+                id={targetFilterId}
+                size={controlSize}
+                className="min-w-48"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_VALUE}>
+                <SelectItem value={ALL_VALUE} size={optionSize}>
                   {copy.filterTargetAll}
                 </SelectItem>
                 {targetOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
+                  <SelectItem
+                    key={option.id}
+                    value={option.id}
+                    size={optionSize}
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -122,19 +146,20 @@ export function PermissionAuditFilters({
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="audit-since" className="text-xs">
+            <Label htmlFor={sinceFilterId} className="text-xs">
               {copy.filterSince}
             </Label>
             <div className="flex items-end gap-2">
               <Input
-                id="audit-since"
+                id={sinceFilterId}
                 type="date"
                 value={draftSince}
                 onChange={(e) => setDraftSince(e.target.value)}
+                controlSize={controlSize}
                 className="min-w-40"
               />
               <Button
-                size="sm"
+                size={actionSize}
                 onClick={() => pushParams({ since: draftSince || null })}
                 disabled={isPending || !sinceDirty}
               >
@@ -148,7 +173,7 @@ export function PermissionAuditFilters({
         hasActive ? (
           <Button
             variant="ghost"
-            size="sm"
+            size={actionSize}
             onClick={() => {
               setDraftSince("");
               pushParams({ action: null, target: null, since: null });

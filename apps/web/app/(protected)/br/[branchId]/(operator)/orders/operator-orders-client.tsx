@@ -56,13 +56,14 @@ export function OperatorOrdersClient({
         onValueChange={(value) => setView(value as typeof view)}
       >
         <TabsList
-          className="grid min-h-12 w-full grid-cols-2"
+          size="touch"
+          className="grid w-full grid-cols-2"
           aria-label={ORDERS_COPY.operatorTabsAriaLabel}
         >
-          <TabsTrigger value="active" className="min-h-11">
+          <TabsTrigger value="active">
             {ORDERS_COPY.operatorActiveTab(inProgressCount)}
           </TabsTrigger>
-          <TabsTrigger value="recent" className="min-h-11">
+          <TabsTrigger value="recent">
             {ORDERS_COPY.operatorRecentTab}
           </TabsTrigger>
         </TabsList>

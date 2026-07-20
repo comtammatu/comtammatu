@@ -9,6 +9,7 @@ type TabsProps = React.ComponentProps<typeof Tabs>;
 interface UrlTabsProps extends Omit<TabsProps, "value" | "onValueChange"> {
   paramKey?: string;
   defaultValue: string;
+  validValues: readonly string[];
 }
 
 /**
@@ -19,6 +20,7 @@ interface UrlTabsProps extends Omit<TabsProps, "value" | "onValueChange"> {
 export function UrlTabs({
   paramKey = "tab",
   defaultValue,
+  validValues,
   children,
   ...props
 }: UrlTabsProps) {
@@ -26,7 +28,11 @@ export function UrlTabs({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const value = searchParams.get(paramKey) ?? defaultValue;
+  const requestedValue = searchParams.get(paramKey);
+  const value =
+    requestedValue && validValues.includes(requestedValue)
+      ? requestedValue
+      : defaultValue;
 
   const onValueChange = useCallback(
     (next: string) => {

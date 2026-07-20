@@ -181,7 +181,7 @@ export function PaymentsForm({
       className="flex flex-col gap-4"
     >
       <Tabs defaultValue="connection" className="flex flex-col gap-4">
-        <TabsList className="w-fit">
+        <TabsList size="touch" className="w-fit">
           <TabsTrigger value="connection">
             {messages.settings.payments.connectionTab}
           </TabsTrigger>

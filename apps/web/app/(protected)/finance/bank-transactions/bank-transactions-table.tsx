@@ -11,7 +11,11 @@ import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import {
+  InputGroup,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Select,
   SelectContent,
@@ -20,12 +24,26 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@comtammatu/ui/components/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@comtammatu/ui/components/tooltip";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { Item, ItemContent } from "@comtammatu/ui/components/item";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
   SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
@@ -43,9 +61,12 @@ import {
 } from "../_lib/sepay-bank-transaction-model";
 import {
   linkSepayTransactionToPayment,
+  recordBankTransactionCashDeposit,
   reviewMissingBankWebhookPayment,
 } from "../bank-webhook-review-actions";
 import type { ExpenseMatchOption } from "../expense-actions";
+import type { FinanceParams } from "../_lib/finance-params";
+import { FilterBar } from "../components/filter-bar";
 import { MatchExpenseCell } from "./match-expense-cell";
 
 const copy = messages.finance.bankTransactions;
@@ -76,6 +97,7 @@ function reconciliationStateBadgeMeta(state: SepayReconciliationState): {
 }
 
 interface BankTransactionsTableProps {
+  params: FinanceParams;
   transactions: SepayBankTransaction[];
   missingBankWebhookPayments: SepayMissingBankWebhookPayment[];
   expenseOptions: ExpenseMatchOption[];
@@ -99,14 +121,6 @@ function referenceCode(tx: SepayBankTransaction): string {
   return tx.referenceCode ?? tx.code ?? tx.requestId;
 }
 
-function optionalReferenceCode(tx: SepayBankTransaction): string {
-  return tx.referenceCode ?? tx.code ?? "—";
-}
-
-function formatOrderId(orderId: number | null): string {
-  return orderId == null ? "—" : `#${orderId}`;
-}
-
 function formatPaymentId(paymentId: number): string {
   return `#${paymentId}`;
 }
@@ -126,19 +140,32 @@ function isBankReconciliationFilter(
 }
 
 function AmountCell({ tx }: { tx: SepayBankTransaction }) {
-  const isIn = tx.transferType === "in";
+  return (
+    <TransactionAmount amount={tx.amount} transferType={tx.transferType} />
+  );
+}
+
+function TransactionAmount({
+  amount,
+  transferType,
+}: {
+  amount: number;
+  transferType: "in" | "out";
+}) {
+  const isIn = transferType === "in";
   const Icon = isIn ? IconMoneyIn : IconMoneyOut;
 
   return (
     <div
       className={cn(
-        "flex items-center justify-end gap-1.5 whitespace-nowrap font-mono text-sm font-semibold tabular-nums",
+        "flex items-center justify-end gap-1 whitespace-nowrap font-mono text-sm font-semibold tabular-nums",
         isIn ? "text-success" : "text-warning",
       )}
     >
       <Icon className="size-3.5" aria-hidden />
+      <span className="sr-only">{isIn ? copy.moneyIn : copy.moneyOut}</span>
       {isIn ? "+" : "-"}
-      {formatVND(tx.amount)}
+      {formatVND(amount)}
     </div>
   );
 }
@@ -148,29 +175,11 @@ function PaymentAmountCell({
 }: {
   payment: SepayMissingBankWebhookPayment;
 }) {
-  return (
-    <div className="whitespace-nowrap text-right font-mono text-sm font-semibold tabular-nums text-foreground">
-      {formatVND(payment.amount)}
-    </div>
-  );
+  return <TransactionAmount amount={payment.amount} transferType="in" />;
 }
 
 function reasonLabel(reason: SepayUnmatchedMoneyInReason): string {
   return copy.unmatchedMoneyInTable.reasonLabels[reason];
-}
-
-function reasonDetail(tx: SepayBankTransaction): string {
-  if (tx.errorCode) {
-    const labels = copy.unmatchedMoneyInTable.errorCodeLabels as Record<
-      string,
-      string
-    >;
-    return labels[tx.errorCode] ?? copy.unmatchedMoneyInTable.technicalError;
-  }
-  if (tx.processingStatus === "failed") {
-    return copy.unmatchedMoneyInTable.technicalError;
-  }
-  return optionalReferenceCode(tx);
 }
 
 function ReconciliationStateBadge({ tx }: { tx: SepayBankTransaction }) {
@@ -199,21 +208,21 @@ function MissingWebhookStatusCell({
 }: {
   payment: SepayMissingBankWebhookPayment;
 }) {
-  return (
-    <div className="flex flex-col gap-1">
-      {missingWebhookBadge(payment)}
-      <span className="text-xs text-muted-foreground">
-        {copy.reconciliation.missingBankWebhook}
-      </span>
-    </div>
-  );
+  return missingWebhookBadge(payment);
 }
 
 function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
   const state = classifySepayReconciliationState(tx);
+  if (state === "matched" && tx.paymentId != null) {
+    return <Badge variant="success">{copy.matchedPayment(tx.paymentId)}</Badge>;
+  }
+
   const hasPaymentConflictDetail =
-    tx.transferType === "in" &&
-    isSepayPaymentConflictReviewCode(tx.errorCode);
+    tx.transferType === "in" && isSepayPaymentConflictReviewCode(tx.errorCode);
+  const conflictOrder =
+    hasPaymentConflictDetail && tx.orderId != null
+      ? { id: tx.orderId, number: tx.orderNumber }
+      : null;
   const detail =
     tx.transferType === "in" && state !== "matched"
       ? hasPaymentConflictDetail
@@ -224,102 +233,84 @@ function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
         : null;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 items-center gap-2">
       <ReconciliationStateBadge tx={tx} />
       {detail ? (
-        <span className="text-xs text-muted-foreground">{detail}</span>
+        <span className="truncate text-xs text-muted-foreground">{detail}</span>
       ) : null}
-      {tx.transferType === "in" && state !== "matched" ? (
-        <span className="text-xs text-muted-foreground">
-          {reasonDetail(tx)}
-        </span>
+      {conflictOrder ? (
+        <Link
+          href={`/orders?orderId=${String(conflictOrder.id)}`}
+          className="truncate font-mono text-xs font-medium text-primary underline-offset-2 hover:underline"
+        >
+          {copy.unmatchedMoneyInTable.conflictOrder}:{" "}
+          {conflictOrder.number ?? copy.unmatchedMoneyInTable.openConflictOrder}
+        </Link>
       ) : null}
     </div>
   );
 }
 
-function RowTypeBadge({ row }: { row: BankReconciliationRow }) {
-  if (row.kind === "missing_webhook") {
-    return (
-      <Badge variant="outline" className="border-info/20 bg-info/10 text-info">
-        {copy.filters.missingWebhook}
-      </Badge>
-    );
-  }
-
-  const isIn = row.tx.transferType === "in";
-  return (
-    <Badge
-      variant="outline"
-      className={
-        isIn
-          ? "border-success/20 bg-success/10 text-success"
-          : "border-warning/20 bg-warning/10 text-warning"
-      }
-    >
-      {isIn ? copy.moneyIn : copy.moneyOut}
-    </Badge>
-  );
+function displayBankContent(content: string | null): string {
+  const value = content?.trim();
+  return value && value.toLowerCase() !== "null" ? value : copy.noContent;
 }
 
 function RowContentCell({ row }: { row: BankReconciliationRow }) {
   if (row.kind === "missing_webhook") {
+    const content = `${copy.missingWebhookTable.payment} ${formatPaymentId(
+      row.payment.paymentId,
+    )}`;
+    const occurredAt = formatVNDateTime(row.payment.paidAt);
+    const reference = formatProviderRef(row.payment.providerRef);
     return (
-      <div className="flex min-w-0 flex-col gap-1.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <RowTypeBadge row={row} />
-          <span className="min-w-0 truncate font-medium">
-            {copy.missingWebhookTable.payment}{" "}
-            {formatPaymentId(row.payment.paymentId)}
-          </span>
-        </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>{formatVNDateTime(row.payment.paidAt)}</span>
-          <span>
-            {copy.missingWebhookTable.order}:{" "}
-            {formatOrderId(row.payment.orderId)}
-          </span>
-          <span className="font-mono">
-            {formatProviderRef(row.payment.providerRef)}
-          </span>
-        </div>
+      <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          {occurredAt}
+        </span>
+        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+          {reference}
+        </span>
+        <span className="min-w-0 truncate font-medium">{content}</span>
       </div>
     );
   }
 
-  const conflictOrder =
-    isSepayPaymentConflictReviewCode(row.tx.errorCode) &&
-    row.tx.orderId != null
-      ? { id: row.tx.orderId, number: row.tx.orderNumber }
-      : null;
+  const content = displayBankContent(row.tx.content);
+  const occurredAt = formatVNDateTime(resolveSepayTransactionInstant(row.tx));
+  const reference = referenceCode(row.tx);
+  const isLongContent = content.length > 80;
+  const contentLabel = (
+    <span className="min-w-0 truncate font-medium">{content}</span>
+  );
 
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <div className="flex min-w-0 items-center gap-2">
-        <RowTypeBadge row={row} />
-        <span className="min-w-0 truncate font-medium">
-          {row.tx.content ?? copy.noContent}
-        </span>
-      </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span>{formatVNDateTime(resolveSepayTransactionInstant(row.tx))}</span>
-        <span className="font-mono">{referenceCode(row.tx)}</span>
-        <span>
-          {copy.account}: {row.tx.accountNumber ?? "—"}
-        </span>
-        {conflictOrder ? (
-          <span>
-            {copy.unmatchedMoneyInTable.conflictOrder}:{" "}
-            <Link
-              href={`/orders?orderId=${String(conflictOrder.id)}`}
-              className="font-mono font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {conflictOrder.number ??
-                copy.unmatchedMoneyInTable.openConflictOrder}
-            </Link>
-          </span>
-        ) : null}
-      </div>
+    <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+        {occurredAt}
+      </span>
+      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+        {reference}
+      </span>
+      {isLongContent ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span
+                className="min-w-0 truncate font-medium outline-none focus-visible:ring-1 focus-visible:ring-foreground"
+                tabIndex={0}
+              />
+            }
+          >
+            {content}
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-sm whitespace-normal">
+            <p className="break-words font-medium">{content}</p>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        contentLabel
+      )}
     </div>
   );
 }
@@ -365,13 +356,17 @@ function MatchCell({
 function LinkPaymentCell({
   tx,
   canLinkPayments,
+  touch,
 }: {
   tx: SepayBankTransaction;
   canLinkPayments: boolean;
+  touch: boolean;
 }) {
   const router = useRouter();
   const [paymentId, setPaymentId] = React.useState("");
-  const [isPending, startTransition] = React.useTransition();
+  const [open, setOpen] = React.useState(false);
+  const [isPaymentPending, startPaymentTransition] = React.useTransition();
+  const [isDepositPending, startDepositTransition] = React.useTransition();
   const table = copy.unmatchedMoneyInTable;
   const reason = classifySepayUnmatchedMoneyIn(tx);
   const bankTransactionId = tx.bankTransactionId ?? null;
@@ -383,9 +378,7 @@ function LinkPaymentCell({
     reason === "webhook_error" ||
     !canManuallyLinkSepayPayment(tx)
   ) {
-    return (
-      <span className="text-muted-foreground">{table.linkUnavailable}</span>
-    );
+    return null;
   }
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -396,7 +389,7 @@ function LinkPaymentCell({
       return;
     }
 
-    startTransition(async () => {
+    startPaymentTransition(async () => {
       const res = await linkSepayTransactionToPayment({
         bankTransactionId,
         eventId,
@@ -410,36 +403,105 @@ function LinkPaymentCell({
 
       toast.success(table.linkSuccess);
       setPaymentId("");
+      setOpen(false);
       router.refresh();
     });
   };
 
+  const handleCashDeposit = async () => {
+    if (bankTransactionId == null) return;
+
+    const approved = await confirm({
+      title: table.cashDepositConfirmTitle,
+      description: table.cashDepositConfirm(formatVND(tx.amount)),
+      confirmText: table.cashDepositAction,
+    });
+    if (!approved) return;
+
+    startDepositTransition(async () => {
+      const res = await recordBankTransactionCashDeposit({
+        bankTransactionId,
+      });
+
+      if (!res.success) {
+        toast.error(res.error ?? table.cashDepositError);
+        return;
+      }
+
+      toast.success(table.cashDepositSuccess);
+      setOpen(false);
+      router.refresh();
+    });
+  };
+
+  const canRecordCashDeposit = bankTransactionId != null;
+
   return (
-    <form
-      className="flex items-center justify-end gap-2"
-      onSubmit={handleSubmit}
-    >
-      <Input
-        inputMode="numeric"
-        pattern="[0-9]*"
-        aria-label={table.linkInputLabel}
-        placeholder={table.linkInputPlaceholder}
-        value={paymentId}
-        onChange={(event) => setPaymentId(event.target.value)}
-        disabled={isPending}
-        className="h-8 w-24 font-mono"
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger
+        render={
+          <Button variant="outline" size={touch ? "touch" : "sm"}>
+            {table.linkAction}
+          </Button>
+        }
       />
-      <Button type="submit" size="sm" disabled={isPending}>
-        {isPending ? table.linkPending : table.linkAction}
-      </Button>
-    </form>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>{table.linkTitle}</SheetTitle>
+        </SheetHeader>
+        <form className="flex flex-col gap-3 p-4" onSubmit={handleSubmit}>
+          <InputGroup size={touch ? "touch" : "default"}>
+            <InputGroupInput
+              inputMode="numeric"
+              pattern="[0-9]*"
+              aria-label={table.linkInputLabel}
+              placeholder={table.linkInputPlaceholder}
+              value={paymentId}
+              onChange={(event) => setPaymentId(event.target.value)}
+              disabled={isPaymentPending || isDepositPending}
+              className="font-mono"
+            />
+          </InputGroup>
+          <Button
+            type="submit"
+            size={touch ? "touch" : "default"}
+            disabled={isPaymentPending || isDepositPending}
+          >
+            {isPaymentPending ? table.linkPending : table.linkPaymentAction}
+          </Button>
+          {canRecordCashDeposit ? (
+            <div className="flex flex-col gap-3 border-t pt-4">
+              <div>
+                <p className="font-medium">{table.cashDepositTitle}</p>
+                <p className="text-sm text-muted-foreground">
+                  {table.cashDepositDescription}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size={touch ? "touch" : "default"}
+                disabled={isPaymentPending || isDepositPending}
+                onClick={() => void handleCashDeposit()}
+              >
+                {isDepositPending
+                  ? table.cashDepositPending
+                  : table.cashDepositAction}
+              </Button>
+            </div>
+          ) : null}
+        </form>
+      </SheetContent>
+    </Sheet>
   );
 }
 
 function ReviewStatusSelect({
   payment,
+  touch,
 }: {
   payment: SepayMissingBankWebhookPayment;
+  touch: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
@@ -467,15 +529,23 @@ function ReviewStatusSelect({
 
   return (
     <Select value={value} onValueChange={handleChange} disabled={isPending}>
-      <SelectTrigger size="sm" className="h-8 w-40">
+      <SelectTrigger size={touch ? "touch" : "sm"} className="w-44">
         <SelectValue placeholder={table.reviewStatusPlaceholder} />
       </SelectTrigger>
       <SelectContent align="end">
-        <SelectItem value={REVIEW_PENDING_VALUE} disabled>
+        <SelectItem
+          value={REVIEW_PENDING_VALUE}
+          size={touch ? "touch" : "default"}
+          disabled
+        >
           {reviewStatusLabel(REVIEW_PENDING_VALUE)}
         </SelectItem>
         {SEPAY_BANK_WEBHOOK_REVIEW_VALUES.map((status) => (
-          <SelectItem key={status} value={status}>
+          <SelectItem
+            key={status}
+            value={status}
+            size={touch ? "touch" : "default"}
+          >
             {reviewStatusLabel(status)}
           </SelectItem>
         ))}
@@ -488,23 +558,27 @@ function ReconciliationActionCell({
   tx,
   expenseOptions,
   canLinkPayments,
+  touch,
 }: {
   tx: SepayBankTransaction;
   expenseOptions: ExpenseMatchOption[];
   canLinkPayments: boolean;
+  touch: boolean;
 }) {
   const state = classifySepayReconciliationState(tx);
 
-  if (state === "webhook_error") {
-    return (
-      <span className="text-muted-foreground">
-        {copy.unmatchedMoneyInTable.linkUnavailable}
-      </span>
-    );
-  }
+  if (state === "webhook_error") return null;
+
+  if (state === "matched" && tx.paymentId != null) return null;
 
   if (tx.transferType === "in" && state !== "matched") {
-    return <LinkPaymentCell tx={tx} canLinkPayments={canLinkPayments} />;
+    return (
+      <LinkPaymentCell
+        tx={tx}
+        canLinkPayments={canLinkPayments}
+        touch={touch}
+      />
+    );
   }
 
   return <MatchCell tx={tx} expenseOptions={expenseOptions} />;
@@ -542,11 +616,13 @@ function rowMatchesFilter(
 }
 
 export function BankTransactionsTable({
+  params,
   transactions,
   missingBankWebhookPayments,
   expenseOptions,
   canLinkPayments,
 }: BankTransactionsTableProps) {
+  const isTouchLayout = useIsMobile(1024);
   const [filter, setFilter] =
     React.useState<BankReconciliationFilter>("needs_review");
   const rows = React.useMemo<BankReconciliationRow[]>(
@@ -580,15 +656,16 @@ export function BankTransactionsTable({
   ] as const;
   const columns: DataTableColumn<BankReconciliationRow>[] = [
     {
-      key: "content",
-      header: copy.table.content,
-      className: "min-w-96",
-      render: (row) => <RowContentCell row={row} />,
+      key: "index",
+      header: "#",
+      className:
+        "sticky left-0 z-10 w-12 bg-card text-right font-mono tabular-nums",
+      render: (_, index) => index + 1,
     },
     {
       key: "amount",
       header: copy.table.amount,
-      className: "w-40 text-right font-mono tabular-nums",
+      className: "sticky left-12 z-10 w-32 bg-card text-right",
       render: (row) =>
         row.kind === "bank" ? (
           <AmountCell tx={row.tx} />
@@ -599,32 +676,36 @@ export function BankTransactionsTable({
     {
       key: "status",
       header: copy.table.status,
-      className: "w-44",
+      className: "sticky left-44 z-10 w-72 bg-card",
       render: (row) =>
         row.kind === "bank" ? (
-          <ReconciliationStatusCell tx={row.tx} />
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <ReconciliationStatusCell tx={row.tx} />
+            </div>
+            <ReconciliationActionCell
+              tx={row.tx}
+              expenseOptions={expenseOptions}
+              canLinkPayments={canLinkPayments}
+              touch={isTouchLayout}
+            />
+          </div>
         ) : (
-          <MissingWebhookStatusCell payment={row.payment} />
+          <div className="flex min-w-0 items-center gap-2">
+            <MissingWebhookStatusCell payment={row.payment} />
+            <ReviewStatusSelect payment={row.payment} touch={isTouchLayout} />
+          </div>
         ),
     },
     {
-      key: "match",
-      header: copy.table.action,
-      className: "w-64 text-right",
-      render: (row) =>
-        row.kind === "bank" ? (
-          <ReconciliationActionCell
-            tx={row.tx}
-            expenseOptions={expenseOptions}
-            canLinkPayments={canLinkPayments}
-          />
-        ) : (
-          <ReviewStatusSelect payment={row.payment} />
-        ),
+      key: "content",
+      header: copy.table.content,
+      className: "min-w-64 whitespace-normal",
+      render: (row) => <RowContentCell row={row} />,
     },
   ];
 
-  return (
+  const table = (
     <DataTable
       columns={columns}
       data={filteredRows}
@@ -634,25 +715,6 @@ export function BankTransactionsTable({
               row.tx.bankTransactionId ?? row.tx.eventId ?? row.tx.requestId,
             )}`
           : `missing-${row.payment.paymentId}`
-      }
-      filters={[
-        {
-          key: "reconciliation",
-          placeholder: copy.filters.placeholder,
-          options: filterOptions.map(([value, label]) => ({ value, label })),
-        },
-      ]}
-      filterValues={{ reconciliation: filter }}
-      onFilterChange={(_, value) => {
-        if (isBankReconciliationFilter(value)) setFilter(value);
-      }}
-      actions={
-        <Badge
-          variant={openQueueCount > 0 ? "warning" : "success"}
-          className="font-mono"
-        >
-          {copy.queueCount(formatCount(openQueueCount))}
-        </Badge>
       }
       emptyTitle={
         !hasRows
@@ -669,6 +731,7 @@ export function BankTransactionsTable({
             : copy.filteredEmptyDescription
       }
       emptyMode={hasRows ? "no-results" : "no-data"}
+      className="[&_table]:table-fixed"
       mobileBreakpoint={1024}
       mobileCardRender={(row) => (
         <Item variant="outline">
@@ -680,26 +743,88 @@ export function BankTransactionsTable({
               ) : (
                 <PaymentAmountCell payment={row.payment} />
               )}
-              {row.kind === "bank" ? (
-                <ReconciliationStatusCell tx={row.tx} />
-              ) : (
-                <MissingWebhookStatusCell payment={row.payment} />
-              )}
-            </div>
-            <div className="flex justify-end">
-              {row.kind === "bank" ? (
-                <ReconciliationActionCell
-                  tx={row.tx}
-                  expenseOptions={expenseOptions}
-                  canLinkPayments={canLinkPayments}
-                />
-              ) : (
-                <ReviewStatusSelect payment={row.payment} />
-              )}
+              <div className="flex min-w-0 flex-col items-end gap-2">
+                {row.kind === "bank" ? (
+                  <>
+                    <ReconciliationStatusCell tx={row.tx} />
+                    <ReconciliationActionCell
+                      tx={row.tx}
+                      expenseOptions={expenseOptions}
+                      canLinkPayments={canLinkPayments}
+                      touch={isTouchLayout}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <MissingWebhookStatusCell payment={row.payment} />
+                    <ReviewStatusSelect
+                      payment={row.payment}
+                      touch={isTouchLayout}
+                    />
+                  </>
+                )}
+              </div>
             </div>
           </ItemContent>
         </Item>
       )}
     />
+  );
+
+  return (
+    <>
+      <FilterBar
+        params={params}
+        branches={[]}
+        basePath="/finance/bank-transactions"
+        hide={["branch", "granularity", "compare", "payment"]}
+        compact
+        trailing={
+          <>
+            <span className="text-xs font-medium text-muted-foreground">
+              {copy.filters.label}
+            </span>
+            <Select
+              value={filter}
+              onValueChange={(value) => {
+                if (isBankReconciliationFilter(value)) setFilter(value);
+              }}
+            >
+              <SelectTrigger
+                size={isTouchLayout ? "touch" : "default"}
+                className="min-w-36"
+                aria-label={copy.filters.label}
+              >
+                <SelectValue placeholder={copy.filters.placeholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {filterOptions.map(([value, label]) => (
+                  <SelectItem
+                    key={value}
+                    value={value}
+                    size={isTouchLayout ? "touch" : "default"}
+                  >
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Badge
+              variant={openQueueCount > 0 ? "warning" : "success"}
+              className="font-mono"
+            >
+              {copy.queueCount(formatCount(openQueueCount))}
+            </Badge>
+          </>
+        }
+      />
+      {isTouchLayout ? (
+        table
+      ) : (
+        <AppSection className="overflow-hidden" contentFlush>
+          {table}
+        </AppSection>
+      )}
+    </>
   );
 }

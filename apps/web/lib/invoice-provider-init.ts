@@ -9,8 +9,8 @@ let registered = false;
  * Viettel S-invoice is the only supported HĐĐT provider.
  *
  * One singleton per boot. If Sinvoice creds are missing, registration is a
- * no-op (provider stays null) and server actions + cron routes surface clear
- * errors instead of silently calling a mock.
+ * no-op (provider stays null) and server actions surface clear errors instead
+ * of silently calling a mock.
  */
 export function ensureInvoiceProviderRegistered(): void {
   if (registered) return;

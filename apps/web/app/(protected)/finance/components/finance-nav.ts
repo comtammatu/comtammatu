@@ -1,6 +1,5 @@
 import {
   BarChart3 as IconBarChart3,
-  FileSpreadsheet as IconFileSpreadsheet,
   FileCheck as IconFileCheck,
   FileText as IconFileText,
   Landmark as IconLandmark,
@@ -17,11 +16,9 @@ const financeNav = messages.finance.nav;
 
 export function resolveFinanceNav({
   showInvoices,
-  showSummary,
   showSupplierPayables,
 }: {
   showInvoices: boolean;
-  showSummary: boolean;
   showSupplierPayables: boolean;
 }): ShellNavGroup[] {
   const groups: ShellNavGroup[] = [
@@ -74,15 +71,6 @@ export function resolveFinanceNav({
             href: "/finance/supplier-invoices",
             label: financeNav.items.supplierPayables,
             icon: IconFileCheck,
-          },
-        ]
-      : []),
-    ...(showSummary
-      ? [
-          {
-            href: "/finance/summary",
-            label: financeNav.items.summary,
-            icon: IconFileSpreadsheet,
           },
         ]
       : []),

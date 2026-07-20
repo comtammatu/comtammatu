@@ -23,9 +23,8 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { Combobox } from "@/components/form";
+import { Combobox, PhotoUploadInput } from "@/components/form";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
-import { PhotoUploadInput } from "@/(protected)/inventory/_components/photo-upload-input";
 import { formatQty } from "@lib/inventory/format";
 import {
   getDefaultPurchaseUnit,
@@ -179,11 +178,13 @@ export function BranchGrnCreateLineSheet({
                       {messages.inventory.grn.addDialog.unitLabel}
                     </FieldLabel>
                     <Select
-                      value={edit.entryUnitId != null ? String(edit.entryUnitId) : ""}
+                      value={
+                        edit.entryUnitId != null ? String(edit.entryUnitId) : ""
+                      }
                       onValueChange={(value) => {
-                        const option = getPurchaseUnitOptions(edit.ingredient).find(
-                          (item) => String(item.unitId) === value,
-                        );
+                        const option = getPurchaseUnitOptions(
+                          edit.ingredient,
+                        ).find((item) => String(item.unitId) === value);
                         if (option) onUnitChange(option.unitId, option.label);
                       }}
                     >
@@ -193,15 +194,23 @@ export function BranchGrnCreateLineSheet({
                         className="w-full"
                       >
                         <SelectValue
-                          placeholder={messages.inventory.grn.addDialog.selectUnit}
+                          placeholder={
+                            messages.inventory.grn.addDialog.selectUnit
+                          }
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {getPurchaseUnitOptions(edit.ingredient).map((option) => (
-                          <SelectItem key={option.unitId} value={String(option.unitId)}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
+                        {getPurchaseUnitOptions(edit.ingredient).map(
+                          (option) => (
+                            <SelectItem
+                              key={option.unitId}
+                              value={String(option.unitId)}
+                              size="touch"
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </Field>
@@ -210,7 +219,9 @@ export function BranchGrnCreateLineSheet({
                     <NumberPadValueField
                       id="branch-grn-create-quantity"
                       label={`${FORM_VI.quantity} (${edit.unit})`}
-                      value={edit.quantity > 0 ? formatQty(edit.quantity) : null}
+                      value={
+                        edit.quantity > 0 ? formatQty(edit.quantity) : null
+                      }
                       emptyLabel="Nhập số"
                       onClick={() => setNumericField("quantity")}
                     />
@@ -253,7 +264,8 @@ export function BranchGrnCreateLineSheet({
                     ) : null}
                   </div>
 
-                  {variance != null && Math.abs(variance) > DEFAULT_VARIANCE_WARNING ? (
+                  {variance != null &&
+                  Math.abs(variance) > DEFAULT_VARIANCE_WARNING ? (
                     <Alert variant="destructive">
                       <IconAlertTriangle className="size-4" />
                       <AlertDescription>
@@ -269,7 +281,9 @@ export function BranchGrnCreateLineSheet({
                     <Textarea
                       id="branch-grn-create-note"
                       value={edit.note}
-                      onChange={(event) => onPatch({ note: event.target.value })}
+                      onChange={(event) =>
+                        onPatch({ note: event.target.value })
+                      }
                       rows={2}
                       maxLength={200}
                       placeholder={GRN_CREATE_COPY.notePlaceholder}
@@ -329,8 +343,8 @@ export function BranchGrnCreateLineSheet({
         suffix={numericField === "quantity" ? edit?.unit : "₫"}
         initialValue={
           numericField === "quantity"
-            ? edit?.quantity ?? null
-            : edit?.unitCost ?? null
+            ? (edit?.quantity ?? null)
+            : (edit?.unitCost ?? null)
         }
         onConfirm={(value) => {
           onPatch(
@@ -373,7 +387,8 @@ export function BranchGrnReviewLineSheet({
     line != null &&
     line.poQuantity != null &&
     line.poQuantity > 0 &&
-    line.actual < line.poQuantity * (1 - grn.qcSettings.qtyShortTolerancePct / 100);
+    line.actual <
+      line.poQuantity * (1 - grn.qcSettings.qtyShortTolerancePct / 100);
   const needsRejectionDetails =
     line != null && (line.rejected > 0 || line.qualityStatus === "rejected");
   const needsPriceOverride =
@@ -432,7 +447,9 @@ export function BranchGrnReviewLineSheet({
           {line ? (
             <>
               <SheetHeader>
-                <SheetTitle className="text-lg font-semibold">{line.name}</SheetTitle>
+                <SheetTitle className="text-lg font-semibold">
+                  {line.name}
+                </SheetTitle>
                 <p className="text-xs text-muted-foreground">
                   {line.sku ? `${line.sku} · ` : ""}
                   {line.unit}
@@ -468,14 +485,18 @@ export function BranchGrnReviewLineSheet({
                   {needsRejectionDetails ? (
                     <>
                       <Field>
-                        <FieldLabel htmlFor={`branch-grn-reason-${line.lineId}`}>
+                        <FieldLabel
+                          htmlFor={`branch-grn-reason-${line.lineId}`}
+                        >
                           {GRN_DETAIL_COPY.line.rejectReasonRequired}
                         </FieldLabel>
                         <Textarea
                           id={`branch-grn-reason-${line.lineId}`}
                           rows={2}
                           value={line.rejectionReason}
-                          placeholder={GRN_DETAIL_COPY.line.rejectReasonPlaceholder}
+                          placeholder={
+                            GRN_DETAIL_COPY.line.rejectReasonPlaceholder
+                          }
                           onChange={(event) =>
                             onPatch({ rejectionReason: event.target.value })
                           }
@@ -504,11 +525,14 @@ export function BranchGrnReviewLineSheet({
                       <Alert variant="destructive">
                         <IconAlertTriangle className="size-4" />
                         <AlertDescription>
-                          {GRN_DETAIL_COPY.line.priceVariance}: {formattedVariance}
+                          {GRN_DETAIL_COPY.line.priceVariance}:{" "}
+                          {formattedVariance}
                         </AlertDescription>
                       </Alert>
                       <Field>
-                        <FieldLabel htmlFor={`branch-grn-override-${line.lineId}`}>
+                        <FieldLabel
+                          htmlFor={`branch-grn-override-${line.lineId}`}
+                        >
                           {GRN_DETAIL_COPY.line.priceOverrideRequired}
                         </FieldLabel>
                         <Textarea
@@ -573,14 +597,16 @@ export function BranchGrnReviewLineSheet({
                           className="w-full"
                         >
                           <SelectValue
-                            placeholder={GRN_DETAIL_COPY.line.shortagePlaceholder}
+                            placeholder={
+                              GRN_DETAIL_COPY.line.shortagePlaceholder
+                            }
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="accept_and_close">
+                          <SelectItem value="accept_and_close" size="touch">
                             {GRN_DETAIL_COPY.line.acceptAndClose}
                           </SelectItem>
-                          <SelectItem value="wait_backorder">
+                          <SelectItem value="wait_backorder" size="touch">
                             {GRN_DETAIL_COPY.line.waitBackorder}
                           </SelectItem>
                         </SelectContent>
@@ -796,7 +822,9 @@ export function BranchGrnAddLineSheet({
           <div className="p-4">
             <FieldGroup>
               <Field>
-                <FieldLabel>{GRN_DETAIL_COPY.addDialog.ingredientLabel}</FieldLabel>
+                <FieldLabel>
+                  {GRN_DETAIL_COPY.addDialog.ingredientLabel}
+                </FieldLabel>
                 <Combobox
                   value={ingredientId}
                   onValueChange={handleIngredientChange}
@@ -806,7 +834,10 @@ export function BranchGrnAddLineSheet({
                       value: String(ingredient.id),
                       label: ingredient.name,
                       hint: getDefaultPurchaseUnit(ingredient)?.label ?? "",
-                      keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+                      keywords: [
+                        ingredient.sku ?? "",
+                        ingredient.category ?? "",
+                      ],
                     }))}
                   placeholder={GRN_DETAIL_COPY.addDialog.ingredientPlaceholder}
                   searchPlaceholder={
@@ -838,7 +869,11 @@ export function BranchGrnAddLineSheet({
                   </SelectTrigger>
                   <SelectContent>
                     {purchaseUnitOptions.map((option) => (
-                      <SelectItem key={option.unitId} value={String(option.unitId)}>
+                      <SelectItem
+                        key={option.unitId}
+                        value={String(option.unitId)}
+                        size="touch"
+                      >
                         {option.label}
                       </SelectItem>
                     ))}

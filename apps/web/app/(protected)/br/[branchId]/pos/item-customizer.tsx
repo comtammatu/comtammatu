@@ -583,7 +583,7 @@ export function ItemCustomizer({
                           setDiscountValueText("");
                         }}
                       >
-                        <TabsList className="w-full">
+                        <TabsList size="touch" className="w-full">
                           <TabsTrigger value="pct" className="flex-1">
                             {messages.pos.customizer.discountByPercent}
                           </TabsTrigger>

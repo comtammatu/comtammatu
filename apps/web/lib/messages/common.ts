@@ -2,6 +2,7 @@ import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
 
 export const common = {
   brandName: "Cơm Tấm Má Tư",
+  brandShortName: "Má Tư",
   signOut: ACTIONS_VI.signOut,
   skipNavigation: "Bỏ qua điều hướng",
   themeToggleToLight: "Chế độ ngày",
@@ -14,6 +15,9 @@ export const common = {
   confirmTitle: ACTIONS_VI.confirm,
   confirmCancel: ACTIONS_VI.cancel,
   confirmOk: ACTIONS_VI.confirm,
+  unsavedChangesTitle: "Bỏ thay đổi chưa lưu?",
+  unsavedChangesDescription: "Các thay đổi trong biểu mẫu này sẽ bị mất.",
+  discardChanges: "Bỏ thay đổi",
   sessionExpired: ERRORS_VI.sessionExpired,
   forbidden: ERRORS_VI.forbidden,
   networkError: ERRORS_VI.networkError,

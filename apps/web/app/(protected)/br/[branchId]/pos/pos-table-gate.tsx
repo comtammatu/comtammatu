@@ -28,6 +28,7 @@ interface PosTableGateProps {
   tableOrderVisualStateByTable?: Map<number, PosTableOrderVisualState>;
   /** Tables carrying a pending guest request from the public QR flow. */
   pendingSelfOrderTableIds?: ReadonlySet<number>;
+  hasStackedTouchActions?: boolean;
   headerAction?: ReactNode;
   className?: string;
 }
@@ -133,6 +134,7 @@ function PosTableGateComponent({
   orderCountByTable,
   tableOrderVisualStateByTable,
   pendingSelfOrderTableIds,
+  hasStackedTouchActions = false,
   headerAction,
   className,
 }: PosTableGateProps) {
@@ -167,7 +169,12 @@ function PosTableGateComponent({
         />
       ) : (
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-          <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4">
+          <div
+            className={cn(
+              "flex w-full flex-col gap-4 px-2 pt-2 md:px-4 md:pt-4",
+              hasStackedTouchActions ? "pb-40 xl:pb-4" : "pb-28 xl:pb-4",
+            )}
+          >
             {headerAction ? (
               <div className="w-full md:max-w-md">{headerAction}</div>
             ) : null}

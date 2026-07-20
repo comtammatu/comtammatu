@@ -340,6 +340,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
             onPatch={(key, value) => patchRow(row.id, key, value)}
           />
         )}
+        pageSize={25}
       />
 
       <AppDetailFooter
@@ -413,15 +414,19 @@ function ThresholdItem({
           </ItemDescription>
         </div>
         <Checkbox
+          size="touch"
           checked={selected}
           onCheckedChange={(value) => onSelectedChange(value === true)}
           aria-label={`${ariaSelectRowPrefix}${row.name}`}
         />
       </ItemHeader>
       <ItemContent className="basis-full">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="flex flex-col gap-1">
-            <Label htmlFor={`min-stock-${row.id}`} className="text-xs font-medium font-normal">
+            <Label
+              htmlFor={`min-stock-${row.id}`}
+              className="text-xs font-medium font-normal"
+            >
               {copy.cols.min}
             </Label>
             <QuantityInput
@@ -430,12 +435,15 @@ function ThresholdItem({
               onValueChange={(value) => onPatch("minStock", value)}
               maxFractionDigits={3}
               placeholder="0"
-              className="h-8 text-right tabular-nums"
+              className="h-12 text-right tabular-nums lg:h-10"
               aria-label={`${copy.cols.min} ${row.name}`}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor={`reorder-point-${row.id}`} className="text-xs font-medium font-normal">
+            <Label
+              htmlFor={`reorder-point-${row.id}`}
+              className="text-xs font-medium font-normal"
+            >
               {copy.cols.reorder}
             </Label>
             <QuantityInput
@@ -444,12 +452,15 @@ function ThresholdItem({
               onValueChange={(value) => onPatch("reorderPoint", value)}
               maxFractionDigits={3}
               placeholder="—"
-              className="h-8 text-right tabular-nums"
+              className="h-12 text-right tabular-nums lg:h-10"
               aria-label={`${copy.cols.reorder} ${row.name}`}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor={`max-stock-${row.id}`} className="text-xs font-medium font-normal">
+            <Label
+              htmlFor={`max-stock-${row.id}`}
+              className="text-xs font-medium font-normal"
+            >
               {copy.cols.max}
             </Label>
             <QuantityInput
@@ -458,7 +469,7 @@ function ThresholdItem({
               onValueChange={(value) => onPatch("maxStock", value)}
               maxFractionDigits={3}
               placeholder="—"
-              className="h-8 text-right tabular-nums"
+              className="h-12 text-right tabular-nums lg:h-10"
               aria-label={`${copy.cols.max} ${row.name}`}
             />
           </div>
@@ -510,27 +521,27 @@ function BulkApplyDialog({
       contentClassName="sm:max-w-md"
     >
       {(form) => (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <QuantityField
             control={form.control}
             name="min"
             label={copy.cols.min}
             placeholder="—"
-            className="h-8 text-right tabular-nums"
+            className="h-12 text-right tabular-nums lg:h-10"
           />
           <QuantityField
             control={form.control}
             name="reorder"
             label={copy.cols.reorder}
             placeholder="—"
-            className="h-8 text-right tabular-nums"
+            className="h-12 text-right tabular-nums lg:h-10"
           />
           <QuantityField
             control={form.control}
             name="max"
             label={copy.cols.max}
             placeholder="—"
-            className="h-8 text-right tabular-nums"
+            className="h-12 text-right tabular-nums lg:h-10"
           />
         </div>
       )}

@@ -38,14 +38,3 @@ export function countOverlapDays(
   const end = endDate < periodEnd ? endDate : periodEnd;
   return start <= end ? countInclusiveDays(start, end) : 0;
 }
-
-export function suggestAnnualLeaveEntitlement(
-  startDate: string | null | undefined,
-  year: number,
-): number {
-  if (!startDate || startDate < `${year}-01-01`) return 12;
-  if (startDate > `${year}-12-31`) return 0;
-
-  const month = Number(startDate.slice(5, 7));
-  return Number.isFinite(month) ? Math.max(0, 13 - month) : 12;
-}

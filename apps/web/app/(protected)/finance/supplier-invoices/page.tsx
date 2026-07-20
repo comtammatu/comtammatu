@@ -11,6 +11,7 @@ import type { SupplierInvoiceCursor } from "../../inventory/procurement-actions"
 import { fetchSuppliers } from "../../inventory/supplier-actions";
 import { resolveRequestedBranchId } from "../../inventory/_lib/inventory-scope";
 import { SupplierInvoicesClient } from "../../inventory/supplier-invoices/supplier-invoices-client";
+import { parseSupplierInvoiceListFilters } from "../../inventory/supplier-invoices/supplier-invoice-list-model";
 import { mapSupplierInvoiceRow } from "../../inventory/supplier-invoices/supplier-invoice-row";
 
 export default async function FinanceSupplierInvoicesPage({
@@ -20,6 +21,12 @@ export default async function FinanceSupplierInvoicesPage({
     branch?: string | string[];
     branchId?: string | string[];
     invoiceId?: string | string[];
+    q?: string | string[];
+    supplierId?: string | string[];
+    matchStatus?: string | string[];
+    paymentStatus?: string | string[];
+    overdue?: string | string[];
+    view?: string | string[];
   }>;
 }) {
   const copy = messages.finance.supplierInvoicesPage;
@@ -66,6 +73,7 @@ export default async function FinanceSupplierInvoicesPage({
   const branchFilter =
     (await resolveRequestedBranchId(params.branchId ?? params.branch)) ??
     undefined;
+  const filters = parseSupplierInvoiceListFilters(params);
   const rawInvoiceId = Array.isArray(params.invoiceId)
     ? params.invoiceId[0]
     : params.invoiceId;
@@ -84,7 +92,15 @@ export default async function FinanceSupplierInvoicesPage({
   }
 
   const [res, suppliersRes, grnsRes, requestedInvoiceRes] = await Promise.all([
-    fetchSupplierInvoicesPage({ branchId: branchFilter }),
+    fetchSupplierInvoicesPage({
+      branchId: branchFilter,
+      query: filters.query,
+      supplierId: filters.supplierId ?? undefined,
+      matchStatus: filters.matchStatus ?? undefined,
+      paymentStatus: filters.paymentStatus ?? undefined,
+      overdueOnly: filters.overdueOnly,
+      viewMode: filters.viewMode,
+    }),
     fetchSuppliers(),
     fetchGrnIdsForDropdown(branchFilter),
     requestedInvoiceId != null
@@ -168,6 +184,9 @@ export default async function FinanceSupplierInvoicesPage({
       grns={grns}
       initialHasMore={initialHasMore}
       initialNextCursor={initialNextCursor}
+      initialGroups={page?.groups ?? []}
+      initialTotalCount={page?.totalCount ?? 0}
+      filters={filters}
       branchId={branchFilter}
       canPaySupplier={canPaySupplier}
       eyebrow={copy.eyebrow}

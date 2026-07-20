@@ -1,15 +1,9 @@
-import { unzipSync } from "fflate";
 import {
   BUYER_NOT_GET_INVOICE_NAME,
-  type BatchInvoiceItemResult,
-  type InvoiceArchive,
-  type InvoiceArtifact,
-  type InvoiceDownloadRequest,
   type InvoiceLineItem,
   type InvoiceProvider,
   type InvoiceRequest,
   type InvoiceResult,
-  type InvoiceStatus,
 } from "../invoice";
 
 /**
@@ -37,9 +31,8 @@ import {
  *   - 410/412: TransactionUuid must be 10–36 chars
  *
  * Sinvoice expects per-line NET (pre-VAT) prices. The InvoiceRequest
- * interface is rate-agnostic — caller may pass GROSS (B2B realtime path,
- * order_items.subtotal stored as gross) or NET (B2C batch, _compute_vat_breakdown
- * returns net). A heuristic compares Σ items.amount vs subtotal vs totalAmount
+ * interface is rate-agnostic — callers may pass GROSS or NET amounts.
+ * A heuristic compares Σ items.amount vs subtotal vs totalAmount
  * to pick the conversion factor. For mixed-rate B2B, header vatRate (predominant)
  * is used per-line — accepts ≤1₫ rounding tolerance; out-of-tolerance errors
  * surface as Sinvoice rejection (status='failed') rather than silent corruption.
@@ -65,8 +58,6 @@ const LOGIN_PATH = "/auth/login";
 const TX_UUID_LENGTH = 32;
 const TOKEN_SAFETY_MARGIN_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 30_000;
-// Sinvoice createBatchInvoice cap (HDSD v2.50: ≤50/lô to avoid timeout).
-const SINVOICE_BATCH_MAX = 50;
 
 export interface ViettelSinvoiceConfig {
   username: string;
@@ -107,42 +98,6 @@ interface SinvoiceCreateResult {
   codeOfTax?: string | null;
 }
 
-interface SinvoiceStatusSearchResult {
-  invoiceNo?: string;
-  status?: string | null;
-  exchangeStatus?: string | null;
-  exchangeDes?: string | null;
-  codeOfTax?: string | null;
-}
-
-// createBatchInvoice response (HDSD v2.50). Top-level (NOT wrapped in the
-// `result` envelope that single createInvoice uses). Per-invoice outcomes in
-// `createInvoiceOutputs` keyed by `transactionUuid`; input-validation failures
-// in `lstMapError`. A JSON/token-level failure returns `{code,message,data}`.
-interface SinvoiceBatchOutput {
-  transactionUuid?: string | null;
-  errorCode?: number | string | null;
-  description?: string | null;
-  result?: {
-    invoiceNo?: string | null;
-    reservationCode?: string | null;
-    transactionID?: string | null;
-    supplierTaxCode?: string | null;
-    codeOfTax?: string | null;
-  } | null;
-}
-
-interface SinvoiceBatchResponse {
-  createInvoiceOutputs?: SinvoiceBatchOutput[] | null;
-  lstMapError?:
-    | { msg?: string; invoiceSeri?: string; errorCode?: string }[]
-    | null;
-  totalSuccess?: number;
-  totalFail?: number;
-  code?: number;
-  message?: string;
-  data?: string;
-}
 
 /**
  * Build a deterministic 32-char transactionUuid from a domain key. Same key →
@@ -553,8 +508,8 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
 
   /**
    * Detect whether caller's per-item amounts are GROSS (incl VAT) or NET.
-   * B2B realtime path passes order_items.subtotal which is stored gross.
-   * B2C batch path passes _compute_vat_breakdown line_subtotal which is net.
+   * Per-order callers normally pass order_items.subtotal as gross; VAT templates
+   * may pass net amounts.
    * Compare Σ items.amount: closer to totalAmount → gross; closer to subtotal → net.
    */
   private detectGrossInput(request: InvoiceRequest): boolean {
@@ -569,9 +524,7 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
   }
 
   /**
-   * Build the per-invoice request body shared by createInvoice (single) and
-   * createBatchInvoice (the `commonInvoiceInputs[]` elements). Same shape; the
-   * batch endpoint just wraps an array of these.
+   * Build the request body for one invoice.
    */
   private buildInvoiceBody(request: InvoiceRequest): {
     body: Record<string, unknown>;
@@ -716,10 +669,9 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
 
       // MTT mẫu-2 invoices receive the CQT code (codeOfTax / Mã của cơ quan
       // thuế) synchronously on create → already legally issued, so surface
-      // 'issued' immediately (same rule as createBatchInvoice + getStatus). HĐ
-      // GTGT mẫu-1 codes arrive async (no codeOfTax yet ⇒ 'submitted', reconcile
-      // cron promotes). No invoiceNo ⇒ still 'signing'. The codeOfTax check is
-      // strict non-empty so a '' / whitespace value never falsely issues.
+      // 'issued' immediately. HĐ GTGT mẫu-1 without a code remains 'submitted';
+      // no invoiceNo remains 'signing'. The codeOfTax check is strict non-empty
+      // so a blank value never falsely issues.
       const hasCqtCode =
         typeof codeOfTax === "string" && codeOfTax.trim().length > 0;
       const status: InvoiceResult["status"] =
@@ -760,233 +712,6 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     }
   }
 
-  /**
-   * Issue many invoices in one Sinvoice call (HDSD v2.50
-   * `createBatchInvoice`). Request wraps the per-invoice bodies in
-   * `commonInvoiceInputs`; response returns per-invoice outcomes in
-   * `createInvoiceOutputs` (keyed by transactionUuid) + `lstMapError`. Chunks
-   * at SINVOICE_BATCH_MAX. Never throws — a whole-chunk failure marks every
-   * item in that chunk failed so the caller reconciles per transactionUuid.
-   */
-  async createBatchInvoice(
-    requests: InvoiceRequest[],
-  ): Promise<BatchInvoiceItemResult[]> {
-    const results: BatchInvoiceItemResult[] = [];
-
-    const fail = (
-      uuid: string,
-      description: string,
-      extra?: Record<string, unknown>,
-    ): BatchInvoiceItemResult => ({
-      transactionUuid: uuid,
-      status: "failed",
-      invoiceNumber: null,
-      providerRef: uuid,
-      codeOfTax: null,
-      providerData: { transactionUuid: uuid, description, ...extra },
-    });
-
-    for (let i = 0; i < requests.length; i += SINVOICE_BATCH_MAX) {
-      const chunk = requests.slice(i, i + SINVOICE_BATCH_MAX);
-      const built: Array<{
-        body: Record<string, unknown>;
-        transactionUuid: string;
-      }> = [];
-      for (const request of chunk) {
-        try {
-          built.push(this.buildInvoiceBody(request));
-        } catch (err) {
-          results.push(
-            fail(
-              buildSinvoiceTransactionUuid(request.orderId),
-              err instanceof Error ? err.message : "sinvoice_body_build_failed",
-            ),
-          );
-        }
-      }
-      if (built.length === 0) continue;
-      const reqBody = { commonInvoiceInputs: built.map((b) => b.body) };
-
-      try {
-        const res = await this.authedFetch(
-          `/InvoiceAPI/InvoiceWS/createBatchInvoice/${this.taxCode}`,
-          { method: "POST", body: JSON.stringify(reqBody) },
-        );
-        const env = (await this.readEnvelope<unknown>(
-          res,
-        )) as unknown as SinvoiceBatchResponse;
-
-        // JSON/token-level rejection ({code,message,data}) → whole chunk failed.
-        if (!Array.isArray(env.createInvoiceOutputs)) {
-          const description =
-            env.message ??
-            env.data ??
-            this.describeError(
-              env as SinvoiceEnvelope<unknown>,
-              "batch_invoice_failed",
-            );
-          for (const b of built) {
-            results.push(
-              fail(b.transactionUuid, description, {
-                httpStatus: res.status,
-              }),
-            );
-          }
-          continue;
-        }
-
-        const outputs = env.createInvoiceOutputs;
-        for (let k = 0; k < built.length; k++) {
-          const b = built[k];
-          if (!b) continue;
-          // Map by transactionUuid; fall back to positional order (HDSD: outputs
-          // align with commonInvoiceInputs; examples sometimes echo uuid=null).
-          const out =
-            outputs.find(
-              (o) =>
-                o?.transactionUuid && o.transactionUuid === b.transactionUuid,
-            ) ??
-            outputs[k] ??
-            null;
-          const invoiceNo = out?.result?.invoiceNo ?? null;
-          const codeOfTax = out?.result?.codeOfTax ?? null;
-          const okCode =
-            out != null &&
-            (out.errorCode === 200 ||
-              out.errorCode === "200" ||
-              out.errorCode == null);
-
-          if (out && okCode && invoiceNo) {
-            results.push({
-              transactionUuid: b.transactionUuid,
-              // codeOfTax present (MTT) = issued; else submitted, reconcile cron polls.
-              status: codeOfTax ? "issued" : "submitted",
-              invoiceNumber: invoiceNo,
-              providerRef: b.transactionUuid,
-              codeOfTax,
-              providerData: {
-                transactionUuid: b.transactionUuid,
-                reservationCode: out.result?.reservationCode,
-                transactionID: out.result?.transactionID,
-                codeOfTax,
-              },
-            });
-          } else {
-            const errMsg =
-              out?.description ??
-              env.lstMapError?.[k]?.msg ??
-              env.lstMapError?.[0]?.msg ??
-              "batch_item_failed";
-            results.push(
-              fail(b.transactionUuid, errMsg, {
-                errorCode: out?.errorCode ?? null,
-              }),
-            );
-          }
-        }
-      } catch (err) {
-        const description =
-          err instanceof Error ? err.message : "sinvoice_batch_call_failed";
-        for (const b of built)
-          results.push(fail(b.transactionUuid, description));
-      }
-    }
-
-    return results;
-  }
-
-  async getStatus(providerRef: string): Promise<InvoiceStatus> {
-    try {
-      const body = new URLSearchParams({
-        supplierTaxCode: this.taxCode,
-        transactionUuid: providerRef,
-      });
-      const res = await this.authedFetch(
-        `/InvoiceAPI/InvoiceWS/searchInvoiceByTransactionUuid`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body,
-        },
-      );
-      const envelope = (await res.json()) as SinvoiceEnvelope<
-        SinvoiceStatusSearchResult[]
-      >;
-      if (!res.ok || envelope.errorCode) {
-        const description =
-          typeof envelope.description === "string"
-            ? envelope.description
-            : `sinvoice_getstatus_${res.status}`;
-        return {
-          status: "draft",
-          invoiceNumber: null,
-          error: `${envelope.errorCode ?? res.status}:${description}`,
-        };
-      }
-      const r = Array.isArray(envelope.result) ? envelope.result[0] : null;
-      if (!r) {
-        return {
-          status: "draft",
-          invoiceNumber: null,
-          error: "invoice_not_found",
-        };
-      }
-
-      const exchangeStatus = (r.exchangeStatus ?? "").toUpperCase();
-      const textualStatus = `${r.status ?? ""} ${exchangeStatus}`.toLowerCase();
-      const invoiceNumber = r.invoiceNo ?? null;
-
-      if (
-        textualStatus.includes("cancel") ||
-        textualStatus.includes("hủy") ||
-        textualStatus.includes("huy")
-      ) {
-        return { status: "cancelled", invoiceNumber, error: null };
-      }
-      if (
-        textualStatus.includes("replace") ||
-        textualStatus.includes("thay thế") ||
-        textualStatus.includes("thay the")
-      ) {
-        return { status: "replaced", invoiceNumber, error: null };
-      }
-      if (exchangeStatus.includes("DIS_APPROVED")) {
-        return {
-          status: "submitted",
-          invoiceNumber,
-          error: `cqt_rejected:${r.exchangeDes ?? exchangeStatus}`,
-        };
-      }
-      if (
-        r.codeOfTax ||
-        (exchangeStatus.includes("APPROVED") &&
-          !exchangeStatus.includes("DIS_APPROVED"))
-      ) {
-        return {
-          status: "issued",
-          invoiceNumber,
-          codeOfTax: r.codeOfTax ?? null,
-          error: null,
-        };
-      }
-      if (invoiceNumber) {
-        return { status: "submitted", invoiceNumber, error: null };
-      }
-
-      return {
-        status: "draft",
-        invoiceNumber,
-        error: `unknown_exchange_status:${exchangeStatus || "missing"}`,
-      };
-    } catch (e) {
-      return {
-        status: "draft",
-        invoiceNumber: null,
-        error: e instanceof Error ? e.message : "sinvoice_getstatus_exception",
-      };
-    }
-  }
-
   async cancelInvoice(providerRef: string, reason: string): Promise<void> {
     const res = await this.authedFetch(
       `/InvoiceAPI/InvoiceWS/cancelTransactionInvoice/${this.taxCode}`,
@@ -1010,201 +735,4 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     }
   }
 
-  /**
-   * Fetch one representation file (fileType "PDF" or "ZIP") for an issued
-   * invoice. Returns the decoded bytes verbatim (never re-encoded) or an error
-   * string.
-   *
-   * Endpoint: POST /InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile.
-   * Response is a FLAT JSON envelope { errorCode, description, fileName,
-   * fileToBytes, paymentStatus } — fields at top level, NOT under `result`.
-   * This endpoint signals success with errorCode 200 (number), unlike
-   * createInvoice/getStatus where success is a null errorCode; a present
-   * top-level fileToBytes is the reliable success signal.
-   */
-  private async fetchRepresentationFile(
-    invoiceNumber: string,
-    transactionUuid: string,
-    fileType: "PDF" | "ZIP",
-  ): Promise<
-    { bytes: Uint8Array; fileName: string | null } | { error: string }
-  > {
-    const res = await this.authedFetch(
-      `/InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          supplierTaxCode: this.taxCode,
-          invoiceNo: invoiceNumber,
-          templateCode: this.templateCode,
-          transactionUuid,
-          fileType,
-        }),
-      },
-    );
-    const envelope = (await res.json()) as {
-      errorCode?: number | string | null;
-      description?: string | null;
-      fileName?: string | null;
-      fileToBytes?: string | null;
-    };
-    const base64 = envelope.fileToBytes;
-    if (!res.ok || typeof base64 !== "string" || base64.length === 0) {
-      return {
-        error: `${fileType}:${envelope.errorCode ?? res.status}:${envelope.description ?? "download_failed"}`,
-      };
-    }
-    return {
-      bytes: new Uint8Array(Buffer.from(base64, "base64")),
-      fileName: envelope.fileName ?? null,
-    };
-  }
-
-  /**
-   * Download signed PDF + XML for an issued invoice.
-   *
-   * The PDF comes back directly as a base64 PDF (fileType=PDF); the signed XML
-   * (the legal original) ships only inside the ZIP representation (fileType=ZIP)
-   * for the MTT template — so this makes TWO calls and combines them.
-   *
-   * Per Viettel HDSD §III.7 timing note: "request lấy file hóa đơn nên
-   * được thực hiện sau từ 2-5 giây sau khi phát hành hóa đơn." Cron
-   * 15-min cadence covers this comfortably.
-   *
-   * Per Viettel HDSD §III.7 state note: "Hệ thống chỉ lấy lên những
-   * hóa đơn có trạng thái khả dụng (state = 1)" — only fully-signed
-   * invoices are downloadable. Caller filters status='issued'.
-   *
-   * NEVER re-encodes bytes — the PDF is used as returned and the XML is
-   * extracted verbatim from the ZIP. Caller hashes pre-Storage upload to
-   * verify signature integrity.
-   */
-  async downloadInvoice(
-    request: InvoiceDownloadRequest,
-  ): Promise<InvoiceArchive> {
-    if (!request.invoiceNumber) {
-      return {
-        pdf: null,
-        xml: null,
-        error: "missing_invoice_number",
-      };
-    }
-
-    try {
-      // 1) PDF — fileType=PDF returns the signed PDF directly as base64.
-      const pdfRes = await this.fetchRepresentationFile(
-        request.invoiceNumber,
-        request.providerRef,
-        "PDF",
-      );
-      if ("error" in pdfRes) {
-        return {
-          pdf: null,
-          xml: null,
-          error: pdfRes.error,
-          providerData: { invoiceNo: request.invoiceNumber },
-        };
-      }
-      const pdfBytes = pdfRes.bytes;
-      const pdfStart = String.fromCharCode(
-        pdfBytes[0] ?? 0,
-        pdfBytes[1] ?? 0,
-        pdfBytes[2] ?? 0,
-        pdfBytes[3] ?? 0,
-      );
-      if (pdfStart !== "%PDF") {
-        return { pdf: null, xml: null, error: `bad_pdf_magic:got=${pdfStart}` };
-      }
-
-      // 2) XML — the signed XML ships only inside the ZIP representation.
-      const zipRes = await this.fetchRepresentationFile(
-        request.invoiceNumber,
-        request.providerRef,
-        "ZIP",
-      );
-      if ("error" in zipRes) {
-        return {
-          pdf: null,
-          xml: null,
-          error: zipRes.error,
-          providerData: { invoiceNo: request.invoiceNumber },
-        };
-      }
-      const zipBuffer = Buffer.from(zipRes.bytes);
-      // Magic byte check for ZIP: PK\x03\x04 = 0x50 0x4B 0x03 0x04
-      if (
-        zipBuffer.length < 4 ||
-        zipBuffer[0] !== 0x50 ||
-        zipBuffer[1] !== 0x4b ||
-        zipBuffer[2] !== 0x03 ||
-        zipBuffer[3] !== 0x04
-      ) {
-        return {
-          pdf: null,
-          xml: null,
-          error: `bad_zip_magic:size=${zipBuffer.length}`,
-        };
-      }
-
-      let entries: Record<string, Uint8Array>;
-      try {
-        entries = unzipSync(new Uint8Array(zipBuffer));
-      } catch (e) {
-        return {
-          pdf: null,
-          xml: null,
-          error: `unzip_failed:${e instanceof Error ? e.message : "unknown"}`,
-        };
-      }
-
-      // The ZIP carries the signed .xml (plus xsl/qrcode/logo we ignore).
-      let xmlEntry: { name: string; bytes: Uint8Array } | null = null;
-      for (const [name, bytes] of Object.entries(entries)) {
-        if (name.toLowerCase().endsWith(".xml")) {
-          xmlEntry = { name, bytes };
-          break;
-        }
-      }
-      if (!xmlEntry) {
-        return {
-          pdf: null,
-          xml: null,
-          error: "missing_xml_in_zip",
-          providerData: { zipEntries: Object.keys(entries) },
-        };
-      }
-      const xmlHead = Buffer.from(xmlEntry.bytes.slice(0, 5)).toString("utf8");
-      if (!xmlHead.startsWith("<?xml") && !xmlHead.startsWith("<")) {
-        return { pdf: null, xml: null, error: `bad_xml_magic:got=${xmlHead}` };
-      }
-
-      const pdf: InvoiceArtifact = {
-        bytes: pdfBytes,
-        contentType: "application/pdf",
-        filename: pdfRes.fileName ?? `${request.invoiceNumber}.pdf`,
-      };
-      const xml: InvoiceArtifact = {
-        bytes: xmlEntry.bytes,
-        contentType: "application/xml",
-        filename: xmlEntry.name,
-      };
-
-      return {
-        pdf,
-        xml,
-        error: null,
-        providerData: {
-          pdfFileName: pdf.filename,
-          xmlFileName: xmlEntry.name,
-          zipFileName: zipRes.fileName,
-        },
-      };
-    } catch (e) {
-      return {
-        pdf: null,
-        xml: null,
-        error: e instanceof Error ? e.message : "sinvoice_download_exception",
-      };
-    }
-  }
 }

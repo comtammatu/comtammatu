@@ -43,10 +43,7 @@ const MARGIN_GREEN = 60;
 const MARGIN_WARN = 40;
 
 function marginPct(r: FoodCostRow): number | null {
-  const rev = Number(r.revenue ?? 0);
-  const cost = Number(r.ingredient_cost ?? 0);
-  if (rev === 0) return null;
-  return ((rev - cost) / rev) * 100;
+  return r.gross_margin_pct == null ? null : Number(r.gross_margin_pct);
 }
 
 function marginToneClass(pct: number | null): string {
@@ -89,8 +86,20 @@ export function FoodCostClient({
       render: (row) => formatVND(Number(row.ingredient_cost ?? 0)),
     },
     {
+      key: "unit_food_cost",
+      header: foodCopy.unitFoodCostCurrency,
+      className: "w-32 text-right font-mono tabular-nums",
+      render: (row) => formatVND(Number(row.unit_ingredient_cost ?? 0)),
+    },
+    {
+      key: "gross_profit",
+      header: foodCopy.grossProfitCurrency,
+      className: "w-36 text-right font-mono font-medium tabular-nums",
+      render: (row) => formatVND(Number(row.gross_profit ?? 0)),
+    },
+    {
       key: "margin",
-      header: foodCopy.margin,
+      header: foodCopy.grossMargin,
       className: "w-24 text-right font-mono font-medium tabular-nums",
       render: (row) => {
         const pct = marginPct(row);
@@ -140,7 +149,6 @@ export function FoodCostClient({
 
       <AppSection
         title={foodCopy.tableTitle}
-        description={foodCopy.tableDescription}
         badge={{
           children: foodCopy.itemCount(formatCount(rows.length)),
           variant: "secondary",
@@ -173,11 +181,17 @@ export function FoodCostClient({
                     {foodCopy.revenueCurrency}:{" "}
                     {formatVND(Number(row.revenue ?? 0))}
                   </ItemDescription>
+                  <ItemDescription>
+                    {foodCopy.unitFoodCostCurrency}: {" "}
+                    {formatVND(Number(row.unit_ingredient_cost ?? 0))} ·{" "}
+                    {foodCopy.foodCostCurrency}: {" "}
+                    {formatVND(Number(row.ingredient_cost ?? 0))}
+                  </ItemDescription>
                 </ItemContent>
                 <ItemFooter>
-                  <span className="text-xs text-muted-foreground">
-                    {foodCopy.foodCostCurrency}:{" "}
-                    {formatVND(Number(row.ingredient_cost ?? 0))}
+                  <span className="text-xs font-medium">
+                    {foodCopy.grossProfitCurrency}:{" "}
+                    {formatVND(Number(row.gross_profit ?? 0))}
                   </span>
                   <span
                     className={`font-mono text-sm font-semibold tabular-nums ${marginToneClass(pct)}`}

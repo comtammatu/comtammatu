@@ -333,9 +333,9 @@ export function SelfOrderItemSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="mx-auto h-dvh max-h-dvh w-full max-w-2xl p-0 data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh"
+        className="mx-auto w-full max-w-2xl overflow-hidden p-0"
       >
-        <div className="flex h-full flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="relative h-52 w-full shrink-0 overflow-hidden bg-muted/50 sm:aspect-video sm:h-auto sm:max-h-52 md:max-h-48 lg:max-h-48">
             {item.image_url ? (
               <Image
@@ -576,9 +576,9 @@ export function SelfOrderItemSheet({
           </ScrollArea>
 
           <Separator />
-          <div className="workflow-safe-pb flex shrink-0 items-center gap-2 p-3">
+          <div className="workflow-safe-pb flex shrink-0 flex-wrap items-center gap-2 p-3 sm:flex-nowrap">
             <p
-              className="min-w-0 shrink-0 font-mono text-lg font-semibold tabular-nums text-primary"
+              className="min-w-0 flex-1 font-mono text-lg font-semibold tabular-nums text-primary sm:shrink-0 sm:flex-none"
               aria-label={`${SELF_ORDER_VI.subtotal}: ${formatVND(total)}`}
             >
               {formatVND(total)}
@@ -611,7 +611,7 @@ export function SelfOrderItemSheet({
             <Button
               type="button"
               size="touch"
-              className="min-w-0 flex-1"
+              className="min-w-0 flex-1 max-sm:basis-full"
               disabled={disabled}
               onClick={commitCustomizedItem}
             >

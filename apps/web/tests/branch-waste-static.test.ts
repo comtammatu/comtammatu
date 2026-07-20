@@ -16,7 +16,7 @@ test("Branch waste is a native touch document workflow with an isolated Owner su
   const data = read("apps/web/lib/inventory/branch-waste-create-data.ts");
   const model = read("apps/web/lib/inventory/waste-tier-model.ts");
   const photoUpload = read(
-    "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx",
+    "apps/web/app/components/form/photo-upload-input.tsx",
   );
   const officePage = read(
     "apps/web/app/(protected)/inventory/waste/new/page.tsx",

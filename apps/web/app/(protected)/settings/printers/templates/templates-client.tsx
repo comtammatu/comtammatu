@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -13,6 +20,7 @@ import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   Item,
@@ -30,7 +38,12 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
-import { FormDialog, SelectField, TextField, FormattedNumberInput } from "@/components/form";
+import {
+  FormDialog,
+  FormattedNumberInput,
+  SelectField,
+  TextField,
+} from "@/components/form";
 import {
   ChevronDown as IconChevronDown,
   ChevronUp as IconChevronUp,
@@ -148,10 +161,24 @@ export function TemplatesClient({
   branches: BranchOption[];
 }) {
   const router = useRouter();
+  const editorIdPrefix = useId();
+  const isTouchLayout = useIsMobile(1024);
   const [kind, setKind] = useState<PrintKind>(templates[0]?.kind ?? "receipt");
   const [blocksByKind, setBlocksByKind] = useState<
     Record<string, TemplateBlock[]>
   >(() => Object.fromEntries(templates.map((t) => [t.kind, t.blocks])));
+  const [blockEditorIdsByKind, setBlockEditorIdsByKind] = useState<
+    Record<string, string[]>
+  >(() =>
+    Object.fromEntries(
+      templates.map((template) => [
+        template.kind,
+        template.blocks.map(
+          (_, index) => `${editorIdPrefix}-${template.kind}-block-${index}`,
+        ),
+      ]),
+    ),
+  );
   const [dirtyKinds, setDirtyKinds] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -162,12 +189,16 @@ export function TemplatesClient({
     branches[0] ? String(branches[0].id) : "",
   );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nextBlockEditorIdRef = useRef(0);
 
   const current = useMemo(
     () => templates.find((t) => t.kind === kind),
     [templates, kind],
   );
   const blocks = blocksByKind[kind] ?? [];
+  const blockEditorIds = blockEditorIdsByKind[kind] ?? [];
+  const addSystemBlockId = `${editorIdPrefix}-add-system-block`;
+  const testBranchId = `${editorIdPrefix}-test-branch`;
   const saveDefaultValues = useMemo<SaveTemplateValues>(
     () => ({
       name: "",
@@ -181,6 +212,13 @@ export function TemplatesClient({
   const setBlocks = (next: TemplateBlock[]) => {
     setBlocksByKind((prev) => ({ ...prev, [kind]: next }));
     setDirtyKinds((prev) => new Set(prev).add(kind));
+  };
+
+  const createBlockEditorId = () =>
+    `${editorIdPrefix}-${kind}-added-block-${nextBlockEditorIdRef.current++}`;
+
+  const setBlockEditorIds = (next: string[]) => {
+    setBlockEditorIdsByKind((prev) => ({ ...prev, [kind]: next }));
   };
 
   const patchBlock = (index: number, patch: Record<string, unknown>) => {
@@ -198,10 +236,16 @@ export function TemplatesClient({
     const removed = next.splice(index, 1)[0];
     if (!removed) return;
     next.splice(target, 0, removed);
+    const nextEditorIds = [...blockEditorIds];
+    const removedEditorId =
+      nextEditorIds.splice(index, 1)[0] ?? createBlockEditorId();
+    nextEditorIds.splice(target, 0, removedEditorId);
+    setBlockEditorIds(nextEditorIds);
     setBlocks(next);
   };
 
   const removeBlock = (index: number) => {
+    setBlockEditorIds(blockEditorIds.filter((_, i) => i !== index));
     setBlocks(blocks.filter((_, i) => i !== index));
   };
 
@@ -215,6 +259,7 @@ export function TemplatesClient({
     }
     if (type === "divider") base.char = "-";
     if (type === "spacer") base.lines = 1;
+    setBlockEditorIds([...blockEditorIds, createBlockEditorId()]);
     setBlocks([...blocks, base as TemplateBlock]);
   };
 
@@ -279,6 +324,11 @@ export function TemplatesClient({
           ...prev,
           [kind]: DEFAULT_TEMPLATE_CONTENT[kind].blocks,
         }));
+        setBlockEditorIds(
+          DEFAULT_TEMPLATE_CONTENT[kind].blocks.map(() =>
+            createBlockEditorId(),
+          ),
+        );
         toast.success(copy.restoredToast(KIND_LABEL[kind]));
         router.refresh();
       } else {
@@ -310,7 +360,7 @@ export function TemplatesClient({
   return (
     <div className="flex flex-col gap-4">
       <Tabs value={kind} onValueChange={(v) => setKind(v as PrintKind)}>
-        <TabsList className="w-full justify-start overflow-x-auto">
+        <TabsList variant="toolbar" size="touch" className="w-full">
           {templates.map((t) => (
             <TabsTrigger key={t.kind} value={t.kind} className="gap-1.5">
               {KIND_LABEL[t.kind]}
@@ -346,7 +396,7 @@ export function TemplatesClient({
                 key={type}
                 type="button"
                 variant="outline"
-                size="sm"
+                size={isTouchLayout ? "touch" : "sm"}
                 disabled={blocks.length >= MAX_BLOCKS}
                 onClick={() => addBlock(type)}
               >
@@ -355,12 +405,23 @@ export function TemplatesClient({
             ))}
             {missingSystemBlocks.length > 0 ? (
               <Select value="" onValueChange={addBlock}>
-                <SelectTrigger size="sm" className="w-56">
+                <Label htmlFor={addSystemBlockId} className="sr-only">
+                  {copy.addSystemBlockPlaceholder}
+                </Label>
+                <SelectTrigger
+                  id={addSystemBlockId}
+                  size={isTouchLayout ? "touch" : "sm"}
+                  className="w-full sm:w-56"
+                >
                   <SelectValue placeholder={copy.addSystemBlockPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {missingSystemBlocks.map((type) => (
-                    <SelectItem key={type} value={type}>
+                    <SelectItem
+                      key={type}
+                      value={type}
+                      size={isTouchLayout ? "touch" : "default"}
+                    >
                       {blockLabel(type)}
                     </SelectItem>
                   ))}
@@ -370,56 +431,64 @@ export function TemplatesClient({
           </div>
 
           <ItemGroup className="gap-2">
-            {blocks.map((block, index) => (
-              <Item key={`${block.type}-${index}`} variant="outline" size="sm">
-                <ItemHeader>
-                  <ItemTitle className="flex items-center gap-2">
-                    {blockLabel(block.type)}
-                    {SYSTEM_BLOCK_TYPES.has(block.type) ? (
-                      <Badge variant="secondary">{copy.systemBadge}</Badge>
-                    ) : null}
-                    {hasCondition(block) ? (
-                      <Badge variant="outline">{copy.conditionalBadge}</Badge>
-                    ) : null}
-                  </ItemTitle>
-                  <ItemActions>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={copy.moveUp}
-                      disabled={index === 0}
-                      onClick={() => moveBlock(index, -1)}
-                    >
-                      <IconChevronUp className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={copy.moveDown}
-                      disabled={index === blocks.length - 1}
-                      onClick={() => moveBlock(index, 1)}
-                    >
-                      <IconChevronDown className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={copy.removeBlock}
-                      onClick={() => removeBlock(index)}
-                    >
-                      <IconX className="size-4" />
-                    </Button>
-                  </ItemActions>
-                </ItemHeader>
-                <BlockFields
-                  block={block}
-                  onPatch={(patch) => patchBlock(index, patch)}
-                />
-              </Item>
-            ))}
+            {blocks.map((block, index) => {
+              const blockEditorId =
+                blockEditorIds[index] ??
+                `${editorIdPrefix}-${kind}-fallback-block-${index}`;
+
+              return (
+                <Item key={blockEditorId} variant="outline" size="sm">
+                  <ItemHeader className="flex-wrap">
+                    <ItemTitle className="flex items-center gap-2">
+                      {blockLabel(block.type)}
+                      {SYSTEM_BLOCK_TYPES.has(block.type) ? (
+                        <Badge variant="secondary">{copy.systemBadge}</Badge>
+                      ) : null}
+                      {hasCondition(block) ? (
+                        <Badge variant="outline">{copy.conditionalBadge}</Badge>
+                      ) : null}
+                    </ItemTitle>
+                    <ItemActions className="ml-auto">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size={isTouchLayout ? "icon-touch" : "icon-sm"}
+                        aria-label={copy.moveUp}
+                        disabled={index === 0}
+                        onClick={() => moveBlock(index, -1)}
+                      >
+                        <IconChevronUp className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size={isTouchLayout ? "icon-touch" : "icon-sm"}
+                        aria-label={copy.moveDown}
+                        disabled={index === blocks.length - 1}
+                        onClick={() => moveBlock(index, 1)}
+                      >
+                        <IconChevronDown className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size={isTouchLayout ? "icon-touch" : "icon-sm"}
+                        aria-label={copy.removeBlock}
+                        onClick={() => removeBlock(index)}
+                      >
+                        <IconX className="size-4" />
+                      </Button>
+                    </ItemActions>
+                  </ItemHeader>
+                  <BlockFields
+                    idPrefix={blockEditorId}
+                    isTouchLayout={isTouchLayout}
+                    block={block}
+                    onPatch={(patch) => patchBlock(index, patch)}
+                  />
+                </Item>
+              );
+            })}
           </ItemGroup>
         </AppSection>
 
@@ -454,16 +523,23 @@ export function TemplatesClient({
 
           <AppSection title={copy.actionsTitle}>
             <div className="flex flex-col gap-3">
-              <div className="flex items-end gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1 flex flex-col gap-1.5">
-                  <Label htmlFor="test-branch">{copy.testBranchLabel}</Label>
+                  <Label htmlFor={testBranchId}>{copy.testBranchLabel}</Label>
                   <Select value={testBranch} onValueChange={setTestBranch}>
-                    <SelectTrigger id="test-branch">
+                    <SelectTrigger
+                      id={testBranchId}
+                      size={isTouchLayout ? "touch" : "default"}
+                    >
                       <SelectValue placeholder={copy.testBranchPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
                       {branches.map((b) => (
-                        <SelectItem key={b.id} value={String(b.id)}>
+                        <SelectItem
+                          key={b.id}
+                          value={String(b.id)}
+                          size={isTouchLayout ? "touch" : "default"}
+                        >
                           {b.name}
                         </SelectItem>
                       ))}
@@ -473,7 +549,8 @@ export function TemplatesClient({
                 <Button
                   type="button"
                   variant="outline"
-                  className="gap-1"
+                  size={isTouchLayout ? "touch" : "default"}
+                  className="w-full gap-1 sm:w-auto"
                   disabled={actionPending || !testBranch}
                   onClick={handleTestPrint}
                 >
@@ -485,7 +562,8 @@ export function TemplatesClient({
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  className="gap-1"
+                  size={isTouchLayout ? "touch" : "default"}
+                  className="w-full gap-1 sm:w-auto"
                   onClick={() => setSaveOpen(true)}
                 >
                   <IconSave className="size-4" />
@@ -503,8 +581,7 @@ export function TemplatesClient({
                   onSubmit={handleSave}
                   onSuccess={(result) => {
                     const data = result.data as
-                      | { version?: number }
-                      | undefined;
+                      { version?: number } | undefined;
                     toast.success(
                       copy.savedToast(
                         KIND_LABEL[kind],
@@ -542,7 +619,8 @@ export function TemplatesClient({
                 <Button
                   type="button"
                   variant="outline"
-                  className="gap-1"
+                  size={isTouchLayout ? "touch" : "default"}
+                  className="w-full gap-1 sm:w-auto"
                   disabled={actionPending}
                   onClick={() => void handleRestore()}
                 >
@@ -559,9 +637,13 @@ export function TemplatesClient({
 }
 
 function BlockFields({
+  idPrefix,
+  isTouchLayout,
   block,
   onPatch,
 }: {
+  idPrefix: string;
+  isTouchLayout: boolean;
   block: TemplateBlock;
   onPatch: (patch: Record<string, unknown>) => void;
 }) {
@@ -569,15 +651,29 @@ function BlockFields({
     case "text":
       return (
         <ItemContent className="flex flex-col gap-2">
+          <Label htmlFor={`${idPrefix}-text`} className="sr-only">
+            {blockLabel(block.type)}
+          </Label>
           <Textarea
+            id={`${idPrefix}-text`}
             value={(block.text as string) ?? ""}
             onChange={(e) => onPatch({ text: e.target.value })}
             rows={2}
             maxLength={512}
           />
           <div className="flex flex-wrap items-center gap-4">
-            <StyleToggles block={block} onPatch={onPatch} />
-            <AlignSelect block={block} onPatch={onPatch} />
+            <StyleToggles
+              idPrefix={idPrefix}
+              isTouchLayout={isTouchLayout}
+              block={block}
+              onPatch={onPatch}
+            />
+            <AlignSelect
+              id={`${idPrefix}-align`}
+              isTouchLayout={isTouchLayout}
+              block={block}
+              onPatch={onPatch}
+            />
           </div>
         </ItemContent>
       );
@@ -585,30 +681,54 @@ function BlockFields({
       return (
         <ItemContent className="flex flex-col gap-2">
           <div className="grid gap-2 sm:grid-cols-2">
-            <Input
-              value={(block.left as string) ?? ""}
-              onChange={(e) => onPatch({ left: e.target.value })}
-              placeholder={copy.rowLeftPlaceholder}
-              maxLength={512}
-            />
-            <Input
-              value={(block.right as string) ?? ""}
-              onChange={(e) => onPatch({ right: e.target.value })}
-              placeholder={copy.rowRightPlaceholder}
-              maxLength={512}
-            />
+            <div>
+              <Label htmlFor={`${idPrefix}-left`} className="sr-only">
+                {copy.rowLeftPlaceholder}
+              </Label>
+              <Input
+                id={`${idPrefix}-left`}
+                controlSize={isTouchLayout ? "touch" : "default"}
+                value={(block.left as string) ?? ""}
+                onChange={(e) => onPatch({ left: e.target.value })}
+                placeholder={copy.rowLeftPlaceholder}
+                maxLength={512}
+              />
+            </div>
+            <div>
+              <Label htmlFor={`${idPrefix}-right`} className="sr-only">
+                {copy.rowRightPlaceholder}
+              </Label>
+              <Input
+                id={`${idPrefix}-right`}
+                controlSize={isTouchLayout ? "touch" : "default"}
+                value={(block.right as string) ?? ""}
+                onChange={(e) => onPatch({ right: e.target.value })}
+                placeholder={copy.rowRightPlaceholder}
+                maxLength={512}
+              />
+            </div>
           </div>
-          <StyleToggles block={block} onPatch={onPatch} />
+          <StyleToggles
+            idPrefix={idPrefix}
+            isTouchLayout={isTouchLayout}
+            block={block}
+            onPatch={onPatch}
+          />
         </ItemContent>
       );
     case "divider":
       return (
         <ItemContent>
           <div className="flex items-center gap-2">
-            <Label className="text-muted-foreground">
+            <Label
+              htmlFor={`${idPrefix}-char`}
+              className="text-muted-foreground"
+            >
               {copy.dividerCharLabel}
             </Label>
             <Input
+              id={`${idPrefix}-char`}
+              controlSize={isTouchLayout ? "touch" : "default"}
               value={(block.char as string) ?? "-"}
               onChange={(e) => onPatch({ char: e.target.value.slice(0, 1) })}
               className="w-16 text-center"
@@ -621,10 +741,15 @@ function BlockFields({
       return (
         <ItemContent>
           <div className="flex items-center gap-2">
-            <Label className="text-muted-foreground">
+            <Label
+              htmlFor={`${idPrefix}-lines`}
+              className="text-muted-foreground"
+            >
               {copy.spacerLinesLabel}
             </Label>
             <FormattedNumberInput
+              id={`${idPrefix}-lines`}
+              controlSize={isTouchLayout ? "touch" : "default"}
               maxFractionDigits={0}
               allowNegative={false}
               value={String(block.lines ?? 1)}
@@ -642,34 +767,60 @@ function BlockFields({
     case "brandHeader":
       return (
         <ItemContent className="grid gap-2 sm:grid-cols-3">
-          <Input
-            value={(block.eyebrow as string) ?? ""}
-            onChange={(e) => onPatch({ eyebrow: e.target.value })}
-            placeholder={copy.brandEyebrowPlaceholder}
-            maxLength={512}
-          />
-          <Input
-            value={(block.name as string) ?? ""}
-            onChange={(e) => onPatch({ name: e.target.value })}
-            placeholder={copy.brandNamePlaceholder}
-            maxLength={512}
-          />
-          <Input
-            value={(block.tagline as string) ?? ""}
-            onChange={(e) => onPatch({ tagline: e.target.value })}
-            placeholder={copy.brandTaglinePlaceholder}
-            maxLength={512}
-          />
+          <div>
+            <Label htmlFor={`${idPrefix}-eyebrow`} className="sr-only">
+              {copy.brandEyebrowPlaceholder}
+            </Label>
+            <Input
+              id={`${idPrefix}-eyebrow`}
+              controlSize={isTouchLayout ? "touch" : "default"}
+              value={(block.eyebrow as string) ?? ""}
+              onChange={(e) => onPatch({ eyebrow: e.target.value })}
+              placeholder={copy.brandEyebrowPlaceholder}
+              maxLength={512}
+            />
+          </div>
+          <div>
+            <Label htmlFor={`${idPrefix}-name`} className="sr-only">
+              {copy.brandNamePlaceholder}
+            </Label>
+            <Input
+              id={`${idPrefix}-name`}
+              controlSize={isTouchLayout ? "touch" : "default"}
+              value={(block.name as string) ?? ""}
+              onChange={(e) => onPatch({ name: e.target.value })}
+              placeholder={copy.brandNamePlaceholder}
+              maxLength={512}
+            />
+          </div>
+          <div>
+            <Label htmlFor={`${idPrefix}-tagline`} className="sr-only">
+              {copy.brandTaglinePlaceholder}
+            </Label>
+            <Input
+              id={`${idPrefix}-tagline`}
+              controlSize={isTouchLayout ? "touch" : "default"}
+              value={(block.tagline as string) ?? ""}
+              onChange={(e) => onPatch({ tagline: e.target.value })}
+              placeholder={copy.brandTaglinePlaceholder}
+              maxLength={512}
+            />
+          </div>
         </ItemContent>
       );
     case "note":
       return (
         <ItemContent>
-          <div className="flex items-center gap-2">
-            <Label className="shrink-0 text-muted-foreground">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Label
+              htmlFor={`${idPrefix}-prefix`}
+              className="shrink-0 text-muted-foreground"
+            >
               {copy.noteLabel}
             </Label>
             <Input
+              id={`${idPrefix}-prefix`}
+              controlSize={isTouchLayout ? "touch" : "default"}
               value={(block.prefix as string) ?? "Ghi chú: "}
               onChange={(e) => onPatch({ prefix: e.target.value })}
               maxLength={512}
@@ -680,11 +831,16 @@ function BlockFields({
     case "paymentQr":
       return (
         <ItemContent>
-          <div className="flex items-center gap-2">
-            <Label className="shrink-0 text-muted-foreground">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Label
+              htmlFor={`${idPrefix}-heading`}
+              className="shrink-0 text-muted-foreground"
+            >
               {copy.qrHeadingLabel}
             </Label>
             <Input
+              id={`${idPrefix}-heading`}
+              controlSize={isTouchLayout ? "touch" : "default"}
               value={(block.heading as string) ?? "QUÉT QR THANH TOÁN"}
               onChange={(e) => onPatch({ heading: e.target.value })}
               maxLength={512}
@@ -696,7 +852,11 @@ function BlockFields({
       const lines = Array.isArray(block.lines) ? (block.lines as string[]) : [];
       return (
         <ItemContent>
+          <Label htmlFor={`${idPrefix}-lines`} className="sr-only">
+            {copy.footerPlaceholder}
+          </Label>
           <Textarea
+            id={`${idPrefix}-lines`}
             value={lines.join("\n")}
             onChange={(e) =>
               onPatch({ lines: e.target.value.split("\n").slice(0, 10) })
@@ -719,9 +879,13 @@ function BlockFields({
 }
 
 function StyleToggles({
+  idPrefix,
+  isTouchLayout,
   block,
   onPatch,
 }: {
+  idPrefix: string;
+  isTouchLayout: boolean;
   block: TemplateBlock;
   onPatch: (patch: Record<string, unknown>) => void;
 }) {
@@ -729,26 +893,28 @@ function StyleToggles({
     <div className="flex flex-wrap items-center gap-4">
       <div className="flex items-center gap-1.5">
         <Checkbox
-          id="toggle-style-bold"
+          id={`${idPrefix}-bold`}
+          size={isTouchLayout ? "touch" : "default"}
           checked={Boolean(block.bold)}
           onCheckedChange={(v) => onPatch({ bold: v === true })}
         />
         <Label
-          htmlFor="toggle-style-bold"
-          className="text-sm font-normal cursor-pointer"
+          htmlFor={`${idPrefix}-bold`}
+          className="cursor-pointer text-sm font-normal"
         >
           {copy.styleBold}
         </Label>
       </div>
       <div className="flex items-center gap-1.5">
         <Checkbox
-          id="toggle-style-double"
+          id={`${idPrefix}-double`}
+          size={isTouchLayout ? "touch" : "default"}
           checked={Boolean(block.double)}
           onCheckedChange={(v) => onPatch({ double: v === true })}
         />
         <Label
-          htmlFor="toggle-style-double"
-          className="text-sm font-normal cursor-pointer"
+          htmlFor={`${idPrefix}-double`}
+          className="cursor-pointer text-sm font-normal"
         >
           {copy.styleDouble}
         </Label>
@@ -758,25 +924,44 @@ function StyleToggles({
 }
 
 function AlignSelect({
+  id,
+  isTouchLayout,
   block,
   onPatch,
 }: {
+  id: string;
+  isTouchLayout: boolean;
   block: TemplateBlock;
   onPatch: (patch: Record<string, unknown>) => void;
 }) {
   return (
-    <Select
-      value={(block.align as string) ?? "left"}
-      onValueChange={(v) => onPatch({ align: v })}
-    >
-      <SelectTrigger size="sm" className="w-32">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="left">{copy.alignLeft}</SelectItem>
-        <SelectItem value="center">{copy.alignCenter}</SelectItem>
-        <SelectItem value="right">{copy.alignRight}</SelectItem>
-      </SelectContent>
-    </Select>
+    <div>
+      <Label htmlFor={id} className="sr-only">
+        {copy.alignLabel}
+      </Label>
+      <Select
+        value={(block.align as string) ?? "left"}
+        onValueChange={(v) => onPatch({ align: v })}
+      >
+        <SelectTrigger
+          id={id}
+          size={isTouchLayout ? "touch" : "sm"}
+          className="w-32"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="left" size={isTouchLayout ? "touch" : "default"}>
+            {copy.alignLeft}
+          </SelectItem>
+          <SelectItem value="center" size={isTouchLayout ? "touch" : "default"}>
+            {copy.alignCenter}
+          </SelectItem>
+          <SelectItem value="right" size={isTouchLayout ? "touch" : "default"}>
+            {copy.alignRight}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

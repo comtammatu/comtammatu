@@ -23,6 +23,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { formatVND } from "@comtammatu/shared/format";
 import { normalizeSearch } from "@lib/search";
 import { messages } from "@lib/messages";
@@ -40,6 +41,7 @@ import { remainingDailyQuotaAfterDemand } from "./_utils/daily-limit-draft";
 interface PosMenuGridProps {
   categories: MenuCategory[];
   dailyLimitDemandByMenuItem?: ReadonlyMap<number, number>;
+  hasStackedTouchActions?: boolean;
   onItemTap: (item: MenuItem) => void;
 }
 
@@ -238,8 +240,10 @@ const MenuItemGrid = memo(function MenuItemGrid({
 function PosMenuGridComponent({
   categories,
   dailyLimitDemandByMenuItem,
+  hasStackedTouchActions = false,
   onItemTap,
 }: PosMenuGridProps) {
+  const isCompactMenu = useIsMobile();
   const [, startMenuTransition] = useTransition();
   const [activeTabValue, setActiveTabValue] = useState<string>(ALL_MENU_VALUE);
   // Mobile: the search input is hidden by default and opens from the search
@@ -419,48 +423,53 @@ function PosMenuGridComponent({
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="border-b border-border/60 bg-background px-3 py-3 md:px-4 md:py-4">
-          {/* Mobile: search pill and tab pills share one row. Tap search swaps tabs for input and cancel. */}
-          <div className="flex items-center gap-1.5 md:hidden">
-            {isSearchActive ? (
-              <>
-                <div className="min-w-0 flex-1">{searchInput}</div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="touch"
-                  className="shrink-0 px-3 text-sm font-semibold"
-                  onClick={cancelSearch}
-                >
-                  {messages.pos.menu.cancel}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="touch"
-                  className="min-w-12 shrink-0 bg-muted/50 px-0 text-muted-foreground hover:bg-muted"
-                  aria-label={messages.pos.menu.searchAria}
-                  onClick={openSearch}
-                >
-                  <IconSearch />
-                </Button>
-                {unifiedTabs}
-              </>
-            )}
-          </div>
-
-          {/* Desktop (md+): search + tabs on one line. */}
-          <div className="hidden md:flex md:items-center md:gap-3">
-            {searchInput}
-            {unifiedTabs}
-          </div>
+          {isCompactMenu ? (
+            <div className="flex items-center gap-1.5">
+              {isSearchActive ? (
+                <>
+                  <div className="min-w-0 flex-1">{searchInput}</div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="touch"
+                    className="shrink-0 px-3 text-sm font-semibold"
+                    onClick={cancelSearch}
+                  >
+                    {messages.pos.menu.cancel}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="touch"
+                    className="min-w-12 shrink-0 bg-muted/50 px-0 text-muted-foreground hover:bg-muted"
+                    aria-label={messages.pos.menu.searchAria}
+                    onClick={openSearch}
+                  >
+                    <IconSearch />
+                  </Button>
+                  {unifiedTabs}
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {searchInput}
+              {unifiedTabs}
+            </div>
+          )}
         </div>
 
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
           {visibleItems.length > 0 && isAllMenuActive ? (
-            <div className="flex flex-col gap-4 px-2 pb-32 pt-2 md:gap-6 md:px-3 md:py-3 lg:px-4">
+            <div
+              className={cn(
+                "flex flex-col gap-4 px-2 pt-2 md:gap-6 md:px-3 md:pt-3 lg:px-4",
+                hasStackedTouchActions ? "pb-40 xl:pb-4" : "pb-32 xl:pb-4",
+              )}
+            >
               {visibleCategories.map((category) => (
                 <section
                   key={category.id}
@@ -486,7 +495,12 @@ function PosMenuGridComponent({
           ) : null}
 
           {visibleItems.length > 0 && !isAllMenuActive ? (
-            <div className="px-2 pb-32 pt-2 md:px-3 md:py-3 lg:px-4">
+            <div
+              className={cn(
+                "px-2 pt-2 md:px-3 md:pt-3 lg:px-4",
+                hasStackedTouchActions ? "pb-40 xl:pb-4" : "pb-32 xl:pb-4",
+              )}
+            >
               <MenuItemGrid
                 items={visibleItems}
                 sparseMenu={sparseMenu}

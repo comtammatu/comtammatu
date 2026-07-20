@@ -26,8 +26,11 @@ export interface FoodCostResultRow {
   item_name: string | null;
   quantity_sold: number;
   revenue: number;
+  unit_ingredient_cost: number;
   ingredient_cost: number;
   food_cost_pct: number | null;
+  gross_profit: number;
+  gross_margin_pct: number | null;
 }
 
 export function foodCostUnitCostKey(
@@ -71,8 +74,11 @@ export function buildFoodCostRows({
         item_name: line.itemName,
         quantity_sold: 0,
         revenue: 0,
+        unit_ingredient_cost: 0,
         ingredient_cost: 0,
         food_cost_pct: null,
+        gross_profit: 0,
+        gross_margin_pct: null,
       } satisfies FoodCostResultRow);
 
     current.quantity_sold += line.quantity;
@@ -95,9 +101,13 @@ export function buildFoodCostRows({
       return sum + baseQuantity * unitCost;
     }, 0);
 
-    row.ingredient_cost = round2(row.quantity_sold * costPerUnit);
+    row.unit_ingredient_cost = round2(costPerUnit);
+    row.ingredient_cost = round2(row.quantity_sold * row.unit_ingredient_cost);
     row.food_cost_pct =
       row.revenue > 0 ? round2((row.ingredient_cost / row.revenue) * 100) : null;
+    row.gross_profit = round2(row.revenue - row.ingredient_cost);
+    row.gross_margin_pct =
+      row.revenue > 0 ? round2((row.gross_profit / row.revenue) * 100) : null;
   }
 
   return Array.from(rows.values()).sort(

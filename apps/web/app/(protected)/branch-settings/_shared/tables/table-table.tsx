@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import QRCode from "qrcode";
 import {
   Copy as IconCopy,
   ExternalLink as IconExternalLink,
@@ -48,6 +46,7 @@ import {
 } from "@/components/data-table/data-table";
 import { AppDialog } from "@/components/form";
 import { RowActionsMenu } from "@/components/row-actions-menu";
+import { QrCodeImage } from "@/components/qr-code-image";
 
 export interface TableRow {
   id: number;
@@ -235,7 +234,13 @@ export function DiningTableSettingsList({
     return pendingDeleteId === tableId || pendingQrId === tableId;
   }
 
-  function TableActions({ table }: { table: TableRow }) {
+  function TableActions({
+    table,
+    touch = false,
+  }: {
+    table: TableRow;
+    touch?: boolean;
+  }) {
     const qrPending = pendingQrId === table.id;
     const qrItems = table.self_order_token
       ? [
@@ -282,6 +287,7 @@ export function DiningTableSettingsList({
 
     return (
       <RowActionsMenu
+        triggerSize={touch ? "icon-touch" : "icon-lg"}
         items={[
           {
             key: "edit",
@@ -369,7 +375,7 @@ export function DiningTableSettingsList({
               </div>
             </ItemContent>
             <ItemActions className="self-center">
-              <TableActions table={table} />
+              <TableActions table={table} touch />
             </ItemActions>
           </Item>
         )}
@@ -404,7 +410,6 @@ function SelfOrderQrDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [origin, setOrigin] = useState("");
-  const [qrDataUrl, setQrDataUrl] = useState("");
   const tableMessages = messages.settings.tables;
   const url = table ? buildSelfOrderUrl(table.token, origin) : "";
   const previewHref = table ? `/q/${table.token}` : "";
@@ -412,29 +417,6 @@ function SelfOrderQrDialog({
   useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
-
-  useEffect(() => {
-    if (!table || !origin) return;
-
-    let cancelled = false;
-    setQrDataUrl("");
-    QRCode.toDataURL(buildSelfOrderUrl(table.token, origin), {
-      errorCorrectionLevel: "M",
-      margin: 1,
-      width: 256,
-    })
-      .then((nextQrDataUrl) => {
-        if (!cancelled) setQrDataUrl(nextQrDataUrl);
-      })
-      .catch((error) => {
-        console.error("[table-settings] render self-order QR failed", error);
-        if (!cancelled) toast.error(tableMessages.qrRenderFailed);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [origin, table, tableMessages.qrRenderFailed]);
 
   async function handleCopy() {
     if (!url) return;
@@ -458,33 +440,27 @@ function SelfOrderQrDialog({
       contentClassName="sm:max-w-md"
       bodyClassName="gap-3"
     >
-      <div className="mx-auto grid size-72 place-items-center bg-white p-3">
-        {qrDataUrl ? (
-          <Image
-            src={qrDataUrl}
-            alt={tableMessages.qrAlt(table.number)}
-            width={256}
-            height={256}
-            className="size-full"
-            unoptimized
-          />
-        ) : (
-          <span className="text-xs text-muted-foreground">
-            {tableMessages.qrGenerating}
-          </span>
-        )}
-      </div>
+      <QrCodeImage
+        value={url}
+        alt={tableMessages.qrAlt(table.number)}
+        errorMessage={tableMessages.qrRenderFailed}
+      />
       <div className="text-xs break-all text-muted-foreground">{url}</div>
       <div className="grid gap-2 sm:grid-cols-2">
         <Button
           type="button"
           variant="outline"
+          size="touch"
           onClick={() => void handleCopy()}
         >
           <IconCopy data-icon="inline-start" />
           {tableMessages.copyLink}
         </Button>
-        <Button variant="outline" render={<a href={previewHref} />}>
+        <Button
+          variant="outline"
+          size="touch"
+          render={<a href={previewHref} />}
+        >
           <IconExternalLink data-icon="inline-start" />
           {tableMessages.openLink}
         </Button>

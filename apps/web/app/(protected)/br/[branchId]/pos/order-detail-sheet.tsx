@@ -1201,7 +1201,7 @@ export function OrderDetailSheet({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
+                size="icon-touch"
                 className="shrink-0 text-muted-foreground"
                 aria-label={messages.pos.orderDetail.closeAria}
                 onClick={onClose}
@@ -1263,7 +1263,7 @@ export function OrderDetailSheet({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="touch"
                 onClick={() => load()}
               >
                 {ACTIONS_VI.retry}
@@ -1381,6 +1381,7 @@ export function OrderDetailSheet({
                           <DropdownMenuGroup>
                             {canShowBillInMenu && (
                               <DropdownMenuItem
+                                className="min-h-12 text-sm"
                                 onClick={() => {
                                   onOpenBill(data.id, data);
                                   onClose();
@@ -1392,6 +1393,7 @@ export function OrderDetailSheet({
                             )}
                             {canShowBillInMenu && (
                               <DropdownMenuItem
+                                className="min-h-12 text-sm"
                                 disabled={isMutating}
                                 onClick={() => handleReprintReceipt()}
                               >
@@ -1401,6 +1403,7 @@ export function OrderDetailSheet({
                             )}
                             {canShowTransfer && (
                               <DropdownMenuItem
+                                className="min-h-12 text-sm"
                                 disabled={isMutating}
                                 onClick={() => setShowTransfer(true)}
                               >
@@ -1410,6 +1413,7 @@ export function OrderDetailSheet({
                             )}
                             {canPrioritizeOrder && (
                               <DropdownMenuItem
+                                className="min-h-12 text-sm"
                                 disabled={isMutating}
                                 onClick={() => handleOrderPriorityToggle()}
                               >
@@ -1421,6 +1425,7 @@ export function OrderDetailSheet({
                             )}
                             {canShowReorder && (
                               <DropdownMenuItem
+                                className="min-h-12 text-sm"
                                 onClick={() => void handleReorder()}
                               >
                                 <IconCopy />
@@ -1433,6 +1438,7 @@ export function OrderDetailSheet({
                               ACTIVE_POS_STATUSES.includes(data.status) &&
                               data.payment_status !== "paid" && (
                                 <DropdownMenuItem
+                                  className="min-h-12 text-sm"
                                   disabled={isMutating}
                                   onClick={() => {
                                     const tableId = data.table_id;
@@ -1455,6 +1461,7 @@ export function OrderDetailSheet({
                               <DropdownMenuGroup>
                                 {canShowDiscount && (
                                   <DropdownMenuItem
+                                    className="min-h-12 text-sm"
                                     disabled={isMutating}
                                     onClick={() => setShowDiscount(true)}
                                   >
@@ -1466,6 +1473,7 @@ export function OrderDetailSheet({
                                 )}
                                 {canShowServiceCharge && (
                                   <DropdownMenuItem
+                                    className="min-h-12 text-sm"
                                     disabled={isMutating}
                                     onClick={() => setShowServiceCharge(true)}
                                   >
@@ -1478,6 +1486,7 @@ export function OrderDetailSheet({
                                 )}
                                 {canShowSplit && (
                                   <DropdownMenuItem
+                                    className="min-h-12 text-sm"
                                     disabled={isMutating}
                                     onClick={() => setShowSplit(true)}
                                   >
@@ -1487,6 +1496,7 @@ export function OrderDetailSheet({
                                 )}
                                 {canShowMerge && (
                                   <DropdownMenuItem
+                                    className="min-h-12 text-sm"
                                     disabled={isMutating}
                                     onClick={() => setShowMerge(true)}
                                   >
@@ -1504,6 +1514,7 @@ export function OrderDetailSheet({
                                 {canShowCancel && (
                                   <DropdownMenuItem
                                     variant="destructive"
+                                    className="min-h-12 text-sm"
                                     disabled={isMutating}
                                     onClick={() => setShowCancel(true)}
                                   >
@@ -1514,6 +1525,7 @@ export function OrderDetailSheet({
                                 {canShowVoidPaid && (
                                   <DropdownMenuItem
                                     variant="destructive"
+                                    className="min-h-12 text-sm"
                                     disabled={isMutating}
                                     onClick={() => {
                                       setRefundPayoutMethod(null);

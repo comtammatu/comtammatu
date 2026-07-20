@@ -303,14 +303,41 @@ export async function fetchConsumptionVariance(
       ? claims.branch_id
       : branchId;
 
-  // Get ingredient names for display
-  const { data: ingredients, error: ingErr } = await supabase
-    .from("ingredients")
-    .select(
-      "id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code))",
-    )
+  // Actual sale consumption from stock_movements movement_subtype.
+  // `type='consumption'` also includes writeoff/other operational issues.
+  let movQuery = supabase
+    .from("stock_movements")
+    .select("ingredient_id, quantity_change")
     .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true);
+    .eq("movement_subtype", "sale_consumption")
+    .gte("created_at", startRange.startIso)
+    .lt("created_at", endRange.endIso);
+  if (effectiveBranchId) {
+    movQuery = movQuery.eq("branch_id", effectiveBranchId);
+  }
+
+  // These reads share the same authenticated client and filters but have no
+  // data dependency. Keep them in one fan-out so report latency is bounded by
+  // the slowest query instead of the sum of three network round-trips.
+  const [ingredientResult, theoreticalResult, movementResult] =
+    await Promise.all([
+      supabase
+        .from("ingredients")
+        .select(
+          "id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code))",
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("is_active", true),
+      supabase.rpc("get_theoretical_consumption", {
+        p_branch_id: effectiveBranchId ?? undefined,
+        p_from: startRange.startIso,
+        p_to: endRange.endIso,
+        p_order_statuses: ["completed", "paid"],
+      }),
+      movQuery,
+    ]);
+
+  const { data: ingredients, error: ingErr } = ingredientResult;
   if (ingErr) return { success: false, error: "Không tải được nguyên liệu." };
   const ingMap = new Map(
     ((ingredients ?? []) as IngredientReportRow[]).map((i) => {
@@ -324,15 +351,7 @@ export async function fetchConsumptionVariance(
   // SQL: SUM(order_items.quantity * recipes.quantity / yield_factor). Replaces a
   // client loop that fetched order ids (silently capped at 1000 rows -> wrong
   // variance past ~2 weeks) then paged order_items in 200-id chunks.
-  const { data: theoRows, error: theoErr } = await supabase.rpc(
-    "get_theoretical_consumption",
-    {
-      p_branch_id: effectiveBranchId ?? undefined,
-      p_from: startRange.startIso,
-      p_to: endRange.endIso,
-      p_order_statuses: ["completed", "paid"],
-    },
-  );
+  const { data: theoRows, error: theoErr } = theoreticalResult;
   if (theoErr) return { success: false, error: "Không tải được đơn hàng." };
 
   const theoreticalMap = new Map<number, number>();
@@ -341,19 +360,7 @@ export async function fetchConsumptionVariance(
     theoreticalMap.set(row.ingredient_id, Number(row.theoretical_qty ?? 0));
   }
 
-  // 2. Actual sale consumption from stock_movements movement_subtype.
-  // `type='consumption'` also includes writeoff/other operational issues.
-  let movQuery = supabase
-    .from("stock_movements")
-    .select("ingredient_id, quantity_change")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("movement_subtype", "sale_consumption")
-    .gte("created_at", startRange.startIso)
-    .lt("created_at", endRange.endIso);
-  if (effectiveBranchId) {
-    movQuery = movQuery.eq("branch_id", effectiveBranchId);
-  }
-  const { data: movements, error: movErr } = await movQuery;
+  const { data: movements, error: movErr } = movementResult;
   if (movErr) return { success: false, error: "Không tải được biến động kho." };
 
   const actualMap = new Map<number, number>();
@@ -366,7 +373,7 @@ export async function fetchConsumptionVariance(
     );
   }
 
-  // 3. Combine into variance rows
+  // Combine into variance rows
   // Include all ingredients that appear in either theoretical or actual
   const allIngIds = new Set([...theoreticalMap.keys(), ...actualMap.keys()]);
   const rows: ConsumptionVarianceRow[] = [];

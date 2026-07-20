@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
 import {
   AppPageHeader,
@@ -55,7 +56,11 @@ import {
   toggleIngredientActive,
 } from "../ingredient-actions";
 import { IngredientDialog } from "./ingredient-dialog";
-import type { CategoryOption, IngredientRow, UnitOption } from "@lib/inventory/types";
+import type {
+  CategoryOption,
+  IngredientRow,
+  UnitOption,
+} from "@lib/inventory/types";
 import { IngredientImportExportMenu } from "./import-export-menu";
 import {
   getDisplayReferenceCost,
@@ -172,7 +177,7 @@ function IngredientMobileCard({
       <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="min-w-0 truncate font-semibold">{item.name}</p>
+            <p className="min-w-0 truncate">{item.name}</p>
             <StatusBadge
               domain="inventory"
               value={item.is_active ? "active" : "suspended"}
@@ -267,10 +272,12 @@ export function IngredientsClient({
   const [itemKind, setItemKind] = useState(allItemKindsValue);
   const [preservation, setPreservation] = useState("all");
   const [activeFilter, setActiveFilter] = useState<"active" | "all">("active");
+  const [currentPage, setCurrentPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] =
     useState<IngredientRow | null>(null);
   const [isPending, startTransition] = useTransition();
+  const isTouchLayout = useIsMobile(1024);
 
   const lastUpdatedAtRef = useRef<string | null>(null);
 
@@ -339,6 +346,7 @@ export function IngredientsClient({
     setItemKind(allItemKindsValue);
     setPreservation("all");
     setActiveFilter("active");
+    setCurrentPage(1);
   }
 
   async function reload() {
@@ -414,7 +422,10 @@ export function IngredientsClient({
   const filterBar = (
     <AppToolbar
       search={
-        <InputGroup className="h-10 min-w-0 flex-1 sm:min-w-72">
+        <InputGroup
+          size={isTouchLayout ? "touch" : "field"}
+          className="min-w-0 flex-1 sm:min-w-72"
+        >
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -424,28 +435,53 @@ export function IngredientsClient({
             inputMode="search"
             autoComplete="off"
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              setCurrentPage(1);
+            }}
             placeholder={ingredientListCopy.searchPlaceholder}
           />
         </InputGroup>
       }
       filters={
         <>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-36 sm:w-40">
+          <Select
+            value={category}
+            onValueChange={(value) => {
+              setCategory(value);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger
+              size={isTouchLayout ? "touch" : "field"}
+              className="w-36 sm:w-40"
+            >
               <SelectValue placeholder={ingredientFormCopy.category.all} />
             </SelectTrigger>
             <SelectContent>
               {categoryFilterOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className={isTouchLayout ? "min-h-12 text-sm" : undefined}
+                >
                   {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select value={itemKind} onValueChange={setItemKind}>
-            <SelectTrigger className="w-36 sm:w-40">
+          <Select
+            value={itemKind}
+            onValueChange={(value) => {
+              setItemKind(value);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger
+              size={isTouchLayout ? "touch" : "field"}
+              className="w-36 sm:w-40"
+            >
               <SelectValue
                 placeholder={
                   messages.inventory.ingredients.dialog.itemKindLabel
@@ -454,20 +490,37 @@ export function IngredientsClient({
             </SelectTrigger>
             <SelectContent>
               {itemKindOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className={isTouchLayout ? "min-h-12 text-sm" : undefined}
+                >
                   {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select value={preservation} onValueChange={setPreservation}>
-            <SelectTrigger className="w-36 sm:w-40">
+          <Select
+            value={preservation}
+            onValueChange={(value) => {
+              setPreservation(value);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger
+              size={isTouchLayout ? "touch" : "field"}
+              className="w-36 sm:w-40"
+            >
               <SelectValue placeholder={ingredientListCopy.preservationAll} />
             </SelectTrigger>
             <SelectContent>
               {preservationOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className={isTouchLayout ? "min-h-12 text-sm" : undefined}
+                >
                   {option.label}
                 </SelectItem>
               ))}
@@ -476,16 +529,24 @@ export function IngredientsClient({
 
           <Select
             value={activeFilter}
-            onValueChange={(value) =>
-              setActiveFilter(value as "active" | "all")
-            }
+            onValueChange={(value) => {
+              setActiveFilter(value as "active" | "all");
+              setCurrentPage(1);
+            }}
           >
-            <SelectTrigger className="w-36 sm:w-40">
+            <SelectTrigger
+              size={isTouchLayout ? "touch" : "field"}
+              className="w-36 sm:w-40"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {activeOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className={isTouchLayout ? "min-h-12 text-sm" : undefined}
+                >
                   {option.label}
                 </SelectItem>
               ))}
@@ -502,7 +563,7 @@ export function IngredientsClient({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size={isTouchLayout ? "touch" : "sm"}
               onClick={clearFilters}
             >
               {ACTIONS_VI.clearFilters}
@@ -521,7 +582,7 @@ export function IngredientsClient({
       render: (item) => (
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-2">
-            <p className="min-w-0 truncate font-semibold">{item.name}</p>
+            <p className="min-w-0 truncate">{item.name}</p>
             <StatusBadge
               domain="inventory"
               value={item.is_active ? "active" : "suspended"}
@@ -635,14 +696,14 @@ export function IngredientsClient({
   ];
 
   return (
-    <AppPage width="xwide" density="compact" scroll className="max-md:pb-28">
+    <AppPage width="xwide" density="compact" scroll>
       <AppPageHeader
         eyebrow={messages.inventory.shell.moduleName}
         title={PRODUCT_VI.rawIngredient}
         actions={
           <div className="flex items-center gap-2">
             <IngredientImportExportMenu onImported={reload} />
-            <Button type="button" onClick={openCreate}>
+            <Button type="button" size="touch" onClick={openCreate}>
               {INVENTORY_VI.createRawIngredient}
             </Button>
           </div>
@@ -675,6 +736,9 @@ export function IngredientsClient({
               onEdit={openEdit}
             />
           )}
+          pageSize={25}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
         />
       </AppSection>
 

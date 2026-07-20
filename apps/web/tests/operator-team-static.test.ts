@@ -10,6 +10,9 @@ function readWeb(path: string): string {
 const teamTabsSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/team/team-workspace-tabs.tsx",
 );
+const tabsPrimitiveSource = readWeb(
+  "../../packages/ui/src/components/tabs.tsx",
+);
 const teamPageSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/team/page.tsx",
 );
@@ -52,12 +55,11 @@ test("operator team tabs use shared Tabs and preserve client-side switching", ()
   assert.match(teamTabsSource, /TabsContent/);
   assert.match(teamTabsSource, /window\.history\.replaceState/);
   assert.match(teamTabsSource, /sticky top-0 z-20/);
-  assert.match(teamTabsSource, /min-h-12/);
-  assert.match(teamTabsSource, /group-data-horizontal\/tabs:!h-12/);
-  assert.match(
-    teamTabsSource,
-    /h-10 min-w-0 items-center justify-center gap-1/,
-  );
+  assert.match(teamTabsSource, /<TabsList\s+size="touch"/);
+  assert.doesNotMatch(teamTabsSource, /group-data-horizontal\/tabs:!h-12/);
+  assert.doesNotMatch(teamTabsSource, /\bh-10\b/);
+  assert.match(tabsPrimitiveSource, /touch:[\s\S]*min-h-14/);
+  assert.match(tabsPrimitiveSource, /data-size=\{size\}/);
   assert.match(teamTabsSource, /sm:gap-2 sm:px-2 sm:text-sm/);
   assert.match(teamTabsSource, /whitespace-nowrap leading-none/);
   assert.doesNotMatch(teamPageSource, /AppPageTabs/);
@@ -269,6 +271,8 @@ test("operator team members use a roster grid with real profile fields", () => {
     /grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5/,
   );
   assert.match(teamMembersSource, /size="touch"/);
+  assert.match(teamMembersSource, /<InputGroup className="min-h-12">/);
+  assert.doesNotMatch(teamMembersSource, /className="h-11"/);
   assert.doesNotMatch(teamMembersSource, /h-7 cursor-pointer/);
   assert.match(teamMembersSource, /grid gap-2 sm:grid-cols-2/);
   assert.match(

@@ -38,13 +38,13 @@ export function HrClient({
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              size="sm"
+              size="touch"
               render={<Link href="/hr/staff" />}
             >
               <IconShieldCheck data-icon="inline-start" />
               {copy.staffAccounts}
             </Button>
-            <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Button size="touch" onClick={() => setAddOpen(true)}>
               <IconUserPlus data-icon="inline-start" />
               {copy.addEmployee}
             </Button>

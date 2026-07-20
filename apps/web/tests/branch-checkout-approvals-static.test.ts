@@ -84,3 +84,28 @@ test("checkout queue and decisions share the live exact-branch hierarchy", () =>
     /DROP FUNCTION IF EXISTS public\.branch_manager_reject_employee_clock_out/,
   );
 });
+
+test("checkout approval RPC signature stays aligned and discoverable", () => {
+  const actions = read("apps/web/lib/staff-runtime/clock/actions.ts");
+  const migration = read(
+    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+  );
+  const databaseTypes = read("packages/database/src/types/database.types.ts");
+  const cacheReload = read(
+    "supabase/migrations/20260720110100_reload_checkout_rpc_schema_cache.sql",
+  );
+
+  assert.match(
+    actions,
+    /"approve_employee_clock_out",\s*\{\s*p_attendance_id: parsed\.data\.attendanceId,\s*p_note: parsed\.data\.note \?\? undefined,/,
+  );
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.approve_employee_clock_out\(\s*p_attendance_id bigint,\s*p_note text DEFAULT NULL\s*\)/,
+  );
+  assert.match(
+    databaseTypes,
+    /approve_employee_clock_out:\s*\{\s*Args: \{ p_attendance_id: number; p_note\?: string \}/,
+  );
+  assert.match(cacheReload, /^NOTIFY pgrst, 'reload schema';\s*$/);
+});

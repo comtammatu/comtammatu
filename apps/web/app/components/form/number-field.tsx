@@ -8,6 +8,7 @@ import {
   FieldError,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
+import { type FormControlSize, useFormControlSize } from "./control-size";
 import { FormattedNumberInput } from "./formatted-number-input";
 
 export interface NumberFieldProps<TFieldValues extends FieldValues> {
@@ -23,6 +24,7 @@ export interface NumberFieldProps<TFieldValues extends FieldValues> {
   id?: string;
   required?: boolean;
   autoFocus?: boolean;
+  controlSize?: FormControlSize;
 }
 
 export function NumberField<TFieldValues extends FieldValues>({
@@ -38,8 +40,10 @@ export function NumberField<TFieldValues extends FieldValues>({
   id,
   required,
   autoFocus,
+  controlSize = "responsive",
 }: NumberFieldProps<TFieldValues>) {
   const { field, fieldState } = useController({ control, name });
+  const resolvedControlSize = useFormControlSize(controlSize);
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
   const descriptionId = description ? `${fieldId}-description` : undefined;
@@ -74,6 +78,7 @@ export function NumberField<TFieldValues extends FieldValues>({
         autoFocus={autoFocus}
         aria-invalid={hasError}
         aria-describedby={describedBy}
+        controlSize={resolvedControlSize}
         className={className}
       />
       {description ? (

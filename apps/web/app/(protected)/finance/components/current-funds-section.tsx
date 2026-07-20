@@ -8,6 +8,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDate, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   BusinessDateField,
   FormDialog,
@@ -31,6 +32,7 @@ type OpeningValues = z.infer<typeof openingSchema>;
 
 export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
   const router = useRouter();
+  const isTouchLayout = useIsMobile(1024);
   const [dialogOpen, setDialogOpen] = useState(false);
   const defaultValues = useMemo<OpeningValues>(
     () => ({
@@ -50,15 +52,19 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
         action={
           <Button
             variant="outline"
-            size="sm"
+            size={isTouchLayout ? "touch" : "sm"}
             onClick={() => setDialogOpen(true)}
           >
             {cash.hasOpening ? copy.cash.editOpening : copy.cash.setOpening}
           </Button>
         }
       >
-        <KpiRow density="compact" className="lg:grid-cols-2 xl:grid-cols-2">
+        <KpiRow
+          density="compact"
+          className="grid-cols-1 min-[360px]:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2"
+        >
           <KpiCard
+            density="compact"
             icon={<IconWallet className="size-4 text-muted-foreground" />}
             label={copy.basic.kpis.cashOnHand}
             value={
@@ -77,6 +83,7 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
           />
 
           <KpiCard
+            density="compact"
             icon={<IconBank className="size-4 text-muted-foreground" />}
             label={copy.basic.kpis.bankOnHand}
             value={

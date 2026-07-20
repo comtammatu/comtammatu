@@ -3,6 +3,7 @@ import { formatCount } from "@comtammatu/shared/format";
 export const operator = {
   header: {
     notificationsAria: "Thông báo",
+    moreActionsAria: "Thao tác khác",
   },
   nav: {
     schedule: "Lịch ca",

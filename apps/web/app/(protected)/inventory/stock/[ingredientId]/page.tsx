@@ -331,16 +331,19 @@ function OwnerStockIngredientDetail({
 
         <div className="flex flex-col gap-3">
           <AppSection title={detailCopy.operationTitle}>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {data.permissions.canReceiveGrn ? (
-                <Button size="sm" render={<Link href={actionHrefs.receive} />}>
+                <Button
+                  size="touch"
+                  render={<Link href={actionHrefs.receive} />}
+                >
                   <IconReceipt className="size-3.5" />
                   {stockCopy.actions.receiveGoods}
                 </Button>
               ) : null}
               {data.permissions.canCreateTransfer ? (
                 <Button
-                  size="sm"
+                  size="touch"
                   variant="outline"
                   render={<Link href={actionHrefs.transfer} />}
                 >
@@ -350,7 +353,7 @@ function OwnerStockIngredientDetail({
               ) : null}
               {data.permissions.canCreateStocktake ? (
                 <Button
-                  size="sm"
+                  size="touch"
                   variant="outline"
                   render={<Link href={actionHrefs.stocktake} />}
                 >
@@ -360,7 +363,7 @@ function OwnerStockIngredientDetail({
               ) : null}
               {data.permissions.canCreateIssue ? (
                 <Button
-                  size="sm"
+                  size="touch"
                   variant="outline"
                   render={<Link href={actionHrefs.issues} />}
                 >
@@ -370,7 +373,7 @@ function OwnerStockIngredientDetail({
               ) : null}
               {data.permissions.canWriteoff ? (
                 <Button
-                  size="sm"
+                  size="touch"
                   variant="outline"
                   render={<Link href={actionHrefs.waste} />}
                 >

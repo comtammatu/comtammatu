@@ -72,7 +72,7 @@ type OrderItemRow = OrderItemForInvoiceLines & {
   subtotal: number | string | null;
 };
 
-type SummaryInvoiceLink = {
+type HistoricalAggregateInvoiceLink = {
   tax_invoices: {
     summary_date: string | null;
     status: string;
@@ -164,38 +164,40 @@ export async function issueTaxInvoiceForPaidOrder({
     };
   }
 
-  const { data: summaryLinks, error: summaryLinksErr } = await supabase
+  const { data: aggregateLinks, error: aggregateLinksErr } = await supabase
     .from("tax_invoice_orders")
     .select("tax_invoices(summary_date, status)")
     .eq("order_id", parsed.data.orderId)
     .eq("tenant_id", tenantId);
 
-  if (summaryLinksErr) {
+  if (aggregateLinksErr) {
     console.error(
-      `[${logPrefix}] Fetch summary invoice links error:`,
-      summaryLinksErr,
+      `[${logPrefix}] Fetch historical aggregate invoice links error:`,
+      aggregateLinksErr,
     );
     return {
       success: false,
-      error: "Không thể kiểm tra hóa đơn tổng hợp.",
+      error: "Không thể kiểm tra lịch sử HĐĐT của đơn.",
       errorCode: "invoice_guard_failed",
     };
   }
 
-  const summaryInvoice = ((summaryLinks ?? []) as SummaryInvoiceLink[])
+  const historicalAggregateInvoice = (
+    (aggregateLinks ?? []) as HistoricalAggregateInvoiceLink[]
+  )
     .map((link) => link.tax_invoices)
     .find(
       (invoice) =>
         invoice != null && !["cancelled", "replaced"].includes(invoice.status),
     );
 
-  if (summaryInvoice) {
-    const d = summaryInvoice.summary_date;
+  if (historicalAggregateInvoice) {
+    const d = historicalAggregateInvoice.summary_date;
     const dateLabel = d ? formatVNBusinessDate(d) : "trước đó";
     return {
       success: false,
-      error: `Đơn này đã nằm trong hóa đơn tổng hợp ngày ${dateLabel}. Vui lòng giữ biên nhận hoặc yêu cầu hóa đơn điều chỉnh qua kế toán.`,
-      errorCode: "summary_invoice_exists",
+      error: `Đơn này đã có HĐĐT gộp từ ngày ${dateLabel}. Vui lòng giữ biên nhận hoặc yêu cầu hóa đơn điều chỉnh qua kế toán.`,
+      errorCode: "historical_aggregate_invoice_exists",
     };
   }
 
@@ -309,16 +311,16 @@ export async function issueTaxInvoiceForPaidOrder({
       console.error(`[${logPrefix}] Reserve invoice error:`, reservationErr);
     }
     if (reservationErr?.code === "23505") {
-      const summaryConflict = reservationErr.message.includes(
+      const historicalAggregateConflict = reservationErr.message.includes(
         "active daily summary",
       );
       return {
         success: false,
-        error: summaryConflict
-          ? "Đơn này đã nằm trong hóa đơn tổng hợp."
+        error: historicalAggregateConflict
+          ? "Đơn này đã có HĐĐT gộp trước đây."
           : "Đơn hàng đã có hóa đơn.",
-        errorCode: summaryConflict
-          ? "summary_invoice_exists"
+        errorCode: historicalAggregateConflict
+          ? "historical_aggregate_invoice_exists"
           : "invoice_exists",
       };
     }

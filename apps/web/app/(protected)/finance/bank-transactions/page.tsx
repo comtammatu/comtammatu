@@ -8,7 +8,6 @@ import {
   fetchSepayPaymentWebhookSummary,
 } from "../_lib/sepay-bank-transactions";
 import { loadExpenseMatchOptions } from "../_lib/expense-match-options";
-import { FilterBar } from "../components/filter-bar";
 import {
   type FinanceParams,
   parseFinanceParams,
@@ -51,13 +50,12 @@ export default async function BankTransactionsPage({
         eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
-        meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canLinkPayments ? <SepayImportDialog /> : null}
             <Button
               variant="outline"
-              size="sm"
+              size="touch"
               render={<Link href="/finance" />}
             >
               {messages.finance.common.backToFinance}
@@ -65,14 +63,8 @@ export default async function BankTransactionsPage({
           </div>
         }
       />
-      <FilterBar
-        params={params}
-        branches={[]}
-        basePath="/finance/bank-transactions"
-        hide={["branch", "granularity", "compare", "payment"]}
-        compact
-      />
       <BankTransactionsTable
+        params={params}
         transactions={transactions}
         missingBankWebhookPayments={
           paymentWebhookSummary.missingBankWebhookPayments

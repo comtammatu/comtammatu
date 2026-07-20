@@ -224,7 +224,7 @@ export function BranchStocktakeCountClient({
       hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
-        <BranchOperatorControlBar>
+        <BranchOperatorControlBar className="sm:hidden">
           <Button
             variant="ghost"
             size="icon-touch"

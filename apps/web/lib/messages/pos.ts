@@ -60,7 +60,15 @@ export const pos = {
     itemCount: (quantity: number) => `${quantity} món`,
     summaryLabel: "Món thêm chưa gửi",
     cancel: "Hủy",
+    cancelTitle: "Hủy phần thêm món?",
+    cancelDescription: (quantity: number) =>
+      `${quantity} món chưa gửi sẽ bị xóa.`,
+    keep: "Giữ lại",
     submit: "Gửi món thêm",
+  },
+  selfOrderSync: {
+    failed: "Mất kết nối khách quét QR",
+    retry: "Thử tải lại yêu cầu khách quét QR",
   },
   pendingDraft: {
     closeAria: "Đóng món chưa gửi",
@@ -253,8 +261,7 @@ export const pos = {
     replenishKitchenHint:
       "Chỉ dùng khi kho chi nhánh xác nhận còn phần thực tế.",
     replenishKitchenReasonLabel: "Lý do bổ sung",
-    replenishKitchenReasonHint:
-      "Lưu vào lịch sử điều chỉnh tồn kho chi nhánh.",
+    replenishKitchenReasonHint: "Lưu vào lịch sử điều chỉnh tồn kho chi nhánh.",
     replenishKitchenPlaceholder: "VD: Kho còn 2 phần thực tế",
     replenishKitchenReasonMin: "Nhập lý do bổ sung tối thiểu 5 ký tự.",
     replenishKitchenFailed: "Không thể bổ sung tồn kho.",
@@ -313,8 +320,7 @@ export const pos = {
     open: "Mở ca POS",
     openSuccess: "Mở ca thành công",
     openFailed: "Không thể mở ca",
-    terminalsLoadFailed:
-      "Không thể tải danh sách máy POS. Vui lòng thử lại.",
+    terminalsLoadFailed: "Không thể tải danh sách máy POS. Vui lòng thử lại.",
     terminalStatusLoadFailed:
       "Không thể tải trạng thái máy POS. Vui lòng thử lại.",
     activeSessionLoadFailed: "Không thể tải thông tin ca. Vui lòng thử lại.",

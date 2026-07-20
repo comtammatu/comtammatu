@@ -93,7 +93,7 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 ## D022: HĐĐT lập realtime tại payment; không nháp-local sau thanh toán (2026-06-14)
 
-**Decision (owner — cổng pháp lý đóng):** Thời điểm lập HĐĐT = tại thời điểm thanh toán hoàn tất, realtime per-order qua `createInvoice`. KHÔNG triển khai `hddt_issuance_mode='deferred_batch'`, `createDraftTaxInvoice`, `issueDraftBatch`, cron phát hành lô. Gộp lô cuối ngày CHỈ là chuyển dữ liệu MTT lên CQT (bảng tổng hợp); `createBatchInvoice` giữ làm hạ tầng backfill/B2C, không dùng để defer. Sửa sai sau phát hành qua owner/accountant (D023, giới hạn D049). Canonical: `docs/ref/einvoice-tax.md` § 1.1. Đảo (defer việc lập) phải sửa quyết định này trước.
+**Decision (owner — cổng pháp lý đóng):** Thời điểm lập HĐĐT = tại thời điểm thanh toán hoàn tất, realtime per-order qua `createInvoice`. Không có chế độ trì hoãn phát hành sau thanh toán. Sửa sai sau phát hành qua owner/accountant (D023, giới hạn D049). Canonical: `docs/ref/einvoice-tax.md` § 3. Đảo thời điểm lập phải sửa quyết định này trước.
 
 ## D023: Sửa-sai POS realtime — correction ở owner/accountant (2026-06-14)
 
@@ -260,7 +260,7 @@ Canonical route/ACL: bảng generated trong `docs/spec/role-route-matrix.md`.
 4. **Actor:** `branch_manager` ĐƯỢC huỷ HĐĐT issued dưới cổng này — RPC inline flip `tax_invoices.status='cancelled'` + ghi `tax_invoice_events`, KHÔNG gọi `transition_tax_invoice_state` (owner-only).
 5. **Mặc định:** đơn `cancelled` rời board + rớt doanh thu; refund một chạm tại till; re-pay = đơn mới; full-void-only; reject `multiple_payments`.
 
-**GIỮ ở Owner + Kế toán:** hoàn một phần/theo món, hoá đơn điều chỉnh/thay thế, sửa-sai daily_summary B2C — RPC chặn đơn đã gộp daily_summary (`order_in_daily_summary`). Đảo phải sửa bản ghi này trước.
+**GIỮ ở Owner + Kế toán:** hoàn một phần/theo món và hóa đơn điều chỉnh/thay thế. Đảo phải sửa bản ghi này trước.
 
 ## D050: Operator Workspace — một plane vận hành mobile-first tại `/br/[branchId]/*` (2026-06-29)
 

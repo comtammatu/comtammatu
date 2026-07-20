@@ -500,50 +500,54 @@ export function SelfOrderClient({
     const submittedNote = customerNote;
     setSubmitError(null);
     startSubmit(async () => {
-      const response = await postSelfOrderJson(
-        `/api/self-order/${encodeURIComponent(token)}/submit`,
-        {
-          clientOpId: intent.clientOpId,
-          items: submittedItems,
-          customerNote: submittedNote,
-        },
-      );
-      const result = await readApiResponse(response);
-      if (!result.ok) {
-        setSubmitError(result.error.message ?? SELF_ORDER_VI.submitFailed);
-        return;
-      }
-      const acknowledgedClientOpId = readOptionalString(
-        result.payload,
-        "clientOpId",
-      );
-      const parsedSnapshot = publicSelfOrderSnapshotSchema.safeParse(
-        result.payload.snapshot,
-      );
-      if (
-        acknowledgedClientOpId !== intent.clientOpId ||
-        !parsedSnapshot.success
-      ) {
-        setSubmitError(SELF_ORDER_VI.retryChanged);
-        return;
-      }
-      setClientOpId(intent.clientOpId);
-      setSnapshot(parsedSnapshot.data);
-      setCartItems([]);
-      setCustomerNote("");
-      batchIntentRef.current = clearClientIntent(
-        batchIntentRef.current,
-        intent.clientOpId,
-      );
-      if (parsedSnapshot.data.ok) {
-        if (
-          parsedSnapshot.data.state === "awaiting_confirmation" &&
-          isFirstPendingSubmit
-        ) {
-          setAwaitingDialogOpen(true);
-        } else if (parsedSnapshot.data.state === "open") {
-          toast.success(SELF_ORDER_VI.addedOk);
+      try {
+        const response = await postSelfOrderJson(
+          `/api/self-order/${encodeURIComponent(token)}/submit`,
+          {
+            clientOpId: intent.clientOpId,
+            items: submittedItems,
+            customerNote: submittedNote,
+          },
+        );
+        const result = await readApiResponse(response);
+        if (!result.ok) {
+          setSubmitError(result.error.message ?? SELF_ORDER_VI.submitFailed);
+          return;
         }
+        const acknowledgedClientOpId = readOptionalString(
+          result.payload,
+          "clientOpId",
+        );
+        const parsedSnapshot = publicSelfOrderSnapshotSchema.safeParse(
+          result.payload.snapshot,
+        );
+        if (
+          acknowledgedClientOpId !== intent.clientOpId ||
+          !parsedSnapshot.success
+        ) {
+          setSubmitError(SELF_ORDER_VI.retryChanged);
+          return;
+        }
+        setClientOpId(intent.clientOpId);
+        setSnapshot(parsedSnapshot.data);
+        setCartItems([]);
+        setCustomerNote("");
+        batchIntentRef.current = clearClientIntent(
+          batchIntentRef.current,
+          intent.clientOpId,
+        );
+        if (parsedSnapshot.data.ok) {
+          if (
+            parsedSnapshot.data.state === "awaiting_confirmation" &&
+            isFirstPendingSubmit
+          ) {
+            setAwaitingDialogOpen(true);
+          } else if (parsedSnapshot.data.state === "open") {
+            toast.success(SELF_ORDER_VI.addedOk);
+          }
+        }
+      } catch {
+        setSubmitError(SELF_ORDER_VI.submitFailed);
       }
     });
   }
@@ -598,36 +602,41 @@ export function SelfOrderClient({
     setPaymentCompleted(false);
     setPendingPaymentMethod(method);
     startPayment(async () => {
-      const response = await postSelfOrderJson(
-        `/api/self-order/${encodeURIComponent(token)}/payment`,
-        { clientOpId: intent.clientOpId, method, invoice: invoicePayload },
-      );
-      const result = await readApiResponse(response);
-      setPendingPaymentMethod(null);
-      if (!result.ok) {
-        setPaymentError(result.error.message ?? SELF_ORDER_VI.paymentFailed);
-        if (
-          result.error.code === "active_payment_intent" ||
-          result.error.code === "payment_intent_expired" ||
-          result.error.code === "payment_completed"
-        ) {
-          void refreshSnapshot();
+      try {
+        const response = await postSelfOrderJson(
+          `/api/self-order/${encodeURIComponent(token)}/payment`,
+          { clientOpId: intent.clientOpId, method, invoice: invoicePayload },
+        );
+        const result = await readApiResponse(response);
+        if (!result.ok) {
+          setPaymentError(result.error.message ?? SELF_ORDER_VI.paymentFailed);
+          if (
+            result.error.code === "active_payment_intent" ||
+            result.error.code === "payment_intent_expired" ||
+            result.error.code === "payment_completed"
+          ) {
+            void refreshSnapshot();
+          }
+          return;
         }
-        return;
-      }
-      const paymentRequest = normalizePaymentRequest(result.payload);
-      if (!paymentRequest) {
+        const paymentRequest = normalizePaymentRequest(result.payload);
+        if (!paymentRequest) {
+          setPaymentError(SELF_ORDER_VI.paymentFailed);
+          return;
+        }
+        setLocalPaymentRequest(paymentRequest);
+        paymentIntentRef.current = clearClientIntent(
+          paymentIntentRef.current,
+          intent.clientOpId,
+        );
+        setBillView("payment");
+        setBillOpen(true);
+        void refreshSnapshot();
+      } catch {
         setPaymentError(SELF_ORDER_VI.paymentFailed);
-        return;
+      } finally {
+        setPendingPaymentMethod(null);
       }
-      setLocalPaymentRequest(paymentRequest);
-      paymentIntentRef.current = clearClientIntent(
-        paymentIntentRef.current,
-        intent.clientOpId,
-      );
-      setBillView("payment");
-      setBillOpen(true);
-      void refreshSnapshot();
     });
   }
 

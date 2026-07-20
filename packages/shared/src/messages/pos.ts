@@ -96,6 +96,13 @@ export const POS_VI = {
   shellMenuErrorTitle: "Không thể tải menu bán hàng",
   shellMenuErrorFallback: "Ca đã mở nhưng chưa tải được menu.",
   shellMenuErrorBadge: "Gián đoạn dữ liệu bán hàng",
+  shellTablesErrorTitle: "Không thể tải sơ đồ bàn",
+  shellTablesErrorFallback: "Ca đã mở nhưng chưa tải được trạng thái bàn.",
+  shellTablesErrorBadge: "Gián đoạn dữ liệu bàn",
+  shellOrdersErrorTitle: "Không thể tải đơn trong ca",
+  shellOrdersErrorFallback:
+    "POS chưa xác nhận được danh sách đơn đang hoạt động.",
+  shellOrdersErrorBadge: "Gián đoạn dữ liệu đơn",
   hotkeyGroupOrder: "Đơn",
   hotkeySubmitKitchen: "Gửi bếp (từ giỏ)",
   hotkeyToTakeaway: "Chuyển sang mang về",

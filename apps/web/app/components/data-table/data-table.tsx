@@ -30,7 +30,7 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { Search as IconSearch } from "lucide-react";
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState, AppToolbar } from "../surface";
 import { TableEmptyStateRow } from "../table-empty-state-row";
 import { DataTablePagination } from "./data-table-pagination";
@@ -50,6 +50,10 @@ export interface DataTableColumn<T> {
    */
   render: (row: T, index: number) => ReactNode;
 }
+
+const DATA_TABLE_HEADER_TYPOGRAPHY =
+  "font-sans text-xs font-medium uppercase tracking-wider text-muted-foreground";
+const DATA_TABLE_CELL_TYPOGRAPHY = "text-xs font-normal";
 
 export interface DataTableFooterCell {
   key: string;
@@ -75,6 +79,7 @@ interface DataTableFilterOption {
 
 interface DataTableFilter {
   key: string;
+  label?: string;
   placeholder: string;
   options: DataTableFilterOption[];
 }
@@ -153,12 +158,13 @@ export function DataTable<T>({
   getRowDataState,
   rowClassName,
   className,
-  mobileBreakpoint,
+  mobileBreakpoint = 1024,
   desktopFooter,
   desktopFooterRows,
   mobileFooter,
 }: DataTableProps<T>) {
-  const isMobile = useIsMobile(mobileBreakpoint) && mobileCardRender != null;
+  const isTouchLayout = useIsMobile(mobileBreakpoint);
+  const isMobile = isTouchLayout && mobileCardRender != null;
   const [openContextRowKey, setOpenContextRowKey] = React.useState<
     string | number | null
   >(null);
@@ -194,18 +200,33 @@ export function DataTable<T>({
     onRowClick(row);
   }
 
+  function handleSearchValueChange(value: string) {
+    if (currentPage == null) setInternalPage(1);
+    onSearchChange?.(value);
+  }
+
+  function handleFilterValueChange(key: string, value: string) {
+    if (currentPage == null) setInternalPage(1);
+    onFilterChange?.(key, value);
+  }
+
   const toolbar = hasToolbar ? (
     <AppToolbar
       variant="inline"
       search={
         searchable === true ? (
-          <InputGroup className="min-w-0 flex-1 sm:min-w-64">
+          <InputGroup
+            size={isTouchLayout ? "touch" : "default"}
+            className="min-w-0 flex-1 sm:min-w-64"
+          >
             <InputGroupAddon>
               <IconSearch aria-hidden />
             </InputGroupAddon>
             <InputGroupInput
+              type="search"
+              aria-label={searchPlaceholder ?? ACTIONS_VI.search}
               value={searchValue ?? ""}
-              onChange={(event) => onSearchChange?.(event.target.value)}
+              onChange={(event) => handleSearchValueChange(event.target.value)}
               placeholder={searchPlaceholder}
             />
           </InputGroup>
@@ -214,22 +235,40 @@ export function DataTable<T>({
       filters={
         filters != null && filters.length > 0
           ? filters.map((filter) => (
-              <Select
-                key={filter.key}
-                value={filterValues?.[filter.key] ?? ""}
-                onValueChange={(value) => onFilterChange?.(filter.key, value)}
-              >
-                <SelectTrigger className="min-w-36">
-                  <SelectValue placeholder={filter.placeholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filter.options.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div key={filter.key} className="flex items-center gap-2">
+                {filter.label ? (
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {filter.label}
+                  </span>
+                ) : null}
+                <Select
+                  value={filterValues?.[filter.key] ?? ""}
+                  onValueChange={(value) =>
+                    handleFilterValueChange(filter.key, value)
+                  }
+                >
+                  <SelectTrigger
+                    size={isTouchLayout ? "touch" : "default"}
+                    className="min-w-36"
+                    aria-label={filter.label ?? filter.placeholder}
+                  >
+                    <SelectValue placeholder={filter.placeholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filter.options.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        className={
+                          isTouchLayout ? "min-h-12 text-sm" : undefined
+                        }
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             ))
           : null
       }
@@ -263,6 +302,7 @@ export function DataTable<T>({
             currentPage={activePage}
             totalItems={total}
             onPageChange={handlePageChange}
+            touch={isTouchLayout}
           />
         )}
       </div>
@@ -276,7 +316,10 @@ export function DataTable<T>({
         <TableHeader>
           <TableRow>
             {columns.map((col) => (
-              <TableHead key={col.key} className={col.className}>
+              <TableHead
+                key={col.key}
+                className={cn(col.className, DATA_TABLE_HEADER_TYPOGRAPHY)}
+              >
                 {col.header === "" ? (
                   <span className="sr-only">{FORM_VI.action}</span>
                 ) : (
@@ -329,7 +372,10 @@ export function DataTable<T>({
                   }
                 >
                   {columns.map((col) => (
-                    <TableCell key={col.key} className={col.className}>
+                    <TableCell
+                      key={col.key}
+                      className={cn(col.className, DATA_TABLE_CELL_TYPOGRAPHY)}
+                    >
                       {col.render(row, index)}
                     </TableCell>
                   ))}
@@ -382,6 +428,7 @@ export function DataTable<T>({
           currentPage={activePage}
           totalItems={total}
           onPageChange={handlePageChange}
+          touch={isTouchLayout}
         />
       )}
     </div>

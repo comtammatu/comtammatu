@@ -52,6 +52,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Combobox, FormattedNumberInput } from "@/components/form";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
+import { PhotoUploadInput } from "@/components/form";
 import {
   BranchOperatorControlBar,
   BranchOperatorDetailList,
@@ -97,6 +98,8 @@ function issueSurface(type: BranchStockIssueType) {
 type BranchStockIssueLineSheetProps = {
   open: boolean;
   issueId: number;
+  tenantId: number;
+  showConsumptionPhoto: boolean;
   line: BranchStockIssueLine | null;
   ingredients: BranchStockIssueIngredient[];
   isPending: boolean;
@@ -108,6 +111,8 @@ type BranchStockIssueLineSheetProps = {
 function BranchStockIssueLineSheet({
   open,
   issueId,
+  tenantId,
+  showConsumptionPhoto,
   line,
   ingredients,
   isPending,
@@ -119,6 +124,7 @@ function BranchStockIssueLineSheet({
   const [quantity, setQuantity] = useState("");
   const [entryUnitId, setEntryUnitId] = useState("");
   const [reason, setReason] = useState("");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -137,6 +143,7 @@ function BranchStockIssueLineSheet({
           : "",
     );
     setReason(line?.reason ?? "");
+    setPhotoUrl(line?.photoUrls[0] ?? null);
   }, [ingredients, line, open]);
 
   const selectedIngredient = ingredients.find(
@@ -193,6 +200,9 @@ function BranchStockIssueLineSheet({
         quantity: parsedQuantity,
         entryUnitId: selectedUnit.unitId,
         reason: reason.trim(),
+        ...(showConsumptionPhoto
+          ? { photoUrls: photoUrl ? [photoUrl] : [] }
+          : {}),
       });
       if (!result.success) {
         toast.error(result.error ?? issuesCopy.saveLineFailed);
@@ -300,6 +310,7 @@ function BranchStockIssueLineSheet({
                       <SelectItem
                         key={option.unitId}
                         value={String(option.unitId)}
+                        size="touch"
                       >
                         {option.label}
                       </SelectItem>
@@ -321,6 +332,19 @@ function BranchStockIssueLineSheet({
                 onChange={(event) => setReason(event.target.value)}
               />
             </Field>
+            {showConsumptionPhoto ? (
+              <Field>
+                <FieldLabel>{issuesCopy.evidencePhotoLabel}</FieldLabel>
+                <PhotoUploadInput
+                  tenantId={tenantId}
+                  folder={`stock-issues/${issueId}/consumption`}
+                  value={photoUrl}
+                  onChange={setPhotoUrl}
+                  acceptTypes="image"
+                  disabled={isPending}
+                />
+              </Field>
+            ) : null}
           </FieldGroup>
         </div>
 
@@ -674,6 +698,8 @@ export function BranchStockIssueDetailClient({
       <BranchStockIssueLineSheet
         open={lineSheetOpen}
         issueId={issue.id}
+        tenantId={data.tenantId}
+        showConsumptionPhoto={issue.type === "consumption"}
         line={editingLine}
         ingredients={data.ingredients}
         isPending={isPending}

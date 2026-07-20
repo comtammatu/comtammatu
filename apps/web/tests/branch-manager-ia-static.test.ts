@@ -494,7 +494,7 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
   assert.match(posSessionsClient, /<BranchOperatorFrame/);
   assert.match(posSessionsClient, /min-w-0/);
   assert.match(tablesClient, /w-full sm:w-60/);
-  assert.match(tablesClient, /<TabsList className="h-11 w-full"/);
+  assert.match(tablesClient, /<TabsList size="touch" className="w-full"/);
   assert.match(terminalsClient, /size="icon-touch"/);
   assert.match(stationsClient, /size="icon-touch"/);
   assert.match(stockControlCard, /<Switch[\s\S]*?size="touch"/);

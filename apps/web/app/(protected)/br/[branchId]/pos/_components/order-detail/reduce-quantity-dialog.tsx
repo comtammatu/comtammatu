@@ -81,6 +81,7 @@ export function ReduceQuantityDialog({
       }
       cancelLabel={POS_VI.keepUnchanged}
       confirmLabel={POS_VI.confirmReduce}
+      actionSize="touch"
       canConfirm={qtyValid}
       isPending={isPending}
       onConfirm={onConfirm}
@@ -97,7 +98,7 @@ export function ReduceQuantityDialog({
           <Button
             type="button"
             variant="outline"
-            size="icon"
+            size="icon-touch"
             aria-label={POS_VI.decreaseAria}
             disabled={newQuantity <= minQty || isPending}
             onClick={decrement}
@@ -114,7 +115,7 @@ export function ReduceQuantityDialog({
           <Button
             type="button"
             variant="outline"
-            size="icon"
+            size="icon-touch"
             aria-label={POS_VI.increaseAria}
             disabled={newQuantity >= maxQty || isPending}
             onClick={increment}

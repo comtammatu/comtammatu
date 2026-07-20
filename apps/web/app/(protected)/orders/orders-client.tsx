@@ -27,7 +27,10 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -36,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { fetchOrders } from "./actions";
 import { OrderDetailContent, OrderDetailSheet } from "./order-detail-sheet";
 import { useIsXlUp } from "./_hooks/use-is-xl-up";
@@ -44,7 +48,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppSection, AppToolbar } from "@/components/surface";
+import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
 
 const ORDER_COLUMNS: DataTableColumn<OrderRow>[] = [
   {
@@ -149,6 +153,7 @@ export function OrdersClient({
   // right column (design decision D063 W4b) — same OrderDetailContent body,
   // two mount points.
   const isXlUp = useIsXlUp();
+  const isTouchLayout = useIsMobile(1024);
 
   // Filter state
   const [dateFrom, setDateFrom] = useState("");
@@ -275,23 +280,27 @@ export function OrdersClient({
 
   const listContent = (
     <>
-      <div className="grid gap-3 md:grid-cols-3">
+      <KpiRow density="compact" className="grid-cols-2 md:grid-cols-3">
         <KpiCard
           label={ORDERS_COPY.inProgressLabel}
           value={summary.inProgressCount}
           hint={ORDERS_COPY.inProgressHint}
+          density="compact"
         />
         <KpiCard
           label={ORDERS_COPY.paidLabel}
           value={summary.paidCount}
           hint={ORDERS_COPY.paidHint}
+          density="compact"
         />
         <KpiCard
           label={ORDERS_COPY.revenueLabel}
           value={formatVND(summary.paidRevenue)}
           hint={ORDERS_COPY.revenueHint}
+          density="compact"
+          className="col-span-2 md:col-span-1"
         />
-      </div>
+      </KpiRow>
 
       {/* ─── Filter bar ─── */}
       <AppToolbar className="items-end">
@@ -299,26 +308,34 @@ export function OrdersClient({
           <Label htmlFor="date-from" className="text-xs">
             {FORM_VI.fromDate}
           </Label>
-          <Input
-            id="date-from"
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
+          <InputGroup
+            size={isTouchLayout ? "touch" : "default"}
             className="w-full sm:w-36"
-          />
+          >
+            <InputGroupInput
+              id="date-from"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </InputGroup>
         </div>
 
         <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="date-to" className="text-xs">
             {FORM_VI.toDate}
           </Label>
-          <Input
-            id="date-to"
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
+          <InputGroup
+            size={isTouchLayout ? "touch" : "default"}
             className="w-full sm:w-36"
-          />
+          >
+            <InputGroupInput
+              id="date-to"
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </InputGroup>
         </div>
 
         <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
@@ -326,12 +343,20 @@ export function OrdersClient({
             {FORM_VI.status}
           </Label>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger id="status-filter" className="w-full sm:w-40">
+            <SelectTrigger
+              id="status-filter"
+              size={isTouchLayout ? "touch" : "default"}
+              className="w-full sm:w-40"
+            >
               <SelectValue placeholder="Tất cả" />
             </SelectTrigger>
             <SelectContent>
               {Object.entries(ORDER_STATUS_LABELS_VI).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
+                <SelectItem
+                  key={value}
+                  value={value}
+                  size={isTouchLayout ? "touch" : "default"}
+                >
                   {label}
                 </SelectItem>
               ))}
@@ -345,12 +370,20 @@ export function OrdersClient({
               {BRANCH_VI.long}
             </Label>
             <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger id="branch-filter" className="w-full sm:w-44">
+              <SelectTrigger
+                id="branch-filter"
+                size={isTouchLayout ? "touch" : "default"}
+                className="w-full sm:w-44"
+              >
                 <SelectValue placeholder={BRANCH_VI.selectAll} />
               </SelectTrigger>
               <SelectContent>
                 {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
+                  <SelectItem
+                    key={b.id}
+                    value={String(b.id)}
+                    size={isTouchLayout ? "touch" : "default"}
+                  >
                     {b.name}
                   </SelectItem>
                 ))}
@@ -363,7 +396,7 @@ export function OrdersClient({
           <Button
             onClick={handleFilter}
             disabled={isPending}
-            size="sm"
+            size={isTouchLayout ? "touch" : "sm"}
             className="flex-1 sm:flex-none"
           >
             {isPending && <Spinner className="mr-1.5 size-3.5" />}
@@ -374,7 +407,7 @@ export function OrdersClient({
               onClick={handleReset}
               disabled={isPending}
               variant="outline"
-              size="sm"
+              size={isTouchLayout ? "touch" : "sm"}
               className="flex-1 sm:flex-none"
             >
               Xóa bộ lọc

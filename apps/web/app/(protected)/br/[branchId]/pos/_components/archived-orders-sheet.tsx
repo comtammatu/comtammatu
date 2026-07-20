@@ -61,7 +61,7 @@ export function ArchivedOrdersSheet({
   onOpenChange,
   onViewBill,
 }: ArchivedOrdersSheetProps) {
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(1280);
   const [scope, setScope] = useState<ArchivedScope>("session");
   // Debounced search — Zod tolerates max 50, but we throttle keystrokes so a
   // long search string doesn't fire one query per character.
@@ -228,10 +228,7 @@ export function ArchivedOrdersSheet({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent
-          showHandle
-          className="mt-0 h-dvh max-h-dvh p-0 before:inset-0 before:rounded-none before:border-0 before:bg-background"
-        >
+        <DrawerContent showHandle responsiveFullscreen>
           <DrawerTitle className="sr-only">
             {messages.pos.archivedOrders.sheetTitle}
           </DrawerTitle>

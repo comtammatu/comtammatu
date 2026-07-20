@@ -1,29 +1,54 @@
-import { useId } from "react";
+import * as React from "react";
 import { resolveInventoryColorValue, type InventorySemanticColor } from "./ui";
 
 interface BarChartData {
   label: string;
-  values: { value: number; color: InventorySemanticColor | string }[];
+  values: {
+    label: string;
+    value: number;
+    color: InventorySemanticColor | string;
+  }[];
 }
 
 export function SimpleBarChart({
   data,
+  ariaLabel,
+  formatValue = String,
   height = 160,
 }: {
   data: BarChartData[];
+  ariaLabel: string;
+  formatValue?: (value: number) => string;
   height?: number;
 }) {
+  const descriptionId = `${React.useId().replace(/:/g, "")}-description`;
   const maxValue = Math.max(
     ...data.flatMap((item) => item.values.map((value) => value.value)),
     0,
   );
   const isLast = (index: number) => index === data.length - 1;
+  const dataDescription = data
+    .map((item) => {
+      if (item.values.length === 1) {
+        return `${item.label}: ${formatValue(item.values[0]?.value ?? 0)}`;
+      }
+      return `${item.label}: ${item.values
+        .map((value) => `${value.label} ${formatValue(value.value)}`)
+        .join(", ")}`;
+    })
+    .join(". ");
 
   return (
     <div
       className="flex items-end gap-3 border-b border-border px-4 pb-4"
       style={{ height }}
+      role="img"
+      aria-label={ariaLabel}
+      aria-describedby={descriptionId}
     >
+      <span id={descriptionId} className="sr-only">
+        {dataDescription}
+      </span>
       {data.map((item, dataIndex) => (
         <div
           key={item.label}
@@ -73,32 +98,49 @@ export function SimpleBarChart({
 
 export function TrendSparkline({
   data,
+  ariaLabel,
+  formatValue = String,
   width = 200,
   height = 60,
   color = "primary",
   target,
+  targetDescription,
 }: {
-  data: number[];
+  data: { label: string; value: number }[];
+  ariaLabel: string;
+  formatValue?: (value: number) => string;
   width?: number;
   height?: number;
   color?: InventorySemanticColor | string;
   target?: number;
+  targetDescription?: string;
 }) {
-  const gradientId = useId().replace(/:/g, "");
+  const gradientId = React.useId().replace(/:/g, "");
+  const descriptionId = `${gradientId}-description`;
 
   if (data.length < 2) return null;
 
   const strokeColor = resolveInventoryColorValue(color);
-  const min = Math.min(...data) * 0.9;
-  const max = Math.max(...data) * 1.1;
+  const values = data.map((point) => point.value);
+  const min = Math.min(...values) * 0.9;
+  const max = Math.max(...values) * 1.1;
   const range = max - min || 1;
-  const points = data.map((value, index) => {
+  const points = values.map((value, index) => {
     const x = (index / (data.length - 1)) * width;
     const y = height - ((value - min) / range) * height;
     return `${x},${y}`;
   });
-  const targetY = target ? height - ((target - min) / range) * height : null;
+  const targetY =
+    target !== undefined ? height - ((target - min) / range) * height : null;
   const fillPath = `M${points.join(" L")} L${width},${height} L0,${height} Z`;
+  const dataDescription = [
+    data
+      .map((point) => `${point.label}: ${formatValue(point.value)}`)
+      .join(". "),
+    targetDescription,
+  ]
+    .filter(Boolean)
+    .join(". ");
 
   return (
     <svg
@@ -106,7 +148,11 @@ export function TrendSparkline({
       height={height}
       viewBox={`0 0 ${width} ${height}`}
       className="h-auto w-full max-w-full overflow-visible"
+      role="img"
+      aria-label={ariaLabel}
+      aria-describedby={descriptionId}
     >
+      <desc id={descriptionId}>{dataDescription}</desc>
       <defs>
         <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor={strokeColor} stopOpacity={0.15} />

@@ -158,11 +158,15 @@ export function BranchStocktakeNewClient({
                   <SelectValue placeholder={stocktakeCopy.allLocations} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">
+                  <SelectItem value="__all__" size="touch">
                     {stocktakeCopy.allLocations}
                   </SelectItem>
                   {locations.map((location) => (
-                    <SelectItem key={location.id} value={String(location.id)}>
+                    <SelectItem
+                      key={location.id}
+                      value={String(location.id)}
+                      size="touch"
+                    >
                       {location.name}
                       {location.kind ? ` · ${location.kind}` : ""}
                     </SelectItem>

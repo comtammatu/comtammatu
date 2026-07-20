@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { type FormControlSize, useFormControlSize } from "./control-size";
 
 interface SelectFieldOption {
   value: string;
@@ -44,6 +45,7 @@ export interface SelectFieldProps<TFieldValues extends FieldValues> {
   className?: string;
   id?: string;
   required?: boolean;
+  controlSize?: FormControlSize;
 }
 
 export function SelectField<TFieldValues extends FieldValues>({
@@ -58,8 +60,10 @@ export function SelectField<TFieldValues extends FieldValues>({
   className,
   id,
   required,
+  controlSize = "responsive",
 }: SelectFieldProps<TFieldValues>) {
   const { field, fieldState } = useController({ control, name });
+  const resolvedControlSize = useFormControlSize(controlSize);
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
   const descriptionId = description ? `${fieldId}-description` : undefined;
@@ -68,7 +72,12 @@ export function SelectField<TFieldValues extends FieldValues>({
     [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
 
   const renderItem = (opt: SelectFieldOption) => (
-    <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+    <SelectItem
+      key={opt.value}
+      value={opt.value}
+      disabled={opt.disabled}
+      size={resolvedControlSize === "touch" ? "touch" : "default"}
+    >
       {opt.label}
     </SelectItem>
   );
@@ -86,7 +95,7 @@ export function SelectField<TFieldValues extends FieldValues>({
       >
         <SelectTrigger
           id={fieldId}
-          size="field"
+          size={resolvedControlSize}
           className={cn("w-full", className)}
           aria-invalid={hasError}
           aria-describedby={describedBy}

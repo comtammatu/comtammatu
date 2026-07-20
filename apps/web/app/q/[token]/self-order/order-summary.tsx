@@ -132,7 +132,9 @@ const BILL_COLUMNS: DataTableColumn<BillRow>[] = [
     header: SELF_ORDER_VI.billLineTotalColumn,
     className: "whitespace-nowrap text-right text-xs font-mono tabular-nums",
     render: (row) => (
-      <span className={row.option ? "text-muted-foreground" : "font-semibold text-primary"}>
+      <span
+        className={row.option ? "text-muted-foreground" : "text-primary"}
+      >
         {formatVND(row.lineTotal)}
       </span>
     ),
@@ -149,6 +151,25 @@ function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
       getRowKey={(row) => row.key}
       emptyTitle={SELF_ORDER_VI.billEmptyTitle}
       className="text-xs"
+      mobileCardRender={(row) => (
+        <Item size="sm" variant="outline">
+          <ItemContent>
+            <ItemTitle className={row.option ? "text-muted-foreground" : undefined}>
+              {row.option ? "+ " : ""}
+              {row.label}
+            </ItemTitle>
+            <ItemDescription>
+              {SELF_ORDER_VI.billLineItemSummary(
+                row.quantity,
+                formatVND(row.unitPrice),
+              )}
+            </ItemDescription>
+          </ItemContent>
+          <span className={row.option ? "text-muted-foreground" : "text-primary"}>
+            {formatVND(row.lineTotal)}
+          </span>
+        </Item>
+      )}
     />
   );
 }

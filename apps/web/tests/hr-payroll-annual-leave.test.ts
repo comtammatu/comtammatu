@@ -4,8 +4,8 @@ import { test } from "node:test";
 import {
   buildCompletedWorkdays,
   calculateAnnualLeaveUsedThroughMonth,
+  calculateMonthlyLeaveUsedInMonth,
   calculatePayableDays,
-  countAnnualLeaveAccruedThroughMonth,
   splitAnnualLeaveByQuota,
   summarizeLeaveDays,
 } from "../lib/hr/payroll-day-math";
@@ -64,66 +64,75 @@ test("unpaid leave does not increase payable days", () => {
   );
 });
 
-test("annual leave accrues one day per month from the start month", () => {
-  assert.equal(countAnnualLeaveAccruedThroughMonth("2026-03-15", 2026, 5), 3);
-  assert.equal(countAnnualLeaveAccruedThroughMonth("2025-11-01", 2026, 7), 7);
-  assert.equal(countAnnualLeaveAccruedThroughMonth("2026-08-01", 2026, 7), 0);
-});
-
-test("monthly annual leave pays at most three days", () => {
+test("configured monthly leave is allocated before annual leave", () => {
   const split = splitAnnualLeaveByQuota({
-    entitlementDays: 6,
-    usedBeforePeriodDays: 5,
-    annualLeaveDaysInPeriod: 4,
+    entitlementDays: 7,
+    usedBeforePeriodDays: 0,
+    monthlyLeaveDays: 2,
+    annualLeaveDaysInPeriod: 3,
   });
 
   assert.equal(split.paidLeaveDays, 3);
   assert.equal(split.annualLeaveUsedDays, 1);
-  assert.equal(split.overflowLeaveDays, 1);
+  assert.equal(split.monthlyLeaveUsedDays, 2);
+  assert.equal(split.overflowLeaveDays, 0);
   assert.equal(
     calculatePayableDays({
-      workingDays: 23,
+      workingDays: 24,
       paidLeaveDays: split.paidLeaveDays,
-      standardDays: 26,
+      standardDays: 27,
     }),
-    26,
+    27,
   );
 });
 
-test("unused monthly leave does not consume annual carryover", () => {
+test("monthly quota can be zero without reducing annual quota allocation", () => {
   const split = splitAnnualLeaveByQuota({
     entitlementDays: 6,
     usedBeforePeriodDays: 2,
+    monthlyLeaveDays: 0,
     annualLeaveDaysInPeriod: 2,
   });
 
   assert.equal(split.paidLeaveDays, 2);
-  assert.equal(split.annualLeaveUsedDays, 0);
+  assert.equal(split.annualLeaveUsedDays, 2);
+  assert.equal(split.monthlyLeaveUsedDays, 0);
   assert.equal(split.overflowLeaveDays, 0);
 });
 
-test("annual carryover is spent only after monthly leave days", () => {
+test("monthly quota resets each month while annual quota carries through the year", () => {
+  const leaves = [
+    {
+      employeeId: 1,
+      startDate: "2026-02-10",
+      endDate: "2026-02-12",
+      leaveType: "annual" as const,
+    },
+    {
+      employeeId: 1,
+      startDate: "2026-03-10",
+      endDate: "2026-03-12",
+      leaveType: "annual" as const,
+    },
+  ];
   const used = calculateAnnualLeaveUsedThroughMonth({
-    employeeStartDate: "2026-01-05",
+    entitlementDays: 7,
+    monthlyLeaveDays: 2,
     year: 2026,
     throughMonth: 3,
-    leaves: [
-      {
-        employeeId: 1,
-        startDate: "2026-02-10",
-        endDate: "2026-02-12",
-        leaveType: "annual",
-      },
-      {
-        employeeId: 1,
-        startDate: "2026-03-10",
-        endDate: "2026-03-12",
-        leaveType: "annual",
-      },
-    ],
+    leaves,
   });
 
   assert.equal(used, 2);
+  assert.equal(
+    calculateMonthlyLeaveUsedInMonth({
+      leaves,
+      year: 2026,
+      month: 3,
+      monthlyLeaveDays: 2,
+    }),
+    2,
+  );
 });
 
 test("open attendance shifts do not count as workdays", () => {

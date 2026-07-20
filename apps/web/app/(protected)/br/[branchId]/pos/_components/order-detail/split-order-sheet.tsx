@@ -260,6 +260,7 @@ export function SplitOrderSheet({
             <Button
               type="button"
               variant="outline"
+              size="touch"
               className="flex-1"
               disabled={isPending}
               onClick={handleClose}
@@ -268,6 +269,7 @@ export function SplitOrderSheet({
             </Button>
             <Button
               type="button"
+              size="touch"
               className="flex-1"
               disabled={!canSubmit}
               onClick={handleSubmit}

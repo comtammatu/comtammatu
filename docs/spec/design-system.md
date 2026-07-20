@@ -122,8 +122,8 @@ Approved project utilities:
   bottom-sheet footers that sit above a mobile home indicator;
   `workflow-safe-pt` protects public workflow headers below standalone-PWA
   status chrome.
-- `chrome-safe-pb` / `chrome-safe-top` are limited to
-  fixed or sticky app shell chrome affected by mobile safe areas. Side
+- `chrome-safe-pt` / `chrome-safe-pb` / `chrome-safe-top` are limited to
+  app shell roots and fixed or sticky chrome affected by mobile safe areas. Side
   `SheetContent` owns its top/bottom safe-area inset padding by default.
   Do NOT put `chrome-safe-top` on the Sheet absolute close control — its
   `max(0.5rem, …)` floor drops the X below `SheetTitle` on zero-inset
@@ -305,7 +305,7 @@ the rendered label rather than policing a utility pair.
 
 Display call targets are a separate operational display role, not headings. Use them only on customer-facing queue/runner screens where the primary job is reading a stable serving target from distance. The displayed value must be stable (`table_number` for dine-in, `order_number` / `kitchen_ticket_number` for fallback), never a volatile render index.
 
-Runner/KDS customer boards must use Tailwind's built-in 12-column grid, not a custom percent grid: Đơn `col-span-4`, Số món `col-span-3`, Trạng thái `col-span-4`, Chờ `col-span-1`. The wait-time header is `Chờ`, not `Thời gian đợi`, because wait values are short and the label must not steal width from quantity/status. All four data cells use the same `text-runner-board` row typography. Runner display tokens scale with dynamic viewport height (`dvh`) and clamp between compact desktop and 2K/4K displays; they must not scale from viewport width. Compact desktop viewports must keep cell/header/footer padding below the `xl` breakpoint (`px-4 py-2`) so wrapped labels like `Mang về #041` and `2 món` do not collide with row dividers. The narrow wait-time column may use smaller horizontal padding than the other columns. Status cells MUST NOT add a separate `text-*` class on the data-text element; the label inherits row color so `tailwind-merge` cannot drop the shared row typography.
+Runner/KDS customer boards must use one responsive semantic grid, not duplicate mobile and desktop markup or a custom percent grid. Below `sm`, the four fields form a two-column, two-row grid so the wait value remains readable on 320–390 px screens. From `sm`, preserve the built-in 12-column contract: Đơn `col-span-4`, Số món `col-span-3`, Trạng thái `col-span-4`, Chờ `col-span-1`. The wait-time header is `Chờ`, not `Thời gian đợi`, because wait values are short and the label must not steal width from quantity/status. All four data cells use the same `text-runner-board` row typography. Runner display tokens scale with dynamic viewport height (`dvh`) and clamp between compact desktop and 2K/4K displays; they must not scale from viewport width. Compact desktop viewports must keep cell/header/footer padding below the `xl` breakpoint (`px-4 py-2`) so wrapped labels like `Mang về #041` and `2 món` do not collide with row dividers. The narrow wait-time column may use smaller horizontal padding than the other columns. Status cells MUST NOT add a separate `text-*` class on the data-text element; the label inherits row color so `tailwind-merge` cannot drop the shared row typography.
 
 Heading-weight lock: the default heading weight is `font-semibold`. `font-bold` is reserved for receipt totals and print-mode page headers ONLY. One owner-approved named exception: **POS menu item-name over photo → `font-bold` permitted** (legibility over the `pos-text-overlay` drop-shadow). Emphasis inside body copy may still use `font-bold` inline. `font-black` is not allowed in the app.
 
@@ -350,20 +350,18 @@ keep one semantic H1, a clear hierarchy, and responsive action behavior.
 
 Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<button>`, `<Link>`, or `<Button>` acting as a button. Min-heights `min-h-12`, `min-h-14`, `min-h-16` MUST come from the `touch` / `touch-lg` variants — do not override on a different variant via `className`. Touch CTAs use `min-h-` rather than fixed `h-` so wrapped labels grow vertically without clipping.
 
-If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the shared component. The `tile` (POS table-gate selectable tile) and `icon-touch` (48px icon-only) `Button` sizes, and the `touch` / `touch-lg` sizes on the `Toggle` / `ToggleGroup` cva (POS segmented service-mode control), were added under this rule — consume them via `size=`, never a raw `h-*` / `min-h-*` on the group or item `className`. The `button-height-on-button` gate (below) enforces this for `<Button>`. The bare form controls `Select` (trigger), `Switch`, `Checkbox`, and `RadioGroupItem` expose a `touch` value on their own cva `size` prop (`min-h-12` trigger / enlarged 20px box + ≥44px hit area), added under this same rule for POS/KDS order-flow controls — consume via `size="touch"`, never a raw `h-*` / `size-*` on the control `className`.
+If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to the owning shared primitive once. Never fake a button by setting `<button className="min-h-12 ...">` outside that primitive. The `tile` (POS table-gate selectable tile) and `icon-touch` (48px icon-only) `Button` sizes, the `touch` / `touch-lg` sizes on the `Toggle` / `ToggleGroup` cva (POS segmented service-mode control), and `TabsList size="touch"` (48px minimum tab triggers inside a 56px strip) were added under this rule — consume them via `size=`, never a raw `h-*` / `min-h-*` on the group or item `className`. The `button-height-on-button` gate (below) enforces this for `<Button>`. The bare form-control primitives `Select` (trigger), `Switch`, `Checkbox`, and `RadioGroupItem` expose a `touch` value on their own cva `size` prop (`min-h-12` trigger / enlarged 20px box + ≥44px hit area), added under this same rule for POS/KDS order-flow controls — consume via `size="touch"`, never a raw `h-*` / `size-*` on the control `className`.
 
-`Input` owns three evidenced sizes: `size="default"` (`h-7`) for compact use, `size="field"` (`h-10`) for structured form helpers, and `size="touch"` (`min-h-12`) for named touch-first native-input workflows. Composite form controls rendered through the `apps/web/app/components/form/*` layer select `field`; route code MUST NOT recreate these sizes with raw height classes.
+`Input` defaults to `h-7` and exposes `controlSize="field"` / `controlSize="touch"`; the legacy `size` prop remains an equivalent compatibility alias. The RHF-backed `TextField`, `NumberField`, `SelectField`, and `ComboboxField` wrappers default to `controlSize="responsive"`: they resolve to `touch` below the Owner shell's `lg` (1024px) cutover and `field` from `lg` upward. An explicit `field` or `touch` caller remains fixed at that density. A touch-sized Combobox also propagates touch density to its visible popup search input and options; do not enlarge only the trigger.
 
-Routing is semantic, not import-count driven: standard RHF text uses `TextField`; localized numeric entry uses the domain number helpers; non-RHF or specialized labeled controls use `FormField` / shared `Field`; search and addon controls use `InputGroup`. Direct `Input` remains valid for native date/month/file workflows, identifiers, and tightly composed inline editors, but it MUST NOT recreate label/error anatomy or border/ring/height ownership in route code.
+| Control role                                                | Below `lg` | `lg` and above | Source                                                        |
+| ----------------------------------------------------------- | ---------- | -------------- | ------------------------------------------------------------- |
+| Bare text / number `Input` primitive (default)              | `h-7`      | `h-7`          | `Input` primitive (`packages/ui`)                             |
+| Responsive form text / number field                         | `min-h-12` | `h-10`         | `form/text-field`, `form/number-field`                        |
+| Responsive select / combobox field and visible popup inputs | `min-h-12` | `h-10`         | `form/select-field`, `form/combobox-field`, shared `Combobox` |
+| Fixed-density multi-select / date-picker field trigger      | `h-10`     | `h-10`         | `form/multi-select-combobox`, `form/business-date-field`      |
 
-| Control role                                                | Height     | Source                                                                                          |
-| ----------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------- |
-| Bare text / number `Input size="default"`                   | `h-7`      | `Input` shared component (`packages/ui`)                                                        |
-| Form text / number field (`Input size="field"`)             | `h-10`     | `form/text-field`, `form/number-field`                                                          |
-| Touch-first native input (`Input size="touch"`)             | `min-h-12` | named operator/public workflows only                                                            |
-| Field-trigger (select, combobox, multi-select, date-picker) | `h-10`     | `form/select-field`, `form/combobox*`, `form/multi-select-combobox`, `form/business-date-field` |
-
-`h-10` form-field height is selected through the shared wrapper/API. The forbidden fixed heights `h-10` / `h-11` / `h-12` / `h-14` / `h-16` above apply to elements acting as a **button CTA** (`<button>` / `<Link>` / `<Button>` used as an action) — a form-field control that holds input or opens a popover/list is governed by this table, not by the button-height ban. Do not hand-patch a raw `Input` or `SelectTrigger`; route it through the semantic size or `form/*` wrapper so field height stays single-sourced. Vertical chrome should otherwise be controlled with `Field` / `FieldGroup` spacing, not ad-hoc height overrides.
+`h-10` and `min-h-12` are permitted only through the named field-control sizes in the owning primitive or shared `form/*` wrapper. The forbidden fixed heights `h-10` / `h-11` / `h-12` / `h-14` / `h-16` above apply to elements acting as a **button CTA** (`<button>` / `<Link>` / `<Button>` used as an action) — a form-field control that holds input or opens a popover/list is governed by this table, not by the button-height ban. Do not hand-patch a raw `Input` or `SelectTrigger`; route it through the shared wrapper or consume its named size so field height stays single-sourced. Vertical chrome should otherwise be controlled with `Field` / `FieldGroup` spacing, not ad-hoc height overrides.
 
 ### E. Radius Scale (4 tiers, 4 tokens only)
 
@@ -761,8 +759,9 @@ contract change; route-local chrome outside this list is drift.
    bottom nav + `Mô-đun` drawer instead of a desktop sidebar crammed onto a
    narrow width. The
    sidebar's drawer-vs-fixed cutover is driven by `useIsMobile(1024)` in
-   `app-shell.tsx`; the phone breakpoint (`useIsMobile()` = 768) that governs
-   DataTable/toaster/POS is unchanged.
+   `app-shell.tsx`; responsive Owner `DataTable` adapters use the same 1024px
+   default. The phone breakpoint (`useIsMobile()` = 768) still governs
+   toaster/POS unless a route supplies an explicit override.
 2. Branch runtime chrome — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
    branch home, staff daily work under `/br/[branchId]/shift/*`, stock action

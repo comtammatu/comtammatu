@@ -230,6 +230,7 @@ export function RevenueDrillTabs({
           <DataTable
             columns={orderColumns}
             data={orders}
+            pageSize={50}
             getRowKey={(row) => row.order_id}
             emptyTitle="Không có đơn đã thanh toán trong ngày."
             mobileCardRender={(row) => (

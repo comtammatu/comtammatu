@@ -140,21 +140,21 @@ function CartLine({
             {optionSummary}
           </ItemDescription>
         ) : null}
-        <ItemActions className="mt-2 w-full justify-between gap-2">
+        <ItemActions className="mt-2 w-full flex-wrap justify-between gap-2">
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="touch"
             disabled={disabled || !canEdit}
             onClick={onEdit}
           >
             {SELF_ORDER_VI.editCartItem}
           </Button>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Button
               type="button"
               variant="outline"
-              size="icon-sm"
+              size="icon-touch"
               disabled={disabled || item.quantity <= 1}
               onClick={() => onQuantityChange(item.key, -1)}
               aria-label={`${SELF_ORDER_VI.decreaseQuantityAria}: ${item.item_name}`}
@@ -167,7 +167,7 @@ function CartLine({
             <Button
               type="button"
               variant="outline"
-              size="icon-sm"
+              size="icon-touch"
               disabled={disabled}
               onClick={() => onQuantityChange(item.key, 1)}
               aria-label={`${SELF_ORDER_VI.increaseQuantityAria}: ${item.item_name}`}
@@ -177,7 +177,7 @@ function CartLine({
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="icon-touch"
               disabled={disabled}
               onClick={() => onRemove(item.key)}
               aria-label={`${SELF_ORDER_VI.removeItem}: ${item.item_name}`}
@@ -256,7 +256,7 @@ export function CartSheet(props: CartSheetProps) {
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="mx-auto flex h-dvh max-h-dvh w-full max-w-2xl flex-col overflow-hidden p-0 data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh"
+          className="mx-auto flex w-full max-w-2xl flex-col overflow-hidden p-0"
         >
           <SheetHeader className="pr-3 sm:pr-4">
             <div className="flex items-start justify-between gap-3">

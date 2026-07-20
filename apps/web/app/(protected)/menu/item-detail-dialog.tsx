@@ -275,7 +275,7 @@ export function ItemDetailDialog({
         </Alert>
       ) : (
         <Tabs defaultValue="variants" className="w-full">
-          <TabsList className="w-full">
+          <TabsList size="touch" className="w-full">
             <TabsTrigger value="variants" className="flex-1">
               {MENU_VI.variantsTab} ({variants.length})
             </TabsTrigger>

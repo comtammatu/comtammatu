@@ -169,6 +169,7 @@ export function ServiceChargeSheet({
             <Button
               type="button"
               variant="destructive"
+              size="touch"
               disabled={!canClear}
               onClick={handleClear}
               title={
@@ -185,12 +186,18 @@ export function ServiceChargeSheet({
             <Button
               type="button"
               variant="outline"
+              size="touch"
               disabled={isPending}
               onClick={handleClose}
             >
               {ACTIONS_VI.cancel}
             </Button>
-            <Button type="button" disabled={!canApply} onClick={handleApply}>
+            <Button
+              type="button"
+              size="touch"
+              disabled={!canApply}
+              onClick={handleApply}
+            >
               {POS_VI.apply}
             </Button>
           </div>

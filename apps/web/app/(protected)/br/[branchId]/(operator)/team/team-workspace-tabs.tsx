@@ -87,8 +87,9 @@ export function TeamWorkspaceTabs({
   return (
     <Tabs value={value} onValueChange={handleValueChange} className="gap-3">
       <TabsList
+        size="touch"
         aria-label={copy.tabsAriaLabel}
-        className="sticky top-0 z-20 grid h-12 min-h-12 w-full grid-cols-2 items-center overflow-hidden rounded-md bg-background/95 p-1 backdrop-blur group-data-horizontal/tabs:!h-12"
+        className="sticky top-0 z-20 grid w-full grid-cols-2 items-center overflow-hidden bg-background/95 backdrop-blur"
       >
         <span
           aria-hidden="true"
@@ -104,7 +105,7 @@ export function TeamWorkspaceTabs({
             key={tabValue}
             value={tabValue}
             className={cn(
-              "relative z-10 h-10 min-w-0 items-center justify-center gap-1 px-1 py-0 text-xs leading-none text-muted-foreground sm:gap-2 sm:px-2 sm:text-sm data-active:bg-transparent dark:data-active:border-transparent dark:data-active:bg-transparent",
+              "relative z-10 min-w-0 items-center justify-center gap-1 px-1 py-0 text-xs leading-none text-muted-foreground sm:gap-2 sm:px-2 sm:text-sm data-active:bg-transparent dark:data-active:border-transparent dark:data-active:bg-transparent",
               value === tabValue && "text-foreground",
             )}
           >

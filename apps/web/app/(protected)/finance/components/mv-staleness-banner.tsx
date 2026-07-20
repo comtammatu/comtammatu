@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { messages } from "@lib/messages";
 import { formatVNTime } from "@/_lib/format-datetime";
@@ -49,6 +50,7 @@ export function MvStalenessBanner({
 }: MvStalenessBannerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const isTouchLayout = useIsMobile(1024);
 
   const minutes = lastRefreshAt ? diffMinutes(lastRefreshAt) : null;
   const stale = minutes != null && minutes >= STALE_MINUTES_WARNING;
@@ -80,16 +82,18 @@ export function MvStalenessBanner({
       aria-live="polite"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className={tone === "warning" ? undefined : "text-muted-foreground"}>
+        <span
+          className={tone === "warning" ? undefined : "text-muted-foreground"}
+        >
           {messageWhen}
         </span>
         {canRefresh ? (
           <Button
             variant="ghost"
-            size="sm"
+            size={isTouchLayout ? "touch" : "sm"}
             onClick={handleRefresh}
             disabled={isPending}
-            className="h-7 gap-1.5 px-2 text-xs"
+            className="gap-1.5 px-2 text-xs"
           >
             {isPending ? (
               <Spinner className="size-3.5" aria-hidden />

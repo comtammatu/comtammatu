@@ -55,6 +55,7 @@ export function VoidItemDialog({
       cancelLabel={POS_VI.keepItem}
       confirmLabel={POS_VI.voidItem}
       confirmVariant="destructive"
+      actionSize="touch"
       isPending={isPending}
       onConfirm={onConfirm}
     />

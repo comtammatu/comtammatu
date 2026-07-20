@@ -10,6 +10,7 @@ import {
 } from "@comtammatu/ui/components/field";
 import type { ComboboxOption } from "@comtammatu/ui/components/combobox";
 import { Combobox } from "./combobox";
+import { type FormControlSize, useFormControlSize } from "./control-size";
 
 export type ComboboxFieldOption = ComboboxOption;
 
@@ -27,6 +28,7 @@ export interface ComboboxFieldProps<TFieldValues extends FieldValues> {
   id?: string;
   required?: boolean;
   onValueChange?: (value: string) => void;
+  controlSize?: FormControlSize;
 }
 
 export function ComboboxField<TFieldValues extends FieldValues>({
@@ -43,8 +45,10 @@ export function ComboboxField<TFieldValues extends FieldValues>({
   id,
   required,
   onValueChange,
+  controlSize = "responsive",
 }: ComboboxFieldProps<TFieldValues>) {
   const { field, fieldState } = useController({ control, name });
+  const resolvedControlSize = useFormControlSize(controlSize);
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
   const descriptionId = description ? `${fieldId}-description` : undefined;
@@ -74,6 +78,7 @@ export function ComboboxField<TFieldValues extends FieldValues>({
         onBlur={field.onBlur}
         ref={field.ref}
         options={options}
+        size={resolvedControlSize}
         placeholder={placeholder}
         searchPlaceholder={searchPlaceholder}
         emptyMessage={emptyMessage}

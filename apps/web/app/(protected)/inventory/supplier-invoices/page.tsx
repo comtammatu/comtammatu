@@ -9,20 +9,38 @@ import type { SupplierInvoiceCursor } from "../procurement-actions";
 import { fetchSuppliers } from "../supplier-actions";
 import { resolveRequestedBranchId } from "../_lib/inventory-scope";
 import { SupplierInvoicesClient } from "./supplier-invoices-client";
+import { parseSupplierInvoiceListFilters } from "./supplier-invoice-list-model";
 import { mapSupplierInvoiceRow } from "./supplier-invoice-row";
 
 export default async function SupplierInvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{
+    branchId?: string | string[];
+    q?: string | string[];
+    supplierId?: string | string[];
+    matchStatus?: string | string[];
+    paymentStatus?: string | string[];
+    overdue?: string | string[];
+    view?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const branchFilter =
     (await resolveRequestedBranchId(params.branchId)) ?? undefined;
+  const filters = parseSupplierInvoiceListFilters(params);
 
   const [res, suppliersRes, grnsRes, authState, hasPayPermission] =
     await Promise.all([
-      fetchSupplierInvoicesPage({ branchId: branchFilter }),
+      fetchSupplierInvoicesPage({
+        branchId: branchFilter,
+        query: filters.query,
+        supplierId: filters.supplierId ?? undefined,
+        matchStatus: filters.matchStatus ?? undefined,
+        paymentStatus: filters.paymentStatus ?? undefined,
+        overdueOnly: filters.overdueOnly,
+        viewMode: filters.viewMode,
+      }),
       fetchSuppliers(),
       fetchGrnIdsForDropdown(branchFilter),
       loadAuthState(),
@@ -32,7 +50,13 @@ export default async function SupplierInvoicesPage({
     authState.claims.user_role === "owner" && hasPayPermission;
   const page = res.success
     ? res.data
-    : { items: [], hasMore: false, nextCursor: null };
+    : {
+        items: [],
+        hasMore: false,
+        nextCursor: null,
+        totalCount: 0,
+        groups: [],
+      };
   const dbRows = (page?.items ?? []) as Array<Record<string, unknown>>;
   const initialHasMore = page?.hasMore ?? false;
   const initialNextCursor = (page?.nextCursor ??
@@ -68,6 +92,9 @@ export default async function SupplierInvoicesPage({
       grns={grns}
       initialHasMore={initialHasMore}
       initialNextCursor={initialNextCursor}
+      initialGroups={page?.groups ?? []}
+      initialTotalCount={page?.totalCount ?? 0}
+      filters={filters}
       branchId={branchFilter}
       canPaySupplier={canPaySupplier}
     />

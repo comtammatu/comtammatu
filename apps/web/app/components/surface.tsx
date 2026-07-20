@@ -173,6 +173,7 @@ export type AppPageHeaderProps = {
   breadcrumb?: ReactNode;
   tabs?: ReactNode;
   meta?: ReactNode;
+  compactOnMobile?: boolean;
 };
 
 export function AppPageHeader({
@@ -187,51 +188,83 @@ export function AppPageHeader({
   breadcrumb,
   tabs,
   meta,
+  compactOnMobile = false,
 }: AppPageHeaderProps) {
   const Heading = headingLevel;
 
   return (
-    <header className={cn("flex flex-col gap-2", className)}>
-      {breadcrumb ? <div>{breadcrumb}</div> : null}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          {eyebrow ? (
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {eyebrow}
+    <>
+      <header
+        className={cn(
+          "flex flex-col gap-2",
+          compactOnMobile && "max-sm:gap-1",
+          className,
+        )}
+      >
+        {breadcrumb ? <div>{breadcrumb}</div> : null}
+        <div
+          className={cn(
+            "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+            compactOnMobile && "max-sm:gap-1",
+          )}
+        >
+          <div className="flex min-w-0 flex-col gap-1">
+            {eyebrow ? (
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {eyebrow}
+              </div>
+            ) : null}
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Heading
+                className={cn(
+                  "font-heading min-w-0 text-xl font-semibold tracking-tight sm:text-2xl",
+                  compactOnMobile && "max-sm:text-base",
+                  titleClassName,
+                )}
+              >
+                {title}
+              </Heading>
+              {badge ? (
+                <Badge variant={badge.variant ?? "secondary"}>
+                  {badge.children}
+                </Badge>
+              ) : null}
             </div>
-          ) : null}
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Heading
-              className={cn(
-                "font-heading min-w-0 text-xl font-semibold tracking-tight sm:text-2xl",
-                titleClassName,
-              )}
-            >
-              {title}
-            </Heading>
-            {badge ? (
-              <Badge variant={badge.variant ?? "secondary"}>
-                {badge.children}
-              </Badge>
+            {description ? (
+              <div
+                className={cn(
+                  "max-w-3xl text-sm leading-6 text-muted-foreground",
+                  compactOnMobile && "max-sm:hidden",
+                )}
+              >
+                {description}
+              </div>
+            ) : null}
+            {meta ? (
+              <div
+                className={cn(
+                  "text-xs text-muted-foreground",
+                  compactOnMobile && "max-sm:hidden",
+                )}
+              >
+                {meta}
+              </div>
             ) : null}
           </div>
-          {description ? (
-            <div className="max-w-3xl text-sm leading-6 text-muted-foreground">
-              {description}
+          {actions ? (
+            <div
+              className={cn(
+                "flex shrink-0 flex-wrap items-center gap-2",
+                compactOnMobile && "max-sm:hidden",
+              )}
+            >
+              {actions}
             </div>
           ) : null}
-          {meta ? (
-            <div className="text-xs text-muted-foreground">{meta}</div>
-          ) : null}
         </div>
-        {actions ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {actions}
-          </div>
-        ) : null}
-      </div>
+      </header>
       {tabs ? <div>{tabs}</div> : null}
-    </header>
+    </>
   );
 }
 
@@ -948,7 +981,7 @@ export function AppDetailFooter({
           ? "sm:flex-col sm:items-stretch"
           : "sm:flex-row sm:items-center sm:justify-between",
         sticky
-          ? "sticky bottom-0 z-10 gap-2 bg-background p-2 shadow-lg chrome-safe-pb [&_[data-slot=button]]:w-full sm:[&_[data-slot=button]]:w-auto"
+          ? "sticky bottom-[var(--app-bottom-nav-offset,0px)] z-10 gap-2 bg-background p-2 shadow-lg [&_[data-slot=button]]:w-full sm:[&_[data-slot=button]]:w-auto lg:bottom-0"
           : "gap-3 py-6",
         className,
       )}

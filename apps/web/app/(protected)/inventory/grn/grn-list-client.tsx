@@ -1,4 +1,3 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useMemo, useState } from "react";
@@ -25,13 +24,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@comtammatu/ui/components/drawer";
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -52,7 +44,6 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { useLongPress } from "@lib/hooks/use-long-press";
 import {
   AppEmptyState,
   AppPage,
@@ -114,7 +105,6 @@ export function GrnListClient({
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<GrnListStatusFilter>("all");
-  const [drawerRow, setDrawerRow] = useState<GrnRow | null>(null);
   const router = useRouter();
   const grnColumns: DataTableColumn<GrnRow>[] = [
     {
@@ -283,50 +273,16 @@ export function GrnListClient({
           grn.status === "cancelled" ? "opacity-60" : undefined
         }
         mobileCardRender={(grn) => (
-          <GrnMobileCard
-            grn={grn}
-            basePath={basePath}
-            onOpenDrawer={setDrawerRow}
-          />
+          <GrnMobileCard grn={grn} basePath={basePath} />
         )}
       />
     </>
   );
 
   const listBody = (
-    <>
-      <AppSection className="overflow-hidden" contentFlush>
-        {listTable}
-      </AppSection>
-      <Drawer
-        open={drawerRow != null}
-        onOpenChange={(open) => !open && setDrawerRow(null)}
-      >
-        <DrawerContent>
-          {drawerRow ? (
-            <>
-              <DrawerHeader>
-                <DrawerTitle>{drawerRow.code}</DrawerTitle>
-                <DrawerDescription>
-                  {drawerRow.supplierName} • {drawerRow.branchName}
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="flex flex-col gap-3 p-4">
-                <Button
-                  variant="default"
-                  className="w-full"
-                  onClick={() =>
-                    router.push(grnDetailHref(basePath, drawerRow.id))
-                  }
-                >
-                  Xem chi tiết
-                </Button>
-              </div>
-            </>
-          ) : null}
-        </DrawerContent>
-      </Drawer>
-    </>
+    <AppSection className="overflow-hidden" contentFlush>
+      {listTable}
+    </AppSection>
   );
 
   const draftsContent = draftsLoadFailed ? (
@@ -506,24 +462,16 @@ function GrnDraftsTab({
 function GrnMobileCard({
   grn,
   basePath,
-  onOpenDrawer,
 }: {
   grn: GrnRow;
   basePath: string;
-  onOpenDrawer: (grn: GrnRow) => void;
 }) {
-  const router = useRouter();
-  const longPress = useLongPress({
-    onLongPress: () => onOpenDrawer(grn),
-    onClick: () => router.push(grnDetailHref(basePath, grn.id)),
-  });
-
   return (
     <InteractiveCard
+      render={<Link href={grnDetailHref(basePath, grn.id)} />}
       minHeight="mobile"
       padding="default"
-      className="justify-between touch-manipulation select-none cursor-pointer"
-      {...longPress}
+      className="justify-between touch-manipulation cursor-pointer"
     >
       <div className="min-w-0 flex flex-1 flex-col gap-1 pointer-events-none">
         <div className="flex items-center gap-2">

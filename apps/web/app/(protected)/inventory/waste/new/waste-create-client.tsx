@@ -6,7 +6,6 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
 } from "@comtammatu/ui/components/input-group";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -20,6 +19,7 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { Trash as IconTrash } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form/combobox";
@@ -80,6 +80,11 @@ const labelLocationStock = (qty: string, unit: string) =>
 
 export function WasteCreateClient({ context }: { context: WasteFormContext }) {
   const router = useRouter();
+  const isTouchLayout = useIsMobile(1024);
+  const controlSize = isTouchLayout ? "touch" : "field";
+  const optionSize = isTouchLayout ? "touch" : "default";
+  const actionSize = isTouchLayout ? "touch" : "default";
+  const removeActionSize = isTouchLayout ? "icon-touch" : "icon";
   const nextLineId = useRef(1);
   const [locationId, setLocationId] = useState<number | null>(
     context.locations[0]?.id ?? null,
@@ -417,14 +422,14 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
             onValueChange={handleLocationChange}
             disabled={isSubmitting}
           >
-            <SelectTrigger id="waste-loc" size="default" className="w-full">
+            <SelectTrigger id="waste-loc" size={controlSize} className="w-full">
               <SelectValue
                 placeholder={messages.inventory.waste.chooseLocation}
               />
             </SelectTrigger>
             <SelectContent>
               {context.locations.map((l) => (
-                <SelectItem key={l.id} value={String(l.id)}>
+                <SelectItem key={l.id} value={String(l.id)} size={optionSize}>
                   {l.name} ({l.kind})
                 </SelectItem>
               ))}
@@ -502,7 +507,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     />
                     {lines.length > 1 ? (
                       <Button
-                        size="icon"
+                        size={removeActionSize}
                         variant="ghost"
                         type="button"
                         onClick={() => removeLine(line.uid)}
@@ -528,7 +533,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     }
                     onValueChange={(v) => handleIngredientChange(line.uid, v)}
                     placeholder={messages.inventory.waste.chooseIngredient}
-                    size="sm"
+                    size={controlSize}
                     className="w-full"
                   />
                 </div>
@@ -559,7 +564,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     >
                       <SelectTrigger
                         id={`unit-${line.uid}`}
-                        size="sm"
+                        size={controlSize}
                         className="w-full"
                       >
                         <SelectValue
@@ -568,7 +573,11 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                       </SelectTrigger>
                       <SelectContent>
                         {lineIssueUnits.map((u) => (
-                          <SelectItem key={u.unitId} value={String(u.unitId)}>
+                          <SelectItem
+                            key={u.unitId}
+                            value={String(u.unitId)}
+                            size={optionSize}
+                          >
                             {u.label}
                           </SelectItem>
                         ))}
@@ -591,12 +600,12 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                   }
                 />
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <Label htmlFor={`qty-${line.uid}`}>
                       {FORM_VI.quantity}
                     </Label>
-                    <InputGroup>
+                    <InputGroup size={controlSize}>
                       <FormattedNumberInput
                         id={`qty-${line.uid}`}
                         maxFractionDigits={3}
@@ -614,9 +623,12 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                         className="h-full"
                       />
                       {maxQuantityValue ? (
-                        <InputGroupAddon align="inline-end">
-                          <InputGroupButton
+                        <InputGroupAddon align="inline-end" className="py-0">
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size={isTouchLayout ? "touch" : "sm"}
+                            className="shadow-none"
                             onClick={() =>
                               updateLine(line.uid, {
                                 quantity: maxQuantityValue,
@@ -625,7 +637,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                             disabled={isSubmitting}
                           >
                             {FORM_VI.max}
-                          </InputGroupButton>
+                          </Button>
                         </InputGroupAddon>
                       ) : null}
                     </InputGroup>
@@ -663,7 +675,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     value={line.reasonCode as never}
                     onChange={(v) => updateLine(line.uid, { reasonCode: v })}
                     disabled={isSubmitting}
-                    size="sm"
+                    size={controlSize}
                     className="w-full"
                   />
                 </div>
@@ -713,7 +725,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
         <Button
           type="button"
           variant="outline"
-          size="default"
+          size={actionSize}
           onClick={addLine}
           disabled={isSubmitting}
           className="w-full sm:w-auto"
@@ -735,7 +747,8 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
         leading={
           <Button
             variant="outline"
-            size="default"
+            size={actionSize}
+            className="w-full sm:w-auto"
             onClick={() => router.push("/inventory/issues")}
             disabled={isSubmitting}
           >
@@ -743,7 +756,12 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           </Button>
         }
         trailing={
-          <Button size="default" onClick={handleSubmit} disabled={isSubmitting}>
+          <Button
+            size={actionSize}
+            className="w-full sm:w-auto"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
             {isSubmitting ? <Spinner /> : messages.inventory.waste.createSlip}
           </Button>
         }

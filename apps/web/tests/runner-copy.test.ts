@@ -112,9 +112,10 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /const RUNNER_ROW_LIMIT_XL = 6;/);
   assert.match(
     runnerPageSource,
-    /displayRows\.slice\(0, RUNNER_ROW_LIMIT_XL\)/,
+    /const rowLimit = usesBaseRowLimit[\s\S]*RUNNER_ROW_LIMIT_BASE[\s\S]*RUNNER_ROW_LIMIT_XL/,
   );
-  assert.match(runnerPageSource, /hiddenBelowXl && "hidden xl:grid"/);
+  assert.match(runnerPageSource, /useIsMobile\(1280\)/);
+  assert.doesNotMatch(runnerPageSource, /hiddenBelowXl/);
   assert.match(runnerPageSource, /const RUNNER_OVERFLOW_TILE_LIMIT = 4;/);
   assert.match(
     runnerPageSource,
@@ -128,6 +129,11 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /data-runner-overflow-rail/);
   assert.match(
     runnerPageSource,
+    /<RunnerOverflowRail rows=\{overflowRows\} \/>/,
+  );
+  assert.doesNotMatch(runnerPageSource, /overflowBaseRows|overflowXlRows/);
+  assert.match(
+    runnerPageSource,
     /activeRows\.slice\(0, RUNNER_OVERFLOW_PREVIEW_LIMIT\)/,
   );
   assert.match(runnerPageSource, /activeRows\.length - previewRows\.length/);
@@ -136,7 +142,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /className="flex h-full min-h-0 w-full/);
   assert.match(
     runnerPageSource,
-    /className="theme-light-only flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"/,
+    /className="theme-light-only chrome-safe-pt flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"/,
   );
   assert.match(runnerPageSource, /<RunnerLightMode \/>/);
   assert.match(uiGlobalsSource, /:root,\n\.theme-light-only \{/);
@@ -151,15 +157,25 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(runnerLightModeSource, /matu-theme/);
   assert.doesNotMatch(runnerLightModeSource, /localStorage/);
   assert.match(runnerPageSource, /grid-rows-4/);
-  assert.match(runnerPageSource, /grid-cols-12/);
-  assert.match(runnerPageSource, /const RUNNER_COLUMN_SPAN = \{/);
-  assert.match(runnerPageSource, /order: 4/);
-  assert.match(runnerPageSource, /quantity: 3/);
-  assert.match(runnerPageSource, /status: 4/);
-  assert.match(runnerPageSource, /wait: 1/);
+  assert.match(runnerPageSource, /grid-cols-2/);
+  assert.match(runnerPageSource, /sm:grid-cols-12/);
+  assert.match(runnerPageSource, /const RUNNER_COLUMN_CLASS = \{/);
+  assert.match(runnerPageSource, /order: "col-span-1 border-r sm:col-span-4"/);
+  assert.match(
+    runnerPageSource,
+    /quantity: "col-span-1 sm:col-span-3 sm:border-r"/,
+  );
+  assert.match(
+    runnerPageSource,
+    /status: "col-span-1 max-sm:border-t sm:col-span-4 sm:border-r"/,
+  );
+  assert.match(
+    runnerPageSource,
+    /wait: "col-span-1 max-sm:border-l max-sm:border-t sm:col-span-1"/,
+  );
   assert.match(runnerPageSource, /RunnerColumnHeading/);
   assert.match(runnerPageSource, /items-stretch/);
-  assert.match(runnerPageSource, /divide-x divide-border\/70/);
+  assert.doesNotMatch(runnerPageSource, /divide-x divide-border\/70/);
   assert.match(runnerPageSource, /role="list"/);
   assert.match(runnerPageSource, /role="listitem"/);
   assert.match(
@@ -225,7 +241,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /flex max-w-full flex-col items-center gap-2/);
   assert.match(
     runnerPageSource,
-    /<RunnerOrderCell span=\{RUNNER_COLUMN_SPAN\.status\} mono>\s*\{statusLabel\}\s*<\/RunnerOrderCell>/,
+    /<RunnerOrderCell column="status" mono>\s*\{statusLabel\}\s*<\/RunnerOrderCell>/,
   );
   assert.match(
     runnerPageSource,
@@ -255,27 +271,27 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /sortAt: item\.sortAt/);
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeading span=\{RUNNER_COLUMN_SPAN\.order\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.order\}\s*<\/RunnerColumnHeading>/,
+    /<RunnerColumnHeading column="order">\s*\{RUNNER_BOARD_COPY\.tableHeaders\.order\}\s*<\/RunnerColumnHeading>/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeading span=\{RUNNER_COLUMN_SPAN\.quantity\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.quantity\}\s*<\/RunnerColumnHeading>/,
+    /<RunnerColumnHeading column="quantity">\s*\{RUNNER_BOARD_COPY\.tableHeaders\.quantity\}\s*<\/RunnerColumnHeading>/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeading span=\{RUNNER_COLUMN_SPAN\.status\}>\s*\{RUNNER_BOARD_COPY\.tableHeaders\.status\}\s*<\/RunnerColumnHeading>/,
+    /<RunnerColumnHeading column="status">\s*\{RUNNER_BOARD_COPY\.tableHeaders\.status\}\s*<\/RunnerColumnHeading>/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerColumnHeading span=\{RUNNER_COLUMN_SPAN\.wait\} align="right">/,
+    /<RunnerColumnHeading column="wait" align="right">/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerOrderCell span=\{RUNNER_COLUMN_SPAN\.order\} mono>\s*\{row\.orderLabel\}\s*<\/RunnerOrderCell>/,
+    /<RunnerOrderCell column="order" mono>\s*\{row\.orderLabel\}\s*<\/RunnerOrderCell>/,
   );
   assert.match(
     runnerPageSource,
-    /<RunnerOrderCell span=\{RUNNER_COLUMN_SPAN\.quantity\} mono>\s*\{formatCount\(row\.itemQuantity\)\} \{RUNNER_BOARD_COPY\.itemUnit\}\s*<\/RunnerOrderCell>/,
+    /<RunnerOrderCell column="quantity" mono>\s*\{formatCount\(row\.itemQuantity\)\} \{RUNNER_BOARD_COPY\.itemUnit\}\s*<\/RunnerOrderCell>/,
   );
   assert.doesNotMatch(
     runnerPageSource,
@@ -458,10 +474,9 @@ test("Runner board uses responsive design-system text and Tailwind grid tokens",
     uiGlobalsSource,
     /grid-template-columns: 35% 20% 25% 20%;/,
   );
-  assert.match(runnerPageSource, /span === RUNNER_COLUMN_SPAN\.wait/);
-  assert.match(runnerPageSource, /"px-2 xl:px-4" : "px-4"/);
-  assert.match(runnerPageSource, /return "col-span-4"/);
-  assert.match(runnerPageSource, /return "col-span-1"/);
+  assert.match(runnerPageSource, /column === "wait"/);
+  assert.match(runnerPageSource, /"px-2 xl:px-4" : "px-2 sm:px-4"/);
+  assert.match(runnerPageSource, /RUNNER_COLUMN_CLASS\[column\]/);
   assert.match(
     runnerPageSource,
     /text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:py-4/,

@@ -1,9 +1,9 @@
 {
-  "state": "aligned",
-  "baselineFile": "supabase/migrations/20260717151345_baseline.sql",
-  "baselineVersion": "20260717151345",
-  "baselineSha256": "3b038dc7756dd6ce98f93247f4930b86d8ccf52f151de947fd054130e5119cd5",
-  "productionCutoff": "20260717151345",
-  "nativePreviewBranching": "enabled",
-  "activeForwardLimit": 20
+  "state": "blocked_pending_rebaseline",
+  "baselineFile": "supabase/migrations/20260719193932_baseline.sql",
+  "baselineVersion": "20260719193932",
+  "baselineSha256": "590c38e7938d844454879e3e488dc058e4d0ff39be0ddb03b90db41efc515005",
+  "productionCutoff": null,
+  "nativePreviewBranching": "blocked",
+  "activeForwardLimit": 3
 }

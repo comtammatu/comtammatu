@@ -3,7 +3,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR attendance checklist detail copy is local to this manager review surface */
 
 import Image from "next/image";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Image as IconImage, ListChecks as IconListChecks } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -26,6 +26,7 @@ import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -36,6 +37,7 @@ import {
   FORM_VI,
   STAFF_VI,
 } from "@comtammatu/shared/messages";
+import { formatQuantity } from "@comtammatu/shared/format";
 import {
   getVNDateString,
   getVNMonthSequenceBack,
@@ -51,10 +53,9 @@ import {
   getAttendancePhotoUrl,
   forceCloseStaleAttendance,
 } from "./actions";
-import { fetchApprovedLeaveMonth } from "./leave-request-actions";
 import type { BranchOption } from "./_types";
 import { StatusBadge } from "@/components/status-badge";
-import { AppEmptyState, AppToolbar } from "@/components/surface";
+import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { AppDialog } from "@/components/form/form-dialog";
 import {
   DataTable,
@@ -101,19 +102,7 @@ interface AttendanceSummaryRow {
   employee_code: string;
   full_name: string;
   workdays: number;
-  open: number;
-}
-
-interface ApprovedLeaveRow {
-  id: number;
-  start_date: string;
-  end_date: string;
-  leave_type: string;
-  employees: {
-    id: number;
-    employee_code: string;
-    profiles: { full_name: string } | null;
-  } | null;
+  work_hours: number;
 }
 
 interface AttendanceTableProps {
@@ -123,7 +112,6 @@ interface AttendanceTableProps {
 export function AttendanceTable({ branches }: AttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [summary, setSummary] = useState<AttendanceSummaryRow[]>([]);
-  const [leaves, setLeaves] = useState<ApprovedLeaveRow[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<number>(
     branches[0]?.id ?? 0,
   );
@@ -144,12 +132,10 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
     setSelectedBranch(branchId);
     setSelectedMonth(month);
     startTransition(async () => {
-      const [viewResult, leaveResult] = await Promise.all([
+      const viewResult =
         nextView === "summary"
-          ? fetchAttendanceSummary({ branchId, month })
-          : fetchAttendance({ branchId, month }),
-        fetchApprovedLeaveMonth({ branchId, month }),
-      ]);
+          ? await fetchAttendanceSummary({ branchId, month })
+          : await fetchAttendance({ branchId, month });
 
       if (viewResult.success) {
         if (nextView === "summary") {
@@ -161,11 +147,6 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
         toast.error(viewResult.error ?? ERRORS_VI.fallback);
       }
 
-      if (leaveResult.success) {
-        setLeaves((leaveResult.data ?? []) as ApprovedLeaveRow[]);
-      } else {
-        setLeaves([]);
-      }
     });
   }
 
@@ -190,159 +171,87 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <AppToolbar
-        filters={
-          <>
-            <Select
-              value={selectedBranch.toString()}
-              onValueChange={(value) => loadData(Number(value), selectedMonth)}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder={BRANCH_VI.select} />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={selectedMonth}
-              onValueChange={(value) => loadData(selectedBranch, value)}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {monthOptions.map((month) => (
-                  <SelectItem key={month} value={month}>
-                    {month}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        }
-        actions={
-          <>
-            <ToggleGroup
-              type="single"
-              value={view}
-              onValueChange={(value) => {
-                if (value === "clock" || value === "summary") selectView(value);
-              }}
-              aria-label={attendanceCopy.summaryView}
-            >
-              <ToggleGroupItem value="summary" size="sm">
-                {attendanceCopy.summaryView}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="clock" size="sm">
-                {attendanceCopy.clockView}
-              </ToggleGroupItem>
-            </ToggleGroup>
-            {isPending ? <Spinner /> : null}
-          </>
-        }
-      />
-      <p className="text-sm text-muted-foreground">
-        {attendanceCopy.workdayRule}
-      </p>
-
-      {view === "summary" ? (
-        <SummaryView data={summary} />
-      ) : (
-        <DetailView
-          branchId={selectedBranch}
-          data={records}
-          onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
+      <div className="flex flex-col gap-3">
+        <AppToolbar
+          filters={
+            <>
+              <Select
+                value={selectedBranch.toString()}
+                onValueChange={(value) =>
+                  loadData(Number(value), selectedMonth)
+                }
+              >
+                <SelectTrigger className="w-48" aria-label={BRANCH_VI.select}>
+                  <SelectValue placeholder={BRANCH_VI.select} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedMonth}
+                onValueChange={(value) => loadData(selectedBranch, value)}
+              >
+                <SelectTrigger className="w-40" aria-label="Tháng chấm công">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          }
+          actions={
+            <>
+              <ToggleGroup
+                type="single"
+                value={view}
+                onValueChange={(value) => {
+                  if (value === "clock" || value === "summary") {
+                    selectView(value);
+                  }
+                }}
+                aria-label={attendanceCopy.summaryView}
+              >
+                <ToggleGroupItem value="summary" size="sm">
+                  {attendanceCopy.summaryView}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="clock" size="sm">
+                  {attendanceCopy.clockView}
+                </ToggleGroupItem>
+              </ToggleGroup>
+              {isPending ? <Spinner /> : null}
+            </>
+          }
         />
-      )}
-
-      <ApprovedLeavePanel leaves={leaves} />
-    </div>
-  );
-}
-
-function formatLeaveDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split("-");
-  if (!year || !month || !day) return dateStr;
-  return `${day}/${month}/${year}`;
-}
-
-function ApprovedLeavePanel({ leaves }: { leaves: ApprovedLeaveRow[] }) {
-  if (leaves.length === 0) return null;
-
-  const leaveCopy = messages.hr.leave;
-  const columns: DataTableColumn<ApprovedLeaveRow>[] = [
-    {
-      key: "employee_code",
-      header: attendanceCopy.employeeCode,
-      className: "font-mono",
-      render: (leave) => leave.employees?.employee_code ?? "—",
-    },
-    {
-      key: "full_name",
-      header: attendanceCopy.fullName,
-      render: (leave) =>
-        leave.employees?.profiles?.full_name ?? leaveCopy.fallbackEmployee,
-    },
-    {
-      key: "range",
-      header: attendanceCopy.leaveRange,
-      className: "font-mono tabular-nums",
-      render: (leave) =>
-        leave.start_date === leave.end_date
-          ? formatLeaveDate(leave.start_date)
-          : `${formatLeaveDate(leave.start_date)} - ${formatLeaveDate(leave.end_date)}`,
-    },
-    {
-      key: "type",
-      header: attendanceCopy.leaveType,
-      render: (leave) => {
-        const typeLabel =
-          leaveCopy.types[leave.leave_type as keyof typeof leaveCopy.types] ??
-          leaveCopy.types.other;
-        return <Badge variant="outline">{typeLabel}</Badge>;
-      },
-    },
-  ];
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <p className="text-sm font-medium">{attendanceCopy.leaveTitle}</p>
-        <Badge variant="info">{attendanceCopy.leaveCount(leaves.length)}</Badge>
+        <p className="text-sm text-muted-foreground">
+          {attendanceCopy.workdayRule}
+        </p>
       </div>
-      <DataTable
-        columns={columns}
-        data={leaves}
-        getRowKey={(leave) => leave.id}
-        mobileCardRender={(leave) => {
-          const typeLabel =
-            leaveCopy.types[leave.leave_type as keyof typeof leaveCopy.types] ??
-            leaveCopy.types.other;
-          return (
-            <Item variant="outline">
-              <ItemContent>
-                <ItemTitle size="heading" className="line-clamp-none">
-                  {leave.employees?.profiles?.full_name ??
-                    leaveCopy.fallbackEmployee}
-                </ItemTitle>
-                <ItemDescription className="line-clamp-none text-sm leading-6">
-                  {leave.start_date === leave.end_date
-                    ? formatLeaveDate(leave.start_date)
-                    : `${formatLeaveDate(leave.start_date)} - ${formatLeaveDate(leave.end_date)}`}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Badge variant="outline">{typeLabel}</Badge>
-              </ItemActions>
-            </Item>
-          );
-        }}
-      />
+
+      <AppSection
+        title={messages.hr.client.attendanceTitle}
+        contentFlush
+        contentScroll
+      >
+        {view === "summary" ? (
+          <SummaryView data={summary} />
+        ) : (
+          <DetailView
+            branchId={selectedBranch}
+            data={records}
+            onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
+          />
+        )}
+      </AppSection>
     </div>
   );
 }
@@ -360,35 +269,34 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
 
   const columns: DataTableColumn<AttendanceSummaryRow>[] = [
     {
-      key: "employee_code",
-      header: attendanceCopy.employeeCode,
-      className: "font-mono",
-      render: (row) => row.employee_code,
+      key: "index",
+      header: "#",
+      className: "w-12 text-right font-mono tabular-nums",
+      render: (_, index) => index + 1,
     },
     {
-      key: "full_name",
-      header: attendanceCopy.fullName,
-      render: (row) => row.full_name,
+      key: "employee",
+      header: "Họ tên",
+      render: (row) => (
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">{row.full_name || "—"}</span>
+          <span className="font-mono text-xs text-muted-foreground">
+            {row.employee_code || "—"}
+          </span>
+        </div>
+      ),
     },
     {
       key: "workdays",
-      header: "Số công",
-      className: "text-center font-bold tabular-nums",
-      render: (row) => row.workdays,
+      header: "Số ngày công",
+      className: "text-right font-mono tabular-nums",
+      render: (row) => formatQuantity(row.workdays),
     },
     {
-      key: "open",
-      header: "Ca chưa kết",
-      className: "text-center tabular-nums",
-      render: (row) => (
-        <span
-          className={
-            row.open > 0 ? "font-medium text-warning" : "text-muted-foreground"
-          }
-        >
-          {row.open}
-        </span>
-      ),
+      key: "work_hours",
+      header: "Số giờ công",
+      className: "text-right font-mono tabular-nums",
+      render: (row) => formatQuantity(row.work_hours),
     },
   ];
 
@@ -397,21 +305,29 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
       columns={columns}
       data={data}
       getRowKey={(row) => row.employee_id}
-      mobileCardRender={(row) => (
+      mobileCardRender={(row, index) => (
         <Item variant="outline">
           <ItemContent>
             <ItemTitle size="heading" className="line-clamp-none">
-              {row.full_name}
+              {row.full_name || "—"}
             </ItemTitle>
             <ItemDescription className="line-clamp-none text-sm leading-6">
-              {row.employee_code}
+              {row.employee_code || "—"}
             </ItemDescription>
           </ItemContent>
           <ItemActions>
-            <div className="text-right">
-              <div className="font-mono text-sm font-bold">{row.workdays}</div>
-              <div className="text-xs text-muted-foreground">
-                {row.open} ca chưa kết
+            <div className="grid grid-cols-3 gap-3 text-right font-mono text-sm tabular-nums">
+              <div>
+                <div className="text-xs text-muted-foreground">#</div>
+                <div>{index + 1}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Ngày công</div>
+                <div>{formatQuantity(row.workdays)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Giờ công</div>
+                <div>{formatQuantity(row.work_hours)}</div>
               </div>
             </div>
           </ItemActions>
@@ -430,6 +346,8 @@ function DetailView({
   data: AttendanceRecord[];
   onMutated: () => void;
 }) {
+  const isTouchLayout = useIsMobile(1024);
+  const forceCloseFormId = useId();
   const [photoOpen, setPhotoOpen] = useState(false);
   const [checklistRecord, setChecklistRecord] =
     useState<AttendanceRecord | null>(null);
@@ -537,7 +455,7 @@ function DetailView({
     return <StatusBadge domain="attendance" value={record.status} />;
   }
 
-  function photoAction(record: AttendanceRecord) {
+  function photoAction(record: AttendanceRecord, touch = false) {
     const photoPending = pendingPhotoId === record.id;
     if (!record.check_in_photo_path) {
       return (
@@ -551,7 +469,8 @@ function DetailView({
       <Button
         type="button"
         variant="outline"
-        size="sm"
+        size={touch ? "touch" : "sm"}
+        className={touch ? "w-full" : undefined}
         disabled={pendingPhotoId !== null}
         onClick={() => openPhoto(record)}
       >
@@ -565,14 +484,15 @@ function DetailView({
     );
   }
 
-  function forceCloseAction(record: AttendanceRecord) {
+  function forceCloseAction(record: AttendanceRecord, touch = false) {
     if (!canForceCloseRecord(record)) return null;
 
     return (
       <Button
         type="button"
         variant="destructive"
-        size="sm"
+        size={touch ? "touch" : "sm"}
+        className={touch ? "w-full" : undefined}
         onClick={() => setClosingRecord(record)}
       >
         Đóng ca treo
@@ -649,7 +569,7 @@ function DetailView({
     {
       key: "photo",
       header: attendanceCopy.photo,
-      render: photoAction,
+      render: (record) => photoAction(record),
     },
     {
       key: "note",
@@ -660,7 +580,7 @@ function DetailView({
     {
       key: "actions",
       header: "Thao tác",
-      render: forceCloseAction,
+      render: (record) => forceCloseAction(record),
     },
   ];
 
@@ -669,6 +589,7 @@ function DetailView({
       <DataTable
         columns={columns}
         data={data}
+        pageSize={50}
         getRowKey={(record) => record.id}
         mobileCardRender={(record) => (
           <Item variant="outline">
@@ -684,6 +605,7 @@ function DetailView({
                 {recordStateBadge(record)}
                 <ChecklistProgressButton
                   record={record}
+                  touch
                   onOpen={() => setChecklistRecord(record)}
                 />
               </div>
@@ -693,10 +615,10 @@ function DetailView({
                 </p>
               ) : null}
             </ItemContent>
-            <ItemActions>
-              <div className="flex gap-2 items-center">
-                {photoAction(record)}
-                {forceCloseAction(record)}
+            <ItemActions className="basis-full">
+              <div className="flex w-full flex-col items-stretch gap-2">
+                {photoAction(record, true)}
+                {forceCloseAction(record, true)}
               </div>
             </ItemActions>
           </Item>
@@ -751,8 +673,35 @@ function DetailView({
         }}
         title="Đóng ca làm việc"
         description={`Ca làm việc của ${closingRecord?.employees?.profiles?.full_name ?? "nhân viên"} ngày ${formatVNBusinessDate(closingRecord?.date, "")} đang mở.`}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size={isTouchLayout ? "touch" : "default"}
+              onClick={() => setClosingRecord(null)}
+              disabled={isClosing}
+            >
+              Huỷ
+            </Button>
+            <Button
+              type="submit"
+              form={forceCloseFormId}
+              size={isTouchLayout ? "touch" : "default"}
+              disabled={isClosing}
+            >
+              {isClosing && <Spinner data-icon="inline-start" />}
+              Xác nhận đóng ca
+            </Button>
+          </>
+        }
+        footerClassName="pt-4"
       >
-        <form onSubmit={handleForceClose} className="flex flex-col gap-4">
+        <form
+          id={forceCloseFormId}
+          onSubmit={handleForceClose}
+          className="flex flex-col gap-4"
+        >
           <NoteCallout tone="muted">
             Việc đóng ca sẽ đặt giờ ra bằng giờ vào (0 giờ công).
           </NoteCallout>
@@ -762,21 +711,6 @@ function DetailView({
               Ghi chú (tuỳ chọn)
             </label>
             <Textarea id="note" name="note" placeholder="Lý do đóng ca..." />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setClosingRecord(null)}
-              disabled={isClosing}
-            >
-              Huỷ
-            </Button>
-            <Button type="submit" disabled={isClosing}>
-              {isClosing && <Spinner data-icon="inline-start" />}
-              Xác nhận đóng ca
-            </Button>
           </div>
         </form>
       </AppDialog>
@@ -803,9 +737,11 @@ function checklistProgress(record: AttendanceRecord) {
 
 function ChecklistProgressButton({
   record,
+  touch = false,
   onOpen,
 }: {
   record: AttendanceRecord;
+  touch?: boolean;
   onOpen: () => void;
 }) {
   const progress = checklistProgress(record);
@@ -814,7 +750,13 @@ function ChecklistProgressButton({
   }
 
   return (
-    <Button type="button" variant="outline" size="sm" onClick={onOpen}>
+    <Button
+      type="button"
+      variant="outline"
+      size={touch ? "touch" : "sm"}
+      className={touch ? "w-full" : undefined}
+      onClick={onOpen}
+    >
       {progress.requiredDone}/{progress.requiredTotal} bắt buộc ·{" "}
       {progress.done}/{progress.total}
     </Button>

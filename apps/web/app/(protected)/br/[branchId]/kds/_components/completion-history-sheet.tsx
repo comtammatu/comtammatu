@@ -137,7 +137,7 @@ export function KdsCompletionHistorySheet({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="touch"
             disabled={isPending}
             onClick={loadHistory}
           >

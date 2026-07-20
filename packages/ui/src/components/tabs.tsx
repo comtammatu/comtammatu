@@ -34,9 +34,15 @@ const tabsListVariants = cva(
         toolbar:
           "h-auto w-full justify-start gap-2 overflow-x-auto border bg-muted/30 p-2",
       },
+      size: {
+        default: "",
+        touch:
+          "group-data-horizontal/tabs:h-auto group-data-horizontal/tabs:min-h-14 p-1 [&_[data-slot=tabs-trigger]]:min-h-12",
+      },
     },
     defaultVariants: {
       variant: "default",
+      size: "default",
     },
   },
 );
@@ -44,6 +50,7 @@ const tabsListVariants = cva(
 function TabsList({
   className,
   variant = "default",
+  size = "default",
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>) {
@@ -51,7 +58,8 @@ function TabsList({
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant={variant}
-      className={cn(tabsListVariants({ variant }), className)}
+      data-size={size}
+      className={cn(tabsListVariants({ variant, size }), className)}
       {...props}
     />
   );

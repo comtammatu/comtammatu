@@ -335,8 +335,11 @@ export async function issueMissingSepayInvoices(input: unknown = {}): Promise<
     };
   }
 
-  const [activeInvoiceResult, summaryLinkResult, invoiceRequestResult] =
-    await Promise.all([
+  const [
+    activeInvoiceResult,
+    historicalAggregateLinkResult,
+    invoiceRequestResult,
+  ] = await Promise.all([
       supabase
         .from("tax_invoices")
         .select("order_id")
@@ -359,14 +362,14 @@ export async function issueMissingSepayInvoices(input: unknown = {}): Promise<
 
   if (
     activeInvoiceResult.error ||
-    summaryLinkResult.error ||
+    historicalAggregateLinkResult.error ||
     invoiceRequestResult.error
   ) {
     console.error(
       "[finance/actions:issueMissingSepayInvoices] Candidate guard lookup failed:",
       {
         activeInvoiceCode: activeInvoiceResult.error?.code,
-        summaryLinkCode: summaryLinkResult.error?.code,
+        historicalAggregateLinkCode: historicalAggregateLinkResult.error?.code,
         invoiceRequestCode: invoiceRequestResult.error?.code,
       },
     );
@@ -374,16 +377,16 @@ export async function issueMissingSepayInvoices(input: unknown = {}): Promise<
   }
 
   const activeInvoices = activeInvoiceResult.data;
-  const summaryLinks = summaryLinkResult.data;
+  const historicalAggregateLinks = historicalAggregateLinkResult.data;
 
   const invoicedOrderIds = new Set(
     (activeInvoices ?? [])
       .map((row) => row.order_id)
       .filter((id): id is number => typeof id === "number"),
   );
-  const summaryOrderIds = new Set(
+  const historicalAggregateOrderIds = new Set(
     (
-      (summaryLinks ?? []) as Array<{
+      (historicalAggregateLinks ?? []) as Array<{
         order_id: number | null;
         tax_invoices: { status: string } | null;
       }>
@@ -407,7 +410,7 @@ export async function issueMissingSepayInvoices(input: unknown = {}): Promise<
     seenOrderIds.add(payment.order_id);
     return (
       !invoicedOrderIds.has(payment.order_id) &&
-      !summaryOrderIds.has(payment.order_id)
+      !historicalAggregateOrderIds.has(payment.order_id)
     );
   });
 
@@ -495,7 +498,7 @@ export async function issueMissingSepayInvoices(input: unknown = {}): Promise<
       issued += 1;
     } else if (
       result.errorCode === "invoice_exists" ||
-      result.errorCode === "summary_invoice_exists"
+      result.errorCode === "historical_aggregate_invoice_exists"
     ) {
       skipped += 1;
     } else {
@@ -547,7 +550,8 @@ const manualInvoiceLookupSchema = z.object({
  * the wrong branch's order and issue an HĐĐT against a stranger's bill. This
  * NEVER mutates; issuance runs through createTaxInvoice, which re-checks every
  * guard. The preview only lets the operator confirm the right order and see
- * ineligibility (already invoiced / folded into a B2C summary / unpaid) early.
+ * ineligibility (already invoiced / linked to a historical aggregate / unpaid)
+ * early.
  */
 export async function resolveOrderForManualInvoice(
   input: z.infer<typeof manualInvoiceLookupSchema>,
@@ -618,14 +622,14 @@ export async function resolveOrderForManualInvoice(
     existingInvoice?.status === "draft" && !existingInvoice.invoice_number;
   const hasActiveInvoice = existingInvoice != null && !isDraftRetry;
 
-  // B2C daily-summary fold — mirror createTaxInvoice's junction check so the
-  // preview surfaces the summary date before the operator hits the block.
-  const { data: summaryLinks } = await supabase
+  // Historical aggregate guard — mirror createTaxInvoice's junction check so
+  // the preview surfaces the invoice date before the operator hits the block.
+  const { data: aggregateLinks } = await supabase
     .from("tax_invoice_orders")
     .select("tax_invoices(summary_date, status)")
     .eq("order_id", order.id)
     .eq("tenant_id", claims.tenant_id);
-  const summaryInvoice = (summaryLinks ?? [])
+  const historicalAggregateInvoice = (aggregateLinks ?? [])
     .map(
       (l) =>
         l.tax_invoices as unknown as {
@@ -650,8 +654,13 @@ export async function resolveOrderForManualInvoice(
       existingInvoiceNumber: existingInvoice?.invoice_number ?? null,
       isDraftRetry: Boolean(isDraftRetry),
       hasActiveItems,
-      summaryDate: summaryInvoice?.summary_date ?? null,
-      issuable: paid && hasActiveItems && !hasActiveInvoice && !summaryInvoice,
+      historicalAggregateDate:
+        historicalAggregateInvoice?.summary_date ?? null,
+      issuable:
+        paid &&
+        hasActiveItems &&
+        !hasActiveInvoice &&
+        !historicalAggregateInvoice,
     },
   };
 }
@@ -800,7 +809,7 @@ export async function cancelTaxInvoice(
 const TAX_INVOICE_LIST_SELECT = `
   id, order_id, invoice_number, status, buyer_name, buyer_tax_code, buyer_email,
   subtotal, vat_rate, vat_amount, total_amount,
-  issued_at, cancelled_at, archived_at, created_at
+  issued_at, cancelled_at, created_at
 ` as const;
 
 const TAX_INVOICE_PAGE_SIZE = 50;

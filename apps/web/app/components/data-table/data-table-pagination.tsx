@@ -14,6 +14,7 @@ interface DataTablePaginationProps {
   totalItems: number;
   onPageChange: (page: number) => void;
   className?: string;
+  touch?: boolean;
 }
 
 export function DataTablePagination({
@@ -22,6 +23,7 @@ export function DataTablePagination({
   totalItems,
   onPageChange,
   className,
+  touch = false,
 }: DataTablePaginationProps) {
   const totalPages = Math.ceil(totalItems / pageSize);
   if (totalPages <= 1) return null;
@@ -42,7 +44,7 @@ export function DataTablePagination({
       <div className="flex items-center gap-1">
         <Button
           variant="outline"
-          size="icon-sm"
+          size={touch ? "icon-touch" : "icon-sm"}
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
           aria-label={ACTIONS_VI.prevPage}
@@ -54,7 +56,7 @@ export function DataTablePagination({
         </span>
         <Button
           variant="outline"
-          size="icon-sm"
+          size={touch ? "icon-touch" : "icon-sm"}
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
           aria-label={ACTIONS_VI.nextPage}

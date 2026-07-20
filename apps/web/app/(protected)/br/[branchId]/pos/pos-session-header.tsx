@@ -125,6 +125,7 @@ function PosMoreMenu({
       />
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem
+          className="min-h-12 text-sm"
           render={
             <Link href={`/br/${branchId}`}>
               <IconDoorEnter />
@@ -133,7 +134,10 @@ function PosMoreMenu({
           }
         />
 
-        <DropdownMenuItem onClick={toggleSound}>
+        <DropdownMenuItem
+          className="min-h-12 text-sm"
+          onClick={toggleSound}
+        >
           {audioMode === "off" ? (
             <IconVolumeX />
           ) : audioMode === "beep" ? (
@@ -150,14 +154,14 @@ function PosMoreMenu({
                 : "Âm báo POS: chuông + đọc"}
         </DropdownMenuItem>
 
-        <ThemeMenuItem />
+        <ThemeMenuItem className="min-h-12 text-sm" />
 
         {canCloseShift ? (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={onShowCloseSession}
-              className="text-destructive focus:text-destructive"
+              className="min-h-12 text-sm text-destructive focus:text-destructive"
             >
               <IconPowerOff />
               {messages.pos.sessionHeader.closeShift}

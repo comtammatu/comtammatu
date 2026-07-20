@@ -183,9 +183,8 @@ async function PosDesktopData({
   // route revalidation that re-runs page.tsx, and `fetchActiveOrders` was a
   // ~200ms hot-path tax with no real win (provider's realtime channel keeps
   // the list authoritative within sub-second of any mutation). The provider
-  // sees `initialOrdersSeeded=false`, so its first SUBSCRIBED callback fires
-  // one `refreshAll` to populate the list (~200ms after hydrate). Cold load
-  // shows the POS shell with empty Orders panel for that brief window.
+  // sees `initialOrdersSeeded=false`, loads the first snapshot immediately,
+  // and keeps the POS behind loading/error recovery until that read succeeds.
   const initialOrders: SessionOrder[] = [];
   const initialOrdersSeeded = false;
 
@@ -198,7 +197,22 @@ async function PosDesktopData({
       ? vietQrConfigResult.data
       : null;
 
-  const tablesList = (tablesResult.data ?? []) as BranchTable[];
+  if (!tablesResult.success || !tablesResult.data) {
+    return (
+      <PosStatusPanel
+        icon={<IconDeviceDesktop />}
+        title={POS_VI.shellTablesErrorTitle}
+        description={POS_VI.shellTablesErrorFallback}
+        badge={{
+          label: POS_VI.shellTablesErrorBadge,
+          icon: <IconAlertTriangle className="size-3.5" />,
+          variant: "warning",
+        }}
+      />
+    );
+  }
+
+  const tablesList = tablesResult.data as BranchTable[];
   const tableParamValidForDineIn =
     initialTableId != null &&
     tablesList.some((t) => t.id === initialTableId && t.status === "available");

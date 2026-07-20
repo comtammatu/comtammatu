@@ -13,6 +13,7 @@ import { formatCount } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -336,6 +337,7 @@ export function PosDesktopInner({
       paymentRequests: [],
     },
   );
+  const [selfOrderSyncFailed, setSelfOrderSyncFailed] = useState(false);
   const [selectedSelfOrderRequestId, setSelectedSelfOrderRequestId] = useState<
     number | null
   >(null);
@@ -387,7 +389,11 @@ export function PosDesktopInner({
     const generation = selfOrderLoadGenerationRef.current + 1;
     selfOrderLoadGenerationRef.current = generation;
     const result = await fetchSelfOrderPosState(branchId).catch(() => null);
-    if (generation !== selfOrderLoadGenerationRef.current || !result?.success) {
+    if (generation !== selfOrderLoadGenerationRef.current) {
+      return;
+    }
+    if (!result?.success) {
+      setSelfOrderSyncFailed(true);
       return;
     }
 
@@ -418,6 +424,7 @@ export function PosDesktopInner({
     }
     knownSelfOrderRequestIdsRef.current = nextRequestIds;
     knownSelfOrderPaymentRequestIdsRef.current = nextPaymentIds;
+    setSelfOrderSyncFailed(false);
     setSelfOrderPosState(nextState);
   }, [audioMode, branchId]);
 
@@ -442,6 +449,22 @@ export function PosDesktopInner({
   const refreshSelfOrderWorkflow = useCallback(async () => {
     await Promise.all([refreshSelfOrderPosState(), refreshOperational()]);
   }, [refreshOperational, refreshSelfOrderPosState]);
+
+  const selfOrderActionVisible =
+    selfOrderSyncFailed || selfOrderPosState.requests.length > 0;
+  const handleOpenSelfOrderApproval = useCallback(() => {
+    if (selfOrderSyncFailed && selfOrderPosState.requests.length === 0) {
+      void refreshSelfOrderPosState();
+      return;
+    }
+    if (selfOrderSyncFailed) void refreshSelfOrderPosState();
+    setSelectedSelfOrderRequestId(null);
+    setSelfOrderApprovalOpen(true);
+  }, [
+    refreshSelfOrderPosState,
+    selfOrderPosState.requests.length,
+    selfOrderSyncFailed,
+  ]);
 
   // Clear selected table if it becomes unavailable while in dine-in mode.
   // Skip the clear when the user explicitly opted into an occupied table
@@ -715,8 +738,20 @@ export function PosDesktopInner({
     [menuItemById],
   );
 
-  const cancelAppendWorkflow = useCallback(() => {
+  const cancelAppendWorkflow = useCallback(async () => {
     if (appendTarget == null) return;
+
+    if (appendDraftItems.length > 0) {
+      const confirmed = await confirm({
+        title: messages.pos.appendDraft.cancelTitle,
+        description:
+          messages.pos.appendDraft.cancelDescription(appendDraftQuantity),
+        confirmText: messages.pos.appendDraft.cancel,
+        cancelText: messages.pos.appendDraft.keep,
+        variant: "destructive",
+      });
+      if (!confirmed) return;
+    }
 
     const target = appendTarget;
     setAppendDraftItems([]);
@@ -728,6 +763,8 @@ export function PosDesktopInner({
     releaseDailyLimitHoldToken("pos_append");
     focusOrderWorkflow(target.orderId, target.orderNumber);
   }, [
+    appendDraftItems.length,
+    appendDraftQuantity,
     appendTarget,
     clearAppendTarget,
     focusOrderWorkflow,
@@ -1634,6 +1671,33 @@ export function PosDesktopInner({
     </Drawer>
   ) : null;
 
+  const desktopSelfOrderAction = selfOrderActionVisible ? (
+    <Button
+      type="button"
+      variant="outline"
+      size="touch"
+      className="w-full max-w-80"
+      onClick={handleOpenSelfOrderApproval}
+      aria-label={
+        selfOrderSyncFailed && selfOrderPosState.requests.length === 0
+          ? messages.pos.selfOrderSync.retry
+          : undefined
+      }
+    >
+      <IconBell data-icon="inline-start" />
+      <span>
+        {selfOrderSyncFailed && selfOrderPosState.requests.length === 0
+          ? messages.pos.selfOrderSync.failed
+          : SELF_ORDER_VI.staffApprove}
+      </span>
+      {selfOrderPosState.requests.length > 0 ? (
+        <Badge variant="warning">
+          {formatCount(selfOrderPosState.requests.length)}
+        </Badge>
+      ) : null}
+    </Button>
+  ) : undefined;
+
   // POS stays touch-first through tablet widths. The desktop split pane starts
   // at xl so tablet portrait/landscape keeps the drawer + sticky CTA workflow.
   const sidebars = isTouchLayout ? null : (
@@ -1642,12 +1706,13 @@ export function PosDesktopInner({
       onShowCloseSession={openCloseSession}
       isContextGate={!menuContextReady}
       sidebarContentProps={sidebarContentProps}
+      sessionAction={desktopSelfOrderAction}
     />
   );
 
   return (
     <>
-      <div className="xl:hidden">
+      {isTouchLayout ? (
         <PosSessionTopBar
           canCloseShift={canCloseShift}
           onShowCloseSession={openCloseSession}
@@ -1660,7 +1725,7 @@ export function PosDesktopInner({
                 : undefined
           }
         />
-      </div>
+      ) : null}
 
       {!menuContextReady ? (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
@@ -1670,6 +1735,7 @@ export function PosDesktopInner({
                 orders={orders}
                 onCreateNew={handleCreateTakeawayOrder}
                 onViewDetail={openDetail}
+                hasStackedTouchActions={selfOrderActionVisible}
                 headerAction={serviceModeSelector}
                 className="min-h-0 flex-1"
               />
@@ -1681,6 +1747,7 @@ export function PosDesktopInner({
                 orderCountByTable={orderCountByTable}
                 tableOrderVisualStateByTable={tableOrderVisualStateByTable}
                 pendingSelfOrderTableIds={pendingSelfOrderTableIds}
+                hasStackedTouchActions={selfOrderActionVisible}
                 headerAction={serviceModeSelector}
                 className="min-h-0 flex-1"
               />
@@ -1695,32 +1762,13 @@ export function PosDesktopInner({
             <MenuPane
               categories={categories}
               dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
+              hasStackedTouchActions={selfOrderActionVisible}
               onItemTap={handleItemTap}
             />
           </div>
           {sidebars}
         </div>
       )}
-
-      <Button
-        type="button"
-        variant="outline"
-        size="touch"
-        className="fixed right-3 bottom-20 z-40 lg:bottom-4"
-        disabled={selfOrderPosState.requests.length === 0}
-        onClick={() => {
-          setSelectedSelfOrderRequestId(null);
-          setSelfOrderApprovalOpen(true);
-        }}
-      >
-        <IconBell data-icon="inline-start" />
-        <span>{SELF_ORDER_VI.staffApprove}</span>
-        {selfOrderPosState.requests.length > 0 ? (
-          <Badge variant="warning">
-            {formatCount(selfOrderPosState.requests.length)}
-          </Badge>
-        ) : null}
-      </Button>
 
       <PosMobileActionBar
         isTouchLayout={isTouchLayout}
@@ -1733,6 +1781,8 @@ export function PosDesktopInner({
         isSubmittingNewOrder={isPending}
         canSubmitAppendDraft={appendDraftQuantity > 0 && !appendSubmitting}
         isSubmittingAppendDraft={appendSubmitting}
+        selfOrderRequestCount={selfOrderPosState.requests.length}
+        selfOrderSyncFailed={selfOrderSyncFailed}
         onOpenOrdersDrawer={() => {
           setShowOrders(true);
           void refreshOrders();
@@ -1749,6 +1799,7 @@ export function PosDesktopInner({
         onSubmitNewOrder={() => handleSubmitOrder()}
         onSubmitAppendDraft={handleSubmitAppendDraft}
         onCancelAppend={cancelAppendWorkflow}
+        onOpenSelfOrderApproval={handleOpenSelfOrderApproval}
       />
       <SelfOrderApprovalSheet
         open={selfOrderApprovalOpen}

@@ -6,7 +6,6 @@ import { useMemo, useState, useTransition } from "react";
 import { z } from "zod";
 import {
   ArrowRightLeft as IconSwap,
-  Download as IconDownload,
   FileEdit as IconFileEdit,
   FileX as IconFileX,
   Receipt as IconReceipt,
@@ -18,6 +17,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
 import {
@@ -28,8 +28,6 @@ import {
   reissueAllDraftInvoices,
 } from "./actions";
 import type { TaxInvoiceCursor } from "./actions";
-import { forceResyncTaxInvoice } from "./reconcile-invoice-actions";
-import { getArchiveDownloadUrl } from "./archive-actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
 import { correctPaymentMethod } from "./payment-method-actions";
 import { ManualIssueInvoiceDialog } from "./manual-issue-invoice-dialog";
@@ -58,10 +56,6 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
 import { StatusBadge } from "@/components/status-badge";
-
-function isResyncable(status: string): boolean {
-  return status === "signing" || status === "submitted";
-}
 
 function formatDate(iso: string): string {
   return formatVNDateTime(iso);
@@ -151,6 +145,7 @@ export function InvoiceList({
   canIssueInvoices = false,
   branches = [],
 }: InvoiceListProps) {
+  const isTouchLayout = useIsMobile(1024);
   const [invoices, setInvoices] = useState(initialInvoices);
   const [manualIssueOpen, setManualIssueOpen] = useState(false);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -167,7 +162,6 @@ export function InvoiceList({
     useState<CorrectablePaymentMethod | null>(null);
   const [methodFixReason, setMethodFixReason] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [resyncingId, setResyncingId] = useState<number | null>(null);
   const [reissuingId, setReissuingId] = useState<number | null>(null);
   const [sepayRecoveryAfterEventId, setSepayRecoveryAfterEventId] = useState<
     number | null
@@ -293,52 +287,6 @@ export function InvoiceList({
       }
       toast.success(messages.finance.invoiceList.methodFixSuccess);
       resetMethodFixDialog();
-    });
-  }
-
-  function handleDownload(inv: InvoiceRow, kind: "pdf" | "xml") {
-    startTransition(async () => {
-      const result = await getArchiveDownloadUrl(inv.id, kind);
-      if (!result.success) {
-        toast.error(result.error ?? `Không tải được ${kind.toUpperCase()}`);
-        return;
-      }
-      const url = (result.data as { url?: string } | null)?.url;
-      if (!url) {
-        toast.error(FINANCE_VI.invalidDownloadLink);
-        return;
-      }
-      // Open signed URL in a new tab — TTL 5 min, browser handles
-      // the actual download via Content-Disposition.
-      window.open(url, "_blank", "noopener,noreferrer");
-    });
-  }
-
-  function handleResync(inv: InvoiceRow) {
-    setResyncingId(inv.id);
-    startTransition(async () => {
-      try {
-        const result = await forceResyncTaxInvoice(inv.id);
-        if (!result.success) {
-          toast.error(result.error ?? FINANCE_VI.syncFailed);
-          return;
-        }
-        const outcome =
-          (result.data as { outcome?: string } | null)?.outcome ?? "no_change";
-        if (outcome === "transition") {
-          toast.success(FINANCE_VI.syncedStatusUpdated);
-        } else if (outcome === "no_change") {
-          toast.info(FINANCE_VI.syncNoUpdate);
-        } else if (outcome === "race_lost") {
-          toast.warning(FINANCE_VI.syncStatusChangedReload);
-        } else if (outcome === "giveup_24h") {
-          toast.warning(FINANCE_VI.syncExpiredCancelled);
-        } else {
-          toast.error(`Đồng bộ thất bại: ${outcome}`);
-        }
-      } finally {
-        setResyncingId(null);
-      }
     });
   }
 
@@ -505,47 +453,15 @@ export function InvoiceList({
 
   function renderActions(inv: InvoiceRow, variant: "card" | "table") {
     const dense = variant === "table";
-    const size = dense ? "icon" : "sm";
+    const size = dense ? "icon" : "touch";
     return (
       <div
         className={
           dense
             ? "flex items-center justify-end gap-1"
-            : "flex items-center gap-2"
+            : "flex flex-wrap items-center justify-end gap-2"
         }
       >
-        {inv.archived_at ? (
-          <>
-            <Button
-              variant="ghost"
-              size={size}
-              onClick={() => handleDownload(inv, "pdf")}
-              disabled={isPending}
-              title={FINANCE_VI.downloadPdf}
-            >
-              <IconDownload className="size-4" />
-              {dense ? (
-                <span className="sr-only">{FINANCE_VI.downloadPdf}</span>
-              ) : (
-                "PDF"
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size={size}
-              onClick={() => handleDownload(inv, "xml")}
-              disabled={isPending}
-              title={FINANCE_VI.downloadXml}
-            >
-              <IconDownload className="size-4" />
-              {dense ? (
-                <span className="sr-only">{FINANCE_VI.downloadXml}</span>
-              ) : (
-                "XML"
-              )}
-            </Button>
-          </>
-        ) : null}
         {canManageInvoices && inv.status === "draft" ? (
           <Button
             variant="ghost"
@@ -561,26 +477,6 @@ export function InvoiceList({
               </span>
             ) : (
               messages.finance.invoiceList.reissue
-            )}
-          </Button>
-        ) : null}
-        {canManageInvoices && isResyncable(inv.status) ? (
-          <Button
-            variant="ghost"
-            size={size}
-            onClick={() => handleResync(inv)}
-            disabled={isPending && resyncingId === inv.id}
-            title={FINANCE_VI.resyncWithProvider}
-          >
-            {isPending && resyncingId === inv.id ? (
-              <Spinner className="size-4" />
-            ) : (
-              <IconRefreshCw className="size-4" />
-            )}
-            {dense ? (
-              <span className="sr-only">{FINANCE_VI.resync}</span>
-            ) : (
-              FINANCE_VI.sync
             )}
           </Button>
         ) : null}
@@ -701,7 +597,7 @@ export function InvoiceList({
             {canIssueInvoices ? (
               <Button
                 variant="outline"
-                size="sm"
+                size={isTouchLayout ? "touch" : "sm"}
                 onClick={() => setManualIssueOpen(true)}
                 disabled={isPending}
               >
@@ -712,7 +608,7 @@ export function InvoiceList({
             {canManageInvoices ? (
               <Button
                 variant="outline"
-                size="sm"
+                size={isTouchLayout ? "touch" : "sm"}
                 onClick={handleConfirmIssueMissingSepay}
                 disabled={isPending}
               >
@@ -725,7 +621,7 @@ export function InvoiceList({
             {canManageInvoices && draftCount > 0 ? (
               <Button
                 variant="outline"
-                size="sm"
+                size={isTouchLayout ? "touch" : "sm"}
                 onClick={handleConfirmReissueAll}
                 disabled={isPending}
               >
@@ -742,10 +638,10 @@ export function InvoiceList({
           emptyTitle={FINANCE_VI.emptyNoInvoices}
           emptyIcon={<IconReceipt />}
           mobileCardRender={(inv) => (
-            <Item variant="outline" className="flex-col items-stretch">
-              <ItemHeader className="items-start">
-                <div>
-                  <p className="font-mono text-sm">
+            <Item variant="outline" className="min-w-0 flex-col items-stretch">
+              <ItemHeader className="w-full items-start">
+                <div className="min-w-0">
+                  <p className="break-all font-mono text-sm">
                     {inv.invoice_number ?? "—"}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -754,7 +650,7 @@ export function InvoiceList({
                 </div>
                 <StatusBadge domain="tax-invoice" value={inv.status} />
               </ItemHeader>
-              <ItemContent className="mt-4">
+              <ItemContent className="mt-4 w-full">
                 <DescriptionList
                   items={[
                     {
@@ -781,7 +677,7 @@ export function InvoiceList({
                   ]}
                 />
               </ItemContent>
-              <ItemFooter className="mt-4">
+              <ItemFooter className="mt-4 w-full flex-col items-stretch sm:flex-row sm:items-center">
                 <p className="text-xs text-muted-foreground">
                   {formatDate(inv.issued_at ?? inv.created_at)}
                 </p>
@@ -795,7 +691,7 @@ export function InvoiceList({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size={isTouchLayout ? "touch" : "sm"}
               onClick={handleLoadMore}
               disabled={loadingMore}
             >
@@ -884,7 +780,7 @@ export function InvoiceList({
                   key={m}
                   type="button"
                   variant={methodFixMethod === m ? "default" : "outline"}
-                  size="sm"
+                  size="touch"
                   onClick={() => setMethodFixMethod(m)}
                   disabled={isPending}
                 >

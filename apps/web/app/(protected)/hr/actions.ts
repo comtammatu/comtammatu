@@ -20,6 +20,7 @@ import { messages } from "@lib/messages";
 import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
+import { calculateAttendanceWorkHours } from "./attendance-summary";
 
 const HR_ROLES: readonly StaffRole[] = ["owner"];
 const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = [
@@ -1161,7 +1162,7 @@ export const fetchAttendanceSummary = withAction(
       .from("attendance_records")
       .select(
         `
-      employee_id, date, check_out,
+      employee_id, date, check_in, check_out,
       employees (
         id, employee_code,
         profiles ( full_name )
@@ -1184,8 +1185,7 @@ export const fetchAttendanceSummary = withAction(
       };
     }
 
-    // Per-shift attendance (D027): each closed shift contributes 0.5 workday;
-    // open shifts are tracked separately until checkout.
+    // Per-shift attendance (D027): only closed shifts contribute workdays/hours.
     const summaryMap = new Map<
       number,
       {
@@ -1193,7 +1193,7 @@ export const fetchAttendanceSummary = withAction(
         employee_code: string;
         full_name: string;
         days: Map<string, number>;
-        open: number;
+        work_hours: number;
       }
     >();
 
@@ -1210,14 +1210,16 @@ export const fetchAttendanceSummary = withAction(
           employee_code: emp?.employee_code ?? "",
           full_name: emp?.profiles?.full_name ?? "",
           days: new Map(),
-          open: 0,
+          work_hours: 0,
         });
       }
       const s = summaryMap.get(empId)!;
       if (record.check_out) {
         s.days.set(record.date, (s.days.get(record.date) ?? 0) + 1);
-      } else {
-        s.open++;
+        s.work_hours += calculateAttendanceWorkHours(
+          record.check_in,
+          record.check_out,
+        );
       }
     }
 
@@ -1231,7 +1233,7 @@ export const fetchAttendanceSummary = withAction(
         employee_code: s.employee_code,
         full_name: s.full_name,
         workdays,
-        open: s.open,
+        work_hours: s.work_hours,
       };
     });
 

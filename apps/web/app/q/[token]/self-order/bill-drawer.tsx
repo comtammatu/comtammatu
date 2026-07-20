@@ -98,7 +98,7 @@ export function BillDrawer({
           </div>
         </ScrollArea>
         {!paymentView && order?.totalAmount != null ? (
-          <SheetFooter className="workflow-safe-pb shrink-0">
+          <SheetFooter className="shrink-0">
             <div className="flex flex-col gap-1.5 text-sm">
               <p className="font-semibold">{SELF_ORDER_VI.total}</p>
               <div className="flex items-center justify-between gap-3">

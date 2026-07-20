@@ -29,7 +29,7 @@ export default async function KdsLayout({
   const { branchId } = await params;
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation">
+    <main className="chrome-safe-pt flex h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation">
       <OperationalPwaProvider>
         <KdsPwaToolbar branchId={branchId} />
         {children}

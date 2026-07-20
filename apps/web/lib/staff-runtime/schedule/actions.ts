@@ -8,9 +8,11 @@ import {
 } from "@comtammatu/shared/time";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 import {
-  countOverlapDays,
-  suggestAnnualLeaveEntitlement,
-} from "../_lib/workday-math";
+  calculateAnnualLeaveUsedThroughMonth,
+  calculateMonthlyLeaveUsedInMonth,
+  type LeaveRange,
+} from "@lib/hr/payroll-day-math";
+import { fetchTenantHrLeavePolicy } from "@lib/hr/leave-policy-data";
 
 const monthStartSchema = z
   .string()
@@ -39,11 +41,18 @@ export interface ScheduleAnnualLeaveBalance {
   remainingDays: number;
 }
 
+export interface ScheduleMonthlyLeaveBalance {
+  entitlementDays: number;
+  usedDays: number;
+  remainingDays: number;
+}
+
 export interface ScheduleMonthData {
   attendance: ScheduleAttendance[];
   leaves: ScheduleLeave[];
   annualLeaveBalance: ScheduleAnnualLeaveBalance | null;
-  monthlyAnnualLeaveDays: number;
+  monthlyLeaveBalance: ScheduleMonthlyLeaveBalance | null;
+  standardWorkdays: number;
 }
 
 export async function fetchMySchedule(
@@ -80,6 +89,7 @@ export async function fetchMySchedule(
     leaveResult,
     entitlementResult,
     approvedAnnualLeaveResult,
+    policyResult,
   ] = await Promise.all([
     supabase
       .from("attendance_records")
@@ -117,13 +127,18 @@ export async function fetchMySchedule(
       .eq("status", "approved")
       .lte("start_date", yearEndDate)
       .gte("end_date", yearStartDate),
+    fetchTenantHrLeavePolicy({
+      supabase,
+      tenantId: claims.tenant_id,
+    }),
   ]);
 
   if (
     attendanceResult.error ||
     leaveResult.error ||
     entitlementResult.error ||
-    approvedAnnualLeaveResult.error
+    approvedAnnualLeaveResult.error ||
+    !policyResult.success
   ) {
     return { success: false, error: "Không tải được lịch ca." };
   }
@@ -160,43 +175,59 @@ export async function fetchMySchedule(
         ]
       : [],
   );
-  let monthlyAnnualLeaveDays = 0;
-  for (const leave of leaveResult.data ?? []) {
-    if (leave.status !== "approved" || leave.leave_type !== "annual") continue;
-    monthlyAnnualLeaveDays += countOverlapDays(
-      leave.start_date,
-      leave.end_date,
-      parsed.data,
-      monthEndDate,
-    );
-  }
-
-  const entitlementDays = Number(
-    entitlementResult.data?.entitlement_days ??
-      suggestAnnualLeaveEntitlement(ctx.startDate, monthParts.year),
-  );
-  let usedDays = 0;
-  for (const leave of approvedAnnualLeaveResult.data ?? []) {
-    usedDays += countOverlapDays(
-      leave.start_date,
-      leave.end_date,
-      yearStartDate,
-      yearEndDate,
-    );
-  }
+  const policy = policyResult.data;
+  const entitlementDays =
+    entitlementResult.data?.entitlement_days == null
+      ? null
+      : Number(entitlementResult.data.entitlement_days);
+  const approvedAnnualLeaves: LeaveRange[] = (
+    approvedAnnualLeaveResult.data ?? []
+  ).map((leave) => ({
+    employeeId,
+    startDate: leave.start_date,
+    endDate: leave.end_date,
+    leaveType: "annual",
+  }));
+  const monthlyLeaveUsedDays = calculateMonthlyLeaveUsedInMonth({
+    leaves: approvedAnnualLeaves,
+    year: monthParts.year,
+    month: monthParts.month,
+    monthlyLeaveDays: policy.monthlyLeaveDays,
+  });
+  const usedDays =
+    entitlementDays == null
+      ? 0
+      : calculateAnnualLeaveUsedThroughMonth({
+          leaves: approvedAnnualLeaves,
+          entitlementDays,
+          monthlyLeaveDays: policy.monthlyLeaveDays,
+          year: monthParts.year,
+          throughMonth: monthParts.month,
+        });
 
   return {
     success: true,
     data: {
       attendance,
       leaves,
-      annualLeaveBalance: {
-        year: monthParts.year,
-        entitlementDays,
-        usedDays,
-        remainingDays: Math.max(0, entitlementDays - usedDays),
+      annualLeaveBalance:
+        entitlementDays == null
+          ? null
+          : {
+              year: monthParts.year,
+              entitlementDays,
+              usedDays,
+              remainingDays: Math.max(0, entitlementDays - usedDays),
+            },
+      monthlyLeaveBalance: {
+        entitlementDays: policy.monthlyLeaveDays,
+        usedDays: monthlyLeaveUsedDays,
+        remainingDays: Math.max(
+          0,
+          policy.monthlyLeaveDays - monthlyLeaveUsedDays,
+        ),
       },
-      monthlyAnnualLeaveDays,
+      standardWorkdays: policy.standardWorkdays,
     },
   };
 }

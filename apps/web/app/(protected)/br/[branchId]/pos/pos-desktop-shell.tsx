@@ -21,10 +21,8 @@ interface PosDesktopShellProps {
   /** Orders prefetched by RSC. Seeds provider state to skip mount-time refetch. */
   initialOrders: SessionOrder[];
   /**
-   * True when RSC `fetchSessionOrders` succeeded. Lets the realtime hook skip
-   * its first SUBSCRIBED catch-up refresh (already covered by the RSC seed).
-   * False when RSC fetch failed → fall back to old behavior, first SUBSCRIBED
-   * fires a full refresh as recovery.
+   * True when `initialOrders` is authoritative. Otherwise the provider loads
+   * the first snapshot immediately and gates the POS behind recovery UI.
    */
   initialOrdersSeeded: boolean;
   /** Optional deep link from durable notifications: /pos?order=<id>. */
@@ -67,6 +65,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
 
   return (
     <PosDesktopProvider
+      key={`${String(props.branchId)}:${String(props.session.id)}`}
       branchId={props.branchId}
       session={props.session}
       initialTables={props.tables}

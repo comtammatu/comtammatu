@@ -30,9 +30,10 @@ function parseMonth(value: string | undefined) {
   return { year, month };
 }
 
-function parseStandardDays(value: string | undefined): number {
-  const days = Number(value ?? 26);
-  return Number.isFinite(days) && days > 0 && days <= 31 ? days : 26;
+function parseStandardDays(value: string | undefined): number | undefined {
+  if (value == null) return undefined;
+  const days = Number(value);
+  return Number.isFinite(days) && days > 0 && days <= 31 ? days : undefined;
 }
 
 function parseBranchId(value: string | undefined): number | null {
@@ -62,7 +63,7 @@ export default async function PayrollPage({
         title={copy.live.title}
         description={copy.live.description}
         actions={
-          <Button variant="outline" size="sm" render={<Link href="/hr" />}>
+          <Button variant="outline" size="touch" render={<Link href="/hr" />}>
             {copy.backToHr}
           </Button>
         }

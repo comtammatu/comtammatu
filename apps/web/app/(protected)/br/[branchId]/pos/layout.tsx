@@ -31,7 +31,7 @@ export default async function PosLayout({
   return (
     <main
       id="main-content"
-      className="flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background md:min-h-screen"
+      className="chrome-safe-pt flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background md:min-h-screen"
     >
       <PosPwaProvider>
         <PosPwaToolbar branchId={branchId} />

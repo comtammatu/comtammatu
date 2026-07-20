@@ -179,11 +179,11 @@ export function BranchConsumptionListClient({
           setStatus("all");
         }}
       >
-        <TabsList className="grid min-h-12 w-full grid-cols-2">
-          <TabsTrigger value="recorded" className="min-h-11">
+        <TabsList size="touch" className="grid w-full grid-cols-2">
+          <TabsTrigger value="recorded">
             {INVENTORY_VI.recordedConsumptionTitle}
           </TabsTrigger>
-          <TabsTrigger value="manual" className="min-h-11">
+          <TabsTrigger value="manual">
             {INVENTORY_VI.manualConsumptionSlipsTitle}
           </TabsTrigger>
         </TabsList>
@@ -253,7 +253,11 @@ export function BranchConsumptionListClient({
               </SelectTrigger>
               <SelectContent>
                 {statusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    size="touch"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -421,7 +425,7 @@ export function BranchConsumptionListClient({
               />
             </FormField>
           </div>
-          <SheetFooter className="workflow-safe-pb">
+          <SheetFooter>
             <Button
               type="button"
               variant="outline"
@@ -494,7 +498,7 @@ export function BranchConsumptionListClient({
                   ]}
                 />
               </div>
-              <SheetFooter className="workflow-safe-pb">
+              <SheetFooter>
                 {selectedMovement.issueId != null ? (
                   <Button
                     size="touch-lg"

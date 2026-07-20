@@ -316,7 +316,7 @@ export function MembersClient({
     <>
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-col gap-2 border-b pb-3">
-          <InputGroup className="h-11">
+          <InputGroup size="touch">
             <InputGroupAddon>
               <Search aria-hidden />
             </InputGroupAddon>

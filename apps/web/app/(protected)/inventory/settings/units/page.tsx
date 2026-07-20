@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPageHeader } from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { UNITS_MASTER_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { messages } from "@lib/messages";
@@ -28,7 +28,14 @@ export default async function InventoryUnitsPage() {
         description={copy.page.description}
       />
 
-      <UnitsClient rows={rows} />
+      {res.success ? (
+        <UnitsClient rows={rows} />
+      ) : (
+        <AppEmptyState
+          mode="error"
+          title={messages.inventory.settings.units.loadFailed}
+        />
+      )}
     </div>
   );
 }

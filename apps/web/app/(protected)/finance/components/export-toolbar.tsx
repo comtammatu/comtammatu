@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Copy, Download } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { messages } from "@lib/messages";
 import { formatVNDateTime } from "@/_lib/format-datetime";
@@ -102,6 +103,7 @@ export function FinanceExportActions({
   disabled,
 }: FinanceExportActionsProps) {
   const [copyState, setCopyState] = useState<CopyState>("idle");
+  const isTouchLayout = useIsMobile(1024);
 
   function handleDownload() {
     const csv = buildCsv(signature, sections);
@@ -138,10 +140,10 @@ export function FinanceExportActions({
         : exportCopy.copy;
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
       <Button
         variant="outline"
-        size="sm"
+        size={isTouchLayout ? "touch" : "sm"}
         onClick={handleCopy}
         disabled={isDisabled}
       >
@@ -150,7 +152,7 @@ export function FinanceExportActions({
       </Button>
       <Button
         variant="outline"
-        size="sm"
+        size={isTouchLayout ? "touch" : "sm"}
         onClick={handleDownload}
         disabled={isDisabled}
       >

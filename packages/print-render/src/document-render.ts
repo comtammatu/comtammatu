@@ -247,11 +247,11 @@ function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
  * ticket already showed it to the chef. */
 function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
   const out: RenderOp[] = [];
-  out.push(ops.rule());
+  out.push(divider());
   out.push(
     ops.line(receiptRow("Món", "SL", "Đơn giá", "Thành tiền"), { bold: true }),
   );
-  out.push(ops.rule());
+  out.push(divider());
 
   if (groupByCategory) {
     const foodItems = p.items.filter((item) => lineCategory(item) === "food");
@@ -259,28 +259,28 @@ function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
 
     if (foodItems.length > 0) {
       foodItems.forEach((it) => renderReceiptItem(out, it));
-      out.push(ops.rule());
+      out.push(divider());
       out.push(
         ops.line(pair48("Tổng Đồ ăn", fmtMoney(categoryTotal(foodItems, "food"))), {
           bold: true,
         }),
       );
-      out.push(ops.rule());
+      out.push(divider());
     }
     if (drinkItems.length > 0) {
       drinkItems.forEach((it) => renderReceiptItem(out, it));
-      out.push(ops.rule());
+      out.push(divider());
       out.push(
         ops.line(
           pair48("Tổng Nước uống", fmtMoney(categoryTotal(drinkItems, "drink"))),
           { bold: true },
         ),
       );
-      out.push(ops.rule());
+      out.push(divider());
     }
   } else {
     p.items.forEach((it) => renderReceiptItem(out, it));
-    out.push(ops.rule());
+    out.push(divider());
   }
   return out;
 }
@@ -309,14 +309,14 @@ function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
   if ((p.discount_amount ?? 0) > 0 && p.discount_note) {
     if (p.discount_note) out.push(ops.line(`  Lý do: ${p.discount_note}`));
   }
-  out.push(divider("="));
+  out.push(divider());
   out.push(
     ops.line(pair24("TỔNG CỘNG", fmtMoney(p.total_amount)), {
       bold: true,
       double: true,
     }),
   );
-  out.push(divider("="));
+  out.push(divider());
   return out;
 }
 

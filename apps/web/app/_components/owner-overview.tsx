@@ -27,7 +27,6 @@ export function OwnerOverview() {
         title={copy.title}
         description={copy.description}
       />
-
       <AppSection
         title={copy.operationsTitle}
         description={copy.operationsDescription}

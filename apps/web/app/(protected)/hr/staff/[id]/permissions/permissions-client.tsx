@@ -227,7 +227,7 @@ export function PermissionsClient({
             onValueChange={setSelectedBranch}
             disabled={isPending || grantNeedsTenant}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Phạm vi gán quyền">
               <SelectValue placeholder="Phạm vi" />
             </SelectTrigger>
             <SelectContent>
@@ -240,7 +240,7 @@ export function PermissionsClient({
             </SelectContent>
           </Select>
           <Select value={selectedPerm} onValueChange={setSelectedPerm}>
-            <SelectTrigger className="sm:col-span-2">
+            <SelectTrigger aria-label="Quyền cần gán" className="sm:col-span-2">
               <SelectValue placeholder="Chọn quyền" />
             </SelectTrigger>
             <SelectContent>
@@ -296,7 +296,7 @@ export function PermissionsClient({
       <AppSection title="Áp dụng template">
         <div className="grid gap-3 sm:grid-cols-3">
           <Select value={templateBranch} onValueChange={setTemplateBranch}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Phạm vi áp dụng template">
               <SelectValue placeholder="Phạm vi" />
             </SelectTrigger>
             <SelectContent>
@@ -309,7 +309,10 @@ export function PermissionsClient({
             </SelectContent>
           </Select>
           <Select value={templateId} onValueChange={setTemplateId}>
-            <SelectTrigger className="sm:col-span-2">
+            <SelectTrigger
+              aria-label="Template quyền"
+              className="sm:col-span-2"
+            >
               <SelectValue placeholder="Template" />
             </SelectTrigger>
             <SelectContent>

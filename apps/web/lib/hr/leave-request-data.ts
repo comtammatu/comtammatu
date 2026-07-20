@@ -5,8 +5,9 @@ import { messages } from "@lib/messages";
 import type { TenantSupabase } from "@lib/inventory/types";
 import {
   calculateAnnualLeaveUsedThroughMonth,
-  countAnnualLeaveAccruedThroughMonth,
+  calculateMonthlyLeaveUsedInMonth,
 } from "./payroll-day-math";
+import { fetchTenantHrLeavePolicy } from "./leave-policy-data";
 import type { LeaveRequestRow } from "./leave-request-model";
 
 const approvedAnnualRangeSchema = z.object({
@@ -40,18 +41,26 @@ export type LeaveRequestRowsResult =
 export async function fetchLeaveRequestRows(input: {
   supabase: TenantSupabase;
   branchId: number;
+  tenantId: number;
 }): Promise<LeaveRequestRowsResult> {
-  const { data: result, error } = await input.supabase.rpc(
-    "get_leave_review_queue",
-    {
+  const [{ data: result, error }, policyResult] = await Promise.all([
+    input.supabase.rpc("get_leave_review_queue", {
       p_branch_id: input.branchId,
       p_include_rows: true,
-    },
-  );
+    }),
+    fetchTenantHrLeavePolicy({
+      supabase: input.supabase,
+      tenantId: input.tenantId,
+    }),
+  ]);
 
   if (error) {
-    console.error("hr.leave_requests.fetch_failed", { code: error.code });
+    console.error("hr.leave_requests.fetch_failed", { code: error?.code });
     return { success: false, error: messages.hr.leave.loadFailed };
+  }
+  if (!policyResult.success) {
+    console.error("hr.leave_requests.policy_fetch_failed");
+    return { success: false, error: messages.hr.leave.quotaLoadFailed };
   }
 
   const parsedRows = z
@@ -64,26 +73,69 @@ export async function fetchLeaveRequestRows(input: {
     return { success: false, error: messages.hr.leave.loadFailed };
   }
 
+  const employeeIds = [
+    ...new Set(parsedRows.data.map((request) => request.employee_id)),
+  ];
+  const years = [
+    ...new Set(
+      parsedRows.data.map((request) => Number(request.start_date.slice(0, 4))),
+    ),
+  ];
+  const { data: entitlements, error: entitlementsError } =
+    employeeIds.length === 0 || years.length === 0
+      ? { data: [], error: null }
+      : await input.supabase
+          .from("annual_leave_entitlements")
+          .select("employee_id, year, entitlement_days")
+          .eq("tenant_id", input.tenantId)
+          .in("employee_id", employeeIds)
+          .in("year", years);
+
+  if (entitlementsError) {
+    console.error("hr.leave_requests.entitlements_fetch_failed", {
+      code: entitlementsError.code,
+    });
+    return { success: false, error: messages.hr.leave.quotaLoadFailed };
+  }
+
+  const entitlementByEmployeeYear = new Map<string, number>();
+  for (const entitlement of entitlements ?? []) {
+    entitlementByEmployeeYear.set(
+      `${entitlement.employee_id}:${entitlement.year}`,
+      Number(entitlement.entitlement_days),
+    );
+  }
+  const policy = policyResult.data;
+
   return {
     success: true,
     data: parsedRows.data.map((request): LeaveRequestRow => {
       const year = Number(request.start_date.slice(0, 4));
       const month = Number(request.start_date.slice(5, 7));
-      const entitlementDays = countAnnualLeaveAccruedThroughMonth(
-        request.employee_start_date,
+      const entitlementDays = entitlementByEmployeeYear.get(
+        `${request.employee_id}:${year}`,
+      );
+      const annualLeaves = request.approved_annual_ranges.map((leave) => ({
+        employeeId: request.employee_id,
+        startDate: leave.start_date,
+        endDate: leave.end_date,
+        leaveType: "annual" as const,
+      }));
+      const usedDays =
+        entitlementDays == null
+          ? 0
+          : calculateAnnualLeaveUsedThroughMonth({
+              leaves: annualLeaves,
+              entitlementDays,
+              monthlyLeaveDays: policy.monthlyLeaveDays,
+              year,
+              throughMonth: month,
+            });
+      const monthlyLeaveUsedDays = calculateMonthlyLeaveUsedInMonth({
+        leaves: annualLeaves,
         year,
         month,
-      );
-      const usedDays = calculateAnnualLeaveUsedThroughMonth({
-        leaves: request.approved_annual_ranges.map((leave) => ({
-          employeeId: request.employee_id,
-          startDate: leave.start_date,
-          endDate: leave.end_date,
-          leaveType: "annual" as const,
-        })),
-        employeeStartDate: request.employee_start_date,
-        year,
-        throughMonth: month,
+        monthlyLeaveDays: policy.monthlyLeaveDays,
       });
 
       return {
@@ -110,12 +162,23 @@ export async function fetchLeaveRequestRows(input: {
           },
         },
         annual_leave_balance:
-          request.leave_type === "annual"
+          request.leave_type === "annual" && entitlementDays != null
             ? {
                 year,
                 entitlementDays,
                 usedDays,
                 remainingDays: Math.max(0, entitlementDays - usedDays),
+              }
+            : null,
+        monthly_leave_balance:
+          request.leave_type === "annual"
+            ? {
+                entitlementDays: policy.monthlyLeaveDays,
+                usedDays: monthlyLeaveUsedDays,
+                remainingDays: Math.max(
+                  0,
+                  policy.monthlyLeaveDays - monthlyLeaveUsedDays,
+                ),
               }
             : null,
       };

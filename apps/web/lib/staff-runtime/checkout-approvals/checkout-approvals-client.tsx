@@ -122,14 +122,23 @@ function ApprovalRow({
       swipeBindings.onPointerCancel(e);
       longPress.onPointerCancel();
     },
+    onPointerLeave: longPress.onPointerLeave,
+    onKeyDown: longPress.onKeyDown,
+    onKeyUp: longPress.onKeyUp,
+    role: longPress.role,
+    tabIndex: longPress.tabIndex,
     onContextMenu: longPress.onContextMenu,
   };
 
   return (
     <div className="relative overflow-hidden">
-      <div className="absolute inset-y-0 right-0 flex w-35 items-stretch justify-end">
+      <div
+        className="absolute inset-y-0 right-0 flex w-35 items-stretch justify-end"
+        {...swipe.actionRegionProps(String(item.id))}
+      >
         <Button
           variant="destructive"
+          size="touch"
           className="h-full rounded-none w-1/2 flex flex-col items-center justify-center p-0 gap-1"
           disabled={!canApprove || approving || isPending}
           onClick={() => {
@@ -141,6 +150,7 @@ function ApprovalRow({
           <span className="text-2xs font-medium uppercase">Từ chối</span>
         </Button>
         <Button
+          size="touch"
           className="bg-success text-success-foreground h-full rounded-none w-1/2 flex flex-col items-center justify-center p-0 gap-1"
           disabled={!canApprove || approving || isPending}
           onClick={() => {
@@ -159,7 +169,7 @@ function ApprovalRow({
 
       <div
         className={cn(
-          "bg-background transition-transform duration-300 ease-out cursor-pointer h-full border-r",
+          "bg-background transition-transform duration-300 ease-out cursor-pointer h-full border-r touch-pan-y",
           isRevealed ? "-translate-x-35" : "translate-x-0",
         )}
         {...handlers}
@@ -427,6 +437,7 @@ export function CheckoutApprovalsClient({
           <DrawerFooter className="flex-row gap-3 pt-2">
             <Button
               variant="outline"
+              size="touch"
               className="flex-1 border-destructive text-destructive hover:bg-destructive/10"
               disabled={!canApprove || isPending}
               onClick={() => {
@@ -440,6 +451,7 @@ export function CheckoutApprovalsClient({
               Từ chối
             </Button>
             <Button
+              size="touch"
               className="flex-1 bg-success text-success-foreground"
               disabled={!canApprove || isPending}
               onClick={() => {
@@ -490,6 +502,7 @@ export function CheckoutApprovalsClient({
           <DrawerFooter className="pt-2">
             <Button
               variant="destructive"
+              size="touch"
               className="w-full"
               disabled={rejectReason.length < 3 || isPending}
               onClick={handleReject}

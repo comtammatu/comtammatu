@@ -14,11 +14,18 @@ import { formatPercent } from "@comtammatu/shared/format";
 import { ReportsClient } from "./reports-client";
 import type { ApAgingItem, VarianceItem } from "./reports-client";
 import type { InventorySemanticColor } from "../_lib/ui";
+import { messages } from "@lib/messages";
 
 type MovementSummaryItem = {
   label: string;
-  values: { value: number; color: InventorySemanticColor }[];
+  values: {
+    label: string;
+    value: number;
+    color: InventorySemanticColor;
+  }[];
 };
+
+type FoodCostTrendPoint = { label: string; value: number };
 
 function buildFoodCostTrend(
   rows: Array<{
@@ -41,23 +48,26 @@ function buildFoodCostTrend(
     buckets.set(monthKey, bucket);
   }
 
-  const trend: number[] = [];
+  const trend: FoodCostTrendPoint[] = [];
   for (const key of monthKeys) {
     const bucket = buckets.get(key);
     const ratio =
       bucket && bucket.revenue > 0
         ? (bucket.foodCost / bucket.revenue) * 100
         : 0;
-    trend.push(Number(ratio.toFixed(1)));
+    trend.push({
+      label: `${key.slice(5)}/${key.slice(0, 4)}`,
+      value: Number(ratio.toFixed(1)),
+    });
   }
 
   return trend;
 }
 
-function calculateTrendDeltaPct(trend: number[]) {
+function calculateTrendDeltaPct(trend: FoodCostTrendPoint[]) {
   if (trend.length < 2) return null;
-  const current = trend[trend.length - 1] ?? 0;
-  const previous = trend[trend.length - 2] ?? 0;
+  const current = trend[trend.length - 1]?.value ?? 0;
+  const previous = trend[trend.length - 2]?.value ?? 0;
   if (previous <= 0) return null;
   return Number((((current - previous) / previous) * 100).toFixed(1));
 }
@@ -163,27 +173,54 @@ export async function ReportsPageContent() {
 
   const movementSummary: MovementSummaryItem[] = [
     {
-      label: "Nhập kho",
-      values: [{ value: movementTotals.grnReceipt, color: "primary" }],
-    },
-    {
-      label: "Chuyển vào",
-      values: [{ value: movementTotals.transferIn, color: "success" }],
-    },
-    {
-      label: "Xuất / tiêu hao",
+      label: messages.inventory.reports.inbound,
       values: [
-        { value: movementTotals.transferOut, color: "danger" },
-        { value: movementTotals.consumption, color: "warning" },
         {
+          label: messages.inventory.reports.inbound,
+          value: movementTotals.grnReceipt,
+          color: "primary",
+        },
+      ],
+    },
+    {
+      label: messages.inventory.reports.transferIn,
+      values: [
+        {
+          label: messages.inventory.reports.transferIn,
+          value: movementTotals.transferIn,
+          color: "success",
+        },
+      ],
+    },
+    {
+      label: messages.inventory.reports.outboundConsumption,
+      values: [
+        {
+          label: messages.inventory.reports.transferOut,
+          value: movementTotals.transferOut,
+          color: "danger",
+        },
+        {
+          label: messages.inventory.reports.consumption,
+          value: movementTotals.consumption,
+          color: "warning",
+        },
+        {
+          label: messages.inventory.reports.productionConsumption,
           value: movementTotals.productionConsumption,
           color: "info",
         },
       ],
     },
     {
-      label: "Sản xuất",
-      values: [{ value: movementTotals.productionOutput, color: "info" }],
+      label: messages.inventory.reports.production,
+      values: [
+        {
+          label: messages.inventory.reports.production,
+          value: movementTotals.productionOutput,
+          color: "info",
+        },
+      ],
     },
   ];
 

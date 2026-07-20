@@ -12,7 +12,6 @@ import { Input } from "@comtammatu/ui/components/input";
 import {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
 } from "@comtammatu/ui/components/input-group";
 import { Item, ItemActions, ItemContent } from "@comtammatu/ui/components/item";
 import {
@@ -24,6 +23,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { FormField } from "@/components/form/form-field";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import {
@@ -54,6 +54,11 @@ export function CreateTransferForm({
   });
   const copy = messages.inventory.transfer;
   const sourceBranch = controller.currentBranch;
+  const isTouchLayout = useIsMobile(1024);
+  const controlSize = isTouchLayout ? "touch" : "field";
+  const optionSize = isTouchLayout ? "touch" : "default";
+  const actionSize = isTouchLayout ? "touch" : "default";
+  const removeActionSize = isTouchLayout ? "icon-touch" : "icon-sm";
 
   return (
     <form onSubmit={controller.submit} className="flex min-w-0 flex-col gap-4">
@@ -98,7 +103,7 @@ export function CreateTransferForm({
                 >
                   <SelectTrigger
                     id="owner-transfer-source-location"
-                    size="field"
+                    size={controlSize}
                     className="w-full"
                     aria-required
                   >
@@ -111,6 +116,7 @@ export function CreateTransferForm({
                           <SelectItem
                             key={location.id}
                             value={String(location.id)}
+                            size={optionSize}
                           >
                             {formatTransferLocationLabel(
                               sourceBranch,
@@ -135,7 +141,7 @@ export function CreateTransferForm({
               >
                 <SelectTrigger
                   id="owner-transfer-target"
-                  size="field"
+                  size={controlSize}
                   className="w-full"
                   aria-required
                 >
@@ -144,7 +150,11 @@ export function CreateTransferForm({
                 <SelectContent>
                   <SelectGroup>
                     {controller.outboundDestinationOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        size={optionSize}
+                      >
                         {formatTransferTargetOption(option)}
                       </SelectItem>
                     ))}
@@ -172,7 +182,7 @@ export function CreateTransferForm({
               >
                 <SelectTrigger
                   id="owner-transfer-ingredient"
-                  size="sm"
+                  size={controlSize}
                   className="w-full"
                   aria-label={copy.createNative.ingredientLabel}
                 >
@@ -184,6 +194,7 @@ export function CreateTransferForm({
                       <SelectItem
                         key={ingredient.id}
                         value={String(ingredient.id)}
+                        size={optionSize}
                         label={`${ingredient.name} ${getTransferWarehouseUnit(
                           ingredient,
                         )} ${ingredient.id}`}
@@ -199,7 +210,7 @@ export function CreateTransferForm({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size={removeActionSize}
               className="shrink-0"
               onClick={controller.addIngredientLine}
               disabled={!controller.pickerIngredientId}
@@ -211,7 +222,7 @@ export function CreateTransferForm({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size={actionSize}
             className="w-full shrink-0 sm:w-auto"
             onClick={controller.addAllAvailableStockLines}
             disabled={controller.selectedSourceLocationId == null}
@@ -237,15 +248,18 @@ export function CreateTransferForm({
                   key={line.key}
                   variant="outline"
                   size="sm"
-                  className="w-full flex-nowrap justify-between gap-4"
+                  className="w-full flex-col items-stretch gap-3 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between"
                 >
-                  <ItemContent className="min-w-0 flex-1">
+                  <ItemContent className="w-full min-w-0 flex-1 sm:w-auto">
                     <span className="truncate text-sm font-medium">
                       {line.name}
                     </span>
                   </ItemContent>
-                  <ItemActions className="flex shrink-0 items-center gap-2">
-                    <InputGroup className="h-8 w-32">
+                  <ItemActions className="grid w-full grid-cols-[minmax(0,1fr)_3rem] items-center gap-2 sm:flex sm:w-auto sm:shrink-0">
+                    <InputGroup
+                      size={controlSize}
+                      className="col-span-2 w-full sm:w-40"
+                    >
                       <FormattedNumberInput
                         className="h-full"
                         placeholder={messages.inventory.common.quantityShort}
@@ -258,13 +272,16 @@ export function CreateTransferForm({
                         required
                       />
                       {maxQuantityValue ? (
-                        <InputGroupAddon align="inline-end">
-                          <InputGroupButton
+                        <InputGroupAddon align="inline-end" className="py-0">
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size={isTouchLayout ? "touch" : "sm"}
+                            className="shadow-none"
                             onClick={() => controller.fillLineMax(line)}
                           >
                             {FORM_VI.max}
-                          </InputGroupButton>
+                          </Button>
                         </InputGroupAddon>
                       ) : null}
                     </InputGroup>
@@ -276,7 +293,8 @@ export function CreateTransferForm({
                         }
                       >
                         <SelectTrigger
-                          className="h-8 w-20"
+                          size={controlSize}
+                          className="w-full sm:w-24"
                           aria-label={copy.unit}
                         >
                           <SelectValue placeholder={copy.selectUnit} />
@@ -287,6 +305,7 @@ export function CreateTransferForm({
                               <SelectItem
                                 key={option.unitId}
                                 value={String(option.unitId)}
+                                size={optionSize}
                               >
                                 {option.label}
                               </SelectItem>
@@ -296,7 +315,8 @@ export function CreateTransferForm({
                       </Select>
                     ) : (
                       <Input
-                        className="h-8 w-16"
+                        controlSize={controlSize}
+                        className="w-full sm:w-20"
                         value={line.unit}
                         readOnly
                         aria-readonly="true"
@@ -306,7 +326,7 @@ export function CreateTransferForm({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-sm"
+                      size={removeActionSize}
                       className="shrink-0"
                       onClick={() => controller.removeLine(line.key)}
                       aria-label={copy.removeLineAria}
@@ -323,7 +343,11 @@ export function CreateTransferForm({
 
       <AppSection title={FORM_VI.notes}>
         <FormField controlId="owner-transfer-vehicle" label={copy.vehicleInfo}>
-          <Input size="field" id="owner-transfer-vehicle" name="vehicleInfo" />
+          <Input
+            id="owner-transfer-vehicle"
+            name="vehicleInfo"
+            controlSize={controlSize}
+          />
         </FormField>
         <FormField controlId="owner-transfer-notes" label={FORM_VI.notes}>
           <Textarea
@@ -337,10 +361,20 @@ export function CreateTransferForm({
       </AppSection>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="outline" render={<Link href={controller.listHref} />}>
+        <Button
+          variant="outline"
+          size={actionSize}
+          className="w-full sm:w-auto"
+          render={<Link href={controller.listHref} />}
+        >
           {ACTIONS_VI.cancel}
         </Button>
-        <Button type="submit" disabled={controller.submitDisabled}>
+        <Button
+          type="submit"
+          size={actionSize}
+          className="w-full sm:w-auto"
+          disabled={controller.submitDisabled}
+        >
           {controller.isPending ? copy.creating : copy.createSlip}
         </Button>
       </div>

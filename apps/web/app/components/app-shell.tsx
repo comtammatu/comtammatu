@@ -1,13 +1,24 @@
 "use client";
 
-import { Fragment, useMemo, type ReactNode } from "react";
+import { Fragment, useMemo, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut as IconLogout } from "lucide-react";
-import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  ChevronsUpDown as IconChevronsUpDown,
+  LogOut as IconLogout,
+} from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   Sidebar,
   SidebarContent,
@@ -23,7 +34,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
-  SidebarTrigger,
 } from "@comtammatu/ui/components/sidebar";
 import {
   findActivePrimaryNavItem,
@@ -35,28 +45,18 @@ import {
 import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
 import { OwnerBottomNav } from "@/components/owner-bottom-nav";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeMenuItem } from "@/components/theme-toggle";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
-
-export interface AppShellHeaderConfig {
-  actions?: ReactNode;
-  /** Renders in the shell utility bar, left of actions. */
-  headerExtras?: ReactNode;
-  /** Renders below the utility bar on screens < md, full-width sticky band. */
-  mobileTopBar?: ReactNode;
-}
 
 export interface AppShellProps {
   children: ReactNode;
   user: { name: string };
-  /** Current user's role — drives the sidebar eyebrow label. */
-  role: StaffRole;
   /** Primary module tabs for the single sidebar. */
   tier1: ShellNavItem[];
   /** Sub-tabs for the active primary tab. */
   tier2: ShellNavGroup[];
-  shellHeader?: AppShellHeaderConfig;
+  sidebarHeaderAccessory?: ReactNode;
   /**
    * Mobile-only Owner bottom navbar (same nav model as the sidebar + drawer
    * trigger). Default true for all Owner shells.
@@ -79,13 +79,13 @@ function getSidebarSubNavGroups(
 export function AppShell({
   children,
   user,
-  role,
   tier1,
   tier2,
-  shellHeader = {},
+  sidebarHeaderAccessory,
   bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
+  const isTouchLayout = useIsMobile(1024);
   const copy = messages.common;
   const activePrimaryItem = useMemo(
     () => findActivePrimaryNavItem(tier1, pathname),
@@ -94,30 +94,37 @@ export function AppShell({
   const showBottomNav = bottomNav && pathname !== "/";
 
   return (
-    <SidebarProvider open={true}>
+    <SidebarProvider
+      open={true}
+      style={
+        showBottomNav
+          ? ({
+              "--app-bottom-nav-offset":
+                "calc(3.5rem + max(0.5rem, env(safe-area-inset-bottom)))",
+            } as CSSProperties)
+          : undefined
+      }
+    >
       <Sidebar variant="inset" collapsible="offcanvas">
-        <SidebarHeader className="relative gap-3 border-b p-3 overflow-hidden bg-gradient-to-br from-sidebar via-sidebar/50 to-sidebar/10">
-          <div className="brand-pattern-caro absolute inset-0 opacity-10 pointer-events-none" />
-          <div className="relative z-10 flex items-center gap-3">
-            <BrandLogoBox tone="sidebar">
+        <SidebarHeader className="relative overflow-hidden border-b bg-gradient-to-br from-sidebar via-sidebar/50 to-sidebar/10 px-4 py-2">
+          <div className="relative z-10 flex items-center gap-2">
+            <BrandLogoBox tone="sidebar" className="size-8 p-0.5">
               <BrandMark
                 variant="seal"
                 alt={copy.brandName}
                 className="size-full"
               />
             </BrandLogoBox>
-            <div className="min-w-0 flex flex-1 flex-col gap-1">
-              <SectionLabel className="text-sidebar-foreground/60">
-                {ROLE_LABEL_VI[role]}
-              </SectionLabel>
-              <p className="truncate font-heading text-base font-semibold leading-tight">
-                {copy.brandName}
-              </p>
-            </div>
+            <p className="min-w-0 flex-1 font-heading text-sm font-semibold leading-tight">
+              {copy.brandShortName}
+            </p>
           </div>
+          {sidebarHeaderAccessory ? (
+            <div className="relative z-10 mt-1">{sidebarHeaderAccessory}</div>
+          ) : null}
         </SidebarHeader>
 
-        <SidebarContent className="gap-3 px-2 py-3">
+        <SidebarContent className="px-2 py-2">
           <SidebarGroup className="px-0 py-0">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -132,6 +139,7 @@ export function AppShell({
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         isActive={active}
+                        size={isTouchLayout ? "lg" : "default"}
                         tooltip={item.label}
                         className="relative rounded-md data-active:bg-primary/10 data-active:text-primary font-medium dark:data-active:bg-primary/15 before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-r-sm before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
                         render={
@@ -150,9 +158,12 @@ export function AppShell({
                             <Fragment key={group.title}>
                               {subNavGroups.length > 1 ? (
                                 <SidebarMenuSubItem>
-                                  <span className="block px-2 py-1 text-2xs font-medium uppercase tracking-wider text-sidebar-foreground/70">
+                                  <SectionLabel
+                                    density="dense"
+                                    className="px-2 py-1 text-sidebar-foreground/70"
+                                  >
                                     {group.title}
-                                  </span>
+                                  </SectionLabel>
                                 </SidebarMenuSubItem>
                               ) : null}
                               {group.items.map((subItem) => {
@@ -165,7 +176,8 @@ export function AppShell({
                                   <SidebarMenuSubItem key={subItem.href}>
                                     <SidebarMenuSubButton
                                       isActive={subActive}
-                                      className="relative data-active:text-primary data-active:font-semibold dark:data-active:text-primary-foreground before:absolute before:-left-2.5 before:top-3 before:size-1.5 before:rounded-full before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
+                                      size={isTouchLayout ? "touch" : "md"}
+                                      className="relative data-active:bg-transparent data-active:text-primary data-active:font-semibold dark:data-active:text-primary-foreground before:absolute before:-left-2.5 before:top-3 before:size-1.5 before:rounded-full before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
                                       render={
                                         <Link
                                           href={subItem.linkHref ?? subItem.href}
@@ -193,48 +205,50 @@ export function AppShell({
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t p-2 bg-muted/30">
-          <div className="flex items-center gap-2">
-            <Avatar size="sm">
-              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-            </Avatar>
-            <span className="min-w-0 flex-1 truncate text-xs font-medium">
-              {user.name}
-            </span>
-            <form action="/api/auth/signout" method="post">
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon-sm"
-                className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                aria-label={copy.signOut}
-              >
-                <IconLogout />
-              </Button>
-            </form>
-          </div>
+        <SidebarFooter className="border-t px-2 py-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size={isTouchLayout ? "touch" : "default"}
+                  className="w-full justify-start gap-2 px-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                />
+              }
+            >
+              <Avatar size="sm">
+                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+              </Avatar>
+              <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                {user.name}
+              </span>
+              <IconChevronsUpDown className="ml-auto text-sidebar-foreground/60" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start">
+              <DropdownMenuGroup>
+                <ThemeMenuItem className="min-h-12 text-sm" />
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <form action="/api/auth/signout" method="post">
+                  <DropdownMenuItem
+                    nativeButton
+                    variant="destructive"
+                    className="min-h-12 w-full text-sm"
+                    render={<Button type="submit" variant="ghost" />}
+                  >
+                    <IconLogout />
+                    {copy.signOut}
+                  </DropdownMenuItem>
+                </form>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset id="main-content">
-        <header className="sticky top-0 z-30 border-b border-border/20 bg-background/80 px-4 py-2.5 backdrop-blur-md shadow-xs print:hidden">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger className="lg:hidden" />
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              {shellHeader.headerExtras}
-            </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <ThemeToggle />
-              {shellHeader.actions}
-            </div>
-          </div>
-          {shellHeader.mobileTopBar ? (
-            <div className="sticky top-0 z-10 -mx-4 mt-3 w-[calc(100%+2rem)] border-t bg-background px-4 py-2 lg:hidden">
-              {shellHeader.mobileTopBar}
-            </div>
-          ) : null}
-        </header>
-
+      <SidebarInset id="main-content" className="chrome-safe-pt">
         <div
           className={cn("flex-1 p-3 md:p-4", showBottomNav && "pb-24 lg:pb-4")}
         >
@@ -243,9 +257,7 @@ export function AppShell({
           </AppShellPaddingBoundary>
         </div>
       </SidebarInset>
-      {showBottomNav ? (
-        <OwnerBottomNav tier1={tier1} tier2={tier2} />
-      ) : null}
+      {showBottomNav ? <OwnerBottomNav tier1={tier1} tier2={tier2} /> : null}
     </SidebarProvider>
   );
 }

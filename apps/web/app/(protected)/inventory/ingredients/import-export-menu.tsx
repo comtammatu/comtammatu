@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { FileImportDialog } from "@/components/form";
 import { downloadCsv, downloadXlsx } from "@/_lib/download-file";
 import {
@@ -36,6 +37,7 @@ export function IngredientImportExportMenu({
 }) {
   const [isExporting, startExport] = useTransition();
   const [importOpen, setImportOpen] = useState(false);
+  const isTouchLayout = useIsMobile(1024);
 
   function handleExport(format: "xlsx" | "csv") {
     startExport(async () => {
@@ -70,7 +72,11 @@ export function IngredientImportExportMenu({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="outline" disabled={isExporting}>
+            <Button
+              variant="outline"
+              size={isTouchLayout ? "touch" : "default"}
+              disabled={isExporting}
+            >
               {isExporting ? (
                 <Spinner className="mr-2" />
               ) : (
@@ -81,20 +87,32 @@ export function IngredientImportExportMenu({
           }
         />
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onClick={() => setImportOpen(true)}>
+          <DropdownMenuItem
+            size={isTouchLayout ? "touch" : "default"}
+            onClick={() => setImportOpen(true)}
+          >
             <IconUpload className="mr-2 size-4" />
             {INVENTORY_VI.importFromFile}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleTemplate}>
+          <DropdownMenuItem
+            size={isTouchLayout ? "touch" : "default"}
+            onClick={handleTemplate}
+          >
             <IconFileSpreadsheet className="mr-2 size-4" />
             {INVENTORY_VI.downloadTemplate}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleExport("xlsx")}>
+          <DropdownMenuItem
+            size={isTouchLayout ? "touch" : "default"}
+            onClick={() => handleExport("xlsx")}
+          >
             <IconDownload className="mr-2 size-4" />
             {INVENTORY_VI.exportXlsx}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleExport("csv")}>
+          <DropdownMenuItem
+            size={isTouchLayout ? "touch" : "default"}
+            onClick={() => handleExport("csv")}
+          >
             <IconDownload className="mr-2 size-4" />
             {INVENTORY_VI.exportCsv}
           </DropdownMenuItem>

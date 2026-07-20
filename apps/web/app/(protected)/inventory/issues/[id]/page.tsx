@@ -28,6 +28,7 @@ export async function IssueDetailPageContent({
   if (!res.success || !res.data) notFound();
 
   const d = res.data as {
+    tenantId: number;
     issue: {
       id: number;
       issue_number: string;
@@ -54,6 +55,7 @@ export async function IssueDetailPageContent({
       unit_cost: number;
       total_cost: number;
       reason: string | null;
+      photo_urls: string[];
       ingredients: { id: number; name: string; unit: string } | null;
     }>;
   };
@@ -96,6 +98,7 @@ export async function IssueDetailPageContent({
   return (
     <IssueDetailClient
       issueId={issueId}
+      tenantId={d.tenantId}
       initialIssue={d.issue}
       initialLines={d.lines}
       ingredients={ingredients}

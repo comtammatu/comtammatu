@@ -129,6 +129,7 @@ export const settings = {
     systemBlockHint: "Nội dung khối này lấy từ dữ liệu đơn khi in.",
     styleBold: "Đậm",
     styleDouble: "Phóng to",
+    alignLabel: "Căn lề",
     alignLeft: "Căn trái",
     alignCenter: "Căn giữa",
     alignRight: "Căn phải",

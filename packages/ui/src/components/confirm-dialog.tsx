@@ -104,10 +104,14 @@ export function ConfirmDialogProvider() {
           </div>
         ) : null}
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => settle(false)}>
+          <AlertDialogCancel size="touch" onClick={() => settle(false)}>
             {opts?.cancelText ?? "Hủy"}
           </AlertDialogCancel>
-          <AlertDialogAction variant={variant} onClick={() => settle(true)}>
+          <AlertDialogAction
+            variant={variant}
+            size="touch"
+            onClick={() => settle(true)}
+          >
             {opts?.confirmText ?? "Xác nhận"}
           </AlertDialogAction>
         </AlertDialogFooter>

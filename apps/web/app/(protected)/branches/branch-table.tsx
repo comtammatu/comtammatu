@@ -89,11 +89,12 @@ export function BranchTable({ branches }: BranchTableProps) {
     });
   }
 
-  function BranchActions({ branch }: { branch: BranchRow }) {
+  function renderBranchActions(branch: BranchRow, touch = false) {
     const isActive = branch.is_active !== false;
 
     return (
       <RowActionsMenu
+        triggerSize={touch ? "icon-touch" : "icon-lg"}
         items={[
           ...(isActive
             ? [
@@ -190,7 +191,7 @@ export function BranchTable({ branches }: BranchTableProps) {
       key: "actions",
       header: "",
       className: "w-12",
-      render: (branch) => <BranchActions branch={branch} />,
+      render: (branch) => renderBranchActions(branch),
     },
   ];
 
@@ -233,7 +234,7 @@ export function BranchTable({ branches }: BranchTableProps) {
               </Badge>
             </ItemContent>
             <ItemActions>
-              <BranchActions branch={branch} />
+              {renderBranchActions(branch, true)}
             </ItemActions>
           </Item>
         )}

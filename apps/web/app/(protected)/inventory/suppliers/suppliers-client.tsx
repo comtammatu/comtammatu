@@ -198,7 +198,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
       render: (s, i) => (
         <div className="flex items-center gap-3">
           <SupplierAvatar name={s.name} colorIndex={i} />
-          <p className="text-sm font-semibold">{s.name}</p>
+          <p className="text-sm">{s.name}</p>
         </div>
       ),
     },
@@ -274,7 +274,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         <AppPageHeader
           title={suppliersCopy.title}
           actions={
-            <Button type="button" onClick={openCreate}>
+            <Button type="button" size="touch" onClick={openCreate}>
               <IconPlus className="size-4" />
               {suppliersCopy.createAction}
             </Button>
@@ -301,6 +301,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         <DataTable
           columns={columns}
           data={filtered}
+          pageSize={25}
           getRowKey={(s) => s.id}
           emptyTitle={
             search.trim()

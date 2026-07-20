@@ -193,11 +193,11 @@ export function BranchCountSlipsClient({
       hideHeaderOnMobile
     >
       <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
-        <TabsList className="grid min-h-12 w-full grid-cols-2">
-          <TabsTrigger value="pending" className="min-h-11">
+        <TabsList size="touch" className="grid w-full grid-cols-2">
+          <TabsTrigger value="pending">
             {INVENTORY_VI.countSlipPendingBadge(pendingRows.length)}
           </TabsTrigger>
-          <TabsTrigger value="history" className="min-h-11">
+          <TabsTrigger value="history">
             {INVENTORY_VI.countSlipHistoryTitle}
           </TabsTrigger>
         </TabsList>
@@ -354,7 +354,7 @@ export function BranchCountSlipsClient({
                   </div>
                 ) : null}
               </div>
-              <SheetFooter className="workflow-safe-pb shrink-0 bg-background/95 backdrop-blur">
+              <SheetFooter className="shrink-0 bg-background/95 backdrop-blur">
                 {selected.status === "submitted" ? (
                   recounting ? (
                     <>

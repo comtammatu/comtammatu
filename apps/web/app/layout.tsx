@@ -55,12 +55,6 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
-
 // Dynamic themeColor: read the `matu-theme` cookie so the browser chrome
 // matches the resolved theme from the very first SSR render (no flash).
 export async function generateViewport(): Promise<Viewport> {
@@ -68,6 +62,9 @@ export async function generateViewport(): Promise<Viewport> {
   const theme = cookieStore.get(MATU_THEME_COOKIE_NAME)?.value;
   const resolved = resolveMatuThemeMode(theme) ?? "light";
   return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
     themeColor: BROWSER_CHROME_THEME_COLORS[resolved],
   };
 }

@@ -240,6 +240,9 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
   const client = readWeb(
     "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
   );
+  const listModel = readWeb(
+    "app/(protected)/inventory/supplier-invoices/supplier-invoice-list-model.ts",
+  );
 
   assert.match(actionSource, /purchase_orders \( id, po_number \)/);
   assert.match(
@@ -255,10 +258,10 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
   assert.match(client, /invoiceGroups/);
   assert.match(client, /outstandingAmount/);
   assert.match(client, /overdueAmount/);
-  assert.match(client, /creditAppliedAmount: number/);
-  assert.match(client, /creditAppliedAmount: 0/);
+  assert.match(listModel, /creditAppliedAmount: number/);
+  assert.match(listModel, /creditAppliedAmount: 0/);
   assert.match(
-    client,
+    listModel,
     /group\.creditAppliedAmount \+= invoice\.creditAppliedAmount/,
   );
   assert.equal(client.match(/group\.creditAppliedAmount > 0/g)?.length, 2);

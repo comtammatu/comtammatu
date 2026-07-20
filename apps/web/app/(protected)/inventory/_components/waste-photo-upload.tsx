@@ -1,6 +1,6 @@
 "use client";
 
-import { PhotoUploadInput } from "./photo-upload-input";
+import { PhotoUploadInput } from "@/components/form";
 
 interface WastePhotoUploadProps {
   id?: string;
@@ -12,6 +12,7 @@ interface WastePhotoUploadProps {
   disabled?: boolean;
   /** Allow fallback gallery upload when camera fails (hotel wifi blocks, etc). */
   allowGalleryFallback?: boolean;
+  previewSize?: "default" | "touch";
 }
 
 /**
@@ -33,6 +34,7 @@ export function WastePhotoUpload({
   onChange,
   disabled,
   allowGalleryFallback = false,
+  previewSize = "default",
 }: WastePhotoUploadProps) {
   return (
     <PhotoUploadInput
@@ -45,6 +47,7 @@ export function WastePhotoUpload({
       acceptTypes="image"
       captureCamera={!allowGalleryFallback}
       allowPaste={false}
+      previewSize={previewSize}
     />
   );
 }

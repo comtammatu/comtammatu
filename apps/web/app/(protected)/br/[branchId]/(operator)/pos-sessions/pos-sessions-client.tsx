@@ -55,6 +55,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import type { CartModifier, CartSide } from "../../pos/types";
 import type { PosSessionReport } from "./report-actions";
 import { resolvePosSessionVariance } from "./actions";
@@ -62,6 +63,7 @@ import { correctPaymentMethod } from "@/(protected)/finance/payment-method-actio
 import { messages } from "@lib/messages";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { CloseSessionSheet } from "../../pos/close-session-sheet";
 
 export interface PosSessionRow {
   id: number;
@@ -178,7 +180,10 @@ export function PosSessionsClient({
   report,
   canCorrectPaymentMethod,
 }: PosSessionsClientProps) {
+  const isTouchLayout = useIsMobile(1280);
+  const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [closeSessionId, setCloseSessionId] = useState<number | null>(null);
   const selectedSession =
     sessions.find((session) => session.id === selectedSessionId) ?? null;
   const selectedOrder =
@@ -205,26 +210,76 @@ export function PosSessionsClient({
     );
   }
 
+  const sessionHistoryPanel = (
+    <SessionHistoryPanel
+      branchId={branchId}
+      sessions={sessions}
+      selectedSessionId={selectedSessionId}
+      openSessionCount={openSessionCount}
+      unresolvedVarianceCount={unresolvedVarianceCount}
+      onSessionSelect={
+        isTouchLayout ? () => setSessionHistoryOpen(false) : undefined
+      }
+    />
+  );
+
   return (
     <div className="grid gap-3 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(20rem,24rem)_minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
-      <div className="order-2 min-w-0 xl:order-1">
-        <SessionHistoryPanel
-          branchId={branchId}
-          sessions={sessions}
-          selectedSessionId={selectedSessionId}
-          openSessionCount={openSessionCount}
-          unresolvedVarianceCount={unresolvedVarianceCount}
-        />
-      </div>
+      {isTouchLayout ? (
+        <Drawer open={sessionHistoryOpen} onOpenChange={setSessionHistoryOpen}>
+          <DrawerContent showHandle responsiveFullscreen>
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>
+                {messages.settings.posSessions.sessionHistory}
+              </DrawerTitle>
+              <DrawerDescription>
+                {messages.settings.posSessions.sessionHistoryDescription(
+                  openSessionCount,
+                  unresolvedVarianceCount,
+                )}
+              </DrawerDescription>
+            </DrawerHeader>
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="p-3">{sessionHistoryPanel}</div>
+            </ScrollArea>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <div className="order-1 min-w-0">{sessionHistoryPanel}</div>
+      )}
 
       <div className="order-1 flex min-w-0 flex-col gap-3 xl:order-2">
+        {isTouchLayout ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full justify-start text-left"
+            onClick={() => setSessionHistoryOpen(true)}
+          >
+            <IconClock data-icon="inline-start" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">
+                {messages.settings.posSessions.sessionHistory}
+              </span>
+              <span className="block truncate text-xs font-normal text-muted-foreground">
+                {selectedSession
+                  ? resolveSessionLabel(selectedSession)
+                  : messages.settings.posSessions.emptyTitle}
+              </span>
+            </span>
+            <Badge variant="secondary">{formatCount(sessions.length)}</Badge>
+            <IconChevronRight data-icon="inline-end" />
+          </Button>
+        ) : null}
+
         {selectedSession ? (
           <>
             <SessionDetailCard
               branchId={branchId}
               session={selectedSession}
               summary={summary}
-              onCloseShift={() => {}}
+              onCloseShift={() => setCloseSessionId(selectedSession.id)}
             />
 
             <AppSection
@@ -241,7 +296,8 @@ export function PosSessionsClient({
                     <Item
                       key={order.id}
                       variant="outline"
-                      className="cursor-pointer"
+                      render={<button type="button" />}
+                      className="cursor-pointer text-left"
                       onClick={() => setSelectedOrderId(order.id)}
                     >
                       <ItemHeader>
@@ -283,8 +339,6 @@ export function PosSessionsClient({
         {report ? <SessionReportCard report={report} /> : null}
       </div>
 
-      {selectedSession ? <div /> : null}
-
       <OrderDetailDrawer
         order={selectedOrder}
         canCorrectPaymentMethod={canCorrectPaymentMethod}
@@ -293,6 +347,15 @@ export function PosSessionsClient({
           if (!next) setSelectedOrderId(null);
         }}
       />
+      {closeSessionId !== null ? (
+        <CloseSessionSheet
+          sessionId={closeSessionId}
+          open
+          onOpenChange={(next) => {
+            if (!next) setCloseSessionId(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -303,12 +366,14 @@ function SessionHistoryPanel({
   selectedSessionId,
   openSessionCount,
   unresolvedVarianceCount,
+  onSessionSelect,
 }: {
   branchId: number;
   sessions: PosSessionRow[];
   selectedSessionId: number | null;
   openSessionCount: number;
   unresolvedVarianceCount: number;
+  onSessionSelect?: () => void;
 }) {
   return (
     <AppSection
@@ -338,6 +403,7 @@ function SessionHistoryPanel({
               <Link
                 href={`/br/${branchId}/pos-sessions?session=${session.id}`}
                 aria-current={selected ? "page" : undefined}
+                onClick={onSessionSelect}
                 className="flex min-w-0 flex-1 flex-wrap items-center gap-3"
               />
             }
@@ -1102,7 +1168,7 @@ function OrderDetailDrawer({
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="touch"
                       onClick={() => setMethodFixOpen(true)}
                     >
                       {messages.finance.invoiceList.methodFix}:{" "}

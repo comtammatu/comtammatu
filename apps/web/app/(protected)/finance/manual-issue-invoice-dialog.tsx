@@ -29,7 +29,7 @@ const MI = messages.finance.invoiceList.manualIssue;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function formatSummaryDate(date: string): string {
+function formatHistoricalAggregateDate(date: string): string {
   return formatVNBusinessDate(date, date);
 }
 
@@ -158,8 +158,10 @@ export function ManualIssueInvoiceDialog({
   const ineligibleReason = preview
     ? preview.paymentStatus !== "paid"
       ? MI.unpaid
-      : preview.summaryDate
-        ? MI.inSummary(formatSummaryDate(preview.summaryDate))
+      : preview.historicalAggregateDate
+        ? MI.historicalAggregate(
+            formatHistoricalAggregateDate(preview.historicalAggregateDate),
+          )
         : preview.existingInvoiceStatus && !preview.isDraftRetry
           ? MI.alreadyInvoiced(
               preview.existingInvoiceNumber ?? preview.existingInvoiceStatus,

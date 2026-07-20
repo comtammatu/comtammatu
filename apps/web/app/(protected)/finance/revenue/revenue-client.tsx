@@ -580,19 +580,21 @@ export function RevenueClient({
               mobileCardRender={(row) => {
                 const href = periodDrillHref(row);
                 return (
-                  <Item variant="outline">
+                  <Item
+                    variant="outline"
+                    render={href ? <Link href={href} /> : undefined}
+                  >
                     <ItemContent>
                       <ItemTitle>
-                        {href ? (
-                          <Link
-                            href={href}
-                            className="text-primary underline-offset-2 hover:underline"
-                          >
-                            {row.period_label}
-                          </Link>
-                        ) : (
-                          row.period_label
-                        )}
+                        <span
+                          className={
+                            href
+                              ? "text-primary underline-offset-2 group-hover/item:underline"
+                              : undefined
+                          }
+                        >
+                          {row.period_label}
+                        </span>
                       </ItemTitle>
                       <ItemDescription>
                         {formatCount(row.order_count)}{" "}

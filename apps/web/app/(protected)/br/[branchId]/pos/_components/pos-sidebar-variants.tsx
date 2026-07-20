@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type ComponentProps } from "react";
+import { memo, type ComponentProps, type ReactNode } from "react";
 import { PosSessionTopBar } from "../pos-session-header";
 import { PosSidebarContent } from "../pos-sidebar-panel";
 import { AppendDraftPane } from "./append-draft-pane";
@@ -17,6 +17,7 @@ interface SidebarHeaderInputs {
 export interface SplitSidebarProps extends SidebarHeaderInputs {
   isContextGate: boolean;
   sidebarContentProps: SidebarContentProps;
+  sessionAction?: ReactNode;
 }
 
 /** Wide layout (xl+): cart + order-list side by side. */
@@ -25,6 +26,7 @@ function SplitSidebarComponent({
   onShowCloseSession,
   isContextGate,
   sidebarContentProps,
+  sessionAction,
 }: SplitSidebarProps) {
   const {
     canSubmit,
@@ -39,6 +41,11 @@ function SplitSidebarComponent({
     onOpenArchivedSheet,
     hideTakeawayOrders,
   } = sidebarContentProps;
+  const sessionActionRow = sessionAction ? (
+    <div className="flex shrink-0 justify-end border-b border-border/60 px-3 py-2">
+      {sessionAction}
+    </div>
+  ) : null;
 
   if (isContextGate) {
     return (
@@ -47,6 +54,7 @@ function SplitSidebarComponent({
           canCloseShift={canCloseShift}
           onShowCloseSession={onShowCloseSession}
         />
+        {sessionActionRow}
         <OrderListPane
           onViewBill={onViewBill}
           onViewDetail={onViewDetail}
@@ -63,6 +71,7 @@ function SplitSidebarComponent({
         canCloseShift={canCloseShift}
         onShowCloseSession={onShowCloseSession}
       />
+      {sessionActionRow}
       <div className="flex min-h-0 flex-1">
         <div className="flex w-72 shrink-0 flex-col xl:w-80 2xl:w-96">
           {appendDraft.target != null ? (

@@ -120,9 +120,10 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   `Nền tảng & thiết lập`; card link cho Tài chính, Đơn hàng, Kho hàng, Thực đơn,
   Nhân sự, Chi nhánh và Cài đặt. Không hiển thị KPI khi chưa có contract dữ liệu
   Owner tương ứng.
-- **Quy chuẩn UX/UI:** Dùng `AppPage` + `AppPageHeader` + `AppSection` +
-  `LinkCardGrid` + `AppLinkCard`; 1 cột trên phone, 2 cột trên tablet dọc và 3
-  cột trên desktop. Chỉ Owner được vào mọi route top-level của Owner surface.
+- **Quy chuẩn UX/UI:** Dùng `AppPage` + `AppSection` + `LinkCardGrid` +
+  `AppLinkCard`; không có Header/Breadcrumb dư thừa, các card là điểm vào chính.
+  1 cột trên phone, 2 cột trên tablet dọc và 3 cột trên desktop.
+  Chỉ Owner được vào mọi route top-level của Owner surface.
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`, `/shift`, `/team`
 

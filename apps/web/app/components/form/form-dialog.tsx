@@ -38,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   Field,
   FieldDescription,
@@ -50,6 +51,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 
 export interface FormDialogProps<TValues extends FieldValues> {
   open: boolean;
@@ -117,13 +119,16 @@ export function FormDialog<TValues extends FieldValues>({
   onSuccess,
   submitLabel,
   submitVariant = "default",
-  actionSize = "default",
+  actionSize = "touch",
   cancelLabel = "Hủy",
   contentClassName,
   children,
 }: FormDialogProps<TValues>) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const wasOpenRef = useRef(false);
+  const previousEntityKeyRef = useRef(entityKey);
+  const closeConfirmationPendingRef = useRef(false);
 
   const form = useForm<TValues, unknown, TValues>({
     // zodResolver's generic constraints don't flow cleanly through this
@@ -132,12 +137,19 @@ export function FormDialog<TValues extends FieldValues>({
     resolver: zodResolver(schema as any),
     defaultValues,
   });
+  const isDirty = form.formState.isDirty;
 
   useEffect(() => {
-    if (open) {
+    const justOpened = open && !wasOpenRef.current;
+    const entityChanged = open && previousEntityKeyRef.current !== entityKey;
+
+    if (justOpened || entityChanged) {
       form.reset(defaultValues);
       setServerError(null);
     }
+
+    wasOpenRef.current = open;
+    previousEntityKeyRef.current = entityKey;
   }, [open, entityKey, defaultValues, form]);
 
   function handleValid(values: TValues) {
@@ -157,8 +169,38 @@ export function FormDialog<TValues extends FieldValues>({
     });
   }
 
+  async function requestClose() {
+    if (isPending || closeConfirmationPendingRef.current) return;
+    if (!isDirty) {
+      onOpenChange(false);
+      return;
+    }
+
+    closeConfirmationPendingRef.current = true;
+    try {
+      const shouldDiscard = await confirm({
+        title: messages.common.unsavedChangesTitle,
+        description: messages.common.unsavedChangesDescription,
+        confirmText: messages.common.discardChanges,
+        cancelText: messages.common.confirmCancel,
+        variant: "destructive",
+      });
+      if (shouldDiscard) onOpenChange(false);
+    } finally {
+      closeConfirmationPendingRef.current = false;
+    }
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
+    void requestClose();
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className={cn("sm:max-w-lg", contentClassName)}
         key={entityKey ?? "new"}
@@ -189,7 +231,7 @@ export function FormDialog<TValues extends FieldValues>({
               type="button"
               variant="outline"
               size={actionSize}
-              onClick={() => onOpenChange(false)}
+              onClick={() => void requestClose()}
               disabled={isPending}
             >
               {cancelLabel}
@@ -396,12 +438,13 @@ export function FileImportDialog<
             <Button
               type="button"
               variant="outline"
+              size="touch"
               onClick={() => handleOpenChange(false)}
               disabled={isPending}
             >
               {closeLabel}
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" size="touch" disabled={isPending}>
               {isPending && <Spinner data-icon="inline-start" />}
               {submitLabel}
             </Button>

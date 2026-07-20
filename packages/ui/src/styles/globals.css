@@ -566,12 +566,17 @@
   padding-top: max(0.5rem, env(safe-area-inset-top));
 }
 
-/* Override: safe-area for app-shell chrome (BottomNav, sticky toolbars)
+/* Override: safe-area for app-shell chrome (shell roots, BottomNav, sticky toolbars)
  * when the PWA runs standalone on Android — viewport-fit:cover lets the
  * system gesture/3-button nav bar overlap fixed-bottom UI. `max(...)`
  * preserves the original chrome padding on non-gesture devices.
+ * `chrome-safe-pt` shifts a full-height shell below translucent status chrome
+ * without adding spacing on zero-inset viewports.
  * `chrome-safe-pb` replaces `pb-2`-style chrome padding on fixed or sticky
  * `bottom-0` shells. Prefixed `chrome-` to avoid retired helper names. */
+@utility chrome-safe-pt {
+  padding-top: env(safe-area-inset-top);
+}
 @utility chrome-safe-pb {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }

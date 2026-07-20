@@ -6,6 +6,13 @@ import { AppDialog } from "@/components/form";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import {
+  Field,
+  FieldDescription,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Item,
@@ -16,6 +23,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
+import { Switch } from "@comtammatu/ui/components/switch";
 import {
   Select,
   SelectContent,
@@ -104,6 +112,20 @@ const PRINTER_COPY = {
   paperWidthLabel: "Khổ giấy",
   printTypesLabel: "Loại phiếu in trên máy này",
   categoriesLabel: "Danh mục món in trên máy này",
+  activeControlLabel: "Cho phép nhận lệnh in",
+} as const;
+
+const PRINTER_FORM_ID = "branch-printer-form";
+const PRINTER_FIELD_IDS = {
+  branch: "branch-printer-branch",
+  role: "branch-printer-role",
+  name: "branch-printer-name",
+  lanHost: "branch-printer-lan-host",
+  lanPort: "branch-printer-lan-port",
+  lanPortHelp: "branch-printer-lan-port-help",
+  paperWidth: "branch-printer-paper-width",
+  codePage: "branch-printer-code-page",
+  active: "branch-printer-active",
 } as const;
 
 const DEFAULT_PRINT_TYPES: Record<PrinterRole, readonly PrintType[]> = {
@@ -170,7 +192,10 @@ export function PrintersClient(props: {
                   >
                     <ItemContent className="min-w-0">
                       <ItemHeader className="justify-start gap-2">
-                        <ItemTitle size="heading" className="line-clamp-none w-full">
+                        <ItemTitle
+                          size="heading"
+                          className="line-clamp-none w-full"
+                        >
                           {ROLE_LABEL[role]}
                         </ItemTitle>
                         {printer?.is_active ? (
@@ -293,7 +318,7 @@ function PrinterForm({
     role: initialRole,
     name: initial?.name ?? "",
     lan_host: initial?.lan_host ?? "",
-    lan_port: initial?.lan_port ?? 9100,
+    lan_port: String(initial?.lan_port ?? 9100),
     paper_width_mm: (initial?.paper_width_mm ?? 80) as 58 | 80,
     code_page: initial?.code_page ?? "CP1258",
     is_active: initial?.is_active ?? true,
@@ -304,6 +329,8 @@ function PrinterForm({
     category_ids: initial?.category_ids ?? [],
   });
   const canSwitchBranch = branches.length > 1;
+  const controlSize = embedded ? "touch" : "field";
+  const optionSize = embedded ? "touch" : "default";
 
   const setRole = (role: PrinterRole) => {
     setForm({
@@ -333,6 +360,7 @@ function PrinterForm({
   };
 
   const save = () => {
+    if (pending) return;
     setErr(null);
     if (!form.branch_id) {
       setErr("Vui lòng chọn chi nhánh");
@@ -346,7 +374,7 @@ function PrinterForm({
         role: form.role,
         name: form.name,
         lan_host: form.lan_host,
-        lan_port: form.lan_port || null,
+        lan_port: form.lan_port ? Number(form.lan_port) : null,
         paper_width_mm: form.paper_width_mm,
         code_page: form.code_page,
         is_active: form.is_active,
@@ -404,6 +432,7 @@ function PrinterForm({
         <>
           {initial ? (
             <Button
+              type="button"
               variant="outline"
               size={embedded ? "touch" : "default"}
               className="w-full sm:w-auto"
@@ -414,6 +443,7 @@ function PrinterForm({
             </Button>
           ) : null}
           <Button
+            type="button"
             variant="outline"
             size={embedded ? "touch" : "default"}
             className="w-full sm:w-auto"
@@ -423,183 +453,302 @@ function PrinterForm({
             {ACTIONS_VI.cancel}
           </Button>
           <Button
+            type="submit"
+            form={PRINTER_FORM_ID}
             size={embedded ? "touch" : "default"}
             className="w-full sm:w-auto"
-            onClick={save}
             disabled={pending}
           >
-            {pending ? "Đang lưu..." : "Lưu"}
+            {pending ? "Đang lưu…" : "Lưu"}
           </Button>
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2">
-            {canSwitchBranch ? (
-              <div className="flex flex-col gap-2">
-                <Label>{BRANCH_VI.long}</Label>
-                {initial ? (
-                  <Input
-                    readOnly
-                    value={
-                      branches.find((branch) => branch.id === form.branch_id)?.name ??
-                      `#${form.branch_id}`
-                    }
-                    className="bg-muted/50"
-                  />
-                ) : (
-                  <Select
-                    value={form.branch_id ? String(form.branch_id) : undefined}
-                    onValueChange={(value) =>
-                      setForm({ ...form, branch_id: Number(value) })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={BRANCH_VI.select} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={String(branch.id)}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            ) : null}
+      <form
+        id={PRINTER_FORM_ID}
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          save();
+        }}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          {canSwitchBranch ? (
             <div className="flex flex-col gap-2">
-              <Label>{PRINTER_COPY.slotLabel}</Label>
+              <FieldLabel htmlFor={PRINTER_FIELD_IDS.branch}>
+                {BRANCH_VI.long}
+              </FieldLabel>
               {initial ? (
                 <Input
+                  id={PRINTER_FIELD_IDS.branch}
+                  name="branch_id"
+                  autoComplete="off"
+                  controlSize={controlSize}
                   readOnly
-                  value={ROLE_LABEL[form.role]}
+                  value={
+                    branches.find((branch) => branch.id === form.branch_id)
+                      ?.name ?? `#${form.branch_id}`
+                  }
                   className="bg-muted/50"
                 />
               ) : (
                 <Select
-                  value={form.role}
-                  onValueChange={(value) => setRole(value as PrinterRole)}
+                  name="branch_id"
+                  value={form.branch_id ? String(form.branch_id) : undefined}
+                  onValueChange={(value) =>
+                    setForm({ ...form, branch_id: Number(value) })
+                  }
                 >
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger
+                    id={PRINTER_FIELD_IDS.branch}
+                    size={controlSize}
+                  >
+                    <SelectValue placeholder={BRANCH_VI.select} />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLE_ORDER.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {ROLE_LABEL[role]}
+                    {branches.map((branch) => (
+                      <SelectItem
+                        key={branch.id}
+                        value={String(branch.id)}
+                        size={optionSize}
+                      >
+                        {branch.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
             </div>
-            <div className="flex flex-col gap-2">
-              <Label>{FORM_VI.name}</Label>
-              <Input
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder={PRINTER_COPY.samplePrinterPlaceholder}
-              />
-            </div>
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label>LAN host / IP</Label>
-              <Input
-                value={form.lan_host}
-                onChange={(event) =>
-                  setForm({ ...form, lan_host: event.target.value })
-                }
-                placeholder="192.168.1.50"
-              />
-              <p className="text-xs text-muted-foreground">
-                {PRINTER_COPY.lanPortHelp}
-              </p>
-            </div>
+          ) : null}
 
-            <div className="flex flex-col gap-2">
-              <Label>{PRINTER_COPY.paperWidthLabel}</Label>
+          <Field>
+            <FieldLabel htmlFor={PRINTER_FIELD_IDS.role}>
+              {PRINTER_COPY.slotLabel}
+            </FieldLabel>
+            {initial ? (
+              <Input
+                id={PRINTER_FIELD_IDS.role}
+                name="role"
+                autoComplete="off"
+                controlSize={controlSize}
+                readOnly
+                value={ROLE_LABEL[form.role]}
+                className="bg-muted/50"
+              />
+            ) : (
               <Select
-                value={String(form.paper_width_mm)}
-                onValueChange={(value) =>
-                  setForm({ ...form, paper_width_mm: Number(value) as 58 | 80 })
-                }
+                name="role"
+                value={form.role}
+                onValueChange={(value) => setRole(value as PrinterRole)}
               >
-                <SelectTrigger>
+                <SelectTrigger id={PRINTER_FIELD_IDS.role} size={controlSize}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="58">58mm</SelectItem>
-                  <SelectItem value="80">80mm</SelectItem>
+                  {ROLE_ORDER.map((role) => (
+                    <SelectItem key={role} value={role} size={optionSize}>
+                      {ROLE_LABEL[role]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
+          </Field>
 
-            <div className="flex flex-col gap-2">
-              <Label>Code page</Label>
-              <Input
-                value={form.code_page}
-                onChange={(event) =>
-                  setForm({ ...form, code_page: event.target.value })
-                }
-                placeholder="CP1258"
-              />
-            </div>
-          </div>
+          <Field className="sm:col-span-2">
+            <FieldLabel htmlFor={PRINTER_FIELD_IDS.name}>
+              {FORM_VI.name}
+            </FieldLabel>
+            <Input
+              id={PRINTER_FIELD_IDS.name}
+              name="name"
+              autoComplete="off"
+              controlSize={controlSize}
+              value={form.name}
+              onChange={(event) =>
+                setForm({ ...form, name: event.target.value })
+              }
+              placeholder={PRINTER_COPY.samplePrinterPlaceholder}
+            />
+          </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label>{PRINTER_COPY.printTypesLabel}</Label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {PRINT_TYPE_ORDER.map((type) => (
-                <Item
-                  key={type}
-                  variant="outline"
-                  className="flex cursor-pointer items-center gap-2 p-3"
+          <Field>
+            <FieldLabel htmlFor={PRINTER_FIELD_IDS.lanHost}>
+              LAN host / IP
+            </FieldLabel>
+            <Input
+              id={PRINTER_FIELD_IDS.lanHost}
+              name="lan_host"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              controlSize={controlSize}
+              value={form.lan_host}
+              onChange={(event) =>
+                setForm({ ...form, lan_host: event.target.value })
+              }
+              placeholder="192.168.1.50"
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor={PRINTER_FIELD_IDS.lanPort}>
+              LAN port
+            </FieldLabel>
+            <Input
+              id={PRINTER_FIELD_IDS.lanPort}
+              name="lan_port"
+              type="number"
+              inputMode="numeric"
+              autoComplete="off"
+              min={1}
+              max={65535}
+              step={1}
+              controlSize={controlSize}
+              aria-describedby={PRINTER_FIELD_IDS.lanPortHelp}
+              value={form.lan_port}
+              onChange={(event) =>
+                setForm({ ...form, lan_port: event.target.value })
+              }
+            />
+            <FieldDescription id={PRINTER_FIELD_IDS.lanPortHelp}>
+              {PRINTER_COPY.lanPortHelp}
+            </FieldDescription>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor={PRINTER_FIELD_IDS.paperWidth}>
+              {PRINTER_COPY.paperWidthLabel}
+            </FieldLabel>
+            <Select
+              name="paper_width_mm"
+              value={String(form.paper_width_mm)}
+              onValueChange={(value) =>
+                setForm({ ...form, paper_width_mm: Number(value) as 58 | 80 })
+              }
+            >
+              <SelectTrigger
+                id={PRINTER_FIELD_IDS.paperWidth}
+                size={controlSize}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="58" size={optionSize}>
+                  58mm
+                </SelectItem>
+                <SelectItem value="80" size={optionSize}>
+                  80mm
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor={PRINTER_FIELD_IDS.codePage}>
+              Code page
+            </FieldLabel>
+            <Input
+              id={PRINTER_FIELD_IDS.codePage}
+              name="code_page"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              controlSize={controlSize}
+              value={form.code_page}
+              onChange={(event) =>
+                setForm({ ...form, code_page: event.target.value })
+              }
+              placeholder="CP1258"
+            />
+          </Field>
+
+          <Field orientation="horizontal" className="sm:col-span-2">
+            <Switch
+              id={PRINTER_FIELD_IDS.active}
+              name="is_active"
+              size={embedded ? "touch" : "default"}
+              checked={form.is_active}
+              onCheckedChange={(checked) =>
+                setForm({ ...form, is_active: checked })
+              }
+            />
+            <FieldLabel htmlFor={PRINTER_FIELD_IDS.active}>
+              {PRINTER_COPY.activeControlLabel}
+            </FieldLabel>
+          </Field>
+        </div>
+
+        <FieldSet>
+          <FieldLegend variant="label">
+            {PRINTER_COPY.printTypesLabel}
+          </FieldLegend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {PRINT_TYPE_ORDER.map((type) => (
+              <Item
+                key={type}
+                variant="outline"
+                className="flex cursor-pointer items-center gap-2 p-3"
+              >
+                <Checkbox
+                  id={`print-type-${type}`}
+                  name="print_types"
+                  value={type}
+                  size={embedded ? "touch" : "default"}
+                  checked={form.print_types.includes(type)}
+                  onCheckedChange={(checked) =>
+                    togglePrintType(type, checked === true)
+                  }
+                />
+                <Label
+                  htmlFor={`print-type-${type}`}
+                  className="w-full cursor-pointer text-sm font-normal"
                 >
-                  <Checkbox
-                    id={`print-type-${type}`}
-                    checked={form.print_types.includes(type)}
-                    onCheckedChange={(checked) =>
-                      togglePrintType(type, checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor={`print-type-${type}`}
-                    className="w-full cursor-pointer text-sm font-normal"
-                  >
-                    {PRINT_TYPE_LABEL[type]}
-                  </Label>
-                </Item>
-              ))}
-            </div>
+                  {PRINT_TYPE_LABEL[type]}
+                </Label>
+              </Item>
+            ))}
           </div>
+        </FieldSet>
 
-          <div className="flex flex-col gap-2">
-            <Label>{PRINTER_COPY.categoriesLabel}</Label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {categories.map((category) => (
-                <Item
-                  key={category.id}
-                  variant="outline"
-                  className="flex cursor-pointer items-center gap-2 p-3"
+        <FieldSet>
+          <FieldLegend variant="label">
+            {PRINTER_COPY.categoriesLabel}
+          </FieldLegend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {categories.map((category) => (
+              <Item
+                key={category.id}
+                variant="outline"
+                className="flex cursor-pointer items-center gap-2 p-3"
+              >
+                <Checkbox
+                  id={`print-category-${category.id}`}
+                  name="category_ids"
+                  value={String(category.id)}
+                  size={embedded ? "touch" : "default"}
+                  checked={form.category_ids.includes(category.id)}
+                  onCheckedChange={(checked) =>
+                    toggleCategory(category.id, checked === true)
+                  }
+                />
+                <Label
+                  htmlFor={`print-category-${category.id}`}
+                  className="w-full cursor-pointer text-sm font-normal"
                 >
-                  <Checkbox
-                    id={`print-category-${category.id}`}
-                    checked={form.category_ids.includes(category.id)}
-                    onCheckedChange={(checked) =>
-                      toggleCategory(category.id, checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor={`print-category-${category.id}`}
-                    className="w-full cursor-pointer text-sm font-normal"
-                  >
-                    {category.name}
-                  </Label>
-                </Item>
-              ))}
-            </div>
+                  {category.name}
+                </Label>
+              </Item>
+            ))}
           </div>
+        </FieldSet>
 
-      {err ? <p className="text-sm text-destructive">{err}</p> : null}
+        {err ? (
+          <p className="text-sm text-destructive" role="alert">
+            {err}
+          </p>
+        ) : null}
+      </form>
     </AppDialog>
   );
 }

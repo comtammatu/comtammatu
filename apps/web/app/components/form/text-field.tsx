@@ -10,12 +10,20 @@ import {
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
+import { type FormControlSize, useFormControlSize } from "./control-size";
 
 type InputProps = ComponentProps<typeof Input>;
 
 export interface TextFieldProps<TFieldValues extends FieldValues> extends Omit<
   InputProps,
-  "name" | "value" | "defaultValue" | "onChange" | "onBlur" | "ref" | "id"
+  | "name"
+  | "value"
+  | "defaultValue"
+  | "onChange"
+  | "onBlur"
+  | "ref"
+  | "id"
+  | "controlSize"
 > {
   control: Control<TFieldValues>;
   name: FieldPath<TFieldValues>;
@@ -23,6 +31,7 @@ export interface TextFieldProps<TFieldValues extends FieldValues> extends Omit<
   description?: string;
   id?: string;
   required?: boolean;
+  controlSize?: FormControlSize;
 }
 
 export function TextField<TFieldValues extends FieldValues>({
@@ -33,9 +42,11 @@ export function TextField<TFieldValues extends FieldValues>({
   id,
   required,
   className,
+  controlSize = "responsive",
   ...inputProps
 }: TextFieldProps<TFieldValues>) {
   const { field, fieldState } = useController({ control, name });
+  const resolvedControlSize = useFormControlSize(controlSize);
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
   const descriptionId = description ? `${fieldId}-description` : undefined;
@@ -54,6 +65,7 @@ export function TextField<TFieldValues extends FieldValues>({
         id={fieldId}
         aria-invalid={hasError}
         aria-describedby={describedBy}
+        controlSize={resolvedControlSize}
         className={className}
         {...inputProps}
         name={field.name}

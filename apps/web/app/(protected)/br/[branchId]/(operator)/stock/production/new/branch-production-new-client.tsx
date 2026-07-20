@@ -514,6 +514,7 @@ export function BranchProductionNewClient({
                           <SelectItem
                             key={unit.unitId}
                             value={String(unit.unitId)}
+                            size="touch"
                           >
                             {unit.label}
                           </SelectItem>
@@ -591,6 +592,7 @@ export function BranchProductionNewClient({
                           <SelectItem
                             key={location.id}
                             value={String(location.id)}
+                            size="touch"
                           >
                             {locationKindLabel(location)}
                           </SelectItem>
@@ -619,6 +621,7 @@ export function BranchProductionNewClient({
                           <SelectItem
                             key={location.id}
                             value={String(location.id)}
+                            size="touch"
                           >
                             {locationLabel(location)}
                           </SelectItem>

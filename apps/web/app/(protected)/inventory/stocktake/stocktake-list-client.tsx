@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight as IconArrowRight,
   ClipboardCheck as IconClipboardCheck,
+  EllipsisVertical as IconDotsVertical,
   Search as IconSearch,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
@@ -95,12 +96,25 @@ function StocktakeSessionCard({
     <InteractiveCard
       minHeight="mobile"
       padding="default"
-      className="flex-col items-stretch touch-none select-none cursor-pointer"
+      className="flex-col items-stretch touch-pan-y select-none cursor-pointer"
       {...longPress}
     >
-      <div className="flex items-center justify-between gap-2 pointer-events-none">
-        <span className="font-mono text-sm font-medium">KK-{row.id}</span>
-        <StatusBadge domain="inventory" value={row.status} />
+      <div className="flex items-center gap-2">
+        <span className="flex-1 font-mono text-sm font-medium pointer-events-none">
+          KK-{row.id}
+        </span>
+        <span className="pointer-events-none">
+          <StatusBadge domain="inventory" value={row.status} />
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-touch"
+          aria-label={`${FORM_VI.action} KK-${row.id}`}
+          onClick={() => onOpenDrawer(row)}
+        >
+          <IconDotsVertical />
+        </Button>
       </div>
       <div className="flex items-center justify-between text-xs text-muted-foreground pointer-events-none">
         <span>{row.branches?.name ?? "—"}</span>
@@ -317,6 +331,7 @@ export function StocktakeListClient({
       <DataTable
         columns={columns}
         data={filtered}
+        pageSize={50}
         getRowKey={(r) => r.id}
         emptyTitle={
           isFiltered

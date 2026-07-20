@@ -24,6 +24,9 @@ test("public QR surfaces use the shared web QR renderer", () => {
   const selfOrderPayment = readWeb(
     "app/q/[token]/self-order/payment-panel.tsx",
   );
+  const tableQr = readWeb(
+    "app/(protected)/branch-settings/_shared/tables/table-table.tsx",
+  );
 
   assert.match(sharedQr, /import QRCode from "qrcode"/);
   assert.match(sharedQr, /QRCode\.toDataURL/);
@@ -56,6 +59,9 @@ test("public QR surfaces use the shared web QR renderer", () => {
   assert.match(selfOrderPayment, /apps\.map\(\(app\)/);
   assert.doesNotMatch(selfOrderPayment, /AUTOFILL_BANK_APPS/);
   assert.doesNotMatch(selfOrderPayment, /import QRCode from "qrcode"/);
+  assert.match(tableQr, /<QrCodeImage[\s\S]*value=\{url\}/);
+  assert.doesNotMatch(tableQr, /size-72|QRCode\.toDataURL|next\/image/);
+  assert.equal(tableQr.match(/size="touch"/g)?.length, 2);
 });
 
 test("bank app catalog keeps safe unique apps for testing", () => {
@@ -103,7 +109,9 @@ test("bank app catalog follows the customer device platform", () => {
     "https://api.vietqr.io/v2/ios-app-deeplinks",
   );
   assert.equal(
-    getVietQrBankAppCatalogUrl({ userAgent: "Mozilla/5.0 (Linux; Android 16)" }),
+    getVietQrBankAppCatalogUrl({
+      userAgent: "Mozilla/5.0 (Linux; Android 16)",
+    }),
     "https://api.vietqr.io/v2/android-app-deeplinks",
   );
   assert.equal(

@@ -69,7 +69,6 @@ export default async function ExpensesPage({
         eyebrow={copy.page.eyebrow}
         title={copy.page.title}
         description={copy.page.description}
-        meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
       />
       <ExpensesClient
         params={params}

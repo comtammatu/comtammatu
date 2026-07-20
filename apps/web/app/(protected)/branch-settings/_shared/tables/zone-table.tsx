@@ -61,9 +61,10 @@ export function ZoneTable({ zones }: ZoneTableProps) {
     });
   }
 
-  function ZoneActions({ zone }: { zone: ZoneRow }) {
+  function ZoneActions({ zone, touch = false }: { zone: ZoneRow; touch?: boolean }) {
     return (
       <RowActionsMenu
+        triggerSize={touch ? "icon-touch" : "icon-lg"}
         items={[
           {
             key: "edit",
@@ -127,7 +128,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
               </ItemDescription>
             </ItemContent>
             <ItemActions>
-              <ZoneActions zone={zone} />
+              <ZoneActions zone={zone} touch />
             </ItemActions>
           </Item>
         )}

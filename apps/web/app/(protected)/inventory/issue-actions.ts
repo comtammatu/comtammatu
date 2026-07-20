@@ -58,6 +58,7 @@ const issueLineSchema = z.object({
   // Missing value resolves to the ingredient base entry unit.
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   reason: z.string().trim().optional().nullable(),
+  photoUrls: z.array(z.string().url()).max(1).optional(),
 });
 
 const issueLineDeleteSchema = z.object({
@@ -226,7 +227,7 @@ export async function fetchStockIssueDetail(
     supabase
       .from("stock_issue_items")
       .select(
-        "id, ingredient_id, quantity, entry_unit_id, unit_cost, total_cost, reason, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+        "id, ingredient_id, quantity, entry_unit_id, unit_cost, total_cost, reason, photo_urls, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
       )
       .eq("issue_id", id.data)
       .eq("tenant_id", claims.tenant_id)
@@ -272,7 +273,7 @@ export async function fetchStockIssueDetail(
 
   return {
     success: true,
-    data: { issue, lines },
+    data: { tenantId: claims.tenant_id, issue, lines },
   };
 }
 
@@ -346,6 +347,7 @@ export const upsertStockIssueLine = withAction(
         entry_unit_id: resolvedUnit.unitId,
         unit_cost: Number.isFinite(unitCost) ? unitCost : 0,
         reason: d.reason ?? null,
+        ...(d.photoUrls === undefined ? {} : { photo_urls: d.photoUrls }),
       },
       { onConflict: "issue_id,ingredient_id,tenant_id" },
     );

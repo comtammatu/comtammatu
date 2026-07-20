@@ -74,7 +74,8 @@ export function BranchOperatorPage({
       <AppPageHeader
         title={title}
         description={description}
-        className={hideHeaderOnMobile ? "sr-only sm:not-sr-only" : undefined}
+        className={hideHeaderOnMobile ? "max-sm:sr-only" : undefined}
+        compactOnMobile={hideHeaderOnMobile}
         badge={badge}
         actions={action}
       />

@@ -86,11 +86,20 @@ test("operator header shows branch context and keeps profile and notifications",
   assert.match(layout, /className="sm:hidden"/);
   assert.match(layout, /className="hidden sm:inline"/);
   assert.match(appHeader, /homeHref\?: string/);
+  assert.match(appHeader, /showThemeToggle\?: boolean/);
   assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
   assert.match(appHeader, /"min-h-11 min-w-11 shrink-0 justify-center"/);
   assert.match(layout, /IconLayoutDashboard/);
+  assert.match(
+    layout,
+    /const usesHeaderOverflow = canOpenOwnerHome \|\| canManageBranch/,
+  );
+  assert.match(layout, /showThemeToggle=\{!usesHeaderOverflow\}/);
+  assert.match(layout, /<DropdownMenu>/);
+  assert.match(layout, /<ThemeMenuItem className="min-h-12 text-sm" \/>/);
+  assert.match(layout, /\{usesHeaderOverflow \? \(/);
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/dashboard`\}/);
-  assert.match(layout, /aria-label=\{APP_COPY_VI\.branchCommand\}/);
+  assert.match(layout, /\{APP_COPY_VI\.branchCommand\}/);
   assert.match(layout, /IconUser/);
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/profile`\}/);
   assert.match(layout, /aria-label=\{messages\.operator\.nav\.profileShort\}/);
@@ -105,7 +114,6 @@ test("operator header shows branch context and keeps profile and notifications",
   assert.match(layout, /encodeURIComponent\(`\/br\/\$\{context\.branchId\}`\)/);
   assert.match(layout, /href=\{notificationsHref\}/);
   assert.match(layout, /size="icon-touch"/);
-  assert.match(layout, /className="min-w-11"/);
   assert.match(layout, /className="hidden sm:inline"/);
   assert.doesNotMatch(layout, /IconBell data-icon="inline-start"/);
   assert.doesNotMatch(layout, /<Badge/);
@@ -155,10 +163,15 @@ test("operator home keeps visible mobile identity while detail pages may compact
   const stock = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
   );
+  const surface = read("apps/web/app/components/surface.tsx");
 
   assert.match(adapter, /hideHeaderOnMobile\?: boolean/);
-  assert.match(adapter, /sr-only sm:not-sr-only/);
+  assert.match(adapter, /compactOnMobile=\{hideHeaderOnMobile\}/);
+  assert.doesNotMatch(adapter, /sr-only sm:not-sr-only/);
   assert.match(adapter, /data-slot="branch-operator-page"/);
+  assert.match(surface, /compactOnMobile\?: boolean/);
+  assert.match(surface, /compactOnMobile && "max-sm:text-base"/);
+  assert.match(surface, /compactOnMobile && "max-sm:hidden"/);
   assert.doesNotMatch(home, /hideHeaderOnMobile/);
   assert.match(stock, /hideHeaderOnMobile/);
 });

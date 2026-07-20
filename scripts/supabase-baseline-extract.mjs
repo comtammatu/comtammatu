@@ -20,6 +20,7 @@ const DEFAULT_TIMEOUT_MS = 300_000;
 const KNOWN_TARGETS = {
   iexwsuaqqenyjiskawoj: {
     passwordEnv: "SUPABASE_PASSWORD_IEXW",
+    fallbackPasswordEnv: "SUPABASE_DB_PASSWORD",
     explicitUrlEnv: "SUPABASE_DB_URL_IEXW",
   },
 };
@@ -161,11 +162,14 @@ function buildBaselineDbUrl(expectedRef) {
   //    .temp/pooler-url belongs to the linked project; both known targets are in
   //    the same region so the pooler host is identical — swap the ref segment.
   const poolerPath = join(process.cwd(), "supabase", ".temp", "pooler-url");
-  const password = readEnvLocalValue(target.passwordEnv);
+  const password =
+    readEnvLocalValue(target.passwordEnv) ||
+    readEnvLocalValue(target.fallbackPasswordEnv);
   if (!existsSync(poolerPath) || !password) {
     throw new Error(
       `Privileged dump for ${expectedRef} requires ${target.explicitUrlEnv} (or ` +
-        `${target.passwordEnv} in .env.local plus supabase/.temp/pooler-url). The ` +
+        `${target.passwordEnv} or ${target.fallbackPasswordEnv} in .env.local plus ` +
+        "supabase/.temp/pooler-url). The " +
         "--linked temp-login dump is INCOMPLETE — it drops RLS-restricted tables.",
     );
   }

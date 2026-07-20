@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@comtammatu/ui";
-import { BrandLogoBox, BrandMark } from "@/components/brand";
+import { BRAND_NAME, BrandLogoBox, BrandMark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export interface AppHeaderBrandProps {
@@ -53,11 +53,12 @@ export function AppHeaderBrand({
     "flex items-center gap-2",
     showText ? "min-w-0" : "min-h-11 min-w-11 shrink-0 justify-center",
   );
+  const linkAriaLabel = ariaLabel || (!showText ? BRAND_NAME : undefined);
 
   return href ? (
     <Link
       href={href}
-      aria-label={ariaLabel}
+      aria-label={linkAriaLabel}
       className={cn(
         className,
         "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground",
@@ -89,6 +90,7 @@ export interface AppHeaderProps {
   /** Row max-width breakpoint step-up; default matches the Branch runtime header. */
   wide?: boolean;
   className?: string;
+  showThemeToggle?: boolean;
 }
 
 /**
@@ -109,6 +111,7 @@ export function AppHeader({
   actions,
   wide = false,
   className,
+  showThemeToggle = true,
 }: AppHeaderProps) {
   return (
     <header
@@ -133,7 +136,9 @@ export function AppHeader({
         />
         {nav}
         <div className="flex shrink-0 items-center gap-2">
-          <ThemeToggle variant="outline" size="icon-touch" />
+          {showThemeToggle ? (
+            <ThemeToggle variant="outline" size="icon-touch" />
+          ) : null}
           {actions}
         </div>
       </div>

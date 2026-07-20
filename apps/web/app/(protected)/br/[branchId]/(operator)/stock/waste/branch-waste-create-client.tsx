@@ -764,7 +764,11 @@ export function BranchWasteCreateClient({
                   </SelectTrigger>
                   <SelectContent>
                     {context.locations.map((location) => (
-                      <SelectItem key={location.id} value={String(location.id)}>
+                      <SelectItem
+                        key={location.id}
+                        value={String(location.id)}
+                        size="touch"
+                      >
                         {location.name} ({location.kind})
                       </SelectItem>
                     ))}
@@ -1007,6 +1011,7 @@ export function BranchWasteCreateClient({
                                   <SelectItem
                                     key={unit.unitId}
                                     value={String(unit.unitId)}
+                                    size="touch"
                                   >
                                     {unit.label}
                                   </SelectItem>
@@ -1149,6 +1154,7 @@ export function BranchWasteCreateClient({
                                 patchEditor({ photoUrls: url ? [url] : [] })
                               }
                               disabled={isSubmitting}
+                              previewSize="touch"
                             />
                           </FormField>
                         ) : null}

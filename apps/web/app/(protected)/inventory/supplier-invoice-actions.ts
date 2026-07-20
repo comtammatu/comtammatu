@@ -7,11 +7,21 @@ import {
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { addVNDateDays } from "@comtammatu/shared/time";
+import { addVNDateDays, getVNDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { PG_ERR } from "./_lib/constants";
+import {
+  filterSupplierInvoices,
+  groupSupplierInvoices,
+  SUPPLIER_INVOICE_MATCH_STATUSES,
+  SUPPLIER_INVOICE_PAYMENT_STATUSES,
+  SUPPLIER_INVOICE_VIEW_MODES,
+  type SupplierInvoiceGroup,
+  type SupplierInvoiceListFilters,
+} from "./supplier-invoices/supplier-invoice-list-model";
+import { mapSupplierInvoiceRow } from "./supplier-invoices/supplier-invoice-row";
 
 const ROLES = PROCUREMENT_ROLES;
 
@@ -198,6 +208,7 @@ const supplierInvoiceSelect = (branchId?: number) => {
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;
+const SUPPLIER_INVOICE_SCAN_PAGE_SIZE = 500;
 
 export interface SupplierInvoiceCursor {
   invoiceDate: string;
@@ -208,6 +219,8 @@ export interface SupplierInvoicePage {
   items: unknown[];
   hasMore: boolean;
   nextCursor: SupplierInvoiceCursor | null;
+  totalCount: number;
+  groups: SupplierInvoiceGroup[];
 }
 
 const supplierInvoiceCursorSchema = z.object({
@@ -218,6 +231,12 @@ const supplierInvoiceCursorSchema = z.object({
 const fetchSupplierInvoicesPaginatedSchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
   invoiceId: z.coerce.number().int().positive().optional(),
+  query: z.string().trim().max(200).optional().default(""),
+  supplierId: z.coerce.number().int().positive().optional(),
+  matchStatus: z.enum(SUPPLIER_INVOICE_MATCH_STATUSES).optional(),
+  paymentStatus: z.enum(SUPPLIER_INVOICE_PAYMENT_STATUSES).optional(),
+  overdueOnly: z.boolean().optional().default(false),
+  viewMode: z.enum(SUPPLIER_INVOICE_VIEW_MODES).optional().default("supplier"),
   before: supplierInvoiceCursorSchema.optional(),
   pageSize: z.coerce
     .number()
@@ -229,12 +248,9 @@ const fetchSupplierInvoicesPaginatedSchema = z.object({
 });
 
 /**
- * Keyset-paginated supplier-invoice list (invoice_date desc, id desc
- * tiebreaker). invoice_date is a NOT NULL timestamptz with frequent ties,
- * so the id tiebreaker is required for stable paging. Mirrors
- * fetchArchivedOrders: fetch pageSize+1 to probe hasMore, slice to
- * pageSize, expose the last row as nextCursor. Scoped to tenant + optional
- * branch (branch filter rides the GRN relationship).
+ * Server-filtered supplier-invoice list. The tenant/branch result is scanned
+ * with an internal keyset so search and aggregate truth cover unloaded rows;
+ * the public cursor only controls which matching rows are presented next.
  */
 export async function fetchSupplierInvoicesPage(
   input: z.input<typeof fetchSupplierInvoicesPaginatedSchema> = {},
@@ -250,57 +266,112 @@ export async function fetchSupplierInvoicesPage(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const { branchId, invoiceId, before, pageSize } = parsed.data;
-
-  let query = supabase
-    .from("supplier_invoices")
-    .select(supplierInvoiceSelect(branchId))
-    .eq("tenant_id", claims.tenant_id);
-
-  if (branchId != null) {
-    query = query.eq("goods_received_notes.branch_id", branchId);
-  }
-
-  if (invoiceId != null) {
-    query = query.eq("id", invoiceId);
-  }
-
-  if (before) {
-    // Keyset: rows STRICTLY after the cursor under (invoice_date desc, id desc).
-    // PostgREST has no composite "<", so OR two disjoint half-spaces:
-    //   invoice_date < cursor.invoiceDate
-    //   OR (invoice_date = cursor.invoiceDate AND id < cursor.id)
-    query = query.or(
-      `invoice_date.lt.${before.invoiceDate},and(invoice_date.eq.${before.invoiceDate},id.lt.${String(before.id)})`,
-    );
-  }
-
-  const { data, error } = await query
-    .order("invoice_date", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(pageSize + 1);
-
-  if (error) {
-    return {
-      success: false,
-      error: messages.inventory.supplierInvoices.loadFailed,
-    };
-  }
-
-  const fetched = (data ?? []) as unknown as Array<{
+  const {
+    branchId,
+    invoiceId,
+    query: queryText,
+    supplierId,
+    matchStatus,
+    paymentStatus,
+    overdueOnly,
+    viewMode,
+    before,
+    pageSize,
+  } = parsed.data;
+  const fetched: Array<{
     id: number;
     invoice_date: string;
     [k: string]: unknown;
-  }>;
-  const hasMore = fetched.length > pageSize;
-  const items = hasMore ? fetched.slice(0, pageSize) : fetched;
-  const last = items.at(-1);
+  }> = [];
+  let scanBefore: SupplierInvoiceCursor | null = null;
+
+  while (true) {
+    let query = supabase
+      .from("supplier_invoices")
+      .select(supplierInvoiceSelect(branchId))
+      .eq("tenant_id", claims.tenant_id);
+
+    if (branchId != null) {
+      query = query.eq("goods_received_notes.branch_id", branchId);
+    }
+
+    if (invoiceId != null) {
+      query = query.eq("id", invoiceId);
+    }
+
+    if (scanBefore) {
+      query = query.or(
+        `invoice_date.lt.${scanBefore.invoiceDate},and(invoice_date.eq.${scanBefore.invoiceDate},id.lt.${String(scanBefore.id)})`,
+      );
+    }
+
+    const { data, error } = await query
+      .order("invoice_date", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(SUPPLIER_INVOICE_SCAN_PAGE_SIZE);
+
+    if (error) {
+      return {
+        success: false,
+        error: messages.inventory.supplierInvoices.loadFailed,
+      };
+    }
+
+    const batch = (data ?? []) as unknown as typeof fetched;
+    fetched.push(...batch);
+    if (batch.length < SUPPLIER_INVOICE_SCAN_PAGE_SIZE) break;
+
+    const last = batch.at(-1);
+    if (!last) break;
+    scanBefore = { invoiceDate: last.invoice_date, id: last.id };
+  }
+
+  const filters: SupplierInvoiceListFilters = {
+    query: queryText,
+    supplierId: supplierId ?? null,
+    matchStatus: matchStatus ?? null,
+    paymentStatus: paymentStatus ?? null,
+    overdueOnly,
+    viewMode,
+  };
+  const today = getVNDateString();
+  const mapped = fetched.map(mapSupplierInvoiceRow);
+  const filtered =
+    invoiceId != null ? mapped : filterSupplierInvoices(mapped, filters, today);
+  const afterCursor = before
+    ? filtered.filter((invoice) => {
+        const invoiceDate = invoice.invoiceDate;
+        if (invoiceDate == null) return false;
+        return (
+          invoiceDate < before.invoiceDate ||
+          (invoiceDate === before.invoiceDate && invoice.id < before.id)
+        );
+      })
+    : filtered;
+  const pageRows = afterCursor.slice(0, pageSize + 1);
+  const hasMore = pageRows.length > pageSize;
+  const visibleRows = hasMore ? pageRows.slice(0, pageSize) : pageRows;
+  const rawById = new Map(fetched.map((row) => [row.id, row]));
+  const items = visibleRows.flatMap((row) => {
+    const raw = rawById.get(row.id);
+    return raw ? [raw] : [];
+  });
+  const last = visibleRows.at(-1);
   const nextCursor =
-    hasMore && last !== undefined
-      ? { invoiceDate: last.invoice_date, id: last.id }
+    hasMore && last?.invoiceDate != null
+      ? { invoiceDate: last.invoiceDate, id: last.id }
       : null;
 
-  return { success: true, data: { items, hasMore, nextCursor } };
+  return {
+    success: true,
+    data: {
+      items,
+      hasMore,
+      nextCursor,
+      totalCount: filtered.length,
+      groups: groupSupplierInvoices(filtered, viewMode, today),
+    },
+  };
 }
 
 export async function recomputeInvoiceMatching(

@@ -15,7 +15,10 @@ import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
@@ -28,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   Item,
   ItemActions,
@@ -55,7 +59,7 @@ import { BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { StatusBadge } from "@/components/status-badge";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { AppSection, AppToolbar } from "@/components/surface";
+import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
 import {
   REFUND_PAYOUT_METHODS,
   type RefundPayoutMethod,
@@ -90,6 +94,7 @@ export function RefundsClient({
   canApprove,
   branches,
 }: RefundsClientProps) {
+  const isTouchLayout = useIsMobile(1024);
   const [refunds, setRefunds] = useState<RefundRow[]>(initialRefunds);
   const [isPending, startTransition] = useTransition();
   const [actioningId, setActioningId] = useState<number | null>(null);
@@ -356,23 +361,27 @@ export function RefundsClient({
 
   return (
     <>
-      <div className="grid gap-3 md:grid-cols-3">
+      <KpiRow density="compact" className="grid-cols-2 md:grid-cols-3">
         <KpiCard
           label="Chờ duyệt"
           value={formatCount(pendingCount)}
           hint="Các yêu cầu cần quyết định ngay."
+          density="compact"
         />
         <KpiCard
           label={STATES_VI.approved}
           value={formatCount(approvedCount)}
           hint="Yêu cầu đã được xử lý trong danh sách hiện tại."
+          density="compact"
         />
         <KpiCard
           label="Tổng giá trị"
           value={formatVND(totalRefundAmount)}
           hint="Tổng số tiền hoàn của tập kết quả đang xem."
+          density="compact"
+          className="col-span-2 md:col-span-1"
         />
-      </div>
+      </KpiRow>
 
       <AppToolbar className="justify-between">
         <div className="flex flex-col gap-1.5">
@@ -392,14 +401,17 @@ export function RefundsClient({
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {canApprove ? (
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Button
+              size={isTouchLayout ? "touch" : "sm"}
+              onClick={() => setCreateOpen(true)}
+            >
               <IconRefund className="size-4" />
               {ORDERS_COPY.refundCreateAction}
             </Button>
           ) : null}
           <Button
             variant="outline"
-            size="sm"
+            size={isTouchLayout ? "touch" : "sm"}
             onClick={refreshRefunds}
             disabled={isPending}
           >
@@ -444,6 +456,7 @@ export function RefundsClient({
         cancelDisabled={creatingRefund}
         confirmLabel={ORDERS_COPY.refundConfirm}
         confirmVariant="destructive"
+        actionSize={isTouchLayout ? "touch" : "default"}
         canConfirm={canCreateRefund}
         isPending={creatingRefund}
         onConfirm={handleCreateRefund}
@@ -459,12 +472,16 @@ export function RefundsClient({
             }}
             disabled={creatingRefund}
           >
-            <SelectTrigger>
+            <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
               <SelectValue placeholder={ORDERS_COPY.refundBranchPlaceholder} />
             </SelectTrigger>
             <SelectContent>
               {branches.map((branch) => (
-                <SelectItem key={branch.id} value={String(branch.id)}>
+                <SelectItem
+                  key={branch.id}
+                  value={String(branch.id)}
+                  size={isTouchLayout ? "touch" : "default"}
+                >
                   {branch.name}
                 </SelectItem>
               ))}
@@ -477,20 +494,23 @@ export function RefundsClient({
             {ORDERS_COPY.refundOrderLabel}
           </FieldLabel>
           <div className="flex gap-2">
-            <Input
-              id="refund-create-order-number"
-              value={createOrderNumber}
-              onChange={(event) => {
-                setCreateOrderNumber(event.target.value);
-                setEligibility(null);
-                setCreateError(null);
-              }}
-              placeholder={ORDERS_COPY.refundOrderPlaceholder}
-              disabled={creatingRefund}
-            />
+            <InputGroup size={isTouchLayout ? "touch" : "default"}>
+              <InputGroupInput
+                id="refund-create-order-number"
+                value={createOrderNumber}
+                onChange={(event) => {
+                  setCreateOrderNumber(event.target.value);
+                  setEligibility(null);
+                  setCreateError(null);
+                }}
+                placeholder={ORDERS_COPY.refundOrderPlaceholder}
+                disabled={creatingRefund}
+              />
+            </InputGroup>
             <Button
               type="button"
               variant="outline"
+              size={isTouchLayout ? "touch" : "default"}
               onClick={handleEligibilityCheck}
               disabled={
                 checkingOrder ||
@@ -541,12 +561,16 @@ export function RefundsClient({
             }
             disabled={!eligibility?.eligible || creatingRefund}
           >
-            <SelectTrigger>
+            <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
               <SelectValue placeholder={ORDERS_COPY.refundPayoutPlaceholder} />
             </SelectTrigger>
             <SelectContent>
               {REFUND_PAYOUT_METHODS.map((method) => (
-                <SelectItem key={method} value={method}>
+                <SelectItem
+                  key={method}
+                  value={method}
+                  size={isTouchLayout ? "touch" : "default"}
+                >
                   {PAYMENT_METHOD_LABELS_VI[method]}
                 </SelectItem>
               ))}
@@ -618,7 +642,7 @@ export function RefundsClient({
                 {canApprove && refund.status === "pending" ? (
                   <ItemActions className="flex-wrap justify-end">
                     <Button
-                      size="sm"
+                      size="touch"
                       variant="outline"
                       className="border-success/20 text-success hover:bg-success/10 hover:text-success"
                       disabled={isPending && actioningId === refund.id}
@@ -632,7 +656,7 @@ export function RefundsClient({
                       <span className="ml-1">Duyệt</span>
                     </Button>
                     <Button
-                      size="sm"
+                      size="touch"
                       variant="outline"
                       className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       disabled={isPending && actioningId === refund.id}

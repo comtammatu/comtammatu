@@ -404,7 +404,7 @@ export function StockClient({
       render: (item) => (
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">{item.name}</p>
+            <p>{item.name}</p>
             <StockAlertBadges item={item} />
           </div>
           <span className="font-mono text-xs text-muted-foreground">
@@ -454,7 +454,7 @@ export function StockClient({
             className={cn(
               "font-mono tabular-nums",
               (item.status === "low" || item.status === "out") &&
-                "font-semibold text-destructive",
+                "text-destructive",
             )}
           />
           <StockLocationBreakdownLine
@@ -482,7 +482,7 @@ export function StockClient({
       header: stockCopy.table.stockValue,
       className: "min-w-28 text-right",
       render: (item) => (
-        <span className="font-mono font-semibold tabular-nums">
+        <span className="font-mono tabular-nums">
           {stockValue(item) > 0
             ? formatVND(stockValue(item))
             : inventoryCommon.noValue}
@@ -948,6 +948,7 @@ export function StockClient({
           <DataTable
             columns={stockColumns}
             data={filtered}
+            pageSize={25}
             getRowKey={(item) => item.id}
             emptyTitle={
               searchQuery.trim()

@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
 
 import { BRANCH_VI } from "@comtammatu/shared/messages";
@@ -26,6 +27,7 @@ export function InventoryBranchFilter({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isTouchLayout = useIsMobile(1024);
 
   const currentId = useMemo(() => {
     const raw = searchParams.get("branchId");
@@ -60,7 +62,10 @@ export function InventoryBranchFilter({
 
   return (
     <Select value={String(currentId)} onValueChange={handleChange}>
-      <SelectTrigger className="h-9 min-w-0 w-full justify-start overflow-hidden bg-sidebar-accent/40 px-2 py-1.5 text-left text-sm font-medium text-sidebar-foreground shadow-none hover:bg-sidebar-accent/60 focus-visible:ring-sidebar-ring [&>svg:last-child]:ml-auto [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:flex-1 [&_[data-slot=select-value]]:truncate">
+      <SelectTrigger
+        size={isTouchLayout ? "touch" : "default"}
+        className="h-9 min-w-0 w-full justify-start overflow-hidden bg-sidebar-accent/40 px-2 py-1.5 text-left text-sm font-medium text-sidebar-foreground shadow-none hover:bg-sidebar-accent/60 focus-visible:ring-sidebar-ring [&>svg:last-child]:ml-auto [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:flex-1 [&_[data-slot=select-value]]:truncate"
+      >
         <IconBuildingStore className="size-4 shrink-0" />
         <SelectValue placeholder={BRANCH_VI.select}>
           <span className="block min-w-0 truncate">
@@ -83,6 +88,7 @@ export function InventoryBranchFilter({
               key={branch.id}
               value={String(branch.id)}
               label={branch.name}
+              className={isTouchLayout ? "min-h-12 text-sm" : undefined}
             >
               <span className="flex min-w-0 items-center gap-1.5">
                 <span className="min-w-0 truncate text-sm">{branch.name}</span>

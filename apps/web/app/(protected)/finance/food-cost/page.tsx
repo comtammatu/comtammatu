@@ -1,4 +1,9 @@
-import { AppPage, AppPageHeader } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+} from "@/components/surface";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import { fetchAccessibleBranches, fetchRevenueKpis } from "../actions";
@@ -45,23 +50,34 @@ export default async function FoodCostPage({
   const revenueKpis = revenueRes.success
     ? (revenueRes.data as { order_count?: number | null } | null)
     : null;
+  const loadFailed =
+    !branchesRes.success ||
+    !foodRes.success ||
+    !actualRes.success ||
+    !revenueRes.success;
 
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow={messages.finance.foodCost.eyebrow}
         title={messages.finance.nav.items.foodCost}
-        description={messages.finance.foodCost.description}
-        meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
       />
-      <FoodCostClient
-        params={params}
-        branches={branches}
-        rows={rows}
-        actualFoodCost={actualSummary.total}
-        coveredOrderCount={actualSummary.orderCount}
-        totalOrderCount={Number(revenueKpis?.order_count ?? 0)}
-      />
+      {loadFailed ? (
+        <AppEmptyState
+          mode="error"
+          title={ERRORS_VI.loadFailed}
+          description={ERRORS_VI.fallback}
+        />
+      ) : (
+        <FoodCostClient
+          params={params}
+          branches={branches}
+          rows={rows}
+          actualFoodCost={actualSummary.total}
+          coveredOrderCount={actualSummary.orderCount}
+          totalOrderCount={Number(revenueKpis?.order_count ?? 0)}
+        />
+      )}
     </AppPage>
   );
 }

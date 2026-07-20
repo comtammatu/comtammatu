@@ -17,7 +17,7 @@ import {
 } from "@/lib/shell-primitives";
 
 const copy = messages.owner.nav;
-const MAX_VISIBLE_ITEMS = 5;
+const MAX_VISIBLE_ITEMS = 4;
 
 function flattenNavGroups(navGroups: ShellNavGroup[]): ShellNavItem[] {
   const seenHref = new Set<string>();
@@ -62,7 +62,7 @@ export function OwnerBottomNav({
   tier2: ShellNavGroup[];
 }) {
   const pathname = usePathname();
-  const { toggleSidebar } = useSidebar();
+  const { openMobile, toggleSidebar } = useSidebar();
   // tier1 is surfaced through the drawer the leading tab toggles; the bar items
   // stay scoped to tier-2 so the module's deep actions win the top-5 race.
   void tier1;
@@ -72,7 +72,7 @@ export function OwnerBottomNav({
     <AppBottomNav
       ariaLabel={copy.ariaLabel}
       className="lg:hidden"
-      itemClassName="min-w-16"
+      itemClassName="min-w-14"
       items={items.map((item) => ({
         href: item.linkHref ?? item.href,
         label: item.label,
@@ -84,7 +84,8 @@ export function OwnerBottomNav({
           variant="ghost"
           size="touch"
           onClick={toggleSidebar}
-          className={cn(BOTTOM_NAV_ITEM_CLASS, "min-w-16")}
+          aria-expanded={openMobile}
+          className={cn(BOTTOM_NAV_ITEM_CLASS, "min-w-14")}
         >
           <IconLayoutGrid data-icon="inline-start" aria-hidden="true" />
           <span>{copy.modules}</span>

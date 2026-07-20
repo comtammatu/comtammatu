@@ -463,6 +463,7 @@ export function CountSlipClient({
                             <SelectItem
                               key={unit.unitId}
                               value={String(unit.unitId)}
+                              size="touch"
                             >
                               {unit.label}
                             </SelectItem>
@@ -526,12 +527,16 @@ export function CountSlipClient({
             }
             onValueChange={changeLocation}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger size="touch" className="w-full">
               <SelectValue placeholder="Chọn kho" />
             </SelectTrigger>
             <SelectContent>
               {locationOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  size="touch"
+                >
                   {option.label}
                 </SelectItem>
               ))}

@@ -13,7 +13,6 @@ export const finance = {
     loadRevenueByCashierFailed: "Không thể tải dữ liệu thu ngân.",
     loadBranchesFailed: "Không thể tải danh sách chi nhánh.",
     loadTopItemsFailed: "Không thể tải dữ liệu top món.",
-    loadSummaryQueueFailed: "Không thể tải hàng đợi.",
   },
   invoiceList: {
     reissue: "Phát hành lại",
@@ -39,7 +38,7 @@ export const finance = {
     sepayMissingContinue: "Tiếp tục quét HĐĐT SePay",
     sepayMissingTitle: "Khôi phục HĐĐT cho đơn SePay đã thanh toán",
     sepayMissingDescription:
-      "Tìm các webhook SePay đã xử lý, thanh toán đã hoàn tất nhưng chưa có HĐĐT/summary, rồi xuất tối đa 20 hóa đơn trong lượt này. Tiếp tục?",
+      "Tìm các webhook SePay đã xử lý, thanh toán đã hoàn tất nhưng chưa có HĐĐT đang hoạt động, rồi xuất tối đa 20 hóa đơn trong lượt này. Tiếp tục?",
     sepayMissingConfirm: "Khôi phục",
     sepayMissingResult: (
       issued: number,
@@ -100,8 +99,8 @@ export const finance = {
       unpaid: "Đơn chưa thanh toán — không thể xuất hóa đơn.",
       noItems: "Đơn không còn món nào (đã hủy hết) — không thể xuất hóa đơn.",
       alreadyInvoiced: (num: string) => `Đơn đã có hóa đơn ${num}.`,
-      inSummary: (date: string) =>
-        `Đơn đã nằm trong hóa đơn tổng hợp ngày ${date}. Giữ biên nhận hoặc yêu cầu hóa đơn điều chỉnh qua kế toán.`,
+      historicalAggregate: (date: string) =>
+        `Đơn đã có HĐĐT gộp từ ngày ${date}. Giữ biên nhận hoặc yêu cầu hóa đơn điều chỉnh qua kế toán.`,
       draftRetry:
         "Lần xuất trước bị nhà cung cấp từ chối — bấm xuất để thử lại.",
     },
@@ -273,7 +272,6 @@ export const finance = {
       expenses: "Chi vận hành",
       supplierPayables: "Phải trả NCC",
       invoices: "Hóa đơn điện tử",
-      summary: "HĐ bán cho người tiêu dùng",
       foodCost: "Giá vốn món",
     },
   },
@@ -497,6 +495,7 @@ export const finance = {
       action: "Xử lý",
     },
     filters: {
+      label: "Lọc",
       placeholder: "Lọc đối soát",
       all: "Tất cả",
       needsReview: "Cần xử lý",
@@ -514,7 +513,7 @@ export const finance = {
     filteredEmptyDescription: "Đổi bộ lọc để xem nhóm giao dịch khác.",
     unmatchedMoneyInListTitle: "Tiền vào cần kiểm tra",
     unmatchedMoneyInListDescription:
-      "Webhook tiền vào chưa gắn được đơn; kiểm mã tham chiếu trước khi sửa payment.",
+      "Giao dịch tiền vào chưa được phân loại; kiểm mã tham chiếu trước khi gắn payment hoặc xác nhận nộp tiền mặt.",
     unmatchedMoneyOutListTitle: "Tiền ra cần kiểm tra",
     unmatchedMoneyOutListDescription:
       "Giao dịch tiền ra chưa gắn khoản chi hoặc khoản trả NCC.",
@@ -543,14 +542,26 @@ export const finance = {
       technicalError: "Webhook không xử lý được",
       conflictOrder: "Đơn liên quan",
       openConflictOrder: "Mở đơn",
-      linkInputLabel: "Payment ID cần gắn",
-      linkInputPlaceholder: "Payment ID",
-      linkAction: "Gắn",
+      linkTitle: "Khớp giao dịch tiền vào",
+      linkInputLabel: "Mã thanh toán cần gắn",
+      linkInputPlaceholder: "Mã thanh toán",
+      linkAction: "Khớp",
+      linkPaymentAction: "Gắn thanh toán",
       linkPending: "Đang gắn",
       linkUnavailable: "—",
-      linkInvalid: "Nhập payment ID hợp lệ.",
+      linkInvalid: "Nhập mã thanh toán hợp lệ.",
       linkSuccess: "Đã gắn giao dịch với payment.",
       linkError: "Không thể gắn giao dịch với payment.",
+      cashDepositTitle: "Nộp tiền mặt vào tài khoản",
+      cashDepositDescription:
+        "Xác nhận sao kê này là tiền mặt đã nộp vào ngân hàng, không tính là chi vận hành.",
+      cashDepositAction: "Nộp tiền mặt",
+      cashDepositPending: "Đang ghi nhận",
+      cashDepositConfirmTitle: "Xác nhận nộp tiền mặt?",
+      cashDepositConfirm: (amount: string) =>
+        `Ghi nhận ${amount} đã chuyển từ quỹ tiền mặt sang tài khoản ngân hàng theo sao kê này?`,
+      cashDepositSuccess: "Đã ghi nhận nộp tiền mặt vào tài khoản.",
+      cashDepositError: "Không thể ghi nhận nộp tiền mặt.",
       emptyTitle: "Không còn tiền vào cần kiểm tra",
       emptyDescription:
         "Khi mọi webhook tiền vào đều khớp đơn hoặc payment, danh sách này sẽ trống.",
@@ -919,36 +930,22 @@ export const finance = {
       description: "Màn hình chính cho tài chính vận hành HKD.",
     },
   },
-  summaryPage: {
-    eyebrow: "HĐĐT HKD",
-    title: "HĐ bán cho người tiêu dùng",
-    description:
-      'Hóa đơn tổng hợp ghi người mua là "Bán cho người tiêu dùng" theo cấu hình HĐĐT hiện hành. Tác vụ tự động chạy 02:00 ICT mỗi ngày cho dữ liệu hôm trước; có thể chạy thủ công cho ngày cụ thể nếu tác vụ lỗi hoặc cần chạy lại.',
-    noAccessTitle: "Không có quyền truy cập",
-    noAccessDescription:
-      "Bạn cần quyền quản trị cấu hình (cấp tổ chức) để xem hàng đợi hóa đơn tổng hợp. Liên hệ chủ cửa hàng nếu cần truy cập.",
-    queueLoadFailed: "Không thể tải hàng đợi.",
-    loadErrorTitle: "Không thể tải hàng đợi tổng hợp",
-    loadErrorDescription:
-      "Đã xảy ra lỗi khi tải hàng đợi HĐ tổng hợp. Vui lòng tải lại trang; nếu vẫn lỗi, kiểm tra cấu hình HĐĐT hoặc thử lại sau.",
-  },
   foodCost: {
     eyebrow: "Tài chính",
-    description: "Đối chiếu giá vốn đã ghi nhận và định mức theo món trong kỳ.",
     actualFoodCost: "Giá vốn đã ghi nhận",
-    actualFoodCostHint: "Từ tiêu hao kho đã post cho món bán.",
+    actualFoodCostHint: "Tiêu hao kho đã ghi nhận.",
     coverage: "Độ phủ giá vốn",
     coverageValue: (covered: string, total: string) =>
       `${covered}/${total} đơn`,
-    coverageHint: "Chỉ tin lãi gộp khi đơn đã trả tiền có đủ tiêu hao kho.",
+    coverageHint: "Đơn đã thanh toán và đủ tiêu hao kho.",
     tableTitle: "Giá vốn theo món",
-    tableDescription:
-      "Định mức dùng để tham chiếu; số đã ghi nhận lấy từ tiêu hao kho.",
     itemCount: (count: string) => `${count} món`,
     quantitySold: "SL bán",
     revenueCurrency: "Bán hàng sau giảm giá (₫)",
+    unitFoodCostCurrency: "Giá vốn/món (₫)",
     foodCostCurrency: "Giá vốn định mức (₫)",
-    margin: "Biên lãi định mức",
+    grossProfitCurrency: "Lãi gộp định mức (₫)",
+    grossMargin: "Biên gộp định mức",
     emptyTitle: "Không có dữ liệu giá vốn món",
     emptyDescription: "Đổi khoảng ngày để kiểm tra món đã bán và giá vốn.",
     loadSalesFailed: "Không thể tải dữ liệu giá vốn món.",

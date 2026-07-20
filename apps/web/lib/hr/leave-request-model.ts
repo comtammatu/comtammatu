@@ -1,15 +1,8 @@
 export type LeaveRequestStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "cancelled";
+  "pending" | "approved" | "rejected" | "cancelled";
 
 export type LeaveRequestType =
-  | "annual"
-  | "sick"
-  | "unpaid"
-  | "personal"
-  | "other";
+  "annual" | "sick" | "unpaid" | "personal" | "other";
 
 export interface LeaveRequestRow {
   id: number;
@@ -33,6 +26,11 @@ export interface LeaveRequestRow {
   } | null;
   annual_leave_balance: {
     year: number;
+    entitlementDays: number;
+    usedDays: number;
+    remainingDays: number;
+  } | null;
+  monthly_leave_balance: {
     entitlementDays: number;
     usedDays: number;
     remainingDays: number;

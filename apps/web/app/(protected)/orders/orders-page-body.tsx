@@ -80,7 +80,7 @@ export function OrdersPageBody({
         actions={
           <Button
             variant="outline"
-            size={embedded ? "touch" : "sm"}
+            size="touch"
             render={<Link href="/finance" />}
           >
             {ORDERS_COPY.reportsAction}

@@ -41,7 +41,8 @@ now-squashed forward chain.
 
 1. **Dump public + private from prod** (read-only). Prefer the repo tool — it
    builds the direct privileged libpq connection from `.env.local`
-   (`SUPABASE_PASSWORD_IEXW` + `supabase/.temp/pooler-url`):
+   (`SUPABASE_PASSWORD_IEXW` or `SUPABASE_DB_PASSWORD` +
+   `supabase/.temp/pooler-url`):
 
    ```bash
    pnpm db:baseline:extract -- --schemas=public,private

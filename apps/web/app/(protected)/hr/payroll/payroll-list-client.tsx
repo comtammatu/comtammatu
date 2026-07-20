@@ -104,43 +104,19 @@ function adjustmentLabel(adjustment: PayrollAdjustment): string {
   return copy.adjustmentKinds[adjustment.kind];
 }
 
-function adjustmentSummary(entry: PayrollPreviewEntry): string {
-  if (!canCalculate(entry)) return "—";
-  const finalized = entry.finalized;
-  const additions =
-    (finalized?.bonus ?? entry.bonus) +
-    (finalized?.taxableAllowances ?? entry.taxableAllowances) +
-    (finalized?.taxExemptAllowances ?? entry.taxExemptAllowances);
-  const deductions =
-    (finalized?.advanceDeduction ?? entry.advanceDeduction) +
-    (finalized?.otherDeductions ?? entry.otherDeductions);
-  if (additions === 0 && deductions === 0) return "—";
-  return [
-    additions > 0 ? `+${formatVND(additions)}` : null,
-    deductions > 0 ? `−${formatVND(deductions)}` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
 function workSummary(entry: PayrollPreviewEntry): string {
   const finalized = entry.finalized;
   return copy.mobile.work(
     finalized?.workingDays ?? entry.workingDays,
-    finalized?.paidLeaveDays ?? entry.paidLeaveDays,
-    finalized?.unpaidLeaveDays ?? entry.unpaidLeaveDays,
+    totalLeaveDays(entry),
   );
 }
 
-function grossValue(entry: PayrollPreviewEntry): number {
-  return entry.finalized?.grossTotal ?? entry.grossTotal;
-}
-
-function deductionValue(entry: PayrollPreviewEntry): number {
+function totalLeaveDays(entry: PayrollPreviewEntry): number {
   const finalized = entry.finalized;
   return (
-    (finalized?.totalInsuranceEmployee ?? entry.totalInsuranceEmployee) +
-    (finalized?.pitTax ?? entry.pitTax)
+    (finalized?.paidLeaveDays ?? entry.paidLeaveDays) +
+    (finalized?.unpaidLeaveDays ?? entry.unpaidLeaveDays)
   );
 }
 
@@ -217,7 +193,6 @@ export function PayrollListClient({
     preview.snapshot?.status === "approved" ||
     preview.snapshot?.status === "paid";
   const netHeader = isLocked ? copy.table.finalizedNet : copy.table.net;
-
   const adjustmentDefaults: AdjustmentFormValues = {
     kind: editingAdjustment?.kind ?? "bonus",
     amount: editingAdjustment ? String(editingAdjustment.amount) : "",
@@ -327,6 +302,12 @@ export function PayrollListClient({
 
   const columns: DataTableColumn<PayrollPreviewEntry>[] = [
     {
+      key: "row-number",
+      header: copy.table.index,
+      className: "w-12 text-right font-mono text-sm tabular-nums",
+      render: (_, index) => String(index + 1),
+    },
+    {
       key: "employee",
       header: copy.table.employee,
       render: (entry) => (
@@ -348,94 +329,56 @@ export function PayrollListClient({
         decimalCell(entry.finalized?.workingDays ?? entry.workingDays),
     },
     {
-      key: "paid-leave-days",
-      header: copy.table.paidLeaveDays,
+      key: "leave-days",
+      header: copy.table.leaveDays,
       className: "w-20 text-right font-mono text-sm tabular-nums",
+      render: (entry) => decimalCell(totalLeaveDays(entry)),
+    },
+    {
+      key: "bonus",
+      header: copy.table.bonus,
+      className: "min-w-28 text-right font-mono text-sm tabular-nums",
       render: (entry) =>
-        decimalCell(entry.finalized?.paidLeaveDays ?? entry.paidLeaveDays),
+        moneyCell(entry, entry.finalized?.bonus ?? entry.bonus),
     },
     {
-      key: "unpaid-leave-days",
-      header: copy.table.unpaidLeaveDays,
-      className: "min-w-24 text-right font-mono text-sm tabular-nums",
-      render: (entry) =>
-        decimalCell(entry.finalized?.unpaidLeaveDays ?? entry.unpaidLeaveDays),
-    },
-    {
-      key: "adjustments",
-      header: copy.table.adjustments,
-      className: "min-w-32 text-right font-mono text-sm tabular-nums",
-      render: adjustmentSummary,
-    },
-    {
-      key: "gross",
-      header: copy.table.gross,
-      className: "min-w-32 text-right font-mono text-sm tabular-nums",
-      render: (entry) => moneyCell(entry, grossValue(entry)),
-    },
-    {
-      key: "deductions",
-      header: copy.table.deductions,
-      className: "min-w-32 text-right font-mono text-sm tabular-nums",
-      render: (entry) => moneyCell(entry, deductionValue(entry)),
+      key: "bhxh",
+      header: copy.table.bhxh,
+      className: "min-w-28 text-right font-mono text-sm tabular-nums",
+      render: (entry) => moneyCell(entry, entry.bhxhEmployee),
     },
     {
       key: "net",
       header: netHeader,
       className:
-        "min-w-32 text-right font-mono text-sm font-semibold tabular-nums",
+        "min-w-32 text-right font-mono text-sm tabular-nums",
       render: (entry) => moneyCell(entry, netValue(entry)),
     },
     {
-      key: "status",
-      header: copy.table.status,
-      className: "min-w-32",
-      render: (entry) => (
-        <Badge
-          variant={
-            !canCalculate(entry)
-              ? "destructive"
-              : isLocked
-                ? "secondary"
-                : "success"
-          }
-        >
-          {!canCalculate(entry)
-            ? copy.table.missingSalary
-            : isLocked
-              ? copy.table.finalized
-              : copy.table.calculable}
-        </Badge>
-      ),
+      key: "actions",
+      header: copy.table.edit,
+      className: "w-32 text-right",
+      render: (entry) =>
+        !isLocked &&
+        (canCalculate(entry) ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openAdjustment(entry)}
+          >
+            <IconPencil data-icon="inline-start" />
+            {copy.table.edit}
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/hr")}
+          >
+            {copy.missingSalaryAction}
+          </Button>
+        )),
     },
-    ...(!isLocked
-      ? [
-          {
-            key: "actions",
-            header: copy.table.actions,
-            className: "w-32 text-right",
-            render: (entry: PayrollPreviewEntry) =>
-              canCalculate(entry) ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openAdjustment(entry)}
-                >
-                  <IconPencil data-icon="inline-start" />
-                  {copy.adjustment}
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push("/hr")}
-                >
-                  {copy.missingSalaryAction}
-                </Button>
-              ),
-          },
-        ]
-      : []),
   ];
 
   return (
@@ -585,7 +528,7 @@ export function PayrollListClient({
                       {
                         key: "label",
                         content: copy.table.total(calculableRows.length),
-                        colSpan: 7,
+                        colSpan: 6,
                         className: "font-medium",
                       },
                       {
@@ -594,8 +537,7 @@ export function PayrollListClient({
                         className:
                           "text-right font-mono font-semibold tabular-nums",
                       },
-                      { key: "status", content: "" },
-                      ...(!isLocked ? [{ key: "actions", content: "" }] : []),
+                      { key: "actions", content: "" },
                     ],
                   },
                 ]
@@ -621,14 +563,11 @@ export function PayrollListClient({
                 <ItemTitle>{entry.employeeName}</ItemTitle>
                 <ItemDescription>{workSummary(entry)}</ItemDescription>
                 <ItemDescription>
-                  {copy.table.adjustments}: {adjustmentSummary(entry)}
+                  {copy.table.bonus}: {" "}
+                  {moneyCell(entry, entry.finalized?.bonus ?? entry.bonus)}
                 </ItemDescription>
                 <ItemDescription>
-                  {copy.table.gross}: {moneyCell(entry, grossValue(entry))}
-                </ItemDescription>
-                <ItemDescription>
-                  {copy.mobile.deductions}:{" "}
-                  {moneyCell(entry, deductionValue(entry))}
+                  {copy.table.bhxh}: {moneyCell(entry, entry.bhxhEmployee)}
                 </ItemDescription>
               </ItemContent>
               <ItemActions className="items-end gap-2">
@@ -636,16 +575,16 @@ export function PayrollListClient({
                   canCalculate(entry) ? (
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="touch"
                       onClick={() => openAdjustment(entry)}
                     >
                       <IconPencil data-icon="inline-start" />
-                      {copy.adjustment}
+                      {copy.table.edit}
                     </Button>
                   ) : (
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="touch"
                       onClick={() => router.push("/hr")}
                     >
                       {copy.missingSalaryAction}

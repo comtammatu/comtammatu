@@ -100,7 +100,7 @@ export function TablesClient({
       ) : null}
 
       <Tabs defaultValue="zones">
-        <TabsList className="h-11 w-full">
+        <TabsList size="touch" className="w-full">
           <TabsTrigger value="zones" className="flex-1">
             {copy.zonesTab(filteredZones.length)}
           </TabsTrigger>
