@@ -81,8 +81,8 @@ export async function createTaxInvoice(
   }
 
   const ctx = await getAuthContextWithPermission(
-    FINANCE_ROLES,
-    PERMISSION_KEYS.ORDERS_WRITE,
+    POS_INVOICE_ROLES,
+    PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 

@@ -159,13 +159,18 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
   );
 });
 
-test("SePay webhook uses the POS settlement service without direct HĐĐT issuance", () => {
+test("SePay webhook issues exactly once after an exact POS settlement match", () => {
   const src = read("apps/web/app/api/webhooks/sepay/route.ts");
   const migration = read(
     "supabase/migration-archive/20260711024758_sepay_webhook_order_evidence.sql",
   );
 
-  assert.doesNotMatch(src, /issueTaxInvoiceForPaidOrder/);
+  assert.match(src, /issueTaxInvoiceForPaidOrder\(\{/);
+  assert.match(
+    src,
+    /reconciliation\.data\.status === "matched"[\s\S]*issueTaxInvoiceForPaidOrder/,
+  );
+  assert.match(src, /buyerNotGetInvoice: true/);
   assert.doesNotMatch(src, /confirm_sepay_payment/);
   assert.match(src, /"reconcile_sepay_order_evidence"/);
   assert.match(migration, /public\.confirm_sepay_payment\(/);
