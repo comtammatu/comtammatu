@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
+import { issueTaxInvoiceForPaidOrder } from "@lib/hddt-per-order";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -176,20 +177,27 @@ const sepayPayloadSchema = z
   })
   .passthrough();
 
-const sepayOrderEvidenceRpcResultSchema = z
-  .object({
-    status: z.enum([
-      "matched",
-      "missing_payment_code",
-      "order_not_found",
-      "ambiguous_payment_code",
-      "amount_mismatch",
-      "payment_confirmation_failed",
-      "invalid_payment_code",
-      "invalid_amount",
-    ]),
-  })
-  .passthrough();
+const sepayOrderEvidenceRpcResultSchema = z.discriminatedUnion("status", [
+  z
+    .object({
+      status: z.literal("matched"),
+      order_id: z.coerce.number().int().positive(),
+    })
+    .passthrough(),
+  z
+    .object({
+      status: z.enum([
+        "missing_payment_code",
+        "order_not_found",
+        "ambiguous_payment_code",
+        "amount_mismatch",
+        "payment_confirmation_failed",
+        "invalid_payment_code",
+        "invalid_amount",
+      ]),
+    })
+    .passthrough(),
+]);
 
 const cashDepositRpcResultSchema = z
   .object({
@@ -711,13 +719,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false }, { status: 500 });
   }
 
-  if (!sepayOrderEvidenceRpcResultSchema.safeParse(rawRpcData).success) {
+  const reconciliation =
+    sepayOrderEvidenceRpcResultSchema.safeParse(rawRpcData);
+  if (!reconciliation.success) {
     await markWebhookEvent(supabase, webhookEventId, {
       processing_status: "failed",
       http_status: 500,
       error_code: "rpc_result_invalid",
     });
     return NextResponse.json({ success: false }, { status: 500 });
+  }
+
+  if (reconciliation.data.status === "matched") {
+    const invoiceResult = await issueTaxInvoiceForPaidOrder({
+      supabase,
+      tenantId: accountScope.tenantId,
+      input: {
+        orderId: reconciliation.data.order_id,
+        buyerNotGetInvoice: true,
+      },
+      logPrefix: "sepay-webhook:issueTaxInvoice",
+    });
+    if (!invoiceResult.success) {
+      console.error("[sepay-webhook] invoice attempt failed", {
+        errorCode: invoiceResult.errorCode ?? "unknown",
+      });
+    }
   }
 
   return sepayAcceptedResponse();
