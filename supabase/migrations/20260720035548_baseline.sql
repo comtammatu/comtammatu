@@ -4,7 +4,7 @@ SET check_function_bodies = false;
 -- PostgreSQL database dump
 --
 
--- \restrict HdBWUOevCfW2hlZBRkXhS2y2bDCr5qyflzod72KBfRlRwp8iftv3uQoPVBeD80M
+-- \restrict bFQDcJHmrDtfvx8JJoqN3lCOTEmachDmSEygC6C3Gs1G0hPF5HaP4VR7PEPygy5
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -1442,160 +1442,12 @@ ALTER TABLE ONLY private.cron_job_health_grace
 
 
 --
--- Name: SCHEMA private; Type: ACL; Schema: -; Owner: -
---
-
-GRANT USAGE ON SCHEMA private TO service_role;
-
-
---
--- Name: FUNCTION assert_expense_transfer_content(p_expense_id bigint); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.assert_expense_transfer_content(p_expense_id bigint) FROM PUBLIC;
-
-
---
--- Name: FUNCTION can_view_leave_entitlement(p_employee_id bigint, p_tenant_id bigint); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.can_view_leave_entitlement(p_employee_id bigint, p_tenant_id bigint) FROM PUBLIC;
-GRANT ALL ON FUNCTION private.can_view_leave_entitlement(p_employee_id bigint, p_tenant_id bigint) TO authenticated;
-GRANT ALL ON FUNCTION private.can_view_leave_entitlement(p_employee_id bigint, p_tenant_id bigint) TO service_role;
-
-
---
--- Name: FUNCTION canonicalize_notification(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.canonicalize_notification() FROM PUBLIC;
-
-
---
--- Name: FUNCTION check_expense_transfer_content_event(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.check_expense_transfer_content_event() FROM PUBLIC;
-
-
---
--- Name: FUNCTION check_expense_transfer_content_expense(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.check_expense_transfer_content_expense() FROM PUBLIC;
-
-
---
--- Name: FUNCTION check_expense_transfer_content_match(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.check_expense_transfer_content_match() FROM PUBLIC;
-
-
---
--- Name: FUNCTION enforce_leave_review_authority(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.enforce_leave_review_authority() FROM PUBLIC;
-
-
---
--- Name: FUNCTION enforce_owner_position_task_write(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.enforce_owner_position_task_write() FROM PUBLIC;
-
-
---
--- Name: FUNCTION enforce_staff_permission_boundary(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.enforce_staff_permission_boundary() FROM PUBLIC;
-
-
---
--- Name: FUNCTION enqueue_kitchen_completion_print_internal(p_branch_id bigint, p_ticket_ids bigint[], p_actor uuid); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.enqueue_kitchen_completion_print_internal(p_branch_id bigint, p_ticket_ids bigint[], p_actor uuid) FROM PUBLIC;
-
-
---
--- Name: FUNCTION enqueue_kitchen_print_internal(p_order_id bigint, p_actor_override uuid, p_enforce_request_auth boolean); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.enqueue_kitchen_print_internal(p_order_id bigint, p_actor_override uuid, p_enforce_request_auth boolean) FROM PUBLIC;
-
-
---
--- Name: FUNCTION finance_scope(p_uid uuid, p_key text); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.finance_scope(p_uid uuid, p_key text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION guard_authenticated_payment_update(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.guard_authenticated_payment_update() FROM PUBLIC;
-
-
---
--- Name: FUNCTION guard_payment_method_bank_evidence(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.guard_payment_method_bank_evidence() FROM PUBLIC;
-
-
---
--- Name: FUNCTION sepay_bank_occurred_at(p_payload jsonb, p_fallback timestamp with time zone); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.sepay_bank_occurred_at(p_payload jsonb, p_fallback timestamp with time zone) FROM PUBLIC;
-
-
---
--- Name: FUNCTION sepay_payload_contains_transfer_content(p_payload jsonb, p_transfer_content text); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.sepay_payload_contains_transfer_content(p_payload jsonb, p_transfer_content text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION staff_role_from_position_code(p_code text); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.staff_role_from_position_code(p_code text) FROM PUBLIC;
-GRANT ALL ON FUNCTION private.staff_role_from_position_code(p_code text) TO service_role;
-
-
---
--- Name: FUNCTION sync_completed_payment_method_to_order(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.sync_completed_payment_method_to_order() FROM PUBLIC;
-
-
---
--- Name: FUNCTION sync_sepay_bank_transaction_from_webhook(); Type: ACL; Schema: private; Owner: -
---
-
-REVOKE ALL ON FUNCTION private.sync_sepay_bank_transaction_from_webhook() FROM PUBLIC;
-
-
---
--- PostgreSQL database dump complete
---
-
--- \unrestrict HdBWUOevCfW2hlZBRkXhS2y2bDCr5qyflzod72KBfRlRwp8iftv3uQoPVBeD80M
-
 
 --
 -- PostgreSQL database dump
 --
 
--- \restrict j4z5nYWdLJJ35f135WTfIdQyz0TW4wrZnfLXeYvg7U89gQ2A8T7aGnia3As9MDs
+-- \restrict s27fr2Wf9ZdH9qkLO5Qo3Qq7hEkoio54vWmbZaB1c7dAAcXzggM37Bn5WVnHbnv
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -57640,12 +57492,160 @@ CREATE POLICY zone_lock_rpc_only_write ON public.stocktake_zone_locks TO authent
 
 
 --
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
---
-
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
 REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
+-- Name: SCHEMA private; Type: ACL; Schema: -; Owner: -
+--
+
+GRANT USAGE ON SCHEMA private TO service_role;
+
+
+--
+-- Name: FUNCTION assert_expense_transfer_content(p_expense_id bigint); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.assert_expense_transfer_content(p_expense_id bigint) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION can_view_leave_entitlement(p_employee_id bigint, p_tenant_id bigint); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.can_view_leave_entitlement(p_employee_id bigint, p_tenant_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION private.can_view_leave_entitlement(p_employee_id bigint, p_tenant_id bigint) TO authenticated;
+GRANT ALL ON FUNCTION private.can_view_leave_entitlement(p_employee_id bigint, p_tenant_id bigint) TO service_role;
+
+
+--
+-- Name: FUNCTION canonicalize_notification(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.canonicalize_notification() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION check_expense_transfer_content_event(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.check_expense_transfer_content_event() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION check_expense_transfer_content_expense(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.check_expense_transfer_content_expense() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION check_expense_transfer_content_match(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.check_expense_transfer_content_match() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enforce_leave_review_authority(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.enforce_leave_review_authority() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enforce_owner_position_task_write(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.enforce_owner_position_task_write() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enforce_staff_permission_boundary(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.enforce_staff_permission_boundary() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enqueue_kitchen_completion_print_internal(p_branch_id bigint, p_ticket_ids bigint[], p_actor uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.enqueue_kitchen_completion_print_internal(p_branch_id bigint, p_ticket_ids bigint[], p_actor uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enqueue_kitchen_print_internal(p_order_id bigint, p_actor_override uuid, p_enforce_request_auth boolean); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.enqueue_kitchen_print_internal(p_order_id bigint, p_actor_override uuid, p_enforce_request_auth boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION finance_scope(p_uid uuid, p_key text); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.finance_scope(p_uid uuid, p_key text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION guard_authenticated_payment_update(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.guard_authenticated_payment_update() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION guard_payment_method_bank_evidence(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.guard_payment_method_bank_evidence() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION sepay_bank_occurred_at(p_payload jsonb, p_fallback timestamp with time zone); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.sepay_bank_occurred_at(p_payload jsonb, p_fallback timestamp with time zone) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION sepay_payload_contains_transfer_content(p_payload jsonb, p_transfer_content text); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.sepay_payload_contains_transfer_content(p_payload jsonb, p_transfer_content text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_role_from_position_code(p_code text); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_role_from_position_code(p_code text) FROM PUBLIC;
+GRANT ALL ON FUNCTION private.staff_role_from_position_code(p_code text) TO service_role;
+
+
+--
+-- Name: FUNCTION sync_completed_payment_method_to_order(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.sync_completed_payment_method_to_order() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION sync_sepay_bank_transaction_from_webhook(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.sync_sepay_bank_transaction_from_webhook() FROM PUBLIC;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+-- \unrestrict bFQDcJHmrDtfvx8JJoqN3lCOTEmachDmSEygC6C3Gs1G0hPF5HaP4VR7PEPygy5
+
+
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
+--
 
 GRANT USAGE ON SCHEMA public TO postgres;
 GRANT USAGE ON SCHEMA public TO anon;
@@ -63406,4 +63406,4 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES 
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict j4z5nYWdLJJ35f135WTfIdQyz0TW4wrZnfLXeYvg7U89gQ2A8T7aGnia3As9MDs
+-- \unrestrict s27fr2Wf9ZdH9qkLO5Qo3Qq7hEkoio54vWmbZaB1c7dAAcXzggM37Bn5WVnHbnv
