@@ -940,7 +940,17 @@ for (const file of legacyDocReferenceFiles) {
 const docsPathPattern =
   /docs\/(?:agent|architecture|modules|plan|ref|releases|runbooks|spec|status|user-guides|worklog)\/[A-Za-z0-9_./%#-]+\.md/g;
 
-for (const file of legacyDocReferenceFiles) {
+function isHistoricalSqlSnapshot(filePath) {
+  const relativePath = toPosix(filePath);
+  return (
+    relativePath.startsWith("supabase/migration-archive/") ||
+    /supabase\/migrations\/\d{14}_baseline\.sql$/.test(relativePath)
+  );
+}
+
+for (const file of legacyDocReferenceFiles.filter(
+  (file) => !isHistoricalSqlSnapshot(file),
+)) {
   const relativePath = toPosix(file);
   const content = fs.readFileSync(file, "utf8");
   for (const match of content.matchAll(docsPathPattern)) {
@@ -1383,6 +1393,20 @@ function runLegacyDebtBudgetSelfTest() {
     ) !== 0
   ) {
     throw new Error("raw input fixed-height self-test did not enforce scope");
+  }
+
+  if (
+    !isHistoricalSqlSnapshot(
+      path.join(REPO_ROOT, "supabase/migration-archive/20260101000000_history.sql"),
+    ) ||
+    !isHistoricalSqlSnapshot(
+      path.join(REPO_ROOT, "supabase/migrations/20260101000000_baseline.sql"),
+    ) ||
+    isHistoricalSqlSnapshot(
+      path.join(REPO_ROOT, "supabase/migrations/20260101000001_forward.sql"),
+    )
+  ) {
+    throw new Error("historical SQL snapshot filter self-test did not enforce scope");
   }
 }
 
