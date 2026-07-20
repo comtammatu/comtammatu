@@ -332,7 +332,7 @@ test("SePay webhook retries receipt enqueue on already-completed settlements", (
     "supabase/migration-archive/20260703140015_sepay_webhook_receipt_already_completed.sql",
   );
   const baseline = readRepoFile(
-    "supabase/migrations/20260717151345_baseline.sql",
+    "supabase/migrations/20260720035548_baseline.sql",
   );
 
   assert.match(

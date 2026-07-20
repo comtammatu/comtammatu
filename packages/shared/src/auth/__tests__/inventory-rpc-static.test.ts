@@ -66,7 +66,7 @@ test("stocktake heartbeat lock RPC rechecks ttl and branch permission", () => {
 
 test("stock transfer draft creation is owner-only at the RPC boundary", () => {
   const source = readRepoFile(
-    "supabase/migrations/20260719165715_restrict_stock_transfer_creation_to_owner.sql",
+    "supabase/migration-archive/20260719165715_restrict_stock_transfer_creation_to_owner.sql",
   );
 
   assert.match(

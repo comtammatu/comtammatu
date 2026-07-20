@@ -56,7 +56,7 @@ test("SePay recovery and shared issuer fail closed before provider submission", 
   const recovery = read("apps/web/app/(protected)/finance/actions.ts");
   const issuer = read("apps/web/lib/hddt-per-order.ts");
   const baseline = normalizePgDumpSql(
-    read("supabase/migrations/20260717151345_baseline.sql"),
+    read("supabase/migrations/20260720035548_baseline.sql"),
   );
 
   assert.match(

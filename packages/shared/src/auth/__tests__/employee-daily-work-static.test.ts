@@ -361,7 +361,7 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
   const workStateSrc = read(
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
   );
-  const baselineSrc = read("supabase/migrations/20260717151345_baseline.sql");
+  const baselineSrc = read("supabase/migrations/20260720035548_baseline.sql");
   const countGateMigrationSrc = read(
     "supabase/migration-archive/20260629183853_require_inventory_count_checkout_gate.sql",
   );
@@ -375,7 +375,7 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
     "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
   );
   const authorityMigrationSrc = read(
-    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
 
   for (const expected of [
@@ -447,7 +447,7 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
   );
   assert.ok(
     baselineSrc.includes(
-      'CREATE OR REPLACE FUNCTION "public"."employee_request_clock_out"',
+      "CREATE FUNCTION public.employee_request_clock_out",
     ),
     "production baseline must retain the current checkout RPC before the forward repair",
   );

@@ -271,7 +271,7 @@ test("operator team members use a roster grid with real profile fields", () => {
     /grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5/,
   );
   assert.match(teamMembersSource, /size="touch"/);
-  assert.match(teamMembersSource, /<InputGroup className="min-h-12">/);
+  assert.match(teamMembersSource, /<InputGroup size="touch">/);
   assert.doesNotMatch(teamMembersSource, /className="h-11"/);
   assert.doesNotMatch(teamMembersSource, /h-7 cursor-pointer/);
   assert.match(teamMembersSource, /grid gap-2 sm:grid-cols-2/);

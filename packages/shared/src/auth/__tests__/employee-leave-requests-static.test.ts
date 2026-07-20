@@ -57,18 +57,20 @@ test("Employee leave migration uses branch-scoped RLS and RPC workflow", () => {
 });
 
 test("Current baseline keeps leave approval RPCs scoped to the request branch", () => {
-  const baseline = read("supabase/migrations/20260717151345_baseline.sql");
+  const baseline = read("supabase/migrations/20260720035548_baseline.sql");
   const approveStart = baseline.indexOf(
-    'CREATE OR REPLACE FUNCTION "public"."approve_leave_request"',
+    "CREATE FUNCTION public.approve_leave_request",
   );
   const rejectStart = baseline.indexOf(
-    'CREATE OR REPLACE FUNCTION "public"."reject_leave_request"',
+    "CREATE FUNCTION public.reject_leave_request",
   );
+  assert.ok(approveStart >= 0, "approve RPC must exist in the baseline");
+  assert.ok(rejectStart >= 0, "reject RPC must exist in the baseline");
   const approveBody = baseline.slice(approveStart, rejectStart);
   const rejectBody = baseline.slice(
     rejectStart,
     baseline.indexOf(
-      'COMMENT ON FUNCTION "public"."reject_leave_request"',
+      "COMMENT ON FUNCTION public.reject_leave_request",
       rejectStart,
     ),
   );

@@ -23,7 +23,7 @@ const BRANCH_DATA =
 const TODAY_WORK_STATE =
   "apps/web/lib/staff-runtime/_lib/today-work-state.ts";
 const ATTENDANCE_POLICY_MIGRATION =
-  "supabase/migrations/20260719070350_align_attendance_checkout_read_policy.sql";
+  "supabase/migration-archive/20260719070350_align_attendance_checkout_read_policy.sql";
 const BACKTICK = "`";
 
 function literalWith(pattern: string, flags = "i"): RegExp {

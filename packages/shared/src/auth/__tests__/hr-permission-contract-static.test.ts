@@ -275,7 +275,7 @@ test("HR branch-manager employee payload stays branch-safe", () => {
 
 test("Owner HR administration and branch approval authority fail closed below the application ACL", () => {
   const migration = read(
-    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
   const localSeed = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
   const ownerOnlyKeys = [

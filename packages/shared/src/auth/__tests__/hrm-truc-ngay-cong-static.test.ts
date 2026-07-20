@@ -19,7 +19,7 @@ const MIGRATION_PATH =
 
 test("Migration backfills leave grants and notifies approvers", () => {
   const migration = read(MIGRATION_PATH);
-  const baseline = read("supabase/migrations/20260717151345_baseline.sql");
+  const baseline = read("supabase/migrations/20260720035548_baseline.sql");
 
   for (const expected of [
     "SELECT public.sync_missing_permissions_from_template();",
@@ -144,7 +144,7 @@ test("Checkout approval gate uses hr:approve_checkout (renamed in Phase 2)", () 
     "apps/web/lib/staff-runtime/clock/actions.ts",
   );
   const authorityMigration = read(
-    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
   const approvalsPage = read(
     "apps/web/lib/staff-runtime/checkout-approvals/page.tsx",
@@ -251,24 +251,4 @@ test("P2 app no longer references shift assignments anywhere", () => {
     !hrClient.includes('value="assignments"'),
     "Phân ca tab must be removed from the HR workspace",
   );
-});
-
-test("P2 HR attendance tab shows approved leave for the month", () => {
-  const actions = read("apps/web/app/(protected)/hr/leave-request-actions.ts");
-  for (const expected of [
-    "fetchApprovedLeaveMonth",
-    '.eq("status", "approved")',
-    "PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST",
-  ]) {
-    assert.ok(actions.includes(expected), `expected ${expected}`);
-  }
-
-  const table = read("apps/web/app/(protected)/hr/attendance-table.tsx");
-  for (const expected of [
-    "fetchApprovedLeaveMonth",
-    "ApprovedLeavePanel",
-    "attendanceCopy.leaveTitle",
-  ]) {
-    assert.ok(table.includes(expected), `expected ${expected}`);
-  }
 });

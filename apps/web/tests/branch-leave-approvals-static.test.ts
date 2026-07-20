@@ -50,7 +50,7 @@ test("leave data is neutral while Owner surface keeps its desktop presenter", ()
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts",
   );
   const migration = read(
-    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
   const ownerSurface = read(
     "apps/web/app/(protected)/hr/leave-requests-table.tsx",

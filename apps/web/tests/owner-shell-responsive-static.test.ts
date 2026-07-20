@@ -21,7 +21,7 @@ test("Owner mobile shell controls meet the touch target contract", () => {
 
   assert.match(
     source,
-    /<SidebarTrigger className="lg:hidden" size="icon-touch" \/>/,
+    /\{showBottomNav \? <OwnerBottomNav tier1=\{tier1\} tier2=\{tier2\} \/> : null\}/,
   );
   assert.match(
     source,

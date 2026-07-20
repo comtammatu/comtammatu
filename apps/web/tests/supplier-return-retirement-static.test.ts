@@ -73,7 +73,7 @@ test("supplier-return UI copy is retired while GRN rejection copy stays neutral"
 
 test("supplier-return history, RPCs, and GRN integrity gates remain", () => {
   const baseline = normalizePgDumpSql(
-    read("supabase/migrations/20260717151345_baseline.sql"),
+    read("supabase/migrations/20260720035548_baseline.sql"),
   );
   const integrityMigration = read(
     "supabase/migration-archive/20260708130500_inventory_supplier_integrity_gates.sql",

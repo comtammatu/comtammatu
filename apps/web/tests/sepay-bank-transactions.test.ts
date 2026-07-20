@@ -30,20 +30,17 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 test("bank reconciliation index alignment is replay-safe", () => {
-  const alignmentMigration = read(
-    "supabase/migrations/20260719221500_align_bank_reconciliation_indexes.sql",
-  );
-  const tenantIndexMigration = read(
-    "supabase/migrations/20260719222000_add_bank_reconciliation_tenant_index.sql",
+  const baseline = read(
+    "supabase/migrations/20260720035548_baseline.sql",
   );
 
   assert.match(
-    alignmentMigration,
-    /CREATE INDEX IF NOT EXISTS bank_transaction_reconciliation_matches_created_by_idx/,
+    baseline,
+    /CREATE INDEX bank_transaction_reconciliation_matches_created_by_idx/,
   );
   assert.match(
-    tenantIndexMigration,
-    /CREATE INDEX IF NOT EXISTS bank_transaction_reconciliation_matches_tenant_idx/,
+    baseline,
+    /CREATE INDEX bank_transaction_reconciliation_matches_tenant_idx/,
   );
 });
 
@@ -648,7 +645,7 @@ test("SePay money-in manual link stays guarded by RPC", () => {
     "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
   );
   const canonicalMigration = read(
-    "supabase/migrations/20260719220000_create_bank_reconciliation_matches.sql",
+    "supabase/migration-archive/20260719220000_create_bank_reconciliation_matches.sql",
   );
 
   assert.match(

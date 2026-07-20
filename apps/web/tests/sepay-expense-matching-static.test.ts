@@ -234,8 +234,12 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(table, /amount=\{tx\.amount\}/);
   assert.match(cell, /Math\.abs\(left\.amount - amount\)/);
   assert.match(table, /type BankReconciliationRow/);
-  assert.match(table, /filters=\{\[/);
-  assert.match(table, /filterValues=\{\{ reconciliation: filter \}\}/);
+  assert.match(table, /const filterOptions = \[/);
+  assert.match(table, /rows\.filter\(\(row\) => rowMatchesFilter\(row, filter\)\)/);
+  assert.match(
+    table,
+    /<FilterBar[\s\S]*trailing=\{[\s\S]*<Select[\s\S]*value=\{filter\}/,
+  );
   assert.match(table, /missingBankWebhookPayments/);
   assert.match(table, /ReviewStatusSelect/);
   assert.match(actions, /parsed\.data\.category === "bank_deposit"/);

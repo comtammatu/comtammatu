@@ -5,6 +5,18 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Re-align the schema migration lineage
+
+State: blocked
+Kind: defect
+Tier: T3
+Lane: database
+Exit: A current Production-derived baseline, required fresh-environment forwards, and the live Production ledger are reconciled without replaying or mutating business data.
+Evidence: Production catalog/ACL comparison, CI baseline replay, type no-diff, a reviewed owner-operated ledger repair, and one disposable Preview proof.
+Blocker: CI baseline replay passed in PR #320. The remaining external dependency is the separately authorized Production migration-ledger repair, followed by disposable Preview validation; recheck after full CI is green and the owner can perform the exact ledger operation.
+
+- [ ] Obtain full CI green, then request the separately authorized Production ledger repair and Preview validation.
+
 ## Prove Self-Order offline navigation isolation
 
 State: verify

@@ -53,7 +53,7 @@ function forwardMigrationFiles(): string[] {
       (name) =>
         name.endsWith(".sql") &&
         /^\d{14}_/.test(name) &&
-        !name.startsWith("00000000000000"),
+        !/^\d{14}_baseline\.sql$/.test(name),
     )
     .sort();
 }
