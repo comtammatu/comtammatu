@@ -13,9 +13,9 @@ Tier: T3
 Lane: database
 Exit: A current Production-derived baseline, required fresh-environment forwards, and the live Production ledger are reconciled without replaying or mutating business data.
 Evidence: Production catalog/ACL comparison, CI baseline replay, type no-diff, a reviewed owner-operated ledger repair, and one disposable Preview proof.
-Blocker: CI-only baseline replay and the separately authorized Production migration-ledger repair cannot run from this guarded agent session. Recheck after the source branch is reviewed and the owner can perform the exact ledger operation.
+Blocker: CI baseline replay passed in PR #320. The remaining external dependency is the separately authorized Production migration-ledger repair, followed by disposable Preview validation; recheck after full CI is green and the owner can perform the exact ledger operation.
 
-- [ ] Complete source and CI replay proof, then request the separately authorized Production ledger repair and Preview validation.
+- [ ] Obtain full CI green, then request the separately authorized Production ledger repair and Preview validation.
 
 ## Prove Self-Order offline navigation isolation
 

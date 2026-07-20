@@ -6,21 +6,21 @@ import test from "node:test";
 const migration = readFileSync(
   resolve(
     import.meta.dirname,
-    "../../../supabase/migrations/20260717170555_initialize_materialized_views.sql",
+    "../../../supabase/migrations/20260720035551_initialize_materialized_views.sql",
   ),
   "utf8",
 );
 const foldMigration = readFileSync(
   resolve(
     import.meta.dirname,
-    "../../../supabase/migrations/20260717151346_fold_managed_surfaces.sql",
+    "../../../supabase/migrations/20260720035549_fold_managed_surfaces.sql",
   ),
   "utf8",
 );
 const cronMigration = readFileSync(
   resolve(
     import.meta.dirname,
-    "../../../supabase/migrations/20260717171918_reregister_managed_cron_jobs.sql",
+    "../../../supabase/migrations/20260720035552_reregister_managed_cron_jobs.sql",
   ),
   "utf8",
 );
@@ -50,7 +50,7 @@ test("managed cron jobs are re-registered from the canonical fold", () => {
   const canonicalNames = scheduleNames(foldMigration);
   const unscheduleBlock = cronMigration.slice(
     0,
-    cronMigration.indexOf("SELECT cron.schedule"),
+    cronMigration.indexOf("PERFORM cron.schedule"),
   );
 
   assert.deepEqual(scheduleNames(cronMigration), canonicalNames);

@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("checkout queue and decisions share the live exact-branch hierarchy", () => {
   const migration = read(
-    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
   const page = read("apps/web/lib/staff-runtime/checkout-approvals/page.tsx");
   const actions = read("apps/web/lib/staff-runtime/clock/actions.ts");
@@ -88,11 +88,11 @@ test("checkout queue and decisions share the live exact-branch hierarchy", () =>
 test("checkout approval RPC signature stays aligned and discoverable", () => {
   const actions = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const migration = read(
-    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
   );
   const databaseTypes = read("packages/database/src/types/database.types.ts");
   const cacheReload = read(
-    "supabase/migrations/20260720110100_reload_checkout_rpc_schema_cache.sql",
+    "supabase/migration-archive/20260720110100_reload_checkout_rpc_schema_cache.sql",
   );
 
   assert.match(

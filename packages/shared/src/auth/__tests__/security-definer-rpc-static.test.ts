@@ -26,6 +26,7 @@ function readForwardMigrations(): Array<{ path: string; source: string }> {
     .filter(
       (name) =>
         name !== "00000000000000_baseline.sql" &&
+        !/^\d{14}_baseline\.sql$/.test(name) &&
         name !== "20260706084248_realtime_pr5_cron_monitoring.sql",
     )
     .sort()

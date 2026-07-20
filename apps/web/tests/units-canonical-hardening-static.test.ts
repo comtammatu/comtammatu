@@ -12,7 +12,7 @@ const migration = readRepo(
   "supabase/migration-archive/20260703170000_units_canonical_hardening.sql",
 );
 const baseline = normalizePgDumpSql(
-  readRepo("supabase/migrations/20260717151345_baseline.sql"),
+  readRepo("supabase/migrations/20260720035548_baseline.sql"),
 );
 
 test("hardening migration self-heals name to mirror code", () => {

@@ -16,9 +16,18 @@ function around(source: string, needle: string) {
   return source.slice(Math.max(0, index - 900), index + 1_200);
 }
 
+function functionBlock(source: string, name: string) {
+  const start = source.search(
+    new RegExp(`CREATE (?:OR REPLACE )?FUNCTION public\\.${name}\\b`),
+  );
+  assert.notEqual(start, -1, `${name} must exist`);
+  const end = source.indexOf(`COMMENT ON FUNCTION public.${name}`, start);
+  return source.slice(start, end === -1 ? source.length : end);
+}
+
 test("count-slip RPCs emit durable notifications with review links", () => {
   const baselineSql = normalizePgDumpSql(
-    readRepoFile("supabase/migrations/20260717151345_baseline.sql"),
+    readRepoFile("supabase/migrations/20260720035548_baseline.sql"),
   );
   const repairSql = readRepoFile(
     "supabase/migration-archive/20260716182000_restore_missed_runtime_contracts.sql",
@@ -27,16 +36,16 @@ test("count-slip RPCs emit durable notifications with review links", () => {
   const itemSrc = readRepoFile(
     "apps/web/app/_components/notification-item.tsx",
   );
-  const submittedBlock = around(
+  const submittedBlock = functionBlock(
     baselineSql,
-    "'inventory.count_slip_submitted'",
+    "submit_inventory_count_slip",
   );
   const approvedBlock = around(repairSql, "'inventory.count_slip_approved'");
   const recountBlock = around(repairSql, "'inventory.count_slip_recount'");
 
   assert.match(
     submittedBlock,
-    /ARRAY\['branch_manager', 'warehouse_manager', 'owner'\]::text\[\][\s\S]*'inventory\.count_slip_submitted'[\s\S]*'\/inventory\/count-slips'[\s\S]*format\('inventory\.count_slip:%s:submitted', v_slip_id\)/,
+    /ARRAY\['branch_manager', 'owner', 'owner'\]::text\[\][\s\S]*'inventory\.count_slip_submitted'[\s\S]*format\('\/br\/%s\/stock\/count-slips', p_branch_id\)[\s\S]*format\('inventory\.count_slip:%s:submitted', v_slip_id\)/,
     "submitted count slips must notify managers and link to review queue",
   );
   assert.match(

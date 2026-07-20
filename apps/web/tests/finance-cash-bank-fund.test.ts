@@ -54,10 +54,10 @@ test("bank fund pulls SePay in and out with the right sign", () => {
     "supabase/migration-archive/20260714031027_20260713160248_persist_sepay_refund_match.sql",
   );
   const bankMigration = read(
-    "supabase/migrations/20260719210000_create_canonical_bank_transactions.sql",
+    "supabase/migration-archive/20260719210000_create_canonical_bank_transactions.sql",
   );
   const financeAclMigration = read(
-    "supabase/migrations/20260719213000_harden_finance_function_execute_acl.sql",
+    "supabase/migration-archive/20260719213000_harden_finance_function_execute_acl.sql",
   );
   const periodMigration = read(
     "supabase/migration-archive/20260716100000_close_expense_payment_state_machine.sql",

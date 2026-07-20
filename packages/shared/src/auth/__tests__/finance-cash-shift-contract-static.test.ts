@@ -7,7 +7,7 @@ const root = join(import.meta.dirname, "../../../../..");
 const migration = readFileSync(
   join(
     root,
-    "supabase/migrations/20260719190000_align_finance_cash_shift_truth.sql",
+    "supabase/migration-archive/20260719190000_align_finance_cash_shift_truth.sql",
   ),
   "utf8",
 );
@@ -36,14 +36,14 @@ const financeMessages = readFileSync(
 const bankEvidenceGuardMigration = readFileSync(
   join(
     root,
-    "supabase/migrations/20260719224000_guard_cash_correction_with_bank_evidence.sql",
+    "supabase/migration-archive/20260719224000_guard_cash_correction_with_bank_evidence.sql",
   ),
   "utf8",
 );
 const paymentMethodMirrorMigration = readFileSync(
   join(
     root,
-    "supabase/migrations/20260720110000_enforce_payment_method_mirror.sql",
+    "supabase/migration-archive/20260720110000_enforce_payment_method_mirror.sql",
   ),
   "utf8",
 );

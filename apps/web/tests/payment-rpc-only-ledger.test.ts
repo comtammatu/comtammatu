@@ -123,7 +123,7 @@ test("pending intent and provider metadata share one guarded write boundary", ()
 
 test("authenticated remote-payment RPC is absent after provider cutover", () => {
   const baseline = normalizePgDumpSql(
-    read("supabase/migrations/20260717151345_baseline.sql"),
+    read("supabase/migrations/20260720035548_baseline.sql"),
   );
 
   assert.doesNotMatch(

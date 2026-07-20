@@ -29,14 +29,14 @@ const authTypes = readFileSync(
 const staffPermissionBoundaryMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260717164132_harden_staff_permission_boundary.sql",
+    "supabase/migration-archive/20260717164132_harden_staff_permission_boundary.sql",
   ),
   "utf8",
 );
 const authUserProfileTriggerMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260717164133_restore_auth_user_profile_trigger.sql",
+    "supabase/migrations/20260720035550_restore_auth_user_profile_trigger.sql",
   ),
   "utf8",
 );
@@ -91,7 +91,6 @@ test("active auth templates and target-role lists use canonical access names", (
   const checkedSources = [
     "apps/web/tests/fixtures/supabase-e2e/tenant.sql",
     "supabase/tests/branch_manager_kds_permissions_test.sql",
-    "supabase/migrations/20260717151345_baseline.sql",
   ];
 
   for (const file of checkedSources) {

@@ -82,7 +82,7 @@ test("SePay export parser fails closed on missing columns and invalid money", ()
 
 test("canonical bank ledger import is atomic and idempotent", () => {
   const migration = read(
-    "supabase/migrations/20260719210000_create_canonical_bank_transactions.sql",
+    "supabase/migration-archive/20260719210000_create_canonical_bank_transactions.sql",
   );
   const action = read(
     "apps/web/app/(protected)/finance/bank-transactions/import-actions.ts",

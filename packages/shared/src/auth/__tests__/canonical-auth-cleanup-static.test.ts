@@ -7,7 +7,7 @@ const root = join(import.meta.dirname, "../../../../..");
 const migration = readFileSync(
   join(
     root,
-    "supabase/migrations/20260718174604_canonical_auth_role_position_cleanup.sql",
+    "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
   ),
   "utf8",
 );
