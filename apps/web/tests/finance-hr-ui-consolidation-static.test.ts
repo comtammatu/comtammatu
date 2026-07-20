@@ -41,7 +41,8 @@ test("Finance analysis routes use compact Design System composition", () => {
 
   assert.match(expenses, /<AppSection[\s\S]*title=\{copy\.listTitle\}/);
   assert.match(expenses, /<DataTable/);
-  assert.doesNotMatch(expenses, /<KpiCard|<KpiRow/);
+  assert.match(expenses, /<KpiRow density="compact">/);
+  assert.equal((expenses.match(/<KpiCard/g) ?? []).length, 1);
   assert.match(expenses, /expensePaymentMethod\(row\)/);
 
   assert.equal((foodCost.match(/<KpiCard/g) ?? []).length, 2);

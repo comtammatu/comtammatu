@@ -34,8 +34,9 @@ test("shared field primitives receive named field and touch sizes", () => {
   const selectField = read("apps/web/app/components/form/select-field.tsx");
   const comboboxField = read("apps/web/app/components/form/combobox-field.tsx");
 
-  assert.match(input, /controlSize === "field" && "h-10"/);
-  assert.match(input, /controlSize === "touch" && "min-h-12/);
+  assert.match(input, /field: "h-10"/);
+  assert.match(input, /touch: "min-h-12/);
+  assert.match(input, /inputVariants\(\{ size: resolvedControlSize \}\)/);
   assert.match(textField, /controlSize=\{resolvedControlSize\}/);
   assert.match(numberField, /controlSize=\{resolvedControlSize\}/);
   assert.match(

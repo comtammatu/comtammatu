@@ -176,7 +176,7 @@ test("attendance and leave approval data stay in their respective tabs", () => {
   );
   assert.match(
     leaveRequestsTableSource,
-    /value: "approved-month",[\s\S]*copy\.approvedMonthTab[\s\S]*<TabsContent value="approved-month">[\s\S]*<AppToolbar[\s\S]*<AppSection title=\{copy\.approvedMonthTitle\}[\s\S]*data=\{approvedMonthRows\}/,
+    /value: "approved-month",[\s\S]*copy\.approvedMonthTab[\s\S]*<TabsContent value="approved-month">[\s\S]*<AppToolbar[\s\S]*<AppSection\s+title=\{copy\.approvedMonthTitle\}[\s\S]*data=\{approvedMonthRows\}/,
     "approved monthly leave needs its own view, with filters before its data section",
   );
   assert.match(

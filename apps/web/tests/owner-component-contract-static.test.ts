@@ -162,7 +162,7 @@ test("Input variants own height and InputGroup owns child chrome", () => {
   assert.match(input, /default: "h-7"/);
   assert.match(input, /field: "h-10"/);
   assert.match(input, /touch: "min-h-12 text-base/);
-  assert.match(input, /data-size=\{size \?\? "default"\}/);
+  assert.match(input, /data-control-size=\{resolvedControlSize\}/);
 
   for (const contract of [
     "has-[>input:focus-visible]:ring-2",
@@ -176,7 +176,7 @@ test("Input variants own height and InputGroup owns child chrome", () => {
   }
   assert.match(
     source,
-    /<Input\s+data-slot="input-group-control"\s+className=\{className\}/,
+    /data-slot="input-group-control"[\s\S]*className=\{cn\(/,
   );
 });
 
