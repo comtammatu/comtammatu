@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 // replays behavior fixtures so regex edits cannot silently weaken blocking.
 //
 // Blocks (exit 2): state-mutating Supabase CLI subcommands unless a supported
-// command binds its literal database URL to the approved Cloud DEV ref; psql
+// command binds its literal database URL to an approved Cloud DEV ref; psql
 // writes against a protected or unverified connection; pg_restore toward a
 // protected or unverified target; HTTP writes plus non-catalog Production
 // reads; and
@@ -35,10 +35,8 @@ const PROTECTED_REFS = {
 
 const NO_TOUCH_REFS = new Set(["dyksphedgzqsqjqgxzog"]);
 
-const APPROVED_NON_PROD_REFS = {
-  xrsantkidwknjhcgcfmi: "DEV (matu-greenfield)",
-};
-const APPROVED_DEV_REF = Object.keys(APPROVED_NON_PROD_REFS)[0];
+const APPROVED_NON_PROD_REFS = {};
+const APPROVED_DEV_REF = null;
 const APPROVED_PREVIEW_PARENT_REF = "iexwsuaqqenyjiskawoj";
 
 const LINEAGE_MANIFEST = new URL(
@@ -1494,7 +1492,7 @@ function block(reason) {
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
       "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is PRODUCTION — guarded table/view/catalog reads only;",
-      "dyksphedgzqsqjqgxzog belongs to a different codebase. matu-greenfield is DEV only when a supported command explicitly binds its target to xrsantkidwknjhcgcfmi;",
+      "dyksphedgzqsqjqgxzog belongs to a different codebase. No persistent Cloud DEV is registered; unregistered database targets are blocked;",
       "migrations ship as file → PR → owner applies. If the owner explicitly delegated a prod write",
       "in this session, the owner applies it outside the guarded runtime or provides a scoped",
       "approval path. Never disable this hook or its runtime wiring.",
@@ -1581,6 +1579,7 @@ if (toolName === "Bash") {
         /^--(?:linked|local)(?:=|$)/.test(token),
       );
       const cliTargetsDev =
+        APPROVED_DEV_REF !== null &&
         allowDevTarget &&
         isDbPush &&
         !/[`$]/.test(segment) &&
@@ -1683,6 +1682,7 @@ if (toolName === "Bash") {
         );
       }
       if (
+        APPROVED_DEV_REF !== null &&
         psqlTargetRef === APPROVED_DEV_REF &&
         (!allowDevTarget || !guardedDevCommand)
       ) {

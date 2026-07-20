@@ -36,8 +36,10 @@ UPSTASH_REDIS_REST_URL=https://YOUR_REDIS.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
 ```
 
-`corepack pnpm db:types` luôn dùng registered Cloud DEV type source; không cần
-và không được override `SUPABASE_PROJECT_ID` sang project khác:
+Hiện chưa có registered Cloud DEV type source, nên `corepack pnpm db:types`
+fail-closed. Sau khi owner đăng ký ref DEV mới trong Environment Registry, lệnh
+này mới được bật lại; không được override `SUPABASE_PROJECT_ID` sang project
+khác:
 
 ```bash
 corepack pnpm db:types
@@ -47,8 +49,8 @@ corepack pnpm db:types
 
 - Migration production là owner-gated. Agent viết migration file; owner apply
   production trừ khi owner ủy quyền rõ trong chính session hiện tại.
-- Kiểm migration non-production trên persistent Cloud DEV đã đăng ký. Chỉ dùng
-  Preview Branch qua trusted registration hoặc owner-operated path. Xem
+- Chỉ kiểm migration non-production sau khi persistent Cloud DEV mới được đăng
+  ký. Preview Branch không thay thế DEV type source. Xem
   `docs/agent/rules/database.md`.
 - Không chạy `supabase db push` vào production.
 

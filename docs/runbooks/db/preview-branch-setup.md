@@ -12,12 +12,12 @@ deployment status/log và mutation evidence phải chuyển sang persistent Clou
 DEV đã đăng ký, hoặc do chủ dự án trực tiếp vận hành và cung cấp từ Preview.
 Không được nới guard, dùng stored link state hay thay bằng Local Docker.
 
-## Trạng thái hiện tại — aligned
+## Trạng thái hiện tại — không có target non-production đã đăng ký
 
-PROD ledger đã được đối chiếu với baseline `20260717151345` và managed-surfaces
-fold `20260717151346`; source manifest cho phép native Preview Branching. Kết quả
-cũ không thay thế được `corepack pnpm lint:migration-lineage` ngay trước mỗi lần
-tạo branch.
+Chưa có persistent Cloud DEV trong Environment Registry, nên agent-side
+typegen, Preview binding và mutation đều fail-closed. Luôn chạy
+`corepack pnpm lint:migration-lineage` ngay trước mỗi lần tạo branch; kết quả
+cũ không thay thế được trạng thái manifest hiện tại.
 
 Trạng thái lineage không chứng minh branch cloud sẵn sàng. Trước khi tạo branch,
 phải kiểm tra trạng thái Supabase hiện tại, lấy đúng chi phí theo giờ và được chủ
@@ -69,13 +69,14 @@ Vercel Preview có thể được nối thủ công với credential của Previ
 runtime. Ghi rõ preview host và Supabase ref; không cho preview deploy nhận
 production service-role key.
 
-Trước khi deploy, cấu hình `NEXT_PUBLIC_SUPABASE_URL`,
-`SUPABASE_PROJECT_ID` và publishable/anon key cùng thuộc target đã đăng ký.
-`scripts/check-preview-supabase-env.mjs` chạy trước `next build` và hiện chỉ chấp
-nhận persistent Cloud DEV; Preview Branch throwaway chỉ được mở lại sau khi có
-trusted registration path mà guard có thể kiểm chứng. Nếu chưa cấp được
-service-role key đúng target qua đường tin cậy, bỏ biến đó khỏi scope Preview;
-không sao chép service-role key của Production để giữ feature parity.
+Không cấu hình Preview với Supabase cho đến khi owner đăng ký persistent Cloud
+DEV mới trong Environment Registry. Khi đó, cấu hình
+`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_PROJECT_ID` và publishable/anon key phải
+cùng thuộc target đã đăng ký. `scripts/check-preview-supabase-env.mjs` chạy trước
+`next build`; Preview Branch throwaway chỉ được mở lại sau khi có trusted
+registration path mà guard có thể kiểm chứng. Nếu chưa cấp được service-role key
+đúng target qua đường tin cậy, bỏ biến đó khỏi scope Preview; không sao chép
+service-role key của Production để giữ feature parity.
 
 ## Automation hiện hành
 

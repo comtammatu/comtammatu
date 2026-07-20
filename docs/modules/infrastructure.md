@@ -63,8 +63,8 @@ comtammatu/
 
 | Environment           | Web runtime                       | Database target                                                                                              | Mutation policy                                                                       |
 | --------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| Developer workstation | Local Next.js/print-agent         | Persistent Cloud DEV                                                                                         | Task-scoped non-production data only; no workstation Supabase Local substitute        |
-| Vercel Preview        | Ephemeral Vercel deployment       | Explicit non-production Cloud target; use a task-bound Supabase Preview Branch for isolated migration replay | Verify the target before every DB operation                                           |
+| Developer workstation | Local Next.js/print-agent         | No Cloud DEV currently registered                                                                            | Database operations fail closed; no workstation Supabase Local substitute              |
+| Vercel Preview        | Ephemeral Vercel deployment       | No trusted non-production target while DEV is unregistered                                                   | Environment validation fails closed until an owner registers a persistent DEV target   |
 | CI                    | GitHub-hosted runner              | Isolated Supabase Local started by CI-only harness                                                           | Disposable baseline, seed, SQL, and E2E verification only                             |
 | Production            | Vercel production + branch agents | Production Supabase                                                                                          | Agent reads by default; writes/applies require the rights in the Environment Registry |
 
@@ -103,7 +103,7 @@ smoke against the CI-only isolated Supabase stack.
 Every Vercel Preview build runs `scripts/check-preview-supabase-env.mjs` before
 Next.js compilation. The guard reads the Environment Registry directly, requires
 the canonical Supabase URL and matching `SUPABASE_PROJECT_ID`, and currently
-accepts only the registered persistent Cloud DEV target. Production,
+has no approved target until a persistent Cloud DEV is registered. Production,
 do-not-touch, unregistered, mismatched, or unverifiable privileged-key bindings
 fail closed. Production and CI-only Local builds stay outside this Preview gate.
 
@@ -143,8 +143,9 @@ corepack pnpm install
 corepack pnpm dev
 ```
 
-Use owner-provided Cloud DEV values. Generate database types only after the
-migration is applied to the verified type-source schema:
+After an owner registers a Cloud DEV target, use its verified values and
+generate database types only after the migration is applied to that type-source
+schema:
 
 ```bash
 SUPABASE_PROJECT_ID=<verified-ref> corepack pnpm db:types

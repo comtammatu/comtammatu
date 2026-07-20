@@ -32,11 +32,11 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
   step (the storage-policy section needs `storage.objects` owner, which the migration
   role has).
 - Production keeps its applied migration history; the baseline is the fresh-env
-  install path. Persistent non-production verification uses the registered Cloud
-  DEV project `matu-greenfield`; disposable Preview work additionally requires
-  the trusted registration or owner-operated path defined by `database.md`.
-  Workstations do not use Local Docker as a fallback. Empty-database replay is a
-  CI-only harness, and Production evidence stays within `database.md` read rights.
+  install path. Persistent non-production verification requires a registered
+  Cloud DEV project. Until the owner registers one, disposable Preview work and
+  type generation fail closed under `database.md`; workstations do not use Local
+  Docker as a fallback. Empty-database replay is a CI-only harness, and
+  Production evidence stays within `database.md` read rights.
   Fresh-env notes live in `supabase/migrations/README.md`.
 
 ## Source Ladder

@@ -68,10 +68,9 @@ the re-registration path.
 
 - **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
   is NOT reset to the baseline; the baseline is for fresh/dev envs only.
-- **Cloud DEV (`xrsantkidwknjhcgcfmi`)** may use the one-shot
-  `../_cloud-dev/matu-greenfield-owner-seed.sql` after an empty schema-only
-  replay. The seed is not part of automatic `db.seed` and must never run on
-  Production.
+- **No Cloud DEV is currently registered.** Do not reuse retired one-shot
+  fixtures or substitute a local database. Register the replacement target in
+  `docs/agent/rules/database.md` before non-production replay or typegen.
 - Native Supabase Branching is usable only when `../migration-lineage.json` says
   the baseline version and production cutoff are aligned. Moving files to
   `../migration-archive/` alone does not change the parent project's ledger.

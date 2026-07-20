@@ -12,10 +12,10 @@ Kind: defect
 Tier: T3
 Lane: database
 Exit: A current Production-derived baseline, required fresh-environment forwards, and the live Production ledger are reconciled without replaying or mutating business data.
-Evidence: Production catalog/ACL comparison, CI baseline replay, type no-diff, a reviewed owner-operated ledger repair, and one disposable Preview proof.
-Blocker: CI baseline replay passed in PR #320. The remaining external dependency is the separately authorized Production migration-ledger repair, followed by disposable Preview validation; recheck after full CI is green and the owner can perform the exact ledger operation.
+Evidence: Production catalog/ACL comparison, CI baseline replay, type no-diff, and one disposable Preview proof.
+Blocker: Production migration ledger already matches the rebaseline cutoff. PR #324 CI is green, but no persistent Cloud DEV type source is currently registered, so type generation, alignment, and disposable Preview validation remain blocked. Recheck after the owner registers the literal DEV ref and the corresponding registry/guard update passes.
 
-- [ ] Obtain full CI green, then request the separately authorized Production ledger repair and Preview validation.
+- [ ] Register a persistent Cloud DEV target, regenerate types, then complete aligned schema and disposable Preview validation.
 
 ## Prove Self-Order offline navigation isolation
 
