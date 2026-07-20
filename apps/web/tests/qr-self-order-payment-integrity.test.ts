@@ -206,7 +206,12 @@ test("snapshot recovery returns the stored QR without invoice PII", () => {
 
   const sepayWebhook = readWeb("app/api/webhooks/sepay/route.ts");
   assert.match(sepayWebhook, /"reconcile_sepay_order_evidence"/);
-  assert.doesNotMatch(sepayWebhook, /issueTaxInvoiceForPaidOrder/);
+  assert.match(sepayWebhook, /issueTaxInvoiceForPaidOrder\(\{/);
+  assert.match(
+    sepayWebhook,
+    /reconciliation\.data\.status === "matched"[\s\S]*issueTaxInvoiceForPaidOrder/,
+  );
+  assert.match(sepayWebhook, /buyerNotGetInvoice: true/);
 });
 
 test("Self-Order SePay evidence auto-confirms through the POS settlement service", () => {
