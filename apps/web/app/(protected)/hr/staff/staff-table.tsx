@@ -1,32 +1,23 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { useState, useTransition } from "react";
 import {
   Key as IconKey,
   Pencil as IconPencil,
-  Search as IconSearch,
   ToggleLeft as IconToggleLeft,
   ToggleRight as IconToggleRight,
   Users as IconUsers,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { StatusBadge } from "@/components/status-badge";
-import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@comtammatu/ui/components/input-group";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-} from "@comtammatu/ui/components/item";
+import { Item, ItemActions, ItemContent } from "@comtammatu/ui/components/item";
 import {
   DataTable,
   type DataTableColumn,
@@ -61,6 +52,7 @@ interface StaffTableProps {
   staff: StaffRow[];
   branches: BranchOption[];
   positionOptions: PositionOption[];
+  hasActiveFilters: boolean;
 }
 
 function StaffActiveBadge({ active }: { active: boolean | null }) {
@@ -101,12 +93,6 @@ function StaffActionsMenu({
           onSelect: () => onEdit(member),
         },
         {
-          key: "permissions",
-          label: messages.owner.staffPage.actionPermissions,
-          icon: <IconKey data-icon="inline-start" />,
-          href: `/hr/staff/${member.id}/permissions`,
-        },
-        {
           key: isActive ? "deactivate" : "activate",
           label: isActive
             ? messages.owner.staffPage.actionDeactivate
@@ -127,27 +113,11 @@ export function StaffTable({
   staff,
   branches,
   positionOptions,
+  hasActiveFilters,
 }: StaffTableProps) {
   const [editStaff, setEditStaff] = useState<StaffRow | null>(null);
-  const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const staffCopy = messages.owner.staffPage;
-
-  const filtered = useMemo(() => {
-    const q = search.trim();
-    if (!q) return staff;
-    return staff.filter((member) =>
-      matchesSearch(
-        [
-          member.full_name,
-          member.phone,
-          member.position_label ?? member.role,
-          member.branch_name,
-        ],
-        q,
-      ),
-    );
-  }, [staff, search]);
 
   async function handleToggleActive(member: StaffRow) {
     if (member.is_active !== false) {
@@ -174,7 +144,12 @@ export function StaffTable({
       key: "name",
       header: STAFF_VI.long,
       render: (member) => (
-        <span className="font-medium">{member.full_name}</span>
+        <Link
+          href={`/hr/staff/${member.id}/permissions`}
+          className="font-medium hover:underline"
+        >
+          {member.full_name}
+        </Link>
       ),
     },
     {
@@ -204,8 +179,23 @@ export function StaffTable({
       render: (member) => <StaffActiveBadge active={member.is_active} />,
     },
     {
+      key: "permissions",
+      header: staffCopy.actionPermissions,
+      render: (member) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          render={
+            <Link href={`/hr/staff/${member.id}/permissions?tab=permissions`} />
+          }
+        >
+          {staffCopy.actionPermissions}
+        </Button>
+      ),
+    },
+    {
       key: "actions",
-      header: "",
+      header: <span className="sr-only">{staffCopy.actions}</span>,
       className: "w-12",
       render: (member) => (
         <StaffActionsMenu
@@ -220,27 +210,17 @@ export function StaffTable({
 
   return (
     <>
-      <InputGroup className="h-12 sm:h-10">
-        <InputGroupAddon>
-          <IconSearch />
-        </InputGroupAddon>
-        <InputGroupInput
-          type="text"
-          placeholder={staffCopy.searchPlaceholder}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          inputMode="search"
-        />
-      </InputGroup>
       <DataTable
         columns={columns}
-        data={filtered}
+        data={staff}
         pageSize={25}
         getRowKey={(member) => member.id}
         emptyTitle={
-          search.trim() ? staffCopy.emptySearchTitle : "Chưa có nhân viên nào"
+          hasActiveFilters
+            ? staffCopy.emptySearchTitle
+            : "Chưa có nhân viên nào"
         }
-        emptyMode={search.trim() ? "no-results" : "no-data"}
+        emptyMode={hasActiveFilters ? "no-results" : "no-data"}
         emptyIcon={<IconUsers />}
         className={isPending ? "opacity-60" : undefined}
         mobileCardRender={(member) => (
@@ -251,7 +231,12 @@ export function StaffTable({
             <ItemContent className="gap-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">
-                  <p className="font-medium">{member.full_name}</p>
+                  <Link
+                    href={`/hr/staff/${member.id}/permissions`}
+                    className="font-medium hover:underline"
+                  >
+                    {member.full_name}
+                  </Link>
                   <p className="text-sm text-muted-foreground">
                     {member.branch_name ?? "—"}
                   </p>
@@ -264,12 +249,26 @@ export function StaffTable({
                   <p>{member.position_label ?? member.role}</p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <p className="text-muted-foreground">{staffCopy.phoneShort}</p>
+                  <p className="text-muted-foreground">
+                    {staffCopy.phoneShort}
+                  </p>
                   <p>{member.phone ?? "—"}</p>
                 </div>
               </div>
             </ItemContent>
             <ItemActions>
+              <Button
+                variant="outline"
+                size="touch"
+                render={
+                  <Link
+                    href={`/hr/staff/${member.id}/permissions?tab=permissions`}
+                  />
+                }
+              >
+                <IconKey data-icon="inline-start" />
+                {staffCopy.actionPermissions}
+              </Button>
               <StaffActionsMenu
                 member={member}
                 variant="card"

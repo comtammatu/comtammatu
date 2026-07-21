@@ -53,7 +53,16 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.doesNotMatch(client, /bottom-20/);
   assert.match(client, /billView/);
   assert.match(client, /onOpenPayment=\{\(\) => setBillView\("payment"\)\}/);
-  assert.match(client, /!ambiguous && order \? \(/);
+  assert.match(client, /from "next\/dynamic"/);
+  assert.match(
+    client,
+    /const PaymentPanel = dynamic\([\s\S]*import\("\.\/self-order\/payment-panel"\)/,
+  );
+  assert.match(client, /ssr: false, loading: PaymentPanelLoading/);
+  assert.match(
+    client,
+    /billOpen && billView === "payment" && !ambiguous && order \? \(/,
+  );
   assert.match(client, /toast\.error\(refreshError\)/);
   assert.match(client, /toast\.warning\(SELF_ORDER_VI\.rejectedCalloutTitle/);
   assert.match(client, /guestToastKeyRef/);

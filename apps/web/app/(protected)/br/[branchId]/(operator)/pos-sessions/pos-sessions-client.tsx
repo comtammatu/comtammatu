@@ -14,7 +14,10 @@ import {
   ChevronRight as IconChevronRight,
 } from "lucide-react";
 import { AppEmptyState, AppSection } from "@/components/surface";
-import { BranchOperatorFrame } from "@lib/branch-operator/components/branch-operator-page";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorFrame,
+} from "@lib/branch-operator/components/branch-operator-page";
 import {
   Drawer,
   DrawerContent,
@@ -30,7 +33,6 @@ import {
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import {
   formatVNDateTime,
-  formatVNDuration,
   formatVNTime,
 } from "@comtammatu/shared/time";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
@@ -53,7 +55,7 @@ import {
   ItemTitle,
   ItemGroup,
 } from "@comtammatu/ui/components/item";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import type { CartModifier, CartSide } from "../../pos/types";
@@ -181,9 +183,11 @@ export function PosSessionsClient({
   canCorrectPaymentMethod,
 }: PosSessionsClientProps) {
   const isTouchLayout = useIsMobile(1280);
+  const isInsightRailLayout = !useIsMobile(1536);
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [closeSessionId, setCloseSessionId] = useState<number | null>(null);
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const selectedSession =
     sessions.find((session) => session.id === selectedSessionId) ?? null;
   const selectedOrder =
@@ -220,11 +224,43 @@ export function PosSessionsClient({
       onSessionSelect={
         isTouchLayout ? () => setSessionHistoryOpen(false) : undefined
       }
+      className={isTouchLayout ? undefined : "flex-1"}
+      scrollable={!isTouchLayout}
     />
   );
 
+  const sessionContext = selectedSession ? (
+    <SessionContextBar
+      session={selectedSession}
+      onCloseShift={() => setCloseSessionId(selectedSession.id)}
+      onOpenInsights={
+        !isTouchLayout && !isInsightRailLayout
+          ? () => setInsightsOpen(true)
+          : undefined
+      }
+    />
+  ) : null;
+
+  const billsPanel = selectedSession ? (
+    <SessionBillsPanel
+      key={selectedSession.id}
+      orders={orders}
+      onOrderSelect={setSelectedOrderId}
+      className={isTouchLayout ? undefined : "flex-1"}
+      scrollable={!isTouchLayout}
+    />
+  ) : null;
+
+  const settlementPanel = selectedSession ? (
+    <SessionSettlementPanel
+      branchId={branchId}
+      session={selectedSession}
+      summary={summary}
+    />
+  ) : null;
+
   return (
-    <div className="grid gap-3 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(20rem,24rem)_minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+    <>
       {isTouchLayout ? (
         <Drawer open={sessionHistoryOpen} onOpenChange={setSessionHistoryOpen}>
           <DrawerContent showHandle responsiveFullscreen>
@@ -239,105 +275,121 @@ export function PosSessionsClient({
                 )}
               </DrawerDescription>
             </DrawerHeader>
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="p-3">{sessionHistoryPanel}</div>
-            </ScrollArea>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+              {sessionHistoryPanel}
+            </div>
           </DrawerContent>
         </Drawer>
-      ) : (
-        <div className="order-1 min-w-0">{sessionHistoryPanel}</div>
-      )}
+      ) : null}
 
-      <div className="order-1 flex min-w-0 flex-col gap-3 xl:order-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
         {isTouchLayout ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="w-full justify-start text-left"
-            onClick={() => setSessionHistoryOpen(true)}
-          >
-            <IconClock data-icon="inline-start" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">
-                {messages.settings.posSessions.sessionHistory}
-              </span>
-              <span className="block truncate text-xs font-normal text-muted-foreground">
-                {selectedSession
-                  ? resolveSessionLabel(selectedSession)
-                  : messages.settings.posSessions.emptyTitle}
-              </span>
-            </span>
-            <Badge variant="secondary">{formatCount(sessions.length)}</Badge>
-            <IconChevronRight data-icon="inline-end" />
-          </Button>
-        ) : null}
-
-        {selectedSession ? (
           <>
-            <SessionDetailCard
-              branchId={branchId}
-              session={selectedSession}
-              summary={summary}
-              onCloseShift={() => setCloseSessionId(selectedSession.id)}
-            />
-
-            <AppSection
-              title={messages.settings.posSessions.billsInSession(
-                orders.length,
-              )}
-              description={messages.settings.posSessions.billsDescription}
-              contentFlush
-              contentScroll
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full shrink-0 justify-start text-left"
+              onClick={() => setSessionHistoryOpen(true)}
             >
-              {orders.length > 0 ? (
-                <ItemGroup>
-                  {orders.map((order) => (
-                    <Item
-                      key={order.id}
-                      variant="outline"
-                      render={<button type="button" />}
-                      className="cursor-pointer text-left"
-                      onClick={() => setSelectedOrderId(order.id)}
-                    >
-                      <ItemHeader>
-                        <ItemContent>
-                          <ItemTitle>{order.order_number}</ItemTitle>
-                          <ItemDescription>
-                            {formatTime(order.created_at)} ·{" "}
-                            {order.order_type === "dine_in"
-                              ? messages.settings.posSessions.tableContext(
-                                  order.tables?.number ?? "-",
-                                )
-                              : messages.settings.posSessions.takeaway}
-                          </ItemDescription>
-                        </ItemContent>
-                        <IconChevronRight className="size-4 text-muted-foreground" />
-                      </ItemHeader>
-                      <ItemFooter>
-                        <StatusBadge domain="order" value={order.status} />
-                        <span className="font-mono text-sm font-semibold tabular-nums">
-                          {formatVND(order.total_amount)}
-                        </span>
-                      </ItemFooter>
-                    </Item>
-                  ))}
-                </ItemGroup>
-              ) : (
-                <AppEmptyState
-                  title={messages.settings.posSessions.noBills}
-                  compact
-                  symbol="riceBowl"
-                />
-              )}
-            </AppSection>
+              <IconClock data-icon="inline-start" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">
+                  {messages.settings.posSessions.sessionHistory}
+                </span>
+                <span className="block truncate text-xs font-normal text-muted-foreground">
+                  {selectedSession
+                    ? resolveSessionLabel(selectedSession)
+                    : messages.settings.posSessions.emptyTitle}
+                </span>
+              </span>
+              <Badge variant="secondary">{formatCount(sessions.length)}</Badge>
+              <IconChevronRight data-icon="inline-end" />
+            </Button>
+
+            {sessionContext}
+
+            <AppPageTabs
+              paramKey="view"
+              defaultValue="bills"
+              className="min-h-0 flex-1 overflow-hidden"
+              items={[
+                {
+                  value: "bills",
+                  label: messages.settings.posSessions.billsTab,
+                },
+                {
+                  value: "settlement",
+                  label: messages.settings.posSessions.settlementTab,
+                },
+                ...(report
+                  ? [
+                      {
+                        value: "report",
+                        label: messages.settings.posSessions.reportTab,
+                      },
+                    ]
+                  : []),
+              ]}
+            >
+              <TabsContent
+                value="bills"
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+              >
+                {billsPanel}
+              </TabsContent>
+              <TabsContent
+                value="settlement"
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+              >
+                {settlementPanel}
+              </TabsContent>
+              {report ? (
+                <TabsContent
+                  value="report"
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+                >
+                  <SessionReportCard report={report} />
+                </TabsContent>
+              ) : null}
+            </AppPageTabs>
           </>
-        ) : null}
+        ) : (
+          <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(20rem,24rem)_minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+            <div className="flex min-h-0 flex-col">{sessionHistoryPanel}</div>
+            <div className="flex min-h-0 flex-col gap-2">
+              {sessionContext}
+              {billsPanel}
+            </div>
+            {isInsightRailLayout ? (
+              <div className="hidden min-h-0 2xl:flex 2xl:flex-col">
+                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain">
+                  {settlementPanel}
+                  {report ? <SessionReportCard report={report} /> : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
 
-      <div className="order-3 min-w-0 xl:col-start-2 2xl:col-start-3 2xl:row-start-1">
-        {report ? <SessionReportCard report={report} /> : null}
-      </div>
+      {selectedSession && !isTouchLayout && !isInsightRailLayout ? (
+        <Drawer open={insightsOpen} onOpenChange={setInsightsOpen}>
+          <DrawerContent className="flex h-full flex-col overflow-hidden">
+            <DrawerHeader>
+              <DrawerTitle>
+                {messages.settings.posSessions.reportTitle}
+              </DrawerTitle>
+            </DrawerHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+              <div className="flex flex-col gap-3">
+                {settlementPanel}
+                {report ? <SessionReportCard report={report} /> : null}
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : null}
 
       <OrderDetailDrawer
         order={selectedOrder}
@@ -356,7 +408,7 @@ export function PosSessionsClient({
           }}
         />
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -367,6 +419,8 @@ function SessionHistoryPanel({
   openSessionCount,
   unresolvedVarianceCount,
   onSessionSelect,
+  className,
+  scrollable = true,
 }: {
   branchId: number;
   sessions: PosSessionRow[];
@@ -374,9 +428,12 @@ function SessionHistoryPanel({
   openSessionCount: number;
   unresolvedVarianceCount: number;
   onSessionSelect?: () => void;
+  className?: string;
+  scrollable?: boolean;
 }) {
   return (
     <AppSection
+      size="sm"
       title={messages.settings.posSessions.sessionHistory}
       description={messages.settings.posSessions.sessionHistoryDescription(
         openSessionCount,
@@ -386,8 +443,11 @@ function SessionHistoryPanel({
         children: messages.settings.posSessions.sessionCount(sessions.length),
         variant: "secondary",
       }}
-      className="h-fit"
-      contentClassName="gap-2"
+      className={cn("min-h-0", scrollable && "flex-1", className)}
+      contentClassName={cn(
+        "min-h-0 flex-1 gap-1",
+        scrollable && "overflow-y-auto overscroll-contain",
+      )}
     >
       {sessions.map((session) => {
         const selected = session.id === selectedSessionId;
@@ -397,61 +457,183 @@ function SessionHistoryPanel({
           <Button
             key={session.id}
             variant={selected ? "secondary" : "ghost"}
-            size="touch-lg"
-            className="w-full justify-start text-left"
+            size="touch"
+            className="h-auto min-h-0 w-full justify-start p-0 text-left"
             render={
               <Link
                 href={`/br/${branchId}/pos-sessions?session=${session.id}`}
                 aria-current={selected ? "page" : undefined}
                 onClick={onSessionSelect}
-                className="flex min-w-0 flex-1 flex-wrap items-center gap-3"
               />
             }
           >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-              <IconClock className="size-5" />
-            </span>
-            <span className="min-w-0 flex-1 basis-40">
-              <span className="block truncate text-sm font-semibold">
+            <span className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-2">
+              <span className="truncate text-sm font-semibold">
                 {resolveSessionLabel(session)}
               </span>
-              <span className="block truncate text-xs text-muted-foreground">
-                {formatDateTime(session.opened_at)}
-              </span>
-              {session.cash_difference != null ? (
-                <span
-                  className={cn(
-                    "mt-1 block text-xs font-medium tabular-nums",
-                    breached && !resolved
-                      ? "text-destructive"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {messages.settings.posSessions.sessionVarianceLine(
-                    formatVND(session.cash_difference),
-                  )}
-                </span>
-              ) : null}
-            </span>
-            <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
-              {breached ? (
-                <Badge variant={resolved ? "outline" : "destructive"}>
-                  {resolved
-                    ? messages.settings.posSessions.varianceResolvedShort
-                    : messages.settings.posSessions.varianceShort}
-                </Badge>
-              ) : null}
               <Badge
+                className="justify-self-end"
                 variant={session.status === "open" ? "warning" : "outline"}
               >
                 {session.status === "open"
                   ? messages.settings.posSessions.open
                   : messages.settings.posSessions.closed}
               </Badge>
+              <span className="whitespace-nowrap text-xs text-muted-foreground">
+                {formatDateTime(session.opened_at)}
+              </span>
+              {session.cash_difference != null ? (
+                <span
+                  className={cn(
+                    "justify-self-end whitespace-nowrap text-xs font-medium tabular-nums",
+                    breached && !resolved
+                      ? "text-destructive"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {" · "}
+                  {formatVND(session.cash_difference)}
+                </span>
+              ) : null}
             </span>
           </Button>
         );
       })}
+    </AppSection>
+  );
+}
+
+function SessionContextBar({
+  session,
+  onCloseShift,
+  onOpenInsights,
+}: {
+  session: PosSessionRow;
+  onCloseShift: () => void;
+  onOpenInsights?: () => void;
+}) {
+  const breached = isVarianceBreached(session);
+  const isOpen = session.status === "open";
+
+  return (
+    <BranchOperatorControlBar className="sticky top-0 z-10 bg-card">
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate font-heading text-sm font-semibold">
+            {resolveSessionLabel(session)}
+          </p>
+          <Badge
+            className="shrink-0"
+            variant={isOpen ? "warning" : "outline"}
+          >
+            {isOpen
+              ? messages.settings.posSessions.open
+              : messages.settings.posSessions.closed}
+          </Badge>
+        </div>
+        <p
+          className={cn(
+            "truncate text-xs tabular-nums text-muted-foreground",
+            breached && "text-destructive",
+          )}
+        >
+          {session.cash_difference == null
+            ? messages.settings.posSessions.notClosed
+            : messages.settings.posSessions.sessionVarianceLine(
+                formatVND(session.cash_difference),
+              )}
+        </p>
+      </div>
+      {onOpenInsights || isOpen ? (
+        <div className="flex shrink-0 gap-2">
+          {onOpenInsights ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={onOpenInsights}
+            >
+              {messages.settings.posSessions.reportTab}
+            </Button>
+          ) : null}
+          {isOpen ? (
+            <Button size="touch" onClick={onCloseShift}>
+              {messages.settings.posSessions.closeShift}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </BranchOperatorControlBar>
+  );
+}
+
+function SessionBillsPanel({
+  orders,
+  onOrderSelect,
+  className,
+  scrollable = true,
+}: {
+  orders: PosSessionOrder[];
+  onOrderSelect: (orderId: number) => void;
+  className?: string;
+  scrollable?: boolean;
+}) {
+  return (
+    <AppSection
+      size="sm"
+      title={messages.settings.posSessions.billsInSession(orders.length)}
+      className={cn("min-h-0", scrollable && "flex-1", className)}
+      contentClassName="min-h-0 flex-1 gap-1"
+      contentFlush
+    >
+      <div
+        className={cn(
+          "min-h-0",
+          scrollable && "flex-1 overflow-y-auto overscroll-contain",
+        )}
+      >
+        {orders.length > 0 ? (
+          <ItemGroup className="gap-px overflow-hidden bg-border has-data-[size=sm]:gap-px">
+            {orders.map((order) => (
+              <Item
+                key={order.id}
+                variant="default"
+                size="sm"
+                render={<button type="button" />}
+                className="cursor-pointer gap-1 rounded-none border-0 bg-card px-3 py-2 text-left hover:bg-muted active:bg-muted"
+                onClick={() => onOrderSelect(order.id)}
+              >
+                <ItemContent>
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <ItemTitle>{order.order_number}</ItemTitle>
+                    <span className="shrink-0 font-mono text-sm font-semibold tabular-nums">
+                      {formatVND(order.total_amount)}
+                    </span>
+                  </div>
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <ItemDescription className="min-w-0">
+                      {formatTime(order.created_at)} ·{" "}
+                      {order.order_type === "dine_in"
+                        ? messages.settings.posSessions.tableContext(
+                            order.tables?.number ?? "-",
+                          )
+                        : messages.settings.posSessions.takeaway}
+                    </ItemDescription>
+                    <StatusBadge domain="order" value={order.status} />
+                  </div>
+                </ItemContent>
+                <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </Item>
+            ))}
+          </ItemGroup>
+        ) : (
+          <AppEmptyState
+            title={messages.settings.posSessions.noBills}
+            compact
+            symbol="riceBowl"
+          />
+        )}
+      </div>
     </AppSection>
   );
 }
@@ -468,16 +650,14 @@ interface SessionSummary {
   paymentBreakdown: Array<{ method: string; count: number; amount: number }>;
 }
 
-function SessionDetailCard({
+function SessionSettlementPanel({
   branchId,
   session,
   summary,
-  onCloseShift,
 }: {
   branchId: number;
   session: PosSessionRow;
   summary: SessionSummary;
-  onCloseShift: () => void;
 }) {
   const router = useRouter();
   const breached = isVarianceBreached(session);
@@ -525,44 +705,7 @@ function SessionDetailCard({
   }
 
   return (
-    <AppSection
-      title={messages.settings.posSessions.settlementTitle}
-      description={
-        <div className="flex flex-col gap-1">
-          <p className="font-medium text-foreground">
-            {resolveSessionLabel(session)}
-          </p>
-          <p>
-            {messages.settings.posSessions.openedBy(
-              session.opened_by_profile?.full_name ?? "—",
-              formatDateTime(session.opened_at),
-            )}
-          </p>
-          {!isOpen ? (
-            <p>
-              {messages.settings.posSessions.closedBy(
-                session.closed_by_profile?.full_name ?? "—",
-                formatDateTime(session.closed_at),
-                formatDuration(session.opened_at, session.closed_at),
-              )}
-            </p>
-          ) : null}
-        </div>
-      }
-      badge={{
-        children: isOpen
-          ? messages.settings.posSessions.open
-          : messages.settings.posSessions.closed,
-        variant: isOpen ? "warning" : "outline",
-      }}
-      action={
-        isOpen ? (
-          <Button size="touch" onClick={onCloseShift}>
-            {messages.settings.posSessions.closeShift}
-          </Button>
-        ) : null
-      }
-    >
+    <AppSection title={messages.settings.posSessions.settlementTitle}>
       {breached ? (
         <Alert
           variant={resolved ? "default" : "destructive"}
@@ -1098,7 +1241,7 @@ function OrderDetailDrawer({
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="flex flex-col overflow-hidden">
+        <DrawerContent className="flex h-full flex-col overflow-hidden">
           <DrawerHeader>
             <div className="flex flex-col gap-1">
               <DrawerTitle className="text-base font-semibold">
@@ -1118,7 +1261,7 @@ function OrderDetailDrawer({
             </div>
           </DrawerHeader>
 
-          <ScrollArea className="min-h-0 flex-1">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {order ? (
               <div className="flex flex-col gap-4">
                 <div className="grid gap-2 lg:grid-cols-2">
@@ -1321,7 +1464,7 @@ function OrderDetailDrawer({
                 ) : null}
               </div>
             ) : null}
-          </ScrollArea>
+          </div>
         </DrawerContent>
       </Drawer>
 
@@ -1493,8 +1636,4 @@ function formatDateTime(value: string | null): string {
 
 function formatTime(value: string): string {
   return formatVNTime(value, "-");
-}
-
-function formatDuration(start: string, end: string | null): string {
-  return formatVNDuration(start, end);
 }

@@ -307,6 +307,13 @@ export function AppBackLink({
 }
 
 type AppSectionTone = "default" | "info" | "warning" | "destructive";
+export type AppSectionHeadingLevel =
+  | "h1"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "h6";
 
 const SECTION_TONE_CLASSNAME: Record<AppSectionTone, string> = {
   default: "",
@@ -324,6 +331,8 @@ const SECTION_TONE_ICON_CLASSNAME: Record<AppSectionTone, string> = {
 
 export type AppSectionProps = {
   title?: ReactNode;
+  /** Use only when this visible section title participates in the page heading hierarchy. */
+  headingLevel?: AppSectionHeadingLevel;
   description?: ReactNode;
   /**
    * Right-aligned muted hint text shown next to the title on sm: viewport,
@@ -359,6 +368,7 @@ export type AppSectionProps = {
 
 export function AppSection({
   title,
+  headingLevel,
   description,
   headerHint,
   icon,
@@ -410,6 +420,7 @@ export function AppSection({
       {hasHeader ? (
         <CardHeader className="has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
           <CardTitle
+            as={headingLevel}
             className={cn(
               "flex min-w-0 items-center gap-2",
               headerHint && "flex-col items-start sm:flex-row sm:items-center",
@@ -852,7 +863,7 @@ export function AppLinkCard({
         "h-full transition",
         disabled
           ? "cursor-not-allowed opacity-60"
-          : "hover:shadow-effect-card-hover",
+          : "hover:shadow-effect-card-hover focus-within:shadow-effect-card-hover focus-within:ring-[3px] focus-within:ring-foreground",
       )}
     >
       <CardContent flush className="h-full">
@@ -861,7 +872,7 @@ export function AppLinkCard({
             {inner}
           </div>
         ) : (
-          <Link href={href} className="h-full">
+          <Link href={href} className="block h-full">
             {inner}
           </Link>
         )}

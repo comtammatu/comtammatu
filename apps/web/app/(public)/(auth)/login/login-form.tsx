@@ -21,6 +21,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { ACTIONS_VI, AUTH_VI } from "@comtammatu/shared/messages";
+import { useFormControlSize } from "@/components/form/control-size";
 import { login } from "./actions";
 
 type LoginField = "email" | "password";
@@ -36,6 +37,7 @@ const PASSWORD_ERROR_ID = "login-password-error";
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(login, null);
+  const controlSize = useFormControlSize();
   const [values, setValues] = useState<LoginValues>({
     email: "",
     password: "",
@@ -80,7 +82,7 @@ export function LoginForm() {
       <FieldGroup>
         <Field data-invalid={emailInvalid || undefined}>
           <FieldLabel htmlFor="email">Email</FieldLabel>
-          <InputGroup className="h-10">
+          <InputGroup size={controlSize}>
             <InputGroupAddon>
               <IconMail aria-hidden="true" />
             </InputGroupAddon>
@@ -111,7 +113,7 @@ export function LoginForm() {
 
         <Field data-invalid={passwordInvalid || undefined}>
           <FieldLabel htmlFor="password">{AUTH_VI.passwordLabel}</FieldLabel>
-          <InputGroup className="h-10">
+          <InputGroup size={controlSize}>
             <InputGroupAddon>
               <IconLockKeyhole aria-hidden="true" />
             </InputGroupAddon>

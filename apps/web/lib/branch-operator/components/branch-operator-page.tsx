@@ -55,6 +55,7 @@ export interface BranchOperatorPageProps {
     variant?: BadgeProps["variant"];
   };
   action?: ReactNode;
+  fill?: boolean;
   children: ReactNode;
 }
 
@@ -64,12 +65,13 @@ export function BranchOperatorPage({
   hideHeaderOnMobile = false,
   badge,
   action,
+  fill = false,
   children,
 }: BranchOperatorPageProps) {
   return (
     <div
       data-slot="branch-operator-page"
-      className="flex min-w-0 flex-col gap-3"
+      className={cn("flex min-w-0 flex-col gap-3", fill && "min-h-0 flex-1")}
     >
       <AppPageHeader
         title={title}

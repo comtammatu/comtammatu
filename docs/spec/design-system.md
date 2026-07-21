@@ -313,6 +313,10 @@ Prefer `tracking-wide` for the page-header eyebrow and `tracking-wider` for
 repeated dense/table/grid eyebrows. `AppPageHeader` is the default management
 page H1 because it keeps context and actions coordinated; a bespoke header must
 keep one semantic H1, a clear hierarchy, and responsive action behavior.
+For a standalone public/GATE page whose visible `AppSection` title is the
+canonical page title, set `headingLevel="h1"`. Nested operational sections keep
+the default non-heading card label unless the route has established a valid
+heading hierarchy.
 
 ### C. Icon Size by Role
 

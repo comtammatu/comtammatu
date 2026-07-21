@@ -18,11 +18,9 @@ const linkSepayTransactionToPaymentSchema = z
   .object({
     bankTransactionId: z.number().int().positive().nullable(),
     eventId: z.number().int().positive().nullable(),
-    paymentId: z.coerce.number().int().positive(),
+    paymentCode: z.string().trim().min(1).max(128),
   })
-  .refine(
-    (input) => input.bankTransactionId != null || input.eventId != null,
-  );
+  .refine((input) => input.bankTransactionId != null || input.eventId != null);
 const recordBankTransactionCashDepositSchema = z.object({
   bankTransactionId: z.coerce.number().int().positive(),
 });
@@ -158,14 +156,49 @@ export async function linkSepayTransactionToPayment(
     return { success: false, error: "Không có quyền đối soát thanh toán." };
   }
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("payment_code", parsed.data.paymentCode)
+    .maybeSingle();
+
+  if (orderError || order == null) {
+    return { success: false, error: "Không tìm thấy đơn theo mã thanh toán." };
+  }
+
+  const { data: payments, error: paymentsError } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("order_id", order.id)
+    .eq("method", "vietqr")
+    .eq("status", "completed")
+    .limit(2);
+
+  if (paymentsError || payments == null || payments.length !== 1) {
+    return {
+      success: false,
+      error: "Không tìm thấy thanh toán VietQR đã thu cho mã này.",
+    };
+  }
+
+  const paymentId = payments[0]?.id;
+  if (paymentId == null) {
+    return {
+      success: false,
+      error: "Không tìm thấy thanh toán VietQR đã thu cho mã này.",
+    };
+  }
+
   const canonicalResult =
     parsed.data.bankTransactionId == null
       ? null
       : await supabase.rpc("reconcile_bank_transaction_targets", {
           p_bank_transaction_id: parsed.data.bankTransactionId,
           p_target_type: "payment",
-          p_target_ids: [parsed.data.paymentId],
+          p_target_ids: [paymentId],
         });
   const legacyResult =
     canonicalResult != null || parsed.data.eventId == null
@@ -174,7 +207,7 @@ export async function linkSepayTransactionToPayment(
           "link_sepay_transaction_to_payment",
           {
             p_event_id: parsed.data.eventId,
-            p_payment_id: parsed.data.paymentId,
+            p_payment_id: paymentId,
           },
         );
   const data = canonicalResult?.data ?? legacyResult?.data ?? null;

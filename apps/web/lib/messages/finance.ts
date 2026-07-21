@@ -243,8 +243,8 @@ export const finance = {
       moneyCollected: "Doanh thu",
       moneyCollectedHint: (orders: string) =>
         `${orders} đơn có thanh toán hoàn tất · gồm VAT nếu có`,
-      netRevenue: "Bán hàng sau giảm giá",
-      netRevenueHint: "Tổng giá món − giảm giá · chưa gồm VAT",
+      netProfit: "Lợi nhuận ròng",
+      netProfitHint: "Doanh thu − chi vận hành",
       inventoryValue: "Giá trị tồn kho",
       inventoryValueHint: (opening: string) =>
         `Tồn đầu kỳ ${opening} · số lượng kho × giá vốn chuyển động`,
@@ -543,15 +543,19 @@ export const finance = {
       conflictOrder: "Đơn liên quan",
       openConflictOrder: "Mở đơn",
       linkTitle: "Khớp giao dịch tiền vào",
-      linkInputLabel: "Mã thanh toán cần gắn",
-      linkInputPlaceholder: "Mã thanh toán",
+      linkDescription:
+        "Dùng mã thanh toán từ sao kê SePay để tìm đúng giao dịch VietQR.",
+      linkInputLabel: "Mã thanh toán trên sao kê",
+      linkInputPlaceholder: "Ví dụ: MATU ABC123",
+      linkInputHelp:
+        "Mã được điền sẵn khi SePay cung cấp. Không dùng mã đơn hoặc mã tham chiếu.",
       linkAction: "Khớp",
       linkPaymentAction: "Gắn thanh toán",
       linkPending: "Đang gắn",
       linkUnavailable: "—",
-      linkInvalid: "Nhập mã thanh toán hợp lệ.",
-      linkSuccess: "Đã gắn giao dịch với payment.",
-      linkError: "Không thể gắn giao dịch với payment.",
+      linkInvalid: "Nhập mã thanh toán trên sao kê.",
+      linkSuccess: "Đã gắn giao dịch với thanh toán VietQR.",
+      linkError: "Không thể gắn giao dịch với thanh toán VietQR.",
       cashDepositTitle: "Nộp tiền mặt vào tài khoản",
       cashDepositDescription:
         "Xác nhận sao kê này là tiền mặt đã nộp vào ngân hàng, không tính là chi vận hành.",

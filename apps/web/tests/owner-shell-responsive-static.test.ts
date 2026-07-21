@@ -13,12 +13,19 @@ test("Owner bottom nav fits one module action and four destinations", () => {
   assert.equal(source.match(/min-w-14/g)?.length, 2);
   assert.doesNotMatch(source, /min-w-16/);
   assert.match(source, /visible\.slice\(0, MAX_VISIBLE_ITEMS - 1\), active/);
+  assert.match(source, /const deepNavItems = flattenNavGroups\(tier2\);/);
+  assert.match(
+    source,
+    /deepNavItems\.length > 0 \? deepNavItems : tier1/,
+  );
   assert.match(source, /aria-expanded=\{openMobile\}/);
 });
 
-test("Owner mobile shell controls meet the touch target contract", () => {
+test("Owner mobile shell keeps the module drawer available on the root landing", () => {
   const source = read("apps/web/app/components/app-shell.tsx");
 
+  assert.match(source, /const showBottomNav = bottomNav;/);
+  assert.doesNotMatch(source, /pathname !== "\/"/);
   assert.match(
     source,
     /\{showBottomNav \? <OwnerBottomNav tier1=\{tier1\} tier2=\{tier2\} \/> : null\}/,
@@ -127,9 +134,13 @@ test("Owner list-card actions use named touch variants without enlarging desktop
   }
 
   const branches = read("apps/web/app/(protected)/branches/branch-table.tsx");
-  assert.match(branches, /triggerSize=\{touch \? "icon-touch" : "icon-lg"\}/);
-  assert.match(branches, /renderBranchActions\(branch, true\)/);
-  assert.doesNotMatch(branches, /function BranchActions|<BranchActions/);
+  assert.match(
+    branches,
+    /grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4/,
+  );
+  assert.match(branches, /grid grid-cols-2 gap-2 border-t pt-3/);
+  assert.match(branches, /href=\{`\/br\/\$\{branch\.id\}\/settings\/tables`\}/);
+  assert.match(branches, /feedbackComingSoonTitle/);
 
   const employees = read("apps/web/app/(protected)/hr/employee-table.tsx");
   assert.match(employees, /size=\{touch \? "touch" : "sm"\}/);

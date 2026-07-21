@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { requiredBranchKindForPositionCode } from "@comtammatu/shared/auth";
@@ -10,6 +11,8 @@ import {
   TextField,
   valuesToFormData,
 } from "@/components/form";
+import { FieldLegend, FieldSet } from "@comtammatu/ui/components/field";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { messages } from "@lib/messages";
 import { createStaff, updateStaff } from "./actions";
 import type { BranchOption, PositionOption, StaffRow } from "./staff-table";
@@ -74,8 +77,10 @@ export function StaffFormDialog({
   positionOptions,
 }: StaffFormDialogProps) {
   const isEdit = !!staff;
+  const router = useRouter();
   const schema = useMemo(() => staffSchemaForMode(isEdit), [isEdit]);
   const defaultValues = useMemo(() => toFormValues(staff), [staff]);
+  const copy = messages.owner.staffForm;
 
   async function handleSubmit(values: StaffFormValues) {
     const requiredBranchKind = requiredBranchKindForPositionCode(
@@ -109,20 +114,29 @@ export function StaffFormDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={isEdit ? "Chỉnh sửa nhân viên" : "Thêm nhân viên mới"}
+      title={isEdit ? copy.editTitle : copy.createTitle}
+      description={isEdit ? copy.editDescription : copy.createDescription}
       schema={schema}
       defaultValues={defaultValues}
       entityKey={staff?.id ?? "new"}
       onSubmit={handleSubmit}
-      successMessage={isEdit ? "Đã cập nhật nhân viên" : "Đã tạo nhân viên mới"}
+      onSuccess={(result) => {
+        const staffId = (result.data as { staffId?: string | null } | undefined)
+          ?.staffId;
+        if (!isEdit && staffId) {
+          toast.success(copy.createContinuePermissions);
+          router.push(`/hr/staff/${staffId}/permissions?tab=permissions`);
+          return;
+        }
+        toast.success(isEdit ? copy.editSuccess : copy.createSuccess);
+      }}
       submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       contentClassName="sm:max-w-md"
     >
       {(form) => {
         const selectedPosition = form.watch("position_code");
-        const requiredBranchKind = requiredBranchKindForPositionCode(
-          selectedPosition,
-        );
+        const requiredBranchKind =
+          requiredBranchKindForPositionCode(selectedPosition);
         const branchChoices =
           requiredBranchKind && requiredBranchKind !== "unassigned"
             ? branches.filter(
@@ -138,7 +152,8 @@ export function StaffFormDialog({
         return (
           <>
             {!isEdit && (
-              <>
+              <FieldSet>
+                <FieldLegend>{copy.accountSection}</FieldLegend>
                 <TextField
                   control={form.control}
                   name="email"
@@ -155,51 +170,54 @@ export function StaffFormDialog({
                   placeholder={messages.owner.staffForm.passwordPlaceholder}
                   required
                 />
-              </>
+              </FieldSet>
             )}
 
-            <TextField
-              control={form.control}
-              name="full_name"
-              label="Họ tên"
-              placeholder={messages.owner.staffForm.fullNamePlaceholder}
-              required
-            />
+            <FieldSet>
+              <FieldLegend>{copy.assignmentSection}</FieldLegend>
+              <TextField
+                control={form.control}
+                name="full_name"
+                label="Họ tên"
+                placeholder={messages.owner.staffForm.fullNamePlaceholder}
+                required
+              />
 
-            <TextField
-              control={form.control}
-              name="phone"
-              label="Số điện thoại"
-              type="tel"
-              placeholder="0901 234 567"
-            />
+              <TextField
+                control={form.control}
+                name="phone"
+                label="Số điện thoại"
+                type="tel"
+                placeholder="0901 234 567"
+              />
 
-            <SelectField
-              control={form.control}
-              name="position_code"
-              label="Chức vụ"
-              options={positionOptions}
-              placeholder={messages.owner.staffForm.rolePlaceholder}
-              required
-            />
+              <SelectField
+                control={form.control}
+                name="position_code"
+                label="Chức vụ"
+                options={positionOptions}
+                placeholder={messages.owner.staffForm.rolePlaceholder}
+                required
+              />
 
-            <SelectField
-              control={form.control}
-              name="branch_id"
-              label="Chi nhánh / địa điểm"
-              options={branchOptions}
-              placeholder={
-                isSiteOptional
-                  ? messages.owner.staffForm.branchNotApplicable
-                  : messages.owner.staffForm.branchPlaceholder
-              }
-              disabled={isSiteOptional}
-              description={
-                !isSiteOptional
-                  ? messages.owner.staffForm.branchDescription
-                  : undefined
-              }
-            />
+              <SelectField
+                control={form.control}
+                name="branch_id"
+                label="Chi nhánh / địa điểm"
+                options={branchOptions}
+                placeholder={
+                  isSiteOptional
+                    ? messages.owner.staffForm.branchNotApplicable
+                    : messages.owner.staffForm.branchPlaceholder
+                }
+                disabled={isSiteOptional}
+                description={
+                  !isSiteOptional
+                    ? messages.owner.staffForm.branchDescription
+                    : undefined
+                }
+              />
+            </FieldSet>
           </>
         );
       }}

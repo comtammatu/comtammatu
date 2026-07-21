@@ -166,7 +166,8 @@ export default async function OperatorLayout({
         >
           <AppPage
             density="compact"
-            contentClassName="max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-screen-2xl"
+            className="flex min-h-0 flex-1 flex-col"
+            contentClassName="min-h-0 flex-1 max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-screen-2xl"
           >
             {children}
           </AppPage>

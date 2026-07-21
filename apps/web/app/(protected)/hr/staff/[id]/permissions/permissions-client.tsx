@@ -2,18 +2,18 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: permission management surface keeps localized operational copy inline */
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { z } from "zod";
 import {
+  Layers as IconStack,
   Plus as IconPlus,
   Trash as IconTrash,
-  Layers as IconStack,
 } from "lucide-react";
-import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
+import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import { AppEmptyState, AppSection } from "@/components/surface";
 import {
   Select,
   SelectContent,
@@ -21,8 +21,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+import { FormDialog, SelectField, TextField } from "@/components/form";
+import { AppSection } from "@/components/surface";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { messages } from "@lib/messages";
 import {
   applyTemplateAction,
   grantPermissionAction,
@@ -63,14 +77,31 @@ interface Props {
   targetFullName: string;
   currentGrants: Grant[];
   branches: BranchOpt[];
+  branchNames: { id: number; name: string }[];
   permissionKeys: PermKey[];
   templates: Template[];
 }
 
+interface GrantExceptionValues {
+  scope: string;
+  permissionKey: string;
+  validUntil: string;
+}
+
 const TENANT_SCOPE_VALUE = "__tenant__";
+
+const grantExceptionSchema = z.object({
+  scope: z.string().min(1, "Chọn phạm vi."),
+  permissionKey: z.string().min(1, "Chọn quyền."),
+  validUntil: z.string(),
+});
 
 function branchIdFromValue(value: string): number | null {
   return value === TENANT_SCOPE_VALUE ? null : Number(value);
+}
+
+function toIsoZ(local: string): string {
+  return new Date(local).toISOString();
 }
 
 export function PermissionsClient({
@@ -78,247 +109,262 @@ export function PermissionsClient({
   targetFullName,
   currentGrants,
   branches,
+  branchNames,
   permissionKeys,
   templates,
 }: Props) {
-  const [selectedBranch, setSelectedBranch] = useState<string>("");
-  const [selectedPerm, setSelectedPerm] = useState<string>("");
-  const [grantValidUntil, setGrantValidUntil] = useState<string>("");
   const [templateBranch, setTemplateBranch] = useState<string>("");
   const [templateId, setTemplateId] = useState<string>("");
   const [templateValidUntil, setTemplateValidUntil] = useState<string>("");
+  const [grantDialogOpen, setGrantDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const copy = messages.owner.staffPermissions;
 
-  const tenantGrants = useMemo(
-    () => currentGrants.filter((g) => g.branchId === null),
-    [currentGrants],
+  const branchNameById = useMemo(
+    () => new Map(branchNames.map((branch) => [branch.id, branch.name])),
+    [branchNames],
   );
-  const branchGrantsByBranch = useMemo(() => {
-    const map = new Map<number, Grant[]>();
-    for (const g of currentGrants) {
-      if (g.branchId === null) continue;
-      const list = map.get(g.branchId) ?? [];
-      list.push(g);
-      map.set(g.branchId, list);
-    }
-    return map;
-  }, [currentGrants]);
-
-  const modules = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of permissionKeys) set.add(p.module);
-    return Array.from(set).sort();
-  }, [permissionKeys]);
-  const selectedPermission = useMemo(
-    () => permissionKeys.find((p) => p.key === selectedPerm),
-    [permissionKeys, selectedPerm],
+  const permissionByKey = useMemo(
+    () =>
+      new Map(permissionKeys.map((permission) => [permission.key, permission])),
+    [permissionKeys],
   );
-  const grantNeedsBranch = selectedPermission?.scope === "branch";
-  const grantNeedsTenant = selectedPermission?.scope === "tenant";
-  const canGrant =
-    !!selectedPerm &&
-    !!selectedBranch &&
-    !(grantNeedsBranch && selectedBranch === TENANT_SCOPE_VALUE) &&
-    !(grantNeedsTenant && selectedBranch !== TENANT_SCOPE_VALUE);
-
-  useEffect(() => {
-    if (grantNeedsTenant && selectedBranch !== TENANT_SCOPE_VALUE) {
-      setSelectedBranch(TENANT_SCOPE_VALUE);
-    }
-  }, [grantNeedsTenant, selectedBranch]);
-
-  function handleGrant() {
-    if (!selectedPerm || !selectedBranch) {
-      toast.error("Chọn phạm vi và quyền.");
-      return;
-    }
-    if (grantNeedsBranch && selectedBranch === TENANT_SCOPE_VALUE) {
-      toast.error("Quyền này cần chọn chi nhánh.");
-      return;
-    }
-    if (grantNeedsTenant && selectedBranch !== TENANT_SCOPE_VALUE) {
-      toast.error("Quyền này phải gán ở phạm vi toàn quán.");
-      return;
-    }
-    startTransition(async () => {
-      const res = await grantPermissionAction({
-        target_user_id: targetUserId,
-        branch_id: branchIdFromValue(selectedBranch),
-        permission_key: selectedPerm,
-        valid_until: grantValidUntil ? toIsoZ(grantValidUntil) : null,
+  const templateNameById = useMemo(
+    () => new Map(templates.map((template) => [template.id, template.name])),
+    [templates],
+  );
+  const permissionGroups = useMemo(() => {
+    const groups = new Map<string, { value: string; label: string }[]>();
+    for (const permission of permissionKeys) {
+      const options = groups.get(permission.module) ?? [];
+      options.push({
+        value: permission.key,
+        label: permission.description || permission.key,
       });
-      if (!res.success) {
-        toast.error(res.error ?? "Thất bại");
-      } else {
-        toast.success(`Đã gán ${selectedPerm}`);
-        setSelectedPerm("");
-        setGrantValidUntil("");
-      }
-    });
+      groups.set(permission.module, options);
+    }
+    return Array.from(groups, ([label, options]) => ({ label, options }));
+  }, [permissionKeys]);
+  const scopeOptions = useMemo(
+    () => [
+      { value: TENANT_SCOPE_VALUE, label: copy.tenantWide },
+      ...branches.map((branch) => ({
+        value: String(branch.id),
+        label: branch.name,
+      })),
+    ],
+    [branches, copy.tenantWide],
+  );
+
+  function grantScope(grant: Grant) {
+    return grant.branchId === null
+      ? copy.tenantWide
+      : (branchNameById.get(grant.branchId) ??
+          copy.branchFallback(grant.branchId));
+  }
+
+  function grantSource(grant: Grant) {
+    if (grant.sourceTemplate === null) return copy.sourceException;
+    const templateName = templateNameById.get(grant.sourceTemplate);
+    return templateName
+      ? `${copy.sourceTemplate} · ${templateName}`
+      : copy.sourceTemplate;
+  }
+
+  function grantExpiry(grant: Grant) {
+    if (!grant.validUntil) return copy.forever;
+    const isExpired = new Date(grant.validUntil).getTime() <= Date.now();
+    return `${isExpired ? "Đã hết hạn" : "Đến"} ${formatVNDate(grant.validUntil)}`;
   }
 
   async function handleRevoke(grant: Grant) {
-    const description = permissionKeys.find(
-      (p) => p.key === grant.permissionKey,
-    )?.description;
+    const description = permissionByKey.get(grant.permissionKey)?.description;
     const ok = await confirm({
       title: "Thu hồi quyền này?",
       description:
         "Nhân viên sẽ mất quyền truy cập tương ứng ngay sau khi thu hồi.",
       details: [
-        { label: "Quyền", value: grant.permissionKey },
+        { label: copy.permission, value: grant.permissionKey },
         ...(description ? [{ label: "Mô tả", value: description }] : []),
       ],
       confirmText: "Thu hồi",
       variant: "destructive",
     });
     if (!ok) return;
+
     startTransition(async () => {
-      const res = await revokePermissionAction({
+      const result = await revokePermissionAction({
         target_user_id: targetUserId,
         branch_id: grant.branchId,
         permission_key: grant.permissionKey,
       });
-      if (!res.success) {
-        toast.error(res.error ?? "Thất bại");
-      } else {
-        toast.success(`Đã thu hồi ${grant.permissionKey}`);
+      if (!result.success) {
+        toast.error(result.error ?? "Thất bại");
+        return;
       }
+      toast.success(`Đã thu hồi ${grant.permissionKey}`);
     });
   }
 
   function handleApplyTemplate() {
     if (!templateBranch || !templateId) {
-      toast.error("Chọn phạm vi và template.");
+      toast.error("Chọn phạm vi và mẫu quyền.");
       return;
     }
+
     startTransition(async () => {
-      const res = await applyTemplateAction({
+      const result = await applyTemplateAction({
         target_user_id: targetUserId,
         branch_id: branchIdFromValue(templateBranch),
         template_id: Number(templateId),
         valid_until: templateValidUntil ? toIsoZ(templateValidUntil) : null,
       });
-      if (!res.success) {
-        toast.error(res.error ?? "Thất bại");
-      } else {
-        toast.success(
-          `Đã áp dụng template (${res.data?.rows_inserted ?? 0} quyền mới)`,
-        );
-        setTemplateId("");
-        setTemplateValidUntil("");
+      if (!result.success) {
+        toast.error(result.error ?? "Thất bại");
+        return;
       }
+      toast.success(
+        `Đã áp dụng mẫu quyền (${result.data?.rows_inserted ?? 0} quyền mới)`,
+      );
+      setTemplateId("");
+      setTemplateValidUntil("");
     });
   }
 
-  /** Convert datetime-local value (no tz) to ISO 8601 with offset. */
-  function toIsoZ(local: string): string {
-    // local is "YYYY-MM-DDTHH:mm" — treat as local time, emit UTC ISO.
-    return new Date(local).toISOString();
+  async function submitGrantException(values: GrantExceptionValues) {
+    const selectedPermission = permissionByKey.get(values.permissionKey);
+    if (!selectedPermission) {
+      return { success: false, error: "Quyền không hợp lệ." };
+    }
+    if (
+      selectedPermission.scope === "branch" &&
+      values.scope === TENANT_SCOPE_VALUE
+    ) {
+      return { success: false, error: "Quyền này cần chọn chi nhánh." };
+    }
+    if (
+      selectedPermission.scope === "tenant" &&
+      values.scope !== TENANT_SCOPE_VALUE
+    ) {
+      return {
+        success: false,
+        error: "Quyền này phải gán ở phạm vi toàn quán.",
+      };
+    }
+
+    return grantPermissionAction({
+      target_user_id: targetUserId,
+      branch_id: branchIdFromValue(values.scope),
+      permission_key: values.permissionKey,
+      valid_until: values.validUntil ? toIsoZ(values.validUntil) : null,
+    });
   }
+
+  const grantColumns = useMemo<DataTableColumn<Grant>[]>(
+    () => [
+      {
+        key: "permission",
+        header: copy.permission,
+        render: (grant) => {
+          const permission = permissionByKey.get(grant.permissionKey);
+          return (
+            <div className="flex flex-col gap-1">
+              <span className="font-medium">
+                {permission?.description ?? grant.permissionKey}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                {grant.permissionKey}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        key: "scope",
+        header: copy.scope,
+        render: (grant) => (
+          <Badge variant="secondary">{grantScope(grant)}</Badge>
+        ),
+      },
+      {
+        key: "source",
+        header: copy.source,
+        render: (grant) => (
+          <span className="text-muted-foreground">{grantSource(grant)}</span>
+        ),
+      },
+      {
+        key: "expires",
+        header: copy.expires,
+        render: (grant) => (
+          <span
+            className="text-muted-foreground"
+            title={grant.validUntil ?? undefined}
+          >
+            {grantExpiry(grant)}
+          </span>
+        ),
+      },
+      {
+        key: "actions",
+        header: <span className="sr-only">Thu hồi</span>,
+        className: "w-12",
+        render: (grant) => (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={isPending}
+            onClick={() => handleRevoke(grant)}
+            aria-label={`Thu hồi ${grant.permissionKey}`}
+          >
+            <IconTrash className="text-destructive" />
+          </Button>
+        ),
+      },
+    ],
+    [copy, isPending, permissionByKey, templateNameById, branchNameById],
+  );
 
   return (
     <div className="flex flex-col gap-4">
-      {/* ─── Grant individual permission ─── */}
-      <AppSection title="Gán quyền đơn lẻ">
+      <AppSection
+        title={copy.templateTitle}
+        description={copy.templateDescription}
+        icon={<IconStack />}
+      >
         <div className="grid gap-3 sm:grid-cols-3">
           <Select
-            value={selectedBranch}
-            onValueChange={setSelectedBranch}
-            disabled={isPending || grantNeedsTenant}
+            value={templateBranch}
+            onValueChange={setTemplateBranch}
+            disabled={isPending}
           >
-            <SelectTrigger aria-label="Phạm vi gán quyền">
-              <SelectValue placeholder="Phạm vi" />
+            <SelectTrigger aria-label="Phạm vi áp dụng mẫu quyền">
+              <SelectValue placeholder={copy.scopePlaceholder} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={TENANT_SCOPE_VALUE}>Toàn quán</SelectItem>
-              {branches.map((b) => (
-                <SelectItem key={b.id} value={String(b.id)}>
-                  {b.name}
+              <SelectItem value={TENANT_SCOPE_VALUE}>
+                {copy.tenantWide}
+              </SelectItem>
+              {branches.map((branch) => (
+                <SelectItem key={branch.id} value={String(branch.id)}>
+                  {branch.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={selectedPerm} onValueChange={setSelectedPerm}>
-            <SelectTrigger aria-label="Quyền cần gán" className="sm:col-span-2">
-              <SelectValue placeholder="Chọn quyền" />
+          <Select
+            value={templateId}
+            onValueChange={setTemplateId}
+            disabled={isPending}
+          >
+            <SelectTrigger aria-label="Mẫu quyền" className="sm:col-span-2">
+              <SelectValue placeholder={copy.templateTitle} />
             </SelectTrigger>
             <SelectContent>
-              {modules.map((mod) => (
-                <div key={mod}>
-                  <div className="px-2 py-1 text-xs font-medium uppercase text-muted-foreground">
-                    {mod}
-                  </div>
-                  {permissionKeys
-                    .filter((p) => p.module === mod)
-                    .map((p) => (
-                      <SelectItem key={p.key} value={p.key}>
-                        <div className="flex min-w-0 flex-col items-start gap-1">
-                          <span className="font-mono text-xs">{p.key}</span>
-                          <span className="break-words text-xs text-muted-foreground">
-                            {p.description}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                </div>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
-          <div className="flex flex-col gap-1">
-            <Label
-              htmlFor="grant-valid-until"
-              className="text-xs text-muted-foreground font-normal"
-            >
-              Hạn kết thúc (tuỳ chọn)
-            </Label>
-            <Input
-              id="grant-valid-until"
-              type="datetime-local"
-              value={grantValidUntil}
-              onChange={(e) => setGrantValidUntil(e.target.value)}
-              className="w-full sm:w-auto"
-            />
-          </div>
-          <p className="self-end text-xs text-muted-foreground">
-            Để trống = vĩnh viễn. Dùng cho luân chuyển tạm hoặc uỷ quyền có hạn.
-          </p>
-        </div>
-        <Button onClick={handleGrant} disabled={isPending || !canGrant}>
-          <IconPlus className="mr-1 size-4" />
-          Gán quyền
-        </Button>
-      </AppSection>
-
-      {/* ─── Apply template ─── */}
-      <AppSection title="Áp dụng template">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Select value={templateBranch} onValueChange={setTemplateBranch}>
-            <SelectTrigger aria-label="Phạm vi áp dụng template">
-              <SelectValue placeholder="Phạm vi" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TENANT_SCOPE_VALUE}>Toàn quán</SelectItem>
-              {branches.map((b) => (
-                <SelectItem key={b.id} value={String(b.id)}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={templateId} onValueChange={setTemplateId}>
-            <SelectTrigger
-              aria-label="Template quyền"
-              className="sm:col-span-2"
-            >
-              <SelectValue placeholder="Template" />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map((t) => (
-                <SelectItem key={t.id} value={String(t.id)}>
-                  {t.name} ({t.permissionKeys.length} quyền)
+              {templates.map((template) => (
+                <SelectItem key={template.id} value={String(template.id)}>
+                  {template.name} ({template.permissionKeys.length} quyền)
                 </SelectItem>
               ))}
             </SelectContent>
@@ -327,128 +373,137 @@ export function PermissionsClient({
         <div className="flex flex-col gap-1">
           <Label
             htmlFor="template-valid-until"
-            className="text-xs text-muted-foreground font-normal"
+            className="text-xs font-normal text-muted-foreground"
           >
-            Hạn kết thúc (tuỳ chọn)
+            {copy.validUntil}
           </Label>
           <Input
             id="template-valid-until"
             type="datetime-local"
             value={templateValidUntil}
-            onChange={(e) => setTemplateValidUntil(e.target.value)}
-            className="max-w-xs w-full"
+            onChange={(event) => setTemplateValidUntil(event.target.value)}
+            className="w-full max-w-xs"
           />
         </div>
-        <p className="text-xs text-muted-foreground">
-          Template cộng dồn với quyền hiện có — chỉ thêm, không xóa. Nếu đặt
-          hạn, tất cả quyền mới cùng hạn.
-        </p>
         <Button
+          type="button"
+          variant="secondary"
           onClick={handleApplyTemplate}
           disabled={isPending || !templateBranch || !templateId}
-          variant="secondary"
         >
-          <IconStack className="mr-1 size-4" />
-          Áp dụng
+          <IconStack data-icon="inline-start" />
+          Áp dụng mẫu quyền
         </Button>
       </AppSection>
 
-      {/* ─── Current grants — whole shop ─── */}
-      {tenantGrants.length > 0 && (
-        <AppSection title={`Quyền toàn quán (${tenantGrants.length})`}>
-          <GrantList
-            grants={tenantGrants}
-            onRevoke={handleRevoke}
-            disabled={isPending}
-          />
-        </AppSection>
-      )}
-
-      {/* ─── Current grants — per branch ─── */}
-      {branches.map((b) => {
-        const list = branchGrantsByBranch.get(b.id) ?? [];
-        if (list.length === 0) return null;
-        return (
-          <AppSection key={b.id} title={`${b.name} (${list.length} quyền)`}>
-            <GrantList
-              grants={list}
-              onRevoke={handleRevoke}
-              disabled={isPending}
-            />
-          </AppSection>
-        );
-      })}
-
-      {currentGrants.length === 0 && (
-        <AppEmptyState
-          compact
-          title={`${targetFullName} chưa có quyền nào.`}
-          description="Gán đơn lẻ hoặc áp dụng template ở trên."
-          symbol="chopsticks"
+      <AppSection
+        title={copy.currentTitle}
+        description={copy.currentDescription}
+        contentFlush
+      >
+        <DataTable
+          columns={grantColumns}
+          data={currentGrants}
+          pageSize={25}
+          getRowKey={(grant) => grant.id}
+          emptyTitle={`${targetFullName} chưa có quyền nào.`}
+          emptyDescription="Áp dụng mẫu quyền hoặc thêm một quyền ngoại lệ."
+          mobileCardRender={(grant) => {
+            const permission = permissionByKey.get(grant.permissionKey);
+            return (
+              <Item>
+                <ItemContent>
+                  <ItemTitle>
+                    {permission?.description ?? grant.permissionKey}
+                  </ItemTitle>
+                  <ItemDescription className="font-mono">
+                    {grant.permissionKey}
+                  </ItemDescription>
+                  <div className="flex flex-wrap gap-2 pt-1 text-xs text-muted-foreground">
+                    <span>{grantScope(grant)}</span>
+                    <span>{grantSource(grant)}</span>
+                    <span>{grantExpiry(grant)}</span>
+                  </div>
+                </ItemContent>
+                <ItemActions>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-touch"
+                    disabled={isPending}
+                    onClick={() => handleRevoke(grant)}
+                    aria-label={`Thu hồi ${grant.permissionKey}`}
+                  >
+                    <IconTrash className="text-destructive" />
+                  </Button>
+                </ItemActions>
+              </Item>
+            );
+          }}
         />
-      )}
-    </div>
-  );
-}
+      </AppSection>
 
-function GrantList({
-  grants,
-  onRevoke,
-  disabled,
-}: {
-  grants: Grant[];
-  onRevoke: (g: Grant) => void;
-  disabled: boolean;
-}) {
-  const now = Date.now();
-  return (
-    <ul className="flex flex-wrap gap-2">
-      {grants.map((g) => {
-        const expiry = g.validUntil ? new Date(g.validUntil).getTime() : null;
-        const expired = expiry !== null && expiry <= now;
-        const expiringSoon =
-          expiry !== null && !expired && expiry - now < 24 * 60 * 60 * 1000;
-        return (
-          <li
-            key={g.id}
-            className={`flex items-center gap-1.5 rounded-md border px-2 py-1 ${
-              expired
-                ? "border-destructive/20 bg-destructive/10"
-                : expiringSoon
-                  ? "border-warning/20 bg-warning/10"
-                  : "border-border/60 bg-muted/30"
-            }`}
+      <AppSection
+        title={copy.exceptionTitle}
+        description={copy.exceptionDescription}
+        size="sm"
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            onClick={() => setGrantDialogOpen(true)}
           >
-            <Badge variant="secondary" className="font-mono text-xs">
-              {g.permissionKey}
-            </Badge>
-            {g.validUntil && (
-              <span
-                className={`text-xs ${
-                  expired
-                    ? "text-destructive"
-                    : expiringSoon
-                      ? "text-warning"
-                      : "text-muted-foreground"
-                }`}
-                title={formatVNDateTime(g.validUntil)}
-              >
-                {expired ? "hết hạn" : "đến"} {formatVNDate(g.validUntil)}
-              </span>
-            )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0"
-              disabled={disabled}
-              onClick={() => onRevoke(g)}
-            >
-              <IconTrash className="size-3.5 text-destructive" />
-              <span className="sr-only">Thu hồi</span>
-            </Button>
-          </li>
-        );
-      })}
-    </ul>
+            <IconPlus data-icon="inline-start" />
+            {copy.addException}
+          </Button>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Chỉ mở form này khi cần cấp thêm quyền riêng cho một người.
+        </p>
+      </AppSection>
+
+      <FormDialog<GrantExceptionValues>
+        open={grantDialogOpen}
+        onOpenChange={setGrantDialogOpen}
+        title={copy.grantExceptionTitle}
+        description={copy.grantExceptionDescription}
+        schema={grantExceptionSchema}
+        defaultValues={{ scope: "", permissionKey: "", validUntil: "" }}
+        onSubmit={submitGrantException}
+        successMessage={copy.grantExceptionSuccess}
+        submitLabel={copy.addException}
+        entityKey={targetUserId}
+      >
+        {(form) => (
+          <>
+            <SelectField
+              control={form.control}
+              name="scope"
+              label={copy.scope}
+              options={scopeOptions}
+              placeholder={copy.scopePlaceholder}
+              required
+            />
+            <SelectField
+              control={form.control}
+              name="permissionKey"
+              label={copy.permission}
+              groups={permissionGroups}
+              placeholder={copy.permissionPlaceholder}
+              required
+            />
+            <TextField
+              control={form.control}
+              name="validUntil"
+              label={copy.validUntil}
+              type="datetime-local"
+              description={copy.validUntilDescription}
+            />
+          </>
+        )}
+      </FormDialog>
+    </div>
   );
 }

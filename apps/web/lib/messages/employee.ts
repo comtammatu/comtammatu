@@ -62,10 +62,8 @@ export const employee = {
     statusNoProfile: "Thiếu hồ sơ nhân viên",
     statusNoBranch: "Thiếu chi nhánh",
     descriptionWorking: "Hoàn thành checklist trong ca, sau đó gửi kết ca.",
-    descriptionReadyToCheckout:
-      "Checklist đã xong, gửi quản lý duyệt kết ca.",
-    descriptionCheckoutPending:
-      "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
+    descriptionReadyToCheckout: "Checklist đã xong, gửi quản lý duyệt kết ca.",
+    descriptionCheckoutPending: "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     descriptionDone: "Chấm công hôm nay đã đủ giờ vào và giờ ra.",
     descriptionNotStarted: "Chụp ảnh để chấm công vào ca.",
@@ -167,8 +165,7 @@ export const employee = {
     shiftWorking: "Đang làm",
     shiftPending: "Chờ duyệt",
     shiftNotStarted: "Chưa vào",
-    checkoutApprovalsDescription:
-      "Yêu cầu kết ca đang chờ quản lý duyệt.",
+    checkoutApprovalsDescription: "Yêu cầu kết ca đang chờ quản lý duyệt.",
     checkoutApprovalsDescriptionAll:
       "Yêu cầu kết ca đang chờ duyệt theo phạm vi quyền hiện tại.",
     checkoutApprovalEscalatedDescription:
@@ -243,7 +240,9 @@ export const employee = {
   },
   hrAttendance: {
     summaryView: "Tổng hợp",
+    calendarView: "Lịch",
     clockView: "Vào / ra",
+    viewSwitcher: "Góc xem chấm công",
     workdayRule: "Mỗi ca đã kết = 0,5 công",
     loadHint: "Chưa có dữ liệu chấm công cho chi nhánh và tháng đã chọn.",
     summaryEmptyTitle: "Chưa có ngày công",
@@ -273,6 +272,50 @@ export const employee = {
     photoLoadError: "Không mở được ảnh chấm công.",
     photoAlt: (employeeName: string, date: string) =>
       `Ảnh chấm công của ${employeeName} ngày ${date}`,
+    calendarTitle: "Lịch chấm công theo ngày",
+    calendarDescription:
+      "Ngày trống là chưa có lượt chấm, không phải trạng thái vắng.",
+    calendarGridAria: "Lịch chấm công theo ngày trong tháng",
+    calendarEmployeeLabel: "Nhân viên",
+    calendarAllEmployees: "Tất cả nhân viên",
+    calendarEmployeeSearch: "Tìm nhân viên...",
+    calendarEmployeeEmpty: "Không tìm thấy nhân viên.",
+    calendarScopeLabel: "Phạm vi lịch",
+    calendarScopeAll: "Tất cả ngày",
+    calendarScopeAttention: "Cần xử lý",
+    calendarAttentionDescription:
+      "Chỉ mở chi tiết cho ca treo; khi đã chọn nhân viên, gồm cả nghỉ chờ duyệt. Ngày còn lại được làm mờ.",
+    calendarAttention: "Cần xử lý",
+    calendarNoAttention: "Không cần xử lý",
+    calendarAttentionEmpty:
+      "Không có ca treo hoặc nghỉ chờ duyệt trong tháng này.",
+    calendarDetailTitle: (date: string) => `Lượt chấm ngày ${date}`,
+    calendarDetailDescription:
+      "Chỉ hiển thị ca thực tế và nghỉ phép đã ghi nhận.",
+    calendarActualSummary: (
+      closedShifts: number,
+      workdays: number,
+      workHours: number,
+    ) =>
+      closedShifts > 0
+        ? `${formatCount(closedShifts)} ca đã kết · ${formatDecimal(workdays, 1)} công · ${formatDecimal(workHours, 1)} giờ`
+        : "Chưa có ca đã kết",
+    calendarDayAria: (
+      date: string,
+      closedShifts: number,
+      openShifts: number,
+      workdays: number,
+      workHours: number,
+    ) => {
+      const details =
+        closedShifts > 0
+          ? `${formatCount(closedShifts)} ca đã kết, ${formatDecimal(workdays, 1)} công, ${formatDecimal(workHours, 1)} giờ`
+          : "Chưa có ca đã kết";
+      return `${date}. ${details}${openShifts > 0 ? `. ${formatCount(openShifts)} ca chưa kết` : ""}`;
+    },
+    workdayShort: "công",
+    hourShort: "giờ",
+    openShiftCount: (count: number) => `${formatCount(count)} ca chưa kết`,
     leaveTitle: "Nghỉ phép đã duyệt trong tháng",
     leaveCount: (count: number) => `${formatCount(count)} lượt`,
     leaveRange: "Khoảng nghỉ",

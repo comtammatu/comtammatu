@@ -8,6 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const ADMIN_COPY = "apps/web/lib/messages/owner.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
+const FINANCE_COCKPIT = "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts";
 const FINANCE_COPY = "apps/web/lib/messages/finance.ts";
 const INVENTORY_COPY = "apps/web/lib/messages/inventory.ts";
 const PRINT_JOBS_PAGE =
@@ -38,16 +39,17 @@ test("finance basic landing only promotes direct-contract KPI cards", () => {
   const pageBody = page.slice(
     page.indexOf("export default async function FinancePage"),
   );
+  const cockpit = read(FINANCE_COCKPIT);
   const copy = read(FINANCE_COPY);
 
   assert.match(page, /xl:grid-cols-4/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.moneyCollected\}/);
-  assert.match(page, /label=\{financeCopy\.basic\.kpis\.netRevenue\}/);
+  assert.match(page, /label=\{financeCopy\.basic\.kpis\.netProfit\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.inventoryValue\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.operatingExpense\}/);
   assert.doesNotMatch(page, /label=\{financeCopy\.basic\.kpis\.grossProfit\}/);
-  assert.doesNotMatch(page, /financeCopy\.basic\.kpis\.netProfit/);
-  assert.doesNotMatch(page, /cockpit\.kpis\.netProfit/);
+  assert.doesNotMatch(page, /financeCopy\.basic\.kpis\.netRevenue/);
+  assert.match(page, /cockpit\.kpis\.netProfit/);
   assert.doesNotMatch(page, /IconPiggyBank/);
   assert.doesNotMatch(page, /xl:grid-cols-5/);
   assert.doesNotMatch(page, /cashNetMovementPeriod/);
@@ -70,8 +72,9 @@ test("finance basic landing only promotes direct-contract KPI cards", () => {
   assert.equal((pageBody.match(/<FinanceAttentionSection/g) ?? []).length, 1);
   assert.match(copy, /title: "Sức khỏe tài chính"/);
   assert.match(copy, /moneyCollected: "Doanh thu"/);
-  assert.match(copy, /netRevenue: "Bán hàng sau giảm giá"/);
-  assert.match(copy, /netRevenueHint: "Tổng giá món − giảm giá · chưa gồm VAT"/);
+  assert.match(copy, /netProfit: "Lợi nhuận ròng"/);
+  assert.match(copy, /netProfitHint: "Doanh thu − chi vận hành"/);
+  assert.match(cockpit, /const netProfit = totalCollected - operatingExpense/);
   assert.match(copy, /Tồn đầu kỳ/);
   assert.match(copy, /số lượng kho × giá vốn chuyển động/);
   assert.match(copy, /gồm đã trả\/chưa trả/);
@@ -79,15 +82,12 @@ test("finance basic landing only promotes direct-contract KPI cards", () => {
   assert.match(copy, /Đối soát ngân hàng cần xử lý/);
   assert.match(page, /FinanceAttentionSection/);
   assert.doesNotMatch(copy, /cashDeltaTitle:/);
-  assert.doesNotMatch(copy, /netProfit:/);
-  assert.doesNotMatch(copy, /netProfitHint/);
 });
 
 test("finance and admin copy keep domain vocabulary explicit", () => {
   const copy = [read(FINANCE_COPY), read(ADMIN_COPY)].join("\n");
 
   for (const term of [
-    literalWith(String.raw`lợi nhuận ròng`),
     literalWith(String.raw`lợi nhuận thực tế`),
     literalWith(String.raw`food cost`),
     literalWith(String.raw`webhook lỗi`),

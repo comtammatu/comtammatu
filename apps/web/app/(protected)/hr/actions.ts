@@ -920,6 +920,19 @@ const attendancePhotoSchema = z.object({
   branchId: z.coerce.number().int().positive(),
 });
 
+export interface AttendanceCalendarEmployee {
+  id: number;
+  employee_code: string;
+  full_name: string;
+}
+
+export interface AttendanceCalendarLeave {
+  employee_id: number;
+  start_date: string;
+  end_date: string;
+  status: "pending" | "approved";
+}
+
 export const fetchAttendance = withAction(
   {
     roles: SHIFT_ROLES,
@@ -977,6 +990,117 @@ export const fetchAttendance = withAction(
     }
 
     return { success: true, data: result ?? [] };
+  },
+);
+
+export const fetchAttendanceCalendar = withAction(
+  {
+    roles: SHIFT_ROLES,
+    schema: fetchAttendanceSchema,
+    permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    if (
+      claims.user_role === "branch_manager" &&
+      claims.branch_id !== data.branchId
+    ) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
+
+    const startDate = `${data.month}-01`;
+    const [year, mon] = data.month.split("-").map(Number);
+    const endDate = getVNMonthEndDateString(year!, mon!);
+    const calendarClient =
+      claims.user_role === "branch_manager" ? createServiceClient() : supabase;
+
+    const [attendanceResult, employeesResult, leavesResult] = await Promise.all(
+      [
+        calendarClient
+          .from("attendance_records")
+          .select(
+            `
+        id, date, check_in, check_out, status, note, check_in_photo_path,
+        checklist_template_id,
+        employee_id,
+        employees (
+          id, employee_code,
+          profiles ( full_name )
+        ),
+        shifts ( name, start_time, end_time ),
+        shift_checklist_templates ( name ),
+        attendance_checklist_items (
+          id, title, phase, done_definition, is_required, is_done, sort_order
+        )
+      `,
+          )
+          .eq("branch_id", data.branchId)
+          .eq("tenant_id", claims.tenant_id)
+          .gte("date", startDate)
+          .lte("date", endDate!)
+          .order("date")
+          .order("employee_id"),
+        calendarClient
+          .from("employees")
+          .select("id, employee_code, profiles!inner ( full_name, branch_id )")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("profiles.branch_id", data.branchId)
+          .order("employee_code"),
+        calendarClient
+          .from("leave_requests")
+          .select("employee_id, start_date, end_date, status")
+          .eq("branch_id", data.branchId)
+          .eq("tenant_id", claims.tenant_id)
+          .in("status", ["pending", "approved"])
+          .lte("start_date", endDate!)
+          .gte("end_date", startDate)
+          .order("start_date"),
+      ],
+    );
+
+    if (attendanceResult.error || employeesResult.error || leavesResult.error) {
+      console.error(
+        "[hr/actions:fetchAttendanceCalendar] Fetch attendance calendar error:",
+        attendanceResult.error ?? employeesResult.error ?? leavesResult.error,
+      );
+      return { success: false, error: hrActionCopy.fetchAttendanceFailed };
+    }
+
+    const employees: AttendanceCalendarEmployee[] = (
+      employeesResult.data ?? []
+    ).map((employee) => {
+      const profile = employee.profiles as {
+        full_name: string;
+      } | null;
+      return {
+        id: employee.id,
+        employee_code: employee.employee_code ?? "",
+        full_name: profile?.full_name ?? "",
+      };
+    });
+    const leaves: AttendanceCalendarLeave[] = (leavesResult.data ?? []).flatMap(
+      (leave) =>
+        leave.status === "pending" || leave.status === "approved"
+          ? [
+              {
+                employee_id: leave.employee_id,
+                start_date: leave.start_date,
+                end_date: leave.end_date,
+                status: leave.status,
+              },
+            ]
+          : [],
+    );
+
+    return {
+      success: true,
+      data: {
+        attendance: attendanceResult.data ?? [],
+        employees,
+        leaves,
+      },
+    };
   },
 );
 

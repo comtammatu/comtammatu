@@ -228,15 +228,15 @@ cùng một slice.
 
 **Decision:** "Thông báo trên thiết bị" = popup OS từ client qua `Notification` API khi PWA đang mở (Realtime INSERT → refetch → `showNotification`); KHÔNG có lớp Web Push server (VAPID/cron/ledger đã gỡ). Đánh đổi chấp nhận: không thông báo khi app đóng. Popup bắn cho MỌI severity nhìn thấy được (gồm `info` `pos.order_new`). In-app feed giữ nguyên. Canonical: `docs/spec/toast-notification-system.md`. Đảo phải sửa bản ghi này trước.
 
-## D047: Non-prod runtime = Cloud DEV + Preview Branch on-demand (2026-06-27, cập nhật 2026-07-17)
+## D047: Production type source; Preview runtime disabled (2026-06-27, cập nhật 2026-07-20)
 
-**Decision (net):** Persistent non-prod database runtime dùng Cloud DEV đã đăng
-ký trong Environment Registry. Preview Branch chỉ dùng on-demand; agent-side
-read/mutation cần trusted registration, nếu không chủ dự án trực tiếp vận hành
-và cung cấp evidence. Vercel Preview có thể nối đúng non-production ref khi cần
-runtime smoke; quyền production không mở rộng. Per-PR auto-provision vẫn Parked
-đến khi seed safety, teardown, spend, env binding và trusted registration được
-chứng minh. Canonical: `docs/agent/rules/database.md` +
+**Decision (net):** Production là type source duy nhất và `pnpm db:types` phải
+nhận literal `SUPABASE_PROJECT_ID` của ref Production. Không có persistent
+non-production database; Vercel Preview bị tắt và không nhận Supabase ENV.
+Preview Branch chỉ được owner vận hành on-demand; agent-side mutation vẫn cần
+trusted registration. Per-PR auto-provision vẫn Parked đến khi target, seed
+safety, teardown, spend, env binding và trusted registration được chứng minh.
+Canonical: `docs/agent/rules/database.md` +
 `docs/runbooks/db/preview-branch-setup.md`.
 
 ## D048: Hợp nhất IA quản lý Người + Chi nhánh (2026-06-28)

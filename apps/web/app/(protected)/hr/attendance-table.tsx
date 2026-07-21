@@ -3,10 +3,12 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR attendance checklist detail copy is local to this manager review surface */
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Image as IconImage, ListChecks as IconListChecks } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,
   ItemActions,
@@ -26,6 +28,13 @@ import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   ToggleGroup,
@@ -46,17 +55,24 @@ import {
   formatVNTime,
 } from "@comtammatu/shared/time";
 import { isShiftEndedForBusinessDate } from "@lib/staff-runtime/_lib/default-shift";
+import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
 import { messages } from "@lib/messages";
 import {
   fetchAttendance,
+  fetchAttendanceCalendar,
   fetchAttendanceSummary,
   getAttendancePhotoUrl,
   forceCloseStaleAttendance,
+  type AttendanceCalendarEmployee,
+  type AttendanceCalendarLeave,
 } from "./actions";
+import { AttendanceCalendar } from "./attendance-calendar";
+import { calculateAttendanceWorkHours } from "./attendance-summary";
 import type { BranchOption } from "./_types";
 import { StatusBadge } from "@/components/status-badge";
 import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { AppDialog } from "@/components/form/form-dialog";
+import { Combobox } from "@/components/form/combobox";
 import {
   DataTable,
   type DataTableColumn,
@@ -68,6 +84,7 @@ import {
 } from "./checklist-types";
 
 const attendanceCopy = messages.employee.hrAttendance;
+const scheduleCopy = messages.employee.schedule;
 
 interface AttendanceRecord {
   id: number;
@@ -97,6 +114,19 @@ interface AttendanceRecord {
   }[];
 }
 
+function isStaleOpenAttendanceRecord(
+  record: Pick<AttendanceRecord, "date" | "check_in" | "check_out" | "shifts">,
+  todayStr: string,
+): boolean {
+  if (!record.check_in || record.check_out) return false;
+  if (!record.shifts) return record.date < todayStr;
+  return isShiftEndedForBusinessDate(record.date, {
+    id: 0,
+    start_time: record.shifts.start_time,
+    end_time: record.shifts.end_time,
+  });
+}
+
 interface AttendanceSummaryRow {
   employee_id: number;
   employee_code: string;
@@ -105,20 +135,52 @@ interface AttendanceSummaryRow {
   work_hours: number;
 }
 
+type AttendanceView = "clock" | "summary" | "calendar";
+type CalendarScope = "all" | "attention";
+
 interface AttendanceTableProps {
   branches: BranchOption[];
+  initialBranchId?: number;
+  initialMonth?: string;
+  initialView?: AttendanceView;
+  initialDay?: string | null;
+  initialEmployeeId?: number | null;
+  initialCalendarScope?: CalendarScope;
 }
 
-export function AttendanceTable({ branches }: AttendanceTableProps) {
+export function AttendanceTable({
+  branches,
+  initialBranchId,
+  initialMonth = getVNMonthString(),
+  initialView = "summary",
+  initialDay = null,
+  initialEmployeeId = null,
+  initialCalendarScope = "all",
+}: AttendanceTableProps) {
+  const router = useRouter();
+  const isCalendarDetailTouch = useIsMobile();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [summary, setSummary] = useState<AttendanceSummaryRow[]>([]);
+  const [calendarEmployees, setCalendarEmployees] = useState<
+    AttendanceCalendarEmployee[]
+  >([]);
+  const [calendarLeaves, setCalendarLeaves] = useState<
+    AttendanceCalendarLeave[]
+  >([]);
   const [selectedBranch, setSelectedBranch] = useState<number>(
-    branches[0]?.id ?? 0,
+    initialBranchId ?? branches[0]?.id ?? 0,
   );
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    return getVNMonthString();
-  });
-  const [view, setView] = useState<"clock" | "summary">("summary");
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth);
+  const [view, setView] = useState<AttendanceView>(initialView);
+  const [selectedDay, setSelectedDay] = useState<string | null>(
+    initialView === "calendar" ? initialDay : null,
+  );
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
+    initialView === "calendar" ? initialEmployeeId : null,
+  );
+  const [calendarScope, setCalendarScope] = useState<CalendarScope>(
+    initialView === "calendar" ? initialCalendarScope : "all",
+  );
   const [isPending, startTransition] = useTransition();
 
   // `nextView` rides as a parameter: the view-toggle handlers call
@@ -127,32 +189,121 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
   function loadData(
     branchId: number,
     month: string,
-    nextView: "clock" | "summary" = view,
+    nextView: AttendanceView = view,
+    nextDay: string | null = null,
+    nextEmployeeId: number | null = null,
+    nextCalendarScope: CalendarScope = calendarScope,
   ) {
     setSelectedBranch(branchId);
     setSelectedMonth(month);
+    setSelectedDay(nextDay);
+    setSelectedEmployeeId(nextEmployeeId);
+    setCalendarScope(nextView === "calendar" ? nextCalendarScope : "all");
+    const params = new URLSearchParams({
+      branch: String(branchId),
+      month,
+      view: nextView,
+    });
+    if (nextView === "calendar" && nextDay) {
+      params.set("day", nextDay);
+    }
+    if (nextView === "calendar" && nextEmployeeId != null) {
+      params.set("employee", String(nextEmployeeId));
+    }
+    if (nextView === "calendar" && nextCalendarScope === "attention") {
+      params.set("filter", "attention");
+    }
+    router.replace(`/hr/attendance?${params.toString()}`, { scroll: false });
     startTransition(async () => {
       const viewResult =
         nextView === "summary"
           ? await fetchAttendanceSummary({ branchId, month })
-          : await fetchAttendance({ branchId, month });
+          : nextView === "calendar"
+            ? await fetchAttendanceCalendar({ branchId, month })
+            : await fetchAttendance({ branchId, month });
 
       if (viewResult.success) {
         if (nextView === "summary") {
           setSummary((viewResult.data ?? []) as AttendanceSummaryRow[]);
+        } else if (nextView === "calendar") {
+          const calendarData = viewResult.data as
+            | {
+                attendance: AttendanceRecord[];
+                employees: AttendanceCalendarEmployee[];
+                leaves: AttendanceCalendarLeave[];
+              }
+            | undefined;
+          setRecords(calendarData?.attendance ?? []);
+          setCalendarEmployees(calendarData?.employees ?? []);
+          setCalendarLeaves(calendarData?.leaves ?? []);
         } else {
           setRecords((viewResult.data ?? []) as AttendanceRecord[]);
         }
       } else {
         toast.error(viewResult.error ?? ERRORS_VI.fallback);
       }
-
     });
   }
 
-  function selectView(nextView: "clock" | "summary") {
+  function selectView(nextView: AttendanceView) {
     setView(nextView);
-    loadData(selectedBranch, selectedMonth, nextView);
+    loadData(
+      selectedBranch,
+      selectedMonth,
+      nextView,
+      null,
+      nextView === "calendar" ? selectedEmployeeId : null,
+      nextView === "calendar" ? calendarScope : "all",
+    );
+  }
+
+  function selectCalendarDay(date: string | null) {
+    setSelectedDay(date);
+    const params = new URLSearchParams({
+      branch: String(selectedBranch),
+      month: selectedMonth,
+      view: "calendar",
+    });
+    if (date) params.set("day", date);
+    if (selectedEmployeeId != null) {
+      params.set("employee", String(selectedEmployeeId));
+    }
+    if (calendarScope === "attention") {
+      params.set("filter", "attention");
+    }
+    router.replace(`/hr/attendance?${params.toString()}`, { scroll: false });
+  }
+
+  function selectCalendarEmployee(employeeId: number | null) {
+    setSelectedEmployeeId(employeeId);
+    setSelectedDay(null);
+    const params = new URLSearchParams({
+      branch: String(selectedBranch),
+      month: selectedMonth,
+      view: "calendar",
+    });
+    if (employeeId != null) params.set("employee", String(employeeId));
+    if (calendarScope === "attention") {
+      params.set("filter", "attention");
+    }
+    router.replace(`/hr/attendance?${params.toString()}`, { scroll: false });
+  }
+
+  function selectCalendarScope(scope: CalendarScope) {
+    setCalendarScope(scope);
+    setSelectedDay(null);
+    const params = new URLSearchParams({
+      branch: String(selectedBranch),
+      month: selectedMonth,
+      view: "calendar",
+    });
+    if (selectedEmployeeId != null) {
+      params.set("employee", String(selectedEmployeeId));
+    }
+    if (scope === "attention") {
+      params.set("filter", "attention");
+    }
+    router.replace(`/hr/attendance?${params.toString()}`, { scroll: false });
   }
 
   // Initial load on mount — the tab used to open blank with a hint
@@ -161,27 +312,70 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
   useEffect(() => {
     if (initialLoadRef.current) return;
     initialLoadRef.current = true;
-    loadData(selectedBranch, selectedMonth);
+    loadData(
+      selectedBranch,
+      selectedMonth,
+      view,
+      selectedDay,
+      selectedEmployeeId,
+      calendarScope,
+    );
   }, []);
 
   // Generate month options (last 6 months)
   const monthOptions = getVNMonthSequenceBack(6).map(({ date }) =>
     date.slice(0, 7),
   );
+  const calendarRecords = selectedEmployeeId
+    ? records.filter((record) => record.employee_id === selectedEmployeeId)
+    : records;
+  const employeeLeaves = selectedEmployeeId
+    ? calendarLeaves.filter((leave) => leave.employee_id === selectedEmployeeId)
+    : [];
+  const staleOpenDates = calendarRecords
+    .filter((record) => isStaleOpenAttendanceRecord(record, getVNDateString()))
+    .map((record) => record.date);
+  const selectedDayRecords = selectedDay
+    ? calendarRecords.filter((record) => record.date === selectedDay)
+    : [];
+  const selectedDayLeave = selectedDay
+    ? employeeLeaves.find(
+        (leave) =>
+          leave.start_date <= selectedDay && leave.end_date >= selectedDay,
+      )
+    : undefined;
+  const selectedDayClosedShifts = selectedDayRecords.filter(
+    (record) => record.check_out,
+  ).length;
+  const selectedDayOpenShifts = selectedDayRecords.filter(
+    (record) => record.check_in && !record.check_out,
+  ).length;
+  const selectedDayWorkHours = selectedDayRecords.reduce(
+    (total, record) =>
+      total + calculateAttendanceWorkHours(record.check_in, record.check_out),
+    0,
+  );
+  const selectedCalendarEmployee = calendarEmployees.find(
+    (employee) => employee.id === selectedEmployeeId,
+  );
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
         <AppToolbar
+          className="items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block"
           filters={
-            <>
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
               <Select
                 value={selectedBranch.toString()}
                 onValueChange={(value) =>
-                  loadData(Number(value), selectedMonth)
+                  loadData(Number(value), selectedMonth, view)
                 }
               >
-                <SelectTrigger className="w-48" aria-label={BRANCH_VI.select}>
+                <SelectTrigger
+                  className="w-full sm:w-48"
+                  aria-label={BRANCH_VI.select}
+                >
                   <SelectValue placeholder={BRANCH_VI.select} />
                 </SelectTrigger>
                 <SelectContent>
@@ -194,9 +388,20 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
               </Select>
               <Select
                 value={selectedMonth}
-                onValueChange={(value) => loadData(selectedBranch, value)}
+                onValueChange={(value) =>
+                  loadData(
+                    selectedBranch,
+                    value,
+                    view,
+                    null,
+                    view === "calendar" ? selectedEmployeeId : null,
+                  )
+                }
               >
-                <SelectTrigger className="w-40" aria-label="Tháng chấm công">
+                <SelectTrigger
+                  className="w-full sm:w-40"
+                  aria-label="Tháng chấm công"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -207,29 +412,90 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
                   ))}
                 </SelectContent>
               </Select>
-            </>
+              {view === "calendar" ? (
+                <>
+                  <Combobox
+                    value={selectedEmployeeId?.toString() ?? "all"}
+                    onValueChange={(value) =>
+                      selectCalendarEmployee(
+                        value === "all" ? null : Number(value),
+                      )
+                    }
+                    options={[
+                      {
+                        value: "all",
+                        label: attendanceCopy.calendarAllEmployees,
+                      },
+                      ...calendarEmployees.map((employee) => ({
+                        value: String(employee.id),
+                        label:
+                          employee.full_name ||
+                          employee.employee_code ||
+                          attendanceCopy.employeeCode,
+                        hint: employee.employee_code || undefined,
+                      })),
+                    ]}
+                    placeholder={attendanceCopy.calendarEmployeeLabel}
+                    searchPlaceholder={attendanceCopy.calendarEmployeeSearch}
+                    emptyMessage={attendanceCopy.calendarEmployeeEmpty}
+                    aria-label={attendanceCopy.calendarEmployeeLabel}
+                    triggerClassName="col-span-2 w-full sm:w-64"
+                  />
+                  <Select
+                    value={calendarScope}
+                    onValueChange={(value) => {
+                      if (value === "all" || value === "attention") {
+                        selectCalendarScope(value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      className="col-span-2 w-full sm:w-44"
+                      aria-label={attendanceCopy.calendarScopeLabel}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        {attendanceCopy.calendarScopeAll}
+                      </SelectItem>
+                      <SelectItem value="attention">
+                        {attendanceCopy.calendarScopeAttention}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              ) : null}
+            </div>
           }
           actions={
-            <>
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               <ToggleGroup
                 type="single"
                 value={view}
                 onValueChange={(value) => {
-                  if (value === "clock" || value === "summary") {
+                  if (
+                    value === "clock" ||
+                    value === "summary" ||
+                    value === "calendar"
+                  ) {
                     selectView(value);
                   }
                 }}
-                aria-label={attendanceCopy.summaryView}
+                aria-label={attendanceCopy.viewSwitcher}
               >
                 <ToggleGroupItem value="summary" size="sm">
                   {attendanceCopy.summaryView}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="calendar" size="sm">
+                  {attendanceCopy.calendarView}
                 </ToggleGroupItem>
                 <ToggleGroupItem value="clock" size="sm">
                   {attendanceCopy.clockView}
                 </ToggleGroupItem>
               </ToggleGroup>
               {isPending ? <Spinner /> : null}
-            </>
+            </div>
           }
         />
         <p className="text-sm text-muted-foreground">
@@ -237,21 +503,126 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
         </p>
       </div>
 
-      <AppSection
-        title={messages.hr.client.attendanceTitle}
-        contentFlush
-        contentScroll
-      >
-        {view === "summary" ? (
+      {view === "summary" ? (
+        <AppSection
+          title={messages.hr.client.attendanceTitle}
+          contentFlush
+          contentScroll
+        >
           <SummaryView data={summary} />
-        ) : (
+        </AppSection>
+      ) : view === "clock" ? (
+        <AppSection
+          title={messages.hr.client.attendanceTitle}
+          contentFlush
+          contentScroll
+        >
           <DetailView
             branchId={selectedBranch}
             data={records}
             onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
           />
-        )}
-      </AppSection>
+        </AppSection>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <AppSection
+            title={attendanceCopy.calendarTitle}
+            description={
+              calendarScope === "attention"
+                ? attendanceCopy.calendarAttentionDescription
+                : attendanceCopy.calendarDescription
+            }
+          >
+            <AttendanceCalendar
+              month={selectedMonth}
+              records={calendarRecords}
+              leaves={employeeLeaves}
+              selectedDate={selectedDay}
+              onSelectDate={selectCalendarDay}
+              showShiftNames={selectedEmployeeId !== null}
+              attentionOnly={calendarScope === "attention"}
+              staleOpenDates={staleOpenDates}
+            />
+          </AppSection>
+          <Sheet
+            open={selectedDay !== null}
+            onOpenChange={(open) => {
+              if (!open) selectCalendarDay(null);
+            }}
+          >
+            <SheetContent
+              side={isCalendarDetailTouch ? "bottom" : "right"}
+              className="max-h-dvh-95 overflow-hidden bg-background p-0 data-[side=right]:lg:w-1/2 data-[side=right]:lg:max-w-none"
+            >
+              {selectedDay ? (
+                <>
+                  <SheetHeader>
+                    <SheetTitle>
+                      {attendanceCopy.calendarDetailTitle(
+                        formatVNBusinessDate(selectedDay),
+                      )}
+                    </SheetTitle>
+                    <SheetDescription>
+                      {selectedCalendarEmployee
+                        ? `${selectedCalendarEmployee.full_name || selectedCalendarEmployee.employee_code} · ${attendanceCopy.calendarDetailDescription}`
+                        : attendanceCopy.calendarDetailDescription}
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
+                    <div className="flex flex-col gap-3">
+                      <Frame className="flex flex-wrap items-center gap-2 px-3 py-2">
+                        <Badge variant="outline">
+                          {attendanceCopy.calendarActualSummary(
+                            selectedDayClosedShifts,
+                            countCompletedShiftWorkdays(
+                              selectedDayClosedShifts,
+                            ),
+                            selectedDayWorkHours,
+                          )}
+                        </Badge>
+                        {selectedDayOpenShifts > 0 ? (
+                          <Badge variant="warning">
+                            {attendanceCopy.openShiftCount(
+                              selectedDayOpenShifts,
+                            )}
+                          </Badge>
+                        ) : null}
+                        {selectedDayLeave ? (
+                          <Badge
+                            variant={
+                              selectedDayLeave.status === "approved"
+                                ? "info"
+                                : "warning"
+                            }
+                          >
+                            {selectedDayLeave.status === "approved"
+                              ? scheduleCopy.leaveApproved
+                              : scheduleCopy.leavePending}
+                          </Badge>
+                        ) : null}
+                      </Frame>
+                      <DetailView
+                        branchId={selectedBranch}
+                        data={selectedDayRecords}
+                        compact
+                        onMutated={() =>
+                          loadData(
+                            selectedBranch,
+                            selectedMonth,
+                            "calendar",
+                            selectedDay,
+                            selectedEmployeeId,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
     </div>
   );
 }
@@ -340,10 +711,12 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
 function DetailView({
   branchId,
   data,
+  compact = false,
   onMutated,
 }: {
   branchId: number;
   data: AttendanceRecord[];
+  compact?: boolean;
   onMutated: () => void;
 }) {
   const isTouchLayout = useIsMobile(1024);
@@ -416,22 +789,12 @@ function DetailView({
     });
   }
 
-  function isStaleOpenRecord(record: AttendanceRecord): boolean {
-    if (!record.check_in || record.check_out) return false;
-    if (!record.shifts) return record.date < todayStr;
-    return isShiftEndedForBusinessDate(record.date, {
-      id: 0,
-      start_time: record.shifts.start_time,
-      end_time: record.shifts.end_time,
-    });
-  }
-
   function canForceCloseRecord(record: AttendanceRecord): boolean {
-    return isStaleOpenRecord(record);
+    return isStaleOpenAttendanceRecord(record, todayStr);
   }
 
   function recordStateBadge(record: AttendanceRecord) {
-    if (isStaleOpenRecord(record)) {
+    if (isStaleOpenAttendanceRecord(record, todayStr)) {
       return <StatusBadge domain="attendance" value="stale_open" />;
     }
     if (record.check_out) {
@@ -591,6 +954,7 @@ function DetailView({
         data={data}
         pageSize={50}
         getRowKey={(record) => record.id}
+        mobileBreakpoint={compact ? 10_000 : undefined}
         mobileCardRender={(record) => (
           <Item variant="outline">
             <ItemContent>
@@ -601,6 +965,12 @@ function DetailView({
                 {formatVNBusinessDate(record.date)} ·{" "}
                 {record.shifts?.name ?? "—"}
               </ItemDescription>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
+                {attendanceCopy.checkIn}:{" "}
+                {record.check_in ? formatVNTime(record.check_in) : "—"} ·{" "}
+                {attendanceCopy.checkOut}:{" "}
+                {record.check_out ? formatVNTime(record.check_out) : "—"}
+              </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {recordStateBadge(record)}
                 <ChecklistProgressButton

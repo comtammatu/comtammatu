@@ -40,6 +40,7 @@ export default async function AccessDeniedPage({
 
       <AppSection
         title={copy.title}
+        headingLevel="h1"
         description={copy.description}
         icon={<IconShieldExclamation />}
         action={

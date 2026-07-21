@@ -13,6 +13,7 @@ import {
   getVNDateString,
   getVNDateStringDaysAgo,
   getVNDayUtcRange,
+  getVNMonthCalendarCells,
   getVNMonthEndDateString,
   getVNMonthSequenceBack,
   getYesterdayVNDateString,
@@ -105,6 +106,32 @@ test("VN month and week helpers handle boundaries", () => {
     { year: 2025, month: 12, date: "2025-12-01" },
     { year: 2025, month: 11, date: "2025-11-01" },
   ]);
+});
+
+test("VN month calendar cells are Monday-first and preserve business dates", () => {
+  const cells = getVNMonthCalendarCells("2026-02-01", "2026-02-14");
+
+  assert.equal(cells.length, 35);
+  assert.deepEqual(cells.slice(0, 6), Array(6).fill({
+    date: null,
+    day: null,
+    isToday: false,
+  }));
+  assert.deepEqual(cells[6], {
+    date: "2026-02-01",
+    day: 1,
+    isToday: false,
+  });
+  assert.deepEqual(cells[19], {
+    date: "2026-02-14",
+    day: 14,
+    isToday: true,
+  });
+  assert.deepEqual(cells[33], {
+    date: "2026-02-28",
+    day: 28,
+    isToday: false,
+  });
 });
 
 test("VN date-only helpers avoid runtime timezone", () => {

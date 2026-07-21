@@ -19,15 +19,13 @@ Không gộp các trạng thái sau thành “đã xong”:
 
 1. `written`: source/migration đã có trong working tree.
 2. `verified-local`: typecheck, lint, build và test đã qua.
-3. `applied-cloud-dev`: migration có trong Cloud DEV ledger theo `name` và
-   schema/RLS/RPC smoke đã qua.
-4. `preview-ready`: Vercel Preview đã build đúng commit, nối đúng Cloud DEV và
-   authenticated browser smoke đã qua.
-5. `production-ready`: PR/CI/Preview xanh và gói migration/backfill đã được
-   review; chưa có nghĩa là đã ghi Production.
-6. `applied-production`: migration có trong Production ledger theo `name` sau
-   ủy quyền Owner trong session hiện tại.
-7. `deployed-production`: app đúng commit đã READY và canary Production đã qua.
+3. `preview-applied`: owner đã xác nhận migration trong Preview Branch tạm thời
+   theo `name` và schema/RLS/RPC smoke đã qua.
+4. `production-ready`: PR/CI xanh và gói migration/backfill đã được
+  review; chưa có nghĩa là đã ghi Production.
+5. `applied-production`: migration có trong Production ledger theo `name` sau
+  ủy quyền Owner trong session hiện tại.
+6. `deployed-production`: app đúng commit đã READY và canary Production đã qua.
 
 Supabase ghi `version` theo thời điểm apply; đối chiếu rollout bằng `name`, rồi
 lưu cả `version` thực tế làm evidence. Không so filename timestamp local với
@@ -51,9 +49,9 @@ Apply đúng thứ tự dưới đây bằng migration tooling sau khi đã ki�
 Sau khi apply vào schema nguồn tạo types, chạy `corepack pnpm db:types` và review
 diff trước khi chạy full gate.
 
-## Cloud DEV và Preview gate
+## Owner-operated Preview Branch gate
 
-- [ ] Xác nhận literal Cloud DEV ref theo Environment Registry.
+- [ ] Owner xác nhận Preview Branch ref và evidence tạo/xóa branch.
 - [ ] Đủ 10 migration theo `name`; hai bảng canonical bật RLS.
 - [ ] `anon` không có `EXECUTE` trên RPC import, reconcile, correction hoặc
       attention.
@@ -65,10 +63,8 @@ diff trước khi chạy full gate.
       `completed`; migration chỉ repair mirror khi đúng một payment nguồn.
 - [ ] Chạy advisor sau DDL. Cảnh báo SECURITY DEFINER chỉ được chấp nhận khi RPC
       là browser boundary chủ ý, `anon=false` và có auth check bên trong.
-- [ ] Preview build đúng commit/branch, không deploy một working tree chứa thay
-      đổi ngoài scope.
-- [ ] Preview dùng Cloud DEV credentials đồng bộ; không có Production
-      `SUPABASE_SERVICE_ROLE_KEY`.
+- [ ] Không dùng Vercel Preview hoặc bất kỳ credential Production nào cho
+      Preview Branch.
 - [ ] Owner đăng nhập thật và mở được `/finance`,
       `/finance/bank-transactions`, `/finance/expenses`.
 - [ ] Branch Manager không vào được `/finance`, nhưng xử lý được đúng ca thuộc

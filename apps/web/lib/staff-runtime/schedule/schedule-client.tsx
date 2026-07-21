@@ -52,12 +52,18 @@ import {
   formatVNClockTime,
   formatVNTime,
   getVNDateString,
+  getVNMonthCalendarCells,
   getVNMonthEndDateString,
   getVNMonthStartDateString,
   parseISODateParts,
   shiftVNMonth,
+  type VNMonthCalendarCell,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import {
+  expandLeaveRangesByDate,
+  type CalendarLeaveStatus,
+} from "@lib/hr/leave-calendar";
 import {
   getStatusBadgeMeta,
   getStatusDotClassName,
@@ -66,12 +72,6 @@ import {
 import { countCompletedShiftWorkdays } from "../_lib/workday-math";
 
 const copy = messages.employee.schedule;
-
-interface CalendarCell {
-  dateStr: string | null;
-  dayNumber: number | null;
-  isToday: boolean;
-}
 
 interface ScheduleClientProps {
   initialData: ScheduleMonthData;
@@ -154,38 +154,10 @@ function getMonthStartForOffset(monthStartStr: string, delta: number): string {
   return formatISODateParts({ ...shifted, day: 1 });
 }
 
-function generateMonthCalendarCells(monthStartStr: string): CalendarCell[] {
-  const parts = parseISODateParts(monthStartStr);
-  if (!parts) return generateMonthCalendarCells(getVNMonthStartDateString());
-
-  const firstDate = new Date(Date.UTC(parts.year, parts.month - 1, 1, 5, 0, 0));
-  const mondayFirstOffset = (firstDate.getUTCDay() + 6) % 7;
-  const daysInMonth = Number(
-    getVNMonthEndDateString(parts.year, parts.month).slice(-2),
-  );
-  const totalCells = Math.max(
-    35,
-    Math.ceil((mondayFirstOffset + daysInMonth) / 7) * 7,
-  );
-  const todayStr = getVNDateString();
-
-  return Array.from({ length: totalCells }, (_, index) => {
-    const dayNumber = index - mondayFirstOffset + 1;
-    if (dayNumber < 1 || dayNumber > daysInMonth) {
-      return { dateStr: null, dayNumber: null, isToday: false };
-    }
-
-    const dateStr = formatISODateParts({ ...parts, day: dayNumber });
-    return {
-      dateStr,
-      dayNumber,
-      isToday: dateStr === todayStr,
-    };
-  });
-}
-
-function chunkCalendarRows(cells: CalendarCell[]): CalendarCell[][] {
-  const rows: CalendarCell[][] = [];
+function chunkCalendarRows(
+  cells: VNMonthCalendarCell[],
+): VNMonthCalendarCell[][] {
+  const rows: VNMonthCalendarCell[][] = [];
   for (let index = 0; index < cells.length; index += 7) {
     rows.push(cells.slice(index, index + 7));
   }
@@ -198,41 +170,6 @@ function getAttendanceLabel(attendance: ScheduleAttendance): string {
 
 function getAttendanceDotClassName(attendance: ScheduleAttendance): string {
   return getStatusDotClassName("attendance", attendance.status);
-}
-
-type LeaveDayStatus = ScheduleLeave["status"];
-
-function addDaysToISODate(dateStr: string, days: number): string {
-  const parts = parseISODateParts(dateStr);
-  if (!parts) return dateStr;
-  const shifted = new Date(
-    Date.UTC(parts.year, parts.month - 1, parts.day + days),
-  );
-  return shifted.toISOString().slice(0, 10);
-}
-
-function expandLeavesByDate(
-  leaves: ScheduleLeave[],
-  monthStartStr: string,
-  monthEndStr: string,
-): Map<string, LeaveDayStatus> {
-  const leaveByDate = new Map<string, LeaveDayStatus>();
-  for (const leave of leaves) {
-    const from =
-      leave.start_date > monthStartStr ? leave.start_date : monthStartStr;
-    const to = leave.end_date < monthEndStr ? leave.end_date : monthEndStr;
-    for (
-      let dateStr = from;
-      dateStr <= to;
-      dateStr = addDaysToISODate(dateStr, 1)
-    ) {
-      // "approved" wins over "pending" when two requests overlap the same day.
-      if (leave.status === "approved" || !leaveByDate.has(dateStr)) {
-        leaveByDate.set(dateStr, leave.status);
-      }
-    }
-  }
-  return leaveByDate;
 }
 
 function createScheduleMaps(data: ScheduleMonthData, monthStartStr: string) {
@@ -248,8 +185,12 @@ function createScheduleMaps(data: ScheduleMonthData, monthStartStr: string) {
   const monthEndStr = monthParts
     ? getVNMonthEndDateString(monthParts.year, monthParts.month)
     : monthStartStr;
-  const leaveByDate = expandLeavesByDate(
-    data.leaves,
+  const leaveByDate = expandLeaveRangesByDate(
+    data.leaves.map((leave) => ({
+      startDate: leave.start_date,
+      endDate: leave.end_date,
+      status: leave.status,
+    })),
     monthStartStr,
     monthEndStr,
   );
@@ -339,7 +280,7 @@ function ScheduleSkeletonFallback({
   );
 }
 
-function getLeaveLabel(leave: LeaveDayStatus): string {
+function getLeaveLabel(leave: CalendarLeaveStatus): string {
   return leave === "approved" ? copy.leaveApproved : copy.leavePending;
 }
 
@@ -351,12 +292,12 @@ function CalendarCellContent({
   selected,
 }: {
   attendances: ScheduleAttendance[];
-  cell: CalendarCell;
-  leave: LeaveDayStatus | undefined;
+  cell: VNMonthCalendarCell;
+  leave: CalendarLeaveStatus | undefined;
   onSelectDate: (dateStr: string) => void;
   selected: boolean;
 }) {
-  if (!cell.dateStr || cell.dayNumber == null) {
+  if (!cell.date || cell.day == null) {
     return (
       <div
         aria-hidden="true"
@@ -366,7 +307,7 @@ function CalendarCellContent({
   }
 
   const ariaParts = [
-    formatDate(cell.dateStr),
+    formatDate(cell.date),
     attendances.length > 0
       ? attendances
           .map(
@@ -386,7 +327,7 @@ function CalendarCellContent({
       aria-label={ariaParts.join(". ")}
       aria-pressed={selected}
       onClick={() => {
-        if (cell.dateStr) onSelectDate(cell.dateStr);
+        if (cell.date) onSelectDate(cell.date);
       }}
       className={cn(
         "aspect-square w-full flex-col items-stretch justify-start gap-1 rounded-md bg-background p-1.5 text-left transition-[background-color,box-shadow,transform] duration-150 sm:aspect-video sm:p-2",
@@ -401,7 +342,7 @@ function CalendarCellContent({
             cell.isToday ? "text-primary" : "text-foreground",
           )}
         >
-          {cell.dayNumber}
+          {cell.day}
         </span>
         {cell.isToday ? (
           <Badge className="hidden max-w-full truncate sm:inline-flex">
@@ -454,13 +395,13 @@ function ScheduleMonthCalendarGrid({
   selectedDate,
 }: {
   attendanceByDate: Map<string, ScheduleAttendance[]>;
-  leaveByDate: Map<string, LeaveDayStatus>;
+  leaveByDate: Map<string, CalendarLeaveStatus>;
   Frame: ScheduleFrameComponent;
   monthStart: string;
   onSelectDate: (dateStr: string) => void;
   selectedDate: string | null;
 }) {
-  const rows = chunkCalendarRows(generateMonthCalendarCells(monthStart));
+  const rows = chunkCalendarRows(getVNMonthCalendarCells(monthStart));
 
   return (
     <Frame className="overflow-hidden">
@@ -481,22 +422,22 @@ function ScheduleMonthCalendarGrid({
             <div key={rowIndex} role="row" className="grid grid-cols-7">
               {row.map((cell, cellIndex) => (
                 <div
-                  key={cell.dateStr ?? `${rowIndex}-${cellIndex}`}
+                  key={cell.date ?? `${rowIndex}-${cellIndex}`}
                   role="gridcell"
                   className="border-l border-t p-1.5 align-top whitespace-normal first:border-l-0 sm:p-2"
                 >
                   <CalendarCellContent
                     attendances={
-                      cell.dateStr
-                        ? (attendanceByDate.get(cell.dateStr) ?? [])
+                      cell.date
+                        ? (attendanceByDate.get(cell.date) ?? [])
                         : []
                     }
                     cell={cell}
                     leave={
-                      cell.dateStr ? leaveByDate.get(cell.dateStr) : undefined
+                      cell.date ? leaveByDate.get(cell.date) : undefined
                     }
                     onSelectDate={onSelectDate}
-                    selected={cell.dateStr === selectedDate}
+                    selected={cell.date === selectedDate}
                   />
                 </div>
               ))}
@@ -519,7 +460,7 @@ function SelectedDayDetail({
   attendances: ScheduleAttendance[];
   dateStr: string;
   Frame: ScheduleFrameComponent;
-  leave: LeaveDayStatus | undefined;
+  leave: CalendarLeaveStatus | undefined;
   leaveHref: string;
   todayStr: string;
 }) {

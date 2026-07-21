@@ -156,6 +156,12 @@ snapshot đó. UI sau chốt dùng nhãn **Thực lĩnh đã chốt**; trước 
 **Dự kiến thực lĩnh**. Chốt lại chỉ được phép khi snapshot còn ở trạng thái có
 thể sửa theo state machine; không được thay đổi snapshot đã giao cho Finance.
 
+Trước khi gọi snapshot, `/hr/payroll` chạy preflight chỉ đọc. Snapshot bị chặn
+khi còn nhân viên thiếu mức lương, ca đã quá giờ nhưng chưa có giờ ra, hoặc yêu
+cầu nghỉ trong kỳ còn chờ duyệt. Preflight chỉ dẫn về hồ sơ nhân sự hoặc Lịch
+công; không tự sửa công, phép, hoặc dữ liệu lương. Ngoại lệ Owner chỉ được bổ
+sung khi có một cơ chế phê duyệt được lưu vết riêng.
+
 **Ranh giới Finance:** chốt bảng lương không đồng nghĩa với đã trả tiền.
 Khoản chi lương, phương thức tiền mặt/chuyển khoản và evidence đối soát nằm ở
 Finance `expenses` với category `salary`. HR không tự cập nhật

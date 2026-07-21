@@ -246,7 +246,7 @@ function buildKpis({
   const grossProfit = netRevenueBeforeVat - ingredientCost;
   const grossMargin =
     netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0;
-  const netProfit = grossProfit - operatingExpense;
+  const netProfit = totalCollected - operatingExpense;
   const costCoverageOrderCount = actualFoodCost.orderCount;
   const costCoverageRatio =
     orderCount > 0 ? costCoverageOrderCount / orderCount : 1;

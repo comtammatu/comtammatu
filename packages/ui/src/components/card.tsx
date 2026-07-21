@@ -39,13 +39,20 @@ const CARD_TITLE_SIZE_CLASS = {
   lg: "text-2xl",
 } as const;
 
+export type CardTitleProps = React.ComponentProps<"div"> & {
+  size?: "default" | "sm" | "lg";
+  /** Semantic element for the visible title. Defaults to a non-heading card label. */
+  as?: "div" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+};
+
 function CardTitle({
   className,
   size = "default",
+  as: Component = "div",
   ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" | "lg" }) {
+}: CardTitleProps) {
   return (
-    <div
+    <Component
       data-slot="card-title"
       className={cn(
         "font-heading font-semibold",

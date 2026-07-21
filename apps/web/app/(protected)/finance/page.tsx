@@ -154,15 +154,14 @@ export default async function FinancePage({
         <KpiCard
           density="compact"
           icon={<IconTrendingUp className="size-4 text-muted-foreground" />}
-          label={financeCopy.basic.kpis.netRevenue}
-          value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
-          hint={financeCopy.basic.kpis.netRevenueHint}
-          href="/finance/revenue"
+          label={financeCopy.basic.kpis.netProfit}
+          value={formatVND(cockpit.kpis.netProfit)}
+          hint={financeCopy.basic.kpis.netProfitHint}
           delta={
             cockpit.compareKpis
               ? buildCompareDelta(
-                  cockpit.kpis.netRevenueBeforeVat,
-                  cockpit.compareKpis.netRevenueBeforeVat,
+                  cockpit.kpis.netProfit,
+                  cockpit.compareKpis.netProfit,
                   "higher_better",
                 )
               : null

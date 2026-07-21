@@ -122,7 +122,7 @@ corepack pnpm --filter @comtammatu/web guides:capture # Capture POS flow screens
 | -------------------------------------------------------------- | --------------------------------------------- |
 | [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading     |
 | [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index       |
-| [`tasks/todo.md`](tasks/todo.md)                               | Greenfield preparation gate tracker           |
+| [`tasks/todo.md`](tasks/todo.md)                               | Active outcome tracker                        |
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Legacy decision index; no backlog             |
 | [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                           |
 | [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                     |

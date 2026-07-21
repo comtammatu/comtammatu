@@ -28,29 +28,6 @@ Evidence: Production-like offline-browser capture plus the existing `PWA-SELF-OR
 
 - [ ] Run the live offline-browser matrix for a previously visited seating URL and a non-sensitive public route; persist only the deterministic regression if behavior fails.
 
-## Confirm the Greenfield product spine
-
-State: ready
-Kind: product
-Tier: T3
-Lane: greenfield
-Exit: The owner accepts one minimal spine covering owner/auth, branch context, POS → payment → KDS/print → HĐĐT, inventory receive/production/stocktake, and HR/payroll basics.
-Evidence: One current decision or owning-domain contract; no dated planning snapshot or duplicated source-of-truth map.
-
-- [ ] Re-derive the minimal spine from the current baseline and runtime, then present additions outside that spine as explicit owner decisions.
-
-## Establish Greenfield real-auth smokes
-
-State: blocked
-Kind: qa
-Tier: T3
-Lane: greenfield
-Exit: Every owner-accepted spine flow has one repeatable real-auth runtime smoke using current scopes and routes.
-Evidence: Executable tests or one operator runbook that records the authenticated actor, scope, route, expected result, and failure signal.
-Blocker: The accepted product spine is not yet canonical. Recheck after “Confirm the Greenfield product spine” passes its Exit.
-
-- [ ] Define and run one real-auth smoke per accepted spine flow without copying the product map into the tracker.
-
 ## Densify the Branch on-hand list
 
 State: ready
@@ -68,8 +45,8 @@ State: verify
 Kind: qa
 Tier: T3
 Lane: finance/payments
-Exit: Current SePay conflict behavior, expense transitions, supplier-payment retry, required-key `record_supplier_payment`, and Cash/VietQR-only UI all pass against the deployed non-production runtime.
-Evidence: Isolated two-session results, authenticated phone/tablet smoke, deployed caller trace, and Cash/VietQR browser capture with no MoMo affordance.
+Exit: Current SePay conflict behavior, expense transitions, supplier-payment retry, required-key `record_supplier_payment`, and Cash/VietQR-only UI have owner-operated Preview evidence or remain explicitly blocked pending it.
+Evidence: Isolated two-session results, authenticated phone/tablet smoke, deployed caller trace, Cash/VietQR browser capture with no MoMo affordance, and the Preview Branch target/evidence when available.
 
 - [ ] Rehearse current SePay completed-payment conflict behavior with the isolated two-session matrix.
 - [ ] Run authenticated phone/tablet Finance smoke for expense transitions and supplier-payment retry.
@@ -81,12 +58,12 @@ State: blocked
 Kind: release
 Tier: T3
 Lane: finance/payments
-Exit: Legacy `create_supplier_payment` and authenticated direct `payments` UPDATE are absent; approved non-production schema/type/advisor gates pass; the separately owner-delegated Production apply and smoke are evidenced.
+Exit: Legacy `create_supplier_payment` and authenticated direct `payments` UPDATE are absent; owner-operated Preview schema/type/advisor gates pass; the separately owner-delegated Production apply and smoke are evidenced.
 Evidence: Deployed required-key proof from the preceding outcome, catalog and ACL checks, generated-type no-diff, repository gates, advisors, and explicit Production apply/smoke evidence.
-Blocker: Destructive cleanup depends on “Verify the Finance payment cutover” passing its Exit. Recheck after the deployed required-key proof exists and either persistent Cloud DEV is selected for agent-side mutation evidence or a trusted Preview registration/owner-operated path is available; Production still requires explicit owner delegation in that session.
+Blocker: Destructive cleanup depends on “Verify the Finance payment cutover” passing its Exit. Recheck after the deployed required-key proof and an owner-operated Preview path are available; Production still requires explicit owner delegation in that session.
 
 - [ ] Revoke authenticated direct `UPDATE` on `payments` and drop legacy `create_supplier_payment` only after the required-key runtime proof.
-- [ ] Apply the cleanup to registered Cloud DEV, or to Preview only through a trusted registration/owner-operated path; regenerate types and run repository gates plus database advisors.
+- [ ] Apply the cleanup only through the trusted registration/owner-operated Preview path; regenerate types from the explicit Production source and run repository gates plus database advisors.
 - [ ] Perform the separately owner-delegated Production apply and smoke only after every prior gate is evidenced.
 
 ## Align KDS history authorization with route access

@@ -76,7 +76,7 @@ test("long press cards preserve vertical scrolling and composed swipe cards keep
   }
 });
 
-test("FormDialog resets only on open or entity transitions and confirms dirty dismissal", () => {
+test("FormDialog resets only on open or entity transitions and confirms dirty dismissal locally", () => {
   const source = read("apps/web/app/components/form/form-dialog.tsx");
 
   assert.match(source, /const justOpened = open && !wasOpenRef\.current/);
@@ -87,25 +87,25 @@ test("FormDialog resets only on open or entity transitions and confirms dirty di
   );
   assert.doesNotMatch(source, /if \(open\) \{\s*form\.reset\(defaultValues\)/);
   assert.match(source, /const isDirty = form\.formState\.isDirty;/);
+  assert.match(source, /if \(\s*isPending \|\|/);
   assert.match(source, /if \(!isDirty\)/);
-  assert.match(source, /const shouldDiscard = await confirm\(\{/);
-  assert.match(source, /const closeConfirmationPendingRef = useRef\(false\)/);
+  assert.doesNotMatch(source, /await confirm\(/);
   assert.match(
     source,
-    /if \(isPending \|\| closeConfirmationPendingRef\.current\) return/,
+    /const \[discardConfirmationOpen, setDiscardConfirmationOpen\] = useState\(false\)/,
   );
-  assert.match(source, /closeConfirmationPendingRef\.current = true/);
+  assert.doesNotMatch(source, /discardConfirmedRef/);
+  assert.match(source, /setDiscardConfirmationOpen\(true\)/);
   assert.match(
     source,
-    /finally \{\s*closeConfirmationPendingRef\.current = false/,
+    /<Dialog\s+open=\{open\}\s+onOpenChange=\{handleOpenChange\}\s+disablePointerDismissal=\{isPending\}\s*>[\s\S]*?<ConfirmDialog\s+open=\{discardConfirmationOpen\}/,
   );
-  assert.match(
-    source,
-    /<Dialog open=\{open\} onOpenChange=\{handleOpenChange\}>/,
-  );
-  assert.match(source, /onClick=\{\(\) => void requestClose\(\)\}/);
+  assert.match(source, /<\/Dialog>\s*<ConfirmDialog/);
+  assert.match(source, /<DialogContent[\s\S]*?showCloseButton=\{!isPending\}/);
+  assert.match(source, /<form[\s\S]*?aria-busy=\{isPending\}/);
+  assert.match(source, /onClick=\{requestClose\}/);
   assert.match(source, /actionSize = "touch"/);
-  assert.equal(source.match(/size="touch"/g)?.length, 2);
+  assert.equal(source.match(/size=\{actionSize\}/g)?.length, 2);
 });
 
 test("writable settings and finance pages fail closed when initial data cannot load", () => {

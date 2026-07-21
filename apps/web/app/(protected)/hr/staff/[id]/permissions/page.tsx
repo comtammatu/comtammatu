@@ -8,7 +8,6 @@ import { messages } from "@lib/messages";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { PermissionsClient } from "./permissions-client";
-import { OverviewTab } from "./overview-tab";
 import { HistoryTab } from "./history-tab";
 
 const OWNER_STAFF_ROLES = MODULE_ACL.staff.allowedRoles;
@@ -29,9 +28,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
   // Target profile (RLS: viewer must have staff:view or hr:view_employee)
   const { data: profile } = await supabase
     .from("profiles")
-    .select(
-      "id, full_name, phone, branch_id, position_id, is_active, positions(code)",
-    )
+    .select("id, full_name, branch_id, position_id, is_active")
     .eq("id", id)
     .maybeSingle();
 
@@ -84,11 +81,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
       .eq("target_user_id", id)
       .order("at", { ascending: false })
       .limit(50),
-    supabase
-      .from("branches")
-      .select("id, name")
-      .eq("branch_kind", "branch")
-      .order("name"),
+    supabase.from("branches").select("id, name").order("name"),
   ]);
 
   const branchList = branches ?? [];
@@ -153,10 +146,6 @@ export default async function StaffPermissionsPage({ params }: Props) {
       <AppPageTabs
         items={[
           {
-            value: "overview",
-            label: messages.owner.staffPermissions.tabOverview,
-          },
-          {
             value: "permissions",
             label: messages.owner.staffPermissions.tabPermissions,
           },
@@ -165,19 +154,9 @@ export default async function StaffPermissionsPage({ params }: Props) {
             label: messages.owner.staffPermissions.tabHistory,
           },
         ]}
-        defaultValue="overview"
+        defaultValue="permissions"
+        className="motion-safe:animate-in motion-safe:fade-in"
       >
-        <TabsContent value="overview">
-          <OverviewTab
-            fullName={profile.full_name}
-            phone={profile.phone}
-            positionLabel={positionLabel}
-            defaultBranchName={defaultBranchName}
-            positionCode={profile.positions?.code}
-            isActive={profile.is_active ?? false}
-          />
-        </TabsContent>
-
         <TabsContent value="permissions">
           <PermissionsClient
             targetUserId={profile.id}
@@ -194,6 +173,10 @@ export default async function StaffPermissionsPage({ params }: Props) {
               id: b.id,
               name: b.name,
               branchKind: b.branch_kind,
+            }))}
+            branchNames={(branchRows ?? []).map((branch) => ({
+              id: branch.id,
+              name: branch.name,
             }))}
             permissionKeys={permList.map((p) => ({
               key: p.key,

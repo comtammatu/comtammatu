@@ -17,7 +17,14 @@ import {
   splitAnnualLeaveByQuota,
   type LeaveRange,
 } from "@lib/hr/payroll-day-math";
+import {
+  buildPayrollPreflight,
+  type PayrollPreflight,
+} from "@lib/hr/payroll-preflight";
 import { fetchTenantHrLeavePolicy } from "@lib/hr/leave-policy-data";
+import { calculateAttendanceWorkHours } from "./attendance-summary";
+
+export type { PayrollPreflightBlocker } from "@lib/hr/payroll-preflight";
 
 const PAYROLL_ROLES: readonly StaffRole[] = ["owner"];
 const payrollActionCopy = messages.hr.payroll.server;
@@ -91,6 +98,28 @@ export interface PayrollFinalizedEntry {
   netSalary: number;
 }
 
+export interface PayrollLeaveBalance {
+  entitlementDays: number;
+  usedDays: number;
+  remainingDays: number;
+}
+
+export interface PayrollCalendarRecord {
+  id: number;
+  employeeId: number;
+  date: string;
+  check_in: string | null;
+  check_out: string | null;
+  shifts: { name: string; start_time: string; end_time: string } | null;
+}
+
+export interface PayrollCalendarLeave {
+  employeeId: number;
+  start_date: string;
+  end_date: string;
+  status: "approved" | "pending";
+}
+
 export interface PayrollPreviewEntry {
   employeeId: number;
   employeeCode: string | null;
@@ -101,8 +130,11 @@ export interface PayrollPreviewEntry {
   salarySource: "contract" | "employee" | "missing";
   monthlySalary: number;
   workingDays: number;
+  workHours: number;
   paidLeaveDays: number;
   unpaidLeaveDays: number;
+  monthlyLeaveBalance: PayrollLeaveBalance;
+  annualLeaveBalance: PayrollLeaveBalance | null;
   payableDays: number;
   standardDays: number;
   proratedSalary: number;
@@ -143,6 +175,11 @@ export interface PayrollPreview {
   } | null;
   entries: PayrollPreviewEntry[];
   missingSalaryEmployeeIds: number[];
+  preflight: PayrollPreflight;
+  calendar: {
+    records: PayrollCalendarRecord[];
+    leaves: PayrollCalendarLeave[];
+  };
   canSnapshot: boolean;
 }
 
@@ -283,7 +320,9 @@ async function buildPayrollPreview(
     (() => {
       let query = supabase
         .from("attendance_records")
-        .select("employee_id, date, check_out")
+        .select(
+          "id, employee_id, date, check_in, check_out, shifts ( name, start_time, end_time )",
+        )
         .eq("tenant_id", claims.tenant_id)
         .in("employee_id", employeeIds)
         .gte("date", startDate)
@@ -293,9 +332,9 @@ async function buildPayrollPreview(
     })(),
     supabase
       .from("leave_requests")
-      .select("employee_id, start_date, end_date, leave_type")
+      .select("employee_id, start_date, end_date, leave_type, status")
       .eq("tenant_id", claims.tenant_id)
-      .eq("status", "approved")
+      .in("status", ["approved", "pending"])
       .in("employee_id", employeeIds)
       .lte("start_date", endDate)
       .gte("end_date", `${input.year}-01-01`),
@@ -441,13 +480,27 @@ async function buildPayrollPreview(
       checkOut: record.check_out,
     })),
   );
+  const workHoursByEmployee = new Map<number, number>();
+  for (const record of attendanceResult.data ?? []) {
+    workHoursByEmployee.set(
+      record.employee_id,
+      (workHoursByEmployee.get(record.employee_id) ?? 0) +
+        calculateAttendanceWorkHours(record.check_in, record.check_out),
+    );
+  }
 
-  const leaveRanges: LeaveRange[] = (leaveResult.data ?? []).map((leave) => ({
-    employeeId: leave.employee_id,
-    startDate: leave.start_date,
-    endDate: leave.end_date,
-    leaveType: leave.leave_type as LeaveRange["leaveType"],
-  }));
+  const leaveRanges: LeaveRange[] = (leaveResult.data ?? []).flatMap((leave) =>
+    leave.status === "approved"
+      ? [
+          {
+            employeeId: leave.employee_id,
+            startDate: leave.start_date,
+            endDate: leave.end_date,
+            leaveType: leave.leave_type as LeaveRange["leaveType"],
+          },
+        ]
+      : [],
+  );
   const leaveByEmployee = new Map<
     number,
     {
@@ -521,23 +574,46 @@ async function buildPayrollPreview(
         unpaidLeaveDays: 0,
         annualLeaves: [],
       };
-      const annualEntitlementDays =
-        annualEntitlementByEmployee.get(employee.id) ?? 0;
+      const annualEntitlementDays = annualEntitlementByEmployee.get(employee.id);
+      const annualEntitlementForCalculation = annualEntitlementDays ?? 0;
+      const annualLeaveUsedBeforePeriod = calculateAnnualLeaveUsedThroughMonth({
+        leaves: leave.annualLeaves,
+        entitlementDays: annualEntitlementForCalculation,
+        monthlyLeaveDays: policy.monthlyLeaveDays,
+        year: input.year,
+        throughMonth: input.month - 1,
+      });
       const annualSplit = splitAnnualLeaveByQuota({
-        entitlementDays: annualEntitlementDays,
-        usedBeforePeriodDays: calculateAnnualLeaveUsedThroughMonth({
-          leaves: leave.annualLeaves,
-          entitlementDays: annualEntitlementDays,
-          monthlyLeaveDays: policy.monthlyLeaveDays,
-          year: input.year,
-          throughMonth: input.month - 1,
-        }),
+        entitlementDays: annualEntitlementForCalculation,
+        usedBeforePeriodDays: annualLeaveUsedBeforePeriod,
         monthlyLeaveDays: policy.monthlyLeaveDays,
         annualLeaveDaysInPeriod: leave.annualLeaveDays,
       });
       const paidLeaveDays = annualSplit.paidLeaveDays;
       const unpaidLeaveDays =
         leave.unpaidLeaveDays + annualSplit.overflowLeaveDays;
+      const monthlyLeaveBalance: PayrollLeaveBalance = {
+        entitlementDays: policy.monthlyLeaveDays,
+        usedDays: annualSplit.monthlyLeaveUsedDays,
+        remainingDays: Math.max(
+          0,
+          policy.monthlyLeaveDays - annualSplit.monthlyLeaveUsedDays,
+        ),
+      };
+      const annualLeaveBalance =
+        annualEntitlementDays == null
+          ? null
+          : {
+              entitlementDays: annualEntitlementDays,
+              usedDays:
+                annualLeaveUsedBeforePeriod + annualSplit.annualLeaveUsedDays,
+              remainingDays: Math.max(
+                0,
+                annualEntitlementDays -
+                  annualLeaveUsedBeforePeriod -
+                  annualSplit.annualLeaveUsedDays,
+              ),
+            };
       const payableDays = calculatePayableDays({
         workingDays: workdays,
         paidLeaveDays,
@@ -587,8 +663,11 @@ async function buildPayrollPreview(
         salarySource,
         monthlySalary,
         workingDays: workdays,
+        workHours: workHoursByEmployee.get(employee.id) ?? 0,
         paidLeaveDays,
         unpaidLeaveDays,
+        monthlyLeaveBalance,
+        annualLeaveBalance,
         payableDays,
         standardDays,
         proratedSalary,
@@ -624,6 +703,57 @@ async function buildPayrollPreview(
     : entries
         .filter((entry) => entry.salarySource === "missing")
         .map((entry) => entry.employeeId);
+  const previewEmployeeIdSet = new Set(entries.map((entry) => entry.employeeId));
+  const calendar = {
+    records: (attendanceResult.data ?? [])
+      .filter((record) => previewEmployeeIdSet.has(record.employee_id))
+      .map((record) => ({
+        id: record.id,
+        employeeId: record.employee_id,
+        date: record.date,
+        check_in: record.check_in,
+        check_out: record.check_out,
+        shifts: record.shifts,
+      })),
+    leaves: (leaveResult.data ?? []).flatMap((leave) =>
+      leave.status === "approved" || leave.status === "pending"
+        ? [
+            {
+              employeeId: leave.employee_id,
+              start_date: leave.start_date,
+              end_date: leave.end_date,
+              status: leave.status,
+            },
+          ]
+        : [],
+    ),
+  } satisfies PayrollPreview["calendar"];
+  const preflight = snapshotLocked
+    ? { blockers: [] }
+    : buildPayrollPreflight({
+        employees: entries.map((entry) => ({
+          employeeId: entry.employeeId,
+          branchId: entry.branchId,
+          branchName: entry.branchName,
+        })),
+        missingSalaryEmployeeIds,
+        openAttendance: (attendanceResult.data ?? []).map((attendance) => ({
+          employeeId: attendance.employee_id,
+          date: attendance.date,
+          checkIn: attendance.check_in,
+          checkOut: attendance.check_out,
+          shiftStartTime: attendance.shifts?.start_time ?? null,
+          shiftEndTime: attendance.shifts?.end_time ?? null,
+        })),
+        pendingLeaveEmployeeIds: (leaveResult.data ?? [])
+          .filter(
+            (leave) =>
+              leave.status === "pending" &&
+              leave.start_date <= endDate &&
+              leave.end_date >= startDate,
+          )
+          .map((leave) => leave.employee_id),
+      });
   return {
     success: true,
     data: {
@@ -633,10 +763,12 @@ async function buildPayrollPreview(
       snapshot,
       entries,
       missingSalaryEmployeeIds,
+      preflight,
+      calendar,
       canSnapshot:
         input.branchId == null &&
         entries.length > 0 &&
-        missingSalaryEmployeeIds.length === 0 &&
+        preflight.blockers.length === 0 &&
         !snapshotLocked,
     },
   };
@@ -744,6 +876,12 @@ export const snapshotPayrollPreview = withAction(
       return {
         success: false,
         error: payrollActionCopy.snapshotMissingSalary,
+      };
+    }
+    if (preview.preflight.blockers.length > 0) {
+      return {
+        success: false,
+        error: payrollActionCopy.snapshotPreflightBlocked,
       };
     }
     if (!preview.canSnapshot) {

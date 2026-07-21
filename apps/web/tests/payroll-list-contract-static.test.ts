@@ -10,6 +10,10 @@ const client = readFileSync(
   ),
   "utf8",
 );
+const page = readFileSync(
+  join(import.meta.dirname, "../app/(protected)/hr/payroll/page.tsx"),
+  "utf8",
+);
 const actions = readFileSync(
   join(import.meta.dirname, "../app/(protected)/hr/payroll-actions.ts"),
   "utf8",
@@ -33,6 +37,8 @@ test("payroll list shows the requested payroll review columns", () => {
     assert.match(client, new RegExp(`key: "${key}"`));
   }
   assert.match(client, /function totalLeaveDays/);
+  assert.match(client, /workHours/);
+  assert.match(client, /copy\.table\.workHours/);
   assert.match(client, /paidLeaveDays/);
   assert.match(client, /unpaidLeaveDays/);
   assert.match(client, /render: \(_, index\) => String\(index \+ 1\)/);
@@ -61,7 +67,52 @@ test("missing salary is a blocking data state, not a zero-value calculation", ()
   assert.match(client, /function canCalculate/);
   assert.match(client, /function moneyCell/);
   assert.match(client, /copy\.table\.missingSalary/);
-  assert.match(client, /setSalaryStatus\(MISSING_SALARY_STATUS\)/);
+  assert.match(client, /replaceFilters\(\{ salaryStatus: MISSING_SALARY_STATUS \}\)/);
+});
+
+test("payroll filters keep the selected salary state in the URL", () => {
+  assert.match(page, /salaryStatus\?: string/);
+  assert.match(client, /selectedSalaryStatus: string \| undefined/);
+  assert.match(client, /function normalizeSalaryStatus/);
+  assert.match(client, /params\.set\("salaryStatus", nextSalaryStatus\)/);
+  assert.match(page, /selectedSalaryStatus=\{params\.salaryStatus\}/);
+});
+
+test("payroll calendar keeps the selected employee in the URL and reuses the attendance calendar", () => {
+  assert.match(page, /calendar\?: string/);
+  assert.match(page, /function parseCalendarTarget/);
+  assert.match(client, /calendarTarget: "all" \| number \| null/);
+  assert.match(client, /params\.set\("calendar", String\(nextCalendarTarget\)\)/);
+  assert.match(client, /onRowClick=\{openCalendar\}/);
+  assert.match(client, /AttendanceCalendar/);
+  assert.match(client, /copy\.compactPosition\(entry\.positionLabel\)/);
+  assert.match(actions, /workHoursByEmployee/);
+  assert.match(actions, /monthlyLeaveBalance/);
+  assert.match(actions, /annualLeaveBalance/);
+  assert.match(actions, /const calendar = \{/);
+});
+
+test("payroll calendar exposes read-only detail for a selected day", () => {
+  assert.match(client, /const calendarDayEntries =/);
+  assert.match(client, /formatVNBusinessDate\(selectedCalendarDate\)/);
+  assert.match(client, /formatVNTime\(record\.check_in\)/);
+  assert.match(client, /calendarDetailRef\.current\?\.scrollIntoView/);
+  assert.match(client, /attendanceCopy\.calendarDetailTitle/);
+});
+
+test("snapshot remains the period action rather than a competing toolbar action", () => {
+  assert.match(client, /const snapshotAction = !isLocked/);
+  assert.match(client, /action=\{snapshotAction\}/);
+  assert.match(client, /payrollCopy\.server\.snapshotUnavailable/);
+});
+
+test("payroll preflight exposes blockers before the snapshot action", () => {
+  assert.match(client, /preview\.preflight\.blockers/);
+  assert.match(client, /openPreflightBlocker/);
+  assert.match(client, /filter: "attention"/);
+  assert.match(client, /\/hr\/attendance\?tab=leave/);
+  assert.match(actions, /preflight\.blockers\.length === 0/);
+  assert.match(actions, /preview\.preflight\.blockers\.length > 0/);
 });
 
 test("preview order is deterministic before the route renders it", () => {

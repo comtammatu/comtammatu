@@ -28,13 +28,13 @@ test("E2E manager fixture matches the seeded manager account", () => {
   assert.doesNotMatch(seed, /'role', r\.role|sync_missing_permissions_from_template/);
   assert.match(
     tenantSeed,
-    /SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, t\.id,\s*NULL::bigint,/,
+    /SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, t\.id,\s*NULL::bigint/,
   );
   assert.doesNotMatch(tenantSeed, /'role', 'owner'/);
   assert.match(bringup, /POS_NETWORK_GATE=off/);
   assert.doesNotMatch(bringup, /\.env\.local/);
   assert.match(packageManifest, /"build:e2e": "dotenv -e \.env\.test\.local -- next build/);
-  assert.match(packageManifest, /"start:e2e": "dotenv -e \.env\.test\.local -- next start"/);
+  assert.match(packageManifest, /"start:e2e": "dotenv -e \.env\.test\.local -- next start/);
   assert.match(ci, /pnpm --filter @comtammatu\/web build:e2e/);
   assert.match(ci, /E2E_WEB_COMMAND: pnpm start:e2e/);
   assert.match(authSetup, /resolveUserByEmail\(supabase, email\)/);

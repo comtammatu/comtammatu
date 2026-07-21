@@ -133,7 +133,7 @@ function mapRpcError(msg: string): string {
 export async function createStaff(
   _prev: ActionResult | null,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ staffId: string | null }>> {
   const parsed = createStaffSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -180,7 +180,7 @@ export async function createStaff(
   // Service role client for admin user creation
   const serviceClient = createServiceClient();
 
-  const { error } = await serviceClient.auth.admin.createUser({
+  const { data, error } = await serviceClient.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
@@ -210,7 +210,7 @@ export async function createStaff(
   }
 
   revalidateSurfacePath("/hr/staff");
-  return { success: true };
+  return { success: true, data: { staffId: data.user?.id ?? null } };
 }
 
 export async function updateStaff(

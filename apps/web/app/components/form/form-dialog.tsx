@@ -30,6 +30,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
+import { ConfirmDialog } from "@comtammatu/ui/components/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +39,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   Field,
   FieldDescription,
@@ -126,9 +126,9 @@ export function FormDialog<TValues extends FieldValues>({
 }: FormDialogProps<TValues>) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const wasOpenRef = useRef(false);
   const previousEntityKeyRef = useRef(entityKey);
-  const closeConfirmationPendingRef = useRef(false);
 
   const form = useForm<TValues, unknown, TValues>({
     // zodResolver's generic constraints don't flow cleanly through this
@@ -146,7 +146,10 @@ export function FormDialog<TValues extends FieldValues>({
     if (justOpened || entityChanged) {
       form.reset(defaultValues);
       setServerError(null);
+      setDiscardConfirmationOpen(false);
     }
+
+    if (!open) setDiscardConfirmationOpen(false);
 
     wasOpenRef.current = open;
     previousEntityKeyRef.current = entityKey;
@@ -169,26 +172,21 @@ export function FormDialog<TValues extends FieldValues>({
     });
   }
 
-  async function requestClose() {
-    if (isPending || closeConfirmationPendingRef.current) return;
+  function requestClose() {
+    if (isPending || discardConfirmationOpen) {
+      return;
+    }
     if (!isDirty) {
       onOpenChange(false);
       return;
     }
 
-    closeConfirmationPendingRef.current = true;
-    try {
-      const shouldDiscard = await confirm({
-        title: messages.common.unsavedChangesTitle,
-        description: messages.common.unsavedChangesDescription,
-        confirmText: messages.common.discardChanges,
-        cancelText: messages.common.confirmCancel,
-        variant: "destructive",
-      });
-      if (shouldDiscard) onOpenChange(false);
-    } finally {
-      closeConfirmationPendingRef.current = false;
-    }
+    setDiscardConfirmationOpen(true);
+  }
+
+  function discardChanges() {
+    setDiscardConfirmationOpen(false);
+    onOpenChange(false);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -196,59 +194,77 @@ export function FormDialog<TValues extends FieldValues>({
       onOpenChange(true);
       return;
     }
-    void requestClose();
+    requestClose();
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className={cn("sm:max-w-lg", contentClassName)}
-        key={entityKey ?? "new"}
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={handleOpenChange}
+        disablePointerDismissal={isPending}
       >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className={description ? undefined : "sr-only"}>
-            {description ?? title}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form
-          onSubmit={form.handleSubmit(handleValid)}
-          noValidate
-          className="flex flex-col gap-4"
+        <DialogContent
+          className={cn("sm:max-w-lg", contentClassName)}
+          key={entityKey ?? "new"}
+          showCloseButton={!isPending}
         >
-          <FieldGroup>
-            {children(form)}
-            {serverError && (
-              <p className="text-sm text-destructive" role="alert">
-                {serverError}
-              </p>
-            )}
-          </FieldGroup>
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription className={description ? undefined : "sr-only"}>
+              {description ?? title}
+            </DialogDescription>
+          </DialogHeader>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              size={actionSize}
-              onClick={() => void requestClose()}
-              disabled={isPending}
-            >
-              {cancelLabel}
-            </Button>
-            <Button
-              type="submit"
-              variant={submitVariant}
-              size={actionSize}
-              disabled={isPending}
-            >
-              {isPending && <Spinner />}
-              {submitLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <form
+            onSubmit={form.handleSubmit(handleValid)}
+            noValidate
+            className="flex flex-col gap-4"
+            aria-busy={isPending}
+          >
+            <FieldGroup>
+              {children(form)}
+              {serverError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {serverError}
+                </p>
+              )}
+            </FieldGroup>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size={actionSize}
+                onClick={requestClose}
+                disabled={isPending}
+              >
+                {cancelLabel}
+              </Button>
+              <Button
+                type="submit"
+                variant={submitVariant}
+                size={actionSize}
+                disabled={isPending}
+              >
+                {isPending && <Spinner />}
+                {submitLabel}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <ConfirmDialog
+        open={discardConfirmationOpen}
+        onOpenChange={setDiscardConfirmationOpen}
+        onConfirm={discardChanges}
+        title={messages.common.unsavedChangesTitle}
+        description={messages.common.unsavedChangesDescription}
+        cancelText={messages.common.confirmCancel}
+        confirmText={messages.common.discardChanges}
+        variant="destructive"
+      />
+    </>
   );
 }
 

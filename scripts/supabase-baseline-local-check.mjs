@@ -166,7 +166,7 @@ function writeScratchProject(options, baselinePath, bootstrapPath, workdir) {
 
   writeFileSync(
     join(supabaseDir, "config.toml"),
-    `project_id = "comtammatu-greenfield-baseline-local-check"
+    `project_id = "comtammatu-baseline-local-check"
 
 [api]
 port = ${options.apiPort}

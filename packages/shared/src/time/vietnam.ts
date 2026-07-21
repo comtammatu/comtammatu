@@ -158,6 +158,42 @@ export function getVNMonthSequenceBack(
   });
 }
 
+export interface VNMonthCalendarCell {
+  date: string | null;
+  day: number | null;
+  isToday: boolean;
+}
+
+export function getVNMonthCalendarCells(
+  monthStart: string,
+  today = getVNDateString(),
+): VNMonthCalendarCell[] {
+  const parts = parseISODateParts(monthStart);
+  if (!parts) {
+    return getVNMonthCalendarCells(getVNMonthStartDateString(), today);
+  }
+
+  const firstDate = new Date(Date.UTC(parts.year, parts.month - 1, 1, 5, 0, 0));
+  const mondayFirstOffset = (firstDate.getUTCDay() + 6) % 7;
+  const daysInMonth = Number(
+    getVNMonthEndDateString(parts.year, parts.month).slice(-2),
+  );
+  const totalCells = Math.max(
+    35,
+    Math.ceil((mondayFirstOffset + daysInMonth) / 7) * 7,
+  );
+
+  return Array.from({ length: totalCells }, (_, index) => {
+    const day = index - mondayFirstOffset + 1;
+    if (day < 1 || day > daysInMonth) {
+      return { date: null, day: null, isToday: false };
+    }
+
+    const date = formatISODateParts({ ...parts, day });
+    return { date, day, isToday: date === today };
+  });
+}
+
 export function getVNDayUtcRange(dateStr: string): {
   startIso: string;
   endIso: string;

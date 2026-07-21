@@ -235,6 +235,8 @@ export const hr = {
         "Bảng lương tháng này đã chốt, không thể sửa dữ liệu dùng để tính lương.",
       snapshotMissingSalary:
         "Còn nhân viên chưa có mức lương trong hồ sơ hoặc HĐLĐ; bổ sung trước khi chốt.",
+      snapshotPreflightBlocked:
+        "Còn dữ liệu cần xử lý trước khi chốt bảng lương.",
       snapshotUnavailable: "Chưa đủ dữ liệu để chốt bảng lương.",
       snapshotPaymentOwnedByFinance:
         "Bảng lương tháng này đã chốt. Thanh toán và chứng từ được xử lý tại phân hệ Tài chính.",
@@ -256,6 +258,19 @@ export const hr = {
       allBranches: "Tất cả chi nhánh",
       standardDays: "Ngày công chuẩn",
       search: "Tìm nhân viên",
+      calendar: "Lịch",
+      calendarAllTitle: "Lịch công toàn bộ",
+      calendarEmployeeTitle: (employeeName: string) => `Lịch công · ${employeeName}`,
+      calendarDescription:
+        "Xem ngày công, giờ công và nghỉ phép trong kỳ lương đang chọn; chọn một ngày để mở lượt chấm.",
+      calendarOpenRow: (employeeName: string) =>
+        `Mở lịch công của ${employeeName}`,
+      workdays: "Số ngày công",
+      estimatedSalary: "Lương ước tính",
+      monthlyLeave: "Phép tháng",
+      annualLeave: "Phép năm",
+      compactPosition: (positionLabel: string | null) =>
+        positionLabel === "Thu ngân (kiêm phục vụ)" ? "Thu ngân" : positionLabel,
       salaryStatus: "Tình trạng tính lương",
       salaryStatusAll: "Tất cả",
       salaryStatusCalculable: "Đủ thông tin tính lương",
@@ -271,6 +286,28 @@ export const hr = {
         "Chỉ có thể chốt khi đang xem tất cả chi nhánh để bảng lương gồm đủ toàn hệ thống.",
       snapshotLocked: "Đã chốt",
       snapshotOpen: "Chưa chốt",
+      preflight: {
+        title: "Kiểm tra trước chốt lương",
+        blockedBadge: "Cần xử lý",
+        readyBadge: "Sẵn sàng chốt",
+        blockedDescription:
+          "Xử lý hết các điểm dưới đây trước khi chốt. Hệ thống không tự sửa công, phép hoặc hồ sơ lương.",
+        readyDescription:
+          "Không có dữ liệu đang chặn việc chốt bảng lương cho kỳ đã chọn.",
+        allBranches: "toàn hệ thống",
+        missingSalaryTitle: "Thiếu mức lương",
+        missingSalaryDescription: (count: number, branchName: string) =>
+          `${formatCount(count)} nhân viên tại ${branchName} chưa có mức lương hợp lệ để tính.`,
+        missingSalaryAction: "Xem trong bảng",
+        staleAttendanceTitle: "Ca chưa kết",
+        staleAttendanceDescription: (count: number, branchName: string) =>
+          `${formatCount(count)} ca tại ${branchName} đã quá giờ nhưng chưa có giờ ra.`,
+        pendingLeaveTitle: "Nghỉ phép chờ duyệt",
+        pendingLeaveDescription: (count: number, branchName: string) =>
+          `${formatCount(count)} yêu cầu nghỉ tại ${branchName} còn chờ duyệt trong kỳ lương.`,
+        attendanceAction: "Mở Lịch công",
+        leaveAction: "Mở duyệt phép",
+      },
       missingSalaryTitle: "Còn nhân viên chưa có mức lương",
       missingSalaryDescription: (count: number) =>
         `${formatCount(count)} nhân viên chưa có mức lương trong hồ sơ hoặc HĐLĐ; bổ sung trước khi chốt.`,
@@ -308,6 +345,7 @@ export const hr = {
         index: "#",
         employee: "Họ tên",
         workingDays: "Công",
+        workHours: "Giờ công",
         leaveDays: "Nghỉ phép",
         bonus: "Thưởng",
         bhxh: "BHXH",
@@ -321,8 +359,8 @@ export const hr = {
         empty: "Không có nhân viên phù hợp bộ lọc.",
       },
       mobile: {
-        work: (working: number, leaveDays: number) =>
-          `Công ${formatDecimal(working, 1)} · nghỉ phép ${formatDecimal(leaveDays, 1)}`,
+        work: (working: number, workHours: number, leaveDays: number) =>
+          `Công ${formatDecimal(working, 1)} · ${formatDecimal(workHours, 1)} giờ · nghỉ phép ${formatDecimal(leaveDays, 1)}`,
       },
     },
   },

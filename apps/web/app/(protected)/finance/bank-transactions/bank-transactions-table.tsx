@@ -27,6 +27,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -318,9 +319,11 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
 function MatchCell({
   tx,
   expenseOptions,
+  touch,
 }: {
   tx: SepayBankTransaction;
   expenseOptions: ExpenseMatchOption[];
+  touch: boolean;
 }) {
   if (tx.bankTransactionId == null && tx.eventId == null) {
     return (
@@ -343,6 +346,7 @@ function MatchCell({
       refundMatchConfirmed={tx.refundMatchConfirmed}
       transferType={tx.transferType}
       expenseOptions={expenseOptions}
+      touch={touch}
       evidence={{
         content: tx.content ?? copy.noContent,
         reference: referenceCode(tx),
@@ -363,7 +367,7 @@ function LinkPaymentCell({
   touch: boolean;
 }) {
   const router = useRouter();
-  const [paymentId, setPaymentId] = React.useState("");
+  const [paymentCode, setPaymentCode] = React.useState(tx.code ?? "");
   const [open, setOpen] = React.useState(false);
   const [isPaymentPending, startPaymentTransition] = React.useTransition();
   const [isDepositPending, startDepositTransition] = React.useTransition();
@@ -383,8 +387,8 @@ function LinkPaymentCell({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const parsedPaymentId = Number(paymentId.trim());
-    if (!Number.isSafeInteger(parsedPaymentId) || parsedPaymentId <= 0) {
+    const normalizedPaymentCode = paymentCode.trim();
+    if (normalizedPaymentCode === "") {
       toast.error(table.linkInvalid);
       return;
     }
@@ -393,7 +397,7 @@ function LinkPaymentCell({
       const res = await linkSepayTransactionToPayment({
         bankTransactionId,
         eventId,
-        paymentId: parsedPaymentId,
+        paymentCode: normalizedPaymentCode,
       });
 
       if (!res.success) {
@@ -402,7 +406,7 @@ function LinkPaymentCell({
       }
 
       toast.success(table.linkSuccess);
-      setPaymentId("");
+      setPaymentCode(tx.code ?? "");
       setOpen(false);
       router.refresh();
     });
@@ -448,20 +452,28 @@ function LinkPaymentCell({
       <SheetContent>
         <SheetHeader>
           <SheetTitle>{table.linkTitle}</SheetTitle>
+          <SheetDescription>{table.linkDescription}</SheetDescription>
         </SheetHeader>
         <form className="flex flex-col gap-3 p-4" onSubmit={handleSubmit}>
           <InputGroup size={touch ? "touch" : "default"}>
             <InputGroupInput
-              inputMode="numeric"
-              pattern="[0-9]*"
+              autoCapitalize="characters"
+              autoComplete="off"
               aria-label={table.linkInputLabel}
+              aria-describedby="bank-payment-code-help"
               placeholder={table.linkInputPlaceholder}
-              value={paymentId}
-              onChange={(event) => setPaymentId(event.target.value)}
+              value={paymentCode}
+              onChange={(event) => setPaymentCode(event.target.value)}
               disabled={isPaymentPending || isDepositPending}
               className="font-mono"
             />
           </InputGroup>
+          <p
+            id="bank-payment-code-help"
+            className="text-sm text-muted-foreground"
+          >
+            {table.linkInputHelp}
+          </p>
           <Button
             type="submit"
             size={touch ? "touch" : "default"}
@@ -581,7 +593,7 @@ function ReconciliationActionCell({
     );
   }
 
-  return <MatchCell tx={tx} expenseOptions={expenseOptions} />;
+  return <MatchCell tx={tx} expenseOptions={expenseOptions} touch={touch} />;
 }
 
 function rowMatchesFilter(
@@ -676,7 +688,7 @@ export function BankTransactionsTable({
     {
       key: "status",
       header: copy.table.status,
-      className: "sticky left-44 z-10 w-72 bg-card",
+      className: "sticky left-44 z-10 w-80 bg-card",
       render: (row) =>
         row.kind === "bank" ? (
           <div className="flex min-w-0 items-center gap-2">

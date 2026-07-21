@@ -30,6 +30,7 @@ export function OwnerOverview() {
       <AppSection
         title={copy.operationsTitle}
         description={copy.operationsDescription}
+        headingLevel="h2"
       >
         <LinkCardGrid className="xl:grid-cols-3">
           <AppLinkCard
@@ -76,6 +77,7 @@ export function OwnerOverview() {
       <AppSection
         title={copy.foundationTitle}
         description={copy.foundationDescription}
+        headingLevel="h2"
       >
         <LinkCardGrid className="xl:grid-cols-3">
           <AppLinkCard

@@ -27,6 +27,12 @@ export interface ConfirmOptions {
   variant?: "default" | "destructive";
 }
 
+export interface ConfirmDialogProps extends ConfirmOptions {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}
+
 interface PendingConfirm {
   opts: ConfirmOptions;
   resolve: (value: boolean) => void;
@@ -46,6 +52,50 @@ export function confirm(opts: ConfirmOptions): Promise<boolean> {
       new CustomEvent<PendingConfirm>(CONFIRM_EVENT, { detail }),
     );
   });
+}
+
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  title,
+  description,
+  details,
+  confirmText = "Xác nhận",
+  cancelText = "Hủy",
+  variant = "default",
+}: ConfirmDialogProps) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          {description ? (
+            <AlertDialogDescription>{description}</AlertDialogDescription>
+          ) : null}
+        </AlertDialogHeader>
+        {details?.length ? (
+          <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+            {details.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-baseline justify-between gap-3 py-0.5"
+              >
+                <span className="text-muted-foreground">{row.label}</span>
+                <span className="font-medium">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel size="touch">{cancelText}</AlertDialogCancel>
+          <AlertDialogAction variant={variant} size="touch" onClick={onConfirm}>
+            {confirmText}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
 
 export function ConfirmDialogProvider() {
@@ -79,43 +129,17 @@ export function ConfirmDialogProvider() {
   );
 
   const opts = pending?.opts;
-  const variant = opts?.variant ?? "default";
-
   return (
-    <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{opts?.title ?? ""}</AlertDialogTitle>
-          {opts?.description ? (
-            <AlertDialogDescription>{opts.description}</AlertDialogDescription>
-          ) : null}
-        </AlertDialogHeader>
-        {opts?.details?.length ? (
-          <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-            {opts.details.map((row) => (
-              <div
-                key={row.label}
-                className="flex items-baseline justify-between gap-3 py-0.5"
-              >
-                <span className="text-muted-foreground">{row.label}</span>
-                <span className="font-medium">{row.value}</span>
-              </div>
-            ))}
-          </div>
-        ) : null}
-        <AlertDialogFooter>
-          <AlertDialogCancel size="touch" onClick={() => settle(false)}>
-            {opts?.cancelText ?? "Hủy"}
-          </AlertDialogCancel>
-          <AlertDialogAction
-            variant={variant}
-            size="touch"
-            onClick={() => settle(true)}
-          >
-            {opts?.confirmText ?? "Xác nhận"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      onConfirm={() => settle(true)}
+      title={opts?.title ?? ""}
+      description={opts?.description}
+      details={opts?.details}
+      confirmText={opts?.confirmText}
+      cancelText={opts?.cancelText}
+      variant={opts?.variant}
+    />
   );
 }

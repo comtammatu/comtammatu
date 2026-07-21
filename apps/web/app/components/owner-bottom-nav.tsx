@@ -50,8 +50,8 @@ function selectBottomNavItems(
 
 /**
  * Mobile bottom navbar for Owner routes. Bar destinations are the
- * active module's deep nav (tier-2); the leading "Mô-đun" tab opens the single
- * sidebar drawer for cross-module switching plus the active module sub-tabs.
+ * active module's deep nav (tier-2), falling back to primary modules when no
+ * deep nav exists. The leading "Mô-đun" tab opens the single sidebar drawer.
  * Must render inside `SidebarProvider` (AppShell does this).
  */
 export function OwnerBottomNav({
@@ -63,10 +63,11 @@ export function OwnerBottomNav({
 }) {
   const pathname = usePathname();
   const { openMobile, toggleSidebar } = useSidebar();
-  // tier1 is surfaced through the drawer the leading tab toggles; the bar items
-  // stay scoped to tier-2 so the module's deep actions win the top-5 race.
-  void tier1;
-  const items = selectBottomNavItems(flattenNavGroups(tier2), pathname);
+  const deepNavItems = flattenNavGroups(tier2);
+  const items = selectBottomNavItems(
+    deepNavItems.length > 0 ? deepNavItems : tier1,
+    pathname,
+  );
 
   return (
     <AppBottomNav

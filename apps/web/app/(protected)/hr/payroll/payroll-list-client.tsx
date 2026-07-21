@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { formatDecimal, formatVND } from "@comtammatu/shared/format";
+import { formatVNBusinessDate, formatVNTime } from "@comtammatu/shared/time";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -30,10 +31,12 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  CalendarDays as IconCalendarDays,
   Pencil as IconPencil,
   Search as IconSearch,
   Trash2 as IconTrash,
 } from "lucide-react";
+import { AppDialog } from "@/components/form/form-dialog";
 import {
   FormattedNumberInput,
   FormDialog,
@@ -45,19 +48,25 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppSection, AppToolbar } from "@/components/surface";
+import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { messages } from "@lib/messages";
+import { AttendanceCalendar } from "../attendance-calendar";
 import {
   removePayrollAdjustment,
   savePayrollAdjustment,
   snapshotPayrollPreview,
   type PayrollAdjustment,
   type PayrollAdjustmentKind,
+  type PayrollPreflightBlocker,
   type PayrollPreview,
   type PayrollPreviewEntry,
 } from "../payroll-actions";
 
-const copy = messages.hr.payroll.live;
+const payrollCopy = messages.hr.payroll;
+const copy = payrollCopy.live;
+const attendanceCopy = messages.employee.hrAttendance;
+const scheduleCopy = messages.employee.schedule;
 const ALL_BRANCHES = "all";
 const ALL_SALARY_STATUSES = "all";
 const CALCULABLE_SALARY_STATUS = "calculable";
@@ -94,6 +103,8 @@ interface Props {
   branches: BranchOption[];
   query: string;
   selectedBranchId: number | null;
+  selectedSalaryStatus: string | undefined;
+  calendarTarget: "all" | number | null;
 }
 
 function monthValue(year: number, month: number): string {
@@ -105,11 +116,16 @@ function adjustmentLabel(adjustment: PayrollAdjustment): string {
 }
 
 function workSummary(entry: PayrollPreviewEntry): string {
-  const finalized = entry.finalized;
+  const workdays = entry.finalized?.workingDays ?? entry.workingDays;
   return copy.mobile.work(
-    finalized?.workingDays ?? entry.workingDays,
+    workdays,
+    entry.workHours,
     totalLeaveDays(entry),
   );
+}
+
+function workingDaysValue(entry: PayrollPreviewEntry): number {
+  return entry.finalized?.workingDays ?? entry.workingDays;
 }
 
 function totalLeaveDays(entry: PayrollPreviewEntry): number {
@@ -136,16 +152,70 @@ function moneyCell(entry: PayrollPreviewEntry, value: number): string {
   return canCalculate(entry) ? formatVND(value) : "—";
 }
 
+function estimatedCalendarSalary(entry: PayrollPreviewEntry): number {
+  if (entry.monthlySalary <= 0 || entry.standardDays <= 0) return 0;
+  return (workingDaysValue(entry) * entry.monthlySalary) / entry.standardDays;
+}
+
+function normalizeSalaryStatus(value: string | undefined): SalaryStatusFilter {
+  return value === CALCULABLE_SALARY_STATUS || value === MISSING_SALARY_STATUS
+    ? value
+    : ALL_SALARY_STATUSES;
+}
+
+function preflightBlockerContent(blocker: PayrollPreflightBlocker): {
+  title: string;
+  description: string;
+  action: string;
+} {
+  const branchName = blocker.branchName ?? copy.preflight.allBranches;
+  switch (blocker.kind) {
+    case "missing_salary":
+      return {
+        title: copy.preflight.missingSalaryTitle,
+        description: copy.preflight.missingSalaryDescription(
+          blocker.count,
+          branchName,
+        ),
+        action: copy.preflight.missingSalaryAction,
+      };
+    case "stale_open_attendance":
+      return {
+        title: copy.preflight.staleAttendanceTitle,
+        description: copy.preflight.staleAttendanceDescription(
+          blocker.count,
+          branchName,
+        ),
+        action: copy.preflight.attendanceAction,
+      };
+    case "pending_leave":
+      return {
+        title: copy.preflight.pendingLeaveTitle,
+        description: copy.preflight.pendingLeaveDescription(
+          blocker.count,
+          branchName,
+        ),
+        action: copy.preflight.leaveAction,
+      };
+    default:
+      return {
+        title: copy.preflight.title,
+        description: copy.preflight.blockedDescription,
+        action: copy.preflight.attendanceAction,
+      };
+  }
+}
+
 export function PayrollListClient({
   preview,
   branches,
   query,
   selectedBranchId,
+  selectedSalaryStatus,
+  calendarTarget,
 }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState(query);
-  const [salaryStatus, setSalaryStatus] =
-    useState<SalaryStatusFilter>(ALL_SALARY_STATUSES);
   const [standardDays, setStandardDays] = useState(
     String(preview.standardDays),
   );
@@ -160,6 +230,19 @@ export function PayrollListClient({
     () => setStandardDays(String(preview.standardDays)),
     [preview.standardDays],
   );
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<
+    string | null
+  >(null);
+  const calendarDetailRef = useRef<HTMLElement>(null);
+  useEffect(() => setSelectedCalendarDate(null), [calendarTarget]);
+  useEffect(() => {
+    if (selectedCalendarDate) {
+      calendarDetailRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [selectedCalendarDate]);
+
+  const salaryStatus = normalizeSalaryStatus(selectedSalaryStatus);
+  const hasPreflightBlockers = preview.preflight.blockers.length > 0;
 
   const rows = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase("vi-VN");
@@ -198,11 +281,62 @@ export function PayrollListClient({
     amount: editingAdjustment ? String(editingAdjustment.amount) : "",
     note: editingAdjustment?.note ?? "",
   };
+  const calendarEntry =
+    typeof calendarTarget === "number"
+      ? (preview.entries.find((entry) => entry.employeeId === calendarTarget) ??
+        null)
+      : null;
+  const isCalendarOpen = calendarTarget === "all" || calendarEntry !== null;
+  const calendarRecords = calendarEntry
+    ? preview.calendar.records.filter(
+        (record) => record.employeeId === calendarEntry.employeeId,
+      )
+    : preview.calendar.records;
+  const calendarLeaves = calendarEntry
+    ? preview.calendar.leaves.filter(
+        (leave) => leave.employeeId === calendarEntry.employeeId,
+      )
+    : preview.calendar.leaves;
+  const calendarDayEntries =
+    selectedCalendarDate == null
+      ? []
+      : Array.from(
+          new Set([
+            ...calendarRecords
+              .filter((record) => record.date === selectedCalendarDate)
+              .map((record) => record.employeeId),
+            ...calendarLeaves
+              .filter(
+                (leave) =>
+                  leave.start_date <= selectedCalendarDate &&
+                  leave.end_date >= selectedCalendarDate,
+              )
+              .map((leave) => leave.employeeId),
+          ]),
+        ).map((employeeId) => ({
+          employeeId,
+          employee: preview.entries.find(
+            (entry) => entry.employeeId === employeeId,
+          ),
+          records: calendarRecords.filter(
+            (record) =>
+              record.employeeId === employeeId &&
+              record.date === selectedCalendarDate,
+          ),
+          leave: calendarLeaves.find(
+            (leave) =>
+              leave.employeeId === employeeId &&
+              leave.start_date <= selectedCalendarDate &&
+              leave.end_date >= selectedCalendarDate,
+          ),
+        }));
 
   function replaceFilters(nextValues: {
     month?: string;
     branchId?: number | null;
+    salaryStatus?: SalaryStatusFilter;
     standardDays?: string;
+    calendarTarget?: "all" | number | null;
   }) {
     const params = new URLSearchParams();
     params.set(
@@ -220,6 +354,17 @@ export function PayrollListClient({
     if (branchId != null) params.set("branch", String(branchId));
     const nextQuery = search;
     if (nextQuery.trim()) params.set("q", nextQuery.trim());
+    const nextSalaryStatus = nextValues.salaryStatus ?? salaryStatus;
+    if (nextSalaryStatus !== ALL_SALARY_STATUSES) {
+      params.set("salaryStatus", nextSalaryStatus);
+    }
+    const nextCalendarTarget =
+      nextValues.calendarTarget === undefined
+        ? calendarTarget
+        : nextValues.calendarTarget;
+    if (nextCalendarTarget != null) {
+      params.set("calendar", String(nextCalendarTarget));
+    }
     router.replace(`/hr/payroll?${params.toString()}`);
   }
 
@@ -235,6 +380,10 @@ export function PayrollListClient({
   function openAdjustment(entry: PayrollPreviewEntry) {
     setEditingAdjustment(null);
     setSelectedEntry(entry);
+  }
+
+  function openCalendar(entry: PayrollPreviewEntry) {
+    replaceFilters({ calendarTarget: entry.employeeId });
   }
 
   async function submitAdjustment(
@@ -300,6 +449,36 @@ export function PayrollListClient({
     });
   }
 
+  const snapshotAction = !isLocked ? (
+    <Button
+      onClick={() => void confirmSnapshot()}
+      disabled={!preview.canSnapshot || isSnapshotting}
+    >
+      {isSnapshotting ? copy.snapshotting : copy.snapshot}
+    </Button>
+  ) : null;
+
+  function openPreflightBlocker(blocker: PayrollPreflightBlocker) {
+    if (blocker.kind === "missing_salary") {
+      replaceFilters({ salaryStatus: MISSING_SALARY_STATUS });
+      return;
+    }
+    if (blocker.kind === "pending_leave") {
+      router.push("/hr/attendance?tab=leave");
+      return;
+    }
+
+    const params = new URLSearchParams({
+      month: monthValue(preview.year, preview.month),
+      view: "calendar",
+      filter: "attention",
+    });
+    if (blocker.branchId != null) {
+      params.set("branch", String(blocker.branchId));
+    }
+    router.push(`/hr/attendance?${params.toString()}`);
+  }
+
   const columns: DataTableColumn<PayrollPreviewEntry>[] = [
     {
       key: "row-number",
@@ -314,7 +493,11 @@ export function PayrollListClient({
         <div className="min-w-44 max-w-72 overflow-hidden">
           <p className="truncate font-medium">{entry.employeeName}</p>
           <p className="truncate text-xs text-muted-foreground">
-            {[entry.employeeCode, entry.positionLabel, entry.branchName]
+            {[
+              entry.employeeCode,
+              copy.compactPosition(entry.positionLabel),
+              entry.branchName,
+            ]
               .filter(Boolean)
               .join(" · ") || "—"}
           </p>
@@ -324,9 +507,17 @@ export function PayrollListClient({
     {
       key: "working-days",
       header: copy.table.workingDays,
-      className: "w-20 text-right font-mono text-sm tabular-nums",
-      render: (entry) =>
-        decimalCell(entry.finalized?.workingDays ?? entry.workingDays),
+      className: "w-32 text-right font-mono text-xs tabular-nums",
+      render: (entry) => (
+        <span className="flex flex-col gap-1">
+          <span className="whitespace-nowrap">
+            {copy.workdays}: {decimalCell(workingDaysValue(entry))}
+          </span>
+          <span className="whitespace-nowrap text-muted-foreground">
+            {copy.table.workHours}: {decimalCell(entry.workHours)}
+          </span>
+        </span>
+      ),
     },
     {
       key: "leave-days",
@@ -364,7 +555,10 @@ export function PayrollListClient({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => openAdjustment(entry)}
+            onClick={(event) => {
+              event.stopPropagation();
+              openAdjustment(entry);
+            }}
           >
             <IconPencil data-icon="inline-start" />
             {copy.table.edit}
@@ -373,7 +567,10 @@ export function PayrollListClient({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push("/hr")}
+            onClick={(event) => {
+              event.stopPropagation();
+              router.push("/hr");
+            }}
           >
             {copy.missingSalaryAction}
           </Button>
@@ -384,8 +581,9 @@ export function PayrollListClient({
   return (
     <>
       <AppToolbar
+        className="items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block"
         search={
-          <InputGroup>
+          <InputGroup className="w-full sm:w-64">
             <InputGroupAddon>
               <IconSearch aria-hidden />
             </InputGroupAddon>
@@ -398,7 +596,7 @@ export function PayrollListClient({
           </InputGroup>
         }
         filters={
-          <>
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <Input
               type="month"
               value={monthValue(preview.year, preview.month)}
@@ -406,6 +604,7 @@ export function PayrollListClient({
                 replaceFilters({ month: event.target.value })
               }
               aria-label={copy.month}
+              className="w-full sm:w-36"
             />
             <Select
               value={
@@ -419,7 +618,10 @@ export function PayrollListClient({
                 })
               }
             >
-              <SelectTrigger className="min-w-44" aria-label={copy.branch}>
+              <SelectTrigger
+                className="w-full sm:w-44"
+                aria-label={copy.branch}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -434,11 +636,13 @@ export function PayrollListClient({
             <Select
               value={salaryStatus}
               onValueChange={(value) =>
-                setSalaryStatus(value as SalaryStatusFilter)
+                replaceFilters({
+                  salaryStatus: normalizeSalaryStatus(value),
+                })
               }
             >
               <SelectTrigger
-                className="min-w-40"
+                className="w-full sm:w-44"
                 aria-label={copy.salaryStatus}
               >
                 <SelectValue />
@@ -466,37 +670,67 @@ export function PayrollListClient({
                 if (event.key === "Enter") updateStandardDays();
               }}
               maxFractionDigits={2}
-              className="w-28 text-right font-mono tabular-nums"
+              className="w-full text-right font-mono tabular-nums sm:w-28"
               aria-label={copy.standardDays}
               title={copy.standardDays}
             />
-          </>
+          </div>
         }
         actions={
           <Button
-            onClick={() => void confirmSnapshot()}
-            disabled={!preview.canSnapshot || isSnapshotting}
+            variant="outline"
+            size="touch"
+            onClick={() => replaceFilters({ calendarTarget: "all" })}
           >
-            {isSnapshotting ? copy.snapshotting : copy.snapshot}
+            <IconCalendarDays data-icon="inline-start" />
+            {copy.calendar}
           </Button>
         }
       />
 
-      {preview.missingSalaryEmployeeIds.length > 0 ? (
+      {!isLocked ? (
         <AppSection
-          tone="warning"
-          title={copy.missingSalaryTitle}
-          description={copy.missingSalaryDescription(
-            preview.missingSalaryEmployeeIds.length,
-          )}
+          tone={hasPreflightBlockers ? "warning" : "default"}
+          title={copy.preflight.title}
+          description={
+            hasPreflightBlockers
+              ? copy.preflight.blockedDescription
+              : copy.preflight.readyDescription
+          }
+          badge={{
+            children: hasPreflightBlockers
+              ? copy.preflight.blockedBadge
+              : copy.preflight.readyBadge,
+            variant: hasPreflightBlockers ? "warning" : "success",
+          }}
         >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSalaryStatus(MISSING_SALARY_STATUS)}
-          >
-            {copy.missingSalaryListAction}
-          </Button>
+          {hasPreflightBlockers ? (
+            <div className="flex flex-col gap-2">
+              {preview.preflight.blockers.map((blocker) => {
+                const content = preflightBlockerContent(blocker);
+                return (
+                  <Item
+                    key={`${blocker.kind}:${blocker.branchId ?? "none"}`}
+                    variant="outline"
+                  >
+                    <ItemContent>
+                      <ItemTitle>{content.title}</ItemTitle>
+                      <ItemDescription>{content.description}</ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openPreflightBlocker(blocker)}
+                      >
+                        {content.action}
+                      </Button>
+                    </ItemActions>
+                  </Item>
+                );
+              })}
+            </div>
+          ) : null}
         </AppSection>
       ) : null}
 
@@ -507,9 +741,13 @@ export function PayrollListClient({
             ? copy.snapshotDescription
             : selectedBranchId != null
               ? copy.snapshotAllBranchesRequired
-              : copy.description
+              : preview.canSnapshot
+                ? copy.description
+                : payrollCopy.server.snapshotUnavailable
         }
         headerHint={isLocked ? copy.snapshotLocked : copy.snapshotOpen}
+        action={snapshotAction}
+        className="motion-safe:animate-in motion-safe:fade-in"
         contentFlush
         contentScroll
       >
@@ -517,6 +755,8 @@ export function PayrollListClient({
           columns={columns}
           data={rows}
           getRowKey={(entry) => entry.employeeId}
+          onRowClick={openCalendar}
+          getRowAriaLabel={(entry) => copy.calendarOpenRow(entry.employeeName)}
           emptyTitle={copy.table.empty}
           pageSize={25}
           desktopFooterRows={
@@ -571,6 +811,14 @@ export function PayrollListClient({
                 </ItemDescription>
               </ItemContent>
               <ItemActions className="items-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="touch"
+                  onClick={() => openCalendar(entry)}
+                >
+                  <IconCalendarDays data-icon="inline-start" />
+                  {copy.calendar}
+                </Button>
                 {!isLocked ? (
                   canCalculate(entry) ? (
                     <Button
@@ -619,6 +867,130 @@ export function PayrollListClient({
           )}
         />
       </AppSection>
+
+      <AppDialog
+        open={isCalendarOpen}
+        onOpenChange={(open) => {
+          if (!open) replaceFilters({ calendarTarget: null });
+        }}
+        title={
+          calendarEntry
+            ? copy.calendarEmployeeTitle(calendarEntry.employeeName)
+            : copy.calendarAllTitle
+        }
+        description={copy.calendarDescription}
+        contentClassName="sm:max-w-4xl"
+        bodyClassName="min-w-0"
+      >
+        {calendarEntry ? (
+          <KpiRow density="compact">
+            <KpiCard
+              density="compact"
+              label={copy.workdays}
+              value={decimalCell(workingDaysValue(calendarEntry))}
+            />
+            <KpiCard
+              density="compact"
+              label={copy.estimatedSalary}
+              value={moneyCell(
+                calendarEntry,
+                estimatedCalendarSalary(calendarEntry),
+              )}
+            />
+            <KpiCard
+              density="compact"
+              label={copy.monthlyLeave}
+              value={`${decimalCell(calendarEntry.monthlyLeaveBalance.remainingDays)}/${decimalCell(calendarEntry.monthlyLeaveBalance.entitlementDays)}`}
+            />
+            <KpiCard
+              density="compact"
+              label={copy.annualLeave}
+              value={
+                calendarEntry.annualLeaveBalance
+                  ? `${decimalCell(calendarEntry.annualLeaveBalance.remainingDays)}/${decimalCell(calendarEntry.annualLeaveBalance.entitlementDays)}`
+                  : "—"
+              }
+            />
+          </KpiRow>
+        ) : null}
+        <AttendanceCalendar
+          month={monthValue(preview.year, preview.month)}
+          records={calendarRecords}
+          leaves={calendarLeaves}
+          selectedDate={selectedCalendarDate}
+          onSelectDate={setSelectedCalendarDate}
+        />
+        {selectedCalendarDate ? (
+          <section
+            ref={calendarDetailRef}
+            aria-live="polite"
+            className="flex scroll-mt-4 flex-col gap-2"
+          >
+            <h3 className="font-heading text-sm font-semibold">
+              {attendanceCopy.calendarDetailTitle(
+                formatVNBusinessDate(selectedCalendarDate),
+              )}
+            </h3>
+            {calendarDayEntries.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {calendarDayEntries.map((dayEntry) => (
+                  <Item
+                    key={dayEntry.employeeId}
+                    variant="outline"
+                  >
+                    <ItemContent>
+                      <ItemTitle>
+                        {dayEntry.employee?.employeeName ?? "—"}
+                      </ItemTitle>
+                      {dayEntry.employee?.branchName ? (
+                        <ItemDescription>
+                          {dayEntry.employee.branchName}
+                        </ItemDescription>
+                      ) : null}
+                      <div className="flex flex-col gap-1 text-xs/relaxed text-muted-foreground">
+                        {dayEntry.records.map((record) => (
+                          <p key={record.id}>
+                            <span className="font-medium text-foreground">
+                              {record.shifts?.name ?? scheduleCopy.rowShift}
+                            </span>
+                            {` · ${attendanceCopy.checkIn} ${formatVNTime(record.check_in)} · ${attendanceCopy.checkOut} ${formatVNTime(record.check_out)}`}
+                          </p>
+                        ))}
+                        {dayEntry.leave ? (
+                          <p>
+                            {dayEntry.leave.status === "approved"
+                              ? scheduleCopy.leaveApproved
+                              : scheduleCopy.leavePending}
+                          </p>
+                        ) : null}
+                      </div>
+                    </ItemContent>
+                    {dayEntry.records.length > 0 ? (
+                      <ItemActions>
+                        <Badge
+                          variant={
+                            dayEntry.records.every((record) => record.check_out)
+                              ? "success"
+                              : "warning"
+                          }
+                        >
+                          {dayEntry.records.every((record) => record.check_out)
+                            ? attendanceCopy.checkedOut
+                            : attendanceCopy.inShift}
+                        </Badge>
+                      </ItemActions>
+                    ) : null}
+                  </Item>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {attendanceCopy.detailEmptyDescription}
+              </p>
+            )}
+          </section>
+        ) : null}
+      </AppDialog>
 
       {selectedEntry ? (
         <FormDialog

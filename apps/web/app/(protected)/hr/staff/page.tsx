@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { matchesSearch } from "@lib/search";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";
@@ -14,6 +16,7 @@ interface StaffPageProps {
     position?: string;
     branch?: string;
     status?: string;
+    q?: string;
   }>;
 }
 
@@ -96,16 +99,25 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     if (s.role === "owner") return false;
     if (
       params.position &&
-      positionOptions.some((option) => option.value === params.position)
+      positionOptions.some((option) => option.value === params.position) &&
+      s.position_code !== params.position
     ) {
-      return s.position_code === params.position;
+      return false;
     }
-    return true;
+    return matchesSearch(
+      [s.full_name, s.phone, s.position_label ?? s.role, s.branch_name],
+      params.q,
+    );
   });
+
+  const hasActiveFilters = Boolean(
+    params.q || params.position || params.branch || params.status,
+  );
 
   return (
     <AppPage width="xwide">
       <AppPageHeader
+        eyebrow={APP_COPY_VI.hrWorkspace}
         title={messages.owner.staffPage.title}
         description={messages.owner.staffPage.description}
         actions={
@@ -118,20 +130,17 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
           </>
         }
       />
-      <AppToolbar
-        filters={
-          <Suspense>
-            <StaffFilters
-              branches={branchOptions}
-              positionOptions={positionOptions}
-            />
-          </Suspense>
-        }
-      />
+      <Suspense>
+        <StaffFilters
+          branches={branchOptions}
+          positionOptions={positionOptions}
+        />
+      </Suspense>
       <StaffTable
         staff={staff}
         branches={branchOptions}
         positionOptions={positionOptions}
+        hasActiveFilters={hasActiveFilters}
       />
     </AppPage>
   );

@@ -10,7 +10,9 @@ type SearchParams = {
   month?: string;
   branch?: string;
   q?: string;
+  salaryStatus?: string;
   standardDays?: string;
+  calendar?: string;
 };
 
 function parseMonth(value: string | undefined) {
@@ -39,6 +41,12 @@ function parseStandardDays(value: string | undefined): number | undefined {
 function parseBranchId(value: string | undefined): number | null {
   const branchId = Number(value);
   return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
+}
+
+function parseCalendarTarget(value: string | undefined): "all" | number | null {
+  if (value === "all") return "all";
+  const employeeId = Number(value);
+  return Number.isInteger(employeeId) && employeeId > 0 ? employeeId : null;
 }
 
 export default async function PayrollPage({
@@ -74,6 +82,8 @@ export default async function PayrollPage({
           branches={branchesResult.success ? (branchesResult.data ?? []) : []}
           query={params.q ?? ""}
           selectedBranchId={branchId}
+          selectedSalaryStatus={params.salaryStatus}
+          calendarTarget={parseCalendarTarget(params.calendar)}
         />
       ) : (
         <AppSection

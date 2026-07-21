@@ -91,7 +91,7 @@ export function AppShell({
     () => findActivePrimaryNavItem(tier1, pathname),
     [tier1, pathname],
   );
-  const showBottomNav = bottomNav && pathname !== "/";
+  const showBottomNav = bottomNav;
 
   return (
     <SidebarProvider

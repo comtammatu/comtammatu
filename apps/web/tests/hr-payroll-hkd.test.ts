@@ -85,7 +85,7 @@ test("Payroll live preview validates the selected standard days", () => {
 
 test("Payroll live preview: attendance, leave and adjustments feed the atomic snapshot", () => {
   for (const expected of [
-    '.select("employee_id, date, check_out")',
+    '"employee_id, date, check_in, check_out, shifts ( start_time, end_time )"',
     "buildCompletedWorkdays",
     "fetchTenantHrLeavePolicy",
     "calculateAnnualLeaveUsedThroughMonth",
@@ -108,6 +108,20 @@ test("Payroll live preview: attendance, leave and adjustments feed the atomic sn
     /\.from\("annual_leave_entitlements"\)/,
     "employee/year annual entitlement rows must determine annual leave allocation",
   );
+});
+
+test("Payroll snapshot blocks unresolved preflight data on the server", () => {
+  for (const expected of [
+    "buildPayrollPreflight",
+    "pendingLeaveEmployeeIds",
+    "preview.preflight.blockers.length > 0",
+    "snapshotPreflightBlocked",
+  ]) {
+    assert.ok(
+      payrollActionsSource.includes(expected),
+      `expected payroll snapshot preflight to include ${expected}`,
+    );
+  }
 });
 
 test("Payroll snapshot keeps finalized values separate from live estimates", () => {

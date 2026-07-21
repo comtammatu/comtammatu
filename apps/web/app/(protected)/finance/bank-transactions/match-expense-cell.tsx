@@ -59,6 +59,7 @@ interface MatchExpenseCellProps {
   refundMatchConfirmed: boolean;
   transferType: "in" | "out";
   expenseOptions: ExpenseMatchOption[];
+  touch: boolean;
   evidence: {
     content: string;
     reference: string;
@@ -93,6 +94,7 @@ export function MatchExpenseCell({
   refundMatchConfirmed,
   transferType,
   expenseOptions,
+  touch,
   evidence,
 }: MatchExpenseCellProps) {
   const router = useRouter();
@@ -366,8 +368,9 @@ export function MatchExpenseCell({
     selectedRefundIds.length,
   );
 
-  const triggerLabel =
-    selectedIds.length > 0
+  const triggerLabel = !touch
+    ? copy.unmatchedMoneyInTable.linkAction
+    : selectedIds.length > 0
       ? `${copy.matchedExpenseCount(formatCount(selectedIds.length))}${
           selectedExpenses.length > 0 ? ` · -${formatVND(selectedTotal)}` : ""
         }`
@@ -426,8 +429,11 @@ export function MatchExpenseCell({
         render={
           <Button
             variant="outline"
-            size="touch"
-            className="w-full max-w-64 justify-between gap-2"
+            size={touch ? "touch" : "sm"}
+            className={cn(
+              "justify-between gap-2",
+              touch ? "w-full max-w-64" : "shrink-0",
+            )}
           >
             <span className="truncate">{triggerLabel}</span>
             <IconChevronRight className="size-3.5 shrink-0" aria-hidden />

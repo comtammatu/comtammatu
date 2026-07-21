@@ -9,9 +9,11 @@ import {
   useTransition,
 } from "react";
 import { Clock as IconClock, ReceiptText as IconReceipt } from "lucide-react";
-import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
+import dynamic from "next/dynamic";
+import { SELF_ORDER_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppDialog } from "@/components/form";
 import {
   Item,
@@ -46,7 +48,6 @@ import {
   defaultSelfOrderCategoryValue,
 } from "./self-order/menu-panel";
 import {
-  PaymentPanel,
   type GuestPaymentRequestState,
   type InvoiceErrorFocusRequest,
   type InvoiceFieldErrors,
@@ -60,6 +61,25 @@ interface SelfOrderClientProps {
 const TAX_CODE_PATTERN = /^\d{10}(-\d{3})?$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PAYMENT_COMPLETED_DISPLAY_MS = 10_000;
+
+function PaymentPanelLoading() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex min-h-24 items-center justify-center gap-2 text-sm text-muted-foreground"
+    >
+      <Spinner aria-hidden="true" className="size-4" />
+      {STATES_VI.loading}
+    </div>
+  );
+}
+
+const PaymentPanel = dynamic(
+  () =>
+    import("./self-order/payment-panel").then((module) => module.PaymentPanel),
+  { ssr: false, loading: PaymentPanelLoading },
+);
 
 function normalizeTaxCodeInput(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 13);
@@ -739,7 +759,7 @@ export function SelfOrderClient({
         order={order}
         pendingItems={awaiting ? available.request?.items : undefined}
       >
-        {!ambiguous && order ? (
+        {billOpen && billView === "payment" && !ambiguous && order ? (
           <PaymentPanel
             disabled={awaiting || paymentPending}
             activeOrder={order}

@@ -23,8 +23,16 @@ const attendanceTableSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/attendance-table.tsx"),
   "utf8",
 );
+const attendanceCalendarSource = readFileSync(
+  join(process.cwd(), "app/(protected)/hr/attendance-calendar.tsx"),
+  "utf8",
+);
 const hrActionsSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/actions.ts"),
+  "utf8",
+);
+const leaveCalendarSource = readFileSync(
+  join(process.cwd(), "lib/hr/leave-calendar.ts"),
   "utf8",
 );
 const leaveRequestActionsSource = readFileSync(
@@ -49,7 +57,7 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
   );
   assert.match(
     attendancePageSource,
-    /<AttendanceTable branches=\{branches\} \/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
+    /<AttendanceTable[\s\S]*branches=\{branches\}[\s\S]*\/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
     "day-work and leave review should share their dedicated route",
   );
   assert.match(
@@ -114,7 +122,7 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
   );
   assert.match(
     attendanceTableSource,
-    /function canForceCloseRecord[\s\S]*isStaleOpenRecord\(record\)/,
+    /function canForceCloseRecord[\s\S]*isStaleOpenAttendanceRecord\(record, todayStr\)/,
     "Force-close UI should mirror the scheduled shift-end predicate",
   );
   assert.match(
@@ -207,6 +215,138 @@ test("attendance and leave approval data stay in their respective tabs", () => {
   assert.match(
     hrActionsSource,
     /employee_id, date, check_in, check_out,[\s\S]*calculateAttendanceWorkHours\([\s\S]*record\.check_in,[\s\S]*record\.check_out/,
+  );
+});
+
+test("individual calendar reads only branch-scoped attendance and leave state", () => {
+  assert.match(
+    attendanceTableSource,
+    /fetchAttendanceCalendar\(\{ branchId, month \}\)[\s\S]*<Combobox[\s\S]*attendanceCopy\.calendarEmployeeLabel/,
+  );
+  assert.match(
+    hrActionsSource,
+    /export const fetchAttendanceCalendar = withAction\([\s\S]*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,[\s\S]*requireBranchScope: true/,
+  );
+  assert.match(
+    hrActionsSource,
+    /\.from\("leave_requests"\)[\s\S]*\.eq\("branch_id", data\.branchId\)[\s\S]*\.in\("status", \["pending", "approved"\]\)/,
+  );
+  assert.match(
+    attendanceCalendarSource,
+    /leave === "approved"\s*\?\s*scheduleCopy\.leaveApproved\s*:\s*scheduleCopy\.leavePending/,
+  );
+  assert.match(
+    leaveCalendarSource,
+    /leave\.status === "approved" \|\| !leaveByDate\.has\(date\)/,
+  );
+});
+
+test("calendar attention scope uses the stale-shift predicate and pending leave only", () => {
+  assert.match(
+    attendanceTableSource,
+    /function isStaleOpenAttendanceRecord[\s\S]*isShiftEndedForBusinessDate/,
+    "calendar attention must share the stale open-shift predicate used by force-close",
+  );
+  assert.match(
+    attendanceTableSource,
+    /type CalendarScope = "all" \| "attention"[\s\S]*function selectCalendarScope\(scope: CalendarScope\)[\s\S]*params\.set\("filter", "attention"\)/,
+    "attention scope should be recoverable through the calendar URL",
+  );
+  assert.match(
+    attendanceTableSource,
+    /<Select[\s\S]*attendanceCopy\.calendarScopeLabel[\s\S]*calendarScopeAttention/,
+    "calendar should expose an explicit attention scope control",
+  );
+  assert.match(
+    attendanceCalendarSource,
+    /staleOpenDateSet\.has\(cell\.date\)[\s\S]{0,80}leave === "pending"/,
+    "only stale open shifts and pending leave should be marked as attention",
+  );
+  assert.match(
+    attendanceCalendarSource,
+    /disabled=\{isFilteredOut\}/,
+    "non-attention days should not open a detail sheet while filtered",
+  );
+  assert.match(
+    attendancePageSource,
+    /resolveCalendarScope\(params\.filter\)/,
+    "deep links should restore the requested calendar scope",
+  );
+});
+
+test("calendar controls preserve a compact, non-scrolling mobile presentation", () => {
+  assert.match(
+    attendanceTableSource,
+    /<AppToolbar\s+className="items-stretch[^"]*\[&>\[data-slot=toolbar-group\]\]:w-full[^"]*"[\s\S]*<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">/,
+    "calendar filters should form a compact two-column control group on phones",
+  );
+  assert.match(
+    attendanceTableSource,
+    /triggerClassName="col-span-2 w-full sm:w-64"[\s\S]*className="col-span-2 w-full sm:w-44"/,
+    "employee and attention scope controls should occupy complete mobile rows",
+  );
+  assert.match(
+    attendanceCalendarSource,
+    /attentionOnly && !hasAttention \? null[\s\S]*className="min-w-0 overflow-hidden"/,
+    "an empty attention scope should not render a blank seven-column grid",
+  );
+  assert.doesNotMatch(
+    attendanceCalendarSource,
+    /min-w-112/,
+    "the phone calendar must fit its owning card instead of relying on horizontal scrolling",
+  );
+  assert.match(
+    attendanceCalendarSource,
+    /className="flex min-h-24 min-w-0[^"]*sm:min-h-28[^"]*"/,
+    "calendar cells should reserve an even visual height for every day",
+  );
+  assert.match(
+    attendanceCalendarSource,
+    /const calendarDetailLabel =[\s\S]*calendarDetailTone[\s\S]*min-h-8 line-clamp-2 text-xs leading-4/,
+    "calendar cells should reserve a fixed two-line summary and one status line",
+  );
+});
+
+test("calendar day detail is a responsive contextual sheet with URL recovery", () => {
+  assert.match(
+    attendanceTableSource,
+    /function selectCalendarDay\(date: string \| null\)[\s\S]*if \(date\) params\.set\("day", date\)/,
+    "closing the calendar detail should remove its deep-link day state",
+  );
+  assert.match(
+    attendanceTableSource,
+    /<Sheet[\s\S]*open=\{selectedDay !== null\}[\s\S]*onOpenChange=\{\(open\) => \{[\s\S]*selectCalendarDay\(null\)/,
+    "selected calendar days should open in an accessible Sheet that can close safely",
+  );
+  assert.match(
+    attendanceTableSource,
+    /side=\{isCalendarDetailTouch \? "bottom" : "right"\}/,
+    "calendar detail should preserve a touch-first bottom sheet and desktop side panel",
+  );
+  assert.match(
+    attendanceTableSource,
+    /className="max-h-dvh-95 overflow-hidden bg-background p-0 data-\[side=right\]:lg:w-1\/2 data-\[side=right\]:lg:max-w-none"/,
+    "desktop calendar detail should use half of the viewport instead of the shared narrow sheet cap",
+  );
+  assert.match(
+    attendanceTableSource,
+    /<DetailView\s+branchId=\{selectedBranch\}[\s\S]*compact[\s\S]*function DetailView\([\s\S]*compact = false[\s\S]*mobileBreakpoint=\{compact \? 10_000 : undefined\}/,
+    "the calendar detail should keep responsive cards inside the desktop review panel",
+  );
+  assert.match(
+    attendanceTableSource,
+    /attendanceCopy\.checkIn[\s\S]{0,80}formatVNTime\(record\.check_in\)[\s\S]{0,160}attendanceCopy\.checkOut[\s\S]{0,80}formatVNTime\(record\.check_out\)/,
+    "calendar detail cards should retain the in/out times needed for attendance review",
+  );
+  assert.match(
+    attendanceTableSource,
+    /calculateAttendanceWorkHours\(\s*record\.check_in,\s*record\.check_out\s*\)[\s\S]*countCompletedShiftWorkdays\(\s*selectedDayClosedShifts,?\s*\)/,
+    "the day detail summary should derive hours and workdays from recorded attendance",
+  );
+  assert.match(
+    attendanceTableSource,
+    /leave\.start_date <= selectedDay && leave\.end_date >= selectedDay/,
+    "the selected day should surface only an overlapping leave range",
   );
 });
 
