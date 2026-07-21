@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 // The prod-DB guard is split across files that must agree:
@@ -348,6 +349,9 @@ const PROD = documentedProdRef ?? "iexwsuaqqenyjiskawoj";
 const NO_TOUCH = hookNoTouchRefs[0] ?? "dyksphedgzqsqjqgxzog";
 const DEV = documentedDevRef ?? "dzvilydcccemlafxcydj";
 const UNREGISTERED_REF = "abcdefghijklmnopqrst";
+const TRUSTED_PREVIEW = "prvwabcdefghijklmnop";
+const WRONG_PARENT_PREVIEW = "wrngabcdefghijklmnop";
+const MISMATCHED_PREVIEW = "mismabcdefghijklmnop";
 const lineage = JSON.parse(
   fs.readFileSync(
     path.join(REPO_ROOT, "supabase/migration-lineage.json"),
@@ -376,6 +380,45 @@ const mcpConnectorLive = (tool, tool_input) => ({
   tool_name: `mcp__codex_apps__supabase_${tool}`,
   tool_input,
 });
+const previewFixtureDir = fs.mkdtempSync(
+  path.join(tmpdir(), "comtammatu-preview-guard-"),
+);
+const previewFixtureBranches = {
+  [TRUSTED_PREVIEW]: {
+    id: "preview-branch-id",
+    project_ref: TRUSTED_PREVIEW,
+    parent_project_ref: PROD,
+  },
+  [WRONG_PARENT_PREVIEW]: {
+    id: "wrong-parent-branch-id",
+    project_ref: WRONG_PARENT_PREVIEW,
+    parent_project_ref: NO_TOUCH,
+  },
+  [MISMATCHED_PREVIEW]: {
+    id: "mismatched-branch-id",
+    project_ref: TRUSTED_PREVIEW,
+    parent_project_ref: PROD,
+  },
+};
+fs.writeFileSync(
+  path.join(previewFixtureDir, "supabase"),
+  `#!/usr/bin/env node
+const branches = ${JSON.stringify(previewFixtureBranches)};
+const args = process.argv.slice(2);
+const branch =
+  args[0] === "branches" &&
+  args[1] === "get" &&
+  args[3] === "--project-ref" &&
+  args[4] === ${JSON.stringify(PROD)} &&
+  args[5] === "--output" &&
+  args[6] === "json"
+    ? branches[args[2]]
+    : null;
+if (!branch) process.exit(1);
+process.stdout.write(JSON.stringify(branch));
+`,
+  { mode: 0o700 },
+);
 const FIXTURES = [
   ["block: supabase db push", 2, bash("supabase db push")],
   ["block: actual supabase link", 2, bash("supabase link")],
@@ -1249,9 +1292,9 @@ const FIXTURES = [
     mcp("create_branch", { project_id: UNREGISTERED_REF }),
   ],
   [
-    "allow: mcp delete_branch (preview-branch cleanup)",
+    "allow: mcp delete_branch with a verified Production parent",
     0,
-    mcp("delete_branch", { project_id: PROD, branch_id: "preview-branch" }),
+    mcp("delete_branch", { project_id: PROD, branch_id: TRUSTED_PREVIEW }),
   ],
   [
     "block: mcp delete_branch cannot target separate-codebase parent",
@@ -1272,8 +1315,8 @@ const FIXTURES = [
     mcp("delete_branch", { project_id: PROD, branch_id: PROD }),
   ],
   [
-    "allow: mcp delete_branch can clean an unregistered Preview ref",
-    0,
+    "block: mcp delete_branch cannot clean an unverified Preview ref",
+    2,
     mcp("delete_branch", { project_id: PROD, branch_id: UNREGISTERED_REF }),
   ],
   [
@@ -1282,11 +1325,11 @@ const FIXTURES = [
     mcpConnector("create_branch", { project_id: PROD }),
   ],
   [
-    "allow: mcp connector dotted delete_branch (preview cleanup)",
+    "allow: mcp connector dotted delete_branch with a verified Production parent",
     0,
     mcpConnector("delete_branch", {
       project_id: PROD,
-      branch_id: "preview-branch",
+      branch_id: TRUSTED_PREVIEW,
     }),
   ],
   [
@@ -1985,6 +2028,21 @@ const FIXTURES = [
     mcp("apply_migration", { project_id: DEV }),
   ],
   [
+    "allow: mcp write vs a Preview verified from the Production parent",
+    0,
+    mcp("apply_migration", { project_id: TRUSTED_PREVIEW }),
+  ],
+  [
+    "block: mcp write vs a Preview with the wrong parent",
+    2,
+    mcp("apply_migration", { project_id: WRONG_PARENT_PREVIEW }),
+  ],
+  [
+    "block: mcp write when Preview lookup returns a different project ref",
+    2,
+    mcp("apply_migration", { project_id: MISMATCHED_PREVIEW }),
+  ],
+  [
     "block: mcp write vs unknown ref",
     2,
     mcp("apply_migration", { project_id: "abcdefabcdefabcdefab" }),
@@ -2013,6 +2071,11 @@ const FIXTURES = [
     mcpConnectorLive("delete_branch", { branch_id: "preview-branch" }),
   ],
   [
+    "allow: live connector Preview deletion with a verified Production parent",
+    0,
+    mcpConnectorLive("delete_branch", { branch_id: TRUSTED_PREVIEW }),
+  ],
+  [
     "block: direct Preview deletion without parent binding",
     2,
     mcp("delete_branch", { branch_id: "preview-branch" }),
@@ -2030,7 +2093,7 @@ const FIXTURES = [
   [
     "block: live connector Preview merge by branch_id",
     2,
-    mcpConnectorLive("merge_branch", { branch_id: "preview-branch" }),
+    mcpConnectorLive("merge_branch", { branch_id: TRUSTED_PREVIEW }),
   ],
   [
     "block: live connector Preview reset by branch_id",
@@ -2051,6 +2114,7 @@ const FIXTURES = [
   ],
 ];
 const hookBaseEnv = { ...process.env };
+hookBaseEnv.PATH = `${previewFixtureDir}${path.delimiter}${hookBaseEnv.PATH ?? ""}`;
 for (const name of [
   "CLAUDE_PROJECT_DIR",
   "PGDATABASE",
@@ -2080,6 +2144,7 @@ for (const [desc, want, payload, fixtureEnv = {}] of FIXTURES) {
     );
   }
 }
+fs.rmSync(previewFixtureDir, { recursive: true, force: true });
 
 if (errors.length > 0) {
   for (const message of errors) console.error(`[guard-sync] ${message}`);

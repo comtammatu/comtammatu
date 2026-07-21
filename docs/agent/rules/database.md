@@ -39,10 +39,13 @@ Production.
   GitHub runner's `GITHUB_ENV`; it never writes repository `.env.local` files.
   CLI creation additionally requires the literal parent binding
   `--project-ref iexwsuaqqenyjiskawoj`; stored link state and any other parent
-  remain blocked. Until a trusted Preview-ref registration path exists,
-  registered agent hooks block mutation tools against a newly created Preview
-  ref; stop and report the blocker instead of weakening the guard or
-  substituting Local Docker.
+  remain blocked.
+  Preview MCP actions are trusted only when the guard retrieves that exact
+  candidate from `supabase branches get` with the literal Production parent and
+  verifies both `project_ref` and `parent_project_ref`. This proof is repeated
+  per action; it creates no local whitelist or stored-link exception. A lookup
+  failure, mismatched parent, branch merge/reset/rebase, or every Preview CLI
+  mutation fails closed. `supabase db push` remains DEV-only.
 - Org-scoped MCP servers and the Supabase CLI are write-capable. This repo has
   no tracked `.mcp.json`; never infer a project binding from one. Codex's direct
   repo MCP URL in `.codex/config.toml` is pinned to comtammatu Production with

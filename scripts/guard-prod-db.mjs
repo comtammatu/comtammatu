@@ -130,6 +130,54 @@ function nativePreviewBranchingEnabled() {
   }
 }
 
+function trustedPreviewBranch(candidate) {
+  if (typeof candidate !== "string" || !/^[a-z0-9-]{1,64}$/.test(candidate)) {
+    return null;
+  }
+
+  try {
+    const result = spawnSync(
+      "supabase",
+      [
+        "branches",
+        "get",
+        candidate,
+        "--project-ref",
+        APPROVED_PREVIEW_PARENT_REF,
+        "--output",
+        "json",
+      ],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: 10_000,
+        maxBuffer: 64 * 1024,
+      },
+    );
+    if (result.status !== 0 || result.error) return null;
+
+    const branch = JSON.parse(result.stdout);
+    return branch &&
+      typeof branch === "object" &&
+      !Array.isArray(branch) &&
+      typeof branch.id === "string" &&
+      branch.id !== "" &&
+      typeof branch.project_ref === "string" &&
+      typeof branch.parent_project_ref === "string" &&
+      branch.parent_project_ref === APPROVED_PREVIEW_PARENT_REF
+      ? branch
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function trustedPreviewProject(ref) {
+  if (typeof ref !== "string" || !/^[a-z0-9]{20}$/.test(ref)) return null;
+  const branch = trustedPreviewBranch(ref);
+  return branch?.project_ref === ref ? branch : null;
+}
+
 function supabaseCliFlagValues(args, flag) {
   const values = [];
   let sawOtherOption = false;
@@ -1758,12 +1806,14 @@ if (mcpMatch) {
   ) {
     block(`malformed ${action} branch ref`);
   }
-  if (
-    branchActions.includes(action) &&
-    (Object.hasOwn(PROTECTED_REFS, toolInput.branch_id.trim()) ||
-      Object.hasOwn(APPROVED_NON_PROD_REFS, toolInput.branch_id.trim()))
-  ) {
-    block(`${action} against a registered persistent environment ref`);
+  if (branchActions.includes(action)) {
+    if (action !== "delete_branch") {
+      block(`${action} is never allowed against a Preview branch`);
+    }
+    if (!trustedPreviewBranch(toolInput.branch_id.trim())) {
+      block("Preview branch deletion without a verified Production parent");
+    }
+    process.exit(0);
   }
 
   const projectFieldNames =
@@ -1802,10 +1852,12 @@ if (mcpMatch) {
   // project_id. Claude/plugin and connector-wrapped tools are org-scoped and
   // must always carry an explicit project ref.
   const target = projectId === "" ? "iexwsuaqqenyjiskawoj" : projectId;
-  const approvedNonProd = Object.hasOwn(APPROVED_NON_PROD_REFS, target);
+  const staticNonProd = Object.hasOwn(APPROVED_NON_PROD_REFS, target);
   const label = Object.hasOwn(PROTECTED_REFS, target)
     ? PROTECTED_REFS[target]
     : undefined;
+  const preview = !staticNonProd && !label ? trustedPreviewProject(target) : null;
+  const approvedNonProd = staticNonProd || preview !== null;
   if (NO_TOUCH_REFS.has(target)) {
     block(`${action} against no-touch ref ${target}`);
   }
@@ -1828,12 +1880,6 @@ if (mcpMatch) {
     executeQuery = queryValue;
   }
 
-  if (action === "delete_branch") {
-    if (target !== APPROVED_PREVIEW_PARENT_REF) {
-      block(`Preview branch deletion against an unapproved parent ${target}`);
-    }
-    process.exit(0);
-  }
   if (action === "create_branch") {
     if (target !== APPROVED_PREVIEW_PARENT_REF) {
       block(`Preview branch creation against an unapproved parent ${target}`);
@@ -1859,7 +1905,11 @@ if (mcpMatch) {
     ) {
       process.exit(0);
     }
-    block(`${action} against ${APPROVED_NON_PROD_REFS[target]}`);
+    block(
+      `${action} against ${
+        APPROVED_NON_PROD_REFS[target] ?? "a trusted Preview branch"
+      }`,
+    );
   }
 
   if (action === "execute_sql") {
