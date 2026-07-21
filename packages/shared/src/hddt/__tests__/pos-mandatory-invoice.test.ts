@@ -154,18 +154,13 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
   );
 });
 
-test("SePay webhook issues exactly once after an exact POS settlement match", () => {
+test("SePay webhook only settles payment; the HĐĐT worker owns issuance", () => {
   const src = read("apps/web/app/api/webhooks/sepay/route.ts");
   const migration = read(
     "supabase/migration-archive/20260711024758_sepay_webhook_order_evidence.sql",
   );
 
-  assert.match(src, /issueTaxInvoiceForPaidOrder\(\{/);
-  assert.match(
-    src,
-    /reconciliation\.data\.status === "matched"[\s\S]*issueTaxInvoiceForPaidOrder/,
-  );
-  assert.match(src, /buyerNotGetInvoice: true/);
+  assert.doesNotMatch(src, /issueTaxInvoiceForPaidOrder|createInvoice/);
   assert.doesNotMatch(src, /confirm_sepay_payment/);
   assert.match(src, /"reconcile_sepay_order_evidence"/);
   assert.match(migration, /public\.confirm_sepay_payment\(/);
@@ -196,22 +191,22 @@ test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
   );
 });
 
-test("draft HĐĐT reissue preserves stored buyer contact fields", () => {
+test("Finance requeues only the exact blocked HĐĐT job", () => {
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
+  const migration = read(
+    "supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
+  );
 
+  assert.match(actionSrc, /requeue_tax_invoice_issue_job/);
+  assert.doesNotMatch(actionSrc, /reissueAllDraftInvoices/);
   assert.match(
-    actionSrc,
-    /\.select\(\s*"id, order_id, buyer_name, buyer_tax_code, buyer_address, buyer_email",?\s*\)/,
-    "draft reissue must load buyer address/email with the other buyer fields",
+    migration,
+    /v_job\.status NOT IN \('blocked', 'reconcile_required'\)[\s\S]*v_invoice\.status <> 'draft'/,
   );
-  assert.ok(
-    actionSrc.includes("buyerAddress: draft.buyer_address ?? undefined"),
-    "draft reissue must pass buyer_address back into createTaxInvoice",
-  );
-  assert.ok(
-    actionSrc.includes("buyerEmail: draft.buyer_email ?? undefined"),
-    "draft reissue must pass buyer_email back into createTaxInvoice",
+  assert.match(
+    migration,
+    /SET status = 'queued', locked_until = NULL, last_error = NULL, updated_at = now\(\)/,
   );
   assert.ok(
     createSrc.includes("buyer_email: buyerEmail ?? null"),

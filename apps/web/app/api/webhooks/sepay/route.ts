@@ -4,7 +4,6 @@ import { z } from "zod";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
-import { issueTaxInvoiceForPaidOrder } from "@lib/hddt-per-order";
 
 const SEPAY_WEBHOOK_SECRET = process.env.SEPAY_WEBHOOK_SECRET ?? "";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -728,23 +727,6 @@ export async function POST(request: Request) {
       error_code: "rpc_result_invalid",
     });
     return NextResponse.json({ success: false }, { status: 500 });
-  }
-
-  if (reconciliation.data.status === "matched") {
-    const invoiceResult = await issueTaxInvoiceForPaidOrder({
-      supabase,
-      tenantId: accountScope.tenantId,
-      input: {
-        orderId: reconciliation.data.order_id,
-        buyerNotGetInvoice: true,
-      },
-      logPrefix: "sepay-webhook:issueTaxInvoice",
-    });
-    if (!invoiceResult.success) {
-      console.error("[sepay-webhook] invoice attempt failed", {
-        errorCode: invoiceResult.errorCode ?? "unknown",
-      });
-    }
   }
 
   return sepayAcceptedResponse();

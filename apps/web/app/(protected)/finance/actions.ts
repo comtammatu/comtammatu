@@ -20,6 +20,7 @@ import {
 import type { ManualInvoiceOrderPreview } from "./_lib/finance-types";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
+const financeActionErrors = messages.finance.actionErrors;
 const POS_INVOICE_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
@@ -120,81 +121,6 @@ export async function createTaxInvoice(
   });
 
   return result;
-}
-
-/* ─── HĐĐT: Bulk re-issue provider-rejected drafts ─── */
-
-const REISSUE_ALL_CAP = 20;
-const REISSUE_ALL_BUDGET_MS = 40_000;
-const financeActionErrors = messages.finance.actionErrors;
-
-/**
- * Bulk-reissue draft invoices (status='draft' with no invoice_number — i.e.
- * provider-rejected attempts) by reusing createTaxInvoice per order. Bounded by
- * a cap + budget timer to stay within the function limit; the trailing count
- * reports how many drafts remain so the caller re-runs for the rest. Each
- * createTaxInvoice re-checks auth + branch scope + per-order idempotency
- * (deterministic transactionUuid + active-per-order unique slot), so re-running
- * is safe. User-facing copy lives in the caller's messages catalog.
- */
-export async function reissueAllDraftInvoices(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
-  );
-  if (!ctx) return { success: false, errorCode: "forbidden" };
-
-  const { supabase, claims } = ctx;
-
-  const { data: drafts, error } = await supabase
-    .from("tax_invoices")
-    .select(
-      "id, order_id, buyer_name, buyer_tax_code, buyer_address, buyer_email",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .eq("status", "draft")
-    .is("invoice_number", null)
-    .not("order_id", "is", null)
-    .order("created_at", { ascending: true })
-    .limit(REISSUE_ALL_CAP);
-
-  if (error) {
-    console.error(
-      "[finance/actions:reissueAllDraftInvoices] Fetch drafts error:",
-      error,
-    );
-    return { success: false, errorCode: "load_failed" };
-  }
-
-  let issued = 0;
-  let failed = 0;
-  const startedAt = Date.now();
-  for (const draft of drafts ?? []) {
-    if (Date.now() - startedAt > REISSUE_ALL_BUDGET_MS) break;
-    if (draft.order_id == null) continue;
-    const result = await createTaxInvoice({
-      orderId: draft.order_id,
-      buyerName: draft.buyer_name ?? undefined,
-      buyerTaxCode: draft.buyer_tax_code ?? undefined,
-      buyerAddress: draft.buyer_address ?? undefined,
-      buyerEmail: draft.buyer_email ?? undefined,
-    });
-    if (result.success) issued += 1;
-    else failed += 1;
-  }
-
-  const { count: remaining } = await supabase
-    .from("tax_invoices")
-    .select("id", { count: "exact", head: true })
-    .eq("tenant_id", claims.tenant_id)
-    .eq("status", "draft")
-    .is("invoice_number", null)
-    .not("order_id", "is", null);
-
-  return {
-    success: true,
-    data: { issued, failed, remaining: remaining ?? 0 },
-  };
 }
 
 const taxInvoiceReconcileSchema = z.object({
@@ -460,7 +386,7 @@ export async function resolveOrderForManualInvoice(
 export async function canIssueManualInvoice(): Promise<boolean> {
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.ORDERS_WRITE,
+    PERMISSION_KEYS.SETTINGS_TENANT,
   );
   return ctx != null;
 }

@@ -31,6 +31,7 @@ test("stored buyer intent is explicit and cannot collapse into an empty B2C payl
 test("SePay only completes payment; the durable job owns HĐĐT recovery", () => {
   const webhook = read("apps/web/app/api/webhooks/sepay/route.ts");
   const finance = read("apps/web/app/(protected)/finance/actions.ts");
+  const vercel = read("apps/web/vercel.json");
   const migration = read(
     "supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
   );
@@ -42,6 +43,11 @@ test("SePay only completes payment; the durable job owns HĐĐT recovery", () =>
   assert.match(migration, /UNIQUE \(tenant_id, order_id\)/);
   assert.match(migration, /pending_payment', 'queued', 'processing', 'completed', 'blocked', 'reconcile_required/);
   assert.match(migration, /FOR UPDATE SKIP LOCKED/);
+  assert.doesNotMatch(
+    vercel,
+    /tax-invoice-issue/,
+    "the route deploys before automatic cron is enabled",
+  );
 });
 
 test("provider-issued result is reconciled atomically and never written directly", () => {

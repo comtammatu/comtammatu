@@ -50,10 +50,10 @@ test("manual-issue gates on the issuance predicate, not canManageInvoices", () =
   const page = read("apps/web/app/(protected)/finance/invoices/page.tsx");
 
   assert.ok(
-    /export async function createTaxInvoice[\s\S]*?getAuthContextWithPermission\(\s*FINANCE_ROLES,\s*PERMISSION_KEYS\.ORDERS_WRITE/.test(
+    /export async function createTaxInvoice[\s\S]*?getAuthContextWithPermission\(\s*FINANCE_ROLES,\s*PERMISSION_KEYS\.SETTINGS_TENANT/.test(
       actions,
     ) &&
-      /export async function canIssueManualInvoice[\s\S]*?getAuthContextWithPermission\(\s*FINANCE_ROLES,\s*PERMISSION_KEYS\.ORDERS_WRITE/.test(
+      /export async function canIssueManualInvoice[\s\S]*?getAuthContextWithPermission\(\s*FINANCE_ROLES,\s*PERMISSION_KEYS\.SETTINGS_TENANT/.test(
         actions,
       ),
     "canIssueManualInvoice must enforce the SAME predicate as createTaxInvoice",

@@ -12,10 +12,6 @@
     {
       "path": "/api/cron/kds-maintenance",
       "schedule": "0 5,11,17,23 * * *"
-    },
-    {
-      "path": "/api/cron/tax-invoice-issue",
-      "schedule": "*/5 * * * *"
     }
   ]
 }

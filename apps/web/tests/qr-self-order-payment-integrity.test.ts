@@ -11,6 +11,14 @@ const migration = readFileSync(
   ),
   "utf8",
 );
+const issueJobMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../..",
+    "supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
+  ),
+  "utf8",
+);
 
 function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -191,7 +199,7 @@ test("payment completion sync handles inserts and updates", () => {
   );
 });
 
-test("snapshot recovery returns the stored QR without invoice PII", () => {
+test("snapshot recovery returns the stored QR and queues the frozen HĐĐT payload", () => {
   assert.match(
     migration,
     /ALTER FUNCTION public\.self_order_get_snapshot\(text\) SET SCHEMA private/,
@@ -206,12 +214,15 @@ test("snapshot recovery returns the stored QR without invoice PII", () => {
 
   const sepayWebhook = readWeb("app/api/webhooks/sepay/route.ts");
   assert.match(sepayWebhook, /"reconcile_sepay_order_evidence"/);
-  assert.match(sepayWebhook, /issueTaxInvoiceForPaidOrder\(\{/);
+  assert.doesNotMatch(sepayWebhook, /issueTaxInvoiceForPaidOrder|createInvoice/);
   assert.match(
-    sepayWebhook,
-    /reconciliation\.data\.status === "matched"[\s\S]*issueTaxInvoiceForPaidOrder/,
+    issueJobMigration,
+    /v_request_payload[\s\S]*request\.invoice_payload[\s\S]*private\.upsert_tax_invoice_issue_job/,
   );
-  assert.match(sepayWebhook, /buyerNotGetInvoice: true/);
+  assert.match(
+    issueJobMigration,
+    /AFTER INSERT OR UPDATE OF payment_id, invoice_payload, status ON public\.self_order_payment_requests/,
+  );
 });
 
 test("Self-Order SePay evidence auto-confirms through the POS settlement service", () => {

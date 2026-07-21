@@ -9,12 +9,10 @@ import {
   FileEdit as IconFileEdit,
   FileX as IconFileX,
   Receipt as IconReceipt,
-  RefreshCw as IconRefreshCw,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Label } from "@comtammatu/ui/components/label";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
@@ -22,10 +20,8 @@ import { formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
 import {
   cancelTaxInvoice,
-  createTaxInvoice,
   fetchTaxInvoicesPage,
   reconcileTaxInvoiceProviderIssued,
-  reissueAllDraftInvoices,
   requeueTaxInvoiceIssueJob,
   type TaxInvoiceIssueAttention,
 } from "./actions";
@@ -171,7 +167,6 @@ export function InvoiceList({
     useState<CorrectablePaymentMethod | null>(null);
   const [methodFixReason, setMethodFixReason] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [reissuingId, setReissuingId] = useState<number | null>(null);
   const [issueAttention, setIssueAttention] = useState(initialIssueAttention);
   const [reconcileTarget, setReconcileTarget] =
     useState<TaxInvoiceIssueAttention | null>(null);
@@ -299,51 +294,6 @@ export function InvoiceList({
     });
   }
 
-  // Drafts are provider-rejected issuances; the server-side retry path
-  // (`createTaxInvoice` reusing the existing draft row) predates this
-  // button — the UI was the missing link, not the backend.
-  function handleReissue(inv: InvoiceRow) {
-    const orderId = inv.order_id;
-    if (orderId === null) {
-      toast.error(messages.finance.invoiceList.reissueNoOrder);
-      return;
-    }
-    setReissuingId(inv.id);
-    startTransition(async () => {
-      try {
-        const result = await createTaxInvoice({
-          orderId,
-          buyerName: inv.buyer_name ?? undefined,
-          buyerTaxCode: inv.buyer_tax_code ?? undefined,
-        });
-        if (!result.success) {
-          toast.error(
-            result.error ?? messages.finance.invoiceList.reissueFailed,
-          );
-          return;
-        }
-        const issued = result.data as {
-          invoice_number?: string | null;
-          status?: string;
-        } | null;
-        toast.success(messages.finance.invoiceList.reissueSuccess);
-        setInvoices((prev) =>
-          prev.map((row) =>
-            row.id === inv.id
-              ? {
-                  ...row,
-                  status: issued?.status ?? row.status,
-                  invoice_number: issued?.invoice_number ?? row.invoice_number,
-                }
-              : row,
-          ),
-        );
-      } finally {
-        setReissuingId(null);
-      }
-    });
-  }
-
   function handleRequeue(job: TaxInvoiceIssueAttention) {
     startTransition(async () => {
       const result = await requeueTaxInvoiceIssueJob(job.id);
@@ -375,8 +325,6 @@ export function InvoiceList({
     }
     return result;
   }
-
-  const draftCount = invoices.filter((inv) => inv.status === "draft").length;
 
   function handleLoadMore() {
     if (loadingMore || !hasMore || !nextCursor) return;
@@ -410,46 +358,6 @@ export function InvoiceList({
     });
   }
 
-  function handleReissueAll() {
-    startTransition(async () => {
-      try {
-        const result = await reissueAllDraftInvoices();
-        if (!result.success) {
-          toast.error(messages.finance.invoiceList.reissueAllError);
-          return;
-        }
-        const d = result.data as {
-          issued?: number;
-          failed?: number;
-          remaining?: number;
-        } | null;
-        toast.success(
-          messages.finance.invoiceList.reissueAllResult(
-            d?.issued ?? 0,
-            d?.failed ?? 0,
-            d?.remaining ?? 0,
-          ),
-        );
-        // Statuses changed server-side; reload to reflect the fresh list.
-        setTimeout(() => window.location.reload(), 1500);
-      } catch {
-        toast.error(messages.finance.invoiceList.reissueAllError);
-      }
-    });
-  }
-
-  async function handleConfirmReissueAll() {
-    const ok = await confirm({
-      title: messages.finance.invoiceList.reissueAllTitle,
-      description:
-        messages.finance.invoiceList.reissueAllDescription(draftCount),
-      cancelText: messages.finance.invoiceList.reissueAllCancel,
-      confirmText: messages.finance.invoiceList.reissueAllConfirm,
-    });
-    if (!ok) return;
-    handleReissueAll();
-  }
-
   function renderActions(inv: InvoiceRow, variant: "card" | "table") {
     const dense = variant === "table";
     const size = dense ? "icon" : "touch";
@@ -461,24 +369,6 @@ export function InvoiceList({
             : "flex flex-wrap items-center justify-end gap-2"
         }
       >
-        {canManageInvoices && inv.status === "draft" ? (
-          <Button
-            variant="ghost"
-            size={size}
-            onClick={() => handleReissue(inv)}
-            disabled={isPending && reissuingId === inv.id}
-            title={messages.finance.invoiceList.reissueTitle}
-          >
-            <IconRefreshCw className="size-4" />
-            {dense ? (
-              <span className="sr-only">
-                {messages.finance.invoiceList.reissue}
-              </span>
-            ) : (
-              messages.finance.invoiceList.reissue
-            )}
-          </Button>
-        ) : null}
         {canManageInvoices && inv.status === "issued" ? (
           <>
             <Button
@@ -639,17 +529,6 @@ export function InvoiceList({
               >
                 <IconReceipt className="size-4" />
                 {messages.finance.invoiceList.manualIssue.button}
-              </Button>
-            ) : null}
-            {canManageInvoices && draftCount > 0 ? (
-              <Button
-                variant="outline"
-                size={isTouchLayout ? "touch" : "sm"}
-                onClick={handleConfirmReissueAll}
-                disabled={isPending}
-              >
-                <IconRefreshCw className="size-4" />
-                {messages.finance.invoiceList.reissueAll(draftCount)}
               </Button>
             ) : null}
           </div>

@@ -84,11 +84,7 @@ test("SePay webhook claims idempotency before order-evidence reconciliation", ()
   assert.match(source, /p_event_id: webhookEventId/);
   assert.match(source, /p_payment_code: paymentCode/);
   assert.doesNotMatch(source, /"confirm_sepay_payment"/);
-  assert.match(source, /issueTaxInvoiceForPaidOrder\(\{/);
-  assert.match(
-    source,
-    /reconciliation\.data\.status === "matched"[\s\S]*issueTaxInvoiceForPaidOrder/,
-  );
+  assert.doesNotMatch(source, /issueTaxInvoiceForPaidOrder|createInvoice/);
   assert.doesNotMatch(source, /type SepayRpcClient/);
   assert.doesNotMatch(source, /as unknown as SepayRpcClient/);
   assert.doesNotMatch(source, /p_order_number/);
@@ -143,11 +139,7 @@ test("SePay evidence invokes the POS settlement service only after an exact matc
   assert.match(migration, /v_confirmation_status IS DISTINCT FROM 'completed'/);
   assert.doesNotMatch(migration, /FOR v_event IN/);
   assert.doesNotMatch(route, /confirm_sepay_payment/);
-  assert.match(route, /issueTaxInvoiceForPaidOrder\(\{/);
-  assert.match(
-    route,
-    /reconciliation\.data\.status === "matched"[\s\S]*issueTaxInvoiceForPaidOrder/,
-  );
+  assert.doesNotMatch(route, /issueTaxInvoiceForPaidOrder|createInvoice/);
 });
 
 test("Each order owns one immutable MB speaker payment code", () => {

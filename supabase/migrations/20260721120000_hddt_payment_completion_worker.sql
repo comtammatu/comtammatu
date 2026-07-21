@@ -317,6 +317,10 @@ DECLARE
   v_payload jsonb;
   v_request_payload jsonb;
 BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+
   v_payload := public.self_order_normalize_invoice_payload(p_invoice_payload);
   v_result := public.confirm_cash_payment_with_invoice_binding(p_order_id, p_cash_received);
   v_payment_id := NULLIF(v_result ->> 'payment_id', '')::bigint;

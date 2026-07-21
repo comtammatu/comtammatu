@@ -74,10 +74,10 @@ test("printer badge surfaces the failed-job count above heartbeat tone", () => {
   assert.match(badgeSource, /failedCount > 0/);
 });
 
-test("draft invoices expose a one-tap reissue wired to the existing retry path", () => {
-  assert.match(invoiceListSource, /inv\.status === "draft"/);
-  assert.match(invoiceListSource, /createTaxInvoice\(\{/);
-  assert.match(invoiceListSource, /messages\.finance\.invoiceList\.reissue/);
+test("blocked HĐĐT jobs requeue through their exact work item", () => {
+  assert.match(invoiceListSource, /job\.status === "blocked"/);
+  assert.match(invoiceListSource, /requeueTaxInvoiceIssueJob\(job\.id\)/);
+  assert.doesNotMatch(invoiceListSource, /reissueAllDraftInvoices|createTaxInvoice\(\{/);
 });
 
 test("PWA runtime exposes the new-version signal and the toolbar offers reload", () => {

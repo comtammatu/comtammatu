@@ -16,43 +16,6 @@ export const finance = {
     loadTopItemsFailed: "Không thể tải dữ liệu top món.",
   },
   invoiceList: {
-    reissue: "Phát hành lại",
-    reissueTitle: "Phát hành lại HĐĐT",
-    reissueSuccess: "Đã phát hành lại HĐĐT",
-    reissueFailed: "Không thể phát hành lại HĐĐT",
-    reissueNoOrder: "Hóa đơn không gắn đơn hàng — không thể phát hành lại",
-    reissueAll: (count: number) =>
-      `Phát hành lại tất cả nháp (${formatCount(count)})`,
-    reissueAllTitle: "Phát hành lại tất cả HĐĐT nháp",
-    reissueAllDescription: (count: number) =>
-      `Phát hành lại ${formatCount(count)} hóa đơn đang ở trạng thái nháp (bị nhà cung cấp từ chối). Mỗi đơn gửi lại lên Viettel. Tiếp tục?`,
-    reissueAllConfirm: "Phát hành lại tất cả",
-    reissueAllCancel: "Không",
-    reissueAllResult: (issued: number, failed: number, remaining: number) =>
-      remaining > 0
-        ? `Đã phát hành ${issued}, lỗi ${failed}, còn ${remaining} nháp — bấm lại để tiếp tục.`
-        : failed > 0
-          ? `Đã phát hành ${issued}, còn ${failed} đơn vẫn lỗi.`
-          : `Đã phát hành ${issued} hóa đơn.`,
-    reissueAllError: "Không thể phát hành lại hàng loạt.",
-    sepayMissing: "Khôi phục HĐĐT SePay thiếu",
-    sepayMissingContinue: "Tiếp tục quét HĐĐT SePay",
-    sepayMissingTitle: "Khôi phục HĐĐT cho đơn SePay đã thanh toán",
-    sepayMissingDescription:
-      "Tìm các webhook SePay đã xử lý, thanh toán đã hoàn tất nhưng chưa có HĐĐT đang hoạt động, rồi xuất tối đa 20 hóa đơn trong lượt này. Tiếp tục?",
-    sepayMissingConfirm: "Khôi phục",
-    sepayMissingResult: (
-      issued: number,
-      failed: number,
-      skipped: number,
-      hasMore: boolean,
-    ) =>
-      hasMore
-        ? `Đã xuất ${issued}, bỏ qua ${skipped}, lỗi ${failed}. Vẫn còn giao dịch chưa quét — bấm tiếp tục.`
-        : failed > 0
-          ? `Đã xuất ${issued}, bỏ qua ${skipped}, còn ${failed} đơn lỗi.`
-          : `Đã xuất ${issued}, bỏ qua ${skipped}.`,
-    sepayMissingError: "Không thể khôi phục HĐĐT SePay.",
     refund: "Hoàn tiền",
     refundTitle: "Hoàn tiền / đảo thanh toán",
     refundDialogTitle: "Xác nhận hoàn tiền",
