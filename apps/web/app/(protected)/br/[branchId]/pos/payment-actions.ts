@@ -61,8 +61,6 @@ type OrderPaymentCodeResult = {
   payment_code?: string;
 };
 
-const POS_CONSUMPTION_SETUP_ERROR =
-  "Không thể hoàn tất thanh toán vì cấu hình chi nhánh chưa sẵn sàng. Quản lý đã được thông báo.";
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
 
 export interface CreatePaymentSuccessData {
@@ -88,38 +86,6 @@ export interface PendingRemotePaymentForBillData {
   qr_data?: string;
   redirect_url?: string;
   qr_info?: CreatePaymentSuccessData["qr_info"];
-}
-
-function mapPaymentRpcError(message: string): string | null {
-  const normalized = message.toLowerCase();
-
-  if (
-    normalized.includes("default_consumption_location_missing") ||
-    normalized.includes("consumption_location_missing") ||
-    normalized.includes("consume_location_missing") ||
-    normalized.includes("default_consumption")
-  ) {
-    return POS_CONSUMPTION_SETUP_ERROR;
-  }
-
-  if (normalized.includes("tenant_mismatch")) {
-    return "Không thể xử lý thanh toán cho chi nhánh này.";
-  }
-
-  if (
-    normalized.includes("stock_consumption_failed") ||
-    normalized.includes("stock_failed") ||
-    normalized.includes("out_of_stock") ||
-    normalized.includes("recipe_missing")
-  ) {
-    return "Chưa thể hoàn tất thanh toán vì tồn kho hoặc định mức món chưa sẵn sàng. Quản lý đã được thông báo.";
-  }
-
-  if (normalized.includes("amount_mismatch_recomputed")) {
-    return "Tổng tiền đơn đã thay đổi so với dữ liệu món. Vui lòng tải lại đơn và kiểm tra trước khi thanh toán.";
-  }
-
-  return null;
 }
 
 function describeProviderCreateFailure(method: PaymentMethod): string {
@@ -546,9 +512,6 @@ export const fetchPaymentMethodsForPos = withActionPositional(
  *     provider metadata after rechecking the POS actor and branch permission.
  *   - `createPaymentRpcMappings` ordering matters:
  *     `amount_mismatch_recomputed` must shadow `amount_mismatch`.
- *
- * Local `mapPaymentRpcError` (defined above) remains in the file for
- * the VietQR family, which still calls it.
  */
 export const createPayment = withActionPositional(
   {

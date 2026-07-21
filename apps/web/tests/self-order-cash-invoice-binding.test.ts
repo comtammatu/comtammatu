@@ -29,14 +29,6 @@ function functionBlock(source: string, name: string): string {
   return block;
 }
 
-function asyncFunctionBlock(source: string, name: string): string {
-  const block = new RegExp(`async function ${name}\\([\\s\\S]*?\\n\\}`).exec(
-    source,
-  )?.[0];
-  assert.ok(block, `expected async function ${name}`);
-  return block;
-}
-
 const bindingRpc = functionBlock(
   migration,
   "confirm_cash_payment_with_invoice_binding",
