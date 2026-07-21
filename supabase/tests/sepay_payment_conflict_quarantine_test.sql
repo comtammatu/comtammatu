@@ -165,6 +165,7 @@ BEGIN
     amount,
     status,
     provider_ref,
+    provider_data,
     created_by
   ) VALUES (
     v_tenant_id,
@@ -174,8 +175,23 @@ BEGIN
     v_amount,
     'pending',
     v_pending_code,
+    jsonb_build_object(
+      'invoiceSnapshot',
+      jsonb_build_object('buyerNotGetInvoice', true)
+    ),
     v_owner_id
   ) RETURNING id INTO v_pending_payment_id;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.tax_invoice_issue_jobs j
+    WHERE j.tenant_id = v_tenant_id
+      AND j.order_id = v_pending_order_id
+      AND j.payment_id = v_pending_payment_id
+      AND j.status = 'pending_payment'
+  ) THEN
+    RAISE EXCEPTION 'Pending VietQR did not create its HĐĐT job';
+  END IF;
 
   INSERT INTO public.webhook_events (
     tenant_id,
@@ -219,12 +235,31 @@ BEGIN
       AND p.status = 'completed'
       AND p.method = 'vietqr'
       AND o.payment_status = 'paid'
+      AND o.status = 'completed'
       AND o.payment_method = 'vietqr'
       AND e.id = v_pending_event_id
       AND e.processing_status = 'processed'
       AND e.error_code IS NULL
   ) THEN
     RAISE EXCEPTION 'Pending VietQR settlement state is incomplete';
+  END IF;
+
+  IF (
+    SELECT count(*)
+    FROM public.tax_invoice_issue_jobs j
+    WHERE j.tenant_id = v_tenant_id
+      AND j.order_id = v_pending_order_id
+      AND j.payment_id = v_pending_payment_id
+      AND j.status = 'queued'
+      AND j.attempt_count = 0
+      AND j.tax_invoice_id IS NULL
+  ) <> 1 OR EXISTS (
+    SELECT 1
+    FROM public.tax_invoices ti
+    WHERE ti.tenant_id = v_tenant_id
+      AND ti.order_id = v_pending_order_id
+  ) THEN
+    RAISE EXCEPTION 'Settled VietQR did not queue exactly one untouched HĐĐT job';
   END IF;
 
   v_result := public.reconcile_sepay_order_evidence(
@@ -234,6 +269,24 @@ BEGIN
   IF v_result ->> 'status' <> 'matched'
      OR COALESCE((v_result ->> 'idempotent')::boolean, false) IS NOT true THEN
     RAISE EXCEPTION 'Same-event replay was not idempotent: %', v_result;
+  END IF;
+
+  IF (
+    SELECT count(*)
+    FROM public.tax_invoice_issue_jobs j
+    WHERE j.tenant_id = v_tenant_id
+      AND j.order_id = v_pending_order_id
+      AND j.payment_id = v_pending_payment_id
+      AND j.status = 'queued'
+      AND j.attempt_count = 0
+      AND j.tax_invoice_id IS NULL
+  ) <> 1 OR EXISTS (
+    SELECT 1
+    FROM public.tax_invoices ti
+    WHERE ti.tenant_id = v_tenant_id
+      AND ti.order_id = v_pending_order_id
+  ) THEN
+    RAISE EXCEPTION 'Same-event replay changed the queued HĐĐT job';
   END IF;
 
   INSERT INTO public.orders (

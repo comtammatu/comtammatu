@@ -8579,6 +8579,97 @@ export type Database = {
           },
         ]
       }
+      tax_invoice_issue_jobs: {
+        Row: {
+          attempt_count: number
+          branch_id: number
+          created_at: string
+          id: number
+          invoice_payload: Json
+          last_error: string | null
+          locked_until: string | null
+          order_id: number
+          payment_id: number | null
+          status: string
+          tax_invoice_id: number | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          branch_id: number
+          created_at?: string
+          id?: never
+          invoice_payload: Json
+          last_error?: string | null
+          locked_until?: string | null
+          order_id: number
+          payment_id?: number | null
+          status?: string
+          tax_invoice_id?: number | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          branch_id?: number
+          created_at?: string
+          id?: never
+          invoice_payload?: Json
+          last_error?: string | null
+          locked_until?: string | null
+          order_id?: number
+          payment_id?: number | null
+          status?: string
+          tax_invoice_id?: number | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_invoice_issue_jobs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_issue_jobs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_issue_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_issue_jobs_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_issue_jobs_tax_invoice_id_fkey"
+            columns: ["tax_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_issue_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_invoice_orders: {
         Row: {
           branch_id: number
@@ -9559,6 +9650,19 @@ export type Database = {
         Args: { p_agent_id: string; p_job_id: number }
         Returns: boolean
       }
+      claim_tax_invoice_issue_jobs: {
+        Args: { p_lease_seconds?: number; p_limit?: number }
+        Returns: {
+          attempt_count: number
+          branch_id: number
+          id: number
+          invoice_payload: Json
+          order_id: number
+          payment_id: number
+          tax_invoice_id: number
+          tenant_id: number
+        }[]
+      }
       cleanup_abandoned_payments: {
         Args: { p_threshold?: string }
         Returns: number
@@ -9662,10 +9766,19 @@ export type Database = {
         Args: { p_cash_received: number; p_order_id: number }
         Returns: Json
       }
-      confirm_cash_payment_with_invoice_binding: {
-        Args: { p_cash_received: number; p_order_id: number }
-        Returns: Json
-      }
+      confirm_cash_payment_with_invoice_binding:
+        | {
+            Args: { p_cash_received: number; p_order_id: number }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_cash_received: number
+              p_invoice_payload: Json
+              p_order_id: number
+            }
+            Returns: Json
+          }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
       confirm_payment_and_post: {
         Args: {
@@ -9699,16 +9812,6 @@ export type Database = {
       }
       confirm_stock_issue: { Args: { p_issue_id: number }; Returns: Json }
       confirm_supplier_return: { Args: { p_return_id: number }; Returns: Json }
-      confirm_vietqr_payment: {
-        Args: {
-          p_amount: number
-          p_branch_id: number
-          p_created_by: string
-          p_order_id: number
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
       consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
       consume_stock_for_order_service: {
         Args: { p_actor_id?: string; p_order_id: number }
@@ -10041,6 +10144,7 @@ export type Database = {
         Args: { p_branch_id: number; p_minutes: number; p_note: string }
         Returns: string
       }
+      fetch_tax_invoice_issue_attention: { Args: never; Returns: Json }
       finalize_paid_order: {
         Args: { p_actor_id?: string; p_order_id: number }
         Returns: undefined
@@ -10069,6 +10173,10 @@ export type Database = {
           payment_status: string
           tenant_id: number
         }[]
+      }
+      finish_tax_invoice_issue_job_as_system: {
+        Args: { p_job_id: number; p_last_error?: string; p_status: string }
+        Returns: Json
       }
       force_close_stale_attendance: {
         Args: {
@@ -10714,6 +10822,10 @@ export type Database = {
         Args: { p_actor_id?: string; p_order_id: number }
         Returns: Json
       }
+      prepare_tax_invoice_provider_submission: {
+        Args: { p_provider_ref: string; p_tax_invoice_id: number }
+        Returns: Json
+      }
       print_template_block_visible: {
         Args: { p_block: Json; p_payload: Json }
         Returns: boolean
@@ -10822,6 +10934,10 @@ export type Database = {
         }
         Returns: string
       }
+      queue_tax_invoice_issue_job_for_completed_order: {
+        Args: { p_invoice_payload: Json; p_order_id: number }
+        Returns: Json
+      }
       recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       recompute_supplier_invoice_matching: {
         Args: { p_invoice_id: number }
@@ -10837,6 +10953,18 @@ export type Database = {
       }
       reconcile_sepay_order_evidence: {
         Args: { p_event_id: number; p_payment_code: string }
+        Returns: Json
+      }
+      reconcile_tax_invoice_provider_issued: {
+        Args: {
+          p_cqt_code?: string
+          p_invoice_number: string
+          p_issued_at?: string
+          p_provider_data?: Json
+          p_provider_ref: string
+          p_tax_invoice_id: number
+          p_trigger_source?: string
+        }
         Returns: Json
       }
       record_bank_transaction_cash_deposit: {
@@ -10961,6 +11089,10 @@ export type Database = {
       request_inventory_count_recount: {
         Args: { p_note?: string; p_slip_id: number }
         Returns: undefined
+      }
+      requeue_tax_invoice_issue_job: {
+        Args: { p_job_id: number }
+        Returns: Json
       }
       reserve_branch_menu_daily_holds: {
         Args: {
