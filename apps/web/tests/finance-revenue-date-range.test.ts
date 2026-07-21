@@ -251,7 +251,7 @@ test("Finance keeps gross-profit coverage as supporting logic, not a landing KPI
   );
   assert.match(cockpit, /missingCostCoverageHint/);
   assert.doesNotMatch(page, /basic\.kpis\.grossProfit/);
-  assert.match(page, /basic\.kpis\.netRevenue/);
+  assert.match(page, /basic\.kpis\.moneyCollected/);
   assert.match(financeMessages, /netRevenue: "Bán hàng sau giảm giá"/);
 });
 

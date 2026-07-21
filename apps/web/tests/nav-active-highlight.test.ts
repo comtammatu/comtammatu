@@ -95,8 +95,8 @@ test("mobile Owner surface bottom nav reuses the shell nav model", () => {
   );
   assert.match(
     appShell,
-    /bottomNav && pathname !== "\/"/,
-    "the Owner surface launcher owns its module grid and must not duplicate Settings deep-nav in the mobile bottom bar",
+    /const showBottomNav = bottomNav/,
+    "the Owner shell must honor the shared bottom-nav switch without route-local navigation logic",
   );
   assert.doesNotMatch(
     bottomNav,

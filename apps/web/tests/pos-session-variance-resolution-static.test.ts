@@ -30,7 +30,7 @@ test("POS session variance resolution keeps the close-time cash difference immut
   assert.doesNotMatch(action, /\.update\(\{[\s\S]*cash_difference/m);
 
   assert.match(client, /resolvePosSessionVariance/);
-  assert.match(client, /varianceResolvedShort/);
+  assert.match(client, /varianceResolvedStrong/);
   assert.match(client, /varianceResolutionLabel/);
   assert.match(client, /staff_repaid/);
   assert.match(client, /accepted_adjustment/);

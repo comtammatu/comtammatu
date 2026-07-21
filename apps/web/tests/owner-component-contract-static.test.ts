@@ -180,12 +180,17 @@ test("Input variants own height and InputGroup owns child chrome", () => {
   );
 });
 
-test("Batch 1 Owner screens use DataTable instead of raw table/card layout", () => {
-  for (const file of [BRANCH_TABLE, PRINT_JOBS, STAFF_AUDIT_TABLE]) {
+test("Owner monitors use DataTable while the branch launcher keeps its action grid", () => {
+  for (const file of [PRINT_JOBS, STAFF_AUDIT_TABLE]) {
     const source = read(file);
     assert.match(source, /@\/components\/data-table\/data-table/);
     assert.doesNotMatch(source, /@comtammatu\/ui\/components\/table/);
   }
+
+  const branchLauncher = read(BRANCH_TABLE);
+  assert.match(branchLauncher, /role="list"/);
+  assert.match(branchLauncher, /filtered\.map\(\(branch\) =>/);
+  assert.doesNotMatch(branchLauncher, /@comtammatu\/ui\/components\/table/);
 
   assert.doesNotMatch(read(STAFF_AUDIT), /@comtammatu\/ui\/components\/card/);
   assert.doesNotMatch(read(STAFF_AUDIT), /@comtammatu\/ui\/components\/table/);

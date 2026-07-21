@@ -85,7 +85,7 @@ test("Payroll live preview validates the selected standard days", () => {
 
 test("Payroll live preview: attendance, leave and adjustments feed the atomic snapshot", () => {
   for (const expected of [
-    '"employee_id, date, check_in, check_out, shifts ( start_time, end_time )"',
+    '"id, employee_id, date, check_in, check_out, shifts ( name, start_time, end_time )"',
     "buildCompletedWorkdays",
     "fetchTenantHrLeavePolicy",
     "calculateAnnualLeaveUsedThroughMonth",
