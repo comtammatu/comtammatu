@@ -702,6 +702,7 @@ BEGIN
   ) RETURNING id INTO v_invalid_event_id;
 
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+  PERFORM set_config('request.jwt.claim.sub', '', true);
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
   v_result := public.reconcile_sepay_order_evidence(
     v_invalid_event_id,
