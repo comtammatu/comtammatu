@@ -38,6 +38,8 @@ DECLARE
   v_target_job_id bigint;
   v_other_job_id bigint;
   v_claimed_job_id bigint;
+  v_invoice_id bigint;
+  v_invoice_provider_ref text;
   v_result jsonb;
   v_before_order jsonb;
   v_before_payment jsonb;
@@ -761,6 +763,72 @@ BEGIN
     FROM public.claim_tax_invoice_issue_job(v_target_job_id, 300)
   ) THEN
     RAISE EXCEPTION 'Scoped HĐĐT claim reclaimed an active lease';
+  END IF;
+
+  v_invoice_provider_ref := 'HDDT-TEST-' || v_code_suffix;
+  INSERT INTO public.tax_invoices (
+    tenant_id,
+    branch_id,
+    order_id,
+    buyer_name,
+    subtotal,
+    vat_rate,
+    vat_amount,
+    total_amount,
+    provider,
+    provider_ref,
+    status,
+    signing_started_at,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    v_pending_order_id,
+    'Người mua không lấy hóa đơn',
+    v_amount,
+    0,
+    0,
+    v_amount,
+    'viettel',
+    v_invoice_provider_ref,
+    'signing',
+    now(),
+    v_owner_id
+  ) RETURNING id INTO v_invoice_id;
+
+  v_result := public.reconcile_tax_invoice_provider_issued(
+    v_invoice_id,
+    v_invoice_provider_ref,
+    'C26MAATEST',
+    'M2-TEST',
+    jsonb_build_object('transactionUuid', v_invoice_provider_ref),
+    now(),
+    'cron'
+  );
+
+  IF v_result ->> 'status' <> 'issued'
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.tax_invoice_issue_jobs
+       WHERE id = v_target_job_id
+         AND status = 'completed'
+         AND tax_invoice_id = v_invoice_id
+         AND locked_until IS NULL
+         AND last_error IS NULL
+     ) THEN
+    RAISE EXCEPTION 'Provider reconciliation did not bind the completed job: %', v_result;
+  END IF;
+
+  IF has_function_privilege(
+    'authenticated',
+    'public.confirm_cash_payment_with_invoice_binding(bigint,numeric)',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'authenticated',
+    'private.upsert_tax_invoice_issue_job(bigint,bigint,bigint,bigint,jsonb,text)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'Internal HĐĐT payment helper remains directly executable';
   END IF;
 END;
 $$;

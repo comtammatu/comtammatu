@@ -119,7 +119,6 @@ async function processJob(
     : await latestInvoiceStatus(service, job.tenant_id, job.order_id);
 
   if (finalStatus === "issued") {
-    await finishJob(rpc, job.id, "completed");
     return "completed";
   }
   if (finalStatus === "signing" || finalStatus === "submitted") {

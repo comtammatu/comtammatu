@@ -43,17 +43,17 @@ test("SePay only completes payment; the durable job owns HĐĐT recovery", () =>
   assert.match(migration, /UNIQUE \(tenant_id, order_id\)/);
   assert.match(migration, /pending_payment', 'queued', 'processing', 'completed', 'blocked', 'reconcile_required/);
   assert.match(migration, /FOR UPDATE SKIP LOCKED/);
-  assert.doesNotMatch(
-    vercel,
-    /tax-invoice-issue/,
-    "the route deploys before automatic cron is enabled",
-  );
+  assert.match(vercel, /"path": "\/api\/cron\/tax-invoice-issue"/);
+  assert.match(vercel, /"schedule": "\*\/5 \* \* \* \*"/);
 });
 
 test("provider-issued result is reconciled atomically and never written directly", () => {
   const issuer = read("apps/web/lib/hddt-per-order.ts");
   const migration = read(
     "supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
+  );
+  const bindingFix = read(
+    "supabase/migrations/20260721211000_bind_tax_invoice_job_on_reconcile.sql",
   );
 
   assert.match(issuer, /reconcile_tax_invoice_provider_issued/);
@@ -62,6 +62,26 @@ test("provider-issued result is reconciled atomically and never written directly
   assert.match(migration, /tax_invoice_provider_ref_mismatch/);
   assert.match(migration, /INSERT INTO public\.tax_invoice_events/);
   assert.match(migration, /INSERT INTO public\.reconcile_run_log/);
+  assert.match(
+    bindingFix,
+    /tax_invoice_id = COALESCE\(tax_invoice_id, v_invoice\.id\)/,
+  );
+  assert.match(bindingFix, /job\.status = 'completed'[\s\S]*job\.tax_invoice_id IS NULL/);
+});
+
+test("internal payment helper and two-argument cash overload are not callable directly", () => {
+  const migration = read(
+    "supabase/migrations/20260721211000_bind_tax_invoice_job_on_reconcile.sql",
+  );
+
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION private\.upsert_tax_invoice_issue_job\(bigint, bigint, bigint, bigint, jsonb, text\)[\s\S]*FROM PUBLIC, anon, authenticated;/,
+  );
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.confirm_cash_payment_with_invoice_binding\(bigint, numeric\)[\s\S]*FROM PUBLIC, anon, authenticated;/,
+  );
 });
 
 test("only the service worker can claim or finalize HĐĐT jobs", () => {
@@ -111,5 +131,9 @@ test("one-shot HĐĐT worker claims only the requested job", () => {
   assert.match(
     migration,
     /GRANT EXECUTE ON FUNCTION public\.claim_tax_invoice_issue_job\(bigint, integer\)[\s\S]*TO service_role;/,
+  );
+  assert.match(
+    worker,
+    /if \(finalStatus === "issued"\) \{\s*return "completed";\s*\}/,
   );
 });
