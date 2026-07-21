@@ -189,6 +189,21 @@ test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
     /HĐĐT cần Finance đối soát/,
     "finance list must expose attention jobs",
   );
+  const invoiceActions = sourceBetween(
+    listSrc,
+    "function renderActions",
+    "const columns",
+  );
+  assert.match(
+    invoiceActions,
+    /\["signing", "submitted"\]\.includes\(inv\.status\)[\s\S]*inv\.provider_ref/,
+    "Owner must reconcile provider-bound signing/submitted invoices without waiting for a job",
+  );
+  assert.doesNotMatch(
+    invoiceActions,
+    /createTaxInvoice|issueTaxInvoiceForPaidOrder/,
+    "reconciliation UI must never issue a second invoice",
+  );
 });
 
 test("Finance requeues only the exact blocked HĐĐT job", () => {

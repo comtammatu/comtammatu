@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { z } from "zod";
 import {
   ArrowRightLeft as IconSwap,
+  BadgeCheck as IconReconcile,
   FileEdit as IconFileEdit,
   FileX as IconFileX,
   Receipt as IconReceipt,
@@ -87,6 +88,12 @@ const reconcileInvoiceSchema = z.object({
   cqtCode: z.string().trim().max(200),
 });
 type ReconcileInvoiceValues = z.infer<typeof reconcileInvoiceSchema>;
+type ReconcileTarget = {
+  key: string;
+  taxInvoiceId: number;
+  providerRef: string;
+  attentionJobId?: number;
+};
 
 const replaceInvoiceSchema = z
   .object({
@@ -169,7 +176,7 @@ export function InvoiceList({
   const [isPending, startTransition] = useTransition();
   const [issueAttention, setIssueAttention] = useState(initialIssueAttention);
   const [reconcileTarget, setReconcileTarget] =
-    useState<TaxInvoiceIssueAttention | null>(null);
+    useState<ReconcileTarget | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<InvoiceRow | null>(null);
   const replaceDefaultValues = useMemo<ReplaceInvoiceFormValues>(
     () => ({
@@ -306,21 +313,53 @@ export function InvoiceList({
     });
   }
 
+  function openReconcileForInvoice(invoice: InvoiceRow) {
+    if (!invoice.provider_ref) return;
+    setReconcileTarget({
+      key: `invoice-${invoice.id}`,
+      taxInvoiceId: invoice.id,
+      providerRef: invoice.provider_ref,
+    });
+  }
+
+  function openReconcileForJob(job: TaxInvoiceIssueAttention) {
+    if (!job.tax_invoice_id || !job.provider_ref) return;
+    setReconcileTarget({
+      key: `job-${job.id}`,
+      taxInvoiceId: job.tax_invoice_id,
+      providerRef: job.provider_ref,
+      attentionJobId: job.id,
+    });
+  }
+
   async function handleReconcile(
     values: ReconcileInvoiceValues,
   ): Promise<ActionResult> {
-    if (!reconcileTarget?.tax_invoice_id || !reconcileTarget.provider_ref) {
+    if (!reconcileTarget) {
       return { success: false, error: "Thiếu định danh provider để đối soát." };
     }
     const result = await reconcileTaxInvoiceProviderIssued({
-      taxInvoiceId: reconcileTarget.tax_invoice_id,
-      providerRef: reconcileTarget.provider_ref,
+      taxInvoiceId: reconcileTarget.taxInvoiceId,
+      providerRef: reconcileTarget.providerRef,
       invoiceNumber: values.invoiceNumber,
       cqtCode: values.cqtCode || undefined,
     });
     if (result.success) {
-      setIssueAttention((current) =>
-        current.filter((item) => item.id !== reconcileTarget.id),
+      if (reconcileTarget.attentionJobId) {
+        setIssueAttention((current) =>
+          current.filter((item) => item.id !== reconcileTarget.attentionJobId),
+        );
+      }
+      setInvoices((current) =>
+        current.map((invoice) =>
+          invoice.id === reconcileTarget.taxInvoiceId
+            ? {
+                ...invoice,
+                status: "issued",
+                invoice_number: values.invoiceNumber,
+              }
+            : invoice,
+        ),
       );
     }
     return result;
@@ -415,6 +454,23 @@ export function InvoiceList({
             </Button>
           </>
         ) : null}
+        {canManageInvoices &&
+        ["signing", "submitted"].includes(inv.status) &&
+        inv.provider_ref ? (
+          <Button
+            variant="ghost"
+            size={size}
+            onClick={() => openReconcileForInvoice(inv)}
+            title="Đối soát đã phát hành"
+          >
+            <IconReconcile className="size-4" />
+            {dense ? (
+              <span className="sr-only">Đối soát đã phát hành</span>
+            ) : (
+              "Đối soát đã phát hành"
+            )}
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -503,7 +559,7 @@ export function InvoiceList({
                 {canManageInvoices ? (
                   <ItemFooter className="gap-2">
                     {job.status === "reconcile_required" && job.tax_invoice_id && job.provider_ref ? (
-                      <Button type="button" variant="outline" size="sm" onClick={() => setReconcileTarget(job)} disabled={isPending}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => openReconcileForJob(job)} disabled={isPending}>
                         Đối soát đã phát hành
                       </Button>
                     ) : null}
@@ -792,10 +848,10 @@ export function InvoiceList({
           if (!open) setReconcileTarget(null);
         }}
         title="Đối soát HĐĐT đã phát hành"
-        description={`Chỉ ghi khi đã xác minh trên Viettel: provider_ref ${reconcileTarget?.provider_ref ?? "—"}. Thao tác này không phát hành lại hóa đơn.`}
+        description={`Chỉ ghi khi đã xác minh trên Viettel: provider_ref ${reconcileTarget?.providerRef ?? "—"}. Thao tác này không phát hành lại hóa đơn.`}
         schema={reconcileInvoiceSchema}
         defaultValues={{ invoiceNumber: "", cqtCode: "" }}
-        entityKey={reconcileTarget?.id ?? "tax-invoice-reconcile"}
+        entityKey={reconcileTarget?.key ?? "tax-invoice-reconcile"}
         onSubmit={handleReconcile}
         onSuccess={() => toast.success("Đã ghi nhận HĐĐT từ Viettel.")}
         submitLabel="Xác nhận đối soát"

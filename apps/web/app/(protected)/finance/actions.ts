@@ -517,7 +517,7 @@ export async function cancelTaxInvoice(
 // and since both tables' RLS policies reference a bare `branch_id`, the generated
 // query fails with 42702 "column reference branch_id is ambiguous".
 const TAX_INVOICE_LIST_SELECT = `
-  id, order_id, invoice_number, status, buyer_name, buyer_tax_code, buyer_email,
+  id, order_id, provider_ref, invoice_number, status, buyer_name, buyer_tax_code, buyer_email,
   subtotal, vat_rate, vat_amount, total_amount,
   issued_at, cancelled_at, created_at
 ` as const;
