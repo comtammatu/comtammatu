@@ -731,6 +731,15 @@ BEGIN
   FROM public.tax_invoice_issue_jobs
   WHERE order_id = v_pending_order_id;
 
+  PERFORM private.upsert_tax_invoice_issue_job(
+    v_tenant_id,
+    v_branch_id,
+    v_fresh_order_id,
+    v_fresh_payment_id,
+    jsonb_build_object('buyerNotGetInvoice', true),
+    'queued'
+  );
+
   SELECT id INTO v_other_job_id
   FROM public.tax_invoice_issue_jobs
   WHERE order_id = v_fresh_order_id;

@@ -130,7 +130,7 @@ test("Schedule is the single day-axis: leave ranges render and link to leave req
     "apps/web/lib/staff-runtime/schedule/schedule-client.tsx",
   );
   for (const expected of [
-    "expandLeavesByDate",
+    "expandLeaveRangesByDate",
     "leaveByDate",
     "href={leaveHref}",
     "copy.requestLeaveCta",

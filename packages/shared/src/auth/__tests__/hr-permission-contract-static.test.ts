@@ -190,7 +190,7 @@ test("HR routes keep employee, attendance and setup surfaces separate", () => {
   );
   assert.match(
     attendancePage,
-    /<AttendanceTable branches=\{branches\} \/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
+    /<AttendanceTable[\s\S]*?branches=\{branches\}[\s\S]*?\/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
   );
   assert.match(
     setupPage,
