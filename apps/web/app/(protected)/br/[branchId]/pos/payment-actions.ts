@@ -2,7 +2,6 @@
 
 import { z } from "zod";
 import { unstable_cache } from "next/cache";
-import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -20,15 +19,7 @@ import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
-import {
-  createTaxInvoice,
-  resolveExistingInvoiceForOrder,
-} from "@/(protected)/finance/actions";
-import {
-  existingIssuedInvoiceOutcome,
-  mapTaxInvoiceOutcome,
-  type InvoiceOutcome,
-} from "./_lib/invoice-outcome";
+import { type InvoiceOutcome } from "./_lib/invoice-outcome";
 import { mapRpcError } from "@/_lib/rpc-error-map";
 import {
   isPosBranchInScope,
@@ -70,17 +61,9 @@ type OrderPaymentCodeResult = {
   payment_code?: string;
 };
 
-const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const POS_CONSUMPTION_SETUP_ERROR =
   "Không thể hoàn tất thanh toán vì cấu hình chi nhánh chưa sẵn sàng. Quản lý đã được thông báo.";
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
-
-const branchIdSchema = z.coerce
-  .number()
-  .int()
-  .positive({ error: "Branch ID không hợp lệ" });
-
-const orderIdSchema = z.coerce.number().int().positive();
 
 export interface CreatePaymentSuccessData {
   payment_id: number;
@@ -255,12 +238,16 @@ function pickRemoteQrData(
   return undefined;
 }
 
-function buildStoredProviderData(providerResult: PaymentResult): Json {
+function buildStoredProviderData(
+  providerResult: PaymentResult,
+  invoiceSnapshot: InvoiceBuyerPayload,
+): Json {
   const raw = {
     ...(providerResult.providerData ?? {}),
     providerRef: providerResult.providerRef,
     qrData: providerResult.qrData,
     redirectUrl: providerResult.redirectUrl,
+    invoiceSnapshot,
   };
   return JSON.parse(JSON.stringify(raw)) as Json;
 }
@@ -570,16 +557,22 @@ export const createPayment = withActionPositional(
       orderId: number,
       method: RemotePaymentMethod,
       amount: number,
-    ) => ({ branchId, orderId, method, amount }),
+      invoice: InvoicePayload,
+    ) => ({ branchId, orderId, method, amount, invoice }),
     schema: createPaymentSchema,
     customAuth: posUseAuth,
   },
   async (
-    { branchId, orderId, method, amount },
+    { branchId, orderId, method, amount, invoice },
     { supabase, claims },
   ): Promise<ActionResult<CreatePaymentSuccessData>> => {
     if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
+
+    const parsedInvoice = parseInvoicePayload(invoice as InvoicePayload);
+    if (!parsedInvoice.success || !parsedInvoice.data) {
+      return parsedInvoice as ActionResult<CreatePaymentSuccessData>;
     }
 
     // Verify order exists and belongs to branch.
@@ -746,7 +739,10 @@ export const createPayment = withActionPositional(
         p_amount: amount,
         p_created_by: user.id,
         p_provider_ref: providerRef,
-        p_provider_data: buildStoredProviderData(providerResult),
+        p_provider_data: buildStoredProviderData(
+          providerResult,
+          parsedInvoice.data,
+        ),
       },
     );
 
@@ -989,9 +985,8 @@ export interface CashPaymentResult {
 /**
  * Auth requires POS_CONFIRM_PAYMENT (cashier / branch_manager+); staff without POS_CONFIRM_PAYMENT
  * with only POS_USE + POS_PRINT can print a provisional bill but MUST NOT
- * touch the cash drawer. VietQR keeps POS_USE at createPayment /
- * confirmVietQrPayment (e-wallet is the webhook source of truth, no cash
- * drawer).
+ * touch the cash drawer. VietQR keeps POS_USE at createPayment; the SePay
+ * webhook is the only payment-completion source and never touches cash.
  *
  * Non-obvious constraints:
  *   - `confirmCashPaymentRpcMappings` order matters so cash-specific copy
@@ -1006,16 +1001,17 @@ export interface CashPaymentResult {
  */
 export const confirmCashPayment = withActionPositional(
   {
-    argsToInput: (branchId: number, orderId: number, cashReceived: number) => ({
-      branchId,
-      orderId,
-      cashReceived,
-    }),
+    argsToInput: (
+      branchId: number,
+      orderId: number,
+      cashReceived: number,
+      invoice: InvoicePayload,
+    ) => ({ branchId, orderId, cashReceived, invoice }),
     schema: cashConfirmSchema,
     customAuth: posConfirmPaymentAuth,
   },
   async (
-    { branchId, orderId, cashReceived },
+    { branchId, orderId, cashReceived, invoice },
     { supabase, claims },
   ): Promise<ActionResult<CashPaymentResult>> => {
     if (!isPosBranchInScope(claims, branchId)) {
@@ -1026,12 +1022,18 @@ export const confirmCashPayment = withActionPositional(
       };
     }
 
+    const parsedInvoice = parseInvoicePayload(invoice as InvoicePayload);
+    if (!parsedInvoice.success || !parsedInvoice.data) {
+      return parsedInvoice as ActionResult<CashPaymentResult>;
+    }
+
     const rpc = supabase as unknown as RpcCaller;
     const { data, error } = await rpc.rpc<CashPaymentResult>(
       "confirm_cash_payment_with_invoice_binding",
       {
         p_order_id: orderId,
         p_cash_received: cashReceived,
+        p_invoice_payload: parsedInvoice.data,
       },
     );
 
@@ -1117,14 +1119,6 @@ const invoiceBuyerPayloadSchema = z
 type InvoiceBuyerPayload = z.infer<typeof invoiceBuyerPayloadSchema>;
 type InvoicePayload = InvoiceBuyerPayload | null | undefined;
 
-type StoredCashCallInvoiceRow = {
-  id: number;
-  invoice_payload: Json;
-};
-
-const SELF_ORDER_INVOICE_BINDING_ERROR =
-  "Không thể xác minh thông tin HĐĐT của yêu cầu gọi thanh toán. Vui lòng tải lại và thử lại.";
-
 function normalizeInvoicePayload(invoice: InvoicePayload): InvoiceBuyerPayload {
   return (
     invoice ?? {
@@ -1149,89 +1143,7 @@ function parseInvoicePayload(
   return { success: true, data: parsed.data };
 }
 
-function parseStoredCashCallInvoicePayload(
-  row: StoredCashCallInvoiceRow,
-): ActionResult<InvoiceBuyerPayload> {
-  const parsed = invoiceBuyerPayloadSchema.safeParse(row.invoice_payload);
-  if (!parsed.success) {
-    console.error("[confirmCashPaymentWithInvoice] invalid stored payload", {
-      requestId: row.id,
-      issues: parsed.error.issues.map((issue) => ({
-        code: issue.code,
-        path: issue.path.join("."),
-      })),
-    });
-    return { success: false, error: SELF_ORDER_INVOICE_BINDING_ERROR };
-  }
-  return { success: true, data: parsed.data };
-}
-
-async function resolveBoundCashCallInvoicePayload(
-  branchId: number,
-  orderId: number,
-  paymentId: number,
-  requestId: number,
-): Promise<ActionResult<InvoiceBuyerPayload>> {
-  const parsedBranch = branchIdSchema.safeParse(branchId);
-  const parsedOrder = orderIdSchema.safeParse(orderId);
-  const parsedPayment = orderIdSchema.safeParse(paymentId);
-  const parsedRequest = orderIdSchema.safeParse(requestId);
-  if (
-    !parsedBranch.success ||
-    !parsedOrder.success ||
-    !parsedPayment.success ||
-    !parsedRequest.success
-  ) {
-    return { success: false, error: "Dữ liệu thanh toán không hợp lệ" };
-  }
-
-  const ctx = await posConfirmPaymentAuth({ branchId: parsedBranch.data });
-  if (!ctx) return { success: false, error: "Không có quyền thanh toán" };
-  if (!isPosBranchInScope(ctx.claims, parsedBranch.data)) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const { data: row, error } = await ctx.supabase
-    .from("self_order_payment_requests")
-    .select("id, invoice_payload")
-    .eq("id", parsedRequest.data)
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("branch_id", parsedBranch.data)
-    .eq("order_id", parsedOrder.data)
-    .eq("payment_id", parsedPayment.data)
-    .eq("method", "cash_call")
-    .eq("status", "completed")
-    .maybeSingle();
-  if (error) {
-    console.error(
-      "[confirmCashPaymentWithInvoice] bound request lookup failed",
-      error.code,
-    );
-    return { success: false, error: SELF_ORDER_INVOICE_BINDING_ERROR };
-  }
-  if (!row) {
-    console.error("[confirmCashPaymentWithInvoice] bound request missing", {
-      tenantId: ctx.claims.tenant_id,
-      branchId,
-      orderId,
-      paymentId,
-      requestId,
-    });
-    return { success: false, error: SELF_ORDER_INVOICE_BINDING_ERROR };
-  }
-  return parseStoredCashCallInvoicePayload(row);
-}
-
-/**
- * Orchestrator: confirm cash payment, then always attempt HĐĐT issuance.
- *
- * Failure isolation contract:
- *   - Payment is the commercial close. It commits independently.
- *   - HĐĐT failure does NOT roll back payment — the order stays paid and
- *     the invoice attempt becomes an orphan picked up by Finance.
- *   - On HĐĐT failure, we still return success: true with invoice.status='failed'
- *     so the cashier UI can confirm "Đã thu tiền" and show a soft toast.
- */
+/** Payment completion atomically stores the HĐĐT snapshot and queues the job. */
 export async function confirmCashPaymentWithInvoice(
   branchId: number,
   orderId: number,
@@ -1247,77 +1159,17 @@ export async function confirmCashPaymentWithInvoice(
     branchId,
     orderId,
     cashReceived,
+    posInvoicePayload.data,
   );
   if (!paymentResult.success || !paymentResult.data) {
     return paymentResult as ActionResult<CashPaymentWithInvoiceResult>;
   }
 
-  // Idempotent replay (flaky-Wi-Fi re-tap): payment already committed. Only
-  // short-circuit when the order already has a genuinely-issued invoice —
-  // a draft/orphan or missing row falls through to createTaxInvoice so the
-  // legally-required HĐĐT still gets issued/retried (NĐ 254/2026).
-  if (paymentResult.data.status === "already_completed") {
-    const replayInvoice = existingIssuedInvoiceOutcome(
-      await resolveExistingInvoiceForOrder(orderId),
-    );
-    if (replayInvoice) {
-      return {
-        success: true,
-        data: { ...paymentResult.data, invoice: replayInvoice },
-      };
-    }
-  }
-
-  let invoicePayload = posInvoicePayload;
-  const selfOrderRequestId = paymentResult.data.self_order_request_id;
-  if (typeof selfOrderRequestId === "number" && selfOrderRequestId > 0) {
-    invoicePayload = await resolveBoundCashCallInvoicePayload(
-      branchId,
-      orderId,
-      paymentResult.data.payment_id,
-      selfOrderRequestId,
-    );
-    if (!invoicePayload.success || !invoicePayload.data) {
-      return {
-        success: true,
-        data: {
-          ...paymentResult.data,
-          invoice: {
-            status: "failed",
-            error: invoicePayload.error ?? SELF_ORDER_INVOICE_BINDING_ERROR,
-          },
-        },
-      };
-    }
-  }
-
-  const invoiceResult = await createTaxInvoice({
-    orderId,
-    ...invoicePayload.data,
-  });
-
-  if (!invoiceResult.success) {
-    return {
-      success: true,
-      data: {
-        ...paymentResult.data,
-        invoice: {
-          status: "failed",
-          error: invoiceResult.error ?? "Không thể xuất hóa đơn",
-        },
-      },
-    };
-  }
-
-  const inv = invoiceResult.data as
-    | { id: number; invoice_number: string | null; status?: string | null }
-    | undefined;
-
   return {
     success: true,
     data: {
       ...paymentResult.data,
-      invoice: mapTaxInvoiceOutcome(inv),
+      invoice: { status: "queued" },
     },
   };
 }
@@ -1378,207 +1230,3 @@ export const fetchVietQrConfig = withActionPositional(
     };
   },
 );
-
-/* ─── confirmVietQrPayment ─── */
-
-export interface ConfirmVietQrPaymentResult {
-  payment_id: number;
-  idempotent: boolean;
-  print: { jobId?: number; failed: boolean; error?: string };
-}
-
-/**
- * Atomic cashier-confirm fallback for a pending VietQR bank transfer.
- * Gated by pos:confirm_payment (cashier / branch_manager+).
- */
-export async function confirmVietQrPayment(
-  branchId: number,
-  orderId: number,
-  amount: number,
-): Promise<ActionResult<ConfirmVietQrPaymentResult>> {
-  const parsedBranch = branchIdSchema.safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const parsedOrderId = orderIdSchema.safeParse(orderId);
-  if (!parsedOrderId.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
-  }
-
-  const parsedAmount = z.coerce.number().positive().safeParse(amount);
-  if (!parsedAmount.success) {
-    return { success: false, error: "Số tiền không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền thanh toán" };
-
-  const { supabase, claims } = ctx;
-
-  if (!isPosBranchInScope(claims, parsedBranch.data)) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
-
-  const { data, error: rpcError } = await supabase.rpc(
-    "confirm_vietqr_payment",
-    {
-      p_tenant_id: claims.tenant_id,
-      p_branch_id: parsedBranch.data,
-      p_order_id: parsedOrderId.data,
-      p_amount: parsedAmount.data,
-      p_created_by: user.id,
-    },
-  );
-
-  if (rpcError) {
-    const msg = rpcError.message ?? "";
-    if (msg.includes("order_not_found")) {
-      return { success: false, error: "Đơn hàng không tồn tại." };
-    }
-    if (msg.includes("amount_mismatch")) {
-      return {
-        success: false,
-        error:
-          "Số tiền không khớp với tổng đơn hàng. Khách đã quét QR cũ — vui lòng tạo đơn mới cho phần chênh lệch.",
-      };
-    }
-    if (
-      msg.includes("permission denied") ||
-      msg.includes("pos:confirm_payment")
-    ) {
-      return { success: false, error: "Không có quyền thanh toán" };
-    }
-    const mappedError = mapPaymentRpcError(msg);
-    if (mappedError) {
-      console.error("[confirmVietQrPayment] rpc failed:", msg);
-      return { success: false, error: mappedError };
-    }
-    console.error("[confirmVietQrPayment] [unmapped] rpc error:", msg);
-    return { success: false, error: "Không thể xác nhận thanh toán VietQR." };
-  }
-
-  const result = data as {
-    status?: string;
-    payment_id: number;
-    idempotent: boolean;
-    error_code?: string;
-    detail?: string;
-    print: { job_id?: number; failed: boolean; error?: string };
-  } | null;
-
-  if (!result) {
-    return { success: false, error: "Không thể xác nhận thanh toán." };
-  }
-
-  if (
-    result.status &&
-    !["completed", "already_completed"].includes(result.status)
-  ) {
-    const mappedError = mapPaymentRpcError(
-      `${result.status}:${result.error_code ?? ""}:${result.detail ?? ""}`,
-    );
-    console.error("[confirmVietQrPayment] completion blocked:", {
-      status: result.status,
-      error_code: result.error_code,
-      detail: result.detail,
-    });
-    return {
-      success: false,
-      error: mappedError ?? "Không thể xác nhận thanh toán VietQR.",
-    };
-  }
-
-  return {
-    success: true,
-    data: {
-      payment_id: result.payment_id,
-      idempotent: result.idempotent,
-      print: {
-        failed: result.print.failed,
-        ...(result.print.job_id != null ? { jobId: result.print.job_id } : {}),
-        ...(result.print.error ? { error: result.print.error } : {}),
-      },
-    },
-  };
-}
-
-/* ─── confirmVietQrPaymentWithInvoice ─── */
-
-export interface VietQrPaymentWithInvoiceResult extends ConfirmVietQrPaymentResult {
-  invoice: InvoiceOutcome;
-}
-
-/**
- * Orchestrator: confirm VietQR payment, then always attempt HĐĐT issuance.
- * Payment commits independently — HĐĐT failure does NOT roll back payment.
- */
-export async function confirmVietQrPaymentWithInvoice(
-  branchId: number,
-  orderId: number,
-  amount: number,
-  invoice: InvoicePayload,
-): Promise<ActionResult<VietQrPaymentWithInvoiceResult>> {
-  const invoicePayload = parseInvoicePayload(invoice);
-  if (!invoicePayload.success || !invoicePayload.data) {
-    return invoicePayload as ActionResult<VietQrPaymentWithInvoiceResult>;
-  }
-
-  const paymentResult = await confirmVietQrPayment(branchId, orderId, amount);
-  if (!paymentResult.success || !paymentResult.data) {
-    return paymentResult as ActionResult<VietQrPaymentWithInvoiceResult>;
-  }
-
-  // Idempotent replay: VietQR signals replay via `idempotent` (its result
-  // carries no `status` field). Only short-circuit on a genuinely-issued
-  // invoice; otherwise fall through to createTaxInvoice (NĐ 254/2026).
-  if (paymentResult.data.idempotent === true) {
-    const replayInvoice = existingIssuedInvoiceOutcome(
-      await resolveExistingInvoiceForOrder(orderId),
-    );
-    if (replayInvoice) {
-      return {
-        success: true,
-        data: { ...paymentResult.data, invoice: replayInvoice },
-      };
-    }
-  }
-
-  const invoiceResult = await createTaxInvoice({
-    orderId,
-    ...invoicePayload.data,
-  });
-
-  if (!invoiceResult.success) {
-    return {
-      success: true,
-      data: {
-        ...paymentResult.data,
-        invoice: {
-          status: "failed",
-          error: invoiceResult.error ?? "Không thể xuất hóa đơn",
-        },
-      },
-    };
-  }
-
-  const inv = invoiceResult.data as
-    | { id: number; invoice_number: string | null; status?: string | null }
-    | undefined;
-
-  return {
-    success: true,
-    data: {
-      ...paymentResult.data,
-      invoice: mapTaxInvoiceOutcome(inv),
-    },
-  };
-}

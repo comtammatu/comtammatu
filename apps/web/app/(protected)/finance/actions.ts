@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
@@ -8,7 +9,6 @@ import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { messages } from "@lib/messages";
 import {
   createInvoiceSchema,
-  issueTaxInvoiceForPaidOrder,
 } from "@lib/hddt-per-order";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -65,9 +65,8 @@ export async function resolveExistingInvoiceForOrder(orderId: number): Promise<
 }
 
 /**
- * Create a draft tax invoice for an order.
- * Production HĐĐT issuance uses Viettel S-invoice. When provider credentials
- * are missing, the invoice remains draft for Finance recovery.
+ * Queue one HĐĐT issue job for a completed order. The cron worker is the only
+ * runtime path allowed to call Viettel.
  */
 export async function createTaxInvoice(
   input: z.infer<typeof createInvoiceSchema>,
@@ -81,30 +80,42 @@ export async function createTaxInvoice(
   }
 
   const ctx = await getAuthContextWithPermission(
-    POS_INVOICE_ROLES,
-    PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims, user } = ctx;
-
-  const result = await issueTaxInvoiceForPaidOrder({
-    supabase,
-    tenantId: claims.tenant_id,
-    input: parsed.data,
-    actorId: user.id,
-    canAccessBranch: (branchId) => canAccessBranch(supabase, claims, branchId),
-    logPrefix: "finance/actions:createTaxInvoice",
+  const { supabase } = ctx;
+  const rpc = supabase as unknown as {
+    rpc: <T>(
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: T | null; error: { code?: string | null } | null }>;
+  };
+  const { data, error } = await rpc.rpc<{
+    job_id: number;
+    status: string;
+  }>("queue_tax_invoice_issue_job_for_completed_order", {
+    p_order_id: parsed.data.orderId,
+    p_invoice_payload: parsed.data,
   });
-  if (!result.success) return result;
+  if (error || !data) {
+    console.error("[finance/actions:createTaxInvoice] queue failed", error?.code);
+    return { success: false, error: "Không thể đưa HĐĐT vào hàng chờ xử lý." };
+  }
+
+  const result = {
+    success: true as const,
+    data: { id: data.job_id, invoice_number: null, status: data.status },
+  };
 
   await logAudit(supabase, {
     action: "create",
     entityType: "tax_invoice",
     entityId: result.data?.id ?? null,
     newData: {
-      invoice_number: result.data?.invoice_number,
-      status: result.data?.status,
+      job_id: result.data.id,
+      status: result.data.status,
     },
   });
 
@@ -115,16 +126,7 @@ export async function createTaxInvoice(
 
 const REISSUE_ALL_CAP = 20;
 const REISSUE_ALL_BUDGET_MS = 40_000;
-const SEPAY_MISSING_SCAN_CAP = 200;
 const financeActionErrors = messages.finance.actionErrors;
-
-const sepayMissingInvoiceInputSchema = z.object({
-  afterEventId: z.coerce.number().int().positive().nullable().optional(),
-});
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 /**
  * Bulk-reissue draft invoices (status='draft' with no invoice_number — i.e.
@@ -195,342 +197,124 @@ export async function reissueAllDraftInvoices(): Promise<ActionResult> {
   };
 }
 
-export async function issueMissingSepayInvoices(input: unknown = {}): Promise<
-  ActionResult<{
-    issued: number;
-    failed: number;
-    skipped: number;
-    hasMore: boolean;
-    nextAfterEventId: number | null;
-  }>
+const taxInvoiceReconcileSchema = z.object({
+  taxInvoiceId: z.coerce.number().int().positive(),
+  providerRef: z.string().trim().min(1).max(200),
+  invoiceNumber: z.string().trim().min(1).max(200),
+  cqtCode: z.string().trim().max(200).optional(),
+});
+
+const taxInvoiceIssueJobIdSchema = z.coerce.number().int().positive();
+
+export type TaxInvoiceIssueAttention = {
+  id: number;
+  order_id: number;
+  status: "blocked" | "reconcile_required";
+  provider_ref: string | null;
+  last_error: string | null;
+  updated_at: string;
+  payment_method: "cash" | "vietqr" | null;
+  tax_invoice_id: number | null;
+};
+
+export async function fetchTaxInvoiceIssueAttention(): Promise<
+  ActionResult<TaxInvoiceIssueAttention[]>
 > {
-  const parsedInput = sepayMissingInvoiceInputSchema.safeParse(input);
-  if (!parsedInput.success) {
-    return { success: false, errorCode: "invalid_input" };
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const rpc = ctx.supabase as unknown as {
+    rpc: <T>(
+      name: string,
+      args?: Record<string, unknown>,
+    ) => Promise<{ data: T | null; error: { code?: string | null } | null }>;
+  };
+  const { data, error } = await rpc.rpc<TaxInvoiceIssueAttention[]>(
+    "fetch_tax_invoice_issue_attention",
+  );
+  if (error) {
+    console.error("[finance/actions:fetchTaxInvoiceIssueAttention]", error.code);
+    return {
+      success: false,
+      error: messages.finance.actionErrors.loadTaxInvoiceIssueAttentionFailed,
+    };
   }
 
+  return {
+    success: true,
+    data: data ?? [],
+  };
+}
+
+export async function requeueTaxInvoiceIssueJob(
+  jobId: number,
+): Promise<ActionResult> {
+  const parsed = taxInvoiceIssueJobIdSchema.safeParse(jobId);
+  if (!parsed.success) return { success: false, error: "Job HĐĐT không hợp lệ." };
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
     PERMISSION_KEYS.SETTINGS_TENANT,
   );
-  if (!ctx) return { success: false, errorCode: "forbidden" };
+  if (!ctx) return { success: false, error: "Không có quyền đối soát HĐĐT." };
 
-  const { supabase, claims, user } = ctx;
-
-  let webhookQuery = supabase
-    .from("webhook_events")
-    .select("id, payment_id")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("provider", "sepay")
-    .eq("processing_status", "processed")
-    .or("error_code.is.null,error_code.neq.invoice_binding_manual_review")
-    .not("payment_id", "is", null)
-    .order("id", { ascending: true })
-    .limit(SEPAY_MISSING_SCAN_CAP + 1);
-
-  const afterEventId = parsedInput.data.afterEventId ?? null;
-  if (afterEventId !== null) {
-    webhookQuery = webhookQuery.gt("id", afterEventId);
-  }
-
-  const { data: webhookWindow, error: webhookErr } = await webhookQuery;
-
-  if (webhookErr) {
-    console.error(
-      "[finance/actions:issueMissingSepayInvoices] Fetch webhook_events error:",
-      webhookErr,
-    );
-    return { success: false, errorCode: "load_failed" };
-  }
-
-  const webhookRows = (webhookWindow ?? []).slice(0, SEPAY_MISSING_SCAN_CAP);
-  const hasMoreEvents = (webhookWindow?.length ?? 0) > SEPAY_MISSING_SCAN_CAP;
-  const pageEndEventId = webhookRows.at(-1)?.id ?? null;
-
-  const pageResult = (
-    overrides: Partial<{
-      issued: number;
-      failed: number;
-      skipped: number;
-      hasMore: boolean;
-      nextAfterEventId: number | null;
-    }> = {},
-  ) => ({
-    issued: 0,
-    failed: 0,
-    skipped: 0,
-    hasMore: hasMoreEvents,
-    nextAfterEventId:
-      hasMoreEvents && pageEndEventId !== null ? pageEndEventId : null,
-    ...overrides,
-  });
-
-  const candidatePaymentIds = Array.from(
-    new Set(
-      (webhookRows ?? [])
-        .map((row) => row.payment_id)
-        .filter((id): id is number => typeof id === "number"),
-    ),
-  );
-  if (candidatePaymentIds.length === 0) {
-    return {
-      success: true,
-      data: pageResult(),
-    };
-  }
-
-  const { data: manualReviewRows, error: manualReviewErr } = await supabase
-    .from("webhook_events")
-    .select("payment_id")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("provider", "sepay")
-    .eq("processing_status", "processed")
-    .eq("error_code", "invoice_binding_manual_review")
-    .in("payment_id", candidatePaymentIds);
-
-  if (manualReviewErr) {
-    console.error(
-      "[finance/actions:issueMissingSepayInvoices] Fetch manual review events error:",
-      manualReviewErr,
-    );
-    return { success: false, errorCode: "load_failed" };
-  }
-
-  const manualReviewPaymentIds = new Set(
-    (manualReviewRows ?? [])
-      .map((row) => row.payment_id)
-      .filter((id): id is number => typeof id === "number"),
-  );
-  const paymentIds = candidatePaymentIds.filter(
-    (paymentId) => !manualReviewPaymentIds.has(paymentId),
-  );
-  if (paymentIds.length === 0) {
-    return {
-      success: true,
-      data: pageResult(),
-    };
-  }
-
-  const { data: payments, error: paymentErr } = await supabase
-    .from("payments")
-    .select("id, order_id")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("method", "vietqr")
-    .eq("status", "completed")
-    .in("id", paymentIds);
-
-  if (paymentErr) {
-    console.error(
-      "[finance/actions:issueMissingSepayInvoices] Fetch payments error:",
-      paymentErr,
-    );
-    return { success: false, errorCode: "load_failed" };
-  }
-
-  const orderIds = Array.from(new Set((payments ?? []).map((p) => p.order_id)));
-  if (orderIds.length === 0) {
-    return {
-      success: true,
-      data: pageResult(),
-    };
-  }
-
-  const [
-    activeInvoiceResult,
-    historicalAggregateLinkResult,
-    invoiceRequestResult,
-  ] = await Promise.all([
-      supabase
-        .from("tax_invoices")
-        .select("order_id")
-        .eq("tenant_id", claims.tenant_id)
-        .in("order_id", orderIds)
-        .not("status", "in", '("cancelled","replaced","not_required")'),
-      supabase
-        .from("tax_invoice_orders")
-        .select("order_id, tax_invoices(status)")
-        .eq("tenant_id", claims.tenant_id)
-        .in("order_id", orderIds),
-      supabase
-        .from("self_order_payment_requests")
-        .select("id, payment_id, order_id, invoice_payload")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("method", "vietqr")
-        .eq("status", "completed")
-        .in("order_id", orderIds),
-    ]);
-
-  if (
-    activeInvoiceResult.error ||
-    historicalAggregateLinkResult.error ||
-    invoiceRequestResult.error
-  ) {
-    console.error(
-      "[finance/actions:issueMissingSepayInvoices] Candidate guard lookup failed:",
-      {
-        activeInvoiceCode: activeInvoiceResult.error?.code,
-        historicalAggregateLinkCode: historicalAggregateLinkResult.error?.code,
-        invoiceRequestCode: invoiceRequestResult.error?.code,
-      },
-    );
-    return { success: false, errorCode: "load_failed" };
-  }
-
-  const activeInvoices = activeInvoiceResult.data;
-  const historicalAggregateLinks = historicalAggregateLinkResult.data;
-
-  const invoicedOrderIds = new Set(
-    (activeInvoices ?? [])
-      .map((row) => row.order_id)
-      .filter((id): id is number => typeof id === "number"),
-  );
-  const historicalAggregateOrderIds = new Set(
-    (
-      (historicalAggregateLinks ?? []) as Array<{
-        order_id: number | null;
-        tax_invoices: { status: string } | null;
-      }>
-    )
-      .filter(
-        (link) =>
-          link.order_id != null &&
-          link.tax_invoices != null &&
-          !["cancelled", "replaced"].includes(link.tax_invoices.status),
-      )
-      .map((link) => link.order_id as number),
-  );
-
-  const paymentsById = new Map((payments ?? []).map((row) => [row.id, row]));
-  const orderedPayments = paymentIds
-    .map((paymentId) => paymentsById.get(paymentId))
-    .filter((row): row is NonNullable<typeof row> => row != null);
-  const seenOrderIds = new Set<number>();
-  const missingPayments = orderedPayments.filter((payment) => {
-    if (seenOrderIds.has(payment.order_id)) return false;
-    seenOrderIds.add(payment.order_id);
-    return (
-      !invoicedOrderIds.has(payment.order_id) &&
-      !historicalAggregateOrderIds.has(payment.order_id)
-    );
-  });
-
-  const invoiceRequestsByOrderId = new Map<
-    number,
-    NonNullable<typeof invoiceRequestResult.data>[number][]
-  >();
-  for (const row of invoiceRequestResult.data ?? []) {
-    const rows = invoiceRequestsByOrderId.get(row.order_id) ?? [];
-    rows.push(row);
-    invoiceRequestsByOrderId.set(row.order_id, rows);
-  }
-
-  const attemptRows = missingPayments.slice(0, REISSUE_ALL_CAP);
-
-  let issued = 0;
-  let failed = 0;
-  let skipped = 0;
-  const startedAt = Date.now();
-  let attempted = 0;
-  for (const payment of attemptRows) {
-    if (Date.now() - startedAt > REISSUE_ALL_BUDGET_MS) break;
-    attempted += 1;
-    const matchingInvoiceRequests =
-      invoiceRequestsByOrderId.get(payment.order_id) ?? [];
-    if (matchingInvoiceRequests.length > 1) {
-      console.error(
-        "[finance/actions:issueMissingSepayInvoices] Ambiguous invoice request binding:",
-        { orderId: payment.order_id, paymentId: payment.id },
-      );
-      failed += 1;
-      continue;
-    }
-    const invoiceRequest = matchingInvoiceRequests[0];
-    let invoiceInput: z.infer<typeof createInvoiceSchema>;
-    if (invoiceRequest) {
-      if (
-        invoiceRequest.order_id !== payment.order_id ||
-        invoiceRequest.payment_id !== payment.id ||
-        !isRecord(invoiceRequest.invoice_payload)
-      ) {
-        console.error(
-          "[finance/actions:issueMissingSepayInvoices] Invalid invoice request binding:",
-          { requestId: invoiceRequest.id, paymentId: payment.id },
-        );
-        failed += 1;
-        continue;
-      }
-      const parsedInvoiceInput = createInvoiceSchema.safeParse({
-        ...invoiceRequest.invoice_payload,
-        orderId: payment.order_id,
-      });
-      if (!parsedInvoiceInput.success) {
-        console.error(
-          "[finance/actions:issueMissingSepayInvoices] Invalid stored invoice payload:",
-          {
-            requestId: invoiceRequest.id,
-            issues: parsedInvoiceInput.error.issues.map((issue) => ({
-              code: issue.code,
-              path: issue.path.join("."),
-            })),
-          },
-        );
-        failed += 1;
-        continue;
-      }
-      invoiceInput = parsedInvoiceInput.data;
-    } else {
-      invoiceInput = {
-        orderId: payment.order_id,
-        buyerNotGetInvoice: true,
-      };
-    }
-
-    const result = await issueTaxInvoiceForPaidOrder({
-      supabase,
-      tenantId: claims.tenant_id,
-      input: invoiceInput,
-      actorId: user.id,
-      canAccessBranch: (branchId) =>
-        canAccessBranch(supabase, claims, branchId),
-      logPrefix: "finance/actions:issueMissingSepayInvoices",
-    });
-    if (result.success) {
-      issued += 1;
-    } else if (
-      result.errorCode === "invoice_exists" ||
-      result.errorCode === "historical_aggregate_invoice_exists"
-    ) {
-      skipped += 1;
-    } else {
-      failed += 1;
-    }
-  }
-
-  const hasUnattemptedInPage = missingPayments.length > attempted;
-  const lastAttemptedPaymentId = attemptRows.at(Math.max(0, attempted - 1))?.id;
-  const lastAttemptedEventId =
-    lastAttemptedPaymentId == null
-      ? null
-      : (webhookRows.find((row) => row.payment_id === lastAttemptedPaymentId)
-          ?.id ?? null);
-  const hasMore = hasUnattemptedInPage || hasMoreEvents;
-  const nextAfterEventId = hasUnattemptedInPage
-    ? lastAttemptedEventId
-    : hasMoreEvents
-      ? pageEndEventId
-      : null;
-
-  return {
-    success: true,
-    data: pageResult({
-      issued,
-      failed,
-      skipped,
-      hasMore,
-      nextAfterEventId,
-    }),
+  const rpc = ctx.supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ error: { code?: string | null } | null }>;
   };
+  const { error } = await rpc.rpc("requeue_tax_invoice_issue_job", {
+    p_job_id: parsed.data,
+  });
+  if (error) {
+    console.error("[finance/actions:requeueTaxInvoiceIssueJob]", error.code);
+    return { success: false, error: "Job chưa đủ điều kiện phát hành lại." };
+  }
+  revalidatePath("/finance/invoices");
+  return { success: true };
 }
+
+export async function reconcileTaxInvoiceProviderIssued(
+  input: z.infer<typeof taxInvoiceReconcileSchema>,
+): Promise<ActionResult> {
+  const parsed = taxInvoiceReconcileSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu đối soát không hợp lệ." };
+  }
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền đối soát HĐĐT." };
+
+  const rpc = ctx.supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ error: { code?: string | null } | null }>;
+  };
+  const { error } = await rpc.rpc("reconcile_tax_invoice_provider_issued", {
+    p_tax_invoice_id: parsed.data.taxInvoiceId,
+    p_provider_ref: parsed.data.providerRef,
+    p_invoice_number: parsed.data.invoiceNumber,
+    p_cqt_code: parsed.data.cqtCode ?? null,
+    p_provider_data: null,
+    p_trigger_source: "manual",
+  });
+  if (error) {
+    console.error(
+      "[finance/actions:reconcileTaxInvoiceProviderIssued]",
+      error.code,
+    );
+    return { success: false, error: "Không thể ghi đối soát; kiểm tra lại provider_ref và trạng thái." };
+  }
+  revalidatePath("/finance/invoices");
+  return { success: true };
+}
+
 
 /* ─── HĐĐT: Manual issue for a past paid order ─── */
 

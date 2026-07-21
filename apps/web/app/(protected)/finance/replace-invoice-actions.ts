@@ -11,10 +11,7 @@
  *   2. Transition NEW: draft → signing via canonical user RPC.
  *   3. Call provider.createInvoice with `replacement: ctx` — Viettel
  *      branches body shape to adjustmentType=3 + original refs.
- *   4. Transition NEW: signing → issued|submitted|draft based on
- *      provider result.
- *   5. UPDATE tax_invoices.{invoice_number, provider_ref, provider_data}
- *      on NEW row.
+ *   4. Reconcile provider-issued results through the canonical RPC.
  *
  * Failsoft: if provider rejects, NEW stays at 'draft' (recovery
  * candidate); OLD stays at 'replaced' (per atomic RPC). User can
@@ -29,7 +26,10 @@
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getInvoiceProvider } from "@comtammatu/shared/providers";
+import {
+  buildSinvoiceTransactionUuid,
+  getInvoiceProvider,
+} from "@comtammatu/shared/providers";
 import { resolveSalesTaxProfile } from "@comtammatu/shared/tax";
 import {
   applyInvoiceLineDiscount,
@@ -276,6 +276,21 @@ export async function replaceTaxInvoice(
     return { success: false, error: "Không thể chuyển sang ký số." };
   }
 
+  const providerRef = buildSinvoiceTransactionUuid(newId);
+  const rpc = supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ error: { code?: string | null; message?: string | null } | null }>;
+  };
+  const { error: prepareErr } = await rpc.rpc(
+    "prepare_tax_invoice_provider_submission",
+    { p_tax_invoice_id: newId, p_provider_ref: providerRef },
+  );
+  if (prepareErr) {
+    return { success: false, error: "Không thể giữ định danh HĐ thay thế." };
+  }
+
   // STEP C — Call provider with replacement context.
   const invoiceItems = applyInvoiceLineDiscount(
     buildInvoiceLineItemsFromOrderItems(activeItems),
@@ -312,7 +327,7 @@ export async function replaceTaxInvoice(
     },
   });
 
-  // STEP D — Transition NEW to final state based on provider result.
+  // STEP D — Reconcile the provider result without a direct invoice update.
   const nextStatus: "issued" | "submitted" | "draft" =
     providerResult.status === "issued"
       ? "issued"
@@ -326,18 +341,25 @@ export async function replaceTaxInvoice(
     ? JSON.parse(JSON.stringify(providerResult.providerData))
     : null;
 
-  const { error: finalErr } = await supabase.rpc(
-    "transition_tax_invoice_state",
-    {
-      p_tax_invoice_id: newId,
-      p_to_status: nextStatus,
-      p_payload: providerDataPayload,
-      p_note:
-        providerResult.status === "failed"
-          ? "Provider call failed during replace"
-          : "Replacement issued",
-    },
-  );
+  const { error: finalErr } =
+    nextStatus === "issued"
+      ? await rpc.rpc("reconcile_tax_invoice_provider_issued", {
+          p_tax_invoice_id: newId,
+          p_provider_ref: providerRef,
+          p_invoice_number: providerResult.invoiceNumber ?? "",
+          p_cqt_code: providerResult.codeOfTax ?? null,
+          p_provider_data: providerDataPayload,
+          p_trigger_source: "manual",
+        })
+      : await supabase.rpc("transition_tax_invoice_state", {
+          p_tax_invoice_id: newId,
+          p_to_status: nextStatus,
+          p_payload: providerDataPayload,
+          p_note:
+            providerResult.status === "failed"
+              ? "Provider call failed during replace"
+              : "Replacement submitted",
+        });
   if (finalErr) {
     await logAudit(supabase, {
       action: "replace_final_transition_failed",
@@ -349,17 +371,6 @@ export async function replaceTaxInvoice(
       success: false,
       error: "Không thể cập nhật trạng thái HĐ thay thế.",
     };
-  }
-
-  // STEP E — Persist invoice_number + provider_ref on NEW row.
-  if (providerResult.invoiceNumber || providerResult.providerRef) {
-    await supabase
-      .from("tax_invoices")
-      .update({
-        invoice_number: providerResult.invoiceNumber,
-        provider_ref: providerResult.providerRef,
-      })
-      .eq("id", newId);
   }
 
   await logAudit(supabase, {

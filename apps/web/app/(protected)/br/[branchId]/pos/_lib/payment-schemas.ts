@@ -21,6 +21,7 @@ export const cashConfirmSchema = z.object({
   cashReceived: z.coerce
     .number()
     .nonnegative({ error: "Số tiền nhận không được âm" }),
+  invoice: z.unknown(),
 });
 
 /**
@@ -44,6 +45,7 @@ export const createPaymentSchema = z.object({
   orderId: z.coerce.number().int().positive(),
   method: z.enum(["vietqr"]),
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
+  invoice: z.unknown(),
 });
 
 /**

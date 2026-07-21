@@ -47,7 +47,6 @@ import { fetchOrderForBill } from "../../actions";
 import type { SessionOrder } from "../../order-history";
 import {
   confirmCashPaymentWithInvoice,
-  confirmVietQrPaymentWithInvoice,
   cancelPendingPayment,
   createPayment,
   fetchPendingRemotePaymentForBill,
@@ -464,15 +463,13 @@ export function BillReceipt({
   const cashReceived = Number(cashInput) || 0;
   const cashChange = cashReceived - totalAmount;
   const invoiceValid = isInvoiceFormValid(invoiceForm);
-  // Offline guard: cash RPC + e-wallet confirm both touch the network. Cash is
-  // the most dangerous (physical money already in hand if cashier presses
-  // confirm and request fails) — see regression HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN.
+  // Cash is the only cashier-confirmable payment. VietQR settles only through
+  // the verified SePay webhook.
   const canConfirmPaid =
     isOnline &&
     invoiceValid &&
-    (selectedMethod === "cash"
-      ? cashReceived >= totalAmount
-      : Boolean(pendingExtras?.payment_id));
+    selectedMethod === "cash" &&
+    cashReceived >= totalAmount;
 
   // Tooltip explaining why the button is disabled — a dimmed button must
   // tell the cashier what is missing (offline, bad tax code, not enough
@@ -654,6 +651,11 @@ export function BillReceipt({
     (method: PaymentMethod) => {
       if (!order || orderId === null) return;
 
+      if (method === "vietqr" && !invoiceValid) {
+        toast.error("Cần hoàn tất thông tin HĐĐT trước khi tạo mã chuyển khoản.");
+        return;
+      }
+
       if (
         method === selectedMethod &&
         pendingExtras?.payment_id !== undefined &&
@@ -681,6 +683,7 @@ export function BillReceipt({
       }
 
       setMethodPending(true);
+      const invoicePayload = buildInvoicePayload(invoiceForm);
       void (async () => {
         try {
           const result = await createPayment(
@@ -688,6 +691,7 @@ export function BillReceipt({
             orderId,
             method,
             Number(order.total_amount),
+            invoicePayload,
           );
           if (result.success && result.data) {
             setPendingExtras({
@@ -716,6 +720,8 @@ export function BillReceipt({
     [
       branchId,
       isOnline,
+      invoiceForm,
+      invoiceValid,
       order,
       orderId,
       pendingExtras?.payment_id,
@@ -819,8 +825,7 @@ export function BillReceipt({
   const handleConfirmPaid = useCallback(async () => {
     if (!order || orderId === null || !canConfirmPaid) return;
 
-    // Freeze the invoice payload at click — guards against the cashier
-    // editing the form while the submit is in flight.
+    // Freeze the invoice payload at click before the cash transaction commits.
     const invoicePayload = buildInvoicePayload(invoiceForm);
 
     startActionTransition(async () => {
@@ -843,19 +848,22 @@ export function BillReceipt({
         const change = result.data?.cash_change ?? 0;
         const inv = result.data?.invoice ?? null;
         const printWarning = result.data?.print_warning;
-        const invFailed = inv != null && inv.status === "failed";
+        const invoiceQueued = inv?.status === "queued";
+        const invoiceNeedsReconcile = inv?.status === "reconcile_required";
         const successTitle =
           inv == null
             ? "Đã thanh toán"
-            : invFailed
-              ? "Đã thu tiền — HĐĐT chưa xuất được"
-              : "Đã thanh toán & xuất HĐĐT";
+            : invoiceQueued
+              ? "Đã thu tiền — HĐĐT đang xử lý"
+              : "Đã thu tiền — HĐĐT cần đối soát";
         const successDescription =
           inv == null
             ? `Tiền trả khách: ${formatVND(change)}`
-            : invFailed
-              ? (inv.error ?? "Lưu nháp; Finance sẽ xuất lại sau.")
-              : `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`} · Tiền trả khách: ${formatVND(change)}`;
+            : invoiceQueued
+              ? `Tiền trả khách: ${formatVND(change)} · Bộ phận tài chính sẽ đối soát nếu cần.`
+              : invoiceNeedsReconcile
+                ? "HĐĐT đã được chuyển sang bộ phận tài chính để đối soát với Viettel."
+                : "HĐĐT đang chờ bộ phận tài chính kiểm tra.";
         // Receipt enqueue is fail-soft inside confirm_cash_payment. With a
         // 1-slot toaster a separate print warning would evict the success
         // toast, so fold the printer error into one warning that supersedes
@@ -865,7 +873,7 @@ export function BillReceipt({
             description: `${successDescription} · ${printWarning} — bấm "in lại" sau khi sửa máy in.`,
             duration: 8000,
           });
-        } else if (invFailed) {
+        } else if (invoiceNeedsReconcile) {
           toast.warning(successTitle, { description: successDescription });
         } else {
           toast.success(successTitle, { description: successDescription });
@@ -874,56 +882,6 @@ export function BillReceipt({
         onClose();
         return;
       }
-
-      // VietQR fallback: cashier confirms manually if SePay has not completed
-      // the pending transfer.
-      const result = await confirmVietQrPaymentWithInvoice(
-        branchId,
-        orderId,
-        totalAmount,
-        invoicePayload,
-      );
-      if (!result.success) {
-        toast.error(result.error ?? "Không thể xác nhận thanh toán");
-        // Stale total: re-pull the order so the cashier sees the new
-        // amount and can re-confirm in one tap. Keep the sheet open.
-        if (isAmountMismatchError(result.error)) {
-          await onOrderUpdated?.();
-        }
-        return;
-      }
-      const inv = result.data?.invoice ?? null;
-      const invFailed = inv != null && inv.status === "failed";
-      const printFailed = result.data?.print.failed ?? false;
-      const successTitle =
-        inv == null
-          ? "Đã thanh toán"
-          : invFailed
-            ? "Đã thanh toán — HĐĐT chưa xuất được"
-            : "Đã thanh toán & xuất HĐĐT";
-      const successDescription =
-        inv == null
-          ? undefined
-          : invFailed
-            ? (inv.error ?? "Lưu nháp; Finance sẽ xuất lại sau.")
-            : `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`}`;
-      // 1-slot toaster: fold the print failure into one warning that
-      // supersedes the success and stays longer instead of evicting it.
-      if (printFailed) {
-        const printError = result.data?.print.error ?? "Mở đơn để in lại.";
-        toast.warning(`${successTitle} — chưa in được hóa đơn`, {
-          description: successDescription
-            ? `${successDescription} · ${printError}`
-            : printError,
-          duration: 8000,
-        });
-      } else if (invFailed) {
-        toast.warning(successTitle, { description: successDescription });
-      } else {
-        toast.success(successTitle, { description: successDescription });
-      }
-      await onOrderUpdated?.();
-      onClose();
     });
   }, [
     branchId,
@@ -935,7 +893,6 @@ export function BillReceipt({
     order,
     orderId,
     selectedMethod,
-    totalAmount,
   ]);
 
   const handleCancelPendingPayment = useCallback(async () => {
@@ -1360,7 +1317,10 @@ export function BillReceipt({
               <InvoiceFormSection
                 state={invoiceForm}
                 totalAmount={totalAmount}
-                disabled={actionPending}
+                disabled={
+                  actionPending ||
+                  (selectedMethod === "vietqr" && pendingExtras !== null)
+                }
                 onChange={setInvoiceForm}
               />
             ) : null}
@@ -1396,24 +1356,32 @@ export function BillReceipt({
                 {ACTIONS_VI.cancel}
               </Button>
             </div>
-            {disabledReason ? (
+            {selectedMethod === "vietqr" ? (
+              <Alert>
+                <AlertDescription>
+                  {pendingExtras?.payment_id
+                    ? "Đang chờ SePay xác thực chuyển khoản. Sau khi thanh toán hoàn tất, HĐĐT sẽ được xử lý tự động."
+                    : "Tạo mã chuyển khoản để chờ SePay xác thực thanh toán."}
+                </AlertDescription>
+              </Alert>
+            ) : disabledReason ? (
               <p className="text-sm text-muted-foreground">{disabledReason}</p>
             ) : null}
-            <Button
-              data-testid={
-                selectedMethod === "cash" ? "bill-confirm-cash" : undefined
-              }
-              type="button"
-              size="touch-lg"
-              onClick={() => void handleConfirmPaid()}
-              disabled={
-                isPending || methodPending || actionPending || !canConfirmPaid
-              }
-              title={disabledReason ?? undefined}
-            >
-              {actionPending ? <Spinner data-icon="inline-start" /> : null}
-              {messages.pos.payment.paidConfirm}
-            </Button>
+            {selectedMethod === "cash" ? (
+              <Button
+                data-testid="bill-confirm-cash"
+                type="button"
+                size="touch-lg"
+                onClick={() => void handleConfirmPaid()}
+                disabled={
+                  isPending || methodPending || actionPending || !canConfirmPaid
+                }
+                title={disabledReason ?? undefined}
+              >
+                {actionPending ? <Spinner data-icon="inline-start" /> : null}
+                {messages.pos.payment.paidConfirm}
+              </Button>
+            ) : null}
           </div>
         </>
       )}

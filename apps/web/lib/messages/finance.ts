@@ -4,6 +4,7 @@ export const finance = {
   actionErrors: {
     loadPaymentFailed: "Không thể tải thanh toán.",
     loadTaxInvoicesFailed: "Không thể tải danh sách hóa đơn.",
+    loadTaxInvoiceIssueAttentionFailed: "Không thể tải hàng chờ HĐĐT.",
     loadRevenueRollupFailed: "Không thể tải dữ liệu doanh thu.",
     loadRevenueKpisFailed: "Không thể tải chỉ số KPI.",
     loadDashboardSummaryFailed: "Không thể tải chỉ số dashboard.",

@@ -21,10 +21,14 @@ const confirmPaidBlock =
     billReceiptSource,
   )?.[1] ?? "";
 
-test("POS payment confirmation runs from the Đã thanh toán button without an extra confirm dialog", () => {
+test("POS only lets the cashier confirm cash; VietQR waits for SePay", () => {
   assert.match(confirmPaidBlock, /buildInvoicePayload\(invoiceForm\)/);
   assert.match(confirmPaidBlock, /confirmCashPaymentWithInvoice\(/);
-  assert.match(confirmPaidBlock, /confirmVietQrPaymentWithInvoice\(/);
+  assert.doesNotMatch(confirmPaidBlock, /confirmVietQrPaymentWithInvoice\(/);
+  assert.match(
+    billReceiptSource,
+    /Đang chờ SePay xác thực chuyển khoản/,
+  );
   assert.doesNotMatch(confirmPaidBlock, /await confirm\(/);
   assert.doesNotMatch(posMessagesSource, /confirmIssue/);
 });

@@ -24,8 +24,10 @@ import {
   cancelTaxInvoice,
   createTaxInvoice,
   fetchTaxInvoicesPage,
-  issueMissingSepayInvoices,
+  reconcileTaxInvoiceProviderIssued,
   reissueAllDraftInvoices,
+  requeueTaxInvoiceIssueJob,
+  type TaxInvoiceIssueAttention,
 } from "./actions";
 import type { TaxInvoiceCursor } from "./actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
@@ -70,6 +72,7 @@ interface InvoiceListProps {
   canManageInvoices: boolean;
   canIssueInvoices?: boolean;
   branches?: { id: number; name: string }[];
+  initialIssueAttention?: TaxInvoiceIssueAttention[];
 }
 
 const CANCEL_REASON_MIN = 20;
@@ -83,6 +86,11 @@ const REPLACE_REASON_MIN = 20;
 const REPLACE_REASON_MAX = 255;
 const REPLACE_AGREEMENT_MAX = 225;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
+const reconcileInvoiceSchema = z.object({
+  invoiceNumber: z.string().trim().min(1, "Nhập số hóa đơn từ Viettel").max(200),
+  cqtCode: z.string().trim().max(200),
+});
+type ReconcileInvoiceValues = z.infer<typeof reconcileInvoiceSchema>;
 
 const replaceInvoiceSchema = z
   .object({
@@ -144,6 +152,7 @@ export function InvoiceList({
   canManageInvoices,
   canIssueInvoices = false,
   branches = [],
+  initialIssueAttention = [],
 }: InvoiceListProps) {
   const isTouchLayout = useIsMobile(1024);
   const [invoices, setInvoices] = useState(initialInvoices);
@@ -163,9 +172,9 @@ export function InvoiceList({
   const [methodFixReason, setMethodFixReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const [reissuingId, setReissuingId] = useState<number | null>(null);
-  const [sepayRecoveryAfterEventId, setSepayRecoveryAfterEventId] = useState<
-    number | null
-  >(null);
+  const [issueAttention, setIssueAttention] = useState(initialIssueAttention);
+  const [reconcileTarget, setReconcileTarget] =
+    useState<TaxInvoiceIssueAttention | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<InvoiceRow | null>(null);
   const replaceDefaultValues = useMemo<ReplaceInvoiceFormValues>(
     () => ({
@@ -335,6 +344,38 @@ export function InvoiceList({
     });
   }
 
+  function handleRequeue(job: TaxInvoiceIssueAttention) {
+    startTransition(async () => {
+      const result = await requeueTaxInvoiceIssueJob(job.id);
+      if (!result.success) {
+        toast.error(result.error ?? "Không thể đưa job HĐĐT vào hàng chờ.");
+        return;
+      }
+      setIssueAttention((current) => current.filter((item) => item.id !== job.id));
+      toast.success("Đã đưa HĐĐT vào hàng chờ xử lý.");
+    });
+  }
+
+  async function handleReconcile(
+    values: ReconcileInvoiceValues,
+  ): Promise<ActionResult> {
+    if (!reconcileTarget?.tax_invoice_id || !reconcileTarget.provider_ref) {
+      return { success: false, error: "Thiếu định danh provider để đối soát." };
+    }
+    const result = await reconcileTaxInvoiceProviderIssued({
+      taxInvoiceId: reconcileTarget.tax_invoice_id,
+      providerRef: reconcileTarget.provider_ref,
+      invoiceNumber: values.invoiceNumber,
+      cqtCode: values.cqtCode || undefined,
+    });
+    if (result.success) {
+      setIssueAttention((current) =>
+        current.filter((item) => item.id !== reconcileTarget.id),
+      );
+    }
+    return result;
+  }
+
   const draftCount = invoices.filter((inv) => inv.status === "draft").length;
 
   function handleLoadMore() {
@@ -407,48 +448,6 @@ export function InvoiceList({
     });
     if (!ok) return;
     handleReissueAll();
-  }
-
-  function handleIssueMissingSepay() {
-    startTransition(async () => {
-      try {
-        const result = await issueMissingSepayInvoices({
-          afterEventId: sepayRecoveryAfterEventId,
-        });
-        if (!result.success) {
-          toast.error(messages.finance.invoiceList.sepayMissingError);
-          return;
-        }
-        const d = result.data;
-        setSepayRecoveryAfterEventId(
-          d?.hasMore ? (d.nextAfterEventId ?? null) : null,
-        );
-        toast.success(
-          messages.finance.invoiceList.sepayMissingResult(
-            d?.issued ?? 0,
-            d?.failed ?? 0,
-            d?.skipped ?? 0,
-            d?.hasMore ?? false,
-          ),
-        );
-        if (!d?.hasMore && (d?.issued ?? 0) > 0) {
-          setTimeout(() => window.location.reload(), 1500);
-        }
-      } catch {
-        toast.error(messages.finance.invoiceList.sepayMissingError);
-      }
-    });
-  }
-
-  async function handleConfirmIssueMissingSepay() {
-    const ok = await confirm({
-      title: messages.finance.invoiceList.sepayMissingTitle,
-      description: messages.finance.invoiceList.sepayMissingDescription,
-      cancelText: messages.finance.invoiceList.reissueAllCancel,
-      confirmText: messages.finance.invoiceList.sepayMissingConfirm,
-    });
-    if (!ok) return;
-    handleIssueMissingSepay();
   }
 
   function renderActions(inv: InvoiceRow, variant: "card" | "table") {
@@ -592,6 +591,43 @@ export function InvoiceList({
   return (
     <>
       <div className="flex flex-col gap-4">
+        {issueAttention.length > 0 ? (
+          <Item variant="outline" className="flex-col items-stretch gap-3">
+            <ItemHeader>
+              <ItemContent>
+                <p className="font-semibold">HĐĐT cần Finance đối soát</p>
+                <p className="text-sm text-muted-foreground">
+                  Không phát hành lại bản ghi đang chờ provider. Kiểm tra Viettel theo provider_ref trước khi ghi số HĐ.
+                </p>
+              </ItemContent>
+            </ItemHeader>
+            {issueAttention.map((job) => (
+              <Item key={job.id} variant="muted" className="flex-col items-stretch gap-2 p-3 sm:flex-row sm:items-center">
+                <ItemContent className="min-w-0">
+                  <p className="font-mono text-sm">Đơn #{job.order_id}</p>
+                  <p className="break-all text-xs text-muted-foreground">
+                    {job.payment_method ? PAYMENT_METHOD_LABELS_VI[job.payment_method] : "—"} · {job.provider_ref ?? "Chưa có provider_ref"}
+                  </p>
+                  <p className="text-xs text-destructive">{job.last_error ?? job.status} · {formatDate(job.updated_at)}</p>
+                </ItemContent>
+                {canManageInvoices ? (
+                  <ItemFooter className="gap-2">
+                    {job.status === "reconcile_required" && job.tax_invoice_id && job.provider_ref ? (
+                      <Button type="button" variant="outline" size="sm" onClick={() => setReconcileTarget(job)} disabled={isPending}>
+                        Đối soát đã phát hành
+                      </Button>
+                    ) : null}
+                    {job.status === "blocked" ? (
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleRequeue(job)} disabled={isPending}>
+                        Đưa vào hàng chờ
+                      </Button>
+                    ) : null}
+                  </ItemFooter>
+                ) : null}
+              </Item>
+            ))}
+          </Item>
+        ) : null}
         {canIssueInvoices || canManageInvoices ? (
           <div className="flex flex-wrap justify-end gap-2">
             {canIssueInvoices ? (
@@ -603,19 +639,6 @@ export function InvoiceList({
               >
                 <IconReceipt className="size-4" />
                 {messages.finance.invoiceList.manualIssue.button}
-              </Button>
-            ) : null}
-            {canManageInvoices ? (
-              <Button
-                variant="outline"
-                size={isTouchLayout ? "touch" : "sm"}
-                onClick={handleConfirmIssueMissingSepay}
-                disabled={isPending}
-              >
-                <IconRefreshCw className="size-4" />
-                {sepayRecoveryAfterEventId === null
-                  ? messages.finance.invoiceList.sepayMissing
-                  : messages.finance.invoiceList.sepayMissingContinue}
               </Button>
             ) : null}
             {canManageInvoices && draftCount > 0 ? (
@@ -882,6 +905,43 @@ export function InvoiceList({
             </>
           );
         }}
+      </FormDialog>
+
+      <FormDialog
+        open={!!reconcileTarget}
+        onOpenChange={(open) => {
+          if (!open) setReconcileTarget(null);
+        }}
+        title="Đối soát HĐĐT đã phát hành"
+        description={`Chỉ ghi khi đã xác minh trên Viettel: provider_ref ${reconcileTarget?.provider_ref ?? "—"}. Thao tác này không phát hành lại hóa đơn.`}
+        schema={reconcileInvoiceSchema}
+        defaultValues={{ invoiceNumber: "", cqtCode: "" }}
+        entityKey={reconcileTarget?.id ?? "tax-invoice-reconcile"}
+        onSubmit={handleReconcile}
+        onSuccess={() => toast.success("Đã ghi nhận HĐĐT từ Viettel.")}
+        submitLabel="Xác nhận đối soát"
+        cancelLabel="Không"
+        contentClassName="max-w-lg"
+      >
+        {(form) => (
+          <>
+            <TextField
+              control={form.control}
+              name="invoiceNumber"
+              id="tax-invoice-reconcile-number"
+              label="Số hóa đơn Viettel"
+              required
+              maxLength={200}
+            />
+            <TextField
+              control={form.control}
+              name="cqtCode"
+              id="tax-invoice-reconcile-cqt"
+              label="Mã CQT"
+              maxLength={200}
+            />
+          </>
+        )}
       </FormDialog>
 
       {canIssueInvoices ? (

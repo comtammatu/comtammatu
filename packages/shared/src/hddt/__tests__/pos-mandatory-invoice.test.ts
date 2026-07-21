@@ -39,22 +39,22 @@ test("POS invoice form defaults to buyer-not-get-invoice instead of opting out",
   );
 });
 
-test("payment confirm actions always attempt HĐĐT after successful payment", () => {
+test("payment completion records a mandatory HĐĐT job instead of calling Viettel inline", () => {
   const src = read(
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
   );
 
   assert.ok(
-    src.includes("always attempt HĐĐT issuance"),
-    "payment/HĐĐT contract should state mandatory issuance",
+    src.includes('invoice: { status: "queued" }'),
+    "cash completion must return the queued HĐĐT state",
   );
   assert.ok(
-    !src.includes("data: { ...paymentResult.data, invoice: null }"),
-    "successful payment must not return invoice:null without attempting HĐĐT",
+    !src.includes("confirmVietQrPaymentWithInvoice"),
+    "cashier must not complete a VietQR payment",
   );
   assert.ok(
-    src.includes("normalizeInvoicePayload(invoice)"),
-    "missing no-MST fallback payload before createTaxInvoice",
+    src.includes("invoiceSnapshot"),
+    "remote payment must persist an immutable HĐĐT snapshot",
   );
 });
 
@@ -67,11 +67,6 @@ test("POS validates HĐĐT buyer payload before committing payment", () => {
     "export async function confirmCashPaymentWithInvoice",
     "/* ─── fetchVietQrConfig",
   );
-  const vietQrStart = src.indexOf(
-    "export async function confirmVietQrPaymentWithInvoice",
-  );
-  assert.notEqual(vietQrStart, -1, "missing VietQR invoice orchestrator");
-  const vietQrBlock = src.slice(vietQrStart);
 
   assert.match(
     src,
@@ -89,9 +84,9 @@ test("POS validates HĐĐT buyer payload before committing payment", () => {
     "cash HĐĐT buyer validation must happen before payment commit",
   );
   assert.ok(
-    vietQrBlock.indexOf("parseInvoicePayload(invoice)") <
-      vietQrBlock.indexOf("const paymentResult = await confirmVietQrPayment("),
-    "VietQR HĐĐT buyer validation must happen before payment commit",
+    src.indexOf("const parsedInvoice = parseInvoicePayload") <
+      src.indexOf('"create_remote_payment_intent"'),
+    "VietQR HĐĐT buyer validation must happen before the pending intent is stored",
   );
 });
 
@@ -103,7 +98,7 @@ test("POS invoice buyer form is available for cash and VietQR confirmation", () 
   assert.match(
     src,
     /const showInvoiceForm =\s*selectedMethod === "cash" \|\| selectedMethod === "vietqr";/,
-    "buyer invoice form must be available for both cashier-confirmed payment paths",
+    "buyer invoice form must be available before both payment paths",
   );
   assert.equal(
     src.match(/<InvoiceFormSection/g)?.length,
@@ -150,12 +145,12 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
     "provider-rejected draft rows must be retryable after payload/config fixes",
   );
   assert.ok(
-    src.includes('.select("id, invoice_number, status")'),
-    "POS toast needs persisted invoice status, especially provider failures",
+    src.includes("reconcile_tax_invoice_provider_issued"),
+    "provider-issued results must use the canonical reconciliation RPC",
   );
   assert.ok(
-    actionSrc.includes("issueTaxInvoiceForPaidOrder"),
-    "createTaxInvoice action must use the shared per-order issue helper",
+    actionSrc.includes("queue_tax_invoice_issue_job_for_completed_order"),
+    "Finance manual issue must queue the shared worker job",
   );
 });
 
@@ -176,47 +171,28 @@ test("SePay webhook issues exactly once after an exact POS settlement match", ()
   assert.match(migration, /public\.confirm_sepay_payment\(/);
 });
 
-test("finance can recover paid SePay orders that missed HĐĐT", () => {
+test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
   const listSrc = read("apps/web/app/(protected)/finance/invoice-list.tsx");
 
   assert.ok(
-    actionSrc.includes("issueMissingSepayInvoices"),
-    "finance must expose a bounded recovery action for processed SePay webhooks",
+    actionSrc.includes("fetchTaxInvoiceIssueAttention"),
+    "finance must list attention jobs",
   );
   assert.match(
     actionSrc,
-    /\.from\("webhook_events"\)[\s\S]*\.eq\("provider", "sepay"\)[\s\S]*\.eq\("processing_status", "processed"\)/,
-    "recovery candidates must come from processed SePay webhook events",
+    /requeueTaxInvoiceIssueJob/,
+    "finance must requeue the exact failed job",
   );
   assert.match(
     actionSrc,
-    /\.or\("error_code\.is\.null,error_code\.neq\.invoice_binding_manual_review"\)/,
-    "recovery must preserve NULL errors while excluding ambiguous buyer bindings",
+    /reconcileTaxInvoiceProviderIssued/,
+    "finance must reconcile a provider-issued invoice through the canonical action",
   );
   assert.match(
-    actionSrc,
-    /\.eq\("error_code", "invoice_binding_manual_review"\)[\s\S]*\.in\("payment_id", candidatePaymentIds\)/,
-    "recovery must find any manual-review event sharing a candidate payment",
-  );
-  assert.match(
-    actionSrc,
-    /candidatePaymentIds\.filter\([\s\S]*!manualReviewPaymentIds\.has\(paymentId\)/,
-    "a second event must not make a manual-review payment eligible again",
-  );
-  assert.match(
-    actionSrc,
-    /\.from\("payments"\)[\s\S]*\.eq\("method", "vietqr"\)[\s\S]*\.eq\("status", "completed"\)/,
-    "recovery must bind processed webhooks to completed VietQR payments",
-  );
-  assert.match(
-    actionSrc,
-    /issueTaxInvoiceForPaidOrder\(\{/,
-    "recovery must reuse the shared per-order HĐĐT helper and duplicate guards",
-  );
-  assert.ok(
-    listSrc.includes("issueMissingSepayInvoices"),
-    "finance invoice list must expose the recovery action to operators",
+    listSrc,
+    /HĐĐT cần Finance đối soát/,
+    "finance list must expose attention jobs",
   );
 });
 

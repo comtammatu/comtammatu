@@ -17,6 +17,9 @@ const paymentMessages = read(
 const staffActions = read(
   "app/(protected)/br/[branchId]/pos/self-order-actions.ts",
 );
+const workerMigration = read(
+  "../../supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
+);
 
 function functionBlock(source: string, name: string): string {
   const block = new RegExp(
@@ -37,10 +40,6 @@ function asyncFunctionBlock(source: string, name: string): string {
 const bindingRpc = functionBlock(
   migration,
   "confirm_cash_payment_with_invoice_binding",
-);
-const resolveBoundPayload = asyncFunctionBlock(
-  paymentActions,
-  "resolveBoundCashCallInvoicePayload",
 );
 
 test("cash binding locks the order before resolving the active self-order request", () => {
@@ -157,27 +156,20 @@ test("only authenticated staff can execute the binding RPC", () => {
   );
 });
 
-test("payment action reloads buyer data by exact bound request and payment", () => {
+test("cash action passes the frozen buyer snapshot into the atomic binding RPC", () => {
   assert.match(
     paymentActions,
     /rpc\.rpc<CashPaymentResult>\(\s*"confirm_cash_payment_with_invoice_binding"/,
   );
-  assert.match(resolveBoundPayload, /\.eq\("id", parsedRequest\.data\)/);
   assert.match(
-    resolveBoundPayload,
-    /\.eq\("tenant_id", ctx\.claims\.tenant_id\)/,
+    paymentActions,
+    /p_invoice_payload: parsedInvoice\.data/,
   );
-  assert.match(resolveBoundPayload, /\.eq\("branch_id", parsedBranch\.data\)/);
-  assert.match(resolveBoundPayload, /\.eq\("order_id", parsedOrder\.data\)/);
-  assert.match(
-    resolveBoundPayload,
-    /\.eq\("payment_id", parsedPayment\.data\)/,
-  );
-  assert.match(resolveBoundPayload, /\.eq\("method", "cash_call"\)/);
-  assert.match(resolveBoundPayload, /\.eq\("status", "completed"\)/);
+  assert.match(workerMigration, /p_invoice_payload jsonb/);
+  assert.match(workerMigration, /private\.upsert_tax_invoice_issue_job/);
 });
 
-test("stored payload overrides the POS form only after a successful bound payment", () => {
+test("cash completion queues the worker instead of issuing HĐĐT from the action", () => {
   const orchestrator = paymentActions.slice(
     paymentActions.indexOf(
       "export async function confirmCashPaymentWithInvoice",
@@ -185,33 +177,15 @@ test("stored payload overrides the POS form only after a successful bound paymen
     paymentActions.indexOf("/* ─── fetchVietQrConfig"),
   );
   const paymentCall = orchestrator.indexOf("confirmCashPayment(");
-  const boundLookup = orchestrator.indexOf(
-    "resolveBoundCashCallInvoicePayload(",
-  );
-  const invoiceCall = orchestrator.indexOf("createTaxInvoice({");
 
   assert.ok(paymentCall >= 0);
-  assert.ok(boundLookup > paymentCall);
-  assert.ok(invoiceCall > boundLookup);
-  assert.match(orchestrator, /let invoicePayload = posInvoicePayload/);
-  assert.match(
-    orchestrator,
-    /selfOrderRequestId[\s\S]*?invoicePayload = await resolveBoundCashCallInvoicePayload/,
-  );
+  assert.match(orchestrator, /invoice: \{ status: "queued" \}/);
+  assert.doesNotMatch(orchestrator, /createTaxInvoice\(/);
 });
 
-test("a post-payment binding read failure stays invoice-fail-soft", () => {
-  const orchestrator = paymentActions.slice(
-    paymentActions.indexOf(
-      "export async function confirmCashPaymentWithInvoice",
-    ),
-    paymentActions.indexOf("/* ─── fetchVietQrConfig"),
-  );
-
-  assert.match(
-    orchestrator,
-    /!invoicePayload\.success[\s\S]*?success: true,[\s\S]*?invoice: \{[\s\S]*?status: "failed"/,
-  );
+test("self-order snapshot remains the authoritative payload inside the RPC", () => {
+  assert.match(workerMigration, /v_payload := COALESCE\(v_request_payload, v_payload\)/);
+  assert.match(workerMigration, /request\.payment_id = v_payment_id/);
 });
 
 test("staff payment request contract does not expose stored buyer PII", () => {

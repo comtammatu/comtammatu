@@ -99,7 +99,7 @@ export async function issueTaxInvoiceForPaidOrder({
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .select(
-      "id, branch_id, created_by, subtotal, tax_amount, total_amount, discount_amount, order_discount_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, discount_amount, modifiers, sides, status)",
+      "id, branch_id, created_by, subtotal, tax_amount, total_amount, discount_amount, order_discount_amount, payment_status, status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, discount_amount, modifiers, sides, status)",
     )
     .eq("id", parsed.data.orderId)
     .eq("tenant_id", tenantId)
@@ -116,11 +116,11 @@ export async function issueTaxInvoiceForPaidOrder({
     };
   }
 
-  if (order.payment_status !== "paid") {
+  if (order.payment_status !== "paid" || order.status !== "completed") {
     return {
       success: false,
-      error: "Đơn hàng chưa thanh toán. Không thể xuất hóa đơn.",
-      errorCode: "order_unpaid",
+      error: "Đơn hàng chưa hoàn tất thanh toán. Không thể xuất hóa đơn.",
+      errorCode: "order_not_completed",
     };
   }
 
@@ -385,44 +385,101 @@ export async function issueTaxInvoiceForPaidOrder({
     providerData = undefined;
   }
 
-  const stateTimestamp = new Date().toISOString();
-  const hasProviderSubmission =
-    invoiceStatus === "signing" ||
-    invoiceStatus === "submitted" ||
-    invoiceStatus === "issued";
+  const providerPayload = providerData
+    ? JSON.parse(JSON.stringify(providerData))
+    : null;
 
-  const invoiceWrite = {
-    invoice_number: invoiceNumber,
-    status: invoiceStatus,
-    buyer_name: buyerName,
-    buyer_tax_code: buyerTaxCode ?? null,
-    buyer_address: buyerAddress ?? null,
-    buyer_email: buyerEmail ?? null,
-    subtotal: roundedSubtotal,
-    vat_rate: vatRate,
-    vat_amount: roundedVatAmount,
-    total_amount: Number(order.total_amount),
-    provider: invoiceProvider?.name ?? "viettel",
-    provider_ref: providerRef,
-    provider_data: providerData
-      ? JSON.parse(JSON.stringify(providerData))
-      : null,
-    cqt_code: cqtCode,
-    signing_started_at: hasProviderSubmission ? stateTimestamp : null,
-    issued_at: invoiceStatus === "issued" ? stateTimestamp : null,
+  if (invoiceStatus === "issued") {
+    if (!invoiceNumber || !providerRef) {
+      return {
+        success: false,
+        error:
+          "Nhà cung cấp đã phản hồi không đầy đủ. Hệ thống giữ lệnh để Finance đối soát.",
+        errorCode: "invoice_provider_incomplete",
+      };
+    }
+
+    const rpc = supabase as unknown as {
+      rpc: <T>(
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: T | null; error: { code?: string | null } | null }>;
+    };
+    const { data: invoice, error: reconcileErr } = await rpc.rpc<TaxInvoiceIssueRow>(
+      "reconcile_tax_invoice_provider_issued",
+      {
+        p_tax_invoice_id: reservedInvoice.id,
+        p_provider_ref: providerRef,
+        p_invoice_number: invoiceNumber,
+        p_cqt_code: cqtCode,
+        p_provider_data: providerPayload,
+        p_issued_at: new Date().toISOString(),
+        p_trigger_source: actorId ? "manual" : "cron",
+      },
+    );
+
+    if (reconcileErr || !invoice) {
+      console.error(`[${logPrefix}] Reconcile issued invoice error:`, reconcileErr);
+      return {
+        success: false,
+        error:
+          "Hóa đơn đã được gửi nhưng chưa lưu đủ trạng thái. Hệ thống đã giữ lệnh để đối soát.",
+        errorCode: "invoice_write_failed",
+      };
+    }
+
+    return {
+      success: true,
+      data: invoice as unknown as TaxInvoiceIssueRow,
+    };
+  }
+
+  if (invoiceStatus === "signing") {
+    return {
+      success: true,
+      data: {
+        id: reservedInvoice.id,
+        invoice_number: null,
+        status: "signing",
+      },
+    };
+  }
+
+  const transitionRpc = actorId
+    ? "transition_tax_invoice_state"
+    : "transition_tax_invoice_state_as_system";
+  const transitionArgs = actorId
+    ? {
+        p_tax_invoice_id: reservedInvoice.id,
+        p_to_status: invoiceStatus,
+        p_payload: providerPayload,
+        p_note:
+          invoiceStatus === "draft"
+            ? "Provider rejected invoice issuance"
+            : "Provider submitted invoice",
+      }
+    : {
+        p_tax_invoice_id: reservedInvoice.id,
+        p_to_status: invoiceStatus,
+        p_actor: null,
+        p_payload: providerPayload,
+        p_note:
+          invoiceStatus === "draft"
+            ? "Provider rejected invoice issuance"
+            : "Provider submitted invoice",
+      };
+  const transition = supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ error: { code?: string | null } | null }>;
   };
-
-  const { data: invoice, error: insertErr } = await supabase
-    .from("tax_invoices")
-    .update(invoiceWrite)
-    .eq("id", reservedInvoice.id)
-    .eq("tenant_id", tenantId)
-    .eq("status", "signing")
-    .select("id, invoice_number, status")
-    .single();
-
-  if (insertErr) {
-    console.error(`[${logPrefix}] Insert/update invoice error:`, insertErr);
+  const { error: transitionErr } = await transition.rpc(
+    transitionRpc,
+    transitionArgs,
+  );
+  if (transitionErr) {
+    console.error(`[${logPrefix}] Invoice state transition error:`, transitionErr);
     return {
       success: false,
       error:
@@ -431,5 +488,12 @@ export async function issueTaxInvoiceForPaidOrder({
     };
   }
 
-  return { success: true, data: invoice };
+  return {
+    success: true,
+    data: {
+      id: reservedInvoice.id,
+      invoice_number: null,
+      status: invoiceStatus,
+    },
+  };
 }

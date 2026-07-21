@@ -6,6 +6,7 @@ import { messages } from "@lib/messages";
 import {
   canIssueManualInvoice,
   fetchAccessibleBranches,
+  fetchTaxInvoiceIssueAttention,
   fetchTaxInvoicesPage,
 } from "../actions";
 import type { TaxInvoiceCursor } from "../actions";
@@ -32,7 +33,7 @@ export default async function InvoicesPage({
       ? ("attention" as const)
       : undefined;
 
-  const [res, canManageInvoices, canIssueInvoices, branchesRes] =
+  const [res, canManageInvoices, canIssueInvoices, branchesRes, attentionRes] =
     await Promise.all([
       fetchTaxInvoicesPage({ branchId, queue }),
       currentUserHasAnyPermissionAny([PERMISSION_KEYS.SETTINGS_TENANT]),
@@ -40,6 +41,7 @@ export default async function InvoicesPage({
       // order" button so button-visible ⊆ action-authorized (no click-then-403).
       canIssueManualInvoice(),
       fetchAccessibleBranches(),
+      fetchTaxInvoiceIssueAttention(),
     ]);
   const branches = (branchesRes.success ? (branchesRes.data ?? []) : []) as {
     id: number;
@@ -65,6 +67,7 @@ export default async function InvoicesPage({
           canManageInvoices={canManageInvoices}
           canIssueInvoices={canIssueInvoices}
           branches={branches}
+          initialIssueAttention={attentionRes.success ? (attentionRes.data ?? []) : []}
         />
       ) : (
         <AppEmptyState
