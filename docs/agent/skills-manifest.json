@@ -8,8 +8,8 @@
     "next-upgrade": "fbb6dbcf79b72520c5069e258df1129290db63dd2bb0d2408a38bf9be9165fe0",
     "playwright": "046358737927634d18f4d4102d93a1bb82b72d52f210f30b984523b43fbd18df",
     "shadcn": "1741845899da3278a3ec7ea7236b4cd8627479e18acb57c48d284d93f4d055f0",
-    "supabase": "25e56b6243eff2554c89bf106347bdc255ceee7e2aa3e30dc52149a29ed71a95",
-    "supabase-postgres-best-practices": "302e2cbcc4a64d631a238c610a85a6346064cafa195b369c052b8615f8e02a91",
+    "supabase": "83fcb27278a253a058357021d601aa8ad796ec41a85f6792543d6cf9c20da012",
+    "supabase-postgres-best-practices": "48bd2889208f7c7bd18c10ed9cce5266181b947e992d7b3de2f20975572deb62",
     "turborepo": "7a2bd7e60eb8e8a815d98af8c27fc24def1bc897f9ac2c2dd977347427d4f436",
     "vercel-react-best-practices": "85cdd2e931c68f342de165b71b7fce3f1785638de382364e67b2b83b89d439c4",
     "web-design-guidelines": "d5cb29ea15d5ceeb4ef0802e75c17ef4287c6f60ff8aa05e46c6080f615178bc"
