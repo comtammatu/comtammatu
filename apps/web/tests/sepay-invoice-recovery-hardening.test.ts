@@ -63,3 +63,31 @@ test("provider-issued result is reconciled atomically and never written directly
   assert.match(migration, /INSERT INTO public\.tax_invoice_events/);
   assert.match(migration, /INSERT INTO public\.reconcile_run_log/);
 });
+
+test("only the service worker can claim or finalize HĐĐT jobs", () => {
+  const migration = read(
+    "supabase/migrations/20260721121000_harden_tax_invoice_issue_job_acl.sql",
+  );
+
+  for (const signature of [
+    "public.claim_tax_invoice_issue_jobs(integer, integer)",
+    "public.finish_tax_invoice_issue_job_as_system(bigint, text, text)",
+  ]) {
+    assert.match(
+      migration,
+      new RegExp(
+        "REVOKE ALL ON FUNCTION " +
+          signature.replace(/[().]/g, "\\$&") +
+          " FROM PUBLIC, anon, authenticated;",
+      ),
+    );
+    assert.match(
+      migration,
+      new RegExp(
+        "GRANT EXECUTE ON FUNCTION " +
+          signature.replace(/[().]/g, "\\$&") +
+          " TO service_role;",
+      ),
+    );
+  }
+});
