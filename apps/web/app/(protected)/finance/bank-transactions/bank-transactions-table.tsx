@@ -372,14 +372,12 @@ function LinkPaymentCell({
   const [isPaymentPending, startPaymentTransition] = React.useTransition();
   const [isDepositPending, startDepositTransition] = React.useTransition();
   const table = copy.unmatchedMoneyInTable;
-  const reason = classifySepayUnmatchedMoneyIn(tx);
   const bankTransactionId = tx.bankTransactionId ?? null;
   const eventId = tx.eventId;
 
   if (
     !canLinkPayments ||
     (bankTransactionId == null && eventId == null) ||
-    reason === "webhook_error" ||
     !canManuallyLinkSepayPayment(tx)
   ) {
     return null;
@@ -578,8 +576,6 @@ function ReconciliationActionCell({
   touch: boolean;
 }) {
   const state = classifySepayReconciliationState(tx);
-
-  if (state === "webhook_error") return null;
 
   if (state === "matched" && tx.paymentId != null) return null;
 

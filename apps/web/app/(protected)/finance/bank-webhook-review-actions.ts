@@ -2,6 +2,7 @@
 
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { z } from "zod";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
@@ -58,13 +59,15 @@ function mapLinkPaymentError(error: LinkPaymentRpcError): string {
   }
   if (
     normalized.includes("payment_not_found") ||
-    normalized.includes("bank_reconciliation_target_not_found")
+    normalized.includes("bank_reconciliation_target_not_found") ||
+    normalized.includes("sepay_replay_payment_not_pending")
   ) {
-    return "Không tìm thấy payment VietQR đã thu.";
+    return "Không tìm thấy payment VietQR đang chờ hoặc đã thu.";
   }
   if (
     normalized.includes("webhook_event_not_found") ||
-    normalized.includes("bank_transaction_not_found")
+    normalized.includes("bank_transaction_not_found") ||
+    normalized.includes("sepay_replay_event_not_found")
   ) {
     return "Không tìm thấy giao dịch ngân hàng.";
   }
@@ -85,7 +88,8 @@ function mapLinkPaymentError(error: LinkPaymentRpcError): string {
   }
   if (
     normalized.includes("payment_amount_mismatch") ||
-    normalized.includes("bank_reconciliation_amount_mismatch")
+    normalized.includes("bank_reconciliation_amount_mismatch") ||
+    normalized.includes("sepay_replay_amount_mismatch")
   ) {
     return "Số tiền payment không khớp giao dịch ngân hàng.";
   }
@@ -97,6 +101,24 @@ function mapLinkPaymentError(error: LinkPaymentRpcError): string {
   }
   if (normalized.includes("webhook_event_amount_invalid")) {
     return "Số tiền webhook không hợp lệ.";
+  }
+  if (
+    normalized.includes("sepay_replay_event_not_recoverable") ||
+    normalized.includes("sepay_replay_event_invalid")
+  ) {
+    return "Webhook này không đủ điều kiện phát lại an toàn.";
+  }
+  if (
+    normalized.includes("sepay_replay_payment_code_mismatch") ||
+    normalized.includes("sepay_replay_payment_code_required")
+  ) {
+    return "Mã thanh toán không khớp payment VietQR đang chờ.";
+  }
+  if (normalized.includes("sepay_replay_payment_already_linked")) {
+    return "Payment này đã có giao dịch SePay hợp lệ.";
+  }
+  if (normalized.includes("sepay_replay_failed")) {
+    return "Chưa thể hoàn tất payment từ webhook này. Dữ liệu cũ được giữ nguyên.";
   }
 
   console.error(
@@ -156,7 +178,7 @@ export async function linkSepayTransactionToPayment(
     return { success: false, error: "Không có quyền đối soát thanh toán." };
   }
 
-  const { supabase, claims } = ctx;
+  const { supabase, claims, user } = ctx;
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .select("id")
@@ -170,17 +192,18 @@ export async function linkSepayTransactionToPayment(
 
   const { data: payments, error: paymentsError } = await supabase
     .from("payments")
-    .select("id")
+    .select("id, status")
     .eq("tenant_id", claims.tenant_id)
     .eq("order_id", order.id)
     .eq("method", "vietqr")
-    .eq("status", "completed")
+    .in("status", ["pending", "completed"])
     .limit(2);
 
   if (paymentsError || payments == null || payments.length !== 1) {
     return {
       success: false,
-      error: "Không tìm thấy thanh toán VietQR đã thu cho mã này.",
+      error:
+        "Không tìm thấy thanh toán VietQR đang chờ hoặc đã thu cho mã này.",
     };
   }
 
@@ -188,8 +211,42 @@ export async function linkSepayTransactionToPayment(
   if (paymentId == null) {
     return {
       success: false,
-      error: "Không tìm thấy thanh toán VietQR đã thu cho mã này.",
+      error:
+        "Không tìm thấy thanh toán VietQR đang chờ hoặc đã thu cho mã này.",
     };
+  }
+
+  if (payments[0]?.status === "pending") {
+    if (parsed.data.eventId == null) {
+      return {
+        success: false,
+        error:
+          "Chưa có webhook SePay đã xác thực. Hãy gửi lại webhook từ portal SePay trước khi khớp payment.",
+      };
+    }
+
+    const { data, error } = await createServiceClient().rpc(
+      "replay_signed_sepay_payment_evidence",
+      {
+        p_actor_id: user.id,
+        p_event_id: parsed.data.eventId,
+        p_payment_code: parsed.data.paymentCode,
+        p_payment_id: paymentId,
+      },
+    );
+
+    if (error) {
+      console.error(
+        "[finance:bank-webhook-review] failed to replay signed payment evidence",
+        error.code,
+      );
+      return { success: false, error: mapLinkPaymentError(error) };
+    }
+
+    revalidateSurfacePath("/finance");
+    revalidateSurfacePath("/finance/bank-transactions");
+    revalidateSurfacePath("/finance/invoices");
+    return { success: true, data };
   }
 
   const canonicalResult =

@@ -11099,6 +11099,15 @@ export type Database = {
         }
         Returns: number
       }
+      replay_signed_sepay_payment_evidence: {
+        Args: {
+          p_actor_id: string
+          p_event_id: number
+          p_payment_code: string
+          p_payment_id: number
+        }
+        Returns: Json
+      }
       request_inventory_count_recount: {
         Args: { p_note?: string; p_slip_id: number }
         Returns: undefined

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Clock as IconClock, ReceiptText as IconReceipt } from "lucide-react";
 import dynamic from "next/dynamic";
+import { formatVND } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -288,6 +289,12 @@ export function SelfOrderClient({
   const [billOpen, setBillOpen] = useState(false);
   const [billView, setBillView] = useState<"bill" | "payment">("bill");
   const [awaitingDialogOpen, setAwaitingDialogOpen] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    "cash_call" | "vietqr" | null
+  >(null);
+  const [paymentConfirmationMethod, setPaymentConfirmationMethod] = useState<
+    "cash_call" | "vietqr" | null
+  >(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<
     "cash_call" | "vietqr" | null
   >(null);
@@ -645,6 +652,8 @@ export function SelfOrderClient({
           return;
         }
         setLocalPaymentRequest(paymentRequest);
+        setSelectedPaymentMethod(null);
+        setPaymentConfirmationMethod(null);
         paymentIntentRef.current = clearClientIntent(
           paymentIntentRef.current,
           intent.clientOpId,
@@ -659,6 +668,31 @@ export function SelfOrderClient({
       }
     });
   }
+
+  function openPaymentConfirmation() {
+    if (!selectedPaymentMethod || !order || activePaymentRequest) return;
+    const fieldErrors = validateInvoice();
+    setInvoiceFieldErrors(fieldErrors);
+    const firstError = (
+      ["buyerName", "buyerTaxCode", "buyerAddress", "buyerEmail"] as const
+    ).find((field) => fieldErrors[field]);
+    if (firstError) {
+      invoiceFocusAttemptRef.current += 1;
+      setInvoiceErrorFocusRequest({
+        attempt: invoiceFocusAttemptRef.current,
+        field: firstError,
+      });
+      return;
+    }
+
+    setPaymentError(null);
+    setPaymentConfirmationMethod(selectedPaymentMethod);
+  }
+
+  const paymentConfirmationInvoice = buyerNotGetInvoice
+    ? SELF_ORDER_VI.paymentConfirmInvoiceDefault
+    : [buyerName.trim(), buyerTaxCode.trim()].filter(Boolean).join(" · ") ||
+      SELF_ORDER_VI.paymentConfirmInvoiceDefault;
 
   return (
     <AppPage
@@ -769,6 +803,7 @@ export function SelfOrderClient({
             buyerTaxCode={buyerTaxCode}
             buyerAddress={buyerAddress}
             buyerEmail={buyerEmail}
+            selectedPaymentMethod={selectedPaymentMethod}
             isPending={isPaymentPending}
             pendingMethod={pendingPaymentMethod}
             error={paymentError}
@@ -781,7 +816,8 @@ export function SelfOrderClient({
             }
             onBuyerAddressChange={setBuyerAddress}
             onBuyerEmailChange={setBuyerEmail}
-            onRequestPayment={requestPayment}
+            onPaymentMethodChange={setSelectedPaymentMethod}
+            onConfirmPayment={openPaymentConfirmation}
           />
         ) : null}
       </BillDrawer>
@@ -813,6 +849,88 @@ export function SelfOrderClient({
         }
         footerClassName="flex-col gap-2 sm:flex-row"
       />
+
+      <AppDialog
+        open={paymentConfirmationMethod != null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !isPaymentPending) {
+            setPaymentConfirmationMethod(null);
+          }
+        }}
+        title={
+          paymentConfirmationMethod === "vietqr"
+            ? SELF_ORDER_VI.paymentReconcileTitle
+            : SELF_ORDER_VI.paymentConfirmTitle
+        }
+        description={
+          paymentConfirmationMethod === "vietqr"
+            ? SELF_ORDER_VI.paymentReconcileDescription
+            : SELF_ORDER_VI.paymentConfirmDescription
+        }
+        bodyClassName="gap-2"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              disabled={isPaymentPending}
+              onClick={() => setPaymentConfirmationMethod(null)}
+            >
+              {SELF_ORDER_VI.paymentConfirmBack}
+            </Button>
+            <Button
+              type="button"
+              size="touch"
+              disabled={isPaymentPending || paymentConfirmationMethod == null}
+              onClick={() => {
+                if (paymentConfirmationMethod) {
+                  requestPayment(paymentConfirmationMethod);
+                }
+              }}
+            >
+              {isPaymentPending ? <Spinner className="size-4" /> : null}
+              {paymentConfirmationMethod === "vietqr"
+                ? SELF_ORDER_VI.paymentReconcileAction
+                : SELF_ORDER_VI.paymentConfirmAction}
+            </Button>
+          </>
+        }
+        footerClassName="flex-col-reverse gap-2 sm:flex-row"
+      >
+        <Item
+          variant="outline"
+          size="sm"
+          className="flex-col items-stretch bg-muted/30 text-sm"
+        >
+          <div className="flex items-baseline justify-between gap-3 py-1">
+            <span className="text-muted-foreground">
+              {SELF_ORDER_VI.paymentConfirmMethod}
+            </span>
+            <span className="text-right font-medium">
+              {paymentConfirmationMethod === "cash_call"
+                ? SELF_ORDER_VI.cashCall
+                : SELF_ORDER_VI.vietQrCreate}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 py-1">
+            <span className="text-muted-foreground">
+              {SELF_ORDER_VI.totalAmount}
+            </span>
+            <span className="font-mono font-semibold tabular-nums">
+              {formatVND(order?.totalAmount ?? 0)}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 py-1">
+            <span className="text-muted-foreground">
+              {SELF_ORDER_VI.paymentConfirmInvoice}
+            </span>
+            <span className="text-right font-medium">
+              {paymentConfirmationInvoice}
+            </span>
+          </div>
+        </Item>
+      </AppDialog>
     </AppPage>
   );
 }

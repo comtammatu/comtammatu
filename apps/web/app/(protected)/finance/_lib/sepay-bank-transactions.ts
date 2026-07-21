@@ -104,7 +104,7 @@ interface RefundMatchRow {
 }
 
 const SEPAY_WEBHOOK_SELECT =
-  "id, request_id, created_at, processing_status, error_code, order_id, payment_id, expense_id, payload" as const;
+  "id, request_id, created_at, processing_status, http_status, error_code, order_id, payment_id, expense_id, payload" as const;
 const SEPAY_BANK_WEBHOOK_SELECT =
   `${SEPAY_WEBHOOK_SELECT}, orders!webhook_events_order_id_fkey(order_number)` as const;
 const SEPAY_BANK_LEDGER_SELECT =

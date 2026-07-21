@@ -71,12 +71,14 @@ function row(
   errorCode: string | null = null,
   orderId: number | null = null,
   orderNumber: string | null = null,
+  httpStatus: number | null = null,
 ): SepayWebhookRow {
   return {
     id,
     request_id: String(id),
     created_at: createdAt,
     processing_status: processingStatus,
+    http_status: httpStatus,
     error_code: errorCode,
     order_id: orderId,
     payment_id: paymentId,
@@ -632,6 +634,73 @@ test("signed SePay business mismatches stay reviewable without exposing conflict
     isSepayPaymentConflictReviewCode(technicalFailure.errorCode),
     false,
   );
+});
+
+test("signed SePay server failures can be replayed but client failures stay blocked", () => {
+  const serverFailure = tx(
+    row(
+      7,
+      { transferType: "in", transferAmount: 30000 },
+      undefined,
+      null,
+      null,
+      "failed",
+      "payment_confirmation_failed",
+      null,
+      null,
+      500,
+    ),
+  );
+  const clientFailure = tx(
+    row(
+      8,
+      { transferType: "in", transferAmount: 30000 },
+      undefined,
+      null,
+      null,
+      "failed",
+      "invalid_amount",
+      null,
+      null,
+      200,
+    ),
+  );
+
+  assert.equal(canManuallyLinkSepayPayment(serverFailure), true);
+  assert.equal(canManuallyLinkSepayPayment(clientFailure), false);
+});
+
+test("Owner replay of signed SePay evidence is exact, atomic, and audited", () => {
+  const migration = read(
+    "supabase/migrations/20260721174543_replay_signed_sepay_payment_evidence.sql",
+  );
+  const action = read(
+    "apps/web/app/(protected)/finance/bank-webhook-review-actions.ts",
+  );
+
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.replay_signed_sepay_payment_evidence/,
+  );
+  assert.match(migration, /auth\.role\(\) IS DISTINCT FROM 'service_role'/);
+  assert.match(migration, /v_event\.signature_valid/);
+  assert.match(migration, /v_event\.http_status, 0\) >= 500/);
+  assert.match(migration, /payment\.status = 'pending'/);
+  assert.match(migration, /v_amount <> v_payment\.amount/);
+  assert.match(
+    migration,
+    /reconcile_sepay_order_evidence\(v_event\.id, v_payment_code\)/,
+  );
+  assert.match(migration, /INSERT INTO public\.audit_logs/);
+  assert.match(migration, /TO service_role/);
+  assert.doesNotMatch(
+    migration,
+    /GRANT EXECUTE[\s\S]*replay_signed_sepay_payment_evidence[\s\S]*TO authenticated/,
+  );
+  assert.match(action, /\.in\("status", \["pending", "completed"\]\)/);
+  assert.match(action, /createServiceClient\(\)/);
+  assert.match(action, /replay_signed_sepay_payment_evidence/);
+  assert.match(action, /p_actor_id: user\.id/);
 });
 
 test("SePay money-in manual link stays guarded by RPC", () => {

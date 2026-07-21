@@ -78,6 +78,7 @@ export interface PaymentPanelProps {
   buyerTaxCode: string;
   buyerAddress: string;
   buyerEmail: string;
+  selectedPaymentMethod: "cash_call" | "vietqr" | null;
   isPending: boolean;
   pendingMethod: "cash_call" | "vietqr" | null;
   error: string | null;
@@ -88,7 +89,8 @@ export interface PaymentPanelProps {
   onBuyerTaxCodeChange: (value: string) => void;
   onBuyerAddressChange: (value: string) => void;
   onBuyerEmailChange: (value: string) => void;
-  onRequestPayment: (method: "cash_call" | "vietqr") => void;
+  onPaymentMethodChange: (method: "cash_call" | "vietqr") => void;
+  onConfirmPayment: () => void;
 }
 
 type BuyerTaxLookupStatus =
@@ -228,6 +230,7 @@ export function PaymentPanel({
   buyerTaxCode,
   buyerAddress,
   buyerEmail,
+  selectedPaymentMethod,
   isPending,
   pendingMethod,
   error,
@@ -238,7 +241,8 @@ export function PaymentPanel({
   onBuyerTaxCodeChange,
   onBuyerAddressChange,
   onBuyerEmailChange,
-  onRequestPayment,
+  onPaymentMethodChange,
+  onConfirmPayment,
 }: PaymentPanelProps) {
   const [buyerTaxLookupStatus, setBuyerTaxLookupStatus] =
     useState<BuyerTaxLookupStatus>("idle");
@@ -611,10 +615,13 @@ export function PaymentPanel({
             <div className="grid grid-cols-1 gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant={
+                  selectedPaymentMethod === "cash_call" ? "default" : "outline"
+                }
                 size="touch"
                 disabled={disabled || isPending}
-                onClick={() => onRequestPayment("cash_call")}
+                aria-pressed={selectedPaymentMethod === "cash_call"}
+                onClick={() => onPaymentMethodChange("cash_call")}
               >
                 {pendingMethod === "cash_call" ? (
                   <Spinner className="size-4" />
@@ -625,9 +632,13 @@ export function PaymentPanel({
               </Button>
               <Button
                 type="button"
+                variant={
+                  selectedPaymentMethod === "vietqr" ? "default" : "outline"
+                }
                 size="touch"
                 disabled={disabled || isPending}
-                onClick={() => onRequestPayment("vietqr")}
+                aria-pressed={selectedPaymentMethod === "vietqr"}
+                onClick={() => onPaymentMethodChange("vietqr")}
               >
                 {pendingMethod === "vietqr" ? (
                   <Spinner className="size-4" />
@@ -640,7 +651,22 @@ export function PaymentPanel({
           )}
         </>
       </AppSection>
-      {activePaymentRequest ? null : buyerDetails}
+      {activePaymentRequest ? null : (
+        <>
+          {buyerDetails}
+          <Button
+            type="button"
+            size="touch"
+            className="w-full"
+            disabled={disabled || isPending || selectedPaymentMethod == null}
+            onClick={onConfirmPayment}
+          >
+            {selectedPaymentMethod === "vietqr"
+              ? SELF_ORDER_VI.paymentReconcileAction
+              : SELF_ORDER_VI.paymentConfirmAction}
+          </Button>
+        </>
+      )}
     </section>
   );
 }

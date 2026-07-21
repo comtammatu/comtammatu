@@ -508,17 +508,17 @@ export const finance = {
       openConflictOrder: "Mở đơn",
       linkTitle: "Khớp giao dịch tiền vào",
       linkDescription:
-        "Dùng mã thanh toán từ sao kê SePay để tìm đúng giao dịch VietQR.",
+        "Dùng mã thanh toán để khớp đúng payment VietQR. Nếu payment còn chờ, hệ thống chỉ hoàn tất từ webhook SePay đã xác thực.",
       linkInputLabel: "Mã thanh toán trên sao kê",
       linkInputPlaceholder: "Ví dụ: MATU ABC123",
       linkInputHelp:
-        "Mã được điền sẵn khi SePay cung cấp. Không dùng mã đơn hoặc mã tham chiếu.",
+        "Mã được điền sẵn khi SePay cung cấp. Nếu chưa có webhook đã xác thực, hãy gửi lại webhook từ portal SePay.",
       linkAction: "Khớp",
       linkPaymentAction: "Gắn thanh toán",
       linkPending: "Đang gắn",
       linkUnavailable: "—",
       linkInvalid: "Nhập mã thanh toán trên sao kê.",
-      linkSuccess: "Đã gắn giao dịch với thanh toán VietQR.",
+      linkSuccess: "Đã đối soát giao dịch với thanh toán VietQR.",
       linkError: "Không thể gắn giao dịch với thanh toán VietQR.",
       cashDepositTitle: "Nộp tiền mặt vào tài khoản",
       cashDepositDescription:

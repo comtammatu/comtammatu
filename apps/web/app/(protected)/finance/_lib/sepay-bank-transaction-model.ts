@@ -17,6 +17,7 @@ export interface SepayWebhookRow {
   request_id: string;
   created_at: string;
   processing_status: string;
+  http_status?: number | null;
   error_code: string | null;
   order_id: number | null;
   payment_id: number | null;
@@ -57,6 +58,7 @@ export interface SepayBankTransaction {
   requestId: string;
   createdAt: string;
   processingStatus: string;
+  httpStatus?: number | null;
   errorCode: string | null;
   orderId: number | null;
   orderNumber: string | null;
@@ -176,6 +178,7 @@ export function canManuallyLinkSepayPayment(
     SepayBankTransaction,
     | "errorCode"
     | "expenseIds"
+    | "httpStatus"
     | "paymentId"
     | "processingStatus"
     | "transferType"
@@ -183,14 +186,16 @@ export function canManuallyLinkSepayPayment(
 ): boolean {
   return (
     transaction.transferType === "in" &&
-    transaction.processingStatus === "processed" &&
     transaction.paymentId == null &&
     transaction.expenseIds.length === 0 &&
-    (transaction.errorCode == null ||
-      includesErrorCode(
-        SEPAY_RECOVERABLE_PAYMENT_REVIEW_CODES,
-        transaction.errorCode,
-      ))
+    ((transaction.processingStatus === "processed" &&
+      (transaction.errorCode == null ||
+        includesErrorCode(
+          SEPAY_RECOVERABLE_PAYMENT_REVIEW_CODES,
+          transaction.errorCode,
+        ))) ||
+      (transaction.processingStatus === "failed" &&
+        (transaction.httpStatus ?? 0) >= 500))
   );
 }
 
@@ -425,6 +430,7 @@ export function mapSepayWebhookRow(
     requestId: row.request_id,
     createdAt: row.created_at,
     processingStatus: row.processing_status,
+    httpStatus: row.http_status ?? null,
     errorCode: row.error_code,
     orderId: row.order_id,
     orderNumber:

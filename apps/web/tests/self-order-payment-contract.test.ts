@@ -29,6 +29,13 @@ function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
+function readShared(path: string): string {
+  return readFileSync(
+    join(process.cwd(), "../../packages/shared/src", path),
+    "utf8",
+  );
+}
+
 test("VietQR response contract preserves the exact database snapshot", () => {
   const snapshot = {
     id: 41,
@@ -117,6 +124,38 @@ test("Self-Order permits payment while KDS is still preparing", () => {
   assert.match(paymentTimingMigration, /EXECUTE v_definition/);
   assert.doesNotMatch(paymentPanel, /canCreateVietQr/);
   assert.doesNotMatch(paymentPanel, /paymentNotReady/);
+});
+
+test("Self-Order selects payment and HĐĐT before creating an immutable request", () => {
+  const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
+  const client = readWeb("app/q/[token]/self-order-client.tsx");
+  const messages = readShared("messages/self-order.ts");
+
+  assert.match(paymentPanel, /selectedPaymentMethod/);
+  assert.match(paymentPanel, /onPaymentMethodChange\("cash_call"\)/);
+  assert.match(paymentPanel, /onPaymentMethodChange\("vietqr"\)/);
+  assert.match(paymentPanel, /onClick=\{onConfirmPayment\}/);
+  assert.doesNotMatch(paymentPanel, /onRequestPayment/);
+  assert.match(client, /setPaymentConfirmationMethod\(selectedPaymentMethod\)/);
+  assert.match(client, /requestPayment\(paymentConfirmationMethod\)/);
+  assert.match(
+    client,
+    /postSelfOrderJson\([\s\S]*?\/payment`[\s\S]*?invoice: invoicePayload/,
+  );
+  assert.match(messages, /paymentConfirmAction: "Xác nhận thanh toán"/);
+  assert.match(messages, /paymentReconcileAction: "Chờ đối soát"/);
+  assert.match(
+    paymentPanel,
+    /selectedPaymentMethod === "vietqr"[\s\S]*paymentReconcileAction/,
+  );
+  assert.match(
+    client,
+    /paymentConfirmationMethod === "vietqr"[\s\S]*paymentReconcileTitle[\s\S]*paymentConfirmTitle/,
+  );
+  assert.match(
+    client,
+    /paymentConfirmationMethod === "vietqr"[\s\S]*paymentReconcileAction/,
+  );
 });
 
 test("only the current payment request can unlock the Self-Order completion screen", () => {

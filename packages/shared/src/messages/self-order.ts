@@ -131,8 +131,20 @@ export const SELF_ORDER_VI = {
   orderRejectedBlocked:
     "Yêu cầu gọi món đã bị từ chối. Vui lòng gọi nhân viên để được hỗ trợ.",
   paymentTitle: "Thanh toán",
-  cashCall: "Gọi nhân viên thu tiền mặt",
-  vietQrCreate: "Tạo mã QR thanh toán",
+  cashCall: "Tiền mặt",
+  vietQrCreate: "VietQR",
+  paymentConfirmAction: "Xác nhận thanh toán",
+  paymentConfirmTitle: "Xác nhận thanh toán?",
+  paymentConfirmDescription:
+    "Kiểm tra phương thức, số tiền và thông tin HĐĐT trước khi tiếp tục.",
+  paymentReconcileAction: "Chờ đối soát",
+  paymentReconcileTitle: "Chờ đối soát VietQR?",
+  paymentReconcileDescription:
+    "Đơn chỉ hoàn tất sau khi SePay xác thực hoặc chủ quán đối soát.",
+  paymentConfirmMethod: "Phương thức",
+  paymentConfirmInvoice: "Thông tin HĐĐT",
+  paymentConfirmInvoiceDefault: "Không ghi thông tin người mua",
+  paymentConfirmBack: "Quay lại",
   cashCallOk: "Đã gọi nhân viên thu tiền mặt.",
   vietQrPendingTitle: "Mã QR thanh toán",
   openBankApp: "Mở ứng dụng",
