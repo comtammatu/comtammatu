@@ -21,8 +21,11 @@ const ACTION_SOURCE = readFileSync(
 test("staff permission UI can submit tenant-wide grants", () => {
   assert.match(CLIENT_SOURCE, /TENANT_SCOPE_VALUE = "__tenant__"/);
   assert.match(CLIENT_SOURCE, /branchIdFromValue/);
-  assert.match(CLIENT_SOURCE, /value=\{TENANT_SCOPE_VALUE\}>Toàn quán/);
-  assert.match(CLIENT_SOURCE, /branch_id: branchIdFromValue\(selectedBranch\)/);
+  assert.match(
+    CLIENT_SOURCE,
+    /\{ value: TENANT_SCOPE_VALUE, label: copy\.tenantWide \}/,
+  );
+  assert.match(CLIENT_SOURCE, /branch_id: branchIdFromValue\(values\.scope\)/);
   assert.match(CLIENT_SOURCE, /branch_id: branchIdFromValue\(templateBranch\)/);
 });
 
