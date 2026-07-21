@@ -18,21 +18,34 @@ over older task notes, regressions, and memory.
 project-scoped MCP tools; it is not the guarded-read policy used for comtammatu
 Production.
 
-- **No persistent non-production Cloud target is registered.** Do not infer a
-  replacement from a deleted ref, a local env file, or a Preview branch.
-  `corepack pnpm db:types` fails closed until the owner records a literal DEV
-  ref here and the guard fixtures are updated in the same change. Supabase CLI,
-  direct `psql`, and project-scoped MCP calls against non-production are blocked
-  until then.
-- An on-demand Preview Branch is not a substitute for a registered persistent
-  DEV target. A workstation must not substitute Supabase Local Docker for either
-  Cloud target. The CI-only E2E harness is the sole isolated Docker exception
-  and may write only its ignored `apps/web/.env.test.local` plus the GitHub
-  runner's `GITHUB_ENV`; it never writes repository `.env.local` files.
-  Preview creation still requires the literal parent binding
-  `--project-ref iexwsuaqqenyjiskawoj`, but no Preview ref is trusted for agent
-  mutation while no DEV is registered. Stop and report the blocker instead of
-  weakening the guard or substituting Local Docker.
+- **DEV — `matu-greenfield` (`dzvilydcccemlafxcydj`)** is the persistent
+  non-production Cloud target. Verify this ref before every tool or SQL call;
+  use only task-scoped non-production data and never treat it as production.
+  `corepack pnpm db:types` always generates from this registered DEV target and
+  rejects any other `SUPABASE_PROJECT_ID`.
+  The local guard permits `supabase db push` only with a literal `--db-url`
+  whose host is the direct DEV database endpoint or the registered DEV Session
+  Pooler (the IPv4-only fallback for this runner). The repository `dotenv`
+  runner may load a password from `.env.local`, but cannot provide the URL.
+  Direct DEV `psql` URLs are
+  supported only as static literal `-c` commands with `-X` or `--no-psqlrc`.
+  Interactive sessions, script files, psql variables/meta-commands, stored link
+  state, startup-file commands, env-indirected targets, and every other
+  mutating Supabase CLI path remain blocked.
+- Use an on-demand Preview Branch for isolated migration replay or disposable
+  verification. A workstation must not substitute Supabase Local Docker for
+  either Cloud target. The CI-only E2E harness is the sole isolated Docker
+  exception and may write only its ignored `apps/web/.env.test.local` plus the
+  GitHub runner's `GITHUB_ENV`; it never writes repository `.env.local` files.
+  CLI creation additionally requires the literal parent binding
+  `--project-ref iexwsuaqqenyjiskawoj`; stored link state and any other parent
+  remain blocked.
+  Preview MCP actions are trusted only when the guard retrieves that exact
+  candidate from `supabase branches get` with the literal Production parent and
+  verifies both `project_ref` and `parent_project_ref`. This proof is repeated
+  per action; it creates no local whitelist or stored-link exception. A lookup
+  failure, mismatched parent, branch merge/reset/rebase, or every Preview CLI
+  mutation fails closed. `supabase db push` remains DEV-only.
 - Org-scoped MCP servers and the Supabase CLI are write-capable. This repo has
   no tracked `.mcp.json`; never infer a project binding from one. Codex's direct
   repo MCP URL in `.codex/config.toml` is pinned to comtammatu Production with
@@ -50,9 +63,8 @@ Production.
   target selectors fail closed. Project-scoped CLI reads use a literal
   `--project-ref` or direct registered `--db-url` as supported by that command.
   Production CLI and MCP reads are limited to schema/catalog surfaces; project
-  metadata, logs, advisors, API keys, and secrets remain blocked. A future
-  registered DEV may use the broader project-read actions required for
-  non-production QA.
+  metadata, logs, advisors, API keys, and secrets remain blocked. Registered DEV
+  may use the broader project-read actions required for non-production QA.
 - Protected HTTP reads must also disable hidden request input: use `curl -q`,
   `wget --no-config`, or HTTPie/xh `--ignore-stdin`. Explicit client config,
   stdin/request bodies, mutating methods, and unresolved Supabase URLs remain
@@ -73,13 +85,14 @@ Production.
 ## Migration Policy
 
 - Every migration is T3. Write the migration file before applying it.
-- Verify the target ref before every apply. Preview Branch creation is allowed
-  only when `supabase/migration-lineage.json` is `aligned` and explicitly enables
-  native branching. When lineage or the Cloud target cannot be verified, stop
-  and report the blocker; never fall back to Supabase Local Docker on a
-  workstation. Preview deletion is allowed only when the hook can prove the
-  comtammatu parent; org-scoped branch-id-only tools fail closed. Merge,
-  reset, and rebase into production remain production writes.
+- Verify the target ref before every apply. Preview Branch creation requires the
+  literal registered Production parent and per-action parent verification by the
+  guard. `supabase/migration-lineage.json` validates the local baseline/install
+  layout; it does not grant or block Preview access. When the Cloud target cannot
+  be verified, stop and report the blocker; never fall back to Supabase Local
+  Docker on a workstation. Preview deletion is allowed only when the hook can
+  prove the comtammatu parent; org-scoped branch-id-only tools fail closed.
+  Merge, reset, and rebase into production remain production writes.
 - Production defaults to file → PR → merge → owner applies. Agent apply requires
   explicit delegation for the exact operation in the current session.
 - Delegation never authorizes changing or disabling repo guards. If the guarded

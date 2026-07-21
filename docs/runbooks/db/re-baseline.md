@@ -6,9 +6,9 @@
 > baseline that squashes the forward chain so a from-empty replay matches current
 > prod exactly.
 
-`supabase/migration-lineage.json` is the machine gate for this runbook. Never
-raise its frozen forward limit to make CI green; completing this runbook is the
-only path from `blocked_pending_rebaseline` to `aligned`.
+`supabase/migration-lineage.json` records the candidate baseline file, version,
+and hash. Its guard validates local install-layout integrity; it neither changes
+the Production ledger nor controls Preview access.
 
 ## Why this exists
 
@@ -109,10 +109,7 @@ now-squashed forward chain.
    the canonical seed or managed-surfaces fold. Do not assume a schema dump
    preserves `INSERT`, `UPDATE`, or `DELETE` effects.
 
-3. **Update the lineage manifest.** Set the new baseline file/version/hash, keep
-   `state=blocked_pending_rebaseline`, keep `productionCutoff=null`, keep native
-   Preview blocked, and reduce `activeForwardLimit` to the remaining forward
-   count. Run:
+3. **Update the lineage manifest.** Set the new baseline file/version/hash. Run:
 
    ```bash
    corepack pnpm lint:migration-lineage
@@ -143,11 +140,11 @@ now-squashed forward chain.
    migration. Do **not** run `supabase db push`/`migration repair` against prod
    as part of this — the new baseline is a replay artifact for fresh envs, not a
    prod migration. Verify the prod ledger still matches the (archived) history
-   before and after. Native Preview remains blocked in this state.
+   before and after.
 
-7. **Merge the source re-baseline while native Preview stays blocked.** The PR
-   contains the baseline, archive/seed/fold classification, manifest hash, types,
-   and replay evidence. It does not apply schema or rewrite production history.
+7. **Merge the source re-baseline.** The PR contains the baseline,
+   archive/seed/fold classification, manifest hash, types, and replay evidence.
+   It does not apply schema or rewrite production history.
 
 8. **Align the production migration ledger only under a separate explicit owner
    approval.** Rehearse the current Supabase CLI squash/repair behavior on a
@@ -159,13 +156,10 @@ now-squashed forward chain.
    if it blocks `migration repair`, the owner performs the exact reviewed command
    outside the guarded agent runtime.
 
-9. **Enable native Preview only after live ledger proof.** In a follow-up change,
-   set
-   `productionCutoff=baselineVersion`, `state=aligned`,
-   `nativePreviewBranching=enabled`, and `activeForwardLimit` to at most `20`.
-   Re-run the lineage guard and create one throwaway Preview. Inspect its
-   deployment log only through trusted registration or owner-operated evidence,
-   then delete it after verification.
+9. **Use Preview independently when needed.** Re-run the lineage guard, create
+   one throwaway Preview with the verified Production parent, inspect its
+   deployment log through trusted registration or owner-operated evidence, then
+   delete it after verification.
 
 10. **Close the alignment change.** File → PR → owner. Tier **T3** (baseline /
     migration chain). Future migrations append on top of the aligned baseline
@@ -181,5 +175,5 @@ now-squashed forward chain.
 - The remaining forward chain is either strictly newer than the dump cutoff, not
   yet represented by prod, or the managed-surfaces fold migration, and the whole
   remaining chain replays clean.
-- `pnpm lint:migration-lineage` exits 0; native Preview is enabled only after the
-  live production ledger and baseline version match.
+- `pnpm lint:migration-lineage` exits 0. Any Preview proof records its verified
+  parent separately from the Production ledger.

@@ -1,9 +1,90 @@
 #!/usr/bin/env node
+// Cross-platform Supabase type generation.
+//
+// Replaces `pnpm db:types` shell script. The previous implementation used
+// `2>/dev/null` which fails on Windows cmd.exe (`The system cannot find the
+// path specified`), and `$SUPABASE_PROJECT_ID` shell expansion that does not
+// work the same way on cmd vs sh. Lesson #11–#13 in `tasks/lessons.md`.
+//
+// Behavior:
+// - Generates from the registered persistent Cloud DEV project only. Typegen is
+//   a read path, but it must never silently choose Production or stored env state.
+// - Captures only stdout; CLI update notice on stderr is shown in console
+//   but never poisons the types file.
+// - Writes to `packages/database/src/types/database.types.ts`.
+
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+
+const DEV_PROJECT_ID = "dzvilydcccemlafxcydj";
 const requestedProjectId = process.env["SUPABASE_PROJECT_ID"]?.trim();
-const requestedTarget = requestedProjectId
-  ? `SUPABASE_PROJECT_ID=${requestedProjectId}`
-  : "the default target";
-console.error(
-  `gen-types: no persistent Cloud DEV is registered; refusing to generate types for ${requestedTarget}. Register an explicit DEV ref in docs/agent/rules/database.md first.`,
-);
-process.exit(1);
+if (requestedProjectId && requestedProjectId !== DEV_PROJECT_ID) {
+  console.error(
+    `gen-types: SUPABASE_PROJECT_ID must be the registered DEV ref ${DEV_PROJECT_ID}.`,
+  );
+  process.exit(1);
+}
+const outPath = "packages/database/src/types/database.types.ts";
+
+function sanitizeTypes(raw) {
+  return String(raw)
+    .split("\n")
+    .filter((line) => !line.startsWith('{"_tag":'))
+    .join("\n");
+}
+
+function isValidTypes(text) {
+  return text.trimStart().startsWith("export type Json =");
+}
+
+function runTypegen(command, args) {
+  try {
+    return execFileSync(command, args, {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "inherit"],
+    });
+  } catch (error) {
+    const stdout =
+      error && typeof error === "object" && "stdout" in error
+        ? String(error.stdout ?? "")
+        : "";
+    if (isValidTypes(sanitizeTypes(stdout))) return stdout;
+    throw error;
+  }
+}
+
+let types;
+try {
+  types = runTypegen("supabase", [
+    "gen",
+    "types",
+    "typescript",
+    "--project-id",
+    DEV_PROJECT_ID,
+  ]);
+} catch (error) {
+  if (error && typeof error === "object" && "code" in error && error.code !== "ENOENT") {
+    throw error;
+  }
+
+  types = runTypegen("pnpm", [
+    "dlx",
+    "supabase",
+    "gen",
+    "types",
+    "typescript",
+    "--project-id",
+    DEV_PROJECT_ID,
+  ]);
+}
+
+types = sanitizeTypes(types);
+if (!isValidTypes(types)) {
+  console.error("gen-types: CLI output is not a TypeScript types payload — refusing to write.");
+  process.exit(1);
+}
+
+writeFileSync(outPath, types);
+
+const lineCount = types.split("\n").length;
+process.stdout.write(`✓ ${outPath} regenerated (${lineCount} lines)\n`);

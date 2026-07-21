@@ -2,22 +2,21 @@
 
 Preview Branch là môi trường throwaway cho migration replay, RLS/RPC
 verification và smoke có write mà không đụng production. Quyền tạo branch phụ
-thuộc vào `supabase/migration-lineage.json`; production
-merge/reset/rebase/apply vẫn là production write và cần quyền riêng.
+thuộc vào parent Production đã xác minh; production merge/reset/rebase/apply vẫn
+là production write và cần quyền riêng.
 
-Guard của repo chỉ cho agent đọc hoặc mutate một Preview ref mới sau khi ref đó
-đi qua trusted registration path. Khi đường đăng ký này chưa có, agent chỉ được
-dùng các thao tác create/teardown branch đã được guard xác minh; việc kiểm tra
-deployment status/log và mutation evidence phải chuyển sang persistent Cloud
-DEV đã đăng ký, hoặc do chủ dự án trực tiếp vận hành và cung cấp từ Preview.
-Không được nới guard, dùng stored link state hay thay bằng Local Docker.
+Guard của repo chỉ cho agent đọc hoặc mutate một Preview ref sau khi nó được
+Supabase xác nhận là con của Production. Với từng MCP action, guard gọi
+`supabase branches get` với parent Production cố định và đòi `project_ref` cùng
+`parent_project_ref` khớp chính xác; không có local whitelist, stored-link state
+hay cache để tin cậy lại. Nếu không xác minh được, Preview bị chặn. Không được
+nới guard hay thay bằng Local Docker.
 
-## Trạng thái hiện tại — không có target non-production đã đăng ký
+## Trạng thái hiện tại — persistent DEV đã đăng ký
 
-Chưa có persistent Cloud DEV trong Environment Registry, nên agent-side
-typegen, Preview binding và mutation đều fail-closed. Luôn chạy
-`corepack pnpm lint:migration-lineage` ngay trước mỗi lần tạo branch; kết quả
-cũ không thay thế được trạng thái manifest hiện tại.
+Persistent Cloud DEV là `dzvilydcccemlafxcydj`. Agent-side typegen và mutation
+chỉ dùng literal ref này. `corepack pnpm lint:migration-lineage` kiểm tra active
+migration layout trước replay, nhưng không quyết định quyền tạo Preview.
 
 Trạng thái lineage không chứng minh branch cloud sẵn sàng. Trước khi tạo branch,
 phải kiểm tra trạng thái Supabase hiện tại, lấy đúng chi phí theo giờ và được chủ
@@ -26,20 +25,20 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
 
 ## Flow
 
-1. Chạy `corepack pnpm lint:migration-lineage` và xác nhận manifest vẫn
-   `state=aligned`, `nativePreviewBranching=enabled`.
+1. Chạy `corepack pnpm lint:migration-lineage` để xác nhận baseline và active
+   migration layout hợp lệ.
 2. Lấy chi phí Preview Branch hiện hành, báo đúng số tiền và chờ chủ dự án xác
    nhận.
 3. Tạo một Preview Branch throwaway bằng tooling Supabase được kết nối cho task.
-4. Ghi project ref/URL và xác minh ref không trùng protected refs trong
-   Environment Registry.
-5. Chỉ kiểm tra deployment status/log của Preview qua trusted registration hoặc
-   owner-operated evidence. Xác nhận log chỉ chạy baseline version đã aligned
-   và các forward migration mới hơn cutoff; dừng ngay nếu thấy
+4. Ghi project ref, xác minh ref không trùng protected refs trong Environment
+   Registry, rồi dùng MCP với `project_id` tường minh. Guard sẽ tự xác minh
+   parent cho từng action.
+5. Chỉ kiểm tra deployment status/log sau khi guard đã xác minh Preview. Xác
+   nhận log chỉ chạy active baseline và forward migrations; dừng ngay nếu thấy
    archived/remote-only history.
-6. Trước mọi mutation, chứng minh Preview ref đã được trusted registration hoặc
-   chuyển mutation test sang persistent Cloud DEV với literal target binding.
-   Nếu không có một trong hai đường này, dừng và báo blocker.
+6. Trước mọi mutation, để guard xác minh Preview ref qua parent Production.
+   `supabase db push` vẫn chỉ dùng registered Cloud DEV; merge/reset/rebase bị
+   chặn kể cả với Preview đã xác minh. Nếu tra cứu thất bại, dừng và báo blocker.
 7. Chỉ seed bằng dữ liệu non-production, không secret và không customer data.
 8. Chạy schema/RLS/RPC tests, smoke flow cần thiết và security advisors trên
    target đã được phép mutation; ghi rõ target là DEV hay Preview.
@@ -52,13 +51,12 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
 ## Preconditions
 
 - Migration chain replay được từ empty DB.
-- `supabase/migration-lineage.json` có `state=aligned`,
-  `nativePreviewBranching=enabled`, và `productionCutoff=baselineVersion`.
+- `corepack pnpm lint:migration-lineage` pass cho active migration layout.
 - `supabase/seed.sql` đã được kiểm tra không mang production data hoặc secret.
 - Caller có tooling/credential đủ để tạo và xóa branch.
 - Mọi URL/service-role key trong session được đối chiếu với ref đã ghi.
-- Agent-side Preview mutation có trusted registration path; nếu không, kế hoạch
-  mutation phải chỉ rõ persistent Cloud DEV hoặc owner-operated Preview.
+- Agent-side Preview mutation gọi MCP với `project_id` tường minh và CLI có thể
+  xác nhận branch đó là con của Production.
 
 Nếu một precondition chưa chứng minh, không tạo branch. CI baseline replay chỉ
 là source-chain evidence, không được báo thành cloud Preview proof.

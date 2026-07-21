@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 // replays behavior fixtures so regex edits cannot silently weaken blocking.
 //
 // Blocks (exit 2): state-mutating Supabase CLI subcommands unless a supported
-// command binds its literal database URL to an approved Cloud DEV ref; psql
+// command binds its literal database URL to the approved Cloud DEV ref; psql
 // writes against a protected or unverified connection; pg_restore toward a
 // protected or unverified target; HTTP writes plus non-catalog Production
 // reads; and
@@ -35,14 +35,16 @@ const PROTECTED_REFS = {
 
 const NO_TOUCH_REFS = new Set(["dyksphedgzqsqjqgxzog"]);
 
-const APPROVED_NON_PROD_REFS = {};
-const APPROVED_DEV_REF = null;
+const APPROVED_NON_PROD_REFS = {
+  dzvilydcccemlafxcydj: "DEV (matu-greenfield)",
+};
+const APPROVED_DEV_REF = Object.keys(APPROVED_NON_PROD_REFS)[0];
+const APPROVED_DEV_SESSION_POOLER = {
+  ref: "dzvilydcccemlafxcydj",
+  host: "aws-0-ap-southeast-1.pooler.supabase.com",
+};
 const APPROVED_PREVIEW_PARENT_REF = "iexwsuaqqenyjiskawoj";
 
-const LINEAGE_MANIFEST = new URL(
-  "../supabase/migration-lineage.json",
-  import.meta.url,
-);
 const CODEX_CONFIG = new URL("../.codex/config.toml", import.meta.url);
 
 const LIBPQ_UNVERIFIED_ENV = [
@@ -97,31 +99,52 @@ function codexSupabaseBindingVerified() {
   }
 }
 
-function nativePreviewBranchingEnabled() {
-  try {
-    const lineage = JSON.parse(readFileSync(LINEAGE_MANIFEST, "utf8"));
-    const manifestAllows =
-      lineage.state === "aligned" &&
-      lineage.nativePreviewBranching === "enabled" &&
-      lineage.productionCutoff === lineage.baselineVersion;
-    if (!manifestAllows) return false;
+function trustedPreviewBranch(candidate) {
+  if (typeof candidate !== "string" || !/^[a-z0-9-]{1,64}$/.test(candidate)) {
+    return null;
+  }
 
-    const check = spawnSync(
-      process.execPath,
+  try {
+    const result = spawnSync(
+      "supabase",
       [
-        fileURLToPath(
-          new URL("./check-migration-lineage.mjs", import.meta.url),
-        ),
+        "branches",
+        "get",
+        candidate,
+        "--project-ref",
+        APPROVED_PREVIEW_PARENT_REF,
+        "--output",
+        "json",
       ],
       {
-        cwd: fileURLToPath(new URL("../", import.meta.url)),
-        stdio: "ignore",
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: 10_000,
+        maxBuffer: 64 * 1024,
       },
     );
-    return check.status === 0;
+    if (result.status !== 0 || result.error) return null;
+
+    const branch = JSON.parse(result.stdout);
+    return branch &&
+      typeof branch === "object" &&
+      !Array.isArray(branch) &&
+      typeof branch.id === "string" &&
+      branch.id !== "" &&
+      typeof branch.project_ref === "string" &&
+      typeof branch.parent_project_ref === "string" &&
+      branch.parent_project_ref === APPROVED_PREVIEW_PARENT_REF
+      ? branch
+      : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function trustedPreviewProject(ref) {
+  if (typeof ref !== "string" || !/^[a-z0-9]{20}$/.test(ref)) return null;
+  const branch = trustedPreviewBranch(ref);
+  return branch?.project_ref === ref ? branch : null;
 }
 
 function supabaseCliFlagValues(args, flag) {
@@ -446,11 +469,15 @@ function supabaseCommandIndex(tokens) {
       index,
       new Set(["-p", "--package", "--shell-mode"]),
     );
-  } else {
-    return -1;
   }
 
   basename = commandTokenBasename(tokens[index]);
+  if (basename === "dotenv") {
+    index = skipRunnerOptions(tokens, index + 1, new Set(["-e", "--env"]));
+    if (tokens[index] === "--") index += 1;
+    basename = commandTokenBasename(tokens[index]);
+  }
+
   return basename === "supabase" || basename.startsWith("supabase@")
     ? index
     : -1;
@@ -610,11 +637,7 @@ function registeredDatabaseUrlRef(value) {
     const hostMatch = url.hostname.match(
       /^db\.([a-z0-9]{20})\.supabase\.co$/,
     );
-    if (
-      !/^postgres(?:ql)?:$/.test(url.protocol) ||
-      !hostMatch ||
-      url.hash
-    ) {
+    if (!/^postgres(?:ql)?:$/.test(url.protocol) || url.hash) {
       return null;
     }
 
@@ -626,8 +649,22 @@ function registeredDatabaseUrlRef(value) {
     for (const key of url.searchParams.keys()) {
       if (!safeParams.has(key)) return null;
     }
-    const ref = hostMatch[1];
-    return registeredReadableRef(ref) ? ref : null;
+    if (hostMatch) {
+      const ref = hostMatch[1];
+      return registeredReadableRef(ref) ? ref : null;
+    }
+
+    if (
+      url.hostname === APPROVED_DEV_SESSION_POOLER.host &&
+      url.port === "5432" &&
+      url.username === `postgres.${APPROVED_DEV_SESSION_POOLER.ref}` &&
+      !url.password &&
+      url.pathname === "/postgres"
+    ) {
+      return APPROVED_DEV_SESSION_POOLER.ref;
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -1492,7 +1529,7 @@ function block(reason) {
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
       "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is PRODUCTION — guarded table/view/catalog reads only;",
-      "dyksphedgzqsqjqgxzog belongs to a different codebase. No persistent Cloud DEV is registered; unregistered database targets are blocked;",
+      "dyksphedgzqsqjqgxzog belongs to a different codebase. matu-greenfield is DEV only when a supported command explicitly binds its target to dzvilydcccemlafxcydj;",
       "migrations ship as file → PR → owner applies. If the owner explicitly delegated a prod write",
       "in this session, the owner applies it outside the guarded runtime or provides a scoped",
       "approval path. Never disable this hook or its runtime wiring.",
@@ -1578,11 +1615,14 @@ if (toolName === "Bash") {
       const hasCompetingCliTarget = cliArgs.slice(2).some((token) =>
         /^--(?:linked|local)(?:=|$)/.test(token),
       );
+      const hasUnresolvedDbUrl = dbUrls.some(
+        (url) => containsShellParameter(url) || url.includes("`"),
+      );
       const cliTargetsDev =
         APPROVED_DEV_REF !== null &&
         allowDevTarget &&
         isDbPush &&
-        !/[`$]/.test(segment) &&
+        !hasUnresolvedDbUrl &&
         !hasCompetingCliTarget &&
         dbUrls.length === 1 &&
         readTargetRef === APPROVED_DEV_REF;
@@ -1607,11 +1647,6 @@ if (toolName === "Bash") {
           previewParentRefs[0] !== APPROVED_PREVIEW_PARENT_REF
         ) {
           block("Preview branch creation without the registered parent ref");
-        }
-        if (!nativePreviewBranchingEnabled()) {
-          block(
-            "native Preview branch creation while migration lineage is blocked pending re-baseline",
-          );
         }
       } else if (isDbPush) {
         if (refHit || !cliTargetsDev) {
@@ -1735,12 +1770,14 @@ if (mcpMatch) {
   ) {
     block(`malformed ${action} branch ref`);
   }
-  if (
-    branchActions.includes(action) &&
-    (Object.hasOwn(PROTECTED_REFS, toolInput.branch_id.trim()) ||
-      Object.hasOwn(APPROVED_NON_PROD_REFS, toolInput.branch_id.trim()))
-  ) {
-    block(`${action} against a registered persistent environment ref`);
+  if (branchActions.includes(action)) {
+    if (action !== "delete_branch") {
+      block(`${action} is never allowed against a Preview branch`);
+    }
+    if (!trustedPreviewBranch(toolInput.branch_id.trim())) {
+      block("Preview branch deletion without a verified Production parent");
+    }
+    process.exit(0);
   }
 
   const projectFieldNames =
@@ -1779,10 +1816,12 @@ if (mcpMatch) {
   // project_id. Claude/plugin and connector-wrapped tools are org-scoped and
   // must always carry an explicit project ref.
   const target = projectId === "" ? "iexwsuaqqenyjiskawoj" : projectId;
-  const approvedNonProd = Object.hasOwn(APPROVED_NON_PROD_REFS, target);
+  const staticNonProd = Object.hasOwn(APPROVED_NON_PROD_REFS, target);
   const label = Object.hasOwn(PROTECTED_REFS, target)
     ? PROTECTED_REFS[target]
     : undefined;
+  const preview = !staticNonProd && !label ? trustedPreviewProject(target) : null;
+  const approvedNonProd = staticNonProd || preview !== null;
   if (NO_TOUCH_REFS.has(target)) {
     block(`${action} against no-touch ref ${target}`);
   }
@@ -1805,20 +1844,11 @@ if (mcpMatch) {
     executeQuery = queryValue;
   }
 
-  if (action === "delete_branch") {
-    if (target !== APPROVED_PREVIEW_PARENT_REF) {
-      block(`Preview branch deletion against an unapproved parent ${target}`);
-    }
-    process.exit(0);
-  }
   if (action === "create_branch") {
     if (target !== APPROVED_PREVIEW_PARENT_REF) {
       block(`Preview branch creation against an unapproved parent ${target}`);
     }
-    if (nativePreviewBranchingEnabled()) process.exit(0);
-    block(
-      "native Preview branch creation while migration lineage is blocked pending re-baseline",
-    );
+    process.exit(0);
   }
 
   if (MCP_PROJECT_READ_ACTIONS.has(action)) {
@@ -1836,7 +1866,11 @@ if (mcpMatch) {
     ) {
       process.exit(0);
     }
-    block(`${action} against ${APPROVED_NON_PROD_REFS[target]}`);
+    block(
+      `${action} against ${
+        APPROVED_NON_PROD_REFS[target] ?? "a trusted Preview branch"
+      }`,
+    );
   }
 
   if (action === "execute_sql") {

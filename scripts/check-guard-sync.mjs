@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 // The prod-DB guard is split across files that must agree:
@@ -44,7 +45,7 @@ if (/temporar(?:y|ily) disable/i.test(hookSource)) {
 }
 
 // 1. Protected refs in the hook == refs in the Environment Registry table;
-// no unregistered non-production ref can remain approved in the hook.
+// approved Cloud DEV ref in the hook == the documented DEV target.
 const refsBlock = hookSource.match(/const PROTECTED_REFS = \{([\s\S]*?)\};/);
 const hookRefs = refsBlock
   ? [...refsBlock[1].matchAll(/^\s*([a-z0-9]{20}):/gm)].map((m) => m[1])
@@ -74,13 +75,10 @@ for (const ref of hookRefs) {
 }
 
 const documentedDevRef = registryDoc.match(
-  /^- \*\*DEV — `[^`]+` \(`([a-z0-9]{20})`\)/m,
+  /matu-greenfield` \(`([a-z0-9]{20})`\)/,
 )?.[1];
-if (documentedDevRef) {
-  fail(`${REGISTRY_PATH}: a deleted DEV ref remains registered`);
-}
-if (!registrySection.includes("No persistent non-production Cloud target is registered.")) {
-  fail(`${REGISTRY_PATH}: must explicitly declare the absence of a registered DEV target`);
+if (!documentedDevRef) {
+  fail(`${REGISTRY_PATH}: could not parse matu-greenfield DEV ref`);
 }
 const approvedRefsBlock = hookSource.match(
   /const APPROVED_NON_PROD_REFS = \{([\s\S]*?)\};/,
@@ -88,9 +86,9 @@ const approvedRefsBlock = hookSource.match(
 const hookApprovedRefs = approvedRefsBlock
   ? [...approvedRefsBlock[1].matchAll(/^\s*([a-z0-9]{20}):/gm)].map((m) => m[1])
   : [];
-if (hookApprovedRefs.length !== 0) {
+if (hookApprovedRefs.length !== 1 || hookApprovedRefs[0] !== documentedDevRef) {
   fail(
-    `${HOOK_PATH}: APPROVED_NON_PROD_REFS must be empty until a DEV target is registered`,
+    `${HOOK_PATH}: APPROVED_NON_PROD_REFS must contain only the documented matu-greenfield ref`,
   );
 }
 
@@ -300,26 +298,22 @@ if (!fs.existsSync(typegenPath)) {
 } else {
   const typegenSource = fs.readFileSync(typegenPath, "utf8");
   if (
+    !typegenSource.includes(`const DEV_PROJECT_ID = "${documentedDevRef}";`) ||
     typegenSource.includes(documentedProdRef) ||
     typegenSource.includes(".env.local") ||
-    !typegenSource.includes("no persistent Cloud DEV is registered")
+    !typegenSource.includes("requestedProjectId !== DEV_PROJECT_ID")
   ) {
     fail(
-      `${TYPEGEN_PATH}: typegen must fail closed without a registered DEV or Production fallback`,
+      `${TYPEGEN_PATH}: typegen must bind only to registered DEV without .env.local or Production fallback`,
     );
   }
-  const rejectedDefault = spawnSync("node", [typegenPath], {
-    cwd: REPO_ROOT,
-    env: { ...process.env, SUPABASE_PROJECT_ID: "" },
-    encoding: "utf8",
-  });
   const rejectedTarget = spawnSync("node", [typegenPath], {
     cwd: REPO_ROOT,
     env: { ...process.env, SUPABASE_PROJECT_ID: documentedProdRef },
     encoding: "utf8",
   });
-  if (rejectedDefault.status === 0 || rejectedTarget.status === 0) {
-    fail(`${TYPEGEN_PATH}: must reject both default and explicit Production type sources`);
+  if (rejectedTarget.status === 0) {
+    fail(`${TYPEGEN_PATH}: must reject an explicit Production type source`);
   }
 }
 
@@ -353,19 +347,12 @@ if (!fs.existsSync(e2eBringupPath)) {
 // here are file contents — the runtime hooks only scan Bash command lines.
 const PROD = documentedProdRef ?? "iexwsuaqqenyjiskawoj";
 const NO_TOUCH = hookNoTouchRefs[0] ?? "dyksphedgzqsqjqgxzog";
+const DEV = documentedDevRef ?? "dzvilydcccemlafxcydj";
 const UNREGISTERED_REF = "abcdefghijklmnopqrst";
-const lineage = JSON.parse(
-  fs.readFileSync(
-    path.join(REPO_ROOT, "supabase/migration-lineage.json"),
-    "utf8",
-  ),
-);
-const previewCreateStatus =
-  lineage.state === "aligned" &&
-  lineage.nativePreviewBranching === "enabled" &&
-  lineage.productionCutoff === lineage.baselineVersion
-    ? 0
-    : 2;
+const TRUSTED_PREVIEW = "prvwabcdefghijklmnop";
+const WRONG_PARENT_PREVIEW = "wrngabcdefghijklmnop";
+const MISMATCHED_PREVIEW = "mismabcdefghijklmnop";
+const previewCreateStatus = 0;
 const bash = (command) => ({ tool_name: "Bash", tool_input: { command } });
 const mcp = (tool, tool_input) => ({
   tool_name: `mcp__supabase__${tool}`,
@@ -382,6 +369,45 @@ const mcpConnectorLive = (tool, tool_input) => ({
   tool_name: `mcp__codex_apps__supabase_${tool}`,
   tool_input,
 });
+const previewFixtureDir = fs.mkdtempSync(
+  path.join(tmpdir(), "comtammatu-preview-guard-"),
+);
+const previewFixtureBranches = {
+  [TRUSTED_PREVIEW]: {
+    id: "preview-branch-id",
+    project_ref: TRUSTED_PREVIEW,
+    parent_project_ref: PROD,
+  },
+  [WRONG_PARENT_PREVIEW]: {
+    id: "wrong-parent-branch-id",
+    project_ref: WRONG_PARENT_PREVIEW,
+    parent_project_ref: NO_TOUCH,
+  },
+  [MISMATCHED_PREVIEW]: {
+    id: "mismatched-branch-id",
+    project_ref: TRUSTED_PREVIEW,
+    parent_project_ref: PROD,
+  },
+};
+fs.writeFileSync(
+  path.join(previewFixtureDir, "supabase"),
+  `#!/usr/bin/env node
+const branches = ${JSON.stringify(previewFixtureBranches)};
+const args = process.argv.slice(2);
+const branch =
+  args[0] === "branches" &&
+  args[1] === "get" &&
+  args[3] === "--project-ref" &&
+  args[4] === ${JSON.stringify(PROD)} &&
+  args[5] === "--output" &&
+  args[6] === "json"
+    ? branches[args[2]]
+    : null;
+if (!branch) process.exit(1);
+process.stdout.write(JSON.stringify(branch));
+`,
+  { mode: 0o700 },
+);
 const FIXTURES = [
   ["block: supabase db push", 2, bash("supabase db push")],
   ["block: actual supabase link", 2, bash("supabase link")],
@@ -461,6 +487,53 @@ const FIXTURES = [
     2,
     bash(
       `supabase db push --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres`,
+    ),
+  ],
+  [
+    "allow: supabase db push with explicit Cloud DEV URL",
+    0,
+    bash(
+      `supabase db push --db-url postgres://u@db.${DEV}.supabase.co/postgres`,
+    ),
+  ],
+  [
+    "allow: supabase db push with the registered Cloud DEV session pooler",
+    0,
+    bash(
+      `supabase db push --db-url postgres://postgres.${DEV}@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`,
+    ),
+  ],
+  [
+    "block: session pooler cannot target Production",
+    2,
+    bash(
+      `supabase db push --db-url postgres://postgres.${PROD}@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`,
+    ),
+  ],
+  [
+    "allow: supabase db push with an environment password and literal Cloud DEV URL",
+    0,
+    bash(
+      `supabase db push --db-url postgres://u@db.${DEV}.supabase.co/postgres --password "$SUPABASE_DB_PASSWORD"`,
+    ),
+  ],
+  [
+    "allow: dotenv-loaded password with literal Cloud DEV URL",
+    0,
+    bash(
+      `corepack pnpm exec dotenv -e .env.local -- supabase db push --db-url postgres://u@db.${DEV}.supabase.co/postgres --password "$SUPABASE_DB_PASSWORD"`,
+    ),
+  ],
+  [
+    "block: supabase db push with an unresolved db-url",
+    2,
+    bash('supabase db push --db-url "$SUPABASE_DB_URL"'),
+  ],
+  [
+    "block: dotenv-loaded password cannot hide an unresolved db-url",
+    2,
+    bash(
+      'corepack pnpm exec dotenv -e .env.local -- supabase db push --db-url "$SUPABASE_DB_URL" --password "$SUPABASE_DB_PASSWORD"',
     ),
   ],
   [
@@ -1193,7 +1266,7 @@ const FIXTURES = [
     mcp("apply_migration", {}),
   ],
   [
-    "mcp create_branch follows migration lineage",
+    "allow: mcp create_branch with the registered Production parent",
     previewCreateStatus,
     mcp("create_branch", { project_id: PROD }),
   ],
@@ -1208,9 +1281,9 @@ const FIXTURES = [
     mcp("create_branch", { project_id: UNREGISTERED_REF }),
   ],
   [
-    "allow: mcp delete_branch (preview-branch cleanup)",
+    "allow: mcp delete_branch with a verified Production parent",
     0,
-    mcp("delete_branch", { project_id: PROD, branch_id: "preview-branch" }),
+    mcp("delete_branch", { project_id: PROD, branch_id: TRUSTED_PREVIEW }),
   ],
   [
     "block: mcp delete_branch cannot target separate-codebase parent",
@@ -1231,21 +1304,21 @@ const FIXTURES = [
     mcp("delete_branch", { project_id: PROD, branch_id: PROD }),
   ],
   [
-    "allow: mcp delete_branch can clean an unregistered Preview ref",
-    0,
+    "block: mcp delete_branch cannot clean an unverified Preview ref",
+    2,
     mcp("delete_branch", { project_id: PROD, branch_id: UNREGISTERED_REF }),
   ],
   [
-    "mcp connector create_branch follows migration lineage",
+    "allow: mcp connector create_branch with the registered Production parent",
     previewCreateStatus,
     mcpConnector("create_branch", { project_id: PROD }),
   ],
   [
-    "allow: mcp connector dotted delete_branch (preview cleanup)",
+    "allow: mcp connector dotted delete_branch with a verified Production parent",
     0,
     mcpConnector("delete_branch", {
       project_id: PROD,
-      branch_id: "preview-branch",
+      branch_id: TRUSTED_PREVIEW,
     }),
   ],
   [
@@ -1255,7 +1328,7 @@ const FIXTURES = [
   ],
   ["allow: plain command", 0, bash("ls -la")],
   [
-    "supabase branches create follows migration lineage",
+    "allow: supabase branches create with the registered Production parent",
     previewCreateStatus,
     bash(`supabase branches create test --project-ref ${PROD}`),
   ],
@@ -1934,9 +2007,29 @@ const FIXTURES = [
     mcp("apply_migration", { project_id: UNREGISTERED_REF }),
   ],
   [
-    "block: destructive branch operation vs registered DEV ref",
+    "block: destructive branch operation vs unregistered ref",
     2,
     mcp("merge_branch", { project_id: UNREGISTERED_REF, branch_id: "preview-branch" }),
+  ],
+  [
+    "allow: mcp write vs registered DEV ref",
+    0,
+    mcp("apply_migration", { project_id: DEV }),
+  ],
+  [
+    "allow: mcp write vs a Preview verified from the Production parent",
+    0,
+    mcp("apply_migration", { project_id: TRUSTED_PREVIEW }),
+  ],
+  [
+    "block: mcp write vs a Preview with the wrong parent",
+    2,
+    mcp("apply_migration", { project_id: WRONG_PARENT_PREVIEW }),
+  ],
+  [
+    "block: mcp write when Preview lookup returns a different project ref",
+    2,
+    mcp("apply_migration", { project_id: MISMATCHED_PREVIEW }),
   ],
   [
     "block: mcp write vs unknown ref",
@@ -1967,6 +2060,11 @@ const FIXTURES = [
     mcpConnectorLive("delete_branch", { branch_id: "preview-branch" }),
   ],
   [
+    "allow: live connector Preview deletion with a verified Production parent",
+    0,
+    mcpConnectorLive("delete_branch", { branch_id: TRUSTED_PREVIEW }),
+  ],
+  [
     "block: direct Preview deletion without parent binding",
     2,
     mcp("delete_branch", { branch_id: "preview-branch" }),
@@ -1984,7 +2082,7 @@ const FIXTURES = [
   [
     "block: live connector Preview merge by branch_id",
     2,
-    mcpConnectorLive("merge_branch", { branch_id: "preview-branch" }),
+    mcpConnectorLive("merge_branch", { branch_id: TRUSTED_PREVIEW }),
   ],
   [
     "block: live connector Preview reset by branch_id",
@@ -2005,6 +2103,7 @@ const FIXTURES = [
   ],
 ];
 const hookBaseEnv = { ...process.env };
+hookBaseEnv.PATH = `${previewFixtureDir}${path.delimiter}${hookBaseEnv.PATH ?? ""}`;
 for (const name of [
   "CLAUDE_PROJECT_DIR",
   "PGDATABASE",
@@ -2034,6 +2133,7 @@ for (const [desc, want, payload, fixtureEnv = {}] of FIXTURES) {
     );
   }
 }
+fs.rmSync(previewFixtureDir, { recursive: true, force: true });
 
 if (errors.length > 0) {
   for (const message of errors) console.error(`[guard-sync] ${message}`);

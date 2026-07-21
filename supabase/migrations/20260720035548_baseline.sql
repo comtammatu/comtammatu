@@ -4,7 +4,7 @@ SET check_function_bodies = false;
 -- PostgreSQL database dump
 --
 
--- \restrict HdBWUOevCfW2hlZBRkXhS2y2bDCr5qyflzod72KBfRlRwp8iftv3uQoPVBeD80M
+-- \restrict 8gF4hG5Lq8jnQ9QU9u53oDnFy6FuMZfUFboIgCnogmt0oWHE1C7ZFzJifvnxDGl
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -1440,6 +1440,9 @@ CREATE TABLE private.cron_job_health_grace (
 ALTER TABLE ONLY private.cron_job_health_grace
     ADD CONSTRAINT cron_job_health_grace_pkey PRIMARY KEY (jobid);
 
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
+REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
 
 --
 -- Name: SCHEMA private; Type: ACL; Schema: -; Owner: -
@@ -1588,14 +1591,14 @@ REVOKE ALL ON FUNCTION private.sync_sepay_bank_transaction_from_webhook() FROM P
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict HdBWUOevCfW2hlZBRkXhS2y2bDCr5qyflzod72KBfRlRwp8iftv3uQoPVBeD80M
+-- \unrestrict 8gF4hG5Lq8jnQ9QU9u53oDnFy6FuMZfUFboIgCnogmt0oWHE1C7ZFzJifvnxDGl
 
 
 --
 -- PostgreSQL database dump
 --
 
--- \restrict j4z5nYWdLJJ35f135WTfIdQyz0TW4wrZnfLXeYvg7U89gQ2A8T7aGnia3As9MDs
+-- \restrict LhL9ESuDBJVv0my09KZYfBbMuZHC5lcdycitcqAa9AGduIK94khnjkPWLlDXsWO
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -57643,10 +57646,6 @@ CREATE POLICY zone_lock_rpc_only_write ON public.stocktake_zone_locks TO authent
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
 --
 
-REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
-REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
-REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";
-
 GRANT USAGE ON SCHEMA public TO postgres;
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT USAGE ON SCHEMA public TO authenticated;
@@ -63406,4 +63405,4 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES 
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict j4z5nYWdLJJ35f135WTfIdQyz0TW4wrZnfLXeYvg7U89gQ2A8T7aGnia3As9MDs
+-- \unrestrict LhL9ESuDBJVv0my09KZYfBbMuZHC5lcdycitcqAa9AGduIK94khnjkPWLlDXsWO

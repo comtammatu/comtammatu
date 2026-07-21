@@ -11,12 +11,11 @@ incremental chains could not replay from empty (squash-vs-history drop ordering
 plus migrations that self-assert production-only state), which is why this single
 squashed baseline exists.
 
-The machine-readable lineage state lives in `../migration-lineage.json`. When it
-is `blocked_pending_rebaseline`, repo-managed Preview creation is forbidden and
-the active forward count is frozen; do not raise the ceiling or patch the
-baseline hash. `pnpm lint:migration-lineage` enforces this contract. An installed
-Supabase GitHub App runs outside this repo guard and must be disabled in Supabase
-or cleaned up explicitly while lineage is blocked.
+`../migration-lineage.json` records the baseline file, version, and hash.
+`pnpm lint:migration-lineage` enforces one intact baseline, unique migration
+versions, and forward versions newer than the baseline. Preview authorization is
+separate: the database guard verifies the requested branch's Production parent
+for every action.
 
 ## What's here
 
@@ -68,12 +67,11 @@ the re-registration path.
 
 - **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
   is NOT reset to the baseline; the baseline is for fresh/dev envs only.
-- **No Cloud DEV is currently registered.** Do not reuse retired one-shot
-  fixtures or substitute a local database. Register the replacement target in
-  `docs/agent/rules/database.md` before non-production replay or typegen.
-- Native Supabase Branching is usable only when `../migration-lineage.json` says
-  the baseline version and production cutoff are aligned. Moving files to
-  `../migration-archive/` alone does not change the parent project's ledger.
+- **Cloud DEV (`dzvilydcccemlafxcydj`)** is the non-production target for
+  migration replay and type generation. Do not substitute a local database.
+- Native Supabase Branching requires the guard to verify the Production parent.
+  Moving files to `../migration-archive/` alone does not change the parent
+  project's ledger.
 
 ## Regenerating the baseline (re-baseline)
 

@@ -17,14 +17,14 @@ of maintaining schema dumps.
 The pre-baseline incremental chain could not replay from an empty DB (ordering bug at
 `20260508055046`), so it was consolidated:
 
-- `supabase/migrations/20260717151345_baseline.sql` — canonical public+private
+- `supabase/migrations/20260720035548_baseline.sql` — canonical public+private
   schema install; validated to replay on an empty DB.
 - `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
 - `supabase/migration-archive/` — historical and squashed forward migrations
   retained for archaeology, not replayed by the active chain.
-- `supabase/migration-lineage.json` — machine gate for the baseline hash,
-  production cutoff, active-forward ceiling, and native Preview eligibility.
-  `blocked_pending_rebaseline` forbids parent-history Preview creation.
+- `supabase/migration-lineage.json` — machine guard for the baseline hash and
+  active migration layout. It is not Production-ledger proof and does not govern
+  Preview eligibility.
 - `supabase/migrations/20260717151346_fold_managed_surfaces.sql` — extensions /
   storage buckets + RLS policies / realtime publication / cron jobs (excluded from
   the baseline schema dump, folded back in here). It is a forward migration in the

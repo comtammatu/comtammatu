@@ -140,15 +140,23 @@ export function validatePreviewSupabaseEnv(env, registrySource) {
 
 function runSelfTest(registrySource) {
   const registry = parseEnvironmentRegistry(registrySource);
-  assert.equal(registry.devRef, undefined);
+  assert.equal(registry.devRef, "dzvilydcccemlafxcydj");
   assert.equal(
     validatePreviewSupabaseEnv({ VERCEL_ENV: "production" }, registrySource)
       .status,
     "skipped",
   );
-  assert.throws(
-    () => validatePreviewSupabaseEnv({ VERCEL_ENV: "preview" }, registrySource),
-    /No persistent Cloud DEV is registered/,
+  assert.deepEqual(
+    validatePreviewSupabaseEnv(
+      {
+        VERCEL_ENV: "preview",
+        NEXT_PUBLIC_SUPABASE_URL: "https://dzvilydcccemlafxcydj.supabase.co",
+        SUPABASE_PROJECT_ID: "dzvilydcccemlafxcydj",
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
+      },
+      registrySource,
+    ),
+    { status: "passed", projectRef: "dzvilydcccemlafxcydj" },
   );
 
   console.log("[preview-supabase-env] self-test passed (3 cases)");
