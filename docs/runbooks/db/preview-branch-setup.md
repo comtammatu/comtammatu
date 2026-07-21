@@ -12,12 +12,11 @@ deployment status/log và mutation evidence phải chuyển sang persistent Clou
 DEV đã đăng ký, hoặc do chủ dự án trực tiếp vận hành và cung cấp từ Preview.
 Không được nới guard, dùng stored link state hay thay bằng Local Docker.
 
-## Trạng thái hiện tại — không có target non-production đã đăng ký
+## Trạng thái hiện tại — persistent DEV đã đăng ký
 
-Chưa có persistent Cloud DEV trong Environment Registry, nên agent-side
-typegen, Preview binding và mutation đều fail-closed. Luôn chạy
-`corepack pnpm lint:migration-lineage` ngay trước mỗi lần tạo branch; kết quả
-cũ không thay thế được trạng thái manifest hiện tại.
+Persistent Cloud DEV là `dzvilydcccemlafxcydj`. Agent-side typegen và mutation
+chỉ dùng literal ref này; Preview vẫn cần `corepack pnpm lint:migration-lineage`
+xác nhận manifest trước khi tạo branch.
 
 Trạng thái lineage không chứng minh branch cloud sẵn sàng. Trước khi tạo branch,
 phải kiểm tra trạng thái Supabase hiện tại, lấy đúng chi phí theo giờ và được chủ

@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 // replays behavior fixtures so regex edits cannot silently weaken blocking.
 //
 // Blocks (exit 2): state-mutating Supabase CLI subcommands unless a supported
-// command binds its literal database URL to an approved Cloud DEV ref; psql
+// command binds its literal database URL to the approved Cloud DEV ref; psql
 // writes against a protected or unverified connection; pg_restore toward a
 // protected or unverified target; HTTP writes plus non-catalog Production
 // reads; and
@@ -35,8 +35,14 @@ const PROTECTED_REFS = {
 
 const NO_TOUCH_REFS = new Set(["dyksphedgzqsqjqgxzog"]);
 
-const APPROVED_NON_PROD_REFS = {};
-const APPROVED_DEV_REF = null;
+const APPROVED_NON_PROD_REFS = {
+  dzvilydcccemlafxcydj: "DEV (matu-greenfield)",
+};
+const APPROVED_DEV_REF = Object.keys(APPROVED_NON_PROD_REFS)[0];
+const APPROVED_DEV_SESSION_POOLER = {
+  ref: "dzvilydcccemlafxcydj",
+  host: "aws-0-ap-southeast-1.pooler.supabase.com",
+};
 const APPROVED_PREVIEW_PARENT_REF = "iexwsuaqqenyjiskawoj";
 
 const LINEAGE_MANIFEST = new URL(
@@ -446,11 +452,15 @@ function supabaseCommandIndex(tokens) {
       index,
       new Set(["-p", "--package", "--shell-mode"]),
     );
-  } else {
-    return -1;
   }
 
   basename = commandTokenBasename(tokens[index]);
+  if (basename === "dotenv") {
+    index = skipRunnerOptions(tokens, index + 1, new Set(["-e", "--env"]));
+    if (tokens[index] === "--") index += 1;
+    basename = commandTokenBasename(tokens[index]);
+  }
+
   return basename === "supabase" || basename.startsWith("supabase@")
     ? index
     : -1;
@@ -610,11 +620,7 @@ function registeredDatabaseUrlRef(value) {
     const hostMatch = url.hostname.match(
       /^db\.([a-z0-9]{20})\.supabase\.co$/,
     );
-    if (
-      !/^postgres(?:ql)?:$/.test(url.protocol) ||
-      !hostMatch ||
-      url.hash
-    ) {
+    if (!/^postgres(?:ql)?:$/.test(url.protocol) || url.hash) {
       return null;
     }
 
@@ -626,8 +632,22 @@ function registeredDatabaseUrlRef(value) {
     for (const key of url.searchParams.keys()) {
       if (!safeParams.has(key)) return null;
     }
-    const ref = hostMatch[1];
-    return registeredReadableRef(ref) ? ref : null;
+    if (hostMatch) {
+      const ref = hostMatch[1];
+      return registeredReadableRef(ref) ? ref : null;
+    }
+
+    if (
+      url.hostname === APPROVED_DEV_SESSION_POOLER.host &&
+      url.port === "5432" &&
+      url.username === `postgres.${APPROVED_DEV_SESSION_POOLER.ref}` &&
+      !url.password &&
+      url.pathname === "/postgres"
+    ) {
+      return APPROVED_DEV_SESSION_POOLER.ref;
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -1492,7 +1512,7 @@ function block(reason) {
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
       "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is PRODUCTION — guarded table/view/catalog reads only;",
-      "dyksphedgzqsqjqgxzog belongs to a different codebase. No persistent Cloud DEV is registered; unregistered database targets are blocked;",
+      "dyksphedgzqsqjqgxzog belongs to a different codebase. matu-greenfield is DEV only when a supported command explicitly binds its target to dzvilydcccemlafxcydj;",
       "migrations ship as file → PR → owner applies. If the owner explicitly delegated a prod write",
       "in this session, the owner applies it outside the guarded runtime or provides a scoped",
       "approval path. Never disable this hook or its runtime wiring.",
@@ -1578,11 +1598,14 @@ if (toolName === "Bash") {
       const hasCompetingCliTarget = cliArgs.slice(2).some((token) =>
         /^--(?:linked|local)(?:=|$)/.test(token),
       );
+      const hasUnresolvedDbUrl = dbUrls.some(
+        (url) => containsShellParameter(url) || url.includes("`"),
+      );
       const cliTargetsDev =
         APPROVED_DEV_REF !== null &&
         allowDevTarget &&
         isDbPush &&
-        !/[`$]/.test(segment) &&
+        !hasUnresolvedDbUrl &&
         !hasCompetingCliTarget &&
         dbUrls.length === 1 &&
         readTargetRef === APPROVED_DEV_REF;

@@ -7,15 +7,13 @@
 
 ## Re-align the schema migration lineage
 
-State: blocked
+State: doing
 Kind: defect
 Tier: T3
 Lane: database
 Exit: A current Production-derived baseline, required fresh-environment forwards, and the live Production ledger are reconciled without replaying or mutating business data.
 Evidence: Production catalog/ACL comparison, CI baseline replay, type no-diff, and one disposable Preview proof.
-Blocker: Production migration ledger already matches the rebaseline cutoff. PR #324 CI is green, but no persistent Cloud DEV type source is currently registered, so type generation, alignment, and disposable Preview validation remain blocked. Recheck after the owner registers the literal DEV ref and the corresponding registry/guard update passes.
-
-- [ ] Register a persistent Cloud DEV target, regenerate types, then complete aligned schema and disposable Preview validation.
+- [ ] Apply the active baseline and forward chain to registered DEV, regenerate types, then complete aligned schema and disposable Preview validation.
 
 ## Prove Self-Order offline navigation isolation
 

@@ -44,7 +44,7 @@ if (/temporar(?:y|ily) disable/i.test(hookSource)) {
 }
 
 // 1. Protected refs in the hook == refs in the Environment Registry table;
-// no unregistered non-production ref can remain approved in the hook.
+// approved Cloud DEV ref in the hook == the documented DEV target.
 const refsBlock = hookSource.match(/const PROTECTED_REFS = \{([\s\S]*?)\};/);
 const hookRefs = refsBlock
   ? [...refsBlock[1].matchAll(/^\s*([a-z0-9]{20}):/gm)].map((m) => m[1])
@@ -74,13 +74,10 @@ for (const ref of hookRefs) {
 }
 
 const documentedDevRef = registryDoc.match(
-  /^- \*\*DEV — `[^`]+` \(`([a-z0-9]{20})`\)/m,
+  /matu-greenfield` \(`([a-z0-9]{20})`\)/,
 )?.[1];
-if (documentedDevRef) {
-  fail(`${REGISTRY_PATH}: a deleted DEV ref remains registered`);
-}
-if (!registrySection.includes("No persistent non-production Cloud target is registered.")) {
-  fail(`${REGISTRY_PATH}: must explicitly declare the absence of a registered DEV target`);
+if (!documentedDevRef) {
+  fail(`${REGISTRY_PATH}: could not parse matu-greenfield DEV ref`);
 }
 const approvedRefsBlock = hookSource.match(
   /const APPROVED_NON_PROD_REFS = \{([\s\S]*?)\};/,
@@ -88,9 +85,9 @@ const approvedRefsBlock = hookSource.match(
 const hookApprovedRefs = approvedRefsBlock
   ? [...approvedRefsBlock[1].matchAll(/^\s*([a-z0-9]{20}):/gm)].map((m) => m[1])
   : [];
-if (hookApprovedRefs.length !== 0) {
+if (hookApprovedRefs.length !== 1 || hookApprovedRefs[0] !== documentedDevRef) {
   fail(
-    `${HOOK_PATH}: APPROVED_NON_PROD_REFS must be empty until a DEV target is registered`,
+    `${HOOK_PATH}: APPROVED_NON_PROD_REFS must contain only the documented matu-greenfield ref`,
   );
 }
 
@@ -300,26 +297,22 @@ if (!fs.existsSync(typegenPath)) {
 } else {
   const typegenSource = fs.readFileSync(typegenPath, "utf8");
   if (
+    !typegenSource.includes(`const DEV_PROJECT_ID = "${documentedDevRef}";`) ||
     typegenSource.includes(documentedProdRef) ||
     typegenSource.includes(".env.local") ||
-    !typegenSource.includes("no persistent Cloud DEV is registered")
+    !typegenSource.includes("requestedProjectId !== DEV_PROJECT_ID")
   ) {
     fail(
-      `${TYPEGEN_PATH}: typegen must fail closed without a registered DEV or Production fallback`,
+      `${TYPEGEN_PATH}: typegen must bind only to registered DEV without .env.local or Production fallback`,
     );
   }
-  const rejectedDefault = spawnSync("node", [typegenPath], {
-    cwd: REPO_ROOT,
-    env: { ...process.env, SUPABASE_PROJECT_ID: "" },
-    encoding: "utf8",
-  });
   const rejectedTarget = spawnSync("node", [typegenPath], {
     cwd: REPO_ROOT,
     env: { ...process.env, SUPABASE_PROJECT_ID: documentedProdRef },
     encoding: "utf8",
   });
-  if (rejectedDefault.status === 0 || rejectedTarget.status === 0) {
-    fail(`${TYPEGEN_PATH}: must reject both default and explicit Production type sources`);
+  if (rejectedTarget.status === 0) {
+    fail(`${TYPEGEN_PATH}: must reject an explicit Production type source`);
   }
 }
 
@@ -353,6 +346,7 @@ if (!fs.existsSync(e2eBringupPath)) {
 // here are file contents — the runtime hooks only scan Bash command lines.
 const PROD = documentedProdRef ?? "iexwsuaqqenyjiskawoj";
 const NO_TOUCH = hookNoTouchRefs[0] ?? "dyksphedgzqsqjqgxzog";
+const DEV = documentedDevRef ?? "dzvilydcccemlafxcydj";
 const UNREGISTERED_REF = "abcdefghijklmnopqrst";
 const lineage = JSON.parse(
   fs.readFileSync(
@@ -461,6 +455,53 @@ const FIXTURES = [
     2,
     bash(
       `supabase db push --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres`,
+    ),
+  ],
+  [
+    "allow: supabase db push with explicit Cloud DEV URL",
+    0,
+    bash(
+      `supabase db push --db-url postgres://u@db.${DEV}.supabase.co/postgres`,
+    ),
+  ],
+  [
+    "allow: supabase db push with the registered Cloud DEV session pooler",
+    0,
+    bash(
+      `supabase db push --db-url postgres://postgres.${DEV}@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`,
+    ),
+  ],
+  [
+    "block: session pooler cannot target Production",
+    2,
+    bash(
+      `supabase db push --db-url postgres://postgres.${PROD}@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`,
+    ),
+  ],
+  [
+    "allow: supabase db push with an environment password and literal Cloud DEV URL",
+    0,
+    bash(
+      `supabase db push --db-url postgres://u@db.${DEV}.supabase.co/postgres --password "$SUPABASE_DB_PASSWORD"`,
+    ),
+  ],
+  [
+    "allow: dotenv-loaded password with literal Cloud DEV URL",
+    0,
+    bash(
+      `corepack pnpm exec dotenv -e .env.local -- supabase db push --db-url postgres://u@db.${DEV}.supabase.co/postgres --password "$SUPABASE_DB_PASSWORD"`,
+    ),
+  ],
+  [
+    "block: supabase db push with an unresolved db-url",
+    2,
+    bash('supabase db push --db-url "$SUPABASE_DB_URL"'),
+  ],
+  [
+    "block: dotenv-loaded password cannot hide an unresolved db-url",
+    2,
+    bash(
+      'corepack pnpm exec dotenv -e .env.local -- supabase db push --db-url "$SUPABASE_DB_URL" --password "$SUPABASE_DB_PASSWORD"',
     ),
   ],
   [
@@ -1934,9 +1975,14 @@ const FIXTURES = [
     mcp("apply_migration", { project_id: UNREGISTERED_REF }),
   ],
   [
-    "block: destructive branch operation vs registered DEV ref",
+    "block: destructive branch operation vs unregistered ref",
     2,
     mcp("merge_branch", { project_id: UNREGISTERED_REF, branch_id: "preview-branch" }),
+  ],
+  [
+    "allow: mcp write vs registered DEV ref",
+    0,
+    mcp("apply_migration", { project_id: DEV }),
   ],
   [
     "block: mcp write vs unknown ref",

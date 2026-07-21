@@ -68,9 +68,8 @@ the re-registration path.
 
 - **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
   is NOT reset to the baseline; the baseline is for fresh/dev envs only.
-- **No Cloud DEV is currently registered.** Do not reuse retired one-shot
-  fixtures or substitute a local database. Register the replacement target in
-  `docs/agent/rules/database.md` before non-production replay or typegen.
+- **Cloud DEV (`dzvilydcccemlafxcydj`)** is the non-production target for
+  migration replay and type generation. Do not substitute a local database.
 - Native Supabase Branching is usable only when `../migration-lineage.json` says
   the baseline version and production cutoff are aligned. Moving files to
   `../migration-archive/` alone does not change the parent project's ledger.
