@@ -31,7 +31,7 @@ repo root), keep the graph fresh instead of trusting a previous session:
 Before implementation, read the applicable rule files:
 
 - Always read `docs/agent/rules/engineering.md` for core constraints, import/runtime boundaries, and Git conventions. Root command and architecture summaries stay here; detailed authority is routed by `references.md`.
-- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. Its **Authority Order** and **Required Routing Matrix** give layer-first and task-signal routing into the rules, skills, and verification a task needs.
+- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. Its **Authority Order** and **Required Routing Matrix** give layer-first and task-signal routing into the rules, skills, and verification a task needs. Every fresh checkout must pass `corepack pnpm agent:skills` before agent work; the tracked `.agents/skills` bundle is mandatory.
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
 - Read `docs/agent/rules/workflow.md` for behavior changes, review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates. Only editorial changes that do not alter policy, authority, behavior, or source-of-truth routing are T1-eligible.
@@ -114,9 +114,10 @@ owns the Node.js runtime requirement.
 corepack pnpm dev          # Start dev server (Turbopack)
 corepack pnpm build        # Production build
 corepack pnpm typecheck    # Type checking across all packages
-corepack pnpm lint         # Repo guard checks (copy, ui-contract, client-storage, rules-mirror, guard-sync, seed-permissions, regression-guards, baseline hygiene, review-tier, doc-staleness, i18n:no-grow, route-matrix) + ESLint
+corepack pnpm lint         # Repo guard checks (copy, UI, storage, rules, agent skills, guard sync, baseline, review tier, docs, routes) + ESLint
 corepack pnpm test         # Test suites (turbo test)
 corepack pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
+corepack pnpm agent:skills # Verify the required tracked agent skill bundle
 corepack pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
 ```
 

@@ -23,8 +23,46 @@ T3 tasks must state this before coding; T2 should when routing is not obvious:
 Skill plan: repo rules = engineering.md + <topic-rule>.md; external skills = <names or none>; runtime tools = <browser/db/cli>; skipped = <reason>.
 ```
 
-Name only what the task actually uses. Do not install, vendor, or pin a skill or
-plugin unless the owner asks.
+Name only what the task actually uses. The repo-owned skill bundle is mandatory:
+every fresh checkout must pass `corepack pnpm agent:skills` before agent work.
+External plugins and MCP tools remain adapters, not substitutes for the bundle.
+
+## Capability Registry
+
+Capability keys are runtime-neutral contracts. Each maps to a required,
+tracked skill in the `.agents/skills` bundle, locked by
+`docs/agent/skills-manifest.json` and enforced by `lint:agent-skills`. A normal
+task loads one primary capability and adds at most one specialist when it owns a
+separate risk surface. Dormant capabilities are installed but require an explicit
+task signal before loading.
+
+| Capability              | Status     | Required repo skill                   | Load when                                                    | Skip when                                                     |
+| ----------------------- | ---------- | ------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
+| `next-runtime`          | Primary    | `next-best-practices`                 | App Router, RSC, Server Action, route-handler work            | Copy-only or CSS-only change                                  |
+| `ui-components`         | Primary    | `building-components`                 | Shared primitive, composition, or accessibility work          | Route-local layout with no component-contract change          |
+| `supabase-runtime`      | Primary    | `supabase`                            | Supabase Auth, RLS, RPC, migration, or API work                | Target ref has not been verified                              |
+| `runtime-qa`            | Primary    | `playwright`                          | UI or workflow behavior needs runtime proof                   | Source-only review is the requested outcome                   |
+| `monorepo`              | Specialist | `turborepo`                           | Package graph, task pipeline, cache, or CI topology work       | Change stays inside one package                               |
+| `postgres-specialist`   | Specialist | `supabase-postgres-best-practices`    | Query plan, index, lock, concurrency, or schema performance    | Ordinary Supabase API or RLS work                             |
+| `react-performance`     | Specialist | `vercel-react-best-practices`         | A measured metric or bounded performance hypothesis exists    | Routine React implementation                                  |
+| `registry-ui`           | Specialist | `shadcn`                              | Registry, preset, or `components.json` work                    | General Má Tư UI design or styling                            |
+| `external-ui-review`    | Specialist | `web-design-guidelines`               | Advisory audit after the UI Advisor Gate                      | It would replace the Má Tư Design System                      |
+| `next-cache`            | Dormant    | `next-cache-components`               | Cache Components is enabled or its adoption is explicitly scoped | General data-fetching or caching work                      |
+| `next-upgrade`          | Dormant    | `next-upgrade`                        | The owner explicitly requests a Next.js upgrade               | Framework maintenance without a version change                |
+| `ai-interface`          | Dormant    | `ai-elements`                         | An AI/chat product surface and its dependency are justified   | No product consumer exists                                    |
+
+Do not stack `building-components`, `shadcn`, and
+`web-design-guidelines` for routine UI work. Do not add the Postgres specialist
+to ordinary Supabase work. Personal/global skills may add capability but cannot
+replace or alter the tracked bundle.
+
+## Bundle Governance
+
+The bundle contains exactly the skills listed in the manifest. `lint` verifies
+the complete tree and its SHA-256 lock; CI blocks a missing, extra, or drifted
+skill. Any change to `.agents/skills/`, its manifest, or checker is T3
+governance work. Do not rely on a developer's global skill cache, plugin catalog,
+or MCP state for project behavior.
 
 ## Routing Matrix
 

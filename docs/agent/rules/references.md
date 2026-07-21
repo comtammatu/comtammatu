@@ -33,6 +33,15 @@ Adapter directories wire tools back to repo authority; they do not own rules.
 | Codex        | `AGENTS.md`                    | `.codex/config.toml`                  | `.codex/hooks.json` → canonical guard                                             |
 | Cursor/other | Adapter-local pointer required | Adapter-specific                      | Unregistered: read-only until adapter is added and guard-sync registration exists |
 
+The tracked capability contract and required bundle are
+`docs/agent/rules/skills.md` and `.agents/skills/`. Its exact tree is locked by
+`docs/agent/skills-manifest.json`; every fresh checkout must pass
+`corepack pnpm agent:skills` before agent work, and CI verifies it in `lint`.
+Global skill catalogs, plugin caches, and per-user plugin state are additive only.
+`.claude/settings.json` enables the shared Claude plugin subset;
+`.codex/config.toml` registers Codex MCP servers. Neither adapter can replace or
+alter project policy or the required bundle.
+
 The production guard contract spans the Environment Registry in `database.md`,
 `scripts/guard-prod-db.mjs`, the pinned Codex MCP binding in
 `.codex/config.toml`, and every adapter registered by

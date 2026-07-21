@@ -1,0 +1,17 @@
+{
+  "bundleVersion": 1,
+  "skills": {
+    "ai-elements": "56b29b24c4859fce02966894d8c752a339448d87c3d03e5526d3e33eb9fe32a1",
+    "building-components": "f7bf6819db981e7883e5506a367842fe9105711979ce89ea866249d88a7b63c3",
+    "next-best-practices": "40d62fe6f4588523ae31895b65d83e4b060bba0c54c36ce0bfb273037ad97c7d",
+    "next-cache-components": "48f46dced6a4ee77944b3663e7d424d463bb1c18e0e2fcfc38a9a40175f918e4",
+    "next-upgrade": "fbb6dbcf79b72520c5069e258df1129290db63dd2bb0d2408a38bf9be9165fe0",
+    "playwright": "046358737927634d18f4d4102d93a1bb82b72d52f210f30b984523b43fbd18df",
+    "shadcn": "1741845899da3278a3ec7ea7236b4cd8627479e18acb57c48d284d93f4d055f0",
+    "supabase": "25e56b6243eff2554c89bf106347bdc255ceee7e2aa3e30dc52149a29ed71a95",
+    "supabase-postgres-best-practices": "302e2cbcc4a64d631a238c610a85a6346064cafa195b369c052b8615f8e02a91",
+    "turborepo": "7a2bd7e60eb8e8a815d98af8c27fc24def1bc897f9ac2c2dd977347427d4f436",
+    "vercel-react-best-practices": "85cdd2e931c68f342de165b71b7fce3f1785638de382364e67b2b83b89d439c4",
+    "web-design-guidelines": "d5cb29ea15d5ceeb4ef0802e75c17ef4287c6f60ff8aa05e46c6080f615178bc"
+  }
+}

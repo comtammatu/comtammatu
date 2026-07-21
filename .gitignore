@@ -73,7 +73,6 @@ supabase/.branches/
 .agents/cache/
 .agents/logs/
 .agents/tmp/
-.agents/skills/
 .context/
 .zcode/
 AGENTS.local.md

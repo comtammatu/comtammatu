@@ -16,7 +16,9 @@ const T3_GOVERNANCE = new Set([
   "docs/agent/rules/engineering.md",
   "docs/agent/rules/database.md",
   "docs/agent/rules/workflow.md",
+  "docs/agent/skills-manifest.json",
   "scripts/guard-prod-db.mjs",
+  "scripts/check-agent-skill-bundle.mjs",
   "scripts/check-guard-sync.mjs",
   "scripts/check-review-tier.mjs",
   "scripts/check-doc-staleness.mjs",
@@ -57,6 +59,10 @@ const T2_GOVERNANCE = (path) =>
     "docs/ref/",
     "docs/spec/",
   ].some((prefix) => path.startsWith(prefix));
+const isT3Governance = (path) =>
+  T3_GOVERNANCE.has(path) ||
+  T3_GUARD_SCRIPTS.has(path) ||
+  path.startsWith(".agents/skills/");
 const LOCKFILE = /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/;
 const MONEY =
   /(^|\/)(finance|payments?|invoice|hddt|payroll|refund|journal|sepay|vietqr|vnpay|momo|stripe)/i;
@@ -284,11 +290,9 @@ function classify({
 }) {
   const paths = changedPaths(entries);
   const allModified = entries.every((entry) => entry.status === "M");
-  const governanceT3 = paths.filter(
-    (path) => T3_GOVERNANCE.has(path) || T3_GUARD_SCRIPTS.has(path),
-  );
+  const governanceT3 = paths.filter(isT3Governance);
   const governanceT2 = paths.filter(
-    (path) => T2_GOVERNANCE(path) && !T3_GOVERNANCE.has(path),
+    (path) => T2_GOVERNANCE(path) && !isT3Governance(path),
   );
   const hits = {
     migration: paths.filter((path) => path.startsWith("supabase/migrations/")),
@@ -661,6 +665,7 @@ function runSelfTest() {
   );
   assert.equal(fixture("pnpm-lock.yaml"), 1);
   assert.equal(fixture("supabase/migrations/old.sql", { status: "D" }), 3);
+  assert.equal(fixture(".agents/skills/supabase/SKILL.md"), 3);
   assert.equal(highestDeclaredTier("T1\nT3\nT2"), 3);
   assert.equal(highestDeclaredTier("tier two"), null);
   assert.deepEqual(parseNameStatus("D\0old.sql\0R100\0old.ts\0new.ts\0"), [
