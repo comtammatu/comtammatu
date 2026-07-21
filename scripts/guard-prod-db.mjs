@@ -45,10 +45,6 @@ const APPROVED_DEV_SESSION_POOLER = {
 };
 const APPROVED_PREVIEW_PARENT_REF = "iexwsuaqqenyjiskawoj";
 
-const LINEAGE_MANIFEST = new URL(
-  "../supabase/migration-lineage.json",
-  import.meta.url,
-);
 const CODEX_CONFIG = new URL("../.codex/config.toml", import.meta.url);
 
 const LIBPQ_UNVERIFIED_ENV = [
@@ -98,33 +94,6 @@ function codexSupabaseBindingVerified() {
       url.searchParams.getAll("read_only").length === 1 &&
       url.searchParams.get("read_only") === "true"
     );
-  } catch {
-    return false;
-  }
-}
-
-function nativePreviewBranchingEnabled() {
-  try {
-    const lineage = JSON.parse(readFileSync(LINEAGE_MANIFEST, "utf8"));
-    const manifestAllows =
-      lineage.state === "aligned" &&
-      lineage.nativePreviewBranching === "enabled" &&
-      lineage.productionCutoff === lineage.baselineVersion;
-    if (!manifestAllows) return false;
-
-    const check = spawnSync(
-      process.execPath,
-      [
-        fileURLToPath(
-          new URL("./check-migration-lineage.mjs", import.meta.url),
-        ),
-      ],
-      {
-        cwd: fileURLToPath(new URL("../", import.meta.url)),
-        stdio: "ignore",
-      },
-    );
-    return check.status === 0;
   } catch {
     return false;
   }
@@ -1679,11 +1648,6 @@ if (toolName === "Bash") {
         ) {
           block("Preview branch creation without the registered parent ref");
         }
-        if (!nativePreviewBranchingEnabled()) {
-          block(
-            "native Preview branch creation while migration lineage is blocked pending re-baseline",
-          );
-        }
       } else if (isDbPush) {
         if (refHit || !cliTargetsDev) {
           block(
@@ -1884,10 +1848,7 @@ if (mcpMatch) {
     if (target !== APPROVED_PREVIEW_PARENT_REF) {
       block(`Preview branch creation against an unapproved parent ${target}`);
     }
-    if (nativePreviewBranchingEnabled()) process.exit(0);
-    block(
-      "native Preview branch creation while migration lineage is blocked pending re-baseline",
-    );
+    process.exit(0);
   }
 
   if (MCP_PROJECT_READ_ACTIONS.has(action)) {

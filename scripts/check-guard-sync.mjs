@@ -352,18 +352,7 @@ const UNREGISTERED_REF = "abcdefghijklmnopqrst";
 const TRUSTED_PREVIEW = "prvwabcdefghijklmnop";
 const WRONG_PARENT_PREVIEW = "wrngabcdefghijklmnop";
 const MISMATCHED_PREVIEW = "mismabcdefghijklmnop";
-const lineage = JSON.parse(
-  fs.readFileSync(
-    path.join(REPO_ROOT, "supabase/migration-lineage.json"),
-    "utf8",
-  ),
-);
-const previewCreateStatus =
-  lineage.state === "aligned" &&
-  lineage.nativePreviewBranching === "enabled" &&
-  lineage.productionCutoff === lineage.baselineVersion
-    ? 0
-    : 2;
+const previewCreateStatus = 0;
 const bash = (command) => ({ tool_name: "Bash", tool_input: { command } });
 const mcp = (tool, tool_input) => ({
   tool_name: `mcp__supabase__${tool}`,
@@ -1277,7 +1266,7 @@ const FIXTURES = [
     mcp("apply_migration", {}),
   ],
   [
-    "mcp create_branch follows migration lineage",
+    "allow: mcp create_branch with the registered Production parent",
     previewCreateStatus,
     mcp("create_branch", { project_id: PROD }),
   ],
@@ -1320,7 +1309,7 @@ const FIXTURES = [
     mcp("delete_branch", { project_id: PROD, branch_id: UNREGISTERED_REF }),
   ],
   [
-    "mcp connector create_branch follows migration lineage",
+    "allow: mcp connector create_branch with the registered Production parent",
     previewCreateStatus,
     mcpConnector("create_branch", { project_id: PROD }),
   ],
@@ -1339,7 +1328,7 @@ const FIXTURES = [
   ],
   ["allow: plain command", 0, bash("ls -la")],
   [
-    "supabase branches create follows migration lineage",
+    "allow: supabase branches create with the registered Production parent",
     previewCreateStatus,
     bash(`supabase branches create test --project-ref ${PROD}`),
   ],

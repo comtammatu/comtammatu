@@ -85,13 +85,14 @@ Production.
 ## Migration Policy
 
 - Every migration is T3. Write the migration file before applying it.
-- Verify the target ref before every apply. Preview Branch creation is allowed
-  only when `supabase/migration-lineage.json` is `aligned` and explicitly enables
-  native branching. When lineage or the Cloud target cannot be verified, stop
-  and report the blocker; never fall back to Supabase Local Docker on a
-  workstation. Preview deletion is allowed only when the hook can prove the
-  comtammatu parent; org-scoped branch-id-only tools fail closed. Merge,
-  reset, and rebase into production remain production writes.
+- Verify the target ref before every apply. Preview Branch creation requires the
+  literal registered Production parent and per-action parent verification by the
+  guard. `supabase/migration-lineage.json` validates the local baseline/install
+  layout; it does not grant or block Preview access. When the Cloud target cannot
+  be verified, stop and report the blocker; never fall back to Supabase Local
+  Docker on a workstation. Preview deletion is allowed only when the hook can
+  prove the comtammatu parent; org-scoped branch-id-only tools fail closed.
+  Merge, reset, and rebase into production remain production writes.
 - Production defaults to file → PR → merge → owner applies. Agent apply requires
   explicit delegation for the exact operation in the current session.
 - Delegation never authorizes changing or disabling repo guards. If the guarded
