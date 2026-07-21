@@ -35,6 +35,9 @@ DECLARE
   v_manual_event_id bigint;
   v_denied_event_id bigint;
   v_invalid_event_id bigint;
+  v_target_job_id bigint;
+  v_other_job_id bigint;
+  v_claimed_job_id bigint;
   v_result jsonb;
   v_before_order jsonb;
   v_before_payment jsonb;
@@ -720,6 +723,44 @@ BEGIN
     'EXECUTE'
   ) THEN
     RAISE EXCEPTION 'service_role still executes confirm_sepay_payment directly';
+  END IF;
+
+  SELECT id INTO v_target_job_id
+  FROM public.tax_invoice_issue_jobs
+  WHERE order_id = v_pending_order_id;
+
+  SELECT id INTO v_other_job_id
+  FROM public.tax_invoice_issue_jobs
+  WHERE order_id = v_fresh_order_id;
+
+  SELECT id INTO v_claimed_job_id
+  FROM public.claim_tax_invoice_issue_job(v_target_job_id, 300);
+
+  IF v_claimed_job_id IS DISTINCT FROM v_target_job_id
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.tax_invoice_issue_jobs
+       WHERE id = v_target_job_id
+         AND status = 'processing'
+         AND attempt_count = 1
+         AND locked_until > now()
+     )
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.tax_invoice_issue_jobs
+       WHERE id = v_other_job_id
+         AND status = 'queued'
+         AND attempt_count = 0
+         AND locked_until IS NULL
+     ) THEN
+    RAISE EXCEPTION 'Scoped HĐĐT claim changed a non-target job';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.claim_tax_invoice_issue_job(v_target_job_id, 300)
+  ) THEN
+    RAISE EXCEPTION 'Scoped HĐĐT claim reclaimed an active lease';
   END IF;
 END;
 $$;

@@ -141,17 +141,25 @@ async function processJob(
   return "blocked";
 }
 
-export async function runTaxInvoiceIssueWorker(): Promise<{
+export async function runTaxInvoiceIssueWorker(jobId?: number): Promise<{
   claimed: number;
   completed: number;
   blocked: number;
   reconcile_required: number;
 }> {
+  if (jobId !== undefined && (!Number.isSafeInteger(jobId) || jobId <= 0)) {
+    throw new Error("invalid_job_id");
+  }
+
   const service = createServiceClient();
   const rpc = service as unknown as WorkerRpcClient;
   const { data, error } = await rpc.rpc<ClaimedTaxInvoiceJob[]>(
-    "claim_tax_invoice_issue_jobs",
-    { p_limit: 20, p_lease_seconds: 300 },
+    jobId === undefined
+      ? "claim_tax_invoice_issue_jobs"
+      : "claim_tax_invoice_issue_job",
+    jobId === undefined
+      ? { p_limit: 20, p_lease_seconds: 300 }
+      : { p_job_id: jobId, p_lease_seconds: 300 },
   );
   if (error) {
     throw new Error("claim_failed");

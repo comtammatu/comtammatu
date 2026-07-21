@@ -26,8 +26,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
+  const rawJobId = new URL(request.url).searchParams.get("jobId");
+  const jobId = rawJobId === null ? undefined : Number(rawJobId);
+  if (jobId !== undefined && (!Number.isSafeInteger(jobId) || jobId <= 0)) {
+    return NextResponse.json({ ok: false, error: "invalid job id" }, { status: 400 });
+  }
+
   try {
-    return NextResponse.json({ ok: true, ...(await runTaxInvoiceIssueWorker()) });
+    return NextResponse.json({
+      ok: true,
+      ...(await runTaxInvoiceIssueWorker(jobId)),
+    });
   } catch {
     console.error("[cron/tax-invoice-issue] worker failed");
     return NextResponse.json({ ok: false, error: "worker failed" }, { status: 500 });

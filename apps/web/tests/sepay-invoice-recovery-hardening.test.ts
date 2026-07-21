@@ -91,3 +91,25 @@ test("only the service worker can claim or finalize HĐĐT jobs", () => {
     );
   }
 });
+
+test("one-shot HĐĐT worker claims only the requested job", () => {
+  const worker = read("apps/web/lib/tax-invoice-issue-worker.ts");
+  const route = read("apps/web/app/api/cron/tax-invoice-issue/route.ts");
+  const migration = read(
+    "supabase/migrations/20260721210937_add_scoped_tax_invoice_job_claim.sql",
+  );
+
+  assert.match(worker, /jobId === undefined[\s\S]*claim_tax_invoice_issue_job/);
+  assert.match(route, /searchParams\.get\("jobId"\)/);
+  assert.match(route, /runTaxInvoiceIssueWorker\(jobId\)/);
+  assert.match(migration, /WHERE job\.id = p_job_id/);
+  assert.match(migration, /FOR UPDATE SKIP LOCKED/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.claim_tax_invoice_issue_job\(bigint, integer\)[\s\S]*FROM PUBLIC, anon, authenticated;/,
+  );
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.claim_tax_invoice_issue_job\(bigint, integer\)[\s\S]*TO service_role;/,
+  );
+});

@@ -9650,6 +9650,19 @@ export type Database = {
         Args: { p_agent_id: string; p_job_id: number }
         Returns: boolean
       }
+      claim_tax_invoice_issue_job: {
+        Args: { p_job_id: number; p_lease_seconds?: number }
+        Returns: {
+          attempt_count: number
+          branch_id: number
+          id: number
+          invoice_payload: Json
+          order_id: number
+          payment_id: number
+          tax_invoice_id: number
+          tenant_id: number
+        }[]
+      }
       claim_tax_invoice_issue_jobs: {
         Args: { p_lease_seconds?: number; p_limit?: number }
         Returns: {
