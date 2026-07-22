@@ -1092,7 +1092,11 @@ export function BillReceipt({
           <div className="flex flex-col gap-4">
             <AppSection
               title={messages.pos.payment.stepTitle}
-              description={messages.pos.payment.stepDescription}
+              description={
+                selectedMethod === "cash"
+                  ? messages.pos.payment.stepDescription
+                  : undefined
+              }
               icon={<IconCreditCard />}
               size="sm"
               contentClassName="gap-3"
@@ -1227,20 +1231,6 @@ export function BillReceipt({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
-                    {order && (
-                      <OrderTotalsSummary
-                        subtotal={order.subtotal}
-                        serviceCharge={order.service_charge}
-                        discountAmount={order.discount_amount}
-                        orderDiscountAmount={order.order_discount_amount}
-                        itemDiscountAmount={order.item_discount_amount}
-                        discountType={order.discount_type}
-                        discountValue={order.discount_value}
-                        discountNote={order.discount_note}
-                        totalAmount={order.total_amount}
-                      />
-                    )}
-
                     {methodPending ? (
                       <AppBoneyardSkeleton
                         name="pos-bill-receipt-qr"
@@ -1256,6 +1246,7 @@ export function BillReceipt({
                         {remoteQrValue ? (
                           <PaymentQrCode
                             value={remoteQrValue}
+                            className="max-h-56 max-w-56"
                             alt={`QR ${
                               METHOD_META[selectedMethod]?.label ??
                               REMOTE_PAYMENT_COPY.qrAltFallback
@@ -1315,7 +1306,7 @@ export function BillReceipt({
                 )}
               </>
             </AppSection>
-            {showInvoiceForm ? (
+            {showInvoiceForm && !isWaitingForVietQr ? (
               <InvoiceFormSection
                 state={invoiceForm}
                 totalAmount={totalAmount}
@@ -1361,13 +1352,14 @@ export function BillReceipt({
               </Button>
             </div>
             {selectedMethod === "vietqr" ? (
-              <Alert>
-                <AlertDescription>
-                  {pendingExtras?.payment_id
-                    ? "Đang chờ SePay xác thực chuyển khoản. Sau khi thanh toán hoàn tất, HĐĐT sẽ được xử lý tự động."
-                    : "Tạo mã chuyển khoản để chờ SePay xác thực thanh toán."}
-                </AlertDescription>
-              </Alert>
+              <p
+                role="status"
+                className="text-center text-sm text-muted-foreground"
+              >
+                {pendingExtras?.payment_id
+                  ? SELF_ORDER_VI.paymentReconcileDescription
+                  : "Tạo mã chuyển khoản để chờ SePay xác thực thanh toán."}
+              </p>
             ) : disabledReason ? (
               <p className="text-sm text-muted-foreground">{disabledReason}</p>
             ) : null}

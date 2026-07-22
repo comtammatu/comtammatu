@@ -27,7 +27,7 @@ test("POS only lets the cashier confirm cash; VietQR waits for SePay", () => {
   assert.doesNotMatch(confirmPaidBlock, /confirmVietQrPaymentWithInvoice\(/);
   assert.match(
     billReceiptSource,
-    /Đang chờ SePay xác thực chuyển khoản/,
+    /SELF_ORDER_VI\.paymentReconcileDescription/,
   );
   assert.doesNotMatch(confirmPaidBlock, /await confirm\(/);
   assert.doesNotMatch(posMessagesSource, /confirmIssue/);
@@ -46,6 +46,15 @@ test("POS closes a pending VietQR sheet as waiting without confirming payment", 
     billReceiptSource,
     /onClick=\{onClose\}[\s\S]*?isWaitingForVietQr[\s\S]*?SELF_ORDER_VI\.paymentReconcileAction/,
   );
+  assert.match(
+    billReceiptSource,
+    /<PaymentQrCode[\s\S]*?className="max-h-56 max-w-56"/,
+  );
+  assert.match(
+    billReceiptSource,
+    /showInvoiceForm && !isWaitingForVietQr/,
+  );
+  assert.match(billReceiptSource, /role="status"/);
 });
 
 test("POS payment sheet separates payment step from HĐĐT details", () => {
