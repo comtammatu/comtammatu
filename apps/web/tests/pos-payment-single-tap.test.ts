@@ -33,6 +33,21 @@ test("POS only lets the cashier confirm cash; VietQR waits for SePay", () => {
   assert.doesNotMatch(posMessagesSource, /confirmIssue/);
 });
 
+test("POS closes a pending VietQR sheet as waiting without confirming payment", () => {
+  assert.match(
+    billReceiptSource,
+    /const isWaitingForVietQr =\s*selectedMethod === "vietqr" && pendingExtras\?\.payment_id != null/,
+  );
+  assert.match(
+    billReceiptSource,
+    /variant=\{isWaitingForVietQr \? "default" : "outline"\}/,
+  );
+  assert.match(
+    billReceiptSource,
+    /onClick=\{onClose\}[\s\S]*?isWaitingForVietQr[\s\S]*?SELF_ORDER_VI\.paymentReconcileAction/,
+  );
+});
+
 test("POS payment sheet separates payment step from HĐĐT details", () => {
   assert.match(billReceiptSource, /messages\.pos\.payment\.stepTitle/);
   assert.match(billReceiptSource, /messages\.pos\.payment\.stepDescription/);

@@ -1025,6 +1025,8 @@ export function BillReceipt({
     paymentCreateError ?? REMOTE_PAYMENT_COPY.qrUnavailableDescription;
   const showInvoiceForm =
     selectedMethod === "cash" || selectedMethod === "vietqr";
+  const isWaitingForVietQr =
+    selectedMethod === "vietqr" && pendingExtras?.payment_id != null;
 
   return (
     <AppDialog
@@ -1347,13 +1349,15 @@ export function BillReceipt({
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant={isWaitingForVietQr ? "default" : "outline"}
                 size="touch"
                 className="flex-1"
                 onClick={onClose}
                 disabled={actionPending}
               >
-                {ACTIONS_VI.cancel}
+                {isWaitingForVietQr
+                  ? SELF_ORDER_VI.paymentReconcileAction
+                  : ACTIONS_VI.cancel}
               </Button>
             </div>
             {selectedMethod === "vietqr" ? (
