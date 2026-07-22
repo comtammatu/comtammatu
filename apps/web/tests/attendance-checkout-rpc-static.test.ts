@@ -18,6 +18,9 @@ const forceCloseAfterShiftEndMigration = read(
 const overnightBusinessDateMigration = read(
   "supabase/migration-archive/20260711143450_fix_overnight_attendance_business_date.sql",
 );
+const inventoryShiftScopeMigration = read(
+  "supabase/migrations/20260722074001_fix_attendance_checkout_inventory_shift_scope.sql",
+);
 
 test("attendance checkout notification upsert has a matching unique arbiter", () => {
   assert.match(
@@ -85,6 +88,39 @@ test("employee checkout accepts the current or previous business date", () => {
   );
   assert.doesNotMatch(
     overnightBusinessDateMigration,
+    /GRANT EXECUTE ON FUNCTION public\.employee_request_clock_out[^;]*authenticated/,
+  );
+});
+
+test("employee checkout inventory gate is scoped to the attendance shift", () => {
+  assert.match(
+    inventoryShiftScopeMigration,
+    /CREATE OR REPLACE FUNCTION public\.employee_request_clock_out/,
+  );
+  assert.match(
+    inventoryShiftScopeMigration,
+    /AND \(a\.shift_id IS NULL OR a\.shift_id = v_record\.shift_id\)/,
+    "global and current-shift assignments should block checkout",
+  );
+  assert.match(
+    inventoryShiftScopeMigration,
+    /AND s\.shift_id IS NOT DISTINCT FROM v_record\.shift_id/,
+    "completed slips must belong to the attendance shift",
+  );
+  assert.match(
+    inventoryShiftScopeMigration,
+    /RAISE EXCEPTION 'checklist_incomplete' USING ERRCODE = '23514'/,
+  );
+  assert.match(
+    inventoryShiftScopeMigration,
+    /REVOKE ALL ON FUNCTION public\.employee_request_clock_out\(bigint, bigint, bigint\) FROM PUBLIC, anon, authenticated;/,
+  );
+  assert.match(
+    inventoryShiftScopeMigration,
+    /GRANT EXECUTE ON FUNCTION public\.employee_request_clock_out\(bigint, bigint, bigint\) TO service_role;/,
+  );
+  assert.doesNotMatch(
+    inventoryShiftScopeMigration,
     /GRANT EXECUTE ON FUNCTION public\.employee_request_clock_out[^;]*authenticated/,
   );
 });
