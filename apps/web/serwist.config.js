@@ -8,10 +8,19 @@ export default serwist({
   swDest: "public/sw.js",
   manifestTransforms: [
     (entries) => ({
-      manifest: entries.filter(
-        ({ url }) =>
-          !excludedPrecachePrefixes.some((prefix) => url.startsWith(prefix)),
-      ),
+      manifest: [
+        ...entries.filter(
+          ({ url }) =>
+            !excludedPrecachePrefixes.some((prefix) => url.startsWith(prefix)),
+        ),
+        {
+          url: "/offline",
+          size: 0,
+          revision:
+            entries.find(({ url }) => url.endsWith("/_buildManifest.js"))
+              ?.url ?? null,
+        },
+      ],
       warnings: [],
     }),
   ],

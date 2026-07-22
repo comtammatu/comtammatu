@@ -11,6 +11,14 @@ const runnerLayoutSource = readFileSync(
   join(process.cwd(), "app/(protected)/br/[branchId]/runner/layout.tsx"),
   "utf8",
 );
+const runnerLoadingSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/runner/loading.tsx"),
+  "utf8",
+);
+const runnerErrorSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/runner/error.tsx"),
+  "utf8",
+);
 const runnerLightModeSource = readFileSync(
   join(
     process.cwd(),
@@ -138,11 +146,27 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.match(runnerPageSource, /activeRows\.length - previewRows\.length/);
   assert.match(runnerPageSource, /grid-flow-col auto-cols-fr gap-2/);
-  assert.match(runnerPageSource, /className="flex h-dvh min-h-0 w-full/);
+  assert.match(
+    runnerPageOnlySource,
+    /className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-background"/,
+  );
+  assert.match(
+    runnerPageOnlySource,
+    /className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden bg-background p-4"/,
+  );
+  assert.doesNotMatch(runnerPageOnlySource, /\bh-dvh\b/);
   assert.match(runnerPageSource, /className="flex h-full min-h-0 w-full/);
   assert.match(
     runnerPageSource,
     /className="theme-light-only chrome-safe-pt flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"/,
+  );
+  assert.match(
+    runnerLoadingSource,
+    /className="flex min-h-0 flex-1 items-center justify-center"/,
+  );
+  assert.match(
+    runnerErrorSource,
+    /className="flex min-h-0 flex-1 items-center justify-center p-4"/,
   );
   assert.match(runnerPageSource, /<RunnerLightMode \/>/);
   assert.match(uiGlobalsSource, /:root,\n\.theme-light-only \{/);

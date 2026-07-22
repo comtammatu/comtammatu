@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   CheckCircle2 as IconCheck,
+  Circle as IconPending,
   ClipboardCheck as IconClipboardCheck,
   X as IconX,
 } from "lucide-react";
@@ -34,7 +35,7 @@ import {
 } from "@comtammatu/ui/components/drawer";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { AppEmptyState } from "@/components/surface";
 import { EmployeeDetailList } from "../components/staff-runtime-page";
 import {
@@ -385,47 +386,51 @@ export function CheckoutApprovalsClient({
           if (!open) setDetailsTarget(null);
         }}
       >
-        <DrawerContent>
-          <DrawerHeader>
+        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden">
+          <DrawerHeader className="shrink-0">
             <DrawerTitle>Chi tiết kết ca</DrawerTitle>
             <DrawerDescription>
               {detailsTarget?.employeeName} - {detailsTarget?.shiftLabel}
             </DrawerDescription>
           </DrawerHeader>
-          <ScrollArea className="px-4" style={{ maxHeight: "60vh" }}>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4">
             <div className="pb-4">
               {detailsTarget?.checklist &&
               detailsTarget.checklist.length > 0 ? (
                 <div className="flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Checklist công việc
-                  </h4>
-                  <div className="flex flex-col gap-2 rounded-lg bg-muted/50 p-4 border">
+                  <SectionLabel as="h3">Checklist công việc</SectionLabel>
+                  <ItemGroup className="gap-2">
                     {detailsTarget.checklist.map((c) => (
-                      <div
+                      <Item
                         key={c.id}
-                        className="flex items-start gap-2 text-sm text-foreground"
+                        role="listitem"
+                        variant="muted"
+                        size="sm"
                       >
-                        {c.isDone ? (
-                          <IconCheck className="size-4 text-success shrink-0 mt-0.5" />
-                        ) : (
-                          <div className="size-4 rounded-full border border-muted-foreground shrink-0 mt-0.5 bg-background" />
-                        )}
-                        <span
-                          className={
-                            c.isDone ? "line-through text-muted-foreground" : ""
-                          }
-                        >
-                          {c.title}
-                        </span>
-                        {c.isRequired ? (
-                          <span className="text-2xs leading-none bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-md shrink-0 font-medium">
-                            Bắt buộc
-                          </span>
-                        ) : null}
-                      </div>
+                        <ItemMedia variant="icon" aria-hidden="true">
+                          {c.isDone ? <IconCheck /> : <IconPending />}
+                        </ItemMedia>
+                        <ItemContent>
+                          <ItemTitle
+                            className={cn(
+                              "line-clamp-none",
+                              c.isDone && "text-muted-foreground line-through",
+                            )}
+                          >
+                            {c.title}
+                          </ItemTitle>
+                          <ItemDescription className="flex flex-wrap gap-1.5">
+                            <Badge variant={c.isDone ? "success" : "outline"}>
+                              {c.isDone ? "Đã xong" : "Chưa xong"}
+                            </Badge>
+                            {c.isRequired ? (
+                              <Badge variant="destructive">Bắt buộc</Badge>
+                            ) : null}
+                          </ItemDescription>
+                        </ItemContent>
+                      </Item>
                     ))}
-                  </div>
+                  </ItemGroup>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground italic">
@@ -433,8 +438,8 @@ export function CheckoutApprovalsClient({
                 </p>
               )}
             </div>
-          </ScrollArea>
-          <DrawerFooter className="flex-row gap-3 pt-2">
+          </div>
+          <DrawerFooter className="shrink-0 flex-row gap-3 pt-2">
             <Button
               variant="outline"
               size="touch"

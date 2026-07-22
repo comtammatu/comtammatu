@@ -17,11 +17,13 @@ function UnavailablePage({ description }: { description: string }) {
     <AppPage
       as="main"
       id="main-content"
+      tabIndex={-1}
       width="narrow"
       density="compact"
       mobile
-      className="min-h-dvh bg-background"
-      contentClassName="min-h-dvh justify-center"
+      padded={false}
+      className="flex min-h-dvh flex-col bg-background"
+      contentClassName="min-h-0 flex-1 justify-center px-3 py-6"
     >
       <Item variant="outline" className="bg-card">
         <ItemContent className="items-center gap-3 text-center">

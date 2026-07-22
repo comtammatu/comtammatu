@@ -29,6 +29,7 @@ import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorControlBar,
   BranchOperatorDetailList,
+  BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -132,7 +133,7 @@ export function BranchStocktakeNewClient({
           </div>
         </BranchOperatorControlBar>
 
-        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
+        <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
           <BranchOperatorPanel
             title="Thiết lập phiên kiểm kê"
             description={branchName}

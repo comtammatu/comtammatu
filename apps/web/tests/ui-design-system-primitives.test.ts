@@ -14,6 +14,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Label } from "@comtammatu/ui/components/label";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Select,
   SelectContent,
@@ -360,6 +361,9 @@ test("native visual primitives preserve label, separator, and overflow semantics
   const scrollArea = renderToStaticMarkup(
     createElement(ScrollArea, null, "Scrollable content"),
   );
+  const sectionHeading = renderToStaticMarkup(
+    createElement(SectionLabel, { as: "h3" }, "Checklist"),
+  );
 
   assert.match(label, /^<label/);
   assert.match(label, /data-slot="label"/);
@@ -370,6 +374,8 @@ test("native visual primitives preserve label, separator, and overflow semantics
   );
   assert.match(scrollArea, /data-slot="scroll-area"/);
   assert.match(scrollArea, /data-slot="scroll-area-viewport"/);
+  assert.match(sectionHeading, /^<h3/);
+  assert.match(sectionHeading, />Checklist<\/h3>$/);
 });
 
 test("Má Tư DS brand asset set includes mascot metadata and symbols", () => {
@@ -407,6 +413,7 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
   assert.match(drawerSource, /DrawerPrimitive\.Popup/);
   assert.match(drawerSource, /DrawerPrimitive\.Content/);
   assert.match(drawerSource, /fixed inset-x-0 bottom-0/);
+  assert.match(drawerSource, /max-h-dvh-80/);
   assert.match(drawerSource, /overscroll-contain/);
   assert.match(drawerSource, /motion-reduce:animate-none/);
   assert.match(drawerSource, /responsiveFullscreen = false/);
@@ -422,6 +429,7 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
     /<DrawerContent showHandle responsiveFullscreen>/,
   );
   assert.doesNotMatch(drawerSource, /vaul|data-\[vaul/);
+  assert.doesNotMatch(drawerSource, /max-h-\[80dvh\]/);
   assert.doesNotMatch(posSource, /data-\[vaul/);
   assert.doesNotMatch(archivedOrdersSource, /data-\[vaul/);
   assert.match(

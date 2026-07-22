@@ -34,6 +34,21 @@ const kdsBoardSource = readFileSync(
   "utf8",
 );
 
+const kdsLayoutSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/kds/layout.tsx"),
+  "utf8",
+);
+
+const kdsLoadingSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/kds/loading.tsx"),
+  "utf8",
+);
+
+const kdsErrorSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/kds/error.tsx"),
+  "utf8",
+);
+
 const orderGridSource = readFileSync(
   join(
     process.cwd(),
@@ -312,4 +327,21 @@ test("KDS fullscreen keeps body-level portals inside the fullscreen tree", () =>
   assert.match(kdsBoardSource, /fullscreenTarget = document\.documentElement/);
   assert.match(kdsBoardSource, /fullscreenTarget\.requestFullscreen\(\)/);
   assert.doesNotMatch(kdsBoardSource, /root\.requestFullscreen\(\)/);
+});
+
+test("KDS layout owns the viewport while board states fill the remaining workspace", () => {
+  assert.match(kdsLayoutSource, /<main[\s\S]*?className="[^"]*h-dvh[^"]*"/);
+  assert.match(
+    kdsBoardSource,
+    /className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-background"/,
+  );
+  assert.doesNotMatch(kdsBoardSource, /\bh-dvh\b/);
+  assert.match(
+    kdsLoadingSource,
+    /className="flex min-h-0 flex-1 items-center justify-center"/,
+  );
+  assert.match(
+    kdsErrorSource,
+    /className="flex min-h-0 flex-1 items-center justify-center p-4"/,
+  );
 });

@@ -391,7 +391,7 @@ export function PaymentPanel({
             {SELF_ORDER_VI.buyerTaxCode}
           </FieldLabel>
           <Input
-            size="touch"
+            controlSize="touch"
             ref={buyerTaxCodeRef}
             id="self-order-buyer-tax-code"
             name="buyerTaxCode"
@@ -448,7 +448,7 @@ export function PaymentPanel({
                 {SELF_ORDER_VI.buyerName}
               </FieldLabel>
               <Input
-                size="touch"
+                controlSize="touch"
                 ref={buyerNameRef}
                 id="self-order-buyer-name"
                 name="buyerName"
@@ -474,7 +474,7 @@ export function PaymentPanel({
                 {SELF_ORDER_VI.buyerAddress}
               </FieldLabel>
               <Input
-                size="touch"
+                controlSize="touch"
                 ref={buyerAddressRef}
                 id="self-order-buyer-address"
                 name="buyerAddress"
@@ -500,7 +500,7 @@ export function PaymentPanel({
                 {SELF_ORDER_VI.buyerEmail}
               </FieldLabel>
               <Input
-                size="touch"
+                controlSize="touch"
                 ref={buyerEmailRef}
                 id="self-order-buyer-email"
                 name="buyerEmail"

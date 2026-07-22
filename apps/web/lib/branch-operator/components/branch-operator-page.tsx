@@ -46,6 +46,9 @@ const toneSectionVariant = {
   "default" | "warning" | "info" | "destructive"
 >;
 
+export const BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME =
+  "grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start";
+
 export interface BranchOperatorPageProps {
   title: string;
   description?: string;

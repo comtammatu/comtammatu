@@ -394,7 +394,8 @@ export function CountSlipClient({
       >
         <SheetContent
           side="right"
-          className="w-full overflow-hidden sm:max-w-md"
+          size="md"
+          className="overflow-hidden"
         >
           {assignment ? (
             <>

@@ -7,6 +7,16 @@ function read(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), "utf8");
 }
 
+const operatorLoadingRoutes = [
+  "loading.tsx",
+  "orders/loading.tsx",
+  "settings/loading.tsx",
+  "team/loading.tsx",
+  "menu-limits/loading.tsx",
+  "stock/loading.tsx",
+  "shift/loading.tsx",
+];
+
 test("Branch Manager header collapses secondary controls into the existing overflow menu", () => {
   const source = read(
     "app/(protected)/br/[branchId]/(operator)/layout.tsx",
@@ -20,6 +30,17 @@ test("Branch Manager header collapses secondary controls into the existing overf
   assert.match(source, /\{usesHeaderOverflow \? \([\s\S]*<DropdownMenu>/);
   assert.match(source, /<ThemeMenuItem className="min-h-12 text-sm" \/>/);
   assert.doesNotMatch(source, /canManageBranch && !canOpenOwnerHome/);
+});
+
+test("operator loading states reuse the layout AppPage instead of nesting page shells", () => {
+  for (const relativePath of operatorLoadingRoutes) {
+    const source = read(
+      `app/(protected)/br/[branchId]/(operator)/${relativePath}`,
+    );
+
+    assert.match(source, /<PageSkeleton bare \/>/, relativePath);
+    assert.doesNotMatch(source, /<PageSkeleton \/>/, relativePath);
+  }
 });
 
 test("operational overlays keep all exposed controls touch-sized", () => {
@@ -57,6 +78,23 @@ test("POS skeleton and self-order footer follow the runtime breakpoints", () => 
 
   assert.equal(posSkeleton.match(/xl:flex-row/g)?.length, 2);
   assert.equal(posSkeleton.match(/xl:flex xl:flex-col/g)?.length, 2);
+  assert.equal(
+    posSkeleton.match(
+      /className="flex min-h-0 flex-1 flex-col bg-background"/g,
+    )?.length,
+    2,
+  );
+  assert.equal(
+    posSkeleton.match(
+      /className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3"/g,
+    )?.length,
+    2,
+  );
+  assert.match(
+    posSkeleton,
+    /className="flex min-h-0 flex-1 flex-col bg-background \[&>div:first-child\]:contents"/,
+  );
+  assert.doesNotMatch(posSkeleton, /h-dvh/);
   assert.doesNotMatch(posSkeleton, /md:flex(?:-row| md:flex-col)/);
   assert.match(itemSheet, /flex-wrap items-center[^"]*sm:flex-nowrap/);
   assert.match(itemSheet, /className="min-w-0 flex-1 max-sm:basis-full"/);

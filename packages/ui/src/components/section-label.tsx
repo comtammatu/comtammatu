@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import * as React from "react";
 import { cn } from "../lib/utils";
 
 export type SectionLabelDensity = "default" | "dense";
+export type SectionLabelElement = "div" | "h2" | "h3" | "h4";
 
 export interface SectionLabelProps {
-  children: ReactNode;
+  children: React.ReactNode;
   /**
    * "default" = text-xs tracking-wide (page/section eyebrow).
    * "dense" = text-2xs tracking-wider (KDS chrome, audit row meta, dense grids).
@@ -12,6 +13,7 @@ export interface SectionLabelProps {
    * § Rhythm B (Panel / field / section uppercase label role).
    */
   density?: SectionLabelDensity;
+  as?: SectionLabelElement;
   className?: string;
 }
 
@@ -23,10 +25,11 @@ export interface SectionLabelProps {
 export function SectionLabel({
   children,
   density = "default",
+  as: Component = "div",
   className,
 }: SectionLabelProps) {
   return (
-    <div
+    <Component
       className={cn(
         "font-medium uppercase",
         density === "dense"
@@ -36,6 +39,6 @@ export function SectionLabel({
       )}
     >
       {children}
-    </div>
+    </Component>
   );
 }

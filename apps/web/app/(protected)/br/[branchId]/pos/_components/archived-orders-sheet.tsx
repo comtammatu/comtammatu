@@ -245,7 +245,8 @@ export function ArchivedOrdersSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        size="md"
+        className="p-0"
       >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">

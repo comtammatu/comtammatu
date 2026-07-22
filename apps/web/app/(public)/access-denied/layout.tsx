@@ -8,6 +8,7 @@ export default function AccessDeniedLayout({
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       className="flex min-h-dvh w-full items-center justify-center p-4"
     >
       {children}

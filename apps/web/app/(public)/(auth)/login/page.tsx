@@ -6,7 +6,11 @@ import { Frame } from "@comtammatu/ui/components/frame";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] bg-gradient-to-br from-secondary/30 via-background to-primary/10 lg:grid lg:grid-cols-2">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="relative flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] bg-gradient-to-br from-secondary/30 via-background to-primary/10 lg:grid lg:grid-cols-2"
+    >
       {/* Caro Pattern overlay */}
       <div className="brand-pattern-caro absolute inset-0 opacity-10 pointer-events-none" />
 
@@ -30,7 +34,7 @@ export default function LoginPage() {
           <h1 className="font-heading sr-only">{BRAND_NAME}</h1>
         </div>
         <div className="hidden lg:flex flex-col items-center justify-center h-32 w-32">
-          <BrandMascot mood="waving" animated className="shrink-0 scale-50" />
+          <BrandMascot className="shrink-0 scale-50" />
         </div>
       </div>
 
@@ -39,8 +43,6 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center justify-center h-20 w-20 mb-4 lg:hidden">
             <BrandMascot
-              mood="waving"
-              animated
               className="shrink-0 scale-[0.35]"
             />
           </div>

@@ -26,6 +26,7 @@ import { StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorControlBar,
   BranchOperatorDetailList,
+  BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
@@ -146,7 +147,7 @@ export function BranchTransferDetailClient({
         <StatusBadge domain="inventory" value={transfer.status} size="sm" />
       </BranchOperatorControlBar>
 
-      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
+      <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
         <div className="flex min-w-0 flex-col gap-3 lg:col-start-2 lg:row-start-1">
           <BranchOperatorPanel
             title={copy.internalTransferTitle}

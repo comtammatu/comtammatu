@@ -31,6 +31,7 @@ export default async function PosLayout({
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       className="chrome-safe-pt flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background md:min-h-screen"
     >
       <PosPwaProvider>

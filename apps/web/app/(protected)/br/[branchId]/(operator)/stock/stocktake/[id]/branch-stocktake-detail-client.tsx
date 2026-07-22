@@ -30,6 +30,7 @@ import {
   BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorInlineState,
+  BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
   BranchOperatorPage,
   BranchOperatorPanel,
   BranchOperatorStatusStrip,
@@ -269,7 +270,7 @@ export function BranchStocktakeDetailClient({
           <StatusBadge domain="inventory" value={session.status} size="sm" />
         </BranchOperatorControlBar>
 
-        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
+        <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel
               title={

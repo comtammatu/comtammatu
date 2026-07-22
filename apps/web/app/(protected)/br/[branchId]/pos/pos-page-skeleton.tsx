@@ -15,7 +15,7 @@ function PosSkeletonPanel({ children }: { children: ReactNode }) {
 
 function PosPageSkeletonFallback() {
   return (
-    <div className="flex h-dvh min-h-0 flex-col bg-background">
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
       <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-3">
         <div className="flex min-w-0 flex-col gap-2">
           <Skeleton className="h-5 w-36" />
@@ -27,7 +27,7 @@ function PosPageSkeletonFallback() {
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
-        <div className="flex min-h-0 flex-col overflow-hidden p-3">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3">
           <div className="mb-3 flex shrink-0 gap-2">
             <Skeleton className="h-10 flex-1" />
             <Skeleton className="h-10 flex-1" />
@@ -61,7 +61,7 @@ function PosPageSkeletonFallback() {
 
 function PosPageSkeletonFixture() {
   return (
-    <div className="flex h-dvh min-h-0 flex-col bg-background">
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
       <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-3">
         <div className="min-w-0">
           <p className="text-base font-semibold">POS chi nhanh</p>
@@ -73,7 +73,7 @@ function PosPageSkeletonFixture() {
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
-        <div className="flex min-h-0 flex-col overflow-hidden p-3">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3">
           <div className="mb-3 flex shrink-0 gap-2">
             <div className="flex h-10 flex-1 items-center border px-3 text-sm">
               Tim mon
@@ -116,6 +116,7 @@ export function PosPageSkeleton() {
     <AppBoneyardSkeleton
       name="pos-page-shell"
       loading
+      className="flex min-h-0 flex-1 flex-col bg-background [&>div:first-child]:contents"
       fixture={<PosPageSkeletonFixture />}
       fallback={<PosPageSkeletonFallback />}
       snapshotConfig={{ excludeSelectors: ["svg"] }}

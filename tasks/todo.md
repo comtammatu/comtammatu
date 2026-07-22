@@ -5,6 +5,17 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Converge the Má Tư Design System and roll it into every route family
+
+State: doing
+Kind: feature
+Tier: T3
+Lane: ui/design-system
+Exit: The P0-P7 program has one verified foundation, every page is classified keep/tune/rebuild and processed by route family, and accessibility/PWA/runtime evidence is reconciled without changing business authority.
+Evidence: `docs/plan/design-system-rollout.md`, C0/C1/C2 external review reconciliation, UI debt and archetype audits, focused and full repository gates, authenticated viewport matrix, axe, assistive-technology, and production-like PWA proof.
+
+- [ ] Complete authenticated Branch/Owner viewport and axe runs, VoiceOver/TalkBack critical-path proof, and real install/update/standalone PWA proof on a registered target.
+
 ## Re-align the schema migration lineage
 
 State: doing
@@ -28,14 +39,14 @@ Evidence: Production-like offline-browser capture plus the existing `PWA-SELF-OR
 
 ## Densify the Branch on-hand list
 
-State: ready
+State: verify
 Kind: feature
 Tier: T2
 Lane: inventory
 Exit: Branch on-hand rows use the owner-approved 44px separator-based list with `gap-0` and no duplicate workflow toolbar.
 Evidence: Focused static contract plus runtime QA at `390x844`, `768x1024`, `1024x768`, and `1280x900`.
 
-- [ ] Replace the current oversized row/gap treatment, add separators, and verify touch and scroll behavior at the named viewports.
+- [ ] Verify the implemented 44px separator list for touch and scroll behavior at `390x844`, `768x1024`, `1024x768`, and `1280x900` on an authenticated target.
 
 ## Verify the Finance payment cutover
 

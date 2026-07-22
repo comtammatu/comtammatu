@@ -39,8 +39,20 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   const cart = read("app/q/[token]/self-order/cart-sheet.tsx");
   const menu = read("app/q/[token]/self-order/menu-panel.tsx");
   const hooks = read("app/q/[token]/self-order/hooks.ts");
+  const surface = read("app/components/surface.tsx");
 
   assert.match(client, /SELF_ORDER_VI\.tableLabel/);
+  assert.match(client, /padded=\{false\}/);
+  assert.match(
+    client,
+    /className="h-dvh min-h-0 overflow-hidden bg-background"/,
+  );
+  assert.match(
+    client,
+    /contentClassName="h-full min-h-0 p-0"/,
+  );
+  assert.doesNotMatch(client, /contentClassName="h-dvh/);
+  assert.doesNotMatch(surface, /mobile && "pb-28"/);
   assert.match(client, /SELF_ORDER_VI\.branchFallback/);
   assert.match(client, /SELF_ORDER_VI\.billTab/);
   assert.match(client, /from "@\/components\/theme-toggle"/);

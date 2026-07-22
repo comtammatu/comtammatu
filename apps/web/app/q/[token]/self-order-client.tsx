@@ -199,11 +199,13 @@ function UnavailableState({
     <AppPage
       as="main"
       id="main-content"
+      tabIndex={-1}
       width="narrow"
       density="compact"
       mobile
-      className="min-h-dvh bg-background"
-      contentClassName="min-h-dvh justify-center"
+      padded={false}
+      className="flex min-h-dvh flex-col bg-background"
+      contentClassName="min-h-0 flex-1 justify-center px-3 py-6"
     >
       <Item variant="outline" className="bg-card">
         <ItemContent className="items-center gap-3 text-center">
@@ -223,11 +225,13 @@ function PaymentCompletedState({ onClose }: { onClose: () => void }) {
     <AppPage
       as="main"
       id="main-content"
+      tabIndex={-1}
       width="narrow"
       density="compact"
       mobile
-      className="min-h-dvh bg-background"
-      contentClassName="min-h-dvh justify-center px-5 py-8"
+      padded={false}
+      className="flex min-h-dvh flex-col bg-background"
+      contentClassName="min-h-0 flex-1 justify-center px-5 py-8"
     >
       <Item variant="outline" className="w-full bg-card">
         <ItemContent className="items-center gap-4 text-center">
@@ -698,11 +702,13 @@ export function SelfOrderClient({
     <AppPage
       as="main"
       id="main-content"
+      tabIndex={-1}
       width="narrow"
       density="compact"
       mobile
-      className="h-dvh min-h-dvh bg-background"
-      contentClassName="h-dvh min-h-dvh p-0"
+      padded={false}
+      className="h-dvh min-h-0 overflow-hidden bg-background"
+      contentClassName="h-full min-h-0 p-0"
     >
       <div className="flex h-full min-h-0 flex-col">
         <header className="workflow-safe-pt sticky top-0 z-30 shrink-0 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">

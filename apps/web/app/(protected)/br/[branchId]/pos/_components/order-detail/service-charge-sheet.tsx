@@ -94,7 +94,7 @@ export function ServiceChargeSheet({
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
       <SheetContent
         side="right"
-        className="data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        size="md"
       >
         <SheetHeader>
           <SheetTitle>{POS_VI.serviceChargeTitle}</SheetTitle>

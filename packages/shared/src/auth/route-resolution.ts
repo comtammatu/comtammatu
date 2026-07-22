@@ -6,6 +6,7 @@ export const PUBLIC_APP_PATHS = [
   "/brand",
   "/manifest.webmanifest",
   "/sw.js",
+  "/offline",
   "/access-denied",
   "/q",
   "/api/self-order",

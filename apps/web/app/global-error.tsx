@@ -78,6 +78,7 @@ export default function GlobalError({
             onClick={reset}
             style={{
               marginTop: "1rem",
+              minHeight: "44px",
               padding: "0.5rem 1.25rem",
               border: `1px solid ${colors.border}`,
               borderRadius: "0.5rem",

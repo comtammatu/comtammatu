@@ -17,6 +17,7 @@ const UI_COMPONENT_REGISTRY = "scripts/ui-component-registry.mjs";
 const UI_GUARD_REPORTING = "scripts/ui-contract-guard-reporting.mjs";
 const PAGE_ARCHETYPES = "scripts/page-archetypes.mjs";
 const ROOT_LOADING = "apps/web/app/loading.tsx";
+const GLOBAL_ERROR = "apps/web/app/global-error.tsx";
 const DESIGN_SYSTEM = "docs/spec/design-system.md";
 const UI_MODULE = "docs/modules/ui.md";
 const UI_BUTTON = "packages/ui/src/components/button.tsx";
@@ -25,6 +26,7 @@ const UI_INPUT_GROUP = "packages/ui/src/components/input-group.tsx";
 const UI_SELECT = "packages/ui/src/components/select.tsx";
 const STATUS_BADGE = "apps/web/app/components/status-badge.tsx";
 const SHARED_LABELS = "packages/shared/src/labels/vi.ts";
+const BRANCHES_PAGE = "apps/web/app/(protected)/branches/page.tsx";
 const BRANCH_TABLE = "apps/web/app/(protected)/branches/branch-table.tsx";
 const PRINT_JOBS =
   "apps/web/app/(protected)/settings/printers/jobs/print-jobs-client.tsx";
@@ -162,7 +164,7 @@ test("Input variants own height and InputGroup owns child chrome", () => {
   assert.match(input, /default: "h-7"/);
   assert.match(input, /field: "h-10"/);
   assert.match(input, /touch: "min-h-12 text-base/);
-  assert.match(input, /data-control-size=\{resolvedControlSize\}/);
+  assert.match(input, /data-control-size=\{controlSize\}/);
 
   for (const contract of [
     "has-[>input:focus-visible]:ring-2",
@@ -180,6 +182,21 @@ test("Input variants own height and InputGroup owns child chrome", () => {
   );
 });
 
+test("shared recovery navigation owns touch targets and focus visibility", () => {
+  const surface = read(SURFACE);
+  const globalError = read(GLOBAL_ERROR);
+  const backLinkStart = surface.indexOf("export function AppBackLink");
+  const backLinkEnd = surface.indexOf("type AppSectionTone", backLinkStart);
+  const backLink = surface.slice(backLinkStart, backLinkEnd);
+
+  assert.match(backLink, /<Button/);
+  assert.match(backLink, /size=\{children == null \? "icon-touch" : "touch"\}/);
+  assert.match(backLink, /render=\{[\s\S]*<Link/);
+  assert.match(backLink, /children == null \? ACTIONS_VI\.back/);
+  assert.match(backLink, /aria-hidden="true"/);
+  assert.match(globalError, /minHeight: "44px"/);
+});
+
 test("Owner monitors use DataTable while the branch launcher keeps its action grid", () => {
   for (const file of [PRINT_JOBS, STAFF_AUDIT_TABLE]) {
     const source = read(file);
@@ -195,6 +212,17 @@ test("Owner monitors use DataTable while the branch launcher keeps its action gr
   assert.doesNotMatch(read(STAFF_AUDIT), /@comtammatu\/ui\/components\/card/);
   assert.doesNotMatch(read(STAFF_AUDIT), /@comtammatu\/ui\/components\/table/);
   assert.match(read(STAFF_AUDIT), /PermissionAuditTable/);
+});
+
+test("Owner branch administration distinguishes load failure from an empty list", () => {
+  const source = read(BRANCHES_PAGE);
+
+  assert.match(source, /const \{ data: branches, error \} = await supabase/);
+  assert.match(
+    source,
+    /if \(error\)[\s\S]*<AppEmptyState[\s\S]*mode="error"[\s\S]*branchesLoadFailed/,
+  );
+  assert.match(source, /<BranchTable branches=\{branches \?\? \[\]\}/);
 });
 
 test("Print job monitor keeps owner recovery filter through DataTable filters", () => {
@@ -333,6 +361,9 @@ test("UI component audit command stays wired for route-family drill-down", () =>
     "Component Selection Coverage",
     "UI Component Guidance",
     "Page Archetype Coverage",
+    "Page Disposition Coverage",
+    "PAGE_DISPOSITIONS",
+    "missingPageDispositions",
     "parseOptions",
     "transitionAll",
     "nativeInteractiveElement",
@@ -465,6 +496,10 @@ test("Every route page family stays inside the archetype and boundary contract",
     pathToFileURL(resolve(repoRoot, PAGE_ARCHETYPES)).href
   )) as {
     PAGE_ARCHETYPES: Record<string, string>;
+    PAGE_DISPOSITIONS: Record<
+      string,
+      { status: string; evidence: string; final: boolean }
+    >;
   };
 
   assert.equal(
@@ -475,7 +510,36 @@ test("Every route page family stays inside the archetype and boundary contract",
     archetypeModule.PAGE_ARCHETYPES["apps/web/app/q/[token]/page.tsx"],
     "PUBLIC-WORKFLOW",
   );
+  assert.deepEqual(
+    archetypeModule.PAGE_DISPOSITIONS[
+      "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx"
+    ],
+    { status: "tune", evidence: "implemented-static", final: false },
+  );
+  assert.deepEqual(
+    archetypeModule.PAGE_DISPOSITIONS[
+      "apps/web/app/(public)/(auth)/login/page.tsx"
+    ],
+    { status: "tune", evidence: "browser-runtime", final: false },
+  );
+  assert.deepEqual(
+    archetypeModule.PAGE_DISPOSITIONS[
+      "apps/web/app/(public)/access-denied/page.tsx"
+    ],
+    { status: "tune", evidence: "browser-runtime", final: true },
+  );
+  assert.deepEqual(
+    archetypeModule.PAGE_DISPOSITIONS["apps/web/app/offline/page.tsx"],
+    { status: "tune", evidence: "browser-runtime", final: true },
+  );
+  assert.equal(
+    Object.values(archetypeModule.PAGE_DISPOSITIONS).filter(
+      (disposition) => disposition.final,
+    ).length,
+    2,
+  );
   assert.match(archetypeSource, /PUBLIC-WORKFLOW/);
+  assert.match(uiContract, /page-disposition:/);
   assert.match(uiContract, /walkFiles\("apps\/web\/app", \["\.tsx"\]\)/);
   assert.match(uiContract, /findNearestRouteBoundary/);
   assert.match(uiContract, /route-boundary-coverage/);

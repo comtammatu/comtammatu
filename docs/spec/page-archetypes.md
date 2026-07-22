@@ -59,6 +59,33 @@ Decision order:
 5. Do not start implementation while any gate field that affects hierarchy,
    workflow, state behavior, or component choice is unresolved.
 
+## 0.2 Page Disposition Gate
+
+`scripts/page-archetypes.mjs` also assigns every route a `keep`, `tune`, or
+`rebuild` disposition. The generated source-baseline default is deliberately
+non-final: it records that the route has no source-level rebuild finding, not
+that its rendered UI has passed review. A route becomes final only after the
+applicable browser or authenticated runtime evidence; `scripts/check-ui-contract.mjs`
+rejects a final disposition backed only by source or static implementation
+evidence.
+
+Evidence levels are monotonic:
+
+1. `source-baseline`: archetype, component registry, boundaries, and static
+   guards are clean; runtime remains open.
+2. `implemented-static`: the route tranche was changed and its focused source,
+   type, lint, and build gates are clean; runtime remains open.
+3. `browser-runtime`: a public/system route was observed in a real browser;
+   this is not enough for protected routes.
+4. `authenticated-runtime`: the actor, state, viewport, keyboard/focus, and
+   applicable accessibility checks were observed in a real authenticated
+   session.
+
+The UI component audit reports disposition totals and the final count. P6 is
+not complete while any route remains non-final, even when its disposition is
+`keep`. A protected route can become final only with `authenticated-runtime`;
+a public/system route may use `browser-runtime`.
+
 ## 1. Universal Shell Rule
 
 Every archetype (EMBED-WRAPPER excepted per its own hard rules in § 3) is
@@ -166,7 +193,7 @@ rather than staying a near-empty category.
 
 **Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`.
 
-This is the repo's second-largest archetype (32 of the 135 pages) and its
+This is the repo's second-largest archetype and its
 hard rules are stricter than the other archetypes because its only job is
 delegation:
 

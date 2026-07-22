@@ -50,3 +50,22 @@ test("covered swipe actions stay inert until their row is revealed", () => {
   );
   assert.equal(approvalRow?.match(/size="touch"/g)?.length, 2);
 });
+
+test("checkout approval details keep one scroll body and semantic checklist roles", () => {
+  const source = read(
+    "lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
+  );
+
+  assert.match(
+    source,
+    /<DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden">/,
+  );
+  assert.match(source, /className="min-h-0 flex-1 overflow-y-auto px-4"/);
+  assert.match(
+    source,
+    /<SectionLabel as="h3">Checklist công việc<\/SectionLabel>/,
+  );
+  assert.match(source, /<ItemGroup className="gap-2">/);
+  assert.match(source, /role="listitem"/);
+  assert.doesNotMatch(source, /<ScrollArea[^>]*maxHeight/);
+});

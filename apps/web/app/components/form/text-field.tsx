@@ -61,7 +61,6 @@ export function TextField<TFieldValues extends FieldValues>({
         {required ? " *" : null}
       </FieldLabel>
       <Input
-        size="field"
         id={fieldId}
         aria-invalid={hasError}
         aria-describedby={describedBy}

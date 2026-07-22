@@ -277,7 +277,7 @@ test("employee inventory count uses a compact grid and per-ingredient sheet", ()
   );
   assert.match(
     employeeCountClientSource,
-    /<SheetContent\s+side="right"\s+className="w-full overflow-hidden sm:max-w-md"/,
+    /<SheetContent(?=[^>]*side="right")(?=[^>]*size="md")(?=[^>]*className="overflow-hidden")[^>]*>/,
     "The drawer should constrain overflow on mobile and desktop",
   );
 });

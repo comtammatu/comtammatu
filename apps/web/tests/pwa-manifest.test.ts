@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { GET as getOperatorManifest } from "../app/(protected)/br/[branchId]/(operator)/manifest.webmanifest/route";
 import { GET as getKdsManifest } from "../app/(protected)/br/[branchId]/kds/manifest.webmanifest/route";
 import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/manifest.webmanifest/route";
+import { GET as getRunnerManifest } from "../app/(protected)/br/[branchId]/runner/manifest.webmanifest/route";
 
 test("protected Vercel previews do not register a service worker", () => {
   const rootLayoutSource = readFileSync(
@@ -106,6 +107,29 @@ test("KDS PWA manifest requests landscape orientation per branch", async () => {
   assert.equal(manifest.orientation, "landscape");
 });
 
+test("Runner PWA manifest keeps its station identity and landscape orientation", async () => {
+  const response = await getRunnerManifest(
+    new Request(
+      "https://app.test/br/3/runner/manifest.webmanifest",
+    ) as Parameters<typeof getRunnerManifest>[0],
+    { params: Promise.resolve({ branchId: "3" }) },
+  );
+  const manifest = (await response.json()) as {
+    id?: unknown;
+    orientation?: unknown;
+    scope?: unknown;
+    short_name?: unknown;
+    start_url?: unknown;
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(manifest.id, "/br/3/runner");
+  assert.equal(manifest.start_url, "/br/3/runner");
+  assert.equal(manifest.scope, "/");
+  assert.equal(manifest.short_name, "Má Tư Gọi số");
+  assert.equal(manifest.orientation, "landscape");
+});
+
 test("operator PWA manifest keeps branch identity in its start route", async () => {
   const response = await getOperatorManifest(
     new Request("https://app.test/br/3/manifest.webmanifest") as Parameters<
@@ -171,6 +195,17 @@ test("KDS PWA manifest keeps rejecting invalid branch ids", async () => {
     new Request(
       "https://app.test/br/abc/kds/manifest.webmanifest",
     ) as Parameters<typeof getKdsManifest>[0],
+    { params: Promise.resolve({ branchId: "abc" }) },
+  );
+
+  assert.equal(response.status, 400);
+});
+
+test("Runner PWA manifest keeps rejecting invalid branch ids", async () => {
+  const response = await getRunnerManifest(
+    new Request(
+      "https://app.test/br/abc/runner/manifest.webmanifest",
+    ) as Parameters<typeof getRunnerManifest>[0],
     { params: Promise.resolve({ branchId: "abc" }) },
   );
 
@@ -410,16 +445,21 @@ test("self-order QR preview keeps staff inside the PWA scope", () => {
   assert.doesNotMatch(tableSettingsSource, /target="_blank"/);
 });
 
-test("offline page precaches statically and reuses the shared error copy", () => {
+test("offline page is explicitly precached and reuses the shared error copy", () => {
   const offlinePageSource = readFileSync(
     new URL("../app/offline/page.tsx", import.meta.url),
     "utf8",
   );
+  const serwistConfigSource = readFileSync(
+    new URL("../serwist.config.js", import.meta.url),
+    "utf8",
+  );
 
-  // Static (no dynamic data), so it's swept into the precache manifest by
-  // Serwist's `precachePrerendered` glob and reachable while fully offline.
-  assert.doesNotMatch(offlinePageSource, /force-dynamic/);
+  assert.match(serwistConfigSource, /url: "\/offline"/);
+  assert.match(serwistConfigSource, /size: 0/);
+  assert.match(serwistConfigSource, /url\.endsWith\("\/_buildManifest\.js"\)/);
   assert.match(offlinePageSource, /ERRORS_VI\.networkError/);
   assert.match(offlinePageSource, /ACTIONS_VI\.retry/);
   assert.match(offlinePageSource, /AppEmptyState/);
+  assert.match(offlinePageSource, /size="touch"/);
 });

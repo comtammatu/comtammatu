@@ -13,7 +13,7 @@ import {
   ArrowRight as IconArrowRight,
   ChevronDown as IconChevronDown,
 } from "lucide-react";
-import { ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -101,6 +101,7 @@ export type AppPageProps = {
   children: ReactNode;
   as?: "div" | "main";
   id?: string;
+  tabIndex?: -1;
   className?: string;
   contentClassName?: string;
   scroll?: boolean;
@@ -114,6 +115,7 @@ export function AppPage({
   children,
   as = "div",
   id,
+  tabIndex,
   className,
   contentClassName,
   scroll = false,
@@ -131,11 +133,11 @@ export function AppPage({
     <SurfaceNestingContext.Provider value={SURFACE_NESTING_PAGE}>
       <Root
         id={id}
+        tabIndex={tabIndex}
         className={cn(
           "min-h-0 flex-1",
           scroll ? "no-scrollbar overflow-auto" : "overflow-visible",
           applyPadding && (isCompact ? "p-3" : "p-4"),
-          mobile && "pb-28",
           className,
         )}
       >
@@ -284,25 +286,35 @@ export function AppBackLink({
   href,
   children,
   className,
+  "aria-label": ariaLabel,
   ...props
 }: AppBackLinkProps) {
   return (
-    <Link
-      href={href}
+    <Button
+      variant="ghost"
+      size={children == null ? "icon-touch" : "touch"}
       className={cn(
-        "inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline",
+        "justify-center gap-1 px-2 text-muted-foreground hover:underline",
         className,
       )}
-      {...props}
+      render={
+        <Link
+          href={href}
+          aria-label={
+            ariaLabel ?? (children == null ? ACTIONS_VI.back : undefined)
+          }
+          {...props}
+        />
+      }
     >
-      <IconArrowLeft className="size-4" />
+      <IconArrowLeft className="size-4" aria-hidden="true" />
       {children != null ? (
         <>
           {" "}
           {children}
         </>
       ) : null}
-    </Link>
+    </Button>
   );
 }
 

@@ -64,7 +64,6 @@ export function NumberField<TFieldValues extends FieldValues>({
         {required ? " *" : null}
       </FieldLabel>
       <FormattedNumberInput
-        size="field"
         id={fieldId}
         name={field.name}
         value={value}

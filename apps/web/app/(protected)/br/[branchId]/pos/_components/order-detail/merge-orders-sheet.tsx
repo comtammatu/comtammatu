@@ -138,7 +138,7 @@ export function MergeOrdersSheet({
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
       <SheetContent
         side="right"
-        className="data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        size="md"
       >
         <SheetHeader>
           <SheetTitle>

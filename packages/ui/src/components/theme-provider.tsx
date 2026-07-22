@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -61,24 +62,37 @@ export type ThemeProviderProps = {
 export function ThemeProvider({
   children,
   defaultTheme = "light",
+  disableTransitionOnChange = false,
 }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<ThemeMode>(defaultTheme);
+  const mountedRef = useRef(false);
 
-  // Resolve once on mount to stay in sync with the pre-hydration script.
+  // Preserve the pre-hydration class until the client resolves the same source.
   useEffect(() => {
-    const resolved = readCookieTheme() ?? shiftAwareFallback();
-    setThemeState(resolved);
-  }, []);
-
-  // Apply class on `<html>` whenever the theme changes.
-  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      setThemeState(readCookieTheme() ?? shiftAwareFallback());
+      return;
+    }
     if (typeof document === "undefined") return;
     const root = document.documentElement;
     const next = theme === "night" ? "dark" : "light";
+    const transitionStyle = disableTransitionOnChange
+      ? document.createElement("style")
+      : null;
+    if (transitionStyle) {
+      transitionStyle.textContent =
+        "*,*::before,*::after{transition:none!important}";
+      document.head.appendChild(transitionStyle);
+    }
     root.classList.remove("light", "dark");
     root.classList.add(next);
     root.style.colorScheme = next;
-  }, [theme]);
+    if (transitionStyle) {
+      void getComputedStyle(root).opacity;
+      requestAnimationFrame(() => transitionStyle.remove());
+    }
+  }, [disableTransitionOnChange, theme]);
 
   const setTheme = useCallback((next: ThemeMode) => {
     setThemeState(next);

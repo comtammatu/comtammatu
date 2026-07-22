@@ -248,7 +248,7 @@ export function AppShell({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset id="main-content" className="chrome-safe-pt">
+      <SidebarInset id="main-content" tabIndex={-1} className="chrome-safe-pt">
         <div
           className={cn("flex-1 p-3 md:p-4", showBottomNav && "pb-24 lg:pb-4")}
         >

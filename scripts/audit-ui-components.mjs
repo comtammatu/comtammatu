@@ -9,7 +9,10 @@ import {
 } from "./ui-component-registry.mjs";
 import { buildUiContractGuardReporting } from "./ui-contract-guard-reporting.mjs";
 import { UI_RUNTIME_SOURCE_ROOTS } from "./ui-contract-scope.mjs";
-import { PAGE_ARCHETYPES } from "./page-archetypes.mjs";
+import {
+  PAGE_ARCHETYPES,
+  PAGE_DISPOSITIONS,
+} from "./page-archetypes.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_LIMIT = 60;
@@ -728,6 +731,27 @@ if (missingPageArchetypes.length > 0 || stalePageArchetypes.length > 0) {
       .join("\n"),
   );
 }
+const registeredPageDispositionFiles = Object.keys(PAGE_DISPOSITIONS).sort();
+const missingPageDispositions = actualPageFiles.filter(
+  (file) => !registeredPageDispositionFiles.includes(file),
+);
+const stalePageDispositions = registeredPageDispositionFiles.filter(
+  (file) => !actualPageFiles.includes(file),
+);
+if (missingPageDispositions.length > 0 || stalePageDispositions.length > 0) {
+  throw new Error(
+    [
+      missingPageDispositions.length > 0
+        ? `route pages missing a disposition: ${missingPageDispositions.join(", ")}`
+        : null,
+      stalePageDispositions.length > 0
+        ? `stale page disposition entries: ${stalePageDispositions.join(", ")}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+}
 const unclassifiedFiles = appFiles
   .filter((file) => file.family === "unclassified")
   .map((file) => file.file);
@@ -846,6 +870,30 @@ const pageArchetypeRows = [
   ["stale", String(stalePageArchetypes.length)],
   ["actual pages", String(actualPageFiles.length)],
 ];
+const pageDispositionCounts = Object.values(PAGE_DISPOSITIONS).reduce(
+  (counts, disposition) => {
+    const key = `${disposition.status}/${disposition.evidence}/${disposition.final ? "final" : "open"}`;
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  },
+  {},
+);
+const pageDispositionRows = [
+  ...Object.entries(pageDispositionCounts)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([disposition, count]) => [disposition, String(count)]),
+  ["classified", String(registeredPageDispositionFiles.length)],
+  ["missing", String(missingPageDispositions.length)],
+  ["stale", String(stalePageDispositions.length)],
+  [
+    "final",
+    String(
+      Object.values(PAGE_DISPOSITIONS).filter(
+        (disposition) => disposition.final,
+      ).length,
+    ),
+  ],
+];
 
 const adapterRows = ADAPTERS.map((adapter) => {
   const callers = appFiles.filter((file) => file.adapters[adapter] > 0);
@@ -948,6 +996,10 @@ console.log();
 console.log("## Page Archetype Coverage");
 console.log();
 console.log(table(["archetype", "pages"], pageArchetypeRows));
+console.log();
+console.log("## Page Disposition Coverage");
+console.log();
+console.log(table(["disposition/evidence/gate", "pages"], pageDispositionRows));
 console.log();
 console.log("## Component Selection Coverage");
 console.log();

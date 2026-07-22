@@ -25,7 +25,6 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
@@ -117,9 +116,9 @@ function StockTouchRow({
 }) {
   return (
     <Item
-      variant="outline"
+      variant="default"
       size="sm"
-      className="min-h-16 touch-manipulation gap-3 px-3 py-2.5"
+      className="min-h-11 touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1 last:border-b-0"
       render={
         <Link
           href={`/br/${branchId}/stock/on-hand/${item.id}`}
@@ -309,6 +308,7 @@ export function BranchStockOnHandClient({
                     <IconSearch />
                   </InputGroupAddon>
                   <InputGroupInput
+                    aria-label={stockCopy.filters.searchPlaceholder}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder={stockCopy.filters.searchPlaceholder}
@@ -479,7 +479,7 @@ export function BranchStockOnHandClient({
                 ) : null}
               </AppEmptyState>
             ) : (
-              <ItemGroup className="gap-2">
+              <div role="list" className="flex flex-col">
                 {filtered.map((item) => (
                   <StockTouchRow
                     key={item.id}
@@ -487,7 +487,7 @@ export function BranchStockOnHandClient({
                     item={item}
                   />
                 ))}
-              </ItemGroup>
+              </div>
             )}
           </>
         )}

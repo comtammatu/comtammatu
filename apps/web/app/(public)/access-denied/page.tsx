@@ -5,7 +5,10 @@ import {
   ArrowLeft as IconArrowLeft,
   ShieldAlert as IconShieldExclamation,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Badge,
+  type BadgeProps,
+} from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { AppSection } from "@/components/surface";
@@ -15,10 +18,13 @@ import { resolveBlockedState } from "@comtammatu/shared/auth";
 
 type ToneClass = "danger" | "warning" | "neutral";
 
-const TONE_BADGE_CLASS: Record<ToneClass, string> = {
-  danger: "border-destructive/20 bg-destructive/10 text-destructive",
-  warning: "border-warning/20 bg-warning/10 text-warning",
-  neutral: "border-border bg-secondary text-secondary-foreground",
+const TONE_BADGE_VARIANT: Record<
+  ToneClass,
+  NonNullable<BadgeProps["variant"]>
+> = {
+  danger: "destructive",
+  warning: "warning",
+  neutral: "outline",
 };
 
 interface AccessDeniedPageProps {
@@ -44,7 +50,7 @@ export default async function AccessDeniedPage({
         description={copy.description}
         icon={<IconShieldExclamation />}
         action={
-          <Badge variant="outline" className={TONE_BADGE_CLASS[copy.tone]}>
+          <Badge variant={TONE_BADGE_VARIANT[copy.tone]}>
             Quyền truy cập
           </Badge>
         }

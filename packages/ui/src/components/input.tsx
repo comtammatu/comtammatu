@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
 
 import { cn } from "../lib/utils";
 
@@ -21,27 +21,17 @@ const inputVariants = cva(
 
 export type InputControlSize = "default" | "field" | "touch";
 
-export interface InputProps
-  extends Omit<React.ComponentProps<"input">, "size">,
-    VariantProps<typeof inputVariants> {
+export interface InputProps extends Omit<React.ComponentProps<"input">, "size"> {
   controlSize?: InputControlSize;
 }
 
-function Input({
-  className,
-  type,
-  size,
-  controlSize,
-  ...props
-}: InputProps) {
-  const resolvedControlSize = controlSize ?? size ?? "default";
-
+function Input({ className, type, controlSize = "default", ...props }: InputProps) {
   return (
     <input
       type={type}
       data-slot="input"
-      data-control-size={resolvedControlSize}
-      className={cn(inputVariants({ size: resolvedControlSize }), className)}
+      data-control-size={controlSize}
+      className={cn(inputVariants({ size: controlSize }), className)}
       {...props}
     />
   );

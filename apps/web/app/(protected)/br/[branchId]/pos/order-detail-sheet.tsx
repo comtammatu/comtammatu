@@ -1171,8 +1171,9 @@ export function OrderDetailSheet({
       <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
         <SheetContent
           side="right"
+          size="md"
           showCloseButton={false}
-          className="overflow-hidden data-[side=right]:w-full data-[side=right]:max-w-full data-[side=right]:sm:max-w-md"
+          className="overflow-hidden"
         >
           <SheetHeader>
             <div className="flex items-center justify-between gap-3">

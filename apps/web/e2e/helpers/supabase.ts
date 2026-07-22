@@ -154,6 +154,15 @@ export async function getCashierProfile(): Promise<TestStaffProfile> {
   return resolveCashierProfile(createServiceClient());
 }
 
+export async function getManagerProfile(): Promise<TestStaffProfile> {
+  const email = process.env.E2E_INVENTORY_MANAGER_EMAIL;
+  if (!email) {
+    throw new Error("E2E_INVENTORY_MANAGER_EMAIL must be set in .env.test.local");
+  }
+
+  return resolveProfileByEmail(createServiceClient(), email);
+}
+
 export async function resolveChefCredentials() {
   const supabase = createServiceClient();
   const explicitEmail = process.env.E2E_CHEF_EMAIL;

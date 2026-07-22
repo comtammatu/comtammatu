@@ -12,6 +12,7 @@ export default function OfflinePage() {
   return (
     <div
       id="main-content"
+      tabIndex={-1}
       role="main"
       className="flex min-h-dvh w-full items-center justify-center"
     >
@@ -24,6 +25,7 @@ export default function OfflinePage() {
         >
           <Button
             type="button"
+            size="touch"
             onClick={() => {
               window.location.reload();
             }}

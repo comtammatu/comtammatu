@@ -105,7 +105,10 @@ export default async function RootLayout({
         >
           {messages.common.skipNavigation}
         </a>
-        <ThemeProvider defaultTheme="light" disableTransitionOnChange>
+        <ThemeProvider
+          defaultTheme={resolvedCookie}
+          disableTransitionOnChange
+        >
           <SerwistProvider
             swUrl="/sw.js"
             disable={

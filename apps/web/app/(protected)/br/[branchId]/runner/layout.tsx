@@ -30,7 +30,11 @@ export default async function RunnerLayout({
   const { branchId } = await params;
 
   return (
-    <main className="theme-light-only chrome-safe-pt flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="theme-light-only chrome-safe-pt flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"
+    >
       <RunnerLightMode />
       <OperationalPwaProvider>
         <RunnerPwaToolbar branchId={branchId} />

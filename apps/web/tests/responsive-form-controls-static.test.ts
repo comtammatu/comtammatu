@@ -36,7 +36,7 @@ test("shared field primitives receive named field and touch sizes", () => {
 
   assert.match(input, /field: "h-10"/);
   assert.match(input, /touch: "min-h-12/);
-  assert.match(input, /inputVariants\(\{ size: resolvedControlSize \}\)/);
+  assert.match(input, /inputVariants\(\{ size: controlSize \}\)/);
   assert.match(textField, /controlSize=\{resolvedControlSize\}/);
   assert.match(numberField, /controlSize=\{resolvedControlSize\}/);
   assert.match(

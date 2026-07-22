@@ -34,6 +34,8 @@ export const settings = {
   pages: {
     branchesTitle: "Điểm vận hành",
     branchCount: (count: number) => `${formatCount(count)} điểm vận hành`,
+    branchesLoadFailed:
+      "Không thể tải danh sách điểm vận hành. Vui lòng thử lại.",
     settingsEyebrow: "Cài đặt",
     settingsHomeEyebrow: "Quản trị hệ thống",
     settingsHomeTitle: "Cài đặt",

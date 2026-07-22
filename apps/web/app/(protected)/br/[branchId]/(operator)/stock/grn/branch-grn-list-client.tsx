@@ -355,6 +355,7 @@ export function BranchGrnListClient({
                   <IconSearch />
                 </InputGroupAddon>
                 <InputGroupInput
+                  aria-label={INVENTORY_VI.grnSearchPlaceholder}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={INVENTORY_VI.grnSearchPlaceholder}
@@ -367,7 +368,11 @@ export function BranchGrnListClient({
                   setStatus(value as GrnListStatusFilter)
                 }
               >
-                <SelectTrigger size="touch" className="w-full">
+                <SelectTrigger
+                  aria-label={FORM_VI.status}
+                  size="touch"
+                  className="w-full"
+                >
                   <SelectValue placeholder={FORM_VI.status} />
                 </SelectTrigger>
                 <SelectContent>

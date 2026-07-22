@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { PAGE_ARCHETYPES } from "./page-archetypes.mjs";
+import {
+  PAGE_ARCHETYPES,
+  PAGE_DISPOSITIONS,
+} from "./page-archetypes.mjs";
 import {
   APP_ADAPTER_REGISTRY,
   DOMAIN_ADAPTER_FAMILIES,
@@ -545,6 +548,38 @@ const checks = [
     allowlist: {},
   },
   {
+    id: "legacy-css-variable-name",
+    description:
+      "CSS variable names must express current semantics; legacy/old/v1/compat aliases require a consumer migration and removal instead of becoming permanent tokens.",
+    roots: [
+      { dir: "apps/web", extensions: [".css"] },
+      { dir: "packages/ui/src/styles", extensions: [".css"] },
+    ],
+    pattern:
+      /--(?:[a-z0-9]+-)*(?:legacy|old|v1|compat)(?:-[a-z0-9]+)*(?=\s*:)/gi,
+    allowlist: {},
+  },
+  {
+    id: "input-legacy-size-prop",
+    description:
+      "Input and Input-derived wrappers use controlSize; the native size name is not a compatibility alias or a route-level visual API.",
+    roots: uiRuntimeRoots([".tsx"]),
+    pattern:
+      /<(?:Input|FormattedNumberInput|MoneyVndInput|QuantityInput)\b[^>]*\bsize=/gs,
+    allowlist: {},
+  },
+  {
+    id: "retired-utility-reference",
+    description:
+      "Removed no-consumer utilities must not return as silent class names or duplicate CSS definitions.",
+    roots: [
+      ...uiRuntimeRoots([".ts", ".tsx"]),
+      { dir: "packages/ui/src/styles", extensions: [".css"] },
+    ],
+    pattern: /\b(?:bg-glass-nav|scrollbar-thin|active-touch-press)\b/g,
+    allowlist: {},
+  },
+  {
     id: "focus-ring-contrast",
     description:
       "Focus rings must use the high-contrast keyline (ring-foreground), not the diluted gold ring-ring/NN which fails WCAG 1.4.11 (gold ≈ 2:1 on cream). Mirrors the @matu/design-system contrast gate.",
@@ -965,6 +1000,12 @@ for (const file of legacyDocReferenceFiles.filter(
 }
 
 const forbiddenTextChecks = [
+  {
+    id: "input-control-size-api",
+    files: ["packages/ui/src/components/input.tsx"],
+    pattern:
+      /\bVariantProps\s*<\s*typeof\s+inputVariants\s*>|\bcontrolSize\s*\?\?\s*size\b|\bcontrolSize\s*\?\?\s*[^\n]*\?\?\s*["']default["']/g,
+  },
   {
     id: "active-entrypoints-no-stale-ui-provider-terms",
     files: [
@@ -1395,6 +1436,46 @@ function runLegacyDebtBudgetSelfTest() {
     throw new Error("raw input fixed-height self-test did not enforce scope");
   }
 
+  const legacyCssVariableCheck = checks.find(
+    (check) => check.id === "legacy-css-variable-name",
+  );
+  const inputLegacySizeCheck = checks.find(
+    (check) => check.id === "input-legacy-size-prop",
+  );
+  const retiredUtilityCheck = checks.find(
+    (check) => check.id === "retired-utility-reference",
+  );
+  if (
+    !legacyCssVariableCheck ||
+    countMatches("--surface-legacy: red;", legacyCssVariableCheck.pattern) !==
+      1 ||
+    countMatches("--compatibility-mode: 1;", legacyCssVariableCheck.pattern) !==
+      0 ||
+    countMatches("color: var(--surface-legacy);", legacyCssVariableCheck.pattern) !==
+      0 ||
+    !inputLegacySizeCheck ||
+    countMatches('<Input size="field" />', inputLegacySizeCheck.pattern) !== 1 ||
+    countMatches(
+      '<FormattedNumberInput size="field" />',
+      inputLegacySizeCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      '<Input controlSize="field" />',
+      inputLegacySizeCheck.pattern,
+    ) !== 0 ||
+    !retiredUtilityCheck ||
+    countMatches(
+      'className="bg-glass-nav scrollbar-thin active-touch-press"',
+      retiredUtilityCheck.pattern,
+    ) !== 3 ||
+    countMatches(
+      'className="bg-glass-overlay touch-target"',
+      retiredUtilityCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error("legacy Input and CSS variable self-test did not enforce scope");
+  }
+
   if (
     !isHistoricalSqlSnapshot(
       path.join(REPO_ROOT, "supabase/migration-archive/20260101000000_history.sql"),
@@ -1614,6 +1695,57 @@ for (const file of Object.keys(PAGE_ARCHETYPES)) {
   if (!allPageFiles.includes(file)) {
     failures.push(
       `page-archetype: PAGE_ARCHETYPES has a dead entry for ${file}, which no longer exists. Remove it from scripts/check-ui-contract.mjs.`,
+    );
+  }
+}
+
+const VALID_PAGE_DISPOSITIONS = new Set(["keep", "tune", "rebuild"]);
+const VALID_PAGE_DISPOSITION_EVIDENCE = new Set([
+  "source-baseline",
+  "implemented-static",
+  "browser-runtime",
+  "authenticated-runtime",
+]);
+
+for (const file of allPageFiles) {
+  const disposition = PAGE_DISPOSITIONS[file];
+  if (!disposition) {
+    failures.push(
+      `page-disposition: ${file} has no keep/tune/rebuild entry in PAGE_DISPOSITIONS. Record the current evidence gate before changing the route.`,
+    );
+    continue;
+  }
+  if (!VALID_PAGE_DISPOSITIONS.has(disposition.status)) {
+    failures.push(
+      `page-disposition: ${file} declares unknown status "${disposition.status}".`,
+    );
+  }
+  if (!VALID_PAGE_DISPOSITION_EVIDENCE.has(disposition.evidence)) {
+    failures.push(
+      `page-disposition: ${file} declares unknown evidence "${disposition.evidence}".`,
+    );
+  }
+  if (typeof disposition.final !== "boolean") {
+    failures.push(
+      `page-disposition: ${file} must declare a boolean final gate.`,
+    );
+  }
+  const protectedPage = file.includes("/(protected)/");
+  const hasFinalRuntimeEvidence = protectedPage
+    ? disposition.evidence === "authenticated-runtime"
+    : disposition.evidence === "browser-runtime" ||
+      disposition.evidence === "authenticated-runtime";
+  if (disposition.final && !hasFinalRuntimeEvidence) {
+    failures.push(
+      `page-disposition: ${file} cannot be final without ${protectedPage ? "authenticated-runtime" : "browser-runtime"} evidence.`,
+    );
+  }
+}
+
+for (const file of Object.keys(PAGE_DISPOSITIONS)) {
+  if (!allPageFiles.includes(file)) {
+    failures.push(
+      `page-disposition: PAGE_DISPOSITIONS has a dead entry for ${file}.`,
     );
   }
 }

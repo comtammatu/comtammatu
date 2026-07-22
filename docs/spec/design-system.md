@@ -125,9 +125,14 @@ Approved project utilities:
 - `chrome-safe-pt` / `chrome-safe-pb` / `chrome-safe-top` are limited to
   app shell roots and fixed or sticky chrome affected by mobile safe areas. Side
   `SheetContent` owns its top/bottom safe-area inset padding by default.
+  Side sheets are full width below `sm`; their shared desktop width is `size="lg"`
+  by default, while focused entry and action tasks use `size="md"`.
   Do NOT put `chrome-safe-top` on the Sheet absolute close control — its
   `max(0.5rem, …)` floor drops the X below `SheetTitle` on zero-inset
   viewports; Sheet close uses `top-[env(safe-area-inset-top,0px)]` instead.
+- The global skip link targets exactly one rendered `#main-content` landmark per
+  route plane. The target keeps `tabIndex={-1}` so fragment navigation also
+  moves keyboard focus without adding it to the normal Tab order.
 - `chrome-tap` disables the mobile tap-highlight/callout flash on app chrome
   (nav, tiles, headers, buttons) so the installed operator PWA doesn't read as
   a website; do not apply it to data content that must stay selectable
@@ -272,6 +277,10 @@ responsive need; review the rendered hierarchy, touch targets, and density
 instead of comparing utility strings. Prefer `gap` for compositional stacks,
 but do not treat a utility name or a local wrapper as a defect by itself.
 
+`AppPage mobile` constrains content to the public workflow width; it does not
+reserve space for fixed chrome. The fixed/sticky action owner must provide its
+own content clearance and safe-area padding.
+
 Use `CardContent flush` and `CardContent scroll` when they express the job. A
 route may compose equivalent spacing or overflow when the shared recipe does
 not fit its content, provided it does not create competing visual chrome.
@@ -284,7 +293,7 @@ not fit its content, provided it does not create competing visual chrome.
 | Section title                           | `font-heading text-base font-semibold`                                                                                                  | `CardTitle`                                                                                        |
 | Sub-section / list head                 | `font-heading text-sm font-semibold`                                                                                                    | `Item title` slot                                                                                  |
 | Eyebrow / metadata                      | `text-xs font-medium uppercase tracking-wide`                                                                                           | `AppPageHeader.eyebrow` (page-header lockup only)                                                  |
-| Panel / field / section uppercase label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome: `text-2xs font-medium uppercase tracking-wider`) | `SectionLabel` (default + `density="dense"`); page-header eyebrow stays on `AppPageHeader.eyebrow` |
+| Panel / field / section uppercase label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome: `text-2xs font-medium uppercase tracking-wider`) | `SectionLabel` (default + `density="dense"`; use `as="h2"` / `"h3"` / `"h4"` when the visible label participates in heading hierarchy); page-header eyebrow stays on `AppPageHeader.eyebrow` |
 | Table column header                     | `text-xs font-medium uppercase tracking-wider text-muted-foreground`                                                                    | `TableHead`                                                                                        |
 | Dense eyebrow                           | `text-2xs font-medium uppercase tracking-wider`                                                                                         | KDS chrome, audit row meta, mobile chrome labels                                                   |
 | KDS kitchen item-name                   | `text-base font-semibold leading-6 xl:text-lg xl:leading-6`                                                                             | KDS ticket item-name (wall boards scale up at `xl`)                                                |
@@ -356,7 +365,7 @@ Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<bu
 
 If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to the owning shared primitive once. Never fake a button by setting `<button className="min-h-12 ...">` outside that primitive. The `tile` (POS table-gate selectable tile) and `icon-touch` (48px icon-only) `Button` sizes, the `touch` / `touch-lg` sizes on the `Toggle` / `ToggleGroup` cva (POS segmented service-mode control), and `TabsList size="touch"` (48px minimum tab triggers inside a 56px strip) were added under this rule — consume them via `size=`, never a raw `h-*` / `min-h-*` on the group or item `className`. The `button-height-on-button` gate (below) enforces this for `<Button>`. The bare form-control primitives `Select` (trigger), `Switch`, `Checkbox`, and `RadioGroupItem` expose a `touch` value on their own cva `size` prop (`min-h-12` trigger / enlarged 20px box + ≥44px hit area), added under this same rule for POS/KDS order-flow controls — consume via `size="touch"`, never a raw `h-*` / `size-*` on the control `className`.
 
-`Input` defaults to `h-7` and exposes `controlSize="field"` / `controlSize="touch"`; the legacy `size` prop remains an equivalent compatibility alias. The RHF-backed `TextField`, `NumberField`, `SelectField`, and `ComboboxField` wrappers default to `controlSize="responsive"`: they resolve to `touch` below the Owner shell's `lg` (1024px) cutover and `field` from `lg` upward. An explicit `field` or `touch` caller remains fixed at that density. A touch-sized Combobox also propagates touch density to its visible popup search input and options; do not enlarge only the trigger.
+`Input` defaults to `controlSize="default"` (`h-7`) and also exposes `controlSize="field"` / `controlSize="touch"`; native `size` is omitted and is not a visual-density API. The RHF-backed `TextField`, `NumberField`, `SelectField`, and `ComboboxField` wrappers default to `controlSize="responsive"`: they resolve to `touch` below the Owner shell's `lg` (1024px) cutover and `field` from `lg` upward. An explicit `field` or `touch` caller remains fixed at that density. A touch-sized Combobox also propagates touch density to its visible popup search input and options; do not enlarge only the trigger.
 
 | Control role                                                | Below `lg` | `lg` and above | Source                                                        |
 | ----------------------------------------------------------- | ---------- | -------------- | ------------------------------------------------------------- |
@@ -686,6 +695,9 @@ allowlist.
 ### Owner
 
 - Use the shared admin shell, sidebar, breadcrumb, page heading rhythm, table/list/detail forms, and empty states.
+- Breadcrumb recovery uses `AppBackLink`; its shared contract keeps a minimum
+  `44px` hit target, a visible keyline on keyboard focus, and an accessible
+  fallback name for icon-only use.
 - Prefer filters plus table/list views over dashboard-card mosaics.
 - Page summaries are allowed only when they help decide the next management action.
 - CRUD dialogs use shared form helpers and Zod 4 schemas.
@@ -920,7 +932,7 @@ Route-level transition states are part of the design system, not per-page improv
 
 - Every route family exposes `loading.tsx` built from `PageSkeleton` / `PageSpinner` (`apps/web/app/components/page-skeleton.tsx`). Do not hand-roll new ad-hoc route skeleton layouts; POS keeps its purpose-built `PosPageSkeleton`.
 - KDS, runner, and other realtime boards use `PageSpinner`, never a placeholder board skeleton — fake tickets on an operational screen are forbidden.
-- Every route family exposes `error.tsx` delegating to `ErrorPanel` (`apps/web/app/components/error-panel.tsx`): `AppEmptyState mode="error"`, retry via `reset()`, and the error digest in small mono print. `apps/web/app/global-error.tsx` is the single surface allowed to use inline styles, because root CSS may be unavailable when it renders.
+- Every route family exposes `error.tsx` delegating to `ErrorPanel` (`apps/web/app/components/error-panel.tsx`): `AppEmptyState mode="error"`, retry via `reset()`, and the error digest in small mono print. `apps/web/app/global-error.tsx` is the single surface allowed to use inline styles, because root CSS may be unavailable when it renders; its raw retry control still keeps the `44px` minimum touch target.
 - Not-found renders through `NotFoundPanel` (`apps/web/app/components/not-found-panel.tsx`); `apps/web/app/not-found.tsx` covers the app, and per-family `not-found.tsx` exists only where `notFound()` is called and a shell is worth preserving.
 - Copy for these frames comes from `@comtammatu/shared/messages` (`ACTIONS_VI`, `STATES_VI`, `ERRORS_VI`); do not inline new Vietnamese strings here.
 - `app-presentation-state-copy` keeps route-local loading/empty/error copy in shared messages/adapters across `apps/web/app/**/*.tsx`. Payment/action/data `.ts` copy is reported as `actionDataStateCopy` by `audit:ui-components` and blocked by `app-action-data-state-copy`.

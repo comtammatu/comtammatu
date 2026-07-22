@@ -68,3 +68,28 @@ test("Branch stock pages with an inline mobile title opt into the responsive hea
     /<BranchOperatorControlBar className="sm:hidden">/,
   );
 });
+
+test("Branch detail pages share one desktop two-pane recipe", () => {
+  const adapter = read(
+    "lib/branch-operator/components/branch-operator-page.tsx",
+  );
+  const detailClients = [
+    "app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/branch-grn-receipt-client.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/branch-stock-ingredient-detail.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/stocktake/[id]/branch-stocktake-detail-client.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/stocktake/new/branch-stocktake-new-client.tsx",
+    "app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/branch-transfer-detail-client.tsx",
+  ];
+
+  assert.match(adapter, /export const BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME/);
+  for (const path of detailClients) {
+    const source = read(path);
+    assert.match(source, /BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME/, path);
+    assert.doesNotMatch(
+      source,
+      /lg:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(17rem,0\.65fr\)\]/,
+      path,
+    );
+  }
+});

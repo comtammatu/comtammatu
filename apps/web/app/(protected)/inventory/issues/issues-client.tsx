@@ -611,7 +611,7 @@ export function IssuesClient({
               {FORM_VI.fromDate}
             </Label>
             <Input
-              size={isOperator ? "touch" : "field"}
+              controlSize={isOperator ? "touch" : "field"}
               id="recorded-start-date"
               type="date"
               value={recordedStartDate}
@@ -632,7 +632,7 @@ export function IssuesClient({
               {FORM_VI.toDate}
             </Label>
             <Input
-              size={isOperator ? "touch" : "field"}
+              controlSize={isOperator ? "touch" : "field"}
               id="recorded-end-date"
               type="date"
               value={recordedEndDate}

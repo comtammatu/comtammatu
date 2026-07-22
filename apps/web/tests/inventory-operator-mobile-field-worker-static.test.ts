@@ -131,7 +131,7 @@ test("operator stock route owns loading and error boundaries", () => {
     true,
   );
   assert.match(loadingSource, /import \{ PageSkeleton \}/);
-  assert.match(loadingSource, /<PageSkeleton \/>/);
+  assert.match(loadingSource, /<PageSkeleton bare \/>/);
   assert.match(errorSource, /"use client"/);
   assert.match(errorSource, /import \{ ErrorPanel, type ErrorPanelProps \}/);
   assert.match(errorSource, /<ErrorPanel \{\.\.\.props\} \/>/);

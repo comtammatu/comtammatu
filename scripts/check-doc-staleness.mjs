@@ -8,6 +8,9 @@ import { existsSync, readFileSync } from "node:fs";
 
 const DURABLE = [
   /^docs\/plan\/decisions\.md$/,
+  // Owner-mandated Design System authorities remain exact-path exceptions.
+  /^docs\/plan\/design-system-baseline-decision\.md$/,
+  /^docs\/plan\/design-system-rollout\.md$/,
   /^docs\/plan\/adr\//,
   /^docs\/worklog\/README\.md$/,
   /(^|\/)README\.md$/i,
@@ -28,6 +31,10 @@ const TASK_KINDS = new Set([
   "maintenance",
   "release",
 ]);
+
+function isDurablePath(path) {
+  return DURABLE.some((regex) => regex.test(path));
+}
 
 function taskFieldValues(body, field) {
   return [...body.matchAll(new RegExp(`^${field}:\\s*(.+)$`, "gm"))].map(
@@ -124,7 +131,7 @@ function collectViolations() {
       .split("\n")
       .filter(Boolean)
       .filter((path) => existsSync(path))
-      .filter((path) => !DURABLE.some((regex) => regex.test(path)));
+      .filter((path) => !isDurablePath(path));
   } catch {
     return [{ path: "git", reason: "git ls-files unavailable" }];
   }
@@ -205,7 +212,16 @@ Blocker: External dependency. Recheck after it changes.
       /Status is not/.test(reason),
     ),
   );
-  console.log("doc-staleness self-test: 9 lifecycle fixtures passed.");
+  assert.equal(isDurablePath("docs/plan/design-system-rollout.md"), true);
+  assert.equal(
+    isDurablePath("docs/plan/design-system-baseline-decision.md"),
+    true,
+  );
+  assert.equal(
+    isDurablePath(["docs", "plan", "another-rollout.md"].join("/")),
+    false,
+  );
+  console.log("doc-staleness self-test: 12 lifecycle fixtures passed.");
 }
 
 function main() {

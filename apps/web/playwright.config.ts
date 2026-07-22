@@ -63,7 +63,7 @@ export default defineConfig({
         storageState: E2E_AUTH_STORAGE,
       },
       dependencies: ["setup"],
-      testIgnore: /visual\//,
+      testIgnore: [/visual\//, /accessibility\//],
     },
     // Visual regression — opt-in. Run with:
     //   pnpm test:e2e --project=visual --update-snapshots   (bootstrap)
@@ -75,6 +75,15 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         storageState: E2E_AUTH_STORAGE,
+      },
+      dependencies: ["setup"],
+    },
+    {
+      name: "accessibility",
+      testMatch: /accessibility\/.*\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: E2E_AUTH_STORAGE_OWNER,
       },
       dependencies: ["setup"],
     },

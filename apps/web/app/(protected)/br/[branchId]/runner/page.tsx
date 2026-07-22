@@ -419,7 +419,7 @@ export default async function RunnerPage({
 
       <section
         aria-label={`${RUNNER_COPY.eyebrow} ${branch.name}`}
-        className="flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-background"
+        className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-background"
       >
         <RunnerOrderScreen rows={rows} nowMs={nowMs} idleState={idleState} />
       </section>
@@ -518,7 +518,7 @@ function normalizeQuantity(value: number | string | null): number {
 
 function RunnerErrorState() {
   return (
-    <section className="flex h-dvh min-h-0 w-full items-center justify-center overflow-hidden bg-background">
+    <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden bg-background p-4">
       <AppEmptyState
         mode="error"
         description={RUNNER_ERROR_MESSAGE}

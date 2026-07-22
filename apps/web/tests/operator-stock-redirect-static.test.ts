@@ -270,13 +270,19 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.doesNotMatch(routeSource, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
   assert.match(branchClientSource, /BranchOperatorPage/);
   assert.match(branchClientSource, /BranchOperatorPanel/);
-  assert.match(branchClientSource, /ItemGroup/);
+  assert.match(branchClientSource, /<div role="list" className="flex flex-col">/);
   assert.match(branchClientSource, /StockTouchRow/);
   assert.match(branchClientSource, /StockRiskBadge/);
   assert.match(branchClientSource, /filterStockOnHandIngredients/);
   assert.match(branchClientSource, /isStockReorderRisk/);
-  assert.match(branchClientSource, /variant="outline"/);
-  assert.match(branchClientSource, /min-h-16/);
+  assert.match(
+    branchClientSource,
+    /aria-label=\{stockCopy\.filters\.searchPlaceholder\}/,
+  );
+  assert.match(branchClientSource, /variant="default"/);
+  assert.match(branchClientSource, /min-h-11/);
+  assert.match(branchClientSource, /border-b border-border/);
+  assert.doesNotMatch(branchClientSource, /<ItemGroup/);
   assert.match(branchClientSource, /size="touch"/);
   assert.match(branchClientSource, /const showReceiveAction =/);
   assert.match(branchClientSource, /stockCopy\.attention\.title/);
@@ -718,6 +724,11 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   assert.match(branchGrnListClient, /ItemGroup/);
   assert.match(branchGrnListClient, /size="touch"/);
   assert.match(branchGrnListClient, /discardGrnDraft/);
+  assert.match(
+    branchGrnListClient,
+    /aria-label=\{INVENTORY_VI\.grnSearchPlaceholder\}/,
+  );
+  assert.match(branchGrnListClient, /aria-label=\{FORM_VI\.status\}/);
   assert.match(
     branchGrnListClient,
     /className="min-h-20 items-center gap-2 p-0 touch-manipulation"/,
@@ -1282,7 +1293,7 @@ test("operator transfer routes keep list and detail Branch-scoped while Owner ow
   );
   assert.match(
     branchTransferDetailClient,
-    /lg:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(17rem,0\.65fr\)\]/,
+    /BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME/,
   );
   assert.match(branchTransferDetailClient, /<AppDetailFooter sticky/);
   assert.doesNotMatch(branchTransferDetailClient, /DataTable|embedded/);

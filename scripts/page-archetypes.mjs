@@ -185,3 +185,98 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/offline/page.tsx": "GATE/AUTH",
   "apps/web/app/q/[token]/page.tsx": "PUBLIC-WORKFLOW",
 };
+
+const PAGE_DISPOSITION_OVERRIDES = {
+  "apps/web/app/q/[token]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/br/[branchId]/pos/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/grn/new/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx":
+    {
+      status: "tune",
+      evidence: "implemented-static",
+      final: false,
+    },
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/branches/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(public)/(auth)/login/page.tsx": {
+    status: "tune",
+    evidence: "browser-runtime",
+    final: false,
+  },
+  "apps/web/app/(public)/access-denied/page.tsx": {
+    status: "tune",
+    evidence: "browser-runtime",
+    final: true,
+  },
+  "apps/web/app/offline/page.tsx": {
+    status: "tune",
+    evidence: "browser-runtime",
+    final: true,
+  },
+};
+
+export const PAGE_DISPOSITIONS = Object.fromEntries(
+  Object.keys(PAGE_ARCHETYPES).map((file) => [
+    file,
+    PAGE_DISPOSITION_OVERRIDES[file] ?? {
+      status: "keep",
+      evidence: "source-baseline",
+      final: false,
+    },
+  ]),
+);
