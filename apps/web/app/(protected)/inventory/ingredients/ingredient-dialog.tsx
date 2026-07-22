@@ -35,7 +35,11 @@ import {
   TextField,
 } from "@/components/form";
 import { createIngredient, updateIngredient } from "../ingredient-actions";
-import type { CategoryOption, IngredientRow, UnitOption } from "@lib/inventory/types";
+import type {
+  CategoryOption,
+  IngredientRow,
+  UnitOption,
+} from "@lib/inventory/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "../_lib/constants";
 import { parseOptionalNumber } from "@lib/inventory/format";
 import {
@@ -88,8 +92,6 @@ const ingredientSchema = z
     item_kind: z.enum(["raw_material", "finished_good"]),
     storage_type: z.enum(["ambient", "refrigerated", "frozen"]),
     min_stock_level: z.string().optional(),
-    max_stock_level: z.string().optional(),
-    reorder_point: z.string().optional(),
     units: z.array(unitRowSchema).min(1, { error: copy.units.minOne }),
   })
   .superRefine((data, ctx) => {
@@ -164,20 +166,11 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
       "raw_material",
     storage_type:
       (ingredient?.storage_type as
-        | "ambient"
-        | "refrigerated"
-        | "frozen"
-        | undefined) ?? "ambient",
+        "ambient" | "refrigerated" | "frozen" | undefined) ?? "ambient",
     min_stock_level:
       ingredient?.min_stock_level != null
         ? String(ingredient.min_stock_level)
         : "",
-    max_stock_level:
-      ingredient?.max_stock_level != null
-        ? String(ingredient.max_stock_level)
-        : "",
-    reorder_point:
-      ingredient?.reorder_point != null ? String(ingredient.reorder_point) : "",
     units,
   };
 }
@@ -236,16 +229,24 @@ interface IngredientDialogProps {
   ingredient: IngredientRow | null;
   unitOptions: UnitOption[];
   categoryOptions: CategoryOption[];
+  unitLockState: IngredientUnitLockState;
   onSaved: () => void | Promise<void>;
 }
+
+export type IngredientUnitLockState =
+  "checking" | "editable" | "locked" | "unavailable";
 
 function UnitsField({
   form,
   unitOptions,
+  ingredient,
+  unitLockState,
   errorMessage,
 }: {
   form: UseFormReturn<IngredientFormValues, unknown, IngredientFormValues>;
   unitOptions: UnitOption[];
+  ingredient: IngredientRow | null;
+  unitLockState: IngredientUnitLockState;
   errorMessage?: string;
 }) {
   const { fields, append, remove } = useFieldArray({
@@ -256,8 +257,15 @@ function UnitsField({
   const watchedRows = useWatch({ control: form.control, name: "units" }) ?? [];
   const baseUnitId =
     watchedRows.find((row) => row.is_base && row.unit_id)?.unit_id ?? NO_ANCHOR;
+  const existingUnitIds = useMemo(
+    () => new Set((ingredient?.units ?? []).map((unit) => unit.unit_id)),
+    [ingredient],
+  );
+  const baseLocked = ingredient !== null && unitLockState !== "editable";
+  const canAddUnit = unitLockState === "editable" || unitLockState === "locked";
 
   function setBase(targetIndex: number) {
+    if (baseLocked) return;
     fields.forEach((_, index) => {
       const isTarget = index === targetIndex;
       // Radio semantics: checking one base unchecks the others.
@@ -287,6 +295,7 @@ function UnitsField({
           type="button"
           variant="outline"
           size="sm"
+          disabled={!canAddUnit}
           onClick={() => append(makeSecondaryRow(baseUnitId))}
         >
           <IconPlus className="size-4" />
@@ -314,12 +323,30 @@ function UnitsField({
               onSetBase={() => setBase(index)}
               onRemove={() => remove(index)}
               rowCount={fields.length}
+              rowLocked={
+                baseLocked &&
+                existingUnitIds.has(Number(watchedRows[index]?.unit_id))
+              }
+              baseLocked={baseLocked}
             />
           ))}
         </div>
       </Frame>
 
       <p className="text-xs text-muted-foreground">{copy.units.hint}</p>
+      {unitLockState === "checking" ? (
+        <p className="text-xs text-muted-foreground" role="status">
+          {copy.units.lockChecking}
+        </p>
+      ) : unitLockState === "locked" ? (
+        <p className="text-xs text-warning" role="status">
+          {copy.units.lockedHint}
+        </p>
+      ) : unitLockState === "unavailable" ? (
+        <p className="text-xs text-destructive" role="alert">
+          {copy.units.lockUnavailable}
+        </p>
+      ) : null}
       {errorMessage ? (
         <p className="text-sm text-destructive" role="alert">
           {errorMessage}
@@ -338,6 +365,8 @@ function UnitRowCells({
   onSetBase,
   onRemove,
   rowCount,
+  rowLocked,
+  baseLocked,
 }: {
   control: Control<IngredientFormValues>;
   index: number;
@@ -347,12 +376,14 @@ function UnitRowCells({
   onSetBase: () => void;
   onRemove: () => void;
   rowCount: number;
+  rowLocked: boolean;
+  baseLocked: boolean;
 }) {
   const isBase = useWatch({ control, name: `units.${index}.is_base` }) ?? false;
   const unitId = useWatch({ control, name: `units.${index}.unit_id` }) ?? "";
   const anchorUnitId =
     useWatch({ control, name: `units.${index}.anchor_unit_id` }) ?? NO_ANCHOR;
-  const canRemove = rowCount > 1 && !isBase;
+  const canRemove = rowCount > 1 && !isBase && !rowLocked;
 
   const selectedUnit = useMemo(
     () => unitOptions.find((u) => String(u.id) === unitId) ?? null,
@@ -447,7 +478,11 @@ function UnitRowCells({
             control={control}
             name={`units.${index}.unit_id`}
             render={({ field, fieldState }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+                disabled={rowLocked}
+              >
                 <SelectTrigger
                   className={cn(
                     "h-9 w-full",
@@ -509,6 +544,7 @@ function UnitRowCells({
                   ref={field.ref}
                   name={field.name}
                   maxFractionDigits={6}
+                  disabled={rowLocked}
                   placeholder={copy.units.colFactor}
                   aria-invalid={!!fieldState.error}
                   className={cn(
@@ -530,6 +566,7 @@ function UnitRowCells({
                   <Select
                     value={field.value || undefined}
                     onValueChange={field.onChange}
+                    disabled={rowLocked}
                   >
                     <SelectTrigger
                       className={cn(
@@ -588,6 +625,7 @@ function UnitRowCells({
               <Checkbox
                 id={`units-base-${index}`}
                 checked={field.value}
+                disabled={baseLocked}
                 onCheckedChange={(checked) => {
                   if (checked) onSetBase();
                 }}
@@ -628,6 +666,7 @@ export function IngredientDialog({
   ingredient,
   unitOptions,
   categoryOptions,
+  unitLockState,
   onSaved,
 }: IngredientDialogProps) {
   const isEdit = ingredient !== null;
@@ -642,6 +681,9 @@ export function IngredientDialog({
   );
 
   async function handleSubmit(values: IngredientFormValues) {
+    if (unitLockState === "checking" || unitLockState === "unavailable") {
+      return { success: false, error: copy.units.lockUnavailable };
+    }
     const categoryId =
       values.category_id && values.category_id !== NO_CATEGORY
         ? Number(values.category_id)
@@ -706,8 +748,6 @@ export function IngredientDialog({
       item_kind: values.item_kind,
       storage_type: values.storage_type,
       min_stock_level: parseOptionalNumber(values.min_stock_level) ?? 0,
-      max_stock_level: parseOptionalNumber(values.max_stock_level),
-      reorder_point: parseOptionalNumber(values.reorder_point),
       units: mappedUnits,
     };
 
@@ -783,6 +823,8 @@ export function IngredientDialog({
           <UnitsField
             form={form}
             unitOptions={unitOptions}
+            ingredient={ingredient}
+            unitLockState={unitLockState}
             errorMessage={
               form.formState.errors.units?.root?.message ??
               form.formState.errors.units?.message
@@ -804,21 +846,11 @@ export function IngredientDialog({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <QuantityField
               control={form.control}
               name="min_stock_level"
               label={dialogCopy.minStockLabel}
-            />
-            <QuantityField
-              control={form.control}
-              name="max_stock_level"
-              label={dialogCopy.maxStockLabel}
-            />
-            <QuantityField
-              control={form.control}
-              name="reorder_point"
-              label={dialogCopy.reorderPointLabel}
             />
           </div>
         </>

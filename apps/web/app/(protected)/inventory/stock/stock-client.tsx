@@ -174,7 +174,7 @@ function StockAlertBadges({
   className?: string;
 }) {
   const showStatus = item.status !== "normal";
-  const showReorder = item.qty <= item.reorder;
+  const showReorder = item.min > 0 && item.qty <= item.min;
   if (!showStatus && !showReorder) return null;
 
   return (

@@ -17,7 +17,7 @@ test("stocktake list exposes one create entrypoint", () => {
   assert.doesNotMatch(source, /<FormDialog/);
 });
 
-test("operator consumption and issue routes keep separate business roles", () => {
+test("Branch keeps separate roles while Owner combines consumption and waste", () => {
   const operatorConsumption = read(
     "app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx",
   );
@@ -27,7 +27,9 @@ test("operator consumption and issue routes keep separate business roles", () =>
   const operatorConsumptionDetail = read(
     "app/(protected)/br/[branchId]/(operator)/stock/consumption/[id]/page.tsx",
   );
-  const operations = read("app/(protected)/inventory/operations/page.tsx");
+  const ownerConsumption = read(
+    "app/(protected)/inventory/consumption/page.tsx",
+  );
   const dictionary = read("app/(protected)/inventory/_lib/dictionary.ts");
   const branchIssueData = read("lib/inventory/branch-stock-issue-data.ts");
 
@@ -42,8 +44,8 @@ test("operator consumption and issue routes keep separate business roles", () =>
     /listBasePath=\{`\$\{stockBasePath\}\/consumption`\}/,
   );
   assert.match(branchIssueData, /isBranchInternalIssueType/);
-  assert.match(operations, /label: "Tiêu hao vận hành"/);
-  assert.match(operations, /label: "Sự cố kho"/);
+  assert.match(ownerConsumption, /scope="all"/);
+  assert.match(ownerConsumption, /detailBasePath="\/inventory\/issues"/);
   assert.match(
     dictionary,
     /issues: \{ short: "Sự cố kho", long: "Sự cố kho" \}/,
@@ -78,7 +80,7 @@ test("Owner surface stock quick issue stays on consumption while Branch lookup s
   assert.match(messages, /issueTitle: "Ghi tiêu hao nhanh"/);
 });
 
-test("consumption list separates POS ledger rows from manual slips", () => {
+test("consumption list combines POS ledger rows with operational and waste slips", () => {
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
   const messages = read("../../packages/shared/src/messages/inventory.ts");
 
@@ -86,13 +88,17 @@ test("consumption list separates POS ledger rows from manual slips", () => {
     issues,
     /const isConsumptionScope =\s+allowedIssueTypes\.length === 1 && allowedIssueTypes\[0\] === "consumption";/,
   );
+  assert.match(issues, /const showsRecordedConsumption =/);
   assert.match(
     issues,
-    /recordedConsumptions\.length > 0 \|\| isConsumptionScope/,
+    /recordedConsumptions\.length > 0 \|\| showsRecordedConsumption/,
   );
   assert.match(issues, /title=\{INVENTORY_VI\.recordedConsumptionTitle\}/);
-  assert.match(issues, /const issueListTitle = isConsumptionScope/);
-  assert.match(issues, /const createIssueActionLabel = isConsumptionScope/);
+  assert.match(issues, /const issueListTitle = isCombinedConsumptionScope/);
+  assert.match(
+    issues,
+    /const createIssueActionLabel = isCombinedConsumptionScope/,
+  );
   assert.match(issues, /title=\{issueListTitle\}/);
   assert.match(issues, /title=\{createIssueActionLabel\}/);
   assert.match(issues, /submitLabel=\{createIssueActionLabel\}/);
@@ -106,8 +112,14 @@ test("consumption list separates POS ledger rows from manual slips", () => {
     messages,
     /manualConsumptionCreateAction: "Tạo phiếu tiêu hao thủ công"/,
   );
-  assert.match(messages, /issueSlipsTitle: "WO \/ PXK khác"/);
-  assert.match(messages, /issueCreateAction: "Tạo WO\/PXK khác"/);
+  assert.match(
+    messages,
+    /combinedConsumptionSlipsTitle: "Phiếu vận hành và hao hụt"/,
+  );
+  assert.match(
+    messages,
+    /combinedConsumptionCreateAction: "Tạo phiếu tiêu hao \/ hao hụt"/,
+  );
 });
 
 test("production create redirects to the created run detail", () => {
@@ -149,10 +161,7 @@ test("operations tabs use the same sectioned list chrome", () => {
     );
   }
 
-  assert.match(
-    grn,
-    /actions=\{withinOwnerTabs \? desktopActions : null\}/,
-  );
+  assert.match(grn, /actions=\{withinOwnerTabs \? desktopActions : null\}/);
   assert.match(grn, /const listTable = grnsLoadFailed \? \(/);
   assert.match(grn, /title=\{messages\.inventory\.grn\.loadFailed\}/);
   assert.match(grn, /const draftsContent = draftsLoadFailed \? \(/);

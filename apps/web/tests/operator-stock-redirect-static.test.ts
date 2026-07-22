@@ -659,9 +659,10 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   assert.match(issuesClient, /embedded\?: boolean/);
   assert.match(issuesClient, embeddedContentWrapperPattern);
   assert.match(issuesClient, /listBasePath = "\/inventory\/consumption"/);
+  assert.match(issuesClient, /detailBasePath = listBasePath/);
   assert.match(
     issuesClient,
-    /router\.push\(`\$\{listBasePath\}\/\$\{newId\}`\)/,
+    /router\.push\(`\$\{detailBasePath\}\/\$\{newId\}`\)/,
   );
   assert.doesNotMatch(issuesClient, /router\.push\(`\/inventory\/consumption/);
   assert.match(issueDetailClient, /listBasePath = "\/inventory\/consumption"/);

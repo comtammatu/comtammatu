@@ -331,7 +331,7 @@ Branch stock workflow áp dụng cùng ranh giới này:
 - Owner surface `/inventory/stock` dùng cùng loader/model nhưng giữ management
   `StockClient`: compact cards khi viewport hẹp và dense `DataTable` trên
   desktop. Owner surface client không có `embedded` mode hoặc Branch route branching.
-- Owner surface `/inventory/operations?tab=grn` dùng cùng GRN loader/model nhưng giữ
+- Owner surface `/inventory/grn` dùng cùng GRN loader/model nhưng giữ
   `GrnListClient` management presentation: branch, tổng giá trị và desktop
   `DataTable` vẫn thuộc Owner surface; client này không nhận diện `/br/` để đổi layout.
 - Owner surface `/inventory/grn/new/[supplierId]` giữ `DocumentFormFrame` và desktop

@@ -107,7 +107,7 @@ test("POS invoice buyer form is available for cash and VietQR confirmation", () 
   );
   assert.match(
     src,
-    /\{showInvoiceForm \? \(\s*<InvoiceFormSection/,
+    /\{showInvoiceForm && !isWaitingForVietQr \? \(\s*<InvoiceFormSection/,
     "buyer invoice form must not live only inside the cash payment panel",
   );
 });

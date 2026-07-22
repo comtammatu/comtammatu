@@ -59,7 +59,9 @@ export async function fetchUnits(): Promise<ActionResult<UnitRow[]>> {
   const [unitsResult, mappingsResult] = await Promise.all([
     supabase
       .from("units")
-      .select("id, code, name, is_active, dimension, is_standard, standard_factor")
+      .select(
+        "id, code, name, is_active, dimension, is_standard, standard_factor",
+      )
       .eq("tenant_id", claims.tenant_id)
       .order("code"),
     supabase
@@ -130,6 +132,37 @@ export const updateUnit = withAction(
     anyPermission: UNITS_MASTER_PERMISSIONS,
   },
   async (data, { supabase, claims }) => {
+    const [currentResult, mappingsResult] = await Promise.all([
+      supabase
+        .from("units")
+        .select("code")
+        .eq("id", data.id)
+        .eq("tenant_id", claims.tenant_id)
+        .maybeSingle(),
+      supabase
+        .from("ingredient_units")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", claims.tenant_id)
+        .or(`unit_id.eq.${data.id},anchor_unit_id.eq.${data.id}`),
+    ]);
+
+    if (currentResult.error || mappingsResult.error) {
+      return { success: false, error: "Không thể kiểm tra đơn vị." };
+    }
+    if (!currentResult.data) {
+      return { success: false, error: "Đơn vị không tồn tại." };
+    }
+    if (
+      (mappingsResult.count ?? 0) > 0 &&
+      currentResult.data.code !== data.code
+    ) {
+      return {
+        success: false,
+        error:
+          "Đơn vị đã gán nguyên liệu nên không thể đổi mã. Hãy tạo đơn vị mới nếu cần cách gọi khác.",
+      };
+    }
+
     const { error } = await supabase
       .from("units")
       .update({

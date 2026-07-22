@@ -3,11 +3,12 @@ export const UNITS_VI = {
     eyebrow: "Quản lý nguyên liệu",
     title: "Đơn vị đo",
     description:
-      "Danh mục đơn vị đo dùng chung cho nguyên liệu: đơn vị nhập, đơn vị tính và quy đổi.",
+      "Danh mục đơn vị dùng chung. Quy đổi cụ thể được cấu hình theo từng nguyên liệu.",
   },
   add: "Thêm đơn vị",
   empty: "Chưa có đơn vị nào. Thêm đơn vị đầu tiên để bắt đầu.",
-  emptyPackaging: "Chưa có đơn vị đóng gói nào. Thêm đơn vị đầu tiên để bắt đầu.",
+  emptyPackaging:
+    "Chưa có đơn vị đóng gói nào. Thêm đơn vị đầu tiên để bắt đầu.",
   showInactive: "Hiện đơn vị đã ngừng dùng",
   standard: {
     title: "Đơn vị chuẩn",
@@ -20,7 +21,7 @@ export const UNITS_VI = {
   packaging: {
     title: "Đơn vị đóng gói",
     description:
-      "Đơn vị nhập và đóng gói do cửa hàng tự khai báo. Có thể thêm, sửa, ngừng dùng hoặc xoá.",
+      "Có thể đổi mã trước khi gán nguyên liệu. Sau khi đã gán, chỉ được ngừng dùng; hãy tạo đơn vị mới nếu cần cách gọi khác.",
   },
   cols: {
     code: "Mã",
@@ -52,8 +53,7 @@ export const UNITS_VI = {
   delete: {
     action: "Xoá",
     title: "Xoá đơn vị?",
-    description: (name: string) =>
-      `Xoá đơn vị "${name}"? Không thể hoàn tác.`,
+    description: (name: string) => `Xoá đơn vị "${name}"? Không thể hoàn tác.`,
     confirm: "Xoá",
     cancel: "Không",
     success: "Đã xoá đơn vị",
@@ -115,10 +115,10 @@ export const INGREDIENT_FORM_VI = {
     all: "Tất cả nhóm",
   },
   units: {
-    sectionLabel: "Đơn vị",
+    sectionLabel: "Đơn vị tồn và quy đổi",
     add: "Thêm đơn vị",
     empty: "Chưa có đơn vị nào.",
-    hint: "Đơn vị tồn chuẩn có hệ số = 1. Mỗi đơn vị nhập/đếm phải quy đổi được về tồn chuẩn (ví dụ: 1 thùng = 24 chai).",
+    hint: "Chọn một đơn vị tồn chuẩn. Mỗi đơn vị nhập/đếm phải quy đổi được về đơn vị này. Sau khi có giao dịch, tồn chuẩn và các quy đổi hiện hữu sẽ được khóa; chỉ thêm đơn vị mới.",
     colUnit: "Đơn vị",
     colFactor: "Quy đổi về tồn chuẩn",
     colAnchor: "Quy đổi theo",
@@ -137,5 +137,11 @@ export const INGREDIENT_FORM_VI = {
     factorPositive: "Hệ số quy đổi phải lớn hơn 0",
     distinctUnits: "Đơn vị không được trùng nhau",
     baseTag: "tồn chuẩn",
+    lockChecking:
+      "Đang kiểm tra lịch sử giao dịch trước khi cho phép sửa quy đổi…",
+    lockedHint:
+      "Nguyên liệu đã có giao dịch. Tồn chuẩn và quy đổi hiện hữu đã khóa; bạn vẫn có thể thêm một đơn vị mới.",
+    lockUnavailable:
+      "Chưa kiểm tra được lịch sử giao dịch nên đơn vị đang tạm khóa. Hãy thử mở lại biểu mẫu.",
   },
 } as const;

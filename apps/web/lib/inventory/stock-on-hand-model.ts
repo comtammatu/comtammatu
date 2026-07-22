@@ -6,7 +6,7 @@ import { matchesSearch } from "@lib/search";
 export const STOCK_ALL_CATEGORY_VALUE = "all";
 export const STOCK_NO_CATEGORY_VALUE = "__none__";
 
-export type StockStatus = "normal" | "low" | "out" | "over";
+export type StockStatus = "normal" | "low" | "out";
 export type StockFilter = "all" | "in_stock" | "low" | "out";
 export type StockLocationFilter = "all" | "warehouse" | "kitchen";
 
@@ -77,25 +77,17 @@ export interface StockOnHandFilters {
 const STATUS_PRIORITY: Record<StockStatus, number> = {
   out: 0,
   low: 1,
-  over: 2,
-  normal: 3,
+  normal: 2,
 };
 
-export function computeStockStatus(
-  qty: number,
-  min: number,
-  max: number,
-): StockStatus {
+export function computeStockStatus(qty: number, min: number): StockStatus {
   if (qty <= 0) return "out";
-  if (qty < min) return "low";
-  if (max > 0 && qty > max) return "over";
+  if (min > 0 && qty <= min) return "low";
   return "normal";
 }
 
 export function isStockReorderRisk(item: StockIngredient): boolean {
-  return (
-    item.status === "out" || item.status === "low" || item.qty <= item.reorder
-  );
+  return item.status === "out" || item.status === "low";
 }
 
 export function stockLocationLabel(row: StockLocationBreakdown): string {
@@ -149,7 +141,7 @@ export function scopeStockIngredientToLocation(
     ...ingredient,
     qty,
     cost: qty > 0 ? costBasis / qty : ingredient.cost,
-    status: computeStockStatus(qty, ingredient.min, ingredient.max),
+    status: computeStockStatus(qty, ingredient.min),
     lastCount: latestCount
       ? formatVNDate(latestCount)
       : messages.inventory.common.noValue,
@@ -209,10 +201,7 @@ export function filterStockOnHandIngredients(
   }
 
   if (filters.status === "in_stock") {
-    result = result.filter(
-      (ingredient) =>
-        ingredient.status === "normal" || ingredient.status === "over",
-    );
+    result = result.filter((ingredient) => ingredient.status === "normal");
   } else if (filters.status === "low") {
     result = result.filter(isStockReorderRisk);
   } else if (filters.status === "out") {

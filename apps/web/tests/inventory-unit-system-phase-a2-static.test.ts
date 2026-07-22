@@ -4,7 +4,8 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const readRepo = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const readRepo = (path: string) =>
+  readFileSync(resolve(repoRoot, path), "utf8");
 
 const migration = readRepo(
   "supabase/migration-archive/20260706170000_inventory_unit_system_phase_a2_catalog_anchor.sql",
@@ -14,6 +15,15 @@ const unitLadderLockMigration = readRepo(
 );
 const ingredientActions = readRepo(
   "apps/web/app/(protected)/inventory/ingredient-actions.ts",
+);
+const ingredientDialog = readRepo(
+  "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
+);
+const ingredientClient = readRepo(
+  "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx",
+);
+const unitsActions = readRepo(
+  "apps/web/app/(protected)/inventory/settings/units/units-actions.ts",
 );
 
 test("A2 redefines the catalog upsert to derive to_base_factor from anchors", () => {
@@ -94,7 +104,10 @@ test("A2 blocks unit ladder rewrites once ledger movements exist", () => {
     "DELETE FROM public.ingredient_units WHERE ingredient_id = v_id",
   );
 
-  assert.ok(guardIndex > 0, "the catalog upsert must expose a stable lock code");
+  assert.ok(
+    guardIndex > 0,
+    "the catalog upsert must expose a stable lock code",
+  );
   assert.ok(
     replaceIndex > guardIndex,
     "the lock must run before replacing ingredient_units",
@@ -123,10 +136,37 @@ test("ingredient actions surface locked unit ladders with operator-safe copy", (
   );
   assert.match(
     ingredientActions,
-    /Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị tồn chuẩn hoặc quy đổi về tồn chuẩn\./,
+    /Nguyên liệu đã có lịch sử tồn kho; đơn vị tồn chuẩn và quy đổi hiện hữu đã khóa\./,
   );
   assert.match(
     ingredientActions,
     /mapCatalogRpcError\(error\.code, error\.message\)/,
+  );
+});
+
+test("ingredient editor checks the ledger before enabling unit changes", () => {
+  assert.match(
+    ingredientActions,
+    /export async function fetchIngredientUnitLock/,
+  );
+  assert.match(
+    ingredientActions,
+    /\.from\("stock_movements"\)[\s\S]*\.select\("id", \{ count: "exact", head: true \}\)/,
+  );
+  assert.match(ingredientClient, /setUnitLockState\("checking"\)/);
+  assert.match(ingredientClient, /fetchIngredientUnitLock\(row\.id\)/);
+  assert.match(ingredientDialog, /disabled=\{rowLocked\}/);
+  assert.match(ingredientDialog, /disabled=\{baseLocked\}/);
+  assert.match(ingredientDialog, /unitLockState === "locked"/);
+});
+
+test("global units cannot be renamed after they are assigned", () => {
+  assert.match(
+    unitsActions,
+    /\.select\("id", \{ count: "exact", head: true \}\)/,
+  );
+  assert.match(
+    unitsActions,
+    /\(mappingsResult\.count \?\? 0\) > 0[\s\S]*currentResult\.data\.code !== data\.code/,
   );
 });

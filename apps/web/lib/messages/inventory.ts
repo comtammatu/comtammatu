@@ -681,7 +681,7 @@ export const inventory = {
       inStock: "Còn hàng",
       low: "Thấp",
       out: "Hết hàng",
-      reorder: "Chạm reorder",
+      reorder: "Chạm Min",
       categoryPlaceholder: "Danh mục",
       noCategory: "Chưa phân loại",
       statusPlaceholder: "Trạng thái",
@@ -1008,15 +1008,13 @@ export const inventory = {
       title: "Ngưỡng tồn kho",
       eyebrow: "Inventory thresholds",
       description:
-        "Ngưỡng tồn tối thiểu / điểm đặt lại / tồn tối đa cho từng nguyên liệu — cảnh báo và đề xuất mua dùng chung ngưỡng này.",
-      hint: "Quy tắc: Tồn tối thiểu ≤ Điểm đặt lại ≤ Tồn tối đa. Để trống Điểm đặt lại = không cảnh báo reorder.",
+        "Một ngưỡng tồn tối thiểu cho từng nguyên liệu, dùng chung cho cảnh báo và đề xuất nhập thêm.",
+      hint: "Tồn thực tế chạm hoặc thấp hơn ngưỡng này sẽ được cảnh báo.",
       cols: {
         ingredient: "Nguyên liệu",
         sku: "SKU",
         unit: "Đơn vị",
         min: "Tồn tối thiểu",
-        reorder: "Điểm đặt lại",
-        max: "Tồn tối đa",
       },
       selectAllAria: "Chọn tất cả",
       dirtySummary: (dirty: number, errors: number) =>
@@ -1026,8 +1024,7 @@ export const inventory = {
       bulk: {
         applyTo: (count: number) => `Áp dụng cho ${formatCount(count)} dòng`,
         dialogTitle: "Áp dụng ngưỡng cho dòng đã chọn",
-        dialogHint:
-          "Chỉ những ô bạn nhập sẽ ghi đè. Để trống = giữ nguyên giá trị hiện có.",
+        dialogHint: "Giá trị này sẽ thay ngưỡng hiện có của các dòng đã chọn.",
         applyAction: "Áp dụng",
         cancel: "Hủy",
         empty: "Chọn ít nhất 1 dòng để áp dụng hàng loạt.",

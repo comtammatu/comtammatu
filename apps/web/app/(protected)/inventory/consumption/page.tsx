@@ -12,8 +12,9 @@ export default async function ConsumptionPage({
   return (
     <IssuesPageContent
       searchParams={searchParams}
-      scope="consumption"
+      scope="all"
       listBasePath="/inventory/consumption"
+      detailBasePath="/inventory/issues"
     />
   );
 }

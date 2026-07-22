@@ -56,7 +56,7 @@ test("stock list sorts out and low ingredients before normal stock", () => {
   );
 });
 
-test("stock filters combine search, category, and reorder risk", () => {
+test("stock filters combine search, category, and minimum-threshold risk", () => {
   const rows = [
     makeIngredient({ id: 1, name: "Rice", category: "Dry" }),
     makeIngredient({
@@ -65,9 +65,8 @@ test("stock filters combine search, category, and reorder risk", () => {
       sku: "FISH-01",
       category: "Sauce",
       qty: 3,
-      min: 0,
-      reorder: 5,
-      status: "normal",
+      min: 5,
+      status: "low",
     }),
     makeIngredient({ id: 3, name: "No category", category: "" }),
   ];

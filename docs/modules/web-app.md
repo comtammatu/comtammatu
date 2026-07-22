@@ -72,24 +72,22 @@ Server action có rate limiting (`loginRateLimit` từ `@comtammatu/security`). 
 
 ### IA theo workflow
 
-Inventory không còn dùng sidebar kiểu liệt kê chứng từ phẳng. `inventory-shell.tsx` hiện gom điều hướng theo nhịp vận hành thật:
+`inventory-shell.tsx` gom điều hướng Owner theo các nhóm ổn định:
 
-- `Hôm nay`
-- `Nhập hàng tenant`
-- `Điều chuyển nội bộ`
-- `Vận hành chi nhánh` hoặc `Tồn và xuất` tùy site
-- `chi nhánh`
-- `Kiểm soát`
-- `Danh mục`
+- `0 · Nay`
+- `1 · Kiểm soát tồn`: chỉ còn `Tồn kho`
+- `2 · Nhập/Nhận/Đối soát`: `Nhập kho`, `Tiêu hao`, `Điều chuyển`
+- `3 · Sản xuất`
+- `4 · Danh mục & thiết lập`
 
 Các nguyên tắc đang được code phản ánh:
 
-- `/inventory/operations` là landing giao dịch kho theo tab: GRN, điều chuyển nội bộ, phiếu xuất
+- `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers` là ba route giao dịch kho canonical; `/inventory/operations` chỉ còn redirect tương thích cho deep-link cũ.
+- Sidebar không quảng bá `Kiểm kê đối chiếu`, `Đếm tồn`, `Báo cáo` hoặc `Hóa đơn NCC`; các route nghiệp vụ còn tồn tại vẫn giữ ACL/deep-link riêng. Hóa đơn NCC có cửa vào canonical tại Finance.
 - Purchase orders và supplier returns không còn surface hằng ngày; GRN bắt đầu từ NCC, còn DB/RPC/history cũ vẫn được giữ theo D073
 - `Production` chạy tại chính chi nhánh; owner và `branch_manager` đi qua
   permission + branch scope hiện hành.
-- `Consumption` là actual branch food cost; không tái mở same-branch Kho↔Bếp
-  transfer.
+- `Tiêu hao` gom tiêu hao vận hành, hao hụt và xuất khác; actual food cost vẫn đọc từ ledger đã ghi nhận và không tái mở same-branch Kho↔Bếp transfer.
 - `Ingredients / Suppliers / Định mức món bán` chỉ còn một cửa vào chính trong `Danh mục`
 
 ### Workflow đã wire thật ở UI
@@ -155,4 +153,4 @@ Browser request
   và payslip nằm trong Branch. HR Owner surface và `/hr/payroll/*` chỉ dành
   cho Owner.
 - **Finance mặc định là tài chính vận hành HKD:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Các route kế toán doanh nghiệp và đóng/mở lại kỳ không nằm trong app surface hiện tại.
-- **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ config danh mục nguyên liệu, đơn vị, ngưỡng cảnh báo, và QC; `page.tsx` redirect theo permission về categories/units/qc. Catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`.
+- **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ config danh mục nguyên liệu, đơn vị, một ngưỡng tồn `Min`, và QC; `page.tsx` redirect theo permission về categories/units/qc. Catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`.

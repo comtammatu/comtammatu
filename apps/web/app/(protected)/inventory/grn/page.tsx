@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { loadGrnListPageData } from "@lib/inventory/grn-list-data";
 import { GrnListClient } from "./grn-list-client";
 
@@ -39,15 +38,5 @@ export default async function GRNListPage({
 }: {
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
-  const params = await searchParams;
-  const qParams = new URLSearchParams();
-  qParams.set("tab", "grn");
-  if (params.branchId) {
-    if (Array.isArray(params.branchId)) {
-      params.branchId.forEach((id) => qParams.append("branchId", id));
-    } else {
-      qParams.set("branchId", params.branchId);
-    }
-  }
-  redirect(`/inventory/operations?${qParams.toString()}`);
+  return <GRNListPageContent searchParams={searchParams} />;
 }

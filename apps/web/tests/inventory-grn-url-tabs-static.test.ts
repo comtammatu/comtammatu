@@ -6,16 +6,22 @@ const operationsPageSource = readFileSync(
   "app/(protected)/inventory/operations/page.tsx",
   "utf8",
 );
+const grnPageSource = readFileSync(
+  "app/(protected)/inventory/grn/page.tsx",
+  "utf8",
+);
 const grnListClientSource = readFileSync(
   "app/(protected)/inventory/grn/grn-list-client.tsx",
   "utf8",
 );
 
-test("operations GRN list embeds drafts without nested URL tabs", () => {
+test("GRN is a direct route and operations links redirect to it", () => {
+  assert.match(operationsPageSource, /: "\/inventory\/grn"/);
   assert.match(
-    operationsPageSource,
-    /<AppPageTabs items=\{tabsList\} defaultValue=\{activeTab\}>/,
+    grnPageSource,
+    /<GRNListPageContent searchParams=\{searchParams\} \/>/,
   );
+  assert.doesNotMatch(operationsPageSource, /AppPageTabs|GRNListPageContent/);
 
   const ownerBodySource = grnListClientSource.slice(
     grnListClientSource.indexOf("const ownerBody"),
@@ -25,10 +31,7 @@ test("operations GRN list embeds drafts without nested URL tabs", () => {
     ),
   );
 
-  assert.match(
-    ownerBodySource,
-    /draftSectionWithinOwnerTabs/,
-  );
+  assert.match(ownerBodySource, /draftSectionWithinOwnerTabs/);
   assert.match(ownerBodySource, /listBody/);
   assert.doesNotMatch(ownerBodySource, /paramKey=/);
 });

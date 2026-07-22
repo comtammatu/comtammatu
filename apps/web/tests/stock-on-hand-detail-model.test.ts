@@ -28,12 +28,11 @@ function makeMovement(
   };
 }
 
-test("ingredient detail status keeps depletion, threshold, and overstock order", () => {
-  assert.equal(computeStockIngredientDetailStatus(0, 10, 15, 30), "out");
-  assert.equal(computeStockIngredientDetailStatus(9, 10, 15, 30), "low");
-  assert.equal(computeStockIngredientDetailStatus(15, 10, 15, 30), "low");
-  assert.equal(computeStockIngredientDetailStatus(31, 10, 15, 30), "over");
-  assert.equal(computeStockIngredientDetailStatus(20, 10, 15, 30), "normal");
+test("ingredient detail status uses the single minimum threshold", () => {
+  assert.equal(computeStockIngredientDetailStatus(0, 10), "out");
+  assert.equal(computeStockIngredientDetailStatus(9, 10), "low");
+  assert.equal(computeStockIngredientDetailStatus(10, 10), "low");
+  assert.equal(computeStockIngredientDetailStatus(11, 10), "normal");
 });
 
 test("ingredient detail movement links stay in the selected Branch stock plane", () => {

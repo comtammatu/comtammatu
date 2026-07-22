@@ -301,7 +301,7 @@ export async function loadStockIngredientDetailData({
     movements,
     totalQty,
     latestCountedAt,
-    status: computeStockIngredientDetailStatus(totalQty, min, reorder, max),
+    status: computeStockIngredientDetailStatus(totalQty, min),
     storageTemperature: stockStorageTemperature(ingredientRow.storage_type),
     valuation,
     permissions: {

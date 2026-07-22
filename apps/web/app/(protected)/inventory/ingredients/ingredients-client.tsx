@@ -52,10 +52,14 @@ import {
   ITEM_KIND_OPTIONS,
 } from "../_lib/constants";
 import {
+  fetchIngredientUnitLock,
   fetchIngredients,
   toggleIngredientActive,
 } from "../ingredient-actions";
-import { IngredientDialog } from "./ingredient-dialog";
+import {
+  IngredientDialog,
+  type IngredientUnitLockState,
+} from "./ingredient-dialog";
 import type {
   CategoryOption,
   IngredientRow,
@@ -148,8 +152,6 @@ function ThresholdBadges({ item }: { item: IngredientRow }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       <Badge variant="destructive">Min {item.min_stock_level ?? 0}</Badge>
-      <Badge variant="success">Re {item.reorder_point ?? 0}</Badge>
-      <Badge variant="secondary">Max {item.max_stock_level ?? 0}</Badge>
     </div>
   );
 }
@@ -276,10 +278,13 @@ export function IngredientsClient({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] =
     useState<IngredientRow | null>(null);
+  const [unitLockState, setUnitLockState] =
+    useState<IngredientUnitLockState>("editable");
   const [isPending, startTransition] = useTransition();
   const isTouchLayout = useIsMobile(1024);
 
   const lastUpdatedAtRef = useRef<string | null>(null);
+  const unitLockRequestRef = useRef(0);
 
   // Initialize the water-mark cursor from initial rows
   if (lastUpdatedAtRef.current === null && initial.length > 0) {
@@ -390,13 +395,26 @@ export function IngredientsClient({
   }
 
   function openCreate() {
+    unitLockRequestRef.current += 1;
     setEditingIngredient(null);
+    setUnitLockState("editable");
     setDialogOpen(true);
   }
 
-  function openEdit(row: IngredientRow) {
+  async function openEdit(row: IngredientRow) {
+    const requestId = unitLockRequestRef.current + 1;
+    unitLockRequestRef.current = requestId;
     setEditingIngredient(row);
+    setUnitLockState("checking");
     setDialogOpen(true);
+    const result = await fetchIngredientUnitLock(row.id);
+    if (unitLockRequestRef.current !== requestId) return;
+    if (!result.success || !result.data) {
+      setUnitLockState("unavailable");
+      toast.error(result.error ?? ingredientListCopy.reloadFailed);
+      return;
+    }
+    setUnitLockState(result.data.locked ? "locked" : "editable");
   }
 
   function handleToggleActive(item: IngredientRow) {
@@ -748,6 +766,7 @@ export function IngredientsClient({
         ingredient={editingIngredient}
         unitOptions={unitOptions}
         categoryOptions={categoryOptions}
+        unitLockState={unitLockState}
         onSaved={reload}
       />
     </AppPage>

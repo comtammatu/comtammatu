@@ -67,7 +67,8 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
 
   const standardByDimension = useMemo(() => {
     const grouped = new Map<UnitDimension, UnitRow[]>();
-    for (const dimension of STANDARD_DIMENSION_ORDER) grouped.set(dimension, []);
+    for (const dimension of STANDARD_DIMENSION_ORDER)
+      grouped.set(dimension, []);
     for (const row of rows) {
       if (!row.is_standard || row.dimension === null) continue;
       grouped.get(row.dimension)?.push(row);
@@ -80,9 +81,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
 
   const packagingRows = useMemo(
     () =>
-      rows.filter(
-        (row) => !row.is_standard && (showInactive || row.is_active),
-      ),
+      rows.filter((row) => !row.is_standard && (showInactive || row.is_active)),
     [rows, showInactive],
   );
 
@@ -92,6 +91,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
   }
 
   function openEdit(row: UnitRow) {
+    if (row.inUse) return;
     setEditRow(row);
     setDialogOpen(true);
   }
@@ -163,14 +163,16 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
   function RowActions({ row }: { row: UnitRow }) {
     return (
       <div className="flex items-center justify-end gap-1">
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          onClick={() => openEdit(row)}
-        >
-          <IconPencil className="size-4" />
-          <span className="sr-only">{copy.edit}</span>
-        </Button>
+        {!row.inUse ? (
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            onClick={() => openEdit(row)}
+          >
+            <IconPencil className="size-4" />
+            <span className="sr-only">{copy.edit}</span>
+          </Button>
+        ) : null}
         {row.inUse ? (
           <Button
             variant="ghost"
@@ -228,10 +230,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
             const dimensionRows = standardByDimension.get(dimension) ?? [];
             if (dimensionRows.length === 0) return null;
             return (
-              <div
-                key={dimension}
-                className="flex flex-col gap-2 px-4 py-3"
-              >
+              <div key={dimension} className="flex flex-col gap-2 px-4 py-3">
                 <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   {STANDARD_DIMENSION_LABEL[dimension]}
                 </p>

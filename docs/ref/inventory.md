@@ -97,6 +97,8 @@ Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu
 
 > **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`, và giá vốn BQ luôn lưu theo **đơn vị tồn chuẩn**. Chứng từ GRN, issue, waste, stocktake, recipe và production có thể nhập theo `entry_unit_id`; RPC/action phải quy đổi qua `ingredient_units`, không tin unit text từ client.
 
+Sau khi nguyên liệu đã có `stock_movements`, đơn vị tồn chuẩn và hệ số của các đơn vị hiện hữu là lịch sử kế toán kho nên không được sửa hoặc xóa. UI phải kiểm tra trước và khóa các dòng này; nếu cần cách nhập/đếm mới thì thêm một `ingredient_unit` mới. RPC `upsert_ingredient_catalog` vẫn là authority cuối và từ chối mọi thay đổi có thể diễn giải lại ledger cũ. Mã trong registry `units` cũng không được đổi sau khi đã gán; chỉ được ngừng dùng hoặc tạo đơn vị mới.
+
 ### 2.2 Database — bảng `ingredients`
 
 Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` là **giá nhập tham chiếu**; **giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` và tính trên **đơn vị tồn chuẩn**.
@@ -340,15 +342,15 @@ Ngoài phạm vi v1:
 
 ## 9. Cảnh báo tồn kho
 
-### 9.1 Cảnh báo đặt hàng (Reorder Alerts)
+### 9.1 Cảnh báo ngưỡng tồn
 
 > Hiển thị: card trên dashboard Tổng Quan (`/inventory`)
 
-So sánh `stock_levels.current_quantity` với `ingredients.reorder_point` (theo từng chi nhánh, chỉ `is_active = true`).
+So sánh `stock_levels.current_quantity` với `ingredients.min_stock_level` (theo từng chi nhánh, chỉ `is_active = true`). UI, import/export và cài đặt chỉ công bố một trường **Tồn tối thiểu**; `reorder_point` và `max_stock_level` là cột tương thích cũ và được ghi `NULL` khi danh mục được cập nhật.
 
-- Card vàng khi có nguyên liệu dưới mức đặt hàng, xanh khi đủ tồn.
-- Hiển thị top 5 nguyên liệu cần đặt + current/reorder ratio + đơn vị.
-- Tính `suggested_order_qty = max_stock_level - current_quantity`.
+- Card vàng khi tồn chạm hoặc thấp hơn `Min`, xanh khi đủ tồn.
+- Hiển thị top 5 nguyên liệu cần nhập + current/Min ratio + đơn vị.
+- Tính `suggested_order_qty = max(0, min_stock_level - current_quantity)`.
 - Branch scoping: `branch_manager` chỉ thấy chi nhánh mình.
 
 ### 9.2 Hạn sử dụng

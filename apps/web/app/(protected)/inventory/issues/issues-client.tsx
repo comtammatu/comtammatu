@@ -158,6 +158,7 @@ export function IssuesClient({
   recordedIsLimited,
   recordedStartDate: initialRecordedStartDate,
   listBasePath = "/inventory/consumption",
+  detailBasePath = listBasePath,
   allowedIssueTypes = ["consumption", "writeoff", "other"],
   defaultIssueType = "consumption",
   pageTitle,
@@ -172,6 +173,7 @@ export function IssuesClient({
   recordedIsLimited: boolean;
   recordedStartDate: string;
   listBasePath?: string;
+  detailBasePath?: string;
   allowedIssueTypes?: string[];
   defaultIssueType?: string;
   pageTitle?: string;
@@ -214,21 +216,34 @@ export function IssuesClient({
   );
   const isConsumptionScope =
     allowedIssueTypes.length === 1 && allowedIssueTypes[0] === "consumption";
-  const issueListTitle = isConsumptionScope
-    ? INVENTORY_VI.manualConsumptionSlipsTitle
-    : INVENTORY_VI.issueSlipsTitle;
-  const createIssueActionLabel = isConsumptionScope
-    ? INVENTORY_VI.manualConsumptionCreateAction
-    : INVENTORY_VI.issueCreateAction;
-  const createIssueDialogDescription = isConsumptionScope
-    ? INVENTORY_VI.manualConsumptionCreateDescription
-    : INVENTORY_VI.issueCreateDialogDescription;
-  const issueEmptyNoDataTitle = isConsumptionScope
-    ? INVENTORY_VI.manualConsumptionEmptyTitle
-    : INVENTORY_VI.issueEmptyNoData;
-  const issueEmptyDescription = isConsumptionScope
-    ? INVENTORY_VI.manualConsumptionEmptyDescription
-    : INVENTORY_VI.issueEmptyDescription;
+  const isCombinedConsumptionScope =
+    allowedIssueTypes.length > 1 && allowedIssueTypes.includes("consumption");
+  const showsRecordedConsumption = allowedIssueTypes.includes("consumption");
+  const issueListTitle = isCombinedConsumptionScope
+    ? INVENTORY_VI.combinedConsumptionSlipsTitle
+    : isConsumptionScope
+      ? INVENTORY_VI.manualConsumptionSlipsTitle
+      : INVENTORY_VI.issueSlipsTitle;
+  const createIssueActionLabel = isCombinedConsumptionScope
+    ? INVENTORY_VI.combinedConsumptionCreateAction
+    : isConsumptionScope
+      ? INVENTORY_VI.manualConsumptionCreateAction
+      : INVENTORY_VI.issueCreateAction;
+  const createIssueDialogDescription = isCombinedConsumptionScope
+    ? INVENTORY_VI.combinedConsumptionCreateDescription
+    : isConsumptionScope
+      ? INVENTORY_VI.manualConsumptionCreateDescription
+      : INVENTORY_VI.issueCreateDialogDescription;
+  const issueEmptyNoDataTitle = isCombinedConsumptionScope
+    ? INVENTORY_VI.combinedConsumptionEmptyTitle
+    : isConsumptionScope
+      ? INVENTORY_VI.manualConsumptionEmptyTitle
+      : INVENTORY_VI.issueEmptyNoData;
+  const issueEmptyDescription = isCombinedConsumptionScope
+    ? INVENTORY_VI.combinedConsumptionEmptyDescription
+    : isConsumptionScope
+      ? INVENTORY_VI.manualConsumptionEmptyDescription
+      : INVENTORY_VI.issueEmptyDescription;
   // Capability-gated only — the CSV builds client-side and downloads fine
   // on phones; hiding it by breakpoint forced warehouse staff back to a
   // desktop just to press one button.
@@ -287,7 +302,7 @@ export function IssuesClient({
 
     if (res.success && res.data) {
       const newId = (res.data as { id: number }).id;
-      router.push(`${listBasePath}/${newId}`);
+      router.push(`${detailBasePath}/${newId}`);
     }
 
     return res;
@@ -660,7 +675,7 @@ export function IssuesClient({
       header: INVENTORY_VI.issueCode,
       render: (item) => (
         <Link
-          href={`${listBasePath}/${item.id}`}
+          href={`${detailBasePath}/${item.id}`}
           className="font-mono text-primary hover:underline"
         >
           {item.code}
@@ -702,7 +717,7 @@ export function IssuesClient({
           variant="ghost"
           size="icon-sm"
           aria-label={`${ACTIONS_VI.viewDetails} ${item.code}`}
-          render={<Link href={`${listBasePath}/${item.id}`} />}
+          render={<Link href={`${detailBasePath}/${item.id}`} />}
         >
           <IconDotsVertical className="size-4" />
         </Button>
@@ -772,7 +787,7 @@ export function IssuesClient({
     <InteractiveCard
       minHeight="mobile"
       padding="default"
-      render={<Link href={`${listBasePath}/${item.id}`} className="block" />}
+      render={<Link href={`${detailBasePath}/${item.id}`} className="block" />}
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-2">
@@ -822,7 +837,7 @@ export function IssuesClient({
         />
       )}
 
-      {(recordedConsumptions.length > 0 || isConsumptionScope) && (
+      {(recordedConsumptions.length > 0 || showsRecordedConsumption) && (
         <AppSection
           title={INVENTORY_VI.recordedConsumptionTitle}
           headerHint={visibleRecordedConsumptionHint}

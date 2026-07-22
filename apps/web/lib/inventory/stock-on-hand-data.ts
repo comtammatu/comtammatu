@@ -40,9 +40,7 @@ type TenantStockLevelRow = {
   current_quantity: number | null;
   avg_unit_cost: number | null;
   ingredients:
-    | { unit_cost: number | null }
-    | { unit_cost: number | null }[]
-    | null;
+    { unit_cost: number | null } | { unit_cost: number | null }[] | null;
 };
 
 type StockIngredientRow = {
@@ -281,7 +279,7 @@ export async function loadStockOnHandPageData({
         min,
         max,
         reorder,
-        status: computeStockStatus(qty, min, max),
+        status: computeStockStatus(qty, min),
         lastCount: stock?.lastCountedAt ? formatDate(stock.lastCountedAt) : "—",
         temp: storageTemp(row.storage_type),
         locationBreakdown: locationMap.get(row.id) ?? [],

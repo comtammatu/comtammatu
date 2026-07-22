@@ -51,15 +51,13 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
       showProduction: true,
       showCatalogManagement: true,
       showSettings: true,
-      showWasteApprovals: true,
-      showCountAssignments: true,
-      showCountSlips: true,
     }),
   );
 
   for (const href of [
-    "/inventory/operations",
-    "/inventory/supplier-invoices",
+    "/inventory/grn",
+    "/inventory/consumption",
+    "/inventory/transfers",
     "/inventory/production",
     "/inventory/settings",
     "/inventory/suppliers",
@@ -73,51 +71,42 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
     );
   }
 
-  for (const href of ["/inventory/transfers", "/inventory/supplier-returns"]) {
+  for (const href of [
+    "/inventory/operations",
+    "/inventory/supplier-invoices",
+    "/inventory/stocktake",
+    "/inventory/count-assignments",
+    "/inventory/count-slips",
+    "/inventory/reports",
+  ]) {
     assert.equal(
       visible.has(href),
       false,
-      `${href} is covered by a parent workflow entry, not its own sidebar row`,
+      `${href} must stay out of the simplified sidebar`,
     );
   }
 });
 
-test("inventory sidebar compresses count management into one visible entry", () => {
+test("inventory sidebar removes duplicate stock-control and finance entries", () => {
   const groups = resolveInventoryNav({
     userRole: "owner",
     showProcurement: true,
     showProduction: true,
     showCatalogManagement: true,
     showSettings: true,
-    showWasteApprovals: true,
-    showCountAssignments: true,
-    showCountSlips: true,
   });
   const visible = hrefs(groups);
-  const countItem = groups
-    .flatMap((group) => group.items)
-    .find((item) => item.label === "Đếm tồn");
-
-  assert.equal(
-    visible.has("/inventory/count-assignments"),
-    true,
-    "count assignments remain reachable from the compressed sidebar",
-  );
-  assert.equal(
-    visible.has("/inventory/count-slips"),
-    false,
-    "count slips are covered by the single Đếm tồn entry instead of a second sidebar row",
-  );
-  assert.deepEqual(countItem?.matchPrefixes, [
+  for (const href of [
+    "/inventory/stocktake",
     "/inventory/count-assignments",
     "/inventory/count-slips",
-  ]);
-
-  for (const href of ["/inventory/consumption", "/inventory/waste/approvals"]) {
+    "/inventory/reports",
+    "/inventory/supplier-invoices",
+  ]) {
     assert.equal(
       visible.has(href),
       false,
-      `${href} stays out of the compressed sidebar`,
+      `${href} stays out of the simplified sidebar`,
     );
   }
 });
@@ -129,9 +118,6 @@ test("inventory nav click targets preserve branch URL scope", () => {
     showProduction: true,
     showCatalogManagement: true,
     showSettings: true,
-    showWasteApprovals: true,
-    showCountAssignments: true,
-    showCountSlips: true,
   });
   const scoped = withInventoryBranchNavScope(groups, 3);
   const stockItem = scoped
@@ -141,10 +127,7 @@ test("inventory nav click targets preserve branch URL scope", () => {
   assert.equal(stockItem?.href, "/inventory/stock");
   assert.equal(stockItem?.linkHref, "/inventory/stock?branchId=3");
   assert.match(appShellSource, /href=\{subItem\.linkHref \?\? subItem\.href\}/);
-  assert.match(
-    ownerBottomNavSource,
-    /href: item\.linkHref \?\? item\.href/,
-  );
+  assert.match(ownerBottomNavSource, /href: item\.linkHref \?\? item\.href/);
   assert.equal(withInventoryBranchNavScope(groups, null), groups);
 });
 
@@ -156,9 +139,6 @@ test("owner inventory nav excludes /inventory/drafts (folded into GRN list draft
       showProduction: true,
       showCatalogManagement: true,
       showSettings: true,
-      showWasteApprovals: true,
-      showCountAssignments: true,
-      showCountSlips: true,
     }),
   );
 
@@ -169,35 +149,29 @@ test("owner inventory nav excludes /inventory/drafts (folded into GRN list draft
   );
 });
 
-test("Owner surface inventory nav keeps transfer routes under Giao dịch kho", () => {
+test("Owner surface inventory nav exposes direct warehouse workflow routes", () => {
   const groups = resolveInventoryNav({
     userRole: "owner",
     showProcurement: true,
     showProduction: true,
     showCatalogManagement: true,
     showSettings: true,
-    showWasteApprovals: true,
-    showCountAssignments: true,
-    showCountSlips: true,
   });
   const visible = hrefs(groups);
-  const operationsItem = groups
-    .flatMap((group) => group.items)
-    .find((item) => item.href === "/inventory/operations");
-
-  for (const href of ["/inventory/stock", "/inventory/stocktake"]) {
+  for (const href of [
+    "/inventory/stock",
+    "/inventory/grn",
+    "/inventory/consumption",
+    "/inventory/transfers",
+  ]) {
     assert.equal(
       visible.has(href),
       true,
-      `Owner surface inventory nav must advertise ${href} as an oversight entry — additive to the branch operator door at /br/[id]/stock/*`,
+      `Owner surface inventory nav must advertise ${href}`,
     );
   }
 
-  assert.equal(visible.has("/inventory/transfers"), false);
-  assert.ok(
-    operationsItem?.matchPrefixes?.includes("/inventory/transfers"),
-    "Giao dịch kho must own the transfer route active state",
-  );
+  assert.equal(visible.has("/inventory/operations"), false);
 });
 
 test("inventory desktop workflow groups keep the canonical operator order", () => {
@@ -207,9 +181,6 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
     showProduction: true,
     showCatalogManagement: true,
     showSettings: true,
-    showWasteApprovals: true,
-    showCountAssignments: true,
-    showCountSlips: true,
   });
 
   assert.deepEqual(
@@ -227,7 +198,7 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
     [
       "/inventory",
       "/inventory/stock",
-      "/inventory/operations",
+      "/inventory/grn",
       "/inventory/production",
       "/inventory/settings",
     ],
@@ -248,9 +219,6 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
     showProduction: true,
     showCatalogManagement: true,
     showSettings: true,
-    showWasteApprovals: true,
-    showCountAssignments: true,
-    showCountSlips: true,
   });
   const visible = hrefs(groups);
   const settingsItem = groups
