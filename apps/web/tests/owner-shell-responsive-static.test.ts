@@ -151,19 +151,13 @@ test("Owner list-card actions use named touch variants without enlarging desktop
   assert.equal(refunds.match(/size="touch"/g)?.length, 2);
 });
 
-test("threshold cards stack fields on phones and paginate the growth list", () => {
+test("single-Min threshold cards stay touch-safe and paginate the growth list", () => {
   const source = read(
     "apps/web/app/(protected)/inventory/settings/thresholds/thresholds-client.tsx",
   );
 
   assert.match(source, /pageSize=\{25\}/);
-  assert.equal(
-    source.match(/grid grid-cols-1 gap-3 sm:grid-cols-3/g)?.length,
-    2,
-  );
-  assert.equal(
-    source.match(/h-12 text-right tabular-nums lg:h-10/g)?.length,
-    6,
-  );
+  assert.doesNotMatch(source, /sm:grid-cols-3/);
+  assert.equal(source.match(/h-12 text-right tabular-nums lg:h-10/g)?.length, 2);
   assert.match(source, /<Checkbox[\s\S]*size="touch"/);
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   Eye as IconEye,
   EyeOff as IconEyeOff,
@@ -30,10 +30,14 @@ import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
 import { AppEmptyState } from "@/components/surface";
 import {
+  fetchIngredientUnitLock,
   fetchIngredients,
   toggleIngredientActive,
 } from "@/(protected)/inventory/ingredient-actions";
-import { IngredientDialog } from "@/(protected)/inventory/ingredients/ingredient-dialog";
+import {
+  IngredientDialog,
+  type IngredientUnitLockState,
+} from "@/(protected)/inventory/ingredients/ingredient-dialog";
 import type {
   CategoryOption,
   IngredientRow,
@@ -59,13 +63,17 @@ export function CatalogIngredientsClient({
   const [showArchived, setShowArchived] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<IngredientRow | null>(null);
+  const [unitLockState, setUnitLockState] =
+    useState<IngredientUnitLockState>("editable");
   const [isPending, startTransition] = useTransition();
+  const unitLockRequestRef = useRef(0);
 
   const filtered = useMemo(() => {
     let result = rows;
     if (!showArchived) result = result.filter((row) => row.is_active);
     const q = search.trim();
-    if (q) result = result.filter((row) => matchesSearch([row.name, row.sku], q));
+    if (q)
+      result = result.filter((row) => matchesSearch([row.name, row.sku], q));
     return result;
   }, [rows, showArchived, search]);
 
@@ -79,13 +87,26 @@ export function CatalogIngredientsClient({
   }
 
   function openCreate() {
+    unitLockRequestRef.current += 1;
     setEditing(null);
+    setUnitLockState("editable");
     setDialogOpen(true);
   }
 
-  function openEdit(row: IngredientRow) {
+  async function openEdit(row: IngredientRow) {
+    const requestId = unitLockRequestRef.current + 1;
+    unitLockRequestRef.current = requestId;
     setEditing(row);
+    setUnitLockState("checking");
     setDialogOpen(true);
+    const result = await fetchIngredientUnitLock(row.id);
+    if (unitLockRequestRef.current !== requestId) return;
+    if (!result.success || !result.data) {
+      setUnitLockState("unavailable");
+      toast.error(result.error ?? copy.reloadFailed);
+      return;
+    }
+    setUnitLockState(result.data.locked ? "locked" : "editable");
   }
 
   async function handleToggleArchive(row: IngredientRow) {
@@ -220,6 +241,7 @@ export function CatalogIngredientsClient({
         ingredient={editing}
         unitOptions={unitOptions}
         categoryOptions={categoryOptions}
+        unitLockState={unitLockState}
         onSaved={reload}
       />
     </div>

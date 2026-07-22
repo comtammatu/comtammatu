@@ -396,17 +396,6 @@ function OwnerStockIngredientDetail({
                   description: formatQty(ingredient.min),
                 },
                 {
-                  term: messages.inventory.ingredients.dialog.reorderPointLabel,
-                  description: formatQty(ingredient.reorder),
-                },
-                {
-                  term: messages.inventory.ingredients.dialog.maxStockLabel,
-                  description:
-                    ingredient.max > 0
-                      ? formatQty(ingredient.max)
-                      : inventoryCommon.noValue,
-                },
-                {
                   term: detailCopy.storage,
                   description:
                     data.storageTemperature ?? inventoryCommon.noValue,

@@ -115,7 +115,7 @@ function mapCatalogRpcError(
   message: string | undefined,
 ): string {
   if (message?.includes("inventory_unit_ladder_locked_by_stock_movements")) {
-    return "Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị tồn chuẩn hoặc quy đổi về tồn chuẩn. Hãy tạo nguyên liệu mới hoặc xử lý điều chỉnh tồn kho.";
+    return "Nguyên liệu đã có lịch sử tồn kho; đơn vị tồn chuẩn và quy đổi hiện hữu đã khóa. Chỉ thêm đơn vị mới nếu cần cách nhập hoặc đếm khác.";
   }
   if (
     message?.includes("ingredient_unit_in_use_by_recipe") ||
@@ -124,7 +124,10 @@ function mapCatalogRpcError(
   ) {
     return "Đơn vị đang dùng trong công thức sản xuất hoặc công thức món; không thể xóa. Giữ đơn vị trong thang quy đổi hoặc sửa công thức trước.";
   }
-  if (message?.includes("unit not found") || message?.includes("unit_not_found")) {
+  if (
+    message?.includes("unit not found") ||
+    message?.includes("unit_not_found")
+  ) {
     return "Đơn vị tồn chuẩn không hợp lệ";
   }
   if (
@@ -228,7 +231,10 @@ export async function fetchIngredients(
   );
 
   if (error) {
-    return { success: false, error: messages.inventory.ingredients.list.loadFailed };
+    return {
+      success: false,
+      error: messages.inventory.ingredients.list.loadFailed,
+    };
   }
 
   const rows = (data ?? []).map((row) => {
@@ -261,6 +267,36 @@ export async function fetchIngredients(
   });
 
   return { success: true, data: rows };
+}
+
+export async function fetchIngredientUnitLock(
+  ingredientId: number,
+): Promise<ActionResult<{ locked: boolean }>> {
+  const parsedId = z.coerce.number().int().positive().safeParse(ingredientId);
+  if (!parsedId.success) {
+    return { success: false, error: "ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithAnyPermission(
+    INVENTORY_CATALOG_ROLES,
+    CATALOG_MANAGE_PERMISSIONS,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { count, error } = await ctx.supabase
+    .from("stock_movements")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .eq("ingredient_id", parsedId.data);
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể kiểm tra lịch sử đơn vị của nguyên liệu.",
+    };
+  }
+
+  return { success: true, data: { locked: (count ?? 0) > 0 } };
 }
 
 /* ─── Option fetchers for the dialog dropdowns ─── */
@@ -457,11 +493,7 @@ export async function updateIngredient(
 
   const { error } = await supabase.rpc(
     "upsert_ingredient_catalog",
-    rpcCatalogArgs(
-      parsedId.data,
-      parsedInput.data,
-      existing.shelf_life_days,
-    ),
+    rpcCatalogArgs(parsedId.data, parsedInput.data, existing.shelf_life_days),
   );
 
   if (error) {
@@ -509,8 +541,6 @@ interface ExportIngredientRow {
   item_kind: string;
   unit_cost: number | null;
   min_stock_level: number;
-  max_stock_level: number | null;
-  reorder_point: number | null;
   storage_type: string;
   is_active: boolean;
   units: {
@@ -530,9 +560,7 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
         { header: "Danh mục", key: "category", width: 18 },
         { header: "Loại hàng", key: "item_kind_label", width: 16 },
         { header: "Giá nhập (VND)", key: "unit_cost", width: 16 },
-        { header: "Tồn tối thiểu", key: "min_stock_level", width: 14 },
-        { header: "Tồn tối đa", key: "max_stock_level", width: 14 },
-        { header: "Điểm đặt hàng", key: "reorder_point", width: 14 },
+        { header: "Tồn tối thiểu", key: "min_stock_level", width: 18 },
         { header: "Bảo quản", key: "storage_label", width: 14 },
         { header: "Hoạt động", key: "is_active", width: 12 },
       ],
@@ -543,8 +571,6 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
         item_kind_label: ITEM_KIND_LABELS[r.item_kind] ?? r.item_kind,
         unit_cost: r.unit_cost ?? "",
         min_stock_level: r.min_stock_level,
-        max_stock_level: r.max_stock_level ?? "",
-        reorder_point: r.reorder_point ?? "",
         storage_label: STORAGE_LABELS[r.storage_type] ?? r.storage_type,
         is_active: r.is_active ? "Có" : "Không",
       })),
@@ -590,7 +616,7 @@ export async function exportIngredients(
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "name, sku, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+      "name, sku, category, item_kind, unit_cost, min_stock_level, storage_type, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("name");
@@ -609,9 +635,6 @@ export async function exportIngredients(
     item_kind: r.item_kind ?? "raw_material",
     unit_cost: r.unit_cost != null ? Number(r.unit_cost) : null,
     min_stock_level: Number(r.min_stock_level ?? 0),
-    max_stock_level:
-      r.max_stock_level != null ? Number(r.max_stock_level) : null,
-    reorder_point: r.reorder_point != null ? Number(r.reorder_point) : null,
     storage_type: r.storage_type ?? "ambient",
     is_active: r.is_active ?? true,
     units: (r.ingredient_units ?? [])
@@ -660,8 +683,6 @@ const importIngredientRowSchema = z.object({
   item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
   unit_cost: z.coerce.number().min(0).optional(),
   min_stock_level: z.coerce.number().min(0).default(0),
-  max_stock_level: z.coerce.number().min(0).optional(),
-  reorder_point: z.coerce.number().min(0).optional(),
   storage_type: z
     .enum(["ambient", "refrigerated", "frozen"])
     .default("ambient"),
@@ -827,22 +848,12 @@ export async function importIngredients(
       0,
     );
     const minStock = parseOptionalNumber(
-      raw["Tồn tối thiểu"] ?? raw["min_stock_level"],
-      3,
-    );
-    const maxStock = parseOptionalNumber(
-      raw["Tồn tối đa"] ?? raw["max_stock_level"],
-      3,
-    );
-    const reorder = parseOptionalNumber(
-      raw["Điểm đặt hàng"] ?? raw["reorder_point"],
+      raw["Tồn tối thiểu"] ?? raw["Ngưỡng tồn (Min)"] ?? raw["min_stock_level"],
       3,
     );
     const invalidNumber = [
       { field: "Giá nhập (VND)", result: unitCost },
       { field: "Tồn tối thiểu", result: minStock },
-      { field: "Tồn tối đa", result: maxStock },
-      { field: "Điểm đặt hàng", result: reorder },
     ].find(({ result }) => result.error != null);
     if (invalidNumber) {
       issues.push({
@@ -860,8 +871,6 @@ export async function importIngredients(
       item_kind: kindKey,
       unit_cost: unitCost.value,
       min_stock_level: minStock.value ?? 0,
-      max_stock_level: maxStock.value,
-      reorder_point: reorder.value,
       storage_type: storageKey,
       is_active: parseBool(raw["Hoạt động"] ?? raw["is_active"]),
     });
@@ -901,8 +910,8 @@ export async function importIngredients(
       item_kind: row.item_kind,
       unit_cost: row.unit_cost ?? null,
       min_stock_level: row.min_stock_level,
-      max_stock_level: row.max_stock_level ?? null,
-      reorder_point: row.reorder_point ?? null,
+      max_stock_level: null,
+      reorder_point: null,
       storage_type: row.storage_type,
     })),
   });
@@ -945,8 +954,6 @@ export async function downloadIngredientTemplate(): Promise<ActionResult> {
       item_kind: "raw_material",
       unit_cost: 18000,
       min_stock_level: 1000,
-      max_stock_level: 10000,
-      reorder_point: 2000,
       storage_type: "ambient",
       is_active: true,
       units: [

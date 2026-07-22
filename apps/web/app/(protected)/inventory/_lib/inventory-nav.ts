@@ -1,11 +1,10 @@
 import {
-  ChartBar as IconChartBar,
-  ClipboardCheck as IconClipboardCheck,
-  ClipboardList as IconClipboardList,
-  FileCheck as IconFileCheck,
+  ArrowRightLeft as IconArrowRightLeft,
+  CircleMinus as IconCircleMinus,
   FileText as IconFileText,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
+  PackagePlus as IconPackagePlus,
   Settings as IconSettings,
   Users as IconUsers,
   Utensils as IconToolsKitchen,
@@ -45,23 +44,13 @@ export function resolveInventoryNav({
   showProduction,
   showCatalogManagement,
   showSettings,
-  showCountAssignments,
-  showCountSlips,
 }: {
   userRole: StaffRole;
   showProcurement: boolean;
   showProduction: boolean;
   showCatalogManagement: boolean;
   showSettings: boolean;
-  showWasteApprovals: boolean;
-  showCountAssignments: boolean;
-  showCountSlips: boolean;
 }): ShellNavGroup[] {
-  const countHref = showCountAssignments
-    ? "/inventory/count-assignments"
-    : showCountSlips
-      ? "/inventory/count-slips"
-      : null;
   const groups: ShellNavGroup[] = [
     {
       title: "0 · Nay",
@@ -86,56 +75,32 @@ export function resolveInventoryNav({
         label: tNav("stock", "navigation"),
         icon: IconPackage,
       },
-      {
-        href: "/inventory/stocktake",
-        label: tNav("stocktake", "navigation"),
-        icon: IconClipboardCheck,
-      },
-      ...(countHref
-        ? [
-            {
-              href: countHref,
-              label: "Đếm tồn",
-              icon: IconClipboardList,
-              matchPrefixes: [
-                "/inventory/count-assignments",
-                "/inventory/count-slips",
-              ],
-            },
-          ]
-        : []),
-      {
-        href: "/inventory/reports",
-        label: tNav("reports", "navigation"),
-        icon: IconChartBar,
-      },
     ],
   });
 
   groups.push({
     title: "2 · Nhập/Nhận/Đối soát",
     items: [
-      {
-        href: "/inventory/operations",
-        label: "Giao dịch kho",
-        icon: IconFileText,
-        matchPrefixes: [
-          "/inventory/operations",
-          "/inventory/grn",
-          "/inventory/consumption",
-          "/inventory/issues",
-          "/inventory/transfers",
-        ],
-      },
       ...(showProcurement
         ? [
             {
-              href: "/inventory/supplier-invoices",
-              label: tNav("supplierInvoices", "navigation"),
-              icon: IconFileCheck,
+              href: "/inventory/grn",
+              label: "Nhập kho",
+              icon: IconPackagePlus,
             },
           ]
         : []),
+      {
+        href: "/inventory/consumption",
+        label: "Tiêu hao",
+        icon: IconCircleMinus,
+        matchPrefixes: ["/inventory/issues"],
+      },
+      {
+        href: "/inventory/transfers",
+        label: "Điều chuyển",
+        icon: IconArrowRightLeft,
+      },
     ],
   });
 

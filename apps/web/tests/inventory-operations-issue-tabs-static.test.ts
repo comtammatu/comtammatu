@@ -2,20 +2,24 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-const source = readFileSync(
+const operationsSource = readFileSync(
   "app/(protected)/inventory/operations/page.tsx",
   "utf8",
 );
+const consumptionSource = readFileSync(
+  "app/(protected)/inventory/consumption/page.tsx",
+  "utf8",
+);
+const issuesSource = readFileSync(
+  "app/(protected)/inventory/issues/page.tsx",
+  "utf8",
+);
 
-test("operations keeps sale consumption separate from internal issues", () => {
-  assert.match(source, /value: "consumption", label: "Tiêu hao vận hành"/);
-  assert.match(source, /value: "issues", label: "Sự cố kho"/);
+test("consumption combines operational usage and waste while keeping issue details", () => {
   assert.match(
-    source,
-    /activeTab === "consumption"[\s\S]*scope="consumption"[\s\S]*listBasePath="\/inventory\/consumption"/,
+    consumptionSource,
+    /scope="all"[\s\S]*listBasePath="\/inventory\/consumption"[\s\S]*detailBasePath="\/inventory\/issues"/,
   );
-  assert.match(
-    source,
-    /activeTab === "issues"[\s\S]*scope="internal"[\s\S]*listBasePath="\/inventory\/issues"/,
-  );
+  assert.match(operationsSource, /tab === "consumption" \|\| tab === "issues"/);
+  assert.match(issuesSource, /`\/inventory\/consumption\?\$\{query\}`/);
 });

@@ -79,13 +79,9 @@ export type StockMovementBadgeVariant = "success" | "destructive" | "secondary";
 export function computeStockIngredientDetailStatus(
   qty: number,
   min: number,
-  reorder: number,
-  max: number,
 ): StockStatus {
   if (qty <= 0) return "out";
-  if (qty < min) return "low";
-  if (max > 0 && qty > max) return "over";
-  if (reorder > 0 && qty <= reorder) return "low";
+  if (min > 0 && qty <= min) return "low";
   return "normal";
 }
 

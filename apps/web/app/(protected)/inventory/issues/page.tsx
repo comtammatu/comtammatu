@@ -120,6 +120,7 @@ interface IssuesPageContentProps {
     startDate?: string | string[];
   }>;
   listBasePath?: string;
+  detailBasePath?: string;
   scope?: IssuesScope;
   embedded?: boolean;
 }
@@ -127,6 +128,7 @@ interface IssuesPageContentProps {
 export async function IssuesPageContent({
   searchParams,
   listBasePath = "/inventory/consumption",
+  detailBasePath = listBasePath,
   scope: scopeVariant = "all",
   embedded = false,
 }: IssuesPageContentProps) {
@@ -267,6 +269,7 @@ export async function IssuesPageContent({
       recordedIsLimited={!hasRecordedDateFilter}
       recordedStartDate={startDate ?? ""}
       listBasePath={listBasePath}
+      detailBasePath={detailBasePath}
       allowedIssueTypes={scopeConfig.allowedIssueTypes}
       defaultIssueType={scopeConfig.defaultIssueType}
       pageTitle={pageTitle}
@@ -286,7 +289,6 @@ export default async function IssuesPage({
 }) {
   const params = await searchParams;
   const qParams = new URLSearchParams();
-  qParams.set("tab", "issues");
   if (params.branchId) {
     if (Array.isArray(params.branchId)) {
       params.branchId.forEach((id) => qParams.append("branchId", id));
@@ -307,5 +309,8 @@ export default async function IssuesPage({
       : params.endDate;
     if (ed) qParams.set("endDate", ed);
   }
-  redirect(`/inventory/operations?${qParams.toString()}`);
+  const query = qParams.toString();
+  redirect(
+    query ? `/inventory/consumption?${query}` : "/inventory/consumption",
+  );
 }

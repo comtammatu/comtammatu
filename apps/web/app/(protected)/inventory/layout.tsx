@@ -34,30 +34,22 @@ export default async function InventoryLayout({
     canOpenSettings,
     hasProductionPermission,
     hasProductionBranchAccess,
-    canApproveWaste,
-    canAssignCounts,
-    canApproveCounts,
   ] = await Promise.all([
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
     currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
     currentUserHasAnyPermissionAny(INVENTORY_SETTINGS_PERMISSIONS),
     currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
     hasCurrentProductionBranchAccess(supabase, claims),
-    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_WASTE_APPROVE),
-    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN),
-    currentUserHasPermissionAny(PERMISSION_KEYS.INVENTORY_COUNT_APPROVE),
   ]);
   const isOwner = claims.user_role === "owner";
   const showProcurement =
     isOwner ||
-    (canAccess(claims.user_role, "branch_stock") &&
-      hasProcurementRead);
+    (canAccess(claims.user_role, "branch_stock") && hasProcurementRead);
   const showProduction =
     isOwner ||
     (canAccessProductionSurface(claims.user_role) &&
       hasProductionPermission &&
       hasProductionBranchAccess);
-  const showWasteApprovals = isOwner || canApproveWaste;
 
   return (
     <>
@@ -76,9 +68,6 @@ export default async function InventoryLayout({
         showProduction={showProduction}
         showCatalogManagement={isOwner || canManageCatalog}
         showSettings={isOwner || canOpenSettings}
-        showWasteApprovals={showWasteApprovals}
-        showCountAssignments={isOwner || canAssignCounts}
-        showCountSlips={isOwner || canApproveCounts}
         allowedBranches={scope.allowedBranches}
         defaultBranchId={scope.selectedBranchId}
       >

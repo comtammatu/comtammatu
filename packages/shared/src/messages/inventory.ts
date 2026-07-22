@@ -348,6 +348,13 @@ export const INVENTORY_VI = {
   manualConsumptionEmptyTitle: "Chưa có phiếu tiêu hao thủ công",
   manualConsumptionEmptyDescription:
     "Phần này chỉ theo dõi chứng từ nhập tay; các dòng đã ghi sổ nằm ở mục tiêu hao đã ghi nhận.",
+  combinedConsumptionSlipsTitle: "Phiếu vận hành và hao hụt",
+  combinedConsumptionCreateAction: "Tạo phiếu tiêu hao / hao hụt",
+  combinedConsumptionCreateDescription:
+    "Ghi tiêu hao vận hành, hao hụt hoặc xuất khác theo đúng chi nhánh.",
+  combinedConsumptionEmptyTitle: "Chưa có phiếu vận hành hoặc hao hụt",
+  combinedConsumptionEmptyDescription:
+    "Tạo phiếu khi cần ghi tiêu hao ngoài POS, hao hụt hoặc xuất khác.",
   issueSlipsTitle: "WO / PXK khác",
   issueCreateAction: "Tạo WO/PXK khác",
   issueEmptyFiltered: "Không tìm thấy phiếu phù hợp",
@@ -501,8 +508,7 @@ export const INVENTORY_VI = {
   dashboardGrnPriceReviewLabel: "GRN cần kiểm tra giá",
   dashboardGrnPriceReviewTask: (count: number) =>
     `${formatCount(count)} dòng GRN cần kiểm tra giá`,
-  dashboardGrnPriceVarianceHint:
-    "Giá nhập cần rà soát trong 30 ngày qua.",
+  dashboardGrnPriceVarianceHint: "Giá nhập cần rà soát trong 30 ngày qua.",
   // Production surface guards — generalized copy (D068): production runs at the
   // central kitchen or at a branch, not central-kitchen-only.
   productionSiteRequired:

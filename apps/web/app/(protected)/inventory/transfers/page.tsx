@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import {
   fetchStockTransfers,
@@ -80,15 +80,5 @@ export default async function TransfersPage({
     branchId?: string | string[];
   }>;
 }) {
-  const params = await searchParams;
-  const qParams = new URLSearchParams();
-  qParams.set("tab", "transfers");
-  if (params.branchId) {
-    if (Array.isArray(params.branchId)) {
-      params.branchId.forEach((id) => qParams.append("branchId", id));
-    } else {
-      qParams.set("branchId", params.branchId);
-    }
-  }
-  redirect(`/inventory/operations?${qParams.toString()}`);
+  return <TransfersPageContent searchParams={searchParams} />;
 }

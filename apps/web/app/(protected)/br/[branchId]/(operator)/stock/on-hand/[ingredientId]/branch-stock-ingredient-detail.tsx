@@ -35,11 +35,7 @@ import {
   type StockIngredientDetailData,
 } from "@lib/inventory/stock-on-hand-detail-model";
 import { messages } from "@lib/messages";
-import {
-  formatDate,
-  formatDateTime,
-  formatQty,
-} from "@lib/inventory/format";
+import { formatDate, formatDateTime, formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 
 const stockCopy = messages.inventory.stock;
@@ -337,19 +333,6 @@ export function BranchStockIngredientDetail({
                   {
                     label: stockCopy.table.minThreshold,
                     value: `${formatQty(ingredient.min)} ${ingredient.unit}`,
-                  },
-                  {
-                    label:
-                      messages.inventory.ingredients.dialog.reorderPointLabel,
-                    value: `${formatQty(ingredient.reorder)} ${ingredient.unit}`,
-                  },
-                  {
-                    label: messages.inventory.ingredients.dialog.maxStockLabel,
-                    value:
-                      ingredient.max > 0
-                        ? `${formatQty(ingredient.max)} ${ingredient.unit}`
-                        : inventoryCommon.noValue,
-                    muted: ingredient.max <= 0,
                   },
                   {
                     label: detailCopy.storage,

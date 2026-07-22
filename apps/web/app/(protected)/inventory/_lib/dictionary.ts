@@ -27,7 +27,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     transfers: { short: "Điều chuyển", long: "Điều chuyển nội bộ" },
     stocktake: { long: "Kiểm kê đối chiếu" },
     issues: { short: "Sự cố kho", long: "Sự cố kho" },
-    consumption: { long: "Tiêu hao vận hành" },
+    consumption: { long: "Tiêu hao" },
     reports: { long: "Báo cáo" },
     production: { long: "Sản xuất Bếp Trung Tâm" },
     ingredients: { long: "Nguyên liệu" },
