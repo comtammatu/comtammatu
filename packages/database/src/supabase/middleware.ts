@@ -3,6 +3,60 @@ import { type NextRequest, NextResponse } from "next/server";
 import type { Database } from "../index";
 import { getSupabaseUrl, getSupabaseAnonKey } from "./_env";
 
+function isAuthRefreshSocketClose(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  error: unknown,
+): boolean {
+  if (init?.method?.toUpperCase() !== "POST") return false;
+
+  const cause =
+    typeof error === "object" && error !== null && "cause" in error
+      ? error.cause
+      : null;
+  const code =
+    typeof cause === "object" && cause !== null && "code" in cause
+      ? cause.code
+      : null;
+  if (code !== "UND_ERR_SOCKET") return false;
+
+  const rawUrl = input instanceof Request ? input.url : String(input);
+  try {
+    const url = new URL(rawUrl);
+    return (
+      url.pathname.endsWith("/auth/v1/token") &&
+      url.searchParams.get("grant_type") === "refresh_token"
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function createAuthSocketRetryFetch(
+  fetcher: typeof fetch = fetch,
+): typeof fetch {
+  let retried = false;
+  return async (input, init) => {
+    try {
+      return await fetcher(input, init);
+    } catch (error) {
+      if (
+        retried ||
+        init?.signal?.aborted ||
+        !isAuthRefreshSocketClose(input, init, error)
+      ) {
+        throw error;
+      }
+      retried = true;
+      console.warn("[supabase-middleware] retrying auth refresh", {
+        code: "UND_ERR_SOCKET",
+        attempt: 2,
+      });
+      return fetcher(input, init);
+    }
+  };
+}
+
 /**
  * Middleware Supabase client — reads session from cookies and persists any
  * refreshed tokens via the `setAll` callback.
@@ -31,6 +85,7 @@ export async function updateSession(request: NextRequest) {
     getSupabaseUrl(),
     getSupabaseAnonKey(),
     {
+      global: { fetch: createAuthSocketRetryFetch() },
       cookies: {
         getAll() {
           return request.cookies.getAll();
