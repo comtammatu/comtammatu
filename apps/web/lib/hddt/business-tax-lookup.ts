@@ -1,4 +1,4 @@
-const VIETQR_BUSINESS_LOOKUP_URL = "https://api.vietqr.io/v2/business";
+const BUSINESS_TAX_LOOKUP_URL = "/api/self-order/tax-lookup";
 const BUSINESS_TAX_CODE_PATTERN = /^\d{10}(-\d{3})?$/;
 
 export interface BusinessTaxLookup {
@@ -50,11 +50,9 @@ export async function lookupBusinessTaxCode(
   if (!isBusinessTaxCode(normalizedTaxCode)) return null;
 
   const response = await fetch(
-    `${VIETQR_BUSINESS_LOOKUP_URL}/${encodeURIComponent(normalizedTaxCode)}`,
+    `${BUSINESS_TAX_LOOKUP_URL}/${encodeURIComponent(normalizedTaxCode)}`,
     {
       cache: "no-store",
-      credentials: "omit",
-      referrerPolicy: "no-referrer",
       signal,
     },
   );

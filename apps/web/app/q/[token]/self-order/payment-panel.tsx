@@ -41,7 +41,7 @@ import {
 import {
   isBusinessTaxCode,
   lookupBusinessTaxCode,
-} from "@lib/self-order/business-tax-lookup";
+} from "@lib/hddt/business-tax-lookup";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
 
 export interface GuestPaymentRequestState {

@@ -1,7 +1,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: invoice form section displays inline vietnamese text for advisory warnings and placeholder text */
 "use client";
 
-import { useId } from "react";
+import { useId, useRef, useState } from "react";
 import { Receipt as IconReceipt } from "lucide-react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -12,13 +12,24 @@ import {
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { BUYER_NOT_GET_INVOICE_NAME } from "@comtammatu/shared/providers";
 import { POS_VI } from "@comtammatu/shared/messages";
 import { AppSection } from "@/components/surface";
+import {
+  isBusinessTaxCode,
+  lookupBusinessTaxCode,
+} from "@lib/hddt/business-tax-lookup";
 
 const ADVISORY_THRESHOLD_VND = 200_000;
-const MST_REGEX = /^\d{10}(-\d{3})?$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type BuyerTaxLookupStatus =
+  | "idle"
+  | "loading"
+  | "found"
+  | "not-found"
+  | "unavailable";
 
 export interface InvoiceFormState {
   enabled: boolean;
@@ -49,7 +60,7 @@ export function isInvoiceFormValid(state: InvoiceFormState): boolean {
   const name = state.buyerName.trim();
   const mst = state.buyerTaxCode.trim();
   const email = state.buyerEmail.trim();
-  if (mst.length > 0 && !MST_REGEX.test(mst)) return false;
+  if (mst.length > 0 && !isBusinessTaxCode(mst)) return false;
   if (mst.length > 0 && name.length === 0) return false;
   if (email.length > 0 && !EMAIL_REGEX.test(email)) return false;
   return true;
@@ -93,16 +104,95 @@ export function InvoiceFormSection({
   const mstId = useId();
   const addrId = useId();
   const emailId = useId();
+  const [taxLookupStatus, setTaxLookupStatus] =
+    useState<BuyerTaxLookupStatus>("idle");
+  const taxLookupRequestRef = useRef(0);
+  const stateRef = useRef(state);
+
+  stateRef.current = state;
+
+  function resetTaxLookup() {
+    taxLookupRequestRef.current += 1;
+    setTaxLookupStatus("idle");
+  }
+
+  function handleTaxCodeChange(value: string) {
+    resetTaxLookup();
+    const next = {
+      ...state,
+      buyerTaxCode: value,
+      buyerName: "",
+      buyerAddress: "",
+    };
+    stateRef.current = next;
+    onChange(next);
+  }
+
+  async function handleTaxCodeBlur() {
+    const taxCode = stateRef.current.buyerTaxCode.trim();
+    if (
+      !isBusinessTaxCode(taxCode) ||
+      (taxLookupStatus !== "idle" && taxLookupStatus !== "unavailable")
+    ) {
+      return;
+    }
+
+    const requestId = taxLookupRequestRef.current + 1;
+    taxLookupRequestRef.current = requestId;
+    setTaxLookupStatus("loading");
+
+    try {
+      const business = await lookupBusinessTaxCode(taxCode);
+      if (
+        taxLookupRequestRef.current !== requestId ||
+        stateRef.current.buyerTaxCode.trim() !== taxCode
+      ) {
+        return;
+      }
+      if (!business) {
+        setTaxLookupStatus("not-found");
+        return;
+      }
+
+      const next = {
+        ...stateRef.current,
+        buyerName: business.name,
+        buyerAddress: business.address,
+      };
+      stateRef.current = next;
+      onChange(next);
+      setTaxLookupStatus("found");
+    } catch {
+      if (taxLookupRequestRef.current !== requestId) return;
+      setTaxLookupStatus("unavailable");
+    }
+  }
 
   const showAdvisory = !state.enabled && totalAmount >= ADVISORY_THRESHOLD_VND;
   const buyerNotGetInvoice = !state.enabled;
 
   const mstTrim = state.buyerTaxCode.trim();
   const emailTrim = state.buyerEmail.trim();
-  const mstInvalid = mstTrim.length > 0 && !MST_REGEX.test(mstTrim);
+  const mstInvalid = mstTrim.length > 0 && !isBusinessTaxCode(mstTrim);
   const emailInvalid = emailTrim.length > 0 && !EMAIL_REGEX.test(emailTrim);
   const nameMissing =
     state.enabled && mstTrim.length > 0 && state.buyerName.trim().length === 0;
+  const taxLookupMessage =
+    taxLookupStatus === "loading"
+      ? POS_VI.taxLookupLoading
+      : taxLookupStatus === "found"
+        ? POS_VI.taxLookupFound
+        : taxLookupStatus === "not-found"
+          ? POS_VI.taxLookupNotFound
+          : taxLookupStatus === "unavailable"
+            ? POS_VI.taxLookupUnavailable
+            : null;
+  const taxCodeDescribedBy = [
+    mstInvalid ? "pos-buyer-tax-code-error" : null,
+    taxLookupMessage ? "pos-buyer-tax-code-lookup" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <AppSection
@@ -119,17 +209,20 @@ export function InvoiceFormSection({
             size="touch"
             checked={buyerNotGetInvoice}
             disabled={disabled}
-            onCheckedChange={(checked) =>
-              checked === true
-                ? onChange({
-                    enabled: false,
-                    buyerName: "",
-                    buyerTaxCode: "",
-                    buyerAddress: "",
-                    buyerEmail: "",
-                  })
-                : onChange({ ...state, enabled: true })
-            }
+            onCheckedChange={(checked) => {
+              if (checked === true) {
+                resetTaxLookup();
+                onChange({
+                  enabled: false,
+                  buyerName: "",
+                  buyerTaxCode: "",
+                  buyerAddress: "",
+                  buyerEmail: "",
+                });
+                return;
+              }
+              onChange({ ...state, enabled: true });
+            }}
           />
           <FieldLabel
             htmlFor={checkboxId}
@@ -187,14 +280,32 @@ export function InvoiceFormSection({
                 value={state.buyerTaxCode}
                 disabled={disabled}
                 maxLength={14}
-                onChange={(e) =>
-                  onChange({ ...state, buyerTaxCode: e.target.value })
-                }
+                inputMode="numeric"
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(e) => handleTaxCodeChange(e.target.value)}
+                onBlur={() => void handleTaxCodeBlur()}
                 placeholder="0123456789"
                 aria-invalid={mstInvalid || undefined}
+                aria-describedby={taxCodeDescribedBy || undefined}
               />
               {mstInvalid ? (
-                <FieldError>{POS_VI.taxCodeError}</FieldError>
+                <FieldError id="pos-buyer-tax-code-error">
+                  {POS_VI.taxCodeError}
+                </FieldError>
+              ) : null}
+              {taxLookupMessage ? (
+                <p
+                  id="pos-buyer-tax-code-lookup"
+                  role="status"
+                  aria-live="polite"
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                >
+                  {taxLookupStatus === "loading" ? (
+                    <Spinner aria-hidden="true" className="size-4" />
+                  ) : null}
+                  {taxLookupMessage}
+                </p>
               ) : null}
             </Field>
 

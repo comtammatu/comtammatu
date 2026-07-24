@@ -73,6 +73,11 @@ export const POS_VI = {
   taxCodeLabel: "Mã số thuế",
   taxCodeOptionalHint: "(tùy chọn, 10 hoặc 13 số)",
   taxCodeError: "MST phải có dạng 10 số hoặc 10-3 số (vd 0123456789-001).",
+  taxLookupLoading: "Đang tra cứu MST...",
+  taxLookupFound: "Đã tìm thấy thông tin. Vui lòng kiểm tra lại.",
+  taxLookupNotFound: "Không tìm thấy MST. Vui lòng kiểm tra hoặc nhập tay.",
+  taxLookupUnavailable:
+    "Chưa tra cứu được. Bạn vẫn có thể nhập tên và địa chỉ.",
   addressLabel: "Địa chỉ",
   optionalHint: "(tùy chọn)",
   printerNoneTitle: "Chưa có máy in nào kết nối cho chi nhánh này",
