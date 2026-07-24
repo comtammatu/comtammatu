@@ -107,6 +107,10 @@ import { OrderTotalsSummary } from "./_components/order-totals-summary";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
 import type { SessionOrder } from "./order-history";
 import type { RefundPayoutMethod } from "@lib/refund-payout";
+import {
+  canAppendPosOrder,
+  isPosOrderAmountLocked,
+} from "./_lib/table-order-visual-state";
 
 // Superset of bill's OrderData: same top-level fields, but order_items
 // carry extra UI-only fields (status, menu_item_id) used by the detail
@@ -115,10 +119,6 @@ import type { RefundPayoutMethod } from "@lib/refund-payout";
 export type OrderDetailData = Omit<OrderData, "order_items"> & {
   order_items: OrderItemRowData[];
 };
-
-function canAppendOrderStatus(status: string): boolean {
-  return ACTIVE_POS_STATUSES.includes(status);
-}
 
 const ORDER_DETAIL_LOADING_TEXT = {
   append: "Th\u00eam m\u00f3n",
@@ -1085,8 +1085,14 @@ export function OrderDetailSheet({
       .filter((item) => item.status !== "cancelled")
       .reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
+  const orderAmountLocked = data != null && isPosOrderAmountLocked(data);
+  const canAppendItems =
+    data != null && canAppendPosOrder(data, ACTIVE_POS_STATUSES);
   const canShowCancel =
-    canManage && data && !["completed", "cancelled"].includes(data.status);
+    canManage &&
+    data &&
+    !orderAmountLocked &&
+    !["completed", "cancelled"].includes(data.status);
   const canShowVoidPaid =
     canVoidPaid &&
     data != null &&
@@ -1114,11 +1120,9 @@ export function OrderDetailSheet({
     hasActiveKitchenItems &&
     data.payment_status !== "paid" &&
     !["completed", "cancelled"].includes(data.status);
-  // Financial adjustment / split / merge gating — all require an active
-  // unpaid order with no pending QR. The server enforces the same conditions;
-  // the UI guards just hide entries that would always reject.
-  const canMutateUnpaidOrder =
-    canShowPaymentAction && data?.payment_status !== "pending";
+  // VietQR exposure locks every amount-changing path until the cashier
+  // cancels the pending payment or settlement completes.
+  const canMutateUnpaidOrder = canShowPaymentAction && !orderAmountLocked;
   const canShowDiscount = canMutateUnpaidOrder;
   const canShowServiceCharge = canMutateUnpaidOrder;
   const canShowSplit =
@@ -1337,9 +1341,9 @@ export function OrderDetailSheet({
                   </Button>
                 )}
 
-                {(canAppendOrderStatus(data.status) || canShowMoreMenu) && (
+                {(canAppendItems || canShowMoreMenu) && (
                   <div className="flex gap-2">
-                    {canAppendOrderStatus(data.status) && (
+                    {canAppendItems && (
                       <Button
                         type="button"
                         variant="outline"
@@ -1364,13 +1368,13 @@ export function OrderDetailSheet({
                                 messages.pos.orderDetail.moreActionsAria
                               }
                               className={
-                                canAppendOrderStatus(data.status)
+                                canAppendItems
                                   ? "min-w-12 shrink-0 px-0"
                                   : "flex-1"
                               }
                             >
                               <IconDots />
-                              {!canAppendOrderStatus(data.status) && (
+                              {!canAppendItems && (
                                 <span className="ml-1.5">
                                   {messages.pos.orderDetail.moreActions}
                                 </span>
@@ -1555,7 +1559,7 @@ export function OrderDetailSheet({
         item={
           data?.order_items.find((item) => item.id === actionsItemId) ?? null
         }
-        canManage={canManage}
+        canManage={canManage && canMutateUnpaidOrder}
         isPending={isMutating}
         onClose={() => setActionsItemId(null)}
         onMarkServed={handleMarkItemServed}

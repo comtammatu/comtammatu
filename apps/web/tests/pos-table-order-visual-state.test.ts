@@ -1,12 +1,42 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  canAppendPosOrder,
   deriveTableOrderVisualStates,
   getPosTableTileVisualState,
   isActiveUnpaidPosOrder,
+  isPosOrderAmountLocked,
 } from "../app/(protected)/br/[branchId]/pos/_lib/table-order-visual-state";
 
 const ACTIVE_STATUSES = ["new", "confirmed", "preparing", "ready", "served"];
+
+test("VietQR exposure locks amount mutations and append affordances", () => {
+  const activeOrder = {
+    status: "served",
+    payment_status: "unpaid",
+    payment_method: null,
+  };
+  const pendingVietQrOrder = {
+    ...activeOrder,
+    payment_method: "vietqr",
+  };
+
+  assert.equal(isPosOrderAmountLocked(activeOrder), false);
+  assert.equal(canAppendPosOrder(activeOrder, ACTIVE_STATUSES), true);
+  assert.equal(isPosOrderAmountLocked(pendingVietQrOrder), true);
+  assert.equal(canAppendPosOrder(pendingVietQrOrder, ACTIVE_STATUSES), false);
+  assert.equal(
+    canAppendPosOrder({ ...activeOrder, status: "completed" }, ACTIVE_STATUSES),
+    false,
+  );
+  assert.equal(
+    canAppendPosOrder(
+      { ...activeOrder, payment_status: "paid" },
+      ACTIVE_STATUSES,
+    ),
+    false,
+  );
+});
 
 test("deriveTableOrderVisualStates leaves empty tables without a visual state", () => {
   const states = deriveTableOrderVisualStates([], ACTIVE_STATUSES);

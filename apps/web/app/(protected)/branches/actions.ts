@@ -6,6 +6,7 @@ import {
   PERMISSION_KEYS,
   TENANT_STRATEGY_SETTINGS_ROLES,
 } from "@comtammatu/shared/auth";
+import { branchCodeSchema } from "@lib/branch-code";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
 
@@ -22,6 +23,10 @@ const branchSchema = z.object({
   phone: optionalText,
 });
 
+const createBranchSchema = branchSchema.extend({
+  code: branchCodeSchema,
+});
+
 const updateBranchSchema = branchSchema.extend({
   id: z.coerce.number().int().positive(),
 });
@@ -35,9 +40,10 @@ const toggleIdSchema = z.object({
 export const createBranch = withFormAction(
   {
     roles: TENANT_STRATEGY_SETTINGS_ROLES,
-    schema: branchSchema,
+    schema: createBranchSchema,
     extract: (fd) => ({
       name: fd.get("name"),
+      code: fd.get("code"),
       address: fd.get("address"),
       phone: fd.get("phone"),
     }),
@@ -46,6 +52,7 @@ export const createBranch = withFormAction(
     const { error } = await supabase.from("branches").insert({
       tenant_id: claims.tenant_id,
       name: data.name,
+      code: data.code,
       address: data.address || null,
       phone: data.phone || null,
       branch_kind: "branch",
@@ -54,7 +61,10 @@ export const createBranch = withFormAction(
     if (error) {
       console.error("[branches/actions:createBranch] Insert branch error:", error);
       if (error.code === "23505") {
-        return { success: false, error: "Tên điểm vận hành đã tồn tại" };
+        return {
+          success: false,
+          error: "Tên hoặc mã điểm vận hành đã tồn tại",
+        };
       }
       if (error.code === "42703") {
         return {

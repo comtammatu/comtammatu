@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { FormDialog, TextField, valuesToFormData } from "@/components/form";
+import { branchCodeSchema } from "@lib/branch-code";
 import { createBranch, updateBranch } from "./actions";
 import type { BranchRow } from "./branch-table";
 
@@ -13,6 +14,7 @@ const branchSchema = z.object({
     .string()
     .trim()
     .min(1, { error: "Tên điểm vận hành không được trống" }),
+  code: branchCodeSchema,
   address: z
     .string()
     .trim()
@@ -30,6 +32,7 @@ type BranchFormValues = z.infer<typeof branchSchema>;
 function toFormValues(branch: BranchRow | null | undefined): BranchFormValues {
   return {
     name: branch?.name ?? "",
+    code: branch?.code ?? "",
     address: branch?.address ?? "",
     phone: branch?.phone ?? "",
   };
@@ -84,6 +87,15 @@ export function BranchFormDialog({
             placeholder={messages.settings.branchForm.namePlaceholder}
             required
           />
+          {!isEdit ? (
+            <TextField
+              control={form.control}
+              name="code"
+              label={messages.settings.branchForm.codeLabel}
+              placeholder={messages.settings.branchForm.codePlaceholder}
+              required
+            />
+          ) : null}
           <TextField
             control={form.control}
             name="address"

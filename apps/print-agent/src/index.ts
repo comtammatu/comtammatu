@@ -1,5 +1,6 @@
 import { config as loadEnv } from "dotenv";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import packageJson from "../package.json";
 import {
   dispatchPrintJob,
   type PrinterRow,
@@ -43,7 +44,7 @@ const config = {
   branchId: Number(requireEnv("AGENT_BRANCH_ID")),
   tenantId: Number(requireEnv("AGENT_TENANT_ID")),
   agentId,
-  version: process.env.AGENT_VERSION ?? "1.0.0",
+  version: packageJson.version,
   // Network gate: agent registers its NAT egress IP every 5 min via the
   // web app's /api/branch-presence endpoint. Web app then enforces "POS/KDS
   // only from devices on this branch's wifi" in proxy.ts.

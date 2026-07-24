@@ -14,6 +14,29 @@ type PosTableOrderStateInput = {
   payment_status: string | null;
 };
 
+type PosOrderMutationStateInput = {
+  status: string;
+  payment_status: string | null;
+  payment_method: string | null;
+};
+
+export function isPosOrderAmountLocked(
+  order: Pick<PosOrderMutationStateInput, "payment_method" | "payment_status">,
+): boolean {
+  return order.payment_status !== "paid" && order.payment_method === "vietqr";
+}
+
+export function canAppendPosOrder(
+  order: PosOrderMutationStateInput,
+  activeStatuses: readonly string[],
+): boolean {
+  return (
+    order.payment_status !== "paid" &&
+    !isPosOrderAmountLocked(order) &&
+    activeStatuses.includes(order.status)
+  );
+}
+
 export function isActiveUnpaidPosOrder(
   order: PosTableOrderStateInput,
   activeStatuses: readonly string[],

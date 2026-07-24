@@ -26,6 +26,8 @@ export const settings = {
     updated: "Đã cập nhật điểm vận hành",
     nameLabel: "Tên điểm vận hành",
     namePlaceholder: "VD: Chi nhánh Quận 1",
+    codeLabel: "Mã điểm vận hành",
+    codePlaceholder: "VD: DD",
     addressLabel: "Địa chỉ",
     addressPlaceholder: "VD: 123 Nguyễn Huệ, Quận 1",
     phoneLabel: "Điện thoại",

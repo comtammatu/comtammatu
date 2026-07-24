@@ -39,7 +39,7 @@
     "exceljs": "^4.4.0",
     "geist": "^1.7.2",
     "lucide-react": "^1.25.0",
-    "next": "^16.2.10",
+    "next": "^16.2.11",
     "qrcode": "^1.5.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -50,7 +50,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@eslint/js": "^10.0.1",
-    "@next/eslint-plugin-next": "^16.2.10",
+    "@next/eslint-plugin-next": "^16.2.11",
     "@playwright/test": "^1.61.1",
     "@serwist/cli": "^9.5.11",
     "@serwist/next": "^9.5.11",

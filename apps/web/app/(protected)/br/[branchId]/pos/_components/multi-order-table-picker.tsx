@@ -23,8 +23,9 @@ import {
   CreditCard as IconCreditCard,
   Plus as IconPlus,
 } from "lucide-react";
-import type { SessionOrder } from "../order-history";
+import { ACTIVE_POS_STATUSES, type SessionOrder } from "../order-history";
 import { getPosOrderStatusInfo } from "../_lib/order-status-display";
+import { canAppendPosOrder } from "../_lib/table-order-visual-state";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -74,6 +75,10 @@ export function MultiOrderTablePicker({
           <div className="flex flex-col gap-3 pr-2 pb-2">
             {orders.map((order) => {
               const statusInfo = getPosOrderStatusInfo(order);
+              const canAppendItems = canAppendPosOrder(
+                order,
+                ACTIVE_POS_STATUSES,
+              );
               return (
                 <Item
                   key={order.id}
@@ -116,6 +121,7 @@ export function MultiOrderTablePicker({
                       variant="secondary"
                       size="touch"
                       className="px-2 text-sm"
+                      disabled={!canAppendItems}
                       onClick={() =>
                         onAppendOrder(order.id, order.order_number)
                       }
