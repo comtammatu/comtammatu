@@ -213,8 +213,8 @@ Mỗi đơn phải trả về toàn bộ bằng chứng:
 
 ### P6 — Kiểm chứng và phát hành
 
-- Làm rõ parent `main` đang báo `MIGRATIONS_FAILED`; không tạo hoặc dùng Preview
-  làm evidence cho tới khi parent/lineage sẵn sàng.
+- Replay migration chain trên Preview child mới của đúng Production parent;
+  không dùng branch có lineage lỗi làm evidence.
 - Test lựa chọn payment.
 - Test KDS History từ event snapshot sau cleanup.
 - Test tĩnh các contract migration/ACL/money.
@@ -267,44 +267,55 @@ Production nếu owner chưa ủy quyền rõ cho đúng thao tác trong phiên 
 
 ## Kiểm toán bằng chứng hoàn tất
 
-| Yêu cầu                                                                 | Bằng chứng hiện có                                                 | Trạng thái                                     |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |
-| Thuật ngữ dòng món, số lượng, phần cơm, ăn kèm, served và KDS completed | Contract UI/SQL và unit/static tests                               | Đã chứng minh ở source/local                   |
-| Payment và ngày doanh thu theo `payments.paid_at`                       | Sáu migration, static contract, Production preflight chỉ đọc       | Đã chứng minh ở source; chưa replay DB         |
-| KDS History bất biến sau cleanup                                        | Event ledger, immutable trigger, snapshot món/trạm và test cleanup | Đã chứng minh ở source; chưa chạy SQL test     |
-| SePay canonical một bank–một payment                                    | Preflight Production, unique/guard migration và transaction test   | Chưa replay/backfill trên Preview              |
-| Trace POS/print/HĐĐT/audit theo ngày                                    | `/orders`, POS session và Finance drill contract                   | Chưa có authenticated runtime capture          |
-| Migration/ACL an toàn                                                   | T3 review, `pnpm verify`, SQL transaction tests đã viết            | Chưa có Preview replay/advisors                |
-| CI và artifact phát hành                                                | Isolated worktree xanh                                             | Chưa commit/push/Draft PR/CI                   |
-| Production                                                              | Không có write; nguyên nhân và phạm vi đã đọc xác nhận             | Chưa được owner ủy quyền apply/smoke           |
-| Tuyến máy in danh mục `Khác` tại Phước Hải                              | Đã xác định thiếu mapping                                          | Chưa được owner xác nhận/sửa và thử phiếu giấy |
+| Yêu cầu                                                                 | Bằng chứng hiện có                                                             | Trạng thái                                             |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Thuật ngữ dòng món, số lượng, phần cơm, ăn kèm, served và KDS completed | Contract UI/SQL, unit/static tests và Preview DB tests                          | Đã chứng minh ở source/Preview                         |
+| Payment và ngày doanh thu theo `payments.paid_at`                       | Năm RPC Finance dùng completed payment/`paid_at`; catalog check trên Production | DB đã apply; web Production chưa deploy                |
+| KDS History bất biến sau cleanup                                        | Event ledger, immutable trigger, cleanup test và 215 event backfill Production  | DB đã apply; màn hình Production chưa deploy           |
+| SePay canonical một bank–một payment                                    | Unique/guard, transaction test và Production backfill 102 liên kết              | `missing=0`, duplicate bank/payment đều bằng 0         |
+| Trace POS/print/HĐĐT/audit theo ngày                                    | RPC trace/POS/day tồn tại với ACL đúng trên Production                          | Chưa có authenticated Production capture sau web deploy |
+| Migration/ACL an toàn                                                   | T3 review, Preview replay, CI, DB tests và Production advisors                  | Không có finding mới chặn phát hành                    |
+| CI và artifact phát hành                                                | Draft PR #328, commit `e9f93b7bf`, toàn bộ required checks xanh                 | Source sẵn sàng review; chưa merge/deploy              |
+| Production                                                              | Sáu migration trong ledger và read-only smoke lúc 17:15 ngày 2026-07-25         | DB đã apply; runtime web vẫn là phiên bản trước         |
+| Tuyến máy in danh mục `Khác` tại Phước Hải                              | Post-smoke vẫn có 0 mapping cho category `5`                                    | Chưa được owner xác nhận/sửa và thử phiếu giấy         |
 
 Không dùng test tĩnh hoặc local build để thay thế bằng chứng Preview,
 authenticated runtime, CI hay Production.
 
 ## Trạng thái thực hiện
 
-Đã hoàn thành tại isolated worktree:
+Đã hoàn thành:
 
 - xác định nguyên nhân đơn `TC-260725-044-PH` và preflight Production chỉ đọc;
 - triển khai sáu migration, cập nhật bốn route, cảnh báo tuyến in và bộ test;
 - hoàn tất T3 engineering/operations review, không còn finding local;
-- `pnpm verify` và `git diff --check` đều xanh, gồm security/dependency audit,
-  package boundaries, `typecheck`, `lint`, production `build` và full test; web
-  test có 1.274 test, 1.242 pass, 32 skip, 0 fail.
+- local `typecheck`, `lint`, production `build`, focused regression test và
+  `git diff --check` đều xanh;
+- Supabase Preview `ljtoqlklgtbthxxyofqa` replay thành công; CI run
+  `30151808263` xanh ở `gates`, baseline replay, DB tests và E2E payment smoke;
+- owner đã ủy quyền rõ trong phiên hiện tại và sáu migration đã được apply tuần
+  tự lên Production `iexwsuaqqenyjiskawoj`;
+- lần đầu apply migration SePay dừng và rollback nguyên khối vì trigger
+  `BEFORE INSERT` gặp canonical pair đã tồn tại; commit `e9f93b7bf` loại đúng
+  các pair đã canonical khỏi backfill, thêm regression check, qua lại Preview
+  và CI trước khi retry;
+- retry đã backfill 102 liên kết; hậu kiểm có 302 exact candidates,
+  `missing_canonical = 0`, duplicate payment/bank đều bằng 0 và 102 audit rows;
+- incident post-smoke giữ nguyên sự thật lịch sử: order 12 dòng/26 đơn vị/17
+  phần main, KDS live 17, KDS cutover snapshot 17, phiếu bếp cũ 16,
+  `Cơm Tấm Bì ×1` có event `legacy_live_snapshot`, completed payment 788.000đ;
+- advisor không phát hiện finding mới chặn phát hành. `kds_ticket_events` bị
+  báo INFO không có policy vì bảng cố ý đóng với `anon`/`authenticated` và chỉ
+  ghi qua trigger; các WARN `SECURITY DEFINER` là API app có tenant/permission
+  guard. Unused index của ledger mới là số liệu trước khi runtime mới có traffic.
 
-Chưa được coi là phát hành:
+Chưa được coi là phát hành web hoàn tất:
 
-- chưa replay migration và SQL transaction tests trên Supabase Preview;
-- chưa regenerate database types từ schema đã áp;
-- chưa có authenticated browser QA/CI;
-- chưa sửa mapping máy in hoặc áp migration trên Production.
-
-Supabase inventory làm mới ngày 2026-07-25 xác nhận project Production
-`iexwsuaqqenyjiskawoj` là `ACTIVE_HEALTHY`, chưa có Preview branch và record
-branch `main` mang trạng thái migration `MIGRATIONS_FAILED`. Trạng thái này
-không chứng minh runtime Production lỗi, nhưng phải được làm rõ bằng branch
-replay trước mọi kế hoạch apply.
+- Draft PR #328 chưa merge/deploy nên bốn màn hình Production chưa dùng contract
+  mới;
+- chưa có authenticated Production route capture sau deploy;
+- chưa sửa mapping máy in category `Khác` hoặc chứng minh một phiếu giấy
+  `Cơm Tấm Bì` mới.
 
 ## Điều kiện hoàn tất
 

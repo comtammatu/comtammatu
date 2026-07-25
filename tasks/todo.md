@@ -14,8 +14,7 @@ Lane: pos/operational-truth
 Exit: `/orders`, Branch POS sessions, KDS History, and Finance daily revenue agree on completed-payment money and `paid_at` day boundaries; ordered, served, KDS-completed, printed, side, and main-dish quantities remain separately named; exact SePay, print, KDS, POS-session, HĐĐT, and audit evidence is traceable after cleanup.
 Evidence: `docs/ref/order-kds-payment-revenue-operational-truth.md`, isolated Preview migration replay, generated types, focused and full repository gates, T3 review, authenticated desktop/mobile route captures, CI, separately owner-applied Production migration, and read-only Production smoke.
 
-- [ ] Resolve the parent `main` branch `MIGRATIONS_FAILED` metadata/lineage through the owner-approved path, then replay all six migrations on a verified Preview child of `iexwsuaqqenyjiskawoj`, resolve SQL/ACL findings, and run database advisors.
-- [ ] Regenerate types from the registered type source and complete authenticated route QA plus CI before the owner-operated Production apply.
+- [ ] Merge and deploy the web runtime, then capture authenticated Production evidence for `/orders`, Branch POS sessions, KDS History, and Finance daily revenue.
 - [ ] Owner-confirm and apply the Phước Hải `Khác` category printer route, then prove one `Cơm Tấm Bì` test order has matching KDS ticket, print job, and physical kitchen slip.
 
 ## Converge the Má Tư Design System and roll it into every route family
