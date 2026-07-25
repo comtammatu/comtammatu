@@ -14,7 +14,6 @@ Lane: finance/hddt
 Exit: Every completed Cash or VietQR payment owns one immutable internal HĐĐT draft; the receipt QR atomically closes on customer confirmation or `payments.paid_at + 2 hours`; the worker issues each eligible draft independently and exactly once, while unknown provider outcomes remain reconcile-only.
 Evidence: `docs/plan/adr/0013-receipt-qr-buyer-window.md`, SQL/RPC race and privilege tests, provider timestamp unit coverage, Cash/VietQR/Self-Order integration coverage, receipt reprint/token stability, repository gates, authenticated Preview proof, and Production migration/deployment evidence.
 
-- [x] Complete authenticated HTTP and 390×844 Playwright smoke for the receipt-QR route against a disposable Preview schema.
 - [ ] Apply the verified migration to Production, deploy the runtime, and capture read-only Production evidence without triggering a Viettel issuance.
 
 ## Restore order-to-revenue operational truth
