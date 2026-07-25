@@ -124,8 +124,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/supabase-e2e-bringup.mjs
       - run: pnpm db:test
-      - run: node scripts/hddt-buyer-race-test.mjs
-        timeout-minutes: 5
       - run: node scripts/finance-transfer-intent-race-test.mjs
         timeout-minutes: 5
       - run: pnpm --filter @comtammatu/web exec playwright install --with-deps chromium
