@@ -56,7 +56,7 @@ BEGIN
       'TEST FAILED: complete_kds_tickets print set is not based on active-ticket transitions';
   END IF;
 
-  IF v_helper_def NOT ILIKE '%WHERE kt.id = ANY(v_ticket_ids)%'
+  IF v_helper_def NOT ILIKE '%WHERE ticket.id = ANY(v_ticket_ids)%'
      OR v_helper_def NOT ILIKE '%sent_to_kitchen_at IS NULL%' THEN
     RAISE EXCEPTION
       'TEST FAILED: completion print helper is not scoped to unsent completed ticket ids';

@@ -19,6 +19,11 @@ const batchActionsSource = readFileSync(
   "utf8",
 );
 
+const kdsMessagesSource = readFileSync(
+  join(process.cwd(), "../../packages/shared/src/messages/kds.ts"),
+  "utf8",
+);
+
 test("KDS completion sends only active tickets to the completion RPC", () => {
   assert.match(
     useKdsMutationsSource,
@@ -50,9 +55,17 @@ test("KDS completion surfaces safe print warnings without raw DB errors", () => 
   );
   assert.match(
     useKdsMutationsSource,
-    /toast\.warning\([\s\S]*chưa tạo đủ phiếu in bếp/,
+    /kitchen_print_skipped[\s\S]*KDS_VI\.printRouteMissing/,
+    "unrouted categories must be distinguished from printer failures",
+  );
+  assert.match(
+    useKdsMutationsSource,
+    /KDS_VI\.printEnqueueFailed/,
     "client must warn operators when completion could not queue all slips",
   );
+  assert.match(kdsMessagesSource, /chưa có tuyến in/);
+  assert.match(kdsMessagesSource, /cấu hình danh mục và máy in bếp/);
+  assert.match(kdsMessagesSource, /chưa tạo đủ phiếu in bếp/);
   assert.doesNotMatch(
     useKdsMutationsSource,
     /toast\.warning\([^)]*error\.message/,

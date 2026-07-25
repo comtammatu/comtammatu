@@ -866,14 +866,24 @@ export async function fetchOrdersForDay(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { data, error } = await ctx.supabase.rpc("get_orders_for_day", {
-    p_branch_id: parsedBranch.data,
-    p_date: parsedDate.data,
-  });
+  const ordersForDayV2Rpc = ctx.supabase.rpc as unknown as (
+    name: "get_orders_for_day_v2",
+    args: { p_branch_id: number; p_date: string },
+  ) => Promise<{
+    data: unknown[] | null;
+    error: { message: string } | null;
+  }>;
+  const { data, error } = await ordersForDayV2Rpc(
+    "get_orders_for_day_v2",
+    {
+      p_branch_id: parsedBranch.data,
+      p_date: parsedDate.data,
+    },
+  );
 
   if (error) {
     console.error(
-      "[finance/actions:fetchOrdersForDay] RPC get_orders_for_day error:",
+      "[finance/actions:fetchOrdersForDay] RPC get_orders_for_day_v2 error:",
       error,
     );
     return { success: false, error: financeActionErrors.loadOrdersFailed };

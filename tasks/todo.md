@@ -5,6 +5,18 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Restore order-to-revenue operational truth
+
+State: doing
+Kind: defect
+Tier: T3
+Lane: pos/operational-truth
+Exit: `/orders`, Branch POS sessions, KDS History, and Finance daily revenue agree on completed-payment money and `paid_at` day boundaries; ordered, served, KDS-completed, printed, side, and main-dish quantities remain separately named; exact SePay, print, KDS, POS-session, HĐĐT, and audit evidence is traceable after cleanup.
+Evidence: `docs/ref/order-kds-payment-revenue-operational-truth.md`, isolated Preview migration replay, generated types, focused and full repository gates, T3 review, authenticated desktop/mobile route captures, CI, separately owner-applied Production migration, and read-only Production smoke.
+
+- [ ] Merge and deploy the web runtime, then capture authenticated Production evidence for `/orders`, Branch POS sessions, KDS History, and Finance daily revenue.
+- [ ] Owner-confirm and apply the Phước Hải `Khác` category printer route, then prove one `Cơm Tấm Bì` test order has matching KDS ticket, print job, and physical kitchen slip.
+
 ## Converge the Má Tư Design System and roll it into every route family
 
 State: doing
@@ -24,6 +36,7 @@ Tier: T3
 Lane: database
 Exit: A current Production-derived baseline, required fresh-environment forwards, and the live Production ledger are reconciled without replaying or mutating business data.
 Evidence: Production catalog/ACL comparison, CI baseline replay, type no-diff, and one disposable Preview proof.
+
 - [ ] Apply the active baseline and forward chain to registered DEV, regenerate types, then complete aligned schema and disposable Preview validation.
 
 ## Prove Self-Order offline navigation isolation

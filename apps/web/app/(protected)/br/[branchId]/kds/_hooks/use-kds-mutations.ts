@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@comtammatu/database/supabase/client";
+import { KDS_VI } from "@comtammatu/shared/messages";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { isKdsActiveTicketStatus } from "../_lib/order-status";
 import type { KdsTicket } from "../types";
@@ -162,8 +163,11 @@ export function useKdsMutations({
           ((result?.completed_count ?? 0) > 0 &&
             (result?.skipped_ticket_count ?? 0) > 0);
         if (hasPrintWarning) {
+          const skippedCount = result?.skipped_ticket_count ?? 0;
           toast.warning(
-            "Đã hoàn thành món, nhưng chưa tạo đủ phiếu in bếp. Kiểm tra máy in bếp hoặc báo trực tiếp.",
+            result?.print_warning === "kitchen_print_skipped"
+              ? KDS_VI.printRouteMissing(skippedCount)
+              : KDS_VI.printEnqueueFailed,
           );
         }
       } finally {

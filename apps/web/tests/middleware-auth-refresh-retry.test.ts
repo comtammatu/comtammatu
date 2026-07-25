@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createAuthSocketRetryFetch } from "../../../packages/database/src/supabase/middleware";
+import { createAuthSocketRetryFetch } from "@comtammatu/database/supabase/middleware";
 
 const refreshUrl =
   "https://example.supabase.co/auth/v1/token?grant_type=refresh_token";
@@ -42,10 +42,9 @@ test("middleware does not retry socket closes for other POST requests", async ()
   const fetchWithRetry = createAuthSocketRetryFetch(fetcher);
 
   await assert.rejects(
-    fetchWithRetry(
-      "https://example.supabase.co/rest/v1/rpc/confirm_payment",
-      { method: "POST" },
-    ),
+    fetchWithRetry("https://example.supabase.co/rest/v1/rpc/confirm_payment", {
+      method: "POST",
+    }),
     TypeError,
   );
   assert.equal(calls, 1);

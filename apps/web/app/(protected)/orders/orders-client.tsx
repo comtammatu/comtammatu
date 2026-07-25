@@ -92,9 +92,11 @@ const ORDER_COLUMNS: DataTableColumn<OrderRow>[] = [
     key: "payment",
     header: "Thanh toán",
     render: (order) =>
-      order.payment_method ? (
+      (order.payment?.method ?? order.payment_method) ? (
         <Badge variant="outline" className="text-xs">
-          {getPaymentMethodLabelVi(order.payment_method)}
+          {getPaymentMethodLabelVi(
+            order.payment?.method ?? order.payment_method ?? "",
+          )}
         </Badge>
       ) : (
         <span className="text-xs text-muted-foreground">—</span>
