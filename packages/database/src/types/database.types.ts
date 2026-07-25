@@ -11939,10 +11939,6 @@ export type Database = {
         }
         Returns: number
       }
-      verify_branch_override_code: {
-        Args: { p_branch_id: number; p_code: string }
-        Returns: boolean
-      }
       vietqr_payment_code_prefix: { Args: never; Returns: string }
       void_order_item: {
         Args: { p_order_item_id: number; p_reason: string }
