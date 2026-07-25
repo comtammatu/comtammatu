@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Banknote as IconCash,
   Landmark as IconBank,
@@ -11,10 +11,6 @@ import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNTime } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import { Checkbox } from "@comtammatu/ui/components/checkbox";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import {
   Avatar,
@@ -38,10 +34,6 @@ import {
   parseVietQrBankApps,
   type VietQrBankApp,
 } from "@lib/self-order/bank-app-link";
-import {
-  isBusinessTaxCode,
-  lookupBusinessTaxCode,
-} from "@lib/hddt/business-tax-lookup";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
 
 export interface GuestPaymentRequestState {
@@ -60,41 +52,17 @@ export interface GuestPaymentRequestState {
   expiresAt?: string | null;
 }
 
-export type InvoiceFieldErrors = Partial<
-  Record<"buyerName" | "buyerTaxCode" | "buyerAddress" | "buyerEmail", string>
->;
-
-export interface InvoiceErrorFocusRequest {
-  attempt: number;
-  field: keyof InvoiceFieldErrors;
-}
-
 export interface PaymentPanelProps {
   disabled: boolean;
   activeOrder: PublicSelfOrderAvailableSnapshot["order"];
   activePaymentRequest: GuestPaymentRequestState | null;
-  buyerNotGetInvoice: boolean;
-  buyerName: string;
-  buyerTaxCode: string;
-  buyerAddress: string;
-  buyerEmail: string;
   selectedPaymentMethod: "cash_call" | "vietqr" | null;
   isPending: boolean;
   pendingMethod: "cash_call" | "vietqr" | null;
   error: string | null;
-  fieldErrors: InvoiceFieldErrors;
-  errorFocusRequest: InvoiceErrorFocusRequest | null;
-  onBuyerNotGetInvoiceChange: (value: boolean) => void;
-  onBuyerNameChange: (value: string) => void;
-  onBuyerTaxCodeChange: (value: string) => void;
-  onBuyerAddressChange: (value: string) => void;
-  onBuyerEmailChange: (value: string) => void;
   onPaymentMethodChange: (method: "cash_call" | "vietqr") => void;
   onConfirmPayment: () => void;
 }
-
-type BuyerTaxLookupStatus =
-  "idle" | "loading" | "found" | "not-found" | "unavailable";
 
 function BankAppLauncher({
   accountNo,
@@ -225,137 +193,13 @@ export function PaymentPanel({
   disabled,
   activeOrder,
   activePaymentRequest,
-  buyerNotGetInvoice,
-  buyerName,
-  buyerTaxCode,
-  buyerAddress,
-  buyerEmail,
   selectedPaymentMethod,
   isPending,
   pendingMethod,
   error,
-  fieldErrors,
-  errorFocusRequest,
-  onBuyerNotGetInvoiceChange,
-  onBuyerNameChange,
-  onBuyerTaxCodeChange,
-  onBuyerAddressChange,
-  onBuyerEmailChange,
   onPaymentMethodChange,
   onConfirmPayment,
 }: PaymentPanelProps) {
-  const [buyerTaxLookupStatus, setBuyerTaxLookupStatus] =
-    useState<BuyerTaxLookupStatus>("idle");
-  const buyerNameRef = useRef<HTMLInputElement>(null);
-  const buyerTaxCodeRef = useRef<HTMLInputElement>(null);
-  const buyerAddressRef = useRef<HTMLInputElement>(null);
-  const buyerEmailRef = useRef<HTMLInputElement>(null);
-  const buyerTaxLookupAbortRef = useRef<AbortController | null>(null);
-  const lastLookedUpTaxCodeRef = useRef("");
-  const buyerTaxCodeValueRef = useRef(buyerTaxCode);
-
-  buyerTaxCodeValueRef.current = buyerTaxCode;
-
-  useEffect(() => {
-    const target =
-      errorFocusRequest?.field === "buyerName"
-        ? buyerNameRef.current
-        : errorFocusRequest?.field === "buyerTaxCode"
-          ? buyerTaxCodeRef.current
-          : errorFocusRequest?.field === "buyerAddress"
-            ? buyerAddressRef.current
-            : errorFocusRequest?.field === "buyerEmail"
-              ? buyerEmailRef.current
-              : null;
-    target?.focus();
-  }, [errorFocusRequest]);
-
-  useEffect(
-    () => () => {
-      buyerTaxLookupAbortRef.current?.abort();
-    },
-    [],
-  );
-
-  function resetBuyerTaxLookup() {
-    buyerTaxLookupAbortRef.current?.abort();
-    buyerTaxLookupAbortRef.current = null;
-    lastLookedUpTaxCodeRef.current = "";
-    setBuyerTaxLookupStatus("idle");
-  }
-
-  function handleBuyerTaxCodeChange(value: string) {
-    if (buyerName) onBuyerNameChange("");
-    if (buyerAddress) onBuyerAddressChange("");
-    if (value.trim() && buyerNotGetInvoice) {
-      onBuyerNotGetInvoiceChange(false);
-    }
-    buyerTaxCodeValueRef.current = value;
-    resetBuyerTaxLookup();
-    onBuyerTaxCodeChange(value);
-  }
-
-  async function handleBuyerTaxCodeBlur() {
-    const taxCode = buyerTaxCodeValueRef.current.trim();
-    if (
-      !isBusinessTaxCode(taxCode) ||
-      lastLookedUpTaxCodeRef.current === taxCode
-    ) {
-      return;
-    }
-
-    buyerTaxLookupAbortRef.current?.abort();
-    const controller = new AbortController();
-    buyerTaxLookupAbortRef.current = controller;
-    lastLookedUpTaxCodeRef.current = taxCode;
-    setBuyerTaxLookupStatus("loading");
-
-    try {
-      const business = await lookupBusinessTaxCode(taxCode, controller.signal);
-      if (
-        controller.signal.aborted ||
-        buyerTaxCodeValueRef.current.trim() !== taxCode
-      ) {
-        return;
-      }
-
-      if (!business) {
-        setBuyerTaxLookupStatus("not-found");
-        return;
-      }
-
-      onBuyerNameChange(business.name);
-      onBuyerAddressChange(business.address);
-      setBuyerTaxLookupStatus("found");
-    } catch {
-      if (controller.signal.aborted) return;
-      lastLookedUpTaxCodeRef.current = "";
-      setBuyerTaxLookupStatus("unavailable");
-    }
-  }
-
-  const buyerTaxLookupMessage =
-    buyerTaxLookupStatus === "loading"
-      ? SELF_ORDER_VI.buyerTaxLookupLoading
-      : buyerTaxLookupStatus === "found"
-        ? SELF_ORDER_VI.buyerTaxLookupFound
-        : buyerTaxLookupStatus === "not-found"
-          ? SELF_ORDER_VI.buyerTaxLookupNotFound
-          : buyerTaxLookupStatus === "unavailable"
-            ? SELF_ORDER_VI.buyerTaxLookupUnavailable
-            : null;
-
-  const canEditBuyerDetails =
-    buyerTaxLookupStatus === "not-found" ||
-    buyerTaxLookupStatus === "unavailable";
-
-  const buyerTaxCodeDescribedBy = [
-    fieldErrors.buyerTaxCode ? "self-order-buyer-tax-code-error" : null,
-    buyerTaxLookupMessage ? "self-order-buyer-tax-code-lookup" : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   if (!activeOrder) {
     return (
       <AppSection
@@ -377,159 +221,6 @@ export function PaymentPanel({
     Boolean(activePaymentRequest.qrData) &&
     Boolean(activePaymentRequest.paymentCode);
   const expiryLabel = formatVNTime(activePaymentRequest?.expiresAt, "") || null;
-
-  const buyerDetails = (
-    <AppSection
-      title={SELF_ORDER_VI.buyerTitle}
-      description={SELF_ORDER_VI.buyerDescription}
-      icon={<IconReceipt />}
-      size="sm"
-    >
-      <div className="grid gap-3">
-        <Field data-invalid={Boolean(fieldErrors.buyerTaxCode)}>
-          <FieldLabel htmlFor="self-order-buyer-tax-code">
-            {SELF_ORDER_VI.buyerTaxCode}
-          </FieldLabel>
-          <Input
-            controlSize="touch"
-            ref={buyerTaxCodeRef}
-            id="self-order-buyer-tax-code"
-            name="buyerTaxCode"
-            className="font-mono"
-            inputMode="numeric"
-            maxLength={14}
-            autoComplete="off"
-            spellCheck={false}
-            value={buyerTaxCode}
-            disabled={disabled || isPending}
-            aria-invalid={Boolean(fieldErrors.buyerTaxCode)}
-            aria-describedby={buyerTaxCodeDescribedBy || undefined}
-            placeholder="0123456789"
-            onChange={(event) => handleBuyerTaxCodeChange(event.target.value)}
-            onBlur={() => void handleBuyerTaxCodeBlur()}
-          />
-          <FieldError id="self-order-buyer-tax-code-error">
-            {fieldErrors.buyerTaxCode}
-          </FieldError>
-          {buyerTaxLookupMessage ? (
-            <p
-              id="self-order-buyer-tax-code-lookup"
-              role="status"
-              aria-live="polite"
-              className="flex items-center gap-2 text-xs text-muted-foreground"
-            >
-              {buyerTaxLookupStatus === "loading" ? (
-                <Spinner aria-hidden="true" className="size-4" />
-              ) : null}
-              {buyerTaxLookupMessage}
-            </p>
-          ) : null}
-        </Field>
-        <div className="flex items-center gap-2 rounded-md bg-muted/30 p-3">
-          <Checkbox
-            id="self-order-buyer-not-get-invoice"
-            size="touch"
-            checked={buyerNotGetInvoice}
-            disabled={disabled || isPending}
-            onCheckedChange={(value) => {
-              const nextValue = value === true;
-              if (nextValue) resetBuyerTaxLookup();
-              onBuyerNotGetInvoiceChange(nextValue);
-            }}
-          />
-          <Label htmlFor="self-order-buyer-not-get-invoice" className="text-sm">
-            {SELF_ORDER_VI.buyerNoInvoice}
-          </Label>
-        </div>
-        {!buyerNotGetInvoice ? (
-          <>
-            <Field data-invalid={Boolean(fieldErrors.buyerName)}>
-              <FieldLabel htmlFor="self-order-buyer-name">
-                {SELF_ORDER_VI.buyerName}
-              </FieldLabel>
-              <Input
-                controlSize="touch"
-                ref={buyerNameRef}
-                id="self-order-buyer-name"
-                name="buyerName"
-                autoComplete="name"
-                value={buyerName}
-                disabled={disabled || isPending}
-                readOnly={!canEditBuyerDetails}
-                aria-invalid={Boolean(fieldErrors.buyerName)}
-                aria-describedby={
-                  fieldErrors.buyerName
-                    ? "self-order-buyer-name-error"
-                    : undefined
-                }
-                placeholder={SELF_ORDER_VI.buyerName}
-                onChange={(event) => onBuyerNameChange(event.target.value)}
-              />
-              <FieldError id="self-order-buyer-name-error">
-                {fieldErrors.buyerName}
-              </FieldError>
-            </Field>
-            <Field data-invalid={Boolean(fieldErrors.buyerAddress)}>
-              <FieldLabel htmlFor="self-order-buyer-address">
-                {SELF_ORDER_VI.buyerAddress}
-              </FieldLabel>
-              <Input
-                controlSize="touch"
-                ref={buyerAddressRef}
-                id="self-order-buyer-address"
-                name="buyerAddress"
-                autoComplete="street-address"
-                value={buyerAddress}
-                disabled={disabled || isPending}
-                readOnly={!canEditBuyerDetails}
-                aria-invalid={Boolean(fieldErrors.buyerAddress)}
-                aria-describedby={
-                  fieldErrors.buyerAddress
-                    ? "self-order-buyer-address-error"
-                    : undefined
-                }
-                placeholder={SELF_ORDER_VI.buyerAddress}
-                onChange={(event) => onBuyerAddressChange(event.target.value)}
-              />
-              <FieldError id="self-order-buyer-address-error">
-                {fieldErrors.buyerAddress}
-              </FieldError>
-            </Field>
-            <Field data-invalid={Boolean(fieldErrors.buyerEmail)}>
-              <FieldLabel htmlFor="self-order-buyer-email">
-                {SELF_ORDER_VI.buyerEmail}
-              </FieldLabel>
-              <Input
-                controlSize="touch"
-                ref={buyerEmailRef}
-                id="self-order-buyer-email"
-                name="buyerEmail"
-                type="email"
-                autoComplete="email"
-                spellCheck={false}
-                value={buyerEmail}
-                disabled={disabled || isPending}
-                aria-invalid={Boolean(fieldErrors.buyerEmail)}
-                aria-describedby={
-                  fieldErrors.buyerEmail
-                    ? "self-order-buyer-email-error"
-                    : undefined
-                }
-                placeholder="email@example.com"
-                onChange={(event) => onBuyerEmailChange(event.target.value)}
-              />
-              <FieldError id="self-order-buyer-email-error">
-                {fieldErrors.buyerEmail}
-              </FieldError>
-            </Field>
-            <p className="text-xs text-muted-foreground">
-              {SELF_ORDER_VI.buyerBusinessHint}
-            </p>
-          </>
-        ) : null}
-      </div>
-    </AppSection>
-  );
 
   return (
     <section className="flex flex-col gap-3">
@@ -652,20 +343,17 @@ export function PaymentPanel({
         </>
       </AppSection>
       {activePaymentRequest ? null : (
-        <>
-          {buyerDetails}
-          <Button
-            type="button"
-            size="touch"
-            className="w-full"
-            disabled={disabled || isPending || selectedPaymentMethod == null}
-            onClick={onConfirmPayment}
-          >
-            {selectedPaymentMethod === "vietqr"
-              ? SELF_ORDER_VI.paymentReconcileAction
-              : SELF_ORDER_VI.paymentConfirmAction}
-          </Button>
-        </>
+        <Button
+          type="button"
+          size="touch"
+          className="w-full"
+          disabled={disabled || isPending || selectedPaymentMethod == null}
+          onClick={onConfirmPayment}
+        >
+          {selectedPaymentMethod === "vietqr"
+            ? SELF_ORDER_VI.paymentReconcileAction
+            : SELF_ORDER_VI.paymentConfirmAction}
+        </Button>
       )}
     </section>
   );

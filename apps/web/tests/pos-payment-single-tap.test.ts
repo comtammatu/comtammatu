@@ -22,13 +22,13 @@ const confirmPaidBlock =
   )?.[1] ?? "";
 
 test("POS only lets the cashier confirm cash; VietQR waits for SePay", () => {
-  assert.match(confirmPaidBlock, /buildInvoicePayload\(invoiceForm\)/);
   assert.match(confirmPaidBlock, /confirmCashPaymentWithInvoice\(/);
-  assert.doesNotMatch(confirmPaidBlock, /confirmVietQrPaymentWithInvoice\(/);
   assert.match(
-    billReceiptSource,
-    /SELF_ORDER_VI\.paymentReconcileDescription/,
+    confirmPaidBlock,
+    /confirmCashPaymentWithInvoice\([\s\S]*?cashReceived,[\s\S]*?null/,
   );
+  assert.doesNotMatch(confirmPaidBlock, /confirmVietQrPaymentWithInvoice\(/);
+  assert.match(billReceiptSource, /SELF_ORDER_VI\.paymentReconcileDescription/);
   assert.doesNotMatch(confirmPaidBlock, /await confirm\(/);
   assert.doesNotMatch(posMessagesSource, /confirmIssue/);
 });
@@ -50,17 +50,14 @@ test("POS closes a pending VietQR sheet as waiting without confirming payment", 
     billReceiptSource,
     /<PaymentQrCode[\s\S]*?className="max-h-56 max-w-56"/,
   );
-  assert.match(
-    billReceiptSource,
-    /showInvoiceForm && !isWaitingForVietQr/,
-  );
+  assert.doesNotMatch(billReceiptSource, /InvoiceFormSection|invoiceForm/);
   assert.match(billReceiptSource, /role="status"/);
 });
 
-test("POS payment sheet separates payment step from HĐĐT details", () => {
+test("POS payment sheet delegates HĐĐT buyer details to the receipt QR", () => {
   assert.match(billReceiptSource, /messages\.pos\.payment\.stepTitle/);
   assert.match(billReceiptSource, /messages\.pos\.payment\.stepDescription/);
-  assert.match(billReceiptSource, /<InvoiceFormSection/);
+  assert.doesNotMatch(billReceiptSource, /InvoiceFormSection|invoiceForm/);
   assert.match(posMessagesSource, /stepTitle: "Bước thanh toán"/);
   assert.match(posMessagesSource, /stepDescription:/);
 });

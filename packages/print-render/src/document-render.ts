@@ -532,6 +532,28 @@ function renderDocumentPaymentQr(
   return out;
 }
 
+function renderDocumentInvoiceQr(
+  block: Extract<PrintDocumentBlock, { type: "invoiceQr" }>,
+): RenderOp[] {
+  const content = clampQrContent(block.qr?.content);
+  if (!content) return [];
+  return [
+    ops.blank(),
+    ops.line(clampText(block.heading) || "QUÉT QR XUẤT HĐĐT", {
+      bold: true,
+      align: "center",
+    }),
+    ops.blank(),
+    ops.qr(content, 6),
+    ops.blank(),
+    ops.line("QR chỉ có giá trị xuất HĐĐT trong 2 giờ", {
+      bold: true,
+      align: "center",
+    }),
+    divider("-"),
+  ];
+}
+
 function renderDocumentFooter(
   block: Extract<PrintDocumentBlock, { type: "footer" }>,
 ): RenderOp[] {
@@ -593,6 +615,9 @@ export function renderDocumentToOps(document: PrintDocument): RenderOp[] {
         break;
       case "paymentQr":
         out.push(...renderDocumentPaymentQr(block));
+        break;
+      case "invoiceQr":
+        out.push(...renderDocumentInvoiceQr(block));
         break;
       case "footer":
         out.push(...renderDocumentFooter(block));

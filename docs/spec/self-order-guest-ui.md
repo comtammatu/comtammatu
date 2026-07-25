@@ -47,8 +47,8 @@ A paid order leaves the snapshot immediately. The next guest scanning the same p
 5. Staff sees the badge on the POS table tile → **Duyệt** → `create_order(table_id, items)` → `route_order_to_kds` fires → the kitchen has it.
 6. Guest adds more after approval → `append_order_items` directly. **No approval.** KDS receives it.
 7. Guest opens the bill drawer → `orders.items + totalAmount` (the payable truth after staff edits, voids, merges) and presses **Thanh toán**.
-8. The drawer switches to payment (`cash_call` | `vietqr`) + optional HĐĐT buyer fields; Back returns to the bill.
-9. Payment settles → existing triggers complete the order and release the table.
+8. The drawer switches to payment (`cash_call` | `vietqr`); Back returns to the bill. Self-Order never collects HĐĐT buyer details.
+9. Payment settles → existing triggers complete the order and release the table. Buyer details are supplied later through the QR printed on the payment receipt.
 
 ### Table already has an open order
 
@@ -172,16 +172,16 @@ is unambiguous and open.
 
 ### G7: Payment (inside the drawer)
 
-After **Thanh toán**, the drawer replaces the bill with `cash_call` | VietQR +
-HĐĐT buyer fields; its back control returns to G6. Exactly one live intent
-across both methods; a live intent locks add-more, item customization, and
-buyer fields. VietQR reload renders the stored amount, payment code, QR bytes,
-bank snapshot, and expiry — it never rebuilds an active QR from current
-settings. MoMo is never a Self-Order payment method. It may appear only when the
-official VietQR app catalog for the current OS supplies a supported deeplink;
-the handoff then carries the stored recipient, amount, payment code, and account
-name and creates no MoMo intent or settlement state. Self-Order must not invent
-an undocumented MoMo scheme or fall back to the MoMo merchant payment API.
+After **Thanh toán**, the drawer replaces the bill with `cash_call` | VietQR;
+its back control returns to G6. Exactly one live intent across both methods; a
+live intent locks add-more and item customization. VietQR reload renders the
+stored amount, payment code, QR bytes, bank snapshot, and expiry — it never
+rebuilds an active QR from current settings. MoMo is never a Self-Order payment
+method. It may appear only when the official VietQR app catalog for the current
+OS supplies a supported deeplink; the handoff then carries the stored
+recipient, amount, payment code, and account name and creates no MoMo intent or
+settlement state. Self-Order must not invent an undocumented MoMo scheme or
+fall back to the MoMo merchant payment API.
 Guests cannot cancel an intent; staff own cancellation after verifying money is
 not already in flight.
 

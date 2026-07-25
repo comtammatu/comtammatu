@@ -184,9 +184,15 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(public)/access-denied/page.tsx": "GATE/AUTH",
   "apps/web/app/offline/page.tsx": "GATE/AUTH",
   "apps/web/app/q/[token]/page.tsx": "PUBLIC-WORKFLOW",
+  "apps/web/app/q/invoice/[token]/page.tsx": "PUBLIC-WORKFLOW",
 };
 
 const PAGE_DISPOSITION_OVERRIDES = {
+  "apps/web/app/q/invoice/[token]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
   "apps/web/app/q/[token]/page.tsx": {
     status: "tune",
     evidence: "implemented-static",

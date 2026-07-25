@@ -98,7 +98,6 @@ interface SinvoiceCreateResult {
   codeOfTax?: string | null;
 }
 
-
 /**
  * Build a deterministic 32-char transactionUuid from a domain key. Same key →
  * same uuid → safe retry: Sinvoice rejects duplicate uuid with code
@@ -427,8 +426,7 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     }
 
     const data = (await res.json()) as
-      | SinvoiceEnvelope<SinvoiceLoginResult>
-      | SinvoiceLoginResult;
+      SinvoiceEnvelope<SinvoiceLoginResult> | SinvoiceLoginResult;
     const result =
       "result" in data && data.result
         ? data.result
@@ -565,6 +563,14 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       cusGetInvoiceRight: true,
       userName: this.username,
     };
+
+    if (request.invoiceIssuedAt) {
+      const invoiceIssuedDate = Date.parse(request.invoiceIssuedAt);
+      if (!Number.isFinite(invoiceIssuedDate)) {
+        throw new Error("sinvoice_invoice_issued_at_invalid");
+      }
+      generalInvoiceInfo["invoiceIssuedDate"] = invoiceIssuedDate;
+    }
 
     if (request.replacement) {
       const r = request.replacement;
@@ -734,5 +740,4 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       );
     }
   }
-
 }

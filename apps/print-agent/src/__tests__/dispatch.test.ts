@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import net from "node:net";
 import {
   dispatchPrintJob,
+  resolveInvoiceQrUrls,
   type PrinterRow,
   type PrintJobRow,
 } from "../dispatch.js";
@@ -128,4 +129,39 @@ test("fails before rendering when the LAN host is missing", async () => {
       ),
     /printer 10 missing lan_host/,
   );
+});
+
+test("resolves the customer invoice QR against WEB_BASE_URL", () => {
+  const payload = {
+    ...job().payload,
+    invoice_qr: {
+      type: "invoice" as const,
+      content: "/q/invoice/abc123",
+      header_label: "NHẬN HĐĐT",
+    },
+    document: {
+      schema_version: 1,
+      template_id: 0,
+      template_version: 1,
+      paper_width_mm: 80,
+      blocks: [
+        {
+          type: "invoiceQr",
+          qr: { type: "invoice", content: "/q/invoice/abc123" },
+        },
+      ],
+    },
+  };
+
+  const resolved = resolveInvoiceQrUrls(payload, "https://pos.matu.vn");
+  assert.equal(
+    resolved.kind === "receipt" ? resolved.invoice_qr?.content : null,
+    "https://pos.matu.vn/q/invoice/abc123",
+  );
+  assert.equal(
+    (resolved.document as { blocks: Array<{ qr: { content: string } }> })
+      .blocks[0]?.qr.content,
+    "https://pos.matu.vn/q/invoice/abc123",
+  );
+  assert.throws(() => resolveInvoiceQrUrls(payload), /requires WEB_BASE_URL/);
 });

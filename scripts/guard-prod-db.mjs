@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 // replays behavior fixtures so regex edits cannot silently weaken blocking.
 //
 // Blocks (exit 2): state-mutating Supabase CLI subcommands unless a supported
-// command binds its literal database URL to the approved Cloud DEV ref; psql
+// command binds its literal database URL to a verified Preview Branch; psql
 // writes against a protected or unverified connection; pg_restore toward a
 // protected or unverified target; HTTP writes plus non-catalog Production
 // reads; and
@@ -35,14 +35,6 @@ const PROTECTED_REFS = {
 
 const NO_TOUCH_REFS = new Set(["dyksphedgzqsqjqgxzog"]);
 
-const APPROVED_NON_PROD_REFS = {
-  dzvilydcccemlafxcydj: "DEV (matu-greenfield)",
-};
-const APPROVED_DEV_REF = Object.keys(APPROVED_NON_PROD_REFS)[0];
-const APPROVED_DEV_SESSION_POOLER = {
-  ref: "dzvilydcccemlafxcydj",
-  host: "aws-0-ap-southeast-1.pooler.supabase.com",
-};
 const APPROVED_PREVIEW_PARENT_REF = "iexwsuaqqenyjiskawoj";
 
 const CODEX_CONFIG = new URL("../.codex/config.toml", import.meta.url);
@@ -58,10 +50,7 @@ const LIBPQ_UNVERIFIED_ENV = [
 ];
 
 function registeredReadableRef(ref) {
-  return (
-    ref === APPROVED_PREVIEW_PARENT_REF ||
-    Object.hasOwn(APPROVED_NON_PROD_REFS, ref)
-  );
+  return ref === APPROVED_PREVIEW_PARENT_REF || trustedPreviewProject(ref) !== null;
 }
 
 function codexSupabaseBindingVerified() {
@@ -652,16 +641,6 @@ function registeredDatabaseUrlRef(value) {
     if (hostMatch) {
       const ref = hostMatch[1];
       return registeredReadableRef(ref) ? ref : null;
-    }
-
-    if (
-      url.hostname === APPROVED_DEV_SESSION_POOLER.host &&
-      url.port === "5432" &&
-      url.username === `postgres.${APPROVED_DEV_SESSION_POOLER.ref}` &&
-      !url.password &&
-      url.pathname === "/postgres"
-    ) {
-      return APPROVED_DEV_SESSION_POOLER.ref;
     }
 
     return null;
@@ -1529,7 +1508,7 @@ function block(reason) {
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
       "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is PRODUCTION — guarded table/view/catalog reads only;",
-      "dyksphedgzqsqjqgxzog belongs to a different codebase. matu-greenfield is DEV only when a supported command explicitly binds its target to dzvilydcccemlafxcydj;",
+      "dyksphedgzqsqjqgxzog belongs to a different codebase. Preview writes require a branch verified as a child of iexwsuaqqenyjiskawoj;",
       "migrations ship as file → PR → owner applies. If the owner explicitly delegated a prod write",
       "in this session, the owner applies it outside the guarded runtime or provides a scoped",
       "approval path. Never disable this hook or its runtime wiring.",
@@ -1578,7 +1557,7 @@ if (toolName === "Bash") {
         hasDynamicShellInvocation(segment) ||
         hasUnquotedDynamicExpansion(segment),
     );
-  const allowDevTarget = segments.length === 1 && !dynamicShell;
+  const allowPreviewTarget = segments.length === 1 && !dynamicShell;
   if (dynamicShell && DATABASE_CAPABLE_CLIENT.test(cmd)) {
     block("dynamic shell composition around a database-capable command");
   }
@@ -1618,14 +1597,15 @@ if (toolName === "Bash") {
       const hasUnresolvedDbUrl = dbUrls.some(
         (url) => containsShellParameter(url) || url.includes("`"),
       );
-      const cliTargetsDev =
-        APPROVED_DEV_REF !== null &&
-        allowDevTarget &&
+      const cliTargetsPreview =
+        allowPreviewTarget &&
         isDbPush &&
         !hasUnresolvedDbUrl &&
         !hasCompetingCliTarget &&
         dbUrls.length === 1 &&
-        readTargetRef === APPROVED_DEV_REF;
+        readTargetRef !== null &&
+        readTargetRef !== APPROVED_PREVIEW_PARENT_REF &&
+        trustedPreviewProject(readTargetRef) !== null;
 
       if (isReadOnly) {
         if (!isUnboundSafe && !readTargetRef) {
@@ -1639,7 +1619,7 @@ if (toolName === "Bash") {
         }
       } else if (isPreviewCreate) {
         if (
-          !allowDevTarget ||
+          !allowPreviewTarget ||
           /[`$]/.test(segment) ||
           hasCompetingCliTarget ||
           readTargetRef !== APPROVED_PREVIEW_PARENT_REF ||
@@ -1649,9 +1629,9 @@ if (toolName === "Bash") {
           block("Preview branch creation without the registered parent ref");
         }
       } else if (isDbPush) {
-        if (refHit || !cliTargetsDev) {
+        if (refHit || !cliTargetsPreview) {
           block(
-            "Supabase db push without a supported explicit Cloud DEV target",
+            "Supabase db push without a verified Preview Branch target",
           );
         }
       } else {
@@ -1696,7 +1676,7 @@ if (toolName === "Bash") {
         !psql.hasScriptFile &&
         psql.commands.every((sql) => guardedReadOnlySql(sql)) &&
         !unsafeFunction;
-      const guardedDevCommand =
+      const guardedPreviewCommand =
         psql.commands.length > 0 &&
         !psql.hasScriptFile &&
         !psql.hasVariables &&
@@ -1717,12 +1697,13 @@ if (toolName === "Bash") {
         );
       }
       if (
-        APPROVED_DEV_REF !== null &&
-        psqlTargetRef === APPROVED_DEV_REF &&
-        (!allowDevTarget || !guardedDevCommand)
+        psqlTargetRef !== APPROVED_PREVIEW_PARENT_REF &&
+        (!allowPreviewTarget ||
+          trustedPreviewProject(psqlTargetRef) === null ||
+          !guardedPreviewCommand)
       ) {
         block(
-          "DEV psql requires static literal -c input without variables or meta-commands",
+          "Preview psql requires a verified branch and static literal -c input without variables or meta-commands",
         );
       }
     }
@@ -1816,12 +1797,11 @@ if (mcpMatch) {
   // project_id. Claude/plugin and connector-wrapped tools are org-scoped and
   // must always carry an explicit project ref.
   const target = projectId === "" ? "iexwsuaqqenyjiskawoj" : projectId;
-  const staticNonProd = Object.hasOwn(APPROVED_NON_PROD_REFS, target);
   const label = Object.hasOwn(PROTECTED_REFS, target)
     ? PROTECTED_REFS[target]
     : undefined;
-  const preview = !staticNonProd && !label ? trustedPreviewProject(target) : null;
-  const approvedNonProd = staticNonProd || preview !== null;
+  const preview = !label ? trustedPreviewProject(target) : null;
+  const approvedNonProd = preview !== null;
   if (NO_TOUCH_REFS.has(target)) {
     block(`${action} against no-touch ref ${target}`);
   }
@@ -1867,9 +1847,7 @@ if (mcpMatch) {
       process.exit(0);
     }
     block(
-      `${action} against ${
-        APPROVED_NON_PROD_REFS[target] ?? "a trusted Preview branch"
-      }`,
+      `${action} against a trusted Preview branch`,
     );
   }
 

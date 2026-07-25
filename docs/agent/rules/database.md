@@ -18,25 +18,17 @@ over older task notes, regressions, and memory.
 project-scoped MCP tools; it is not the guarded-read policy used for comtammatu
 Production.
 
-- **DEV — `matu-greenfield` (`dzvilydcccemlafxcydj`)** is the persistent
-  non-production Cloud target. Verify this ref before every tool or SQL call;
-  use only task-scoped non-production data and never treat it as production.
-  `corepack pnpm db:types` always generates from this registered DEV target and
-  rejects any other `SUPABASE_PROJECT_ID`.
-  The local guard permits `supabase db push` only with a literal `--db-url`
-  whose host is the direct DEV database endpoint or the registered DEV Session
-  Pooler (the IPv4-only fallback for this runner). The repository `dotenv`
-  runner may load a password from `.env.local`, but cannot provide the URL.
-  Direct DEV `psql` URLs are
-  supported only as static literal `-c` commands with `-X` or `--no-psqlrc`.
-  Interactive sessions, script files, psql variables/meta-commands, stored link
-  state, startup-file commands, env-indirected targets, and every other
-  mutating Supabase CLI path remain blocked.
+- Production is the only persistent comtammatu Cloud database.
+  `corepack pnpm db:types` generates from the registered Production ref and
+  rejects any other `SUPABASE_PROJECT_ID`. Type generation is read-only and
+  does not grant schema-write authority.
 - Use an on-demand Preview Branch for isolated migration replay or disposable
-  verification. A workstation must not substitute Supabase Local Docker for
-  either Cloud target. The CI-only E2E harness is the sole isolated Docker
-  exception and may write only its ignored `apps/web/.env.test.local` plus the
-  GitHub runner's `GITHUB_ENV`; it never writes repository `.env.local` files.
+  verification. It must be an ephemeral child of the registered Production
+  project, never a second persistent non-production project. A workstation must
+  not substitute Supabase Local Docker for either Cloud target. The CI-only E2E
+  harness is the sole isolated Docker exception and may write only its ignored
+  `apps/web/.env.test.local` plus the GitHub runner's `GITHUB_ENV`; it never
+  writes repository `.env.local` files.
   CLI creation additionally requires the literal parent binding
   `--project-ref iexwsuaqqenyjiskawoj`; stored link state and any other parent
   remain blocked.
@@ -45,7 +37,8 @@ Production.
   verifies both `project_ref` and `parent_project_ref`. This proof is repeated
   per action; it creates no local whitelist or stored-link exception. A lookup
   failure, mismatched parent, branch merge/reset/rebase, or every Preview CLI
-  mutation fails closed. `supabase db push` remains DEV-only.
+  mutation fails closed. File replay is allowed only against a verified Preview
+  Branch; it remains blocked against Production.
 - Org-scoped MCP servers and the Supabase CLI are write-capable. This repo has
   no tracked `.mcp.json`; never infer a project binding from one. Codex's direct
   repo MCP URL in `.codex/config.toml` is pinned to comtammatu Production with
@@ -63,8 +56,8 @@ Production.
   target selectors fail closed. Project-scoped CLI reads use a literal
   `--project-ref` or direct registered `--db-url` as supported by that command.
   Production CLI and MCP reads are limited to schema/catalog surfaces; project
-  metadata, logs, advisors, API keys, and secrets remain blocked. Registered DEV
-  may use the broader project-read actions required for non-production QA.
+  metadata, logs, advisors, API keys, and secrets remain blocked. A verified
+  Preview Branch may use the broader project-read actions required for QA.
 - Protected HTTP reads must also disable hidden request input: use `curl -q`,
   `wget --no-config`, or HTTPie/xh `--ignore-stdin`. Explicit client config,
   stdin/request bodies, mutating methods, and unresolved Supabase URLs remain
@@ -94,7 +87,9 @@ Production.
   prove the comtammatu parent; org-scoped branch-id-only tools fail closed.
   Merge, reset, and rebase into production remain production writes.
 - Production defaults to file → PR → merge → owner applies. Agent apply requires
-  explicit delegation for the exact operation in the current session.
+  explicit delegation for the exact operation in the current session. That
+  delegation authorizes only the named apply; it does not make Production a
+  default write target for later operations or sessions.
 - Delegation never authorizes changing or disabling repo guards. If the guarded
   runtime still blocks the operation, the owner applies outside it or provides a
   scoped approval path.

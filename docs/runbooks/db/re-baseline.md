@@ -165,6 +165,108 @@ now-squashed forward chain.
     migration chain). Future migrations append on top of the aligned baseline
     and retain their filename version in the production ledger.
 
+## Current alignment packet — 2026-07-25
+
+This packet records the read-only comparison against Production
+`iexwsuaqqenyjiskawoj`. Refresh it immediately before an owner-authorized
+metadata or schema write; it is not authorization to run one.
+
+Use a clean worktree at the exact source commit being aligned. The current
+shared worktree is not suitable because it is behind `origin/main` and contains
+uncommitted HĐĐT work.
+
+### Classification
+
+Keep these Production ledger versions:
+
+- `20260720035548_baseline`
+- `20260724030942_enforce_self_order_payment_fingerprint_v1`
+- `20260724070601_fix_menu_limit_warehouse_replenishment`
+
+The fingerprint migration's stored statement differs from the current file,
+but Production already has the validated `payment:v1` constraint, both
+invariant triggers enabled, and zero `legacy:v0` rows. This is catalog/data
+equivalence, not statement equality.
+
+The following source versions are schema-equivalent to an existing
+Production-applied version. Add the source version as `applied` only after the
+same comparison is refreshed:
+
+| Source version | Existing Production version | Evidence |
+| --- | --- | --- |
+| `20260720035549` | `20260717151346` | All five extensions, five buckets, ten storage policies, ten realtime tables, and nine cron jobs match the managed-surface fold |
+| `20260720035550` | `20260719091531` | Stored SQL MD5 matches |
+| `20260720035551` | `20260719091552` | Stored SQL MD5 matches |
+| `20260720035552` | `20260719091602` | Stored SQL MD5 matches |
+| `20260721120000` | `20260721111518` | Stored SQL MD5 matches |
+| `20260721121000` | `20260721111549` | Stored SQL MD5 matches |
+| `20260721135538` | `20260721135954` | Applied SQL matches the pre-ACL file; current function ACL is `postgres,service_role` only |
+| `20260721160235` | `20260721160551` | SQL matches after whitespace normalization |
+| `20260721174543` | `20260721183309` | Stored SQL MD5 matches |
+| `20260721210937` | `20260721142727` | Stored SQL MD5 matches |
+| `20260721211000` | `20260721150240` | Current reconciliation function completes the issue job; no completed job is unbound |
+| `20260721221745` | `20260721151828` | SQL matches after whitespace normalization |
+| `20260722074001` | `20260722075955` | Stored SQL MD5 matches |
+| `20260725122220` | `20260725060308` | Stored SQL MD5 matches |
+| `20260725141050` | `20260725084711` | Stored SQL MD5 matches |
+| `20260725141240` | `20260725100805` | Stored SQL MD5 matches |
+| `20260725141900` | `20260725100849` | Stored SQL MD5 matches |
+| `20260725142100` | `20260725100918` | Stored SQL MD5 matches |
+| `20260725142200` | `20260725100952` | Stored SQL MD5 matches |
+| `20260725142300` | `20260725101020` | Stored SQL MD5 matches |
+
+Do not mark these as applied:
+
+- `20260720120000_fix_paid_menu_item_sales_aggregation.sql` has no Production
+  ledger row. Production still uses the stale `LANGUAGE sql` definition that
+  buckets by `orders.created_at` and does not expand sides. Apply the actual
+  migration through the owner-approved schema path, then record its source
+  version.
+- `20260725160907_add_customer_invoice_qr_flow.sql` is pending feature work.
+  Keep it out of Production until the legal, Viettel, Preview, and release gates
+  in ADR 0013 pass.
+
+### Owner-operated order
+
+1. Save a fresh read-only Production ledger and catalog/ACL evidence.
+2. Create one disposable Preview from Production and require automatic migration
+   replay plus contract, race, privilege, and HTTP smoke. No manual SQL patch is
+   accepted as Preview evidence.
+3. Apply `20260720120000_fix_paid_menu_item_sales_aggregation.sql` to Production
+   through the owner-approved schema path. `migration repair` is not a substitute
+   for this SQL.
+4. Add the schema-equivalent source versions above as `applied`.
+5. Only after all source versions are present, mark their superseded Production
+   aliases and every pre-`20260720035548` squashed entry as `reverted`.
+6. Require `supabase migration list` parity and a `supabase db push --dry-run`
+   with no pending migration against the clean non-feature source commit.
+7. Regenerate types from Production and review the diff.
+8. Delete the Preview after all evidence is collected.
+
+Run steps 3–5 only with explicit owner approval in that session and an
+owner-held literal Production connection. Never use stored link state, never
+disable the repository guard, and preserve the before/after ledger output for
+rollback. If the refreshed hash or catalog evidence differs, stop before the
+first write and regenerate this mapping.
+
+### Execution evidence — 2026-07-25
+
+- Production `iexwsuaqqenyjiskawoj` now records the source baseline and forwards
+  from `20260720035548` through `20260725142300`; the provider-applied
+  `20260725060308_allow_guest_cancel_vietqr` row remains until its source file
+  is committed.
+- `20260720120000_fix_paid_menu_item_sales_aggregation.sql` was applied once.
+  The live function uses completed `payments.paid_at`, expands side lines, keeps
+  `private.finance_scope`, denies anon execution, and the temporary connector
+  version was replaced by the source version in the ledger.
+- Disposable Preview `qxdsfqfhalvuixjkjyll`, parent
+  `iexwsuaqqenyjiskawoj`, completed automatic replay from the aligned ledger.
+  The receipt-QR migration then passed its SQL contract, concurrent race, ACL,
+  authenticated Data API denial, and index checks without calling the invoice
+  provider.
+- The receipt-QR migration remains absent from Production. Its legal, Viettel,
+  authenticated HTTP, and release gates remain independent.
+
 ## Acceptance
 
 - CI `baseline-replay` runs `pnpm db:baseline:local-check` successfully on its

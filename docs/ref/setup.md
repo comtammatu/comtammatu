@@ -36,22 +36,19 @@ UPSTASH_REDIS_REST_URL=https://YOUR_REDIS.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
 ```
 
-Hiện chưa có registered Cloud DEV type source, nên `corepack pnpm db:types`
-fail-closed. Sau khi owner đăng ký ref DEV mới trong Environment Registry, lệnh
-này mới được bật lại; không được override `SUPABASE_PROJECT_ID` sang project
-khác:
+`corepack pnpm db:types` chỉ đọc schema từ Production đã đăng ký và từ chối mọi
+`SUPABASE_PROJECT_ID` khác:
 
 ```bash
-corepack pnpm db:types
+SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj corepack pnpm db:types
 ```
 
 ## Database
 
 - Migration production là owner-gated. Agent viết migration file; owner apply
   production trừ khi owner ủy quyền rõ trong chính session hiện tại.
-- Chỉ kiểm migration non-production sau khi persistent Cloud DEV mới được đăng
-  ký. Preview Branch không thay thế DEV type source. Xem
-  `docs/agent/rules/database.md`.
+- Kiểm migration trên Preview Branch throwaway có parent là Production trước
+  khi apply Production. Xem `docs/agent/rules/database.md`.
 - Không chạy `supabase db push` vào production.
 
 JWT Custom Claims Hook trong Supabase Dashboard:

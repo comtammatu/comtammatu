@@ -182,10 +182,34 @@ test("receipt fallback materializes default layout", () => {
     blocks.some((b) => b.type === "cashChange" && b.cash_received === 200000),
     "missing cashChange block",
   );
-  const qrBlock = blocks.find((b) => b.type === "paymentQr");
-  assert.ok(qrBlock, "missing paymentQr block");
-  assert.equal(qrBlock.qr?.account_no, "1234567890123");
+  assert.ok(
+    !blocks.some((b) => b.type === "paymentQr"),
+    "receipt must not include paymentQr",
+  );
   assertTextOrder(blocks, "HÓA ĐƠN THANH TOÁN", "Bàn 5 #087");
+});
+
+test("receipt appends a customer invoice QR before the footer", () => {
+  const document = materializeDocument("receipt", {
+    ...SAMPLE_PAYLOADS.receipt,
+    invoice_qr: {
+      type: "invoice",
+      content: "https://pos.matu.vn/q/invoice/abc123",
+      header_label: "NHẬN HĐĐT",
+    },
+  });
+  const lines = renderDocumentToOps(document).flatMap((op) =>
+    op.kind === "line" ? [op.text] : [],
+  );
+
+  assert.ok(document.blocks.some((block) => block.type === "invoiceQr"));
+  assert.ok(
+    document.blocks.findIndex((block) => block.type === "invoiceQr") <
+      document.blocks.findIndex((block) => block.type === "footer"),
+  );
+  assert.ok(lines.includes("QUÉT QR XUẤT HĐĐT"));
+  assert.ok(lines.includes("QR chỉ có giá trị xuất HĐĐT trong 2 giờ"));
+  assert.ok(!lines.includes("THÔNG TIN TÀI KHOẢN NGÂN HÀNG"));
 });
 
 test("receipt render keeps compact item table with category total rows", () => {
@@ -248,12 +272,10 @@ test("receipt render keeps compact item table with category total rows", () => {
   );
 
   const qrIndex = ops.findIndex((op) => op.kind === "qr");
-  assert.ok(qrIndex > 0, "missing QR render op");
-  assert.equal(ops[qrIndex - 1]?.kind, "blank", "missing gap before QR");
-  assert.equal(ops[qrIndex + 1]?.kind, "blank", "missing gap after QR");
+  assert.equal(qrIndex, -1, "receipt must not render payment QR");
   assert.ok(
-    lines.includes("THÔNG TIN TÀI KHOẢN NGÂN HÀNG"),
-    "missing bank account heading",
+    !lines.includes("THÔNG TIN TÀI KHOẢN NGÂN HÀNG"),
+    "receipt must not render bank account details",
   );
 });
 
@@ -279,10 +301,12 @@ test("receipt render wraps long branch address", () => {
   );
 });
 
-test("receipt without QR skips paymentQr block", () => {
+test("receipt ignores payment QR data", () => {
   const blocks = blocksOf({
     ...SAMPLE_PAYLOADS.receipt,
-    payment_qr: null,
+    payment_qr: (
+      SAMPLE_PAYLOADS.provisional_bill as { payment_qr: unknown }
+    ).payment_qr,
   } as PrintPayload);
   assert.ok(!blocks.some((b) => b.type === "paymentQr"));
 });

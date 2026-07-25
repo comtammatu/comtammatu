@@ -41,7 +41,10 @@ test("SePay only completes payment; the durable job owns HĐĐT recovery", () =>
   assert.doesNotMatch(finance, /issueMissingSepayInvoices|webhook_events/);
   assert.match(migration, /CREATE TABLE public\.tax_invoice_issue_jobs/);
   assert.match(migration, /UNIQUE \(tenant_id, order_id\)/);
-  assert.match(migration, /pending_payment', 'queued', 'processing', 'completed', 'blocked', 'reconcile_required/);
+  assert.match(
+    migration,
+    /pending_payment', 'queued', 'processing', 'completed', 'blocked', 'reconcile_required/,
+  );
   assert.match(migration, /FOR UPDATE SKIP LOCKED/);
   assert.match(vercel, /"path": "\/api\/cron\/tax-invoice-issue"/);
   assert.match(vercel, /"schedule": "\*\/5 \* \* \* \*"/);
@@ -58,7 +61,10 @@ test("provider-issued result is reconciled atomically and never written directly
 
   assert.match(issuer, /reconcile_tax_invoice_provider_issued/);
   assert.doesNotMatch(issuer, /\.update\(invoiceWrite\)/);
-  assert.match(migration, /FOR UPDATE[\s\S]*tax_invoice_reconcile_status_invalid/);
+  assert.match(
+    migration,
+    /FOR UPDATE[\s\S]*tax_invoice_reconcile_status_invalid/,
+  );
   assert.match(migration, /tax_invoice_provider_ref_mismatch/);
   assert.match(migration, /INSERT INTO public\.tax_invoice_events/);
   assert.match(migration, /INSERT INTO public\.reconcile_run_log/);
@@ -66,7 +72,10 @@ test("provider-issued result is reconciled atomically and never written directly
     bindingFix,
     /tax_invoice_id = COALESCE\(tax_invoice_id, v_invoice\.id\)/,
   );
-  assert.match(bindingFix, /job\.status = 'completed'[\s\S]*job\.tax_invoice_id IS NULL/);
+  assert.match(
+    bindingFix,
+    /job\.status = 'completed'[\s\S]*job\.tax_invoice_id IS NULL/,
+  );
 });
 
 test("internal payment helper and two-argument cash overload are not callable directly", () => {
@@ -114,12 +123,16 @@ test("only the service worker can claim or finalize HĐĐT jobs", () => {
 
 test("one-shot HĐĐT worker claims only the requested job", () => {
   const worker = read("apps/web/lib/tax-invoice-issue-worker.ts");
+  const issuer = read("apps/web/lib/hddt-per-order.ts");
   const route = read("apps/web/app/api/cron/tax-invoice-issue/route.ts");
   const migration = read(
     "supabase/migrations/20260721210937_add_scoped_tax_invoice_job_claim.sql",
   );
 
-  assert.match(worker, /jobId === undefined[\s\S]*claim_tax_invoice_issue_job/);
+  assert.match(
+    worker,
+    /if \(jobId !== undefined\)[\s\S]*"claim_tax_invoice_issue_job"[\s\S]*p_job_id: jobId[\s\S]*return summary/,
+  );
   assert.match(route, /searchParams\.get\("jobId"\)/);
   assert.match(route, /runTaxInvoiceIssueWorker\(jobId\)/);
   assert.match(migration, /WHERE job\.id = p_job_id/);
@@ -135,5 +148,12 @@ test("one-shot HĐĐT worker claims only the requested job", () => {
   assert.match(
     worker,
     /if \(finalStatus === "issued"\) \{\s*return "completed";\s*\}/,
+  );
+  assert.match(worker, /issuePreparedTaxInvoice/);
+  assert.match(worker, /\.eq\("id", taxInvoiceId\)/);
+  assert.match(issuer, /prepare_tax_invoice_issue_job_as_system/);
+  assert.match(
+    issuer,
+    /invoiceIssuedAt: parsed\.data\.draftSnapshot\.invoiceTime/,
   );
 });

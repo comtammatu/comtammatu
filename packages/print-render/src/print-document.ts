@@ -120,6 +120,12 @@ export type PrintDocumentPaymentQrBlock = {
   qr?: PrintDocumentQrData | null;
 };
 
+export type PrintDocumentInvoiceQrBlock = {
+  type: "invoiceQr";
+  heading?: string;
+  qr?: PrintDocumentQrData | null;
+};
+
 export type PrintDocumentFooterBlock = {
   type: "footer";
   lines?: string[];
@@ -139,6 +145,7 @@ export type PrintDocumentBlock =
   | PrintDocumentCashChangeBlock
   | PrintDocumentNoteBlock
   | PrintDocumentPaymentQrBlock
+  | PrintDocumentInvoiceQrBlock
   | PrintDocumentFooterBlock;
 
 export type PrintDocument = {

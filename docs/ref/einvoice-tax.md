@@ -5,7 +5,7 @@
 > 108/2025/QH15; NĐ 252/2026/NĐ-CP; NĐ 254/2026/NĐ-CP;
 > TT 32/2025/TT-BTC; NĐ 68/2026/NĐ-CP; NĐ 141/2026/NĐ-CP;
 > TT 152/2025/TT-BTC.
-> Last updated: 2026-07-19.
+> Last updated: 2026-07-25.
 
 ## 1. Ranh Giới Nghiệp Vụ
 
@@ -63,16 +63,25 @@ khấu trừ với CQT. Không suy diễn cấu hình này từ việc schema c�
 
 ```text
 Payment thành công
-  → chụp dữ liệu order, người mua và các dòng hàng
-  → issueTaxInvoiceForPaidOrder
-  → ViettelSinvoiceProvider.createInvoice
-  → ghi tax_invoices với provider_ref và trạng thái provider trả về
-  → nếu provider lỗi: giữ payment, lưu draft + last_error để Finance xử lý
+  → chụp bất biến order, các dòng hàng, tổng tiền và paid_at
+  → tạo một tax_invoices draft với người mua "Bán cho người tiêu dùng"
+  → in QR bổ sung thông tin người mua trên Hóa đơn thanh toán
+  → khách xác nhận thông tin hoặc đến paid_at + 2 giờ
+  → worker khóa chính draft đó và gọi ViettelSinvoiceProvider.createInvoice
+  → ghi provider_ref và trạng thái provider trả về
+  → nếu kết quả provider chưa rõ: giữ payment và chuyển sang đối soát, không tự gửi lại
 ```
 
+VietQR thanh toán chỉ in trên Phiếu tạm tính và luôn gắn với pending payment
+của đúng order/amount. Hóa đơn thanh toán không in lại VietQR; chứng từ này chỉ
+bổ sung QR để khách nhập thông tin nhận HĐĐT.
+
 HĐĐT là side effect bắt buộc sau thanh toán nhưng lỗi HĐĐT không được rollback
-payment. Mọi lần thử lại phải dùng cùng định danh giao dịch của bản ghi để tránh
-phát hành trùng.
+payment. Thông tin người mua chỉ được bổ sung vào draft hiện hữu; dòng hàng,
+tổng tiền và `invoice_time` không được thay đổi. `invoice_time` lấy từ
+`payments.paid_at`, còn `issued_at` ghi thời điểm provider xác nhận phát hành.
+Mọi lần đối soát hoặc thử lại hợp lệ phải dùng cùng định danh giao dịch của bản
+ghi để tránh phát hành trùng.
 
 Khách không cung cấp tên/MST vẫn đi qua luồng phát hành với:
 
@@ -82,9 +91,44 @@ buyerTaxCode = ""
 buyerNotGetInvoice = true
 ```
 
+Nếu khách không bổ sung thông tin trước `paid_at + 2 giờ`, worker phát hành
+draft với người mua mặc định trên. Nếu khách xác nhận sớm, job được mở khóa để
+phát hành ngay cùng draft đó.
+
+Quyền sửa đóng chính xác tại `paid_at + 2 giờ`. Cron hiện chạy mỗi năm phút nên
+lệnh phát hành tự động có thể bắt đầu ở lần cron kế tiếp; độ trễ scheduler này
+không kéo dài hoặc mở lại QR.
+
+Buyer request lưu trạng thái kết thúc: khách xác nhận chuyển `open → submitted`;
+worker hết hạn chuyển `open → expired`. Cả hai nhánh đều ghi `closed_at` và
+`close_reason`. Từ thời điểm đó, mọi lần ghi tiếp bị từ chối và Hóa đơn thanh
+toán in lại không còn QR.
+
+Khi khách xác nhận, `submitted_payload` lưu snapshot MST, tên đơn vị, địa chỉ và
+email đã được server xác minh; `tax_invoice_events` ghi một sự kiện nguồn
+`receipt_qr`. Bảng buyer request chỉ cho `service_role`, không mở đọc trực tiếp
+cho trình duyệt.
+
+`available_at` chỉ là mốc job đủ điều kiện, không phải quan hệ phụ thuộc FIFO.
+Bốn lane worker claim từng job bằng `FOR UPDATE SKIP LOCKED`; một hóa đơn chậm
+không giữ trước hoặc chặn các hóa đơn đủ điều kiện khác.
+
 Nếu trạng thái `signing` hoặc `submitted` kéo dài, nhân sự Finance tra
 `provider_ref` trực tiếp trên Viettel S-invoice trước khi thử lại. Không tạo
 một hóa đơn mới chỉ vì ứng dụng chưa nhận số hóa đơn.
+
+Việc truyền `invoice_time = payments.paid_at` thành `invoiceIssuedDate` khi gọi
+Viettel sau tối đa hai giờ là cổng phát hành Production, không phải giả định đã
+được chứng minh. Phải có xác nhận pháp lý bằng văn bản và bằng chứng trên đúng
+tài khoản Viettel trước khi bật; nếu không đạt, phát hành tại `paid_at` rồi dùng
+quy trình thay thế/điều chỉnh khi khách bổ sung thông tin.
+
+Kiểm chứng ngày 25/07/2026: [trả lời của Bộ Tài chính ngày
+23/07/2026](https://nif.mof.gov.vn/hoidapcstc/home/cthoidap/163784) dẫn Điều 9
+NĐ 254/2026/NĐ-CP rằng dịch vụ lập hóa đơn khi hoàn thành; nếu thu tiền trước
+hoặc trong khi cung cấp dịch vụ thì thời điểm lập hóa đơn là thời điểm thu
+tiền. Bằng chứng này không xác lập khoảng chờ pháp lý hai giờ, nên draft nội bộ
+không thay thế HĐĐT pháp lý và cổng Production ở trên vẫn bắt buộc.
 
 ### 3.2 Dòng Hàng Và Tổng Tiền
 
@@ -109,7 +153,7 @@ issued → replaced
 
 | Trạng thái | Ý nghĩa |
 | --- | --- |
-| `draft` | Chưa phát hành thành công; có thể sửa và thử lại |
+| `draft` | Chưa gửi provider; chỉ được bổ sung thông tin người mua trước hạn |
 | `signing` | Đang gửi/ký tại provider |
 | `submitted` | Provider đã nhận nhưng chưa trả đủ số/mã |
 | `issued` | Đã phát hành thành công |

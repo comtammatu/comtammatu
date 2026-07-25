@@ -52,6 +52,13 @@ export type PaymentQR = {
   description: string;
 };
 
+export type InvoiceQR = {
+  type: "invoice";
+  /** Relative public path; print-agent resolves it against WEB_BASE_URL. */
+  content: string;
+  header_label: string;
+};
+
 export type BillBase = {
   branch_name?: string;
   branch_address?: string;
@@ -96,7 +103,7 @@ export type ReceiptPayload = BillBase & {
   kind: "receipt";
   /** Unknown values pass through and render as the raw key. */
   payment_method?: "cash" | "vietqr" | "bank_transfer" | string | null;
-  payment_qr?: PaymentQR | null;
+  invoice_qr?: InvoiceQR | null;
   /** Cash only; non-cash methods send total_amount. Rows skipped when omitted. */
   cash_received?: number | null;
   cash_change?: number | null;

@@ -1,4 +1,5 @@
 import {
+  isRecord,
   renderPayloadToEscpos,
   type PrintPayload,
 } from "@comtammatu/print-render";
@@ -40,7 +41,57 @@ export type PrintRetryOptions = {
   timeoutMs: number;
   maxAttempts: number;
   backoffMs: number;
+  webBaseUrl?: string | null;
 };
+
+function resolveInvoiceUrl(
+  content: string,
+  webBaseUrl?: string | null,
+): string {
+  if (/^https?:\/\//i.test(content)) return content;
+  if (!content.startsWith("/") || !webBaseUrl) {
+    throw new Error("receipt invoice QR requires WEB_BASE_URL");
+  }
+  const url = new URL(content, webBaseUrl);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("receipt invoice QR requires an HTTP(S) WEB_BASE_URL");
+  }
+  return url.href;
+}
+
+export function resolveInvoiceQrUrls(
+  payload: PrintPayload,
+  webBaseUrl?: string | null,
+): PrintPayload {
+  if (payload.kind !== "receipt" || !payload.invoice_qr?.content)
+    return payload;
+
+  const invoiceQr = {
+    ...payload.invoice_qr,
+    content: resolveInvoiceUrl(payload.invoice_qr.content, webBaseUrl),
+  };
+  if (!isRecord(payload.document) || !Array.isArray(payload.document.blocks)) {
+    return { ...payload, invoice_qr: invoiceQr };
+  }
+
+  return {
+    ...payload,
+    invoice_qr: invoiceQr,
+    document: {
+      ...payload.document,
+      blocks: payload.document.blocks.map((block) => {
+        if (
+          !isRecord(block) ||
+          block.type !== "invoiceQr" ||
+          !isRecord(block.qr)
+        ) {
+          return block;
+        }
+        return { ...block, qr: { ...block.qr, content: invoiceQr.content } };
+      }),
+    },
+  };
+}
 
 export async function dispatchPrintJob(
   job: PrintJobRow,
@@ -60,6 +111,8 @@ export async function dispatchPrintJob(
     throw new Error(`printer ${printer.id} missing lan_host`);
   }
 
-  const bytes = await renderPayloadToEscpos(job.payload);
+  const bytes = await renderPayloadToEscpos(
+    resolveInvoiceQrUrls(job.payload, options.webBaseUrl),
+  );
   await sendRawLAN(printer.lan_host, printer.lan_port ?? 9100, bytes, options);
 }

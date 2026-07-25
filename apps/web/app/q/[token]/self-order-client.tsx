@@ -48,19 +48,13 @@ import {
   MenuPanel,
   defaultSelfOrderCategoryValue,
 } from "./self-order/menu-panel";
-import {
-  type GuestPaymentRequestState,
-  type InvoiceErrorFocusRequest,
-  type InvoiceFieldErrors,
-} from "./self-order/payment-panel";
+import type { GuestPaymentRequestState } from "./self-order/payment-panel";
 
 interface SelfOrderClientProps {
   token: string;
   initialSnapshot: PublicSelfOrderAvailableSnapshot;
 }
 
-const TAX_CODE_PATTERN = /^\d{10}(-\d{3})?$/;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PAYMENT_COMPLETED_DISPLAY_MS = 10_000;
 
 function PaymentPanelLoading() {
@@ -81,13 +75,6 @@ const PaymentPanel = dynamic(
     import("./self-order/payment-panel").then((module) => module.PaymentPanel),
   { ssr: false, loading: PaymentPanelLoading },
 );
-
-function normalizeTaxCodeInput(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 13);
-  return digits.length > 10
-    ? `${digits.slice(0, 10)}-${digits.slice(10)}`
-    : digits;
-}
 
 function lineTotal(item: SelfOrderCartItem) {
   const modifierTotal = item.modifiers.reduce(
@@ -278,15 +265,6 @@ export function SelfOrderClient({
       null,
   );
   const [paymentCompleted, setPaymentCompleted] = useState(false);
-  const [buyerNotGetInvoice, setBuyerNotGetInvoice] = useState(true);
-  const [buyerName, setBuyerName] = useState("");
-  const [buyerTaxCode, setBuyerTaxCode] = useState("");
-  const [buyerAddress, setBuyerAddress] = useState("");
-  const [buyerEmail, setBuyerEmail] = useState("");
-  const [invoiceFieldErrors, setInvoiceFieldErrors] =
-    useState<InvoiceFieldErrors>({});
-  const [invoiceErrorFocusRequest, setInvoiceErrorFocusRequest] =
-    useState<InvoiceErrorFocusRequest | null>(null);
   const [activeCategoryValue, setActiveCategoryValue] = useState(() =>
     defaultSelfOrderCategoryValue(initialSnapshot.menu),
   );
@@ -306,7 +284,6 @@ export function SelfOrderClient({
   const [isPaymentPending, startPayment] = useTransition();
   const batchIntentRef = useRef<SelfOrderClientIntent | null>(null);
   const paymentIntentRef = useRef<SelfOrderClientIntent | null>(null);
-  const invoiceFocusAttemptRef = useRef(0);
   const guestToastKeyRef = useRef<string | null>(null);
   const refreshErrorRef = useRef<string | null>(null);
   const ignoredPaymentStatusClientOpIdRef = useRef<string | null>(null);
@@ -435,17 +412,6 @@ export function SelfOrderClient({
         : undefined,
     });
   }, [snapshot]);
-
-  const invoicePayload = useMemo(
-    () => ({
-      buyerNotGetInvoice,
-      buyerName: buyerName.trim(),
-      buyerTaxCode: buyerTaxCode.trim(),
-      buyerAddress: buyerAddress.trim(),
-      buyerEmail: buyerEmail.trim(),
-    }),
-    [buyerAddress, buyerEmail, buyerName, buyerNotGetInvoice, buyerTaxCode],
-  );
 
   const cartDemandByMenuItemId = useMemo(
     () => buildCartDemandByMenuItemId(cartItems),
@@ -583,46 +549,12 @@ export function SelfOrderClient({
     });
   }
 
-  function validateInvoice(): InvoiceFieldErrors {
-    if (buyerNotGetInvoice) return {};
-    const errors: InvoiceFieldErrors = {};
-    if (buyerEmail.trim() && !EMAIL_PATTERN.test(buyerEmail.trim())) {
-      errors.buyerEmail = SELF_ORDER_VI.buyerEmailInvalid;
-    }
-    if (buyerTaxCode.trim() && !TAX_CODE_PATTERN.test(buyerTaxCode.trim())) {
-      errors.buyerTaxCode = SELF_ORDER_VI.buyerTaxInvalid;
-    }
-    if (buyerTaxCode.trim()) {
-      if (!buyerName.trim())
-        errors.buyerName = SELF_ORDER_VI.buyerBusinessMissing;
-      if (!buyerAddress.trim()) {
-        errors.buyerAddress = SELF_ORDER_VI.buyerBusinessMissing;
-      }
-    }
-    return errors;
-  }
-
   function requestPayment(method: "cash_call" | "vietqr") {
     if (!order || activePaymentRequest) return;
-    const fieldErrors = validateInvoice();
-    setInvoiceFieldErrors(fieldErrors);
-    const firstError = (
-      ["buyerName", "buyerTaxCode", "buyerAddress", "buyerEmail"] as const
-    ).find((field) => fieldErrors[field]);
-    if (firstError) {
-      invoiceFocusAttemptRef.current += 1;
-      setInvoiceErrorFocusRequest({
-        attempt: invoiceFocusAttemptRef.current,
-        field: firstError,
-      });
-      return;
-    }
-
     const intent = resolveClientIntent(
       paymentIntentRef.current,
       buildPaymentIntentKey({
         method,
-        invoice: invoicePayload,
         orderNumber: order.orderNumber,
         totalAmount: order.totalAmount,
       }),
@@ -636,7 +568,7 @@ export function SelfOrderClient({
       try {
         const response = await postSelfOrderJson(
           `/api/self-order/${encodeURIComponent(token)}/payment`,
-          { clientOpId: intent.clientOpId, method, invoice: invoicePayload },
+          { clientOpId: intent.clientOpId, method },
         );
         const result = await readApiResponse(response);
         if (!result.ok) {
@@ -675,28 +607,9 @@ export function SelfOrderClient({
 
   function openPaymentConfirmation() {
     if (!selectedPaymentMethod || !order || activePaymentRequest) return;
-    const fieldErrors = validateInvoice();
-    setInvoiceFieldErrors(fieldErrors);
-    const firstError = (
-      ["buyerName", "buyerTaxCode", "buyerAddress", "buyerEmail"] as const
-    ).find((field) => fieldErrors[field]);
-    if (firstError) {
-      invoiceFocusAttemptRef.current += 1;
-      setInvoiceErrorFocusRequest({
-        attempt: invoiceFocusAttemptRef.current,
-        field: firstError,
-      });
-      return;
-    }
-
     setPaymentError(null);
     setPaymentConfirmationMethod(selectedPaymentMethod);
   }
-
-  const paymentConfirmationInvoice = buyerNotGetInvoice
-    ? SELF_ORDER_VI.paymentConfirmInvoiceDefault
-    : [buyerName.trim(), buyerTaxCode.trim()].filter(Boolean).join(" · ") ||
-      SELF_ORDER_VI.paymentConfirmInvoiceDefault;
 
   return (
     <AppPage
@@ -804,24 +717,10 @@ export function SelfOrderClient({
             disabled={awaiting || paymentPending}
             activeOrder={order}
             activePaymentRequest={activePaymentRequest}
-            buyerNotGetInvoice={buyerNotGetInvoice}
-            buyerName={buyerName}
-            buyerTaxCode={buyerTaxCode}
-            buyerAddress={buyerAddress}
-            buyerEmail={buyerEmail}
             selectedPaymentMethod={selectedPaymentMethod}
             isPending={isPaymentPending}
             pendingMethod={pendingPaymentMethod}
             error={paymentError}
-            fieldErrors={invoiceFieldErrors}
-            errorFocusRequest={invoiceErrorFocusRequest}
-            onBuyerNotGetInvoiceChange={setBuyerNotGetInvoice}
-            onBuyerNameChange={setBuyerName}
-            onBuyerTaxCodeChange={(value) =>
-              setBuyerTaxCode(normalizeTaxCodeInput(value))
-            }
-            onBuyerAddressChange={setBuyerAddress}
-            onBuyerEmailChange={setBuyerEmail}
             onPaymentMethodChange={setSelectedPaymentMethod}
             onConfirmPayment={openPaymentConfirmation}
           />
@@ -925,14 +824,6 @@ export function SelfOrderClient({
             </span>
             <span className="font-mono font-semibold tabular-nums">
               {formatVND(order?.totalAmount ?? 0)}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between gap-3 py-1">
-            <span className="text-muted-foreground">
-              {SELF_ORDER_VI.paymentConfirmInvoice}
-            </span>
-            <span className="text-right font-medium">
-              {paymentConfirmationInvoice}
             </span>
           </div>
         </Item>

@@ -7,7 +7,7 @@
 import { z } from "zod";
 
 /**
- * Schema for `confirmCashPayment(branchId, orderId, cashReceived, invoice)`. The cashier UI
+ * Schema for `confirmCashPayment(branchId, orderId, cashReceived)`. The cashier UI
  * clamps `cashReceived >= total` client-side, but the server-side RPC is
  * the authoritative gate (this schema only enforces non-negative; the
  * `must be >=` sentinel comes from the RPC for under-payment).
@@ -21,13 +21,12 @@ export const cashConfirmSchema = z.object({
   cashReceived: z.coerce
     .number()
     .nonnegative({ error: "Số tiền nhận không được âm" }),
-  invoice: z.unknown(),
 });
 
 /**
- * Schema for `createPayment(branchId, orderId, method, amount, invoice)`.
+ * Schema for `createPayment(branchId, orderId, method, amount)`.
  *
- * Aggregates all 5 positional args. Only VietQR creates a pending
+ * Aggregates all 4 positional args. Only VietQR creates a pending
  * intent here; cash uses the confirmation RPC and cash-drawer gate.
  *
  * Field order matters: branchId is validated first, then the remaining
@@ -45,7 +44,6 @@ export const createPaymentSchema = z.object({
   orderId: z.coerce.number().int().positive(),
   method: z.enum(["vietqr"]),
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
-  invoice: z.unknown(),
 });
 
 /**

@@ -37,7 +37,6 @@ export async function POST(
     ipHash: hashSelfOrderClientIp(request),
     clientOpId: parsed.data.clientOpId,
     method: parsed.data.method,
-    invoice: parsed.data.invoice,
   });
   if (!result.ok) {
     const response = jsonError(result.status, result.code, result.message);

@@ -148,14 +148,14 @@ test("only authenticated staff can execute the binding RPC", () => {
   );
 });
 
-test("cash action passes the frozen buyer snapshot into the atomic binding RPC", () => {
+test("cash action passes the server-owned fallback buyer snapshot into the atomic binding RPC", () => {
   assert.match(
     paymentActions,
     /rpc\.rpc<CashPaymentResult>\(\s*"confirm_cash_payment_with_invoice_binding"/,
   );
   assert.match(
     paymentActions,
-    /p_invoice_payload: parsedInvoice\.data/,
+    /p_invoice_payload: POS_DEFAULT_INVOICE_PAYLOAD/,
   );
   assert.match(workerMigration, /p_invoice_payload jsonb/);
   assert.match(workerMigration, /private\.upsert_tax_invoice_issue_job/);
@@ -176,7 +176,10 @@ test("cash completion queues the worker instead of issuing HĐĐT from the actio
 });
 
 test("self-order snapshot remains the authoritative payload inside the RPC", () => {
-  assert.match(workerMigration, /v_payload := COALESCE\(v_request_payload, v_payload\)/);
+  assert.match(
+    workerMigration,
+    /v_payload := COALESCE\(v_request_payload, v_payload\)/,
+  );
   assert.match(workerMigration, /request\.payment_id = v_payment_id/);
 });
 
