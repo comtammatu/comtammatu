@@ -121,7 +121,13 @@ const runtimeCaching: RuntimeCaching[] = [
         url.pathname.endsWith(".woff")),
     handler: new StaleWhileRevalidate({ cacheName: "static-assets" }),
   },
-  // 7. Public self-order navigations: never cache SSR HTML. The stable table
+  // 7. Public authentication navigation: always load fresh UI after a deploy.
+  {
+    matcher: ({ request, url }) =>
+      request.mode === "navigate" && url.pathname === "/login",
+    handler: new NetworkOnly(),
+  },
+  // 8. Public self-order navigations: never cache SSR HTML. The stable table
   //    URL can outlive a seating while its response embeds the current session,
   //    batches, and bill.
   {
@@ -129,8 +135,8 @@ const runtimeCaching: RuntimeCaching[] = [
       request.mode === "navigate" && url.pathname.startsWith("/q/"),
     handler: new NetworkOnly(),
   },
-  // 8. Operator entry/shell navigations: never cache the response (same
-  //    identity-leak rule as #9), but on network failure serve the precached
+  // 9. Operator entry/shell navigations: never cache the response (same
+  //    identity-leak rule as #10), but on network failure serve the precached
   //    offline shell instead of the browser's default error page. Data stays
   //    correct — this only replaces the error page, never the live HTML.
   {
@@ -138,7 +144,7 @@ const runtimeCaching: RuntimeCaching[] = [
       request.mode === "navigate" && isOperatorShellPath(url.pathname),
     handler: new NetworkOnly({ plugins: [operatorOfflineFallback] }),
   },
-  // 9. Remaining authed navigations (POS/KDS/Runner stations and admin/domain
+  // 10. Remaining authed navigations (POS/KDS/Runner stations and admin/domain
   //    workspaces): never cache, no offline fallback.
   //    Protected shells embed user identity in the SSR'd HTML, so the service
   //    worker must never persist a navigation response.
@@ -147,7 +153,7 @@ const runtimeCaching: RuntimeCaching[] = [
       request.mode === "navigate" && isAuthedPath(url.pathname),
     handler: new NetworkOnly(),
   },
-  // 10. Remaining public HTML navigation: network-first with short timeout,
+  // 11. Remaining public HTML navigation: network-first with short timeout,
   //     cached fallback.
   {
     matcher: ({ request }) => request.mode === "navigate",

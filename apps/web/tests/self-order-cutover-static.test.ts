@@ -101,10 +101,9 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
     /StatusPill|SessionStatePanel|DeviceAccessPanel|<Tabs/,
   );
   assert.match(bill, /<Sheet/);
-  assert.match(
-    bill,
-    /data-\[side=bottom\]:h-dvh data-\[side=bottom\]:max-h-dvh/,
-  );
+  assert.match(bill, /<SheetContent/);
+  assert.match(bill, /\bfullscreen\b/);
+  assert.doesNotMatch(bill, /<Drawer/);
   assert.match(bill, /<ScrollArea className="min-h-0 flex-1">/);
   assert.doesNotMatch(bill, /SELF_ORDER_VI\.tableLabel/);
   assert.doesNotMatch(bill, /visibleRounds|RoundItem/);
@@ -120,6 +119,7 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(summary, /SELF_ORDER_VI\.billUnitPriceColumn/);
   assert.match(summary, /SELF_ORDER_VI\.billLineTotalColumn/);
   assert.match(summary, /<DataTable/);
+  assert.match(summary, /mobileCardRender/);
   assert.doesNotMatch(summary, /grid-cols-\[minmax\(0,1fr\)_auto_auto_auto\]/);
   assert.match(summary, /items\.flatMap\(buildBillRows\)/);
   assert.match(summary, /formatVND\(row\.unitPrice\)/);
@@ -138,6 +138,8 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(menu, /compact=\{!isSelfOrderComCategory\(category\)\}/);
   assert.match(menu, /<MenuRowButton/);
   assert.match(menu, /defaultSelfOrderCategoryValue/);
+  assert.match(client, /hasCartItems=\{cartItems\.length > 0\}/);
+  assert.match(menu, /hasCartItems \? "pb-44 sm:pb-32" : "pb-2"/);
   assert.match(menu, /splitMenuItemDisplayName/);
   assert.match(menu, /from "\.\/menu-display"/);
   assert.match(menu, /menuPromptTitle/);
@@ -217,7 +219,7 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
     cart.indexOf("function CartLine"),
     cart.indexOf("export function CartSheet"),
   );
-  assert.match(cartLine, /ItemActions className="[^"]*flex-wrap/);
+  assert.match(cartLine, /ItemActions className="[^"]*flex-nowrap/);
   assert.match(cartLine, /size="touch"/);
   assert.equal(cartLine.match(/size="icon-touch"/g)?.length, 3);
   assert.doesNotMatch(cartLine, /size="(?:sm|icon-sm)"/);
@@ -261,17 +263,16 @@ test("item sheet supports add and cart-edit commit paths", () => {
   assert.match(itemSheet, /hydrateFromDraft/);
   assert.match(
     itemSheet,
-    /className="mx-auto w-full max-w-2xl overflow-hidden p-0"/,
+    /<SheetContent[\s\S]*fullscreen[\s\S]*className="mx-auto w-full max-w-2xl overflow-hidden p-0"/,
   );
   assert.match(
     itemSheet,
-    /className="flex min-h-0 flex-1 flex-col overflow-hidden"/,
+    /className="flex h-full min-h-0 flex-col overflow-hidden"/,
   );
-  assert.doesNotMatch(itemSheet, /\bh-dvh\b|\bmax-h-dvh\b/);
-  assert.match(itemSheet, /h-52 w-full/);
+  assert.match(itemSheet, /h-80 w-full/);
   assert.match(
     itemSheet,
-    /sm:aspect-video sm:h-auto sm:max-h-52 md:max-h-48 lg:max-h-48/,
+    /sm:aspect-video sm:h-auto sm:max-h-64 md:max-h-48 lg:max-h-56/,
   );
   assert.match(itemSheet, /max-w-2xl/);
   assert.match(itemSheet, /object-cover object-center/);
@@ -282,7 +283,7 @@ test("item sheet supports add and cart-edit commit paths", () => {
   );
   assert.match(
     itemSheet,
-    /flex shrink-0 flex-wrap items-center gap-2 p-3 sm:flex-nowrap[\s\S]*max-sm:basis-full[\s\S]*commitCustomizedItem/,
+    /flex shrink-0 flex-wrap items-center gap-2 p-3 sm:flex-nowrap[\s\S]*className="min-w-0 flex-1 max-sm:basis-full"[\s\S]*commitCustomizedItem/,
   );
 });
 
@@ -315,6 +316,10 @@ test("S5 routes pending QR requests through the table and bill surfaces", () => 
   assert.match(approval, /request\.items\.map/);
   assert.match(approval, /request\.customerNote/);
   assert.match(approval, /provisionalTotal/);
+  assert.match(
+    approval,
+    /className="flex w-full items-center justify-between border-y py-3"/,
+  );
   assert.match(approval, /activeOrdersByTable/);
   assert.match(approval, /activeOrders\.length >= 2/);
   assert.match(approval, /role="list"/);

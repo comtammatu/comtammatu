@@ -7,6 +7,7 @@ import {
   Item,
   ItemContent,
   ItemDescription,
+  ItemFooter,
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
@@ -152,22 +153,26 @@ function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
       emptyTitle={SELF_ORDER_VI.billEmptyTitle}
       className="text-xs"
       mobileCardRender={(row) => (
-        <Item size="sm" variant="outline">
+        <Item variant="outline" size="xs">
           <ItemContent>
-            <ItemTitle className={row.option ? "text-muted-foreground" : undefined}>
+            <ItemTitle className="break-words">
               {row.option ? "+ " : ""}
               {row.label}
             </ItemTitle>
-            <ItemDescription>
-              {SELF_ORDER_VI.billLineItemSummary(
-                row.quantity,
-                formatVND(row.unitPrice),
-              )}
-            </ItemDescription>
+            {!row.option && row.note ? (
+              <ItemDescription className="break-words">
+                {SELF_ORDER_VI.itemNoteLabel}: {row.note}
+              </ItemDescription>
+            ) : null}
           </ItemContent>
-          <span className={row.option ? "text-muted-foreground" : "text-primary"}>
-            {formatVND(row.lineTotal)}
-          </span>
+          <ItemFooter className="font-mono tabular-nums">
+            <span className="text-muted-foreground">
+              {row.quantity} x {formatVND(row.unitPrice)}
+            </span>
+            <span className={row.option ? "text-muted-foreground" : "text-primary"}>
+              {formatVND(row.lineTotal)}
+            </span>
+          </ItemFooter>
         </Item>
       )}
     />

@@ -62,6 +62,12 @@ export const selfOrderPaymentRequestSchema = z
   })
   .strict();
 
+export const selfOrderPaymentCancelRequestSchema = z
+  .object({
+    clientOpId: selfOrderClientOpIdSchema,
+  })
+  .strict();
+
 export const selfOrderRequestStatusSchema = z.enum([
   "pending",
   "accepted",

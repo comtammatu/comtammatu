@@ -14,6 +14,7 @@ import QRCode from "qrcode";
 import {
   DOTS_WIDTH,
   LINE_HEIGHT_NORMAL,
+  drawBillHeaderBitmap,
   drawLineBitmap,
   drawRuleBitmap,
   ensureFontsLoaded,
@@ -59,6 +60,10 @@ function measure(op: RenderOp): Placed {
         height,
         content: op.content,
       };
+    }
+    case "billHeader": {
+      const bitmap = drawBillHeaderBitmap(op.lines);
+      return { kind: "bitmap", bitmap, height: bitmap.height };
     }
   }
 }

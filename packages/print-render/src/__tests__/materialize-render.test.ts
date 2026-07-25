@@ -189,36 +189,95 @@ test("receipt fallback materializes default layout", () => {
   assertTextOrder(blocks, "HÓA ĐƠN THANH TOÁN", "Bàn 5 #087");
 });
 
-test("receipt appends a customer invoice QR before the footer", () => {
+test("bills show VAT rates only when present and after adjustments", () => {
+  for (const kind of ["receipt", "provisional_bill"] as const) {
+    const payload = SAMPLE_PAYLOADS[kind] as Extract<
+      PrintPayload,
+      { kind: "receipt" | "provisional_bill" }
+    >;
+    const withoutVat = renderDocumentToOps(buildFallbackDocument(payload))
+      .flatMap((op) => (op.kind === "line" ? [op.text] : []));
+    assert.ok(
+      !withoutVat.some((line) => line.trimStart().startsWith("VAT")),
+      `${kind} must hide VAT without a tax breakdown`,
+    );
+
+    const withVat = renderDocumentToOps(
+      buildFallbackDocument({
+        ...payload,
+        tax_amount: 9966,
+        tax_breakdowns: [
+          { rate: 10, amount: 1818 },
+          { rate: 8, amount: 8148 },
+        ],
+      }),
+    ).flatMap((op) => (op.kind === "line" ? [op.text] : []));
+    const discountIndex = withVat.findIndex((line) =>
+      line.includes("Chiết khấu"),
+    );
+    const vat8Index = withVat.findIndex((line) =>
+      line.startsWith("VAT 8% (đã gồm)"),
+    );
+    const vat10Index = withVat.findIndex((line) =>
+      line.startsWith("VAT 10% (đã gồm)"),
+    );
+    const totalIndex = withVat.findIndex((line) =>
+      line.includes("TỔNG CỘNG"),
+    );
+
+    assert.ok(
+      discountIndex < vat8Index &&
+        vat8Index < vat10Index &&
+        vat10Index < totalIndex,
+      `${kind} must render sorted VAT rates after discount and before total`,
+    );
+  }
+});
+
+test("receipt appends a customer invoice QR without bank-account rows", () => {
   const document = materializeDocument("receipt", {
     ...SAMPLE_PAYLOADS.receipt,
+    payment_qr: (
+      SAMPLE_PAYLOADS.provisional_bill as { payment_qr: unknown }
+    ).payment_qr,
     invoice_qr: {
       type: "invoice",
       content: "https://pos.matu.vn/q/invoice/abc123",
       header_label: "NHẬN HĐĐT",
     },
   });
-  const lines = renderDocumentToOps(document).flatMap((op) =>
-    op.kind === "line" ? [op.text] : [],
-  );
+  const ops = renderDocumentToOps(document);
+  const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
 
-  assert.ok(document.blocks.some((block) => block.type === "invoiceQr"));
+  assert.ok(
+    document.blocks.some((block) => block.type === "invoiceQr"),
+    "missing customer invoice QR block",
+  );
+  assert.ok(
+    !document.blocks.some((block) => block.type === "paymentQr"),
+    "receipt must not include a payment QR block",
+  );
   assert.ok(
     document.blocks.findIndex((block) => block.type === "invoiceQr") <
       document.blocks.findIndex((block) => block.type === "footer"),
+    "customer invoice QR should render before the footer",
   );
   assert.ok(lines.includes("QUÉT QR XUẤT HĐĐT"));
   assert.ok(lines.includes("QR chỉ có giá trị xuất HĐĐT trong 2 giờ"));
+  assert.ok(!lines.includes("Nhập MST để nhận HĐĐT"));
   assert.ok(!lines.includes("THÔNG TIN TÀI KHOẢN NGÂN HÀNG"));
 });
 
 test("receipt render keeps compact item table with category total rows", () => {
-  const ops = renderDocumentToOps(buildFallbackDocument(SAMPLE_PAYLOADS.receipt));
+  const ops = renderDocumentToOps(
+    buildFallbackDocument(SAMPLE_PAYLOADS.receipt),
+  );
   const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
   const tableRules = ops.filter((op) => op.kind === "rule");
-  const hyphenDividers = lines.filter((line) => /^-+$/.test(line));
+  const tableBorders = lines.filter((line) => /^\+[-+]+\+$/.test(line));
+  const numberedRows = lines.filter((line) => /^\|\s*\d+\|/.test(line));
 
-  assert.ok(lines.some((line) => line.includes("Đơn giá")), "missing unit price header");
+  assert.ok(!lines.some((line) => line.includes("Đơn giá")));
   assert.ok(
     lines.some((line) => line.includes("Cơm tấm")),
     "missing food item",
@@ -228,39 +287,69 @@ test("receipt render keeps compact item table with category total rows", () => {
     "missing drink item",
   );
   assert.ok(!lines.includes("Đồ ăn"), "receipt should not add food section");
-  assert.ok(!lines.includes("Nước uống"), "receipt should not add drink section");
+  assert.ok(
+    !lines.includes("Nước uống"),
+    "receipt should not add drink section",
+  );
   assert.ok(
     lines.some(
-      (line) => line.includes("Tổng Đồ ăn") && line.includes("110.000đ"),
+      (line) => line.includes("Tổng đồ ăn") && line.includes("110.000đ"),
     ),
     "receipt should add food subtotal",
   );
   assert.ok(
     lines.some(
-      (line) => line.includes("Tổng Nước uống") && line.includes("20.000đ"),
+      (line) => line.includes("Tổng nước uống") && line.includes("20.000đ"),
     ),
     "receipt should add drink subtotal",
   );
   const foodIndex = lines.findIndex((line) => line.includes("Cơm tấm"));
-  const foodTotalIndex = lines.findIndex((line) => line.includes("Tổng Đồ ăn"));
+  const foodTotalIndex = lines.findIndex((line) => line.includes("Tổng đồ ăn"));
   const drinkIndex = lines.findIndex((line) => line.includes("Nước sâm"));
   const drinkTotalIndex = lines.findIndex((line) =>
-    line.includes("Tổng Nước uống"),
+    line.includes("Tổng nước uống"),
   );
   assert.ok(
-    foodIndex < foodTotalIndex &&
-      foodTotalIndex < drinkIndex &&
-      drinkIndex < drinkTotalIndex,
-    "receipt should subtotal each category before the next category",
+    foodTotalIndex < foodIndex &&
+      foodIndex < drinkTotalIndex &&
+      drinkTotalIndex < drinkIndex,
+    "receipt should show each category total before its items",
   );
   assert.ok(
-    lines.every((line) => !line.includes(" | ")),
-    "receipt table should not use boxed column separators",
+    lines.some(
+      (line) =>
+        line.startsWith("|STT|Món") &&
+        line.includes("|SL|") &&
+        line.includes("Thành tiền"),
+    ),
+    "receipt table should include the compact four-column header",
   );
+  assert.ok(
+    lines.some((line) => /^\|\s*1\|Cơm tấm/.test(line)),
+    "first food item should be numbered",
+  );
+  assert.ok(
+    lines.some((line) => /^\|\s*1\|Nước sâm/.test(line)),
+    "drink numbering should restart from one",
+  );
+  assert.equal(numberedRows.length, 2, "only primary item rows are numbered");
   assert.equal(tableRules.length, 0, "receipt should not use raster rules");
+  assert.equal(
+    tableBorders.length,
+    6,
+    "receipt should frame the columns and separate category totals",
+  );
   assert.ok(
-    hyphenDividers.length >= 8,
-    "receipt should use hyphen dividers for the table and total",
+    lines.some(
+      (line) => line.startsWith("Tổng đồ ăn") && !line.startsWith("|"),
+    ),
+    "food total should use a separate full-width row",
+  );
+  assert.ok(
+    lines.some(
+      (line) => line.startsWith("Tổng nước uống") && !line.startsWith("|"),
+    ),
+    "drink total should use a separate full-width row",
   );
   assert.ok(
     lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),
@@ -270,6 +359,19 @@ test("receipt render keeps compact item table with category total rows", () => {
     lines.some((line) => line.includes("Chiết khấu") && line.includes("0đ")),
     "discount must stay visible when zero",
   );
+  const subtotalIndex = lines.findIndex((line) => line.startsWith("Tạm tính"));
+  assert.equal(
+    lines[subtotalIndex - 1],
+    "=".repeat(48),
+    "billing summary should start with a divider",
+  );
+  const subtotalOp = ops.find(
+    (op) => op.kind === "line" && op.text.startsWith("Tạm tính"),
+  );
+  assert.ok(subtotalOp?.kind === "line");
+  assert.deepEqual(subtotalOp.opts, { bold: true, double: true });
+  assert.ok(lines.includes("Powered by CSR-VN.com"));
+  assert.ok(!lines.includes("Thịt tươi 100%"));
 
   const qrIndex = ops.findIndex((op) => op.kind === "qr");
   assert.equal(qrIndex, -1, "receipt must not render payment QR");
@@ -288,9 +390,13 @@ test("receipt render wraps long branch address", () => {
       branch_address: branchAddress,
     } as PrintPayload),
   );
-  const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
+  const header = ops.find((op) => op.kind === "billHeader");
+  assert.ok(header, "missing split bill header");
+  const lines = header.lines.map((line) => line.text);
 
   assert.ok(!lines.includes(branchAddress), "address must not stay one line");
+  assert.equal(lines[0], "Chi nhánh Quận 1");
+  assert.equal(header.lines[0]?.bold, true);
   assert.ok(
     lines.some((line) => line.includes("123 Nguyễn Huệ")),
     "missing first address line",
@@ -322,9 +428,7 @@ test("provisional bill fallback", () => {
   assertText(blocks, "PHIẾU TẠM TÍNH", { bold: true, double: true });
   assertText(blocks, "Mang về #088", { bold: true, double: true });
   assert.ok(
-    blocks.some(
-      (b) => b.type === "itemsTable" && b.group_by_category === true,
-    ),
+    blocks.some((b) => b.type === "itemsTable" && b.group_by_category === true),
     "provisional bill must keep category totals enabled",
   );
   assert.ok(
@@ -336,18 +440,22 @@ test("provisional bill fallback", () => {
   assert.ok(blocks.some((b) => b.type === "paymentQr"));
 
   const ops = renderDocumentToOps(buildFallbackDocument(payload));
+  assert.equal(ops[0]?.kind, "billHeader");
   const lines = ops.flatMap((op) => (op.kind === "line" ? [op.text] : []));
-  assert.ok(!lines.includes("Đồ ăn"), "provisional bill should not add food section");
+  assert.ok(
+    !lines.includes("Đồ ăn"),
+    "provisional bill should not add food section",
+  );
   assert.ok(
     !lines.includes("Nước uống"),
     "provisional bill should not add drink section",
   );
   assert.ok(
-    lines.some((line) => line.includes("Tổng Đồ ăn")),
+    lines.some((line) => line.includes("Tổng đồ ăn")),
     "provisional bill should add food subtotal",
   );
   assert.ok(
-    lines.some((line) => line.includes("Tổng Nước uống")),
+    lines.some((line) => line.includes("Tổng nước uống")),
     "provisional bill should add drink subtotal",
   );
   assert.ok(
@@ -358,6 +466,11 @@ test("provisional bill fallback", () => {
     lines.some((line) => line.includes("Chiết khấu") && line.includes("0đ")),
     "discount must stay visible when zero",
   );
+  const qrIndex = ops.findIndex((op) => op.kind === "qr");
+  assert.ok(qrIndex > 0, "provisional bill must render payment QR");
+  assert.equal(ops[qrIndex - 1]?.kind, "blank", "missing gap before QR");
+  assert.equal(ops[qrIndex + 1]?.kind, "blank", "missing gap after QR");
+  assert.ok(lines.includes("THÔNG TIN TÀI KHOẢN NGÂN HÀNG"));
 });
 
 test("kitchen ticket fallback", () => {
@@ -414,6 +527,10 @@ test("cancel ticket fallback", () => {
 
 test("shift close fallback", () => {
   const blocks = blocksOf(SAMPLE_PAYLOADS.shift_close_report);
+  const ops = renderDocumentToOps(
+    buildFallbackDocument(SAMPLE_PAYLOADS.shift_close_report),
+  );
+  assert.notEqual(ops[0]?.kind, "billHeader");
   assertText(blocks, "PHIẾU CHỐT CA", { bold: true, double: true });
   assertText(blocks, "BIÊN BẢN BÀN GIAO TIỀN & DOANH THU", { bold: true });
   assertText(blocks, "Mã ca: #42");

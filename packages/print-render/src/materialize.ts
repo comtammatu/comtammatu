@@ -272,6 +272,7 @@ export function materializeDocument(
           type: "totals",
           subtotal: payload.subtotal,
           tax_amount: payload.tax_amount,
+          tax_breakdowns: payload.tax_breakdowns,
           service_charge: payload.service_charge,
           discount_amount: payload.discount_amount,
           total_amount: payload.total_amount,

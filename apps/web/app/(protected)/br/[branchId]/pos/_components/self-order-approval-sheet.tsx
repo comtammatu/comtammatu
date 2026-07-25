@@ -276,7 +276,7 @@ export function SelfOrderApprovalSheet({
                           </NoteCallout>
                         ) : null}
 
-                        <div className="flex items-center justify-between border-y py-3">
+                        <div className="flex w-full items-center justify-between border-y py-3">
                           <span className="text-sm font-medium">
                             {SELF_ORDER_VI.subtotal}
                           </span>

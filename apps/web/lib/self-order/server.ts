@@ -52,7 +52,7 @@ export type SelfOrderActionResult<T = unknown> =
       retryAfterSeconds?: number;
     };
 
-type SelfOrderErrorContext = "default" | "payment";
+type SelfOrderErrorContext = "default" | "payment" | "payment_cancel";
 type RateLimitPurpose = "batch" | "payment";
 type SelfOrderPaymentRequestStatus =
   | "cash_call"
@@ -118,6 +118,17 @@ function mapSelfOrderError(
       status: 409,
       code: "payment_cancel_staff_required",
       message: SELF_ORDER_VI.paymentCancelStaffRequired,
+    };
+  }
+  if (
+    message.includes("self_order_payment_request_not_found") ||
+    message.includes("self_order_payment_cancel_not_allowed")
+  ) {
+    return {
+      ok: false,
+      status: 409,
+      code: "payment_cancel_not_allowed",
+      message: SELF_ORDER_VI.cancelVietQrNotAllowed,
     };
   }
   if (
@@ -263,9 +274,11 @@ function mapSelfOrderError(
     status: 500,
     code: "unknown",
     message:
-      context === "payment"
-        ? SELF_ORDER_VI.paymentFailed
-        : SELF_ORDER_VI.submitFailed,
+      context === "payment_cancel"
+        ? SELF_ORDER_VI.cancelVietQrFailed
+        : context === "payment"
+          ? SELF_ORDER_VI.paymentFailed
+          : SELF_ORDER_VI.submitFailed,
   };
 }
 
@@ -468,9 +481,11 @@ function publicPayloadFailure(
     status: 500,
     code: "invalid_public_payload",
     message:
-      context === "payment"
-        ? SELF_ORDER_VI.paymentFailed
-        : SELF_ORDER_VI.loadFailed,
+      context === "payment_cancel"
+        ? SELF_ORDER_VI.cancelVietQrFailed
+        : context === "payment"
+          ? SELF_ORDER_VI.paymentFailed
+          : SELF_ORDER_VI.loadFailed,
   };
 }
 
@@ -741,6 +756,43 @@ export async function createSelfOrderPaymentRequest(input: {
       input.method === "vietqr" ? "vietqr_payment" : "cash_payment",
       parsed.error.issues,
       "payment",
+    );
+  }
+  return { ok: true, data: parsed.data };
+}
+
+export async function cancelSelfOrderVietQrPayment(input: {
+  token: string;
+  ipHash: string | null;
+  clientOpId: string;
+}): Promise<SelfOrderActionResult<Record<string, unknown>>> {
+  const rateLimit = await consumeSelfOrderRateLimit({
+    purpose: "payment",
+    token: input.token,
+    ipHash: input.ipHash,
+  });
+  if (!rateLimit.ok) return rateLimit;
+
+  const { data, error } = await service().rpc<Record<string, unknown>>(
+    "self_order_cancel_vietqr_payment",
+    {
+      p_token: input.token,
+      p_client_op_id: input.clientOpId,
+    },
+  );
+  if (error) {
+    console.error("[self-order] VietQR cancellation failed", error);
+    return mapSelfOrderError(error, "payment_cancel");
+  }
+  const payload = data ?? {};
+  const failure = dataFailure(payload, "payment_cancel");
+  if (failure) return failure;
+  const parsed = selfOrderPaymentActionResponseSchema.safeParse(payload);
+  if (!parsed.success) {
+    return publicPayloadFailure(
+      "cancel_vietqr_payment",
+      parsed.error.issues,
+      "payment_cancel",
     );
   }
   return { ok: true, data: parsed.data };

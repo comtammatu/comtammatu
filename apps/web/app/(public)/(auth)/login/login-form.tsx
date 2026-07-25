@@ -123,6 +123,7 @@ export function LoginForm() {
               type="password"
               required
               autoComplete="current-password"
+              placeholder={AUTH_VI.passwordPlaceholder}
               value={values.password}
               onChange={updateValue("password")}
               aria-invalid={passwordInvalid || undefined}

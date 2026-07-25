@@ -13,6 +13,7 @@ import {
   CHARS_PER_LINE_DOUBLE,
   CHARS_PER_LINE_NORMAL,
   LINE_HEIGHT_NORMAL,
+  type BillHeaderLine,
   type RenderOpts,
 } from "./render-bitmap";
 import {
@@ -42,18 +43,21 @@ export type RenderOp =
   | { kind: "line"; text: string; opts?: RenderOpts }
   | { kind: "rule"; thickness?: number }
   | { kind: "blank"; height: number }
-  | { kind: "qr"; content: string; dotSize: number };
+  | { kind: "qr"; content: string; dotSize: number }
+  | { kind: "billHeader"; lines: BillHeaderLine[] };
 
 const ops: {
   line: (text: string, opts?: RenderOpts) => RenderOp;
   rule: (thickness?: number) => RenderOp;
   blank: (height?: number) => RenderOp;
   qr: (content: string, dotSize?: number) => RenderOp;
+  billHeader: (lines: BillHeaderLine[]) => RenderOp;
 } = {
   line: (text, opts) => ({ kind: "line", text, opts }),
   rule: (thickness = 2) => ({ kind: "rule", thickness }),
   blank: (height = LINE_HEIGHT_NORMAL) => ({ kind: "blank", height }),
   qr: (content, dotSize = 6) => ({ kind: "qr", content, dotSize }),
+  billHeader: (lines) => ({ kind: "billHeader", lines }),
 };
 
 const divider = (ch = "-"): RenderOp =>
@@ -107,19 +111,25 @@ function renderBillMeta(p: BillBase): RenderOp[] {
   return out;
 }
 
-// Receipt items table — 4 open columns and 3 spaces sum to 48.
-const RECEIPT_COL_NAME = 22;
-const RECEIPT_COL_QTY = 3;
-const RECEIPT_COL_UNIT = 9;
-const RECEIPT_COL_AMT = 11;
+// Receipt items table — 4 columns and 5 separators sum to 48 characters.
+const RECEIPT_COL_INDEX = 3;
+const RECEIPT_COL_NAME = 25;
+const RECEIPT_COL_QTY = 2;
+const RECEIPT_COL_AMT = 13;
 
 const receiptRow = (
+  index: string,
   name: string,
   qty: string,
-  unit: string,
   amt: string,
 ): string =>
-  `${padRight(name, RECEIPT_COL_NAME)} ${padLeft(qty, RECEIPT_COL_QTY)} ${padLeft(unit, RECEIPT_COL_UNIT)} ${padLeft(amt, RECEIPT_COL_AMT)}`;
+  `|${padLeft(index, RECEIPT_COL_INDEX)}|${padRight(name, RECEIPT_COL_NAME)}|${padLeft(qty, RECEIPT_COL_QTY)}|${padLeft(amt, RECEIPT_COL_AMT)}|`;
+
+const RECEIPT_TABLE_BORDER =
+  `+${"-".repeat(RECEIPT_COL_INDEX)}` +
+  `+${"-".repeat(RECEIPT_COL_NAME)}` +
+  `+${"-".repeat(RECEIPT_COL_QTY)}` +
+  `+${"-".repeat(RECEIPT_COL_AMT)}+`;
 
 type ReceiptItem = BillBase["items"][number];
 
@@ -162,18 +172,22 @@ function categoryTotal(items: ReceiptItem[], category: "food" | "drink"): number
     .reduce((sum, item) => sum + receiptLineTotals(item).lineAmount, 0);
 }
 
-function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
+function renderReceiptItem(
+  out: RenderOp[],
+  it: ReceiptItem,
+  itemNumber: number,
+): void {
   const qty = String(it.quantity);
-  const { baseUnit, baseAmount } = receiptLineTotals(it);
+  const { baseAmount } = receiptLineTotals(it);
 
   const nameChunks = wrapText(it.item_name, RECEIPT_COL_NAME);
   nameChunks.forEach((chunk, i) => {
     out.push(
       ops.line(
         receiptRow(
+          i === 0 ? String(itemNumber) : "",
           chunk,
           i === 0 ? qty : "",
-          i === 0 ? fmtMoney(baseUnit) : "",
           i === 0 ? fmtMoney(baseAmount) : "",
         ),
       ),
@@ -186,7 +200,7 @@ function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
       RECEIPT_COL_NAME - 2,
     );
     for (const chunk of variantChunks) {
-      out.push(ops.line(receiptRow(`  ${chunk}`, "", "", "")));
+      out.push(ops.line(receiptRow("", `  ${chunk}`, "", "")));
     }
   }
 
@@ -195,15 +209,14 @@ function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
       if (!m.name) continue;
       const modPrice = m.price ?? 0;
       const modAmt = modPrice > 0 ? fmtMoney(modPrice * it.quantity) : "";
-      const modUnit = modPrice > 0 ? fmtMoney(modPrice) : "";
       const modChunks = wrapText(`  + ${m.name}`, RECEIPT_COL_NAME);
       modChunks.forEach((chunk, i) => {
         out.push(
           ops.line(
             receiptRow(
+              "",
               chunk,
               i === 0 ? qty : "",
-              i === 0 ? modUnit : "",
               i === 0 ? modAmt : "",
             ),
           ),
@@ -219,7 +232,6 @@ function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
       const sidePrice = s.price ?? 0;
       const totalSideQty = sideTotalQuantity(s.quantity, it.quantity);
       const sideQtyStr = totalSideQty ? String(totalSideQty) : "";
-      const sideUnit = sidePrice > 0 ? fmtMoney(sidePrice) : "";
       const sideAmt =
         sidePrice > 0 && totalSideQty > 0
           ? fmtMoney(sidePrice * totalSideQty)
@@ -229,9 +241,9 @@ function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
         out.push(
           ops.line(
             receiptRow(
+              "",
               chunk,
               i === 0 ? sideQtyStr : "",
-              i === 0 ? sideUnit : "",
               i === 0 ? sideAmt : "",
             ),
           ),
@@ -247,49 +259,56 @@ function renderReceiptItem(out: RenderOp[], it: ReceiptItem): void {
  * ticket already showed it to the chef. */
 function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
   const out: RenderOp[] = [];
-  out.push(divider());
+  out.push(ops.line(RECEIPT_TABLE_BORDER));
   out.push(
-    ops.line(receiptRow("Món", "SL", "Đơn giá", "Thành tiền"), { bold: true }),
+    ops.line(receiptRow("STT", "Món", "SL", "Thành tiền"), {
+      bold: true,
+    }),
   );
-  out.push(divider());
+  out.push(ops.line(RECEIPT_TABLE_BORDER));
 
   if (groupByCategory) {
     const foodItems = p.items.filter((item) => lineCategory(item) === "food");
     const drinkItems = p.items.filter((item) => lineCategory(item) === "drink");
 
     if (foodItems.length > 0) {
-      foodItems.forEach((it) => renderReceiptItem(out, it));
-      out.push(divider());
-      out.push(
-        ops.line(pair48("Tổng Đồ ăn", fmtMoney(categoryTotal(foodItems, "food"))), {
-          bold: true,
-        }),
-      );
-      out.push(divider());
-    }
-    if (drinkItems.length > 0) {
-      drinkItems.forEach((it) => renderReceiptItem(out, it));
-      out.push(divider());
       out.push(
         ops.line(
-          pair48("Tổng Nước uống", fmtMoney(categoryTotal(drinkItems, "drink"))),
+          pair48("Tổng đồ ăn", fmtMoney(categoryTotal(foodItems, "food"))),
           { bold: true },
         ),
       );
-      out.push(divider());
+      out.push(ops.line(RECEIPT_TABLE_BORDER));
+      foodItems.forEach((it, index) => renderReceiptItem(out, it, index + 1));
+      out.push(ops.line(RECEIPT_TABLE_BORDER));
+    }
+    if (drinkItems.length > 0) {
+      out.push(
+        ops.line(
+          pair48("Tổng nước uống", fmtMoney(categoryTotal(drinkItems, "drink"))),
+          { bold: true },
+        ),
+      );
+      out.push(ops.line(RECEIPT_TABLE_BORDER));
+      drinkItems.forEach((it, index) => renderReceiptItem(out, it, index + 1));
+      out.push(ops.line(RECEIPT_TABLE_BORDER));
     }
   } else {
-    p.items.forEach((it) => renderReceiptItem(out, it));
-    out.push(divider());
+    p.items.forEach((it, index) => renderReceiptItem(out, it, index + 1));
+    out.push(ops.line(RECEIPT_TABLE_BORDER));
   }
   return out;
 }
 
 function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
   const out: RenderOp[] = [];
-  out.push(ops.line(pair48("Tạm tính", fmtMoney(p.subtotal))));
-  if ((p.tax_amount ?? 0) > 0)
-    out.push(ops.line(pair48("Thuế VAT", fmtMoney(p.tax_amount))));
+  out.push(divider("="));
+  out.push(
+    ops.line(pair24("Tạm tính", fmtMoney(p.subtotal)), {
+      bold: true,
+      double: true,
+    }),
+  );
   if (alwaysShowAdjustments || (p.service_charge ?? 0) > 0) {
     const label = alwaysShowAdjustments ? "Phí dịch vụ" : "Phụ phí";
     out.push(ops.line(pair48(label, fmtMoney(p.service_charge))));
@@ -309,14 +328,32 @@ function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
   if ((p.discount_amount ?? 0) > 0 && p.discount_note) {
     if (p.discount_note) out.push(ops.line(`  Lý do: ${p.discount_note}`));
   }
-  out.push(divider());
+  for (const tax of [...(p.tax_breakdowns ?? [])]
+    .filter(
+      ({ rate, amount }) =>
+        Number.isFinite(rate) &&
+        rate >= 0 &&
+        Number.isFinite(amount) &&
+        amount >= 0,
+    )
+    .sort((a, b) => a.rate - b.rate)) {
+    out.push(
+      ops.line(
+        pair48(
+          `VAT ${formatPercent(tax.rate, 2)} (đã gồm)`,
+          fmtMoney(tax.amount),
+        ),
+      ),
+    );
+  }
+  out.push(divider("="));
   out.push(
     ops.line(pair24("TỔNG CỘNG", fmtMoney(p.total_amount)), {
       bold: true,
       double: true,
     }),
   );
-  out.push(divider());
+  out.push(divider("="));
   return out;
 }
 
@@ -381,6 +418,24 @@ function renderDocumentBranchInfo(
   return rows.map((row) => ops.line(row, { align: "center" }));
 }
 
+function renderDocumentBillHeader(
+  block: Extract<PrintDocumentBlock, { type: "branchInfo" }>,
+): RenderOp[] {
+  const branchName = clampText(block.branch_name);
+  const address = clampText(block.branch_address);
+  const phone = clampText(block.branch_phone);
+  const taxCode = clampText(block.branch_tax_code);
+  const lines: BillHeaderLine[] = [
+    ...wrapText(branchName, 32).map((text) => ({ text, bold: true })),
+    ...(address ? wrapText(address, 32).map((text) => ({ text })) : []),
+    ...(phone ? wrapText(`ĐT: ${phone}`, 32).map((text) => ({ text })) : []),
+    ...(taxCode
+      ? wrapText(`MST: ${taxCode}`, 32).map((text) => ({ text }))
+      : []),
+  ].filter((line) => line.text !== "");
+  return [ops.billHeader(lines)];
+}
+
 function normalizeOrderType(value: unknown): "dine_in" | "takeaway" {
   return value === "dine_in" ? "dine_in" : "takeaway";
 }
@@ -416,6 +471,7 @@ function billBaseForDocument(overrides: Partial<BillBase>): BillBase {
     items: overrides.items ?? [],
     subtotal: overrides.subtotal ?? 0,
     tax_amount: overrides.tax_amount,
+    tax_breakdowns: overrides.tax_breakdowns,
     service_charge: overrides.service_charge,
     discount_amount: overrides.discount_amount,
     total_amount: overrides.total_amount ?? 0,
@@ -449,6 +505,12 @@ function renderDocumentTotals(block: PrintDocumentTotalsBlock): RenderOp[] {
     billBaseForDocument({
       subtotal: numberOrZero(block.subtotal),
       tax_amount: numberOrZero(block.tax_amount),
+      tax_breakdowns: Array.isArray(block.tax_breakdowns)
+        ? block.tax_breakdowns.map((tax) => ({
+            rate: numberOrZero(tax.rate),
+            amount: numberOrZero(tax.amount),
+          }))
+        : null,
       service_charge: numberOrZero(block.service_charge),
       discount_amount: numberOrZero(block.discount_amount),
       total_amount: numberOrZero(block.total_amount),
@@ -556,14 +618,21 @@ function renderDocumentInvoiceQr(
 
 function renderDocumentFooter(
   block: Extract<PrintDocumentBlock, { type: "footer" }>,
+  usesBillHeader: boolean,
 ): RenderOp[] {
+  const billCredit = "Powered by CSR-VN.com";
   const lines =
     Array.isArray(block.lines) && block.lines.length > 0
       ? block.lines.map(clampText).filter(Boolean)
-      : [BRAND_LOCKUP_TAGLINE];
+      : [usesBillHeader ? billCredit : BRAND_LOCKUP_TAGLINE];
+  const renderedLines = usesBillHeader
+    ? lines.map((line) => (line === BRAND_LOCKUP_TAGLINE ? billCredit : line))
+    : lines;
   return [
     ops.blank(),
-    ...lines.map((footerLine) => ops.line(footerLine, { align: "center" })),
+    ...renderedLines.map((footerLine) =>
+      ops.line(footerLine, { align: "center" }),
+    ),
   ];
 }
 
@@ -571,7 +640,12 @@ function renderDocumentFooter(
  * append their own epilogue). */
 export function renderDocumentToOps(document: PrintDocument): RenderOp[] {
   const out: RenderOp[] = [];
-  for (const block of document.blocks) {
+  const usesBillHeader = document.blocks.some(
+    (block) => block.type === "itemsTable",
+  );
+  for (let index = 0; index < document.blocks.length; index += 1) {
+    const block = document.blocks[index];
+    if (!block) continue;
     switch (block.type) {
       case "text":
         out.push(...renderDocumentText(block));
@@ -589,9 +663,16 @@ export function renderDocumentToOps(document: PrintDocument): RenderOp[] {
         for (let i = 0; i < count; i += 1) out.push(ops.blank());
         break;
       }
-      case "brandHeader":
-        out.push(...renderDocumentBrandHeader(block));
+      case "brandHeader": {
+        const branchInfo = document.blocks[index + 1];
+        if (usesBillHeader && branchInfo?.type === "branchInfo") {
+          out.push(...renderDocumentBillHeader(branchInfo));
+          index += 1;
+        } else {
+          out.push(...renderDocumentBrandHeader(block));
+        }
         break;
+      }
       case "branchInfo":
         out.push(...renderDocumentBranchInfo(block));
         break;
@@ -620,7 +701,7 @@ export function renderDocumentToOps(document: PrintDocument): RenderOp[] {
         out.push(...renderDocumentInvoiceQr(block));
         break;
       case "footer":
-        out.push(...renderDocumentFooter(block));
+        out.push(...renderDocumentFooter(block, usesBillHeader));
         break;
     }
   }

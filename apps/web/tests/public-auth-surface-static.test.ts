@@ -19,7 +19,13 @@ test("public auth surfaces preserve responsive input density and a visible page 
     2,
   );
   assert.doesNotMatch(loginForm, /<InputGroup className="h-10">/);
-  assert.doesNotMatch(loginPage, /\banimated\b/);
+  assert.match(loginForm, /placeholder=\{AUTH_VI\.passwordPlaceholder\}/);
+  assert.match(loginPage, /<BrandMascot\s+animated/);
+  assert.match(loginPage, /md:grid-cols-2/);
+  assert.match(loginPage, /sm:landscape:grid-cols-2/);
+  assert.match(loginPage, /md:grid-rows-2/);
+  assert.match(loginPage, /md:justify-self-center/);
+  assert.doesNotMatch(loginPage, /md:absolute md:bottom-6/);
   assert.match(accessDenied, /headingLevel="h1"/);
   assert.match(accessDenied, /TONE_BADGE_VARIANT/);
   assert.doesNotMatch(accessDenied, /TONE_BADGE_CLASS/);

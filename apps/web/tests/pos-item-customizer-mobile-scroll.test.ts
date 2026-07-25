@@ -14,7 +14,7 @@ const source = readFileSync(
 test("POS item customizer pins action footer outside the scroll body", () => {
   assert.match(
     source,
-    /SheetContent[\s\S]*className="h-dvh max-h-dvh overflow-hidden p-0 data-\[side=bottom\]:h-dvh data-\[side=bottom\]:max-h-dvh"/,
+    /SheetContent[\s\S]*fullscreen[\s\S]*className="overflow-hidden p-0"/,
   );
   assert.match(
     source,

@@ -86,6 +86,7 @@ export type PrintDocumentTotalsBlock = {
   always_show_adjustments?: boolean;
   subtotal?: number | null;
   tax_amount?: number | null;
+  tax_breakdowns?: Array<{ rate?: number; amount?: number }> | null;
   service_charge?: number | null;
   discount_amount?: number | null;
   total_amount?: number | null;

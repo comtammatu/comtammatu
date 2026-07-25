@@ -15,8 +15,8 @@ const BRAND_ASSETS = {
   },
   horizontal: {
     src: "/brand/logo-matu.png",
-    width: 960,
-    height: 540,
+    width: 3358,
+    height: 2163,
   },
   vertical: {
     src: "/brand/logo-matu-vertical.png",

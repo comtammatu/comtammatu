@@ -928,6 +928,7 @@ export function BillReceipt({
     if (orderId === null) return;
     startPrintTransition(async () => {
       const result = await printProvisionalBill(orderId);
+      refetchOrderRef.current();
       if (result.success) {
         if (result.data?.agent_offline) {
           toast.warning(

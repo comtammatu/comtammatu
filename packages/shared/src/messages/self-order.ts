@@ -42,7 +42,8 @@ export const SELF_ORDER_VI = {
   pendingApprovalDescription:
     "Nhân viên đã nhận lượt gọi món của bàn. Vui lòng đợi một chút để gọi thêm.",
   pendingDialogTitle: "Đã gửi đơn cho Thu Ngân",
-  pendingDialogDescription: "Bạn có thể xem thực đơn trong lúc chờ và gọi thêm món.",
+  pendingDialogDescription:
+    "Bạn có thể xem thực đơn trong lúc chờ và gọi thêm món.",
   callMore: "Gọi thêm",
   activeSessionTitle: "Đang gọi món",
   addMoreTitle: "Gọi thêm món",
@@ -117,6 +118,14 @@ export const SELF_ORDER_VI = {
     "Bàn đang có một yêu cầu thanh toán. Vui lòng dùng yêu cầu hiện tại hoặc gọi nhân viên hỗ trợ.",
   paymentCancelStaffRequired:
     "Yêu cầu thanh toán đang được xử lý. Vui lòng gọi nhân viên nếu cần huỷ hoặc đổi cách thanh toán.",
+  cancelVietQr: "Huỷ mã QR",
+  cancelVietQrTitle: "Huỷ mã QR thanh toán?",
+  cancelVietQrDescription:
+    "Mã QR hiện tại sẽ hết hiệu lực. Bạn có thể chọn lại cách thanh toán.",
+  cancelVietQrSuccess: "Đã huỷ mã QR.",
+  cancelVietQrFailed:
+    "Không huỷ được mã QR. Vui lòng thử lại hoặc gọi nhân viên.",
+  cancelVietQrNotAllowed: "Chỉ có thể huỷ mã VietQR đang chờ thanh toán.",
   paymentExpiresAt: (time: string) => `Yêu cầu này hết hạn lúc ${time}.`,
   qrRenderFailed: "Không hiển thị được mã QR trên thiết bị này.",
   retryQr: "Thử hiển thị lại",
@@ -133,10 +142,12 @@ export const SELF_ORDER_VI = {
   paymentTitle: "Thanh toán",
   cashCall: "Tiền mặt",
   vietQrCreate: "VietQR",
+  cashCallAction: "Gọi nhân viên thu tiền",
+  vietQrCreateAction: "Tạo mã QR",
   paymentConfirmAction: "Xác nhận thanh toán",
   paymentConfirmTitle: "Xác nhận thanh toán?",
   paymentConfirmDescription:
-    "Kiểm tra phương thức và số tiền trước khi tiếp tục.",
+    "Kiểm tra phương thức, số tiền và thông tin HĐĐT trước khi tiếp tục.",
   paymentReconcileAction: "Chờ đối soát",
   paymentReconcileTitle: "Chờ đối soát VietQR?",
   paymentReconcileDescription:
@@ -154,6 +165,23 @@ export const SELF_ORDER_VI = {
   saveVietQr: "Lưu QR",
   paymentFailed: "Không tạo được yêu cầu thanh toán. Vui lòng gọi nhân viên.",
   paymentDescription: "Chọn cách thanh toán sau khi nhân viên đã duyệt món.",
+  buyerTitle: "Thông tin HĐĐT",
+  buyerDescription:
+    "HĐĐT vẫn được phát hành cho đơn đã thanh toán. Nhập MST nếu bạn cần thông tin người mua trên hóa đơn.",
+  buyerNoInvoice: "Không cần ghi thông tin người mua (vẫn xuất HĐĐT)",
+  buyerName: "Tên người mua / công ty",
+  buyerTaxCode: "Mã số thuế",
+  buyerAddress: "Địa chỉ",
+  buyerEmail: "Email nhận hóa đơn",
+  buyerEmailInvalid: "Email chưa đúng định dạng.",
+  buyerBusinessHint:
+    "Nhập MST để tự điền tên và địa chỉ. Hãy kiểm tra lại trước khi thanh toán.",
+  buyerTaxLookupLoading: "Đang tra cứu MST...",
+  buyerTaxLookupFound: "Đã tìm thấy thông tin. Vui lòng kiểm tra lại.",
+  buyerTaxLookupNotFound:
+    "Không tìm thấy MST. Vui lòng kiểm tra hoặc nhập tay.",
+  buyerTaxLookupUnavailable:
+    "Chưa tra cứu được. Bạn vẫn có thể nhập tên và địa chỉ.",
   staffQueueButton: "QR gọi món",
   staffQueueTitle: "Yêu cầu QR gọi món",
   staffQueueDescription: "Duyệt lượt đầu, theo dõi gọi thanh toán từ bàn.",

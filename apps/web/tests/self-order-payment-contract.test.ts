@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  selfOrderPaymentCancelRequestSchema,
   selfOrderPaymentRequestSchema,
   selfOrderPaymentRequestStatusResponseSchema,
   selfOrderVietQrResponseSchema,
@@ -22,6 +23,15 @@ const paymentStatusMigration = readFileSync(
     process.cwd(),
     "../..",
     "supabase/migration-archive/20260711034552_self_order_payment_status.sql",
+  ),
+  "utf8",
+);
+
+const guestCancelMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../..",
+    "supabase/migrations/20260725122220_allow_guest_cancel_vietqr.sql",
   ),
   "utf8",
 );
@@ -127,7 +137,7 @@ test("Self-Order permits payment while KDS is still preparing", () => {
   assert.doesNotMatch(paymentPanel, /paymentNotReady/);
 });
 
-test("Self-Order creates buyer-neutral payments after the existing confirmation", () => {
+test("Self-Order creates the selected buyer-neutral payment without a hidden confirmation step", () => {
   const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
   const client = readWeb("app/q/[token]/self-order-client.tsx");
   const route = readWeb("app/api/self-order/[token]/payment/route.ts");
@@ -149,10 +159,10 @@ test("Self-Order creates buyer-neutral payments after the existing confirmation"
   assert.match(paymentPanel, /selectedPaymentMethod/);
   assert.match(paymentPanel, /onPaymentMethodChange\("cash_call"\)/);
   assert.match(paymentPanel, /onPaymentMethodChange\("vietqr"\)/);
-  assert.match(paymentPanel, /onClick=\{onConfirmPayment\}/);
+  assert.match(paymentPanel, /onClick=\{onCreatePayment\}/);
   assert.doesNotMatch(paymentPanel, /onRequestPayment/);
-  assert.match(client, /setPaymentConfirmationMethod\(selectedPaymentMethod\)/);
-  assert.match(client, /requestPayment\(paymentConfirmationMethod\)/);
+  assert.match(client, /requestPayment\(selectedPaymentMethod\)/);
+  assert.doesNotMatch(client, /paymentConfirmationMethod/);
   assert.match(
     client,
     /postSelfOrderJson\([\s\S]*?\/payment`[\s\S]*?\{ clientOpId: intent\.clientOpId, method \}/,
@@ -161,19 +171,55 @@ test("Self-Order creates buyer-neutral payments after the existing confirmation"
   assert.doesNotMatch(route, /parsed\.data\.invoice/);
   assert.match(server, /p_invoice_payload: \{\}/);
   assert.doesNotMatch(paymentPanel, /buyerTaxCode|buyerNotGetInvoice/);
-  assert.match(messages, /paymentConfirmAction: "Xác nhận thanh toán"/);
-  assert.match(messages, /paymentReconcileAction: "Chờ đối soát"/);
+  assert.match(messages, /cashCallAction: "Gọi nhân viên thu tiền"/);
+  assert.match(messages, /vietQrCreateAction: "Tạo mã QR"/);
   assert.match(
     paymentPanel,
-    /selectedPaymentMethod === "vietqr"[\s\S]*paymentReconcileAction/,
+    /selectedPaymentMethod === "vietqr"[\s\S]*vietQrCreateAction/,
   );
+  assert.match(paymentPanel, /<QrCodeImage[\s\S]*saveVietQr/);
+  assert.match(paymentPanel, /<BankAppLauncher/);
+});
+
+test("guest can cancel only the exact active VietQR request", () => {
+  const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
+  const client = readWeb("app/q/[token]/self-order-client.tsx");
+  const route = readWeb("app/api/self-order/[token]/payment/route.ts");
+  const server = readWeb("lib/self-order/server.ts");
+
+  assert.equal(
+    selfOrderPaymentCancelRequestSchema.safeParse({
+      clientOpId: "ee023e0f-618c-4b72-b6bc-580030845214",
+    }).success,
+    true,
+  );
+  assert.equal(
+    selfOrderPaymentCancelRequestSchema.safeParse({
+      clientOpId: "not-a-uuid",
+    }).success,
+    false,
+  );
+  assert.match(paymentPanel, /hasRecoverableVietQr[\s\S]*cancelVietQr/);
+  assert.match(client, /await confirm\([\s\S]*cancelVietQrTitle/);
   assert.match(
     client,
-    /paymentConfirmationMethod === "vietqr"[\s\S]*paymentReconcileTitle[\s\S]*paymentConfirmTitle/,
+    /method: "DELETE"[\s\S]*JSON\.stringify\(\{ clientOpId: currentClientOpId \}\)/,
+  );
+  assert.match(route, /export async function DELETE/);
+  assert.match(route, /selfOrderPaymentCancelRequestSchema\.safeParse/);
+  assert.match(route, /validateSelfOrderMutationRequest/);
+  assert.match(server, /"self_order_cancel_vietqr_payment"/);
+  assert.match(
+    guestCancelMigration,
+    /auth\.role\(\) IS DISTINCT FROM 'service_role'/,
   );
   assert.match(
-    client,
-    /paymentConfirmationMethod === "vietqr"[\s\S]*paymentReconcileAction/,
+    guestCancelMigration,
+    /pr\.table_id = v_table\.table_id[\s\S]*pr\.client_op_id = p_client_op_id/,
+  );
+  assert.match(
+    guestCancelMigration,
+    /v_request_ref\.method <> 'vietqr'[\s\S]*v_request_ref\.status <> 'vietqr_pending'/,
   );
 });
 
@@ -209,10 +255,7 @@ test("only the current payment request can unlock the Self-Order completion scre
     client,
     /currentPaymentStatusClientOpId ===[\s\S]*ignoredPaymentStatusClientOpIdRef\.current[\s\S]*\? null/,
   );
-  assert.doesNotMatch(
-    client,
-    /const paymentStatusClientOpId = snapshot\.ok/,
-  );
+  assert.doesNotMatch(client, /const paymentStatusClientOpId = snapshot\.ok/);
   assert.match(client, /payload\?\.status === "completed"/);
   assert.match(client, /<PaymentCompletedState/);
   assert.match(client, /mood="waving"/);

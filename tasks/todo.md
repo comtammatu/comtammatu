@@ -28,17 +28,6 @@ Evidence: `docs/plan/design-system-rollout.md`, C0/C1/C2 external review reconci
 
 - [ ] Complete authenticated Branch/Owner viewport and axe runs, VoiceOver/TalkBack critical-path proof, and real install/update/standalone PWA proof on a registered target.
 
-## Re-align the schema migration lineage
-
-State: doing
-Kind: defect
-Tier: T3
-Lane: database
-Exit: A current Production-derived baseline, required fresh-environment forwards, and the live Production ledger are reconciled without replaying or mutating business data.
-Evidence: Production catalog/ACL comparison, CI baseline replay, type no-diff, and one disposable Preview proof.
-
-- [ ] Apply the active baseline and forward chain to registered DEV, regenerate types, then complete aligned schema and disposable Preview validation.
-
 ## Prove Self-Order offline navigation isolation
 
 State: verify

@@ -326,7 +326,8 @@ export function ItemCustomizer({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="h-dvh max-h-dvh overflow-hidden p-0 data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh"
+        fullscreen
+        className="overflow-hidden p-0"
       >
         {item && (
           <div className="flex h-full min-h-0 flex-col overflow-hidden">

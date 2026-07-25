@@ -14,6 +14,11 @@ export type SideLine = {
   quantity?: number;
 };
 
+export type TaxBreakdownLine = {
+  rate: number;
+  amount: number;
+};
+
 export type KitchenPayload = {
   kind: "kitchen_ticket";
   kitchen_ticket_number?: string;
@@ -83,6 +88,7 @@ export type BillBase = {
   }>;
   subtotal: number;
   tax_amount?: number | null;
+  tax_breakdowns?: TaxBreakdownLine[] | null;
   service_charge?: number | null;
   discount_amount?: number | null;
   discount_type?: "pct" | "vnd" | null;

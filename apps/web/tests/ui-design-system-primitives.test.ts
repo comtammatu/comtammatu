@@ -468,6 +468,7 @@ test("InputGroup controls fill their owning field and touch variants stay named"
   assert.match(inputGroup, /data-slot="input-group"/);
   assert.match(inputGroup, /data-size="touch"/);
   assert.match(inputGroup, /class="[^"]*h-12/);
+  assert.match(inputGroup, /class="[^"]*overflow-hidden/);
   assert.match(inputGroup, /data-slot="input-group-control"/);
   assert.match(inputGroup, /h-full/);
   assert.match(selectSource, /size\?: "default" \| "touch"/);

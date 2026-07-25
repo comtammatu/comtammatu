@@ -6,6 +6,7 @@ import {
   Landmark as IconBank,
   QrCode as IconQrcode,
   ReceiptText as IconReceipt,
+  X as IconCancel,
 } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
@@ -58,10 +59,12 @@ export interface PaymentPanelProps {
   activePaymentRequest: GuestPaymentRequestState | null;
   selectedPaymentMethod: "cash_call" | "vietqr" | null;
   isPending: boolean;
+  isCancelling: boolean;
   pendingMethod: "cash_call" | "vietqr" | null;
   error: string | null;
   onPaymentMethodChange: (method: "cash_call" | "vietqr") => void;
-  onConfirmPayment: () => void;
+  onCreatePayment: () => void;
+  onCancelVietQr: () => Promise<void>;
 }
 
 function BankAppLauncher({
@@ -195,10 +198,12 @@ export function PaymentPanel({
   activePaymentRequest,
   selectedPaymentMethod,
   isPending,
+  isCancelling,
   pendingMethod,
   error,
   onPaymentMethodChange,
-  onConfirmPayment,
+  onCreatePayment,
+  onCancelVietQr,
 }: PaymentPanelProps) {
   if (!activeOrder) {
     return (
@@ -299,6 +304,21 @@ export function PaymentPanel({
                       </p>
                     ) : null}
                   </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    className="w-full"
+                    disabled={isCancelling}
+                    onClick={() => void onCancelVietQr()}
+                  >
+                    {isCancelling ? (
+                      <Spinner className="size-4" />
+                    ) : (
+                      <IconCancel data-icon="inline-start" />
+                    )}
+                    {SELF_ORDER_VI.cancelVietQr}
+                  </Button>
                 </div>
               ) : null}
             </div>
@@ -348,11 +368,12 @@ export function PaymentPanel({
           size="touch"
           className="w-full"
           disabled={disabled || isPending || selectedPaymentMethod == null}
-          onClick={onConfirmPayment}
+          onClick={onCreatePayment}
         >
+          {isPending ? <Spinner className="size-4" /> : null}
           {selectedPaymentMethod === "vietqr"
-            ? SELF_ORDER_VI.paymentReconcileAction
-            : SELF_ORDER_VI.paymentConfirmAction}
+            ? SELF_ORDER_VI.vietQrCreateAction
+            : SELF_ORDER_VI.cashCallAction}
         </Button>
       )}
     </section>
