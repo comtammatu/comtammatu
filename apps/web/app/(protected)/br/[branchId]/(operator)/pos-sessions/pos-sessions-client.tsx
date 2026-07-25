@@ -12,6 +12,7 @@ import {
   AlertTriangle as IconAlertTriangle,
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
+  Printer as IconPrinter,
 } from "lucide-react";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import {
@@ -31,10 +32,7 @@ import {
   formatVND,
 } from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
-import {
-  formatVNDateTime,
-  formatVNTime,
-} from "@comtammatu/shared/time";
+import { formatVNDateTime, formatVNTime } from "@comtammatu/shared/time";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
@@ -522,10 +520,7 @@ function SessionContextBar({
           <p className="truncate font-heading text-sm font-semibold">
             {resolveSessionLabel(session)}
           </p>
-          <Badge
-            className="shrink-0"
-            variant={isOpen ? "warning" : "outline"}
-          >
+          <Badge className="shrink-0" variant={isOpen ? "warning" : "outline"}>
             {isOpen
               ? messages.settings.posSessions.open
               : messages.settings.posSessions.closed}
@@ -987,7 +982,11 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
     aov_bins,
     peak_hour,
     discounts,
+    payment_attempt_summary,
+    operational_evidence,
   } = report;
+  const sideQuantity =
+    totals.side_dish_quantity + totals.included_side_quantity;
   const maxBinCount = Math.max(1, ...aov_bins.map((b) => b.count));
   const maxCategoryRevenue = Math.max(
     1,
@@ -1012,6 +1011,33 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
           value={formatCount(totals.total_items)}
         />
         <Metric
+          icon={<IconToolsKitchen2 className="size-4" />}
+          label={
+            totals.legacy_unclassified_quantity > 0
+              ? messages.settings.posSessions.mainDishQuantitySnapshot
+              : messages.settings.posSessions.mainDishQuantity
+          }
+          value={formatCount(totals.main_dish_quantity)}
+        />
+        <Metric
+          icon={<IconToolsKitchen2 className="size-4" />}
+          label={messages.settings.posSessions.sideQuantity}
+          value={formatCount(sideQuantity)}
+        />
+        <Metric
+          icon={<IconCircleCheck className="size-4" />}
+          label={messages.settings.posSessions.kdsCompletedQuantity}
+          value={formatCount(operational_evidence.kds_completed_item_quantity)}
+        />
+        <Metric
+          icon={<IconPrinter className="size-4" />}
+          label={messages.settings.posSessions.printedJobs}
+          value={`${formatCount(operational_evidence.printed_job_count)}/${formatCount(operational_evidence.print_job_count)}`}
+          tone={
+            operational_evidence.print_failed_count > 0 ? "warning" : "muted"
+          }
+        />
+        <Metric
           icon={<IconAlertTriangle className="size-4" />}
           label={messages.settings.posSessions.voidItems}
           value={formatCount(totals.void_item_count)}
@@ -1030,6 +1056,57 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
           }
         />
       </div>
+
+      <NoteCallout label={messages.settings.posSessions.operationalEvidence}>
+        {messages.settings.posSessions.operationalEvidenceLine(
+          operational_evidence.kds_event_count,
+          operational_evidence.printed_job_count,
+          operational_evidence.print_job_count,
+          operational_evidence.invoice_count,
+          operational_evidence.audit_event_count,
+        )}
+      </NoteCallout>
+
+      {totals.legacy_unclassified_quantity > 0 ? (
+        <NoteCallout
+          label={messages.settings.posSessions.legacyItemClassification}
+        >
+          {messages.settings.posSessions.legacyItemClassificationLine(
+            totals.legacy_unclassified_quantity,
+            totals.legacy_current_main_dish_quantity,
+          )}
+        </NoteCallout>
+      ) : null}
+
+      {operational_evidence.kds_legacy_completed_item_quantity > 0 ? (
+        <NoteCallout label={messages.settings.posSessions.legacyKdsSnapshot}>
+          {messages.settings.posSessions.legacyKdsSnapshotLine(
+            operational_evidence.kds_legacy_completed_item_quantity,
+          )}
+        </NoteCallout>
+      ) : null}
+
+      {operational_evidence.order_payment_state_mismatch_count > 0 ||
+      operational_evidence.late_payment_count > 0 ? (
+        <NoteCallout label={messages.settings.posSessions.paymentExceptions}>
+          {messages.settings.posSessions.paymentExceptionsLine(
+            operational_evidence.order_payment_state_mismatch_count,
+            operational_evidence.late_payment_count,
+            formatVND(operational_evidence.late_payment_amount),
+          )}
+        </NoteCallout>
+      ) : null}
+
+      {payment_attempt_summary.total > payment_attempt_summary.completed ? (
+        <NoteCallout label={messages.settings.posSessions.paymentBreakdown}>
+          {messages.settings.posSessions.paymentAttemptWarning(
+            payment_attempt_summary.total,
+            payment_attempt_summary.completed,
+            payment_attempt_summary.failed,
+            payment_attempt_summary.pending,
+          )}
+        </NoteCallout>
+      ) : null}
 
       {top_items.length > 0 ? (
         <div>
@@ -1320,6 +1397,47 @@ function OrderDetailDrawer({
                   ) : null}
                 </div>
 
+                {order.payments.length > 0 ? (
+                  <div>
+                    <SectionLabel>
+                      {messages.settings.posSessions.paymentAttempts}
+                    </SectionLabel>
+                    <ItemGroup className="mt-2">
+                      {[...order.payments]
+                        .sort(
+                          (a, b) =>
+                            new Date(
+                              b.paid_at ?? "1970-01-01T00:00:00.000Z",
+                            ).getTime() -
+                              new Date(
+                                a.paid_at ?? "1970-01-01T00:00:00.000Z",
+                              ).getTime() || b.id - a.id,
+                        )
+                        .map((payment) => (
+                          <Item key={payment.id} variant="outline" size="xs">
+                            <ItemContent>
+                              <ItemTitle>
+                                {paymentMethodLabel(payment.method)}
+                              </ItemTitle>
+                              <ItemDescription>
+                                {formatDateTime(payment.paid_at)}
+                              </ItemDescription>
+                            </ItemContent>
+                            <ItemFooter>
+                              <StatusBadge
+                                domain="payment"
+                                value={payment.status}
+                              />
+                              <span className="font-mono tabular-nums">
+                                {formatVND(payment.amount)}
+                              </span>
+                            </ItemFooter>
+                          </Item>
+                        ))}
+                    </ItemGroup>
+                  </div>
+                ) : null}
+
                 <div>
                   <SectionLabel>
                     {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */}
@@ -1462,6 +1580,7 @@ function OrderDetailDrawer({
                     {order.note}
                   </NoteCallout>
                 ) : null}
+
               </div>
             ) : null}
           </div>
@@ -1589,10 +1708,15 @@ function KVRow({
 }
 
 function buildSummary(orders: PosSessionOrder[]): SessionSummary {
-  const activeOrders = orders.filter((order) => order.status !== "cancelled");
-  const paid = activeOrders.filter((o) => o.payment_status === "paid");
-  const completedPayments = paid.flatMap((order) =>
+  const completedPayments = orders.flatMap((order) =>
     order.payments.filter((payment) => payment.status === "completed"),
+  );
+  const paidOrderIds = new Set(
+    orders.flatMap((order) =>
+      order.payments.some((payment) => payment.status === "completed")
+        ? [order.id]
+        : [],
+    ),
   );
   const breakdownMap = new Map<string, { count: number; amount: number }>();
   let cashRevenue = 0;
@@ -1611,23 +1735,31 @@ function buildSummary(orders: PosSessionOrder[]): SessionSummary {
     .sort((a, b) => b.amount - a.amount);
 
   return {
-    billCount: activeOrders.length,
+    billCount: orders.length,
     revenue: completedPayments.reduce(
       (sum, payment) => sum + payment.amount,
       0,
     ),
-    servedItems: activeOrders.reduce((sum, o) => sum + countItems(o), 0),
+    servedItems: orders.reduce(
+      (sum, order) =>
+        sum +
+        order.order_items.reduce(
+          (itemSum, item) =>
+            item.status === "served" ? itemSum + item.quantity : itemSum,
+          0,
+        ),
+      0,
+    ),
     cashRevenue,
     noncashRevenue,
-    paidCount: paid.length,
-    unpaidCount: activeOrders.length - paid.length,
-    cancelledCount: orders.length - activeOrders.length,
+    paidCount: paidOrderIds.size,
+    unpaidCount: orders.filter(
+      (order) => order.status !== "cancelled" && !paidOrderIds.has(order.id),
+    ).length,
+    cancelledCount: orders.filter((order) => order.status === "cancelled")
+      .length,
     paymentBreakdown,
   };
-}
-
-function countItems(order: PosSessionOrder): number {
-  return order.order_items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
 function formatDateTime(value: string | null): string {

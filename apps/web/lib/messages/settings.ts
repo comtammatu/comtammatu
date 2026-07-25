@@ -649,10 +649,11 @@ export const settings = {
     paidOrders: "Đơn đã thanh toán",
     unpaidOrders: "Đơn chưa thanh toán",
     paymentBreakdown: "Chi tiết phương thức thanh toán",
+    paymentAttempts: "Lịch sử thanh toán",
     methodCount: (method: string, count: number) =>
       `${method} · ${formatCount(count)} khoản`,
     cancelledOrders: (count: number) =>
-      `${formatCount(count)} đơn đã hủy (không tính vào doanh thu).`,
+      `${formatCount(count)} đơn đã hủy; payment hoàn tất vẫn được tính và đánh dấu để đối soát.`,
     sessionNote: "Ghi chú ca",
     mainItem: "Món chính",
     sideCombo: "Side/Combo",
@@ -661,9 +662,23 @@ export const settings = {
     itemNote: "Ghi chú món",
     reportTitle: "Báo cáo chi tiết ca",
     reportDescription:
-      "Tổng kết món bán ra, danh mục, giá trị bill và giờ cao điểm. Tất cả tính trên đơn đã thanh toán, đã trừ đơn hủy.",
+      "Tiền thu lấy từ payment hoàn tất; đơn hủy hoặc trạng thái đơn lệch vẫn được tính và đánh dấu để đối soát.",
     aov: "Giá trị TB / bill (AOV)",
     totalItems: "Tổng món bán",
+    mainDishQuantity: "Phần cơm/món chính",
+    mainDishQuantitySnapshot: "Phần cơm/món chính có snapshot",
+    legacyItemClassification: "Dữ liệu món cũ",
+    legacyItemClassificationLine: (
+      unclassified: number,
+      currentMainDishEstimate: number,
+    ) =>
+      `${formatCount(unclassified)} món chưa có snapshot; danh mục hiện tại ước tính ${formatCount(currentMainDishEstimate)} phần cơm, không cộng vào số canonical.`,
+    sideQuantity: "Món và phần ăn kèm",
+    kdsCompletedQuantity: "Số lượng KDS đã hoàn thành",
+    legacyKdsSnapshot: "Bằng chứng KDS cũ",
+    legacyKdsSnapshotLine: (quantity: number) =>
+      `${formatCount(quantity)} món chỉ có snapshot ticket còn sống lúc chuyển đổi; không đủ để kết luận bếp đã làm hoặc giao đủ.`,
+    printedJobs: "Phiếu in thành công",
     voidItems: "Món bị huỷ",
     peakHour: "Giờ cao điểm",
     peakHourValue: (range: string, count: number) =>
@@ -684,6 +699,29 @@ export const settings = {
       `Giảm giá (${formatCount(count)} bill · ${total})`,
     discount: "Giảm",
     note: "Ghi chú",
+    operationalEvidence: "Bằng chứng vận hành",
+    operationalEvidenceLine: (
+      kdsEvents: number,
+      printedJobs: number,
+      totalPrintJobs: number,
+      invoices: number,
+      auditEvents: number,
+    ) =>
+      `${formatCount(kdsEvents)} sự kiện KDS · ${formatCount(printedJobs)}/${formatCount(totalPrintJobs)} phiếu đã in · ${formatCount(invoices)} HĐĐT · ${formatCount(auditEvents)} audit`,
+    paymentAttemptWarning: (
+      total: number,
+      completed: number,
+      failed: number,
+      pending: number,
+    ) =>
+      `${formatCount(total)} lượt thanh toán: ${formatCount(completed)} hoàn tất, ${formatCount(failed)} lỗi, ${formatCount(pending)} đang chờ.`,
+    paymentExceptions: "Ngoại lệ payment trong ca",
+    paymentExceptionsLine: (
+      stateMismatch: number,
+      latePayments: number,
+      lateAmount: string,
+    ) =>
+      `${formatCount(stateMismatch)} đơn lệch trạng thái/tổng tiền · ${formatCount(latePayments)} payment ngoài thời gian mở–đóng ca (${lateAmount}).`,
     orderSheetEyebrow: "Chi tiết bill",
     orderSheetTitle: (orderNumber: string) => `Bill ${orderNumber}`,
     orderNumber: "Mã bill",
