@@ -31,6 +31,8 @@ const databaseContractTest = read(
   "../../../supabase/tests/order_kds_payment_revenue_operational_truth_test.sql",
 );
 const kdsActions = read("../app/(protected)/br/[branchId]/kds/actions.ts");
+const financeActions = read("../app/(protected)/finance/actions.ts");
+const orderActions = read("../app/(protected)/orders/actions.ts");
 const financeDrill = read(
   "../app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx",
 );
@@ -43,6 +45,12 @@ const orderDetail = read(
 const kdsHistorySheet = read(
   "../app/(protected)/br/[branchId]/kds/_components/completion-history-sheet.tsx",
 );
+
+test("operational RPC calls preserve the Supabase client receiver", () => {
+  for (const actions of [kdsActions, financeActions, orderActions]) {
+    assert.doesNotMatch(actions, /=\s*ctx\.supabase\.rpc\s+as\s+unknown\s+as/);
+  }
+});
 
 test("sale classification and KDS evidence are immutable at the database boundary", () => {
   assert.match(

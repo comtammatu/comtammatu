@@ -866,7 +866,7 @@ export async function fetchOrdersForDay(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const ordersForDayV2Rpc = ctx.supabase.rpc as unknown as (
+  const ordersForDayV2Rpc = ctx.supabase.rpc.bind(ctx.supabase) as unknown as (
     name: "get_orders_for_day_v2",
     args: { p_branch_id: number; p_date: string },
   ) => Promise<{
