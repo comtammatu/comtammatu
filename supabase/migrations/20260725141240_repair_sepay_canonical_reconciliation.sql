@@ -460,6 +460,13 @@ WITH exact_candidates AS (
         AND match.bank_transaction_id = bank.id
         AND match.payment_id IS DISTINCT FROM payment.id
     )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.bank_transaction_reconciliation_matches match
+      WHERE match.tenant_id = event.tenant_id
+        AND match.bank_transaction_id = bank.id
+        AND match.payment_id = payment.id
+    )
   ORDER BY event.tenant_id, bank.id, payment.id, event.id
 ),
 inserted AS (

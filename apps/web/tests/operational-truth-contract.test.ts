@@ -128,6 +128,10 @@ test("SePay exact matches create one canonical bank-to-payment link", () => {
   );
   assert.match(
     reconciliationMigration,
+    /AND NOT EXISTS \(\s*SELECT 1\s*FROM public\.bank_transaction_reconciliation_matches match\s*WHERE match\.tenant_id = event\.tenant_id\s*AND match\.bank_transaction_id = bank\.id\s*AND match\.payment_id = payment\.id\s*\)/,
+  );
+  assert.match(
+    reconciliationMigration,
     /bank_payment_mixed_target_requires_review/,
   );
   assert.match(
