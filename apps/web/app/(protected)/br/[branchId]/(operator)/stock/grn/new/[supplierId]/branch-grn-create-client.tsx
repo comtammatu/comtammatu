@@ -350,36 +350,13 @@ export function BranchGrnCreateClient({
                   {GRN_CREATE_COPY.discardDraft}
                 </Button>
               ) : null}
-              {controller.canConfirm ? (
-                <Button
-                  type="button"
-                  size="touch-lg"
-                  onClick={controller.confirmNow}
-                  disabled={!controller.canSubmit}
-                >
-                  {controller.submitting ? (
-                    <>
-                      <Spinner className="size-5" />
-                      {STATES_VI.saving}
-                    </>
-                  ) : controller.lineCount === 0 ? (
-                    GRN_CREATE_COPY.addItemToContinue
-                  ) : (
-                    GRN_CREATE_COPY.confirmNow(
-                      controller.lineCount,
-                      controller.total,
-                    )
-                  )}
-                </Button>
-              ) : null}
               <Button
                 type="button"
-                variant={controller.canConfirm ? "outline" : "default"}
                 size="touch-lg"
                 onClick={controller.submit}
                 disabled={!controller.canSubmit}
               >
-                {controller.submitting && !controller.canConfirm ? (
+                {controller.submitting ? (
                   <>
                     <Spinner className="size-5" />
                     {STATES_VI.saving}

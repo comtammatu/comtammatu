@@ -28,6 +28,7 @@ export default async function OperatorStockGrnPage({ params }: PageProps) {
           grnNumber,
           updatedAt,
           lineCount,
+          qcIssueCount,
         }) => ({
           grnId,
           supplierId,
@@ -37,11 +38,12 @@ export default async function OperatorStockGrnPage({ params }: PageProps) {
           grnNumber,
           updatedAt,
           lineCount,
+          qcIssueCount,
         }),
       )}
       draftsLoadFailed={data.draftsLoadFailed}
       grns={data.grns.map(
-        ({ id, code, supplierName, poId, poCode, date, status }) => ({
+        ({
           id,
           code,
           supplierName,
@@ -49,6 +51,16 @@ export default async function OperatorStockGrnPage({ params }: PageProps) {
           poCode,
           date,
           status,
+          qcIssueCount,
+        }) => ({
+          id,
+          code,
+          supplierName,
+          poId,
+          poCode,
+          date,
+          status,
+          qcIssueCount,
         }),
       )}
       grnsLoadFailed={data.grnsLoadFailed}

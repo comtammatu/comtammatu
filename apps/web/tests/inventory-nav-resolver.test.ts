@@ -34,10 +34,6 @@ const settingsUnitsSource = readFileSync(
   "app/(protected)/inventory/settings/units/units-client.tsx",
   "utf8",
 );
-const qcSettingsSource = readFileSync(
-  "app/(protected)/inventory/settings/qc/qc-settings-client.tsx",
-  "utf8",
-);
 const ownerBottomNavSource = readFileSync(
   "app/components/owner-bottom-nav.tsx",
   "utf8",
@@ -229,7 +225,6 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
     "/inventory/settings/categories",
     "/inventory/settings/units",
     "/inventory/settings/thresholds",
-    "/inventory/settings/qc",
   ]) {
     assert.equal(
       visible.has(href),
@@ -264,10 +259,5 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
     settingsUnitsSource,
     /rounded-full border border-border\/60 bg-muted\/40/,
   );
-  assert.doesNotMatch(
-    qcSettingsSource,
-    /mx-auto|max-w-3xl|<footer|rounded-md border p-3/,
-  );
-  assert.match(qcSettingsSource, /<Field orientation="horizontal"/);
-  assert.match(qcSettingsSource, /footer=\{/);
+  assert.doesNotMatch(settingsLayoutSource, /settings\/qc|icon: "qc"/);
 });

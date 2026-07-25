@@ -6,6 +6,7 @@ import { loadAuthState, probePermission } from "@/_lib/auth";
 import { fetchGrns } from "@/(protected)/inventory/procurement-actions";
 import { listMyGrnDrafts } from "@/(protected)/inventory/grn-actions";
 import { formatDate } from "@lib/inventory/format";
+import { isGrnBaselineReviewRequired } from "./grn-quality";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import type { GrnDraftRow, GrnRow } from "./grn-list-model";
 
@@ -20,6 +21,9 @@ type GrnLineRow = {
   received_quantity?: number | null;
   rejected_quantity?: number | null;
   unit_cost?: number | null;
+  quality_status?: string | null;
+  requires_review?: boolean | null;
+  baseline_variance_pct?: number | null;
 };
 
 type GrnDbRow = {
@@ -52,6 +56,19 @@ type LoadGrnListPageDataOptions = {
   routeBranchId?: number;
 };
 
+function countQcIssues(items: GrnLineRow[] | null): number {
+  return (items ?? []).filter(
+    (item) =>
+      item.quality_status !== "accepted" ||
+      item.requires_review === true ||
+      isGrnBaselineReviewRequired(
+        item.baseline_variance_pct == null
+          ? null
+          : Number(item.baseline_variance_pct),
+      ),
+  ).length;
+}
+
 function relatedOne<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
   return Array.isArray(value) ? (value[0] ?? null) : value;
@@ -81,6 +98,7 @@ function mapGrnRows(rows: GrnDbRow[]): GrnRow[] {
       date: row.received_date ? formatDate(row.received_date) : "—",
       total,
       status: row.status ?? "pending",
+      qcIssueCount: countQcIssues(row.grn_items),
     };
   });
 }
@@ -102,6 +120,7 @@ function mapGrnDraftRows(rows: GrnDbRow[]): GrnDraftRow[] {
       grnNumber: row.grn_number ?? "",
       updatedAt: row.updated_at,
       lineCount: row.grn_items?.length ?? 0,
+      qcIssueCount: countQcIssues(row.grn_items),
     };
   });
 }

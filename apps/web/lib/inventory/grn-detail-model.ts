@@ -20,6 +20,8 @@ export type GrnDetailItem = {
   priceOverrideNote: string;
   priceOverridePhotoUrl: string;
   priceVariancePct: number | null;
+  baselineVariancePct: number | null;
+  baselineSampleN: number | null;
   requiresReview: boolean;
   shortDeliveryAction: "accept_and_close" | "wait_backorder" | null;
   unit: string;
@@ -90,6 +92,8 @@ export function createEditableGrnLine({
   entryUnitId,
   unit,
   unitCost,
+  baselineVariancePct = null,
+  baselineSampleN = null,
 }: {
   lineId: number;
   ingredient: IngredientRow;
@@ -97,6 +101,8 @@ export function createEditableGrnLine({
   entryUnitId: number | null;
   unit: string;
   unitCost: number;
+  baselineVariancePct?: number | null;
+  baselineSampleN?: number | null;
 }): EditableGrnLine {
   return {
     lineId,
@@ -114,6 +120,8 @@ export function createEditableGrnLine({
     priceOverrideNote: "",
     priceOverridePhotoUrl: "",
     priceVariancePct: null,
+    baselineVariancePct,
+    baselineSampleN,
     requiresReview: false,
     shortDeliveryAction: null,
     unit,

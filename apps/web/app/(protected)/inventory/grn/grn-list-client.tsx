@@ -81,6 +81,7 @@ const dialogDiscardTitleSuffix = "?";
 
 const statusFilterOptions: { value: GrnListStatusFilter; label: string }[] = [
   { value: "all", label: KDS_VI.filterAll },
+  { value: "review", label: messages.inventory.grn.qcQueue },
   { value: "draft", label: INVENTORY_VI.draft },
   { value: "confirmed", label: statusConfirmed },
   { value: "cancelled", label: STATES_VI.cancelled },
@@ -165,7 +166,14 @@ export function GrnListClient({
       key: "status",
       header: FORM_VI.status,
       render: (grn) => (
-        <StatusBadge domain="inventory" value={grn.status} size="sm" />
+        <div className="flex flex-wrap items-center gap-1">
+          <StatusBadge domain="inventory" value={grn.status} size="sm" />
+          {grn.qcIssueCount > 0 ? (
+            <Badge variant="warning">
+              {messages.inventory.grn.qcIssueCount(grn.qcIssueCount)}
+            </Badge>
+          ) : null}
+        </div>
       ),
     },
     {
@@ -301,9 +309,7 @@ export function GrnListClient({
   );
 
   const draftSectionWithinOwnerTabs =
-    withinOwnerTabs &&
-    drafts &&
-    (drafts.length > 0 || draftsLoadFailed) ? (
+    withinOwnerTabs && drafts && (drafts.length > 0 || draftsLoadFailed) ? (
       <AppSection
         title={INVENTORY_VI.draft}
         badge={
@@ -340,9 +346,7 @@ export function GrnListClient({
   );
 
   if (withinOwnerTabs) {
-    return (
-      <div className="flex w-full flex-col gap-3">{ownerBody}</div>
-    );
+    return <div className="flex w-full flex-col gap-3">{ownerBody}</div>;
   }
 
   return (
@@ -427,6 +431,11 @@ function GrnDraftsTab({
             <Badge variant="outline" className="rounded-full px-3 py-1">
               {INVENTORY_VI.grnDraftLineCount(draft.lineCount)}
             </Badge>
+            {draft.qcIssueCount > 0 ? (
+              <Badge variant="warning" className="rounded-full px-3 py-1">
+                {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
+              </Badge>
+            ) : null}
           </ItemHeader>
 
           <ItemContent className="hidden" />
@@ -459,13 +468,7 @@ function GrnDraftsTab({
   );
 }
 
-function GrnMobileCard({
-  grn,
-  basePath,
-}: {
-  grn: GrnRow;
-  basePath: string;
-}) {
+function GrnMobileCard({ grn, basePath }: { grn: GrnRow; basePath: string }) {
   return (
     <InteractiveCard
       render={<Link href={grnDetailHref(basePath, grn.id)} />}
@@ -477,6 +480,11 @@ function GrnMobileCard({
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm font-semibold">{grn.code}</span>
           <StatusBadge domain="inventory" value={grn.status} size="sm" />
+          {grn.qcIssueCount > 0 ? (
+            <Badge variant="warning">
+              {messages.inventory.grn.qcIssueCount(grn.qcIssueCount)}
+            </Badge>
+          ) : null}
         </div>
         <p className="truncate text-xs text-muted-foreground">
           {grn.supplierName}

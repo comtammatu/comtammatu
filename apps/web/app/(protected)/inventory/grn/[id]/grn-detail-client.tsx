@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { formatPercent } from "@comtammatu/shared/format";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -49,7 +48,7 @@ import type {
   GrnDetail as GRNDetail,
   RecreateReceivingLocationOption,
 } from "@lib/inventory/grn-detail-model";
-const qcStatusTitle = "Trạng thái kiểm kê QC";
+const qcStatusTitle = "Trạng thái kiểm nhận QC";
 const historySectionTitle = "Lịch sử chỉnh sửa";
 
 export function GRNDetailClient({
@@ -130,11 +129,7 @@ export function GRNDetailClient({
             title={grnCopy.inspectionItemsTitle}
             description={
               isDraft
-                ? grnCopy.draftToleranceHint(
-                    formatPercent(qc.qtyShortTolerancePct),
-                    formatPercent(qc.priceVarianceWarnPct),
-                    formatPercent(qc.priceVarianceReviewPct),
-                  )
+                ? grnCopy.draftQcHint
                 : grnCopy.finalizedLineCount(lines.length)
             }
             action={
@@ -409,11 +404,7 @@ export function GRNDetailClient({
         title={grnCopy.inspectionItemsTitle}
         description={
           isDraft
-            ? grnCopy.draftToleranceHint(
-                formatPercent(qc.qtyShortTolerancePct),
-                formatPercent(qc.priceVarianceWarnPct),
-                formatPercent(qc.priceVarianceReviewPct),
-              )
+            ? grnCopy.draftQcHint
             : grnCopy.finalizedLineCount(lines.length)
         }
         action={

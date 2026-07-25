@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  CheckCircle as IconCheckCircle,
   ChartBar as IconChartBar,
   FileText as IconFileText,
   Package as IconPackage,
@@ -15,7 +14,6 @@ const SETTINGS_SECTION_ICONS = {
   categories: IconFileText,
   units: IconPackage,
   thresholds: IconChartBar,
-  qc: IconCheckCircle,
 } as const;
 
 export type SettingsSectionNavIcon = keyof typeof SETTINGS_SECTION_ICONS;

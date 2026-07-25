@@ -63,7 +63,14 @@ import { messages } from "@lib/messages";
 
 type BranchGrnRow = Pick<
   GrnRow,
-  "id" | "code" | "supplierName" | "poId" | "poCode" | "date" | "status"
+  | "id"
+  | "code"
+  | "supplierName"
+  | "poId"
+  | "poCode"
+  | "date"
+  | "status"
+  | "qcIssueCount"
 >;
 
 type BranchGrnDraftRow = Pick<
@@ -76,6 +83,7 @@ type BranchGrnDraftRow = Pick<
   | "grnNumber"
   | "updatedAt"
   | "lineCount"
+  | "qcIssueCount"
 >;
 
 const statusFilterOptions: {
@@ -83,6 +91,7 @@ const statusFilterOptions: {
   label: string;
 }[] = [
   { value: "all", label: KDS_VI.filterAll },
+  { value: "review", label: messages.inventory.grn.qcQueue },
   {
     value: "draft",
     label: getStatusBadgeMeta("inventory", "draft").label,
@@ -149,6 +158,11 @@ function BranchGrnDraftItem({
           <Badge variant="warning">
             {INVENTORY_VI.grnDraftLineCount(draft.lineCount)}
           </Badge>
+          {draft.qcIssueCount > 0 ? (
+            <Badge variant="destructive">
+              {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
+            </Badge>
+          ) : null}
           <IconChevronRight className="size-4 text-muted-foreground" />
         </ItemActions>
       </Link>
@@ -202,6 +216,11 @@ function BranchGrnListItem({
         </ItemContent>
         <ItemActions className="shrink-0">
           <StatusBadge domain="inventory" value={grn.status} size="sm" />
+          {grn.qcIssueCount > 0 ? (
+            <Badge variant="warning">
+              {messages.inventory.grn.qcIssueCount(grn.qcIssueCount)}
+            </Badge>
+          ) : null}
           <IconChevronRight className="size-4 text-muted-foreground" />
         </ItemActions>
       </Item>

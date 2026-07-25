@@ -42,9 +42,9 @@ test("GRN detail route accepts numeric IDs and GRN document numbers", () => {
 });
 
 test("GRN partial line save keeps failed rows dirty", () => {
-  assert.match(lineActionsSource, /const savedLineIds = new Set<number>\(\)/);
-  assert.match(lineActionsSource, /savedLineIds\.add\(line\.lineId\)/);
-  assert.match(lineActionsSource, /savedLineIds\.has\(line\.lineId\)/);
+  assert.match(lineActionsSource, /const savedLines = new Map</);
+  assert.match(lineActionsSource, /savedLines\.set\(line\.lineId,/);
+  assert.match(lineActionsSource, /savedLines\.has\(line\.lineId\)/);
   assert.doesNotMatch(
     lineActionsSource,
     /setLines\(\(previous\) =>\s*previous\.map\(\(line\) => \(\{ \.\.\.line, dirty: false \}\)\)\)/,

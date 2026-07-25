@@ -46,7 +46,6 @@ export type GrnCreatePageData = {
     id: number;
     lines: GrnCreateServerDraftLine[];
   } | null;
-  canConfirm: boolean;
 };
 
 export type GrnLineEditState = {

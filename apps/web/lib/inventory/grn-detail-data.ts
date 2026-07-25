@@ -97,6 +97,8 @@ export async function loadGrnDetailResult(
       price_override_note: string | null;
       price_override_photo_url: string | null;
       price_variance_pct: number | null;
+      baseline_variance_pct: number | null;
+      baseline_sample_n: number | null;
       requires_review: boolean | null;
       short_delivery_action: string | null;
       unit: string;
@@ -169,6 +171,12 @@ export async function loadGrnDetailResult(
         line.price_variance_pct != null
           ? Number(line.price_variance_pct)
           : null,
+      baselineVariancePct:
+        line.baseline_variance_pct != null
+          ? Number(line.baseline_variance_pct)
+          : null,
+      baselineSampleN:
+        line.baseline_sample_n != null ? Number(line.baseline_sample_n) : null,
       requiresReview: Boolean(line.requires_review),
       shortDeliveryAction:
         line.short_delivery_action === "accept_and_close" ||

@@ -158,7 +158,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/settings/categories/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/inventory/settings/page.tsx": "REDIRECT-SHIM",
-  "apps/web/app/(protected)/inventory/settings/qc/page.tsx": "SETTINGS-PANEL",
   "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/inventory/settings/units/page.tsx":

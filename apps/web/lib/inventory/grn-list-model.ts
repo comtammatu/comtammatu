@@ -10,6 +10,7 @@ export type GrnRow = {
   date: string;
   total: number;
   status: string;
+  qcIssueCount: number;
 };
 
 export type GrnDraftRow = {
@@ -23,9 +24,11 @@ export type GrnDraftRow = {
   grnNumber: string;
   updatedAt: string;
   lineCount: number;
+  qcIssueCount: number;
 };
 
-export type GrnListStatusFilter = "all" | "draft" | "confirmed" | "cancelled";
+export type GrnListStatusFilter =
+  "all" | "review" | "draft" | "confirmed" | "cancelled";
 
 export type GrnListFilters = {
   query: string;
@@ -34,7 +37,7 @@ export type GrnListFilters = {
 
 type GrnListSearchRow = Pick<
   GrnRow,
-  "code" | "supplierName" | "poCode" | "status"
+  "code" | "supplierName" | "poCode" | "status" | "qcIssueCount"
 >;
 
 export function filterGrnListRows<T extends GrnListSearchRow>(
@@ -42,7 +45,11 @@ export function filterGrnListRows<T extends GrnListSearchRow>(
   filters: GrnListFilters,
 ): T[] {
   let result = rows;
-  if (filters.status !== "all") {
+  if (filters.status === "review") {
+    result = result.filter(
+      (row) => row.status === "draft" && row.qcIssueCount > 0,
+    );
+  } else if (filters.status !== "all") {
     result = result.filter((row) => row.status === filters.status);
   }
 

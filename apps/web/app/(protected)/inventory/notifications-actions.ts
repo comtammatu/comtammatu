@@ -1,101 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import {
   PERMISSION_KEYS,
   SUPPLIER_RETURN_ROLES,
 } from "@comtammatu/shared/auth";
 import { formatPercent } from "@comtammatu/shared/format";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { withAction } from "@/_lib/with-action";
-import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
 
 const ROLES = SUPPLIER_RETURN_ROLES;
-
-/* ─── fetchQcSettingsForForm ─── */
-
-export async function fetchQcSettingsForForm(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-
-  const { data, error } = await supabase
-    .from("inventory_qc_settings")
-    .select(
-      "qty_short_tolerance_pct, price_variance_warn_pct, price_variance_review_pct, reject_requires_photo",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
-
-  if (error) {
-    return {
-      success: false,
-      error: messages.inventory.settings.qc.loadFailed,
-    };
-  }
-  return {
-    success: true,
-    data: data ?? {
-      qty_short_tolerance_pct: 5,
-      price_variance_warn_pct: 5,
-      price_variance_review_pct: 15,
-      reject_requires_photo: true,
-    },
-  };
-}
-
-/* ─── saveQcSettings ─── */
-
-const qcSettingsSchema = z.object({
-  qtyShortTolerancePct: z.coerce.number().min(0).max(100),
-  priceVarianceWarnPct: z.coerce.number().min(0).max(100),
-  priceVarianceReviewPct: z.coerce.number().min(0).max(100),
-  rejectRequiresPhoto: z.boolean(),
-});
-
-export const saveQcSettings = withAction(
-  {
-    roles: ROLES,
-    schema: qcSettingsSchema,
-    permission: PERMISSION_KEYS.SETTINGS_TENANT,
-  },
-  async (data, { supabase, claims, user }) => {
-    if (data.priceVarianceWarnPct >= data.priceVarianceReviewPct) {
-      return {
-        success: false,
-        error: "Ngưỡng cảnh báo phải nhỏ hơn ngưỡng kiểm tra.",
-      };
-    }
-    const { error } = await supabase.from("inventory_qc_settings").upsert(
-      {
-        tenant_id: claims.tenant_id,
-        qty_short_tolerance_pct: data.qtyShortTolerancePct,
-        price_variance_warn_pct: data.priceVarianceWarnPct,
-        price_variance_review_pct: data.priceVarianceReviewPct,
-        reject_requires_photo: data.rejectRequiresPhoto,
-        alert_webhook_url: null,
-        alert_channel: "generic",
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "tenant_id" },
-    );
-    if (error) {
-      console.error("inventory.notifications.save_qc_settings_failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return { success: false, error: "Không thể lưu cấu hình QC." };
-    }
-    revalidatePath("/inventory/settings/qc");
-    revalidatePath("/inventory/grn");
-    return { success: true };
-  },
-);
 
 /* ─── dispatchNotificationOutbox ─── */
 /**

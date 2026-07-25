@@ -11,7 +11,7 @@ import {
   Save as IconDeviceFloppy,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
-import { formatPercent, formatVND } from "@comtammatu/shared/format";
+import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -39,6 +39,7 @@ import {
 } from "@lib/inventory/grn-detail-model";
 import { useGrnDetailActions } from "@lib/inventory/use-grn-detail-actions";
 import { useGrnDetailLines } from "@lib/inventory/use-grn-detail-lines";
+import { isGrnBaselineReviewRequired } from "@lib/inventory/grn-quality";
 import { messages } from "@lib/messages";
 import {
   BranchGrnAddLineSheet,
@@ -128,11 +129,7 @@ export function GrnReviewOperatorClient({
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
           <BranchOperatorPanel
             title={grnCopy.inspectionItemsTitle}
-            description={grnCopy.draftToleranceHint(
-              formatPercent(grn.qcSettings.qtyShortTolerancePct),
-              formatPercent(grn.qcSettings.priceVarianceWarnPct),
-              formatPercent(grn.qcSettings.priceVarianceReviewPct),
-            )}
+            description={grnCopy.draftQcHint}
             icon={IconClipboardCheck}
             size="sm"
             className="min-w-0 lg:col-start-1 lg:row-start-1"
@@ -196,7 +193,11 @@ export function GrnReviewOperatorClient({
                       </ItemContent>
                       <ItemActions className="shrink-0">
                         {line.rejected > 0 ||
-                        line.qualityStatus === "rejected" ? (
+                        line.qualityStatus === "rejected" ||
+                        line.requiresReview ||
+                        isGrnBaselineReviewRequired(
+                          line.baselineVariancePct,
+                        ) ? (
                           <IconAlertTriangle className="size-5 text-warning" />
                         ) : (
                           <IconCircleCheck className="size-5 text-success" />

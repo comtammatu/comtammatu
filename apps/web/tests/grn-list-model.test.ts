@@ -18,6 +18,7 @@ const rows = [
     supplierName: "NCC Gạo",
     poCode: "PO-100",
     status: "draft",
+    qcIssueCount: 1,
   },
   {
     id: 2,
@@ -25,6 +26,7 @@ const rows = [
     supplierName: "NCC Thịt",
     poCode: "PO-200",
     status: "confirmed",
+    qcIssueCount: 1,
   },
 ];
 
@@ -40,6 +42,12 @@ test("GRN list filters combine status with document, supplier, and PO search", (
       (row) => row.id,
     ),
     [2],
+  );
+  assert.deepEqual(
+    filterGrnListRows(rows, { query: "", status: "review" }).map(
+      (row) => row.id,
+    ),
+    [1],
   );
 });
 
