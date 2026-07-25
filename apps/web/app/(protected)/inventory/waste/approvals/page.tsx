@@ -19,6 +19,7 @@ export default async function WasteApprovalsPage({
     <WasteApprovalsClient
       initial={data.rows}
       branchFilter={data.branchFilter}
+      loadFailed={data.loadFailed}
     />
   );
 }

@@ -1,15 +1,16 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft as IconArrowLeft } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
 import {
   fetchProductionRunById,
   fetchProductionRecipeContext,
 } from "../../production-run-actions";
 import { ProductionDetailClient } from "./production-detail-client";
-import { AppPage, AppPageHeader } from "@/components/surface";
-import { StatusBadge } from "@/components/status-badge";
+import {
+  AppBackLink,
+  AppPage,
+  AppPageHeader,
+} from "@/components/surface";
+import { getStatusBadgeMeta } from "@/components/status-badge";
 
 export default async function ProductionDetailPage({
   params,
@@ -26,6 +27,7 @@ export default async function ProductionDetailPage({
   }
 
   const run = res.data;
+  const statusBadge = getStatusBadgeMeta("inventory", run.status);
   const recipeRes = await fetchProductionRecipeContext(
     run.finished_good_id,
     run.branch_id,
@@ -41,17 +43,14 @@ export default async function ProductionDetailPage({
     <AppPage width="wide" density="compact">
       <AppPageHeader
         title={`Lệnh sản xuất ${run.production_number}`}
-        actions={<StatusBadge domain="inventory" value={run.status} />}
+        badge={{
+          children: statusBadge.label,
+          variant: statusBadge.variant,
+        }}
         breadcrumb={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="px-2"
-            render={<Link href="/inventory/production" />}
-          >
-            <IconArrowLeft data-icon="inline-start" />
+          <AppBackLink href="/inventory/production">
             Quay lại
-          </Button>
+          </AppBackLink>
         }
       />
       <ProductionDetailClient

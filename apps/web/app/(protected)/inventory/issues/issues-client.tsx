@@ -482,6 +482,8 @@ export function IssuesClient({
             <IconSearch />
           </InputGroupAddon>
           <InputGroupInput
+            type="search"
+            aria-label={INVENTORY_VI.issueSearchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={INVENTORY_VI.issueSearchPlaceholder}
@@ -568,6 +570,8 @@ export function IssuesClient({
             <IconSearch />
           </InputGroupAddon>
           <InputGroupInput
+            type="search"
+            aria-label={INVENTORY_VI.recordedSearchPlaceholder}
             value={recordedSearch}
             onChange={(event) => setRecordedSearch(event.target.value)}
             placeholder={INVENTORY_VI.recordedSearchPlaceholder}

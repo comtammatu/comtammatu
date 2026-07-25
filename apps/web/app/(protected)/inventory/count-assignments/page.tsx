@@ -82,6 +82,12 @@ export async function CountAssignmentsPageContent({
       .in("location_kind", ["warehouse"])
       .order("sort_order", { ascending: true })
       .order("id", { ascending: true });
+    if (locationsRes.error) {
+      console.error("inventory.count_assignments.locations_fetch_failed", {
+        code: locationsRes.error.code,
+      });
+      throw new Error("inventory.count_assignments.load_failed");
+    }
     for (const l of locationsRes.data ?? []) {
       locations.push({
         id: l.id,
@@ -112,6 +118,12 @@ export async function CountAssignmentsPageContent({
       .or(`branch_id.is.null,branch_id.eq.${selectedBranchId}`)
       .eq("is_active", true)
       .order("start_time");
+    if (shiftsRes.error) {
+      console.error("inventory.count_assignments.shifts_fetch_failed", {
+        code: shiftsRes.error.code,
+      });
+      throw new Error("inventory.count_assignments.load_failed");
+    }
     for (const shift of shiftsRes.data ?? []) {
       shiftOptions.push({
         id: shift.id,
@@ -204,7 +216,7 @@ export async function CountAssignmentsPageContent({
     .order("name");
   if (ingredientsRes.error) {
     console.error("inventory.count_assignments.ingredients_fetch_failed", {
-      error: ingredientsRes.error.message,
+      code: ingredientsRes.error.code,
     });
     throw new Error(
       "Không đọc được danh sách nguyên liệu để phân công đếm tồn.",
@@ -234,6 +246,12 @@ export async function CountAssignmentsPageContent({
         ? assignmentsQuery.is("shift_id", null)
         : assignmentsQuery.eq("shift_id", selectedShiftId);
     const assignmentsRes = await assignmentsQuery;
+    if (assignmentsRes.error) {
+      console.error("inventory.count_assignments.assignments_fetch_failed", {
+        code: assignmentsRes.error.code,
+      });
+      throw new Error("inventory.count_assignments.load_failed");
+    }
     for (const row of assignmentsRes.data ?? []) {
       const key = String(row.employee_id);
       (assignmentsByEmployee[key] ??= []).push(row.ingredient_id);

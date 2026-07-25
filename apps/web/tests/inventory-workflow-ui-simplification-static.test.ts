@@ -6,6 +6,15 @@ const read = (path: string) => readFileSync(path, "utf8");
 const between = (source: string, start: string, end: string) =>
   source.slice(source.indexOf(start), source.indexOf(end));
 
+test("Inventory cancel navigation returns to its owning list", () => {
+  const productionNew = read(
+    "app/(protected)/inventory/production/new/production-new-client.tsx",
+  );
+
+  assert.doesNotMatch(productionNew, /router\.back\(\)/);
+  assert.match(productionNew, /onClick=\{\(\) => router\.push\(basePath\)\}/);
+});
+
 test("stocktake list exposes one create entrypoint", () => {
   const source = read(
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",

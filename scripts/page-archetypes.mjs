@@ -148,7 +148,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/ingredients/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/issues/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/operations/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/operations/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD",
   "apps/web/app/(protected)/inventory/production/page.tsx": "LANDING",
   "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC-WORKFLOW",
@@ -207,6 +207,26 @@ const PAGE_DISPOSITION_OVERRIDES = {
     evidence: "implemented-static",
     final: false,
   },
+  "apps/web/app/(protected)/inventory/consumption/[id]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/consumption/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/count-assignments/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/count-slips/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
   "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
@@ -222,12 +242,122 @@ const PAGE_DISPOSITION_OVERRIDES = {
     evidence: "implemented-static",
     final: false,
   },
+  "apps/web/app/(protected)/inventory/grn/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/ingredients/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
   "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,
   },
+  "apps/web/app/(protected)/inventory/issues/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/production/[id]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/production/new/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/production/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/recipes/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/reports/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/settings/qc/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/stock/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/stocktake/[id]/count/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/stocktake/[id]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/stocktake/new/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/stocktake/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/suppliers/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
   "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/transfers/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/waste/new/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,

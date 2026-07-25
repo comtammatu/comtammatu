@@ -149,14 +149,15 @@ khác dùng `AppSection`, `AppLinkCard`, `OperationalBoardCard`,
 ## Component Selection
 
 Registry tại `scripts/ui-component-registry.mjs` là executable index của visual
-contract và implementation guide cho shared component, app adapter và domain
-adapter. Tra cứu trước khi compose một surface mới:
+contract và implementation guide cho shared component, app adapter, domain
+adapter và UI block. Tra cứu trước khi compose một surface mới:
 
 ```bash
 corepack pnpm audit:ui-components --component Card
 corepack pnpm audit:ui-components --component KpiCard
 corepack pnpm audit:ui-components --component InteractiveCard
 corepack pnpm audit:ui-components --component BranchOperatorPage
+corepack pnpm audit:ui-components --component branch-touch-list
 ```
 
 Kết quả trả về `need`, `use`, `fallback`, `forbidden` và `exemplar`. Chọn layer
@@ -165,6 +166,49 @@ adapter gần nhất trước khi thêm shared API mới.
 
 `apps/web/app/components/data-table/interactive-card.tsx` chỉ là compatibility
 re-export của shared `InteractiveCard`, không phải một app adapter thứ hai.
+
+## UI Block Selection
+
+`UI_BLOCK_REGISTRY` trong `scripts/ui-component-registry.mjs` là index cho các
+composition đã có thật. UI block đứng giữa archetype và component:
+
+```text
+actor/job → archetype → UI block → adapter/component → route
+```
+
+- Archetype sở hữu shape và state model của cả page.
+- UI block đặt tên cho một composition cụ thể theo plane, ví dụ
+  `management-list`, `branch-touch-list`, `realtime-board`.
+- Adapter/component là code được import.
+- Route gắn data, authority, copy và mutation thật.
+
+UI block không tạo thư mục `blocks/`, package mới hoặc component `*Block`. Nó là
+recipe tra cứu có `archetypes`, `planes`, `need`, `use`, `fallback`,
+`forbidden`, `exemplar`; validator chặn source, exemplar, plane hoặc archetype
+không còn hợp lệ. Chỉ thêm block khi có ít nhất hai consumer thật, hoặc một
+critical workflow có exemplar được chấp thuận. Nếu không có block phù hợp, dùng
+archetype + route-scoped composition từ adapter hiện có.
+
+## Stitch Adapter Workflow
+
+Stitch là sandbox thiết kế và mirror tùy chọn, không phải visual authority.
+Luồng dùng Stitch:
+
+1. Khóa actor, job, information order, archetype, plane và UI block trong UI
+   Advisor Gate.
+2. Nạp guideline từ visual contract hiện hành; không lấy theme cũ trên Stitch
+   làm nguồn ngược vào repo.
+3. Yêu cầu prototype đúng một screen/state hoặc một bounded flow; dùng dữ liệu
+   giả an toàn, không đưa secrets hay dữ liệu khách hàng/nhân sự/Production.
+4. Review hierarchy, touch target, responsive IA, loading/empty/error/blocked
+   state và accessibility trước khi chấp nhận.
+5. Implement lại bằng adapter/component đã đăng ký. Không copy generated token,
+   font, component API hoặc business behavior vào runtime.
+6. Verify trên browser/runtime; chỉ update contract khi finding thật sự dùng
+   chung.
+
+Khi visual contract đổi, repo đổi trước rồi mới sync mirror Stitch. Khi chỉ có
+Stitch output đổi, runtime và docs không tự động thay đổi.
 
 ## Branch Operator Landing
 

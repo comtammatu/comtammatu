@@ -449,6 +449,7 @@ export function IngredientsClient({
           </InputGroupAddon>
           <InputGroupInput
             type="search"
+            aria-label={ingredientListCopy.searchPlaceholder}
             name="ingredient-search"
             inputMode="search"
             autoComplete="off"

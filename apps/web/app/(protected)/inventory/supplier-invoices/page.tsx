@@ -46,17 +46,12 @@ export default async function SupplierInvoicesPage({
       loadAuthState(),
       currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
     ]);
+  if (!res.success || !suppliersRes.success || !grnsRes.success) {
+    throw new Error("inventory.supplier_invoices.load_failed");
+  }
   const canPaySupplier =
     authState.claims.user_role === "owner" && hasPayPermission;
-  const page = res.success
-    ? res.data
-    : {
-        items: [],
-        hasMore: false,
-        nextCursor: null,
-        totalCount: 0,
-        groups: [],
-      };
+  const page = res.data;
   const dbRows = (page?.items ?? []) as Array<Record<string, unknown>>;
   const initialHasMore = page?.hasMore ?? false;
   const initialNextCursor = (page?.nextCursor ??
@@ -64,26 +59,23 @@ export default async function SupplierInvoicesPage({
 
   const invoices = dbRows.map(mapSupplierInvoiceRow);
 
-  const suppliers = suppliersRes.success
-    ? ((suppliersRes.data ?? []) as Array<Record<string, unknown>>).map(
-        (row) => ({
-          id: Number(row.id ?? 0),
-          name: String(row.name ?? "—"),
-        }),
-      )
-    : [];
+  const suppliers = (
+    (suppliersRes.data ?? []) as Array<Record<string, unknown>>
+  ).map((row) => ({
+    id: Number(row.id ?? 0),
+    name: String(row.name ?? "—"),
+  }));
 
-  const grns = grnsRes.success
-    ? ((grnsRes.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-        id: Number(row.id ?? 0),
-        code: String(row.grn_number ?? "—"),
-        supplierId: Number(row.supplier_id ?? 0),
-        supplierName: String(
-          ((row.suppliers as Record<string, unknown> | null)?.name as string) ??
-            "—",
-        ),
-      }))
-    : [];
+  const grns = (
+    (grnsRes.data ?? []) as Array<Record<string, unknown>>
+  ).map((row) => ({
+    id: Number(row.id ?? 0),
+    code: String(row.grn_number ?? "—"),
+    supplierId: Number(row.supplier_id ?? 0),
+    supplierName: String(
+      ((row.suppliers as Record<string, unknown> | null)?.name as string) ?? "—",
+    ),
+  }));
 
   return (
     <SupplierInvoicesClient

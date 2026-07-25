@@ -661,7 +661,7 @@ export function ProductionNewClient({
     <Button
       type="button"
       variant="outline"
-      onClick={() => router.back()}
+      onClick={() => router.push(basePath)}
       disabled={isPending}
       size={embedded ? "touch" : "default"}
     >

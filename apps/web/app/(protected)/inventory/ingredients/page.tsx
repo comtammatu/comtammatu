@@ -31,16 +31,13 @@ export default async function IngredientsPage() {
     fetchUnitOptions(),
     fetchCategoryOptions(),
   ]);
+  if (!result.success || !unitsResult.success || !categoriesResult.success) {
+    throw new Error("inventory.ingredients.load_failed");
+  }
 
-  const initial: IngredientRow[] = result.success
-    ? (result.data as IngredientRow[])
-    : [];
-  const unitOptions: UnitOption[] = unitsResult.success
-    ? (unitsResult.data ?? [])
-    : [];
-  const categoryOptions: CategoryOption[] = categoriesResult.success
-    ? (categoriesResult.data ?? [])
-    : [];
+  const initial = result.data as IngredientRow[];
+  const unitOptions: UnitOption[] = unitsResult.data ?? [];
+  const categoryOptions: CategoryOption[] = categoriesResult.data ?? [];
 
   return (
     <IngredientsClient

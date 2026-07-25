@@ -6,7 +6,7 @@ import {
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { fetchQcSettingsForForm } from "../../notifications-actions";
 import { QcSettingsClient } from "./qc-settings-client";
-import { AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 
 export default async function QcSettingsPage() {
@@ -17,19 +17,14 @@ export default async function QcSettingsPage() {
   if (!ctx) redirect("/inventory");
 
   const res = await fetchQcSettingsForForm();
-  const settings = res.success
-    ? (res.data as {
+  const settings = res.data as
+    | {
         qty_short_tolerance_pct: number;
         price_variance_warn_pct: number;
         price_variance_review_pct: number;
         reject_requires_photo: boolean;
-      })
-    : {
-        qty_short_tolerance_pct: 5,
-        price_variance_warn_pct: 5,
-        price_variance_review_pct: 15,
-        reject_requires_photo: true,
-      };
+      }
+    | undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -38,7 +33,14 @@ export default async function QcSettingsPage() {
         title={messages.settings.qcSettings.title}
         description={messages.settings.qcSettings.description}
       />
-      <QcSettingsClient initial={settings} />
+      {!res.success || !settings ? (
+        <AppEmptyState
+          mode="error"
+          title={messages.inventory.settings.qc.loadFailed}
+        />
+      ) : (
+        <QcSettingsClient initial={settings} />
+      )}
     </div>
   );
 }

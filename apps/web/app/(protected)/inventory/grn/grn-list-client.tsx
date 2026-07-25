@@ -213,13 +213,15 @@ export function GrnListClient({
     <>
       <AppToolbar
         variant="inline"
-        className="items-stretch sm:items-center"
+        className="items-stretch max-sm:[&>[data-slot=separator]]:hidden max-sm:[&>[data-slot=toolbar-group]:first-child]:basis-full sm:items-center"
         search={
           <InputGroup className="min-h-10 w-full sm:h-10">
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
             <InputGroupInput
+              type="search"
+              aria-label={INVENTORY_VI.grnSearchPlaceholder}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={INVENTORY_VI.grnSearchPlaceholder}
@@ -251,7 +253,7 @@ export function GrnListClient({
         }
         bulk={
           <Badge variant="outline">
-            {filtered.length}/{grns.length}
+            {INVENTORY_VI.grnListCount(filtered.length)}
           </Badge>
         }
         actions={withinOwnerTabs ? desktopActions : null}

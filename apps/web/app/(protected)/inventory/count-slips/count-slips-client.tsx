@@ -39,6 +39,7 @@ import {
 import { AppDialog } from "@/components/form";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
+import { messages } from "@lib/messages";
 import type {
   CountSlipLineView as CountSlipLine,
   CountSlipRow,
@@ -266,6 +267,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
+        eyebrow={messages.inventory.shell.moduleName}
         title={INVENTORY_VI.countSlipTitle}
         description={INVENTORY_VI.countSlipDescription}
         actions={

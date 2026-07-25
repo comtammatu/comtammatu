@@ -122,6 +122,10 @@ test("writable settings and finance pages fail closed when initial data cannot l
   const units = read(
     "apps/web/app/(protected)/inventory/settings/units/page.tsx",
   );
+  const qc = read("apps/web/app/(protected)/inventory/settings/qc/page.tsx");
+  const thresholds = read(
+    "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx",
+  );
 
   assert.match(general, /data: tenant, error/);
   assert.match(general, /error \|\| !identity/);
@@ -134,10 +138,76 @@ test("writable settings and finance pages fail closed when initial data cannot l
   assert.match(foodCost, /!revenueRes\.success/);
   assert.match(categories, /\{res\.success \? \(/);
   assert.match(units, /\{res\.success \? \(/);
+  assert.match(qc, /!res\.success \|\| !settings/);
+  assert.match(thresholds, /!res\.success \? \(/);
 
-  for (const source of [general, payments, foodCost, categories, units]) {
+  for (const source of [
+    general,
+    payments,
+    foodCost,
+    categories,
+    units,
+    qc,
+    thresholds,
+  ]) {
     assert.match(source, /<AppEmptyState/);
     assert.match(source, /mode="error"/);
+  }
+});
+
+test("Inventory document and approval workflows fail closed on incomplete source data", () => {
+  const stocktakeStart = read(
+    "apps/web/app/(protected)/inventory/stocktake/new/page.tsx",
+  );
+  const wasteApprovalsPage = read(
+    "apps/web/app/(protected)/inventory/waste/approvals/page.tsx",
+  );
+  const wasteApprovalsClient = read(
+    "apps/web/app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
+  );
+  const wasteNew = read(
+    "apps/web/app/(protected)/inventory/waste/new/page.tsx",
+  );
+
+  assert.match(stocktakeStart, /loadFailed=\{locationsRes\.error !== null\}/);
+  assert.match(wasteApprovalsPage, /loadFailed=\{data\.loadFailed\}/);
+  assert.match(wasteApprovalsClient, /loadFailed \? \(/);
+  assert.match(wasteApprovalsClient, /mode="error"/);
+  for (const source of [
+    /branchRes\.error/,
+    /locationsRes\.error/,
+    /ingredientsRes\.error/,
+    /stockLevelsError/,
+    /!capRes\.success/,
+    /!capRes\.data/,
+  ]) {
+    assert.match(wasteNew, source);
+  }
+  assert.match(wasteNew, /mode: "error"/);
+  assert.doesNotMatch(wasteNew, /shiftCap: 1_500_000/);
+});
+
+test("Inventory lists and reports do not render load failures as empty data", () => {
+  const routes = [
+    ["ingredients/page.tsx", "inventory.ingredients.load_failed"],
+    ["suppliers/page.tsx", "inventory.suppliers.load_failed"],
+    ["transfers/page.tsx", "inventory.transfers.load_failed"],
+    ["stocktake/page.tsx", "inventory.stocktake.load_failed"],
+    ["production/page.tsx", "inventory.production.load_failed"],
+    ["supplier-invoices/page.tsx", "inventory.supplier_invoices.load_failed"],
+    ["issues/page.tsx", "inventory.issues.load_failed"],
+    ["reports/page.tsx", "inventory.reports.load_failed"],
+    ["count-assignments/page.tsx", "inventory.count_assignments.load_failed"],
+    ["count-slips/page.tsx", "inventory.count_slips.load_failed"],
+  ] as const;
+
+  for (const [route, errorCode] of routes) {
+    const source = read(`apps/web/app/(protected)/inventory/${route}`);
+    assert.match(
+      source,
+      new RegExp(`throw new Error\\("${errorCode.replaceAll(".", "\\.")}"\\)`),
+      route,
+    );
   }
 });
 

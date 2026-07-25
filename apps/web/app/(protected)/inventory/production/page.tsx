@@ -36,7 +36,10 @@ export async function ProductionPageContent({
     fetchProductionRuns(),
     loadProductionSurfaceData({ routeBranchId }),
   ]);
-  const rows: ProductionRunRow[] = res.success ? (res.data as ProductionRunRow[]) : [];
+  if (!res.success) {
+    throw new Error("inventory.production.load_failed");
+  }
+  const rows = res.data as ProductionRunRow[];
 
   const runsContent = (
     <ProductionRunsClient

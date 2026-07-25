@@ -88,6 +88,14 @@ export async function ReportsPageContent() {
       endDate,
     }),
   ]);
+  if (
+    !varRes.success ||
+    !movementRes.success ||
+    !foodCostRes.success ||
+    (showSupplierPayables && !apRes?.success)
+  ) {
+    throw new Error("inventory.reports.load_failed");
+  }
 
   let apAging: ApAgingItem[] = [];
   if (apRes?.success && apRes.data) {

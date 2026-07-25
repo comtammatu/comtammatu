@@ -1,10 +1,8 @@
-import { Truck as IconTruck } from "lucide-react";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   AppBackLink,
   AppEmptyState,
   AppPageHeader,
-  AppSection,
   DocumentFormFrame,
 } from "@/components/surface";
 import { loadGrnSourcePageData } from "@lib/inventory/grn-source-data";
@@ -35,11 +33,21 @@ export async function GrnNewPageContent({ searchParams }: GrnNewPageProps) {
   const data = await loadGrnSourcePageData({
     queryBranchId: params.branchId,
   });
-  const content = (
-    <AppSection
-      icon={<IconTruck />}
-      title={INVENTORY_VI.receiveBySupplierTitle}
-      description={INVENTORY_VI.receiveBySupplierDescription}
+  return (
+    <DocumentFormFrame
+      header={
+        <AppPageHeader
+          breadcrumb={
+            <AppBackLink href="/inventory/grn">
+              {INVENTORY_VI.grnListBackLabel}
+            </AppBackLink>
+          }
+          eyebrow={INVENTORY_VI.receivingEyebrow}
+          title={INVENTORY_VI.chooseSourceTitle}
+          description={INVENTORY_VI.chooseSourceDescription}
+        />
+      }
+      width="narrow"
     >
       {data.suppliersLoadFailed ? (
         <AppEmptyState
@@ -55,26 +63,6 @@ export async function GrnNewPageContent({ searchParams }: GrnNewPageProps) {
           canCreate={data.canCreateSupplier}
         />
       )}
-    </AppSection>
-  );
-
-  return (
-    <DocumentFormFrame
-      header={
-        <AppPageHeader
-          breadcrumb={
-            <AppBackLink href="/inventory/grn">
-              {INVENTORY_VI.grnListBackLabel}
-            </AppBackLink>
-          }
-          eyebrow={INVENTORY_VI.receivingEyebrow}
-          title={INVENTORY_VI.chooseSourceTitle}
-          description={INVENTORY_VI.chooseSourceDescription}
-        />
-      }
-      width="wide"
-    >
-      {content}
     </DocumentFormFrame>
   );
 }

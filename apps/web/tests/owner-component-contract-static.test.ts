@@ -359,7 +359,7 @@ test("UI component audit command stays wired for route-family drill-down", () =>
     "APP_ADAPTER_REGISTRY",
     "validateUiComponentRegistry",
     "Component Selection Coverage",
-    "UI Component Guidance",
+    "UI Artifact Guidance",
     "Page Archetype Coverage",
     "Page Disposition Coverage",
     "PAGE_DISPOSITIONS",
@@ -717,7 +717,7 @@ test("UI component registry classifies and explains every shared component and a
     { cwd: repoRoot, encoding: "utf8" },
   );
   assert.equal(cardGuidance.status, 0, cardGuidance.stderr);
-  assert.match(cardGuidance.stdout, /# UI Component Guidance/);
+  assert.match(cardGuidance.stdout, /# UI Artifact Guidance/);
   assert.match(cardGuidance.stdout, /surface framing internals/);
   assert.match(cardGuidance.stdout, /AppSection, AppLinkCard, KpiCard/);
 
@@ -737,7 +737,7 @@ test("UI component registry classifies and explains every shared component and a
     { cwd: repoRoot, encoding: "utf8" },
   );
   assert.equal(unknownGuidance.status, 1);
-  assert.match(unknownGuidance.stderr, /Unknown UI component or adapter/);
+  assert.match(unknownGuidance.stderr, /Unknown UI artifact/);
 
   const fixtureReport = registryModule.buildSharedComponentCoverage([
     ...report.sharedComponentCoverage.actual,

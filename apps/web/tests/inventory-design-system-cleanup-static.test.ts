@@ -32,7 +32,62 @@ const productionDetailSource = readWeb(
 const dashboardClientSource = readWeb(
   "app/(protected)/inventory/dashboard-client.tsx",
 );
+const issueDetailSource = readWeb(
+  "app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
+);
+const stocktakeCountSource = readWeb(
+  "app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
+);
 const inventoryMessagesSource = readWeb("lib/messages/inventory.ts");
+
+test("inventory search inputs expose native semantics and accessible names", () => {
+  const failures = walkFiles(inventoryDir).flatMap((file) => {
+    const source = readFileSync(file, "utf8");
+    const inputs = source.match(/<InputGroupInput\b[\s\S]*?\/>/g) ?? [];
+    return inputs.flatMap((input) => {
+      const missing = [
+        !/\btype="search"/.test(input) ? "type=search" : null,
+        !/\baria-label=/.test(input) ? "aria-label" : null,
+      ].filter(Boolean);
+      return missing.length > 0
+        ? [
+            `${file.slice(process.cwd().length + 1)}: missing ${missing.join(
+              ", ",
+            )}`,
+          ]
+        : [];
+    });
+  });
+
+  assert.deepEqual(failures, []);
+});
+
+test("inventory motion does not scale operational controls on hover", () => {
+  const failures = walkFiles(inventoryDir)
+    .filter((file) => readFileSync(file, "utf8").includes("hover:scale"))
+    .map((file) => file.slice(process.cwd().length + 1));
+
+  assert.deepEqual(failures, []);
+});
+
+test("inventory informational states are not disabled buttons", () => {
+  assert.match(
+    issueDetailSource,
+    /<Badge variant="secondary">\{ISSUES_VI\.draftAutoSaved\}<\/Badge>/,
+  );
+  assert.doesNotMatch(
+    issueDetailSource,
+    /<Button[^>]*disabled>[\s\S]{0,120}ISSUES_VI\.draftAutoSaved/,
+  );
+  assert.match(
+    stocktakeCountSource,
+    /<Badge variant=\{status === "cancelled" \? "secondary" : "success"\}>/,
+  );
+  assert.doesNotMatch(
+    stocktakeCountSource,
+    /messages\.inventory\.stocktake\.detail\.updateFailed/,
+  );
+});
 
 test("inventory surfaces use approved tint opacity scale", () => {
   const forbiddenTint =

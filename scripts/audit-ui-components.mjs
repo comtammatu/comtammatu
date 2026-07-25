@@ -9,10 +9,7 @@ import {
 } from "./ui-component-registry.mjs";
 import { buildUiContractGuardReporting } from "./ui-contract-guard-reporting.mjs";
 import { UI_RUNTIME_SOURCE_ROOTS } from "./ui-contract-scope.mjs";
-import {
-  PAGE_ARCHETYPES,
-  PAGE_DISPOSITIONS,
-} from "./page-archetypes.mjs";
+import { PAGE_ARCHETYPES, PAGE_DISPOSITIONS } from "./page-archetypes.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_LIMIT = 60;
@@ -558,7 +555,7 @@ function markdownCell(value) {
 }
 
 function printComponentGuidance(query, matches) {
-  console.log("# UI Component Guidance");
+  console.log("# UI Artifact Guidance");
   console.log();
   console.log(`Query: \`${query}\``);
   for (const entry of matches) {
@@ -571,6 +568,8 @@ function printComponentGuidance(query, matches) {
         [
           ["classification", entry.classification],
           ["source", entry.source],
+          ["archetypes", entry.archetypes?.join(", ")],
+          ["planes", entry.planes?.join(", ")],
           ["need", entry.need],
           ["use", entry.use],
           ["fallback", entry.fallback],
@@ -688,7 +687,7 @@ if (options.component !== null) {
   const matches = findComponentGuidance(options.component);
   if (matches.length === 0) {
     console.error(
-      `Unknown UI component or adapter "${options.component}". Use the source name, for example Card, KpiCard, or BranchOperatorPage.`,
+      `Unknown UI artifact "${options.component}". Use a registered component, adapter, or block such as Card, KpiCard, BranchOperatorPage, or branch-touch-list.`,
     );
     process.exit(1);
   }
@@ -949,6 +948,7 @@ const componentSelectionRows = [
   ["app-adapter", "registered", String(componentRegistry.appAdapterCount)],
   ["domain-adapter", "families", String(componentRegistry.domainFamilyCount)],
   ["domain-adapter", "exports", String(componentRegistry.domainExportCount)],
+  ["ui-block", "registered", String(componentRegistry.uiBlockCount)],
 ];
 
 console.log("# UI Component Audit");

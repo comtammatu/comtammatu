@@ -35,10 +35,11 @@ export async function StocktakePageContent({
   const branchFilter = scope.selectedBranchId ?? undefined;
 
   const sessionsRes = await fetchStocktakeSessions(branchFilter);
+  if (!sessionsRes.success) {
+    throw new Error("inventory.stocktake.load_failed");
+  }
 
-  const sessions: StocktakeSessionRow[] = sessionsRes.success
-    ? ((sessionsRes.data ?? []) as StocktakeSessionRow[])
-    : [];
+  const sessions = (sessionsRes.data ?? []) as StocktakeSessionRow[];
   const branches: BranchOption[] = (scope?.allowedBranches ?? []).map((b) => ({
     id: b.id,
     name: getBranchSiteDisplayName(b),

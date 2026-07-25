@@ -272,6 +272,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
     <>
       <AppPage width="wide" scroll>
         <AppPageHeader
+          eyebrow={messages.inventory.shell.moduleName}
           title={suppliersCopy.title}
           actions={
             <Button type="button" size="touch" onClick={openCreate}>
@@ -280,23 +281,30 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             </Button>
           }
         />
-        <AppToolbar>
-          <InputGroup className="h-12 flex-1 basis-full sm:h-10 sm:basis-auto">
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="text"
-              placeholder={suppliersCopy.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              inputMode="search"
-            />
-          </InputGroup>
-          <Badge variant="outline" className="rounded-full">
-            {filtered.length}/{rows.length}
-          </Badge>
-        </AppToolbar>
+        <AppToolbar
+          search={
+            <InputGroup className="h-12 w-full sm:h-10">
+              <InputGroupAddon>
+                <IconSearch />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="search"
+                name="supplier-search"
+                autoComplete="off"
+                placeholder={suppliersCopy.searchPlaceholder}
+                aria-label={suppliersCopy.searchPlaceholder}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                inputMode="search"
+              />
+            </InputGroup>
+          }
+          reset={
+            <Badge variant="outline" className="rounded-full">
+              {filtered.length}/{rows.length}
+            </Badge>
+          }
+        />
 
         <DataTable
           columns={columns}

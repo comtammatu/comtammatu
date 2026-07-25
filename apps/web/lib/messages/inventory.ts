@@ -80,6 +80,7 @@ export const inventory = {
     ],
   },
   dashboard: {
+    title: "Bản điều hành kho",
     mainFlowsTitle: "Điểm vào vận hành chính",
     mainFlowsOversightTitle: "3 điểm giám sát chính",
     mainFlowsOversightDescription:
@@ -1038,6 +1039,7 @@ export const inventory = {
         failed: "Không thể cập nhật ngưỡng.",
       },
       empty: "Chưa có nguyên liệu nào trong danh mục.",
+      loadFailed: "Không thể tải ngưỡng tồn kho.",
       forbidden: "Bạn không có quyền chỉnh sửa ngưỡng tồn kho.",
     },
     qc: {
@@ -1351,6 +1353,7 @@ export const inventory = {
     startTitle: "Bắt đầu kiểm kê",
     startDescription:
       "Chọn chế độ và chi nhánh. Hệ thống sẽ tạo danh sách theo phân hạng ABC.",
+    startLoadFailed: "Không thể tải dữ liệu để bắt đầu kiểm kê.",
     modeTitle: "Chế độ kiểm kê",
     locationOptional: "Vị trí kho (tuỳ chọn)",
     allLocations: "Tất cả vị trí kho",
@@ -1464,6 +1467,9 @@ export const inventory = {
   },
   waste: {
     title: "Phiếu hao hụt / hủy hàng",
+    loadFailedTitle: "Không thể tải dữ liệu phiếu hao hụt",
+    loadFailedDescription:
+      "Chưa thể xác nhận vị trí kho, tồn hiện tại và ngưỡng kiểm soát. Vui lòng tải lại.",
     shiftPrefix: "ca:",
     generalInfoTitle: "Thông tin chung",
     generalInfoDescription:
@@ -1490,6 +1496,9 @@ export const inventory = {
       branchSuffix: (branchId: number) => ` • CN #${branchId}`,
       count: (count: number) => `${formatCount(count)} phiếu`,
       empty: "Không có phiếu chờ duyệt.",
+      loadFailed: "Không thể tải phiếu chờ duyệt.",
+      loadFailedDescription:
+        "Danh sách hiện tại chưa được xác nhận. Vui lòng tải lại.",
       selfCreatedBadge: "Bạn tạo — không thể tự duyệt",
       lineCount: (count: number) => `${formatCount(count)} dòng`,
       reason: (label: string) => `Lý do: ${label}`,

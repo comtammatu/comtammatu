@@ -7,6 +7,7 @@ import {
 import { resolveInventoryListScope } from "../../_lib/inventory-scope";
 import { getBranchSiteDisplayName } from "../../_lib/branch-site-labels";
 import { NewStocktakeSessionClient } from "./new-session-client";
+import { messages } from "@lib/messages";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,8 @@ export async function NewStocktakeSessionPageContent({
       defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
       routeBase={routeBase}
       embedded={embedded}
+      loadFailed={locationsRes.error !== null}
+      loadFailedTitle={messages.inventory.stocktake.startLoadFailed}
     />
   );
 }
