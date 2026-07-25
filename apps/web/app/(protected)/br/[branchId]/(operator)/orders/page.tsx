@@ -9,14 +9,36 @@ import { OperatorOrdersClient } from "./operator-orders-client";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
+  searchParams?: Promise<{ orderId?: string | string[] }>;
 }
 
-export default async function OperatorOrdersPage({ params }: PageProps) {
+export default async function OperatorOrdersPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { branchId: rawBranchId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
-  const result = await fetchOrders({ branchId });
+  const query = searchParams ? await searchParams : {};
+  const rawOrderId = Array.isArray(query.orderId)
+    ? query.orderId[0]
+    : query.orderId;
+  const requestedOrderId =
+    typeof rawOrderId === "string" && /^\d+$/.test(rawOrderId)
+      ? Number(rawOrderId)
+      : null;
+  const [result, selectedOrderResult] = await Promise.all([
+    fetchOrders({ branchId }),
+    requestedOrderId == null
+      ? Promise.resolve(null)
+      : fetchOrders({ branchId, orderId: requestedOrderId }),
+  ]);
+  const initialSelectedOrder =
+    selectedOrderResult?.success === true
+      ? (selectedOrderResult.data?.orders[0] ?? null)
+      : null;
+  if (requestedOrderId != null && initialSelectedOrder == null) notFound();
 
   return (
     <BranchOperatorPage
@@ -29,6 +51,7 @@ export default async function OperatorOrdersPage({ params }: PageProps) {
           orders={result.data.orders}
           totalCount={result.data.summary.totalCount}
           inProgressCount={result.data.summary.inProgressCount}
+          initialSelectedOrder={initialSelectedOrder}
         />
       ) : (
         <AppEmptyState

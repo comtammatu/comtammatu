@@ -4,8 +4,8 @@ export const ORDERS_VI = {
   loadRefundsFailed: "Không thể tải danh sách hoàn tiền",
   loadHistoryFailed: "Không thể tải lịch sử",
   loadItemsFailed: "Không thể tải món",
-  loadOperationalEvidenceFailed: "Không thể tải bằng chứng vận hành",
-  invalidOperationalEvidence: "Dữ liệu bằng chứng vận hành không hợp lệ",
+  loadOperationalEvidenceFailed: "Không thể tải dữ liệu đối chiếu",
+  invalidOperationalEvidence: "Dữ liệu đối chiếu không hợp lệ",
   noOrders: "Chưa có đơn hàng",
   orderedBy: "Người order",
   time: "Thời gian",
@@ -18,7 +18,7 @@ export const ORDERS_VI = {
   auditHistoryTitle: "Lịch sử thao tác",
   noAuditHistory: "Chưa có thao tác nào được ghi nhận.",
   loadingItems: "Đang tải món…",
-  loadingOperationalEvidence: "Đang tải bằng chứng vận hành…",
+  loadingOperationalEvidence: "Đang đối chiếu dữ liệu…",
   noItems: "Không có món nào",
 } as const;
 
