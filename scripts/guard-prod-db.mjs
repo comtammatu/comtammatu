@@ -12,11 +12,10 @@ import { fileURLToPath } from "node:url";
 // keeps the registry, this script, and every adapter's matchers in sync, and
 // replays behavior fixtures so regex edits cannot silently weaken blocking.
 //
-// Blocks (exit 2): state-mutating Supabase CLI subcommands unless a supported
-// command binds its literal database URL to the approved Cloud DEV ref; psql
-// writes against a protected or unverified connection; pg_restore toward a
-// protected or unverified target; HTTP writes plus non-catalog Production
-// reads; and
+// Blocks (exit 2): state-mutating Supabase CLI subcommands except verified
+// Preview branch lifecycle operations; psql writes against a protected or
+// unverified connection; pg_restore toward a protected or unverified target;
+// HTTP writes plus non-catalog Production reads; and
 // write-capable Supabase MCP tools targeting a protected or unregistered ref.
 // Preview branch delete is allowed for cleanup; creation is allowed only when
 // supabase/migration-lineage.json proves the repository baseline and production
@@ -35,14 +34,6 @@ const PROTECTED_REFS = {
 
 const NO_TOUCH_REFS = new Set(["dyksphedgzqsqjqgxzog"]);
 
-const APPROVED_NON_PROD_REFS = {
-  dzvilydcccemlafxcydj: "DEV (matu-greenfield)",
-};
-const APPROVED_DEV_REF = Object.keys(APPROVED_NON_PROD_REFS)[0];
-const APPROVED_DEV_SESSION_POOLER = {
-  ref: "dzvilydcccemlafxcydj",
-  host: "aws-0-ap-southeast-1.pooler.supabase.com",
-};
 const APPROVED_PREVIEW_PARENT_REF = "iexwsuaqqenyjiskawoj";
 
 const CODEX_CONFIG = new URL("../.codex/config.toml", import.meta.url);
@@ -58,10 +49,7 @@ const LIBPQ_UNVERIFIED_ENV = [
 ];
 
 function registeredReadableRef(ref) {
-  return (
-    ref === APPROVED_PREVIEW_PARENT_REF ||
-    Object.hasOwn(APPROVED_NON_PROD_REFS, ref)
-  );
+  return ref === APPROVED_PREVIEW_PARENT_REF;
 }
 
 function codexSupabaseBindingVerified() {
@@ -652,16 +640,6 @@ function registeredDatabaseUrlRef(value) {
     if (hostMatch) {
       const ref = hostMatch[1];
       return registeredReadableRef(ref) ? ref : null;
-    }
-
-    if (
-      url.hostname === APPROVED_DEV_SESSION_POOLER.host &&
-      url.port === "5432" &&
-      url.username === `postgres.${APPROVED_DEV_SESSION_POOLER.ref}` &&
-      !url.password &&
-      url.pathname === "/postgres"
-    ) {
-      return APPROVED_DEV_SESSION_POOLER.ref;
     }
 
     return null;
@@ -1529,7 +1507,7 @@ function block(reason) {
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
       "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is PRODUCTION — guarded table/view/catalog reads only;",
-      "dyksphedgzqsqjqgxzog belongs to a different codebase. matu-greenfield is DEV only when a supported command explicitly binds its target to dzvilydcccemlafxcydj;",
+      "dyksphedgzqsqjqgxzog belongs to a different codebase. No persistent non-production project is registered; Preview refs require parent verification per action;",
       "migrations ship as file → PR → owner applies. If the owner explicitly delegated a prod write",
       "in this session, the owner applies it outside the guarded runtime or provides a scoped",
       "approval path. Never disable this hook or its runtime wiring.",
@@ -1578,7 +1556,7 @@ if (toolName === "Bash") {
         hasDynamicShellInvocation(segment) ||
         hasUnquotedDynamicExpansion(segment),
     );
-  const allowDevTarget = segments.length === 1 && !dynamicShell;
+  const allowStaticCommand = segments.length === 1 && !dynamicShell;
   if (dynamicShell && DATABASE_CAPABLE_CLIENT.test(cmd)) {
     block("dynamic shell composition around a database-capable command");
   }
@@ -1595,10 +1573,6 @@ if (toolName === "Bash") {
     if (noTouchRef && detectedDatabaseClient) {
       block(`command against no-touch ref ${noTouchRef}`);
     }
-    const refHit = Object.keys(PROTECTED_REFS).find((ref) =>
-      segment.includes(ref),
-    );
-
     const cliArgs = supabaseCliArgs(segment);
     if (cliArgs) {
       const isReadOnly = readOnlySupabaseCli(cliArgs);
@@ -1606,7 +1580,6 @@ if (toolName === "Bash") {
       const isDbPush = cliArgs[0] === "db" && cliArgs[1] === "push";
       const isPreviewCreate =
         cliArgs[0] === "branches" && cliArgs[1] === "create";
-      const dbUrls = supabaseCliFlagValues(cliArgs, "--db-url");
       const previewParentRefs = supabaseCliFlagValues(
         cliArgs,
         "--project-ref",
@@ -1615,17 +1588,6 @@ if (toolName === "Bash") {
       const hasCompetingCliTarget = cliArgs.slice(2).some((token) =>
         /^--(?:linked|local)(?:=|$)/.test(token),
       );
-      const hasUnresolvedDbUrl = dbUrls.some(
-        (url) => containsShellParameter(url) || url.includes("`"),
-      );
-      const cliTargetsDev =
-        APPROVED_DEV_REF !== null &&
-        allowDevTarget &&
-        isDbPush &&
-        !hasUnresolvedDbUrl &&
-        !hasCompetingCliTarget &&
-        dbUrls.length === 1 &&
-        readTargetRef === APPROVED_DEV_REF;
 
       if (isReadOnly) {
         if (!isUnboundSafe && !readTargetRef) {
@@ -1639,7 +1601,7 @@ if (toolName === "Bash") {
         }
       } else if (isPreviewCreate) {
         if (
-          !allowDevTarget ||
+          !allowStaticCommand ||
           /[`$]/.test(segment) ||
           hasCompetingCliTarget ||
           readTargetRef !== APPROVED_PREVIEW_PARENT_REF ||
@@ -1649,11 +1611,9 @@ if (toolName === "Bash") {
           block("Preview branch creation without the registered parent ref");
         }
       } else if (isDbPush) {
-        if (refHit || !cliTargetsDev) {
-          block(
-            "Supabase db push without a supported explicit Cloud DEV target",
-          );
-        }
+        block(
+          "Supabase db push is disabled without a persistent non-production target",
+        );
       } else {
         block("Supabase CLI command outside the guarded read-only allowlist");
       }
@@ -1696,14 +1656,6 @@ if (toolName === "Bash") {
         !psql.hasScriptFile &&
         psql.commands.every((sql) => guardedReadOnlySql(sql)) &&
         !unsafeFunction;
-      const guardedDevCommand =
-        psql.commands.length > 0 &&
-        !psql.hasScriptFile &&
-        !psql.hasVariables &&
-        psql.commands.every(
-          (sql) => !UNSAFE_PSQL_META.test(stripSqlNoise(sql)),
-        );
-
       if (
         psqlTargetRef === APPROVED_PREVIEW_PARENT_REF &&
         (!guardedRead || psql.hasVariables)
@@ -1713,16 +1665,7 @@ if (toolName === "Bash") {
             ? `psql calling non-whitelisted function ${unsafeFunction}() against Production`
             : psql.hasVariables
               ? "psql variables are unverified SQL input against Production"
-            : "psql against Production without a verified read-only command",
-        );
-      }
-      if (
-        APPROVED_DEV_REF !== null &&
-        psqlTargetRef === APPROVED_DEV_REF &&
-        (!allowDevTarget || !guardedDevCommand)
-      ) {
-        block(
-          "DEV psql requires static literal -c input without variables or meta-commands",
+              : "psql against Production without a verified read-only command",
         );
       }
     }
@@ -1816,16 +1759,15 @@ if (mcpMatch) {
   // project_id. Claude/plugin and connector-wrapped tools are org-scoped and
   // must always carry an explicit project ref.
   const target = projectId === "" ? "iexwsuaqqenyjiskawoj" : projectId;
-  const staticNonProd = Object.hasOwn(APPROVED_NON_PROD_REFS, target);
   const label = Object.hasOwn(PROTECTED_REFS, target)
     ? PROTECTED_REFS[target]
     : undefined;
-  const preview = !staticNonProd && !label ? trustedPreviewProject(target) : null;
-  const approvedNonProd = staticNonProd || preview !== null;
+  const preview = !label ? trustedPreviewProject(target) : null;
+  const isTrustedPreview = preview !== null;
   if (NO_TOUCH_REFS.has(target)) {
     block(`${action} against no-touch ref ${target}`);
   }
-  if (!approvedNonProd && !label) {
+  if (!isTrustedPreview && !label) {
     block(`${action} against unregistered Supabase ref ${target}`);
   }
 
@@ -1852,13 +1794,13 @@ if (mcpMatch) {
   }
 
   if (MCP_PROJECT_READ_ACTIONS.has(action)) {
-    if (approvedNonProd || MCP_PRODUCTION_READ_ACTIONS.has(action)) {
+    if (isTrustedPreview || MCP_PRODUCTION_READ_ACTIONS.has(action)) {
       process.exit(0);
     }
     block(`${action} is outside the Production database catalog read allowlist`);
   }
 
-  if (approvedNonProd) {
+  if (isTrustedPreview) {
     if (
       action === "apply_migration" ||
       action === "execute_sql" ||
@@ -1866,11 +1808,7 @@ if (mcpMatch) {
     ) {
       process.exit(0);
     }
-    block(
-      `${action} against ${
-        APPROVED_NON_PROD_REFS[target] ?? "a trusted Preview branch"
-      }`,
-    );
+    block(`${action} against a trusted Preview branch`);
   }
 
   if (action === "execute_sql") {

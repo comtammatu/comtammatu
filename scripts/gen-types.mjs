@@ -7,8 +7,8 @@
 // work the same way on cmd vs sh. Lesson #11–#13 in `tasks/lessons.md`.
 //
 // Behavior:
-// - Generates from the registered persistent Cloud DEV project only. Typegen is
-//   a read path, but it must never silently choose Production or stored env state.
+// - Generates from Production only after an explicit matching project ref.
+//   Typegen is read-only and never loads stored env or link state.
 // - Captures only stdout; CLI update notice on stderr is shown in console
 //   but never poisons the types file.
 // - Writes to `packages/database/src/types/database.types.ts`.
@@ -16,11 +16,11 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 
-const DEV_PROJECT_ID = "dzvilydcccemlafxcydj";
+const PRODUCTION_PROJECT_ID = "iexwsuaqqenyjiskawoj";
 const requestedProjectId = process.env["SUPABASE_PROJECT_ID"]?.trim();
-if (requestedProjectId && requestedProjectId !== DEV_PROJECT_ID) {
+if (requestedProjectId !== PRODUCTION_PROJECT_ID) {
   console.error(
-    `gen-types: SUPABASE_PROJECT_ID must be the registered DEV ref ${DEV_PROJECT_ID}.`,
+    `gen-types: SUPABASE_PROJECT_ID must explicitly match Production ${PRODUCTION_PROJECT_ID}.`,
   );
   process.exit(1);
 }
@@ -60,7 +60,7 @@ try {
     "types",
     "typescript",
     "--project-id",
-    DEV_PROJECT_ID,
+    PRODUCTION_PROJECT_ID,
   ]);
 } catch (error) {
   if (error && typeof error === "object" && "code" in error && error.code !== "ENOENT") {
@@ -74,7 +74,7 @@ try {
     "types",
     "typescript",
     "--project-id",
-    DEV_PROJECT_ID,
+    PRODUCTION_PROJECT_ID,
   ]);
 }
 

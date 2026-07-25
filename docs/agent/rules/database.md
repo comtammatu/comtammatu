@@ -18,25 +18,16 @@ over older task notes, regressions, and memory.
 project-scoped MCP tools; it is not the guarded-read policy used for comtammatu
 Production.
 
-- **DEV — `matu-greenfield` (`dzvilydcccemlafxcydj`)** is the persistent
-  non-production Cloud target. Verify this ref before every tool or SQL call;
-  use only task-scoped non-production data and never treat it as production.
-  `corepack pnpm db:types` always generates from this registered DEV target and
-  rejects any other `SUPABASE_PROJECT_ID`.
-  The local guard permits `supabase db push` only with a literal `--db-url`
-  whose host is the direct DEV database endpoint or the registered DEV Session
-  Pooler (the IPv4-only fallback for this runner). The repository `dotenv`
-  runner may load a password from `.env.local`, but cannot provide the URL.
-  Direct DEV `psql` URLs are
-  supported only as static literal `-c` commands with `-X` or `--no-psqlrc`.
-  Interactive sessions, script files, psql variables/meta-commands, stored link
-  state, startup-file commands, env-indirected targets, and every other
-  mutating Supabase CLI path remain blocked.
+- There is no persistent non-production Supabase project. `supabase db push`
+  and direct non-production `psql` targets fail closed. Workstations do not
+  substitute Supabase Local Docker.
+- `corepack pnpm db:types` is a guarded Production schema read. It requires the
+  literal Production `SUPABASE_PROJECT_ID` from this registry and never loads a
+  stored link or `.env.local`.
 - Use an on-demand Preview Branch for isolated migration replay or disposable
-  verification. A workstation must not substitute Supabase Local Docker for
-  either Cloud target. The CI-only E2E harness is the sole isolated Docker
-  exception and may write only its ignored `apps/web/.env.test.local` plus the
-  GitHub runner's `GITHUB_ENV`; it never writes repository `.env.local` files.
+  verification. The CI-only E2E harness is the sole isolated Docker exception
+  and may write only its ignored `apps/web/.env.test.local` plus the GitHub
+  runner's `GITHUB_ENV`; it never writes repository `.env.local` files.
   CLI creation additionally requires the literal parent binding
   `--project-ref iexwsuaqqenyjiskawoj`; stored link state and any other parent
   remain blocked.
@@ -45,7 +36,7 @@ Production.
   verifies both `project_ref` and `parent_project_ref`. This proof is repeated
   per action; it creates no local whitelist or stored-link exception. A lookup
   failure, mismatched parent, branch merge/reset/rebase, or every Preview CLI
-  mutation fails closed. `supabase db push` remains DEV-only.
+  mutation fails closed. `supabase db push` remains disabled.
 - Org-scoped MCP servers and the Supabase CLI are write-capable. This repo has
   no tracked `.mcp.json`; never infer a project binding from one. Codex's direct
   repo MCP URL in `.codex/config.toml` is pinned to comtammatu Production with
@@ -57,14 +48,14 @@ Production.
   `corepack pnpm lint:guard-sync` verifies the registry, guard, adapters, and
   behavior fixtures. Every Supabase MCP action is routed through the guard;
   unknown future actions fail closed. Unregistered runtimes remain read-only
-  around production.
+  around Production.
 - Guarded Supabase CLI, SQL, and HTTP reads require one literal registered ref;
   stored-link state, env-indirected URLs/refs, unregistered refs, and ambiguous
   target selectors fail closed. Project-scoped CLI reads use a literal
   `--project-ref` or direct registered `--db-url` as supported by that command.
   Production CLI and MCP reads are limited to schema/catalog surfaces; project
-  metadata, logs, advisors, API keys, and secrets remain blocked. Registered DEV
-  may use the broader project-read actions required for non-production QA.
+  metadata, logs, advisors, API keys, and secrets remain blocked. Preview
+  Branches may use broader project reads only after parent verification.
 - Protected HTTP reads must also disable hidden request input: use `curl -q`,
   `wget --no-config`, or HTTPie/xh `--ignore-stdin`. Explicit client config,
   stdin/request bodies, mutating methods, and unresolved Supabase URLs remain

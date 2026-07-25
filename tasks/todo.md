@@ -24,7 +24,8 @@ Tier: T3
 Lane: database
 Exit: A current Production-derived baseline, required fresh-environment forwards, and the live Production ledger are reconciled without replaying or mutating business data.
 Evidence: Production catalog/ACL comparison, CI baseline replay, type no-diff, and one disposable Preview proof.
-- [ ] Apply the active baseline and forward chain to registered DEV, regenerate types, then complete aligned schema and disposable Preview validation.
+
+- [ ] Replay the active baseline and forward chain on an owner-operated on-demand Preview; regenerate types from explicit Production only after the matching apply.
 
 ## Prove Self-Order offline navigation isolation
 

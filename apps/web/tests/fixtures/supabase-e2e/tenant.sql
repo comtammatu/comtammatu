@@ -1,4 +1,4 @@
--- LOCAL-DEV ONLY tenant/branch/position/role-template bootstrap.
+-- CI-ONLY tenant/branch/position/role-template bootstrap.
 -- The base dataset (tenant comtammatu, branches, positions, role_templates)
 -- historically lived in archived migrations below the consolidated baseline,
 -- which is schema-only. The CI QA-user fixture assumes this data already exists

@@ -12,11 +12,14 @@ Supabase xác nhận là con của Production. Với từng MCP action, guard g�
 hay cache để tin cậy lại. Nếu không xác minh được, Preview bị chặn. Không được
 nới guard hay thay bằng Local Docker.
 
-## Trạng thái hiện tại — persistent DEV đã đăng ký
+## Trạng thái hiện tại
 
-Persistent Cloud DEV là `dzvilydcccemlafxcydj`. Agent-side typegen và mutation
-chỉ dùng literal ref này. `corepack pnpm lint:migration-lineage` kiểm tra active
-migration layout trước replay, nhưng không quyết định quyền tạo Preview.
+Không có persistent non-production Supabase project. Preview Branch chỉ được
+tạo on-demand cho một verification cụ thể rồi xóa. Type generation đọc
+Production bằng ref literal; Preview Branch không phải type source.
+
+`corepack pnpm lint:migration-lineage` kiểm tra active migration layout trước
+replay, nhưng không quyết định quyền tạo Preview.
 
 Trạng thái lineage không chứng minh branch cloud sẵn sàng. Trước khi tạo branch,
 phải kiểm tra trạng thái Supabase hiện tại, lấy đúng chi phí theo giờ và được chủ
@@ -37,16 +40,19 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
    nhận log chỉ chạy active baseline và forward migrations; dừng ngay nếu thấy
    archived/remote-only history.
 6. Trước mọi mutation, để guard xác minh Preview ref qua parent Production.
-   `supabase db push` vẫn chỉ dùng registered Cloud DEV; merge/reset/rebase bị
-   chặn kể cả với Preview đã xác minh. Nếu tra cứu thất bại, dừng và báo blocker.
+   `supabase db push` bị tắt; merge/reset/rebase bị chặn kể cả với Preview đã
+   xác minh. Nếu tra cứu thất bại, dừng và báo blocker.
 7. Chỉ seed bằng dữ liệu non-production, không secret và không customer data.
 8. Chạy schema/RLS/RPC tests, smoke flow cần thiết và security advisors trên
-   target đã được phép mutation; ghi rõ target là DEV hay Preview.
-9. Nếu registered Cloud DEV là type source của task, chạy
-   `corepack pnpm db:types` và review diff. Preview ref không thay thế DEV type
-   source qua stored link hay env override.
+   Preview đã được phép mutation; ghi rõ target.
+9. Chỉ chạy
+   `SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj corepack pnpm db:types` sau khi
+   schema tương ứng đã được apply vào Production theo owner-gated flow. Không
+   đổi type source sang Preview qua stored link hay env override.
 10. Thu thập evidence: ref, migration versions, test result và cleanup result.
-11. Xóa Preview Branch khi xong; không để resource throwaway chạy vô thời hạn.
+11. Xóa Preview Branch trong cùng task, xác nhận resource đã biến mất rồi mới
+    đóng verification. Nếu cleanup thất bại, giữ task ở trạng thái blocked và
+    báo owner; không để branch trở thành môi trường lâu dài.
 
 ## Preconditions
 
@@ -63,18 +69,11 @@ là source-chain evidence, không được báo thành cloud Preview proof.
 
 ## Vercel Preview
 
-Vercel Preview có thể được nối thủ công với credential của Preview Branch để test
-runtime. Ghi rõ preview host và Supabase ref; không cho preview deploy nhận
-production service-role key.
-
-Không cấu hình Preview với Supabase cho đến khi owner đăng ký persistent Cloud
-DEV mới trong Environment Registry. Khi đó, cấu hình
-`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_PROJECT_ID` và publishable/anon key phải
-cùng thuộc target đã đăng ký. `scripts/check-preview-supabase-env.mjs` chạy trước
-`next build`; Preview Branch throwaway chỉ được mở lại sau khi có trusted
-registration path mà guard có thể kiểm chứng. Nếu chưa cấp được service-role key
-đúng target qua đường tin cậy, bỏ biến đó khỏi scope Preview; không sao chép
-service-role key của Production để giữ feature parity.
+Vercel Preview đang bị tắt và không nhận Supabase ENV. On-demand Supabase
+Preview Branch chỉ phục vụ database verification; nó không tự cấp quyền cho một
+Vercel Preview runtime. `scripts/check-preview-supabase-env.mjs` chặn build
+Preview trước khi Next.js compile. Không bypass guard hoặc sao chép credential
+Production để tạo runtime proof.
 
 ## Automation hiện hành
 

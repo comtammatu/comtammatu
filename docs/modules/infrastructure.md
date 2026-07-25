@@ -61,12 +61,12 @@ comtammatu/
 
 ## Environment Model
 
-| Environment           | Web runtime                       | Database target                                                                                              | Mutation policy                                                                       |
-| --------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| Developer workstation | Local Next.js/print-agent         | Persistent Cloud DEV `dzvilydcccemlafxcydj`                                                                  | Task-scoped non-production operations only; no workstation Supabase Local substitute  |
-| Vercel Preview        | Ephemeral Vercel deployment       | Registered persistent Cloud DEV                                                                              | Environment validation requires the registered DEV target                              |
-| CI                    | GitHub-hosted runner              | Isolated Supabase Local started by CI-only harness                                                           | Disposable baseline, seed, SQL, and E2E verification only                             |
-| Production            | Vercel production + branch agents | Production Supabase                                                                                          | Agent reads by default; writes/applies require the rights in the Environment Registry |
+| Environment           | Web runtime                       | Database target                 | Mutation policy                                                                       |
+| --------------------- | --------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
+| Developer workstation | Local Next.js/print-agent         | None by default                 | No workstation Supabase Local substitute; Production follows registry rights          |
+| Vercel Preview        | Disabled; builds fail closed      | None                            | Supabase environment variables are forbidden                                          |
+| CI                    | GitHub-hosted runner              | CI-only isolated Supabase Local | Disposable baseline, seed, SQL, and E2E verification only                             |
+| Production            | Vercel production + branch agents | Production Supabase             | Agent reads by default; writes/applies require the rights in the Environment Registry |
 
 The Environment Registry in `docs/agent/rules/database.md` is the only source
 for project refs and agent rights. Preview Branches do not silently promote or
@@ -101,11 +101,10 @@ jobs replay the from-empty database baseline and run the POS → payment → KDS
 smoke against the CI-only isolated Supabase stack.
 
 Every Vercel Preview build runs `scripts/check-preview-supabase-env.mjs` before
-Next.js compilation. The guard reads the Environment Registry directly, requires
-the canonical Supabase URL and matching `SUPABASE_PROJECT_ID`, and currently
-accepts only the registered persistent Cloud DEV target. Production,
-do-not-touch, unregistered, mismatched, or unverifiable privileged-key bindings
-fail closed. Production and CI-only Local builds stay outside this Preview gate.
+Next.js compilation. Because no persistent non-production project is
+registered, the guard rejects Preview builds and reports any Supabase
+environment variable names present without printing their values. Production
+and CI-only Local builds stay outside this Preview gate.
 
 ### Dependency maintenance boundaries
 
@@ -143,12 +142,11 @@ corepack pnpm install
 corepack pnpm dev
 ```
 
-After an owner registers a Cloud DEV target, use its verified values and
-generate database types only after the migration is applied to that type-source
-schema:
+Generate database types only from the registered Production schema after the
+relevant migration is applied there:
 
 ```bash
-SUPABASE_PROJECT_ID=<verified-ref> corepack pnpm db:types
+SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj corepack pnpm db:types
 ```
 
 Full setup: `docs/ref/setup.md`. Preview database setup:
