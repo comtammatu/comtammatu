@@ -662,7 +662,9 @@ export async function fetchOrderOperationalTrace(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const rpc = ctx.supabase.rpc as unknown as OrderOperationalTraceRpc;
+  const rpc = ctx.supabase.rpc.bind(
+    ctx.supabase,
+  ) as unknown as OrderOperationalTraceRpc;
   const { data, error } = await rpc("get_order_operational_trace", {
     p_order_id: parsed.data,
   });

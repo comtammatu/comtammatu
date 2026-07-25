@@ -103,7 +103,9 @@ export async function fetchKdsCompletionHistory(
   }
 
   const { startIso, endIso } = getVNDayUtcRange(parsed.data.date);
-  const historyRpc = ctx.supabase.rpc as unknown as KdsHistoryRpc;
+  const historyRpc = ctx.supabase.rpc.bind(
+    ctx.supabase,
+  ) as unknown as KdsHistoryRpc;
   const { data: eventRows, error: eventError } = await historyRpc(
     "get_kds_ticket_history",
     {
