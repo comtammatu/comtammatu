@@ -19,3 +19,9 @@ test("PWA checks for a new service worker when the app returns to foreground", (
     /document\.addEventListener\("visibilitychange", handleVisibilityChange\)/,
   );
 });
+
+test("PWA service worker bypasses the session proxy", () => {
+  const source = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
+
+  assert.equal(source.includes("favicon.ico|sw\\\\.js|"), true);
+});
