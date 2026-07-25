@@ -386,6 +386,29 @@ test("self-order navigations never cache seating-specific SSR HTML", () => {
   );
 });
 
+test("login navigation never serves a cached page shell", () => {
+  const swSource = readFileSync(
+    new URL("../app/sw.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    swSource,
+    /request\.mode === "navigate" && url\.pathname === "\/login",\s*\n\s*handler: new NetworkOnly\(\),/,
+  );
+
+  const loginGuard = swSource.indexOf('url.pathname === "/login"');
+  const publicPageCache = swSource.indexOf(
+    'handler: new NetworkFirst({\n      cacheName: "pages"',
+  );
+  assert.ok(loginGuard >= 0, "expected a login navigation guard");
+  assert.ok(publicPageCache >= 0, "expected the generic public page cache");
+  assert.ok(
+    loginGuard < publicPageCache,
+    "login NetworkOnly must precede the generic navigation cache",
+  );
+});
+
 test("Serwist precache keeps install assets but skips mascot art", () => {
   const configSource = readFileSync(
     new URL("../serwist.config.js", import.meta.url),

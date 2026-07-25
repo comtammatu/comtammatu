@@ -70,10 +70,7 @@ test("business tax lookup route normalizes the upstream response", async () => {
       { params: Promise.resolve({ taxCode: "0312345678" }) },
     );
 
-    assert.equal(
-      requestedUrl,
-      "https://api.vietqr.io/v2/business/0312345678",
-    );
+    assert.equal(requestedUrl, "https://api.vietqr.io/v2/business/0312345678");
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), {
       code: "00",
@@ -87,41 +84,26 @@ test("business tax lookup route normalizes the upstream response", async () => {
   }
 });
 
-test("POS and Self-Order wire fail-soft lookup with stale-request protection", () => {
-  const panel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
+test("public invoice QR flow wires fail-safe lookup with stale-request protection", () => {
   const lookup = readWeb("lib/hddt/business-tax-lookup.ts");
+  const serverLookup = readWeb("lib/hddt/business-tax-lookup-server.ts");
   const route = readWeb("app/api/self-order/tax-lookup/[taxCode]/route.ts");
-  const posInvoiceForm = readWeb(
-    "app/(protected)/br/[branchId]/pos/_components/bill/invoice-form-section.tsx",
-  );
-  const messages = readFileSync(
-    join(process.cwd(), "../../packages/shared/src/messages/self-order.ts"),
-    "utf8",
+  const invoiceBuyerForm = readWeb(
+    "app/q/invoice/[token]/invoice-buyer-form.tsx",
   );
 
-  assert.match(panel, /lookupBusinessTaxCode\(taxCode, controller\.signal\)/);
-  assert.match(panel, /buyerTaxCodeValueRef\.current\.trim\(\) !== taxCode/);
-  assert.match(panel, /onBlur=\{\(\) => void handleBuyerTaxCodeBlur\(\)\}/);
-  assert.match(panel, /buyerTaxLookupAbortRef\.current\?\.abort\(\)/);
-  assert.match(panel, /onBuyerNameChange\(business\.name\)/);
-  assert.match(panel, /onBuyerAddressChange\(business\.address\)/);
-  assert.ok(
-    panel.indexOf('name="buyerTaxCode"') <
-      panel.indexOf('id="self-order-buyer-not-get-invoice"'),
-  );
-  assert.equal(panel.match(/readOnly=\{!canEditBuyerDetails\}/g)?.length, 2);
-  assert.match(
-    panel,
-    /buyerTaxLookupStatus === "not-found"[\s\S]*buyerTaxLookupStatus === "unavailable"/,
-  );
   assert.match(lookup, /\/api\/self-order\/tax-lookup/);
-  assert.match(route, /https:\/\/api\.vietqr\.io\/v2\/business/);
-  assert.match(route, /next: \{ revalidate: 3600 \}/);
-  assert.match(posInvoiceForm, /lookupBusinessTaxCode\(taxCode\)/);
-  assert.match(posInvoiceForm, /onBlur=\{\(\) => void handleTaxCodeBlur\(\)\}/);
-  assert.match(posInvoiceForm, /buyerName: business\.name/);
-  assert.match(posInvoiceForm, /buyerAddress: business\.address/);
-  assert.match(posInvoiceForm, /role="status"/);
-  assert.match(messages, /buyerTaxLookupUnavailable/);
-  assert.match(messages, /Bạn vẫn có thể nhập tên và địa chỉ/);
+  assert.match(serverLookup, /https:\/\/api\.vietqr\.io\/v2\/business/);
+  assert.match(serverLookup, /next: \{ revalidate: 3600 \}/);
+  assert.match(route, /fetchBusinessTaxCode\(taxCode\)/);
+  assert.match(route, /rateLimit\.limit/);
+  assert.match(
+    invoiceBuyerForm,
+    /lookupBusinessTaxCode\(\s*normalized,\s*controller\.signal/,
+  );
+  assert.match(invoiceBuyerForm, /onBlur=\{\(\) => void handleLookup\(\)\}/);
+  assert.match(invoiceBuyerForm, /setBuyerName\(business\.name\)/);
+  assert.match(invoiceBuyerForm, /setBuyerAddress\(business\.address\)/);
+  assert.match(invoiceBuyerForm, /role="status"/);
+  assert.match(invoiceBuyerForm, /requestRef\.current\?\.abort\(\)/);
 });

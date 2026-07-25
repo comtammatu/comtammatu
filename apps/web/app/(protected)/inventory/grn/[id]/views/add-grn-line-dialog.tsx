@@ -24,6 +24,7 @@ import { getReferenceCostForUnit } from "@lib/inventory/reference-cost";
 import type { IngredientRow } from "@lib/inventory/types";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
+  createEditableGrnLine,
   GRN_DETAIL_COPY as grnCopy,
   type EditableGrnLine as EditableLine,
   type GrnDetail as GRNDetail,
@@ -174,33 +175,29 @@ export function AddGrnLineDialog({
         return;
       }
 
-      const row = res.data as { id: number };
-      onSaved({
-        lineId: row.id,
-        ingredientId: parsedIngredientId,
-        name: ingredient.name,
-        sku: ingredient.sku ?? "",
-        poQuantity: null,
-        poUnitPrice: null,
-        required: parsedQuantity,
-        actual: parsedQuantity,
-        accepted: parsedQuantity,
-        rejected: 0,
-        rejectionReason: "",
-        rejectedPhotoUrl: "",
-        priceOverrideNote: "",
-        priceOverridePhotoUrl: "",
-        priceVariancePct: null,
-        requiresReview: false,
-        shortDeliveryAction: null,
-        unit: unit.trim(),
-        entryUnitId,
-        cost: parsedUnitCost,
-        temp: null,
-        qualityStatus: "accepted",
-        status: "pass",
-        dirty: false,
-      });
+      const row = res.data as {
+        id: number;
+        baseline_variance_pct?: number | null;
+        baseline_sample_n?: number | null;
+      };
+      onSaved(
+        createEditableGrnLine({
+          lineId: row.id,
+          ingredient,
+          quantity: parsedQuantity,
+          entryUnitId,
+          unit: unit.trim(),
+          unitCost: parsedUnitCost,
+          baselineVariancePct:
+            row.baseline_variance_pct == null
+              ? null
+              : Number(row.baseline_variance_pct),
+          baselineSampleN:
+            row.baseline_sample_n == null
+              ? null
+              : Number(row.baseline_sample_n),
+        }),
+      );
       notify.success(grnCopy.addDialog.success);
       handleDialogOpenChange(false);
     });

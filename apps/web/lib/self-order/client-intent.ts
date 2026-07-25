@@ -33,7 +33,6 @@ export function buildBatchIntentKey(input: {
 
 export function buildPaymentIntentKey(input: {
   method: "cash_call" | "vietqr";
-  invoice: Record<string, unknown>;
   orderNumber: string;
   totalAmount: number;
 }): string {

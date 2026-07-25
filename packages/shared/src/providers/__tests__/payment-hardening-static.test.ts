@@ -314,13 +314,14 @@ test("SePay expense commands match an existing expense instead of classifying it
   assert.match(messages, /LUONG hoặc DIEN thay cho mã phiếu chi/);
 });
 
-test("Printed provisional bills do not include payment QR", () => {
+test("Printed provisional bills create or reuse the canonical VietQR payment", () => {
   const action = readRepoFile(
     "apps/web/app/(protected)/br/[branchId]/pos/print-actions.ts",
   );
 
-  assert.match(action, /p_qr_content: undefined/);
-  assert.match(action, /p_qr_header_label: undefined/);
+  assert.match(action, /const payment = await createPayment\(/);
+  assert.match(action, /p_qr_content: payment\.data\.qr_data/);
+  assert.match(action, /p_qr_header_label:/);
   assert.doesNotMatch(action, /"ensure_order_payment_code"/);
   assert.doesNotMatch(action, /buildVietQrEmvco/);
   assert.doesNotMatch(action, /new VietQRProvider/);

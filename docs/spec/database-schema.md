@@ -32,11 +32,11 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
   step (the storage-policy section needs `storage.objects` owner, which the migration
   role has).
 - Production keeps its applied migration history; the baseline is the fresh-env
-  install path. There is no persistent non-production project. Disposable
-  Preview work requires an owner-operated on-demand branch verified against its
-  Production parent; workstations do not use Local Docker as a fallback.
-  Empty-database replay is a CI-only harness, and Production type generation and
-  evidence stay within `database.md` read rights.
+  install path. Cloud verification uses a disposable Preview Branch whose parent
+  is Production; there is no persistent non-production database. Repository type
+  generation reads Production after the migration is applied. Workstations do
+  not use Local Docker as a fallback. Empty-database replay is a CI-only harness,
+  and Production evidence stays within `database.md` rights.
   Fresh-env notes live in `supabase/migrations/README.md`.
 
 ## Source Ladder
@@ -76,8 +76,8 @@ Use these labels exactly when describing schema state:
 - **drafted** — SQL file exists in `supabase/migrations/`, but apply status is
   not proven.
 - **preview-applied** — migration was applied to an on-demand Preview Branch.
-- **types generated** — guarded Production type generation completed after the
-  matching schema was applied.
+- **types generated** — `corepack pnpm db:types` regenerated types from the
+  schema used by app code.
 - **UI wired** — Server Actions, pages, or route handlers call the new shape.
 - **prod-applied** — migration was applied to production under the explicit
   rights in `docs/agent/rules/database.md`.

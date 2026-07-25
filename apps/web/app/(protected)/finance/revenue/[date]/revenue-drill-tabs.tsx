@@ -9,6 +9,7 @@ import {
   ItemFooter,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import Link from "next/link";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { formatCount, formatVND } from "@comtammatu/shared/format";
@@ -20,7 +21,7 @@ import {
   type DataTableFooterRow,
 } from "@/components/data-table/data-table";
 import { KpiCard } from "@/components/kpi/kpi-card";
-import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { formatVNTime } from "@/_lib/format-datetime";
 import type { HourSummary, OrderRow } from "./_lib/revenue-drill-types";
 
@@ -51,18 +52,30 @@ function formatHourBucket(hour: number): string {
 
 function invoiceBadge(row: OrderRow) {
   if (!row.invoice_status) {
-    return <span className="text-xs text-muted-foreground">Chưa xuất</span>;
+    return (
+      <span className="max-w-48 break-all text-xs text-muted-foreground">
+        Chưa có bằng chứng HĐĐT
+      </span>
+    );
   }
   const label =
     row.invoice_status === "issued" && row.invoice_number
-      ? `${getStatusBadgeMeta("tax-invoice", row.invoice_status).label} · ${row.invoice_number}`
+      ? `${row.invoice_kind === "daily_summary" ? "HĐ ngày" : "HĐ đơn"} · ${row.invoice_number}`
       : undefined;
   return (
-    <StatusBadge
-      domain="tax-invoice"
-      value={row.invoice_status}
-      label={label}
-    />
+    <div className="flex flex-col items-start gap-1">
+      <StatusBadge
+        domain="tax-invoice"
+        value={row.invoice_status}
+        label={label}
+      />
+      <span className="text-xs text-muted-foreground">
+        {formatCount(row.invoice_evidence.length)} bằng chứng
+        {row.invoice_provider_ref
+          ? ` · Ref ${row.invoice_provider_ref}`
+          : ""}
+      </span>
+    </div>
   );
 }
 
@@ -85,7 +98,14 @@ export function RevenueDrillTabs({
       key: "order",
       header: "Mã đơn",
       className: "font-mono text-xs",
-      render: (row) => row.order_number,
+      render: (row) => (
+        <Link
+          href={`/orders?orderId=${String(row.order_id)}`}
+          className="font-medium underline-offset-4 hover:underline"
+        >
+          {row.order_number}
+        </Link>
+      ),
     },
     {
       key: "type",
@@ -100,17 +120,97 @@ export function RevenueDrillTabs({
     },
     {
       key: "items",
-      header: "Món",
-      className: "text-right font-mono tabular-nums",
-      render: (row) => formatCount(row.item_count),
+      header: "Số lượng",
+      className: "text-right font-mono text-xs tabular-nums",
+      render: (row) => {
+        const sideQuantity =
+          row.side_dish_quantity + row.included_side_quantity;
+        return (
+          <span
+            className="flex flex-col"
+            title={`${String(row.item_row_count)} dòng món`}
+          >
+            <span>
+              {formatCount(row.item_count)} món ·{" "}
+              {formatCount(row.main_dish_quantity)} cơm snapshot ·{" "}
+              {formatCount(sideQuantity)} kèm
+            </span>
+            {row.legacy_unclassified_quantity > 0 && (
+              <span className="text-muted-foreground">
+                {formatCount(row.legacy_unclassified_quantity)} món cũ chưa phân
+                loại · ước tính hiện tại{" "}
+                {formatCount(row.legacy_current_main_dish_quantity)} cơm
+              </span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "evidence",
+      header: "Vận hành",
+      className: "text-xs",
+      render: (row) => (
+        <div className="flex flex-col gap-1">
+          <span>
+            KDS {formatCount(row.kds_completed_item_quantity)} · In{" "}
+            {formatCount(row.printed_job_count)}/
+            {formatCount(row.print_job_count)}
+          </span>
+          {row.kds_legacy_completed_item_quantity > 0 && (
+            <span className="text-warning">
+              Snapshot KDS cũ{" "}
+              {formatCount(row.kds_legacy_completed_item_quantity)} món; bằng
+              chứng không đầy đủ
+            </span>
+          )}
+          {row.print_failed_count > 0 && (
+            <span className="text-destructive">
+              {formatCount(row.print_failed_count)} phiếu in lỗi
+            </span>
+          )}
+          <span className="text-muted-foreground">
+            {row.pos_session_id ? (
+              <Link
+                href={`/br/${String(row.branch_id)}/pos-sessions?session=${String(row.pos_session_id)}`}
+                className="underline-offset-4 hover:underline"
+              >
+                Ca #{String(row.pos_session_id)}
+              </Link>
+            ) : (
+              "Không có ca"
+            )}
+            {" · "}
+            {formatCount(row.audit_event_count)} audit
+          </span>
+        </div>
+      ),
     },
     {
       key: "payment",
       header: "Thanh toán",
-      render: (row) =>
-        row.payment_method
-          ? (PAYMENT_METHOD_LABEL[row.payment_method] ?? row.payment_method)
-          : "—",
+      render: (row) => (
+        <div className="flex flex-col gap-1">
+          <span>
+            {row.payment_method
+              ? (PAYMENT_METHOD_LABEL[row.payment_method] ?? row.payment_method)
+              : "—"}
+          </span>
+          {row.reconciliation_status === "missing" ? (
+            <span className="text-xs text-destructive">
+              Thiếu đối soát canonical
+            </span>
+          ) : row.order_payment_state_mismatch ? (
+            <span className="text-xs text-destructive">
+              Payment hoàn tất nhưng trạng thái đơn lệch
+            </span>
+          ) : row.payment_attempt_count > 1 ? (
+            <span className="text-xs text-muted-foreground">
+              {formatCount(row.payment_attempt_count)} lượt thử
+            </span>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: "discount",
@@ -129,7 +229,18 @@ export function RevenueDrillTabs({
       key: "total",
       header: "Tổng",
       className: "text-right font-mono tabular-nums font-medium",
-      render: (row) => formatVND(row.total_amount),
+      render: (row) => (
+        <span
+          className={
+            Number(row.total_amount) !== Number(row.order_total_amount)
+              ? "text-destructive"
+              : undefined
+          }
+          title={`Tổng trên đơn: ${formatVND(row.order_total_amount)}`}
+        >
+          {formatVND(row.total_amount)}
+        </span>
+      ),
     },
     {
       key: "invoice",
@@ -143,7 +254,7 @@ export function RevenueDrillTabs({
       key: "total",
       className: "hover:bg-transparent",
       cells: [
-        { key: "label", content: "Tổng", colSpan: 6, className: "font-medium" },
+        { key: "label", content: "Tổng", colSpan: 7, className: "font-medium" },
         {
           key: "discount",
           content: formatVND(totalDiscount),
@@ -171,7 +282,7 @@ export function RevenueDrillTabs({
         { value: "theo-gio", label: "Theo giờ", count: hours.length },
         {
           value: "danh-sach-don",
-          label: "Danh sách đơn",
+          label: "Đơn",
           count: totalOrders,
         },
       ]}
@@ -222,8 +333,8 @@ export function RevenueDrillTabs({
 
       <TabsContent value="danh-sach-don">
         <AppSection
-          title={`Danh sách đơn (${formatCount(totalOrders)})`}
-          description='Sắp xếp theo thời gian thanh toán. HĐĐT "Không yêu cầu" = khách lẻ không nhập MST.'
+          title={`Đơn có payment hoàn tất (${formatCount(totalOrders)})`}
+          description={`Mỗi đơn một dòng, sắp xếp theo payments.paid_at. "Không yêu cầu" chỉ hiển thị khi hệ thống đã ghi nhận trạng thái đó.`}
           contentFlush
           contentScroll
         >
@@ -232,7 +343,7 @@ export function RevenueDrillTabs({
             data={orders}
             pageSize={50}
             getRowKey={(row) => row.order_id}
-            emptyTitle="Không có đơn đã thanh toán trong ngày."
+            emptyTitle="Không có đơn với payment hoàn tất trong ngày."
             mobileCardRender={(row) => (
               <Item variant="outline">
                 <ItemContent>
@@ -241,6 +352,44 @@ export function RevenueDrillTabs({
                     {formatVNTime(row.paid_at)} ·{" "}
                     {ORDER_TYPE_LABEL[row.order_type] ?? row.order_type}
                   </ItemDescription>
+                  <ItemDescription>
+                    {formatCount(row.main_dish_quantity)} cơm snapshot ·{" "}
+                    {formatCount(
+                      row.side_dish_quantity + row.included_side_quantity,
+                    )}{" "}
+                    kèm · KDS {formatCount(row.kds_completed_item_quantity)} ·
+                    In {formatCount(row.printed_job_count)}/
+                    {formatCount(row.print_job_count)}
+                  </ItemDescription>
+                  {row.kds_legacy_completed_item_quantity > 0 && (
+                    <ItemDescription className="text-warning">
+                      Snapshot KDS cũ{" "}
+                      {formatCount(row.kds_legacy_completed_item_quantity)} món;
+                      bằng chứng không đầy đủ
+                    </ItemDescription>
+                  )}
+                  {row.legacy_unclassified_quantity > 0 && (
+                    <ItemDescription>
+                      {formatCount(row.legacy_unclassified_quantity)} món cũ
+                      chưa phân loại; ước tính hiện tại{" "}
+                      {formatCount(row.legacy_current_main_dish_quantity)} cơm
+                    </ItemDescription>
+                  )}
+                  {row.order_payment_state_mismatch && (
+                    <ItemDescription className="text-destructive">
+                      Payment hoàn tất nhưng trạng thái đơn lệch
+                    </ItemDescription>
+                  )}
+                  {row.reconciliation_status === "missing" && (
+                    <ItemDescription className="text-destructive">
+                      Thiếu đối soát canonical
+                    </ItemDescription>
+                  )}
+                  {row.print_failed_count > 0 && (
+                    <ItemDescription className="text-destructive">
+                      {formatCount(row.print_failed_count)} phiếu in lỗi
+                    </ItemDescription>
+                  )}
                 </ItemContent>
                 <ItemFooter>
                   <span className="text-xs text-muted-foreground">

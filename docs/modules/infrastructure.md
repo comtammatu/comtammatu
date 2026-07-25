@@ -61,12 +61,12 @@ comtammatu/
 
 ## Environment Model
 
-| Environment           | Web runtime                       | Database target                 | Mutation policy                                                                       |
-| --------------------- | --------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
-| Developer workstation | Local Next.js/print-agent         | None by default                 | No workstation Supabase Local substitute; Production follows registry rights          |
-| Vercel Preview        | Disabled; builds fail closed      | None                            | Supabase environment variables are forbidden                                          |
-| CI                    | GitHub-hosted runner              | CI-only isolated Supabase Local | Disposable baseline, seed, SQL, and E2E verification only                             |
-| Production            | Vercel production + branch agents | Production Supabase             | Agent reads by default; writes/applies require the rights in the Environment Registry |
+| Environment           | Web runtime                       | Database target                                                                                              | Mutation policy                                                                       |
+| --------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| Developer workstation | Local Next.js/print-agent         | Production Supabase for application runtime; database tooling remains read-only by default                   | Writes require exact current-session owner delegation; no workstation Local substitute |
+| Vercel Preview        | Disabled                          | None                                                                                                         | Supabase environment variables are rejected                                            |
+| CI                    | GitHub-hosted runner              | Isolated Supabase Local started by CI-only harness                                                           | Disposable baseline, seed, SQL, and E2E verification only                             |
+| Production            | Vercel production + branch agents | Production Supabase                                                                                          | Agent reads by default; writes/applies require the rights in the Environment Registry |
 
 The Environment Registry in `docs/agent/rules/database.md` is the only source
 for project refs and agent rights. Preview Branches do not silently promote or
@@ -101,10 +101,10 @@ jobs replay the from-empty database baseline and run the POS → payment → KDS
 smoke against the CI-only isolated Supabase stack.
 
 Every Vercel Preview build runs `scripts/check-preview-supabase-env.mjs` before
-Next.js compilation. Because no persistent non-production project is
-registered, the guard rejects Preview builds and reports any Supabase
-environment variable names present without printing their values. Production
-and CI-only Local builds stay outside this Preview gate.
+Next.js compilation and fails closed. The repository has no persistent
+non-production database, and the build cannot currently prove that supplied
+credentials belong to an ephemeral child of Production. Production and CI-only
+Local builds stay outside this Preview gate.
 
 ### Dependency maintenance boundaries
 
@@ -142,8 +142,8 @@ corepack pnpm install
 corepack pnpm dev
 ```
 
-Generate database types only from the registered Production schema after the
-relevant migration is applied there:
+Generate database types from the registered Production schema only after the
+migration is applied:
 
 ```bash
 SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj corepack pnpm db:types

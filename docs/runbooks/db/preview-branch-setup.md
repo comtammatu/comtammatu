@@ -7,19 +7,17 @@ là production write và cần quyền riêng.
 
 Guard của repo chỉ cho agent đọc hoặc mutate một Preview ref sau khi nó được
 Supabase xác nhận là con của Production. Với từng MCP action, guard gọi
-`supabase branches get` với parent Production cố định và đòi `project_ref` cùng
+`supabase branches list` với parent Production cố định và đòi `project_ref` cùng
 `parent_project_ref` khớp chính xác; không có local whitelist, stored-link state
 hay cache để tin cậy lại. Nếu không xác minh được, Preview bị chặn. Không được
 nới guard hay thay bằng Local Docker.
 
-## Trạng thái hiện tại
+## Mô hình môi trường
 
-Không có persistent non-production Supabase project. Preview Branch chỉ được
-tạo on-demand cho một verification cụ thể rồi xóa. Type generation đọc
-Production bằng ref literal; Preview Branch không phải type source.
-
-`corepack pnpm lint:migration-lineage` kiểm tra active migration layout trước
-replay, nhưng không quyết định quyền tạo Preview.
+Production `iexwsuaqqenyjiskawoj` là database persistent duy nhất. Preview Branch
+là môi trường throwaway được tạo từ đúng parent này; không duy trì database
+non-production persistent riêng. `corepack pnpm lint:migration-lineage` kiểm tra active migration
+layout trước replay, nhưng không quyết định quyền tạo Preview.
 
 Trạng thái lineage không chứng minh branch cloud sẵn sàng. Trước khi tạo branch,
 phải kiểm tra trạng thái Supabase hiện tại, lấy đúng chi phí theo giờ và được chủ
@@ -40,19 +38,17 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
    nhận log chỉ chạy active baseline và forward migrations; dừng ngay nếu thấy
    archived/remote-only history.
 6. Trước mọi mutation, để guard xác minh Preview ref qua parent Production.
-   `supabase db push` bị tắt; merge/reset/rebase bị chặn kể cả với Preview đã
-   xác minh. Nếu tra cứu thất bại, dừng và báo blocker.
+   File replay chỉ được phép vào Preview đã xác minh; merge/reset/rebase bị chặn.
+   Nếu tra cứu thất bại, dừng và báo blocker.
 7. Chỉ seed bằng dữ liệu non-production, không secret và không customer data.
 8. Chạy schema/RLS/RPC tests, smoke flow cần thiết và security advisors trên
-   Preview đã được phép mutation; ghi rõ target.
-9. Chỉ chạy
-   `SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj corepack pnpm db:types` sau khi
-   schema tương ứng đã được apply vào Production theo owner-gated flow. Không
-   đổi type source sang Preview qua stored link hay env override.
+   Preview đã được phép mutation.
+9. Sau khi migration được apply lên Production theo quyền hiện hành, chạy
+   `corepack pnpm db:types` và review diff; Preview không phải type source của
+   repository.
 10. Thu thập evidence: ref, migration versions, test result và cleanup result.
-11. Xóa Preview Branch trong cùng task, xác nhận resource đã biến mất rồi mới
-    đóng verification. Nếu cleanup thất bại, giữ task ở trạng thái blocked và
-    báo owner; không để branch trở thành môi trường lâu dài.
+11. Xóa Preview Branch trong cùng task và xác minh resource không còn. Nếu xóa
+    hoặc xác minh thất bại, giữ task ở trạng thái blocked và báo owner.
 
 ## Preconditions
 
@@ -69,15 +65,13 @@ là source-chain evidence, không được báo thành cloud Preview proof.
 
 ## Vercel Preview
 
-Vercel Preview đang bị tắt và không nhận Supabase ENV. On-demand Supabase
-Preview Branch chỉ phục vụ database verification; nó không tự cấp quyền cho một
-Vercel Preview runtime. `scripts/check-preview-supabase-env.mjs` chặn build
-Preview trước khi Next.js compile. Không bypass guard hoặc sao chép credential
-Production để tạo runtime proof.
+Vercel Preview hiện bị vô hiệu hóa. Build Preview không thể tự chứng minh
+credential được cấp thuộc một Preview Branch ephemeral có parent là Production,
+nên `scripts/check-preview-supabase-env.mjs` chặn mọi build Preview và liệt kê
+tên biến Supabase cần gỡ mà không in giá trị.
 
 ## Automation hiện hành
 
-Supabase GitHub App và Vercel integration chạy ngoài repo guard. PR update có thể
-tạo/cập nhật branch hoặc Preview deploy, nên CI lineage gate, seed safety, env
-binding, deployment log và teardown phải được kiểm chứng độc lập; không suy luận
-trạng thái automation từ guard local.
+Supabase GitHub App chạy ngoài repo guard. PR update có thể tạo hoặc cập nhật
+branch, nên CI lineage gate, seed safety, deployment log và teardown phải được
+kiểm chứng độc lập; không suy luận trạng thái automation từ guard local.

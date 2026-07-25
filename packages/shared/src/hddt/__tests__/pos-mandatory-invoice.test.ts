@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { POS_VI } from "../../messages";
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
@@ -15,27 +14,28 @@ function sourceBetween(source: string, start: string, end: string): string {
   return source.slice(startIndex, endIndex);
 }
 
-test("POS invoice form defaults to buyer-not-get-invoice instead of opting out", () => {
-  const src = read(
-    "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/invoice-form-section.tsx",
+test("POS delegates buyer details to the receipt QR and keeps the no-MST fallback", () => {
+  const actions = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
+  );
+  const bill = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
 
-  assert.ok(
-    !src.includes("if (!state.enabled) return null"),
-    "invoice payload must never become null just because buyer details are hidden",
+  assert.match(
+    actions,
+    /buyerName: BUYER_NOT_GET_INVOICE_NAME,[\s\S]*buyerNotGetInvoice: true/,
+    "no-MST sales must still queue the legal fallback buyer payload",
   );
-  assert.ok(
-    src.includes("BUYER_NOT_GET_INVOICE_NAME"),
-    "missing Viettel-style default buyer payload for no-MST sales",
+  assert.doesNotMatch(
+    bill,
+    /InvoiceFormSection|invoiceForm/,
+    "cashier must not collect invoice buyer details",
   );
-  assert.ok(
-    src.includes("buyerNotGetInvoice: true"),
-    "missing buyerNotGetInvoice flag for buyer-not-get-invoice sales",
-  );
-  assert.ok(
-    src.includes("POS_VI.buyerNoInvoice") &&
-      POS_VI.buyerNoInvoice === "Khách không lấy hóa đơn (vẫn xuất HĐĐT)",
-    "checkbox copy must state an HĐĐT still issues (NĐ 254/2026), without embedding the server-owned legal buyerName",
+  assert.match(
+    bill,
+    /createPayment\([\s\S]*Number\(order\.total_amount\),[\s\S]*\);/,
+    "POS must create the payment without collecting a buyer payload",
   );
 });
 
@@ -58,63 +58,62 @@ test("payment completion records a mandatory HĐĐT job instead of calling Viett
   );
 });
 
-test("POS validates HĐĐT buyer payload before committing payment", () => {
+test("POS payment actions do not accept an HĐĐT buyer payload", () => {
   const src = read(
     "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
   );
-  const cashBlock = sourceBetween(
-    src,
-    "export async function confirmCashPaymentWithInvoice",
-    "/* ─── fetchVietQrConfig",
+  const schemas = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/_lib/payment-schemas.ts",
   );
 
   assert.match(
     src,
-    /buyerTaxCode:[\s\S]*regex\(MST_REGEX/,
-    "POS server action must enforce the same MST format as createTaxInvoice",
+    /const POS_DEFAULT_INVOICE_PAYLOAD = \{[\s\S]*buyerName: BUYER_NOT_GET_INVOICE_NAME,[\s\S]*buyerNotGetInvoice: true/,
+    "POS must own the fallback payload until the customer QR updates it",
   );
   assert.match(
     src,
-    /refine\(\(v\) => !v\.buyerTaxCode \|\|/,
-    "POS server action must require buyerName when MST is present",
+    /p_invoice_payload: POS_DEFAULT_INVOICE_PAYLOAD/,
+    "cash completion must use the server-owned fallback payload",
   );
-  assert.ok(
-    cashBlock.indexOf("parseInvoicePayload(invoice)") <
-      cashBlock.indexOf("const paymentResult = await confirmCashPayment("),
-    "cash HĐĐT buyer validation must happen before payment commit",
+  assert.match(
+    src,
+    /invoiceSnapshot: POS_DEFAULT_INVOICE_PAYLOAD/,
+    "VietQR intent must use the server-owned fallback payload",
   );
-  assert.ok(
-    src.indexOf("const parsedInvoice = parseInvoicePayload") <
-      src.indexOf('"create_remote_payment_intent"'),
-    "VietQR HĐĐT buyer validation must happen before the pending intent is stored",
+  assert.doesNotMatch(
+    src,
+    /buyerTaxCode|buyerAddress|buyerEmail|InvoicePayload|parseInvoicePayload/,
+    "POS actions must not expose buyer input fields",
+  );
+  assert.doesNotMatch(
+    schemas,
+    /\binvoice:\s*z\./,
+    "POS action schemas must not accept an invoice argument",
   );
 });
 
-test("POS invoice buyer form is available for cash and VietQR confirmation", () => {
-  const src = read(
-    "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
-  );
+test("customer invoice buyer form is available from the receipt QR", () => {
+  const page = read("apps/web/app/q/invoice/[token]/page.tsx");
+  const form = read("apps/web/app/q/invoice/[token]/invoice-buyer-form.tsx");
+  const action = read("apps/web/app/q/invoice/[token]/actions.ts");
 
+  assert.match(page, /<InvoiceBuyerForm token=\{token\}/);
+  assert.match(form, /lookupBusinessTaxCode/);
+  assert.match(form, /readOnly/);
   assert.match(
-    src,
-    /const showInvoiceForm =\s*selectedMethod === "cash" \|\| selectedMethod === "vietqr";/,
-    "buyer invoice form must be available before both payment paths",
-  );
-  assert.equal(
-    src.match(/<InvoiceFormSection/g)?.length,
-    1,
-    "buyer invoice form should be rendered once, outside method-specific panels",
-  );
-  assert.match(
-    src,
-    /\{showInvoiceForm && !isWaitingForVietQr \? \(\s*<InvoiceFormSection/,
-    "buyer invoice form must not live only inside the cash payment panel",
+    action,
+    /fetchBusinessTaxCode\(parsed\.data\.taxCode\)/,
+    "server action must recheck MST instead of trusting browser-filled buyer data",
   );
 });
 
 test("createTaxInvoice does not create new not_required/skipped rows", () => {
   const src = read("apps/web/lib/hddt-per-order.ts");
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
+  const migration = read(
+    "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
+  );
 
   assert.ok(
     !/status:\s*"not_required"/.test(src),
@@ -137,12 +136,12 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
     "missing buyerEmail pass-through to provider calls",
   );
   assert.ok(
-    src.includes("signing_started_at"),
+    migration.includes("signing_started_at = now()"),
     "provider-submitted invoices must be reconcile-eligible",
   );
   assert.ok(
-    src.includes("retryDraftInvoiceId"),
-    "provider-rejected draft rows must be retryable after payload/config fixes",
+    src.includes("prepare_tax_invoice_issue_job_as_system"),
+    "provider submission must reserve the exact payment-time draft",
   );
   assert.ok(
     src.includes("reconcile_tax_invoice_provider_issued"),
@@ -208,72 +207,107 @@ test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
 
 test("Finance requeues only the exact blocked HĐĐT job", () => {
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
-  const createSrc = read("apps/web/lib/hddt-per-order.ts");
-  const migration = read(
+  const workerMigration = read(
     "supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
+  );
+  const qrMigration = read(
+    "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
   );
 
   assert.match(actionSrc, /requeue_tax_invoice_issue_job/);
   assert.doesNotMatch(actionSrc, /reissueAllDraftInvoices/);
   assert.match(
-    migration,
+    workerMigration,
     /v_job\.status NOT IN \('blocked', 'reconcile_required'\)[\s\S]*v_invoice\.status <> 'draft'/,
   );
   assert.match(
-    migration,
+    workerMigration,
     /SET status = 'queued', locked_until = NULL, last_error = NULL, updated_at = now\(\)/,
   );
   assert.ok(
-    createSrc.includes("buyer_email: buyerEmail ?? null"),
+    qrMigration.includes(
+      "buyer_email = NULLIF(v_buyer_payload ->> 'buyerEmail', '')",
+    ),
     "per-order HĐĐT writes must persist buyer_email",
   );
 });
 
 test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
+  const migration = read(
+    "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
+  );
   const replaceSrc = read(
     "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
   );
 
-  for (const src of [createSrc, replaceSrc]) {
-    assert.ok(
-      src.includes("order_items") && src.includes("modifiers, sides"),
-      "HĐĐT order fetch must include modifier/side snapshots",
-    );
-    assert.ok(
-      src.includes("buildInvoiceLineItemsFromOrderItems(activeItems)"),
-      "provider item payload must split main item, paid modifiers, and sides",
-    );
-    assert.ok(
-      src.includes("order_discount_amount"),
-      "HĐĐT order fetch must include order-level POS discount source",
-    );
-    assert.ok(
-      src.includes("subtotal, discount_amount"),
-      "HĐĐT order item fetch must include item-level POS discount_amount",
-    );
-    assert.ok(
-      src.includes("applyInvoiceLineDiscount("),
-      "provider item payload must allocate POS discounts to legal lines",
-    );
-    assert.ok(
-      src.includes("order.order_discount_amount ?? order.discount_amount ?? 0"),
-      "provider item payload must apply only the remaining order-level discount after item discounts",
-    );
-  }
+  assert.match(
+    migration,
+    /'modifiers', item\.modifiers,[\s\S]*'sides', item\.sides/,
+    "payment-time draft must preserve modifier/side snapshots",
+  );
+  assert.match(
+    migration,
+    /'orderDiscountAmount',[\s\S]*v_order\.order_discount_amount,[\s\S]*v_order\.discount_amount/,
+    "payment-time draft must preserve the remaining order-level discount",
+  );
+  assert.match(
+    migration,
+    /'subtotal', item\.subtotal,[\s\S]*'discount_amount', item\.discount_amount/,
+    "payment-time draft must preserve item-level discount inputs",
+  );
+  assert.ok(
+    createSrc.includes("buildInvoiceLineItemsFromOrderItems(activeItems)"),
+    "prepared provider payload must expand the immutable item snapshot",
+  );
+  assert.ok(
+    createSrc.includes("applyInvoiceLineDiscount("),
+    "prepared provider payload must allocate the immutable order discount",
+  );
+
+  assert.ok(
+    replaceSrc.includes("order_items") &&
+      replaceSrc.includes("modifiers, sides"),
+    "replacement HĐĐT fetch must include modifier/side snapshots",
+  );
+  assert.ok(
+    replaceSrc.includes("buildInvoiceLineItemsFromOrderItems(activeItems)"),
+    "provider item payload must split main item, paid modifiers, and sides",
+  );
+  assert.ok(
+    replaceSrc.includes("order_discount_amount"),
+    "HĐĐT order fetch must include order-level POS discount source",
+  );
+  assert.ok(
+    replaceSrc.includes("subtotal, discount_amount"),
+    "HĐĐT order item fetch must include item-level POS discount_amount",
+  );
+  assert.ok(
+    replaceSrc.includes("applyInvoiceLineDiscount("),
+    "provider item payload must allocate POS discounts to legal lines",
+  );
+  assert.ok(
+    replaceSrc.includes(
+      "order.order_discount_amount ?? order.discount_amount ?? 0",
+    ),
+    "provider item payload must apply only the remaining order-level discount after item discounts",
+  );
 });
 
 test("per-order HKD HĐĐT never carries VAT", () => {
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
+  const migration = read(
+    "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
+  );
 
   assert.match(
-    createSrc,
-    /const subtotal(?:: number)? = orderTotal;/,
+    migration,
+    /'subtotal', v_order\.total_amount,[\s\S]*'vatRate', 0,[\s\S]*'vatAmount', 0/,
     "HKD HĐĐT subtotal must be the paid total, not a reverse VAT split",
   );
   assert.match(
-    createSrc,
-    /const vatRate(?:: number)? = 0;[\s\S]*const vatAmount(?:: number)? = 0;/,
+    migration,
+    /v_order\.total_amount,[\s\S]*0,[\s\S]*0,[\s\S]*v_order\.total_amount,[\s\S]*'viettel'/,
     "HKD HĐĐT must not carry VAT rate or VAT amount",
   );
   assert.ok(

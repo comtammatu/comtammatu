@@ -42,6 +42,7 @@ export interface MenuPanelProps {
   activeCategoryValue: string;
   onActiveCategoryChange: (value: string) => void;
   onAdd: (item: SelfOrderCartItem) => void;
+  hasCartItems: boolean;
   disabled?: boolean;
   cartDemandByMenuItemId?: ReadonlyMap<number, number>;
 }
@@ -51,6 +52,7 @@ export function MenuPanel({
   activeCategoryValue,
   onActiveCategoryChange,
   onAdd,
+  hasCartItems,
   disabled = false,
   cartDemandByMenuItemId,
 }: MenuPanelProps) {
@@ -124,7 +126,11 @@ export function MenuPanel({
         </p>
       </div>
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-        <div className="flex flex-col gap-4 px-2 pb-44 pt-2 sm:pb-32">
+        <div
+          className={`flex flex-col gap-4 px-2 pt-2 ${
+            hasCartItems ? "pb-44 sm:pb-32" : "pb-2"
+          }`}
+        >
           {availableCategories.length === 0 || !hasVisibleItems ? (
             <AppEmptyState
               title={SELF_ORDER_VI.menuEmpty}

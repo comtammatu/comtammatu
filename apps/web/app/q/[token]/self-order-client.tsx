@@ -10,10 +10,10 @@ import {
 } from "react";
 import { Clock as IconClock, ReceiptText as IconReceipt } from "lucide-react";
 import dynamic from "next/dynamic";
-import { formatVND } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppDialog } from "@/components/form";
 import {
@@ -48,19 +48,13 @@ import {
   MenuPanel,
   defaultSelfOrderCategoryValue,
 } from "./self-order/menu-panel";
-import {
-  type GuestPaymentRequestState,
-  type InvoiceErrorFocusRequest,
-  type InvoiceFieldErrors,
-} from "./self-order/payment-panel";
+import type { GuestPaymentRequestState } from "./self-order/payment-panel";
 
 interface SelfOrderClientProps {
   token: string;
   initialSnapshot: PublicSelfOrderAvailableSnapshot;
 }
 
-const TAX_CODE_PATTERN = /^\d{10}(-\d{3})?$/;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PAYMENT_COMPLETED_DISPLAY_MS = 10_000;
 
 function PaymentPanelLoading() {
@@ -82,13 +76,6 @@ const PaymentPanel = dynamic(
   { ssr: false, loading: PaymentPanelLoading },
 );
 
-function normalizeTaxCodeInput(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 13);
-  return digits.length > 10
-    ? `${digits.slice(0, 10)}-${digits.slice(10)}`
-    : digits;
-}
-
 function lineTotal(item: SelfOrderCartItem) {
   const modifierTotal = item.modifiers.reduce(
     (sum, modifier) => sum + modifier.price,
@@ -103,8 +90,7 @@ function lineTotal(item: SelfOrderCartItem) {
 
 async function readApiResponse(response: Response) {
   const payload = (await response.json().catch(() => null)) as
-    | (Record<string, unknown> & { ok?: boolean })
-    | null;
+    (Record<string, unknown> & { ok?: boolean }) | null;
   if (response.ok && payload && payload.ok !== false) {
     return { ok: true, payload } as const;
   }
@@ -278,15 +264,6 @@ export function SelfOrderClient({
       null,
   );
   const [paymentCompleted, setPaymentCompleted] = useState(false);
-  const [buyerNotGetInvoice, setBuyerNotGetInvoice] = useState(true);
-  const [buyerName, setBuyerName] = useState("");
-  const [buyerTaxCode, setBuyerTaxCode] = useState("");
-  const [buyerAddress, setBuyerAddress] = useState("");
-  const [buyerEmail, setBuyerEmail] = useState("");
-  const [invoiceFieldErrors, setInvoiceFieldErrors] =
-    useState<InvoiceFieldErrors>({});
-  const [invoiceErrorFocusRequest, setInvoiceErrorFocusRequest] =
-    useState<InvoiceErrorFocusRequest | null>(null);
   const [activeCategoryValue, setActiveCategoryValue] = useState(() =>
     defaultSelfOrderCategoryValue(initialSnapshot.menu),
   );
@@ -296,17 +273,14 @@ export function SelfOrderClient({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     "cash_call" | "vietqr" | null
   >(null);
-  const [paymentConfirmationMethod, setPaymentConfirmationMethod] = useState<
-    "cash_call" | "vietqr" | null
-  >(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<
     "cash_call" | "vietqr" | null
   >(null);
   const [isSubmitting, startSubmit] = useTransition();
   const [isPaymentPending, startPayment] = useTransition();
+  const [isPaymentCancelling, startPaymentCancel] = useTransition();
   const batchIntentRef = useRef<SelfOrderClientIntent | null>(null);
   const paymentIntentRef = useRef<SelfOrderClientIntent | null>(null);
-  const invoiceFocusAttemptRef = useRef(0);
   const guestToastKeyRef = useRef<string | null>(null);
   const refreshErrorRef = useRef<string | null>(null);
   const ignoredPaymentStatusClientOpIdRef = useRef<string | null>(null);
@@ -436,17 +410,6 @@ export function SelfOrderClient({
     });
   }, [snapshot]);
 
-  const invoicePayload = useMemo(
-    () => ({
-      buyerNotGetInvoice,
-      buyerName: buyerName.trim(),
-      buyerTaxCode: buyerTaxCode.trim(),
-      buyerAddress: buyerAddress.trim(),
-      buyerEmail: buyerEmail.trim(),
-    }),
-    [buyerAddress, buyerEmail, buyerName, buyerNotGetInvoice, buyerTaxCode],
-  );
-
   const cartDemandByMenuItemId = useMemo(
     () => buildCartDemandByMenuItemId(cartItems),
     [cartItems],
@@ -467,9 +430,10 @@ export function SelfOrderClient({
   const itemCount = order?.itemCount ?? 0;
   const cartQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cartItems.reduce((sum, item) => sum + lineTotal(item), 0);
-  const ctaLabel = open || awaiting
-    ? SELF_ORDER_VI.submitAddMore
-    : SELF_ORDER_VI.submitFirstBatch;
+  const ctaLabel =
+    open || awaiting
+      ? SELF_ORDER_VI.submitAddMore
+      : SELF_ORDER_VI.submitFirstBatch;
   const ctaDisabled = paymentPending;
   const ctaDisabledHint = paymentPending
     ? SELF_ORDER_VI.activePaymentIntent
@@ -583,46 +547,12 @@ export function SelfOrderClient({
     });
   }
 
-  function validateInvoice(): InvoiceFieldErrors {
-    if (buyerNotGetInvoice) return {};
-    const errors: InvoiceFieldErrors = {};
-    if (buyerEmail.trim() && !EMAIL_PATTERN.test(buyerEmail.trim())) {
-      errors.buyerEmail = SELF_ORDER_VI.buyerEmailInvalid;
-    }
-    if (buyerTaxCode.trim() && !TAX_CODE_PATTERN.test(buyerTaxCode.trim())) {
-      errors.buyerTaxCode = SELF_ORDER_VI.buyerTaxInvalid;
-    }
-    if (buyerTaxCode.trim()) {
-      if (!buyerName.trim())
-        errors.buyerName = SELF_ORDER_VI.buyerBusinessMissing;
-      if (!buyerAddress.trim()) {
-        errors.buyerAddress = SELF_ORDER_VI.buyerBusinessMissing;
-      }
-    }
-    return errors;
-  }
-
   function requestPayment(method: "cash_call" | "vietqr") {
     if (!order || activePaymentRequest) return;
-    const fieldErrors = validateInvoice();
-    setInvoiceFieldErrors(fieldErrors);
-    const firstError = (
-      ["buyerName", "buyerTaxCode", "buyerAddress", "buyerEmail"] as const
-    ).find((field) => fieldErrors[field]);
-    if (firstError) {
-      invoiceFocusAttemptRef.current += 1;
-      setInvoiceErrorFocusRequest({
-        attempt: invoiceFocusAttemptRef.current,
-        field: firstError,
-      });
-      return;
-    }
-
     const intent = resolveClientIntent(
       paymentIntentRef.current,
       buildPaymentIntentKey({
         method,
-        invoice: invoicePayload,
         orderNumber: order.orderNumber,
         totalAmount: order.totalAmount,
       }),
@@ -636,7 +566,7 @@ export function SelfOrderClient({
       try {
         const response = await postSelfOrderJson(
           `/api/self-order/${encodeURIComponent(token)}/payment`,
-          { clientOpId: intent.clientOpId, method, invoice: invoicePayload },
+          { clientOpId: intent.clientOpId, method },
         );
         const result = await readApiResponse(response);
         if (!result.ok) {
@@ -657,7 +587,6 @@ export function SelfOrderClient({
         }
         setLocalPaymentRequest(paymentRequest);
         setSelectedPaymentMethod(null);
-        setPaymentConfirmationMethod(null);
         paymentIntentRef.current = clearClientIntent(
           paymentIntentRef.current,
           intent.clientOpId,
@@ -673,30 +602,88 @@ export function SelfOrderClient({
     });
   }
 
-  function openPaymentConfirmation() {
+  function createSelectedPayment() {
     if (!selectedPaymentMethod || !order || activePaymentRequest) return;
-    const fieldErrors = validateInvoice();
-    setInvoiceFieldErrors(fieldErrors);
-    const firstError = (
-      ["buyerName", "buyerTaxCode", "buyerAddress", "buyerEmail"] as const
-    ).find((field) => fieldErrors[field]);
-    if (firstError) {
-      invoiceFocusAttemptRef.current += 1;
-      setInvoiceErrorFocusRequest({
-        attempt: invoiceFocusAttemptRef.current,
-        field: firstError,
-      });
-      return;
-    }
-
-    setPaymentError(null);
-    setPaymentConfirmationMethod(selectedPaymentMethod);
+    requestPayment(selectedPaymentMethod);
   }
 
-  const paymentConfirmationInvoice = buyerNotGetInvoice
-    ? SELF_ORDER_VI.paymentConfirmInvoiceDefault
-    : [buyerName.trim(), buyerTaxCode.trim()].filter(Boolean).join(" · ") ||
-      SELF_ORDER_VI.paymentConfirmInvoiceDefault;
+  async function cancelVietQrPayment() {
+    if (
+      activePaymentRequest?.method !== "vietqr" ||
+      activePaymentRequest.status !== "vietqr_pending" ||
+      !activePaymentRequest.clientOpId
+    ) {
+      return;
+    }
+    const confirmed = await confirm({
+      title: SELF_ORDER_VI.cancelVietQrTitle,
+      description: SELF_ORDER_VI.cancelVietQrDescription,
+      confirmText: SELF_ORDER_VI.cancelVietQr,
+      cancelText: SELF_ORDER_VI.paymentConfirmBack,
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
+    const currentClientOpId = activePaymentRequest.clientOpId;
+    setPaymentError(null);
+    startPaymentCancel(async () => {
+      try {
+        const response = await fetch(
+          `/api/self-order/${encodeURIComponent(token)}/payment`,
+          {
+            method: "DELETE",
+            headers: {
+              "content-type": "application/json",
+              "x-self-order-request": "1",
+            },
+            body: JSON.stringify({ clientOpId: currentClientOpId }),
+          },
+        );
+        const result = await readApiResponse(response);
+        if (!result.ok) {
+          setPaymentError(
+            result.error.message ?? SELF_ORDER_VI.cancelVietQrFailed,
+          );
+          if (
+            result.error.code === "payment_completed" ||
+            result.error.code === "payment_cancel_not_allowed" ||
+            result.error.code === "retry_required"
+          ) {
+            void refreshSnapshot();
+          }
+          return;
+        }
+
+        const paymentRequest = normalizePaymentRequest(result.payload);
+        if (!paymentRequest) {
+          setPaymentError(SELF_ORDER_VI.cancelVietQrFailed);
+          return;
+        }
+        if (paymentRequest.status === "completed") {
+          setPaymentCompleted(true);
+          await refreshSnapshot();
+          return;
+        }
+        if (
+          paymentRequest.status !== "cancelled" &&
+          paymentRequest.status !== "expired"
+        ) {
+          setPaymentError(SELF_ORDER_VI.cancelVietQrFailed);
+          return;
+        }
+
+        setLocalPaymentRequest(null);
+        ignoredPaymentStatusClientOpIdRef.current = currentClientOpId;
+        setPaymentStatusClientOpId(null);
+        setSelectedPaymentMethod(null);
+        paymentIntentRef.current = null;
+        toast.success(SELF_ORDER_VI.cancelVietQrSuccess);
+        await refreshSnapshot();
+      } catch {
+        setPaymentError(SELF_ORDER_VI.cancelVietQrFailed);
+      }
+    });
+  }
 
   return (
     <AppPage
@@ -761,6 +748,7 @@ export function SelfOrderClient({
           activeCategoryValue={activeCategoryValue}
           onActiveCategoryChange={setActiveCategoryValue}
           onAdd={addCartItem}
+          hasCartItems={cartItems.length > 0}
           disabled={paymentPending}
           cartDemandByMenuItemId={cartDemandByMenuItemId}
         />
@@ -804,26 +792,14 @@ export function SelfOrderClient({
             disabled={awaiting || paymentPending}
             activeOrder={order}
             activePaymentRequest={activePaymentRequest}
-            buyerNotGetInvoice={buyerNotGetInvoice}
-            buyerName={buyerName}
-            buyerTaxCode={buyerTaxCode}
-            buyerAddress={buyerAddress}
-            buyerEmail={buyerEmail}
             selectedPaymentMethod={selectedPaymentMethod}
             isPending={isPaymentPending}
+            isCancelling={isPaymentCancelling}
             pendingMethod={pendingPaymentMethod}
             error={paymentError}
-            fieldErrors={invoiceFieldErrors}
-            errorFocusRequest={invoiceErrorFocusRequest}
-            onBuyerNotGetInvoiceChange={setBuyerNotGetInvoice}
-            onBuyerNameChange={setBuyerName}
-            onBuyerTaxCodeChange={(value) =>
-              setBuyerTaxCode(normalizeTaxCodeInput(value))
-            }
-            onBuyerAddressChange={setBuyerAddress}
-            onBuyerEmailChange={setBuyerEmail}
             onPaymentMethodChange={setSelectedPaymentMethod}
-            onConfirmPayment={openPaymentConfirmation}
+            onCreatePayment={createSelectedPayment}
+            onCancelVietQr={cancelVietQrPayment}
           />
         ) : null}
       </BillDrawer>
@@ -855,88 +831,6 @@ export function SelfOrderClient({
         }
         footerClassName="flex-col gap-2 sm:flex-row"
       />
-
-      <AppDialog
-        open={paymentConfirmationMethod != null}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen && !isPaymentPending) {
-            setPaymentConfirmationMethod(null);
-          }
-        }}
-        title={
-          paymentConfirmationMethod === "vietqr"
-            ? SELF_ORDER_VI.paymentReconcileTitle
-            : SELF_ORDER_VI.paymentConfirmTitle
-        }
-        description={
-          paymentConfirmationMethod === "vietqr"
-            ? SELF_ORDER_VI.paymentReconcileDescription
-            : SELF_ORDER_VI.paymentConfirmDescription
-        }
-        bodyClassName="gap-2"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              disabled={isPaymentPending}
-              onClick={() => setPaymentConfirmationMethod(null)}
-            >
-              {SELF_ORDER_VI.paymentConfirmBack}
-            </Button>
-            <Button
-              type="button"
-              size="touch"
-              disabled={isPaymentPending || paymentConfirmationMethod == null}
-              onClick={() => {
-                if (paymentConfirmationMethod) {
-                  requestPayment(paymentConfirmationMethod);
-                }
-              }}
-            >
-              {isPaymentPending ? <Spinner className="size-4" /> : null}
-              {paymentConfirmationMethod === "vietqr"
-                ? SELF_ORDER_VI.paymentReconcileAction
-                : SELF_ORDER_VI.paymentConfirmAction}
-            </Button>
-          </>
-        }
-        footerClassName="flex-col-reverse gap-2 sm:flex-row"
-      >
-        <Item
-          variant="outline"
-          size="sm"
-          className="flex-col items-stretch bg-muted/30 text-sm"
-        >
-          <div className="flex items-baseline justify-between gap-3 py-1">
-            <span className="text-muted-foreground">
-              {SELF_ORDER_VI.paymentConfirmMethod}
-            </span>
-            <span className="text-right font-medium">
-              {paymentConfirmationMethod === "cash_call"
-                ? SELF_ORDER_VI.cashCall
-                : SELF_ORDER_VI.vietQrCreate}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between gap-3 py-1">
-            <span className="text-muted-foreground">
-              {SELF_ORDER_VI.totalAmount}
-            </span>
-            <span className="font-mono font-semibold tabular-nums">
-              {formatVND(order?.totalAmount ?? 0)}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between gap-3 py-1">
-            <span className="text-muted-foreground">
-              {SELF_ORDER_VI.paymentConfirmInvoice}
-            </span>
-            <span className="text-right font-medium">
-              {paymentConfirmationInvoice}
-            </span>
-          </div>
-        </Item>
-      </AppDialog>
     </AppPage>
   );
 }

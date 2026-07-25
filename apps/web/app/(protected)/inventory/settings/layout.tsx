@@ -3,10 +3,8 @@ import { redirect } from "next/navigation";
 import {
   buildAccessDeniedPath,
   PERMISSION_KEYS,
-  SUPPLIER_RETURN_ROLES,
 } from "@comtammatu/shared/auth";
 import { AppPage } from "@/components/surface";
-import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import {
   CATALOG_MANAGE_PERMISSIONS,
@@ -29,19 +27,13 @@ export default async function InventorySettingsLayout({
 }: {
   children: ReactNode;
 }) {
-  const [
-    { claims },
-    canOpenSettings,
-    canManageCatalog,
-    canManageUnits,
-    canManageTenantSettings,
-  ] = await Promise.all([
-    loadAuthState(),
-    currentUserHasAnyPermissionAny(INVENTORY_SETTINGS_PERMISSIONS),
-    currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
-    currentUserHasAnyPermissionAny(UNITS_MASTER_PERMISSIONS),
-    currentUserHasAnyPermissionAny([PERMISSION_KEYS.SETTINGS_TENANT]),
-  ]);
+  const [canOpenSettings, canManageCatalog, canManageUnits] = await Promise.all(
+    [
+      currentUserHasAnyPermissionAny(INVENTORY_SETTINGS_PERMISSIONS),
+      currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
+      currentUserHasAnyPermissionAny(UNITS_MASTER_PERMISSIONS),
+    ],
+  );
   if (!canOpenSettings) {
     redirect(
       buildAccessDeniedPath("insufficient-permission", {
@@ -50,8 +42,6 @@ export default async function InventorySettingsLayout({
     );
   }
 
-  const canManageQc =
-    canManageTenantSettings && SUPPLIER_RETURN_ROLES.includes(claims.user_role);
   const sectionItems: SettingsSectionNavItem[] = [];
 
   if (canManageCatalog) {
@@ -75,14 +65,6 @@ export default async function InventorySettingsLayout({
       href: "/inventory/settings/thresholds",
       label: tRoute("/inventory/settings/thresholds", "tab"),
       icon: "thresholds",
-    });
-  }
-
-  if (canManageQc) {
-    sectionItems.push({
-      href: "/inventory/settings/qc",
-      label: tRoute("/inventory/settings/qc", "tab"),
-      icon: "qc",
     });
   }
 

@@ -36,8 +36,8 @@ UPSTASH_REDIS_REST_URL=https://YOUR_REDIS.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
 ```
 
-Type generation chỉ đọc schema Production đã đăng ký và bắt buộc truyền ref
-literal; script không đọc stored link hoặc `.env.local`:
+`corepack pnpm db:types` chỉ đọc schema từ Production đã đăng ký và bắt buộc
+truyền đúng `SUPABASE_PROJECT_ID`:
 
 ```bash
 SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj corepack pnpm db:types
@@ -47,10 +47,9 @@ SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj corepack pnpm db:types
 
 - Migration production là owner-gated. Agent viết migration file; owner apply
   production trừ khi owner ủy quyền rõ trong chính session hiện tại.
-- Verification có write chỉ chạy trên Preview Branch on-demand đã được guard
-  xác minh là con của Production.
-- Không chạy `supabase db push`; migration Production theo owner-gated flow
-  trong `docs/agent/rules/database.md`.
+- Kiểm migration trên Preview Branch throwaway có parent là Production trước
+  khi apply Production. Xem `docs/agent/rules/database.md`.
+- Không chạy `supabase db push` vào production.
 
 JWT Custom Claims Hook trong Supabase Dashboard:
 
@@ -73,9 +72,10 @@ SET position_id = (
 WHERE id = '<user-uuid>';
 ```
 
-Seed QA chỉ chạy trên Preview Branch on-demand đã được guard xác minh. Không
-dùng stored CLI link state; nếu guard không hỗ trợ đúng operation/target của
-task thì dừng và báo blocker.
+Seed kiểm thử chỉ chạy trên Preview Branch throwaway đã được guard xác minh và
+phải dùng literal target binding theo `docs/agent/rules/database.md`. Không dùng
+stored CLI link state; nếu guard không hỗ trợ đúng operation/target của task thì
+dừng và báo blocker.
 
 ## Chạy local
 
@@ -101,26 +101,27 @@ corepack pnpm verify
 
 ## Env Vercel
 
-Thiết lập các biến sau trong Vercel Production:
+Thiết lập các biến sau trong Vercel cho Production:
 
-| Biến                            | Nguồn           |
-| ------------------------------- | --------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase API    |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase API    |
-| `SUPABASE_SERVICE_ROLE_KEY`     | Supabase API    |
-| `UPSTASH_REDIS_REST_URL`        | Upstash console |
-| `UPSTASH_REDIS_REST_TOKEN`      | Upstash console |
+| Biến | Nguồn |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase API |
+| `UPSTASH_REDIS_REST_URL` | Upstash console |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash console |
 
 Không set `VERCEL_URL` thủ công; Vercel tự inject biến này.
 
-Vercel Preview đang bị tắt và không được nhận biến Supabase. Build Preview sẽ
-fail-closed tại `scripts/check-preview-supabase-env.mjs`.
+Vercel Preview hiện bị vô hiệu hóa và không được nhận Supabase env.
+`scripts/check-preview-supabase-env.mjs` chặn build Preview theo nguyên tắc
+fail-closed.
 
 ## File chỉ nằm local
 
-| File                  | Mục đích                            |
-| --------------------- | ----------------------------------- |
-| `apps/web/.env.local` | Env runtime của web                 |
-| `.mcp.json`           | Local Claude MCP config, gitignored |
+| File | Mục đích |
+| --- | --- |
+| `apps/web/.env.local` | Env runtime của web |
+| `.mcp.json` | Local Claude MCP config, gitignored |
 
 Giữ công cụ agent cá nhân, plugin cache, session, và local note ngoài repo này.

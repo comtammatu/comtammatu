@@ -40,6 +40,19 @@ test("Sheet side sizes keep a full mobile width with explicit compact desktop mo
   assert.match(source, /data-\[side=right\]:w-full/);
 });
 
+test("Sheet fullscreen mode removes the default 95dvh cap", () => {
+  assert.match(source, /fullscreen = false/);
+  assert.match(source, /fullscreen\?: boolean/);
+  assert.match(
+    source,
+    /fullscreen\s+\? "data-\[side=bottom\]:h-dvh data-\[side=bottom\]:max-h-dvh/,
+  );
+  assert.match(
+    source,
+    /: "data-\[side=bottom\]:h-auto data-\[side=bottom\]:max-h-dvh-95/,
+  );
+});
+
 test("compact right-sheet workflows use the shared size contract", () => {
   for (const path of [
     "app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx",

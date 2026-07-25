@@ -46,8 +46,8 @@ A paid order leaves the snapshot immediately. The next guest scanning the same p
 4. Before staff decides, each **Gửi thêm món** operation merges into that same pending request; replaying an operation returns its original outcome without duplicating items.
 5. Staff sees the badge on the POS table tile → **Duyệt** → `create_order(table_id, items)` → `route_order_to_kds` fires → the kitchen has it.
 6. Guest adds more after approval → `append_order_items` directly. **No approval.** KDS receives it.
-7. Guest opens the bill drawer → `orders.items + totalAmount` (the payable truth after staff edits, voids, merges) and presses **Thanh toán**.
-8. The drawer switches to payment (`cash_call` | `vietqr`) + optional HĐĐT buyer fields; Back returns to the bill.
+7. Guest opens the full-screen bill sheet → `orders.items + totalAmount` (the payable truth after staff edits, voids, merges) and presses **Thanh toán**.
+8. The sheet switches to payment (`cash_call` | `vietqr`) + optional HĐĐT buyer fields; Back returns to the bill.
 9. Payment settles → existing triggers complete the order and release the table.
 
 ### Table already has an open order
@@ -85,8 +85,9 @@ It contains no branch name or workflow notification.
 
 `Hoá đơn` sits in the header next to `ThemeToggle` as a primary (terracotta)
 `Button` + `Badge` (approved item count, or a `Clock` icon while a request is
-pending). It opens a `Drawer` and **never auto-opens**. An unopened or
-multi-bill table shows the safe empty bill state; payment remains unavailable.
+pending). It opens a full-viewport bottom `Sheet` and **never auto-opens**. An
+unopened or multi-bill table shows the safe empty bill state; payment remains
+unavailable.
 
 Body: category pills (sticky under the header, one scrollable row). The
 default selected pill is the named `Cơm` category when present; otherwise the
@@ -153,7 +154,7 @@ xem thực đơn trong lúc chờ và gọi thêm món.**, and actions **Gọi t
 **Đóng**. Both actions return to the menu; the dialog does not remount from
 polling, reload, or a later add-more submit. The cart CTA stays enabled as
 **Gửi thêm món** and its next submit merges into the same pending request. The
-bill button shows a `Clock` icon; the drawer keeps the pending round visible
+bill button shows a `Clock` icon; the sheet keeps the pending round visible
 behind a blurred state overlay with a static `BrandMascot`, and shows no
 payable total.
 
@@ -163,16 +164,16 @@ Emit one Sonner `toast.warning` with a **Gửi lại** action that reloads the
 rejected cart verbatim. Same guest toaster preset as G4. No dialog. No
 `revoked` state. No token rotation. No reprinting the table QR.
 
-### G6 · Bill drawer
+### G6 · Full-screen bill sheet
 
 Primary content is `orders.items` + `orders.totalAmount`. Below it, the round
 history reads from the existing `kitchen_send_batches` — self-order stores no
 round table of its own. It contains one **Thanh toán** CTA only when the order
 is unambiguous and open.
 
-### G7: Payment (inside the drawer)
+### G7: Payment (inside the full-screen sheet)
 
-After **Thanh toán**, the drawer replaces the bill with `cash_call` | VietQR +
+After **Thanh toán**, the sheet replaces the bill with `cash_call` | VietQR +
 HĐĐT buyer fields; its back control returns to G6. Exactly one live intent
 across both methods; a live intent locks add-more, item customization, and
 buyer fields. VietQR reload renders the stored amount, payment code, QR bytes,
@@ -182,12 +183,13 @@ official VietQR app catalog for the current OS supplies a supported deeplink;
 the handoff then carries the stored recipient, amount, payment code, and account
 name and creates no MoMo intent or settlement state. Self-Order must not invent
 an undocumented MoMo scheme or fall back to the MoMo merchant payment API.
-Guests cannot cancel an intent; staff own cancellation after verifying money is
-not already in flight.
+Guests may cancel only their exact active VietQR request. Cancellation returns
+the sheet to payment selection; a concurrent or late verified SePay transfer
+still completes the request and order. Cash cancellation remains staff-owned.
 
 ### G8 · Paid
 
-The receipt remains in the drawer for the current browser session only. A reload
+The receipt remains in the sheet for the current browser session only. A reload
 returns to G1 with a clean menu, because a paid order is absent from the snapshot
 by contract.
 
@@ -269,13 +271,14 @@ Kept: `self_order_payment_requests`, `self_order_rate_buckets`, `tables.self_ord
 
 Deleted: `self_order_sessions`, `self_order_batches`, `self_order_session_devices`, `tables.self_order_capability_version`, `tables.realtime_topic_token`, every `self_order_*_v2` RPC, the `device_token` cookie and its 428 retry, `status-pill.tsx`, `device-access-panel.tsx`, `session-state-panel.tsx`, `SelfOrderApprovalSheet`.
 
-Six RPCs survive:
+Seven RPCs survive:
 
 | RPC                                                   | Caller | Effect                                                                                                   |
 | ----------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------- |
 | `self_order_get_snapshot(token, op_id?)`              | guest  | table + menu + unambiguous open order + pending request or this browser's rejected request + live intent |
 | `self_order_submit(token, cart, note, op_id)`         | guest  | exactly one open order → `append_order_items`; an existing `pending` request merges the operation; otherwise insert `pending` |
 | `self_order_create_payment_request(...)`              | guest  | same product flow, but binds directly to the only open order and rejects multi-bill ambiguity            |
+| `self_order_cancel_vietqr_payment(token, op_id)`      | guest  | cancels the exact active VietQR request; late verified SePay evidence still settles it                    |
 | `self_order_accept_request(req_id, target_order_id?)` | staff  | `create_order` or `append_order_items`                                                                   |
 | `self_order_reject_request(req_id)`                   | staff  | `status = 'rejected'`                                                                                    |
 | `self_order_cancel_payment_request(...)`              | staff  | same product flow, keyed by request/order rather than session                                            |

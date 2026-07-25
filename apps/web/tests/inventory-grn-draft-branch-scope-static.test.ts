@@ -166,8 +166,11 @@ test("GRN supplier receiving can stay on the same new-receipt page", () => {
   );
   assert.doesNotMatch(grnSupplierPicker, /\$\{basePath\}\/\$\{supplier\.id\}/);
 
-  assert.match(grnCreateController, /confirmGrn/);
-  assert.match(grnCreateController, /GRN_CREATE_COPY\.confirmNow/);
+  assert.doesNotMatch(grnCreateController, /confirmGrn|confirmNow/);
+  assert.match(
+    grnCreateController,
+    /router\.push\(`\$\{grnBasePath\}\/\$\{grnId\}\?review=1`\)/,
+  );
   assert.doesNotMatch(grnCreateController, /NumberPadSheet/);
   assert.doesNotMatch(grnCreateController, /onOpenNumpad/);
 });

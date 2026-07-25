@@ -62,13 +62,6 @@ import type {
   OrderData,
   PendingExtras,
 } from "./bill-receipt-types";
-import {
-  buildInvoicePayload,
-  EMPTY_INVOICE_FORM,
-  InvoiceFormSection,
-  isInvoiceFormValid,
-  type InvoiceFormState,
-} from "./invoice-form-section";
 import { PaymentQrCode } from "./payment-qr-code";
 
 import { ACTIONS_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
@@ -432,8 +425,6 @@ export function BillReceipt({
   const [pendingExtras, setPendingExtras] = useState<PendingExtras | null>(
     null,
   );
-  const [invoiceForm, setInvoiceForm] =
-    useState<InvoiceFormState>(EMPTY_INVOICE_FORM);
   const [isPending, startTransition] = useTransition();
   const [actionPending, startActionTransition] = useTransition();
   const [methodPending, setMethodPending] = useState(false);
@@ -462,14 +453,10 @@ export function BillReceipt({
   const totalAmount = Number(order?.total_amount ?? 0);
   const cashReceived = Number(cashInput) || 0;
   const cashChange = cashReceived - totalAmount;
-  const invoiceValid = isInvoiceFormValid(invoiceForm);
   // Cash is the only cashier-confirmable payment. VietQR settles only through
   // the verified SePay webhook.
   const canConfirmPaid =
-    isOnline &&
-    invoiceValid &&
-    selectedMethod === "cash" &&
-    cashReceived >= totalAmount;
+    isOnline && selectedMethod === "cash" && cashReceived >= totalAmount;
 
   // Tooltip explaining why the button is disabled — a dimmed button must
   // tell the cashier what is missing (offline, bad tax code, not enough
@@ -478,11 +465,9 @@ export function BillReceipt({
     ? null
     : !isOnline
       ? "Mất kết nối — không thể thanh toán khi offline"
-      : !invoiceValid
-        ? "Cần điền đủ MST và tên khách trước khi xuất hoá đơn"
-        : selectedMethod === "cash"
-          ? "Khách chưa thanh toán đủ tổng đơn"
-          : "Chưa tạo mã chuyển khoản";
+      : selectedMethod === "cash"
+        ? "Khách chưa thanh toán đủ tổng đơn"
+        : "Chưa tạo mã chuyển khoản";
 
   const cashSuggestions = useMemo(
     () => buildCashSuggestions(totalAmount),
@@ -502,7 +487,6 @@ export function BillReceipt({
       setPendingExtras(null);
       setMethodPending(false);
       setPaymentCreateError(null);
-      setInvoiceForm(EMPTY_INVOICE_FORM);
       setPendingOfflineMethod(null);
       autoQrTriggeredRef.current = null;
       hydratedPaymentOrderRef.current = null;
@@ -651,11 +635,6 @@ export function BillReceipt({
     (method: PaymentMethod) => {
       if (!order || orderId === null) return;
 
-      if (method === "vietqr" && !invoiceValid) {
-        toast.error("Cần hoàn tất thông tin HĐĐT trước khi tạo mã chuyển khoản.");
-        return;
-      }
-
       if (
         method === selectedMethod &&
         pendingExtras?.payment_id !== undefined &&
@@ -683,7 +662,6 @@ export function BillReceipt({
       }
 
       setMethodPending(true);
-      const invoicePayload = buildInvoicePayload(invoiceForm);
       void (async () => {
         try {
           const result = await createPayment(
@@ -691,7 +669,6 @@ export function BillReceipt({
             orderId,
             method,
             Number(order.total_amount),
-            invoicePayload,
           );
           if (result.success && result.data) {
             setPendingExtras({
@@ -720,8 +697,6 @@ export function BillReceipt({
     [
       branchId,
       isOnline,
-      invoiceForm,
-      invoiceValid,
       order,
       orderId,
       pendingExtras?.payment_id,
@@ -825,16 +800,12 @@ export function BillReceipt({
   const handleConfirmPaid = useCallback(async () => {
     if (!order || orderId === null || !canConfirmPaid) return;
 
-    // Freeze the invoice payload at click before the cash transaction commits.
-    const invoicePayload = buildInvoicePayload(invoiceForm);
-
     startActionTransition(async () => {
       if (selectedMethod === "cash") {
         const result = await confirmCashPaymentWithInvoice(
           branchId,
           orderId,
           cashReceived,
-          invoicePayload,
         );
         if (!result.success) {
           toast.error(result.error ?? "Không thể xác nhận thanh toán");
@@ -887,7 +858,6 @@ export function BillReceipt({
     branchId,
     canConfirmPaid,
     cashReceived,
-    invoiceForm,
     onClose,
     onOrderUpdated,
     order,
@@ -958,6 +928,7 @@ export function BillReceipt({
     if (orderId === null) return;
     startPrintTransition(async () => {
       const result = await printProvisionalBill(orderId);
+      refetchOrderRef.current();
       if (result.success) {
         if (result.data?.agent_offline) {
           toast.warning(
@@ -1023,8 +994,6 @@ export function BillReceipt({
     (paymentCreateError !== null || pendingExtras !== null);
   const remotePaymentError =
     paymentCreateError ?? REMOTE_PAYMENT_COPY.qrUnavailableDescription;
-  const showInvoiceForm =
-    selectedMethod === "cash" || selectedMethod === "vietqr";
   const isWaitingForVietQr =
     selectedMethod === "vietqr" && pendingExtras?.payment_id != null;
 
@@ -1306,17 +1275,6 @@ export function BillReceipt({
                 )}
               </>
             </AppSection>
-            {showInvoiceForm && !isWaitingForVietQr ? (
-              <InvoiceFormSection
-                state={invoiceForm}
-                totalAmount={totalAmount}
-                disabled={
-                  actionPending ||
-                  (selectedMethod === "vietqr" && pendingExtras !== null)
-                }
-                onChange={setInvoiceForm}
-              />
-            ) : null}
           </div>
 
           <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-popover px-4 py-3">

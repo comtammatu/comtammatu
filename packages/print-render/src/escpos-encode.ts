@@ -8,6 +8,7 @@ import {
   ensureFontsLoaded,
   lineSpacingDefault,
   lineSpacingZero,
+  renderBillHeaderRaster,
   renderLineRaster,
   renderRuleRaster,
 } from "./render-bitmap";
@@ -82,6 +83,9 @@ export function encodeOpsToEscpos(opsList: RenderOp[]): Uint8Array {
         parts.push(qrBlock(op.content, op.dotSize));
         parts.push(alignLeft());
         parts.push(lineSpacingZero());
+        break;
+      case "billHeader":
+        parts.push(renderBillHeaderRaster(op.lines));
         break;
     }
   }

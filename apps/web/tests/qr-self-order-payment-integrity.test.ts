@@ -19,6 +19,14 @@ const issueJobMigration = readFileSync(
   ),
   "utf8",
 );
+const guestCancelMigration = readFileSync(
+  join(
+    process.cwd(),
+    "../..",
+    "supabase/migrations/20260725122220_allow_guest_cancel_vietqr.sql",
+  ),
+  "utf8",
+);
 
 function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -158,7 +166,7 @@ test("add-more is blocked by both active request methods and any live payment", 
   assert.match(appendBatch, /self_order_active_payment_intent/);
 });
 
-test("guest cancellation is fail-closed and staff cancellation is explicit", () => {
+test("add-more cancellation stays fail-closed while exact VietQR cancellation is explicit", () => {
   assert.match(guestCancel, /self_order_payment_cancel_staff_required/);
   assert.doesNotMatch(guestCancel, /INSERT INTO|UPDATE public\./);
   assert.match(
@@ -167,6 +175,9 @@ test("guest cancellation is fail-closed and staff cancellation is explicit", () 
   );
 
   const guest = readWeb("app/q/[token]/self-order-client.tsx");
+  const guestPaymentRoute = readWeb(
+    "app/api/self-order/[token]/payment/route.ts",
+  );
   const staffActions = readWeb(
     "app/(protected)/br/[branchId]/pos/self-order-actions.ts",
   );
@@ -177,11 +188,41 @@ test("guest cancellation is fail-closed and staff cancellation is explicit", () 
     "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
   );
   assert.doesNotMatch(guest, /cancel-pending-payment-and-add/);
+  assert.match(guest, /method: "DELETE"/);
+  assert.match(guestPaymentRoute, /cancelSelfOrderVietQrPayment/);
+  assert.match(
+    guestCancelMigration,
+    /pr\.table_id = v_table\.table_id[\s\S]*pr\.client_op_id = p_client_op_id/,
+  );
+  assert.match(guestCancelMigration, /v_request_ref\.method <> 'vietqr'/);
+  assert.match(
+    guestCancelMigration,
+    /SET status = 'cancelled',[\s\S]*cancel_reason = 'guest_cancelled_vietqr'/,
+  );
+  assert.match(
+    guestCancelMigration,
+    /REVOKE ALL ON FUNCTION public\.self_order_cancel_vietqr_payment\(text, uuid\)[\s\S]*FROM PUBLIC, anon, authenticated[\s\S]*TO service_role/,
+  );
   assert.match(staffActions, /self_order_cancel_payment_request/);
   assert.match(staffBill, /staffCancelPaymentTitle/);
   assert.match(staffBill, /variant: "destructive"/);
   assert.match(staffQueue, /staffRejectTitle/);
   assert.match(staffQueue, /variant: "destructive"/);
+});
+
+test("guest VietQR cancellation preserves concurrent and late SePay settlement", () => {
+  assert.match(
+    guestCancelMigration,
+    /v_payment_found AND v_payment\.status = 'completed'[\s\S]*SET status = 'completed'/,
+  );
+  assert.match(
+    guestCancelMigration,
+    /OLD\.status = 'cancelled'[\s\S]*OLD\.cancel_reason = 'guest_cancelled_vietqr'[\s\S]*NEW\.status = 'completed'/,
+  );
+  assert.match(
+    guestCancelMigration,
+    /candidate\.status = 'cancelled'[\s\S]*candidate\.cancel_reason = 'guest_cancelled_vietqr'[\s\S]*candidate\.payment_code_snapshot[\s\S]*NEW\.provider_ref/,
+  );
 });
 
 test("payment completion sync handles inserts and updates", () => {

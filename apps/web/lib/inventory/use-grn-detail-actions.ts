@@ -2,7 +2,6 @@
 
 import type { Dispatch, SetStateAction, TransitionStartFunction } from "react";
 import { useRouter } from "next/navigation";
-import { formatPercent } from "@comtammatu/shared/format";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { m, messages } from "@lib/messages";
@@ -12,11 +11,14 @@ import {
 } from "@/(protected)/inventory/grn-actions";
 import { confirmGrn } from "@/(protected)/inventory/procurement-actions";
 import {
-  deriveGrnVariance,
   GRN_DETAIL_COPY,
   type EditableGrnLine,
   type GrnDetail,
 } from "./grn-detail-model";
+import {
+  deriveGrnQualityStatus,
+  isGrnBaselineReviewRequired,
+} from "./grn-quality";
 
 interface UseGrnDetailActionsArgs {
   grn: GrnDetail;
@@ -49,7 +51,6 @@ export function useGrnDetailActions({
   isMobile,
 }: UseGrnDetailActionsArgs): UseGrnDetailActionsReturn {
   const router = useRouter();
-  const qc = grn.qcSettings;
 
   async function handleSave() {
     if (dirtyLines.length === 0) {
@@ -59,7 +60,10 @@ export function useGrnDetailActions({
 
     startSave(async () => {
       let okCount = 0;
-      const savedLineIds = new Set<number>();
+      const savedLines = new Map<
+        number,
+        { baselineVariancePct: number | null; baselineSampleN: number | null }
+      >();
       for (const line of dirtyLines) {
         const result = await upsertGrnLine({
           grnId: grn.id,
@@ -85,7 +89,20 @@ export function useGrnDetailActions({
           continue;
         }
         okCount += 1;
-        savedLineIds.add(line.lineId);
+        const saved = result.data as {
+          baseline_variance_pct?: number | null;
+          baseline_sample_n?: number | null;
+        };
+        savedLines.set(line.lineId, {
+          baselineVariancePct:
+            saved.baseline_variance_pct == null
+              ? null
+              : Number(saved.baseline_variance_pct),
+          baselineSampleN:
+            saved.baseline_sample_n == null
+              ? null
+              : Number(saved.baseline_sample_n),
+        });
       }
       if (okCount > 0) {
         notify.success(
@@ -96,7 +113,9 @@ export function useGrnDetailActions({
         );
         setLines((previous) =>
           previous.map((line) =>
-            savedLineIds.has(line.lineId) ? { ...line, dirty: false } : line,
+            savedLines.has(line.lineId)
+              ? { ...line, ...savedLines.get(line.lineId), dirty: false }
+              : line,
           ),
         );
         router.refresh();
@@ -148,37 +167,31 @@ export function useGrnDetailActions({
       if (line.rejected > line.actual) {
         return GRN_DETAIL_COPY.validation.rejectedExceedsDelivered(line.name);
       }
-      if (line.rejected > 0 && !line.rejectionReason.trim()) {
+      if (
+        deriveGrnQualityStatus(line.actual, line.rejected) !==
+        line.qualityStatus
+      ) {
+        return GRN_DETAIL_COPY.validation.qualityStatusMismatch(line.name);
+      }
+      if (line.qualityStatus !== "accepted" && !line.rejectionReason.trim()) {
         return GRN_DETAIL_COPY.validation.rejectReasonRequired(line.name);
       }
-      if (
-        qc.rejectRequiresPhoto &&
-        line.rejected > 0 &&
-        !line.rejectedPhotoUrl.trim()
-      ) {
+      if (line.qualityStatus !== "accepted" && !line.rejectedPhotoUrl.trim()) {
         return GRN_DETAIL_COPY.validation.rejectPhotoRequired(line.name);
       }
       if (
-        line.poQuantity != null &&
-        line.poQuantity > 0 &&
-        line.actual < line.poQuantity * (1 - qc.qtyShortTolerancePct / 100) &&
-        !line.shortDeliveryAction
-      ) {
-        return GRN_DETAIL_COPY.validation.shortageActionRequired(
-          line.name,
-          formatPercent(qc.qtyShortTolerancePct),
-        );
-      }
-      const variance = deriveGrnVariance(line.cost, line.poUnitPrice);
-      if (
-        variance != null &&
-        Math.abs(variance) > qc.priceVarianceWarnPct &&
+        (line.requiresReview ||
+          isGrnBaselineReviewRequired(line.baselineVariancePct)) &&
         !line.priceOverrideNote.trim()
       ) {
-        return GRN_DETAIL_COPY.validation.priceReasonRequired(
-          line.name,
-          formatPercent(variance, 2),
-        );
+        return GRN_DETAIL_COPY.validation.priceReviewReasonRequired(line.name);
+      }
+      if (
+        (line.requiresReview ||
+          isGrnBaselineReviewRequired(line.baselineVariancePct)) &&
+        !line.priceOverridePhotoUrl.trim()
+      ) {
+        return GRN_DETAIL_COPY.validation.pricePhotoRequired(line.name);
       }
     }
     return null;

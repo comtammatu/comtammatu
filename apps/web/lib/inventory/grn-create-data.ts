@@ -113,14 +113,7 @@ export async function loadGrnCreatePageData({
 
   if (!supplierRes.data) redirect(fallbackPath);
 
-  const [branches, canConfirm] = await Promise.all([
-    fetchProcurementBranches(supabase, claims.tenant_id),
-    probePermission(
-      auth,
-      PERMISSION_KEYS.PROCUREMENT_GRN_CONFIRM,
-      scope.selectedBranchId,
-    ),
-  ]);
+  const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
   const defaultBranchId =
     scope.selectedBranchId != null &&
     branches.some((branch) => branch.id === scope.selectedBranchId)
@@ -288,6 +281,5 @@ export async function loadGrnCreatePageData({
     ingredients,
     recentLines,
     existingDraft,
-    canConfirm,
   };
 }

@@ -140,7 +140,7 @@ function CartLine({
             {optionSummary}
           </ItemDescription>
         ) : null}
-        <ItemActions className="mt-2 w-full flex-wrap justify-between gap-2">
+        <ItemActions className="mt-2 w-full flex-nowrap justify-between gap-2">
           <Button
             type="button"
             variant="outline"
@@ -150,7 +150,7 @@ function CartLine({
           >
             {SELF_ORDER_VI.editCartItem}
           </Button>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
             <Button
               type="button"
               variant="outline"

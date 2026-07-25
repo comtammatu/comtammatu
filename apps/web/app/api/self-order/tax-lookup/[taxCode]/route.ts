@@ -1,15 +1,13 @@
-import {
-  isBusinessTaxCode,
-  parseVietQrBusinessLookup,
-} from "@lib/hddt/business-tax-lookup";
+import { isBusinessTaxCode } from "@lib/hddt/business-tax-lookup";
+import { fetchBusinessTaxCode } from "@lib/hddt/business-tax-lookup-server";
+import { rateLimit } from "@comtammatu/security";
 
-const VIETQR_BUSINESS_LOOKUP_URL = "https://api.vietqr.io/v2/business";
 const CACHE_HEADERS = {
   "Cache-Control": "public, max-age=0, s-maxage=3600",
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ taxCode: string }> },
 ) {
   const { taxCode: rawTaxCode } = await params;
@@ -18,24 +16,21 @@ export async function GET(
     return Response.json({ code: "invalid_tax_code" }, { status: 400 });
   }
 
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   try {
-    const response = await fetch(
-      `${VIETQR_BUSINESS_LOOKUP_URL}/${encodeURIComponent(taxCode)}`,
-      { next: { revalidate: 3600 } },
-    );
-    if (!response.ok) {
-      return Response.json({ code: "lookup_unavailable" }, { status: 503 });
+    const { success: allowed } = await rateLimit.limit(`tax-lookup:${ip}`);
+    if (!allowed) {
+      return Response.json({ code: "rate_limited" }, { status: 429 });
     }
+  } catch {
+    return Response.json({ code: "lookup_unavailable" }, { status: 503 });
+  }
 
-    const parsed = parseVietQrBusinessLookup(await response.json());
-    if (parsed.kind === "invalid") {
-      return Response.json({ code: "lookup_unavailable" }, { status: 503 });
-    }
-
+  try {
+    const business = await fetchBusinessTaxCode(taxCode);
     return Response.json(
-      parsed.kind === "found"
-        ? { code: "00", data: parsed.business }
-        : { code: "51", data: null },
+      business ? { code: "00", data: business } : { code: "51", data: null },
       { headers: CACHE_HEADERS },
     );
   } catch {

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 
 export const selfOrderTokenSchema = z
   .string()
@@ -56,43 +55,16 @@ export const selfOrderSubmitRequestSchema = z
   })
   .strict();
 
-export const invoiceBuyerSchema = z
-  .object({
-    buyerName: z.string().trim().max(200).optional(),
-    buyerTaxCode: z
-      .string()
-      .trim()
-      .regex(/^\d{10}(-\d{3})?$/, SELF_ORDER_VI.buyerTaxInvalid)
-      .optional()
-      .or(z.literal("")),
-    buyerAddress: z.string().trim().max(500).optional(),
-    buyerEmail: z.email().optional().or(z.literal("")),
-    buyerNotGetInvoice: z.boolean().optional(),
-  })
-  .strict()
-  .superRefine((data, ctx) => {
-    if (!data.buyerTaxCode?.trim()) return;
-    if (!data.buyerName?.trim()) {
-      ctx.addIssue({
-        code: "custom",
-        message: SELF_ORDER_VI.buyerBusinessMissing,
-        path: ["buyerName"],
-      });
-    }
-    if (!data.buyerAddress?.trim()) {
-      ctx.addIssue({
-        code: "custom",
-        message: SELF_ORDER_VI.buyerBusinessMissing,
-        path: ["buyerAddress"],
-      });
-    }
-  });
-
 export const selfOrderPaymentRequestSchema = z
   .object({
     clientOpId: selfOrderClientOpIdSchema,
     method: z.enum(["cash_call", "vietqr"]),
-    invoice: invoiceBuyerSchema.optional(),
+  })
+  .strict();
+
+export const selfOrderPaymentCancelRequestSchema = z
+  .object({
+    clientOpId: selfOrderClientOpIdSchema,
   })
   .strict();
 

@@ -24,8 +24,7 @@ const grnLoadFailedError = messages.inventory.grn.loadFailed;
 const grnNotFoundError = messages.inventory.grn.notFound;
 
 type GrnLookup =
-  | { kind: "id"; value: number }
-  | { kind: "code"; value: string };
+  { kind: "id"; value: number } | { kind: "code"; value: string };
 
 const grnLookupInputSchema = z.union([
   z.number().int().positive(),
@@ -216,7 +215,7 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
   let query = supabase
     .from("goods_received_notes")
     .select(
-      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
+      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost, quality_status, requires_review, baseline_variance_pct )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false })
@@ -490,7 +489,7 @@ export async function listMyGrnDrafts(
   let query = supabase
     .from("goods_received_notes")
     .select(
-      "id, supplier_id, branch_id, po_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), purchase_orders ( id, po_number ), grn_items ( id )",
+      "id, supplier_id, branch_id, po_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), purchase_orders ( id, po_number ), grn_items ( id, quality_status, requires_review, baseline_variance_pct )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("created_by", user.id)
@@ -742,7 +741,7 @@ export const upsertGrnLine = withAction(
         },
         { onConflict: "grn_id,ingredient_id,tenant_id" },
       )
-      .select("id")
+      .select("id, baseline_variance_pct, baseline_sample_n")
       .single();
     if (error || !row) {
       return { success: false, error: "Không thể lưu dòng phiếu nhập." };
@@ -819,6 +818,36 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     console.error("inventory.grn.confirm_failed", {
       error: error,
     });
+    if (error.message.includes("grn_qc_quantity_mismatch")) {
+      return {
+        success: false,
+        error: messages.inventory.grn.confirmQcQuantityInvalid,
+      };
+    }
+    if (error.message.includes("grn_qc_reason_required")) {
+      return {
+        success: false,
+        error: messages.inventory.grn.confirmQcReasonRequired,
+      };
+    }
+    if (error.message.includes("grn_qc_photo_required")) {
+      return {
+        success: false,
+        error: messages.inventory.grn.confirmQcPhotoRequired,
+      };
+    }
+    if (error.message.includes("grn_qc_price_reason_required")) {
+      return {
+        success: false,
+        error: messages.inventory.grn.confirmQcPriceReasonRequired,
+      };
+    }
+    if (error.message.includes("grn_qc_price_photo_required")) {
+      return {
+        success: false,
+        error: messages.inventory.grn.confirmQcPricePhotoRequired,
+      };
+    }
     return { success: false, error: "Không thể xác nhận phiếu nhập." };
   }
 

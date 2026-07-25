@@ -63,9 +63,8 @@ export function ManualIssueInvoiceDialog({
   const [preview, setPreview] = useState<ManualInvoiceOrderPreview | null>(
     null,
   );
-  // Buyer form — mirrors POS invoice-form-section: `enabled` = customer wants a
-  // named invoice; when off, an HĐĐT still issues under the server-owned
-  // "Bán cho người tiêu dùng".
+  // Finance recovery may issue either a named buyer or the server-owned
+  // consumer fallback.
   const [enabled, setEnabled] = useState(false);
   const [buyerName, setBuyerName] = useState("");
   const [buyerTaxCode, setBuyerTaxCode] = useState("");

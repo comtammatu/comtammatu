@@ -7,7 +7,7 @@ export const GRN_CREATE_COPY = {
   changeSupplier: "Đổi nhà cung cấp",
   newReceiptEyebrow: "Phiếu nhập mới",
   newReceiptDescription:
-    "Thêm nguyên liệu, kiểm tra kho nhận, rồi chốt nhập kho ngay tại đây.",
+    "Thêm nguyên liệu, kiểm tra kho nhận, rồi kiểm nhận trước khi chốt.",
   discardDraft: "Hủy nháp",
   addItemToContinue: "Thêm mặt hàng để tiếp tục",
   unitCostTitle: "Đơn giá nhập",
@@ -25,18 +25,17 @@ export const GRN_CREATE_COPY = {
   notePlaceholder: "Tình trạng, nhiệt độ...",
   addedSummary: (lineCount: number) =>
     `Đã thêm ${formatCount(lineCount)} mặt hàng`,
-  confirmNowAction: "Chốt nhập kho",
-  confirmNow: (lineCount: number, total: number) =>
-    `Chốt nhập kho · ${formatCount(lineCount)} mặt hàng · ${formatVND(total)}`,
   reviewBeforeConfirm: (lineCount: number, total: number) =>
-    `Xem lại trước khi chốt · ${formatCount(lineCount)} mặt hàng · ${formatVND(total)}`,
+    `Kiểm nhận trước khi chốt · ${formatCount(lineCount)} mặt hàng · ${formatVND(total)}`,
   lineUnitCost: (quantity: number, unit: string, unitCost: number) =>
     `${formatQty(quantity)} ${unit} · ${formatVND(lineTotalFromUnitCost(quantity, unitCost))} · Đơn giá ${formatVND(unitCost)} / ${unit} ·`,
   linePriceRequired: (quantity: number, unit: string) =>
     `${formatQty(quantity)} ${unit} · Nhập đơn giá`,
   unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
   unitPriceUnit: (unit: string, unitCost: number) =>
-    unitCost > 0 ? `Đơn giá ${formatVND(unitCost)} / ${unit}` : `Đơn giá / ${unit}`,
+    unitCost > 0
+      ? `Đơn giá ${formatVND(unitCost)} / ${unit}`
+      : `Đơn giá / ${unit}`,
   baseConversionPreview: (
     quantity: string,
     entryUnit: string,

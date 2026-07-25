@@ -333,10 +333,11 @@ export function SelfOrderItemSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
+        fullscreen
         className="mx-auto w-full max-w-2xl overflow-hidden p-0"
       >
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="relative h-52 w-full shrink-0 overflow-hidden bg-muted/50 sm:aspect-video sm:h-auto sm:max-h-52 md:max-h-48 lg:max-h-48">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden">
+          <div className="relative h-80 w-full shrink-0 overflow-hidden bg-muted/50 sm:aspect-video sm:h-auto sm:max-h-64 md:max-h-48 lg:max-h-56">
             {item.image_url ? (
               <Image
                 src={item.image_url}
@@ -578,7 +579,7 @@ export function SelfOrderItemSheet({
           <Separator />
           <div className="workflow-safe-pb flex shrink-0 flex-wrap items-center gap-2 p-3 sm:flex-nowrap">
             <p
-              className="min-w-0 flex-1 font-mono text-lg font-semibold tabular-nums text-primary sm:shrink-0 sm:flex-none"
+              className="min-w-0 shrink-0 font-mono text-lg font-semibold tabular-nums text-primary"
               aria-label={`${SELF_ORDER_VI.subtotal}: ${formatVND(total)}`}
             >
               {formatVND(total)}

@@ -122,7 +122,6 @@ test("writable settings and finance pages fail closed when initial data cannot l
   const units = read(
     "apps/web/app/(protected)/inventory/settings/units/page.tsx",
   );
-  const qc = read("apps/web/app/(protected)/inventory/settings/qc/page.tsx");
   const thresholds = read(
     "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx",
   );
@@ -138,7 +137,6 @@ test("writable settings and finance pages fail closed when initial data cannot l
   assert.match(foodCost, /!revenueRes\.success/);
   assert.match(categories, /\{res\.success \? \(/);
   assert.match(units, /\{res\.success \? \(/);
-  assert.match(qc, /!res\.success \|\| !settings/);
   assert.match(thresholds, /!res\.success \? \(/);
 
   for (const source of [
@@ -147,7 +145,6 @@ test("writable settings and finance pages fail closed when initial data cannot l
     foodCost,
     categories,
     units,
-    qc,
     thresholds,
   ]) {
     assert.match(source, /<AppEmptyState/);

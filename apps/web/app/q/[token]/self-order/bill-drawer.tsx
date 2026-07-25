@@ -51,7 +51,8 @@ export function BillDrawer({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="mx-auto flex h-dvh max-h-dvh w-full max-w-2xl flex-col overflow-hidden p-0 data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh"
+        fullscreen
+        className="mx-auto w-full max-w-2xl overflow-hidden p-0"
       >
         <SheetHeader className="shrink-0">
           <div className="flex items-center gap-2">

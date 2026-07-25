@@ -3,11 +3,9 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
 import {
   createGrnDraft,
-  confirmGrn,
   deleteGrnLine,
   discardGrnDraft,
   updateDraftGrnReceivingSite,
@@ -43,7 +41,6 @@ export function useGrnCreateController({
   ingredients,
   recentLines,
   existingDraft,
-  canConfirm,
   basePath,
   grnBasePath,
 }: UseGrnCreateControllerOptions) {
@@ -131,8 +128,7 @@ export function useGrnCreateController({
 
   function applyLines(
     nextLines:
-      | GrnDraftLine[]
-      | ((currentLines: GrnDraftLine[]) => GrnDraftLine[]),
+      GrnDraftLine[] | ((currentLines: GrnDraftLine[]) => GrnDraftLine[]),
   ) {
     setDraft((current) => ({
       ...current,
@@ -281,7 +277,9 @@ export function useGrnCreateController({
       setSubmitError(GRN_CREATE_COPY.toastNoLines);
       return;
     }
-    if (draft.lines.some((line) => line.unitCost == null || line.unitCost <= 0)) {
+    if (
+      draft.lines.some((line) => line.unitCost == null || line.unitCost <= 0)
+    ) {
       setSubmitError(GRN_CREATE_COPY.toastMissingPrices);
       return;
     }
@@ -307,59 +305,13 @@ export function useGrnCreateController({
     }
   }
 
-  async function confirmNow() {
-    if (draft.lines.length === 0) {
-      setSubmitError(GRN_CREATE_COPY.toastNoLines);
-      return;
-    }
-    if (draft.lines.some((line) => line.unitCost == null || line.unitCost <= 0)) {
-      setSubmitError(GRN_CREATE_COPY.toastMissingPrices);
-      return;
-    }
-    if (!branchId) {
-      setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
-      return;
-    }
-    if (!locationId && !serverResolvesLocation) {
-      setSubmitError(GRN_CREATE_COPY.toastChooseLocation);
-      return;
-    }
-    const ok = await confirm({
-      title: messages.inventory.grn.confirmGrnTitle,
-      description: messages.inventory.grn.confirmGrnDesc,
-      variant: "destructive",
-      confirmText: GRN_CREATE_COPY.confirmNowAction,
-    });
-    if (!ok) return;
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      const grnId = await ensureServerDraft();
-      if (grnId === null) return;
-      const result = await confirmGrn(grnId);
-      if (!result.success) {
-        setSubmitError(result.error ?? messages.inventory.grn.confirmFailed);
-        return;
-      }
-      router.push(grnBasePath);
-      router.refresh();
-    } catch {
-      setSubmitError(messages.inventory.grn.confirmFailed);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   const total = draftTotal(draft);
   const lineCount = draft.lines.length;
   const hasMissingPrice = draft.lines.some(
     (line) => line.unitCost == null || line.unitCost <= 0,
   );
   const canSubmit =
-    lineCount > 0 &&
-    !hasMissingPrice &&
-    !submitting &&
-    !receivingSiteSaving;
+    lineCount > 0 && !hasMissingPrice && !submitting && !receivingSiteSaving;
   const branchLocations = locationOptions.filter(
     (location) => location.branchId === branchId,
   );
@@ -434,10 +386,8 @@ export function useGrnCreateController({
     addedMap,
     branchId,
     branchLocations,
-    canConfirm,
     canSubmit,
     closeEdit,
-    confirmNow,
     discardDraft,
     draft,
     edit,

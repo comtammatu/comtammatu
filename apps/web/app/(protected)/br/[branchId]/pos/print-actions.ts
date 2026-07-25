@@ -5,6 +5,7 @@ import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { KITCHEN_PARTIAL_SEND_WARNING } from "./_lib/messages";
+import { createPayment } from "./payment-actions";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
@@ -215,10 +216,40 @@ export async function printProvisionalBill(
 
   const { supabase, claims } = ctx;
 
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("branch_id, total_amount")
+    .eq("id", parsed.data)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+  if (orderError || !order) {
+    return {
+      success: false,
+      error: "Không thể chuẩn bị phiếu tạm tính. Vui lòng thử lại.",
+    };
+  }
+
+  const payment = await createPayment(
+    order.branch_id,
+    parsed.data,
+    "vietqr",
+    Number(order.total_amount),
+  );
+  if (!payment.success || !payment.data?.qr_data) {
+    return {
+      success: false,
+      error:
+        payment.error ?? "Không thể tạo mã QR thanh toán. Vui lòng thử lại.",
+    };
+  }
+
+  const bankCode = payment.data.qr_info?.bank_code?.toUpperCase();
+  const bankBin = payment.data.qr_info?.bank_bin;
   const { data, error } = await supabase.rpc("enqueue_provisional_bill", {
     p_order_id: parsed.data,
-    p_qr_content: undefined,
-    p_qr_header_label: undefined,
+    p_qr_content: payment.data.qr_data,
+    p_qr_header_label:
+      bankCode && bankBin ? `${bankCode} (BIN ${bankBin})` : "VIETQR",
   });
 
   if (error) {

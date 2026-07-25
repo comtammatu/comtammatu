@@ -65,12 +65,15 @@ the re-registration path.
 
 ## Existing environments
 
-- **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
-  is NOT reset to the baseline; the baseline is for fresh environments only.
-- There is no persistent non-production project. Native Supabase Branching
-  requires the guard to verify the Production parent for each on-demand Preview
-  action. Moving files to `../migration-archive/` alone does not change the
-  parent project's ledger.
+- **Production (`iexwsuaqqenyjiskawoj`)** is the only persistent comtammatu
+  database and the repository type source. It keeps its applied migration
+  history and is not reset to the baseline; the baseline is for fresh Preview
+  environments only.
+- Native Supabase Branching provides the disposable migration-replay target and
+  requires the guard to verify the Production parent. Do not substitute a local
+  database.
+  Moving files to `../migration-archive/` alone does not change the parent
+  project's ledger.
 
 ## Regenerating the baseline (re-baseline)
 
@@ -88,5 +91,4 @@ Full procedure: `docs/runbooks/db/re-baseline.md`. In short — owner dumps
 - classify required bootstrap DML into seed/fold instead of losing it in a schema
   dump,
 - update `../migration-lineage.json`,
-- prove `pnpm db:baseline:local-check` exits 0 and
-  `SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj pnpm db:types` shows no diff.
+- prove `pnpm db:baseline:local-check` exits 0 and `pnpm db:types` shows no diff.

@@ -7,14 +7,14 @@ import { ORDERS_VI } from "@comtammatu/shared/messages";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
+import {
+  orderPaymentAttempts,
+  type OrderPaymentAttempt,
+} from "./_lib/order-payment";
 
 /* ─── Allowed roles ─── */
 
-const ALLOWED_ROLES: StaffRole[] = [
-  "owner",
-  "branch_manager",
-  "cashier",
-];
+const ALLOWED_ROLES: StaffRole[] = ["owner", "branch_manager", "cashier"];
 
 /* ─── Schema ─── */
 
@@ -60,12 +60,6 @@ export interface OrderItem {
   sides: OrderItemSide[];
 }
 
-interface OrderPayment {
-  method: string;
-  amount: number;
-  status: string;
-}
-
 export interface OrderRow {
   id: number;
   order_number: string;
@@ -82,8 +76,95 @@ export interface OrderRow {
   branch_name: string;
   created_by_name: string;
   items: OrderItem[];
-  payment: OrderPayment | null;
+  payment: OrderPaymentAttempt | null;
+  payment_attempts: OrderPaymentAttempt[];
 }
+
+const operationalPaymentSchema = z.object({
+  id: z.number(),
+  method: z.string(),
+  amount: z.number(),
+  status: z.string(),
+  provider_ref: z.string().nullable(),
+  paid_at: z.string().nullable(),
+  created_at: z.string(),
+  reconciliation_status: z.enum(["matched", "missing", "not_applicable"]),
+});
+
+const operationalItemSummarySchema = z.object({
+  item_row_count: z.number(),
+  item_quantity: z.number(),
+  main_dish_quantity: z.number(),
+  side_dish_quantity: z.number(),
+  included_side_quantity: z.number(),
+  served_item_quantity: z.number(),
+  legacy_unclassified_quantity: z.number(),
+  legacy_current_main_dish_quantity: z.number(),
+  legacy_current_side_dish_quantity: z.number(),
+});
+
+const operationalKdsEventSchema = z.object({
+  id: z.number(),
+  event_type: z.string(),
+  occurred_at: z.string(),
+  actor_name: z.string().nullable(),
+  ticket_id: z.number(),
+  order_item_id: z.number(),
+  station_id: z.number(),
+  kitchen_send_batch_id: z.number().nullable(),
+  from_status: z.string().nullable(),
+  to_status: z.string(),
+  reason: z.string().nullable(),
+  item_snapshot: z.record(z.string(), z.unknown()),
+  context: z.record(z.string(), z.unknown()),
+});
+
+const operationalPrintJobSchema = z.object({
+  id: z.number(),
+  job_type: z.string(),
+  printer_id: z.number(),
+  status: z.string(),
+  attempts: z.number(),
+  retry_count: z.number(),
+  created_at: z.string(),
+  printed_at: z.string().nullable(),
+  payload_summary: z.record(z.string(), z.unknown()),
+});
+
+const operationalInvoiceSchema = z.object({
+  id: z.number(),
+  invoice_kind: z.string(),
+  status: z.string(),
+  invoice_number: z.string().nullable(),
+  provider: z.string(),
+  provider_ref: z.string().nullable(),
+  issued_at: z.string().nullable(),
+  created_at: z.string(),
+});
+
+const operationalAuditSchema = z.object({
+  id: z.number(),
+  action: z.string(),
+  entity_type: z.string(),
+  entity_id: z.number().nullable(),
+  actor_id: z.string().nullable(),
+  actor_name: z.string().nullable(),
+  created_at: z.string(),
+});
+
+const orderOperationalTraceSchema = z.object({
+  order_id: z.number(),
+  branch_id: z.number(),
+  pos_session_id: z.number().nullable(),
+  item_summary: operationalItemSummarySchema,
+  payments: z.array(operationalPaymentSchema),
+  kds_events: z.array(operationalKdsEventSchema),
+  print_jobs: z.array(operationalPrintJobSchema),
+  tax_invoices: z.array(operationalInvoiceSchema),
+  audit_events: z.array(operationalAuditSchema),
+});
+
+export type OrderOperationalTrace = z.infer<typeof orderOperationalTraceSchema>;
 
 export type FetchOrdersFilters = {
   orderId?: number;
@@ -145,9 +226,7 @@ const auditOrderIdSchema = z.coerce.number().int().positive();
 
 /* ─── Action ─── */
 
-export async function fetchOrders(
-  filters?: FetchOrdersFilters,
-): Promise<
+export async function fetchOrders(filters?: FetchOrdersFilters): Promise<
   ActionResult<{
     orders: OrderRow[];
     branches: { id: number; name: string }[];
@@ -194,7 +273,7 @@ export async function fetchOrders(
        created_at,
        branches(name),
        profiles!orders_created_by_fkey(full_name),
-       payments(method, amount, status)`,
+       payments(id, method, amount, status, paid_at, created_at)`,
     )
     .order("created_at", { ascending: false })
     .limit(50);
@@ -229,8 +308,9 @@ export async function fetchOrders(
   }
 
   const orders: OrderRow[] = (data ?? []).map((row) => {
-    const paymentsArr = Array.isArray(row.payments) ? row.payments : [];
-    const firstPayment = paymentsArr[0];
+    const { attempts, canonical } = orderPaymentAttempts(
+      Array.isArray(row.payments) ? row.payments : [],
+    );
 
     return {
       id: row.id,
@@ -249,13 +329,8 @@ export async function fetchOrders(
       created_by_name:
         (row.profiles as { full_name: string } | null)?.full_name ?? "—",
       items: [],
-      payment: firstPayment
-        ? {
-            method: firstPayment.method,
-            amount: firstPayment.amount,
-            status: firstPayment.status,
-          }
-        : null,
+      payment: canonical,
+      payment_attempts: attempts,
     };
   });
 
@@ -445,11 +520,7 @@ function parseAuditNote(
   };
 }
 
-const ORDERS_READ_ROLES: StaffRole[] = [
-  "owner",
-  "branch_manager",
-  "cashier",
-];
+const ORDERS_READ_ROLES: StaffRole[] = ["owner", "branch_manager", "cashier"];
 
 export async function fetchOrderAuditLog(
   orderId: number,
@@ -567,4 +638,51 @@ export async function fetchOrderItems(
   }));
 
   return { success: true, data: items };
+}
+
+type OrderOperationalTraceRpc = (
+  name: "get_order_operational_trace",
+  args: { p_order_id: number },
+) => Promise<{
+  data: unknown;
+  error: { message: string } | null;
+}>;
+
+export async function fetchOrderOperationalTrace(
+  orderId: number,
+): Promise<ActionResult<OrderOperationalTrace>> {
+  const parsed = auditOrderIdSchema.safeParse(orderId);
+  if (!parsed.success) {
+    return { success: false, error: "Order ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    ORDERS_READ_ROLES,
+    PERMISSION_KEYS.ORDERS_READ,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const rpc = ctx.supabase.rpc.bind(
+    ctx.supabase,
+  ) as unknown as OrderOperationalTraceRpc;
+  const { data, error } = await rpc("get_order_operational_trace", {
+    p_order_id: parsed.data,
+  });
+
+  if (error) {
+    return {
+      success: false,
+      error: ORDERS_VI.loadOperationalEvidenceFailed,
+    };
+  }
+
+  const trace = orderOperationalTraceSchema.safeParse(data);
+  if (!trace.success) {
+    return {
+      success: false,
+      error: ORDERS_VI.invalidOperationalEvidence,
+    };
+  }
+
+  return { success: true, data: trace.data };
 }

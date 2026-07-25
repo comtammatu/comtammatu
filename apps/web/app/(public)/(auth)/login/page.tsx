@@ -9,41 +9,35 @@ export default function LoginPage() {
     <main
       id="main-content"
       tabIndex={-1}
-      className="relative flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] bg-gradient-to-br from-secondary/30 via-background to-primary/10 lg:grid lg:grid-cols-2"
+      className="relative flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] bg-gradient-to-br from-secondary/30 via-background to-primary/10 sm:landscape:grid sm:landscape:grid-cols-2 md:grid md:grid-cols-2"
     >
-      {/* Caro Pattern overlay */}
       <div className="brand-pattern-caro absolute inset-0 opacity-10 pointer-events-none" />
 
-      {/* Brand — compact on mobile, full-height panel on desktop */}
-      <div className="relative z-10 flex flex-col items-center gap-3 p-4 lg:justify-between lg:bg-primary/10">
-        <span aria-hidden="true" className="hidden lg:block" />
-        <div className="flex flex-col items-center gap-6 lg:flex-1 lg:justify-center">
-          <Frame className="border-border/20 bg-card/90 p-3 shadow-effect-card-resting">
-            <BrandLockup decorative size="md" priority className="lg:h-28" />
+      <div className="relative z-10 flex flex-col items-center p-4 sm:landscape:min-h-dvh sm:landscape:grid sm:landscape:grid-rows-2 md:min-h-dvh md:grid md:grid-rows-2">
+        <div className="flex flex-1 items-center justify-center">
+          <Frame className="theme-light-only border-border/20 bg-card/90 p-2 shadow-effect-card-resting md:p-3 lg:p-4">
+            <BrandLockup decorative size="md" priority className="md:h-24 lg:h-28" />
           </Frame>
-          <div className="flex flex-col items-center text-center gap-2">
-            {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: brand tagline static text */}
-            <p className="font-heading text-lg font-semibold tracking-tight text-foreground lg:text-xl">
-              Hệ thống Vận hành & Bán hàng
-            </p>
-            {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: brand subtitle static text */}
-            <p className="text-xs text-muted-foreground max-w-xs">
-              Đồng bộ dữ liệu thời gian thực giữa Bếp, POS, Kho và Tài chính.
-            </p>
-          </div>
-          <h1 className="font-heading sr-only">{BRAND_NAME}</h1>
         </div>
-        <div className="hidden lg:flex flex-col items-center justify-center h-32 w-32">
-          <BrandMascot className="shrink-0 scale-50" />
+        <h1 className="font-heading sr-only">{BRAND_NAME}</h1>
+        <div className="hidden h-40 w-40 items-center justify-center sm:landscape:flex sm:landscape:justify-self-center md:flex md:justify-self-center">
+          <BrandMascot
+            animated
+            decorative
+            mood="waving"
+            className="shrink-0 scale-75 drop-shadow-lg"
+          />
         </div>
       </div>
 
-      {/* Login form */}
-      <section className="relative z-10 flex flex-1 items-center justify-center p-4">
+      <section className="relative z-10 flex flex-1 items-center justify-center p-4 sm:landscape:min-h-dvh md:min-h-dvh">
         <div className="w-full max-w-sm">
-          <div className="flex flex-col items-center justify-center h-20 w-20 mb-4 lg:hidden">
+          <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center sm:landscape:hidden md:hidden">
             <BrandMascot
-              className="shrink-0 scale-[0.35]"
+              animated
+              decorative
+              mood="waving"
+              className="shrink-0 scale-50 drop-shadow-lg"
             />
           </div>
           <AppSection

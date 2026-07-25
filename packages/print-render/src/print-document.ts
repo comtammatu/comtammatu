@@ -86,6 +86,7 @@ export type PrintDocumentTotalsBlock = {
   always_show_adjustments?: boolean;
   subtotal?: number | null;
   tax_amount?: number | null;
+  tax_breakdowns?: Array<{ rate?: number; amount?: number }> | null;
   service_charge?: number | null;
   discount_amount?: number | null;
   total_amount?: number | null;
@@ -120,6 +121,12 @@ export type PrintDocumentPaymentQrBlock = {
   qr?: PrintDocumentQrData | null;
 };
 
+export type PrintDocumentInvoiceQrBlock = {
+  type: "invoiceQr";
+  heading?: string;
+  qr?: PrintDocumentQrData | null;
+};
+
 export type PrintDocumentFooterBlock = {
   type: "footer";
   lines?: string[];
@@ -139,6 +146,7 @@ export type PrintDocumentBlock =
   | PrintDocumentCashChangeBlock
   | PrintDocumentNoteBlock
   | PrintDocumentPaymentQrBlock
+  | PrintDocumentInvoiceQrBlock
   | PrintDocumentFooterBlock;
 
 export type PrintDocument = {

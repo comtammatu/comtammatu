@@ -272,6 +272,7 @@ export function materializeDocument(
           type: "totals",
           subtotal: payload.subtotal,
           tax_amount: payload.tax_amount,
+          tax_breakdowns: payload.tax_breakdowns,
           service_charge: payload.service_charge,
           discount_amount: payload.discount_amount,
           total_amount: payload.total_amount,
@@ -303,6 +304,7 @@ export function materializeDocument(
         break;
       }
       case "paymentQr": {
+        if (kind !== "provisional_bill") continue;
         const qr = payload.payment_qr;
         if (
           typeof qr !== "object" ||
@@ -364,6 +366,23 @@ export function materializeDocument(
         out.push(render as PrintDocumentBlock);
         break;
     }
+  }
+
+  const invoiceQr = payload.invoice_qr;
+  if (
+    kind === "receipt" &&
+    typeof invoiceQr === "object" &&
+    invoiceQr !== null &&
+    typeof (invoiceQr as { content?: unknown }).content === "string" &&
+    (invoiceQr as { content: string }).content !== ""
+  ) {
+    const invoiceQrBlock: PrintDocumentBlock = {
+      type: "invoiceQr",
+      heading: "QUÉT QR XUẤT HĐĐT",
+      qr: invoiceQr,
+    };
+    const footerIndex = out.findIndex((block) => block.type === "footer");
+    out.splice(footerIndex < 0 ? out.length : footerIndex, 0, invoiceQrBlock);
   }
 
   if (out.length === 0) {

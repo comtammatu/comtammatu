@@ -44,12 +44,21 @@ const totalsShape = z.object({
   cancelled_order_count: z.number().int(),
   void_item_count: z.number().int(),
   total_items: z.number().int(),
+  item_row_count: z.number().int(),
+  item_quantity: z.number().int(),
+  main_dish_quantity: z.number().int(),
+  side_dish_quantity: z.number().int(),
+  included_side_quantity: z.number().int(),
+  served_item_quantity: z.number().int(),
+  legacy_unclassified_quantity: z.number().int(),
+  legacy_current_main_dish_quantity: z.number().int(),
   aov: numericLike,
 });
 
 const paymentMixItem = z.object({
   method: z.string().nullable(),
   count: z.number().int(),
+  order_count: z.number().int(),
   amount: numericLike,
 });
 
@@ -75,6 +84,7 @@ const aovBin = z.object({
 const hourlyBucket = z.object({
   hour: z.number().int(),
   order_count: z.number().int(),
+  payment_count: z.number().int(),
   revenue: numericLike,
 });
 
@@ -82,6 +92,7 @@ const peakHour = z
   .object({
     hour: z.number().int(),
     order_count: z.number().int(),
+    payment_count: z.number().int(),
     revenue: numericLike,
   })
   .nullable();
@@ -101,6 +112,29 @@ const discountsShape = z.object({
   top_orders: z.array(discountOrder),
 });
 
+const paymentAttemptSummaryShape = z.object({
+  total: z.number().int(),
+  completed: z.number().int(),
+  pending: z.number().int(),
+  failed: z.number().int(),
+  refunded: z.number().int(),
+});
+
+const operationalEvidenceShape = z.object({
+  kds_event_count: z.number().int(),
+  kds_completed_item_quantity: z.number().int(),
+  kds_legacy_completed_item_quantity: z.number().int(),
+  print_job_count: z.number().int(),
+  printed_job_count: z.number().int(),
+  print_failed_count: z.number().int(),
+  invoice_count: z.number().int(),
+  invoice_attention_count: z.number().int(),
+  audit_event_count: z.number().int(),
+  order_payment_state_mismatch_count: z.number().int(),
+  late_payment_count: z.number().int(),
+  late_payment_amount: numericLike,
+});
+
 const reportSchema = z.object({
   session: sessionShape,
   totals: totalsShape,
@@ -111,6 +145,8 @@ const reportSchema = z.object({
   hourly: z.array(hourlyBucket),
   peak_hour: peakHour,
   discounts: discountsShape,
+  payment_attempt_summary: paymentAttemptSummaryShape,
+  operational_evidence: operationalEvidenceShape,
   generated_at: z.string(),
 });
 

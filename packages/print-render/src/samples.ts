@@ -60,7 +60,6 @@ const receipt: PrintPayload = {
   discount_amount: 0,
   total_amount: 130000,
   payment_method: "cash",
-  payment_qr: SAMPLE_QR,
   cash_received: 200000,
   cash_change: 70000,
   note: "Khách quen",

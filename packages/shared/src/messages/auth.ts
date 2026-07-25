@@ -1,6 +1,7 @@
 // extracted Vietnamese copy.
 export const AUTH_VI = {
   passwordLabel: "Mật khẩu",
+  passwordPlaceholder: "Nhập mật khẩu",
   checking: "Đang kiểm tra...",
 } as const;
 

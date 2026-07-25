@@ -338,6 +338,15 @@ export const inventory = {
     saveLinesFailed: "{name}: {reason}",
     saveLinesOk: "Đã lưu {ok}/{total} dòng.",
     confirmFailed: "Không thể chốt nhập kho.",
+    confirmQcQuantityInvalid:
+      "Kết quả kiểm nhận chưa khớp số lượng từ chối. Kiểm tra lại từng mặt hàng.",
+    confirmQcReasonRequired: "Hàng nhận một phần hoặc từ chối phải có lý do.",
+    confirmQcPhotoRequired:
+      "Hàng nhận một phần hoặc từ chối phải có ảnh chứng từ.",
+    confirmQcPriceReasonRequired:
+      "Dòng lệch giá so với 30 ngày gần nhất phải có lý do.",
+    confirmQcPricePhotoRequired:
+      "Dòng lệch giá so với 30 ngày gần nhất phải có ảnh hóa đơn nhà cung cấp.",
     confirmBlockedByDirty: "Vui lòng lưu thay đổi trước khi chốt.",
     approveConfirmTitle: "Duyệt phiếu nhập?",
     approveConfirmDesc:
@@ -374,12 +383,8 @@ export const inventory = {
     lineHeaderCost: "Đơn giá nhập",
     lineHeaderTotal: "Thành tiền",
     lineHeaderStatus: "Trạng thái",
-    draftToleranceHint: (
-      shortagePct: string,
-      warnPct: string,
-      reviewPct: string,
-    ) =>
-      `Tolerance: thiếu <= ${shortagePct} • Giá lệch >= ${warnPct} bắt buộc lý do • >= ${reviewPct} gắn cờ kiểm tra`,
+    draftQcHint:
+      "Chọn kết quả kiểm nhận cho từng mặt hàng. Hàng nhận một phần hoặc từ chối phải có số lượng, lý do và ảnh.",
     finalizedLineCount: (count: number) => `${formatCount(count)} dòng đã chốt`,
     addLine: "Thêm dòng",
     qcSummary: "Tổng hợp QC",
@@ -398,8 +403,14 @@ export const inventory = {
         `${name}: phải nhập lý do khi có hàng từ chối.`,
       rejectPhotoRequired: (name: string) =>
         `${name}: phải đính kèm ảnh khi có hàng từ chối.`,
+      priceReviewReasonRequired: (name: string) =>
+        `${name}: phải nhập lý do cho giá lệch.`,
+      pricePhotoRequired: (name: string) =>
+        `${name}: phải tải ảnh hóa đơn nhà cung cấp cho giá lệch.`,
       rejectedExceedsDelivered: (name: string) =>
         `${name}: số lượng từ chối không được vượt số đã giao.`,
+      qualityStatusMismatch: (name: string) =>
+        `${name}: kết quả kiểm nhận chưa khớp số lượng từ chối.`,
       shortageActionRequired: (name: string, tolerance: string) =>
         `${name}: thiếu hàng vượt ngưỡng ${tolerance} — phải chọn cách xử lý.`,
       priceReasonRequired: (name: string, variance: string) =>
@@ -491,6 +502,8 @@ export const inventory = {
       importPrice: "Đơn giá nhập",
       poPrice: "Giá đơn mua",
       priceVariance: "Lệch giá",
+      baselineVariance: (sampleN: number) =>
+        `So với TB 30 ngày (${sampleN} lần nhập)`,
       rejectionReason: "Lý do từ chối:",
       priceOverrideReason: "Lý do giá lệch:",
       reviewNeeded: "Cần kiểm tra",
@@ -500,6 +513,10 @@ export const inventory = {
       deleteLineAria: "Xóa dòng",
       actualLabel: (unit: string) => `Số đã giao (${unit})`,
       rejectedLabel: (unit: string) => `Từ chối nhận (${unit})`,
+      qualityStatusLabel: "Kết quả kiểm nhận *",
+      qualityAccepted: "Đạt — nhập toàn bộ",
+      qualityPartial: "Nhận một phần",
+      qualityRejected: "Từ chối toàn bộ",
       unitCostCurrency: "Đơn giá nhập (₫)",
       rejectReasonRequired: "Lý do từ chối *",
       rejectReasonPlaceholder:
@@ -509,6 +526,8 @@ export const inventory = {
       priceOverrideRequired: "Lý do giá lệch *",
       reviewVariancePlaceholder: (variance: string, reviewPct: string) =>
         `Giá lệch ${variance} vượt ngưỡng kiểm tra ${reviewPct}. Bắt buộc nhập lý do + ảnh hóa đơn NCC.`,
+      baselineVariancePlaceholder: (variance: string, sampleN: number) =>
+        `Giá lệch ${variance} so với ${sampleN} lần nhập trong 30 ngày. Bắt buộc nhập lý do + ảnh hóa đơn NCC.`,
       warnVariancePlaceholder: (variance: string, warnPct: string) =>
         `Giá lệch ${variance} vượt ngưỡng cảnh báo ${warnPct}. Nhập lý do để lưu vết kiểm tra.`,
       supplierInvoicePhoto: "Ảnh hóa đơn NCC *",
@@ -517,6 +536,8 @@ export const inventory = {
       acceptAndClose: "Chấp nhận, đóng đơn mua (không chờ giao bù)",
       waitBackorder: "Chờ NCC giao bù (giữ đơn mua chờ giao bù)",
     },
+    qcQueue: "Cần xử lý QC",
+    qcIssueCount: (count: number) => `${count} dòng QC`,
   },
   po: {
     created: "Tạo đơn đặt hàng {code} thành công",
@@ -1041,9 +1062,6 @@ export const inventory = {
       empty: "Chưa có nguyên liệu nào trong danh mục.",
       loadFailed: "Không thể tải ngưỡng tồn kho.",
       forbidden: "Bạn không có quyền chỉnh sửa ngưỡng tồn kho.",
-    },
-    qc: {
-      loadFailed: "Không thể tải cấu hình QC.",
     },
     categories: {
       loadFailed: "Không thể tải danh sách nhóm.",

@@ -42,6 +42,11 @@ import {
   type EditableGrnLine,
   type GrnDetail,
 } from "@lib/inventory/grn-detail-model";
+import {
+  GRN_BASELINE_REVIEW_PCT,
+  deriveGrnQualityStatus,
+  isGrnBaselineReviewRequired,
+} from "@lib/inventory/grn-quality";
 import { messages } from "@lib/messages";
 
 const DEFAULT_VARIANCE_WARNING = 0.2;
@@ -380,7 +385,14 @@ export function BranchGrnReviewLineSheet({
   const [numericField, setNumericField] = useState<
     "actual" | "rejected" | "cost" | null
   >(null);
-  const variance = line ? deriveGrnVariance(line.cost, line.poUnitPrice) : null;
+  const baselineVariance = line?.baselineVariancePct ?? null;
+  const variance = line
+    ? (baselineVariance ?? deriveGrnVariance(line.cost, line.poUnitPrice))
+    : null;
+  const varianceLabel =
+    baselineVariance != null
+      ? GRN_DETAIL_COPY.line.baselineVariance(line?.baselineSampleN ?? 0)
+      : GRN_DETAIL_COPY.line.priceVariance;
   const formattedVariance =
     variance != null ? formatPercent(variance, 2) : formatPercent(0, 2);
   const needsShortDeliveryAction =
@@ -390,25 +402,26 @@ export function BranchGrnReviewLineSheet({
     line.actual <
       line.poQuantity * (1 - grn.qcSettings.qtyShortTolerancePct / 100);
   const needsRejectionDetails =
-    line != null && (line.rejected > 0 || line.qualityStatus === "rejected");
+    line != null && line.qualityStatus !== "accepted";
   const needsPriceOverride =
     variance != null &&
-    Math.abs(variance) > grn.qcSettings.priceVarianceWarnPct;
+    Math.abs(variance) >
+      (baselineVariance != null
+        ? GRN_BASELINE_REVIEW_PCT
+        : grn.qcSettings.priceVarianceWarnPct);
   const needsPriceEvidence =
-    variance != null &&
-    Math.abs(variance) > grn.qcSettings.priceVarianceReviewPct;
+    baselineVariance != null
+      ? isGrnBaselineReviewRequired(baselineVariance)
+      : variance != null &&
+        Math.abs(variance) > grn.qcSettings.priceVarianceReviewPct;
 
   function patchActual(actual: number) {
     if (!line) return;
-    const rejected = line.rejected;
+    const rejected = line.qualityStatus === "rejected" ? actual : line.rejected;
     onPatch({
       actual,
-      qualityStatus:
-        rejected > 0 && actual === 0
-          ? "rejected"
-          : rejected > 0
-            ? "partial"
-            : "accepted",
+      rejected,
+      qualityStatus: deriveGrnQualityStatus(actual, rejected),
     });
   }
 
@@ -416,12 +429,7 @@ export function BranchGrnReviewLineSheet({
     if (!line) return;
     onPatch({
       rejected,
-      qualityStatus:
-        rejected > 0 && line.actual === 0
-          ? "rejected"
-          : rejected > 0
-            ? "partial"
-            : "accepted",
+      qualityStatus: deriveGrnQualityStatus(line.actual, rejected),
     });
   }
 
@@ -458,6 +466,55 @@ export function BranchGrnReviewLineSheet({
 
               <div className="p-4">
                 <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor={`branch-grn-quality-${line.lineId}`}>
+                      {GRN_DETAIL_COPY.line.qualityStatusLabel}
+                    </FieldLabel>
+                    <Select
+                      value={line.qualityStatus}
+                      onValueChange={(value) => {
+                        const qualityStatus =
+                          value as EditableGrnLine["qualityStatus"];
+                        if (qualityStatus === "accepted") {
+                          onPatch({
+                            qualityStatus,
+                            rejected: 0,
+                            rejectionReason: "",
+                            rejectedPhotoUrl: "",
+                          });
+                          return;
+                        }
+                        onPatch({
+                          qualityStatus,
+                          rejected:
+                            qualityStatus === "rejected"
+                              ? line.actual
+                              : line.rejected > 0 && line.rejected < line.actual
+                                ? line.rejected
+                                : 0,
+                        });
+                      }}
+                    >
+                      <SelectTrigger
+                        id={`branch-grn-quality-${line.lineId}`}
+                        size="touch"
+                        className="w-full"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="accepted" size="touch">
+                          {GRN_DETAIL_COPY.line.qualityAccepted}
+                        </SelectItem>
+                        <SelectItem value="partial" size="touch">
+                          {GRN_DETAIL_COPY.line.qualityPartial}
+                        </SelectItem>
+                        <SelectItem value="rejected" size="touch">
+                          {GRN_DETAIL_COPY.line.qualityRejected}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
                   <div className="grid grid-cols-2 gap-3">
                     <NumberPadValueField
                       id={`branch-grn-actual-${line.lineId}`}
@@ -504,9 +561,7 @@ export function BranchGrnReviewLineSheet({
                       </Field>
                       <Field>
                         <FieldLabel>
-                          {GRN_DETAIL_COPY.line.proofPhotoLabel(
-                            grn.qcSettings.rejectRequiresPhoto,
-                          )}
+                          {GRN_DETAIL_COPY.line.proofPhotoLabel(true)}
                         </FieldLabel>
                         <PhotoUploadInput
                           tenantId={grn.tenantId}
@@ -525,8 +580,7 @@ export function BranchGrnReviewLineSheet({
                       <Alert variant="destructive">
                         <IconAlertTriangle className="size-4" />
                         <AlertDescription>
-                          {GRN_DETAIL_COPY.line.priceVariance}:{" "}
-                          {formattedVariance}
+                          {varianceLabel}: {formattedVariance}
                         </AlertDescription>
                       </Alert>
                       <Field>
@@ -540,19 +594,24 @@ export function BranchGrnReviewLineSheet({
                           rows={2}
                           value={line.priceOverrideNote}
                           placeholder={
-                            needsPriceEvidence
-                              ? GRN_DETAIL_COPY.line.reviewVariancePlaceholder(
+                            baselineVariance != null
+                              ? GRN_DETAIL_COPY.line.baselineVariancePlaceholder(
                                   formattedVariance,
-                                  formatPercent(
-                                    grn.qcSettings.priceVarianceReviewPct,
-                                  ),
+                                  line.baselineSampleN ?? 0,
                                 )
-                              : GRN_DETAIL_COPY.line.warnVariancePlaceholder(
-                                  formattedVariance,
-                                  formatPercent(
-                                    grn.qcSettings.priceVarianceWarnPct,
-                                  ),
-                                )
+                              : needsPriceEvidence
+                                ? GRN_DETAIL_COPY.line.reviewVariancePlaceholder(
+                                    formattedVariance,
+                                    formatPercent(
+                                      grn.qcSettings.priceVarianceReviewPct,
+                                    ),
+                                  )
+                                : GRN_DETAIL_COPY.line.warnVariancePlaceholder(
+                                    formattedVariance,
+                                    formatPercent(
+                                      grn.qcSettings.priceVarianceWarnPct,
+                                    ),
+                                  )
                           }
                           onChange={(event) =>
                             onPatch({ priceOverrideNote: event.target.value })
@@ -799,6 +858,12 @@ export function BranchGrnAddLineSheet({
           entryUnitId,
           unit: unit.trim(),
           unitCost: parsedUnitCost,
+          baselineVariancePct:
+            (result.data as { baseline_variance_pct?: number | null })
+              .baseline_variance_pct ?? null,
+          baselineSampleN:
+            (result.data as { baseline_sample_n?: number | null })
+              .baseline_sample_n ?? null,
         }),
       );
       notify.success(GRN_DETAIL_COPY.addDialog.success);

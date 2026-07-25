@@ -4,6 +4,8 @@ import test from "node:test";
 import { MODULE_ACL } from "@comtammatu/shared/auth";
 import {
   buildKdsCompletionHistory,
+  buildKdsCompletionHistoryFromEvents,
+  buildKdsOperationalHistory,
   type KdsCompletionHistoryBatch,
   type KdsCompletionHistoryOrderInfo,
   type KdsCompletionHistoryOrderItem,
@@ -214,4 +216,91 @@ test("KDS completion history sorts newest completion first and honors limit", ()
     history.map((entry) => entry.groupKey),
     ["order-11"],
   );
+});
+
+test("KDS completion history survives live-ticket cleanup via event snapshots", () => {
+  assert.match(actionsSource, /get_kds_ticket_history/);
+  assert.doesNotMatch(actionsSource, /\.from\("kds_tickets"\)/);
+
+  const [entry] = buildKdsCompletionHistoryFromEvents({
+    events: [
+      {
+        event_id: 9001,
+        event_type: "completed",
+        occurred_at: "2026-05-28T03:12:00.000Z",
+        actor_id: null,
+        actor_name: "Bếp A",
+        order_id: 10,
+        ticket_id: 1,
+        order_item_id: 101,
+        station_id: 8,
+        kitchen_send_batch_id: 501,
+        from_status: "preparing",
+        to_status: "ready",
+        reason: null,
+        item_snapshot: {
+          item_name: "Cơm sườn",
+          quantity: 2,
+        },
+        context: { kitchen_ticket_number: "BEP-001" },
+        print_jobs: [],
+      },
+    ],
+    orders,
+    limit: 10,
+  });
+
+  assert.equal(entry?.kitchenTicketNumber, "BEP-001");
+  assert.equal(entry?.itemQuantity, 2);
+  assert.equal(entry?.items[0]?.name, "Cơm sườn");
+});
+
+test("KDS operational history keeps recall details and exact print links", () => {
+  const [entry] = buildKdsOperationalHistory({
+    events: [
+      {
+        event_id: 9002,
+        event_type: "recalled",
+        occurred_at: "2026-05-29T03:12:00.000Z",
+        actor_id: "00000000-0000-0000-0000-000000000001",
+        actor_name: "Bếp A",
+        order_id: 10,
+        ticket_id: 1,
+        order_item_id: 101,
+        station_id: 8,
+        kitchen_send_batch_id: 501,
+        from_status: "ready",
+        to_status: "preparing",
+        reason: "Làm lại",
+        item_snapshot: {
+          item_name: "Cơm sườn",
+          quantity: 2,
+          sides: [{ name: "Canh", quantity: 2 }],
+          modifiers: [{ name: "Ít cơm" }],
+          note: "Không hành",
+        },
+        context: {
+          kitchen_ticket_number: "BEP-001",
+          station_name: "Bếp chính",
+        },
+        print_jobs: [
+          {
+            id: 701,
+            job_type: "kitchen_ticket",
+            status: "printed",
+            created_at: "2026-05-29T03:13:00.000Z",
+          },
+        ],
+      },
+    ],
+    orders,
+    limit: 10,
+  });
+
+  assert.equal(entry?.eventType, "recalled");
+  assert.equal(entry?.actorName, "Bếp A");
+  assert.equal(entry?.stationName, "Bếp chính");
+  assert.deepEqual(entry?.sides, ["2× Canh"]);
+  assert.deepEqual(entry?.modifiers, ["Ít cơm"]);
+  assert.equal(entry?.printJobs[0]?.id, 701);
 });

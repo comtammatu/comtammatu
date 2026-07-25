@@ -31,10 +31,7 @@ import {
   formatVND,
 } from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
-import {
-  formatVNDateTime,
-  formatVNTime,
-} from "@comtammatu/shared/time";
+import { formatVNDateTime, formatVNTime } from "@comtammatu/shared/time";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
@@ -392,6 +389,7 @@ export function PosSessionsClient({
       ) : null}
 
       <OrderDetailDrawer
+        branchId={branchId}
         order={selectedOrder}
         canCorrectPaymentMethod={canCorrectPaymentMethod}
         open={selectedOrder !== null}
@@ -522,10 +520,7 @@ function SessionContextBar({
           <p className="truncate font-heading text-sm font-semibold">
             {resolveSessionLabel(session)}
           </p>
-          <Badge
-            className="shrink-0"
-            variant={isOpen ? "warning" : "outline"}
-          >
+          <Badge className="shrink-0" variant={isOpen ? "warning" : "outline"}>
             {isOpen
               ? messages.settings.posSessions.open
               : messages.settings.posSessions.closed}
@@ -987,6 +982,8 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
     aov_bins,
     peak_hour,
     discounts,
+    payment_attempt_summary,
+    operational_evidence,
   } = report;
   const maxBinCount = Math.max(1, ...aov_bins.map((b) => b.count));
   const maxCategoryRevenue = Math.max(
@@ -1030,6 +1027,28 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
           }
         />
       </div>
+
+      {operational_evidence.order_payment_state_mismatch_count > 0 ||
+      operational_evidence.late_payment_count > 0 ? (
+        <NoteCallout label={messages.settings.posSessions.paymentExceptions}>
+          {messages.settings.posSessions.paymentExceptionsLine(
+            operational_evidence.order_payment_state_mismatch_count,
+            operational_evidence.late_payment_count,
+            formatVND(operational_evidence.late_payment_amount),
+          )}
+        </NoteCallout>
+      ) : null}
+
+      {payment_attempt_summary.total > payment_attempt_summary.completed ? (
+        <NoteCallout label={messages.settings.posSessions.paymentBreakdown}>
+          {messages.settings.posSessions.paymentAttemptWarning(
+            payment_attempt_summary.total,
+            payment_attempt_summary.completed,
+            payment_attempt_summary.failed,
+            payment_attempt_summary.pending,
+          )}
+        </NoteCallout>
+      ) : null}
 
       {top_items.length > 0 ? (
         <div>
@@ -1151,27 +1170,6 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
   );
 }
 
-function DetailFact({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: ReactNode;
-  mono?: boolean;
-}) {
-  return (
-    <Item variant="muted" size="xs" className="items-start">
-      <ItemContent>
-        <ItemTitle className="text-xs text-muted-foreground">{label}</ItemTitle>
-        <div className={cn("font-medium", mono && "font-mono tabular-nums")}>
-          {value}
-        </div>
-      </ItemContent>
-    </Item>
-  );
-}
-
 function AddOnLine({
   label,
   name,
@@ -1195,11 +1193,13 @@ function AddOnLine({
 }
 
 function OrderDetailDrawer({
+  branchId,
   order,
   canCorrectPaymentMethod,
   open,
   onOpenChange,
 }: {
+  branchId: number;
   order: PosSessionOrder | null;
   canCorrectPaymentMethod: boolean;
   open: boolean;
@@ -1264,29 +1264,6 @@ function OrderDetailDrawer({
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {order ? (
               <div className="flex flex-col gap-4">
-                <div className="grid gap-2 lg:grid-cols-2">
-                  <DetailFact
-                    label={messages.settings.posSessions.orderNumber}
-                    value={order.order_number}
-                    mono
-                  />
-                  <DetailFact
-                    label={messages.settings.posSessions.orderContext}
-                    value={
-                      order.order_type === "dine_in"
-                        ? messages.settings.posSessions.tableContext(
-                            order.tables?.number ?? "-",
-                          )
-                        : messages.settings.posSessions.takeaway
-                    }
-                  />
-                  <DetailFact
-                    label={messages.settings.posSessions.orderCreatedAt}
-                    value={formatDateTime(order.created_at)}
-                    mono
-                  />
-                </div>
-
                 <div className="flex flex-wrap gap-2">
                   <StatusBadge
                     domain="order"
@@ -1320,142 +1297,220 @@ function OrderDetailDrawer({
                   ) : null}
                 </div>
 
-                <div>
-                  <SectionLabel>
-                    {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */}
-                    <span>Món ăn</span>
-                  </SectionLabel>
-                  <BranchOperatorFrame className="mt-2 divide-y">
-                    {order.order_items.map((item) => {
-                      const hasAddOns =
-                        item.modifiers.length > 0 || item.sides.length > 0;
-                      const modifierUnit = item.modifiers.reduce(
-                        (sum, modifier) => sum + modifier.price,
-                        0,
-                      );
-                      const sideUnit = item.sides.reduce(
-                        (sum, side) => sum + side.price * side.quantity,
-                        0,
-                      );
-                      const baseUnit = Math.max(
-                        0,
-                        item.unit_price - modifierUnit - sideUnit,
-                      );
+                <NoteCallout
+                  label={messages.settings.posSessions.orderInvestigationPrompt}
+                >
+                  <div className="flex flex-col gap-2">
+                    <p>
+                      {
+                        messages.settings.posSessions
+                          .orderInvestigationDescription
+                      }
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="touch"
+                      className="w-full"
+                      render={
+                        <Link
+                          href={`/br/${String(branchId)}/orders?orderId=${String(order.id)}`}
+                        />
+                      }
+                    >
+                      {messages.settings.posSessions.orderInvestigationAction}
+                    </Button>
+                  </div>
+                </NoteCallout>
 
-                      return (
-                        <div key={item.id} className="flex gap-3 px-3 py-2">
-                          <span className="w-10 shrink-0 font-medium tabular-nums">
-                            {messages.settings.posSessions.quantityPrefix(
-                              item.quantity,
-                            )}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium">
-                              {item.item_name}
-                              {item.variant_name ? (
-                                <span className="text-muted-foreground">
-                                  {" "}
-                                  ({item.variant_name})
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="text-xs text-muted-foreground tabular-nums">
-                              {messages.settings.posSessions.linePrice(
-                                formatVND(
-                                  hasAddOns ? baseUnit : item.unit_price,
-                                ),
+                {order.payments.length > 0 ? (
+                  <div>
+                    <SectionLabel>
+                      {messages.settings.posSessions.paymentAttempts}
+                    </SectionLabel>
+                    <ItemGroup className="mt-2">
+                      {[...order.payments]
+                        .sort(
+                          (a, b) =>
+                            new Date(
+                              b.paid_at ?? "1970-01-01T00:00:00.000Z",
+                            ).getTime() -
+                              new Date(
+                                a.paid_at ?? "1970-01-01T00:00:00.000Z",
+                              ).getTime() || b.id - a.id,
+                        )
+                        .map((payment) => (
+                          <Item key={payment.id} variant="outline" size="xs">
+                            <ItemContent>
+                              <ItemTitle>
+                                {paymentMethodLabel(payment.method)}
+                              </ItemTitle>
+                              <ItemDescription>
+                                {formatDateTime(payment.paid_at)}
+                              </ItemDescription>
+                            </ItemContent>
+                            <ItemFooter>
+                              <StatusBadge
+                                domain="payment"
+                                value={payment.status}
+                              />
+                              <span className="font-mono tabular-nums">
+                                {formatVND(payment.amount)}
+                              </span>
+                            </ItemFooter>
+                          </Item>
+                        ))}
+                    </ItemGroup>
+                  </div>
+                ) : null}
+
+                <Item
+                  variant="outline"
+                  className="block p-3"
+                  render={<details />}
+                >
+                  <summary className="cursor-pointer text-sm font-medium">
+                    {messages.settings.posSessions.billBreakdown(
+                      order.order_items.length,
+                    )}
+                  </summary>
+                  <div className="mt-3 flex flex-col gap-3">
+                    <BranchOperatorFrame className="divide-y">
+                      {order.order_items.map((item) => {
+                        const hasAddOns =
+                          item.modifiers.length > 0 || item.sides.length > 0;
+                        const modifierUnit = item.modifiers.reduce(
+                          (sum, modifier) => sum + modifier.price,
+                          0,
+                        );
+                        const sideUnit = item.sides.reduce(
+                          (sum, side) => sum + side.price * side.quantity,
+                          0,
+                        );
+                        const baseUnit = Math.max(
+                          0,
+                          item.unit_price - modifierUnit - sideUnit,
+                        );
+
+                        return (
+                          <div key={item.id} className="flex gap-3 px-3 py-2">
+                            <span className="w-10 shrink-0 font-medium tabular-nums">
+                              {messages.settings.posSessions.quantityPrefix(
                                 item.quantity,
                               )}
-                              {item.status === "cancelled" ? (
-                                <span className="ml-2 text-destructive">
-                                  {messages.settings.posSessions.cancelledItem}
-                                </span>
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium">
+                                {item.item_name}
+                                {item.variant_name ? (
+                                  <span className="text-muted-foreground">
+                                    {" "}
+                                    ({item.variant_name})
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="text-xs text-muted-foreground tabular-nums">
+                                {messages.settings.posSessions.linePrice(
+                                  formatVND(
+                                    hasAddOns ? baseUnit : item.unit_price,
+                                  ),
+                                  item.quantity,
+                                )}
+                                {item.status === "cancelled" ? (
+                                  <span className="ml-2 text-destructive">
+                                    {
+                                      messages.settings.posSessions
+                                        .cancelledItem
+                                    }
+                                  </span>
+                                ) : null}
+                              </div>
+                              {hasAddOns ? (
+                                <div className="mt-1 flex flex-col gap-1">
+                                  {item.modifiers.map((modifier) => (
+                                    <AddOnLine
+                                      key={`modifier-${String(modifier.modifier_id)}`}
+                                      label={
+                                        messages.settings.posSessions.modifier
+                                      }
+                                      name={modifier.name}
+                                      amount={modifier.price * item.quantity}
+                                    />
+                                  ))}
+                                  {item.sides.map((side) => {
+                                    const totalQuantity =
+                                      side.quantity * item.quantity;
+                                    const name =
+                                      totalQuantity > 1
+                                        ? `${side.name} ×${String(totalQuantity)}`
+                                        : side.name;
+
+                                    return (
+                                      <AddOnLine
+                                        key={`side-${String(side.side_item_id)}`}
+                                        label={
+                                          messages.settings.posSessions.side
+                                        }
+                                        name={name}
+                                        amount={side.price * totalQuantity}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
+                              {item.note ? (
+                                <div className="mt-1 text-xs italic text-muted-foreground">
+                                  {messages.settings.posSessions.itemNote}:{" "}
+                                  {item.note}
+                                </div>
                               ) : null}
                             </div>
-                            {hasAddOns ? (
-                              <div className="mt-1 flex flex-col gap-1">
-                                {item.modifiers.map((modifier) => (
-                                  <AddOnLine
-                                    key={`modifier-${String(modifier.modifier_id)}`}
-                                    label={
-                                      messages.settings.posSessions.modifier
-                                    }
-                                    name={modifier.name}
-                                    amount={modifier.price * item.quantity}
-                                  />
-                                ))}
-                                {item.sides.map((side) => {
-                                  const totalQuantity =
-                                    side.quantity * item.quantity;
-                                  const name =
-                                    totalQuantity > 1
-                                      ? `${side.name} ×${String(totalQuantity)}`
-                                      : side.name;
-
-                                  return (
-                                    <AddOnLine
-                                      key={`side-${String(side.side_item_id)}`}
-                                      label={messages.settings.posSessions.side}
-                                      name={name}
-                                      amount={side.price * totalQuantity}
-                                    />
-                                  );
-                                })}
-                              </div>
-                            ) : null}
-                            {item.note ? (
-                              <div className="mt-1 text-xs italic text-muted-foreground">
-                                {messages.settings.posSessions.itemNote}:{" "}
-                                {item.note}
-                              </div>
-                            ) : null}
+                            <span
+                              className={cn(
+                                "text-sm font-medium tabular-nums",
+                                item.status === "cancelled" &&
+                                  "text-muted-foreground line-through",
+                              )}
+                            >
+                              {formatVND(item.subtotal)}
+                            </span>
                           </div>
-                          <span
-                            className={cn(
-                              "text-sm font-medium tabular-nums",
-                              item.status === "cancelled" &&
-                                "text-muted-foreground line-through",
-                            )}
-                          >
-                            {formatVND(item.subtotal)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </BranchOperatorFrame>
-                </div>
+                        );
+                      })}
+                    </BranchOperatorFrame>
 
-                <BranchOperatorFrame className="flex flex-col gap-1.5 px-3 py-2 text-sm">
-                  <KVRow
-                    label={messages.settings.posSessions.subtotal}
-                    value={formatVND(order.subtotal)}
-                  />
-                  {order.discount_amount > 0 ? (
-                    <KVRow
-                      label={messages.settings.posSessions.discount}
-                      value={`-${formatVND(order.discount_amount)}`}
-                      tone="success"
-                    />
-                  ) : null}
-                  {order.service_charge > 0 ? (
-                    <KVRow
-                      label={messages.settings.posSessions.serviceCharge}
-                      value={formatVND(order.service_charge)}
-                    />
-                  ) : null}
-                  {order.tax_amount > 0 ? (
-                    <KVRow
-                      label={messages.settings.posSessions.tax}
-                      value={formatVND(order.tax_amount)}
-                    />
-                  ) : null}
-                  <Separator />
-                  <KVRow
-                    label={messages.settings.posSessions.total}
-                    value={formatVND(order.total_amount)}
-                    bold
-                  />
-                </BranchOperatorFrame>
+                    <BranchOperatorFrame className="flex flex-col gap-1.5 px-3 py-2 text-sm">
+                      <KVRow
+                        label={messages.settings.posSessions.subtotal}
+                        value={formatVND(order.subtotal)}
+                      />
+                      {order.discount_amount > 0 ? (
+                        <KVRow
+                          label={messages.settings.posSessions.discount}
+                          value={`-${formatVND(order.discount_amount)}`}
+                          tone="success"
+                        />
+                      ) : null}
+                      {order.service_charge > 0 ? (
+                        <KVRow
+                          label={messages.settings.posSessions.serviceCharge}
+                          value={formatVND(order.service_charge)}
+                        />
+                      ) : null}
+                      {order.tax_amount > 0 ? (
+                        <KVRow
+                          label={messages.settings.posSessions.tax}
+                          value={formatVND(order.tax_amount)}
+                        />
+                      ) : null}
+                      <Separator />
+                      <KVRow
+                        label={messages.settings.posSessions.total}
+                        value={formatVND(order.total_amount)}
+                        bold
+                      />
+                    </BranchOperatorFrame>
+                  </div>
+                </Item>
 
                 {order.note ? (
                   <NoteCallout label={messages.settings.posSessions.billNote}>
@@ -1589,10 +1644,15 @@ function KVRow({
 }
 
 function buildSummary(orders: PosSessionOrder[]): SessionSummary {
-  const activeOrders = orders.filter((order) => order.status !== "cancelled");
-  const paid = activeOrders.filter((o) => o.payment_status === "paid");
-  const completedPayments = paid.flatMap((order) =>
+  const completedPayments = orders.flatMap((order) =>
     order.payments.filter((payment) => payment.status === "completed"),
+  );
+  const paidOrderIds = new Set(
+    orders.flatMap((order) =>
+      order.payments.some((payment) => payment.status === "completed")
+        ? [order.id]
+        : [],
+    ),
   );
   const breakdownMap = new Map<string, { count: number; amount: number }>();
   let cashRevenue = 0;
@@ -1611,23 +1671,31 @@ function buildSummary(orders: PosSessionOrder[]): SessionSummary {
     .sort((a, b) => b.amount - a.amount);
 
   return {
-    billCount: activeOrders.length,
+    billCount: orders.length,
     revenue: completedPayments.reduce(
       (sum, payment) => sum + payment.amount,
       0,
     ),
-    servedItems: activeOrders.reduce((sum, o) => sum + countItems(o), 0),
+    servedItems: orders.reduce(
+      (sum, order) =>
+        sum +
+        order.order_items.reduce(
+          (itemSum, item) =>
+            item.status === "served" ? itemSum + item.quantity : itemSum,
+          0,
+        ),
+      0,
+    ),
     cashRevenue,
     noncashRevenue,
-    paidCount: paid.length,
-    unpaidCount: activeOrders.length - paid.length,
-    cancelledCount: orders.length - activeOrders.length,
+    paidCount: paidOrderIds.size,
+    unpaidCount: orders.filter(
+      (order) => order.status !== "cancelled" && !paidOrderIds.has(order.id),
+    ).length,
+    cancelledCount: orders.filter((order) => order.status === "cancelled")
+      .length,
     paymentBreakdown,
   };
-}
-
-function countItems(order: PosSessionOrder): number {
-  return order.order_items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
 function formatDateTime(value: string | null): string {

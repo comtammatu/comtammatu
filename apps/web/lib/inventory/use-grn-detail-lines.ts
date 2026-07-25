@@ -7,6 +7,7 @@ import {
   type EditableGrnLine,
   type GrnDetailItem,
 } from "./grn-detail-model";
+import { isGrnBaselineReviewRequired } from "./grn-quality";
 
 interface UseGrnDetailLinesReturn {
   lines: EditableGrnLine[];
@@ -41,6 +42,7 @@ export function useGrnDetailLines(
       const variance = deriveGrnVariance(line.cost, line.poUnitPrice);
       return (
         line.requiresReview ||
+        isGrnBaselineReviewRequired(line.baselineVariancePct) ||
         (variance != null && Math.abs(variance) > reviewPct)
       );
     }).length;

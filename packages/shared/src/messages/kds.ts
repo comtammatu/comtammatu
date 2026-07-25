@@ -22,6 +22,10 @@ export const KDS_VI = {
     "Không thể tải lịch sử hoàn thành. Vui lòng thử lại.",
   completionHistoryDetailLoadFailed:
     "Không thể tải chi tiết lịch sử hoàn thành. Vui lòng thử lại.",
+  printRouteMissing: (count: number) =>
+    `Đã hoàn thành món, nhưng ${String(count)} món chưa có tuyến in. Kiểm tra cấu hình danh mục và máy in bếp.`,
+  printEnqueueFailed:
+    "Đã hoàn thành món, nhưng chưa tạo đủ phiếu in bếp. Kiểm tra máy in bếp hoặc báo trực tiếp.",
   unitOrder: "đơn",
 } as const;
 

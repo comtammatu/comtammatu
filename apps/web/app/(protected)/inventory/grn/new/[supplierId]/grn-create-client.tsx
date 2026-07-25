@@ -445,36 +445,13 @@ export function GrnCreateClient({
       className="border-0 p-0 shadow-none"
       trailing={
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
-          {controller.canConfirm ? (
-            <Button
-              type="button"
-              size="touch-lg"
-              onClick={controller.confirmNow}
-              disabled={!controller.canSubmit}
-            >
-              {controller.submitting ? (
-                <>
-                  <Spinner className="size-5" />
-                  {STATES_VI.saving}
-                </>
-              ) : controller.lineCount === 0 ? (
-                GRN_CREATE_COPY.addItemToContinue
-              ) : (
-                GRN_CREATE_COPY.confirmNow(
-                  controller.lineCount,
-                  controller.total,
-                )
-              )}
-            </Button>
-          ) : null}
           <Button
             type="button"
-            variant={controller.canConfirm ? "outline" : "default"}
             size="touch-lg"
             onClick={controller.submit}
             disabled={!controller.canSubmit}
           >
-            {controller.submitting && !controller.canConfirm ? (
+            {controller.submitting ? (
               <>
                 <Spinner className="size-5" />
                 {STATES_VI.saving}

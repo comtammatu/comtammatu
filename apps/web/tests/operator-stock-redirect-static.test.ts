@@ -270,7 +270,10 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.doesNotMatch(routeSource, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
   assert.match(branchClientSource, /BranchOperatorPage/);
   assert.match(branchClientSource, /BranchOperatorPanel/);
-  assert.match(branchClientSource, /<div role="list" className="flex flex-col">/);
+  assert.match(
+    branchClientSource,
+    /<div role="list" className="flex flex-col">/,
+  );
   assert.match(branchClientSource, /StockTouchRow/);
   assert.match(branchClientSource, /StockRiskBadge/);
   assert.match(branchClientSource, /filterStockOnHandIngredients/);
@@ -917,9 +920,9 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
     grnCreateData,
     /probePermission\(\s*auth,\s*PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE,\s*scope\.selectedBranchId,\s*\)/,
   );
-  assert.match(
+  assert.doesNotMatch(
     grnCreateData,
-    /PERMISSION_KEYS\.PROCUREMENT_GRN_CONFIRM,\s*scope\.selectedBranchId/,
+    /PERMISSION_KEYS\.PROCUREMENT_GRN_CONFIRM/,
   );
   assert.match(grnCreateClient, /basePath\?: string/);
   assert.match(grnCreateClient, /grnBasePath\?: string/);
@@ -929,7 +932,7 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
   assert.match(grnCreateController, /serverDraftPromiseRef/);
   assert.match(grnCreateController, /createGrnDraft/);
   assert.match(grnCreateController, /upsertGrnLine/);
-  assert.match(grnCreateController, /confirmGrn/);
+  assert.doesNotMatch(grnCreateController, /confirmGrn|confirmNow/);
   assert.match(
     grnCreateController,
     /router\.push\(`\$\{grnBasePath\}\/\$\{grnId\}\?review=1`\)/,

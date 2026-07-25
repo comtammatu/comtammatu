@@ -44,8 +44,7 @@ if (/temporar(?:y|ily) disable/i.test(hookSource)) {
   );
 }
 
-// 1. Protected refs in the hook == refs in the Environment Registry table;
-// persistent non-production refs remain empty.
+// 1. Protected refs in the hook == refs in the Environment Registry table.
 const refsBlock = hookSource.match(/const PROTECTED_REFS = \{([\s\S]*?)\};/);
 const hookRefs = refsBlock
   ? [...refsBlock[1].matchAll(/^\s*([a-z0-9]{20}):/gm)].map((m) => m[1])
@@ -74,17 +73,8 @@ for (const ref of hookRefs) {
   }
 }
 
-if (/^- \*\*DEV —/m.test(registrySection)) {
-  fail(`${REGISTRY_PATH}: persistent non-production targets are not allowed`);
-}
-const approvedRefsBlock = hookSource.match(
-  /const APPROVED_NON_PROD_REFS = \{([\s\S]*?)\};/,
-);
-const hookPersistentNonProdRefs = approvedRefsBlock
-  ? [...approvedRefsBlock[1].matchAll(/^\s*([a-z0-9]{20}):/gm)].map((m) => m[1])
-  : [];
-if (hookPersistentNonProdRefs.length !== 0) {
-  fail(`${HOOK_PATH}: persistent non-production targets are not allowed`);
+if (hookSource.includes("APPROVED_NON_PROD_REFS")) {
+  fail(`${REGISTRY_PATH} and ${HOOK_PATH}: persistent non-production target must not remain`);
 }
 
 const documentedNoTouchRefs = [
@@ -285,8 +275,8 @@ for (const adapterPath of ADAPTER_PATHS) {
   }
 }
 
-// 3. Scripted database entrypoints must enforce the same target and CI-only
-// boundaries because child CLI calls do not traverse interactive hooks.
+// 3. Scripted database entrypoints must enforce the same non-production and
+// CI-only boundaries because child CLI calls do not traverse interactive hooks.
 const typegenPath = path.join(REPO_ROOT, TYPEGEN_PATH);
 if (!fs.existsSync(typegenPath)) {
   fail(`${TYPEGEN_PATH} does not exist`);
@@ -300,7 +290,7 @@ if (!fs.existsSync(typegenPath)) {
     !typegenSource.includes("requestedProjectId !== PRODUCTION_PROJECT_ID")
   ) {
     fail(
-      `${TYPEGEN_PATH}: typegen must require the explicit Production ref without .env.local fallback`,
+      `${TYPEGEN_PATH}: typegen must bind only to registered Production without .env.local or stored-link fallback`,
     );
   }
   const rejectedTarget = spawnSync("node", [typegenPath], {
@@ -309,7 +299,7 @@ if (!fs.existsSync(typegenPath)) {
     encoding: "utf8",
   });
   if (rejectedTarget.status === 0) {
-    fail(`${TYPEGEN_PATH}: must reject an unregistered type source`);
+    fail(`${TYPEGEN_PATH}: must reject any non-Production type source`);
   }
   const missingTarget = spawnSync("node", [typegenPath], {
     cwd: REPO_ROOT,
@@ -399,12 +389,12 @@ const branches = ${JSON.stringify(previewFixtureBranches)};
 const args = process.argv.slice(2);
 const branch =
   args[0] === "branches" &&
-  args[1] === "get" &&
-  args[3] === "--project-ref" &&
-  args[4] === ${JSON.stringify(PROD)} &&
-  args[5] === "--output" &&
-  args[6] === "json"
-    ? branches[args[2]]
+  args[1] === "list" &&
+  args[2] === "--project-ref" &&
+  args[3] === ${JSON.stringify(PROD)} &&
+  args[4] === "--output" &&
+  args[5] === "json"
+    ? Object.values(branches)
     : null;
 if (!branch) process.exit(1);
 process.stdout.write(JSON.stringify(branch));
@@ -481,6 +471,20 @@ const FIXTURES = [
   ],
   ["allow: supabase db push help", 0, bash("supabase db push --help")],
   [
+    "allow: verified Preview API key read",
+    0,
+    bash(
+      `supabase projects api-keys --project-ref ${TRUSTED_PREVIEW} --reveal --output json`,
+    ),
+  ],
+  [
+    "block: Production API key read",
+    2,
+    bash(
+      `supabase projects api-keys --project-ref ${PROD} --reveal --output json`,
+    ),
+  ],
+  [
     "block: help token cannot impersonate a preceding option value",
     2,
     bash("supabase db push --password --help"),
@@ -493,10 +497,31 @@ const FIXTURES = [
     ),
   ],
   [
+    "allow: supabase db push with explicit verified Preview URL",
+    0,
+    bash(
+      `supabase db push --db-url postgres://u@db.${TRUSTED_PREVIEW}.supabase.co/postgres`,
+    ),
+  ],
+  [
     "block: session pooler cannot target Production",
     2,
     bash(
       `supabase db push --db-url postgres://postgres.${PROD}@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`,
+    ),
+  ],
+  [
+    "allow: supabase db push with an environment password and literal Preview URL",
+    0,
+    bash(
+      `supabase db push --db-url postgres://u@db.${TRUSTED_PREVIEW}.supabase.co/postgres --password "$SUPABASE_DB_PASSWORD"`,
+    ),
+  ],
+  [
+    "allow: dotenv-loaded password with literal Preview URL",
+    0,
+    bash(
+      `corepack pnpm exec dotenv -e .env.local -- supabase db push --db-url postgres://u@db.${TRUSTED_PREVIEW}.supabase.co/postgres --password "$SUPABASE_DB_PASSWORD"`,
     ),
   ],
   [
@@ -512,19 +537,19 @@ const FIXTURES = [
     ),
   ],
   [
-    "block: ref in comment cannot approve db push",
+    "block: Preview ref in comment cannot approve db push",
     2,
     bash(`supabase db push # ${UNREGISTERED_REF}`),
   ],
   [
-    "block: db-url in comment cannot approve db push",
+    "block: Preview db-url in comment cannot approve db push",
     2,
     bash(
       `supabase db push # --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres`,
     ),
   ],
   [
-    "block: later command db-url cannot approve db push",
+    "block: later command Preview db-url cannot approve db push",
     2,
     bash(
       `supabase db push && echo --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres`,
@@ -592,47 +617,47 @@ const FIXTURES = [
     bash("supabase db push && echo --help"),
   ],
   [
-    "block: later bare db push remains blocked",
+    "block: later bare db push after approved Preview push",
     2,
     bash(
       `supabase db push --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres && supabase db push`,
     ),
   ],
   [
-    "block: unrelated ref cannot approve db push",
+    "block: unrelated Preview command cannot approve db push",
     2,
     bash(`echo ${UNREGISTERED_REF} && supabase db push`),
   ],
   [
-    "block: production db-url plus unrelated comment",
+    "block: production db-url plus Preview comment",
     2,
     bash(
       `supabase db push --db-url postgres://u@db.${PROD}.supabase.co/postgres # ${UNREGISTERED_REF}`,
     ),
   ],
   [
-    "block: duplicate db-url remains ambiguous",
+    "block: duplicate db-url cannot override approved Preview target",
     2,
     bash(
       `supabase db push --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres --db-url "$DATABASE_URL"`,
     ),
   ],
   [
-    "block: db push cannot combine db-url with stored link selector",
+    "block: db push cannot combine Preview db-url with stored link selector",
     2,
     bash(
       `supabase db push --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres --linked`,
     ),
   ],
   [
-    "block: db push cannot combine db-url with local selector",
+    "block: db push cannot combine Preview db-url with local selector",
     2,
     bash(
       `supabase db push --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres --local=true`,
     ),
   ],
   [
-    "block: db push selector before db-url remains ambiguous",
+    "block: db push selector before Preview db-url remains ambiguous",
     2,
     bash(
       `supabase db push --linked=true --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres`,
@@ -646,7 +671,7 @@ const FIXTURES = [
     ),
   ],
   [
-    "block: env URL plus unrelated ref",
+    "block: env URL plus unrelated Preview token",
     2,
     bash(`psql -X "$DATABASE_URL" -c "update orders set note = null" # ${UNREGISTERED_REF}`),
   ],
@@ -682,19 +707,19 @@ const FIXTURES = [
     ),
   ],
   [
-    "block: interactive psql remains unsupported on unregistered target",
+    "block: interactive psql remains unsupported on explicit Preview",
     2,
     bash(`psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres`),
   ],
   [
-    "block: psql script file remains unsupported on unregistered target",
+    "block: psql script file remains unsupported on explicit Preview",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -f migration.sql`,
     ),
   ],
   [
-    "block: psql meta-command cannot switch to Production",
+    "block: Preview psql meta-command cannot switch to Production",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "\\connect postgres://u@db.${PROD}.supabase.co/postgres" -c "update orders set note = null"`,
@@ -708,70 +733,70 @@ const FIXTURES = [
     ),
   ],
   [
-    "block: psql URL with hostaddr override",
+    "block: psql non-production URL with hostaddr override",
     2,
     bash(
       `psql -X "postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres?hostaddr=203.0.113.10" -c "update orders set note = null"`,
     ),
   ],
   [
-    "block: psql URL with short host override",
+    "block: psql non-production URL with short host override",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -h "$PGHOST" -c "update orders set note = null"`,
     ),
   ],
   [
-    "block: psql URL with long host override",
+    "block: psql non-production URL with long host override",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres --host=203.0.113.10 -c "update orders set note = null"`,
     ),
   ],
   [
-    "block: psql URL with port override",
+    "block: psql non-production URL with port override",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres --port=6543 -c "select 1"`,
     ),
   ],
   [
-    "block: psql URL with attached short host override",
+    "block: psql non-production URL with attached short host override",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -hX -c "update orders set note = null"`,
     ),
   ],
   [
-    "block: psql URL with empty long host override",
+    "block: psql non-production URL with empty long host override",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres --host= -c "update orders set note = null"`,
     ),
   ],
   [
-    "block: psql URL with PGHOSTADDR assignment",
+    "block: psql non-production URL with PGHOSTADDR assignment",
     2,
     bash(
       `PGHOSTADDR=203.0.113.10 psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "update orders set note = null"`,
     ),
   ],
   [
-    "block: earlier shell assignment cannot redirect psql",
+    "block: earlier shell assignment cannot redirect verified Preview psql",
     2,
     bash(
       `PGHOSTADDR=203.0.113.10; psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "select 1"`,
     ),
   ],
   [
-    "block: psql URL with env service assignment",
+    "block: psql non-production URL with env service assignment",
     2,
     bash(
       `env PGSERVICE=other psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "update orders set note = null"`,
     ),
   ],
   [
-    "block: db push URL with host override",
+    "block: db push non-production URL with host override",
     2,
     bash(
       `supabase db push --db-url "postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres?host=db.${PROD}.supabase.co"`,
@@ -799,35 +824,35 @@ const FIXTURES = [
     ),
   ],
   [
-    "block: psql later dbname overrides positional target",
+    "block: psql later dbname overrides positional Preview target",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres --dbname "$DATABASE_URL" -c "update orders set note = null"`,
     ),
   ],
   [
-    "block: later env psql write after unregistered psql read",
+    "block: later env psql write after Preview psql read",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "select 1" && psql -X "$DATABASE_URL" -c "update orders set note = null"`,
     ),
   ],
   [
-    "block: later env HTTP write after unregistered psql read",
+    "block: later env HTTP write after Preview psql read",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "select 1"; curl -X POST "$SUPABASE_URL/rest/v1/orders" -d '{"a":1}'`,
     ),
   ],
   [
-    "block: nested shell cannot hide protected HTTP after psql",
+    "block: nested shell cannot hide protected HTTP after Preview psql",
     2,
     bash(
       `bash -c 'psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "select 1"; curl -X POST "$SUPABASE_URL/rest/v1/orders" -d "{}"'`,
     ),
   ],
   [
-    "block: command substitution cannot hide protected HTTP after psql",
+    "block: command substitution cannot hide protected HTTP after Preview psql",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "select 1" $(curl -X POST "$SUPABASE_URL/rest/v1/orders" -d '{}')`,
@@ -917,7 +942,7 @@ const FIXTURES = [
     ),
   ],
   [
-    "block: pg_restore remains unsupported on unregistered target",
+    "block: pg_restore remains unsupported on explicit Preview",
     2,
     bash(
       `pg_restore --dbname=postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres /tmp/backup.dump`,
@@ -931,7 +956,7 @@ const FIXTURES = [
     ),
   ],
   [
-    "block: direct unregistered HTTP write remains unsupported",
+    "block: direct Preview HTTP write remains unsupported",
     2,
     bash(
       `curl -q -X POST https://${UNREGISTERED_REF}.supabase.co/rest/v1/orders -d '{"a":1}'`,
@@ -1231,7 +1256,7 @@ const FIXTURES = [
     mcp("update_storage_config", { project_id: PROD, file_size_limit: 1 }),
   ],
   [
-    "block: mcp update_storage_config remains unsupported on unregistered target",
+    "block: mcp update_storage_config remains unsupported on Preview",
     2,
     mcp("update_storage_config", { project_id: UNREGISTERED_REF, file_size_limit: 1 }),
   ],
@@ -1437,7 +1462,7 @@ const FIXTURES = [
     ["PGSERVICE", "other"],
     ["PGSERVICEFILE", "/tmp/other-pg-service.conf"],
   ].map(([name, value]) => [
-    `block: inherited ${name} cannot redirect psql`,
+    `block: inherited ${name} cannot redirect verified Preview psql`,
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "select 1"`,
@@ -1492,7 +1517,7 @@ const FIXTURES = [
     ),
   ],
   [
-    "block: attached psql script option against an unregistered target",
+    "block: attached psql script option against Preview",
     2,
     bash(
       `psql -X postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -fx -c "select 1"`,
@@ -1506,7 +1531,7 @@ const FIXTURES = [
     ),
   ],
   [
-    "block: psql write vs unregistered host with startup files enabled",
+    "block: psql write vs explicit Preview host with startup files enabled",
     2,
     bash(
       `psql postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres -c "update orders set note = null"`,
@@ -2020,7 +2045,7 @@ const FIXTURES = [
     mcp("apply_migration", { project_id: "__proto__" }),
   ],
   [
-    "block: array project ref cannot coerce to a registered target",
+    "block: array project ref cannot coerce to a verified Preview",
     2,
     mcp("apply_migration", { project_id: [UNREGISTERED_REF] }),
   ],
@@ -2111,5 +2136,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `[guard-sync] hook, pinned Codex MCP, ${ADAPTER_PATHS.length} adapter configs, Environment Registry, and ${FIXTURES.length} behavior fixtures in sync (${hookRefs.length} protected refs, ${hookNoTouchRefs.length} no-touch ref, ${hookPersistentNonProdRefs.length} persistent non-production ref)`,
+  `[guard-sync] hook, pinned Codex MCP, ${ADAPTER_PATHS.length} adapter configs, Environment Registry, and ${FIXTURES.length} behavior fixtures in sync (${hookRefs.length} protected refs, ${hookNoTouchRefs.length} no-touch ref)`,
 );

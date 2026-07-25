@@ -20,21 +20,29 @@ function isValidIsoDate(value: string): boolean {
 }
 
 function summarizeByHour(orders: OrderRow[]): HourSummary[] {
-  const map = new Map<number, HourSummary>();
+  const map = new Map<
+    number,
+    { total_revenue: number; orderIds: Set<number> }
+  >();
   for (const o of orders) {
     const existing = map.get(o.paid_hour);
     if (existing) {
-      existing.order_count += 1;
       existing.total_revenue += Number(o.total_amount);
+      existing.orderIds.add(o.order_id);
     } else {
       map.set(o.paid_hour, {
-        hour: o.paid_hour,
-        order_count: 1,
         total_revenue: Number(o.total_amount),
+        orderIds: new Set([o.order_id]),
       });
     }
   }
-  return Array.from(map.values()).sort((a, b) => a.hour - b.hour);
+  return Array.from(map.entries())
+    .map(([hour, bucket]) => ({
+      hour,
+      order_count: bucket.orderIds.size,
+      total_revenue: bucket.total_revenue,
+    }))
+    .sort((a, b) => a.hour - b.hour);
 }
 
 function BackToRevenue() {

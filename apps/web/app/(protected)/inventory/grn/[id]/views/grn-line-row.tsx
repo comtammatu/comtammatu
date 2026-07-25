@@ -27,6 +27,11 @@ import {
   type EditableGrnLine as EditableLine,
   type GrnDetail as GRNDetail,
 } from "@lib/inventory/grn-detail-model";
+import {
+  GRN_BASELINE_REVIEW_PCT,
+  deriveGrnQualityStatus,
+  isGrnBaselineReviewRequired,
+} from "@lib/inventory/grn-quality";
 
 export function LineRow({
   tenantId,
@@ -51,7 +56,26 @@ export function LineRow({
   onDelete: () => void;
   onAmend: () => void;
 }) {
-  const variance = deriveVariance(line.cost, line.poUnitPrice);
+  const baselineVariance = line.baselineVariancePct;
+  const variance =
+    baselineVariance ?? deriveVariance(line.cost, line.poUnitPrice);
+  const varianceLabel =
+    baselineVariance != null
+      ? grnCopy.line.baselineVariance(line.baselineSampleN ?? 0)
+      : grnCopy.line.priceVariance;
+  const warnPct =
+    baselineVariance != null
+      ? GRN_BASELINE_REVIEW_PCT
+      : qc.priceVarianceWarnPct;
+  const reviewPct =
+    baselineVariance != null
+      ? GRN_BASELINE_REVIEW_PCT
+      : qc.priceVarianceReviewPct;
+  const needsPriceOverride = variance != null && Math.abs(variance) > warnPct;
+  const needsPriceEvidence =
+    baselineVariance != null
+      ? isGrnBaselineReviewRequired(baselineVariance)
+      : variance != null && Math.abs(variance) > reviewPct;
   const variancesLabel =
     variance != null
       ? `${variance > 0 ? "+" : ""}${formatPercent(variance, 2)}`
@@ -59,9 +83,9 @@ export function LineRow({
   const varianceTone =
     variance == null
       ? "text-muted-foreground"
-      : Math.abs(variance) > qc.priceVarianceReviewPct
+      : Math.abs(variance) > reviewPct
         ? "text-destructive font-bold"
-        : Math.abs(variance) > qc.priceVarianceWarnPct
+        : Math.abs(variance) > warnPct
           ? "text-warning font-semibold"
           : "text-muted-foreground";
 
@@ -114,7 +138,7 @@ export function LineRow({
               ? inventoryCommon.currency(formatVND(line.poUnitPrice))
               : inventoryCommon.noValue}
           </Stat>
-          <Stat label={grnCopy.line.priceVariance}>
+          <Stat label={varianceLabel}>
             <span className={varianceTone}>{variancesLabel}</span>
           </Stat>
         </div>
@@ -161,7 +185,7 @@ export function LineRow({
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-sm ${varianceTone}`}>
-            {grnCopy.line.priceVariance}: {variancesLabel}
+            {varianceLabel}: {variancesLabel}
           </span>
           {line.dirty ? (
             <Badge variant="outline" className="text-xs">
@@ -181,13 +205,64 @@ export function LineRow({
         </div>
       </div>
 
+      <Field id={`quality-${idx}`} label={grnCopy.line.qualityStatusLabel}>
+        <Select
+          value={line.qualityStatus}
+          onValueChange={(value) => {
+            const qualityStatus = value as EditableLine["qualityStatus"];
+            if (qualityStatus === "accepted") {
+              onChange({
+                qualityStatus,
+                rejected: 0,
+                rejectionReason: "",
+                rejectedPhotoUrl: "",
+              });
+              return;
+            }
+            onChange({
+              qualityStatus,
+              rejected:
+                qualityStatus === "rejected"
+                  ? line.actual
+                  : line.rejected > 0 && line.rejected < line.actual
+                    ? line.rejected
+                    : 0,
+            });
+          }}
+        >
+          <SelectTrigger id={`quality-${idx}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="accepted">
+              {grnCopy.line.qualityAccepted}
+            </SelectItem>
+            <SelectItem value="partial">
+              {grnCopy.line.qualityPartial}
+            </SelectItem>
+            <SelectItem value="rejected">
+              {grnCopy.line.qualityRejected}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Field id={`actual-${idx}`} label={grnCopy.line.actualLabel(line.unit)}>
           <FormattedNumberInput
             id={`actual-${idx}`}
             maxFractionDigits={3}
             value={String(line.actual)}
-            onValueChange={(value) => onChange({ actual: Number(value || 0) })}
+            onValueChange={(value) => {
+              const actual = Number(value || 0);
+              const rejected =
+                line.qualityStatus === "rejected" ? actual : line.rejected;
+              onChange({
+                actual,
+                rejected,
+                qualityStatus: deriveGrnQualityStatus(actual, rejected),
+              });
+            }}
           />
         </Field>
         <Field
@@ -198,17 +273,13 @@ export function LineRow({
             id={`rejected-${idx}`}
             maxFractionDigits={3}
             value={String(line.rejected)}
-            onValueChange={(value) =>
+            onValueChange={(value) => {
+              const rejected = Number(value || 0);
               onChange({
-                rejected: Number(value || 0),
-                qualityStatus:
-                  Number(value || 0) > 0 && line.actual === 0
-                    ? "rejected"
-                    : Number(value || 0) > 0
-                      ? "partial"
-                      : "accepted",
-              })
-            }
+                rejected,
+                qualityStatus: deriveGrnQualityStatus(line.actual, rejected),
+              });
+            }}
           />
         </Field>
         <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
@@ -221,7 +292,7 @@ export function LineRow({
         </Field>
       </div>
 
-      {line.rejected > 0 || line.qualityStatus === "rejected" ? (
+      {line.qualityStatus !== "accepted" ? (
         <div className="grid gap-3 md:grid-cols-2">
           <Field id={`reason-${idx}`} label={grnCopy.line.rejectReasonRequired}>
             <Textarea
@@ -234,7 +305,7 @@ export function LineRow({
           </Field>
           <Field
             id={`reject-photo-${idx}`}
-            label={grnCopy.line.proofPhotoLabel(qc.rejectRequiresPhoto)}
+            label={grnCopy.line.proofPhotoLabel(true)}
           >
             <PhotoUploadInput
               tenantId={tenantId}
@@ -246,7 +317,7 @@ export function LineRow({
         </div>
       ) : null}
 
-      {variance != null && Math.abs(variance) > qc.priceVarianceWarnPct ? (
+      {needsPriceOverride ? (
         <div className="grid gap-3 md:grid-cols-2">
           <Field
             id={`override-${idx}`}
@@ -257,20 +328,25 @@ export function LineRow({
               rows={2}
               value={line.priceOverrideNote}
               placeholder={
-                Math.abs(variance) > qc.priceVarianceReviewPct
-                  ? grnCopy.line.reviewVariancePlaceholder(
+                baselineVariance != null
+                  ? grnCopy.line.baselineVariancePlaceholder(
                       formatPercent(variance, 2),
-                      formatPercent(qc.priceVarianceReviewPct),
+                      line.baselineSampleN ?? 0,
                     )
-                  : grnCopy.line.warnVariancePlaceholder(
-                      formatPercent(variance, 2),
-                      formatPercent(qc.priceVarianceWarnPct),
-                    )
+                  : needsPriceEvidence
+                    ? grnCopy.line.reviewVariancePlaceholder(
+                        formatPercent(variance, 2),
+                        formatPercent(reviewPct),
+                      )
+                    : grnCopy.line.warnVariancePlaceholder(
+                        formatPercent(variance, 2),
+                        formatPercent(warnPct),
+                      )
               }
               onChange={(e) => onChange({ priceOverrideNote: e.target.value })}
             />
           </Field>
-          {Math.abs(variance) > qc.priceVarianceReviewPct ? (
+          {needsPriceEvidence ? (
             <Field
               id={`override-photo-${idx}`}
               label={grnCopy.line.supplierInvoicePhoto}
