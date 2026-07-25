@@ -26,12 +26,16 @@ export function OperatorOrdersClient({
   orders,
   totalCount,
   inProgressCount,
+  initialSelectedOrder = null,
 }: {
   orders: OrderRow[];
   totalCount: number;
   inProgressCount: number;
+  initialSelectedOrder?: OrderRow | null;
 }) {
-  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(
+    initialSelectedOrder,
+  );
   const [view, setView] = useState<"active" | "recent">("active");
   const activeOrders = orders.filter(
     (order) => order.status !== "completed" && order.status !== "cancelled",

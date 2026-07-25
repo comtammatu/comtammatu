@@ -39,8 +39,12 @@ const financeDrill = read(
 const posSessions = read(
   "../app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx",
 );
-const orderDetail = read(
-  "../app/(protected)/orders/order-detail-sheet.tsx",
+const orderDetail = read("../app/(protected)/orders/order-detail-sheet.tsx");
+const operatorOrdersPage = read(
+  "../app/(protected)/br/[branchId]/(operator)/orders/page.tsx",
+);
+const operatorOrdersClient = read(
+  "../app/(protected)/br/[branchId]/(operator)/orders/operator-orders-client.tsx",
 );
 const kdsHistorySheet = read(
   "../app/(protected)/br/[branchId]/kds/_components/completion-history-sheet.tsx",
@@ -95,10 +99,7 @@ test("print evidence is append-only while receipt and shift producers get stable
     printMigration,
     /LEFT JOIN public\.printer_menu_categories route[\s\S]*OR NOT EXISTS \([\s\S]*public\.printer_menu_categories route_any[\s\S]*'skipped_ticket_count', GREATEST/,
   );
-  assert.match(
-    baselineMigration,
-    /v_print_warning := 'kitchen_print_skipped'/,
-  );
+  assert.match(baselineMigration, /v_print_warning := 'kitchen_print_skipped'/);
   assert.match(
     evidenceMigration,
     /job\.payload->'ticket_ids'[\s\S]*jsonb_build_array\(event\.ticket_id\)/,
@@ -191,21 +192,45 @@ test("Finance and POS money use completed payments and paid_at", () => {
   );
 });
 
-test("operator surfaces keep ordered, served, KDS-completed, and printed counts distinct", () => {
+test("order investigation owns kitchen and print evidence while POS sessions link to it", () => {
   assert.match(
     posSessions,
     /item\.status === "served" \? itemSum \+ item\.quantity : itemSum/,
   );
-  assert.match(posSessions, /kds_completed_item_quantity/);
-  assert.match(posSessions, /printed_job_count/);
-  assert.doesNotMatch(posSessions, /\/orders\?orderId=/);
+  assert.doesNotMatch(posSessions, /posSessions\.kdsCompletedQuantity/);
+  assert.doesNotMatch(posSessions, /posSessions\.printedJobs/);
+  assert.match(
+    posSessions,
+    /\/br\/\$\{String\(branchId\)\}\/orders\?orderId=\$\{String\(order\.id\)\}/,
+  );
+  assert.doesNotMatch(posSessions, /href=\{?["'`]\/orders\?orderId=/);
   assert.match(financeDrill, /kds_completed_item_quantity/);
   assert.match(financeDrill, /kds_legacy_completed_item_quantity/);
   assert.match(financeDrill, /printed_job_count/);
   assert.match(financeDrill, /invoice_evidence\.length/);
   assert.match(financeDrill, /\/orders\?orderId=/);
   assert.match(orderDetail, /legacy_live_snapshot/);
-  assert.match(orderDetail, /legacy_current_main_dish_quantity/);
+  assert.match(orderDetail, /Kết luận đối chiếu/);
+  assert.match(orderDetail, /summarizeOrderItemKdsEvidence/);
+  assert.match(orderDetail, /Món trong đơn/);
+  assert.match(orderDetail, /Bếp xong/);
+  assert.match(orderDetail, /term: "Đã phục vụ"/);
+  assert.match(orderDetail, /Chưa khớp/);
+  assert.match(orderDetail, /Thông tin bổ sung/);
+  assert.match(orderDetail, /Phiếu đã in/);
+  assert.match(orderDetail, /Các thay đổi trên đơn/);
+  assert.match(orderDetail, /không dùng số\s+này để kết luận món đã ra đủ/);
+  assert.doesNotMatch(orderDetail, /Chi tiết đối chiếu/);
+  assert.doesNotMatch(orderDetail, /Các cập nhật liên quan/);
+  assert.doesNotMatch(orderDetail, /Cơm có snapshot/);
+  assert.doesNotMatch(orderDetail, /không cộng vào số canonical/);
+  assert.doesNotMatch(orderDetail, /ticket #|Print job:|Audit hệ thống/);
+  assert.match(operatorOrdersPage, /orderId\?: string \| string\[\]/);
+  assert.match(
+    operatorOrdersPage,
+    /fetchOrders\(\{ branchId, orderId: requestedOrderId \}\)/,
+  );
+  assert.match(operatorOrdersClient, /initialSelectedOrder = null/);
   assert.match(kdsActions, /parsed\.data\.limit \+ 1/);
   assert.match(kdsHistorySheet, /Đang hiển thị 100 sự kiện mới nhất/);
 });

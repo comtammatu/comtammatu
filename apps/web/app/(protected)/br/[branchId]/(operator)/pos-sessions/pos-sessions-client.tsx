@@ -12,7 +12,6 @@ import {
   AlertTriangle as IconAlertTriangle,
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
-  Printer as IconPrinter,
 } from "lucide-react";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import {
@@ -390,6 +389,7 @@ export function PosSessionsClient({
       ) : null}
 
       <OrderDetailDrawer
+        branchId={branchId}
         order={selectedOrder}
         canCorrectPaymentMethod={canCorrectPaymentMethod}
         open={selectedOrder !== null}
@@ -985,8 +985,6 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
     payment_attempt_summary,
     operational_evidence,
   } = report;
-  const sideQuantity =
-    totals.side_dish_quantity + totals.included_side_quantity;
   const maxBinCount = Math.max(1, ...aov_bins.map((b) => b.count));
   const maxCategoryRevenue = Math.max(
     1,
@@ -1011,33 +1009,6 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
           value={formatCount(totals.total_items)}
         />
         <Metric
-          icon={<IconToolsKitchen2 className="size-4" />}
-          label={
-            totals.legacy_unclassified_quantity > 0
-              ? messages.settings.posSessions.mainDishQuantitySnapshot
-              : messages.settings.posSessions.mainDishQuantity
-          }
-          value={formatCount(totals.main_dish_quantity)}
-        />
-        <Metric
-          icon={<IconToolsKitchen2 className="size-4" />}
-          label={messages.settings.posSessions.sideQuantity}
-          value={formatCount(sideQuantity)}
-        />
-        <Metric
-          icon={<IconCircleCheck className="size-4" />}
-          label={messages.settings.posSessions.kdsCompletedQuantity}
-          value={formatCount(operational_evidence.kds_completed_item_quantity)}
-        />
-        <Metric
-          icon={<IconPrinter className="size-4" />}
-          label={messages.settings.posSessions.printedJobs}
-          value={`${formatCount(operational_evidence.printed_job_count)}/${formatCount(operational_evidence.print_job_count)}`}
-          tone={
-            operational_evidence.print_failed_count > 0 ? "warning" : "muted"
-          }
-        />
-        <Metric
           icon={<IconAlertTriangle className="size-4" />}
           label={messages.settings.posSessions.voidItems}
           value={formatCount(totals.void_item_count)}
@@ -1056,35 +1027,6 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
           }
         />
       </div>
-
-      <NoteCallout label={messages.settings.posSessions.operationalEvidence}>
-        {messages.settings.posSessions.operationalEvidenceLine(
-          operational_evidence.kds_event_count,
-          operational_evidence.printed_job_count,
-          operational_evidence.print_job_count,
-          operational_evidence.invoice_count,
-          operational_evidence.audit_event_count,
-        )}
-      </NoteCallout>
-
-      {totals.legacy_unclassified_quantity > 0 ? (
-        <NoteCallout
-          label={messages.settings.posSessions.legacyItemClassification}
-        >
-          {messages.settings.posSessions.legacyItemClassificationLine(
-            totals.legacy_unclassified_quantity,
-            totals.legacy_current_main_dish_quantity,
-          )}
-        </NoteCallout>
-      ) : null}
-
-      {operational_evidence.kds_legacy_completed_item_quantity > 0 ? (
-        <NoteCallout label={messages.settings.posSessions.legacyKdsSnapshot}>
-          {messages.settings.posSessions.legacyKdsSnapshotLine(
-            operational_evidence.kds_legacy_completed_item_quantity,
-          )}
-        </NoteCallout>
-      ) : null}
 
       {operational_evidence.order_payment_state_mismatch_count > 0 ||
       operational_evidence.late_payment_count > 0 ? (
@@ -1228,27 +1170,6 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
   );
 }
 
-function DetailFact({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: ReactNode;
-  mono?: boolean;
-}) {
-  return (
-    <Item variant="muted" size="xs" className="items-start">
-      <ItemContent>
-        <ItemTitle className="text-xs text-muted-foreground">{label}</ItemTitle>
-        <div className={cn("font-medium", mono && "font-mono tabular-nums")}>
-          {value}
-        </div>
-      </ItemContent>
-    </Item>
-  );
-}
-
 function AddOnLine({
   label,
   name,
@@ -1272,11 +1193,13 @@ function AddOnLine({
 }
 
 function OrderDetailDrawer({
+  branchId,
   order,
   canCorrectPaymentMethod,
   open,
   onOpenChange,
 }: {
+  branchId: number;
   order: PosSessionOrder | null;
   canCorrectPaymentMethod: boolean;
   open: boolean;
@@ -1341,29 +1264,6 @@ function OrderDetailDrawer({
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {order ? (
               <div className="flex flex-col gap-4">
-                <div className="grid gap-2 lg:grid-cols-2">
-                  <DetailFact
-                    label={messages.settings.posSessions.orderNumber}
-                    value={order.order_number}
-                    mono
-                  />
-                  <DetailFact
-                    label={messages.settings.posSessions.orderContext}
-                    value={
-                      order.order_type === "dine_in"
-                        ? messages.settings.posSessions.tableContext(
-                            order.tables?.number ?? "-",
-                          )
-                        : messages.settings.posSessions.takeaway
-                    }
-                  />
-                  <DetailFact
-                    label={messages.settings.posSessions.orderCreatedAt}
-                    value={formatDateTime(order.created_at)}
-                    mono
-                  />
-                </div>
-
                 <div className="flex flex-wrap gap-2">
                   <StatusBadge
                     domain="order"
@@ -1396,6 +1296,31 @@ function OrderDetailDrawer({
                     </Button>
                   ) : null}
                 </div>
+
+                <NoteCallout
+                  label={messages.settings.posSessions.orderInvestigationPrompt}
+                >
+                  <div className="flex flex-col gap-2">
+                    <p>
+                      {
+                        messages.settings.posSessions
+                          .orderInvestigationDescription
+                      }
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="touch"
+                      className="w-full"
+                      render={
+                        <Link
+                          href={`/br/${String(branchId)}/orders?orderId=${String(order.id)}`}
+                        />
+                      }
+                    >
+                      {messages.settings.posSessions.orderInvestigationAction}
+                    </Button>
+                  </div>
+                </NoteCallout>
 
                 {order.payments.length > 0 ? (
                   <div>
@@ -1438,149 +1363,160 @@ function OrderDetailDrawer({
                   </div>
                 ) : null}
 
-                <div>
-                  <SectionLabel>
-                    {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */}
-                    <span>Món ăn</span>
-                  </SectionLabel>
-                  <BranchOperatorFrame className="mt-2 divide-y">
-                    {order.order_items.map((item) => {
-                      const hasAddOns =
-                        item.modifiers.length > 0 || item.sides.length > 0;
-                      const modifierUnit = item.modifiers.reduce(
-                        (sum, modifier) => sum + modifier.price,
-                        0,
-                      );
-                      const sideUnit = item.sides.reduce(
-                        (sum, side) => sum + side.price * side.quantity,
-                        0,
-                      );
-                      const baseUnit = Math.max(
-                        0,
-                        item.unit_price - modifierUnit - sideUnit,
-                      );
+                <Item
+                  variant="outline"
+                  className="block p-3"
+                  render={<details />}
+                >
+                  <summary className="cursor-pointer text-sm font-medium">
+                    {messages.settings.posSessions.billBreakdown(
+                      order.order_items.length,
+                    )}
+                  </summary>
+                  <div className="mt-3 flex flex-col gap-3">
+                    <BranchOperatorFrame className="divide-y">
+                      {order.order_items.map((item) => {
+                        const hasAddOns =
+                          item.modifiers.length > 0 || item.sides.length > 0;
+                        const modifierUnit = item.modifiers.reduce(
+                          (sum, modifier) => sum + modifier.price,
+                          0,
+                        );
+                        const sideUnit = item.sides.reduce(
+                          (sum, side) => sum + side.price * side.quantity,
+                          0,
+                        );
+                        const baseUnit = Math.max(
+                          0,
+                          item.unit_price - modifierUnit - sideUnit,
+                        );
 
-                      return (
-                        <div key={item.id} className="flex gap-3 px-3 py-2">
-                          <span className="w-10 shrink-0 font-medium tabular-nums">
-                            {messages.settings.posSessions.quantityPrefix(
-                              item.quantity,
-                            )}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-medium">
-                              {item.item_name}
-                              {item.variant_name ? (
-                                <span className="text-muted-foreground">
-                                  {" "}
-                                  ({item.variant_name})
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="text-xs text-muted-foreground tabular-nums">
-                              {messages.settings.posSessions.linePrice(
-                                formatVND(
-                                  hasAddOns ? baseUnit : item.unit_price,
-                                ),
+                        return (
+                          <div key={item.id} className="flex gap-3 px-3 py-2">
+                            <span className="w-10 shrink-0 font-medium tabular-nums">
+                              {messages.settings.posSessions.quantityPrefix(
                                 item.quantity,
                               )}
-                              {item.status === "cancelled" ? (
-                                <span className="ml-2 text-destructive">
-                                  {messages.settings.posSessions.cancelledItem}
-                                </span>
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium">
+                                {item.item_name}
+                                {item.variant_name ? (
+                                  <span className="text-muted-foreground">
+                                    {" "}
+                                    ({item.variant_name})
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="text-xs text-muted-foreground tabular-nums">
+                                {messages.settings.posSessions.linePrice(
+                                  formatVND(
+                                    hasAddOns ? baseUnit : item.unit_price,
+                                  ),
+                                  item.quantity,
+                                )}
+                                {item.status === "cancelled" ? (
+                                  <span className="ml-2 text-destructive">
+                                    {
+                                      messages.settings.posSessions
+                                        .cancelledItem
+                                    }
+                                  </span>
+                                ) : null}
+                              </div>
+                              {hasAddOns ? (
+                                <div className="mt-1 flex flex-col gap-1">
+                                  {item.modifiers.map((modifier) => (
+                                    <AddOnLine
+                                      key={`modifier-${String(modifier.modifier_id)}`}
+                                      label={
+                                        messages.settings.posSessions.modifier
+                                      }
+                                      name={modifier.name}
+                                      amount={modifier.price * item.quantity}
+                                    />
+                                  ))}
+                                  {item.sides.map((side) => {
+                                    const totalQuantity =
+                                      side.quantity * item.quantity;
+                                    const name =
+                                      totalQuantity > 1
+                                        ? `${side.name} ×${String(totalQuantity)}`
+                                        : side.name;
+
+                                    return (
+                                      <AddOnLine
+                                        key={`side-${String(side.side_item_id)}`}
+                                        label={
+                                          messages.settings.posSessions.side
+                                        }
+                                        name={name}
+                                        amount={side.price * totalQuantity}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
+                              {item.note ? (
+                                <div className="mt-1 text-xs italic text-muted-foreground">
+                                  {messages.settings.posSessions.itemNote}:{" "}
+                                  {item.note}
+                                </div>
                               ) : null}
                             </div>
-                            {hasAddOns ? (
-                              <div className="mt-1 flex flex-col gap-1">
-                                {item.modifiers.map((modifier) => (
-                                  <AddOnLine
-                                    key={`modifier-${String(modifier.modifier_id)}`}
-                                    label={
-                                      messages.settings.posSessions.modifier
-                                    }
-                                    name={modifier.name}
-                                    amount={modifier.price * item.quantity}
-                                  />
-                                ))}
-                                {item.sides.map((side) => {
-                                  const totalQuantity =
-                                    side.quantity * item.quantity;
-                                  const name =
-                                    totalQuantity > 1
-                                      ? `${side.name} ×${String(totalQuantity)}`
-                                      : side.name;
-
-                                  return (
-                                    <AddOnLine
-                                      key={`side-${String(side.side_item_id)}`}
-                                      label={messages.settings.posSessions.side}
-                                      name={name}
-                                      amount={side.price * totalQuantity}
-                                    />
-                                  );
-                                })}
-                              </div>
-                            ) : null}
-                            {item.note ? (
-                              <div className="mt-1 text-xs italic text-muted-foreground">
-                                {messages.settings.posSessions.itemNote}:{" "}
-                                {item.note}
-                              </div>
-                            ) : null}
+                            <span
+                              className={cn(
+                                "text-sm font-medium tabular-nums",
+                                item.status === "cancelled" &&
+                                  "text-muted-foreground line-through",
+                              )}
+                            >
+                              {formatVND(item.subtotal)}
+                            </span>
                           </div>
-                          <span
-                            className={cn(
-                              "text-sm font-medium tabular-nums",
-                              item.status === "cancelled" &&
-                                "text-muted-foreground line-through",
-                            )}
-                          >
-                            {formatVND(item.subtotal)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </BranchOperatorFrame>
-                </div>
+                        );
+                      })}
+                    </BranchOperatorFrame>
 
-                <BranchOperatorFrame className="flex flex-col gap-1.5 px-3 py-2 text-sm">
-                  <KVRow
-                    label={messages.settings.posSessions.subtotal}
-                    value={formatVND(order.subtotal)}
-                  />
-                  {order.discount_amount > 0 ? (
-                    <KVRow
-                      label={messages.settings.posSessions.discount}
-                      value={`-${formatVND(order.discount_amount)}`}
-                      tone="success"
-                    />
-                  ) : null}
-                  {order.service_charge > 0 ? (
-                    <KVRow
-                      label={messages.settings.posSessions.serviceCharge}
-                      value={formatVND(order.service_charge)}
-                    />
-                  ) : null}
-                  {order.tax_amount > 0 ? (
-                    <KVRow
-                      label={messages.settings.posSessions.tax}
-                      value={formatVND(order.tax_amount)}
-                    />
-                  ) : null}
-                  <Separator />
-                  <KVRow
-                    label={messages.settings.posSessions.total}
-                    value={formatVND(order.total_amount)}
-                    bold
-                  />
-                </BranchOperatorFrame>
+                    <BranchOperatorFrame className="flex flex-col gap-1.5 px-3 py-2 text-sm">
+                      <KVRow
+                        label={messages.settings.posSessions.subtotal}
+                        value={formatVND(order.subtotal)}
+                      />
+                      {order.discount_amount > 0 ? (
+                        <KVRow
+                          label={messages.settings.posSessions.discount}
+                          value={`-${formatVND(order.discount_amount)}`}
+                          tone="success"
+                        />
+                      ) : null}
+                      {order.service_charge > 0 ? (
+                        <KVRow
+                          label={messages.settings.posSessions.serviceCharge}
+                          value={formatVND(order.service_charge)}
+                        />
+                      ) : null}
+                      {order.tax_amount > 0 ? (
+                        <KVRow
+                          label={messages.settings.posSessions.tax}
+                          value={formatVND(order.tax_amount)}
+                        />
+                      ) : null}
+                      <Separator />
+                      <KVRow
+                        label={messages.settings.posSessions.total}
+                        value={formatVND(order.total_amount)}
+                        bold
+                      />
+                    </BranchOperatorFrame>
+                  </div>
+                </Item>
 
                 {order.note ? (
                   <NoteCallout label={messages.settings.posSessions.billNote}>
                     {order.note}
                   </NoteCallout>
                 ) : null}
-
               </div>
             ) : null}
           </div>

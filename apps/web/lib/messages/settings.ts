@@ -73,7 +73,8 @@ export const settings = {
     tablesTitle: "Sơ đồ bàn",
     posTitle: "Máy POS & tồn kho",
     posSessionsTitle: "Đối soát ca POS",
-    posSessionsDescription: "Lịch sử ca, bill, doanh thu và chênh lệch quỹ.",
+    posSessionsDescription:
+      "Lịch sử ca, đơn đã bán, doanh thu và chênh lệch quỹ.",
   },
   printTemplates: {
     layoutTitle: "Bố cục phiếu",
@@ -385,7 +386,7 @@ export const settings = {
       "Các màn thao tác trong ca: bán hàng, bếp, gọi món và giới hạn bán hôm nay.",
     endDayTitle: "Đối soát cuối ngày",
     endDayDescription:
-      "Xem lại ca POS, bill, doanh thu và chênh lệch sau khi vận hành.",
+      "Xem lại ca POS, đơn đã bán, doanh thu và chênh lệch sau khi vận hành.",
     setupEssentialsTitle: "Thiết lập vận hành",
     setupLaneDescription: "Bàn, máy POS, trạm bếp và máy in của chi nhánh.",
     drilldownTitle: "Kho chi nhánh",
@@ -396,7 +397,7 @@ export const settings = {
       "Màn hình gọi số cho khách theo dõi món đã sẵn sàng.",
     commandPosSessionsTitle: "Đối soát ca POS",
     commandPosSessionsDescription:
-      "Lịch sử ca, bill, doanh thu và chênh lệch quỹ.",
+      "Lịch sử ca, đơn đã bán, doanh thu và chênh lệch quỹ.",
     commandOrdersDescription:
       "Tra cứu đơn, xử lý sự cố và đối soát theo chi nhánh.",
     commandHrDescription: "Ngày công, nghỉ phép và duyệt kết ca của nhân viên.",
@@ -469,7 +470,7 @@ export const settings = {
     readinessPrinterNoConfigBadge: "Fallback",
     readinessPrinterCta: "Mở máy in",
     posSessionsLoadFailed: "Không thể tải ca POS",
-    posSessionBillsLoadFailed: "Không thể tải bill của ca POS",
+    posSessionBillsLoadFailed: "Không thể tải đơn của ca POS",
     posSessionReportLoadFailed: "Không thể tải báo cáo ca. Vui lòng thử lại.",
     posTerminalsLoadFailed: "Không thể tải máy POS",
     kdsStationsLoadFailed: "Không thể tải trạm KDS",
@@ -583,24 +584,22 @@ export const settings = {
     sessionCount: (count: number) => `${formatCount(count)} ca`,
     sessionVarianceLine: (difference: string) => `Lệch quỹ ${difference}`,
     settlementTitle: "Đối soát quỹ",
-    billsTab: "Hóa đơn",
-    settlementTab: "Đối soát",
-    reportTab: "Báo cáo",
+    billsTab: "Đơn trong ca",
+    settlementTab: "Quỹ",
+    reportTab: "Tổng kết",
     varianceShort: "Lệch",
     varianceResolvedShort: "Đã xử lý",
     open: "Đang mở",
     closed: "Đã chốt",
-    billsInSession: (count: number) =>
-      `Hoá đơn trong ca (${formatCount(count)})`,
-    billsDescription:
-      "Bấm vào dòng để xem chi tiết bill (món, giảm giá, phí dịch vụ, thanh toán).",
-    bill: "Bill",
+    billsInSession: (count: number) => `Đơn trong ca (${formatCount(count)})`,
+    billsDescription: "Chọn một đơn để xem số tiền và phương thức thanh toán.",
+    bill: "Đơn",
     time: "Giờ",
     payment: "Thanh toán",
     tableContext: (tableNumber: number | string) => `Bàn ${tableNumber}`,
     takeaway: "Mang về",
     unpaidShort: "Chưa TT",
-    noBills: "Ca này chưa có bill.",
+    noBills: "Ca này chưa có đơn.",
     openedBy: (name: string, openedAt: string) =>
       `Mở bởi ${name} · ${openedAt}`,
     closedBy: (name: string, closedAt: string, duration: string) =>
@@ -633,7 +632,7 @@ export const settings = {
     resolveSuccess: "Đã ghi nhận xử lý lệch quỹ",
     resolveFailed: "Không thể lưu xử lý lệch quỹ",
     cashMatched: "Số dư khớp hoàn toàn.",
-    totalBills: "Tổng bill",
+    totalBills: "Tổng đơn",
     paidRevenue: "Doanh thu (đã thanh toán)",
     servedItems: "Món đã phục vụ",
     cashVariance: "Lệch tiền mặt",
@@ -648,37 +647,22 @@ export const settings = {
     bankTransfer: "Chuyển khoản",
     paidOrders: "Đơn đã thanh toán",
     unpaidOrders: "Đơn chưa thanh toán",
-    paymentBreakdown: "Chi tiết phương thức thanh toán",
+    paymentBreakdown: "Theo phương thức thanh toán",
     paymentAttempts: "Lịch sử thanh toán",
     methodCount: (method: string, count: number) =>
-      `${method} · ${formatCount(count)} khoản`,
+      `${method} · ${formatCount(count)} lần`,
     cancelledOrders: (count: number) =>
-      `${formatCount(count)} đơn đã hủy; payment hoàn tất vẫn được tính và đánh dấu để đối soát.`,
+      `${formatCount(count)} đơn đã hủy; khoản đã thu vẫn được giữ để đối chiếu.`,
     sessionNote: "Ghi chú ca",
     mainItem: "Món chính",
-    sideCombo: "Side/Combo",
+    sideCombo: "Món ăn kèm",
     side: "Kèm",
     modifier: "Topping",
     itemNote: "Ghi chú món",
-    reportTitle: "Báo cáo chi tiết ca",
-    reportDescription:
-      "Tiền thu lấy từ payment hoàn tất; đơn hủy hoặc trạng thái đơn lệch vẫn được tính và đánh dấu để đối soát.",
-    aov: "Giá trị TB / bill (AOV)",
-    totalItems: "Tổng món bán",
-    mainDishQuantity: "Phần cơm/món chính",
-    mainDishQuantitySnapshot: "Phần cơm/món chính có snapshot",
-    legacyItemClassification: "Dữ liệu món cũ",
-    legacyItemClassificationLine: (
-      unclassified: number,
-      currentMainDishEstimate: number,
-    ) =>
-      `${formatCount(unclassified)} món chưa có snapshot; danh mục hiện tại ước tính ${formatCount(currentMainDishEstimate)} phần cơm, không cộng vào số canonical.`,
-    sideQuantity: "Món và phần ăn kèm",
-    kdsCompletedQuantity: "Số lượng KDS đã hoàn thành",
-    legacyKdsSnapshot: "Bằng chứng KDS cũ",
-    legacyKdsSnapshotLine: (quantity: number) =>
-      `${formatCount(quantity)} món chỉ có snapshot ticket còn sống lúc chuyển đổi; không đủ để kết luận bếp đã làm hoặc giao đủ.`,
-    printedJobs: "Phiếu in thành công",
+    reportTitle: "Tổng kết ca",
+    reportDescription: "Tổng hợp bán hàng và các khoản cần kiểm tra trong ca.",
+    aov: "Trung bình mỗi đơn",
+    totalItems: "Tổng món đã bán",
     voidItems: "Món bị huỷ",
     peakHour: "Giờ cao điểm",
     peakHourValue: (range: string, count: number) =>
@@ -693,21 +677,12 @@ export const settings = {
     revenueByCategory: "Doanh thu theo danh mục",
     categoryLine: (quantity: number, revenue: string) =>
       `${quantity} món · ${revenue}`,
-    billValueDistribution: "Phân bố giá trị bill",
-    billCount: (count: number) => `${formatCount(count)} bill`,
+    billValueDistribution: "Phân bố giá trị đơn",
+    billCount: (count: number) => `${formatCount(count)} đơn`,
     discountSection: (count: number, total: string) =>
-      `Giảm giá (${formatCount(count)} bill · ${total})`,
+      `Giảm giá (${formatCount(count)} đơn · ${total})`,
     discount: "Giảm",
     note: "Ghi chú",
-    operationalEvidence: "Bằng chứng vận hành",
-    operationalEvidenceLine: (
-      kdsEvents: number,
-      printedJobs: number,
-      totalPrintJobs: number,
-      invoices: number,
-      auditEvents: number,
-    ) =>
-      `${formatCount(kdsEvents)} sự kiện KDS · ${formatCount(printedJobs)}/${formatCount(totalPrintJobs)} phiếu đã in · ${formatCount(invoices)} HĐĐT · ${formatCount(auditEvents)} audit`,
     paymentAttemptWarning: (
       total: number,
       completed: number,
@@ -715,21 +690,27 @@ export const settings = {
       pending: number,
     ) =>
       `${formatCount(total)} lượt thanh toán: ${formatCount(completed)} hoàn tất, ${formatCount(failed)} lỗi, ${formatCount(pending)} đang chờ.`,
-    paymentExceptions: "Ngoại lệ payment trong ca",
+    paymentExceptions: "Thanh toán cần kiểm tra",
     paymentExceptionsLine: (
       stateMismatch: number,
       latePayments: number,
       lateAmount: string,
     ) =>
-      `${formatCount(stateMismatch)} đơn lệch trạng thái/tổng tiền · ${formatCount(latePayments)} payment ngoài thời gian mở–đóng ca (${lateAmount}).`,
-    orderSheetEyebrow: "Chi tiết bill",
-    orderSheetTitle: (orderNumber: string) => `Bill ${orderNumber}`,
-    orderNumber: "Mã bill",
-    orderContext: "Ngữ cảnh",
+      `${formatCount(stateMismatch)} đơn có trạng thái hoặc số tiền chưa khớp · ${formatCount(latePayments)} khoản thanh toán ngoài thời gian ca (${lateAmount}).`,
+    orderSheetEyebrow: "Chi tiết đơn",
+    orderSheetTitle: (orderNumber: string) => `Đơn ${orderNumber}`,
+    orderNumber: "Mã đơn",
+    orderContext: "Hình thức",
     orderCreatedAt: "Tạo lúc",
     orderStatus: "Trạng thái đơn",
     paidWithMethod: (method: string) => `Đã thanh toán · ${method}`,
     unpaid: "Chưa thanh toán",
+    orderInvestigationPrompt: "Cần đối chiếu món hoặc bếp?",
+    orderInvestigationDescription:
+      "Hồ sơ đơn tập hợp số món gọi, bếp làm xong, phục vụ, lượt in, thanh toán và lịch sử thao tác.",
+    orderInvestigationAction: "Xem toàn bộ diễn biến đơn",
+    billBreakdown: (count: number) =>
+      `Chi tiết tính tiền (${formatCount(count)} dòng món)`,
     quantityPrefix: (quantity: number) => `×${quantity}`,
     linePrice: (unitPrice: string, quantity: number) =>
       `${unitPrice} ×${quantity}`,
@@ -738,6 +719,6 @@ export const settings = {
     serviceCharge: "Phụ phí",
     tax: "Thuế",
     total: "Tổng",
-    billNote: "Ghi chú bill",
+    billNote: "Ghi chú đơn",
   },
 } as const;
