@@ -88,6 +88,20 @@ function createFixture(label, paidAtSql) {
   const result = runDatabase(`
     BEGIN;
     SET LOCAL comtammatu.skip_quota_enforcement = 'true';
+    INSERT INTO public.menu_categories (tenant_id, name)
+    SELECT branch.tenant_id, ${sqlLiteral(orderNumber)}
+    FROM public.branches branch
+    JOIN public.profiles profile
+      ON profile.tenant_id = branch.tenant_id
+    WHERE branch.is_active = true
+    ORDER BY branch.id, profile.id
+    LIMIT 1;
+
+    INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
+    SELECT category.tenant_id, category.id, ${sqlLiteral(orderNumber)}, 45000
+    FROM public.menu_categories category
+    WHERE category.name = ${sqlLiteral(orderNumber)};
+
     INSERT INTO public.orders (
       tenant_id,
       branch_id,
@@ -143,6 +157,7 @@ function createFixture(label, paidAtSql) {
     JOIN public.menu_items menu
       ON menu.tenant_id = orders.tenant_id
      AND menu.is_active = true
+     AND menu.name = ${sqlLiteral(orderNumber)}
     WHERE orders.order_number = ${sqlLiteral(orderNumber)}
     ORDER BY menu.id
     LIMIT 1;
@@ -207,7 +222,7 @@ function createFixture(label, paidAtSql) {
   if (![jobId, invoiceId, orderId, paymentId].every(Number.isSafeInteger)) {
     throw new Error(`create ${label} fixture returned invalid identifiers`);
   }
-  return { jobId, invoiceId, orderId, paymentId, tokenHash };
+  return { jobId, invoiceId, orderId, orderNumber, paymentId, tokenHash };
 }
 
 async function waitForAdvisoryLock(lockKey) {
@@ -294,6 +309,9 @@ function claimBatchSql() {
 
 function cleanup(fixtures) {
   const orderIds = fixtures.map(({ orderId }) => orderId).join(",");
+  const orderNumbers = fixtures
+    .map(({ orderNumber }) => sqlLiteral(orderNumber))
+    .join(",");
   const result = runDatabase(`
     DELETE FROM public.tax_invoice_buyer_requests WHERE order_id IN (${orderIds});
     DELETE FROM public.tax_invoice_issue_jobs WHERE order_id IN (${orderIds});
@@ -305,6 +323,7 @@ function cleanup(fixtures) {
     DELETE FROM public.payments WHERE order_id IN (${orderIds});
     DELETE FROM public.order_items WHERE order_id IN (${orderIds});
     DELETE FROM public.orders WHERE id IN (${orderIds});
+    DELETE FROM public.menu_categories WHERE name IN (${orderNumbers});
   `);
   assertSuccess(result, "fixture cleanup");
 }
