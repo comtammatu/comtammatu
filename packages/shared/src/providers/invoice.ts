@@ -56,6 +56,8 @@ export interface InvoiceRequest {
   /** Internal order reference */
   orderId: number;
   orderNumber: string;
+  /** Legal invoice time captured from the completed payment. */
+  invoiceIssuedAt?: string;
 
   /**
    * Provider-neutral seller fields. Viettel S-invoice currently does not send

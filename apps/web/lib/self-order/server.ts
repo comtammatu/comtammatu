@@ -206,14 +206,6 @@ function mapSelfOrderError(
       message: SELF_ORDER_VI.posSessionClosed,
     };
   }
-  if (message.includes("invalid_invoice_payload")) {
-    return {
-      ok: false,
-      status: 422,
-      code: "invalid_invoice",
-      message: SELF_ORDER_VI.buyerBusinessMissing,
-    };
-  }
   if (
     message.includes("order_not_appendable") ||
     message.includes("order_not_payable")
@@ -698,7 +690,6 @@ export async function createSelfOrderPaymentRequest(input: {
   ipHash: string | null;
   clientOpId: string;
   method: "cash_call" | "vietqr";
-  invoice?: Record<string, unknown>;
 }): Promise<SelfOrderActionResult<Record<string, unknown>>> {
   const rateLimit = await consumeSelfOrderRateLimit({
     purpose: "payment",
@@ -713,7 +704,7 @@ export async function createSelfOrderPaymentRequest(input: {
       p_token: input.token,
       p_client_op_id: input.clientOpId,
       p_method: input.method,
-      p_invoice_payload: input.invoice ?? {},
+      p_invoice_payload: {},
     },
   );
   if (error) {

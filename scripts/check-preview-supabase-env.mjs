@@ -14,9 +14,6 @@ function parseEnvironmentRegistry(source) {
   const productionRef = registry.match(
     /^\|\s*`([a-z0-9]{20})`\s*\|\s*\*\*PRODUCTION\*\*/m,
   )?.[1];
-  const devRef = registry.match(
-    /^- \*\*DEV — `[^`]+` \(`([a-z0-9]{20})`\)/m,
-  )?.[1];
   const noTouchRefs = [
     ...registry.matchAll(
       /^\|\s*`([a-z0-9]{20})`\s*\|.*\|\s*Do not touch\.\s*\|$/gm,
@@ -27,7 +24,7 @@ function parseEnvironmentRegistry(source) {
     throw new Error("could not parse the Environment Registry");
   }
 
-  return { productionRef, devRef, noTouchRefs };
+  return { productionRef, noTouchRefs };
 }
 
 function projectRefFromUrl(rawUrl) {
@@ -87,11 +84,6 @@ export function validatePreviewSupabaseEnv(env, registrySource) {
   }
 
   const registry = parseEnvironmentRegistry(registrySource);
-  if (!registry.devRef) {
-    throw new Error(
-      "No persistent Cloud DEV is registered; Vercel Preview cannot bind Supabase",
-    );
-  }
   const rawUrl = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const projectId = env.SUPABASE_PROJECT_ID?.trim();
   const publishableKey = env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
@@ -121,12 +113,6 @@ export function validatePreviewSupabaseEnv(env, registrySource) {
   if (registry.noTouchRefs.includes(urlRef)) {
     throw new Error("Vercel Preview targets a do-not-touch project");
   }
-  if (urlRef !== registry.devRef) {
-    throw new Error(
-      "Vercel Preview must target the registered persistent Cloud DEV project",
-    );
-  }
-
   verifyKeyBinding("NEXT_PUBLIC_SUPABASE_ANON_KEY", anonKey, urlRef, "anon");
   verifyKeyBinding(
     "SUPABASE_SERVICE_ROLE_KEY",
@@ -139,8 +125,6 @@ export function validatePreviewSupabaseEnv(env, registrySource) {
 }
 
 function runSelfTest(registrySource) {
-  const registry = parseEnvironmentRegistry(registrySource);
-  assert.equal(registry.devRef, "dzvilydcccemlafxcydj");
   assert.equal(
     validatePreviewSupabaseEnv({ VERCEL_ENV: "production" }, registrySource)
       .status,
@@ -150,13 +134,27 @@ function runSelfTest(registrySource) {
     validatePreviewSupabaseEnv(
       {
         VERCEL_ENV: "preview",
-        NEXT_PUBLIC_SUPABASE_URL: "https://dzvilydcccemlafxcydj.supabase.co",
-        SUPABASE_PROJECT_ID: "dzvilydcccemlafxcydj",
+        NEXT_PUBLIC_SUPABASE_URL: "https://prvwabcdefghijklmnop.supabase.co",
+        SUPABASE_PROJECT_ID: "prvwabcdefghijklmnop",
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
       },
       registrySource,
     ),
-    { status: "passed", projectRef: "dzvilydcccemlafxcydj" },
+    { status: "passed", projectRef: "prvwabcdefghijklmnop" },
+  );
+  assert.throws(
+    () =>
+      validatePreviewSupabaseEnv(
+        {
+          VERCEL_ENV: "preview",
+          NEXT_PUBLIC_SUPABASE_URL:
+            "https://iexwsuaqqenyjiskawoj.supabase.co",
+          SUPABASE_PROJECT_ID: "iexwsuaqqenyjiskawoj",
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
+        },
+        registrySource,
+      ),
+    /must not target Supabase Production/,
   );
 
   console.log("[preview-supabase-env] self-test passed (3 cases)");
@@ -171,7 +169,7 @@ try {
     const result = validatePreviewSupabaseEnv(process.env, registrySource);
     if (result.status === "passed") {
       console.log(
-        `[preview-supabase-env] passed: Vercel Preview targets registered Cloud DEV ${result.projectRef}`,
+        `[preview-supabase-env] passed: Vercel Preview targets branch ${result.projectRef}`,
       );
     } else {
       console.log(`[preview-supabase-env] skipped: ${result.reason}`);

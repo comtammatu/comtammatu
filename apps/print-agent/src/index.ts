@@ -212,6 +212,7 @@ async function processJob(
       timeoutMs: config.printTimeoutMs,
       maxAttempts: config.printMaxAttempts,
       backoffMs: config.printRetryBackoffMs,
+      webBaseUrl: config.webBaseUrl,
     });
     await completeJob(supabase, jobId, true);
     console.log(`[agent] printed job ${jobId} type=${job.job_type}`);

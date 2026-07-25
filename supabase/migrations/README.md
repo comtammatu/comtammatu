@@ -65,11 +65,13 @@ the re-registration path.
 
 ## Existing environments
 
-- **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
-  is NOT reset to the baseline; the baseline is for fresh/dev envs only.
-- **Cloud DEV (`dzvilydcccemlafxcydj`)** is the non-production target for
-  migration replay and type generation. Do not substitute a local database.
-- Native Supabase Branching requires the guard to verify the Production parent.
+- **Production (`iexwsuaqqenyjiskawoj`)** is the only persistent comtammatu
+  database and the repository type source. It keeps its applied migration
+  history and is not reset to the baseline; the baseline is for fresh Preview
+  environments only.
+- Native Supabase Branching provides the disposable migration-replay target and
+  requires the guard to verify the Production parent. Do not substitute a local
+  database.
   Moving files to `../migration-archive/` alone does not change the parent
   project's ledger.
 

@@ -1,5 +1,5 @@
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { issueTaxInvoiceForPaidOrder } from "@lib/hddt-per-order";
+import { issuePreparedTaxInvoice } from "@lib/hddt-per-order";
 
 type ClaimedTaxInvoiceJob = {
   id: number;
@@ -13,6 +13,9 @@ type ClaimedTaxInvoiceJob = {
 };
 
 type IssueJobStatus = "completed" | "blocked" | "reconcile_required";
+
+const MAX_JOBS_PER_RUN = 20;
+const WORKER_CONCURRENCY = 4;
 
 type WorkerRpcClient = {
   rpc: <T>(
@@ -47,22 +50,19 @@ async function finishJob(
 async function latestInvoiceStatus(
   service: ReturnType<typeof createServiceClient>,
   tenantId: number,
-  orderId: number,
+  taxInvoiceId: number,
 ): Promise<"draft" | "signing" | "submitted" | "issued" | null> {
   const { data, error } = await service
     .from("tax_invoices")
     .select("status")
+    .eq("id", taxInvoiceId)
     .eq("tenant_id", tenantId)
-    .eq("order_id", orderId)
-    .not("status", "in", '("cancelled","replaced","not_required")')
-    .order("id", { ascending: false })
-    .limit(1)
     .maybeSingle();
 
   if (error) {
     console.error("[tax-invoice-worker] invoice lookup failed", {
       tenantId,
-      orderId,
+      taxInvoiceId,
       code: error.code,
     });
     return null;
@@ -84,39 +84,54 @@ async function processJob(
   rpc: WorkerRpcClient,
   job: ClaimedTaxInvoiceJob,
 ): Promise<IssueJobStatus> {
+  if (job.tax_invoice_id === null) {
+    await finishJob(rpc, job.id, "blocked", "invoice_draft_missing");
+    return "blocked";
+  }
+  const taxInvoiceId = job.tax_invoice_id;
+
   const existingStatus = await latestInvoiceStatus(
     service,
     job.tenant_id,
-    job.order_id,
+    taxInvoiceId,
   );
   if (existingStatus === "issued") {
     await finishJob(rpc, job.id, "completed");
     return "completed";
   }
   if (existingStatus === "signing" || existingStatus === "submitted") {
-    await finishJob(rpc, job.id, "reconcile_required", "provider_state_unknown");
+    await finishJob(
+      rpc,
+      job.id,
+      "reconcile_required",
+      "provider_state_unknown",
+    );
     return "reconcile_required";
   }
 
   const invoicePayload =
     job.invoice_payload !== null && typeof job.invoice_payload === "object"
-      ? { ...(job.invoice_payload as Record<string, unknown>), orderId: job.order_id }
+      ? {
+          ...(job.invoice_payload as Record<string, unknown>),
+          orderId: job.order_id,
+        }
       : null;
   if (!invoicePayload) {
     await finishJob(rpc, job.id, "blocked", "invoice_payload_invalid");
     return "blocked";
   }
 
-  const result = await issueTaxInvoiceForPaidOrder({
+  const result = await issuePreparedTaxInvoice({
     supabase: service,
-    tenantId: job.tenant_id,
+    jobId: job.id,
+    taxInvoiceId,
     input: invoicePayload,
     logPrefix: "tax-invoice-worker",
   });
 
   const finalStatus = result.success
     ? result.data?.status
-    : await latestInvoiceStatus(service, job.tenant_id, job.order_id);
+    : await latestInvoiceStatus(service, job.tenant_id, taxInvoiceId);
 
   if (finalStatus === "issued") {
     return "completed";
@@ -152,25 +167,15 @@ export async function runTaxInvoiceIssueWorker(jobId?: number): Promise<{
 
   const service = createServiceClient();
   const rpc = service as unknown as WorkerRpcClient;
-  const { data, error } = await rpc.rpc<ClaimedTaxInvoiceJob[]>(
-    jobId === undefined
-      ? "claim_tax_invoice_issue_jobs"
-      : "claim_tax_invoice_issue_job",
-    jobId === undefined
-      ? { p_limit: 20, p_lease_seconds: 300 }
-      : { p_job_id: jobId, p_lease_seconds: 300 },
-  );
-  if (error) {
-    throw new Error("claim_failed");
-  }
-
   const summary = {
-    claimed: data?.length ?? 0,
+    claimed: 0,
     completed: 0,
     blocked: 0,
     reconcile_required: 0,
   };
-  for (const job of data ?? []) {
+
+  async function handle(job: ClaimedTaxInvoiceJob): Promise<void> {
+    summary.claimed += 1;
     try {
       const status = await processJob(service, rpc, job);
       summary[status] += 1;
@@ -179,5 +184,37 @@ export async function runTaxInvoiceIssueWorker(jobId?: number): Promise<{
       summary.reconcile_required += 1;
     }
   }
+
+  if (jobId !== undefined) {
+    const { data, error } = await rpc.rpc<ClaimedTaxInvoiceJob[]>(
+      "claim_tax_invoice_issue_job",
+      { p_job_id: jobId, p_lease_seconds: 300 },
+    );
+    if (error) throw new Error("claim_failed");
+    await Promise.all((data ?? []).map(handle));
+    return summary;
+  }
+
+  let claimSlots = MAX_JOBS_PER_RUN;
+  let claimFailed = false;
+  await Promise.all(
+    Array.from({ length: WORKER_CONCURRENCY }, async () => {
+      while (claimSlots > 0) {
+        claimSlots -= 1;
+        const { data, error } = await rpc.rpc<ClaimedTaxInvoiceJob[]>(
+          "claim_tax_invoice_issue_jobs",
+          { p_limit: 1, p_lease_seconds: 300 },
+        );
+        if (error) {
+          claimFailed = true;
+          return;
+        }
+        const job = data?.[0];
+        if (!job) return;
+        await handle(job);
+      }
+    }),
+  );
+  if (claimFailed) throw new Error("claim_failed");
   return summary;
 }

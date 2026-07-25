@@ -1,6 +1,5 @@
 "use server";
 
-import { z } from "zod";
 import { unstable_cache } from "next/cache";
 import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
@@ -61,7 +60,10 @@ type OrderPaymentCodeResult = {
   payment_code?: string;
 };
 
-const MST_REGEX = /^\d{10}(-\d{3})?$/;
+const POS_DEFAULT_INVOICE_PAYLOAD = {
+  buyerName: BUYER_NOT_GET_INVOICE_NAME,
+  buyerNotGetInvoice: true,
+} as const;
 
 export interface CreatePaymentSuccessData {
   payment_id: number;
@@ -96,7 +98,10 @@ function describeProviderCreateFailure(method: PaymentMethod): string {
   return "Không thể tạo thanh toán.";
 }
 
-function describeProviderException(method: PaymentMethod, _err: unknown): string {
+function describeProviderException(
+  method: PaymentMethod,
+  _err: unknown,
+): string {
   return describeProviderCreateFailure(method);
 }
 
@@ -204,16 +209,13 @@ function pickRemoteQrData(
   return undefined;
 }
 
-function buildStoredProviderData(
-  providerResult: PaymentResult,
-  invoiceSnapshot: InvoiceBuyerPayload,
-): Json {
+function buildStoredProviderData(providerResult: PaymentResult): Json {
   const raw = {
     ...(providerResult.providerData ?? {}),
     providerRef: providerResult.providerRef,
     qrData: providerResult.qrData,
     redirectUrl: providerResult.redirectUrl,
-    invoiceSnapshot,
+    invoiceSnapshot: POS_DEFAULT_INVOICE_PAYLOAD,
   };
   return JSON.parse(JSON.stringify(raw)) as Json;
 }
@@ -520,22 +522,16 @@ export const createPayment = withActionPositional(
       orderId: number,
       method: RemotePaymentMethod,
       amount: number,
-      invoice: InvoicePayload,
-    ) => ({ branchId, orderId, method, amount, invoice }),
+    ) => ({ branchId, orderId, method, amount }),
     schema: createPaymentSchema,
     customAuth: posUseAuth,
   },
   async (
-    { branchId, orderId, method, amount, invoice },
+    { branchId, orderId, method, amount },
     { supabase, claims },
   ): Promise<ActionResult<CreatePaymentSuccessData>> => {
     if (!isPosBranchInScope(claims, branchId)) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
-
-    const parsedInvoice = parseInvoicePayload(invoice as InvoicePayload);
-    if (!parsedInvoice.success || !parsedInvoice.data) {
-      return parsedInvoice as ActionResult<CreatePaymentSuccessData>;
     }
 
     // Verify order exists and belongs to branch.
@@ -702,10 +698,7 @@ export const createPayment = withActionPositional(
         p_amount: amount,
         p_created_by: user.id,
         p_provider_ref: providerRef,
-        p_provider_data: buildStoredProviderData(
-          providerResult,
-          parsedInvoice.data,
-        ),
+        p_provider_data: buildStoredProviderData(providerResult),
       },
     );
 
@@ -964,17 +957,16 @@ export interface CashPaymentResult {
  */
 export const confirmCashPayment = withActionPositional(
   {
-    argsToInput: (
-      branchId: number,
-      orderId: number,
-      cashReceived: number,
-      invoice: InvoicePayload,
-    ) => ({ branchId, orderId, cashReceived, invoice }),
+    argsToInput: (branchId: number, orderId: number, cashReceived: number) => ({
+      branchId,
+      orderId,
+      cashReceived,
+    }),
     schema: cashConfirmSchema,
     customAuth: posConfirmPaymentAuth,
   },
   async (
-    { branchId, orderId, cashReceived, invoice },
+    { branchId, orderId, cashReceived },
     { supabase, claims },
   ): Promise<ActionResult<CashPaymentResult>> => {
     if (!isPosBranchInScope(claims, branchId)) {
@@ -985,18 +977,13 @@ export const confirmCashPayment = withActionPositional(
       };
     }
 
-    const parsedInvoice = parseInvoicePayload(invoice as InvoicePayload);
-    if (!parsedInvoice.success || !parsedInvoice.data) {
-      return parsedInvoice as ActionResult<CashPaymentResult>;
-    }
-
     const rpc = supabase as unknown as RpcCaller;
     const { data, error } = await rpc.rpc<CashPaymentResult>(
       "confirm_cash_payment_with_invoice_binding",
       {
         p_order_id: orderId,
         p_cash_received: cashReceived,
-        p_invoice_payload: parsedInvoice.data,
+        p_invoice_payload: POS_DEFAULT_INVOICE_PAYLOAD,
       },
     );
 
@@ -1062,67 +1049,16 @@ export interface CashPaymentWithInvoiceResult extends CashPaymentResult {
   invoice: InvoiceOutcome;
 }
 
-const invoiceBuyerPayloadSchema = z
-  .object({
-    buyerName: z.string().trim().max(200).optional(),
-    buyerTaxCode: z
-      .string()
-      .trim()
-      .regex(MST_REGEX, { error: "MST phải có dạng 10 số hoặc 10-3 số" })
-      .optional(),
-    buyerAddress: z.string().trim().max(500).optional(),
-    buyerEmail: z.email({ error: "Email không hợp lệ" }).optional(),
-    buyerNotGetInvoice: z.boolean().optional(),
-  })
-  .refine((v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0), {
-    error: "Có MST thì phải nhập tên người mua",
-    path: ["buyerName"],
-  });
-
-type InvoiceBuyerPayload = z.infer<typeof invoiceBuyerPayloadSchema>;
-type InvoicePayload = InvoiceBuyerPayload | null | undefined;
-
-function normalizeInvoicePayload(invoice: InvoicePayload): InvoiceBuyerPayload {
-  return (
-    invoice ?? {
-      buyerName: BUYER_NOT_GET_INVOICE_NAME,
-      buyerNotGetInvoice: true,
-    }
-  );
-}
-
-function parseInvoicePayload(
-  invoice: InvoicePayload,
-): ActionResult<InvoiceBuyerPayload> {
-  const parsed = invoiceBuyerPayloadSchema.safeParse(
-    normalizeInvoicePayload(invoice),
-  );
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu HĐĐT không hợp lệ",
-    };
-  }
-  return { success: true, data: parsed.data };
-}
-
 /** Payment completion atomically stores the HĐĐT snapshot and queues the job. */
 export async function confirmCashPaymentWithInvoice(
   branchId: number,
   orderId: number,
   cashReceived: number,
-  invoice: InvoicePayload,
 ): Promise<ActionResult<CashPaymentWithInvoiceResult>> {
-  const posInvoicePayload = parseInvoicePayload(invoice);
-  if (!posInvoicePayload.success || !posInvoicePayload.data) {
-    return posInvoicePayload as ActionResult<CashPaymentWithInvoiceResult>;
-  }
-
   const paymentResult = await confirmCashPayment(
     branchId,
     orderId,
     cashReceived,
-    posInvoicePayload.data,
   );
   if (!paymentResult.success || !paymentResult.data) {
     return paymentResult as ActionResult<CashPaymentWithInvoiceResult>;

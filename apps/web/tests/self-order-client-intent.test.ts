@@ -52,14 +52,12 @@ test("one logical batch payload reuses one client operation id", () => {
 test("payment intent key is canonical and changes with payable truth", () => {
   const left = buildPaymentIntentKey({
     method: "vietqr",
-    invoice: { buyerName: "Má Tư", buyerNotGetInvoice: false },
     orderNumber: "MT-1",
     totalAmount: 45_000,
   });
   const right = buildPaymentIntentKey({
     totalAmount: 45_000,
     orderNumber: "MT-1",
-    invoice: { buyerNotGetInvoice: false, buyerName: "Má Tư" },
     method: "vietqr",
   });
   assert.equal(left, right);
@@ -67,7 +65,6 @@ test("payment intent key is canonical and changes with payable truth", () => {
     left,
     buildPaymentIntentKey({
       method: "vietqr",
-      invoice: { buyerName: "Má Tư", buyerNotGetInvoice: false },
       orderNumber: "MT-1",
       totalAmount: 50_000,
     }),

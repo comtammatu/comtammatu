@@ -2872,6 +2872,63 @@ export type Database = {
           },
         ]
       }
+      kds_ticket_events: {
+        Row: {
+          actor_id: string | null
+          branch_id: number
+          context: Json
+          event_type: string
+          from_status: string | null
+          id: number
+          item_snapshot: Json
+          kitchen_send_batch_id: number | null
+          occurred_at: string
+          order_id: number
+          order_item_id: number
+          reason: string | null
+          station_id: number
+          tenant_id: number
+          ticket_id: number
+          to_status: string
+        }
+        Insert: {
+          actor_id?: string | null
+          branch_id: number
+          context?: Json
+          event_type: string
+          from_status?: string | null
+          id?: never
+          item_snapshot: Json
+          kitchen_send_batch_id?: number | null
+          occurred_at?: string
+          order_id: number
+          order_item_id: number
+          reason?: string | null
+          station_id: number
+          tenant_id: number
+          ticket_id: number
+          to_status: string
+        }
+        Update: {
+          actor_id?: string | null
+          branch_id?: number
+          context?: Json
+          event_type?: string
+          from_status?: string | null
+          id?: never
+          item_snapshot?: Json
+          kitchen_send_batch_id?: number | null
+          occurred_at?: string
+          order_id?: number
+          order_item_id?: number
+          reason?: string | null
+          station_id?: number
+          tenant_id?: number
+          ticket_id?: number
+          to_status?: string
+        }
+        Relationships: []
+      }
       kds_tickets: {
         Row: {
           branch_id: number
@@ -3652,6 +3709,8 @@ export type Database = {
       order_items: {
         Row: {
           cancel_reason: string | null
+          category_snapshot_source: string | null
+          category_type_snapshot: string | null
           created_at: string
           discount_amount: number
           discount_note: string | null
@@ -3682,6 +3741,8 @@ export type Database = {
         }
         Insert: {
           cancel_reason?: string | null
+          category_snapshot_source?: string | null
+          category_type_snapshot?: string | null
           created_at?: string
           discount_amount?: number
           discount_note?: string | null
@@ -3712,6 +3773,8 @@ export type Database = {
         }
         Update: {
           cancel_reason?: string | null
+          category_snapshot_source?: string | null
+          category_type_snapshot?: string | null
           created_at?: string
           discount_amount?: number
           discount_note?: string | null
@@ -8521,6 +8584,83 @@ export type Database = {
           },
         ]
       }
+      tax_invoice_buyer_requests: {
+        Row: {
+          branch_id: number
+          close_reason: string | null
+          closed_at: string | null
+          created_at: string
+          expires_at: string
+          id: number
+          order_id: number
+          status: string
+          submitted_at: string | null
+          submitted_payload: Json | null
+          tenant_id: number
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: never
+          order_id: number
+          status?: string
+          submitted_at?: string | null
+          submitted_payload?: Json | null
+          tenant_id: number
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: never
+          order_id?: number
+          status?: string
+          submitted_at?: string | null
+          submitted_payload?: Json | null
+          tenant_id?: number
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_invoice_buyer_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_buyer_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_buyer_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_buyer_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_invoice_events: {
         Row: {
           actor_id: string | null
@@ -8582,6 +8722,7 @@ export type Database = {
       tax_invoice_issue_jobs: {
         Row: {
           attempt_count: number
+          available_at: string
           branch_id: number
           created_at: string
           id: number
@@ -8597,6 +8738,7 @@ export type Database = {
         }
         Insert: {
           attempt_count?: number
+          available_at?: string
           branch_id: number
           created_at?: string
           id?: never
@@ -8612,6 +8754,7 @@ export type Database = {
         }
         Update: {
           attempt_count?: number
+          available_at?: string
           branch_id?: number
           created_at?: string
           id?: never
@@ -8757,6 +8900,7 @@ export type Database = {
           invoice_kind: string
           invoice_number: string | null
           invoice_series: string | null
+          invoice_time: string | null
           issued_at: string | null
           order_id: number | null
           pdf_sha256: string | null
@@ -8796,6 +8940,7 @@ export type Database = {
           invoice_kind?: string
           invoice_number?: string | null
           invoice_series?: string | null
+          invoice_time?: string | null
           issued_at?: string | null
           order_id?: number | null
           pdf_sha256?: string | null
@@ -8835,6 +8980,7 @@ export type Database = {
           invoice_kind?: string
           invoice_number?: string | null
           invoice_series?: string | null
+          invoice_time?: string | null
           issued_at?: string | null
           order_id?: number | null
           pdf_sha256?: string | null
@@ -10360,6 +10506,40 @@ export type Database = {
           opening_value: number
         }[]
       }
+      get_invoice_buyer_request_as_system: {
+        Args: { p_token_hash: string }
+        Returns: Json
+      }
+      get_kds_ticket_history: {
+        Args: {
+          p_before_at?: string
+          p_before_id?: number
+          p_branch_id: number
+          p_event_type?: string
+          p_from?: string
+          p_limit?: number
+          p_order_id?: number
+          p_to?: string
+        }
+        Returns: {
+          actor_id: string
+          actor_name: string
+          context: Json
+          event_id: number
+          event_type: string
+          from_status: string
+          item_snapshot: Json
+          kitchen_send_batch_id: number
+          occurred_at: string
+          order_id: number
+          order_item_id: number
+          print_jobs: Json
+          reason: string
+          station_id: number
+          ticket_id: number
+          to_status: string
+        }[]
+      }
       get_leave_review_queue: {
         Args: { p_branch_id: number; p_include_rows?: boolean }
         Returns: {
@@ -10395,6 +10575,10 @@ export type Database = {
         Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
         Returns: Json
       }
+      get_order_operational_trace: {
+        Args: { p_order_id: number }
+        Returns: Json
+      }
       get_orders_for_day: {
         Args: { p_branch_id: number; p_date: string }
         Returns: {
@@ -10410,6 +10594,56 @@ export type Database = {
           paid_at: string
           paid_hour: number
           payment_method: string
+          subtotal: number
+          tax_amount: number
+          total_amount: number
+        }[]
+      }
+      get_orders_for_day_v2: {
+        Args: { p_branch_id: number; p_date: string }
+        Returns: {
+          audit_event_count: number
+          branch_id: number
+          branch_name: string
+          completed_payment_count: number
+          discount_amount: number
+          included_side_quantity: number
+          invoice_evidence: Json
+          invoice_kind: string
+          invoice_number: string
+          invoice_provider_ref: string
+          invoice_status: string
+          item_count: number
+          item_row_count: number
+          kds_completed_item_quantity: number
+          kds_completed_ticket_count: number
+          kds_legacy_completed_item_quantity: number
+          kds_legacy_completed_ticket_count: number
+          kds_ticket_count: number
+          legacy_current_main_dish_quantity: number
+          legacy_current_side_dish_quantity: number
+          legacy_unclassified_quantity: number
+          main_dish_quantity: number
+          order_id: number
+          order_number: string
+          order_payment_state_mismatch: boolean
+          order_payment_status: string
+          order_status: string
+          order_total_amount: number
+          order_type: string
+          paid_at: string
+          paid_hour: number
+          payment_attempt_count: number
+          payment_attempts: Json
+          payment_id: number
+          payment_method: string
+          pos_session_id: number
+          print_failed_count: number
+          print_job_count: number
+          printed_job_count: number
+          reconciliation_status: string
+          served_item_quantity: number
+          side_dish_quantity: number
           subtotal: number
           tax_amount: number
           total_amount: number
@@ -10442,6 +10676,10 @@ export type Database = {
         }[]
       }
       get_pos_session_report: { Args: { p_session_id: number }; Returns: Json }
+      get_pos_session_report_legacy_20260725: {
+        Args: { p_session_id: number }
+        Returns: Json
+      }
       get_production_recipe_context: {
         Args: { p_branch_id: number; p_finished_good_id: number }
         Returns: Json
@@ -10835,6 +11073,14 @@ export type Database = {
         Args: { p_actor_id?: string; p_order_id: number }
         Returns: Json
       }
+      prepare_tax_invoice_issue_job_as_system: {
+        Args: {
+          p_job_id: number
+          p_provider_ref: string
+          p_tax_invoice_id: number
+        }
+        Returns: Json
+      }
       prepare_tax_invoice_provider_submission: {
         Args: { p_provider_ref: string; p_tax_invoice_id: number }
         Returns: Json
@@ -10965,6 +11211,10 @@ export type Database = {
         Returns: Json
       }
       reconcile_sepay_order_evidence: {
+        Args: { p_event_id: number; p_payment_code: string }
+        Returns: Json
+      }
+      reconcile_sepay_order_evidence_core: {
         Args: { p_event_id: number; p_payment_code: string }
         Returns: Json
       }
@@ -11263,6 +11513,10 @@ export type Database = {
         }
         Returns: Json
       }
+      self_order_cancel_vietqr_payment: {
+        Args: { p_client_op_id: string; p_token: string }
+        Returns: Json
+      }
       self_order_canonicalize_cart: {
         Args: { p_items: Json; p_tenant_id: number }
         Returns: Json
@@ -11468,6 +11722,10 @@ export type Database = {
           p_shift_id?: number
         }
         Returns: number
+      }
+      submit_invoice_buyer_request_as_system: {
+        Args: { p_invoice_payload: Json; p_token_hash: string }
+        Returns: Json
       }
       submit_leave_request: {
         Args: {

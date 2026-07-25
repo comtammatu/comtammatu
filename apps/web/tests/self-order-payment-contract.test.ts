@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  selfOrderPaymentRequestSchema,
   selfOrderPaymentRequestStatusResponseSchema,
   selfOrderVietQrResponseSchema,
 } from "../lib/self-order/contracts";
@@ -126,11 +127,25 @@ test("Self-Order permits payment while KDS is still preparing", () => {
   assert.doesNotMatch(paymentPanel, /paymentNotReady/);
 });
 
-test("Self-Order selects payment and HĐĐT before creating an immutable request", () => {
+test("Self-Order creates buyer-neutral payments after the existing confirmation", () => {
   const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
   const client = readWeb("app/q/[token]/self-order-client.tsx");
+  const route = readWeb("app/api/self-order/[token]/payment/route.ts");
+  const server = readWeb("lib/self-order/server.ts");
   const messages = readShared("messages/self-order.ts");
+  const request = {
+    clientOpId: "ee023e0f-618c-4b72-b6bc-580030845214",
+    method: "vietqr",
+  } as const;
 
+  assert.equal(selfOrderPaymentRequestSchema.safeParse(request).success, true);
+  assert.equal(
+    selfOrderPaymentRequestSchema.safeParse({
+      ...request,
+      invoice: { buyerTaxCode: "0312345678" },
+    }).success,
+    false,
+  );
   assert.match(paymentPanel, /selectedPaymentMethod/);
   assert.match(paymentPanel, /onPaymentMethodChange\("cash_call"\)/);
   assert.match(paymentPanel, /onPaymentMethodChange\("vietqr"\)/);
@@ -140,8 +155,12 @@ test("Self-Order selects payment and HĐĐT before creating an immutable request
   assert.match(client, /requestPayment\(paymentConfirmationMethod\)/);
   assert.match(
     client,
-    /postSelfOrderJson\([\s\S]*?\/payment`[\s\S]*?invoice: invoicePayload/,
+    /postSelfOrderJson\([\s\S]*?\/payment`[\s\S]*?\{ clientOpId: intent\.clientOpId, method \}/,
   );
+  assert.doesNotMatch(client, /invoice: invoicePayload|buyerTaxCode/);
+  assert.doesNotMatch(route, /parsed\.data\.invoice/);
+  assert.match(server, /p_invoice_payload: \{\}/);
+  assert.doesNotMatch(paymentPanel, /buyerTaxCode|buyerNotGetInvoice/);
   assert.match(messages, /paymentConfirmAction: "Xác nhận thanh toán"/);
   assert.match(messages, /paymentReconcileAction: "Chờ đối soát"/);
   assert.match(

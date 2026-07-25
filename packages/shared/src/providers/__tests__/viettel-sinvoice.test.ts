@@ -655,6 +655,49 @@ test("createInvoice: sends buyer email for named buyer invoices", async () => {
   }
 });
 
+test("createInvoice: sends the completed payment time as invoiceIssuedDate", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{
+    input: Parameters<typeof fetch>[0];
+    init: NonNullable<Parameters<typeof fetch>[1]>;
+  }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init: init ?? {} });
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(JSON.stringify({ result: { invoiceNo: "C26MAA84" } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const invoiceIssuedAt = "2026-07-25T03:15:30.000Z";
+    await instantIssueProvider().createInvoice({
+      ...instantIssueReq(84),
+      invoiceIssuedAt,
+    });
+
+    const createCall = calls.find((call) =>
+      String(call.input).includes("/InvoiceAPI/InvoiceWS/createInvoice/"),
+    );
+    assert.ok(createCall, "expected createInvoice endpoint to be called");
+    const body = JSON.parse(String(createCall.init.body)) as {
+      generalInvoiceInfo: { invoiceIssuedDate?: number };
+    };
+    assert.equal(
+      body.generalInvoiceInfo.invoiceIssuedDate,
+      Date.parse(invoiceIssuedAt),
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{

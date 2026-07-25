@@ -136,14 +136,12 @@ export const SELF_ORDER_VI = {
   paymentConfirmAction: "Xác nhận thanh toán",
   paymentConfirmTitle: "Xác nhận thanh toán?",
   paymentConfirmDescription:
-    "Kiểm tra phương thức, số tiền và thông tin HĐĐT trước khi tiếp tục.",
+    "Kiểm tra phương thức và số tiền trước khi tiếp tục.",
   paymentReconcileAction: "Chờ đối soát",
   paymentReconcileTitle: "Chờ đối soát VietQR?",
   paymentReconcileDescription:
     "Đơn chỉ hoàn tất sau khi SePay xác thực hoặc chủ quán đối soát.",
   paymentConfirmMethod: "Phương thức",
-  paymentConfirmInvoice: "Thông tin HĐĐT",
-  paymentConfirmInvoiceDefault: "Không ghi thông tin người mua",
   paymentConfirmBack: "Quay lại",
   cashCallOk: "Đã gọi nhân viên thu tiền mặt.",
   vietQrPendingTitle: "Mã QR thanh toán",
@@ -156,25 +154,6 @@ export const SELF_ORDER_VI = {
   saveVietQr: "Lưu QR",
   paymentFailed: "Không tạo được yêu cầu thanh toán. Vui lòng gọi nhân viên.",
   paymentDescription: "Chọn cách thanh toán sau khi nhân viên đã duyệt món.",
-  buyerTitle: "Thông tin HĐĐT",
-  buyerDescription:
-    "HĐĐT vẫn được phát hành cho đơn đã thanh toán. Nhập MST nếu bạn cần thông tin người mua trên hóa đơn.",
-  buyerNoInvoice: "Không cần ghi thông tin người mua (vẫn xuất HĐĐT)",
-  buyerName: "Tên người mua / công ty",
-  buyerTaxCode: "Mã số thuế",
-  buyerAddress: "Địa chỉ",
-  buyerEmail: "Email nhận hóa đơn",
-  buyerEmailInvalid: "Email chưa đúng định dạng.",
-  buyerBusinessHint:
-    "Nhập MST để tự điền tên và địa chỉ. Hãy kiểm tra lại trước khi thanh toán.",
-  buyerTaxLookupLoading: "Đang tra cứu MST...",
-  buyerTaxLookupFound: "Đã tìm thấy thông tin. Vui lòng kiểm tra lại.",
-  buyerTaxLookupNotFound:
-    "Không tìm thấy MST. Vui lòng kiểm tra hoặc nhập tay.",
-  buyerTaxLookupUnavailable:
-    "Chưa tra cứu được. Bạn vẫn có thể nhập tên và địa chỉ.",
-  buyerTaxInvalid: "MST phải có dạng 10 số hoặc 10-3 số.",
-  buyerBusinessMissing: "Vui lòng nhập đủ tên, MST và địa chỉ.",
   staffQueueButton: "QR gọi món",
   staffQueueTitle: "Yêu cầu QR gọi món",
   staffQueueDescription: "Duyệt lượt đầu, theo dõi gọi thanh toán từ bàn.",

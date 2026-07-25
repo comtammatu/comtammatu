@@ -262,14 +262,24 @@ BEGIN
       AND j.payment_id = v_pending_payment_id
       AND j.status = 'queued'
       AND j.attempt_count = 0
-      AND j.tax_invoice_id IS NULL
+      AND j.tax_invoice_id IS NOT NULL
+  ) <> 1 OR (
+    SELECT count(*)
+    FROM public.tax_invoices ti
+    WHERE ti.tenant_id = v_tenant_id
+      AND ti.order_id = v_pending_order_id
+      AND ti.status = 'draft'
+      AND ti.invoice_number IS NULL
+      AND ti.provider_ref IS NULL
+      AND ti.invoice_time IS NOT NULL
   ) <> 1 OR EXISTS (
     SELECT 1
     FROM public.tax_invoices ti
     WHERE ti.tenant_id = v_tenant_id
       AND ti.order_id = v_pending_order_id
+      AND ti.status <> 'draft'
   ) THEN
-    RAISE EXCEPTION 'Settled VietQR did not queue exactly one untouched HĐĐT job';
+    RAISE EXCEPTION 'Settled VietQR did not create exactly one untouched HĐĐT draft';
   END IF;
 
   v_result := public.reconcile_sepay_order_evidence(
@@ -289,14 +299,24 @@ BEGIN
       AND j.payment_id = v_pending_payment_id
       AND j.status = 'queued'
       AND j.attempt_count = 0
-      AND j.tax_invoice_id IS NULL
+      AND j.tax_invoice_id IS NOT NULL
+  ) <> 1 OR (
+    SELECT count(*)
+    FROM public.tax_invoices ti
+    WHERE ti.tenant_id = v_tenant_id
+      AND ti.order_id = v_pending_order_id
+      AND ti.status = 'draft'
+      AND ti.invoice_number IS NULL
+      AND ti.provider_ref IS NULL
+      AND ti.invoice_time IS NOT NULL
   ) <> 1 OR EXISTS (
     SELECT 1
     FROM public.tax_invoices ti
     WHERE ti.tenant_id = v_tenant_id
       AND ti.order_id = v_pending_order_id
+      AND ti.status <> 'draft'
   ) THEN
-    RAISE EXCEPTION 'Same-event replay changed the queued HĐĐT job';
+    RAISE EXCEPTION 'Same-event replay changed the queued HĐĐT draft';
   END IF;
 
   INSERT INTO public.orders (
@@ -849,6 +869,10 @@ BEGIN
   FROM public.tax_invoice_issue_jobs
   WHERE order_id = v_fresh_order_id;
 
+  UPDATE public.tax_invoice_issue_jobs
+  SET available_at = now() - interval '1 second'
+  WHERE id = v_target_job_id;
+
   SELECT id INTO v_claimed_job_id
   FROM public.claim_tax_invoice_issue_job(v_target_job_id, 300);
 
@@ -880,35 +904,18 @@ BEGIN
   END IF;
 
   v_invoice_provider_ref := 'HDDT-TEST-' || v_code_suffix;
-  INSERT INTO public.tax_invoices (
-    tenant_id,
-    branch_id,
-    order_id,
-    buyer_name,
-    subtotal,
-    vat_rate,
-    vat_amount,
-    total_amount,
-    provider,
-    provider_ref,
-    status,
-    signing_started_at,
-    created_by
-  ) VALUES (
-    v_tenant_id,
-    v_branch_id,
-    v_pending_order_id,
-    'Người mua không lấy hóa đơn',
-    v_amount,
-    0,
-    0,
-    v_amount,
-    'viettel',
-    v_invoice_provider_ref,
-    'signing',
-    now(),
-    v_owner_id
-  ) RETURNING id INTO v_invoice_id;
+  SELECT tax_invoice_id INTO v_invoice_id
+  FROM public.tax_invoice_issue_jobs
+  WHERE id = v_target_job_id;
+
+  v_result := public.prepare_tax_invoice_issue_job_as_system(
+    v_target_job_id,
+    v_invoice_id,
+    v_invoice_provider_ref
+  );
+  IF v_result ->> 'status' <> 'signing' THEN
+    RAISE EXCEPTION 'Payment-time HĐĐT draft was not prepared: %', v_result;
+  END IF;
 
   v_result := public.reconcile_tax_invoice_provider_issued(
     v_invoice_id,
