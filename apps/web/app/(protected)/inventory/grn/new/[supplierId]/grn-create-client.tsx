@@ -304,6 +304,7 @@ export function GrnCreateClient({
         </InputGroupAddon>
         <InputGroupInput
           type="search"
+          aria-label={GRN_CREATE_COPY.searchPlaceholder}
           value={controller.query}
           onChange={(event) => controller.setQuery(event.target.value)}
           placeholder={GRN_CREATE_COPY.searchPlaceholder}

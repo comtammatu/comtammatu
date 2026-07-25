@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { STOCKTAKE_SESSION_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -32,10 +33,10 @@ import {
 import type { CountUnitOption } from "../../../_lib/count-units";
 
 const toastNoCountsInput = "Chưa nhập số đếm nào";
-const toastSubmitRoundFailed = "Không submit được round";
+const toastSubmitRoundFailed = "Không thể gửi kết quả đếm";
 const toastSavedCounts = (count: number) => `Đã lưu ${count} dòng đếm`;
-const labelWizardQuick = "Nhập nhanh (Wizard)";
-const labelSwitchTable = "Chuyển sang Nhập Bảng";
+const labelWizardQuick = "Nhập nhanh từng món";
+const labelSwitchTable = "Nhập theo bảng";
 
 function buildCountUnitPreview({
   quantity,
@@ -292,12 +293,12 @@ export function StocktakeCountClient({
           >
             {messages.inventory.stocktake.detail.completeAction}
           </Button>
-          {!editable ? (
-            <Button variant="outline" size={embedded ? "touch" : "sm"} disabled>
-              {status === "completed"
-                ? STOCKTAKE_SESSION_STATUS_LABELS_VI.completed
-                : messages.inventory.stocktake.detail.updateFailed}
-            </Button>
+          {!canCount ? (
+            <Badge variant={status === "cancelled" ? "secondary" : "success"}>
+              {status === "cancelled"
+                ? STOCKTAKE_SESSION_STATUS_LABELS_VI.cancelled
+                : STOCKTAKE_SESSION_STATUS_LABELS_VI.completed}
+            </Badge>
           ) : null}
         </BlindCountingGridActions>
       </AppSection>

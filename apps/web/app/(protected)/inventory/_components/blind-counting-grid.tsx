@@ -193,6 +193,8 @@ export function BlindCountingGrid({
             <IconSearch aria-hidden />
           </InputGroupAddon>
           <InputGroupInput
+            type="search"
+            aria-label={INVENTORY_VI.searchIngredientPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={INVENTORY_VI.searchIngredientPlaceholder}

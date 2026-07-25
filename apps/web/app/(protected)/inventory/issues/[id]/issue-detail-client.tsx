@@ -9,6 +9,7 @@ import {
   Trash as IconTrash,
   X as IconX,
 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
@@ -586,14 +587,11 @@ export function IssueDetailClient({
           }
           trailing={
             <>
-              <Button type="button" variant="secondary" disabled>
-                {ISSUES_VI.draftAutoSaved}
-              </Button>
+              <Badge variant="secondary">{ISSUES_VI.draftAutoSaved}</Badge>
               <Button
                 type="button"
                 onClick={handleConfirmIssue}
                 disabled={isPending || lines.length === 0}
-                className="transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <IconCircleCheck className="size-5" />
                 {surface.confirmAction}
@@ -788,15 +786,12 @@ export function IssueDetailClient({
           }
           trailing={
             <>
-              <Button type="button" variant="secondary" size="touch" disabled>
-                {ISSUES_VI.draftAutoSaved}
-              </Button>
+              <Badge variant="secondary">{ISSUES_VI.draftAutoSaved}</Badge>
               <Button
                 type="button"
                 size="touch-lg"
                 onClick={handleConfirmIssue}
                 disabled={isPending || lines.length === 0}
-                className="transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <IconCircleCheck className="size-5" />
                 {surface.confirmAction}

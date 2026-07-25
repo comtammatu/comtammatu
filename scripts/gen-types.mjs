@@ -7,8 +7,8 @@
 // work the same way on cmd vs sh. Lesson #11–#13 in `tasks/lessons.md`.
 //
 // Behavior:
-// - Generates from the registered Production project only. Typegen is read-only
-//   and never derives its target from stored link state.
+// - Generates from Production only after an explicit matching project ref.
+//   Typegen is read-only and never loads stored env or link state.
 // - Captures only stdout; CLI update notice on stderr is shown in console
 //   but never poisons the types file.
 // - Writes to `packages/database/src/types/database.types.ts`.
@@ -18,9 +18,9 @@ import { writeFileSync } from "node:fs";
 
 const PRODUCTION_PROJECT_ID = "iexwsuaqqenyjiskawoj";
 const requestedProjectId = process.env["SUPABASE_PROJECT_ID"]?.trim();
-if (requestedProjectId && requestedProjectId !== PRODUCTION_PROJECT_ID) {
+if (requestedProjectId !== PRODUCTION_PROJECT_ID) {
   console.error(
-    `gen-types: SUPABASE_PROJECT_ID must be the registered Production ref ${PRODUCTION_PROJECT_ID}.`,
+    `gen-types: SUPABASE_PROJECT_ID must explicitly match Production ${PRODUCTION_PROJECT_ID}.`,
   );
   process.exit(1);
 }

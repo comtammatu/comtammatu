@@ -362,7 +362,7 @@ Checkpoint C2 chạy sau operational hot paths và sau toàn bộ P6; ba agent g
 - Archetype: login/access-denied/offline `GATE/AUTH`; root not-found/error là shared recovery frame; Self-order `PUBLIC-WORKFLOW`.
 - Primary action: đăng nhập, trở về route mặc định/đăng xuất, thử lại khi có mạng hoặc tiếp tục guest workflow; tất cả control quan trọng dùng named touch size.
 - Disposition: `/offline` và `/access-denied` đạt `tune/browser-runtime/final`; login `tune/browser-runtime/open` vì visual/Axe đã pass nhưng auth success cần registered target; Self-order active flow giữ `tune/implemented-static/open`, unavailable state đã có public runtime proof.
-- Implementation: offline retry chuyển sang `size="touch"`; login bỏ decorative infinite mascot loop; access-denied dùng semantic Badge variants thay route-local tone classes; Axe pass ở `390×844` và `1440×900`, offline retry đo ≥44px. Login runtime dùng local-only Supabase placeholder để render proxy path, không nối DEV/Production.
+- Implementation: offline retry chuyển sang `size="touch"`; login bỏ decorative infinite mascot loop; access-denied dùng semantic Badge variants thay route-local tone classes; Axe pass ở `390×844` và `1440×900`, offline retry đo ≥44px. Login runtime dùng local-only Supabase placeholder để render proxy path, không nối Cloud database.
 
 ## 10. P7 — Release Gate và Self-Improving Loop
 
@@ -406,7 +406,7 @@ Mỗi wave chạy focused tests, `corepack pnpm typecheck`, `corepack pnpm lint`
 | P1 Base UI | Source audit | App không import trực tiếp; imports nằm trong `packages/ui` |
 | C0 | Claude/Agy/Cursor findings | Claude và Cursor có evidence dùng được; Agy không có output do auth/credit/permission boundary; Codex đã reconciliation |
 | P2 Input contract | Source + preventive guards | Xóa public compatibility alias và 8 consumer prop; `controlSize` là visual density API duy nhất |
-| P3 axe setup | Playwright list + runtime | 7 representative specs; `/login`, `/offline`, `/access-denied` và Self-order unavailable đã pass Axe tại 390×844 và 1440×900 trên local production server; Branch landing, checkout approvals và Owner inventory còn mở vì worktree không có `.env.test.local`, auth storage hoặc registered Preview/DEV binding |
+| P3 axe setup | Playwright list + runtime | 7 representative specs; `/login`, `/offline`, `/access-denied` và Self-order unavailable đã pass Axe tại 390×844 và 1440×900 trên local production server; Branch landing, checkout approvals và Owner inventory còn mở vì worktree không có `.env.test.local`, auth storage và Vercel Preview đang bị tắt |
 | P4 CSS convergence | Source audit + UI contract | Xóa 3 utility không consumer; legacy variable name giữ 0 và có preventive ratchet |
 | P5 manifest/update/offline | Static tests + local production browser | Serwist ghi 257 precache URLs ở full gate mới nhất; manifest không có parse error; installability chỉ báo CLI incognito; hai SW khác hash kích hoạt `controllerchange`; offline `/br/1` render fallback sau update, còn `/br/1/pos` và `/q/*` vẫn NetworkOnly |
 | P6 tranche 1 | Focused/full static tests | Tune shared checkout-approval presenter; không đổi action, loader, authority hoặc business flow |

@@ -33,10 +33,10 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
   role has).
 - Production keeps its applied migration history; the baseline is the fresh-env
   install path. Cloud verification uses a disposable Preview Branch whose parent
-  is Production; there is no persistent non-production database. Repository type generation
-  reads Production after the migration is applied. Workstations do not use Local
-  Docker as a fallback. Empty-database replay is a CI-only harness, and
-  Production evidence stays within `database.md` rights.
+  is Production; there is no persistent non-production database. Repository type
+  generation reads Production after the migration is applied. Workstations do
+  not use Local Docker as a fallback. Empty-database replay is a CI-only harness,
+  and Production evidence stays within `database.md` rights.
   Fresh-env notes live in `supabase/migrations/README.md`.
 
 ## Source Ladder

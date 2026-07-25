@@ -10,6 +10,7 @@ import { parseBranchIdParam } from "@/(protected)/inventory/_lib/inventory-scope
 import { getWasteCapStatus } from "@/(protected)/inventory/waste-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import type { WasteFormContext } from "@lib/inventory/waste-create-model";
+import { messages } from "@lib/messages";
 import { WasteCreateClient } from "./waste-create-client";
 
 export const dynamic = "force-dynamic";
@@ -21,14 +22,16 @@ interface WasteNewPageContentProps {
 function renderWasteUnavailable({
   title,
   description,
+  mode = "no-access",
 }: {
   title: string;
   description: string;
+  mode?: "no-access" | "error";
 }) {
   return (
     <AppPage width="default">
       <AppPageHeader title={INVENTORY_VI.createWasteTitle} />
-      <AppEmptyState mode="no-access" title={title} description={description} />
+      <AppEmptyState mode={mode} title={title} description={description} />
     </AppPage>
   );
 }
@@ -88,11 +91,26 @@ export async function WasteNewPageContent({
       .order("name", { ascending: true }),
     getWasteCapStatus(branchId),
   ]);
-  const { data: stockLevels } = await supabase
+  const { data: stockLevels, error: stockLevelsError } = await supabase
     .from("stock_levels")
     .select("ingredient_id, location_id, current_quantity, avg_unit_cost")
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", branchId);
+
+  if (
+    branchRes.error ||
+    locationsRes.error ||
+    ingredientsRes.error ||
+    stockLevelsError ||
+    !capRes.success ||
+    !capRes.data
+  ) {
+    return renderWasteUnavailable({
+      mode: "error",
+      title: messages.inventory.waste.loadFailedTitle,
+      description: messages.inventory.waste.loadFailedDescription,
+    });
+  }
 
   if (!branchRes.data) {
     redirect(fallbackHref);
@@ -144,16 +162,7 @@ export async function WasteNewPageContent({
         stockLevels: ingredientStockLevels,
       };
     }),
-    capStatus:
-      capRes.success && capRes.data
-        ? capRes.data
-        : {
-            shiftKey: "",
-            shiftSum: 0,
-            shiftCap: 1_500_000,
-            branchToday: 0,
-            branchCap: 500_000,
-          },
+    capStatus: capRes.data,
   };
 
   return <WasteCreateClient context={context} />;

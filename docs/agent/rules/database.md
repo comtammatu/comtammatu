@@ -19,9 +19,9 @@ project-scoped MCP tools; it is not the guarded-read policy used for comtammatu
 Production.
 
 - Production is the only persistent comtammatu Cloud database.
-  `corepack pnpm db:types` generates from the registered Production ref and
-  rejects any other `SUPABASE_PROJECT_ID`. Type generation is read-only and
-  does not grant schema-write authority.
+  `corepack pnpm db:types` requires the literal registered Production
+  `SUPABASE_PROJECT_ID` and rejects a missing or different ref. Type generation
+  is read-only and does not grant schema-write authority.
 - Use an on-demand Preview Branch for isolated migration replay or disposable
   verification. It must be an ephemeral child of the registered Production
   project, never a second persistent non-production project. A workstation must

@@ -21,6 +21,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { FormField } from "@/components/form";
 import {
   AppDetailFooter,
+  AppEmptyState,
   AppPageHeader,
   AppSection,
   DocumentFormFrame,
@@ -55,6 +56,8 @@ interface Props {
   defaultBranchId: number | null;
   routeBase?: string;
   embedded?: boolean;
+  loadFailed?: boolean;
+  loadFailedTitle?: string;
 }
 
 export function NewStocktakeSessionClient({
@@ -63,6 +66,8 @@ export function NewStocktakeSessionClient({
   defaultBranchId,
   routeBase = "/inventory/stocktake",
   embedded = false,
+  loadFailed = false,
+  loadFailedTitle = messages.inventory.stocktake.startLoadFailed,
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<StocktakeMode>("daily");
@@ -134,6 +139,17 @@ export function NewStocktakeSessionClient({
       description={messages.inventory.stocktake.startDescription}
     />
   );
+
+  if (loadFailed) {
+    const errorState = (
+      <AppEmptyState compact mode="error" title={loadFailedTitle} />
+    );
+    return embedded ? (
+      errorState
+    ) : (
+      <DocumentFormFrame header={header}>{errorState}</DocumentFormFrame>
+    );
+  }
 
   const content = (
     <>

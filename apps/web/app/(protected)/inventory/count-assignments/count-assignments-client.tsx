@@ -546,6 +546,8 @@ export function CountAssignmentsClient({
             <IconSearch aria-hidden="true" />
           </InputGroupAddon>
           <InputGroupInput
+            type="search"
+            aria-label={INVENTORY_VI.countAssignSearchPlaceholder}
             name="count-assignment-ingredient-search"
             autoComplete="off"
             value={ingredientSearch}

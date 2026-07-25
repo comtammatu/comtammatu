@@ -23,6 +23,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import {
+  AppBackLink,
   AppPage,
   AppPageHeader,
   AppSection,
@@ -434,13 +435,9 @@ export function StocktakeDetailClient({
           variant: statusBadge.variant,
         }}
         breadcrumb={
-          <Link
-            href={`${routeBase}?branchId=${session.branch_id}`}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />{" "}
+          <AppBackLink href={`${routeBase}?branchId=${session.branch_id}`}>
             {tRoute("/inventory/stocktake")}
-          </Link>
+          </AppBackLink>
         }
         actions={stocktakeActions}
       />

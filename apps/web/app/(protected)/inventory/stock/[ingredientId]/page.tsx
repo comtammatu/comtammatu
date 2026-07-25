@@ -1,19 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft as IconArrowLeft,
   ClipboardList as IconClipboardList,
   PackageCheck as IconPackageCheck,
   Receipt as IconReceipt,
   Trash as IconTrash,
   Truck as IconTruck,
 } from "lucide-react";
-import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
+  AppBackLink,
   AppEmptyState,
   AppPage,
   AppPageHeader,
@@ -69,30 +69,6 @@ interface StockIngredientDetailPageContentProps {
   searchParams?: Promise<{ branchId?: string | string[] }>;
 }
 
-function StockMetric({
-  label,
-  value,
-  subValue,
-}: {
-  label: string;
-  value: string;
-  subValue?: string | null;
-}) {
-  return (
-    <AppSection size="sm" contentClassName="gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="font-mono text-lg font-semibold tabular-nums">
-        {value}
-      </span>
-      {subValue ? (
-        <span className="font-mono text-xs font-normal text-muted-foreground tabular-nums">
-          {subValue}
-        </span>
-      ) : null}
-    </AppSection>
-  );
-}
-
 function OwnerStockIngredientDetail({
   data,
 }: {
@@ -129,46 +105,53 @@ function OwnerStockIngredientDetail({
           variant: statusBadge.variant,
         }}
         breadcrumb={
-          <Link
-            href={listHref}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
-          >
-            <IconArrowLeft className="size-4" />
+          <AppBackLink href={listHref}>
             {detailCopy.backToStock}
-          </Link>
+          </AppBackLink>
         }
       />
 
+      <AppSection size="sm">
+        <DescriptionList
+          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+          descriptionClassName="font-mono text-base font-semibold tabular-nums"
+          items={[
+            {
+              term: stockCopy.table.currentStock,
+              description: (
+                <span className="flex flex-col">
+                  <span>{totalStockUnits.big ?? totalStockUnits.base}</span>
+                  {totalStockUnits.big !== null ? (
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {totalStockUnits.base}
+                    </span>
+                  ) : null}
+                </span>
+              ),
+            },
+            {
+              term: stockCopy.table.stockValue,
+              description: formatVND(totalValue),
+            },
+            {
+              term: stockCopy.table.wacPerUnit(
+                ingredient.unit || inventoryCommon.noValue,
+              ),
+              description:
+                wac > 0 ? formatVND(wac) : inventoryCommon.noValue,
+            },
+            {
+              term: stockCopy.table.lastCount,
+              description: data.latestCountedAt
+                ? formatDate(data.latestCountedAt)
+                : inventoryCommon.noValue,
+            },
+          ]}
+        />
+      </AppSection>
+
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="flex flex-col gap-3 lg:col-span-2">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StockMetric
-              label={stockCopy.table.currentStock}
-              value={totalStockUnits.big ?? totalStockUnits.base}
-              subValue={
-                totalStockUnits.big !== null ? totalStockUnits.base : null
-              }
-            />
-            <StockMetric
-              label={stockCopy.table.stockValue}
-              value={formatVND(totalValue)}
-            />
-            <StockMetric
-              label={stockCopy.table.wacPerUnit(
-                ingredient.unit || inventoryCommon.noValue,
-              )}
-              value={wac > 0 ? formatVND(wac) : inventoryCommon.noValue}
-            />
-            <StockMetric
-              label={stockCopy.table.lastCount}
-              value={
-                data.latestCountedAt
-                  ? formatDate(data.latestCountedAt)
-                  : inventoryCommon.noValue
-              }
-            />
-          </div>
-
           <AppSection
             title={detailCopy.locationTitle}
             description={detailCopy.locationDescription}
@@ -403,15 +386,6 @@ function OwnerStockIngredientDetail({
               ]}
             />
           </AppSection>
-
-          <Button
-            variant="ghost"
-            className="justify-start"
-            render={<Link href={listHref} />}
-          >
-            <IconArrowLeft className="size-4" />
-            {ACTIONS_VI.back}
-          </Button>
         </div>
       </div>
     </AppPage>

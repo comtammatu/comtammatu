@@ -96,6 +96,7 @@ export function SupplierPicker({
         </InputGroupAddon>
         <InputGroupInput
           type="search"
+          aria-label={INVENTORY_VI.supplierSearchPlaceholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={INVENTORY_VI.supplierSearchPlaceholder}

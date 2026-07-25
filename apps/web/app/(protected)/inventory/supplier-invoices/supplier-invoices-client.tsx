@@ -1119,6 +1119,7 @@ export function SupplierInvoicesClient({
                   <IconSearch />
                 </InputGroupAddon>
                 <InputGroupInput
+                  type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={copy.searchPlaceholder}

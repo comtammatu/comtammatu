@@ -50,13 +50,12 @@ export async function TransfersPageContent({
     fetchStockTransfers(branchFilter),
     fetchBranchesForTransfer(),
   ]);
+  if (!trRes.success || !brRes.success) {
+    throw new Error("inventory.transfers.load_failed");
+  }
 
-  const rows: TransferListRow[] = trRes.success
-    ? ((trRes.data ?? []) as TransferListRow[])
-    : [];
-  const branches: BranchForTransfer[] = brRes.success
-    ? ((brRes.data ?? []) as BranchForTransfer[])
-    : [];
+  const rows = (trRes.data ?? []) as TransferListRow[];
+  const branches = (brRes.data ?? []) as BranchForTransfer[];
 
   return (
     <TransfersListClient

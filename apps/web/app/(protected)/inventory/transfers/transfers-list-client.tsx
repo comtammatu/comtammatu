@@ -268,6 +268,7 @@ export function TransfersListClient({
           </InputGroupAddon>
           <InputGroupInput
             type="search"
+            aria-label={copy.list.searchPlaceholder}
             placeholder={copy.list.searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}

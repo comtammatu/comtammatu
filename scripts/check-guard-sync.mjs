@@ -301,6 +301,14 @@ if (!fs.existsSync(typegenPath)) {
   if (rejectedTarget.status === 0) {
     fail(`${TYPEGEN_PATH}: must reject any non-Production type source`);
   }
+  const missingTarget = spawnSync("node", [typegenPath], {
+    cwd: REPO_ROOT,
+    env: { ...process.env, SUPABASE_PROJECT_ID: "" },
+    encoding: "utf8",
+  });
+  if (missingTarget.status === 0) {
+    fail(`${TYPEGEN_PATH}: must require an explicit Production type source`);
+  }
 }
 
 const e2eBringupPath = path.join(REPO_ROOT, E2E_BRINGUP_PATH);

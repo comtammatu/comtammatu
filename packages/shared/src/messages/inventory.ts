@@ -142,6 +142,7 @@ export const INVENTORY_VI = {
   choosePoToCreateGrn: "Chọn PO để tạo GRN",
   newGrn: "Phiếu nhập hàng mới",
   grnSearchPlaceholder: "Tìm mã GRN, nhà cung cấp, PO...",
+  grnListCount: (count: number) => `${formatCount(count)} phiếu`,
   grnNotFoundFiltered: "Không tìm thấy phiếu nhập phù hợp",
   grnEmptyNoData: "Chưa có phiếu nhập kho nào",
   grnListTab: "Danh sách",

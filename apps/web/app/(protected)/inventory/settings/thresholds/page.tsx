@@ -48,7 +48,9 @@ export default async function InventoryThresholdsPage() {
       />
 
       <AppSection contentFlush={rows.length > 0}>
-        {rows.length === 0 ? (
+        {!res.success ? (
+          <AppEmptyState mode="error" title={copy.loadFailed} />
+        ) : rows.length === 0 ? (
           <AppEmptyState title={copy.empty} symbol="riceGrain" />
         ) : (
           <ThresholdsClient rows={rows} />

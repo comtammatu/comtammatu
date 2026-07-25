@@ -88,7 +88,7 @@ export async function CountSlipsPageContent() {
 
   // RLS limits these rows to branches where the manager holds
   // `inventory:count_approve`; the employee-facing RLS hides system quantity.
-  const { data: slips } = await supabase
+  const { data: slips, error: slipsError } = await supabase
     .from("inventory_count_slips")
     .select(
       `
@@ -125,6 +125,12 @@ export async function CountSlipsPageContent() {
     .eq("tenant_id", claims.tenant_id)
     .in("status", REVIEW_STATES)
     .order("submitted_at", { ascending: false });
+  if (slipsError) {
+    console.error("inventory.count_slips.fetch_failed", {
+      code: slipsError.code,
+    });
+    throw new Error("inventory.count_slips.load_failed");
+  }
 
   const slipRows = slips ?? [];
   const employeeIds = [
@@ -173,7 +179,7 @@ export async function CountSlipsPageContent() {
   const baseUnitByIngredient = new Map<number, UnitMeta>();
 
   if (ingredientIds.length > 0) {
-    const { data: unitRows } = await supabase
+    const { data: unitRows, error: unitRowsError } = await supabase
       .from("ingredient_units")
       .select(
         "ingredient_id, unit_id, to_base_factor, is_base, units!ingredient_units_unit_tenant_fkey(code)",
@@ -181,6 +187,12 @@ export async function CountSlipsPageContent() {
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .in("ingredient_id", ingredientIds);
+    if (unitRowsError) {
+      console.error("inventory.count_slips.units_fetch_failed", {
+        code: unitRowsError.code,
+      });
+      throw new Error("inventory.count_slips.load_failed");
+    }
 
     for (const row of unitRows ?? []) {
       const ingredientId = Number(row.ingredient_id);

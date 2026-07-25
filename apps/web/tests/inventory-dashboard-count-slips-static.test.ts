@@ -86,7 +86,7 @@ test("inventory dashboard keeps masked and degraded data truthful", () => {
   assert.match(messagesSrc, /dataDegradedTitle: "Dữ liệu chưa đầy đủ"/);
 });
 
-test("inventory dashboard uses one open-transfer predicate for KPI and list", () => {
+test("inventory dashboard uses one open-transfer predicate for KPI and tasks", () => {
   const dataSrc = readWebFile("app/(protected)/inventory/_lib/dashboard-data.ts");
   const clientSrc = readWebFile("app/(protected)/inventory/dashboard-client.tsx");
 
@@ -98,9 +98,12 @@ test("inventory dashboard uses one open-transfer predicate for KPI and list", ()
     /rawTransfers\.filter\(\s*\(t\) => OPEN_TRANSFER_STATUSES\.has\(t\.status\),\s*\)\.length/,
   );
   assert.match(clientSrc, /function isTransferOpen\(status: string\)/);
-  assert.match(clientSrc, /const activeTransferList = transfers\s*\.filter\(\(t\) => isTransferOpen\(t\.status\)\)/);
+  assert.match(
+    clientSrc,
+    /const open = transfers\.filter\(\(t\) => isTransferOpen\(t\.status\)\)/,
+  );
   assert.doesNotMatch(
     clientSrc,
-    /activeTransferList = transfers[\s\S]*\["in_transit",[\s\S]*"confirmed_receive"/,
+    /const open = transfers[\s\S]*\["in_transit",[\s\S]*"confirmed_receive"/,
   );
 });

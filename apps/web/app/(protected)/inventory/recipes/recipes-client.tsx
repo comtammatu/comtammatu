@@ -246,6 +246,8 @@ export function RecipesClient({
                   <IconSearch />
                 </InputGroupAddon>
                 <InputGroupInput
+                  type="search"
+                  aria-label={INVENTORY_VI.recipeSearchPlaceholder}
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={INVENTORY_VI.recipeSearchPlaceholder}

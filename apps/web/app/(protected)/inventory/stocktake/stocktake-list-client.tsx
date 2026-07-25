@@ -242,18 +242,15 @@ export function StocktakeListClient({
     },
   ];
 
-  const stocktakeActions = (
-    <div className="flex items-center gap-2">
-      <Button
-        type="button"
-        variant="outline"
-        size={embedded ? "touch" : "default"}
-        render={<Link href={`${routeBase}/new${branchQuery}`} />}
-      >
-        <IconClipboardCheck className="size-4" />
-        {messages.inventory.stocktake.openSession}
-      </Button>
-    </div>
+  const stocktakeAction = (
+    <Button
+      type="button"
+      size={embedded ? "touch" : "default"}
+      render={<Link href={`${routeBase}/new${branchQuery}`} />}
+    >
+      <IconClipboardCheck className="size-4" />
+      {messages.inventory.stocktake.openSession}
+    </Button>
   );
 
   const content = (
@@ -268,65 +265,71 @@ export function StocktakeListClient({
       ) : null}
 
       {embedded ? (
-        stocktakeActions
+        stocktakeAction
       ) : (
         <AppPageHeader
           eyebrow={messages.inventory.shell.moduleName}
           title={messages.inventory.stocktake.title}
-          actions={stocktakeActions}
+          actions={stocktakeAction}
         />
       )}
-      {/* Filters */}
-      <AppToolbar variant={embedded ? "inline" : "card"}>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger
-            size={embedded ? "touch" : "default"}
-            className={embedded ? "w-full" : "min-w-44"}
-          >
-            <SelectValue
-              placeholder={messages.inventory.stocktake.statusPlaceholder}
+      <AppToolbar
+        variant={embedded ? "inline" : "card"}
+        search={
+          <InputGroup className="h-12 w-full sm:h-10">
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              aria-label={messages.inventory.stocktake.searchPlaceholder}
+              placeholder={messages.inventory.stocktake.searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              inputMode="search"
             />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">
-              {messages.inventory.stocktake.allStatuses}
-            </SelectItem>
-            <SelectItem value="in_progress">
-              {messages.inventory.stocktake.inProgressCount(
-                statusCounts["in_progress"] ?? 0,
-              )}
-            </SelectItem>
-            <SelectItem value="completed">
-              {messages.inventory.stocktake.completedCount(
-                statusCounts["completed"] ?? 0,
-              )}
-            </SelectItem>
-            <SelectItem value="cancelled">
-              {messages.inventory.stocktake.cancelledCount(
-                statusCounts["cancelled"] ?? 0,
-              )}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        <InputGroup className="h-12 flex-1 basis-full sm:h-10 sm:basis-auto">
-          <InputGroupAddon>
-            <IconSearch />
-          </InputGroupAddon>
-          <InputGroupInput
-            placeholder={messages.inventory.stocktake.searchPlaceholder}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            inputMode="search"
-          />
-        </InputGroup>
-
-        {rows.length > 0 ? (
-          <Badge variant="outline" className="rounded-full">
-            {filtered.length}/{rows.length}
-          </Badge>
-        ) : null}
-      </AppToolbar>
+          </InputGroup>
+        }
+        filters={
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger
+              size={embedded ? "touch" : "default"}
+              className={embedded ? "w-full" : "min-w-44"}
+            >
+              <SelectValue
+                placeholder={messages.inventory.stocktake.statusPlaceholder}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                {messages.inventory.stocktake.allStatuses}
+              </SelectItem>
+              <SelectItem value="in_progress">
+                {messages.inventory.stocktake.inProgressCount(
+                  statusCounts["in_progress"] ?? 0,
+                )}
+              </SelectItem>
+              <SelectItem value="completed">
+                {messages.inventory.stocktake.completedCount(
+                  statusCounts["completed"] ?? 0,
+                )}
+              </SelectItem>
+              <SelectItem value="cancelled">
+                {messages.inventory.stocktake.cancelledCount(
+                  statusCounts["cancelled"] ?? 0,
+                )}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        }
+        reset={
+          rows.length > 0 ? (
+            <Badge variant="outline" className="rounded-full">
+              {filtered.length}/{rows.length}
+            </Badge>
+          ) : undefined
+        }
+      />
 
       <DataTable
         columns={columns}

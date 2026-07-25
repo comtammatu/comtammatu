@@ -195,10 +195,11 @@ export async function IssuesPageContent({
     }),
     recordedConsumptionQuery,
   ]);
+  if (!res.success || recordedConsumptionRes?.error) {
+    throw new Error("inventory.issues.load_failed");
+  }
 
-  const dbRows = res.success
-    ? (res.data as Array<Record<string, unknown>>)
-    : [];
+  const dbRows = res.data as Array<Record<string, unknown>>;
   const recordedConsumptionRows = (recordedConsumptionRes?.data ?? []) as Array<
     Record<string, unknown>
   >;

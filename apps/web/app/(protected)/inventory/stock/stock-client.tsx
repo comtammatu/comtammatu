@@ -56,14 +56,12 @@ import {
   AppPageHeader,
   AppSection,
   AppToolbar,
-  KpiRow,
 } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "@lib/inventory/format";
 import { formatStockUnits } from "../_lib/stock-unit-format";
@@ -515,24 +513,6 @@ export function StockClient({
     },
   ];
 
-  // Pure-numeric value tiles route through the single-sourced KpiCard.
-  const summaryMetrics = (
-    <div className="grid grid-cols-2 gap-2">
-      <KpiCard
-        density="compact"
-        label={stockCopy.metrics.selectedWarehouse}
-        value={inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
-      />
-      {totalValue != null ? (
-        <KpiCard
-          density="compact"
-          label={stockCopy.metrics.wholeSystem}
-          value={inventoryCommon.currencyCompact(formatVND(totalValue))}
-        />
-      ) : null}
-    </div>
-  );
-
   // Work signals stay read-only so status filtering has one control.
   const workSignalCluster = (
     <div className="flex flex-wrap items-center gap-2">
@@ -561,6 +541,8 @@ export function StockClient({
         <IconSearch />
       </InputGroupAddon>
       <InputGroupInput
+        type="search"
+        aria-label={stockCopy.filters.searchPlaceholder}
         value={searchQuery}
         onChange={(event) => setSearchQuery(event.target.value)}
         placeholder={stockCopy.filters.searchPlaceholder}
@@ -837,6 +819,24 @@ export function StockClient({
       <AppPageHeader
         eyebrow={messages.inventory.shell.moduleName}
         title={stockCopy.title}
+        meta={
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="inline-flex items-center gap-1.5">
+              <span>{stockCopy.metrics.selectedWarehouse}</span>
+              <span className="font-mono font-semibold tabular-nums text-foreground">
+                {inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
+              </span>
+            </span>
+            {totalValue != null ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span>{stockCopy.metrics.wholeSystem}</span>
+                <span className="font-mono font-semibold tabular-nums text-foreground">
+                  {inventoryCommon.currencyCompact(formatVND(totalValue))}
+                </span>
+              </span>
+            ) : null}
+          </div>
+        }
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="hidden sm:inline-flex">
@@ -846,26 +846,6 @@ export function StockClient({
           </div>
         }
       />
-      {!isCompactLayout ? (
-        <div className="flex flex-col gap-3">
-          <KpiRow density="compact">
-            <KpiCard
-              density="compact"
-              label={stockCopy.metrics.selectedWarehouse}
-              value={inventoryCommon.currencyCompact(
-                formatVND(visibleTotalValue),
-              )}
-            />
-            {totalValue != null ? (
-              <KpiCard
-                density="compact"
-                label={stockCopy.metrics.wholeSystem}
-                value={inventoryCommon.currencyCompact(formatVND(totalValue))}
-              />
-            ) : null}
-          </KpiRow>
-        </div>
-      ) : null}
 
       <AppToolbar
         variant="card"
@@ -902,7 +882,6 @@ export function StockClient({
           collapsible
           defaultOpen={false}
         >
-          {summaryMetrics}
           {workSignalCluster}
           <div className="grid gap-2 sm:grid-cols-2">{filterControls}</div>
           <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>

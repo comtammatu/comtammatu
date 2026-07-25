@@ -36,8 +36,8 @@ UPSTASH_REDIS_REST_URL=https://YOUR_REDIS.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
 ```
 
-`corepack pnpm db:types` chỉ đọc schema từ Production đã đăng ký và từ chối mọi
-`SUPABASE_PROJECT_ID` khác:
+`corepack pnpm db:types` chỉ đọc schema từ Production đã đăng ký và bắt buộc
+truyền đúng `SUPABASE_PROJECT_ID`:
 
 ```bash
 SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj corepack pnpm db:types
@@ -72,10 +72,10 @@ SET position_id = (
 WHERE id = '<user-uuid>';
 ```
 
-Seed QA/dev chỉ chạy trên target non-production đã được Environment Registry
-cho phép và phải dùng literal target binding theo
-`docs/agent/rules/database.md`. Không dùng stored CLI link state; nếu guard
-không hỗ trợ đúng operation/target của task thì dừng và báo blocker.
+Seed kiểm thử chỉ chạy trên Preview Branch throwaway đã được guard xác minh và
+phải dùng literal target binding theo `docs/agent/rules/database.md`. Không dùng
+stored CLI link state; nếu guard không hỗ trợ đúng operation/target của task thì
+dừng và báo blocker.
 
 ## Chạy local
 
@@ -101,7 +101,7 @@ corepack pnpm verify
 
 ## Env Vercel
 
-Thiết lập các biến sau trong Vercel cho Production và Preview:
+Thiết lập các biến sau trong Vercel cho Production:
 
 | Biến | Nguồn |
 | --- | --- |
@@ -112,6 +112,10 @@ Thiết lập các biến sau trong Vercel cho Production và Preview:
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash console |
 
 Không set `VERCEL_URL` thủ công; Vercel tự inject biến này.
+
+Vercel Preview hiện bị vô hiệu hóa và không được nhận Supabase env.
+`scripts/check-preview-supabase-env.mjs` chặn build Preview theo nguyên tắc
+fail-closed.
 
 ## File chỉ nằm local
 

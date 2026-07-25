@@ -1,11 +1,12 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 15.0.0 | Updated: 2026-07-18 | Status: Má Tư visual contract
+> Version: 15.1.0 | Updated: 2026-07-25 | Status: Má Tư visual contract
 
 ## Mục lục / Decision Index
 
 - [Visual Contract And Authority Map](#visual-contract-and-authority-map)
 - [Authority Order](#authority-order)
+- [Artifact Ladder And Delivery Flow](#artifact-ladder-and-delivery-flow)
 - [Product UX Thesis](#product-ux-thesis)
 - [Token Contract](#token-contract)
 - [Typography Contract](#typography-contract)
@@ -67,6 +68,55 @@ The visual contract selects Má Tư expression; Base UI primitives select headle
 behavior; shared components select styled implementation; archetypes and routes select the workflow; tests and browser
 evidence prove the result. Product copy remains owned by `docs/ref/glossary.md`,
 `packages/shared/src/labels/vi.ts`, and domain dictionaries.
+
+## Artifact Ladder And Delivery Flow
+
+Use one artifact ladder from intent to runtime. A lower layer cannot override a
+higher authority, and a higher layer must reuse the lower implementation layer
+before adding anything new.
+
+| Layer          | Owner                                                            | Job                                                                                          |
+| -------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Guideline      | this file + `docs/ref/screen-context-map.md`                     | lock visual language, actor, job, information boundary, and reusable rules                   |
+| Primitive      | Base UI                                                          | provide headless behavior, semantics, focus, keyboard, and layering                          |
+| Component      | `packages/ui/src/components/*`                                   | provide one styled, reusable Má Tư UI unit                                                   |
+| Adapter        | `apps/web/app/components/*` and approved domain adapter families | translate components into an app or plane-specific semantic role                             |
+| UI Block       | `UI_BLOCK_REGISTRY` in `scripts/ui-component-registry.mjs`       | name a production-ready composition for a concrete job without creating another import layer |
+| Page archetype | `docs/spec/page-archetypes.md`                                   | define the complete route-level workflow recipe and state model                              |
+| Screen         | target route                                                     | bind real data, authority, copy, actions, and recovery to one URL                            |
+
+The delivery flow is:
+
+```text
+Screen context and user job
+→ UI Advisor Gate
+→ page archetype
+→ registered UI block when one fits
+→ registered adapters and components
+→ optional Stitch prototype
+→ route implementation
+→ responsive, accessibility, and runtime verification
+```
+
+`UI Block` is recipe metadata, not a `blocks/` component library. Add a block
+only when at least two real consumers share the composition, or when a named
+critical workflow needs one approved exemplar. If no block fits, follow the
+archetype and compose existing adapters behind a route-scoped owner; do not add
+a speculative block.
+
+Stitch is an optional design adapter and mirror. Seed it from the current
+guideline, archetype, block, and semantic roles; use it to compare hierarchy,
+states, and responsive composition. Stitch output never changes tokens,
+typography, component APIs, route authority, or business behavior by itself.
+Generated code is reference material until it is rebuilt from registered Má Tư
+components and verified in the runtime. Do not upload secrets, customer data,
+employee data, or production records.
+
+Lookup before composition:
+
+```bash
+corepack pnpm audit:ui-components --component <component-or-block>
+```
 
 ## Product UX Thesis
 
@@ -287,22 +337,22 @@ not fit its content, provided it does not create competing visual chrome.
 
 ### B. Heading Scale (locked per role)
 
-| Role                                    | Class                                                                                                                                   | Source                                                                                             |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Page H1                                 | `font-heading text-xl sm:text-2xl font-semibold tracking-tight`                                                                         | `AppPageHeader`                                                                                    |
-| Section title                           | `font-heading text-base font-semibold`                                                                                                  | `CardTitle`                                                                                        |
-| Sub-section / list head                 | `font-heading text-sm font-semibold`                                                                                                    | `Item title` slot                                                                                  |
-| Eyebrow / metadata                      | `text-xs font-medium uppercase tracking-wide`                                                                                           | `AppPageHeader.eyebrow` (page-header lockup only)                                                  |
+| Role                                    | Class                                                                                                                                   | Source                                                                                                                                                                                       |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page H1                                 | `font-heading text-xl sm:text-2xl font-semibold tracking-tight`                                                                         | `AppPageHeader`                                                                                                                                                                              |
+| Section title                           | `font-heading text-base font-semibold`                                                                                                  | `CardTitle`                                                                                                                                                                                  |
+| Sub-section / list head                 | `font-heading text-sm font-semibold`                                                                                                    | `Item title` slot                                                                                                                                                                            |
+| Eyebrow / metadata                      | `text-xs font-medium uppercase tracking-wide`                                                                                           | `AppPageHeader.eyebrow` (page-header lockup only)                                                                                                                                            |
 | Panel / field / section uppercase label | `text-xs font-medium uppercase tracking-wide text-muted-foreground` (dense KDS chrome: `text-2xs font-medium uppercase tracking-wider`) | `SectionLabel` (default + `density="dense"`; use `as="h2"` / `"h3"` / `"h4"` when the visible label participates in heading hierarchy); page-header eyebrow stays on `AppPageHeader.eyebrow` |
-| Table column header                     | `text-xs font-medium uppercase tracking-wider text-muted-foreground`                                                                    | `TableHead`                                                                                        |
-| Dense eyebrow                           | `text-2xs font-medium uppercase tracking-wider`                                                                                         | KDS chrome, audit row meta, mobile chrome labels                                                   |
-| KDS kitchen item-name                   | `text-base font-semibold leading-6 xl:text-lg xl:leading-6`                                                                             | KDS ticket item-name (wall boards scale up at `xl`)                                                |
-| Numeric input echo                      | `text-3xl font-semibold tabular-nums`                                                                                                   | Number pad readout, scale display                                                                  |
-| Runner board header                     | `text-runner-header font-semibold`                                                                                                      | Runner/KDS order board column headers, height-responsive display token                             |
-| Runner board row text                   | `text-runner-board font-semibold`                                                                                                       | Runner/KDS order board data cells, height-responsive display token                                 |
-| Runner empty secondary                  | `text-runner-empty-secondary font-semibold`                                                                                             | Runner/KDS empty-state secondary line, height-responsive display token                             |
-| Runner board footer                     | `text-runner-footer font-semibold`                                                                                                      | Runner/KDS order board footer, height-responsive display token                                     |
-| Display call target                     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums`                                                                 | Customer-facing runner / queue display only                                                        |
+| Table column header                     | `text-xs font-medium uppercase tracking-wider text-muted-foreground`                                                                    | `TableHead`                                                                                                                                                                                  |
+| Dense eyebrow                           | `text-2xs font-medium uppercase tracking-wider`                                                                                         | KDS chrome, audit row meta, mobile chrome labels                                                                                                                                             |
+| KDS kitchen item-name                   | `text-base font-semibold leading-6 xl:text-lg xl:leading-6`                                                                             | KDS ticket item-name (wall boards scale up at `xl`)                                                                                                                                          |
+| Numeric input echo                      | `text-3xl font-semibold tabular-nums`                                                                                                   | Number pad readout, scale display                                                                                                                                                            |
+| Runner board header                     | `text-runner-header font-semibold`                                                                                                      | Runner/KDS order board column headers, height-responsive display token                                                                                                                       |
+| Runner board row text                   | `text-runner-board font-semibold`                                                                                                       | Runner/KDS order board data cells, height-responsive display token                                                                                                                           |
+| Runner empty secondary                  | `text-runner-empty-secondary font-semibold`                                                                                             | Runner/KDS empty-state secondary line, height-responsive display token                                                                                                                       |
+| Runner board footer                     | `text-runner-footer font-semibold`                                                                                                      | Runner/KDS order board footer, height-responsive display token                                                                                                                               |
+| Display call target                     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums`                                                                 | Customer-facing runner / queue display only                                                                                                                                                  |
 
 Uppercase eyebrow, panel, field, and section labels default to
 `text-xs font-medium uppercase tracking-wide text-muted-foreground`; dense KDS

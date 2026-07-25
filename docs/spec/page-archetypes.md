@@ -35,7 +35,7 @@ UI Advisor Gate
 - Information order: 1) <first viewport> 2) <decision context> 3) <secondary detail>; exclude: <out-of-scope data>
 - Pattern: <archetype>; exemplar: <path>; data display: <table | board | document | detail | ...>
 - States: <loading | empty | error | success | partial | blocked | permission | offline, as applicable>
-- Components: <shared primitives/adapters>; fallback: <next approved composition if no exact match>
+- Block: <registered UI block or none>; components: <shared primitives/adapters>; fallback: <next approved composition if no exact match>
 - Responsive/accessibility: <same-IA viewport changes>; input: <touch | keyboard | mixed>; risks: <focus/label/contrast/target>
 - Verification: <routes, viewports, states, and browser evidence for meaningful runtime UI changes>
 ```
@@ -49,14 +49,18 @@ Decision order:
    workflow.
 2. Select the archetype and named exemplar in this file. The archetype owns
    page shape; the context map does not.
-3. Select shared primitives and adapters from `docs/modules/ui.md` § Shared
-   Component Registry. External design output may advise but cannot select or
-   override the project contract.
-4. If no exact component fits, compose existing primitives behind a
+3. Select the closest UI block from `UI_BLOCK_REGISTRY` through
+   `corepack pnpm audit:ui-components --component <block>`. A block is a
+   composition recipe, not an import layer; use `none` when the route has no
+   repeated block.
+4. Select shared primitives and adapters from `docs/modules/ui.md` § Shared
+   Component Registry. External design output, including Stitch, may advise but
+   cannot select or override the project contract.
+5. If no exact component fits, compose existing primitives behind a
    route-scoped adapter. If the proposed fallback changes a shared visual role,
    token, or behavior, update `docs/spec/design-system.md` before adding or
    changing a shared adapter or primitive.
-5. Do not start implementation while any gate field that affects hierarchy,
+6. Do not start implementation while any gate field that affects hierarchy,
    workflow, state behavior, or component choice is unresolved.
 
 ## 0.2 Page Disposition Gate
@@ -462,11 +466,11 @@ allowlist, not a precedent for stretching another archetype's definition:
    decision surface is the card, not a row. Classified **LIST** (queue
    variant); it uses the card decision surface instead of a tabular LIST recipe.
 9. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx`
-    — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
-    `BranchOperatorPanel`, and full-row `Item` links because the supported
-    phone/tablet runtime must keep one touch information architecture in both
-    orientations. Classified **LIST** (Branch touch variant); the Owner surface
-    transfer route remains the canonical desktop `DataTable` LIST.
+   — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
+   `BranchOperatorPanel`, and full-row `Item` links because the supported
+   phone/tablet runtime must keep one touch information architecture in both
+   orientations. Classified **LIST** (Branch touch variant); the Owner surface
+   transfer route remains the canonical desktop `DataTable` LIST.
 10. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx`
     — Branch-runtime on-hand lookup. It shares the stock loader and pure filter
     model with Owner surface but owns a full-row touch list that never changes into a
@@ -557,15 +561,18 @@ Before building or changing any `(protected)/**/page.tsx`:
    § 0.1.
 2. Find the target route's archetype in § 2/§ 4, and read its
    composition recipe in § 3.
-3. Read the recipe's named exemplar file(s) in full.
-4. Run `codegraph explore "<adapter name>"` (or MCP `codegraph_explore`) for
+3. Query the registered block for the plane and job with
+   `corepack pnpm audit:ui-components --component <block>`; use the archetype
+   recipe directly when no block fits.
+4. Read the recipe's named exemplar file(s) in full.
+5. Run `codegraph explore "<adapter name>"` (or MCP `codegraph_explore`) for
    live usage of the adapters the recipe names (`DataTable`,
    `DocumentFormFrame`, `KpiCard`, …), or `pnpm audit:ui-components` for a
    route-family adoption/high-risk report. Query
    `scripts/ui-component-registry.mjs` for current ownership and usage; never
    answer "where is X used" from a hand-maintained list.
-5. Build the new page from the exemplar's `PageContent` skeleton: swap the
+6. Build the new page from the exemplar's `PageContent` skeleton: swap the
    domain fetch/map, keep the shell shape.
-6. Add the new page to the `PAGE_ARCHETYPES` map in
+7. Add the new page to the `PAGE_ARCHETYPES` map in
    `scripts/page-archetypes.mjs` with the correct archetype id. An
    undeclared page fails CI with a message pointing back at this file.

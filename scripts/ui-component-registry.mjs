@@ -1,11 +1,21 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { PAGE_ARCHETYPES } from "./page-archetypes.mjs";
+
 const VALID_ACCESS = new Set([
   "direct",
   "adapter-only",
   "workflow-only",
   "internal",
+]);
+const VALID_BLOCK_PLANES = new Set([
+  "owner",
+  "branch",
+  "staff",
+  "station",
+  "public",
+  "system",
 ]);
 
 function decision(access, need, use, fallback, forbidden, exemplar) {
@@ -890,6 +900,157 @@ export const DOMAIN_ADAPTER_FAMILIES = {
   },
 };
 
+function block(archetypes, planes, need, use, fallback, forbidden, exemplar) {
+  return {
+    source: "docs/spec/page-archetypes.md",
+    archetypes,
+    planes,
+    need,
+    use,
+    fallback,
+    forbidden,
+    exemplar,
+  };
+}
+
+export const UI_BLOCK_REGISTRY = {
+  "management-list": block(
+    ["LIST"],
+    ["owner"],
+    "search, filter, compare, and act on a management collection",
+    "AppPage + AppPageHeader + AppToolbar + DataTable",
+    "ItemGroup for a short non-tabular feed",
+    "raw Table or separate mobile and desktop trees",
+    "apps/web/app/(protected)/inventory/grn/page.tsx",
+  ),
+  "management-detail": block(
+    ["DETAIL"],
+    ["owner"],
+    "review one management entity and its stage actions",
+    "AppPage + AppPageHeader + DescriptionList + DataTable + AppDetailFooter",
+    "AppSection when the entity has no repeated lines",
+    "KpiCard metadata or route-local detail chrome",
+    "apps/web/app/(protected)/inventory/grn/[id]/page.tsx",
+  ),
+  "management-document": block(
+    ["DOC-WORKFLOW"],
+    ["owner"],
+    "create or edit a line-array business document",
+    "DocumentFormFrame + shared form fields + DataTable line editor",
+    "AppPage + AppDetailFooter for a short document",
+    "hand-rolled document shell or parallel line trees",
+    "apps/web/app/(protected)/inventory/transfers/new/page.tsx",
+  ),
+  "management-settings": block(
+    ["SETTINGS-PANEL"],
+    ["owner"],
+    "edit tenant or module configuration",
+    "settings frame + shared form fields + FormDialog for list CRUD",
+    "AppSection for read-only configuration",
+    "route-local settings card or raw label-control anatomy",
+    "apps/web/app/(protected)/settings/(tenant)/general/page.tsx",
+  ),
+  "management-landing": block(
+    ["LANDING"],
+    ["owner"],
+    "enter a group of management capabilities",
+    "AppPage + AppPageHeader + AppSection + LinkCardGrid",
+    "ItemGroup for a compact action list",
+    "dashboard-card mosaic or route-local navigation cards",
+    "apps/web/app/(protected)/settings/page.tsx",
+  ),
+  "management-dashboard": block(
+    ["DASHBOARD"],
+    ["owner"],
+    "scan decision metrics and open their owning workflows",
+    "AppPage + AppPageHeader + KpiRow + actionable sections",
+    "management-landing when no governed metric exists",
+    "decorative metrics or cards without drill-down authority",
+    "apps/web/app/(protected)/finance/page.tsx",
+  ),
+  "management-report": block(
+    ["REPORT"],
+    ["owner"],
+    "filter, summarize, and inspect a management report",
+    "AppPage + AppPageHeader + AppToolbar + KpiRow + chart or DataTable",
+    "DataTable only when exact values are the primary job",
+    "decorative charts or duplicated filter controls",
+    "apps/web/app/(protected)/finance/revenue/page.tsx",
+  ),
+  "branch-action-home": block(
+    ["LANDING", "DASHBOARD"],
+    ["branch"],
+    "surface the next safe branch action and live work",
+    "BranchOperatorPage + primary action + live queue + curated action sections",
+    "BranchOperatorActionSection for a simple job group",
+    "Owner shell, KPI mosaic, or duplicated bottom-nav destinations",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
+  ),
+  "branch-touch-list": block(
+    ["LIST"],
+    ["branch"],
+    "scan and act on a fixed-branch work queue",
+    "BranchOperatorPage + compact controls + ItemGroup full-row actions",
+    "DataTable only on the Owner management plane",
+    "desktop table at tablet width or separate responsive trees",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
+  ),
+  "branch-touch-detail": block(
+    ["DETAIL"],
+    ["branch"],
+    "review one branch entity and perform its next permitted action",
+    "BranchOperatorPage + BranchOperatorPanel + ItemGroup + AppDetailFooter",
+    "bottom Sheet for a focused edit or decision",
+    "Owner detail presenter, audit chrome, or multiple primary actions",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx",
+  ),
+  "branch-touch-document": block(
+    ["DOC-WORKFLOW"],
+    ["branch"],
+    "complete a line workflow on phone or tablet",
+    "BranchOperatorPage + BranchOperatorPanel + touch line editor + AppDetailFooter",
+    "bottom Sheet for one line at a time",
+    "DocumentFormFrame, DataTable, or desktop side editor",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx",
+  ),
+  "embedded-workflow": block(
+    ["EMBED-WRAPPER"],
+    ["branch", "staff"],
+    "mount a canonical deep workflow inside branch runtime chrome",
+    "delegation-only route + shared PageContent embedded branch",
+    "native Branch presentation when the workflow becomes branch-owned",
+    "local fetching, nested AppPage, or nested AppPageHeader",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx",
+  ),
+  "realtime-board": block(
+    ["BOARD"],
+    ["station"],
+    "operate a live queue from a dedicated station surface",
+    "Operations chrome + OperationalBoardCard + OperationalTile + touch controls",
+    "PageSpinner while real queue data is unavailable",
+    "fake ticket skeleton, dashboard grid, or hover-only action",
+    "apps/web/app/(protected)/br/[branchId]/kds/page.tsx",
+  ),
+  "public-transaction": block(
+    ["PUBLIC-WORKFLOW"],
+    ["public"],
+    "complete a token-scoped customer transaction",
+    "standalone mobile frame + Item + shared form controls + one primary action",
+    "AppEmptyState for invalid, expired, or unavailable context",
+    "Owner shell, DataTable, or loss of in-progress state on retry",
+    "apps/web/app/q/[token]/page.tsx",
+  ),
+  "system-gate": block(
+    ["GATE/AUTH"],
+    ["public", "system"],
+    "resolve one pre-context, permission, offline, or terminal decision",
+    "standalone AppPage + AppEmptyState + one forward action",
+    "LinkCardGrid when the gate is a genuine destination picker",
+    "app chrome or competing secondary navigation",
+    "apps/web/app/(public)/access-denied/page.tsx",
+  ),
+};
+
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
 }
@@ -948,7 +1109,16 @@ export function findComponentGuidance(query) {
       exemplar: entry.exemplar,
     }));
 
-  return [...sharedComponents, ...appAdapters, ...domainAdapters];
+  const uiBlocks = Object.entries(UI_BLOCK_REGISTRY)
+    .filter(([name]) => normalizeComponentName(name) === normalizedQuery)
+    .map(([name, entry]) => ({
+      layer: "ui-block",
+      name,
+      classification: "block",
+      ...entry,
+    }));
+
+  return [...sharedComponents, ...appAdapters, ...domainAdapters, ...uiBlocks];
 }
 
 function validateDecisionEntry(label, entry, errors) {
@@ -1028,6 +1198,31 @@ export function validateUiComponentRegistry(repoRoot) {
     }
   }
 
+  const liveArchetypes = new Set(Object.values(PAGE_ARCHETYPES));
+  for (const [name, entry] of Object.entries(UI_BLOCK_REGISTRY)) {
+    validateDecisionEntry(`UI block ${name}`, entry, errors);
+    if (
+      !Array.isArray(entry.archetypes) ||
+      entry.archetypes.length === 0 ||
+      entry.archetypes.some((archetype) => !liveArchetypes.has(archetype))
+    ) {
+      errors.push(`UI block ${name} has unknown or missing archetypes`);
+    }
+    if (
+      !Array.isArray(entry.planes) ||
+      entry.planes.length === 0 ||
+      entry.planes.some((plane) => !VALID_BLOCK_PLANES.has(plane))
+    ) {
+      errors.push(`UI block ${name} has unknown or missing planes`);
+    }
+    if (!fs.existsSync(path.join(repoRoot, entry.source))) {
+      errors.push(`UI block ${name} source is missing: ${entry.source}`);
+    }
+    if (!fs.existsSync(path.join(repoRoot, entry.exemplar))) {
+      errors.push(`UI block ${name} exemplar is missing: ${entry.exemplar}`);
+    }
+  }
+
   let domainExportCount = 0;
   for (const [family, entry] of Object.entries(DOMAIN_ADAPTER_FAMILIES)) {
     const sourcePath = path.join(repoRoot, entry.source);
@@ -1070,6 +1265,7 @@ export function validateUiComponentRegistry(repoRoot) {
       .map(([name]) => name),
     domainFamilyCount: Object.keys(DOMAIN_ADAPTER_FAMILIES).length,
     domainExportCount,
+    uiBlockCount: Object.keys(UI_BLOCK_REGISTRY).length,
     errors,
   };
 }

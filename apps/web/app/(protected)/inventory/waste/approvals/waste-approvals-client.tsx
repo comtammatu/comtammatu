@@ -35,9 +35,14 @@ const toastRejectSuccess = (issueNumber: string) =>
 interface Props {
   initial: PendingWasteRow[];
   branchFilter: number | null;
+  loadFailed: boolean;
 }
 
-export function WasteApprovalsClient({ initial, branchFilter }: Props) {
+export function WasteApprovalsClient({
+  initial,
+  branchFilter,
+  loadFailed,
+}: Props) {
   const [rows, setRows] = useState(initial);
   const copy = messages.inventory.waste.approvals;
 
@@ -53,7 +58,14 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
         description={`${copy.principle}${branchFilter !== null ? copy.branchSuffix(branchFilter) : ""}`}
         badge={{ children: copy.count(rows.length) }}
       />
-      {rows.length === 0 ? (
+      {loadFailed ? (
+        <AppEmptyState
+          compact
+          mode="error"
+          title={copy.loadFailed}
+          description={copy.loadFailedDescription}
+        />
+      ) : rows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
         <ItemGroup className="flex flex-col gap-3 rounded-none border-0 p-0">

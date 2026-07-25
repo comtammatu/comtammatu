@@ -47,7 +47,8 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
    `corepack pnpm db:types` và review diff; Preview không phải type source của
    repository.
 10. Thu thập evidence: ref, migration versions, test result và cleanup result.
-11. Xóa Preview Branch khi xong; không để resource throwaway chạy vô thời hạn.
+11. Xóa Preview Branch trong cùng task và xác minh resource không còn. Nếu xóa
+    hoặc xác minh thất bại, giữ task ở trạng thái blocked và báo owner.
 
 ## Preconditions
 
@@ -64,20 +65,13 @@ là source-chain evidence, không được báo thành cloud Preview proof.
 
 ## Vercel Preview
 
-Vercel Preview có thể được nối thủ công với credential của Preview Branch để test
-runtime. Ghi rõ preview host và Supabase ref; không cho preview deploy nhận
-production service-role key.
-
-Supabase/Vercel integration phải cấp `NEXT_PUBLIC_SUPABASE_URL`,
-`SUPABASE_PROJECT_ID` và publishable/anon key cùng thuộc Preview Branch của PR.
-`scripts/check-preview-supabase-env.mjs` chạy trước `next build` và chặn
-Production/no-touch/mismatch. Nếu chưa cấp được service-role key đúng Preview
-qua đường tin cậy, bỏ biến đó khỏi scope Preview; không sao chép service-role
-key của Production để giữ feature parity.
+Vercel Preview hiện bị vô hiệu hóa. Build Preview không thể tự chứng minh
+credential được cấp thuộc một Preview Branch ephemeral có parent là Production,
+nên `scripts/check-preview-supabase-env.mjs` chặn mọi build Preview và liệt kê
+tên biến Supabase cần gỡ mà không in giá trị.
 
 ## Automation hiện hành
 
-Supabase GitHub App và Vercel integration chạy ngoài repo guard. PR update có thể
-tạo/cập nhật branch hoặc Preview deploy, nên CI lineage gate, seed safety, env
-binding, deployment log và teardown phải được kiểm chứng độc lập; không suy luận
-trạng thái automation từ guard local.
+Supabase GitHub App chạy ngoài repo guard. PR update có thể tạo hoặc cập nhật
+branch, nên CI lineage gate, seed safety, deployment log và teardown phải được
+kiểm chứng độc lập; không suy luận trạng thái automation từ guard local.
