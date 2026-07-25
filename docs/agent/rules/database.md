@@ -32,8 +32,8 @@ Production.
   CLI creation additionally requires the literal parent binding
   `--project-ref iexwsuaqqenyjiskawoj`; stored link state and any other parent
   remain blocked.
-  Preview MCP actions are trusted only when the guard retrieves that exact
-  candidate from `supabase branches get` with the literal Production parent and
+  Preview MCP actions are trusted only when the guard finds that exact
+  candidate in `supabase branches list` with the literal Production parent and
   verifies both `project_ref` and `parent_project_ref`. This proof is repeated
   per action; it creates no local whitelist or stored-link exception. A lookup
   failure, mismatched parent, branch merge/reset/rebase, or every Preview CLI

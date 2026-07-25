@@ -98,8 +98,7 @@ function trustedPreviewBranch(candidate) {
       "supabase",
       [
         "branches",
-        "get",
-        candidate,
+        "list",
         "--project-ref",
         APPROVED_PREVIEW_PARENT_REF,
         "--output",
@@ -114,7 +113,12 @@ function trustedPreviewBranch(candidate) {
     );
     if (result.status !== 0 || result.error) return null;
 
-    const branch = JSON.parse(result.stdout);
+    const branch = JSON.parse(result.stdout).find(
+      (item) =>
+        item?.id === candidate ||
+        item?.name === candidate ||
+        item?.project_ref === candidate,
+    );
     return branch &&
       typeof branch === "object" &&
       !Array.isArray(branch) &&
@@ -890,6 +894,7 @@ function readOnlySupabaseCli(args) {
     "gen types",
     "inspect db",
     "migration list",
+    "projects api-keys",
   ]).has(args.slice(0, 2).join(" "));
 }
 

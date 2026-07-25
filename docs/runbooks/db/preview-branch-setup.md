@@ -7,7 +7,7 @@ là production write và cần quyền riêng.
 
 Guard của repo chỉ cho agent đọc hoặc mutate một Preview ref sau khi nó được
 Supabase xác nhận là con của Production. Với từng MCP action, guard gọi
-`supabase branches get` với parent Production cố định và đòi `project_ref` cùng
+`supabase branches list` với parent Production cố định và đòi `project_ref` cùng
 `parent_project_ref` khớp chính xác; không có local whitelist, stored-link state
 hay cache để tin cậy lại. Nếu không xác minh được, Preview bị chặn. Không được
 nới guard hay thay bằng Local Docker.

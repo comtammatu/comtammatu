@@ -381,12 +381,12 @@ const branches = ${JSON.stringify(previewFixtureBranches)};
 const args = process.argv.slice(2);
 const branch =
   args[0] === "branches" &&
-  args[1] === "get" &&
-  args[3] === "--project-ref" &&
-  args[4] === ${JSON.stringify(PROD)} &&
-  args[5] === "--output" &&
-  args[6] === "json"
-    ? branches[args[2]]
+  args[1] === "list" &&
+  args[2] === "--project-ref" &&
+  args[3] === ${JSON.stringify(PROD)} &&
+  args[4] === "--output" &&
+  args[5] === "json"
+    ? Object.values(branches)
     : null;
 if (!branch) process.exit(1);
 process.stdout.write(JSON.stringify(branch));
@@ -462,6 +462,20 @@ const FIXTURES = [
     ),
   ],
   ["allow: supabase db push help", 0, bash("supabase db push --help")],
+  [
+    "allow: verified Preview API key read",
+    0,
+    bash(
+      `supabase projects api-keys --project-ref ${TRUSTED_PREVIEW} --reveal --output json`,
+    ),
+  ],
+  [
+    "block: Production API key read",
+    2,
+    bash(
+      `supabase projects api-keys --project-ref ${PROD} --reveal --output json`,
+    ),
+  ],
   [
     "block: help token cannot impersonate a preceding option value",
     2,
