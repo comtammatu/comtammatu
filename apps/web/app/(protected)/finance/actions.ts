@@ -7,9 +7,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { messages } from "@lib/messages";
-import {
-  createInvoiceSchema,
-} from "@lib/hddt-per-order";
+import { createInvoiceSchema } from "@lib/hddt-per-order";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
@@ -101,7 +99,10 @@ export async function createTaxInvoice(
     p_invoice_payload: parsed.data,
   });
   if (error || !data) {
-    console.error("[finance/actions:createTaxInvoice] queue failed", error?.code);
+    console.error(
+      "[finance/actions:createTaxInvoice] queue failed",
+      error?.code,
+    );
     return { success: false, error: "Không thể đưa HĐĐT vào hàng chờ xử lý." };
   }
 
@@ -135,8 +136,10 @@ const taxInvoiceIssueJobIdSchema = z.coerce.number().int().positive();
 export type TaxInvoiceIssueAttention = {
   id: number;
   order_id: number;
+  order_number: string | null;
   status: "blocked" | "reconcile_required";
   provider_ref: string | null;
+  invoice_number: string | null;
   last_error: string | null;
   updated_at: string;
   payment_method: "cash" | "vietqr" | null;
@@ -162,7 +165,10 @@ export async function fetchTaxInvoiceIssueAttention(): Promise<
     "fetch_tax_invoice_issue_attention",
   );
   if (error) {
-    console.error("[finance/actions:fetchTaxInvoiceIssueAttention]", error.code);
+    console.error(
+      "[finance/actions:fetchTaxInvoiceIssueAttention]",
+      error.code,
+    );
     return {
       success: false,
       error: messages.finance.actionErrors.loadTaxInvoiceIssueAttentionFailed,
@@ -179,7 +185,8 @@ export async function requeueTaxInvoiceIssueJob(
   jobId: number,
 ): Promise<ActionResult> {
   const parsed = taxInvoiceIssueJobIdSchema.safeParse(jobId);
-  if (!parsed.success) return { success: false, error: "Job HĐĐT không hợp lệ." };
+  if (!parsed.success)
+    return { success: false, error: "Job HĐĐT không hợp lệ." };
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
     PERMISSION_KEYS.SETTINGS_TENANT,
@@ -208,7 +215,11 @@ export async function reconcileTaxInvoiceProviderIssued(
 ): Promise<ActionResult> {
   const parsed = taxInvoiceReconcileSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu đối soát không hợp lệ." };
+    return {
+      success: false,
+      error:
+        parsed.error.issues[0]?.message ?? "Dữ liệu đối soát không hợp lệ.",
+    };
   }
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
@@ -235,12 +246,14 @@ export async function reconcileTaxInvoiceProviderIssued(
       "[finance/actions:reconcileTaxInvoiceProviderIssued]",
       error.code,
     );
-    return { success: false, error: "Không thể ghi đối soát; kiểm tra lại provider_ref và trạng thái." };
+    return {
+      success: false,
+      error: "Không thể ghi đối soát; kiểm tra lại provider_ref và trạng thái.",
+    };
   }
   revalidatePath("/finance/invoices");
   return { success: true };
 }
-
 
 /* ─── HĐĐT: Manual issue for a past paid order ─── */
 
@@ -364,8 +377,7 @@ export async function resolveOrderForManualInvoice(
       existingInvoiceNumber: existingInvoice?.invoice_number ?? null,
       isDraftRetry: Boolean(isDraftRetry),
       hasActiveItems,
-      historicalAggregateDate:
-        historicalAggregateInvoice?.summary_date ?? null,
+      historicalAggregateDate: historicalAggregateInvoice?.summary_date ?? null,
       issuable:
         paid &&
         hasActiveItems &&
@@ -873,13 +885,10 @@ export async function fetchOrdersForDay(
     data: unknown[] | null;
     error: { message: string } | null;
   }>;
-  const { data, error } = await ordersForDayV2Rpc(
-    "get_orders_for_day_v2",
-    {
-      p_branch_id: parsedBranch.data,
-      p_date: parsedDate.data,
-    },
-  );
+  const { data, error } = await ordersForDayV2Rpc("get_orders_for_day_v2", {
+    p_branch_id: parsedBranch.data,
+    p_date: parsedDate.data,
+  });
 
   if (error) {
     console.error(

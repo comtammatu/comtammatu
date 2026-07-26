@@ -60,6 +60,14 @@ function formatDate(iso: string): string {
   return formatVNDateTime(iso);
 }
 
+function formatIssueAttentionStatus(
+  status: TaxInvoiceIssueAttention["status"],
+): string {
+  return status === "reconcile_required"
+    ? "Chưa xác định trạng thái phát hành trên Viettel"
+    : "Phát hành tự động đang bị chặn";
+}
+
 interface InvoiceListProps {
   initialInvoices: InvoiceRow[];
   initialHasMore?: boolean;
@@ -84,7 +92,11 @@ const REPLACE_REASON_MAX = 255;
 const REPLACE_AGREEMENT_MAX = 225;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
 const reconcileInvoiceSchema = z.object({
-  invoiceNumber: z.string().trim().min(1, "Nhập số hóa đơn từ Viettel").max(200),
+  invoiceNumber: z
+    .string()
+    .trim()
+    .min(1, "Nhập số hóa đơn từ Viettel")
+    .max(200),
   cqtCode: z.string().trim().max(200),
 });
 type ReconcileInvoiceValues = z.infer<typeof reconcileInvoiceSchema>;
@@ -308,7 +320,9 @@ export function InvoiceList({
         toast.error(result.error ?? "Không thể đưa job HĐĐT vào hàng chờ.");
         return;
       }
-      setIssueAttention((current) => current.filter((item) => item.id !== job.id));
+      setIssueAttention((current) =>
+        current.filter((item) => item.id !== job.id),
+      );
       toast.success("Đã đưa HĐĐT vào hàng chờ xử lý.");
     });
   }
@@ -541,30 +555,91 @@ export function InvoiceList({
           <Item variant="outline" className="flex-col items-stretch gap-3">
             <ItemHeader>
               <ItemContent>
-                <p className="font-semibold">HĐĐT cần Finance đối soát</p>
+                <p className="font-semibold">HĐĐT cần kiểm tra trên Viettel</p>
                 <p className="text-sm text-muted-foreground">
-                  Không phát hành lại bản ghi đang chờ provider. Kiểm tra Viettel theo provider_ref trước khi ghi số HĐ.
+                  Đối chiếu đúng mã đơn, ID HĐĐT và mã giao dịch Viettel. Chỉ
+                  ghi số HĐ sau khi xác minh; không phát hành lại.
                 </p>
               </ItemContent>
             </ItemHeader>
             {issueAttention.map((job) => (
-              <Item key={job.id} variant="muted" className="flex-col items-stretch gap-2 p-3 sm:flex-row sm:items-center">
+              <Item
+                key={job.id}
+                variant="muted"
+                className="flex-col items-stretch gap-2 p-3 sm:flex-row sm:items-center"
+              >
                 <ItemContent className="min-w-0">
-                  <p className="font-mono text-sm">Đơn #{job.order_id}</p>
-                  <p className="break-all text-xs text-muted-foreground">
-                    {job.payment_method ? PAYMENT_METHOD_LABELS_VI[job.payment_method] : "—"} · {job.provider_ref ?? "Chưa có provider_ref"}
+                  <p className="text-sm font-semibold">
+                    Đơn{" "}
+                    <span className="font-mono">
+                      {job.order_number ?? `#${job.order_id}`}
+                    </span>
                   </p>
-                  <p className="text-xs text-destructive">{job.last_error ?? job.status} · {formatDate(job.updated_at)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    ID đơn <span className="font-mono">#{job.order_id}</span>
+                    {" · "}
+                    ID HĐĐT{" "}
+                    <span className="font-mono">
+                      {job.tax_invoice_id
+                        ? `#${job.tax_invoice_id}`
+                        : "Chưa tạo"}
+                    </span>
+                  </p>
+                  <DescriptionList
+                    className="mt-3 grid gap-3 sm:grid-cols-2"
+                    items={[
+                      {
+                        term: "Số HĐ Viettel",
+                        description: (
+                          <span className="font-mono">
+                            {job.invoice_number ?? "Chưa ghi nhận"}
+                          </span>
+                        ),
+                      },
+                      {
+                        term: "Mã giao dịch Viettel",
+                        description: (
+                          <span className="break-all font-mono text-xs">
+                            {job.provider_ref ?? "Chưa có"}
+                          </span>
+                        ),
+                      },
+                      {
+                        term: "Phương thức thanh toán",
+                        description: job.payment_method
+                          ? PAYMENT_METHOD_LABELS_VI[job.payment_method]
+                          : "Chưa ghi nhận",
+                      },
+                    ]}
+                  />
+                  <p className="mt-3 text-xs text-destructive">
+                    {formatIssueAttentionStatus(job.status)} ·{" "}
+                    {formatDate(job.updated_at)}
+                  </p>
                 </ItemContent>
                 {canManageInvoices ? (
                   <ItemFooter className="gap-2">
-                    {job.status === "reconcile_required" && job.tax_invoice_id && job.provider_ref ? (
-                      <Button type="button" variant="outline" size="sm" onClick={() => openReconcileForJob(job)} disabled={isPending}>
+                    {job.status === "reconcile_required" &&
+                    job.tax_invoice_id &&
+                    job.provider_ref ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openReconcileForJob(job)}
+                        disabled={isPending}
+                      >
                         Đối soát đã phát hành
                       </Button>
                     ) : null}
                     {job.status === "blocked" ? (
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleRequeue(job)} disabled={isPending}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRequeue(job)}
+                        disabled={isPending}
+                      >
                         Đưa vào hàng chờ
                       </Button>
                     ) : null}

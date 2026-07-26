@@ -28,17 +28,6 @@ Evidence: `docs/plan/design-system-rollout.md`, C0/C1/C2 external review reconci
 
 - [ ] Complete authenticated Branch/Owner viewport and axe runs, VoiceOver/TalkBack critical-path proof, and real install/update/standalone PWA proof on a registered target.
 
-## Prove Self-Order offline navigation isolation
-
-State: verify
-Kind: qa
-Tier: T2
-Lane: self-order
-Exit: Live offline navigation under `/q/*` never renders cached seating HTML, while the generic public page cache still works for non-sensitive routes.
-Evidence: Production-like offline-browser capture plus the existing `PWA-SELF-ORDER-NAV-NETWORKONLY` static regression.
-
-- [ ] Run the live offline-browser matrix for a previously visited seating URL and a non-sensitive public route; persist only the deterministic regression if behavior fails.
-
 ## Densify the Branch on-hand list
 
 State: verify

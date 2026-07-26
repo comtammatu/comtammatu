@@ -37,6 +37,13 @@ const monthlyAnnualLeaveMigrationSource = readFileSync(
   ),
   "utf8",
 );
+const policyHelperBoundaryMigrationSource = readFileSync(
+  join(
+    process.cwd(),
+    "../../supabase/migrations/20260726053209_remove_direct_auth_is_owner_policy_calls.sql",
+  ),
+  "utf8",
+);
 
 const payrollActionsCode = payrollActionsSource
   .split("\n")
@@ -107,6 +114,24 @@ test("Payroll live preview: attendance, leave and adjustments feed the atomic sn
     payrollActionsSource,
     /\.from\("annual_leave_entitlements"\)/,
     "employee/year annual entitlement rows must determine annual leave allocation",
+  );
+});
+
+test("authenticated read policies keep owner checks behind has_permission", () => {
+  for (const policy of [
+    "tax_invoices_select",
+    "attendance_select",
+    "attendance_checklist_items_select",
+  ]) {
+    assert.match(
+      policyHelperBoundaryMigrationSource,
+      new RegExp(`ALTER POLICY ${policy}`),
+    );
+  }
+  assert.match(policyHelperBoundaryMigrationSource, /public\.has_permission/);
+  assert.doesNotMatch(
+    policyHelperBoundaryMigrationSource,
+    /public\.auth_is_owner/,
   );
 });
 

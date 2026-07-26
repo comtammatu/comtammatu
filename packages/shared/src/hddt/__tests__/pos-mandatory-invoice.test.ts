@@ -168,6 +168,9 @@ test("SePay webhook only settles payment; the HĐĐT worker owns issuance", () =
 test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
   const listSrc = read("apps/web/app/(protected)/finance/invoice-list.tsx");
+  const attentionMigration = read(
+    "supabase/migrations/20260726130118_enrich_hddt_issue_attention_identifiers.sql",
+  );
 
   assert.ok(
     actionSrc.includes("fetchTaxInvoiceIssueAttention"),
@@ -185,8 +188,28 @@ test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
   );
   assert.match(
     listSrc,
-    /HĐĐT cần Finance đối soát/,
+    /HĐĐT cần kiểm tra trên Viettel/,
     "finance list must expose attention jobs",
+  );
+  assert.match(
+    attentionMigration,
+    /'order_number', sales_order\.order_number[\s\S]*'invoice_number', invoice\.invoice_number/,
+    "attention jobs must carry the human order code and provider invoice number",
+  );
+  assert.match(
+    listSrc,
+    /ID đơn[\s\S]*job\.order_id[\s\S]*ID HĐĐT[\s\S]*job\.tax_invoice_id[\s\S]*Số HĐ Viettel[\s\S]*job\.invoice_number[\s\S]*Mã giao dịch Viettel[\s\S]*job\.provider_ref/,
+    "attention rows must label each operational identifier",
+  );
+  assert.doesNotMatch(
+    listSrc,
+    /\{job\.last_error \?\? job\.status\}/,
+    "attention rows must not expose internal worker error codes",
+  );
+  assert.match(
+    listSrc,
+    /status === "reconcile_required"[\s\S]*Chưa xác định trạng thái phát hành trên Viettel[\s\S]*Phát hành tự động đang bị chặn/,
+    "attention rows must translate both worker states into operator copy",
   );
   const invoiceActions = sourceBetween(
     listSrc,
