@@ -8,10 +8,17 @@ function isTerminalSessionError(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   if ("name" in error && error.name === "AuthSessionMissingError") return true;
   if (!("code" in error)) return false;
-  return (
+  if (
     error.code === "refresh_token_not_found" ||
     error.code === "refresh_token_already_used" ||
     error.code === "session_expired"
+  ) {
+    return true;
+  }
+  return (
+    error.code === "validation_failed" &&
+    "message" in error &&
+    error.message === "Refresh token is not valid"
   );
 }
 

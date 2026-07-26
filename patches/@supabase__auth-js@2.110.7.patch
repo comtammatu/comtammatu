@@ -2,7 +2,7 @@ diff --git a/dist/main/GoTrueClient.js b/dist/main/GoTrueClient.js
 index 422a07c4f3306e5f4022d1b56e8e9f44b44385a5..8b05ceb5d80b908306c517645dda07074f62325b 100644
 --- a/dist/main/GoTrueClient.js
 +++ b/dist/main/GoTrueClient.js
-@@ -3606,10 +3606,12 @@ class GoTrueClient {
+@@ -3606,10 +3606,14 @@ class GoTrueClient {
              catch (err) {
                  await ((_b = this.stateChangeEmitters.get(id)) === null || _b === void 0 ? void 0 : _b.callback('INITIAL_SESSION', null));
                  this._debug('INITIAL_SESSION', 'callback id', id, 'error', err);
@@ -14,7 +14,9 @@ index 422a07c4f3306e5f4022d1b56e8e9f44b44385a5..8b05ceb5d80b908306c517645dda0707
 +                    ((0, errors_1.isAuthApiError)(err) &&
 +                        (err.code === 'refresh_token_not_found' ||
 +                            err.code === 'refresh_token_already_used' ||
-+                            err.code === 'session_expired'));
++                            err.code === 'session_expired' ||
++                            (err.code === 'validation_failed' &&
++                                err.message === 'Refresh token is not valid')));
 +                if (!isTerminalSessionError) {
                      console.error(err);
                  }
@@ -23,7 +25,7 @@ diff --git a/dist/module/GoTrueClient.js b/dist/module/GoTrueClient.js
 index e6d611ef760ad9e9ee3f1689649cd819b1286765..b4be4b71087547dfc0709989929dbc396ffb3452 100644
 --- a/dist/module/GoTrueClient.js
 +++ b/dist/module/GoTrueClient.js
-@@ -3603,10 +3603,12 @@ class GoTrueClient {
+@@ -3603,10 +3603,14 @@ class GoTrueClient {
              catch (err) {
                  await ((_b = this.stateChangeEmitters.get(id)) === null || _b === void 0 ? void 0 : _b.callback('INITIAL_SESSION', null));
                  this._debug('INITIAL_SESSION', 'callback id', id, 'error', err);
@@ -35,7 +37,9 @@ index e6d611ef760ad9e9ee3f1689649cd819b1286765..b4be4b71087547dfc0709989929dbc39
 +                    (isAuthApiError(err) &&
 +                        (err.code === 'refresh_token_not_found' ||
 +                            err.code === 'refresh_token_already_used' ||
-+                            err.code === 'session_expired'));
++                            err.code === 'session_expired' ||
++                            (err.code === 'validation_failed' &&
++                                err.message === 'Refresh token is not valid')));
 +                if (!isTerminalSessionError) {
                      console.error(err);
                  }
@@ -44,7 +48,7 @@ diff --git a/src/GoTrueClient.ts b/src/GoTrueClient.ts
 index 4f85623bcaa20f1076dd22b051c45b742b536912..91a6de2312ae1293eb99026fd1720a1cac8399be 100644
 --- a/src/GoTrueClient.ts
 +++ b/src/GoTrueClient.ts
-@@ -4290,9 +4290,13 @@ export default class GoTrueClient {
+@@ -4290,9 +4290,15 @@ export default class GoTrueClient {
        } catch (err) {
          await this.stateChangeEmitters.get(id)?.callback('INITIAL_SESSION', null)
          this._debug('INITIAL_SESSION', 'callback id', id, 'error', err)
@@ -56,7 +60,9 @@ index 4f85623bcaa20f1076dd22b051c45b742b536912..91a6de2312ae1293eb99026fd1720a1c
 +          (isAuthApiError(err) &&
 +            (err.code === 'refresh_token_not_found' ||
 +              err.code === 'refresh_token_already_used' ||
-+              err.code === 'session_expired'))
++              err.code === 'session_expired' ||
++              (err.code === 'validation_failed' &&
++                err.message === 'Refresh token is not valid')))
 +        if (!isTerminalSessionError) {
            console.error(err)
          }
