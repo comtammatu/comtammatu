@@ -5,6 +5,28 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Recover stale Supabase refresh sessions
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: auth/runtime-stability
+Exit: A terminal stale session becomes anonymous without an error-level Vercel event, Supabase SSR deletion cookies are preserved, and unrelated auth failures remain loud instead of causing a silent login redirect.
+Evidence: Focused middleware regression coverage, repository gates, T3 review, deployed stale-cookie smoke, and 24-hour Production runtime-log observation.
+
+- [ ] Deploy, run the stale-cookie smoke, and observe Production runtime logs for 24 hours.
+
+## Make HĐĐT worker failures diagnosable
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: hddt/worker-observability
+Exit: Per-job and top-level HĐĐT worker failures emit safe identifiers plus a bounded error code without logging provider payloads, PII, raw errors, or changing durable job-state behavior.
+Evidence: Focused worker regression coverage, repository gates, T3 review, controlled Preview failure proof, and one read-only Production cron observation.
+
+- [ ] Prove the failure log shape on Preview and observe one Production cron cadence read-only.
+
 ## Restore order-to-revenue operational truth
 
 State: doing

@@ -37,8 +37,16 @@ export async function POST(request: Request) {
       ok: true,
       ...(await runTaxInvoiceIssueWorker(jobId)),
     });
-  } catch {
-    console.error("[cron/tax-invoice-issue] worker failed");
+  } catch (error) {
+    const code =
+      error instanceof Error && error.message === "claim_failed"
+        ? "claim_failed"
+        : error instanceof Error
+          ? error.name
+          : "unknown";
+    console.error("[cron/tax-invoice-issue] worker failed", {
+      code: code.slice(0, 64),
+    });
     return NextResponse.json({ ok: false, error: "worker failed" }, { status: 500 });
   }
 }

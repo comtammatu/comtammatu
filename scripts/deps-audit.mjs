@@ -218,6 +218,10 @@ function copyDedupeCheckWorkspace(tempRoot) {
     const absFile = join(ROOT, file);
     if (existsSync(absFile)) cpSync(absFile, join(tempRoot, file));
   }
+  const patchesDir = join(ROOT, "patches");
+  if (existsSync(patchesDir)) {
+    cpSync(patchesDir, join(tempRoot, "patches"), { recursive: true });
+  }
 
   for (const dir of ["apps", "packages"]) {
     const absDir = join(ROOT, dir);

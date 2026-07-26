@@ -11,6 +11,11 @@ overrides:
   next>postcss: 8.5.19
   next>sharp: 0.35.3
 
+patchedDependencies:
+  '@supabase/auth-js@2.110.7':
+    hash: 6d3c1d03950055aecd80976e67e24517ada00c27d963b6ba80588fe0dadea604
+    path: patches/@supabase__auth-js@2.110.7.patch
+
 importers:
 
   .:
@@ -3599,7 +3604,7 @@ snapshots:
 
   '@standard-schema/utils@0.3.0': {}
 
-  '@supabase/auth-js@2.110.7':
+  '@supabase/auth-js@2.110.7(patch_hash=6d3c1d03950055aecd80976e67e24517ada00c27d963b6ba80588fe0dadea604)':
     dependencies:
       tslib: 2.8.1
 
@@ -3654,7 +3659,7 @@ snapshots:
 
   '@supabase/supabase-js@2.110.7':
     dependencies:
-      '@supabase/auth-js': 2.110.7
+      '@supabase/auth-js': 2.110.7(patch_hash=6d3c1d03950055aecd80976e67e24517ada00c27d963b6ba80588fe0dadea604)
       '@supabase/functions-js': 2.110.7
       '@supabase/postgrest-js': 2.110.7
       '@supabase/realtime-js': 2.110.7
