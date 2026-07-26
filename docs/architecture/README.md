@@ -7,6 +7,7 @@
 - [../ref/glossary.md](../ref/glossary.md) — nguồn chuẩn duy nhất cho ngôn ngữ dự án, thuật ngữ nghiệp vụ, và quy tắc đặt tên
 - [../spec/architecture.md](../spec/architecture.md) — tổng quan kiến trúc hệ thống hiện tại
 - [target-modules-tech-stack-project-structure.md](target-modules-tech-stack-project-structure.md) — Modules, Tech Specs, Infra và Project Structure mục tiêu
+- [../plan/greenfield/README.md](../plan/greenfield/README.md) — kế hoạch fork, dọn authority và chuyển giao greenfield
 - [../spec/database-schema.md](../spec/database-schema.md) — schema chuẩn và ranh giới dữ liệu
 - [../modules/auth.md](../modules/auth.md) — auth, vai trò, JWT claims, ACL
 - [../ref/business-context.md](../ref/business-context.md) — business boundary và phạm vi sản phẩm
