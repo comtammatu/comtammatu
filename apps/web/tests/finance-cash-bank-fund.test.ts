@@ -31,7 +31,7 @@ test("finance landing presents immutable book funds", () => {
   assert.match(copy, /cashOnHand: "Tiền mặt theo sổ"/);
   assert.match(copy, /bankOnHand: "Tiền trong ngân hàng"/);
   assert.match(copy, /verifying: "Đang xác minh"/);
-  assert.match(copy, /onHandTitle: "Số dư hiện có theo sổ"/);
+  assert.match(copy, /onHandTitle: "Số dư hiện có"/);
   assert.match(copy, /onHandDescription: "Toàn quán · không theo bộ lọc"/);
   assert.match(
     currentFunds,

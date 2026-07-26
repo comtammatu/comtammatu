@@ -57,7 +57,7 @@ test("finance overview presents period results, current funds, and inventory in 
   const cockpit = read(FINANCE_COCKPIT);
   const copy = read(FINANCE_COPY);
 
-  assert.match(page, /xl:grid-cols-5/);
+  assert.match(page, /xl:grid-cols-\[minmax\(0,1fr\)_auto/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.netRevenue\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.ingredientCost\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.grossProfit\}/);
@@ -99,10 +99,17 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.equal((pageBody.match(/<FinanceAttentionSection/g) ?? []).length, 1);
   assert.match(copy, /title: "Tổng quan tài chính"/);
   assert.match(copy, /netRevenue: "Doanh thu thuần"/);
-  assert.match(copy, /ingredientCost: "− Giá vốn món"/);
-  assert.match(copy, /grossProfit: "= Lợi nhuận gộp"/);
-  assert.match(copy, /operatingExpense: "− Chi phí vận hành"/);
-  assert.match(copy, /operatingResult: "= Kết quả vận hành"/);
+  assert.match(copy, /ingredientCost: "Giá vốn món"/);
+  assert.match(copy, /grossProfit: "Lợi nhuận gộp"/);
+  assert.match(copy, /operatingExpense: "Chi phí vận hành"/);
+  assert.match(copy, /operatingResult: "Kết quả vận hành"/);
+  assert.match(copy, /inventory: "Tài sản hiện có"/);
+  assert.equal(
+    (page.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
+    4,
+  );
+  assert.equal((page.match(/<span aria-hidden>−<\/span>/g) ?? []).length, 2);
+  assert.equal((page.match(/<span aria-hidden>=<\/span>/g) ?? []).length, 2);
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);
   assert.match(copy, /Đầu kỳ/);

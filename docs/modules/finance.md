@@ -10,12 +10,12 @@ five cards:
 
 - **Doanh thu thuần**: paid-order merchandise value after discount and before
   VAT.
-- **− Giá vốn món**: recorded ingredient cost for the paid orders in the period.
-- **= Lợi nhuận gộp**: net revenue minus recorded food cost.
-- **− Chi phí vận hành**: posted operating spend for rent,
+- **Giá vốn món**: recorded ingredient cost for the paid orders in the period.
+- **Lợi nhuận gộp**: net revenue minus recorded food cost.
+- **Chi phí vận hành**: posted operating spend for rent,
   utilities, payroll, repairs, supplies, marketing, fees/tax, and other
   operating categories?
-- **= Kết quả vận hành**: gross profit minus recorded operating expense.
+- **Kết quả vận hành**: gross profit minus recorded operating expense.
 
 Missing food-cost coverage makes both gross profit and operating result
 unavailable. A period with no recorded operating expense keeps operating result
@@ -58,7 +58,8 @@ updates accounts payable but does not create a second bank movement; the
 canonical outgoing `bank_transactions` row reduces bank funds whether or not
 it has been reconciled.
 
-Inventory is a separate filtered section labeled **Giá trị tồn kho cuối kỳ**.
+Inventory sits in a separate filtered **Tài sản hiện có** section and is labeled
+**Giá trị tồn kho cuối kỳ**.
 The attention queue remains the last section. Tax and GTGT reporting are not
 added to this landing formula; HĐĐT and tax workflows keep their existing
 separate routes and contracts.

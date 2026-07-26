@@ -270,7 +270,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - **KHÔNG hiển thị:** Card GTGT/VAT trong đợt này, nút tạo order, các bước chế biến món ăn, hoặc phân tích tài chính doanh nghiệp cổ phần không áp dụng cho mô hình HKD.
 - **Quy chuẩn UX/UI:**
   - Mọi số liệu tiền tệ phải được định dạng chuẩn VND bằng hàm `formatVND` (ví dụ: `150.000đ`, không viết `150k` hay `150000`).
-  - Desktop hiển thị năm card kết quả trên một hàng; tablet hai cột; mobile một cột. Dùng lại `KpiCard`, `KpiRow` và `AppSection`.
+  - Desktop hiển thị năm card kết quả trên một hàng, có dấu `−` và `=` nối công thức; tablet hai cột; mobile một cột. Dùng lại `KpiCard`, `KpiRow` và `AppSection`.
   - Tất cả các biểu đồ tài chính chỉ được phép sử dụng bảng màu quy chuẩn từ `chart-1` đến `chart-5` trong token của hệ thống để đảm bảo tính đồng bộ thị giác.
 
 ---

@@ -131,8 +131,8 @@ test("Finance separates period results, inventory, and current book funds", () =
   assert.match(financePage, /inventoryOpeningValue/);
   assert.match(financePage, /CurrentFundsSection cash=\{cash\}/);
   assert.match(financeMessages, /netRevenue: "Doanh thu thuần"/);
-  assert.match(financeMessages, /grossProfit: "= Lợi nhuận gộp"/);
-  assert.match(financeMessages, /operatingResult: "= Kết quả vận hành"/);
+  assert.match(financeMessages, /grossProfit: "Lợi nhuận gộp"/);
+  assert.match(financeMessages, /operatingResult: "Kết quả vận hành"/);
   assert.match(financeMessages, /inventoryOpeningCompare: "so với tồn đầu kỳ"/);
 });
 
