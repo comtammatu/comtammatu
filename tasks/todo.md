@@ -5,6 +5,17 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Restore fresh-install database ACL parity
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: database/auth
+Exit: A fresh migration replay restores the Production table, sequence, and function ACLs without inheriting extra `TRUNCATE`, `REFERENCES`, or `TRIGGER` privileges for `anon` or `authenticated`.
+Evidence: Disposable local baseline replay, ACL inventory matched against read-only Production catalogs, `advisor_auth_hardening_test.sql`, repository gates, and CI e2e smoke.
+
+- [ ] Confirm the PR CI e2e smoke and Supabase Preview checks pass.
+
 ## Recover stale Supabase refresh sessions
 
 State: verify
