@@ -37,8 +37,9 @@ each target slice is deployed.
   call the current baseline a greenfield target merely because it contains no
   business rows.
 - Keep one web deployment, one Supabase data platform, and the existing
-  print-agent runtime. Company, warehouse, kitchen, and branch are authorization
-  and workflow scopes, not services.
+  print-agent runtime. Company, Tenant, and operational site are authorization
+  and workflow scopes, not services; warehouse, kitchen, and branch are site
+  kinds.
 - Keep existing durable HĐĐT and print job tables. Do not add a message broker
   or Supabase Queues without measured throughput or consumer-semantics evidence.
 - Remove `service_role` from branch machines before cutover. Every print-agent

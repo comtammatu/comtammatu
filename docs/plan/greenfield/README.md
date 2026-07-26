@@ -10,8 +10,12 @@ release gate. Nó không lặp lại kiến trúc nghiệp vụ hoặc quyết �
 
 - [Kiến trúc mục tiêu](../../architecture/target-modules-tech-stack-project-structure.md)
   sở hữu Modules, Tech Specs, Infra, Project Structure và các lát cắt sản phẩm.
+- [Auth và Authorization mục tiêu](../../architecture/target-auth-authorization.md)
+  sở hữu membership, scoped RBAC, route access, RLS và RPC.
 - [ADR 0014](../adr/0014-greenfield-company-tenant-cutover.md) sở hữu quyết định
   không lấy dữ liệu cũ, không dual-write, rollback và cutover.
+- [ADR 0015](../adr/0015-greenfield-authorization-model.md) sở hữu quyết định
+  authorization đã được owner chấp nhận.
 - `docs/spec/*`, `docs/modules/*` của repo đang chạy tiếp tục là current-state
   authority cho tới khi từng lát cắt được triển khai và chứng minh trên target.
 
@@ -100,18 +104,18 @@ bootstrap evidence; history cũ không được copy sang repo mới. Mọi ngo�
 
 ## 4. Bản đồ authority
 
-| Concern | Authority trong giai đoạn chuyển giao | Quy tắc promote |
-| --- | --- | --- |
-| Hệ thống đang chạy | `comtammatu` current specs, modules, code và applied state | Không sửa thành target-state sớm |
-| Kiến trúc đích | `docs/architecture/target-modules-tech-stack-project-structure.md` | Chỉ chuyển thành current spec sau khi slice live-proven |
-| Cutover/rollback | `docs/plan/adr/0014-greenfield-company-tenant-cutover.md` | Trong repo mới viết lại thành ADR 0001, không copy lịch sử ADR |
-| Thứ tự thực thi | Tài liệu này | Xóa khi hoàn tất và nội dung ổn định đã về đúng owner |
-| Runtime behavior | Code, applied schema và active configuration của đúng target | Docs phải theo sau evidence triển khai |
-| Route và capability | `MODULE_ACL`, route map, navigation source | Route matrix chỉ là generated output |
-| Database type | Applied target schema và generated types | Không sửa type bằng tay |
-| Dependency version | Package manifests và lockfile | Không ghi exact version lặp lại trong docs |
-| Project ref và quyền | Environment Registry của repo tương ứng | Không hardcode ở docs/module khác |
-| Memory và tool output | Discovery evidence | Không bao giờ vượt repo authority |
+| Concern               | Authority trong giai đoạn chuyển giao                              | Quy tắc promote                                                |
+| --------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| Hệ thống đang chạy    | `comtammatu` current specs, modules, code và applied state         | Không sửa thành target-state sớm                               |
+| Kiến trúc đích        | `docs/architecture/target-modules-tech-stack-project-structure.md` | Chỉ chuyển thành current spec sau khi slice live-proven        |
+| Cutover/rollback      | `docs/plan/adr/0014-greenfield-company-tenant-cutover.md`          | Trong repo mới viết lại thành ADR 0001, không copy lịch sử ADR |
+| Thứ tự thực thi       | Tài liệu này                                                       | Xóa khi hoàn tất và nội dung ổn định đã về đúng owner          |
+| Runtime behavior      | Code, applied schema và active configuration của đúng target       | Docs phải theo sau evidence triển khai                         |
+| Route và capability   | Target route-capability registry + capability catalog              | Route matrix và navigation projection chỉ là generated output  |
+| Database type         | Applied target schema và generated types                           | Không sửa type bằng tay                                        |
+| Dependency version    | Package manifests và lockfile                                      | Không ghi exact version lặp lại trong docs                     |
+| Project ref và quyền  | Environment Registry của repo tương ứng                            | Không hardcode ở docs/module khác                              |
+| Memory và tool output | Discovery evidence                                                 | Không bao giờ vượt repo authority                              |
 
 Một fact chỉ có một owner. Khi chuyển nội dung từ tài liệu cũ sang owner mới,
 phải xóa bản lặp; không tạo thư mục archive hoặc agent wiki thứ hai.
@@ -120,20 +124,25 @@ phải xóa bản lặp; không tạo thư mục archive hoặc agent wiki thứ
 
 ### 5.1. Docs
 
-| Hành động | Nội dung |
-| --- | --- |
-| Keep | Kiến trúc mục tiêu, glossary đã được xác nhận, design-system contract còn áp dụng và business invariant đã có owner hiện hành |
-| Rewrite | `docs/README.md`, business context, architecture hiện hành, Auth, Database, Infrastructure, HĐĐT và runbook theo repo/target mới |
-| Generate | `docs/CODEBASE_MAP.md`, role-route matrix, database types, migration/status inventory và mọi tài liệu đã có generator |
-| Exclude | `docs/plan/decisions.md`, source `tasks/*` gồm `tasks/todo.md`, ADR 0005–0013, design rollout/review snapshot, worklog, old environment/runbook evidence và nội dung chỉ mô tả lịch sử triển khai |
+| Hành động | Nội dung                                                                                                                                                                                          |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Keep      | Kiến trúc mục tiêu, từng domain term đã được xác nhận, design-system contract còn áp dụng và business invariant đã có owner hiện hành                                                             |
+| Rewrite   | `docs/README.md`, glossary, business context, architecture hiện hành, Auth, Database, Infrastructure, HĐĐT và runbook theo repo/target mới                                                        |
+| Generate  | `docs/CODEBASE_MAP.md`, route-capability matrix, database types, migration/status inventory và mọi tài liệu đã có generator                                                                       |
+| Exclude   | `docs/plan/decisions.md`, source `tasks/*` gồm `tasks/todo.md`, ADR 0005–0013, design rollout/review snapshot, worklog, old environment/runbook evidence và nội dung chỉ mô tả lịch sử triển khai |
 
 Trước khi exclude, mọi invariant còn cần cho code được fork phải được đối chiếu
 với code và viết lại vào đúng spec/ref/module từ current evidence. Không copy
-đoạn hoặc giữ nguyên `decisions.md` chỉ vì một vài quyết định còn giá trị.
+nguyên current glossary: chỉ extract term đã xác nhận, rồi viết lại
+Company/Tenant/site/Auth vocabulary từ target docs đã được owner chấp nhận.
+Không copy đoạn hoặc giữ nguyên `decisions.md` chỉ vì một vài quyết định còn giá
+trị.
 
 Trong repo mới:
 
 - ADR đầu tiên là greenfield bootstrap/cutover, được viết lại từ ADR 0014;
+- authorization decision được viết lại từ ADR 0015 thành ADR 0002 với trạng
+  thái Accepted; không copy numbering hoặc lịch sử ADR cũ;
 - `docs/plan/decisions.md` không tồn tại;
 - không file nào từ source `tasks/*` được extract; nếu workflow target vẫn cần
   task tracker thì generate một file rỗng từ template Greenfield sau sanitation,
@@ -147,12 +156,12 @@ Trong repo mới:
 
 ### 5.2. Rules
 
-| Hành động | Nội dung |
-| --- | --- |
-| Keep | TypeScript strict, Zod ở trust boundary, `supabase-js`, multi-row RPC, không lộ raw error, ACL/RLS fail closed, URL-owned scope và Git safety |
-| Rewrite | `AGENTS.md`, `database.md`, `skills.md`, `references.md` và business framing theo Company → Tenant → operational site |
-| Keep tối thiểu | `engineering.md`, `database.md`, `ui.md`, `workflow.md`, `orchestration.md`, `references.md`, `skills.md` |
-| Exclude | Quy tắc gắn với HKD hiện hành, old project ref, old baseline, tenant/branch giả định và adapter-specific instruction đã hết tác dụng |
+| Hành động      | Nội dung                                                                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Keep           | TypeScript strict, Zod ở trust boundary, `supabase-js`, multi-row RPC, không lộ raw error, ACL/RLS fail closed, URL-owned scope và Git safety |
+| Rewrite        | `AGENTS.md`, `database.md`, `skills.md`, `references.md` và business framing theo Company → Tenant → operational site                         |
+| Keep tối thiểu | `engineering.md`, `database.md`, `ui.md`, `workflow.md`, `orchestration.md`, `references.md`, `skills.md`                                     |
+| Exclude        | Quy tắc gắn với HKD hiện hành, old project ref, old baseline, tenant/branch giả định và adapter-specific instruction đã hết tác dụng          |
 
 `AGENTS.md` vẫn là entrypoint ngắn. `CLAUDE.md` chỉ là compatibility shim. Root
 adapter directories chỉ nối runtime vào rules; không được trở thành authority
@@ -270,17 +279,17 @@ authority, policy hay behavior.
 
 ### 5.7. Code, database và infrastructure
 
-| Surface | Quy tắc |
-| --- | --- |
-| Monorepo | Giữ package graph hiện tại; không thêm package/service/state library nếu chưa có consumer chéo boundary |
-| Product code | Reuse implementation có test và khớp target; legacy compatibility hoặc hardcode không được promote |
-| Database | Current migrations là discovery input, không phải target chain; viết target chain replay từ empty |
-| Seed | Chỉ versioned reference data; Company, Tenant, site, user, catalog và integration profile được provision có chủ đích |
-| Cron/job | Bootstrap để disabled; chỉ activate bằng release step sau provisioning và health proof |
-| Vercel | Project mới, candidate domain mới, không copy `.vercel/project.json`, không tự gắn production domain |
-| Secrets | Provision lại từng secret; không pull/copy từ project cũ và không lưu credential HĐĐT trong browser/database payload |
-| Print agent | Identity site-scoped, revoke được; không dùng `service_role` tại site |
-| Provider | SePay, Viettel và webhook được đăng ký lại có kiểm soát; không để endpoint cũ và mới cùng nhận ghi |
+| Surface      | Quy tắc                                                                                                              |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Monorepo     | Giữ package graph hiện tại; không thêm package/service/state library nếu chưa có consumer chéo boundary              |
+| Product code | Reuse implementation có test và khớp target; legacy compatibility hoặc hardcode không được promote                   |
+| Database     | Current migrations là discovery input, không phải target chain; viết target chain replay từ empty                    |
+| Seed         | Chỉ versioned reference data; Company, Tenant, site, user, catalog và integration profile được provision có chủ đích |
+| Cron/job     | Bootstrap để disabled; chỉ activate bằng release step sau provisioning và health proof                               |
+| Vercel       | Project mới, candidate domain mới, không copy `.vercel/project.json`, không tự gắn production domain                 |
+| Secrets      | Provision lại từng secret; không pull/copy từ project cũ và không lưu credential HĐĐT trong browser/database payload |
+| Print agent  | Identity site-scoped, revoke được; không dùng `service_role` tại site                                                |
+| Provider     | SePay, Viettel và webhook được đăng ký lại có kiểm soát; không để endpoint cũ và mới cùng nhận ghi                   |
 
 Bootstrap dùng positive allowlist, không dùng cách copy cả repo rồi xóa dần.
 Source archive chỉ là audit input. Một file/module chỉ được extract vào curated
@@ -305,16 +314,16 @@ Mục tiêu không phải xóa mọi literal. Product invariant thật sự cố
 trong code khi có owner và test. Giá trị thay đổi theo tổ chức, site, môi trường,
 provider hoặc thời gian phải rời khỏi code:
 
-| Nhóm | Target owner |
-| --- | --- |
-| Project ref, URL, domain, runtime binding | Environment Registry và verified deployment binding |
-| Company, Tenant, site, user hoặc magic ID như `tenant_id = 1` | Provisioned row, server-derived scope và RLS |
-| Giá, giới hạn bán, payment method, sellable window | Typed Effective Configuration: Tenant default → site override → snapshot |
-| VAT, seller identity, template, series, invoice profile metadata | Versioned invoice profile và transaction snapshot |
-| Username, password, token, certificate | Server-side secret store/env; database chỉ giữ secret reference khi cần |
-| Route scope và quyền | URL params, membership/grant/assignment, `MODULE_ACL` và server authority |
-| Generated schema, route hoặc dependency fact | Generator, applied schema, manifests và lockfile |
-| Brand/product invariant thật sự cố định | Named constant hoặc content contract có owner; không biến thành Company bootstrap field |
+| Nhóm                                                             | Target owner                                                                            |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Project ref, URL, domain, runtime binding                        | Environment Registry và verified deployment binding                                     |
+| Company, Tenant, site, user hoặc magic ID như `tenant_id = 1`    | Provisioned row, server-derived scope và RLS                                            |
+| Giá, giới hạn bán, payment method, sellable window               | Typed Effective Configuration: Tenant default → site override → snapshot                |
+| VAT, seller identity, template, series, invoice profile metadata | Versioned invoice profile và transaction snapshot                                       |
+| Username, password, token, certificate                           | Server-side secret store/env; database chỉ giữ secret reference khi cần                 |
+| Route scope và quyền                                             | URL site param, live membership/assignment, target route-capability registry và RLS/RPC |
+| Generated schema, route hoặc dependency fact                     | Generator, applied schema, manifests và lockfile                                        |
+| Brand/product invariant thật sự cố định                          | Named constant hoặc content contract có owner; không biến thành Company bootstrap field |
 
 G0 tạo inventory theo bảng trên. Mỗi kết quả phải được phân loại `move`,
 `generate`, `keep-with-owner` hoặc `delete`. Không chấp nhận allowlist chung kiểu
@@ -422,8 +431,8 @@ Triển khai đúng năm slice trong
 [kiến trúc mục tiêu](../../architecture/target-modules-tech-stack-project-structure.md#84-các-lát-cắt-triển-khai),
 không lặp chi tiết tại đây:
 
-1. Branch Workspace;
-2. Greenfield authority;
+1. Greenfield Authority;
+2. Branch Workspace;
 3. Effective Configuration và HĐĐT;
 4. Kho Tổng và Bếp Trung Tâm;
 5. Workforce và Attendance.
@@ -434,10 +443,13 @@ Mỗi slice có hai gate:
 2. `runtime-proven`: evidence trên exact Production Candidate hoặc provider/site
    boundary tương ứng đạt.
 
-Phase 2 Greenfield Authority phải tạo target migration chain và bật required
-from-empty replay cùng SQL/RLS negative tests. Sau khi `source-ready`, G5 được
-mở để apply và lấy runtime proof. Phase 3 mở G6 cho provider proof. Phase 4–5
-dùng cùng candidate để chứng minh route kind, RLS và workflow.
+Thứ tự thực thi của năm slice là Greenfield Authority, Branch Workspace,
+Effective Configuration và HĐĐT, Kho Tổng và Bếp Trung Tâm, rồi Workforce và
+Attendance. Greenfield Authority phải tạo target migration chain và bật
+required from-empty replay cùng SQL/RLS negative tests. Sau khi `source-ready`,
+G5 được mở để apply và lấy runtime proof. Effective Configuration và HĐĐT mở G6
+cho provider proof; các slice còn lại dùng cùng candidate để chứng minh route
+kind, RLS và workflow.
 
 Slice kế tiếp chỉ được mở khi dependency trước đã `source-ready`; không slice
 nào được gọi là hoàn tất trước `runtime-proven`. Work hoàn toàn độc lập chỉ chạy
@@ -455,15 +467,22 @@ G4, không phải bước chờ toàn bộ product code hoàn tất.
 2. Thêm target vào Environment Registry, guards, adapters và type generation
    trong cùng một atomic review.
 3. Apply target chain một lần sau khi Local replay đạt.
-4. Lập versioned candidate checklist cho Auth hooks, Site URL/redirect allowlist,
-   SMTP và email suppression, API/network policy, extensions, Realtime, Storage,
-   cron và backup; xác minh từng mục trên exact ref.
+4. Lập versioned candidate checklist cho Auth settings, xác nhận custom
+   access-token hook absent/disabled, public sign-up và anonymous Auth disabled,
+   invite/login/recovery redirect allowlist, password/rate-limit policy, Security
+   Admin MFA, JWT expiry khớp Realtime revocation bound, SMTP và email
+   suppression, API/network policy, extensions, Realtime, Storage, cron và
+   backup; xác minh từng mục trên exact ref.
 5. Provision Company, Tenant, sites, users, reference catalog và enterprise
    Viettel profile; operational cron vẫn disabled.
-6. Tạo Vercel project/candidate domain riêng nhưng chưa gắn production domain.
+6. Chạy owner-gated one-time bootstrap cho Security Admin đầu tiên bằng exact
+   target/user ID, ghi audit, enroll/challenge AAL2 và chứng minh zero-admin
+   recovery; Security Admin sau đó bind một Security Admin recovery identity
+   khác qua audited RPC, không tạo permanent Owner bypass.
+7. Tạo Vercel project/candidate domain riêng nhưng chưa gắn production domain.
    Candidate deployment manifest không có cron schedule; schedule chỉ được thêm
    bằng release change tại G7.
-7. Chốt RPO/RTO, backup tier và chạy restore drill.
+8. Chốt RPO/RTO, backup tier và chạy restore drill.
 
 **Gate**
 
@@ -471,6 +490,9 @@ G4, không phải bước chờ toàn bộ product code hoàn tất.
 - không có operational row cũ;
 - project-level Auth/API/network/Realtime/Storage/backup checklist khớp exact
   target;
+- Security Admin bootstrap bị khóa sau lần đầu; hai identity có AAL2/recovery
+  độc lập, stranded/zero-admin recovery và Realtime revocation-window evidence
+  đạt;
 - candidate Supabase và Vercel không có active cron schedule;
 - Company office user hoạt động không cần site giả, site worker fail closed
   ngoài assignment;
@@ -541,31 +563,31 @@ trên target.
 
 ## 7. Risk register
 
-| Risk | Control |
-| --- | --- |
-| Bootstrap từ dirty tree | Exact clean source commit, archive checksum và allowlist |
-| Old authority lọt sang repo mới | Curated root commit, Keep/Rewrite/Generate/Exclude review |
-| Agent/tool ghi nhầm database cũ | Old refs `NO_TOUCH`, no default target, negative guard fixtures |
-| Current migration mang `tenant_id = 1`, cron hoặc operational assumptions | Target chain mới, from-empty replay, cron disabled until release |
-| Docs nói target đã live | Current/target status header và promote only after evidence |
-| HĐĐT phát hành hai nơi hoặc sai VAT | One enterprise profile, snapshot, idempotency, queue drain và owner smoke |
-| Print agent giữ quyền quá rộng | Site-scoped identity, no `service_role` |
-| Task/memory cũ trở thành hidden authority | Empty task/memory start; import fact-by-fact only |
-| Skill/rule bundle phình không có consumer | Six-skill starting bundle; task-signal gate for additions |
-| Rollback tạo split-brain | Pre-first-transaction rollback only; afterwards restore/fix-forward |
+| Risk                                                                      | Control                                                                   |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Bootstrap từ dirty tree                                                   | Exact clean source commit, archive checksum và allowlist                  |
+| Old authority lọt sang repo mới                                           | Curated root commit, Keep/Rewrite/Generate/Exclude review                 |
+| Agent/tool ghi nhầm database cũ                                           | Old refs `NO_TOUCH`, no default target, negative guard fixtures           |
+| Current migration mang `tenant_id = 1`, cron hoặc operational assumptions | Target chain mới, from-empty replay, cron disabled until release          |
+| Docs nói target đã live                                                   | Current/target status header và promote only after evidence               |
+| HĐĐT phát hành hai nơi hoặc sai VAT                                       | One enterprise profile, snapshot, idempotency, queue drain và owner smoke |
+| Print agent giữ quyền quá rộng                                            | Site-scoped identity, no `service_role`                                   |
+| Task/memory cũ trở thành hidden authority                                 | Empty task/memory start; import fact-by-fact only                         |
+| Skill/rule bundle phình không có consumer                                 | Six-skill starting bundle; task-signal gate for additions                 |
+| Rollback tạo split-brain                                                  | Pre-first-transaction rollback only; afterwards restore/fix-forward       |
 
 ## 8. Owner gates còn cần chốt khi thực thi
 
-| Gate | Thời điểm |
-| --- | --- |
-| Exact source commit | Trước G0 hoàn tất |
-| GitHub organization, private visibility và ruleset | Trước G1 |
-| Exact Supabase candidate ref, region, plan và backup tier | Trước G5 |
-| Vercel candidate project/domain | Trong G5 |
-| RPO/RTO và retention window của old project | Trước G7 |
-| Provider test invoice và cutover window | Trước G6/G7 |
-| First live transaction approval | Ngay tại G7 |
-| Archive/delete old repo/project | Sau retention window |
+| Gate                                                      | Thời điểm            |
+| --------------------------------------------------------- | -------------------- |
+| Exact source commit                                       | Trước G0 hoàn tất    |
+| GitHub organization, private visibility và ruleset        | Trước G1             |
+| Exact Supabase candidate ref, region, plan và backup tier | Trước G5             |
+| Vercel candidate project/domain                           | Trong G5             |
+| RPO/RTO và retention window của old project               | Trước G7             |
+| Provider test invoice và cutover window                   | Trước G6/G7          |
+| First live transaction approval                           | Ngay tại G7          |
+| Archive/delete old repo/project                           | Sau retention window |
 
 Các gate này không cho phép agent tự suy đoán giá trị. Chưa có exact target ref
 thì toàn bộ cloud database write path phải tiếp tục fail closed.
