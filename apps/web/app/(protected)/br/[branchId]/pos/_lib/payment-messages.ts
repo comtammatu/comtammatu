@@ -35,6 +35,12 @@ export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
       "Đơn đang chờ chuyển khoản từ QR tự gọi món. Hãy kiểm tra tiền về và hủy yêu cầu tại hàng chờ trước khi thu tiền mặt.",
   },
   {
+    match: includesAny("invoice_snapshot_immutable"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Dữ liệu HĐĐT của đơn đã được chốt nên hệ thống không thể tiếp tục. Không thu thêm tiền; hãy tải lại đơn để kiểm tra trạng thái thanh toán, rồi báo quản lý nếu đơn vẫn chưa hoàn tất.",
+  },
+  {
     match: includesAny("must be >=", "must be >", "cash_received"),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage: "Tiền nhận phải lớn hơn hoặc bằng tổng cần thu.",

@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { mapRpcError } from "../app/_lib/rpc-error-map";
+import {
+  confirmCashPaymentRpcFallback,
+  confirmCashPaymentRpcMappings,
+} from "../app/(protected)/br/[branchId]/pos/_lib/payment-messages";
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -20,6 +25,9 @@ const staffActions = read(
 const workerMigration = read(
   "../../supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
 );
+const snapshotFixMigration = read(
+  "../../supabase/migrations/20260726170000_preserve_cash_invoice_snapshot.sql",
+);
 
 function functionBlock(source: string, name: string): string {
   const block = new RegExp(
@@ -31,6 +39,10 @@ function functionBlock(source: string, name: string): string {
 
 const bindingRpc = functionBlock(
   migration,
+  "confirm_cash_payment_with_invoice_binding",
+);
+const snapshotSafeBindingRpc = functionBlock(
+  snapshotFixMigration,
   "confirm_cash_payment_with_invoice_binding",
 );
 
@@ -159,6 +171,31 @@ test("cash action passes the server-owned fallback buyer snapshot into the atomi
   );
   assert.match(workerMigration, /p_invoice_payload jsonb/);
   assert.match(workerMigration, /private\.upsert_tax_invoice_issue_job/);
+});
+
+test("cash confirmation preserves the immutable HĐĐT snapshot and returns cashier recovery steps", () => {
+  const paymentCall = snapshotSafeBindingRpc.indexOf(
+    "public.confirm_cash_payment_with_invoice_binding(",
+  );
+  const invoiceUpsert = snapshotSafeBindingRpc.indexOf(
+    "private.upsert_tax_invoice_issue_job(",
+  );
+
+  assert.ok(paymentCall >= 0 && invoiceUpsert > paymentCall);
+  assert.doesNotMatch(snapshotSafeBindingRpc, /UPDATE public\.payments/);
+  assert.deepEqual(
+    mapRpcError(
+      { message: "invoice_snapshot_immutable", code: "22023" },
+      confirmCashPaymentRpcMappings,
+      confirmCashPaymentRpcFallback,
+    ),
+    {
+      success: false,
+      error:
+        "Dữ liệu HĐĐT của đơn đã được chốt nên hệ thống không thể tiếp tục. Không thu thêm tiền; hãy tải lại đơn để kiểm tra trạng thái thanh toán, rồi báo quản lý nếu đơn vẫn chưa hoàn tất.",
+      errorCode: "RPC_GENERIC",
+    },
+  );
 });
 
 test("cash completion queues the worker instead of issuing HĐĐT from the action", () => {
