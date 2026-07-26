@@ -5,6 +5,7 @@ import { PhotoUploadInput } from "@/components/form";
 interface WastePhotoUploadProps {
   id?: string;
   tenantId: number;
+  branchId: number;
   /** stock_issue_items.id when available; otherwise temp id before persist. */
   issueId: number | string;
   value: string | null;
@@ -29,6 +30,7 @@ interface WastePhotoUploadProps {
 export function WastePhotoUpload({
   id,
   tenantId,
+  branchId,
   issueId,
   value,
   onChange,
@@ -40,7 +42,7 @@ export function WastePhotoUpload({
     <PhotoUploadInput
       id={id}
       tenantId={tenantId}
-      folder={`waste/${issueId}`}
+      folder={`branches/${branchId}/waste/${issueId}`}
       value={value}
       onChange={onChange}
       disabled={disabled}

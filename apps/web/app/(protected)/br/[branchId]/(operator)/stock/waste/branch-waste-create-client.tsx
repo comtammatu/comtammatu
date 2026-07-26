@@ -1148,6 +1148,7 @@ export function BranchWasteCreateClient({
                             <WastePhotoUpload
                               id="branch-waste-photo"
                               tenantId={context.tenantId}
+                              branchId={context.branch.id}
                               issueId={`branch-draft-${editor.line.uid}`}
                               value={editor.line.photoUrls[0] ?? null}
                               onChange={(url) =>
