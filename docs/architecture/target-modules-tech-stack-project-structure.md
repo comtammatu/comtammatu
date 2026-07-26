@@ -1,4 +1,4 @@
-# Modules, Tech Stack và Project Structure mục tiêu
+# Modules, Tech Specs, Infra và Project Structure mục tiêu
 
 > Trạng thái: kiến trúc mục tiêu, chưa mô tả hệ thống đang chạy.
 >
@@ -116,9 +116,47 @@ Mũi tên thể hiện module phía sau tiêu thụ interface hoặc dữ liệu
 module phía trước. Central Production gọi interface/RPC của Supply Chain để ghi
 nhận tiêu hao và thành phẩm; Supply Chain không import ngược Central Production.
 
-## 4. Tech Stack
+## 4. Tech Specs và Tech Stack
 
-### 4.1. Baseline
+### 4.1. Hợp đồng kỹ thuật
+
+| Concern       | Hợp đồng mục tiêu                                                                                                                                                                                           |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scope         | Company membership, Tenant grant và site assignment là ba quan hệ riêng. URL mang Tenant/site scope; RLS/RPC xác minh lại server-side.                                                                      |
+| Tiền          | Giá POS là gross đã gồm VAT. Tiền VND là `NUMERIC(...,0)` trong Postgres và `number` safe-integer theo đơn vị đồng trong TypeScript; quantity và VAT rate là field riêng, không dùng binary float cho tiền. |
+| Thời gian     | Lưu instant bằng `TIMESTAMPTZ`; business date và sellable window được tính theo timezone đã cấu hình của site, mặc định `Asia/Ho_Chi_Minh`.                                                                 |
+| Cấu hình      | Mỗi domain có typed default/override riêng; không dùng một mega JSON settings, recursive merge hoặc environment variable làm business configuration.                                                        |
+| Giao dịch     | Ghi nhiều dòng hoặc chuyển trạng thái có cạnh tranh phải đi qua một RPC atomic; external HTTP không được giữ database lock.                                                                                 |
+| Công việc nền | Job bền vững có idempotency key, lease/claim, retry có giới hạn, trạng thái không rõ và reconciliation; Realtime chỉ giảm latency, polling là recovery.                                                     |
+| Lỗi           | Client nhận lỗi nghiệp vụ ổn định; raw Postgres, Supabase, provider response và secret chỉ ở server log/audit đã lọc.                                                                                       |
+| Audit         | Giá, VAT, payment method và invoice profile hiệu lực được snapshot trên giao dịch; thay đổi cấu hình không viết lại lịch sử.                                                                                |
+
+### 4.2. Hợp đồng giá gross và VAT HĐĐT
+
+- `menu_item` sở hữu VAT rate mặc định; giá bán chuẩn và giá override của site
+  đều là giá gross đã gồm VAT.
+- Order line snapshot `unit_price_gross`, `vat_rate`, quantity và phần discount
+  được phân bổ. Không đọc lại thực đơn khi phát hành HĐĐT.
+- Invoice job snapshot `invoice_profile_id`, profile version, seller tax
+  identity, `template_code` và `invoice_series` tại thời điểm thanh toán.
+  Credential không nằm trong snapshot.
+- Nhiều VAT rate trong một đơn phải tạo đúng line/tax breakdown theo contract
+  Viettel. Tổng gross sau discount phải bằng số tiền đã thu; tổng net + VAT phải
+  reconcile về cùng tổng gross.
+- Công thức gross-to-net, thứ tự phân bổ discount và rounding per-line/per-rate
+  chỉ được triển khai sau khi có fixture được kế toán duyệt và tài khoản Viettel
+  chấp nhận. Không suy ra từ luồng HKD mẫu `2/...` hiện tại.
+- Thay profile, template, series hoặc VAT sau thanh toán chỉ áp dụng cho giao
+  dịch mới. Hóa đơn draft, replacement và reconciliation tiếp tục dùng snapshot
+  đã khóa.
+- Replacement/adjustment không dựng lại line, VAT hoặc profile từ order/menu/env
+  hiện tại; chúng đọc snapshot của hóa đơn gốc và chỉ thêm metadata nghiệp vụ
+  được provider yêu cầu.
+- VAT rate dùng basis points nguyên. Gross-to-net và discount allocation dùng
+  integer arithmetic theo fixture đã duyệt; chỉ provider adapter mới chuyển sang
+  shape số mà Viettel yêu cầu.
+
+### 4.3. Baseline
 
 | Lớp                | Công nghệ                                                                |
 | ------------------ | ------------------------------------------------------------------------ |
@@ -145,7 +183,7 @@ Phiên bản patch không được sao chép vào tài liệu. Nguồn chuẩn:
 - task graph: `/turbo.json`;
 - phiên bản đã khóa: `/pnpm-lock.yaml`.
 
-### 4.2. Các lựa chọn không dùng
+### 4.4. Các lựa chọn không dùng
 
 - không Prisma; mọi query dùng `supabase-js`;
 - không tách REST/GraphQL backend khi Next.js và Supabase đã đủ;
@@ -153,10 +191,30 @@ Phiên bản patch không được sao chép vào tài liệu. Nguồn chuẩn:
 - không generic ERP framework;
 - không thêm client state library chỉ để giữ scope;
 - không lưu Tenant/site scope trong `localStorage` hoặc React Context;
+- không thêm message broker khi `tax_invoice_issue_jobs` và `print_jobs` đã đáp
+  ứng durable claim/retry;
+- không đưa `service_role` lên máy tại site trong kiến trúc mục tiêu;
 - không tạo package `core`, `domain`, `types` hoặc `utils` chung khi chưa có ít
   nhất hai runtime thật sự cần.
 
-## 5. Deployable units
+## 5. Target Infrastructure
+
+### 5.1. Topology và deployable units
+
+```mermaid
+flowchart LR
+    users["Company office + operational sites"] --> web["Vercel Web / PWA"]
+    web --> db["Fresh Supabase Production"]
+    web --> rate["Upstash rate limiting"]
+    web --> invoice["Viettel S-invoice"]
+    web --> payment["SePay / payment providers"]
+    db --> agent["Site-scoped print-agent"]
+    agent --> printer["ESC/POS LAN printers"]
+    ci["GitHub Actions + isolated Supabase Local"] --> source["Migration chain + app artifacts"]
+    source --> web
+    source --> db
+    source --> agent
+```
 
 Hệ thống giữ ba đơn vị triển khai:
 
@@ -167,6 +225,63 @@ Hệ thống giữ ba đơn vị triển khai:
 
 Business module không trở thành deployable unit riêng. External provider được
 kết nối qua adapter server-side của web hoặc worker đã được chứng minh là cần.
+
+### 5.2. Environment và greenfield cutover
+
+| Stage                | Contract                                                                                                                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CI                   | Supabase Local chỉ tồn tại trong GitHub Actions để replay from-empty, chạy SQL tests và E2E; không là runtime target.                                     |
+| Current Production   | Tiếp tục là current-state authority cho tới cutover; sau cutover chỉ read-only trong retention window đã chốt.                                            |
+| Production candidate | Supabase Project mới, không phải DEV. Không được query/apply trước khi exact ref và quyền được thêm đồng bộ vào Environment Registry cùng guard adapters. |
+| Production           | Candidate chỉ trở thành Production sau schema replay, RLS negative tests, backup/restore proof, provider/print smoke và owner cutover gate.               |
+
+Không có persistent DEV, không dual-write và không import operational data cũ.
+Chỉ seed reference data bắt buộc; Company, Tenant, site, tài khoản và master data
+được provision rõ ràng trên target. Vercel Preview tiếp tục fail closed cho tới
+khi có một candidate binding được guard xác minh.
+
+Rollback bằng đổi Vercel/agent target chỉ hợp lệ trước giao dịch live đầu tiên.
+Sau mốc đó, khôi phục hoặc sửa tiến trên target; quay lại project cũ sẽ tạo
+split-brain về payment, HĐĐT và tồn kho. Quyết định đầy đủ nằm trong
+`docs/plan/adr/0014-greenfield-company-tenant-cutover.md`.
+
+Trước giao dịch live đầu tiên, current Production phải vào write fence: dừng
+cron/webhook ingress, thu hồi credential của runtime/agent cũ và chứng minh không
+còn writer. Pre-live rollback phải mở lại authority cũ một cách có kiểm soát;
+không được để hai project cùng nhận ghi.
+
+### 5.3. Configuration và secrets
+
+| Lớp                          | Ví dụ                                                                                 | Nơi sở hữu                   |
+| ---------------------------- | ------------------------------------------------------------------------------------- | ---------------------------- |
+| Browser-public bootstrap     | Supabase URL, publishable key, app URL                                                | env của web                  |
+| Server infrastructure secret | service role, cron/webhook secret, Upstash token                                      | env/secret manager của web   |
+| Business configuration       | giá, sellable window, payment method, VAT, template, series, invoice profile metadata | typed tables + audit         |
+| Edge identity                | site/agent identity và revocable scoped credential                                    | protected env của từng agent |
+
+V1 có một enterprise Viettel profile nên credential có thể ở server env. Khi có
+profile thứ hai hoặc cần rotation không deploy, chuyển credential sang secret
+store phía server và database chỉ giữ secret reference; không tạo
+`USERNAME_BRANCH_1`, `PASSWORD_BRANCH_1` hoặc biến môi trường theo site.
+
+Print-agent không được giữ Supabase `service_role`. Agent dùng identity có scope
+đúng site, có thể revoke, và chỉ được claim/complete job cùng đọc printer config
+qua RLS/RPC tương ứng.
+
+### 5.4. Reliability, observability và recovery
+
+- Giữ các durable job table hiện tại; không thêm Supabase Queues hoặc broker cho
+  tới khi job table không còn đáp ứng throughput/consumer semantics đã đo.
+- Health evidence tối thiểu gồm cron run, tuổi job HĐĐT cũ nhất, job failed hoặc
+  `reconcile_required`, print-agent heartbeat và print job stuck/failed. Dùng
+  health route, notification/audit tables và log hiện có trước khi thêm vendor.
+- Print-agent artifact có version và SHA-256, rollout canary một site, giữ bundle
+  trước đó để rollback.
+- Trước go-live phải chốt RPO/RTO, backup tier và chạy restore drill. Nếu daily
+  backup không đáp ứng RPO đã chốt thì bật PITR; không gọi cấu hình backup là
+  hoàn tất khi chưa chứng minh restore.
+- Web, database và print-agent được promote riêng. `written`, `CI green`,
+  `candidate-applied`, `deployed` và `live-proven` là các trạng thái khác nhau.
 
 ## 6. Project Structure
 
@@ -283,19 +398,6 @@ Không tạo interface với một adapter giả định. Provider, storage ho�
 có seam riêng khi thực tế có từ hai adapter hoặc cần fake để kiểm thử một
 workflow có side effect.
 
-### 6.6. Environment và secrets
-
-Environment variable chỉ dùng cho hạ tầng triển khai, không dùng làm Company,
-Tenant hoặc site configuration:
-
-- mỗi app/runtime sở hữu env của mình;
-- Turbo chỉ hash các env thật sự ảnh hưởng task của app đó;
-- giá bán, VAT, phương thức thanh toán, `template_code` và `invoice_series` nằm
-  trong typed configuration có audit;
-- provider username, password và token nằm trong secret store phía server;
-- database chỉ giữ metadata hồ sơ và secret reference;
-- không đưa business configuration vào root `.env` hoặc client bundle.
-
 ## 7. Routing theo workspace
 
 | Workspace            | Route family           | Module điều phối                           |
@@ -334,6 +436,9 @@ thể.
   `apps/web/lib/invoice-provider-init.ts` đang khởi tạo một provider HĐĐT toàn
   cục từ environment. Mô hình này không thể biểu diễn Tenant default và site
   override.
+- Luồng replacement/adjustment HĐĐT hiện đọc lại order và environment. Phase
+  HĐĐT phải chuyển cả phát hành mới, replacement, adjustment và reconciliation
+  sang cùng invoice/profile snapshot đã khóa.
 - `/br/:branchId`, `/br/:branchId/dashboard` và
   `/br/:branchId/settings` đang là ba landing page chồng trách nhiệm. Chúng phải
   trở thành một Branch Workspace cùng các deep route theo tác vụ.
@@ -358,7 +463,17 @@ Tenant default
 Áp dụng cho giá bán, khoảng thời gian được bán, phương thức thanh toán và invoice
 profile. Metadata của profile gồm loại chủ thể phát hành, provider,
 `template_code`, `invoice_series` và trạng thái; username, password, token hoặc
-chứng thư chỉ tồn tại trong secret store phía server.
+chứng thư chỉ tồn tại ở server.
+
+Override là typed record theo domain, không phải JSON merge:
+
+- không có row hoặc `mode = inherit`: dùng Tenant default;
+- `mode = override`: thay đúng các field mà domain contract cho phép;
+- `mode = disabled`: chỉ tồn tại ở domain hỗ trợ tắt, như payment method hoặc
+  sellability; không dùng để tạo invoice profile thiếu cấu hình;
+- `valid_from` và version quyết định hiệu lực; thay đổi cạnh tranh dùng
+  optimistic version hoặc RPC atomic;
+- resolver trả resolved value cùng source/version để caller snapshot.
 
 Đơn hàng đã hoàn tất không phụ thuộc vào kết nối Viettel. Yêu cầu phát hành đi
 qua hàng đợi có idempotency, retry, reconciliation và audit; giao dịch chỉ lưu
@@ -366,13 +481,13 @@ snapshot metadata cần đối soát, không lưu secret.
 
 ### 8.4. Các lát cắt triển khai
 
-| Phase                              | Kết quả nhỏ nhất phải đạt                                                                                                                        | Bề mặt sở hữu                                                                                      | Exit evidence                                                                                                                    |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 1 — Branch Workspace               | `/br/:branchId` là control room duy nhất; dashboard được nhập vào workspace, settings landing bị loại bỏ nhưng deep settings còn nguyên          | operator home/dashboard/settings, route registry, ACL, navigation và route tests                   | không còn landing cạnh tranh; deep link và capability guard vẫn đúng; route matrix, typecheck, lint và build đạt                 |
-| 2 — Greenfield authority           | Supabase mới có Company tối thiểu, Company workforce, Tenant, `operational_site`, membership, grant và assignment; không có migration dữ liệu cũ | migrations, RLS, RPC, auth claims, generated types và SQL tests                                    | chứng minh Văn phòng không cần Branch; worker site không đọc chéo site; target ref được xác minh trước khi apply                 |
-| 3 — Effective Configuration & HĐĐT | thay provider/env singleton bằng resolver `Tenant default → site override`; chỉ provision profile Doanh nghiệp Viettel; phát hành bất đồng bộ    | typed configuration, secret reference, provider adapter, issue jobs, transaction snapshot và audit | test default/override; credential không tới client; một hóa đơn thật đi qua issue và reconcile; lỗi mạng không chặn hoàn tất đơn |
-| 4 — Kho Tổng và Bếp Trung Tâm      | hai workspace có scope, quyền và workflow riêng; không dùng shell hoặc kind của Branch                                                           | `/warehouse/:siteId/*`, `/kitchen/:siteId/*`, Supply Chain và Central Production                   | route/RLS chặn sai kind; tồn kho và sản xuất ghi qua RPC đúng authority                                                          |
-| 5 — Workforce & Attendance         | Văn phòng chấm công theo Company policy; nhân sự vận hành chấm công theo assignment tới site                                                     | workforce, schedule, attendance, leave và payroll input                                            | test cả Company-scoped và site-scoped worker; không sinh Branch giả hoặc quyền ngầm từ phòng ban                                 |
+| Phase                              | Kết quả nhỏ nhất phải đạt                                                                                                                        | Bề mặt sở hữu                                                                                    | Exit evidence                                                                                                                                                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — Branch Workspace               | `/br/:branchId` là control room duy nhất; dashboard được nhập vào workspace, settings landing bị loại bỏ nhưng deep settings còn nguyên          | operator home/dashboard/settings, route registry, ACL, navigation và route tests                 | không còn landing cạnh tranh; deep link và capability guard vẫn đúng; route matrix, typecheck, lint và build đạt                                                                                                     |
+| 2 — Greenfield authority           | Supabase mới có Company tối thiểu, Company workforce, Tenant, `operational_site`, membership, grant và assignment; không có migration dữ liệu cũ | migrations, RLS, RPC, auth claims, generated types và SQL tests                                  | chứng minh Văn phòng không cần Branch; worker site không đọc chéo site; target ref được xác minh trước khi apply                                                                                                     |
+| 3 — Effective Configuration & HĐĐT | thay provider/env singleton bằng resolver `Tenant default → site override`; chỉ provision profile Doanh nghiệp Viettel; phát hành bất đồng bộ    | typed configuration, provider adapter, issue/replace/adjust jobs, line/profile snapshot và audit | test inherit/override/disabled; mixed-VAT gross-price reconcile; replacement/adjustment tái dùng snapshot; credential không tới client; một hóa đơn thật đi qua issue và reconcile; lỗi mạng không chặn hoàn tất đơn |
+| 4 — Kho Tổng và Bếp Trung Tâm      | hai workspace có scope, quyền và workflow riêng; không dùng shell hoặc kind của Branch                                                           | `/warehouse/:siteId/*`, `/kitchen/:siteId/*`, Supply Chain và Central Production                 | route/RLS chặn sai kind; tồn kho và sản xuất ghi qua RPC đúng authority                                                                                                                                              |
+| 5 — Workforce & Attendance         | Văn phòng chấm công theo Company policy; nhân sự vận hành chấm công theo assignment tới site                                                     | workforce, schedule, attendance, leave và payroll input                                          | test cả Company-scoped và site-scoped worker; không sinh Branch giả hoặc quyền ngầm từ phòng ban                                                                                                                     |
 
 Mỗi phase chỉ tạo feature khi chuyển workflow thật. Route tiếp tục làm adapter;
 implementation trùng được xóa sau caller cuối cùng. Phase sau không bắt đầu nếu
@@ -386,6 +501,9 @@ exit evidence của phase trước chưa đạt.
 - nhân viên Văn phòng không cần Branch giả;
 - Kho Tổng và Bếp Trung Tâm không dùng route hoặc shell của Chi nhánh;
 - web và print-agent chia sẻ đúng rendering contract, không chia sẻ app code;
+- không có `service_role` trên máy tại site;
+- current Production không còn writer trước giao dịch live đầu tiên trên target;
+- backup/restore và pre-live rollback được chứng minh trước cutover;
 - không có package mới nếu chưa có consumer chéo runtime;
 - task graph vẫn chạy qua `turbo run`;
 - thay đổi module không làm yếu Zod, RPC, ACL hoặc RLS.

@@ -25,7 +25,7 @@ The pre-baseline incremental chain could not replay from an empty DB (ordering b
 - `supabase/migration-lineage.json` — machine guard for the baseline hash and
   active migration layout. It is not Production-ledger proof and does not govern
   Preview eligibility.
-- `supabase/migrations/20260717151346_fold_managed_surfaces.sql` — extensions /
+- `supabase/migrations/20260720035549_fold_managed_surfaces.sql` — extensions /
   storage buckets + RLS policies / realtime publication / cron jobs (excluded from
   the baseline schema dump, folded back in here). It is a forward migration in the
   chain, so it is applied automatically after the baseline — not a separate manual

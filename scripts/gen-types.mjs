@@ -53,30 +53,15 @@ function runTypegen(command, args) {
   }
 }
 
-let types;
-try {
-  types = runTypegen("supabase", [
-    "gen",
-    "types",
-    "typescript",
-    "--project-id",
-    PRODUCTION_PROJECT_ID,
-  ]);
-} catch (error) {
-  if (error && typeof error === "object" && "code" in error && error.code !== "ENOENT") {
-    throw error;
-  }
-
-  types = runTypegen("pnpm", [
-    "dlx",
-    "supabase",
-    "gen",
-    "types",
-    "typescript",
-    "--project-id",
-    PRODUCTION_PROJECT_ID,
-  ]);
-}
+let types = runTypegen("pnpm", [
+  "exec",
+  "supabase",
+  "gen",
+  "types",
+  "typescript",
+  "--project-id",
+  PRODUCTION_PROJECT_ID,
+]);
 
 types = sanitizeTypes(types);
 if (!isValidTypes(types)) {

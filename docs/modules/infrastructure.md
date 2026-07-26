@@ -35,6 +35,7 @@ payments, stock, or another local database.
 | Validation    | Zod 4; React Hook Form for CRUD forms                       | `apps/web/package.json`                                  |
 | UI            | Tailwind CSS 4 + Má Tư Design System                        | `packages/ui/package.json`, `docs/spec/design-system.md` |
 | Data client   | `supabase-js` 2 + `@supabase/ssr`                           | web/database/agent manifests                             |
+| Database CLI  | Workspace-pinned Supabase CLI                               | root `package.json`                                      |
 | PWA           | Serwist 9                                                   | `apps/web/package.json`, `apps/web/app/sw.ts`            |
 | Branch bundle | esbuild ESM bundle, Node.js installed on host, NSSM service | `apps/print-agent/package.json`, rollout runbook         |
 | Verification  | Node test runner through `tsx`; Playwright browser checks   | package scripts                                          |
@@ -61,12 +62,12 @@ comtammatu/
 
 ## Environment Model
 
-| Environment           | Web runtime                       | Database target                                                                                              | Mutation policy                                                                       |
-| --------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| Developer workstation | Local Next.js/print-agent         | Production Supabase for application runtime; database tooling remains read-only by default                   | Writes require exact current-session owner delegation; no workstation Local substitute |
-| Vercel Preview        | Disabled                          | None                                                                                                         | Supabase environment variables are rejected                                            |
-| CI                    | GitHub-hosted runner              | Isolated Supabase Local started by CI-only harness                                                           | Disposable baseline, seed, SQL, and E2E verification only                             |
-| Production            | Vercel production + branch agents | Production Supabase                                                                                          | Agent reads by default; writes/applies require the rights in the Environment Registry |
+| Environment           | Web runtime                       | Database target                                                                            | Mutation policy                                                                        |
+| --------------------- | --------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| Developer workstation | Local Next.js/print-agent         | Production Supabase for application runtime; database tooling remains read-only by default | Writes require exact current-session owner delegation; no workstation Local substitute |
+| Vercel Preview        | Disabled                          | None                                                                                       | Supabase environment variables are rejected                                            |
+| CI                    | GitHub-hosted runner              | Isolated Supabase Local started by CI-only harness                                         | Disposable baseline, seed, SQL, and E2E verification only                              |
+| Production            | Vercel production + branch agents | Production Supabase                                                                        | Agent reads by default; writes/applies require the rights in the Environment Registry  |
 
 The Environment Registry in `docs/agent/rules/database.md` is the only source
 for project refs and agent rights. Preview Branches do not silently promote or
@@ -146,7 +147,7 @@ Generate database types from the registered Production schema only after the
 migration is applied:
 
 ```bash
-SUPABASE_PROJECT_ID=iexwsuaqqenyjiskawoj corepack pnpm db:types
+SUPABASE_PROJECT_ID=REGISTERED_PRODUCTION_REF corepack pnpm db:types
 ```
 
 Full setup: `docs/ref/setup.md`. Preview database setup:

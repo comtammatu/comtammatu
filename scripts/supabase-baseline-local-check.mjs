@@ -227,7 +227,7 @@ async function main() {
 
   let startError = null;
   try {
-    run("pnpm", ["dlx", "supabase", "db", "start", "--workdir", workdir], {
+    run("pnpm", ["exec", "supabase", "db", "start", "--workdir", workdir], {
       timeoutMs: options.timeoutMs,
     });
     process.stdout.write(
@@ -241,7 +241,7 @@ async function main() {
       try {
         run(
           "pnpm",
-          ["dlx", "supabase", "stop", "--workdir", workdir, "--no-backup"],
+          ["exec", "supabase", "stop", "--workdir", workdir, "--no-backup"],
           { timeoutMs: 120_000 },
         );
       } catch (error) {

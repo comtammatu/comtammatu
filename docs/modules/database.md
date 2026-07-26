@@ -57,13 +57,13 @@ hand-written table/function counts here.
 
 When facts disagree, trust the higher tier:
 
-| Tier | Source                                                | What it tells you                                               |
-| ---- | ----------------------------------------------------- | --------------------------------------------------------------- |
-| 1    | `packages/database/src/types/database.types.ts`       | The shape currently usable from app code (post `pnpm db:types`) |
-| 2    | Applied Production or owner-operated Preview Branch state | What RLS, defaults, constraints actually enforce right now   |
-| 3    | `supabase/migrations/*.sql`                           | What changes have been authored — file existence ≠ applied      |
-| 4    | `docs/spec/database-schema.md`                        | Schema source ladder, migration layout, and status vocabulary   |
-| 5    | Hand-written module docs                              | Narrative + design rationale; can lag the sources above         |
+| Tier | Source                                                    | What it tells you                                               |
+| ---- | --------------------------------------------------------- | --------------------------------------------------------------- |
+| 1    | `packages/database/src/types/database.types.ts`           | The shape currently usable from app code (post `pnpm db:types`) |
+| 2    | Applied Production or owner-operated Preview Branch state | What RLS, defaults, constraints actually enforce right now      |
+| 3    | `supabase/migrations/*.sql`                               | What changes have been authored — file existence ≠ applied      |
+| 4    | `docs/spec/database-schema.md`                            | Schema source ladder, migration layout, and status vocabulary   |
+| 5    | Hand-written module docs                                  | Narrative + design rationale; can lag the sources above         |
 
 ### Migration Status Vocabulary
 
@@ -103,35 +103,34 @@ For the per-column / per-policy reference of a specific table, prefer reading th
 
 ## RLS Pattern
 
-Most public application tables follow this pattern. Intentional exceptions such
-as global catalogs, derived logs, and no-client-write tables must be justified by
-their table policy.
+There is no generic role predicate to copy across tables. Choose the policy from
+the table's action and scope semantics. Intentional exceptions such as global
+catalogs, derived logs, and no-client-write tables must be justified by their
+table policy.
 
 ```sql
 -- 1. Enable RLS
 ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY;
 
--- 2. Tenant isolation (mandatory)
+-- 2. Tenant isolation for a read model
 CREATE POLICY "Tenant isolation" ON public.{table}
-  FOR SELECT USING (tenant_id = auth_tenant_id());
-
--- 3. Branch scoping (where applicable)
-CREATE POLICY "Branch scope" ON public.{table}
-  FOR SELECT USING (
-    branch_id = auth_branch_id()
-    OR auth_role() = 'owner'
+  FOR SELECT
+  TO authenticated
+  USING (
+    tenant_id = auth_tenant_id()
+    AND has_permission(branch_id, '<permission-key>')
   );
 
--- 4. GRANT (mandatory — RLS without GRANT = silent block)
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.{table} TO authenticated;
+-- 3. GRANT only the verbs exposed by this table
+GRANT SELECT ON public.{table} TO authenticated;
 ```
 
 ## Migration Conventions
 
-Fresh/dev installs are baseline-first. `supabase/migrations/20260717151345_baseline.sql`
+Fresh installs are baseline-first. `supabase/migrations/20260720035548_baseline.sql`
 is the public+private schema install path; the managed surfaces (extensions, storage
 policies, realtime, and cron) are folded into the chain as the forward migration
-`supabase/migrations/20260717151346_fold_managed_surfaces.sql`, applied automatically.
+`supabase/migrations/20260720035549_fold_managed_surfaces.sql`, applied automatically.
 Forward migrations live in `supabase/migrations/` with timestamp-prefixed
 filenames after the baseline.
 

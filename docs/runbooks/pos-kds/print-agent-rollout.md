@@ -51,12 +51,11 @@ Complete all items before opening the branch for the day.
   AGENT_TENANT_ID=<numeric>
   AGENT_BRANCH_ID=<numeric>
   AGENT_ID=pos-<branch-slug>
-  AGENT_VERSION=1.0.0
   WEB_BASE_URL=https://<app-host>
   PRINT_AGENT_PRESENCE_TOKEN=<raw per-agent token>
   ```
-  > **Note**: bump `AGENT_VERSION` mỗi release (sync với `package.json`).
-  > SQL view `v_print_agent_fleet` dùng version này để xác định fleet status.
+  > Agent tự đọc version từ `apps/print-agent/package.json`; SQL view
+  > `v_print_agent_fleet` dùng version heartbeat này để xác định fleet status.
   > `PRINT_AGENT_PRESENCE_TOKEN` là token riêng của agent này, không dùng chung
   > giữa các chi nhánh. Token được tạo/xoay/thu hồi bằng
   > `pnpm --filter @comtammatu/print-agent presence:provision -- ...`; không
@@ -189,14 +188,14 @@ repair with preview count and post-check.
 
 ## 5. Rollout checklist
 
-| Day   | Milestone                                                     | Owner           |
-| ----- | ------------------------------------------------------------- | --------------- |
-| D0    | Branch pre-flight (§0) complete                               | Branch manager  |
-| D0    | Smoke test signed off                                         | Ops lead        |
-| D1–D3 | Daily check-in at 08:30 — badge green, 0 stuck `failed` jobs  | Branch manager  |
+| Day   | Milestone                                                      | Owner           |
+| ----- | -------------------------------------------------------------- | --------------- |
+| D0    | Branch pre-flight (§0) complete                                | Branch manager  |
+| D0    | Smoke test signed off                                          | Ops lead        |
+| D1–D3 | Daily check-in at 08:30 — badge green, 0 stuck `failed` jobs   | Branch manager  |
 | D7    | Operations review — failed job count, MTTR, retry success rate | Ops + Eng       |
-| D14   | Go/no-go decision for fleet rollout                           | Ops lead        |
-| D14+  | Fleet rollout: 1 branch per day, same checklist               | Branch managers |
+| D14   | Go/no-go decision for fleet rollout                            | Ops lead        |
+| D14+  | Fleet rollout: 1 branch per day, same checklist                | Branch managers |
 
 Go criteria for fleet rollout:
 

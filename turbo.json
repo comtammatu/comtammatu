@@ -1,6 +1,5 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": [".env.local", "apps/web/.env.local"],
   "ui": "tui",
   "tasks": {
     "build": {
@@ -18,7 +17,9 @@
     },
     "@comtammatu/web#build": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.env.local", ".env.local"],
       "env": [
+        "CI",
         "NEXT_PUBLIC_SUPABASE_URL",
         "SUPABASE_PROJECT_ID",
         "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
@@ -42,7 +43,8 @@
         "CRON_SECRET",
         "SEPAY_WEBHOOK_SECRET",
         "DISABLE_LOGIN_RATE_LIMIT",
-        "ENABLE_DEBUG_CLAIMS"
+        "ENABLE_DEBUG_CLAIMS",
+        "VERCEL_ENV"
       ],
       "outputs": [
         ".next/**",

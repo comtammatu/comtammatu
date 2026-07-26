@@ -55,15 +55,15 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 **Decision:** Hợp nhất molecule theo wave; mỗi molecule = contract trong `docs/spec/design-system.md` + ratchet trong `scripts/check-ui-contract.mjs` (allowlist baseline chỉ giảm). W5 chi tiết ở D019; W6 (decompose god-components) còn lại. Canonical: `docs/spec/design-system.md` § Component Authority.
 
-## D015: Một Platform duy nhất — production in-place là system of record (2026-06-12)
+## D015: Chuyển giao Company/Tenant sang Supabase mới (2026-06-12, sửa 2026-07-26)
 
 **Decision:**
 
-1. Một Platform duy nhất = hệ production hiện tại (repo này, DB `iexwsuaqqenyjiskawoj`). KHÔNG ETL/migrate dữ liệu vận hành sang DB khác.
-2. `matu-platform` (DB `dyksphedgzqsqjqgxzog`) đóng băng vĩnh viễn: không deploy, không mở lại feature; archive read-only sau harvest; DB backup rồi pause/xóa theo owner.
-3. **Harvest một chiều** ở mức spec + migration chọn lọc, viết lại theo convention `with-action.ts`/RPC hiện hành (bê nguyên khối = vi phạm). Danh mục duyệt: pgTAP + CI test-db; idempotency_keys + webhook claim-before-side-effect; inventory ledger-based; HĐĐT worker; PBAC anti-escalation; reports net-profit-daily.
+1. Production hiện tại tiếp tục là nguồn chuẩn cho trạng thái đang chạy cho tới khi chuyển giao.
+2. Kiến trúc Company/Tenant dùng một Supabase production candidate mới; không nhập dữ liệu vận hành cũ, không ghi song song và không tạo môi trường DEV thường trực.
+3. Không truy vấn hoặc áp migration vào target trước khi mã project chính xác và quyền được đăng ký trong Environment Registry cùng guard adapters. Candidate chỉ thành Production sau kiểm chứng và cổng duyệt chuyển giao của Owner.
 
-**Consequences:** Chấm dứt re-litigate hướng platform. Mọi đề xuất rebuild/cutover phải sửa quyết định này trước, kèm số liệu thắng phương án absorb.
+**Canonical:** `docs/plan/adr/0014-greenfield-company-tenant-cutover.md`.
 
 ## D016: POS trừ Kho chi nhánh theo outcome bán hàng — mặc định (2026-05-28, sửa 2026-07-11)
 

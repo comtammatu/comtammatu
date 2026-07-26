@@ -38,13 +38,8 @@ if (
   throw new Error("supabase-e2e-bringup is restricted to the GitHub Actions CI harness");
 }
 
-// Prefer a CLI on PATH (fast locally); fall back to `pnpm dlx supabase` (CI).
 function supabase(args, { timeoutMs = 600_000 } = {}) {
-  let r = spawnSync("supabase", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs, maxBuffer: MAX_BUFFER });
-  if (r.error && r.error.code === "ENOENT") {
-    r = spawnSync("pnpm", ["dlx", "supabase", ...args], { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs, maxBuffer: MAX_BUFFER });
-  }
-  return r;
+  return spawnSync("pnpm", ["exec", "supabase", ...args], { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs, maxBuffer: MAX_BUFFER });
 }
 
 function writeScratch() {

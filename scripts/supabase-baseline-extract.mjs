@@ -188,7 +188,7 @@ function buildBaselineDbUrl(expectedRef) {
 }
 
 function runPnpmSupabase(args, timeoutMs) {
-  const result = spawnSync("pnpm", ["dlx", "supabase", ...args], {
+  const result = spawnSync("pnpm", ["exec", "supabase", ...args], {
     cwd: process.cwd(),
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -212,7 +212,7 @@ function runPnpmSupabase(args, timeoutMs) {
 
 function getSupabaseVersion() {
   try {
-    return execFileSync("pnpm", ["dlx", "supabase", "--version"], {
+    return execFileSync("pnpm", ["exec", "supabase", "--version"], {
       cwd: process.cwd(),
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
@@ -337,7 +337,7 @@ async function main() {
     command:
       options.engine === "pg_dump"
         ? "pg_dump --schema-only --schema=<schema> --no-owner --dbname <redacted>"
-        : "pnpm dlx supabase db dump --db-url <redacted> --schema <schema>",
+        : "pnpm exec supabase db dump --db-url <redacted> --schema <schema>",
     schemas: options.schemas,
     files: [],
   };
