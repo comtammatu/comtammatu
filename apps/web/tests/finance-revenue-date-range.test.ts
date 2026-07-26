@@ -230,7 +230,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.match(financeMessages, /actualFoodCost: "Giá vốn đã ghi nhận"/);
 });
 
-test("Finance keeps gross-profit coverage as supporting logic, not a landing KPI", () => {
+test("Finance gates gross profit and operating result on data coverage", () => {
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
@@ -250,9 +250,10 @@ test("Finance keeps gross-profit coverage as supporting logic, not a landing KPI
     "gross profit must not be trusted when only a subset of paid orders has posted consumption",
   );
   assert.match(cockpit, /missingCostCoverageHint/);
-  assert.doesNotMatch(page, /basic\.kpis\.grossProfit/);
-  assert.match(page, /basic\.kpis\.moneyCollected/);
-  assert.match(financeMessages, /netRevenue: "Bán hàng sau giảm giá"/);
+  assert.match(page, /basic\.kpis\.grossProfit/);
+  assert.match(page, /basic\.kpis\.operatingResult/);
+  assert.doesNotMatch(page, /basic\.kpis\.moneyCollected/);
+  assert.match(financeMessages, /netRevenue: "Doanh thu thuần"/);
 });
 
 test("Finance cockpit branch filter also scopes supplier payable risk", () => {

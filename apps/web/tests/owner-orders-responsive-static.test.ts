@@ -34,18 +34,18 @@ test("Owner order KPI rows stay compact and expose work sooner on phones", () =>
   }
 });
 
-test("Owner finance summary exposes its operational sections sooner on phones", () => {
+test("Owner finance results stay one column on mobile and five on desktop", () => {
   const page = read(FINANCE_PAGE);
   const currentFunds = read(CURRENT_FUNDS);
 
   assert.match(
     page,
-    /className="grid-cols-1 min-\[360px\]:grid-cols-2 xl:grid-cols-4"/,
+    /className="grid-cols-1 md:grid-cols-2 xl:grid-cols-5"/,
   );
-  assert.equal((page.match(/density="compact"/g) ?? []).length, 6);
+  assert.equal((page.match(/density="compact"/g) ?? []).length, 9);
   assert.match(
     currentFunds,
-    /className="grid-cols-1 min-\[360px\]:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2"/,
+    /className="grid-cols-1 md:grid-cols-2 xl:grid-cols-2"/,
   );
   assert.equal((currentFunds.match(/density="compact"/g) ?? []).length, 3);
 });

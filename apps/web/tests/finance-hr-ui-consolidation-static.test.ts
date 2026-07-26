@@ -18,7 +18,10 @@ test("Finance retires the duplicate inventory workspace and keeps one value card
 
   assert.equal(existsSync(route), false);
   assert.doesNotMatch(nav, /\/finance\/inventory-value/);
-  assert.match(page, /label=\{financeCopy\.basic\.kpis\.inventoryValue\}/);
+  assert.match(
+    page,
+    /label=\{financeCopy\.basic\.kpis\.inventoryClosingValue\}/,
+  );
   assert.doesNotMatch(page, /href=.*\/finance\/inventory-value/);
 });
 

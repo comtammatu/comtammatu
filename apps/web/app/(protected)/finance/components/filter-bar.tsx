@@ -21,6 +21,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
@@ -182,7 +183,8 @@ export function FilterBar({
     <>
       {filterCopy.rangeSummary}{" "}
       <span className="font-medium tabular-nums text-foreground">
-        {presetRange.start} → {presetRange.end}
+        {formatVNBusinessDate(presetRange.start)} →{" "}
+        {formatVNBusinessDate(presetRange.end)}
       </span>
       {showCompare && params.compare !== "none" ? (
         <span> · {COMPARE_LABEL[params.compare]}</span>

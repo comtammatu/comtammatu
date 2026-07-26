@@ -32,6 +32,14 @@ test("finance landing presents immutable book funds", () => {
   assert.match(copy, /bankOnHand: "Tiền trong ngân hàng"/);
   assert.match(copy, /verifying: "Đang xác minh"/);
   assert.match(copy, /onHandTitle: "Số dư hiện có theo sổ"/);
+  assert.match(copy, /onHandDescription: "Toàn quán · không theo bộ lọc"/);
+  assert.match(
+    currentFunds,
+    /className="grid-cols-1 md:grid-cols-2 xl:grid-cols-2"/,
+  );
+  assert.match(currentFunds, /copy\.cash\.openingMeta\(openingDate\)/);
+  assert.match(currentFunds, /<details/);
+  assert.match(currentFunds, /copy\.cash\.calculationDetails/);
   assert.match(currentFunds, /initializeFinanceFunds/);
   assert.match(currentFunds, /createFinanceFundAdjustment/);
   assert.match(currentFunds, /allowNegative/);
@@ -155,7 +163,7 @@ test("finance funds use one immutable append-only ledger contract", () => {
   assert.match(
     currentFundsMigration,
     /app\.finance_legacy_cutover_idempotency_key[\s\S]*IS DISTINCT FROM p_idempotency_key::text/,
-    "legacy cutover must require an operator-controlled key bound to the opening request",
+    "cutover must require an operator-controlled key bound to the opening request",
   );
   assert.match(
     databaseTypes,

@@ -161,7 +161,7 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
       >
         <KpiRow
           density="compact"
-          className="grid-cols-1 min-[360px]:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2"
+          className="grid-cols-1 md:grid-cols-2 xl:grid-cols-2"
         >
           <KpiCard
             density="compact"
@@ -172,13 +172,7 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
             }
             hint={
               cash.hasOpening
-                ? copy.cash.onHandBreakdown(
-                    formatVND(cash.openingBalance),
-                    openingDate,
-                    formatVND(cash.cashInSince),
-                    formatVND(cash.cashOutSince),
-                    formatVND(cash.cashAdjustments),
-                  )
+                ? copy.cash.openingMeta(openingDate)
                 : cash.legacySettingsPresent
                   ? copy.cash.noOpeningLegacy
                   : copy.cash.noOpening
@@ -194,13 +188,7 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
             }
             hint={
               cash.hasOpening
-                ? copy.cash.bankBreakdown(
-                    formatVND(cash.bankOpeningBalance),
-                    openingDate,
-                    formatVND(cash.bankInSince),
-                    formatVND(cash.bankOutSince),
-                    formatVND(cash.bankAdjustments),
-                  )
+                ? copy.cash.openingMeta(openingDate)
                 : cash.legacySettingsPresent
                   ? copy.cash.noOpeningLegacy
                   : copy.cash.noOpening
@@ -208,6 +196,31 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
             href="/finance/bank-transactions"
           />
         </KpiRow>
+        {cash.hasOpening ? (
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer font-medium text-foreground">
+              {copy.cash.calculationDetails}
+            </summary>
+            <div className="mt-2 grid gap-1 border-l pl-3">
+              <p>
+                {copy.cash.onHandBreakdown(
+                  formatVND(cash.openingBalance),
+                  formatVND(cash.cashInSince),
+                  formatVND(cash.cashOutSince),
+                  formatVND(cash.cashAdjustments),
+                )}
+              </p>
+              <p>
+                {copy.cash.bankBreakdown(
+                  formatVND(cash.bankOpeningBalance),
+                  formatVND(cash.bankInSince),
+                  formatVND(cash.bankOutSince),
+                  formatVND(cash.bankAdjustments),
+                )}
+              </p>
+            </div>
+          </details>
+        ) : null}
       </AppSection>
 
       {!cash.hasOpening && !cash.legacySettingsPresent ? (

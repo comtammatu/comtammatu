@@ -16,7 +16,7 @@ interface CompareChipProps {
   label: string;
   tone: CompareTone;
   size?: "xs" | "sm";
-  /** Optional secondary label e.g. "vs kỳ trước" */
+  /** Optional secondary label e.g. "so với kỳ trước" */
   hint?: string;
   className?: string;
 }

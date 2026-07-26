@@ -49,7 +49,7 @@ export default async function InvoicesPage({
   }[];
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow={copy.eyebrow}
         title={copy.title}
@@ -67,7 +67,9 @@ export default async function InvoicesPage({
           canManageInvoices={canManageInvoices}
           canIssueInvoices={canIssueInvoices}
           branches={branches}
-          initialIssueAttention={attentionRes.success ? (attentionRes.data ?? []) : []}
+          initialIssueAttention={
+            attentionRes.success ? (attentionRes.data ?? []) : []
+          }
         />
       ) : (
         <AppEmptyState

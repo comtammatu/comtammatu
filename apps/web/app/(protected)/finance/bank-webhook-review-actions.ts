@@ -55,14 +55,14 @@ function mapLinkPaymentError(error: LinkPaymentRpcError): string {
     error.code === "PGRST202" ||
     normalized.includes("link_sepay_transaction_to_payment")
   ) {
-    return "Chức năng gắn payment chưa sẵn sàng.";
+    return "Chức năng gắn thanh toán chưa sẵn sàng.";
   }
   if (
     normalized.includes("payment_not_found") ||
     normalized.includes("bank_reconciliation_target_not_found") ||
     normalized.includes("sepay_replay_payment_not_pending")
   ) {
-    return "Không tìm thấy payment VietQR đang chờ hoặc đã thu.";
+    return "Không tìm thấy thanh toán VietQR đang chờ hoặc đã thu.";
   }
   if (
     normalized.includes("webhook_event_not_found") ||
@@ -75,50 +75,50 @@ function mapLinkPaymentError(error: LinkPaymentRpcError): string {
     normalized.includes("webhook_event_already_linked") ||
     normalized.includes("bank_reconciliation_target_already_matched")
   ) {
-    return "Giao dịch này đã gắn payment.";
+    return "Giao dịch này đã gắn với một thanh toán.";
   }
   if (normalized.includes("webhook_event_failed")) {
-    return "Lỗi webhook không được gắn payment.";
+    return "Dữ liệu đồng bộ lỗi không thể gắn với thanh toán.";
   }
   if (
     normalized.includes("webhook_event_not_in") ||
     normalized.includes("bank_transaction_direction_mismatch")
   ) {
-    return "Chỉ gắn payment cho giao dịch tiền vào.";
+    return "Chỉ gắn thanh toán với giao dịch tiền vào.";
   }
   if (
     normalized.includes("payment_amount_mismatch") ||
     normalized.includes("bank_reconciliation_amount_mismatch") ||
     normalized.includes("sepay_replay_amount_mismatch")
   ) {
-    return "Số tiền payment không khớp giao dịch ngân hàng.";
+    return "Số tiền thanh toán không khớp giao dịch ngân hàng.";
   }
   if (normalized.includes("payment_already_has_bank_webhook")) {
-    return "Payment này đã có webhook ngân hàng.";
+    return "Thanh toán này đã có bằng chứng ngân hàng.";
   }
   if (normalized.includes("webhook_event_signature_invalid")) {
-    return "Webhook chưa hợp lệ chữ ký.";
+    return "Bằng chứng SePay chưa có chữ ký hợp lệ.";
   }
   if (normalized.includes("webhook_event_amount_invalid")) {
-    return "Số tiền webhook không hợp lệ.";
+    return "Số tiền trên bằng chứng SePay không hợp lệ.";
   }
   if (
     normalized.includes("sepay_replay_event_not_recoverable") ||
     normalized.includes("sepay_replay_event_invalid")
   ) {
-    return "Webhook này không đủ điều kiện phát lại an toàn.";
+    return "Bằng chứng SePay này không đủ điều kiện xử lý lại.";
   }
   if (
     normalized.includes("sepay_replay_payment_code_mismatch") ||
     normalized.includes("sepay_replay_payment_code_required")
   ) {
-    return "Mã thanh toán không khớp payment VietQR đang chờ.";
+    return "Mã thanh toán không khớp thanh toán VietQR đang chờ.";
   }
   if (normalized.includes("sepay_replay_payment_already_linked")) {
-    return "Payment này đã có giao dịch SePay hợp lệ.";
+    return "Thanh toán này đã có giao dịch SePay hợp lệ.";
   }
   if (normalized.includes("sepay_replay_failed")) {
-    return "Chưa thể hoàn tất payment từ webhook này. Dữ liệu cũ được giữ nguyên.";
+    return "Chưa thể hoàn tất thanh toán từ bằng chứng này. Dữ liệu cũ được giữ nguyên.";
   }
 
   console.error(
@@ -126,14 +126,14 @@ function mapLinkPaymentError(error: LinkPaymentRpcError): string {
     error.code,
     error.message,
   );
-  return "Không thể gắn giao dịch với payment.";
+  return "Không thể gắn giao dịch với thanh toán.";
 }
 
 function mapCashDepositError(error: LinkPaymentRpcError): string {
   const normalized = error.message?.toLowerCase() ?? "";
 
   if (error.code === "42501" || normalized.includes("forbidden")) {
-    return "Chỉ Owner mới được xác nhận nộp tiền mặt.";
+    return "Chỉ chủ quán mới được xác nhận nộp tiền mặt.";
   }
   if (
     error.code === "PGRST202" ||
@@ -221,7 +221,7 @@ export async function linkSepayTransactionToPayment(
       return {
         success: false,
         error:
-          "Chưa có webhook SePay đã xác thực. Hãy gửi lại webhook từ portal SePay trước khi khớp payment.",
+          "Chưa có bằng chứng SePay hợp lệ. Hãy gửi lại giao dịch từ cổng SePay trước khi khớp thanh toán.",
       };
     }
 

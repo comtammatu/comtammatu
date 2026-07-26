@@ -71,6 +71,8 @@ test("linked KpiCard applies hover feedback to its full card surface", () => {
   assert.doesNotMatch(kpiCard, /hover:bg-muted\/50" : undefined/);
   assert.match(kpiCard, /transition-\[background-color,box-shadow\]/);
   assert.match(kpiCard, /hover:bg-muted\/50 hover:shadow-effect-card-hover/);
+  assert.match(kpiCard, /compareHint = "so với kỳ trước"/);
+  assert.doesNotMatch(kpiCard, /compareHint = "vs kỳ trước"/);
 });
 
 test("shared primitives use Base UI behavior without Radix", () => {
@@ -419,7 +421,14 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
   assert.match(drawerSource, /responsiveFullscreen = false/);
   assert.match(drawerSource, /pt-\[env\(safe-area-inset-top\)\]/);
   assert.match(drawerSource, /pb-\[env\(safe-area-inset-bottom\)\]/);
-  assert.match(drawerSource, /flex h-full min-h-0 flex-col/);
+  assert.match(
+    drawerSource,
+    /flex max-h-dvh-80 flex-col overflow-hidden overscroll-contain/,
+  );
+  assert.match(
+    drawerSource,
+    /flex min-h-0 flex-1 flex-col overflow-y-auto/,
+  );
   assert.match(drawerSource, /before:inset-0/);
   assert.match(drawerSource, /sm:before:inset-2/);
   assert.match(posSource, /<DrawerContent showHandle responsiveFullscreen>/);

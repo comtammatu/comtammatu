@@ -266,7 +266,6 @@ export function RevenueClient({
         revCopy.csvHeaders.colNetRevenue,
         revCopy.csvHeaders.colCash,
         revCopy.csvHeaders.colVietqr,
-        revCopy.csvHeaders.colVat,
       ],
       rows: periodRows.map((r) => [
         r.period_label,
@@ -274,7 +273,6 @@ export function RevenueClient({
         Math.round(netRevenuePreVatFor(r)),
         Math.round(r.cash_revenue),
         Math.round(r.vietqr_revenue),
-        Math.round(r.total_tax),
       ]),
       footer: kpis
         ? [
@@ -283,7 +281,6 @@ export function RevenueClient({
             Math.round(netRevenuePreVat),
             Math.round(kpis.cash_revenue),
             Math.round(kpis.vietqr_revenue),
-            Math.round(kpis.total_tax),
           ]
         : undefined,
     },
@@ -366,12 +363,6 @@ export function RevenueClient({
       className: "text-right font-mono tabular-nums text-muted-foreground",
       render: (row) => formatVND(row.vietqr_revenue),
     },
-    {
-      key: "vat",
-      header: revCopy.periodTable.colVat,
-      className: "text-right font-mono tabular-nums text-muted-foreground",
-      render: (row) => formatVND(row.total_tax),
-    },
   ];
 
   const periodFooterRows: DataTableFooterRow[] = [
@@ -402,11 +393,6 @@ export function RevenueClient({
         {
           key: "vietqr",
           content: formatVND(kpis?.vietqr_revenue ?? 0),
-          className: "text-right font-mono tabular-nums",
-        },
-        {
-          key: "tax",
-          content: formatVND(kpis?.total_tax ?? 0),
           className: "text-right font-mono tabular-nums",
         },
       ],
@@ -513,7 +499,7 @@ export function RevenueClient({
         <KpiCard
           label={revCopy.kpi.totalCollected}
           value={formatVND(kpis?.net_revenue ?? 0)}
-          hint={revCopy.kpi.totalCollectedHint(formatVND(kpis?.total_tax ?? 0))}
+          hint={revCopy.kpi.totalCollectedHint}
           delta={delta(
             kpis?.net_revenue ?? 0,
             prev?.net_revenue ?? 0,
@@ -606,7 +592,8 @@ export function RevenueClient({
                     </ItemContent>
                     <ItemFooter>
                       <span className="text-xs text-muted-foreground">
-                        {revCopy.periodTable.colVat}: {formatVND(row.total_tax)}
+                        {revCopy.periodTable.colCash}:{" "}
+                        {formatVND(row.cash_revenue)}
                       </span>
                       <span className="font-mono text-sm font-semibold tabular-nums">
                         {formatVND(netRevenuePreVatFor(row))}

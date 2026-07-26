@@ -8,8 +8,24 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const ADMIN_COPY = "apps/web/lib/messages/owner.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
-const FINANCE_COCKPIT = "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts";
+const FINANCE_COCKPIT =
+  "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts";
 const FINANCE_COPY = "apps/web/lib/messages/finance.ts";
+const FINANCE_SUBROUTE_SURFACES = [
+  "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
+  "apps/web/app/(protected)/finance/expenses/page.tsx",
+  "apps/web/app/(protected)/finance/food-cost/page.tsx",
+  "apps/web/app/(protected)/finance/invoices/page.tsx",
+  "apps/web/app/(protected)/finance/revenue/revenue-client.tsx",
+  "apps/web/app/(protected)/finance/revenue/[date]/page.tsx",
+  "apps/web/app/(protected)/finance/supplier-invoices/page.tsx",
+] as const;
+const FINANCE_REVENUE =
+  "apps/web/app/(protected)/finance/revenue/revenue-client.tsx";
+const FINANCE_REVENUE_DRILL =
+  "apps/web/app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx";
+const FINANCE_BANK_TABLE =
+  "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx";
 const INVENTORY_COPY = "apps/web/lib/messages/inventory.ts";
 const PRINT_JOBS_PAGE =
   "apps/web/app/(protected)/settings/printers/jobs/page.tsx";
@@ -21,8 +37,7 @@ const BRANCH_COMMAND_CONFIG =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx";
 const BRANCH_DATA =
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts";
-const TODAY_WORK_STATE =
-  "apps/web/lib/staff-runtime/_lib/today-work-state.ts";
+const TODAY_WORK_STATE = "apps/web/lib/staff-runtime/_lib/today-work-state.ts";
 const ATTENDANCE_POLICY_MIGRATION =
   "supabase/migration-archive/20260719070350_align_attendance_checkout_read_policy.sql";
 const BACKTICK = "`";
@@ -34,7 +49,7 @@ function literalWith(pattern: string, flags = "i"): RegExp {
   );
 }
 
-test("finance basic landing only promotes direct-contract KPI cards", () => {
+test("finance overview presents period results, current funds, and inventory in order", () => {
   const page = read(FINANCE_PAGE);
   const pageBody = page.slice(
     page.indexOf("export default async function FinancePage"),
@@ -42,44 +57,57 @@ test("finance basic landing only promotes direct-contract KPI cards", () => {
   const cockpit = read(FINANCE_COCKPIT);
   const copy = read(FINANCE_COPY);
 
-  assert.match(page, /xl:grid-cols-4/);
-  assert.match(page, /label=\{financeCopy\.basic\.kpis\.moneyCollected\}/);
-  assert.match(page, /label=\{financeCopy\.basic\.kpis\.netProfit\}/);
-  assert.match(page, /label=\{financeCopy\.basic\.kpis\.inventoryValue\}/);
+  assert.match(page, /xl:grid-cols-5/);
+  assert.match(page, /label=\{financeCopy\.basic\.kpis\.netRevenue\}/);
+  assert.match(page, /label=\{financeCopy\.basic\.kpis\.ingredientCost\}/);
+  assert.match(page, /label=\{financeCopy\.basic\.kpis\.grossProfit\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.operatingExpense\}/);
-  assert.doesNotMatch(page, /label=\{financeCopy\.basic\.kpis\.grossProfit\}/);
-  assert.doesNotMatch(page, /financeCopy\.basic\.kpis\.netRevenue/);
-  assert.match(page, /cockpit\.kpis\.netProfit/);
+  assert.match(page, /label=\{financeCopy\.basic\.kpis\.operatingResult\}/);
+  assert.match(
+    page,
+    /label=\{financeCopy\.basic\.kpis\.inventoryClosingValue\}/,
+  );
+  assert.match(page, /cockpit\.kpis\.netRevenueBeforeVat/);
+  assert.doesNotMatch(page, /cockpit\.kpis\.netProfit/);
   assert.doesNotMatch(page, /IconPiggyBank/);
-  assert.doesNotMatch(page, /xl:grid-cols-5/);
   assert.doesNotMatch(page, /cashNetMovementPeriod/);
   assert.doesNotMatch(page, /CashPanel|HddtComplianceBand/);
   assert.doesNotMatch(page, /FINANCE_INVOICE_QUEUE_HREF/);
   assert.doesNotMatch(page, /\/finance\/inventory-value/);
-  assert.match(
-    page,
-    /title=\{powerLiteCopy\.title\}[\s\S]{0,120}?description=\{powerLiteCopy\.description\}/,
-  );
+  assert.match(page, /title=\{powerLiteCopy\.title\}/);
+  assert.doesNotMatch(page, /description=\{powerLiteCopy\.description\}/);
   assert.match(
     page,
     /<FinanceAttentionSection exceptions=\{cockpit\.exceptions\}/,
   );
   assert.match(page, /item\.tone !== "neutral"/);
   assert.ok(
-    pageBody.indexOf("<KpiRow") < pageBody.indexOf("<FinanceAttentionSection"),
-    "Finance Basic KPIs must appear before the exception queue",
+    pageBody.indexOf("basic.sections.periodResult") <
+      pageBody.indexOf("<CurrentFundsSection"),
+    "Period results must appear before current funds",
+  );
+  assert.ok(
+    pageBody.indexOf("<CurrentFundsSection") <
+      pageBody.indexOf("basic.sections.inventory"),
+    "Current funds must appear before period-end inventory",
+  );
+  assert.ok(
+    pageBody.indexOf("basic.sections.inventory") <
+      pageBody.indexOf("<FinanceAttentionSection"),
+    "Inventory must appear before the exception queue",
   );
   assert.equal((pageBody.match(/<FinanceAttentionSection/g) ?? []).length, 1);
-  assert.match(copy, /title: "Sức khỏe tài chính"/);
-  assert.match(copy, /moneyCollected: "Doanh thu"/);
-  assert.match(copy, /netProfit: "Lợi nhuận ròng"/);
-  assert.match(copy, /netProfitHint: "Doanh thu − chi vận hành"/);
-  assert.match(cockpit, /const netProfit = totalCollected - operatingExpense/);
-  assert.match(copy, /Tồn đầu kỳ/);
-  assert.match(copy, /số lượng kho × giá vốn chuyển động/);
-  assert.match(copy, /gồm đã trả\/chưa trả/);
-  assert.match(copy, /không gồm nhập hàng\/NCC/);
-  assert.match(copy, /Đối soát ngân hàng cần xử lý/);
+  assert.match(copy, /title: "Tổng quan tài chính"/);
+  assert.match(copy, /netRevenue: "Doanh thu thuần"/);
+  assert.match(copy, /ingredientCost: "− Giá vốn món"/);
+  assert.match(copy, /grossProfit: "= Lợi nhuận gộp"/);
+  assert.match(copy, /operatingExpense: "− Chi phí vận hành"/);
+  assert.match(copy, /operatingResult: "= Kết quả vận hành"/);
+  assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
+  assert.doesNotMatch(cockpit, /const netProfit =/);
+  assert.match(copy, /Đầu kỳ/);
+  assert.match(copy, /Không gồm giá vốn, nhập hàng và công nợ NCC/);
+  assert.match(copy, /bankReconciliationLabel: "Đối soát ngân hàng"/);
   assert.match(page, /FinanceAttentionSection/);
   assert.doesNotMatch(copy, /cashDeltaTitle:/);
 });
@@ -96,7 +124,6 @@ test("finance and admin copy keep domain vocabulary explicit", () => {
     literalWith(String.raw`Hoá`, ""),
     literalWith(String.raw`TT 78\/2021`, ""),
     literalWith(String.raw`Nhập \(GRN\)`, ""),
-    literalWith(String.raw`doanh thu thuần`),
     literalWith(String.raw`Payment provider webhook`),
     literalWith(String.raw`báo cáo doanh thu theo phương thức`),
     literalWith(String.raw`giá vốn nguyên liệu`),
@@ -120,10 +147,47 @@ test("finance and admin copy keep domain vocabulary explicit", () => {
   }
 
   assert.match(copy, /Doanh thu/);
-  assert.match(copy, /Bán hàng sau giảm giá/);
-  assert.match(copy, /Lãi gộp/);
+  assert.match(copy, /Doanh thu thuần/);
+  assert.match(copy, /Lợi nhuận gộp/);
   assert.match(copy, /Giá vốn món/);
+  assert.doesNotMatch(copy, /Bán hàng sau giảm giá/);
+  assert.doesNotMatch(copy, /Lãi gộp/);
   assert.doesNotMatch(copy, /Dòng tiền trong kỳ/);
+});
+
+test("finance subroutes share the compact surface and operational vocabulary", () => {
+  for (const path of FINANCE_SUBROUTE_SURFACES) {
+    assert.match(
+      read(path),
+      /<AppPage width="xwide" density="compact">/,
+      `${path} must use the shared compact finance surface`,
+    );
+  }
+
+  const revenue = read(FINANCE_REVENUE);
+  const drill = read(FINANCE_REVENUE_DRILL);
+  const bankTable = read(FINANCE_BANK_TABLE);
+  const copy = read(FINANCE_COPY);
+
+  assert.doesNotMatch(revenue, /csvHeaders\.colVat|periodTable\.colVat/);
+  assert.match(revenue, /hint=\{revCopy\.kpi\.totalCollectedHint\}/);
+  assert.match(drill, /const netRevenue = totalRevenue - totalTax/);
+  assert.match(drill, /label=\{copy\.kpis\.netRevenue\}/);
+  assert.match(drill, /label=\{copy\.kpis\.totalCollected\}/);
+  for (const term of [
+    literalWith(String.raw`\bVAT\b`),
+    literalWith(String.raw`payment hoàn tất`),
+    literalWith(String.raw`payments\.paid_at`),
+    literalWith(String.raw`canonical`),
+    literalWith(String.raw`snapshot`),
+    literalWith(String.raw`\baudit\b`),
+  ]) {
+    assert.doesNotMatch(drill, term);
+  }
+  assert.doesNotMatch(copy, literalWith(String.raw`\bpayment\b`));
+  assert.doesNotMatch(copy, literalWith(String.raw`\bwebhook\b`));
+  assert.match(bankTable, /gap-2 overflow-hidden whitespace-nowrap sm:gap-3/);
+  assert.match(bankTable, /max-w-36 truncate font-mono/);
 });
 
 test("inventory copy uses Vietnamese operational labels on active surfaces", () => {

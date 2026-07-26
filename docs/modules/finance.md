@@ -5,19 +5,23 @@
 Enterprise accounting is outside the current Finance product boundary.
 
 Finance Basic is the default Finance experience when `/finance` opens as
-`Sức khỏe tài chính` and shows four primary decision cards without ambiguous
-revenue labels:
+`Tổng quan tài chính`. The first section shows one period-result formula across
+five cards:
 
-- **Doanh thu**: how much completed payment value was recorded in the period?
-- **Bán hàng sau giảm giá**: what is paid-order merchandise value after
-  discount and before VAT?
-- **Giá trị tồn kho**: how much operating inventory value remains at period
-  end, what was the opening value, and what is the percentage movement?
-- **Chi vận hành**: how much posted operating spend was recorded for rent,
+- **Doanh thu thuần**: paid-order merchandise value after discount and before
+  VAT.
+- **− Giá vốn món**: recorded ingredient cost for the paid orders in the period.
+- **= Lợi nhuận gộp**: net revenue minus recorded food cost.
+- **− Chi phí vận hành**: posted operating spend for rent,
   utilities, payroll, repairs, supplies, marketing, fees/tax, and other
   operating categories?
+- **= Kết quả vận hành**: gross profit minus recorded operating expense.
 
-Below those period cards, keep the tenant-wide current-funds row:
+Missing food-cost coverage makes both gross profit and operating result
+unavailable. A period with no recorded operating expense keeps operating result
+unavailable instead of treating missing data as zero.
+
+Below the period result, keep the tenant-wide current-funds row:
 
 - **Tiền mặt theo sổ**: immutable opening cash plus completed cash collections,
   minus cash refunds, cash expenses, and cash supplier payments, plus
@@ -54,8 +58,10 @@ updates accounts payable but does not create a second bank movement; the
 canonical outgoing `bank_transactions` row reduces bank funds whether or not
 it has been reconciled.
 
-Gross profit and food-cost coverage remain supporting analysis in
-`/finance/food-cost`; they are not default landing cards.
+Inventory is a separate filtered section labeled **Giá trị tồn kho cuối kỳ**.
+The attention queue remains the last section. Tax and GTGT reporting are not
+added to this landing formula; HĐĐT and tax workflows keep their existing
+separate routes and contracts.
 
 Do not expand Finance by default into a full enterprise accounting product.
 The current business model is HKD, so the Finance surface must serve restaurant
@@ -64,8 +70,8 @@ and accountant export.
 
 Finance metrics, cards, titles, and overview summaries must also follow
 `docs/ref/operational-data-contract.md`. Do not add a new finance KPI or reuse a
-generic label such as "doanh thu" or "lãi gộp" unless the metric contract states
-the exact source, formula, exclusions, confidence, and drilldown.
+generic label such as "doanh thu" or "lợi nhuận" unless the metric contract
+states the exact source, formula, exclusions, confidence, and drilldown.
 
 ## Scope Boundary
 
@@ -88,31 +94,29 @@ level operating reports.
 
 ### Finance Basic
 
-Finance Basic is the current finance surface. Its landing owns four primary
-cards:
+Finance Basic is the current finance surface. Its landing owns five primary
+period-result cards:
 
-1. **Completed-payment revenue**
-   - Completed paid orders by branch/date.
-   - Revenue must be bucketed by completed payment time in Vietnam local date.
-   - The owner-facing label is `Doanh thu`; its precise meaning is completed
-     payment value and it may include VAT. It is not tax-declared revenue.
-
-2. **Sales after discount**
-   - `Bán hàng sau giảm giá` is `subtotal_revenue - discount_amount` for paid
-     orders and excludes VAT. The UI must not call this `Doanh thu ròng`, because
-     that label implies accounting adjustments that the current formula does
-     not model separately.
+1. **Net revenue**
+   - `Doanh thu thuần` is `subtotal_revenue - discount_amount` for paid orders
+     and excludes VAT.
    - Keep the internal adapter field `netRevenueBeforeVat` only as a legacy code
      identifier; UI and operating documentation use the precise label above.
-   - Top món uses the same `resolved.start→end` window as every other KPI; side items in `order_items.sides` are counted as their own món and their revenue is subtracted from the parent món line to avoid double-counting (migrations `20260609151615` + `20260609161402`, applied on prod).
+   - `totalCollected` remains available in the revenue detail and is labeled
+     `Tổng tiền đã thu`; it is not a landing formula card.
+   - Top món uses the same `resolved.start→end` window as every other KPI; side
+     items in `order_items.sides` are counted as their own món and their revenue
+     is subtracted from the parent món line to avoid double-counting.
 
-3. **Inventory value**
-   - Period-end value is reconstructed from current stock value and movements
-     after the selected period; opening value additionally reverses movements
-     inside the period.
-   - Use movement unit cost when available, falling back to ingredient unit
-     cost. Show the opening value and neutral percentage movement, because an
-     increase is not inherently good or bad.
+2. **Food cost**
+   - Use recorded sale-consumption movements for paid orders.
+   - If food-cost coverage is incomplete, display missing-data state and do not
+     calculate the following derived cards.
+
+3. **Gross profit**
+   - `Lợi nhuận gộp = Doanh thu thuần - Giá vốn món`.
+   - Show gross margin as supporting context only when food-cost coverage is
+     complete.
 
 4. **Operating expense**
    - Posted operating expenses in the selected period.
@@ -120,14 +124,16 @@ cards:
      `supplies`, `marketing`, `fees_tax`, and `other`.
    - Exclude ingredient/material COGS, supplier invoice payments, and internal
      cash-to-bank deposits/transfers from the top-line operating expense number.
-   - If operating expenses are not recorded yet, show zero rather than inventing spend from supplier purchases.
+   - If no operating expense has been recorded, display `Chưa ghi nhận`.
 
-Supporting analysis:
+5. **Operating result**
+   - `Kết quả vận hành = Lợi nhuận gộp - Chi phí vận hành`.
+   - Do not call it net profit. Keep it unavailable when food cost is incomplete
+     or operating expense has not been recorded.
 
-- **Gross profit**
-  - Revenue before VAT after discounts minus ingredient cost/food cost.
-  - Show gross margin as supporting context.
-  - Keep this read-only until recipe/food-cost data is trusted.
+After the formula, show the unfiltered current-funds section, the filtered
+period-end inventory value, then the attention queue. Desktop uses five columns,
+tablet uses two, and mobile uses one.
 
 Supporting workflows remain available but are not the first screen:
 
@@ -246,7 +252,7 @@ Do not call the module "done" because enterprise-accounting objects exist in old
 
 ## Current Gaps
 
-- Chi vận hành is captured in `/finance/expenses`; keep it as single-entry HKD operating expense, not enterprise accounting.
+- Chi phí vận hành is captured in `/finance/expenses`; keep it as single-entry HKD operating expense, not enterprise accounting.
 - Inventory value detail stays in Inventory; Finance shows only the current-value card.
 - HĐĐT is active through Viettel S-invoice. The app owns per-order issuance,
   cancellation, and replacement; provider-side artifacts and status lookup stay

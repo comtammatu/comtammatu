@@ -265,11 +265,14 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
     const occurredAt = formatVNDateTime(row.payment.paidAt);
     const reference = formatProviderRef(row.payment.providerRef);
     return (
-      <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
+      <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap sm:gap-3">
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
           {occurredAt}
         </span>
-        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+        <span
+          className="min-w-0 max-w-36 truncate font-mono text-xs text-muted-foreground sm:max-w-48"
+          title={reference}
+        >
           {reference}
         </span>
         <span className="min-w-0 truncate font-medium">{content}</span>
@@ -286,11 +289,14 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
   );
 
   return (
-    <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
+    <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap sm:gap-3">
       <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
         {occurredAt}
       </span>
-      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+      <span
+        className="min-w-0 max-w-36 truncate font-mono text-xs text-muted-foreground sm:max-w-48"
+        title={reference}
+      >
         {reference}
       </span>
       {isLongContent ? (

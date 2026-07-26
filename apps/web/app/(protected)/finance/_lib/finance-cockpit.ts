@@ -21,6 +21,7 @@ import {
 } from "../actions";
 import { fetchFoodCost } from "@/_lib/food-cost-actions";
 import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
+import { calculateFinanceResult } from "./finance-result";
 import { fetchStockBearingLocationIds } from "../../inventory/_lib/stock-bearing-locations";
 import { isOperatingExpenseCategory } from "./expense-categories";
 
@@ -60,6 +61,11 @@ interface FoodCostRow {
 interface ActualFoodCostSnapshot {
   rows: FoodCostRow[];
   orderCount: number;
+}
+
+interface OperatingExpenseSummary {
+  total: number;
+  recorded: boolean;
 }
 
 interface TopItemRow {
@@ -103,10 +109,11 @@ interface FinanceCockpitKpis {
   inventoryValue: number;
   inventoryOpeningValue: number;
   operatingExpense: number;
+  operatingExpenseRecorded: boolean;
   ingredientCost: number;
-  grossProfit: number;
-  grossMargin: number;
-  netProfit: number;
+  grossProfit: number | null;
+  grossMargin: number | null;
+  operatingResult: number | null;
   costAvailable: boolean;
   costCoverageOrderCount: number;
   costCoverageRatio: number;
@@ -156,7 +163,6 @@ export interface FinanceCockpitData {
     | "operatingExpense"
     | "ingredientCost"
     | "grossProfit"
-    | "netProfit"
     | "costAvailable"
   > | null;
   revenueTrend: FinanceTrendPoint[];
@@ -233,7 +239,7 @@ function buildKpis({
   actualFoodCost: ActualFoodCostSnapshot;
   inventoryValue: number;
   inventoryOpeningValue?: number;
-  operatingExpense: number;
+  operatingExpense: OperatingExpenseSummary;
 }): FinanceCockpitKpis {
   const totalCollected = toNumber(kpis?.net_revenue);
   const orderCount = toNumber(kpis?.order_count);
@@ -243,15 +249,18 @@ function buildKpis({
     (sum, row) => sum + toNumber(row.ingredient_cost),
     0,
   );
-  const grossProfit = netRevenueBeforeVat - ingredientCost;
-  const grossMargin =
-    netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0;
-  const netProfit = totalCollected - operatingExpense;
   const costCoverageOrderCount = actualFoodCost.orderCount;
   const costCoverageRatio =
     orderCount > 0 ? costCoverageOrderCount / orderCount : 1;
   const costAvailable =
     orderCount === 0 || costCoverageOrderCount >= orderCount;
+  const financeResult = calculateFinanceResult({
+    netRevenueBeforeVat,
+    ingredientCost,
+    operatingExpense: operatingExpense.total,
+    costAvailable,
+    operatingExpenseRecorded: operatingExpense.recorded,
+  });
 
   return {
     totalCollected,
@@ -259,11 +268,10 @@ function buildKpis({
     netRevenueBeforeVat,
     inventoryValue,
     inventoryOpeningValue,
-    operatingExpense,
+    operatingExpense: operatingExpense.total,
+    operatingExpenseRecorded: operatingExpense.recorded,
     ingredientCost,
-    grossProfit,
-    grossMargin,
-    netProfit,
+    ...financeResult,
     costAvailable,
     costCoverageOrderCount,
     costCoverageRatio,
@@ -272,7 +280,7 @@ function buildKpis({
   };
 }
 
-export async function fetchOperatingExpenseTotal({
+export async function fetchOperatingExpenseSummary({
   supabase,
   tenantId,
   branchId,
@@ -284,7 +292,7 @@ export async function fetchOperatingExpenseTotal({
   branchId: number | null;
   startDate: string;
   endDate: string;
-}): Promise<number> {
+}): Promise<OperatingExpenseSummary> {
   let query = supabase
     .from("expenses")
     .select("amount, category")
@@ -297,14 +305,19 @@ export async function fetchOperatingExpenseTotal({
   }
 
   const { data, error } = await query;
-  if (error) return 0;
-  return (data ?? []).reduce(
-    (sum, row) =>
-      isOperatingExpenseCategory(row.category)
-        ? sum + toNumber(row.amount)
-        : sum,
-    0,
+  if (error) return { total: 0, recorded: false };
+
+  const operatingRows = (data ?? []).filter((row) =>
+    isOperatingExpenseCategory(row.category),
   );
+
+  return {
+    total: operatingRows.reduce(
+      (sum, row) => sum + toNumber(row.amount),
+      0,
+    ),
+    recorded: operatingRows.length > 0,
+  };
 }
 
 async function fetchUnpaidSupplierInvoiceRisk({
@@ -654,11 +667,15 @@ function buildExceptions({
     {
       label: copy.exceptions.bankReconciliationLabel,
       value: copy.exceptions.bankReconciliationValue(
-        formatCount(toNumber(reconciliationAttention?.unmatched_bank_count)),
-        formatCount(toNumber(reconciliationAttention?.missing_vietqr_count)),
+        formatCount(
+          toNumber(reconciliationAttention?.unmatched_bank_count) +
+            toNumber(reconciliationAttention?.missing_vietqr_count),
+        ),
       ),
       hint: copy.exceptions.bankReconciliationHint(
+        formatCount(toNumber(reconciliationAttention?.unmatched_bank_count)),
         formatVND(toNumber(reconciliationAttention?.unmatched_bank_amount)),
+        formatCount(toNumber(reconciliationAttention?.missing_vietqr_count)),
         formatVND(toNumber(reconciliationAttention?.missing_vietqr_amount)),
       ),
       href: reconciliationHref,
@@ -672,11 +689,11 @@ function buildExceptions({
       label: copy.exceptions.operatingExpenseLabel,
       value: formatVND(kpis.operatingExpense),
       hint:
-        kpis.operatingExpense > 0
+        kpis.operatingExpenseRecorded
           ? copy.exceptions.operatingExpenseRecorded
           : copy.exceptions.operatingExpenseMissing,
       href: "/finance/expenses",
-      tone: kpis.operatingExpense > 0 ? "neutral" : "warning",
+      tone: kpis.operatingExpenseRecorded ? "neutral" : "warning",
     },
     {
       label: copy.exceptions.missingCostLabel,
@@ -749,8 +766,8 @@ export async function fetchFinanceCockpit(
     reconciliationAttention,
     dashboardSummaryRes,
     topItemsRes,
-    operatingExpense,
-    compareOperatingExpense,
+    operatingExpenseSummary,
+    compareOperatingExpenseSummary,
     unpaidSupplierInvoices,
     paymentDesync,
   ] = await Promise.all([
@@ -805,7 +822,7 @@ export async function fetchFinanceCockpit(
     }),
     fetchFinanceDashboardSummary(params.branch, resolved.start, resolved.end),
     fetchTopItems(params.branch, resolved.start, resolved.end),
-    fetchOperatingExpenseTotal({
+    fetchOperatingExpenseSummary({
       supabase,
       tenantId: claims.tenant_id,
       branchId: params.branch,
@@ -813,14 +830,14 @@ export async function fetchFinanceCockpit(
       endDate: resolved.end,
     }),
     resolved.compare
-      ? fetchOperatingExpenseTotal({
+      ? fetchOperatingExpenseSummary({
           supabase,
           tenantId: claims.tenant_id,
           branchId: params.branch,
           startDate: resolved.compare.start,
           endDate: resolved.compare.end,
         })
-      : Promise.resolve(0),
+      : Promise.resolve({ total: 0, recorded: false }),
     fetchUnpaidSupplierInvoiceRisk({
       supabase,
       tenantId: claims.tenant_id,
@@ -855,7 +872,7 @@ export async function fetchFinanceCockpit(
     actualFoodCost,
     inventoryValue,
     inventoryOpeningValue,
-    operatingExpense,
+    operatingExpense: operatingExpenseSummary,
   });
 
   const compareKpis = resolved.compare
@@ -865,7 +882,7 @@ export async function fetchFinanceCockpit(
           : null,
         actualFoodCost: compareActualFoodCost,
         inventoryValue,
-        operatingExpense: compareOperatingExpense,
+        operatingExpense: compareOperatingExpenseSummary,
       })
     : null;
 
@@ -923,7 +940,6 @@ export async function fetchFinanceCockpit(
           operatingExpense: compareKpis.operatingExpense,
           ingredientCost: compareKpis.ingredientCost,
           grossProfit: compareKpis.grossProfit,
-          netProfit: compareKpis.netProfit,
           costAvailable: compareKpis.costAvailable,
         }
       : null,

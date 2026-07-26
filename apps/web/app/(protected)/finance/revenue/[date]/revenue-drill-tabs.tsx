@@ -1,6 +1,6 @@
 "use client";
 
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing finance revenue detail page keeps operational copy inline */
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: order investigation labels combine row evidence inline */
 
 import {
   Item,
@@ -13,7 +13,7 @@ import Link from "next/link";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { formatCount, formatVND } from "@comtammatu/shared/format";
-import { AppEmptyState, AppSection } from "@/components/surface";
+import { AppEmptyState, AppSection, KpiRow } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   DataTable,
@@ -23,7 +23,10 @@ import {
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatVNTime } from "@/_lib/format-datetime";
+import { messages } from "@lib/messages";
 import type { HourSummary, OrderRow } from "./_lib/revenue-drill-types";
+
+const copy = messages.finance.revenue.drill;
 
 const ORDER_TYPE_LABEL: Record<string, string> = {
   dine_in: "Tại bàn",
@@ -72,7 +75,7 @@ function invoiceBadge(row: OrderRow) {
       <span className="text-xs text-muted-foreground">
         {formatCount(row.invoice_evidence.length)} bằng chứng
         {row.invoice_provider_ref
-          ? ` · Ref ${row.invoice_provider_ref}`
+          ? ` · Mã tham chiếu ${row.invoice_provider_ref}`
           : ""}
       </span>
     </div>
@@ -132,7 +135,7 @@ export function RevenueDrillTabs({
           >
             <span>
               {formatCount(row.item_count)} món ·{" "}
-              {formatCount(row.main_dish_quantity)} cơm snapshot ·{" "}
+              {formatCount(row.main_dish_quantity)} phần cơm đã ghi nhận ·{" "}
               {formatCount(sideQuantity)} kèm
             </span>
             {row.legacy_unclassified_quantity > 0 && (
@@ -153,15 +156,15 @@ export function RevenueDrillTabs({
       render: (row) => (
         <div className="flex flex-col gap-1">
           <span>
-            KDS {formatCount(row.kds_completed_item_quantity)} · In{" "}
+            Bếp xong {formatCount(row.kds_completed_item_quantity)} món · Đã in{" "}
             {formatCount(row.printed_job_count)}/
             {formatCount(row.print_job_count)}
           </span>
           {row.kds_legacy_completed_item_quantity > 0 && (
             <span className="text-warning">
-              Snapshot KDS cũ{" "}
+              Dữ liệu bếp cũ có{" "}
               {formatCount(row.kds_legacy_completed_item_quantity)} món; bằng
-              chứng không đầy đủ
+              chứng chưa đầy đủ
             </span>
           )}
           {row.print_failed_count > 0 && (
@@ -181,7 +184,7 @@ export function RevenueDrillTabs({
               "Không có ca"
             )}
             {" · "}
-            {formatCount(row.audit_event_count)} audit
+            {formatCount(row.audit_event_count)} lần cập nhật
           </span>
         </div>
       ),
@@ -198,11 +201,11 @@ export function RevenueDrillTabs({
           </span>
           {row.reconciliation_status === "missing" ? (
             <span className="text-xs text-destructive">
-              Thiếu đối soát canonical
+              Thiếu bằng chứng đối soát
             </span>
           ) : row.order_payment_state_mismatch ? (
             <span className="text-xs text-destructive">
-              Payment hoàn tất nhưng trạng thái đơn lệch
+              Đã thu tiền nhưng trạng thái đơn chưa đồng bộ
             </span>
           ) : row.payment_attempt_count > 1 ? (
             <span className="text-xs text-muted-foreground">
@@ -220,14 +223,8 @@ export function RevenueDrillTabs({
         Number(row.discount_amount) > 0 ? formatVND(row.discount_amount) : "—",
     },
     {
-      key: "tax",
-      header: "VAT",
-      className: "text-right font-mono tabular-nums text-muted-foreground",
-      render: (row) => formatVND(row.tax_amount),
-    },
-    {
       key: "total",
-      header: "Tổng",
+      header: copy.kpis.totalCollected,
       className: "text-right font-mono tabular-nums font-medium",
       render: (row) => (
         <span
@@ -261,11 +258,6 @@ export function RevenueDrillTabs({
           className: "text-right font-mono tabular-nums",
         },
         {
-          key: "tax",
-          content: formatVND(totalTax),
-          className: "text-right font-mono tabular-nums",
-        },
-        {
           key: "total",
           content: formatVND(totalRevenue),
           className: "text-right font-mono tabular-nums font-bold",
@@ -274,15 +266,16 @@ export function RevenueDrillTabs({
       ],
     },
   ];
+  const netRevenue = totalRevenue - totalTax;
 
   return (
     <AppPageTabs
       items={[
-        { value: "tong-quan", label: "Tổng quan" },
-        { value: "theo-gio", label: "Theo giờ", count: hours.length },
+        { value: "tong-quan", label: copy.tabs.overview },
+        { value: "theo-gio", label: copy.tabs.hourly, count: hours.length },
         {
           value: "danh-sach-don",
-          label: "Đơn",
+          label: copy.tabs.orders,
           count: totalOrders,
         },
       ]}
@@ -290,21 +283,27 @@ export function RevenueDrillTabs({
       paramKey="tab"
     >
       <TabsContent value="tong-quan">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <KpiCard label="Doanh thu" value={formatVND(totalRevenue)} />
-          <KpiCard label="Giảm giá" value={formatVND(totalDiscount)} />
-          <KpiCard label="VAT" value={formatVND(totalTax)} />
-        </div>
+        <KpiRow density="compact" className="sm:grid-cols-3">
+          <KpiCard
+            label={copy.kpis.netRevenue}
+            value={formatVND(netRevenue)}
+            tone="primary"
+          />
+          <KpiCard
+            label={copy.kpis.totalCollected}
+            value={formatVND(totalRevenue)}
+          />
+          <KpiCard
+            label={copy.kpis.discount}
+            value={formatVND(totalDiscount)}
+          />
+        </KpiRow>
       </TabsContent>
 
       <TabsContent value="theo-gio">
-        <AppSection title="Doanh thu theo giờ">
+        <AppSection title={copy.hourlyTitle}>
           {hours.length === 0 ? (
-            <AppEmptyState
-              compact
-              title="Không có đơn trong ngày này."
-              symbol="riceBowl"
-            />
+            <AppEmptyState compact title={copy.noOrders} symbol="riceBowl" />
           ) : (
             hours.map((hour) => {
               const pct = totalRevenue
@@ -333,8 +332,8 @@ export function RevenueDrillTabs({
 
       <TabsContent value="danh-sach-don">
         <AppSection
-          title={`Đơn có payment hoàn tất (${formatCount(totalOrders)})`}
-          description={`Mỗi đơn một dòng, sắp xếp theo payments.paid_at. "Không yêu cầu" chỉ hiển thị khi hệ thống đã ghi nhận trạng thái đó.`}
+          title={copy.ordersTitle(formatCount(totalOrders))}
+          description={copy.ordersDescription}
           contentFlush
           contentScroll
         >
@@ -343,7 +342,7 @@ export function RevenueDrillTabs({
             data={orders}
             pageSize={50}
             getRowKey={(row) => row.order_id}
-            emptyTitle="Không có đơn với payment hoàn tất trong ngày."
+            emptyTitle={copy.noPaidOrders}
             mobileCardRender={(row) => (
               <Item variant="outline">
                 <ItemContent>
@@ -353,7 +352,7 @@ export function RevenueDrillTabs({
                     {ORDER_TYPE_LABEL[row.order_type] ?? row.order_type}
                   </ItemDescription>
                   <ItemDescription>
-                    {formatCount(row.main_dish_quantity)} cơm snapshot ·{" "}
+                    {formatCount(row.main_dish_quantity)} phần cơm đã ghi nhận ·{" "}
                     {formatCount(
                       row.side_dish_quantity + row.included_side_quantity,
                     )}{" "}
@@ -363,9 +362,9 @@ export function RevenueDrillTabs({
                   </ItemDescription>
                   {row.kds_legacy_completed_item_quantity > 0 && (
                     <ItemDescription className="text-warning">
-                      Snapshot KDS cũ{" "}
+                      Dữ liệu bếp cũ có{" "}
                       {formatCount(row.kds_legacy_completed_item_quantity)} món;
-                      bằng chứng không đầy đủ
+                      bằng chứng chưa đầy đủ
                     </ItemDescription>
                   )}
                   {row.legacy_unclassified_quantity > 0 && (
@@ -377,12 +376,12 @@ export function RevenueDrillTabs({
                   )}
                   {row.order_payment_state_mismatch && (
                     <ItemDescription className="text-destructive">
-                      Payment hoàn tất nhưng trạng thái đơn lệch
+                      Đã thu tiền nhưng trạng thái đơn chưa đồng bộ
                     </ItemDescription>
                   )}
                   {row.reconciliation_status === "missing" && (
                     <ItemDescription className="text-destructive">
-                      Thiếu đối soát canonical
+                      Thiếu bằng chứng đối soát
                     </ItemDescription>
                   )}
                   {row.print_failed_count > 0 && (

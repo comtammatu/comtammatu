@@ -29,7 +29,7 @@ interface KpiCardProps {
   value: ReactNode;
   /** Compare delta (built via buildCompareDelta) */
   delta?: CompareDelta | null;
-  /** Compare period label e.g. "vs kỳ trước" */
+  /** Compare period label e.g. "so với kỳ trước" */
   compareHint?: string;
   /** Inline secondary metric e.g. "Chưa VAT · 1.234 lượt" */
   hint?: ReactNode;
@@ -51,7 +51,7 @@ export function KpiCard({
   label,
   value,
   delta,
-  compareHint = "vs kỳ trước",
+  compareHint = "so với kỳ trước",
   hint,
   tone = "neutral",
   href,

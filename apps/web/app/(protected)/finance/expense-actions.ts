@@ -4,8 +4,8 @@
  * Operating-expense capture (D028 / blueprint P0-2).
  *
  * Single-entry expense-ledger writes for the owner finance cockpit. The summed
- * total feeds `fetchOperatingExpenseTotal` (finance-cockpit) which lights up the
- * "Chi vận hành" KPI and the net-profit line. NOT a general ledger (D020);
+ * total feeds `fetchOperatingExpenseSummary` (finance-cockpit) which supplies
+ * the operating-expense KPI and operating result. NOT a general ledger (D020);
  * supplier costs stay in supplier_invoices. v1 owner-only (finance module gate).
  */
 
@@ -109,7 +109,7 @@ export async function createExpense(
       success: false,
       error:
         parsed.data.category === "cogs_manual"
-          ? "Giá vốn món lấy từ tiêu hao kho; không nhập thủ công ở chi vận hành."
+          ? "Giá vốn món lấy từ tiêu hao kho; không nhập thủ công ở chi phí vận hành."
           : "Nộp tiền vào ngân hàng chỉ được ghi nhận từ giao dịch SePay đã xác thực.",
     };
   }

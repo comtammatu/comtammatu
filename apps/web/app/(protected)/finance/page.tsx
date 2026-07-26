@@ -1,12 +1,10 @@
 import Link from "next/link";
+import { ArrowRight as IconArrowRight } from "lucide-react";
 import {
-  ArrowRight as IconArrowRight,
-  Boxes as IconBoxes,
-  ReceiptText as IconReceiptText,
-  TrendingUp as IconTrendingUp,
-  Wallet as IconWallet,
-} from "lucide-react";
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+  formatCount,
+  formatPercent,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Item,
@@ -24,7 +22,6 @@ import {
   KpiRow,
 } from "@/components/surface";
 import { messages } from "@lib/messages";
-import { buildCompareDelta } from "@/components/kpi/compare-chip";
 import { FilterBar } from "./components/filter-bar";
 import {
   parseFinanceParams,
@@ -57,7 +54,6 @@ function FinanceAttentionSection({
     <AppSection
       size="sm"
       title={powerLiteCopy.ownerNewsTitle}
-      description={powerLiteCopy.exceptionsDescription}
     >
       {needsWork ? (
         <ItemGroup>
@@ -109,12 +105,13 @@ export default async function FinancePage({
     fetchFinanceCockpit(params, resolved),
     fetchCashSummary(),
   ]);
+  const grossProfit = cockpit.kpis.grossProfit;
+  const operatingResult = cockpit.kpis.operatingResult;
 
   return (
     <AppPage width="wide" density="compact">
       <AppPageHeader
         title={powerLiteCopy.title}
-        description={powerLiteCopy.description}
       />
 
       <FilterBar
@@ -126,78 +123,121 @@ export default async function FinancePage({
         compact
       />
 
-      <KpiRow
-        density="compact"
-        className="grid-cols-1 min-[360px]:grid-cols-2 xl:grid-cols-4"
+      <AppSection
+        size="sm"
+        title={financeCopy.basic.sections.periodResult}
+        description={financeCopy.basic.sections.followsFilters}
       >
-        <KpiCard
+        <KpiRow
           density="compact"
-          icon={<IconWallet className="size-4 text-muted-foreground" />}
-          label={financeCopy.basic.kpis.moneyCollected}
-          value={formatVND(cockpit.kpis.totalCollected)}
-          hint={financeCopy.basic.kpis.moneyCollectedHint(
-            formatCount(cockpit.kpis.orderCount),
-          )}
-          tone="primary"
-          href="/finance/revenue"
-          delta={
-            cockpit.compareKpis
-              ? buildCompareDelta(
-                  cockpit.kpis.totalCollected,
-                  cockpit.compareKpis.totalCollected,
-                  "higher_better",
-                )
-              : null
-          }
-        />
+          className="grid-cols-1 md:grid-cols-2 xl:grid-cols-5"
+        >
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.netRevenue}
+            value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
+            hint={financeCopy.basic.kpis.netRevenueHint}
+            tone="primary"
+            href="/finance/revenue"
+          />
 
-        <KpiCard
-          density="compact"
-          icon={<IconTrendingUp className="size-4 text-muted-foreground" />}
-          label={financeCopy.basic.kpis.netProfit}
-          value={formatVND(cockpit.kpis.netProfit)}
-          hint={financeCopy.basic.kpis.netProfitHint}
-          delta={
-            cockpit.compareKpis
-              ? buildCompareDelta(
-                  cockpit.kpis.netProfit,
-                  cockpit.compareKpis.netProfit,
-                  "higher_better",
-                )
-              : null
-          }
-        />
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.ingredientCost}
+            value={
+              cockpit.kpis.costAvailable
+                ? formatVND(cockpit.kpis.ingredientCost)
+                : financeCopy.basic.kpis.missingCost
+            }
+            hint={financeCopy.basic.kpis.ingredientCostHint(
+              formatCount(cockpit.kpis.costCoverageOrderCount),
+              formatCount(cockpit.kpis.orderCount),
+            )}
+            tone={cockpit.kpis.costAvailable ? "neutral" : "warning"}
+            href="/finance/food-cost"
+          />
 
-        <KpiCard
-          density="compact"
-          icon={<IconBoxes className="size-4 text-muted-foreground" />}
-          label={financeCopy.basic.kpis.inventoryValue}
-          value={formatVND(cockpit.kpis.inventoryValue)}
-          hint={financeCopy.basic.kpis.inventoryValueHint(
-            formatVND(cockpit.kpis.inventoryOpeningValue),
-          )}
-          delta={{
-            ...buildCompareDelta(
-              cockpit.kpis.inventoryValue,
-              cockpit.kpis.inventoryOpeningValue,
-              "higher_better",
-            ),
-            tone: "neutral" as const,
-          }}
-          compareHint={financeCopy.basic.kpis.inventoryOpeningCompare}
-        />
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.grossProfit}
+            value={
+              grossProfit == null
+                ? financeCopy.basic.kpis.notCalculated
+                : formatVND(grossProfit)
+            }
+            hint={
+              grossProfit == null || cockpit.kpis.grossMargin == null
+                ? financeCopy.basic.kpis.grossProfitMissingHint
+                : financeCopy.basic.kpis.grossProfitHint(
+                    formatPercent(cockpit.kpis.grossMargin),
+                  )
+            }
+            tone={
+              grossProfit == null
+                ? "warning"
+                : grossProfit < 0
+                  ? "destructive"
+                  : "success"
+            }
+            href="/finance/food-cost"
+          />
 
-        <KpiCard
-          density="compact"
-          icon={<IconReceiptText className="size-4 text-muted-foreground" />}
-          label={financeCopy.basic.kpis.operatingExpense}
-          value={formatVND(cockpit.kpis.operatingExpense)}
-          hint={financeCopy.basic.kpis.operatingExpenseHint}
-          href="/finance/expenses"
-        />
-      </KpiRow>
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.operatingExpense}
+            value={
+              cockpit.kpis.operatingExpenseRecorded
+                ? formatVND(cockpit.kpis.operatingExpense)
+                : financeCopy.basic.kpis.notRecorded
+            }
+            hint={financeCopy.basic.kpis.operatingExpenseHint}
+            tone={
+              cockpit.kpis.operatingExpenseRecorded ? "neutral" : "warning"
+            }
+            href="/finance/expenses"
+          />
+
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.operatingResult}
+            value={
+              operatingResult == null
+                ? financeCopy.basic.kpis.notCalculated
+                : formatVND(operatingResult)
+            }
+            hint={financeCopy.basic.kpis.operatingResultHint}
+            tone={
+              operatingResult == null
+                ? "warning"
+                : operatingResult < 0
+                  ? "destructive"
+                  : "success"
+            }
+          />
+        </KpiRow>
+      </AppSection>
 
       <CurrentFundsSection cash={cash} />
+
+      <AppSection
+        size="sm"
+        title={financeCopy.basic.sections.inventory}
+        description={financeCopy.basic.sections.followsFilters}
+      >
+        <KpiRow
+          density="compact"
+          className="grid-cols-1 md:grid-cols-2 xl:grid-cols-2"
+        >
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.inventoryClosingValue}
+            value={formatVND(cockpit.kpis.inventoryValue)}
+            hint={financeCopy.basic.kpis.inventoryValueHint(
+              formatVND(cockpit.kpis.inventoryOpeningValue),
+            )}
+          />
+        </KpiRow>
+      </AppSection>
 
       <FinanceAttentionSection exceptions={cockpit.exceptions} />
     </AppPage>

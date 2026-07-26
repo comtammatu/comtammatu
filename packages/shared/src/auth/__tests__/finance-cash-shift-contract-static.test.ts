@@ -123,15 +123,16 @@ test("variance resolution is structured, permission-gated, and cash-book aware",
   );
 });
 
-test("Finance exposes opening inventory movement and current book funds", () => {
+test("Finance separates period results, inventory, and current book funds", () => {
   assert.match(
     migration,
     /CREATE OR REPLACE FUNCTION public\.get_inventory_value_period/,
   );
   assert.match(financePage, /inventoryOpeningValue/);
   assert.match(financePage, /CurrentFundsSection cash=\{cash\}/);
-  assert.match(financeMessages, /moneyCollected: "Doanh thu"/);
-  assert.match(financeMessages, /netRevenue: "Bán hàng sau giảm giá"/);
+  assert.match(financeMessages, /netRevenue: "Doanh thu thuần"/);
+  assert.match(financeMessages, /grossProfit: "= Lợi nhuận gộp"/);
+  assert.match(financeMessages, /operatingResult: "= Kết quả vận hành"/);
   assert.match(financeMessages, /inventoryOpeningCompare: "so với tồn đầu kỳ"/);
 });
 
