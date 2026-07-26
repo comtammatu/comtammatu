@@ -22,6 +22,7 @@ test("POS session variance resolution keeps the close-time cash difference immut
   const closeSheet = read(
     "apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx",
   );
+  const messages = read("apps/web/lib/messages/settings.ts");
 
   assert.match(action, /resolvePosSessionVariance/);
   assert.match(action, /PERMISSION_KEYS\.POS_CLOSE_SHIFT/);
@@ -41,6 +42,10 @@ test("POS session variance resolution keeps the close-time cash difference immut
   assert.match(closeSheet, /Quản lý xử lý tại Lịch sử ca POS/);
   assert.match(closeSheet, /không cộng doanh[\s\S]*thu lần hai/);
   assert.doesNotMatch(closeSheet, /xác nhận lại trước khi chốt/);
+  assert.match(messages, /acceptedAdjustment: "Ghi nhận lệch ca"/);
+  assert.match(messages, /không thay đổi tiền mặt theo sổ/);
+  assert.match(messages, /số dư theo sổ không thay đổi/);
+  assert.doesNotMatch(messages, /tiền mặt theo sổ được điều chỉnh/);
 
   assert.match(migration, /variance_resolution_type = p_resolution_type/);
   assert.match(
@@ -77,8 +82,14 @@ test("payment-method correction synchronizes POS cash and protects bank evidence
     "supabase/migration-archive/20260719224000_guard_cash_correction_with_bank_evidence.sql",
   );
 
-  assert.match(migration, /UPDATE public\.payments[\s\S]*method = p_new_method/);
-  assert.match(migration, /UPDATE public\.orders[\s\S]*payment_method = p_new_method/);
+  assert.match(
+    migration,
+    /UPDATE public\.payments[\s\S]*method = p_new_method/,
+  );
+  assert.match(
+    migration,
+    /UPDATE public\.orders[\s\S]*payment_method = p_new_method/,
+  );
   assert.match(
     migration,
     /v_expected_cash := v_session\.opening_cash \+ v_cash_revenue/,

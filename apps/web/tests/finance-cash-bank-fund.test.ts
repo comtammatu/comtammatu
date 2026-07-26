@@ -48,7 +48,7 @@ test("finance landing presents immutable book funds", () => {
 test("current funds load from one tenant-wide PostgreSQL snapshot", () => {
   const cockpit = read("apps/web/app/(protected)/finance/_lib/cash-cockpit.ts");
   const migration = read(
-    "supabase/migrations/20260726140000_immutable_finance_fund_ledger.sql",
+    "supabase/migrations/20260726160405_remove_pos_variance_from_current_funds.sql",
   );
 
   assert.match(cockpit, /\.rpc\("get_finance_current_funds"\)/);
@@ -58,9 +58,17 @@ test("current funds load from one tenant-wide PostgreSQL snapshot", () => {
   assert.match(cockpit, /cash_refunds/);
   assert.match(cockpit, /cash_expenses/);
   assert.match(cockpit, /cash_supplier_payments/);
-  assert.match(cockpit, /cash_variance_adjustments/);
+  assert.doesNotMatch(
+    cockpit,
+    /cash_variance_adjustments|cashVarianceAdjustments/,
+  );
   assert.match(cockpit, /cash_adjustments/);
   assert.match(cockpit, /bank_adjustments/);
+  assert.match(cockpit, /cashInSince: cashCollections/);
+  assert.match(
+    cockpit,
+    /cashOutSince: cashRefunds \+ cashExpenses \+ cashSupplierPayments/,
+  );
 
   assert.match(
     migration,
@@ -76,8 +84,11 @@ test("current funds load from one tenant-wide PostgreSQL snapshot", () => {
   );
   assert.match(
     migration,
-    /v_opening\.cash_delta[\s\S]*\+ v_cash_collections[\s\S]*- v_cash_refunds[\s\S]*- v_cash_expenses[\s\S]*- v_cash_supplier_payments[\s\S]*\+ v_cash_variance_adjustments[\s\S]*\+ v_cash_adjustments/,
+    /v_opening\.cash_delta[\s\S]*\+ v_cash_collections[\s\S]*- v_cash_refunds[\s\S]*- v_cash_expenses[\s\S]*- v_cash_supplier_payments[\s\S]*\+ v_cash_adjustments/,
   );
+  assert.match(migration, /'cash_variance_adjustments', 0/);
+  assert.doesNotMatch(migration, /public\.pos_sessions|cash_difference/);
+  assert.match(migration, /supplier_payment\.payment_method = 'cash'/);
   assert.match(
     migration,
     /v_opening\.bank_delta[\s\S]*\+ v_bank_in[\s\S]*- v_bank_out[\s\S]*\+ v_bank_adjustments/,
@@ -92,6 +103,9 @@ test("finance funds use one immutable append-only ledger contract", () => {
   const action = read("apps/web/app/(protected)/finance/cash-actions.ts");
   const migration = read(
     "supabase/migrations/20260726140000_immutable_finance_fund_ledger.sql",
+  );
+  const currentFundsMigration = read(
+    "supabase/migrations/20260726160405_remove_pos_variance_from_current_funds.sql",
   );
   const databaseTypes = read("packages/database/src/types/database.types.ts");
   const databaseTest = read("supabase/tests/finance_current_funds_test.sql");
@@ -139,13 +153,30 @@ test("finance funds use one immutable append-only ledger contract", () => {
     "prior setting keys must remain frozen as evidence",
   );
   assert.match(
+    currentFundsMigration,
+    /app\.finance_legacy_cutover_idempotency_key[\s\S]*IS DISTINCT FROM p_idempotency_key::text/,
+    "legacy cutover must require an operator-controlled key bound to the opening request",
+  );
+  assert.match(
     databaseTypes,
     /get_finance_current_funds:\s*\{\s*Args:/,
     "generated type surface must expose the summary RPC",
   );
   assert.match(databaseTest, /staff_repaid/);
   assert.match(databaseTest, /accepted_adjustment/);
+  assert.match(databaseTest, /cash_variance_adjustments'\)::numeric <> 0/);
+  assert.match(databaseTest, /cash_current'\)::numeric <> 1007/);
+  assert.match(databaseTest, /bank_supplier_payment_formula_invalid/);
+  assert.match(databaseTest, /cash_supplier_payment_bank_match_not_rejected/);
+  assert.match(databaseTest, /supplier_payment_wrong_direction_not_rejected/);
+  assert.match(databaseTest, /supplier_payment_amount_mismatch_not_rejected/);
+  assert.match(
+    databaseTest,
+    /supplier_payment_cross_tenant_match_not_rejected/,
+  );
+  assert.match(databaseTest, /supplier_payment_duplicate_match_not_rejected/);
   assert.match(databaseTest, /finance_fund_idempotency_conflict/);
+  assert.match(databaseTest, /finance_legacy_evidence_not_preserved/);
   assert.match(databaseTest, /finance_server_cutover_retry_invalid/);
   assert.match(
     databaseTest,

@@ -11,7 +11,6 @@ export interface CashSummary {
   cashRefunds: number;
   cashExpenses: number;
   cashSupplierPayments: number;
-  cashVarianceAdjustments: number;
   cashAdjustments: number;
   cashInSince: number;
   cashOutSince: number;
@@ -33,7 +32,6 @@ const EMPTY_FUNDS: CashSummary = {
   cashRefunds: 0,
   cashExpenses: 0,
   cashSupplierPayments: 0,
-  cashVarianceAdjustments: 0,
   cashAdjustments: 0,
   cashInSince: 0,
   cashOutSince: 0,
@@ -84,14 +82,7 @@ export async function fetchCashSummary(): Promise<CashSummary> {
   const cashCollections = requireNumber(payload, "cash_collections");
   const cashRefunds = requireNumber(payload, "cash_refunds");
   const cashExpenses = requireNumber(payload, "cash_expenses");
-  const cashSupplierPayments = requireNumber(
-    payload,
-    "cash_supplier_payments",
-  );
-  const cashVarianceAdjustments = requireNumber(
-    payload,
-    "cash_variance_adjustments",
-  );
+  const cashSupplierPayments = requireNumber(payload, "cash_supplier_payments");
 
   return {
     hasOpening: true,
@@ -106,14 +97,9 @@ export async function fetchCashSummary(): Promise<CashSummary> {
     cashRefunds,
     cashExpenses,
     cashSupplierPayments,
-    cashVarianceAdjustments,
     cashAdjustments: requireNumber(payload, "cash_adjustments"),
-    cashInSince: cashCollections + Math.max(cashVarianceAdjustments, 0),
-    cashOutSince:
-      cashRefunds +
-      cashExpenses +
-      cashSupplierPayments +
-      Math.max(-cashVarianceAdjustments, 0),
+    cashInSince: cashCollections,
+    cashOutSince: cashRefunds + cashExpenses + cashSupplierPayments,
     cashOnHand: requireNumber(payload, "cash_current"),
     bankInSince: requireNumber(payload, "bank_in"),
     bankOutSince: requireNumber(payload, "bank_out"),

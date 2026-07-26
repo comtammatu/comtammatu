@@ -618,11 +618,11 @@ export const settings = {
       `Quản lý đã nhận đủ ${amount}; số đếm lúc chốt ca không bị sửa.`,
     staffRepaidResult: (amount: string) =>
       `Kết quả: nhân viên đã bù ${amount}; lệch lúc chốt vẫn được giữ để đối chiếu.`,
-    acceptedAdjustment: "Chấp nhận chênh lệch",
+    acceptedAdjustment: "Ghi nhận lệch ca",
     acceptedAdjustmentHint:
-      "Giữ nguyên số đếm và điều chỉnh tiền mặt theo sổ đúng phần thừa/thiếu.",
+      "Giữ nguyên số đếm để báo cáo và điều tra; không thay đổi tiền mặt theo sổ.",
     acceptedAdjustmentResult: (difference: string) =>
-      `Kết quả: tiền mặt theo sổ được điều chỉnh ${difference}; lệch lúc chốt vẫn được giữ để đối chiếu.`,
+      `Kết quả: đã ghi nhận lệch ca ${difference}; số dư theo sổ không thay đổi.`,
     varianceResolutionLabel: "Hướng xử lý",
     varianceResolutionPlaceholder:
       "VD: Thu ngân đã bù đủ tiền thiếu, quản lý đã nhận.",

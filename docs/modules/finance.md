@@ -20,8 +20,9 @@ revenue labels:
 Below those period cards, keep the tenant-wide current-funds row:
 
 - **Tiền mặt theo sổ**: immutable opening cash plus completed cash collections,
-  minus cash refunds, expenses, and supplier payments, plus accepted POS-session
-  variance and append-only audited adjustments.
+  minus cash refunds, cash expenses, and cash supplier payments, plus
+  append-only audited adjustments. POS-session counts and variances are
+  reconciliation evidence only and never change this balance.
 - **Tiền trong ngân hàng**: immutable opening bank amount plus every canonical
   SePay movement in `bank_transactions` and append-only audited adjustments.
   Incoming amounts add and outgoing amounts subtract.
@@ -46,6 +47,12 @@ stable SePay transaction ID. `webhook_events` remains delivery and processing
 evidence. `bank_transaction_reconciliation_matches` only classifies a bank row
 against a payment, operating expense, supplier payment, or refund; adding or
 removing a match must never change the bank balance.
+
+A supplier payment reduces cash only when
+`supplier_payments.payment_method='cash'`. A `bank_transfer` supplier payment
+updates accounts payable but does not create a second bank movement; the
+canonical outgoing `bank_transactions` row reduces bank funds whether or not
+it has been reconciled.
 
 Gross profit and food-cost coverage remain supporting analysis in
 `/finance/food-cost`; they are not default landing cards.
@@ -149,8 +156,11 @@ An over-threshold difference is resolved from
   `abs(cash_difference)`. It does not rewrite the close count or add a cash-book
   adjustment: the repayment restores physical cash to the already expected
   amount.
-- `accepted_adjustment` keeps the close count and posts the signed difference
-  into `Tiền mặt theo sổ`: shortage reduces book cash and overage increases it.
+- `accepted_adjustment` keeps the close count and records the variance outcome
+  for reporting and investigation. It does not change `Tiền mặt theo sổ`.
+
+Any verified gain or loss that must change book funds is recorded separately
+through `create_finance_fund_adjustment` with its own reason and evidence.
 
 Payment-method correction is owner-only in the session bill drawer and HĐĐT
 queue. The atomic RPC updates `payments.method`, the `orders.payment_method`
@@ -170,7 +180,7 @@ is no canonical `accountant` staff role. Therefore:
 | Actor | Current system access | Must review or act on |
 | --- | --- | --- |
 | Owner | Tenant-wide `/finance`; owner-only bank import/reconciliation, payment-method correction, one-time fund initialization, and append-only fund adjustments | Daily landing metrics and formulas; current cash/bank opening and adjustments; exact POS cash variances; unmatched SePay movements; VietQR payments missing bank evidence; operating expenses; AP; HĐĐT; inventory opening/closing evidence; exports |
-| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance, bank import/reconciliation, opening-balance, or payment-correction authority | Resolve an exact subordinate shift shortage as `staff_repaid` or accept its signed book adjustment as `accepted_adjustment`, subject to branch permission and audit |
+| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance, bank import/reconciliation, opening-balance, fund-adjustment, or payment-correction authority | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds |
 | Accountant | No authenticated Finance role or write authority in the current model | Receive Owner-controlled revenue/payment exports, canonical SePay evidence, expense/AP evidence, HĐĐT evidence, and inventory opening/closing evidence; report discrepancies back to the Owner |
 
 The system must not silently map `office` or another position to Finance

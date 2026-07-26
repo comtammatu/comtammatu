@@ -24,6 +24,12 @@ DECLARE
   v_bank_deposit_transaction bigint;
   v_supplier bigint;
   v_supplier_invoice bigint;
+  v_bank_supplier_invoice bigint;
+  v_cash_supplier_payment bigint;
+  v_bank_supplier_payment bigint;
+  v_bank_supplier_transaction bigint;
+  v_test_bank_transaction bigint;
+  v_other_tenant_id bigint;
   v_rejected boolean;
   v_audit_count integer;
   v_legacy_setting_id bigint;
@@ -367,6 +373,65 @@ BEGIN
       v_before
     );
 
+  SELECT payment.id
+  INTO v_cash_supplier_payment
+  FROM public.supplier_payments payment
+  WHERE payment.tenant_id = v_tenant_id
+    AND payment.supplier_invoice_id = v_supplier_invoice
+    AND payment.payment_method = 'cash'
+    AND payment.amount = 30
+    AND payment.payment_date = v_after;
+
+  INSERT INTO public.supplier_invoices (
+    tenant_id,
+    supplier_id,
+    invoice_number,
+    invoice_date,
+    subtotal,
+    vat_rate,
+    vat_amount,
+    total_amount,
+    matching_status,
+    created_by,
+    payment_status,
+    paid_amount,
+    paid_at
+  ) VALUES (
+    v_tenant_id,
+    v_supplier,
+    'FUND-BANK-' || gen_random_uuid()::text,
+    v_after,
+    25,
+    0,
+    0,
+    25,
+    'approved',
+    v_owner,
+    'paid',
+    25,
+    v_after
+  )
+  RETURNING id INTO v_bank_supplier_invoice;
+
+  INSERT INTO public.supplier_payments (
+    tenant_id,
+    supplier_invoice_id,
+    payment_method,
+    amount,
+    payment_date,
+    created_by,
+    created_at
+  ) VALUES (
+    v_tenant_id,
+    v_bank_supplier_invoice,
+    'bank_transfer',
+    25,
+    v_after,
+    v_owner,
+    v_after
+  )
+  RETURNING id INTO v_bank_supplier_payment;
+
   INSERT INTO public.pos_sessions (
     tenant_id,
     branch_id,
@@ -438,6 +503,24 @@ BEGIN
       'accepted_adjustment',
       0,
       v_before
+    ),
+    (
+      v_tenant_id,
+      v_branch_id,
+      v_owner,
+      v_owner,
+      v_after - interval '4 hours',
+      v_after,
+      5295000,
+      0,
+      5295000,
+      -5295000,
+      'closed',
+      'accepted negative variance is report only',
+      v_owner,
+      'accepted_adjustment',
+      0,
+      v_after
     );
 
   INSERT INTO public.bank_transactions (
@@ -617,30 +700,43 @@ BEGIN
     RAISE EXCEPTION 'finance_legacy_cutover_gate_not_enforced';
   END IF;
 
-  ALTER TABLE public.system_settings
-    DISABLE TRIGGER system_settings_guard_legacy_finance_opening;
-  DELETE FROM public.system_settings WHERE id = v_legacy_setting_id;
-  ALTER TABLE public.system_settings
-    ENABLE TRIGGER system_settings_guard_legacy_finance_opening;
-
   v_opening_key := gen_random_uuid();
+  PERFORM set_config(
+    'app.finance_legacy_cutover_idempotency_key',
+    v_opening_key::text,
+    true
+  );
   v_opening := public.initialize_finance_funds(
     1000,
     2000,
     v_cutoff,
-    'Verified project ledger boundary',
+    'Verified controlled legacy cutover boundary',
     v_opening_key
+  );
+  PERFORM set_config(
+    'app.finance_legacy_cutover_idempotency_key',
+    '',
+    true
   );
   v_opening_replay := public.initialize_finance_funds(
     1000,
     2000,
     v_cutoff,
-    'Verified project ledger boundary',
+    'Verified controlled legacy cutover boundary',
     v_opening_key
   );
 
   IF (v_opening ->> 'id') <> (v_opening_replay ->> 'id') THEN
     RAISE EXCEPTION 'finance_opening_retry_not_idempotent';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.system_settings setting
+    WHERE setting.id = v_legacy_setting_id
+      AND setting.value = 'legacy-evidence'
+  ) THEN
+    RAISE EXCEPTION 'finance_legacy_evidence_not_preserved';
   END IF;
 
   v_rejected := false;
@@ -649,7 +745,7 @@ BEGIN
       1001,
       2000,
       v_cutoff,
-      'Verified project ledger boundary',
+      'Verified controlled legacy cutover boundary',
       v_opening_key
     );
   EXCEPTION
@@ -737,9 +833,9 @@ BEGIN
     OR (v_summary ->> 'cash_refunds')::numeric <> 10
     OR (v_summary ->> 'cash_expenses')::numeric <> 60
     OR (v_summary ->> 'cash_supplier_payments')::numeric <> 30
-    OR (v_summary ->> 'cash_variance_adjustments')::numeric <> 5
+    OR (v_summary ->> 'cash_variance_adjustments')::numeric <> 0
     OR (v_summary ->> 'cash_adjustments')::numeric <> 7
-    OR (v_summary ->> 'cash_current')::numeric <> 1012
+    OR (v_summary ->> 'cash_current')::numeric <> 1007
     OR (v_summary ->> 'bank_in')::numeric <> 111
     OR (v_summary ->> 'bank_out')::numeric <> 20
     OR (v_summary ->> 'bank_adjustments')::numeric <> -4
@@ -749,9 +845,242 @@ BEGIN
   END IF;
 
   IF (v_summary ->> 'cash_current')::numeric
-      + (v_summary ->> 'bank_current')::numeric <> 3099
+      + (v_summary ->> 'bank_current')::numeric <> 3094
   THEN
     RAISE EXCEPTION 'cash_to_bank_transfer_changed_total_funds';
+  END IF;
+
+  INSERT INTO public.bank_transactions (
+    tenant_id,
+    provider_transaction_id,
+    occurred_at,
+    transfer_type,
+    amount,
+    ingest_source,
+    raw_payload,
+    created_at
+  ) VALUES (
+    v_tenant_id,
+    'fund-supplier-out-' || gen_random_uuid()::text,
+    v_after,
+    'out',
+    25,
+    'sepay_export',
+    '{}'::jsonb,
+    v_after
+  )
+  RETURNING id INTO v_bank_supplier_transaction;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.reconcile_bank_transaction_targets(
+      v_bank_supplier_transaction,
+      'supplier_payment',
+      ARRAY[v_cash_supplier_payment]
+    );
+  EXCEPTION
+    WHEN SQLSTATE 'P0002' THEN
+      v_rejected :=
+        SQLERRM LIKE '%bank_reconciliation_target_not_found%';
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'cash_supplier_payment_bank_match_not_rejected';
+  END IF;
+
+  v_rejected := false;
+  BEGIN
+    INSERT INTO public.bank_transactions (
+      tenant_id,
+      provider_transaction_id,
+      occurred_at,
+      transfer_type,
+      amount,
+      ingest_source,
+      raw_payload,
+      created_at
+    ) VALUES (
+      v_tenant_id,
+      'fund-supplier-in-' || gen_random_uuid()::text,
+      v_after,
+      'in',
+      25,
+      'sepay_export',
+      '{}'::jsonb,
+      v_after
+    )
+    RETURNING id INTO v_test_bank_transaction;
+
+    PERFORM public.reconcile_bank_transaction_targets(
+      v_test_bank_transaction,
+      'supplier_payment',
+      ARRAY[v_bank_supplier_payment]
+    );
+  EXCEPTION
+    WHEN check_violation THEN
+      v_rejected :=
+        SQLERRM LIKE '%bank_transaction_direction_mismatch%';
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'supplier_payment_wrong_direction_not_rejected';
+  END IF;
+
+  v_rejected := false;
+  BEGIN
+    INSERT INTO public.bank_transactions (
+      tenant_id,
+      provider_transaction_id,
+      occurred_at,
+      transfer_type,
+      amount,
+      ingest_source,
+      raw_payload,
+      created_at
+    ) VALUES (
+      v_tenant_id,
+      'fund-supplier-mismatch-' || gen_random_uuid()::text,
+      v_after,
+      'out',
+      24,
+      'sepay_export',
+      '{}'::jsonb,
+      v_after
+    )
+    RETURNING id INTO v_test_bank_transaction;
+
+    PERFORM public.reconcile_bank_transaction_targets(
+      v_test_bank_transaction,
+      'supplier_payment',
+      ARRAY[v_bank_supplier_payment]
+    );
+  EXCEPTION
+    WHEN check_violation THEN
+      v_rejected :=
+        SQLERRM LIKE '%bank_reconciliation_amount_mismatch%';
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'supplier_payment_amount_mismatch_not_rejected';
+  END IF;
+
+  INSERT INTO public.tenants (name, slug, owner_user_id)
+  VALUES (
+    'Finance fund other tenant',
+    'finance-fund-other-' || gen_random_uuid()::text,
+    v_owner
+  )
+  RETURNING id INTO v_other_tenant_id;
+
+  v_rejected := false;
+  BEGIN
+    INSERT INTO public.bank_transactions (
+      tenant_id,
+      provider_transaction_id,
+      occurred_at,
+      transfer_type,
+      amount,
+      ingest_source,
+      raw_payload,
+      created_at
+    ) VALUES (
+      v_other_tenant_id,
+      'fund-supplier-other-tenant-' || gen_random_uuid()::text,
+      v_after,
+      'out',
+      25,
+      'sepay_export',
+      '{}'::jsonb,
+      v_after
+    )
+    RETURNING id INTO v_test_bank_transaction;
+
+    PERFORM public.reconcile_bank_transaction_targets(
+      v_test_bank_transaction,
+      'supplier_payment',
+      ARRAY[v_bank_supplier_payment]
+    );
+  EXCEPTION
+    WHEN SQLSTATE 'P0002' THEN
+      v_rejected := SQLERRM LIKE '%bank_transaction_not_found%';
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'supplier_payment_cross_tenant_match_not_rejected';
+  END IF;
+
+  PERFORM public.reconcile_bank_transaction_targets(
+    v_bank_supplier_transaction,
+    'supplier_payment',
+    ARRAY[v_bank_supplier_payment]
+  );
+
+  v_summary := public.get_finance_current_funds();
+  IF (v_summary ->> 'cash_current')::numeric <> 1007
+    OR (v_summary ->> 'bank_out')::numeric <> 45
+    OR (v_summary ->> 'bank_current')::numeric <> 2062
+  THEN
+    RAISE EXCEPTION 'bank_supplier_payment_formula_invalid: %', v_summary;
+  END IF;
+
+  PERFORM public.reconcile_bank_transaction_targets(
+    v_bank_supplier_transaction,
+    'supplier_payment',
+    ARRAY[]::bigint[]
+  );
+
+  v_summary := public.get_finance_current_funds();
+  IF (v_summary ->> 'cash_current')::numeric <> 1007
+    OR (v_summary ->> 'bank_out')::numeric <> 45
+    OR (v_summary ->> 'bank_current')::numeric <> 2062
+  THEN
+    RAISE EXCEPTION 'supplier_payment_unmatch_changed_funds: %', v_summary;
+  END IF;
+
+  PERFORM public.reconcile_bank_transaction_targets(
+    v_bank_supplier_transaction,
+    'supplier_payment',
+    ARRAY[v_bank_supplier_payment]
+  );
+
+  v_summary := public.get_finance_current_funds();
+  IF (v_summary ->> 'cash_current')::numeric <> 1007
+    OR (v_summary ->> 'bank_out')::numeric <> 45
+    OR (v_summary ->> 'bank_current')::numeric <> 2062
+  THEN
+    RAISE EXCEPTION 'supplier_payment_rematch_changed_funds: %', v_summary;
+  END IF;
+
+  v_rejected := false;
+  BEGIN
+    INSERT INTO public.bank_transactions (
+      tenant_id,
+      provider_transaction_id,
+      occurred_at,
+      transfer_type,
+      amount,
+      ingest_source,
+      raw_payload,
+      created_at
+    ) VALUES (
+      v_tenant_id,
+      'fund-supplier-duplicate-' || gen_random_uuid()::text,
+      v_after,
+      'out',
+      25,
+      'sepay_export',
+      '{}'::jsonb,
+      v_after
+    )
+    RETURNING id INTO v_test_bank_transaction;
+
+    PERFORM public.reconcile_bank_transaction_targets(
+      v_test_bank_transaction,
+      'supplier_payment',
+      ARRAY[v_bank_supplier_payment]
+    );
+  EXCEPTION
+    WHEN unique_violation THEN
+      v_rejected := true;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'supplier_payment_duplicate_match_not_rejected';
   END IF;
 
   v_rejected := false;

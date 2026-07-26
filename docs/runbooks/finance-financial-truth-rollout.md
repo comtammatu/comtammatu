@@ -4,8 +4,8 @@ Checklist này triển khai Finance theo một chuỗi có thể đối soát:
 
 - `payments` sở hữu Doanh thu và phương thức thanh toán.
 - `bank_transactions` sở hữu mọi biến động tiền ngân hàng từ SePay.
-- `bank_opening_balance` là mốc bắt buộc vì hệ thống không đọc được số dư ngân
-  hàng; sửa mốc chỉ làm thay đổi kết quả đúng phần chênh của mốc.
+- `finance_fund_entries` sở hữu một opening cash/bank bất biến và các adjustment
+  append-only; ba setting opening cũ chỉ còn là bằng chứng.
 - `pos_sessions` sở hữu số đếm, dự thu và lệch tiền của từng ca.
 - Quan hệ đối soát chỉ phân loại bằng chứng; không tạo thêm biến động tiền.
 
@@ -45,6 +45,8 @@ Apply đúng thứ tự dưới đây bằng migration tooling sau khi đã ki�
 8. `20260719224000_guard_cash_correction_with_bank_evidence.sql`
 9. `20260719225000_create_finance_attention_targets.sql`
 10. `20260720110000_enforce_payment_method_mirror.sql`
+11. `20260726140000_immutable_finance_fund_ledger.sql`
+12. `20260726160405_remove_pos_variance_from_current_funds.sql`
 
 Sau khi apply vào schema nguồn tạo types, chạy `corepack pnpm db:types` và review
 diff trước khi chạy full gate.
@@ -52,7 +54,7 @@ diff trước khi chạy full gate.
 ## Owner-operated Preview Branch gate
 
 - [ ] Owner xác nhận Preview Branch ref và evidence tạo/xóa branch.
-- [ ] Đủ 10 migration theo `name`; hai bảng canonical bật RLS.
+- [ ] Đủ 12 migration theo `name`; các bảng canonical bật RLS.
 - [ ] `anon` không có `EXECUTE` trên RPC import, reconcile, correction hoặc
       attention.
 - [ ] Owner-only RPC kiểm `auth_is_owner`; read/attention kiểm `finance:view`;
@@ -70,16 +72,17 @@ diff trước khi chạy full gate.
 - [ ] Branch Manager không vào được `/finance`, nhưng xử lý được đúng ca thuộc
       chi nhánh qua `/br/[branchId]/pos-sessions?session=[id]`.
 
-## Bank ledger canary
+## Current funds canary
 
-- [ ] Đặt `bank_opening_balance` và ngày mốc; chưa có mốc thì UI phải hiển thị
-      `—`, không suy ra số dư từ giao dịch.
+- [ ] Chưa có opening thì UI hiển thị `Đang xác minh`; không dùng ba setting cũ
+      để suy ra số dư.
+- [ ] Opening cash/bank chỉ tạo một lần; mọi sửa sai sau đó là adjustment
+      append-only có reason và idempotency key.
 - [ ] Import file SePay có cả tiền vào và tiền ra. Số cuối phải bằng:
       `đầu kỳ + tổng tiền vào - tổng tiền ra`.
 - [ ] Import lại cùng file cho `inserted_count=0`; cùng SePay ID nhưng facts khác
       phải fail toàn bộ import.
-- [ ] Sửa số dư mở thêm `x` làm số cuối tăng đúng `x`; không mất payment hoặc
-      bank transaction cũ.
+- [ ] Adjustment bank thêm `x` làm số cuối tăng đúng `x`; opening cũ không đổi.
 - [ ] Gắn/gỡ payment, expense, thanh toán NCC hoặc refund không đổi tổng
       `bank_transactions`.
 - [ ] Giao dịch chưa gắn nguồn xuất hiện trong Finance Attention và drilldown
@@ -91,8 +94,11 @@ diff trước khi chạy full gate.
       `orders.total_amount` làm nguồn tiền.
 - [ ] `staff_repaid` chỉ dùng cho thiếu tiền, ghi đúng số nhân viên bù và không
       tạo cash-book adjustment mới.
-- [ ] `accepted_adjustment` giữ nguyên số đếm/lệch lúc đóng và đưa signed
-      difference vào tiền mặt theo sổ.
+- [ ] `accepted_adjustment` giữ nguyên số đếm/lệch lúc đóng để báo cáo, điều tra
+      và không thay đổi tiền mặt theo sổ.
+- [ ] Thanh toán NCC bằng tiền mặt chỉ trừ cash; thanh toán bằng chuyển khoản
+      chỉ trừ bank qua canonical `bank_transactions.out`; gắn/gỡ đối soát không
+      tạo delta lần hai.
 - [ ] Sửa Cash → VietQR đồng bộ payment/order, giảm dự thu ca và mở lại variance
       resolution; bank ledger chưa đổi cho đến khi có SePay evidence.
 - [ ] Mọi sửa method của payment đã hoàn tất vẫn phải qua
@@ -130,9 +136,16 @@ Go khi đủ toàn bộ:
 - Import/backfill canonical SePay dùng provider transaction ID để idempotent;
   không sửa/xóa `payments` nhằm ép số dư khớp.
 
-Thứ tự Production: apply 10 migration → regenerate/verify contract artifacts nếu
-cần → import/backfill SePay → đối chiếu công thức ngân hàng → deploy app → Owner
-canary → theo dõi runtime logs.
+Thứ tự Production: apply 12 migration → regenerate/verify contract artifacts nếu
+cần → deploy app → chốt timestamp đối chiếu → trình Owner opening cash, opening
+bank và `effective_at` → chỉ sau khi Owner xác nhận lại nguyên bộ mới tạo opening
+→ Owner canary → theo dõi runtime logs.
+
+Nếu tenant có ba setting opening cũ, UI và RPC thường phải tiếp tục chặn. Cutover
+chỉ chạy trong một transaction đặc quyền: đặt JWT claims đúng Owner/tenant, đặt
+local `app.finance_legacy_cutover_idempotency_key` bằng chính UUID của request,
+rồi gọi `initialize_finance_funds` với ba giá trị Owner vừa xác nhận. Không xóa
+setting cũ; transaction phải kiểm lại opening, audit row và số RPC trước commit.
 
 ## Rollback
 

@@ -255,7 +255,7 @@ Nguyên tắc nền:
 | `counted_cash`           | Tiền mặt kiểm đếm             | Tiền mặt nhân sự/quản lý đếm thực tế.                                                                      | Manual count at close.                                                                           | Expected cash.                                                                         | Cash session.                                                       |
 | `cash_variance`          | Chênh lệch tiền mặt           | Két thừa/thiếu so với kỳ vọng.                                                                             | `counted_cash - expected_cash`.                                                                  | Lợi nhuận, doanh thu, chi phí.                                                         | Cash session reconciliation.                                        |
 | `staff_repaid`           | Nhân viên bù đủ tiền thiếu    | Quản lý đã nhận đủ `abs(cash_variance)` của ca thiếu; giữ nguyên số đếm lúc chốt.                          | Chỉ dùng khi `cash_variance < 0`; settlement bằng toàn bộ khoản thiếu.                           | Điều chỉnh sổ quỹ, sửa số đếm, thu một phần.                                           | `resolve_pos_session_variance`.                                     |
-| `accepted_adjustment`    | Chấp nhận chênh lệch          | Quản lý giữ số đếm thực tế và chấp nhận đưa khoản thừa/thiếu vào tiền mặt theo sổ.                         | Cộng signed `cash_variance` vào cash ledger từ lúc resolve.                                      | Nhân viên bù tiền, sửa phương thức thanh toán.                                         | `resolve_pos_session_variance`.                                     |
+| `accepted_adjustment`    | Ghi nhận lệch ca              | Quản lý giữ số đếm thực tế và ghi nhận kết quả thừa/thiếu để báo cáo, điều tra.                            | Book delta bằng 0; tổn thất/lợi ích đã kiểm chứng dùng finance adjustment riêng.                 | Nhân viên bù tiền, sửa phương thức thanh toán, tự động đổi số dư theo sổ.              | `resolve_pos_session_variance`.                                     |
 
 ### Legacy identifier notes
 
@@ -331,28 +331,28 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 
 ### Cash, công nợ, và đối soát
 
-| Term                         | Nhãn chuẩn          | Nghĩa agent phải biết                                                     | Không được lẫn với                |
-| ---------------------------- | ------------------- | ------------------------------------------------------------------------- | --------------------------------- |
-| `cash_basis`                 | ghi nhận theo tiền  | Doanh thu/chi phí ghi khi tiền thu/chi.                                   | accrual basis                     |
-| `accrual_basis`              | ghi nhận dồn tích   | Ghi khi doanh thu phát sinh/chi phí incurred, bất kể tiền đã chuyển chưa. | cash basis                        |
-| `cash_flow`                  | dòng tiền           | Tiền vào/ra theo thời gian.                                               | profit                            |
-| `cash_inflow`                | dòng tiền vào       | Tiền nhận từ khách/nền tảng/khoản khác.                                   | revenue nếu chưa earned           |
-| `cash_outflow`               | dòng tiền ra        | Tiền chi cho NCC/nhân sự/expense/chủ rút.                                 | expense nếu là trả nợ cũ          |
-| `cash_on_hand`               | tiền mặt hiện hữu   | Tiền thực có trong két hoặc quỹ.                                          | cash collected                    |
-| `bank_opening_balance`       | số dư ngân hàng đầu kỳ | Mốc số dư Owner nhập vì hệ thống không đọc được số dư tài khoản ngân hàng. | Tổng giao dịch SePay               |
-| `bank_transaction`           | giao dịch ngân hàng | Một biến động tiền vào hoặc tiền ra canonical từ SePay, tính đúng một lần theo ID giao dịch. | Webhook delivery, payment, expense |
-| `opening_cash`               | tiền đầu ca         | Tiền mặt trong két khi mở ca.                                             | doanh thu                         |
-| `closing_cash`               | tiền cuối ca        | Tiền mặt thực đếm khi đóng ca.                                            | expected cash                     |
-| `cash_over_short`            | thừa/thiếu tiền mặt | Counted cash - expected cash.                                             | lãi/lỗ                            |
-| `bank_reconciliation`        | đối soát ngân hàng  | Phân loại giao dịch ngân hàng vào payment/chứng từ; gắn hoặc gỡ không đổi số dư. | payment split, bank movement       |
-| `accounts_receivable` (`AR`) | phải thu            | Tiền khách/nền tảng/đối tác còn nợ.                                       | revenue                           |
-| `accounts_payable`           | phải trả            | Tiền còn nợ NCC/đối tác.                                                  | purchase spend                    |
-| `payable_due_date`           | hạn thanh toán NCC  | Ngày phải trả hóa đơn/khế ước NCC.                                        | ngày GRN                          |
-| `receivable_aging`           | tuổi nợ phải thu    | Phân nhóm khoản phải thu theo số ngày chưa thu.                           | doanh thu ngày                    |
-| `payable_aging`              | tuổi nợ phải trả    | Phân nhóm khoản phải trả theo số ngày chưa thanh toán.                    | chi phí trong kỳ                  |
-| `prepaid_expense`            | chi phí trả trước   | Tiền đã trả nhưng phân bổ cho nhiều kỳ.                                   | chi vận hành kỳ hiện tại          |
-| `accrued_expense`            | chi phí dồn tích    | Chi phí đã phát sinh nhưng chưa trả tiền.                                 | AP invoice đã nhận nếu có invoice |
-| `deposit`                    | đặt cọc             | Tiền giữ chỗ/đặt cọc, chưa chắc là revenue.                               | payment for completed order       |
+| Term                         | Nhãn chuẩn             | Nghĩa agent phải biết                                                                        | Không được lẫn với                 |
+| ---------------------------- | ---------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `cash_basis`                 | ghi nhận theo tiền     | Doanh thu/chi phí ghi khi tiền thu/chi.                                                      | accrual basis                      |
+| `accrual_basis`              | ghi nhận dồn tích      | Ghi khi doanh thu phát sinh/chi phí incurred, bất kể tiền đã chuyển chưa.                    | cash basis                         |
+| `cash_flow`                  | dòng tiền              | Tiền vào/ra theo thời gian.                                                                  | profit                             |
+| `cash_inflow`                | dòng tiền vào          | Tiền nhận từ khách/nền tảng/khoản khác.                                                      | revenue nếu chưa earned            |
+| `cash_outflow`               | dòng tiền ra           | Tiền chi cho NCC/nhân sự/expense/chủ rút.                                                    | expense nếu là trả nợ cũ           |
+| `cash_on_hand`               | tiền mặt hiện hữu      | Tiền thực có trong két hoặc quỹ.                                                             | cash collected                     |
+| `bank_opening_balance`       | số dư ngân hàng đầu kỳ | Mốc số dư Owner nhập vì hệ thống không đọc được số dư tài khoản ngân hàng.                   | Tổng giao dịch SePay               |
+| `bank_transaction`           | giao dịch ngân hàng    | Một biến động tiền vào hoặc tiền ra canonical từ SePay, tính đúng một lần theo ID giao dịch. | Webhook delivery, payment, expense |
+| `opening_cash`               | tiền đầu ca            | Tiền mặt trong két khi mở ca.                                                                | doanh thu                          |
+| `closing_cash`               | tiền cuối ca           | Tiền mặt thực đếm khi đóng ca.                                                               | expected cash                      |
+| `cash_over_short`            | thừa/thiếu tiền mặt    | Counted cash - expected cash.                                                                | lãi/lỗ                             |
+| `bank_reconciliation`        | đối soát ngân hàng     | Phân loại giao dịch ngân hàng vào payment/chứng từ; gắn hoặc gỡ không đổi số dư.             | payment split, bank movement       |
+| `accounts_receivable` (`AR`) | phải thu               | Tiền khách/nền tảng/đối tác còn nợ.                                                          | revenue                            |
+| `accounts_payable`           | phải trả               | Tiền còn nợ NCC/đối tác.                                                                     | purchase spend                     |
+| `payable_due_date`           | hạn thanh toán NCC     | Ngày phải trả hóa đơn/khế ước NCC.                                                           | ngày GRN                           |
+| `receivable_aging`           | tuổi nợ phải thu       | Phân nhóm khoản phải thu theo số ngày chưa thu.                                              | doanh thu ngày                     |
+| `payable_aging`              | tuổi nợ phải trả       | Phân nhóm khoản phải trả theo số ngày chưa thanh toán.                                       | chi phí trong kỳ                   |
+| `prepaid_expense`            | chi phí trả trước      | Tiền đã trả nhưng phân bổ cho nhiều kỳ.                                                      | chi vận hành kỳ hiện tại           |
+| `accrued_expense`            | chi phí dồn tích       | Chi phí đã phát sinh nhưng chưa trả tiền.                                                    | AP invoice đã nhận nếu có invoice  |
+| `deposit`                    | đặt cọc                | Tiền giữ chỗ/đặt cọc, chưa chắc là revenue.                                                  | payment for completed order        |
 
 ### Inventory, procurement, và costing
 
@@ -497,15 +497,15 @@ Tổng tồn chi nhánh không giảm ở bước này; tồn chỉ giảm khi c
 
 ### Thanh toán và tiền mặt
 
-| Canonical term   | Nhãn chuẩn             | Định nghĩa                                                                                     | Không dùng                              |
-| ---------------- | ---------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `payment_method` | phương thức thanh toán | Customer payment `payments.method`: `cash`, `vietqr`.                                          | kênh bán                                |
-| `cash`           | tiền mặt               | Tiền mặt khách trả.                                                                            | tiền mặt hiện hữu nếu chưa kiểm đếm két |
-| `bank_transfer`  | chuyển khoản           | `supplier_payments.payment_method` cho thanh toán NCC; không phải `payments.method` của khách. | VietQR ở payment khách                  |
-| `vietqr`         | VietQR                 | QR chuyển khoản liên ngân hàng.                                                                | QR thanh toán chung                     |
-| `payment_status` | trạng thái thanh toán  | `unpaid` -> `partial` -> `paid`.                                                               | order status                            |
-| `payment_close`  | đóng thanh toán POS    | Event xác nhận thanh toán, chuyển order sang `completed`.                                      | served, ready                           |
-| `cash_session`   | ca tiền mặt            | Phiên mở/đóng két, kiểm đếm, chênh lệch.                                                       | ca POS nếu không quản lý tiền mặt       |
+| Canonical term   | Nhãn chuẩn             | Định nghĩa                                                                                                                                           | Không dùng                                                   |
+| ---------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `payment_method` | phương thức thanh toán | Customer payment `payments.method`: `cash`, `vietqr`.                                                                                                | kênh bán                                                     |
+| `cash`           | tiền mặt               | Tiền mặt khách trả.                                                                                                                                  | tiền mặt hiện hữu nếu chưa kiểm đếm két                      |
+| `bank_transfer`  | chuyển khoản           | `supplier_payments.payment_method` cho thanh toán NCC; công nợ cập nhật tại đây, còn số dư ngân hàng chỉ giảm qua canonical `bank_transactions.out`. | VietQR ở payment khách; trừ ngân hàng lần hai từ bản ghi NCC |
+| `vietqr`         | VietQR                 | QR chuyển khoản liên ngân hàng.                                                                                                                      | QR thanh toán chung                                          |
+| `payment_status` | trạng thái thanh toán  | `unpaid` -> `partial` -> `paid`.                                                                                                                     | order status                                                 |
+| `payment_close`  | đóng thanh toán POS    | Event xác nhận thanh toán, chuyển order sang `completed`.                                                                                            | served, ready                                                |
+| `cash_session`   | ca tiền mặt            | Phiên mở/đóng két, kiểm đếm, chênh lệch.                                                                                                             | ca POS nếu không quản lý tiền mặt                            |
 
 ### HĐĐT, thuế, và kế toán HKD
 
