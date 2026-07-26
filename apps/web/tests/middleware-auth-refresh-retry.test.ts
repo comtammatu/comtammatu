@@ -134,6 +134,27 @@ test("middleware clears terminal sessions without error-level logs", async (t) =
   }
 });
 
+test("middleware clears invalid refresh tokens returned as validation_failed", async (t) => {
+  mockSupabaseEnv(t);
+  const errorLog = t.mock.method(console, "error", () => undefined);
+  const fetcher: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({
+        error_code: "validation_failed",
+        msg: "Refresh token is not valid",
+      }),
+      { status: 400, headers: { "content-type": "application/json" } },
+    );
+  t.mock.method(globalThis, "fetch", fetcher);
+
+  const { response, session } = await updateSession(expiredAuthRequest());
+
+  assert.equal(session, null);
+  assert.equal(response.cookies.get(authCookieName)?.value, "");
+  assert.equal(response.cookies.get(authCookieName)?.maxAge, 0);
+  assert.equal(errorLog.mock.calls.length, 0);
+});
+
 test("middleware does not turn unrelated auth failures into logout redirects", async (t) => {
   mockSupabaseEnv(t);
   const errorLog = t.mock.method(console, "error", () => undefined);
