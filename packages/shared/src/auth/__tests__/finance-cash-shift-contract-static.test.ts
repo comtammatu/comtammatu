@@ -123,7 +123,7 @@ test("variance resolution is structured, permission-gated, and cash-book aware",
   );
 });
 
-test("Finance exposes opening inventory movement and editable opening funds", () => {
+test("Finance exposes opening inventory movement and current book funds", () => {
   assert.match(
     migration,
     /CREATE OR REPLACE FUNCTION public\.get_inventory_value_period/,

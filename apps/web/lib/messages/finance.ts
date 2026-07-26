@@ -377,37 +377,79 @@ export const finance = {
       "Hóa đơn không tồn tại hoặc không thuộc phạm vi chi nhánh đang xem.",
   },
   cash: {
-    onHandTitle: "Tiền hiện có theo sổ",
+    onHandTitle: "Số dư hiện có theo sổ",
     onHandDescription:
-      "Toàn quán · tính từ mốc đầu kỳ; tiền đếm thực tế được giữ ở từng ca POS.",
-    setOpening: "Đặt tồn quỹ",
-    editOpening: "Cập nhật tồn quỹ",
+      "Toàn quán · không đổi theo bộ lọc ngày hoặc chi nhánh. Tiền kiểm đếm thực tế và lệch quỹ được xử lý tại từng ca POS.",
+    verifying: "Đang xác minh",
+    setOpening: "Ghi nhận mốc mở sổ",
+    adjustmentAction: "Ghi nhận điều chỉnh",
     noOpening:
-      "Đặt tồn quỹ đầu kỳ (đếm tiền mặt và số dư tài khoản ngân hàng tại một ngày) để theo dõi tiền trong quỹ.",
+      "Chưa có mốc mở sổ được xác minh nên hệ thống chưa trình bày số dư.",
+    noOpeningLegacy:
+      "Dữ liệu tồn quỹ cũ được giữ làm bằng chứng điều tra, không dùng để tính số dư và chỉ được chốt qua cutover kiểm soát.",
+    legacyCutoverAction: "Chờ cutover xác minh",
     onHandBreakdown: (
       opening: string,
       date: string,
       cashIn: string,
       cashOut: string,
-    ) => `Tồn ${date}: ${opening} + thu ${cashIn} − chi ${cashOut}`,
+      adjustments: string,
+    ) =>
+      `Mở sổ ${date}: ${opening} + thu ${cashIn} − chi ${cashOut} · điều chỉnh ${adjustments}`,
     bankTitle: "Ngân hàng toàn quán",
     bankTransactionsAction: "Giao dịch",
-    bankNoOpening:
-      "Chưa đặt số dư tài khoản ngân hàng. Cập nhật lại tồn quỹ và đếm cả tiền mặt lẫn ngân hàng cùng ngày.",
     bankBreakdown: (
       opening: string,
       date: string,
       bankIn: string,
       bankOut: string,
-    ) => `Tồn ${date}: ${opening} + thu CK ${bankIn} − chi CK ${bankOut}`,
-    openingTitle: "Tồn quỹ đầu kỳ",
+      adjustments: string,
+    ) =>
+      `Mở sổ ${date}: ${opening} + vào ${bankIn} − ra ${bankOut} · điều chỉnh ${adjustments}`,
+    openingTitle: "Ghi nhận mốc mở sổ",
     openingDescription:
-      "Đếm tiền mặt thực tế và số dư tài khoản ngân hàng cùng một ngày làm mốc. Hệ cộng tiền thu và trừ tiền chi từ ngày này để ra số dư hiện tại. Sửa số đầu kỳ chỉ thay đổi mốc, không xóa giao dịch đã có.",
-    openingBalanceLabel: "Số tiền mặt đếm được",
-    openingBankLabel: "Số dư tài khoản ngân hàng",
-    openingDateLabel: "Ngày đếm đủ hai số dư",
-    openingSubmit: "Lưu tồn quỹ",
-    openingSuccess: "Đã lưu tồn quỹ đầu kỳ",
+      "Nhập số theo sổ có bằng chứng đáng tin cậy. Mốc này chỉ được ghi một lần và không thể sửa hoặc xóa.",
+    openingBalanceLabel: "Tiền mặt theo sổ tại mốc",
+    openingBankLabel: "Tiền ngân hàng theo sổ tại mốc",
+    openingAmountRequired: "Cần nhập số tiền tại mốc mở sổ",
+    openingAmountInvalid: "Số tiền mở sổ không hợp lệ",
+    openingBoundaryLabel: "Loại mốc mở sổ",
+    openingBoundaryNow: "Cutover được xác minh ngay lúc ghi nhận",
+    openingBoundaryProjectStart: "Đầu ngày bắt đầu dự án đã được chứng minh",
+    openingBoundaryDescription:
+      "Cutover dùng thời điểm chính xác của máy chủ. Chỉ chọn đầu ngày dự án khi có bằng chứng số dư đúng tại 00:00.",
+    openingDateLabel: "Ngày bắt đầu dự án",
+    openingDateInvalid: "Ngày bắt đầu dự án không hợp lệ",
+    openingDateDescription:
+      "Hệ thống dùng đúng 00:00 giờ Việt Nam của ngày này; đây là ranh giới bất biến, không phải bộ lọc.",
+    openingReasonLabel: "Bằng chứng xác minh",
+    openingReasonDescription:
+      "Ghi nguồn sổ, biên bản hoặc tài liệu dùng để xác nhận hai số mở sổ.",
+    openingReasonRequired: "Cần ghi rõ bằng chứng xác minh",
+    openingReasonTooLong: "Bằng chứng xác minh tối đa 500 ký tự",
+    openingConfirmation:
+      "Tôi đã đối chiếu số tiền, mốc thời gian và bằng chứng; mốc mở sổ này không thể sửa hoặc xóa.",
+    openingConfirmationRequired: "Cần xác nhận mốc mở sổ bất biến",
+    openingSubmit: "Xác nhận mở sổ",
+    openingSuccess: "Đã ghi nhận mốc mở sổ",
+    adjustmentTitle: "Ghi nhận điều chỉnh",
+    adjustmentDescription:
+      "Chỉ dùng cho sai lệch đã kiểm chứng nhưng chưa có trong luồng chuẩn. Không dùng thay payment, refund, expense, thanh toán nhà cung cấp, chốt ca POS, giao dịch ngân hàng hoặc nộp tiền mặt vào ngân hàng.",
+    adjustmentCashLabel: "Điều chỉnh tiền mặt",
+    adjustmentBankLabel: "Điều chỉnh tiền ngân hàng",
+    adjustmentSignedHint: "Nhập số dương để tăng, số âm để giảm.",
+    adjustmentAmountInvalid: "Số tiền điều chỉnh không hợp lệ",
+    adjustmentReasonLabel: "Lý do và bằng chứng đối chiếu",
+    adjustmentReasonDescription:
+      "Nêu nguyên nhân, chứng từ hoặc biên bản làm căn cứ điều chỉnh.",
+    adjustmentReasonRequired: "Cần ghi rõ lý do và bằng chứng đối chiếu",
+    adjustmentReasonTooLong: "Lý do và bằng chứng tối đa 500 ký tự",
+    adjustmentConfirmation:
+      "Tôi xác nhận khoản này chưa được ghi ở luồng chuẩn; bút toán sẽ đổi số dư theo sổ và không thể xóa.",
+    adjustmentConfirmationRequired: "Cần xác nhận bút toán điều chỉnh",
+    adjustmentZero: "Cần nhập ít nhất một khoản điều chỉnh khác 0",
+    adjustmentSubmit: "Xác nhận điều chỉnh sổ",
+    adjustmentSuccess: "Đã ghi nhận điều chỉnh",
     transferTitle: "Chuyển tiền mặt vào ngân hàng",
     transferAction: "Chuyển tiền",
     transferDescription:

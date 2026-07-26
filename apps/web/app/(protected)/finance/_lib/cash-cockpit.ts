@@ -1,182 +1,124 @@
-import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
-import { getVNDayUtcRange } from "@comtammatu/shared/time";
+import type { Json } from "@comtammatu/database";
 import { loadAuthState } from "@/_lib/auth";
-import { calculateSepayBankBalance } from "./sepay-bank-transaction-model";
-import { fetchSepayBankMovementSince } from "./sepay-bank-transactions";
 
-/**
- * Tenant-level running funds anchored by owner-counted cash and bank balances.
- * Without an opening anchor, summing all-time movement would assume zero
- * withdrawals and produce a misleading balance.
- */
-
-type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
-
-function toNumber(value: number | string | null | undefined): number {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
+export interface CashSummary {
+  hasOpening: boolean;
+  openingEntryId: number | null;
+  openingBalance: number;
+  bankOpeningBalance: number;
+  openingEffectiveAt: string | null;
+  cashCollections: number;
+  cashRefunds: number;
+  cashExpenses: number;
+  cashSupplierPayments: number;
+  cashVarianceAdjustments: number;
+  cashAdjustments: number;
+  cashInSince: number;
+  cashOutSince: number;
+  cashOnHand: number;
+  bankInSince: number;
+  bankOutSince: number;
+  bankAdjustments: number;
+  bankOnHand: number;
+  legacySettingsPresent: boolean;
 }
 
-function requireLedgerNumber(
-  value: number | string | null | undefined,
-  field: string,
-): number {
-  if (value == null || value === "") {
-    console.error("[finance:cash] ledger field missing", field);
-    throw new Error("Unable to load cash movement");
-  }
+const EMPTY_FUNDS: CashSummary = {
+  hasOpening: false,
+  openingEntryId: null,
+  openingBalance: 0,
+  bankOpeningBalance: 0,
+  openingEffectiveAt: null,
+  cashCollections: 0,
+  cashRefunds: 0,
+  cashExpenses: 0,
+  cashSupplierPayments: 0,
+  cashVarianceAdjustments: 0,
+  cashAdjustments: 0,
+  cashInSince: 0,
+  cashOutSince: 0,
+  cashOnHand: 0,
+  bankInSince: 0,
+  bankOutSince: 0,
+  bankAdjustments: 0,
+  bankOnHand: 0,
+  legacySettingsPresent: false,
+};
 
-  const parsed = Number(value);
+function requireObject(value: Json): Record<string, Json | undefined> {
+  if (value == null || Array.isArray(value) || typeof value !== "object") {
+    throw new Error("Unable to load current funds");
+  }
+  return value;
+}
+
+function requireNumber(
+  payload: Record<string, Json | undefined>,
+  key: string,
+): number {
+  const parsed = Number(payload[key]);
   if (!Number.isFinite(parsed)) {
-    console.error("[finance:cash] ledger field invalid", field);
-    throw new Error("Unable to load cash movement");
+    console.error("[finance:funds] invalid numeric field", key);
+    throw new Error("Unable to load current funds");
   }
   return parsed;
 }
 
-export interface CashSummary {
-  hasOpening: boolean;
-  openingBalance: number;
-  openingDate: string | null;
-  cashInSince: number;
-  cashOutSince: number;
-  cashOnHand: number;
-  /** Whether the owner has set a bank-account opening balance (shares openingDate). */
-  hasBankOpening: boolean;
-  bankOpeningBalance: number;
-  /** SePay incoming transfers since openingDate. */
-  bankInSince: number;
-  /** SePay outgoing transfers since openingDate. */
-  bankOutSince: number;
-  bankOnHand: number;
-}
-
-const EMPTY_OPENING = {
-  hasOpening: false,
-  openingBalance: 0,
-  openingDate: null,
-  cashInSince: 0,
-  cashOutSince: 0,
-  cashOnHand: 0,
-  hasBankOpening: false,
-  bankOpeningBalance: 0,
-  bankInSince: 0,
-  bankOutSince: 0,
-  bankOnHand: 0,
-} as const;
-
-type CashLedgerMovementRpcClient = {
-  rpc: (
-    fn: "get_cash_ledger_movement_since",
-    args: { p_since: string },
-  ) => PromiseLike<{
-    data: {
-      cash_collections?: number;
-      cash_refunds?: number;
-      cash_expenses?: number;
-      cash_supplier_payments?: number;
-      cash_variance_adjustments?: number;
-    } | null;
-    error: { code?: string } | null;
-  }>;
-};
-
-async function fetchCashLedgerMovementSince(
-  supabase: SupabaseClient,
-  startIso: string,
-): Promise<{
-  collections: number;
-  refunds: number;
-  expenses: number;
-  supplierPayments: number;
-  varianceAdjustments: number;
-}> {
-  const { data, error } = await (
-    supabase as unknown as CashLedgerMovementRpcClient
-  ).rpc("get_cash_ledger_movement_since", { p_since: startIso });
+export async function fetchCashSummary(): Promise<CashSummary> {
+  const { supabase } = await loadAuthState();
+  const { data, error } = await supabase.rpc("get_finance_current_funds");
 
   if (error) {
-    console.error("[finance:cash] failed to load cash movement", error.code);
-    throw new Error("Unable to load cash movement");
+    console.error("[finance:funds] failed to load current funds", error.code);
+    throw new Error("Unable to load current funds");
   }
 
-  return {
-    collections: requireLedgerNumber(
-      data?.cash_collections,
-      "cash_collections",
-    ),
-    refunds: requireLedgerNumber(data?.cash_refunds, "cash_refunds"),
-    expenses: requireLedgerNumber(data?.cash_expenses, "cash_expenses"),
-    supplierPayments: requireLedgerNumber(
-      data?.cash_supplier_payments,
-      "cash_supplier_payments",
-    ),
-    varianceAdjustments: toNumber(data?.cash_variance_adjustments),
-  };
-}
+  const payload = requireObject(data);
+  const hasOpening = payload.has_opening === true;
+  const legacySettingsPresent = payload.legacy_settings_present === true;
 
-export async function fetchCashSummary(): Promise<CashSummary> {
-  const { supabase, claims } = await loadAuthState();
-  const tenantId = claims.tenant_id;
-
-  // Opening anchor (tenant-level).
-  const { data: settingRows } = await supabase
-    .from("system_settings")
-    .select("key, value")
-    .eq("tenant_id", tenantId)
-    .in("key", [
-      SYSTEM_SETTING_KEYS.CASH_OPENING_BALANCE,
-      SYSTEM_SETTING_KEYS.CASH_OPENING_DATE,
-      SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE,
-    ]);
-  const settingMap = new Map(
-    (settingRows ?? []).map((row) => [row.key, row.value]),
-  );
-  const openingDate =
-    settingMap.get(SYSTEM_SETTING_KEYS.CASH_OPENING_DATE) || null;
-  const openingBalance = toNumber(
-    settingMap.get(SYSTEM_SETTING_KEYS.CASH_OPENING_BALANCE),
-  );
-
-  if (!openingDate) {
-    return EMPTY_OPENING;
+  if (!hasOpening) {
+    return { ...EMPTY_FUNDS, legacySettingsPresent };
   }
 
-  // Running balances are tenant-wide from the anchor date. A refunded cash
-  // payment remains an actual collection, while its approved payout is a
-  // separate cash outflow. Bank balance uses signed SePay movement only.
-  const openingStart = getVNDayUtcRange(openingDate).startIso;
-  const [cashMovement, bankMovement] = await Promise.all([
-    fetchCashLedgerMovementSince(supabase, openingStart),
-    fetchSepayBankMovementSince(supabase, openingStart),
-  ]);
-  const cashInSince =
-    cashMovement.collections + Math.max(cashMovement.varianceAdjustments, 0);
-  const cashOutSince =
-    cashMovement.expenses +
-    cashMovement.supplierPayments +
-    cashMovement.refunds +
-    Math.max(-cashMovement.varianceAdjustments, 0);
-  const bankInSince = bankMovement.inAmount;
-  const bankOutSince = bankMovement.outAmount;
-
-  const bankSettingRaw = settingMap.get(
-    SYSTEM_SETTING_KEYS.BANK_OPENING_BALANCE,
+  const cashCollections = requireNumber(payload, "cash_collections");
+  const cashRefunds = requireNumber(payload, "cash_refunds");
+  const cashExpenses = requireNumber(payload, "cash_expenses");
+  const cashSupplierPayments = requireNumber(
+    payload,
+    "cash_supplier_payments",
   );
-  const hasBankOpening = bankSettingRaw != null && bankSettingRaw !== "";
-  const bankOpeningBalance = toNumber(bankSettingRaw);
+  const cashVarianceAdjustments = requireNumber(
+    payload,
+    "cash_variance_adjustments",
+  );
 
   return {
     hasOpening: true,
-    openingBalance,
-    openingDate,
-    cashInSince,
-    cashOutSince,
-    cashOnHand: openingBalance + cashInSince - cashOutSince,
-    hasBankOpening,
-    bankOpeningBalance,
-    bankInSince,
-    bankOutSince,
-    bankOnHand: calculateSepayBankBalance(bankOpeningBalance, bankMovement),
+    openingEntryId: requireNumber(payload, "opening_entry_id"),
+    openingBalance: requireNumber(payload, "opening_cash"),
+    bankOpeningBalance: requireNumber(payload, "opening_bank"),
+    openingEffectiveAt:
+      typeof payload.opening_effective_at === "string"
+        ? payload.opening_effective_at
+        : null,
+    cashCollections,
+    cashRefunds,
+    cashExpenses,
+    cashSupplierPayments,
+    cashVarianceAdjustments,
+    cashAdjustments: requireNumber(payload, "cash_adjustments"),
+    cashInSince: cashCollections + Math.max(cashVarianceAdjustments, 0),
+    cashOutSince:
+      cashRefunds +
+      cashExpenses +
+      cashSupplierPayments +
+      Math.max(-cashVarianceAdjustments, 0),
+    cashOnHand: requireNumber(payload, "cash_current"),
+    bankInSince: requireNumber(payload, "bank_in"),
+    bankOutSince: requireNumber(payload, "bank_out"),
+    bankAdjustments: requireNumber(payload, "bank_adjustments"),
+    bankOnHand: requireNumber(payload, "bank_current"),
+    legacySettingsPresent,
   };
 }

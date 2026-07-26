@@ -19,16 +19,26 @@ revenue labels:
 
 Below those period cards, keep the tenant-wide current-funds row:
 
-- **Tiền mặt theo sổ**: opening cash plus completed cash collections minus cash
-  payouts, adjusted only for accepted POS-session variances.
-- **Tiền trong ngân hàng**: required `bank_opening_balance` anchor plus every
-  canonical SePay movement in `bank_transactions`: incoming amounts add and
-  outgoing amounts subtract. The application cannot read the bank's opening
-  account balance, so changing the anchor changes the result only by the anchor
-  delta; it never removes previously imported movements.
+- **Tiền mặt theo sổ**: immutable opening cash plus completed cash collections,
+  minus cash refunds, expenses, and supplier payments, plus accepted POS-session
+  variance and append-only audited adjustments.
+- **Tiền trong ngân hàng**: immutable opening bank amount plus every canonical
+  SePay movement in `bank_transactions` and append-only audited adjustments.
+  Incoming amounts add and outgoing amounts subtract.
 
-These two balances do not follow the page's period or branch filter. Show `—`
-until the owner has set the applicable opening anchor.
+These two balances do not follow the page's period or branch filter. Show
+`Đang xác minh` until the Owner has created one verified opening through
+`initialize_finance_funds`. The opening is the first delta from zero at its
+verified boundary and cannot be edited or deleted. Corrections use
+`create_finance_fund_adjustment`; they never replace the opening.
+
+Legacy `cash_opening_balance`, `bank_opening_balance`, and `cash_opening_date`
+settings remain frozen as investigation evidence and are never a calculation
+fallback. Their presence blocks interactive initialization and requires a
+controlled cutover. A verified cutover uses the exact server timestamp; a
+project-start day may use 00:00 Vietnam time only when the evidence proves the
+balance at that boundary. Otherwise, describe it honestly as a verified
+cutover rather than a project-start opening.
 
 `bank_transactions` is the bank-ledger source of truth. Signed SePay webhooks
 and Owner-imported SePay exports are idempotent ingestion paths keyed by the
@@ -159,7 +169,7 @@ is no canonical `accountant` staff role. Therefore:
 
 | Actor | Current system access | Must review or act on |
 | --- | --- | --- |
-| Owner | Tenant-wide `/finance`; owner-only bank import/reconciliation, payment-method correction, and opening-balance changes | Daily landing metrics and formulas; current cash/bank anchors; exact POS cash variances; unmatched SePay movements; VietQR payments missing bank evidence; operating expenses; AP; HĐĐT; inventory opening/closing evidence; exports |
+| Owner | Tenant-wide `/finance`; owner-only bank import/reconciliation, payment-method correction, one-time fund initialization, and append-only fund adjustments | Daily landing metrics and formulas; current cash/bank opening and adjustments; exact POS cash variances; unmatched SePay movements; VietQR payments missing bank evidence; operating expenses; AP; HĐĐT; inventory opening/closing evidence; exports |
 | Branch Manager | Branch POS-session workflow only; no tenant-wide Finance, bank import/reconciliation, opening-balance, or payment-correction authority | Resolve an exact subordinate shift shortage as `staff_repaid` or accept its signed book adjustment as `accepted_adjustment`, subject to branch permission and audit |
 | Accountant | No authenticated Finance role or write authority in the current model | Receive Owner-controlled revenue/payment exports, canonical SePay evidence, expense/AP evidence, HĐĐT evidence, and inventory opening/closing evidence; report discrepancies back to the Owner |
 
@@ -171,8 +181,9 @@ permissions, period-close authority, and production profile remediation.
 Every money-changing or classification-changing workflow leaves a durable
 audit action: `bank_transactions.sepay_import`,
 `bank_transaction.reconcile`, `payment.method_correct`, or
-`pos_session.variance_resolve`. Reconciliation matches classify evidence; they
-never add or subtract a second bank movement.
+`pos_session.variance_resolve`, `finance_fund_opening_created`, or
+`finance_fund_adjustment_created`. Reconciliation matches classify evidence;
+they never add or subtract a second bank movement.
 
 ### Accounting Advanced Boundary (D020)
 

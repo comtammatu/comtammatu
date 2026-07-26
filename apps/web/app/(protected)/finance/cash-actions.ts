@@ -1,40 +1,76 @@
 "use server";
 
-/**
- * Cash-book opening anchor (D028 deliverable 3).
- *
- * Owner counts physical cash and bank-account balance on a chosen date and
- * stores them as running-balance anchors in system_settings (both share one
- * anchor date). `fetchCashSummary` adds collected money and subtracts paid
- * expenses from this date to derive on-hand cash and bank balance.
- */
-
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getVNDateString } from "@comtammatu/shared/time";
+import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_FUND_AMOUNT = 100_000_000_000;
+const requiredFundAmount = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.coerce.number().min(0).max(MAX_FUND_AMOUNT),
+);
 
-const setCashOpeningSchema = z.object({
-  balance: z.coerce
-    .number()
-    .min(0, "Số dư không hợp lệ")
-    .max(100_000_000_000, "Số dư quá lớn"),
-  bankBalance: z.coerce
-    .number()
-    .min(0, "Số dư ngân hàng không hợp lệ")
-    .max(100_000_000_000, "Số dư quá lớn"),
-  date: z.string().regex(BUSINESS_DATE, "Ngày không hợp lệ"),
+const initializeFinanceFundsSchema = z.object({
+  balance: requiredFundAmount,
+  bankBalance: requiredFundAmount,
+  boundaryMode: z.enum(["cutover_now", "project_start_day"]),
+  date: z.string().regex(BUSINESS_DATE, "Ngày mở sổ không hợp lệ"),
+  reason: z.string().trim().min(5, "Cần ghi rõ bằng chứng đối chiếu").max(500),
+  confirmed: z.boolean().refine(Boolean, "Cần xác nhận mốc mở sổ bất biến"),
+  idempotencyKey: z.string().uuid(),
 });
 
-export async function setCashOpening(
-  input: z.infer<typeof setCashOpeningSchema>,
+const createFinanceFundAdjustmentSchema = z
+  .object({
+    cashDelta: z.coerce.number().min(-MAX_FUND_AMOUNT).max(MAX_FUND_AMOUNT),
+    bankDelta: z.coerce.number().min(-MAX_FUND_AMOUNT).max(MAX_FUND_AMOUNT),
+    reason: z.string().trim().min(5, "Cần ghi rõ lý do và bằng chứng").max(500),
+    confirmed: z.boolean().refine(Boolean, "Cần xác nhận bút toán điều chỉnh"),
+    idempotencyKey: z.string().uuid(),
+  })
+  .refine(({ cashDelta, bankDelta }) => cashDelta !== 0 || bankDelta !== 0, {
+    message: "Cần nhập ít nhất một khoản điều chỉnh khác 0",
+    path: ["cashDelta"],
+  });
+
+function financeFundError(
+  error: { code?: string; message?: string },
+  operation: "opening" | "adjustment",
+): string {
+  const message = error.message?.toLowerCase() ?? "";
+
+  if (error.code === "42501" || message.includes("forbidden_owner_only")) {
+    return "Chỉ Owner mới được ghi nhận số dư theo sổ.";
+  }
+  if (message.includes("finance_fund_idempotency_conflict")) {
+    return "Yêu cầu này đã được dùng với dữ liệu khác. Hãy đóng và mở lại biểu mẫu.";
+  }
+  if (message.includes("finance_funds_already_initialized")) {
+    return "Mốc mở sổ đã được ghi nhận và không thể thay đổi.";
+  }
+  if (message.includes("finance_fund_legacy_cutover_required")) {
+    return "Dữ liệu tồn quỹ cũ cần được xác minh qua quy trình cutover kiểm soát.";
+  }
+  if (message.includes("finance_funds_not_initialized")) {
+    return "Cần ghi nhận mốc mở sổ trước khi điều chỉnh.";
+  }
+
+  console.error("[finance:funds] write failed", operation, error.code);
+  return operation === "opening"
+    ? "Không thể ghi nhận mốc mở sổ."
+    : "Không thể ghi nhận điều chỉnh.";
+}
+
+export async function initializeFinanceFunds(
+  input: unknown,
 ): Promise<ActionResult> {
-  const parsed = setCashOpeningSchema.safeParse(input);
+  const parsed = initializeFinanceFundsSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -42,25 +78,61 @@ export async function setCashOpening(
     };
   }
 
-  const today = getVNDateString();
-  if (parsed.data.date > today) {
-    return { success: false, error: "Ngày tồn quỹ không thể ở tương lai." };
+  if (
+    parsed.data.boundaryMode === "project_start_day" &&
+    parsed.data.date > getVNDateString()
+  ) {
+    return { success: false, error: "Ngày mở sổ không thể ở tương lai." };
   }
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền." };
-  const { supabase } = ctx;
 
-  const { error } = await supabase.rpc("set_finance_cash_opening", {
-    p_bank_balance: parsed.data.bankBalance,
-    p_cash_balance: parsed.data.balance,
-    p_opening_date: parsed.data.date,
+  const { error } = await ctx.supabase.rpc("initialize_finance_funds", {
+    p_bank_opening: parsed.data.bankBalance,
+    p_cash_opening: parsed.data.balance,
+    p_effective_at: (parsed.data.boundaryMode === "project_start_day"
+      ? getVNDayUtcRange(parsed.data.date).startIso
+      : null) as string,
+    p_idempotency_key: parsed.data.idempotencyKey,
+    p_reason: parsed.data.reason,
   });
   if (error) {
-    return { success: false, error: "Không thể lưu tồn quỹ." };
+    return { success: false, error: financeFundError(error, "opening") };
+  }
+
+  revalidateSurfacePath("/finance");
+  return { success: true };
+}
+
+export async function createFinanceFundAdjustment(
+  input: unknown,
+): Promise<ActionResult> {
+  const parsed = createFinanceFundAdjustmentSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền." };
+
+  const { error } = await ctx.supabase.rpc("create_finance_fund_adjustment", {
+    p_bank_delta: parsed.data.bankDelta,
+    p_cash_delta: parsed.data.cashDelta,
+    p_idempotency_key: parsed.data.idempotencyKey,
+    p_reason: parsed.data.reason,
+  });
+  if (error) {
+    return { success: false, error: financeFundError(error, "adjustment") };
   }
 
   revalidateSurfacePath("/finance");

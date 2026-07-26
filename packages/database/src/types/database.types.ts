@@ -1651,6 +1651,60 @@ export type Database = {
           },
         ]
       }
+      finance_fund_entries: {
+        Row: {
+          bank_delta: number
+          cash_delta: number
+          created_at: string
+          created_by: string
+          effective_at: string
+          entry_type: string
+          id: number
+          idempotency_key: string
+          reason: string
+          tenant_id: number
+        }
+        Insert: {
+          bank_delta?: number
+          cash_delta?: number
+          created_at?: string
+          created_by: string
+          effective_at: string
+          entry_type: string
+          id?: number
+          idempotency_key: string
+          reason: string
+          tenant_id: number
+        }
+        Update: {
+          bank_delta?: number
+          cash_delta?: number
+          created_at?: string
+          created_by?: string
+          effective_at?: string
+          entry_type?: string
+          id?: number
+          idempotency_key?: string
+          reason?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_fund_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_fund_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goods_received_notes: {
         Row: {
           branch_id: number
@@ -10007,6 +10061,15 @@ export type Database = {
         }
         Returns: Json
       }
+      create_finance_fund_adjustment: {
+        Args: {
+          p_bank_delta: number
+          p_cash_delta: number
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       create_grn_from_po: { Args: { p_po_id: number }; Returns: Json }
       create_order: {
         Args: {
@@ -10426,6 +10489,7 @@ export type Database = {
           vietqr_revenue: number
         }[]
       }
+      get_finance_current_funds: { Args: never; Returns: Json }
       get_finance_dashboard_summary: {
         Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
         Returns: {
@@ -10872,6 +10936,16 @@ export type Database = {
         Returns: string
       }
       import_sepay_bank_transactions: { Args: { p_rows: Json }; Returns: Json }
+      initialize_finance_funds: {
+        Args: {
+          p_bank_opening: number
+          p_cash_opening: number
+          p_effective_at: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       inv_catalog_unit_to_base: {
         Args: { p_all_units: Json; p_base_unit_id: number; p_unit: Json }
         Returns: number
@@ -11608,14 +11682,6 @@ export type Database = {
           p_menu_item_id: number
         }
         Returns: Json
-      }
-      set_finance_cash_opening: {
-        Args: {
-          p_bank_balance: number
-          p_cash_balance: number
-          p_opening_date: string
-        }
-        Returns: undefined
       }
       set_inventory_count_assignments: {
         Args: {
