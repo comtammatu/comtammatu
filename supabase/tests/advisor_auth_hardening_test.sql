@@ -65,11 +65,12 @@ BEGIN
       AND policy.tablename = 'tax_invoices'
       AND policy.policyname = 'tax_invoices_select'
       AND policy.qual ~* 'select[[:space:]]+auth_tenant_id[[:space:]]*[(]'
-      AND policy.qual LIKE '%auth_is_owner%'
+      AND policy.qual NOT LIKE '%auth_is_owner%'
+      AND policy.qual LIKE '%has_permission%'
       AND policy.qual LIKE '%orders:read%'
   ) THEN
     RAISE EXCEPTION
-      'TEST FAILED: tax_invoices_select lost its fast or permission path';
+      'TEST FAILED: tax_invoices_select bypasses the executable permission boundary';
   END IF;
 
   IF (
@@ -81,10 +82,24 @@ BEGIN
         'attendance_checklist_items_select'
       )
       AND policy.qual ~* 'select[[:space:]]+auth_tenant_id[[:space:]]*[(]'
-      AND policy.qual LIKE '%auth_is_owner%'
+      AND policy.qual NOT LIKE '%auth_is_owner%'
+      AND policy.qual LIKE '%has_permission%'
   ) <> 2 THEN
     RAISE EXCEPTION
-      'TEST FAILED: attendance Owner fast paths are incomplete';
+      'TEST FAILED: attendance reads bypass the executable permission boundary';
+  END IF;
+
+  IF has_function_privilege(
+    'authenticated',
+    'public.auth_is_owner(uuid)',
+    'EXECUTE'
+  ) OR NOT has_function_privilege(
+    'authenticated',
+    'public.has_permission(bigint,text)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION
+      'TEST FAILED: authenticated helper ACL no longer matches the RLS boundary';
   END IF;
 END
 $$;
@@ -135,6 +150,30 @@ BEGIN
           v_privilege;
       END IF;
     END LOOP;
+  END LOOP;
+
+  IF NOT has_table_privilege(
+    'authenticated',
+    'public.attendance_records',
+    'SELECT'
+  ) THEN
+    RAISE EXCEPTION
+      'TEST FAILED: authenticated lost SELECT on attendance_records';
+  END IF;
+
+  FOREACH v_privilege IN ARRAY ARRAY[
+    'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'
+  ]
+  LOOP
+    IF has_table_privilege(
+      'authenticated',
+      'public.attendance_records',
+      v_privilege
+    ) THEN
+      RAISE EXCEPTION
+        'TEST FAILED: authenticated gained % on attendance_records',
+        v_privilege;
+    END IF;
   END LOOP;
 END
 $$;
