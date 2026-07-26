@@ -18,7 +18,10 @@ test("E2E manager fixture matches the seeded manager account", () => {
   assert.match(seed, new RegExp(email));
   assert.match(bringup, new RegExp(`E2E_INVENTORY_MANAGER_EMAIL=${email}`));
   assert.match(bringup, /process\.env\["CI"\] !== "true"/);
-  assert.equal([...bringup.matchAll(/maxBuffer: MAX_BUFFER/g)].length, 2);
+  assert.match(
+    bringup,
+    /function supabase\([\s\S]*?maxBuffer: MAX_BUFFER[\s\S]*?\n}/,
+  );
   assert.match(seed, /'position_code', r\.position_code/);
   assert.match(seed, /'provisioned_by', v_keeper/);
   assert.match(
