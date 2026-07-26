@@ -10,3 +10,5 @@ overrides:
   exceljs>uuid: 11.1.1
   next>postcss: 8.5.19
   next>sharp: 0.35.3
+patchedDependencies:
+  '@supabase/auth-js@2.110.7': patches/@supabase__auth-js@2.110.7.patch

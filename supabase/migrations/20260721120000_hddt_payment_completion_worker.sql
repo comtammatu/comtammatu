@@ -31,6 +31,8 @@ CREATE INDEX idx_tax_invoice_issue_jobs_attention
 
 ALTER TABLE public.tax_invoice_issue_jobs ENABLE ROW LEVEL SECURITY;
 
+REVOKE ALL ON TABLE public.tax_invoice_issue_jobs
+  FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON TABLE public.tax_invoice_issue_jobs TO authenticated;
 GRANT ALL ON TABLE public.tax_invoice_issue_jobs TO service_role;
 GRANT ALL ON SEQUENCE public.tax_invoice_issue_jobs_id_seq TO service_role;

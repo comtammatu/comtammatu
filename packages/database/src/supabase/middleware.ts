@@ -1,7 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
+import type { Session } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import type { Database } from "../index";
 import { getSupabaseUrl, getSupabaseAnonKey } from "./_env";
+
+function isTerminalSessionError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  if ("name" in error && error.name === "AuthSessionMissingError") return true;
+  if (!("code" in error)) return false;
+  return (
+    error.code === "refresh_token_not_found" ||
+    error.code === "refresh_token_already_used" ||
+    error.code === "session_expired"
+  );
+}
 
 function isAuthRefreshSocketClose(
   input: RequestInfo | URL,
@@ -103,9 +115,16 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  let session: Session | null = null;
+  try {
+    const result = await supabase.auth.getSession();
+    if (result.error && !isTerminalSessionError(result.error)) {
+      throw result.error;
+    }
+    session = result.data.session;
+  } catch (error) {
+    if (!isTerminalSessionError(error)) throw error;
+  }
 
   return { supabase, session, response: supabaseResponse };
 }

@@ -157,3 +157,19 @@ test("one-shot HĐĐT worker claims only the requested job", () => {
     /invoiceIssuedAt: parsed\.data\.draftSnapshot\.invoiceTime/,
   );
 });
+
+test("HĐĐT worker failures log bounded diagnostics and preserve recovery state", () => {
+  const worker = read("apps/web/lib/tax-invoice-issue-worker.ts");
+  const route = read("apps/web/app/api/cron/tax-invoice-issue/route.ts");
+
+  assert.match(
+    worker,
+    /catch \(error\)[\s\S]*\[tax-invoice-worker\] job failed[\s\S]*jobId: job\.id[\s\S]*tenantId: job\.tenant_id[\s\S]*branchId: job\.branch_id[\s\S]*orderId: job\.order_id[\s\S]*attemptCount: job\.attempt_count[\s\S]*code: workerErrorCode\(error\)[\s\S]*"reconcile_required", "worker_exception"/,
+  );
+  assert.doesNotMatch(worker, /error\.message/);
+  assert.match(
+    route,
+    /catch \(error\)[\s\S]*\[cron\/tax-invoice-issue\] worker failed"[\s\S]*code: code\.slice\(0, 64\)/,
+  );
+  assert.doesNotMatch(route, /console\.error\([^;]*error\.message/);
+});

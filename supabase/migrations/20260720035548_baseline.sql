@@ -57642,6 +57642,11 @@ CREATE POLICY zone_lock_read_branch ON public.stocktake_zone_locks FOR SELECT TO
 CREATE POLICY zone_lock_rpc_only_write ON public.stocktake_zone_locks TO authenticated USING (false) WITH CHECK (false);
 
 
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA "public" FROM "anon", "authenticated", "service_role";
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "public" FROM "anon", "authenticated", "service_role";
+REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "public" FROM "anon", "authenticated", "service_role";
+
+
 --
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
 --

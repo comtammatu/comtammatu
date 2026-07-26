@@ -1,9 +1,48 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
-import { createAuthSocketRetryFetch } from "@comtammatu/database/supabase/middleware";
+import { test, type TestContext } from "node:test";
+import { NextRequest } from "next/server";
+import {
+  createAuthSocketRetryFetch,
+  updateSession,
+} from "@comtammatu/database/supabase/middleware";
 
 const refreshUrl =
   "https://example.supabase.co/auth/v1/token?grant_type=refresh_token";
+const authCookieName = "sb-example-auth-token";
+const terminalSessionCodes = [
+  "refresh_token_not_found",
+  "refresh_token_already_used",
+  "session_expired",
+  "session_not_found",
+] as const;
+
+function expiredAuthRequest(): NextRequest {
+  const session = {
+    access_token: "expired-access-token",
+    refresh_token: "missing-refresh-token",
+    expires_at: Math.floor(Date.now() / 1000) - 60,
+  };
+  const cookie = `base64-${Buffer.from(JSON.stringify(session)).toString("base64url")}`;
+  return new NextRequest("https://app.example.test/orders", {
+    headers: { cookie: `${authCookieName}=${cookie}` },
+  });
+}
+
+function mockSupabaseEnv(t: TestContext) {
+  const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const previousKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+  t.after(() => {
+    if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    if (previousKey === undefined) {
+      delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    } else {
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = previousKey;
+    }
+  });
+}
 
 function socketCloseError(): TypeError {
   return new TypeError("fetch failed", {
@@ -68,4 +107,53 @@ test("middleware adds at most one auth refresh attempt per request", async (t) =
     TypeError,
   );
   assert.equal(calls, 3);
+});
+
+test("middleware clears terminal sessions without error-level logs", async (t) => {
+  for (const errorCode of terminalSessionCodes) {
+    await t.test(errorCode, async (t) => {
+      mockSupabaseEnv(t);
+      const errorLog = t.mock.method(console, "error", () => undefined);
+      const fetcher: typeof fetch = async () =>
+        new Response(
+          JSON.stringify({
+            error_code: errorCode,
+            msg: "Session is terminal",
+          }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        );
+      t.mock.method(globalThis, "fetch", fetcher);
+
+      const { response, session } = await updateSession(expiredAuthRequest());
+
+      assert.equal(session, null);
+      assert.equal(response.cookies.get(authCookieName)?.value, "");
+      assert.equal(response.cookies.get(authCookieName)?.maxAge, 0);
+      assert.equal(errorLog.mock.calls.length, 0);
+    });
+  }
+});
+
+test("middleware does not turn unrelated auth failures into logout redirects", async (t) => {
+  mockSupabaseEnv(t);
+  const errorLog = t.mock.method(console, "error", () => undefined);
+  const fetcher: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({
+        error_code: "validation_failed",
+        msg: "Request rejected",
+      }),
+      { status: 400, headers: { "content-type": "application/json" } },
+    );
+  t.mock.method(globalThis, "fetch", fetcher);
+
+  await assert.rejects(updateSession(expiredAuthRequest()), (error: unknown) => {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "validation_failed"
+    );
+  });
+  assert.ok(errorLog.mock.calls.length > 0);
 });

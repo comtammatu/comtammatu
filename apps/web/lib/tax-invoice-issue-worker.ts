@@ -17,6 +17,21 @@ type IssueJobStatus = "completed" | "blocked" | "reconcile_required";
 const MAX_JOBS_PER_RUN = 20;
 const WORKER_CONCURRENCY = 4;
 
+function workerErrorCode(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    return error.code.slice(0, 64);
+  }
+  return (error instanceof Error ? error.name : "worker_exception").slice(
+    0,
+    64,
+  );
+}
+
 type WorkerRpcClient = {
   rpc: <T>(
     name: string,
@@ -179,7 +194,15 @@ export async function runTaxInvoiceIssueWorker(jobId?: number): Promise<{
     try {
       const status = await processJob(service, rpc, job);
       summary[status] += 1;
-    } catch {
+    } catch (error) {
+      console.error("[tax-invoice-worker] job failed", {
+        jobId: job.id,
+        tenantId: job.tenant_id,
+        branchId: job.branch_id,
+        orderId: job.order_id,
+        attemptCount: job.attempt_count,
+        code: workerErrorCode(error),
+      });
       await finishJob(rpc, job.id, "reconcile_required", "worker_exception");
       summary.reconcile_required += 1;
     }
