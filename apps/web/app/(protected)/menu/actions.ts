@@ -461,6 +461,7 @@ interface MenuExportItem {
   name: string;
   category_name: string;
   base_price: number;
+  vat_rate: 0 | 5 | 8 | 10;
   description: string | null;
   sort_order: number;
   is_active: boolean;
@@ -515,6 +516,7 @@ function buildMenuSheets(
         { header: "Tên món", key: "name", width: 32 },
         { header: "Danh mục", key: "category_name", width: 24 },
         { header: "Giá (VND)", key: "base_price", width: 14 },
+        { header: "Thuế GTGT (%)", key: "vat_rate", width: 16 },
         { header: "Mô tả", key: "description", width: 40 },
         { header: "Thứ tự", key: "sort_order", width: 10 },
         { header: "Hoạt động", key: "is_active", width: 12 },
@@ -523,6 +525,7 @@ function buildMenuSheets(
         name: it.name,
         category_name: it.category_name,
         base_price: it.base_price,
+        vat_rate: it.vat_rate,
         description: it.description ?? "",
         sort_order: it.sort_order,
         is_active: it.is_active ? "Có" : "Không",
@@ -603,7 +606,7 @@ export async function exportMenu(
       supabase
         .from("menu_items")
         .select(
-          "name, base_price, description, sort_order, is_active, menu_categories(name)",
+          "name, base_price, vat_rate, description, sort_order, is_active, menu_categories(name)",
         )
         .eq("tenant_id", claims.tenant_id)
         .order("sort_order")
@@ -646,6 +649,7 @@ export async function exportMenu(
     name: it.name,
     category_name: it.menu_categories?.name ?? "",
     base_price: Number(it.base_price ?? 0),
+    vat_rate: it.vat_rate as 0 | 5 | 8 | 10,
     description: it.description,
     sort_order: it.sort_order ?? 0,
     is_active: it.is_active ?? true,
@@ -722,6 +726,12 @@ const importItemRowSchema = z.object({
   name: z.string().trim().min(1, { error: "Thiếu tên món" }),
   category_name: z.string().trim().min(1, { error: "Thiếu danh mục" }),
   base_price: z.number().min(0, { error: "Giá không hợp lệ" }),
+  vat_rate: z.union([
+    z.literal(0),
+    z.literal(5),
+    z.literal(8),
+    z.literal(10),
+  ]),
   description: z.string().default(""),
   sort_order: z.number().int().min(0).default(0),
   is_active: z.boolean().default(true),
@@ -1039,6 +1049,7 @@ export async function importMenu(
       category_id: number;
       name: string;
       base_price: number;
+      vat_rate: 0 | 5 | 8 | 10;
       description: string | null;
       sort_order: number;
       is_active: boolean;
@@ -1054,12 +1065,29 @@ export async function importMenu(
         raw["Thứ tự"] ?? raw["sort_order"],
         { defaultValue: 0, maxFractionDigits: 0 },
       );
-      if (basePrice === null || sortOrder === null) {
+      const rawVatRate = raw["Thuế GTGT (%)"] ?? raw["vat_rate"];
+      const vatRate =
+        rawVatRate == null || rawVatRate.trim() === ""
+          ? null
+          : parseMenuImportNumber(rawVatRate, {
+              defaultValue: 0,
+              maxFractionDigits: 0,
+            });
+      if (
+        basePrice === null ||
+        sortOrder === null ||
+        vatRate === null ||
+        ![0, 5, 8, 10].includes(vatRate)
+      ) {
         issues.push(
           invalidMenuImportNumberIssue(
             itemSheet.name,
             rowNumber,
-            basePrice === null ? "Giá (VND)" : "Thứ tự",
+            basePrice === null
+              ? "Giá (VND)"
+              : sortOrder === null
+                ? "Thứ tự"
+                : "Thuế GTGT (%)",
           ),
         );
         return;
@@ -1068,6 +1096,7 @@ export async function importMenu(
         name: raw["Tên món"] ?? raw["name"],
         category_name: raw["Danh mục"] ?? raw["category_name"],
         base_price: basePrice,
+        vat_rate: vatRate,
         description: raw["Mô tả"] ?? raw["description"] ?? "",
         sort_order: sortOrder,
         is_active: parseBoolean(raw["Hoạt động"] ?? raw["is_active"]),
@@ -1100,6 +1129,7 @@ export async function importMenu(
         category_id: categoryId,
         name: parsedRow.data.name,
         base_price: parsedRow.data.base_price,
+        vat_rate: parsedRow.data.vat_rate,
         description: parsedRow.data.description || null,
         sort_order: parsedRow.data.sort_order,
         is_active: parsedRow.data.is_active,
@@ -1479,6 +1509,7 @@ export async function downloadMenuTemplate(): Promise<ActionResult> {
         name: "Cơm tấm sườn (ví dụ)",
         category_name: "Món chính (ví dụ)",
         base_price: 55000,
+        vat_rate: 8,
         description: "Mô tả tùy chọn",
         sort_order: 1,
         is_active: true,

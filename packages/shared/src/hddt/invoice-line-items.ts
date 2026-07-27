@@ -7,7 +7,7 @@ export interface OrderItemForInvoiceLines {
   unit_price: number | string | null;
   subtotal?: number | string | null;
   discount_amount?: number | string | null;
-  vat_rate?: number | string | null;
+  vat_rate: number | string;
   modifiers?: unknown;
   sides?: unknown;
 }
@@ -36,6 +36,12 @@ function toNumber(value: unknown): number {
 
 function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function toVatRate(value: number | string): 0 | 5 | 8 | 10 {
+  const rate = toNumber(value);
+  if (rate === 0 || rate === 5 || rate === 8 || rate === 10) return rate;
+  throw new Error(`invoice_line_invalid_vat_rate:${String(value)}`);
 }
 
 function readText(
@@ -99,14 +105,14 @@ function buildAggregateLine(item: OrderItemForInvoiceLines): InvoiceLineItem {
     quantity,
     unitPrice,
     amount,
-    ...(item.vat_rate == null ? {} : { vatRate: toNumber(item.vat_rate) }),
+    vatRate: toVatRate(item.vat_rate),
   };
 }
 
 function buildOptionLine(
   option: PricedOption,
   parentQuantity: number,
-  vatRate: number,
+  vatRate: 0 | 5 | 8 | 10,
 ): InvoiceLineItem {
   const quantity = parentQuantity * option.quantityPerParent;
   return {
@@ -157,7 +163,7 @@ function cloneWithNormalizedDiscount(line: InvoiceLineItem): InvoiceLineItem {
     quantity: line.quantity,
     unitPrice: line.unitPrice,
     amount: line.amount,
-    ...(line.vatRate == null ? {} : { vatRate: line.vatRate }),
+    vatRate: line.vatRate,
   };
   const amount = Math.max(0, Math.round(toNumber(line.amount)));
   const existingDiscount = Math.min(
@@ -262,7 +268,7 @@ export function buildInvoiceLineItemsFromOrderItems(
       0,
     );
     const baseUnit = roundMoney(unitPrice - optionUnitTotal);
-    const vatRate = toNumber(item.vat_rate);
+    const vatRate = toVatRate(item.vat_rate);
 
     if (baseUnit < 0) {
       itemLines.push(buildAggregateLine(item));

@@ -2828,6 +2828,59 @@ export type Database = {
           },
         ]
       }
+      invoice_profiles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          invoice_series: string
+          provider: string
+          retired_at: string | null
+          seller_tax_code: string | null
+          status: string
+          template_code: string
+          tenant_id: number
+          valid_from: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          invoice_series: string
+          provider: string
+          retired_at?: string | null
+          seller_tax_code?: string | null
+          status?: string
+          template_code: string
+          tenant_id: number
+          valid_from: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          invoice_series?: string
+          provider?: string
+          retired_at?: string | null
+          seller_tax_code?: string | null
+          status?: string
+          template_code?: string
+          tenant_id?: number
+          valid_from?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kds_station_categories: {
         Row: {
           category_id: number
@@ -3517,7 +3570,7 @@ export type Database = {
           sort_order?: number
           tenant_id: number
           updated_at?: string
-          vat_rate?: number
+          vat_rate: number
         }
         Update: {
           base_price?: number
@@ -8789,9 +8842,11 @@ export type Database = {
           invoice_payload: Json
           last_error: string | null
           locked_until: string | null
+          operation: string
           order_id: number
           payment_id: number | null
           status: string
+          submission_snapshot: Json | null
           tax_invoice_id: number | null
           tenant_id: number
           updated_at: string
@@ -8805,9 +8860,11 @@ export type Database = {
           invoice_payload: Json
           last_error?: string | null
           locked_until?: string | null
+          operation?: string
           order_id: number
           payment_id?: number | null
           status?: string
+          submission_snapshot?: Json | null
           tax_invoice_id?: number | null
           tenant_id: number
           updated_at?: string
@@ -8821,9 +8878,11 @@ export type Database = {
           invoice_payload?: Json
           last_error?: string | null
           locked_until?: string | null
+          operation?: string
           order_id?: number
           payment_id?: number | null
           status?: string
+          submission_snapshot?: Json | null
           tax_invoice_id?: number | null
           tenant_id?: number
           updated_at?: string
@@ -8959,7 +9018,10 @@ export type Database = {
           id: number
           invoice_kind: string
           invoice_number: string | null
+          invoice_profile_id: number | null
+          invoice_profile_version: number | null
           invoice_series: string | null
+          invoice_snapshot: Json | null
           invoice_time: string | null
           issued_at: string | null
           order_id: number | null
@@ -8970,16 +9032,20 @@ export type Database = {
           provider_ref: string | null
           replaced_by: number | null
           replaced_for: number | null
+          seller_address: string | null
+          seller_name: string | null
+          seller_tax_code: string | null
           signing_started_at: string | null
           status: string
           subtotal: number
           summary_date: string | null
           summary_orders_count: number | null
+          template_code: string | null
           tenant_id: number
           total_amount: number
           updated_at: string
           vat_amount: number
-          vat_rate: number
+          vat_rate: number | null
           xml_sha256: string | null
           xml_url: string | null
         }
@@ -8999,7 +9065,10 @@ export type Database = {
           id?: never
           invoice_kind?: string
           invoice_number?: string | null
+          invoice_profile_id?: number | null
+          invoice_profile_version?: number | null
           invoice_series?: string | null
+          invoice_snapshot?: Json | null
           invoice_time?: string | null
           issued_at?: string | null
           order_id?: number | null
@@ -9010,16 +9079,20 @@ export type Database = {
           provider_ref?: string | null
           replaced_by?: number | null
           replaced_for?: number | null
+          seller_address?: string | null
+          seller_name?: string | null
+          seller_tax_code?: string | null
           signing_started_at?: string | null
           status?: string
           subtotal: number
           summary_date?: string | null
           summary_orders_count?: number | null
+          template_code?: string | null
           tenant_id: number
           total_amount: number
           updated_at?: string
           vat_amount: number
-          vat_rate: number
+          vat_rate?: number | null
           xml_sha256?: string | null
           xml_url?: string | null
         }
@@ -9039,7 +9112,10 @@ export type Database = {
           id?: never
           invoice_kind?: string
           invoice_number?: string | null
+          invoice_profile_id?: number | null
+          invoice_profile_version?: number | null
           invoice_series?: string | null
+          invoice_snapshot?: Json | null
           invoice_time?: string | null
           issued_at?: string | null
           order_id?: number | null
@@ -9050,16 +9126,20 @@ export type Database = {
           provider_ref?: string | null
           replaced_by?: number | null
           replaced_for?: number | null
+          seller_address?: string | null
+          seller_name?: string | null
+          seller_tax_code?: string | null
           signing_started_at?: string | null
           status?: string
           subtotal?: number
           summary_date?: string | null
           summary_orders_count?: number | null
+          template_code?: string | null
           tenant_id?: number
           total_amount?: number
           updated_at?: string
           vat_amount?: number
-          vat_rate?: number
+          vat_rate?: number | null
           xml_sha256?: string | null
           xml_url?: string | null
         }
@@ -9083,6 +9163,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_invoice_profile_id_fkey"
+            columns: ["invoice_profile_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -9659,6 +9746,7 @@ export type Database = {
         }
         Returns: Json
       }
+      activate_invoice_profile: { Args: never; Returns: number }
       add_menu_item_kitchen_stock_exception: {
         Args: {
           p_branch_id: number
@@ -10882,6 +10970,10 @@ export type Database = {
           unit: string
         }[]
       }
+      get_tax_invoice_submission_snapshot_as_system: {
+        Args: { p_job_id: number }
+        Returns: Json
+      }
       get_theoretical_consumption: {
         Args: {
           p_branch_id?: number
@@ -11168,14 +11260,27 @@ export type Database = {
         Args: { p_actor_id?: string; p_order_id: number }
         Returns: Json
       }
-      prepare_tax_invoice_issue_job_as_system: {
-        Args: {
-          p_job_id: number
-          p_provider_ref: string
-          p_tax_invoice_id: number
-        }
-        Returns: Json
-      }
+      prepare_tax_invoice_issue_job_as_system:
+        | {
+            Args: {
+              p_job_id: number
+              p_provider_ref: string
+              p_tax_invoice_id: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_job_id: number
+              p_provider_ref: string
+              p_submission_snapshot: Json
+              p_subtotal: number
+              p_tax_invoice_id: number
+              p_total_amount: number
+              p_vat_amount: number
+            }
+            Returns: Json
+          }
       prepare_tax_invoice_provider_submission: {
         Args: { p_provider_ref: string; p_tax_invoice_id: number }
         Returns: Json
@@ -11427,23 +11532,6 @@ export type Database = {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: undefined
       }
-      replace_tax_invoice: {
-        Args: {
-          p_agreement_date: string
-          p_agreement_ref: string
-          p_buyer_address: string
-          p_buyer_name: string
-          p_buyer_tax_code: string
-          p_old_id: number
-          p_provider: string
-          p_reason: string
-          p_subtotal: number
-          p_total_amount: number
-          p_vat_amount: number
-          p_vat_rate: number
-        }
-        Returns: number
-      }
       replay_signed_sepay_payment_evidence: {
         Args: {
           p_actor_id: string
@@ -11470,6 +11558,18 @@ export type Database = {
           p_ttl_seconds?: number
         }
         Returns: Json
+      }
+      reserve_tax_invoice_replacement: {
+        Args: {
+          p_agreement_date: string
+          p_agreement_ref: string
+          p_buyer_address: string
+          p_buyer_name: string
+          p_buyer_tax_code: string
+          p_old_id: number
+          p_reason: string
+        }
+        Returns: number
       }
       resolve_branch_printer_for_type: {
         Args: { p_branch_id: number; p_print_type: string; p_tenant_id: number }

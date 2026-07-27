@@ -1,45 +1,35 @@
-import {
-  ViettelSinvoiceProvider,
-  setInvoiceProvider,
-} from "@comtammatu/shared/providers";
+import { ViettelSinvoiceProvider } from "@comtammatu/shared/providers";
 
-let registered = false;
+export interface InvoiceProfileSnapshot {
+  provider: "viettel";
+  templateCode: string;
+  invoiceSeries: string;
+  sellerTaxCode: string;
+}
 
 /**
  * Viettel S-invoice is the only supported HĐĐT provider.
  *
- * One singleton per boot. If Sinvoice creds are missing, registration is a
- * no-op (provider stays null) and server actions surface clear errors instead
- * of silently calling a mock.
+ * Business identity comes from the immutable invoice snapshot. Environment
+ * variables contain credentials and transport configuration only.
  */
-export function ensureInvoiceProviderRegistered(): void {
-  if (registered) return;
-  registered = true;
-
-  const taxCode = process.env["COMPANY_TAX_CODE"];
-  if (!taxCode) return;
-
+export function createInvoiceProvider(
+  profile: InvoiceProfileSnapshot,
+): ViettelSinvoiceProvider | null {
   const username = process.env["SINVOICE_USERNAME"];
   const password = process.env["SINVOICE_PASSWORD"];
-  const templateCode = process.env["SINVOICE_TEMPLATE_CODE"];
-  const invoiceSeries = process.env["SINVOICE_INVOICE_SERIES"];
-  if (!username || !password || !templateCode || !invoiceSeries) return;
-  if (!/^[12]\//.test(templateCode)) {
-    console.error(
-      "[invoice-provider-init] Unsupported SINVOICE_TEMPLATE_CODE.",
-    );
-    return;
+  if (!username || !password) return null;
+  if (profile.provider !== "viettel" || !/^1\//.test(profile.templateCode)) {
+    return null;
   }
 
-  setInvoiceProvider(
-    new ViettelSinvoiceProvider({
-      username,
-      password,
-      taxCode,
-      templateCode,
-      invoiceSeries,
-      baseUrl: process.env["SINVOICE_BASE_URL"],
-      sandbox: process.env["SINVOICE_SANDBOX"] === "true",
-    }),
-  );
+  return new ViettelSinvoiceProvider({
+    username,
+    password,
+    taxCode: profile.sellerTaxCode,
+    templateCode: profile.templateCode,
+    invoiceSeries: profile.invoiceSeries,
+    baseUrl: process.env["SINVOICE_BASE_URL"],
+    sandbox: process.env["SINVOICE_SANDBOX"] === "true",
+  });
 }

@@ -2,9 +2,8 @@
 
 import { z } from "zod";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
+import { createInvoiceProvider } from "@lib/invoice-provider-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { mapRpcError } from "@/_lib/rpc-error-map";
 import {
@@ -112,8 +111,22 @@ export async function voidPaidOrder(
     result.invoice_provider_ref
   ) {
     if (result.invoice_provider === "viettel") {
-      ensureInvoiceProviderRegistered();
-      const invoiceProvider = getInvoiceProvider();
+      const { data: invoiceProfile } = await supabase
+        .from("tax_invoices")
+        .select("template_code, invoice_series, seller_tax_code")
+        .eq("id", result.invoice_id ?? 0)
+        .maybeSingle();
+      const invoiceProvider =
+        invoiceProfile?.template_code &&
+        invoiceProfile.invoice_series &&
+        invoiceProfile.seller_tax_code
+          ? createInvoiceProvider({
+              provider: "viettel",
+              templateCode: invoiceProfile.template_code,
+              invoiceSeries: invoiceProfile.invoice_series,
+              sellerTaxCode: invoiceProfile.seller_tax_code,
+            })
+          : null;
       if (invoiceProvider) {
         try {
           await invoiceProvider.cancelInvoice(

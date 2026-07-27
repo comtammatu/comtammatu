@@ -18,7 +18,7 @@ export interface InvoiceLineItem {
   unitPrice: number;
   amount: number;
   /** VAT percentage snapshotted from the sold item. */
-  vatRate?: number;
+  vatRate: 0 | 5 | 8 | 10;
   /** Discount allocated to this legal line in the same basis as `amount`. */
   discountAmount?: number;
 }
@@ -44,7 +44,7 @@ export interface InvoiceReplacementContext {
   originalIssuedAt: string;
   /** Provider digit form (e.g. "1", "2") matching original template prefix. */
   originalInvoiceType: string;
-  /** Provider digit form, e.g. "2" for template "2/001". */
+  /** Provider digit form `"1"` for the registered VAT template. */
   originalTemplateCode: string;
   /** Lý do sai sót — ≤255 chars (Sinvoice `adjustedNote`). */
   reason: string;
@@ -82,7 +82,6 @@ export interface InvoiceRequest {
 
   /** Totals */
   subtotal: number;
-  vatRate: number;
   vatAmount: number;
   totalAmount: number;
 
@@ -117,18 +116,4 @@ export interface InvoiceProvider {
 
   /** Cancel an issued invoice */
   cancelInvoice(providerRef: string, reason: string): Promise<void>;
-}
-
-/**
- * Singleton: active invoice provider.
- * Set once at app startup based on env config.
- */
-let activeProvider: InvoiceProvider | null = null;
-
-export function setInvoiceProvider(provider: InvoiceProvider): void {
-  activeProvider = provider;
-}
-
-export function getInvoiceProvider(): InvoiceProvider | null {
-  return activeProvider;
 }

@@ -18,16 +18,17 @@ và không lưu bản PDF/XML vào kho nội bộ. Tra cứu trạng thái và c
 ## Env Bắt Buộc
 
 ```env
-COMPANY_TAX_CODE=<seller tax code>
 SINVOICE_USERNAME=<viettel api username>
 SINVOICE_PASSWORD=<viettel api password>
-SINVOICE_TEMPLATE_CODE=<registered template>
-SINVOICE_INVOICE_SERIES=<registered series>
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
 ```
 
 `SINVOICE_SANDBOX=true` chỉ dùng để ghi nhận môi trường thử; tài khoản Viettel
 quyết định môi trường thực tế. Không commit secret.
+
+MST người bán, mẫu số và ký hiệu nằm trong `invoice_profiles`, được snapshot
+vào hóa đơn trước khi gọi Viettel. Profile đăng ký hiện tại là `1/001` /
+`C26TCS`; chỉ kích hoạt sau khi hồ sơ pháp nhân Tenant đầy đủ và MST khớp.
 
 ## Smoke Hóa Đơn Theo Đơn
 

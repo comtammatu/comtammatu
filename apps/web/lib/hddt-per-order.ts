@@ -3,8 +3,9 @@ import type { Database } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   BUYER_NOT_GET_INVOICE_NAME,
+  buildSinvoiceItemInfo,
   buildSinvoiceTransactionUuid,
-  getInvoiceProvider,
+  type InvoiceLineItem,
   type InvoiceProvider,
   type InvoiceRequest,
   type InvoiceResult,
@@ -13,7 +14,7 @@ import {
   applyInvoiceLineDiscount,
   buildInvoiceLineItemsFromOrderItems,
 } from "@comtammatu/shared/hddt";
-import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
+import { createInvoiceProvider } from "@lib/invoice-provider-init";
 import { z } from "zod";
 
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
@@ -71,10 +72,20 @@ const draftOrderItemSchema = z.object({
   unit_price: z.union([z.number(), z.string()]).nullable(),
   subtotal: z.union([z.number(), z.string()]).nullable().optional(),
   discount_amount: z.union([z.number(), z.string()]).nullable().optional(),
-  vat_rate: z.union([z.number(), z.string()]).nullable().optional(),
+  vat_rate: z.union([z.literal(0), z.literal(5), z.literal(8), z.literal(10)]),
   modifiers: z.unknown().optional(),
   sides: z.unknown().optional(),
   status: z.string().nullable(),
+});
+
+const invoiceLineSchema = z.object({
+  name: z.string().min(1),
+  unit: z.string(),
+  quantity: z.number().positive(),
+  unitPrice: z.number().finite().nonnegative(),
+  amount: z.number().finite().nonnegative(),
+  vatRate: z.union([z.literal(0), z.literal(5), z.literal(8), z.literal(10)]),
+  discountAmount: z.number().finite().nonnegative().optional(),
 });
 
 const preparedInvoicePayloadSchema = z
@@ -85,6 +96,36 @@ const preparedInvoicePayloadSchema = z
     buyerAddress: z.string().trim().max(500).optional(),
     buyerEmail: z.email().optional(),
     buyerNotGetInvoice: z.boolean(),
+    replacement: z
+      .object({
+        originalInvoiceNumber: z.string().trim().min(1),
+        originalIssuedAt: z.string().datetime({ offset: true }),
+        originalInvoiceType: z.literal("1"),
+        originalTemplateCode: z.literal("1"),
+        reason: z.string().trim().min(20).max(255),
+        agreementRef: z.string().trim().min(1).max(225),
+        agreementDate: z.string().datetime({ offset: true }),
+      })
+      .optional(),
+    submissionSnapshot: z
+      .object({
+        version: z.literal(1),
+        invoiceProfile: z.object({
+          id: z.coerce.number().int().positive(),
+          version: z.coerce.number().int().positive(),
+          provider: z.literal("viettel"),
+          templateCode: z.string().regex(/^1\//),
+          invoiceSeries: z.string().trim().min(1),
+          sellerName: z.string().trim().min(1),
+          sellerTaxCode: z.string().trim().regex(MST_REGEX),
+          sellerAddress: z.string().trim().min(1),
+        }),
+        items: z.array(invoiceLineSchema).min(1),
+        subtotal: z.number().finite().nonnegative(),
+        vatAmount: z.number().finite().nonnegative(),
+        totalAmount: z.number().finite().nonnegative(),
+      })
+      .optional(),
     draftSnapshot: z.object({
       version: z.literal(1),
       orderId: z.coerce.number().int().positive(),
@@ -92,8 +133,17 @@ const preparedInvoicePayloadSchema = z
       orderNumber: z.string().trim().min(1).max(100),
       invoiceTime: z.string().datetime({ offset: true }),
       orderDiscountAmount: z.coerce.number().finite().nonnegative(),
+      invoiceProfile: z.object({
+        id: z.coerce.number().int().positive(),
+        version: z.coerce.number().int().positive(),
+        provider: z.literal("viettel"),
+        templateCode: z.string().regex(/^1\//),
+        invoiceSeries: z.string().trim().min(1),
+        sellerName: z.string().trim().min(1),
+        sellerTaxCode: z.string().trim().regex(MST_REGEX),
+        sellerAddress: z.string().trim().min(1),
+      }),
       subtotal: z.coerce.number().finite().nonnegative(),
-      vatRate: z.coerce.number().finite().nonnegative(),
       vatAmount: z.coerce.number().finite().nonnegative(),
       totalAmount: z.coerce.number().finite().nonnegative(),
       items: z.array(draftOrderItemSchema).min(1),
@@ -105,6 +155,7 @@ const preparedInvoicePayloadSchema = z
   })
   .refine(
     (value) =>
+      value.replacement !== undefined ||
       value.buyerNotGetInvoice ||
       Boolean(
         value.buyerTaxCode &&
@@ -149,7 +200,8 @@ async function submitReservedTaxInvoice({
   const providerErrorCode = providerData?.["errorCode"];
   const providerOutcomeUnknown =
     result.status === "failed" &&
-    (providerErrorCode === "exception" ||
+    (providerData?.["outcomeUnknown"] === true ||
+      providerErrorCode === "exception" ||
       providerErrorCode === "TRANSACTION_IS_BEING_PROCESSED");
   const invoiceStatus: "draft" | "signing" | "submitted" | "issued" =
     result.status === "failed"
@@ -295,20 +347,59 @@ export async function issuePreparedTaxInvoice({
     };
   }
 
-  const invoiceItems = applyInvoiceLineDiscount(
-    buildInvoiceLineItemsFromOrderItems(activeItems),
-    parsed.data.draftSnapshot.orderDiscountAmount,
-  );
-  ensureInvoiceProviderRegistered();
-  const invoiceProvider = getInvoiceProvider();
-  if (invoiceProvider?.name !== "viettel") {
+  let invoiceItems: InvoiceLineItem[];
+  if (parsed.data.submissionSnapshot) {
+    invoiceItems = parsed.data.submissionSnapshot.items;
+  } else {
+    try {
+      invoiceItems = applyInvoiceLineDiscount(
+        buildInvoiceLineItemsFromOrderItems(activeItems),
+        parsed.data.draftSnapshot.orderDiscountAmount,
+      );
+    } catch {
+      return {
+        success: false,
+        error: "Dòng hóa đơn thiếu thuế suất VAT hợp lệ.",
+        errorCode: "invoice_vat_invalid",
+      };
+    }
+  }
+  const profile = parsed.data.draftSnapshot.invoiceProfile;
+  const invoiceProvider = createInvoiceProvider(profile);
+  if (!invoiceProvider) {
     return {
       success: false,
       error: "Nhà cung cấp HĐĐT chưa được cấu hình.",
       errorCode: "invoice_provider_not_configured",
     };
   }
-  const providerRef = buildSinvoiceTransactionUuid(parsed.data.orderId);
+  const providerRef = buildSinvoiceTransactionUuid(taxInvoiceId);
+  let lineMath: ReturnType<typeof buildSinvoiceItemInfo>;
+  try {
+    lineMath = buildSinvoiceItemInfo(invoiceItems);
+  } catch {
+    return {
+      success: false,
+      error: "Không thể tính và đối soát các dòng HĐĐT.",
+      errorCode: "invoice_line_math_invalid",
+    };
+  }
+  const subtotal = lineMath.sumLineNet - lineMath.sumLineDiscount;
+  if (lineMath.totalGross !== parsed.data.draftSnapshot.totalAmount) {
+    return {
+      success: false,
+      error: "Tổng dòng, VAT và số tiền thanh toán không khớp.",
+      errorCode: "invoice_total_mismatch",
+    };
+  }
+  const submissionSnapshot = parsed.data.submissionSnapshot ?? {
+    version: 1,
+    invoiceProfile: profile,
+    items: invoiceItems,
+    subtotal,
+    vatAmount: lineMath.sumLineTax,
+    totalAmount: lineMath.totalGross,
+  };
 
   const rpc = supabase as unknown as {
     rpc: <T>(
@@ -323,6 +414,10 @@ export async function issuePreparedTaxInvoice({
     p_job_id: jobId,
     p_tax_invoice_id: taxInvoiceId,
     p_provider_ref: providerRef,
+    p_submission_snapshot: submissionSnapshot,
+    p_subtotal: subtotal,
+    p_vat_amount: lineMath.sumLineTax,
+    p_total_amount: lineMath.totalGross,
   });
   if (
     prepareError ||
@@ -350,9 +445,9 @@ export async function issuePreparedTaxInvoice({
       orderId: parsed.data.orderId,
       orderNumber: parsed.data.draftSnapshot.orderNumber,
       invoiceIssuedAt: parsed.data.draftSnapshot.invoiceTime,
-      sellerName: "",
-      sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
-      sellerAddress: "",
+      sellerName: profile.sellerName,
+      sellerTaxCode: profile.sellerTaxCode,
+      sellerAddress: profile.sellerAddress,
       buyerName: buyerNotGetInvoice
         ? BUYER_NOT_GET_INVOICE_NAME
         : parsed.data.buyerName,
@@ -361,10 +456,10 @@ export async function issuePreparedTaxInvoice({
       buyerEmail: buyerNotGetInvoice ? undefined : parsed.data.buyerEmail,
       buyerNotGetInvoice,
       items: invoiceItems,
-      subtotal: parsed.data.draftSnapshot.subtotal,
-      vatRate: parsed.data.draftSnapshot.vatRate,
-      vatAmount: parsed.data.draftSnapshot.vatAmount,
-      totalAmount: parsed.data.draftSnapshot.totalAmount,
+      subtotal,
+      vatAmount: lineMath.sumLineTax,
+      totalAmount: lineMath.totalGross,
+      replacement: parsed.data.replacement,
     },
   });
 }

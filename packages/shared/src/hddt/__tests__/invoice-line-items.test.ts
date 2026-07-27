@@ -13,6 +13,7 @@ test("expands paid modifiers into separate HĐĐT lines", () => {
       quantity: 1,
       unit_price: 54_000,
       subtotal: 54_000,
+      vat_rate: 8,
       modifiers: [
         { modifier_id: 1, name: "Bì", price: 7_000 },
         { modifier_id: 2, name: "Chả", price: 7_000 },
@@ -72,6 +73,7 @@ test("allocates order discount across legal invoice lines", () => {
       quantity: 1,
       unit_price: 54_000,
       subtotal: 54_000,
+      vat_rate: 8,
       modifiers: [
         { modifier_id: 1, name: "Bì", price: 7_000 },
         { modifier_id: 2, name: "Chả", price: 7_000 },
@@ -115,6 +117,7 @@ test("allocates item discount across that item's legal invoice lines", () => {
       unit_price: 54_000,
       subtotal: 54_000,
       discount_amount: 10_800,
+      vat_rate: 8,
       modifiers: [
         { modifier_id: 1, name: "Bì", price: 7_000 },
         { modifier_id: 2, name: "Chả", price: 7_000 },
@@ -156,6 +159,7 @@ test("adds order discount to existing item line discounts", () => {
         quantity: 1,
         unitPrice: 45_000,
         amount: 45_000,
+        vatRate: 8,
         discountAmount: 5_000,
       },
       {
@@ -164,6 +168,7 @@ test("adds order discount to existing item line discounts", () => {
         quantity: 1,
         unitPrice: 5_000,
         amount: 5_000,
+        vatRate: 8,
       },
     ],
     9_000,
@@ -190,6 +195,7 @@ test("clamps invoice line discount at sold line total", () => {
         quantity: 1,
         unitPrice: 45_000,
         amount: 45_000,
+        vatRate: 8,
       },
     ],
     50_000,
@@ -206,6 +212,7 @@ test("aggregates duplicate component lines by quantity", () => {
       quantity: 1,
       unit_price: 64_000,
       subtotal: 64_000,
+      vat_rate: 8,
       modifiers: [
         { modifier_id: 1, name: "Bì", price: 7_000 },
         { modifier_id: 2, name: "Chả", price: 7_000 },
@@ -219,6 +226,7 @@ test("aggregates duplicate component lines by quantity", () => {
       quantity: 1,
       unit_price: 49_000,
       subtotal: 49_000,
+      vat_rate: 8,
       modifiers: [
         { modifier_id: 1, name: "Bì", price: 7_000 },
         { modifier_id: 2, name: "Chả", price: 7_000 },
@@ -231,6 +239,7 @@ test("aggregates duplicate component lines by quantity", () => {
       quantity: 1,
       unit_price: 50_000,
       subtotal: 50_000,
+      vat_rate: 8,
       modifiers: [{ modifier_id: 3, name: "Trứng", price: 5_000 }],
       sides: [],
     },
@@ -265,6 +274,7 @@ test("expands side quantities per parent order quantity", () => {
       quantity: 2,
       unit_price: 45_000,
       subtotal: 90_000,
+      vat_rate: 8,
       modifiers: [],
       sides: [
         { side_item_id: 10, name: "Canh thêm", price: 5_000, quantity: 2 },
@@ -293,6 +303,7 @@ test("falls back to aggregate line if option prices exceed stored unit price", (
       quantity: 1,
       unit_price: 10_000,
       subtotal: 10_000,
+      vat_rate: 0,
       modifiers: [{ name: "Topping lỗi", price: 20_000 }],
       sides: [],
     },
@@ -305,6 +316,7 @@ test("falls back to aggregate line if option prices exceed stored unit price", (
       quantity: 1,
       unitPrice: 10_000,
       amount: 10_000,
+      vatRate: 0,
     },
   ]);
 });

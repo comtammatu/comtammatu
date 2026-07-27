@@ -52,12 +52,8 @@ export async function fetchBranchDayStatus(
   ).toISOString();
   ensurePaymentProvidersRegistered();
   const registeredPaymentMethods = getRegisteredMethods();
-  const hddtReady =
-    !!process.env["COMPANY_TAX_CODE"] &&
-    !!process.env["SINVOICE_USERNAME"] &&
-    !!process.env["SINVOICE_PASSWORD"] &&
-    !!process.env["SINVOICE_TEMPLATE_CODE"] &&
-    !!process.env["SINVOICE_INVOICE_SERIES"];
+  const hddtCredentialsReady =
+    !!process.env["SINVOICE_USERNAME"] && !!process.env["SINVOICE_PASSWORD"];
 
   const [
     paymentsRes,
@@ -72,6 +68,7 @@ export async function fetchBranchDayStatus(
     stationRes,
     printerRes,
     staffRes,
+    invoiceProfileRes,
   ] = await Promise.all([
     supabase
       .from("payments")
@@ -147,6 +144,11 @@ export async function fetchBranchDayStatus(
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
       .eq("is_active", true),
+    supabase
+      .from("invoice_profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "active"),
   ]);
 
   const paymentRows = paymentsRes.data ?? [];
@@ -185,7 +187,10 @@ export async function fetchBranchDayStatus(
     setupActivePrinters: printerRes.count ?? 0,
     setupActiveStaff: staffRes.count ?? 0,
     setupPaymentReady: registeredPaymentMethods.length > 0,
-    setupHddtReady: hddtReady,
+    setupHddtReady:
+      hddtCredentialsReady &&
+      !invoiceProfileRes.error &&
+      (invoiceProfileRes.count ?? 0) === 1,
   };
 }
 

@@ -291,6 +291,7 @@ async function ensureMenuItem(
       name: E2E_MENU_ITEM_NAME,
       description: "Fixture item for POS/KDS smoke tests",
       base_price: 45000,
+      vat_rate: 8,
       is_active: true,
       sort_order: 999,
     })

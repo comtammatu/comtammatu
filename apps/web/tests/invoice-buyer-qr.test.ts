@@ -160,7 +160,7 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   assert.match(issuer, /value\.buyerAddress &&[\s\S]*value\.buyerEmail/);
   assert.match(
     issuer,
-    /if \(invoiceProvider\?\.name !== "viettel"\) \{[\s\S]*invoice_provider_not_configured[\s\S]*const providerRef = buildSinvoiceTransactionUuid\(parsed\.data\.orderId\);[\s\S]*prepare_tax_invoice_issue_job_as_system/,
+    /const invoiceProvider = createInvoiceProvider\(profile\);[\s\S]*invoice_provider_not_configured[\s\S]*const providerRef = buildSinvoiceTransactionUuid\(taxInvoiceId\);[\s\S]*invoice_total_mismatch[\s\S]*prepare_tax_invoice_issue_job_as_system/,
   );
   assert.doesNotMatch(issuer, /issueTaxInvoiceForPaidOrder|DRAFT-/);
   assert.match(buyerServer, /if \(result\.success\)/);

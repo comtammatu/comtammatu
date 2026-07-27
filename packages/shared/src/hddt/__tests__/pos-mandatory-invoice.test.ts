@@ -263,6 +263,9 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   const replaceSrc = read(
     "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
   );
+  const snapshotMigration = read(
+    "supabase/migrations/20260727161500_invoice_profile_vat_snapshot.sql",
+  );
 
   assert.match(
     migration,
@@ -289,31 +292,17 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   );
 
   assert.ok(
-    replaceSrc.includes("order_items") &&
-      replaceSrc.includes("modifiers, sides"),
-    "replacement HĐĐT fetch must include modifier/side snapshots",
+    snapshotMigration.includes("v_old.invoice_snapshot - 'submissionSnapshot'"),
+    "replacement must copy the original immutable financial snapshot",
   );
   assert.ok(
-    replaceSrc.includes("buildInvoiceLineItemsFromOrderItems(activeItems)"),
-    "provider item payload must split main item, paid modifiers, and sides",
+    replaceSrc.includes('"reserve_tax_invoice_replacement"'),
+    "replacement must use the durable queue reservation RPC",
   );
   assert.ok(
-    replaceSrc.includes("order_discount_amount"),
-    "HĐĐT order fetch must include order-level POS discount source",
-  );
-  assert.ok(
-    replaceSrc.includes("subtotal, discount_amount"),
-    "HĐĐT order item fetch must include item-level POS discount_amount",
-  );
-  assert.ok(
-    replaceSrc.includes("applyInvoiceLineDiscount("),
-    "provider item payload must allocate POS discounts to legal lines",
-  );
-  assert.ok(
-    replaceSrc.includes(
-      "order.order_discount_amount ?? order.discount_amount ?? 0",
-    ),
-    "provider item payload must apply only the remaining order-level discount after item discounts",
+    !replaceSrc.includes("order_items") &&
+      !replaceSrc.includes("createInvoice("),
+    "replacement action must not rebuild mutable order lines or call Viettel inline",
   );
 });
 
@@ -341,9 +330,73 @@ test("order lines snapshot item VAT without annual-revenue inference", () => {
   );
   assert.match(
     providerInitSrc,
-    /\/\^\[12\]\\\//,
-    "invoice provider initialization must accept supported enterprise VAT and direct-sales templates",
+    /\/\^1\\\//,
+    "invoice provider initialization must accept only the registered VAT template family",
   );
+});
+
+test("invoice profile and replacement cutover stay fail-closed", () => {
+  const migration = read(
+    "supabase/migrations/20260727161500_invoice_profile_vat_snapshot.sql",
+  );
+  const provider = read(
+    "packages/shared/src/providers/impl/viettel-sinvoice.ts",
+  );
+  const replacement = read(
+    "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
+  );
+
+  assert.match(migration, /CREATE TABLE public\.invoice_profiles/);
+  assert.match(migration, /'1\/001'/);
+  assert.match(migration, /'C26TCS'/);
+  assert.match(
+    migration,
+    /FROM public\.tenants tenant[\s\S]*ON CONFLICT \(tenant_id, version\) DO NOTHING/,
+  );
+  assert.match(migration, /template_code ~ '\^1\/'/);
+  assert.match(
+    migration,
+    /seller_tax_code IS DISTINCT FROM v_tenant\.tax_code/,
+  );
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.activate_invoice_profile\(\)[\s\S]*public\.auth_tenant_id\(\)[\s\S]*public\.has_permission_any\('settings:tenant'\)/,
+    "profile activation must derive tenant authority from the authenticated caller",
+  );
+  assert.match(
+    migration,
+    /FROM public\.tenants tenant[\s\S]*WHERE tenant\.id = v_tenant_id[\s\S]*FOR UPDATE/,
+    "profile activation must serialize against tenant identity changes",
+  );
+  assert.match(
+    migration,
+    /SET seller_tax_code = v_tenant\.tax_code,[\s\S]*status = 'active'/,
+    "profile activation must bind the seller MST from the locked Tenant row",
+  );
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.activate_invoice_profile\(\)[\s\S]*FROM PUBLIC, anon, service_role;[\s\S]*GRANT EXECUTE ON FUNCTION public\.activate_invoice_profile\(\)[\s\S]*TO authenticated;/,
+    "only authenticated callers may execute profile activation",
+  );
+  assert.match(migration, /ALTER COLUMN vat_rate DROP DEFAULT/);
+  assert.match(migration, /CHECK \(vat_rate IN \(0, 5, 8, 10\)\)/);
+  assert.match(migration, /'vat_rate', item\.vat_rate/);
+  assert.match(migration, /'version', 1/);
+  assert.doesNotMatch(migration, /'version', 2/);
+  assert.match(migration, /submission_snapshot/);
+  assert.match(migration, /Replacement confirmed by provider/);
+  assert.match(
+    migration,
+    /WHERE job\.tax_invoice_id = v_invoice\.id[\s\S]*AND job\.status <> 'completed'/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /WHERE tenant_id = v_invoice\.tenant_id[\s\S]*AND order_id = v_invoice\.order_id[\s\S]*AND status <> 'completed'/,
+  );
+  assert.ok(replacement.includes('"reserve_tax_invoice_replacement"'));
+  assert.ok(!replacement.includes("createInvoice("));
+  assert.ok(!provider.includes("direct_sales_gross"));
+  assert.ok(!provider.includes("detectGrossInput"));
 });
 
 test("POS item-level discount migration and actions exist", () => {

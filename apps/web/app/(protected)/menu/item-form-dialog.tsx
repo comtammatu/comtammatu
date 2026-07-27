@@ -44,7 +44,10 @@ function toFormValues(item: ItemRow | null | undefined): ItemFormValues {
     name: item?.name ?? "",
     category_id: item?.category_id != null ? String(item.category_id) : "",
     base_price: item?.base_price != null ? String(item.base_price) : "",
-    vat_rate: String(item?.vat_rate ?? 0) as ItemFormValues["vat_rate"],
+    vat_rate:
+      item?.vat_rate != null
+        ? (String(item.vat_rate) as ItemFormValues["vat_rate"])
+        : ("" as ItemFormValues["vat_rate"]),
     description: item?.description ?? "",
     image_url: item?.image_url ?? null,
   };
@@ -126,6 +129,7 @@ export function ItemFormDialog({
             name="vat_rate"
             label={MENU_VI.vatRateLabel}
             description={MENU_VI.vatRateDescription}
+            placeholder={MENU_VI.selectVatRatePlaceholder}
             options={[
               { value: "0", label: "0%" },
               { value: "5", label: "5%" },

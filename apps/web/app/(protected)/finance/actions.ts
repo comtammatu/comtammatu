@@ -4,8 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getInvoiceProvider } from "@comtammatu/shared/providers";
-import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
+import { createInvoiceProvider } from "@lib/invoice-provider-init";
 import { messages } from "@lib/messages";
 import { createInvoiceSchema } from "@lib/hddt-per-order";
 import { getAuthContextWithPermission } from "@/_lib/auth";
@@ -440,7 +439,9 @@ export async function cancelTaxInvoice(
 
   const { data: invoice, error: fetchErr } = await supabase
     .from("tax_invoices")
-    .select("id, status, provider_ref, provider")
+    .select(
+      "id, status, provider_ref, provider, template_code, invoice_series, seller_tax_code",
+    )
     .eq("id", parsed.data.invoiceId)
     .eq("tenant_id", claims.tenant_id)
     .single();
@@ -492,8 +493,15 @@ export async function cancelTaxInvoice(
 
   let providerCancelWarning: string | null = null;
   if (invoice.provider_ref && invoice.provider === "viettel") {
-    ensureInvoiceProviderRegistered();
-    const invoiceProvider = getInvoiceProvider();
+    const invoiceProvider =
+      invoice.template_code && invoice.invoice_series && invoice.seller_tax_code
+        ? createInvoiceProvider({
+            provider: "viettel",
+            templateCode: invoice.template_code,
+            invoiceSeries: invoice.invoice_series,
+            sellerTaxCode: invoice.seller_tax_code,
+          })
+        : null;
     if (invoiceProvider) {
       try {
         await invoiceProvider.cancelInvoice(invoice.provider_ref, cancelReason);

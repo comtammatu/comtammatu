@@ -15,8 +15,16 @@ test("menu VAT is validated at the form, action, and database boundaries", () =>
   );
 
   assert.match(form, /vat_rate: z\.enum\(\["0", "5", "8", "10"\]\)/);
+  assert.doesNotMatch(form, /item\?\.vat_rate \?\? 0/);
+  assert.match(form, /placeholder=\{MENU_VI\.selectVatRatePlaceholder\}/);
   assert.match(actions, /const VAT_RATES = \[0, 5, 8, 10\] as const/);
   assert.match(actions, /vat_rate: data\.vat_rate/);
+  assert.match(actions, /header: "Thuế GTGT \(%\)", key: "vat_rate"/);
+  assert.match(
+    actions,
+    /raw\["Thuế GTGT \(%\)"\] \?\? raw\["vat_rate"\]/,
+  );
+  assert.match(actions, /vat_rate: parsedRow\.data\.vat_rate/);
   assert.match(migration, /CHECK \(vat_rate IN \(0, 5, 8, 10\)\)/);
   assert.match(menuCopy, /Giá bán đã gồm VAT/);
   assert.match(menuCopy, /không cộng thêm khi thanh toán/);

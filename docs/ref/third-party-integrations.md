@@ -100,22 +100,18 @@ SePay đẩy evidence webhook, hoặc cashier xác nhận theo quyền khi cần
 2. Dùng Bearer token gọi `InvoiceWS/createInvoice/{supplierTaxCode}`
 3. Reconcile dùng `InvoiceWS/searchInvoiceByTransactionUuid`
 
-**Config runtime**:
+**Credentials runtime**:
 
 ```env
-COMPANY_TAX_CODE=<supplierTaxCode đã đăng ký với Viettel/CQT>
 SINVOICE_USERNAME=<account_mst>
 SINVOICE_PASSWORD=<api_password>
-SINVOICE_TEMPLATE_CODE=<template đăng ký CQT>
-SINVOICE_INVOICE_SERIES=<series Viettel cấp>
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
 SINVOICE_SANDBOX=false
 ```
 
-Runtime hiện không gửi `sellerInfo` lên Vinvoice; người bán hiển thị theo hồ sơ
-đã cấu hình trong S-invoice cho `supplierTaxCode`. Không thêm `SELLER_*` env
-hoặc override thông tin người bán nếu chưa đối chiếu tài liệu/tài khoản Viettel
-cụ thể.
+MST người bán, template và series là dữ liệu versioned trong
+`invoice_profiles`, không phải runtime env. Snapshot hóa đơn giữ nguyên profile
+và pháp nhân bán kể cả khi cấu hình hiện hành thay đổi.
 
 Xem chi tiết schema trong `docs/ref/einvoice-tax.md`.
 
@@ -191,11 +187,8 @@ SEPAY_WEBHOOK_SECRET=    # Secret Key khi tạo webhook HMAC-SHA256 trên SePay
 # VietQR bank/account/name thiết lập trong Owner > Thanh toán, không đặt ENV.
 
 # HĐĐT
-COMPANY_TAX_CODE=
 SINVOICE_USERNAME=
 SINVOICE_PASSWORD=
-SINVOICE_TEMPLATE_CODE=
-SINVOICE_INVOICE_SERIES=
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
 SINVOICE_SANDBOX=false
 

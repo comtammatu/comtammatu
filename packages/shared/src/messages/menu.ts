@@ -47,6 +47,7 @@ export const MENU_VI = {
   basePriceLabel: "Giá bán đã gồm VAT (VND)",
   basePriceTableLabel: "Giá bán đã gồm VAT",
   vatRateLabel: "Thuế suất GTGT",
+  selectVatRatePlaceholder: "Chọn thuế suất",
   vatRateDescription:
     "VAT đã nằm trong giá bán; không cộng thêm khi thanh toán.",
   vatInclusivePriceSummary: (price: string, rate: string) =>

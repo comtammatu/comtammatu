@@ -17,12 +17,9 @@ export type {
   InvoiceRequest,
   InvoiceResult,
   InvoiceLineItem,
+  InvoiceReplacementContext,
 } from "./invoice";
-export {
-  BUYER_NOT_GET_INVOICE_NAME,
-  setInvoiceProvider,
-  getInvoiceProvider,
-} from "./invoice";
+export { BUYER_NOT_GET_INVOICE_NAME } from "./invoice";
 
 // Implementations
 export { CashProvider } from "./impl/cash";
@@ -33,6 +30,8 @@ export {
 } from "./impl/vietqr";
 export {
   ViettelSinvoiceProvider,
+  buildSinvoiceItemInfo,
   buildSinvoiceTransactionUuid,
+  deriveInvoiceTypeFromTemplate,
 } from "./impl/viettel-sinvoice";
 export type { ViettelSinvoiceConfig } from "./impl/viettel-sinvoice";

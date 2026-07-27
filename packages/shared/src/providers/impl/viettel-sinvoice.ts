@@ -30,25 +30,13 @@ import {
  *   - 87: |sumOfTotalLineAmountWithoutTax − Σ(itemInfo.itemTotalAmountWithoutTax)| < 1
  *   - 410/412: TransactionUuid must be 10–36 chars
  *
- * Sinvoice expects per-line NET (pre-VAT) prices. The InvoiceRequest
- * interface is rate-agnostic — callers may pass GROSS or NET amounts.
- * A heuristic compares Σ items.amount vs subtotal vs totalAmount
- * to pick the conversion factor. For mixed-rate B2B, header vatRate (predominant)
- * is used per-line — accepts ≤1₫ rounding tolerance; out-of-tolerance errors
- * surface as Sinvoice rejection (status='failed') rather than silent corruption.
+ * Sinvoice expects per-line NET (pre-VAT) prices. InvoiceRequest always carries
+ * VAT-inclusive sold amounts and an explicit VAT rate on every line.
  *
  * Env vars:
  *   - SINVOICE_USERNAME, SINVOICE_PASSWORD
- *   - COMPANY_TAX_CODE
- *   - SINVOICE_TEMPLATE_CODE   (digit template form, e.g. "2/001" for HĐ bán hàng từ MTT)
- *   - SINVOICE_INVOICE_SERIES  (registered with CQT, e.g. "C26MAA")
  *   - SINVOICE_BASE_URL        (override host; same URL for prod + test)
  *   - SINVOICE_SANDBOX=true    (informational — server distinguishes via creds)
- *
- * Template ↔ invoiceType mapping (derived at runtime):
- *   - "1/..." → invoiceType "1" (HĐ GTGT / VAT-deductible)
- *   - "2/..." → invoiceType "2" (HĐ bán hàng từ MTT — F&B default)
- *   - 3/4/5/6 also supported (see deriveInvoiceTypeFromTemplate)
  */
 
 const DEFAULT_BASE_URL = "https://api-vinvoice.viettel.vn";
@@ -119,25 +107,17 @@ export function buildSinvoiceTransactionUuid(invoiceId: number): string {
  *
  * Per Viettel HDSD line 580-598 + example bodies (HDSD §III.2, line
  * 869+ all show `invoiceType: "1"` paired with `templateCode: "1/001"`):
- *   - Template `1/...` → invoiceType `"1"` (HĐ GTGT)
- *   - Template `2/...` → invoiceType `"2"` (HĐ bán hàng — F&B/MTT)
- *   - Template `3/...` → invoiceType `"3"` ...
- *
- * Older pre-2026 templates like `01GTKT0/001` map to the `"01GTKT"` form;
- * we do NOT support those digit codes since 2026.
- *
  * Throws if templateCode shape is unrecognised so misconfigured env
  * surfaces loudly at boot rather than producing rejected invoices.
  */
 export function deriveInvoiceTypeFromTemplate(templateCode: string): string {
-  const match = templateCode.match(/^([1-6])\//);
-  if (!match || !match[1]) {
+  if (!/^1\//.test(templateCode)) {
     throw new Error(
-      `Invalid SINVOICE_TEMPLATE_CODE format: "${templateCode}". ` +
-        `Expected digit template form like "1/001" or "2/001".`,
+      `Invalid invoice template format: "${templateCode}". ` +
+        `Expected VAT template form like "1/001".`,
     );
   }
-  return match[1];
+  return "1";
 }
 
 interface SinvoiceBaseItemInfo {
@@ -153,11 +133,8 @@ interface SinvoiceBaseItemInfo {
   itemDiscount: number;
   itemNote: null;
   isIncreaseItem: boolean | null;
-  // Omitted for direct_sales_gross (mẫu-2 hóa đơn bán hàng): the sales-invoice
-  // template has no thuế-suất field — Viettel strips taxPercentage from the CQT
-  // XML, so we send neither rather than a placeholder. VAT mode (mẫu-1) sets both.
-  taxPercentage?: number;
-  taxAmount?: number;
+  taxPercentage: number;
+  taxAmount: number;
 }
 
 export interface SinvoiceSaleItemInfo extends SinvoiceBaseItemInfo {
@@ -184,9 +161,6 @@ export interface SinvoiceLineMath {
   totalGross: number;
 }
 
-type SinvoicePricingMode = "vat_deductible_net" | "direct_sales_gross";
-const DIRECT_SALES_DISCOUNT_LINE_NAME = "Chiết khấu hàng hóa";
-
 function normalizeMoney(value: number | undefined): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0;
   return Math.round(value);
@@ -196,9 +170,7 @@ function clampMoney(value: number, max: number): number {
   return Math.min(Math.max(0, value), Math.max(0, max));
 }
 
-// Viettel rejects a `discount` rate carrying >2 decimal places
-// (BAD_REQUEST_INVALID_DECIMAL_POINT_DISCOUNT). VAT mode still needs a line
-// rate; direct-sales mode avoids it by sending a selection=3 discount line.
+// Viettel rejects a `discount` rate carrying >2 decimal places.
 function roundDiscountRate(rate: number): number {
   return Math.round(rate * 100) / 100;
 }
@@ -239,11 +211,7 @@ function findNetDiscountForGrossTarget(
 /**
  * Compute Sinvoice itemInfo + reconciled sums.
  *
- * Template `1/...` (HĐ GTGT) wants net unit prices + VAT in
- * `taxAmount`; template `2/...` (HĐ bán hàng, direct method) displays
- * the sale price itself, with no VAT split on the PDF. For template `2/...`,
- * never divide menu prices by `(1 + vatRate)` — Cơm Tấm Má Tư menu prices are
- * already VAT-inclusive and must appear on the invoice as sold.
+ * Template `1/...` wants net unit prices + VAT in `taxAmount`.
  *
  * Rounding order matters for Sinvoice strict validators:
  *   - 43: |qty × unitPrice − itemTotalAmountWithoutTax| < 1  (STRICT)
@@ -259,94 +227,22 @@ function findNetDiscountForGrossTarget(
  */
 export function buildSinvoiceItemInfo(
   items: InvoiceLineItem[],
-  vatRate: number,
-  callerPassesGross: boolean,
-  pricingMode: SinvoicePricingMode = "vat_deductible_net",
 ): SinvoiceLineMath {
-  if (pricingMode === "direct_sales_gross") {
-    const itemInfo: SinvoiceItemInfo[] = [];
-    let sumLineNet = 0;
-    let sumLineDiscount = 0;
-
-    for (const item of items) {
-      const lineGross = callerPassesGross
-        ? item.amount
-        : item.amount * (1 + vatRate / 100);
-      const qty = item.quantity;
-      const grossUnitPrice =
-        qty > 0
-          ? Math.round(
-              callerPassesGross && item.unitPrice > 0
-                ? item.unitPrice
-                : lineGross / qty,
-            )
-          : 0;
-      const lineAmount = grossUnitPrice * qty;
-      const lineDiscount = clampMoney(
-        normalizeMoney(item.discountAmount),
-        lineAmount,
-      );
-
-      sumLineNet += lineAmount;
-      sumLineDiscount += lineDiscount;
-
-      itemInfo.push({
-        lineNumber: itemInfo.length + 1,
-        selection: 1,
-        itemCode: "",
-        itemName: item.name,
-        unitName: item.unit || "Phần",
-        unitPrice: grossUnitPrice,
-        quantity: qty,
-        itemTotalAmountWithoutTax: lineAmount,
-        itemTotalAmountAfterDiscount: lineAmount,
-        itemTotalAmountWithTax: lineAmount,
-        discount: 0,
-        itemDiscount: 0,
-        itemNote: null,
-        isIncreaseItem: null,
-      });
-    }
-
-    if (sumLineDiscount > 0) {
-      itemInfo.push({
-        lineNumber: itemInfo.length + 1,
-        selection: 3,
-        itemCode: "",
-        itemName: DIRECT_SALES_DISCOUNT_LINE_NAME,
-        unitName: "",
-        itemTotalAmountWithoutTax: sumLineDiscount,
-        itemTotalAmountAfterDiscount: sumLineDiscount,
-        itemTotalAmountWithTax: sumLineDiscount,
-        discount: 0,
-        itemDiscount: 0,
-        itemNote: null,
-        isIncreaseItem: false,
-      });
-    }
-
-    return {
-      itemInfo,
-      sumLineNet,
-      sumLineDiscount,
-      sumLineTax: 0,
-      totalGross: sumLineNet - sumLineDiscount,
-    };
-  }
-
   const itemInfo: SinvoiceItemInfo[] = items.map((item, index) => {
-    const lineVatRate = item.vatRate ?? vatRate;
-    const lineGross = callerPassesGross
-      ? item.amount
-      : item.amount * (1 + lineVatRate / 100);
+    const lineVatRate = item.vatRate;
+    if (![0, 5, 8, 10].includes(lineVatRate)) {
+      throw new Error(`sinvoice_invalid_vat_rate:${lineVatRate}`);
+    }
+    const lineGross = item.amount;
 
     const qty = item.quantity;
+    if (!Number.isFinite(qty) || qty <= 0) {
+      throw new Error("sinvoice_invalid_quantity");
+    }
     const grossUnitPrice = qty > 0 ? lineGross / qty : 0;
     const netUnitPrice = Math.round(grossUnitPrice / (1 + lineVatRate / 100));
     const lineNet = netUnitPrice * qty;
-    const grossDiscount = callerPassesGross
-      ? normalizeMoney(item.discountAmount)
-      : normalizeMoney(item.discountAmount) * (1 + lineVatRate / 100);
+    const grossDiscount = normalizeMoney(item.discountAmount);
     const lineDiscount = clampMoney(
       findNetDiscountForGrossTarget(
         lineNet,
@@ -511,23 +407,6 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
   }
 
   /**
-   * Detect whether caller's per-item amounts are GROSS (incl VAT) or NET.
-   * Per-order callers normally pass order_items.subtotal as gross; VAT templates
-   * may pass net amounts.
-   * Compare Σ items.amount: closer to totalAmount → gross; closer to subtotal → net.
-   */
-  private detectGrossInput(request: InvoiceRequest): boolean {
-    if (request.items.length === 0) return true;
-    const itemsSum = request.items.reduce(
-      (s, i) => s + Math.max(0, i.amount - normalizeMoney(i.discountAmount)),
-      0,
-    );
-    const distToGross = Math.abs(itemsSum - request.totalAmount);
-    const distToNet = Math.abs(itemsSum - request.subtotal);
-    return distToGross <= distToNet;
-  }
-
-  /**
    * Build the request body for one invoice.
    */
   private buildInvoiceBody(request: InvoiceRequest): {
@@ -535,55 +414,48 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     transactionUuid: string;
   } {
     const transactionUuid = buildSinvoiceTransactionUuid(request.orderId);
-    const callerPassesGross = this.detectGrossInput(request);
     const invoiceType = deriveInvoiceTypeFromTemplate(this.templateCode);
-    const pricingMode: SinvoicePricingMode =
-      invoiceType === "2" ? "direct_sales_gross" : "vat_deductible_net";
 
     const { itemInfo, sumLineNet, sumLineDiscount, sumLineTax, totalGross } =
-      buildSinvoiceItemInfo(
-        request.items,
-        request.vatRate,
-        callerPassesGross,
-        pricingMode,
-      );
+      buildSinvoiceItemInfo(request.items);
+    const totalAmountAfterDiscount = sumLineNet - sumLineDiscount;
     if (
-      pricingMode === "direct_sales_gross" &&
+      totalAmountAfterDiscount !== normalizeMoney(request.subtotal) ||
+      sumLineTax !== normalizeMoney(request.vatAmount) ||
       totalGross !== normalizeMoney(request.totalAmount)
     ) {
       throw new Error(
-        `sinvoice_direct_sales_total_mismatch:${totalGross}:${normalizeMoney(request.totalAmount)}`,
+        `sinvoice_total_mismatch:${totalAmountAfterDiscount}:${sumLineTax}:${totalGross}`,
       );
     }
-    const totalAmountAfterDiscount = sumLineNet - sumLineDiscount;
-    const taxBreakdowns =
-      pricingMode === "direct_sales_gross"
-        ? []
-        : Array.from(
-            itemInfo.reduce(
-              (groups, line) => {
-                if (line.selection !== 1) return groups;
-                const rate = line.taxPercentage ?? 0;
-                const current = groups.get(rate) ?? {
-                  taxPercentage: rate,
-                  taxableAmount: 0,
-                  taxAmount: 0,
-                };
-                current.taxableAmount += line.itemTotalAmountAfterDiscount;
-                current.taxAmount += line.taxAmount ?? 0;
-                groups.set(rate, current);
-                return groups;
-              },
-              new Map<
-                number,
-                {
-                  taxPercentage: number;
-                  taxableAmount: number;
-                  taxAmount: number;
-                }
-              >(),
-            ),
-          ).map(([, breakdown]) => breakdown);
+    if (request.sellerTaxCode !== this.taxCode) {
+      throw new Error("sinvoice_seller_tax_code_mismatch");
+    }
+    const taxBreakdowns = Array.from(
+      itemInfo.reduce(
+        (groups, line) => {
+          if (line.selection !== 1) return groups;
+          const rate = line.taxPercentage;
+          const current = groups.get(rate) ?? {
+            taxPercentage: rate,
+            taxableAmount: 0,
+            taxAmount: 0,
+          };
+          current.taxableAmount += line.itemTotalAmountAfterDiscount;
+          current.taxAmount += line.taxAmount;
+          groups.set(rate, current);
+          return groups;
+        },
+        new Map<
+          number,
+          {
+            taxPercentage: number;
+            taxableAmount: number;
+            taxAmount: number;
+          }
+        >(),
+      ),
+    ).map(([, breakdown]) => breakdown);
 
     const isReplacement = !!request.replacement;
     const generalInvoiceInfo: Record<string, unknown> = {
@@ -664,15 +536,29 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
 
   async createInvoice(request: InvoiceRequest): Promise<InvoiceResult> {
     let transactionUuid = buildSinvoiceTransactionUuid(request.orderId);
+    let built: ReturnType<ViettelSinvoiceProvider["buildInvoiceBody"]>;
 
     try {
-      const built = this.buildInvoiceBody(request);
-      const body = built.body;
+      built = this.buildInvoiceBody(request);
       transactionUuid = built.transactionUuid;
+    } catch (err) {
+      return {
+        status: "failed",
+        invoiceNumber: null,
+        providerRef: transactionUuid,
+        providerData: {
+          errorCode: "validation",
+          description:
+            err instanceof Error ? err.message : "sinvoice_validation_failed",
+          transactionUuid,
+        },
+      };
+    }
 
+    try {
       const res = await this.authedFetch(
         `/InvoiceAPI/InvoiceWS/createInvoice/${this.taxCode}`,
-        { method: "POST", body: JSON.stringify(body) },
+        { method: "POST", body: JSON.stringify(built.body) },
       );
 
       const envelope = await this.readEnvelope<SinvoiceCreateResult>(res);
@@ -685,6 +571,8 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
           providerData: {
             httpStatus: res.status,
             errorCode: envelope.errorCode ?? res.status,
+            outcomeUnknown:
+              res.status === 408 || res.status === 429 || res.status >= 500,
             description: this.describeError(envelope, "create_invoice_failed"),
             transactionUuid,
             response: JSON.parse(JSON.stringify(envelope)),
@@ -696,11 +584,9 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       const invoiceNo = result?.invoiceNo ?? null;
       const codeOfTax = result?.codeOfTax ?? null;
 
-      // MTT mẫu-2 invoices receive the CQT code (codeOfTax / Mã của cơ quan
-      // thuế) synchronously on create → already legally issued, so surface
-      // 'issued' immediately. HĐ GTGT mẫu-1 without a code remains 'submitted';
-      // no invoiceNo remains 'signing'. The codeOfTax check is strict non-empty
-      // so a blank value never falsely issues.
+      // A synchronous CQT code means the invoice is legally issued.
+      // An invoice number without that code remains submitted; no invoice
+      // number remains signing. Blank codes never falsely issue.
       const hasCqtCode =
         typeof codeOfTax === "string" && codeOfTax.trim().length > 0;
       const status: InvoiceResult["status"] =
@@ -733,6 +619,7 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         providerRef: transactionUuid,
         providerData: {
           errorCode: "exception",
+          outcomeUnknown: true,
           description:
             err instanceof Error ? err.message : "sinvoice_call_failed",
           transactionUuid,

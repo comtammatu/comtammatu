@@ -124,7 +124,7 @@ async function processJob(
     return "reconcile_required";
   }
 
-  const invoicePayload =
+  const invoicePayload: Record<string, unknown> | null =
     job.invoice_payload !== null && typeof job.invoice_payload === "object"
       ? {
           ...(job.invoice_payload as Record<string, unknown>),
@@ -134,6 +134,17 @@ async function processJob(
   if (!invoicePayload) {
     await finishJob(rpc, job.id, "blocked", "invoice_payload_invalid");
     return "blocked";
+  }
+  const { data: submissionSnapshot, error: snapshotError } =
+    await rpc.rpc<unknown>("get_tax_invoice_submission_snapshot_as_system", {
+      p_job_id: job.id,
+    });
+  if (snapshotError) {
+    await finishJob(rpc, job.id, "blocked", "submission_snapshot_read_failed");
+    return "blocked";
+  }
+  if (submissionSnapshot) {
+    invoicePayload["submissionSnapshot"] = submissionSnapshot;
   }
 
   const result = await issuePreparedTaxInvoice({
