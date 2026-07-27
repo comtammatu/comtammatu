@@ -184,8 +184,13 @@ test("attendance and leave approval data stay in their respective tabs", () => {
   );
   assert.match(
     leaveRequestsTableSource,
-    /value: "approved-month",[\s\S]*copy\.approvedMonthTab[\s\S]*<TabsContent value="approved-month">[\s\S]*<AppToolbar[\s\S]*<AppSection\s+title=\{copy\.approvedMonthTitle\}[\s\S]*data=\{approvedMonthRows\}/,
-    "approved monthly leave needs its own view, with filters before its data section",
+    /value: "approved-month",[\s\S]*copy\.approvedMonthTab[\s\S]*<TabsContent value="approved-month"[\s\S]*<AppToolbar[\s\S]*variant="inline"[\s\S]*data=\{approvedMonthRows\}/,
+    "approved monthly leave needs its own view, with inline month filter before its rows",
+  );
+  assert.match(
+    leaveRequestsTableSource,
+    /<AppListFrame[\s\S]*variant="inline"[\s\S]*<AppPageTabs/,
+    "leave list merges branch filter and tabs into one Owner LIST frame",
   );
   assert.match(
     leaveRequestsTableSource,

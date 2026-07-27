@@ -14,6 +14,10 @@ export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
  * `branch_manager` is admitted (D068) so a branch can receive directly from a
  * supplier; the fine differentiation is the per-action permission key + grant
  * (branch_manager holds GRN/supplier/production keys, never recipe/invoice).
+ * Owner is tenant-wide via `has_permission` / `auth_is_owner` and may procure
+ * for `branch`, `central_supply`, and `central_kitchen` destinations (D082).
+ * Branch managers remain own-branch only and never receive central site scope
+ * through this helper.
  */
 export const PROCUREMENT_ROLES: readonly StaffRole[] = [
   "owner",

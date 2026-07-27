@@ -21,6 +21,7 @@ export {
   confirmGrn,
 } from "./grn-actions";
 export {
+  attachSupplierInvoiceVatEvidence,
   createSupplierInvoice,
   fetchSupplierInvoicesPage,
   recordSupplierPayment,

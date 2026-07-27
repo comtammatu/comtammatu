@@ -117,12 +117,18 @@ export const INGREDIENT_FORM_VI = {
   units: {
     inputUnit: "Đơn vị nhập",
     outputUnit: "Đơn vị xuất",
-    inputToOutputFactor: "Số đơn vị xuất / 1 đơn vị nhập",
-    sameUnitFactorOne: "Hai vai trò cùng đơn vị thì hệ số phải bằng 1",
+    conversion: "Quy đổi",
+    conversionAria: (inputUnit: string, outputUnit: string) =>
+      `Số ${outputUnit} trong 1 ${inputUnit}`,
+    conversionAriaFallback: "Số đơn vị xuất trong 1 đơn vị nhập",
+    unitPending: "…",
+    sameUnitFactorOne: "Cùng đơn vị thì quy đổi phải là 1",
+    unitsBriefHint:
+      "Tồn và định mức theo đơn vị xuất. Chia nhỏ: ml/g; nguyên đơn vị: chai/lon.",
     sectionLabel: "Đơn vị tồn và quy đổi",
     add: "Thêm đơn vị",
     empty: "Chưa có đơn vị nào.",
-    hint: "Chọn một đơn vị tồn chuẩn. Mỗi đơn vị nhập/đếm phải quy đổi được về đơn vị này. Sau khi có giao dịch, tồn chuẩn và các quy đổi hiện hữu sẽ được khóa; chỉ thêm đơn vị mới.",
+    hint: "Chọn đơn vị xuất đủ nhỏ cho bếp (ml/g khi chia nhỏ; chai/lon khi dùng nguyên). Đơn vị nhập là cách NCC giao hàng. Sau khi có phiếu kho, đơn vị và quy đổi hiện hữu bị khóa.",
     colUnit: "Đơn vị",
     colFactor: "Quy đổi về tồn chuẩn",
     colAnchor: "Quy đổi theo",
@@ -138,14 +144,11 @@ export const INGREDIENT_FORM_VI = {
     minOne: "Cần ít nhất 1 đơn vị",
     exactlyOneBase: "Phải có đúng 1 đơn vị tồn chuẩn",
     baseFactorOne: "Đơn vị tồn chuẩn phải có hệ số = 1",
-    factorPositive: "Hệ số quy đổi phải lớn hơn 0",
+    factorPositive: "Quy đổi phải lớn hơn 0",
     distinctUnits: "Đơn vị không được trùng nhau",
     baseTag: "tồn chuẩn",
-    lockChecking:
-      "Đang kiểm tra lịch sử giao dịch trước khi cho phép sửa quy đổi…",
-    lockedHint:
-      "Nguyên liệu đã có giao dịch. Tồn chuẩn và quy đổi hiện hữu đã khóa; bạn vẫn có thể thêm một đơn vị mới.",
-    lockUnavailable:
-      "Chưa kiểm tra được lịch sử giao dịch nên đơn vị đang tạm khóa. Hãy thử mở lại biểu mẫu.",
+    lockChecking: "Đang kiểm tra lịch sử phiếu kho…",
+    lockedHint: "Đã có phiếu kho — không sửa đơn vị/quy đổi.",
+    lockUnavailable: "Không kiểm tra được lịch sử — tạm khóa đơn vị.",
   },
 } as const;

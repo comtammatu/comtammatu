@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
 import {
   AppPageHeader,
@@ -74,7 +74,10 @@ import {
 } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
+import {
+  InventoryListFrame,
+  inventoryListFilterSelectClassName,
+} from "../_components/inventory-list-frame";
 
 const ingredientFormCopy = messages.inventoryMaster.ingredientForm;
 const ingredientListCopy = messages.inventory.ingredients.list;
@@ -239,7 +242,7 @@ export function IngredientsClient({
   const [editingIngredient, setEditingIngredient] =
     useState<IngredientRow | null>(null);
   const [isPending, startTransition] = useTransition();
-  const isTouchLayout = useIsMobile(1024);
+  const controlSize = useFormControlSize();
 
   const lastUpdatedAtRef = useRef<string | null>(null);
 
@@ -379,7 +382,7 @@ export function IngredientsClient({
       variant="inline"
       search={
         <InputGroup
-          size={isTouchLayout ? "touch" : "field"}
+          size={controlSize}
           className="min-w-0 flex-1 sm:min-w-72"
         >
           <InputGroupAddon>
@@ -410,8 +413,12 @@ export function IngredientsClient({
             }}
           >
             <SelectTrigger
-              size={isTouchLayout ? "touch" : "field"}
-              className="w-36 sm:w-40"
+              size={controlSize}
+              className={
+                controlSize === "touch"
+                  ? "w-full"
+                  : inventoryListFilterSelectClassName
+              }
             >
               <SelectValue placeholder={ingredientFormCopy.category.all} />
             </SelectTrigger>
@@ -420,7 +427,7 @@ export function IngredientsClient({
                 <SelectItem
                   key={option.value}
                   value={option.value}
-                  className={isTouchLayout ? "min-h-12 text-sm" : undefined}
+                  size={controlSize === "touch" ? "touch" : "default"}
                 >
                   {option.label}
                 </SelectItem>
@@ -436,8 +443,12 @@ export function IngredientsClient({
             }}
           >
             <SelectTrigger
-              size={isTouchLayout ? "touch" : "field"}
-              className="w-36 sm:w-40"
+              size={controlSize}
+              className={
+                controlSize === "touch"
+                  ? "w-full"
+                  : inventoryListFilterSelectClassName
+              }
             >
               <SelectValue
                 placeholder={
@@ -450,7 +461,7 @@ export function IngredientsClient({
                 <SelectItem
                   key={option.value}
                   value={option.value}
-                  className={isTouchLayout ? "min-h-12 text-sm" : undefined}
+                  size={controlSize === "touch" ? "touch" : "default"}
                 >
                   {option.label}
                 </SelectItem>
@@ -466,8 +477,12 @@ export function IngredientsClient({
             }}
           >
             <SelectTrigger
-              size={isTouchLayout ? "touch" : "field"}
-              className="w-36 sm:w-40"
+              size={controlSize}
+              className={
+                controlSize === "touch"
+                  ? "w-full"
+                  : inventoryListFilterSelectClassName
+              }
             >
               <SelectValue />
             </SelectTrigger>
@@ -476,7 +491,7 @@ export function IngredientsClient({
                 <SelectItem
                   key={option.value}
                   value={option.value}
-                  className={isTouchLayout ? "min-h-12 text-sm" : undefined}
+                  size={controlSize === "touch" ? "touch" : "default"}
                 >
                   {option.label}
                 </SelectItem>
@@ -494,7 +509,7 @@ export function IngredientsClient({
             <Button
               type="button"
               variant="ghost"
-              size={isTouchLayout ? "touch" : "sm"}
+              size={controlSize}
               onClick={clearFilters}
             >
               {ACTIONS_VI.clearFilters}

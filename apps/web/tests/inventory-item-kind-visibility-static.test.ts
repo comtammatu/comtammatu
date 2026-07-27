@@ -50,7 +50,7 @@ test("ingredient form exposes only input and output unit roles", () => {
   assert.match(ingredientDialogSource, /name="input_unit_id"/);
   assert.match(ingredientDialogSource, /name="output_unit_id"/);
   assert.match(ingredientDialogSource, /name="input_to_output_factor"/);
-  assert.match(ingredientDialogSource, /disabled=\{isEdit\}/);
+  assert.match(ingredientDialogSource, /disabled=\{unitsLocked\}/);
   assert.doesNotMatch(
     ingredientDialogSource,
     /makeSecondaryRow|previewCanonical|anchor_input_direction/,

@@ -286,7 +286,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
                     onCheckedChange={setShowInactive}
                   />
                 </Field>
-                <Button size="touch" onClick={openCreate}>
+                <Button size="lg" onClick={openCreate}>
                   <IconPlus data-icon="inline-start" />
                   {copy.add}
                 </Button>

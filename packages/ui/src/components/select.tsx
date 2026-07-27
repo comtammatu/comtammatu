@@ -86,7 +86,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-fit items-center justify-between gap-1.5 px-2 py-1.5 text-xs/relaxed whitespace-nowrap data-[size=default]:h-7 data-[size=sm]:h-6 data-[size=field]:h-10 data-[size=field]:px-3 data-[size=touch]:min-h-12 data-[size=touch]:px-3 data-[size=touch]:text-sm *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        "flex w-fit items-center justify-between gap-1.5 px-2 py-1.5 text-xs/relaxed whitespace-nowrap data-[size=default]:h-7 data-[size=sm]:h-6 data-[size=field]:h-10 data-[size=field]:px-3 data-[size=field]:text-sm data-[size=touch]:min-h-12 data-[size=touch]:px-3 data-[size=touch]:text-sm *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         fieldTriggerChrome,
         className,
       )}
@@ -114,8 +114,8 @@ type SelectContentProps = Omit<
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
-  align = "center",
+  position = "popper",
+  align = "start",
   ...props
 }: SelectContentProps) {
   return (
@@ -140,7 +140,7 @@ function SelectContent({
           <SelectPrimitive.List
             data-position={position}
             className={cn(
-              "data-[position=popper]:h-(--anchor-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--anchor-width)",
+              "data-[position=popper]:w-full data-[position=popper]:min-w-(--anchor-width)",
             )}
           >
             {children}

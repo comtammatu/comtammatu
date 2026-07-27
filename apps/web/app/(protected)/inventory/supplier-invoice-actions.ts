@@ -100,6 +100,20 @@ const supplierPaymentSchema = z.object({
   referenceNote: z.string().trim().max(500).optional(),
 });
 
+const attachVatEvidenceSchema = z.object({
+  invoiceId: z.coerce.number().int().positive(),
+  storagePath: z
+    .string()
+    .trim()
+    .min(1)
+    .max(500)
+    .refine((value) => !value.includes("..") && !/\s/.test(value), {
+      error: "Đường dẫn file HĐ GTGT không hợp lệ.",
+    }),
+});
+
+const SUPPLIER_INVOICE_VAT_BUCKET = "supplier-invoice-attachments";
+
 export const createSupplierInvoice = withAction(
   {
     roles: ROLES,
@@ -232,6 +246,13 @@ export const recordSupplierPayment = withAction(
             "Cần đối soát khớp hóa đơn với phiếu nhập trước khi thanh toán.",
         };
       }
+      if (message.includes("vat_invoice_attachment_required")) {
+        return {
+          success: false,
+          error:
+            "Vui lòng đính kèm ít nhất 1 file HĐ GTGT trước khi ghi nhận thanh toán.",
+        };
+      }
       if (message.includes("invalid_payment_method")) {
         return {
           success: false,
@@ -245,12 +266,70 @@ export const recordSupplierPayment = withAction(
   },
 );
 
+export const attachSupplierInvoiceVatEvidence = withAction(
+  {
+    roles: MODULE_ACL.finance.allowedRoles,
+    schema: attachVatEvidenceSchema,
+    anyPermission: [
+      PERMISSION_KEYS.FINANCE_AP_PAY,
+      PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
+    ],
+    forbiddenError: "Không có quyền đính kèm HĐ GTGT.",
+  },
+  async (data, { supabase, claims }) => {
+    const tenantPrefix = `${claims.tenant_id}/`;
+    if (!data.storagePath.startsWith(tenantPrefix)) {
+      return {
+        success: false,
+        error: "File HĐ GTGT không thuộc tenant hiện tại.",
+      };
+    }
+
+    const { error } = await supabase.rpc(
+      "attach_supplier_invoice_vat_evidence",
+      {
+        p_invoice_id: data.invoiceId,
+        p_storage_path: data.storagePath,
+      },
+    );
+
+    if (error) {
+      const message = error.message ?? "";
+      if (error.code === "42501") {
+        return { success: false, error: "Không có quyền đính kèm HĐ GTGT." };
+      }
+      if (message.includes("invoice_not_found")) {
+        return { success: false, error: "Không tìm thấy hóa đơn NCC." };
+      }
+      if (
+        message.includes("invalid_vat_invoice_attachment") ||
+        message.includes("vat_invoice_attachment_tenant_mismatch")
+      ) {
+        return {
+          success: false,
+          error: "File HĐ GTGT không hợp lệ.",
+        };
+      }
+      return { success: false, error: "Không thể đính kèm HĐ GTGT." };
+    }
+
+    return {
+      success: true,
+      data: {
+        invoiceId: data.invoiceId,
+        storagePath: data.storagePath,
+        bucket: SUPPLIER_INVOICE_VAT_BUCKET,
+      },
+    };
+  },
+);
+
 const supplierInvoiceSelect = (branchId?: number) => {
   const grnSelect =
     branchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
-  return `id, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, total_amount, matching_status, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), ${grnSelect}`;
+  return `id, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, vat_invoice_attachment_path, total_amount, matching_status, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), ${grnSelect}`;
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;

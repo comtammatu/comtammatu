@@ -81,7 +81,7 @@ before adding anything new.
 | Primitive      | Base UI                                                          | provide headless behavior, semantics, focus, keyboard, and layering                          |
 | Component      | `packages/ui/src/components/*`                                   | provide one styled, reusable Má Tư UI unit                                                   |
 | Adapter        | `apps/web/app/components/*` and approved domain adapter families | translate components into an app or plane-specific semantic role                             |
-| UI Block       | `UI_BLOCK_REGISTRY` in `scripts/ui-component-registry.mjs`       | name a production-ready composition for a concrete job without creating another import layer |
+| UI Block       | `UI_BLOCK_REGISTRY` in `scripts/ui-component-registry.mjs`       | name a production-ready composition recipe; import adapters/components, never a `*Block` package |
 | Page archetype | `docs/spec/page-archetypes.md`                                   | define the complete route-level workflow recipe and state model                              |
 | Screen         | target route                                                     | bind real data, authority, copy, actions, and recovery to one URL                            |
 
@@ -98,11 +98,15 @@ Screen context and user job
 → responsive, accessibility, and runtime verification
 ```
 
-`UI Block` is recipe metadata, not a `blocks/` component library. Add a block
-only when at least two real consumers share the composition, or when a named
-critical workflow needs one approved exemplar. If no block fits, follow the
-archetype and compose existing adapters behind a route-scoped owner; do not add
-a speculative block.
+`UI Block` is recipe metadata, not a `blocks/` component library and not an
+importable `*Block` component layer (D086). Add a block recipe only when at
+least two real consumers share the composition, or when a named critical
+workflow needs one approved exemplar. When a composition becomes reusable code,
+promote it to a registered **Adapter** (app or domain) — for example
+`InventoryListFrame`, `DocumentFormFrame`, `SettingsPageFrame` — and keep the
+UI block entry as the named recipe that points agents at that adapter chain. If
+no block fits, follow the archetype and compose existing adapters behind a
+route-scoped owner; do not add a speculative block or invent `apps/web/.../blocks/`.
 
 Stitch is an optional design adapter and mirror. Seed it from the current
 guideline, archetype, block, and semantic roles; use it to compare hierarchy,

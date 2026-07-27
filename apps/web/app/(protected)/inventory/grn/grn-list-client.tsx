@@ -22,7 +22,7 @@ import {
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { useFormControlSize } from "@/components/form/control-size";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   InputGroup,
@@ -72,7 +72,10 @@ import {
   type GrnRow,
 } from "@lib/inventory/grn-list-model";
 import { messages } from "@lib/messages";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
+import {
+  InventoryListFrame,
+  inventoryListFilterSelectClassName,
+} from "../_components/inventory-list-frame";
 
 export type { GrnDraftRow, GrnRow } from "@lib/inventory/grn-list-model";
 
@@ -108,7 +111,7 @@ export function GrnListClient({
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<GrnListStatusFilter>("all");
-  const isTouchLayout = useIsMobile();
+  const controlSize = useFormControlSize();
   const router = useRouter();
   const grnColumns: DataTableColumn<GrnRow>[] = [
     {
@@ -204,7 +207,7 @@ export function GrnListClient({
   const hasActiveFilters = hasGrnListFilters(filters);
   const desktopActions = canCreate ? (
     <Button
-      size={withinOwnerTabs ? "default" : "lg"}
+      size={withinOwnerTabs ? "field" : "lg"}
       render={<Link href={`${basePath}/new`} />}
     >
       <IconPlus className="size-4" />
@@ -217,10 +220,7 @@ export function GrnListClient({
       variant="inline"
       className="items-stretch max-sm:[&>[data-slot=separator]]:hidden max-sm:[&>[data-slot=toolbar-group]:first-child]:basis-full sm:items-center"
       search={
-        <InputGroup
-          size={isTouchLayout ? "touch" : "field"}
-          className="w-full"
-        >
+        <InputGroup size={controlSize} className="w-full">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -242,8 +242,12 @@ export function GrnListClient({
           }
         >
           <SelectTrigger
-            size={isTouchLayout ? "touch" : "field"}
-            className="w-full sm:w-44"
+            size={controlSize}
+            className={
+              controlSize === "touch"
+                ? "w-full"
+                : inventoryListFilterSelectClassName
+            }
           >
             <SelectValue placeholder={FORM_VI.status} />
           </SelectTrigger>

@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   useTransition,
+  type ReactNode,
 } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -14,8 +15,10 @@ import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import {
   TriangleAlert as IconAlertTriangle,
-  CircleCheck as IconCircleCheck,
+  Eye as IconEye,
   Search as IconSearch,
+  Trash as IconTrash,
+  Upload as IconUpload,
 } from "lucide-react";
 import {
   Alert,
@@ -43,7 +46,6 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import { cn } from "@comtammatu/ui";
 import {
   BusinessDateField,
@@ -59,17 +61,37 @@ import {
   AppEmptyState,
   AppPage,
   AppPageHeader,
-  AppSection,
   AppToolbar,
-  DescriptionList,
 } from "@/components/surface";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
 import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
+import {
+  InventoryListFrame,
+  inventoryListFilterSelectClassName,
+} from "../_components/inventory-list-frame";
+import {
+  attachSupplierInvoiceVatEvidence,
   createSupplierInvoice,
   fetchSupplierInvoicesPage,
   recordSupplierPayment,
   recomputeInvoiceMatching,
 } from "../procurement-actions";
+import { createClient } from "@comtammatu/database/supabase/client";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import type { SupplierInvoiceCursor } from "../procurement-actions";
 import {
   getSupplierInvoiceOutstandingAmount,
@@ -90,6 +112,7 @@ import {
   type SupplierInvoiceViewMode,
 } from "./supplier-invoice-list-model";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
+import { RowActionsMenu } from "@/components/row-actions-menu";
 
 import { formatPercent } from "@comtammatu/shared/format";
 import { formatVND } from "@lib/inventory/format";
@@ -163,16 +186,21 @@ const supplierInvoiceSchema = z
     vat10Amount: optionalMoneySchema,
     matchingNotes: z.string().trim().optional(),
   })
-  .refine(
-    (data) =>
-      VAT_BUCKET_FIELDS.some(
-        (bucket) => Number(data[bucket.taxableField] || 0) > 0,
-      ),
-    {
-      error: FORM_VI.required,
-      path: ["vat0Taxable"],
-    },
-  );
+  .superRefine((data, ctx) => {
+    const hasTaxableBucket = VAT_BUCKET_FIELDS.some(
+      (bucket) => Number(data[bucket.taxableField] || 0) > 0,
+    );
+    if (hasTaxableBucket) return;
+
+    const firstEmptyBucket = VAT_BUCKET_FIELDS.find(
+      (bucket) => !(Number(data[bucket.taxableField] || 0) > 0),
+    );
+    ctx.addIssue({
+      code: "custom",
+      message: messages.inventory.supplierInvoices.vatBreakdownRequired,
+      path: [firstEmptyBucket?.taxableField ?? "vat0Taxable"],
+    });
+  });
 
 type SupplierInvoiceFormValues = z.infer<typeof supplierInvoiceSchema>;
 
@@ -274,11 +302,40 @@ function getPaymentMethodLabel(
   return method || copy.unknownPaymentMethod;
 }
 
+function DetailFact({
+  label,
+  value,
+  className,
+  valueClassName,
+}: {
+  label: string;
+  value: ReactNode;
+  className?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <Item variant="outline" size="sm" className={cn("items-start", className)}>
+      <ItemContent className="gap-0.5">
+        <ItemDescription className="line-clamp-none">{label}</ItemDescription>
+        <ItemTitle
+          size="heading"
+          className={cn("line-clamp-none font-normal", valueClassName)}
+        >
+          {value}
+        </ItemTitle>
+      </ItemContent>
+    </Item>
+  );
+}
+
 function SupplierInvoiceCreateFields({
   form,
   suppliers,
   grns,
   copy,
+  canAttachVatEvidence,
+  pendingVatFile,
+  onPendingVatFileChange,
 }: {
   form: UseFormReturn<
     SupplierInvoiceFormValues,
@@ -288,6 +345,9 @@ function SupplierInvoiceCreateFields({
   suppliers: SupplierOption[];
   grns: GrnOption[];
   copy: typeof messages.inventory.supplierInvoices;
+  canAttachVatEvidence: boolean;
+  pendingVatFile: File | null;
+  onPendingVatFileChange: (file: File | null) => void;
 }) {
   const grnId = form.watch("grnId");
   const formValues = form.watch();
@@ -340,92 +400,108 @@ function SupplierInvoiceCreateFields({
 
   return (
     <>
-      <SelectField
-        control={form.control}
-        name="grnId"
-        label={copy.linkedGrn}
-        options={grnOptions}
-        placeholder={copy.chooseGrnOptional}
-      />
-      <SelectField
-        control={form.control}
-        name="supplierId"
-        label={copy.supplier}
-        options={supplierOptions}
-        placeholder={copy.chooseSupplier}
-        disabled={selectedGrn != null}
-        required
-      />
-      <TextField
-        control={form.control}
-        name="invoiceNumber"
-        label={copy.invoiceNumber}
-        placeholder="INV-2026-001"
-        required
-      />
-      <BusinessDateField
-        control={form.control}
-        name="invoiceDate"
-        label={copy.invoiceDate}
-        required
-      />
-      <div className="grid gap-3 sm:grid-cols-2">
-        {VAT_BUCKET_FIELDS.map((bucket) => {
-          const rate = formatPercent(bucket.rate, 0);
-          return (
-            <div key={bucket.rate} className="contents">
-              <MoneyVndField
-                control={form.control}
-                name={bucket.taxableField}
-                label={copy.taxableAtRate(rate)}
-                placeholder={copy.subtotalPlaceholder}
-              />
-              {bucket.vatField != null ? (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium">{copy.documentSection}</p>
+        <SelectField
+          control={form.control}
+          name="grnId"
+          label={copy.linkedGrn}
+          options={grnOptions}
+          placeholder={copy.chooseGrnOptional}
+        />
+        <SelectField
+          control={form.control}
+          name="supplierId"
+          label={copy.supplier}
+          options={supplierOptions}
+          placeholder={copy.chooseSupplier}
+          disabled={selectedGrn != null}
+          required
+        />
+        <TextField
+          control={form.control}
+          name="invoiceNumber"
+          label={copy.invoiceNumber}
+          placeholder={copy.invoiceNumberPlaceholder}
+          required
+        />
+        <BusinessDateField
+          control={form.control}
+          name="invoiceDate"
+          label={copy.invoiceDate}
+          required
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">{copy.vatSection}</p>
+        <p className="text-xs text-muted-foreground">{copy.vatSectionHint}</p>
+        <div className="flex flex-col gap-3">
+          {VAT_BUCKET_FIELDS.map((bucket) => {
+            const rate = formatPercent(bucket.rate, 0);
+            return (
+              <div
+                key={bucket.rate}
+                className={
+                  bucket.vatField != null
+                    ? "grid gap-3 sm:grid-cols-2"
+                    : "grid gap-3"
+                }
+              >
                 <MoneyVndField
                   control={form.control}
-                  name={bucket.vatField}
-                  label={copy.vatAtRate(rate)}
-                  placeholder={copy.vatAutoPlaceholder}
+                  name={bucket.taxableField}
+                  label={copy.taxableAtRate(rate)}
+                  placeholder={copy.subtotalPlaceholder}
                 />
-              ) : null}
+                {bucket.vatField != null ? (
+                  <MoneyVndField
+                    control={form.control}
+                    name={bucket.vatField}
+                    label={copy.vatAtRate(rate)}
+                    placeholder={copy.vatAutoPlaceholder}
+                  />
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        <NoteCallout tone="muted">
+          {vatBreakdown.map((line) => (
+            <div
+              key={line.vatRate}
+              className="mb-2 flex items-center justify-between gap-3"
+            >
+              <span className="text-muted-foreground">
+                {copy.vatBucketSummary(
+                  formatPercent(line.vatRate, 0),
+                  messages.inventory.common.currencyCompact(
+                    formatVND(line.taxableAmount),
+                  ),
+                )}
+              </span>
+              <span className="font-mono tabular-nums">
+                {messages.inventory.common.currencyCompact(
+                  formatVND(line.vatAmount),
+                )}
+              </span>
             </div>
-          );
-        })}
-      </div>
-      <NoteCallout tone="muted">
-        {vatBreakdown.map((line) => (
-          <div
-            key={line.vatRate}
-            className="mb-2 flex items-center justify-between gap-3"
-          >
-            <span className="text-muted-foreground">
-              {copy.vatBucketSummary(
-                formatPercent(line.vatRate, 0),
-                messages.inventory.common.currencyCompact(
-                  formatVND(line.taxableAmount),
-                ),
-              )}
-            </span>
+          ))}
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{copy.vat}</span>
             <span className="font-mono tabular-nums">
-              {messages.inventory.common.currencyCompact(
-                formatVND(line.vatAmount),
-              )}
+              {messages.inventory.common.currencyCompact(formatVND(vatAmount))}
             </span>
           </div>
-        ))}
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">{copy.vat}</span>
-          <span className="font-mono tabular-nums">
-            {messages.inventory.common.currencyCompact(formatVND(vatAmount))}
-          </span>
-        </div>
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">{FORM_VI.totalAmount}</span>
-          <span className="font-mono font-semibold tabular-nums">
-            {messages.inventory.common.currencyCompact(formatVND(totalAmount))}
-          </span>
-        </div>
-      </NoteCallout>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{FORM_VI.totalAmount}</span>
+            <span className="font-mono font-semibold tabular-nums">
+              {messages.inventory.common.currencyCompact(formatVND(totalAmount))}
+            </span>
+          </div>
+        </NoteCallout>
+      </div>
+
       <TextareaField
         control={form.control}
         name="matchingNotes"
@@ -433,6 +509,64 @@ function SupplierInvoiceCreateFields({
         rows={3}
         placeholder={copy.matchingNotesPlaceholder}
       />
+
+      {canAttachVatEvidence ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">{copy.vatAttachmentLabel}</p>
+          <p className="text-xs text-muted-foreground">
+            {copy.vatAttachmentOptionalHint}
+          </p>
+          {pendingVatFile ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="min-w-0 flex-1 truncate text-sm">
+                {copy.vatAttachmentFileSelected(pendingVatFile.name)}
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-destructive"
+                onClick={() => onPendingVatFileChange(null)}
+                aria-label={copy.vatAttachmentClear}
+              >
+                <IconTrash className="size-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="relative w-full sm:w-auto"
+              render={<label />}
+            >
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="absolute inset-0 cursor-pointer opacity-0"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  event.target.value = "";
+                  if (!file) return;
+                  const isPdf = file.type === "application/pdf";
+                  const isImage = file.type.startsWith("image/");
+                  if (!isImage && !isPdf) {
+                    toast.error(copy.vatAttachmentHint);
+                    return;
+                  }
+                  if (file.size > 10 * 1024 * 1024) {
+                    toast.error(copy.vatAttachmentHint);
+                    return;
+                  }
+                  onPendingVatFileChange(file);
+                }}
+              />
+              <IconUpload className="size-4" />
+              {copy.vatAttachmentUpload}
+            </Button>
+          )}
+        </div>
+      ) : null}
     </>
   );
 }
@@ -498,10 +632,12 @@ export function SupplierInvoicesClient({
   initialTotalCount,
   filters,
   branchId,
+  tenantId,
   grnBasePath = "/inventory/grn",
   eyebrow = "Kho hàng",
   description,
   canPaySupplier = false,
+  canAttachVatEvidence = false,
 }: {
   invoices: SupplierInvoiceRow[];
   suppliers: SupplierOption[];
@@ -512,10 +648,12 @@ export function SupplierInvoicesClient({
   initialTotalCount: number;
   filters: SupplierInvoiceListFilters;
   branchId?: number;
+  tenantId: number;
   grnBasePath?: string;
   eyebrow?: string;
   description?: string;
   canPaySupplier?: boolean;
+  canAttachVatEvidence?: boolean;
 }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -524,7 +662,6 @@ export function SupplierInvoicesClient({
   const grnIdParam = searchParams.get("grnId");
   const preselectInvoiceId = invoiceIdParam ? Number(invoiceIdParam) : null;
   const preselectGrnId = grnIdParam ? Number(grnIdParam) : null;
-  const isInvoiceDeepLink = preselectInvoiceId != null;
 
   const [rows, setRows] = useState(invoices);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -542,12 +679,17 @@ export function SupplierInvoicesClient({
   const viewMode: SupplierInvoiceViewMode = filters.viewMode;
   const showOnlyOverdue = filters.overdueOnly;
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
-    preselectInvoiceId ?? invoices[0]?.id ?? null,
+    preselectInvoiceId,
   );
+  const [detailOpen, setDetailOpen] = useState(preselectInvoiceId != null);
   const [createOpen, setCreateOpen] = useState(
     preselectGrnId != null && preselectInvoiceId == null,
   );
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [vatUploading, setVatUploading] = useState(false);
+  const [pendingCreateVatFile, setPendingCreateVatFile] = useState<File | null>(
+    null,
+  );
   const paymentIntentKeyRef = useRef<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const controlSize = useFormControlSize();
@@ -576,7 +718,8 @@ export function SupplierInvoicesClient({
     setAggregateGroups(initialGroups);
     setTotalCount(initialTotalCount);
     setSearch(filters.query);
-    setSelectedInvoiceId(preselectInvoiceId ?? invoices[0]?.id ?? null);
+    setSelectedInvoiceId(preselectInvoiceId);
+    setDetailOpen(preselectInvoiceId != null);
   }, [
     filters.query,
     initialGroups,
@@ -607,6 +750,23 @@ export function SupplierInvoicesClient({
     },
     [pathname, router, search, searchParams, startTransition],
   );
+
+  const openInvoiceDetail = useCallback(
+    (invoiceId: number) => {
+      setSelectedInvoiceId(invoiceId);
+      setDetailOpen(true);
+      replaceListParam("invoiceId", String(invoiceId));
+    },
+    [replaceListParam],
+  );
+
+  function handleDetailOpenChange(open: boolean) {
+    setDetailOpen(open);
+    if (!open) {
+      setSelectedInvoiceId(null);
+      replaceListParam("invoiceId", null);
+    }
+  }
 
   useEffect(() => {
     const normalized = search.trim().slice(0, 200);
@@ -656,19 +816,36 @@ export function SupplierInvoicesClient({
   );
 
   const selectedInvoice =
-    rows.find((invoice) => invoice.id === selectedInvoiceId) ??
-    allInvoiceGroups.find(
-      (group) => group.primaryInvoice.id === selectedInvoiceId,
-    )?.primaryInvoice ??
-    rows[0] ??
-    allInvoiceGroups[0]?.primaryInvoice ??
-    null;
+    (typeof selectedInvoiceId === "number"
+      ? (rows.find((invoice) => invoice.id === selectedInvoiceId) ??
+        allInvoiceGroups
+          .flatMap((group) => group.invoices)
+          .find((invoice) => invoice.id === selectedInvoiceId) ??
+        allInvoiceGroups.find(
+          (group) => group.primaryInvoice.id === selectedInvoiceId,
+        )?.primaryInvoice)
+      : null) ?? null;
   const selectedOutstandingAmount = selectedInvoice
     ? getSupplierInvoiceOutstandingAmount(selectedInvoice)
     : 0;
   const selectedMissingMatchingEvidence = selectedInvoice
     ? isMissingMatchingEvidence(selectedInvoice)
     : false;
+  const selectedGroup =
+    selectedInvoice != null
+      ? (allInvoiceGroups.find(
+          (group) =>
+            group.id === getSupplierInvoiceGroupId(selectedInvoice, viewMode),
+        ) ?? null)
+      : null;
+  const selectedGroupId = selectedGroup?.id ?? null;
+  const invoicesInSelectedGroup = useMemo(() => {
+    if (selectedGroup == null) return [];
+    const rowById = new Map(rows.map((invoice) => [invoice.id, invoice]));
+    return selectedGroup.invoices.map(
+      (invoice) => rowById.get(invoice.id) ?? invoice,
+    );
+  }, [rows, selectedGroup]);
   const paymentDefaultValues = useMemo(
     () => createSupplierPaymentDefaultValues(selectedInvoice),
     [selectedInvoice?.id, selectedOutstandingAmount],
@@ -726,6 +903,8 @@ export function SupplierInvoicesClient({
     setTotalCount(nextTotalCount);
     if (typeof nextSelectedId === "number") {
       setSelectedInvoiceId(nextSelectedId);
+      setDetailOpen(true);
+      replaceListParam("invoiceId", String(nextSelectedId));
     }
   }
 
@@ -768,6 +947,53 @@ export function SupplierInvoicesClient({
     });
   }
 
+  async function uploadAndAttachVatEvidence(
+    invoiceId: number,
+    file: File,
+  ): Promise<boolean> {
+    const isPdf = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+    if (!isImage && !isPdf) {
+      toast.error(copy.vatAttachmentHint);
+      return false;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(copy.vatAttachmentHint);
+      return false;
+    }
+
+    const supabase = createClient();
+    const ext =
+      file.name.includes(".") && file.name.lastIndexOf(".") >= 0
+        ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
+        : isPdf
+          ? ".pdf"
+          : ".jpg";
+    const path = `${tenantId}/supplier-invoices/${invoiceId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("supplier-invoice-attachments")
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      });
+    if (uploadError) {
+      toast.error(copy.vatAttachmentUploadFailed);
+      return false;
+    }
+
+    const res = await attachSupplierInvoiceVatEvidence({
+      invoiceId,
+      storagePath: path,
+    });
+    if (!res.success) {
+      toast.error(res.error ?? copy.vatAttachmentUploadFailed);
+      return false;
+    }
+
+    return true;
+  }
+
   async function handleCreateInvoice(values: SupplierInvoiceFormValues) {
     const selectedGrn =
       values.grnId !== "none"
@@ -775,6 +1001,7 @@ export function SupplierInvoicesClient({
         : null;
     const resolvedSupplierId =
       selectedGrn?.supplierId ?? Number(values.supplierId || 0);
+    const pendingFile = pendingCreateVatFile;
     const res = await createSupplierInvoice({
       supplierId: resolvedSupplierId,
       grnId: selectedGrn?.id ?? null,
@@ -786,7 +1013,25 @@ export function SupplierInvoicesClient({
 
     if (res.success && res.data) {
       const created = res.data as { id: number };
-      await reloadInvoices(created.id);
+      setPendingCreateVatFile(null);
+
+      if (pendingFile && canAttachVatEvidence) {
+        const attached = await uploadAndAttachVatEvidence(
+          created.id,
+          pendingFile,
+        );
+        await reloadInvoices(created.id);
+        if (!attached) {
+          toast.error(copy.vatAttachmentCreateFailed);
+        } else {
+          toast.success(copy.vatAttachmentUploaded);
+        }
+      } else {
+        await reloadInvoices(created.id);
+        if (canAttachVatEvidence) {
+          toast.message(copy.vatAttachmentRemindAfterCreate);
+        }
+      }
     }
 
     return res;
@@ -795,6 +1040,10 @@ export function SupplierInvoicesClient({
   async function handleRecordPayment(values: SupplierPaymentFormValues) {
     if (!selectedInvoice) {
       return { success: false, error: copy.noPaymentInvoice };
+    }
+
+    if (!selectedInvoice.vatInvoiceAttachmentPath) {
+      return { success: false, error: copy.paymentBlockedNoVatAttachment };
     }
 
     const amount = Number(values.amount || 0);
@@ -827,7 +1076,44 @@ export function SupplierInvoicesClient({
     }
   }
 
+  async function handleVatAttachmentUpload(file: File) {
+    if (!selectedInvoice) return;
+
+    setVatUploading(true);
+    try {
+      const attached = await uploadAndAttachVatEvidence(
+        selectedInvoice.id,
+        file,
+      );
+      if (!attached) return;
+
+      toast.success(copy.vatAttachmentUploaded);
+      await reloadInvoices(selectedInvoice.id);
+    } finally {
+      setVatUploading(false);
+    }
+  }
+
+  async function handleOpenVatAttachment() {
+    const path = selectedInvoice?.vatInvoiceAttachmentPath;
+    if (!path) return;
+
+    const supabase = createClient();
+    const { data, error } = await supabase.storage
+      .from("supplier-invoice-attachments")
+      .createSignedUrl(path, 60 * 10);
+    if (error || !data?.signedUrl) {
+      toast.error(copy.vatAttachmentOpenFailed);
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
   function openSupplierPaymentDialog() {
+    if (!selectedInvoice?.vatInvoiceAttachmentPath) {
+      toast.error(copy.paymentBlockedNoVatAttachment);
+      return;
+    }
     paymentIntentKeyRef.current = crypto.randomUUID();
     setPaymentOpen(true);
   }
@@ -842,16 +1128,23 @@ export function SupplierInvoicesClient({
     setPaymentOpen(open);
   }
 
+  function handleCreateOpenChange(open: boolean) {
+    if (!open) {
+      setPendingCreateVatFile(null);
+    }
+    setCreateOpen(open);
+  }
+
   function handleRecomputeMatching() {
     if (!selectedInvoice) return;
 
     startTransition(async () => {
       const res = await recomputeInvoiceMatching(selectedInvoice.id);
       if (!res.success) {
-        toast.error(res.error ?? "Không thể tính lại đối soát.");
+        toast.error(res.error ?? copy.recomputeMatchingFailed);
         return;
       }
-      toast.success("Đã tính lại đối soát 3-way.");
+      toast.success(copy.recomputeMatchingSuccess);
       await reloadInvoices(selectedInvoice.id);
     });
   }
@@ -859,6 +1152,7 @@ export function SupplierInvoicesClient({
   const renderInvoiceGroupCard = (group: SupplierInvoiceGroup) => {
     const primaryInvoice = getPrimaryInvoice(group);
     const isActive =
+      detailOpen &&
       selectedInvoice != null &&
       group.id === getSupplierInvoiceGroupId(selectedInvoice, viewMode);
 
@@ -874,7 +1168,7 @@ export function SupplierInvoicesClient({
           <button
             type="button"
             onClick={() => {
-              if (primaryInvoice) setSelectedInvoiceId(primaryInvoice.id);
+              if (primaryInvoice) openInvoiceDetail(primaryInvoice.id);
             }}
             aria-pressed={isActive}
           />
@@ -886,6 +1180,18 @@ export function SupplierInvoicesClient({
             <p className="truncate text-sm text-muted-foreground">
               {group.subtitle}
             </p>
+            {viewMode !== "supplier" && group.invoices.length > 0 ? (
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {copy.invoiceCodesPreview(
+                  group.invoices.map((invoice) => invoice.code),
+                )}
+              </p>
+            ) : null}
+            {viewMode === "supplier" ? (
+              <p className="font-mono text-xs text-muted-foreground tabular-nums">
+                {copy.invoiceCountHeader}: {group.invoiceCount}
+              </p>
+            ) : null}
           </div>
           {group.overdueCount > 0 ? (
             <Badge variant="outline" className="border-destructive/20">
@@ -911,23 +1217,6 @@ export function SupplierInvoicesClient({
               {messages.inventory.common.currencyCompact(
                 formatVND(group.outstandingAmount),
               )}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{copy.aging}</span>
-            <span
-              className={cn(
-                "text-right font-mono font-semibold",
-                group.overdueAmount > 0 && "text-destructive",
-              )}
-            >
-              {group.overdueAmount > 0
-                ? messages.inventory.common.currencyCompact(
-                    formatVND(group.overdueAmount),
-                  )
-                : group.nextDueDate
-                  ? formatDate(group.nextDueDate)
-                  : copy.noOpenDueDate}
             </span>
           </div>
           <div className="flex items-center justify-between gap-3">
@@ -981,39 +1270,28 @@ export function SupplierInvoicesClient({
     },
     {
       key: "invoiceCount",
-      header: copy.invoiceNumber,
-      className: "min-w-28",
-      render: (group) => (
-        <span className="text-sm text-muted-foreground">{group.subtitle}</span>
-      ),
-    },
-    {
-      key: "aging",
-      header: copy.aging,
-      className: "min-w-40 text-right",
-      render: (group) => (
-        <div className="flex flex-col items-end gap-1 text-right">
-          <span
-            className={cn(
-              "font-mono text-sm tabular-nums",
-              group.overdueAmount > 0 && "text-destructive",
-            )}
-          >
-            {group.overdueAmount > 0
-              ? messages.inventory.common.currencyCompact(
-                  formatVND(group.overdueAmount),
-                )
-              : group.nextDueDate
-                ? formatDate(group.nextDueDate)
-                : copy.noOpenDueDate}
+      header: copy.invoiceCountHeader,
+      className:
+        viewMode === "supplier" ? "min-w-20 text-right" : "min-w-40",
+      render: (group) =>
+        viewMode === "supplier" ? (
+          <span className="font-mono text-sm tabular-nums">
+            {group.invoiceCount}
           </span>
-          {group.overdueCount > 0 ? (
-            <span className="text-xs text-muted-foreground">
-              {copy.overdueGroupSummary(group.overdueCount)}
+        ) : (
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-sm text-muted-foreground">
+              {copy.invoiceGroupSummary(group.invoiceCount)}
             </span>
-          ) : null}
-        </div>
-      ),
+            {group.invoices.length > 0 ? (
+              <span className="truncate font-mono text-xs text-muted-foreground">
+                {copy.invoiceCodesPreview(
+                  group.invoices.map((invoice) => invoice.code),
+                )}
+              </span>
+            ) : null}
+          </div>
+        ),
     },
     {
       key: "total",
@@ -1065,25 +1343,33 @@ export function SupplierInvoicesClient({
     },
     {
       key: "action",
-      header: FORM_VI.action,
-      className: "w-28 text-right",
+      header: "",
+      className: "w-12 text-right",
       render: (group) => {
         const primaryInvoice = getPrimaryInvoice(group);
-        const isActive =
-          selectedInvoice != null &&
-          group.id === getSupplierInvoiceGroupId(selectedInvoice, viewMode);
 
         return (
-          <Button
-            type="button"
-            size="sm"
-            variant={isActive ? "default" : "outline"}
-            onClick={() => {
-              if (primaryInvoice) setSelectedInvoiceId(primaryInvoice.id);
-            }}
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
-            {isActive ? copy.analyzingShort : copy.groupDetailAction}
-          </Button>
+            <RowActionsMenu
+              items={[
+                {
+                  key: "view",
+                  label: copy.groupDetailAction,
+                  icon: <IconEye data-icon="inline-start" />,
+                  disabled: primaryInvoice == null,
+                  onSelect: () => {
+                    if (primaryInvoice) openInvoiceDetail(primaryInvoice.id);
+                  },
+                },
+              ]}
+              label={`${copy.groupDetailAction}: ${group.title}`}
+              triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
+            />
+          </div>
         );
       },
     },
@@ -1091,24 +1377,38 @@ export function SupplierInvoicesClient({
 
   const viewModeActions = (
     <div className="flex flex-wrap gap-2">
-      <Button
-        type="button"
-        size={controlSize}
-        variant={viewMode === "supplier" ? "default" : "outline"}
-        onClick={() => replaceListParam("view", null)}
-        aria-pressed={viewMode === "supplier"}
+      <Select
+        value={viewMode}
+        onValueChange={(value) =>
+          replaceListParam("view", value === "supplier" ? null : value)
+        }
       >
-        {copy.viewBySupplier}
-      </Button>
-      <Button
-        type="button"
-        size={controlSize}
-        variant={viewMode === "po" ? "default" : "outline"}
-        onClick={() => replaceListParam("view", "po")}
-        aria-pressed={viewMode === "po"}
-      >
-        {copy.viewByPo}
-      </Button>
+        <SelectTrigger
+          size={controlSize}
+          className={
+            controlSize === "touch"
+              ? "w-full"
+              : inventoryListFilterSelectClassName
+          }
+          aria-label={copy.groupByAria}
+        >
+          <SelectValue placeholder={copy.groupByLabel} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            value="supplier"
+            size={controlSize === "touch" ? "touch" : "default"}
+          >
+            {copy.viewBySupplier}
+          </SelectItem>
+          <SelectItem
+            value="po"
+            size={controlSize === "touch" ? "touch" : "default"}
+          >
+            {copy.viewByPo}
+          </SelectItem>
+        </SelectContent>
+      </Select>
       <Button
         type="button"
         size={controlSize}
@@ -1124,32 +1424,56 @@ export function SupplierInvoicesClient({
     </div>
   );
 
-  const detailTitle =
-    selectedInvoice != null
-      ? viewMode === "supplier"
-        ? selectedInvoice.supplierName
-        : (selectedInvoice.poCode ?? copy.noLinkedPo)
-      : copy.noInvoiceSelected;
-
-  const selectedGroup = selectedInvoice
-    ? (allInvoiceGroups.find(
-        (group) =>
-          group.id === getSupplierInvoiceGroupId(selectedInvoice, viewMode),
-      ) ?? null)
-    : null;
-
-  const detailSubtitle =
-    selectedGroup != null
-      ? `${copy.outstandingPayable}: ${messages.inventory.common.currencyCompact(
-          formatVND(selectedGroup.outstandingAmount),
-        )} · ${copy.invoiceGroupSummary(selectedGroup.invoiceCount)}`
-      : null;
-
-  const activeGroupId = selectedGroup?.id ?? null;
+  const activeGroupId = selectedGroupId;
   const selectedAgingLabel = selectedInvoice
     ? getInvoiceAgingLabel(selectedInvoice, copy)
     : null;
   const selectedLastPayment = selectedInvoice?.lastPayment ?? null;
+  const missingVatAttachment =
+    selectedInvoice != null && !selectedInvoice.vatInvoiceAttachmentPath;
+  const canShowPayAction =
+    canPaySupplier && selectedInvoice != null && selectedOutstandingAmount > 0;
+  const payIsPrimary =
+    canShowPayAction &&
+    selectedInvoice != null &&
+    selectedInvoice.vatInvoiceAttachmentPath != null;
+  const uploadIsPrimary =
+    canAttachVatEvidence &&
+    missingVatAttachment &&
+    selectedOutstandingAmount > 0;
+  const showMatchProblem =
+    selectedInvoice != null &&
+    (selectedMissingMatchingEvidence ||
+      (selectedInvoice.variance !== null && selectedInvoice.variance > 0));
+  const vatSummaryLabel =
+    selectedInvoice != null && selectedInvoice.vatBreakdown.length > 0
+      ? selectedInvoice.vatBreakdown
+          .map((line) =>
+            copy.vatBucketSummary(
+              formatPercent(line.vatRate, 0),
+              messages.inventory.common.currencyCompact(
+                formatVND(line.taxableAmount),
+              ),
+            ),
+          )
+          .join(" · ")
+      : null;
+
+  const detailTitle =
+    selectedInvoice != null ? selectedInvoice.code : copy.noInvoiceSelected;
+
+  const detailSubtitle =
+    selectedInvoice != null
+      ? [
+          selectedInvoice.supplierName,
+          selectedAgingLabel,
+          selectedGroup != null && selectedGroup.invoiceCount > 1
+            ? copy.invoiceGroupSummary(selectedGroup.invoiceCount)
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : null;
 
   return (
     <AppPage width="xwide">
@@ -1160,7 +1484,7 @@ export function SupplierInvoicesClient({
         actions={
           <Button
             type="button"
-            size="touch"
+            size="lg"
             onClick={() => setCreateOpen(true)}
           >
             {copy.createAction}
@@ -1168,14 +1492,7 @@ export function SupplierInvoicesClient({
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        <div
-          className={cn(
-            "flex min-w-0 flex-col gap-4",
-            isInvoiceDeepLink && "order-2 xl:order-1",
-          )}
-        >
-          <InventoryListFrame
+      <InventoryListFrame
             title={
               viewMode === "supplier" ? copy.viewBySupplier : copy.viewByPo
             }
@@ -1216,7 +1533,11 @@ export function SupplierInvoicesClient({
                       searchPlaceholder={copy.supplierSearchPlaceholder}
                       aria-label={copy.supplierFilterAria}
                       size={controlSize}
-                      triggerClassName="w-48"
+                      triggerClassName={
+                        controlSize === "touch"
+                          ? "w-full"
+                          : inventoryListFilterSelectClassName
+                      }
                     />
 
                     <Select
@@ -1228,7 +1549,14 @@ export function SupplierInvoicesClient({
                         )
                       }
                     >
-                      <SelectTrigger size={controlSize} className="w-48">
+                      <SelectTrigger
+                        size={controlSize}
+                        className={
+                          controlSize === "touch"
+                            ? "w-full"
+                            : inventoryListFilterSelectClassName
+                        }
+                      >
                         <SelectValue placeholder={copy.matchingPlaceholder} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1259,7 +1587,14 @@ export function SupplierInvoicesClient({
                         )
                       }
                     >
-                      <SelectTrigger size={controlSize} className="w-48">
+                      <SelectTrigger
+                        size={controlSize}
+                        className={
+                          controlSize === "touch"
+                            ? "w-full"
+                            : inventoryListFilterSelectClassName
+                        }
+                      >
                         <SelectValue placeholder={copy.paymentPlaceholder} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1304,13 +1639,15 @@ export function SupplierInvoicesClient({
               emptyMode={showEmptyResults ? "no-results" : "no-data"}
               onRowClick={(group) => {
                 const primaryInvoice = getPrimaryInvoice(group);
-                if (primaryInvoice) setSelectedInvoiceId(primaryInvoice.id);
+                if (primaryInvoice) openInvoiceDetail(primaryInvoice.id);
               }}
               getRowAriaLabel={(group) =>
                 `${copy.groupDetailAction}: ${group.title}`
               }
               getRowDataState={(group) =>
-                group.id === activeGroupId ? "selected" : undefined
+                group.id === activeGroupId && detailOpen
+                  ? "selected"
+                  : undefined
               }
               mobileCardRender={renderInvoiceGroupCard}
             />
@@ -1319,7 +1656,7 @@ export function SupplierInvoicesClient({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="touch"
                   onClick={handleLoadMore}
                   disabled={loadingMore}
                 >
@@ -1328,179 +1665,206 @@ export function SupplierInvoicesClient({
               </div>
             ) : null}
           </InventoryListFrame>
-        </div>
 
-        <AppSection
-          title={detailTitle}
-          headerHint={detailSubtitle ?? undefined}
-          className={cn(isInvoiceDeepLink && "order-1 xl:order-2")}
+      <Sheet open={detailOpen} onOpenChange={handleDetailOpenChange}>
+        <SheetContent
+          side="right"
+          size="lg"
+          className="w-full gap-0 p-0 sm:max-w-xl"
         >
-          {selectedInvoice ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="font-mono">
-                  {selectedInvoice.code}
-                </Badge>
-                {canPaySupplier && selectedOutstandingAmount > 0 ? (
-                  <Button
-                    type="button"
-                    size="touch"
-                    onClick={openSupplierPaymentDialog}
-                    disabled={isPending}
-                  >
-                    {copy.payAction}
-                  </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  size="touch"
-                  variant="outline"
-                  onClick={handleRecomputeMatching}
-                  disabled={isPending}
-                >
-                  {copy.recomputeMatching}
-                </Button>
-                <StatusBadge
-                  domain="inventory"
-                  value={getDisplayMatchStatus(selectedInvoice)}
-                />
-                <StatusBadge
-                  domain="inventory"
-                  value={selectedInvoice.paymentStatus}
-                />
-              </div>
+          <SheetHeader>
+            <SheetTitle className="font-mono">{detailTitle}</SheetTitle>
+            {detailSubtitle ? (
+              <SheetDescription>{detailSubtitle}</SheetDescription>
+            ) : null}
+          </SheetHeader>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <KpiCard
-                  density="compact"
-                  label={copy.totalInvoice}
-                  value={messages.inventory.common.currencyCompact(
-                    formatVND(selectedInvoice.amount),
-                  )}
-                />
-                <KpiCard
-                  density="compact"
-                  label={copy.outstandingPayable}
-                  value={messages.inventory.common.currencyCompact(
-                    formatVND(selectedOutstandingAmount),
-                  )}
-                />
-                <KpiCard
-                  density="compact"
-                  label={copy.paidAmount}
-                  value={messages.inventory.common.currencyCompact(
-                    formatVND(selectedInvoice.paidAmount),
-                  )}
-                />
-                <KpiCard
-                  density="compact"
-                  label={copy.aging}
-                  value={
-                    <span
+          {selectedInvoice ? (
+            <>
+              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge
+                    domain="inventory"
+                    value={getDisplayMatchStatus(selectedInvoice)}
+                  />
+                  <StatusBadge
+                    domain="inventory"
+                    value={selectedInvoice.paymentStatus}
+                  />
+                </div>
+
+                {invoicesInSelectedGroup.length > 1 ? (
+                  <Select
+                    value={String(selectedInvoice.id)}
+                    onValueChange={(value) => openInvoiceDetail(Number(value))}
+                  >
+                    <SelectTrigger
+                      size={controlSize}
+                      className="w-full"
+                      aria-label={copy.selectInvoiceInGroupAria}
+                    >
+                      <SelectValue placeholder={copy.selectInvoiceInGroup} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {invoicesInSelectedGroup.map((invoice) => (
+                        <SelectItem
+                          key={invoice.id}
+                          value={String(invoice.id)}
+                          size={controlSize === "touch" ? "touch" : "default"}
+                        >
+                          <span className="font-mono">{invoice.code}</span>
+                          {" · "}
+                          {messages.inventory.common.currencyCompact(
+                            formatVND(
+                              getSupplierInvoiceOutstandingAmount(invoice),
+                            ),
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+
+                <Item variant="outline" size="sm" className="items-start">
+                  <ItemContent className="gap-1">
+                    <ItemDescription className="line-clamp-none">
+                      {copy.outstandingPayable}
+                    </ItemDescription>
+                    <ItemTitle
+                      size="heading"
                       className={cn(
-                        isInvoiceOverdue(selectedInvoice) && "text-destructive",
+                        "line-clamp-none font-mono text-2xl font-semibold tabular-nums tracking-tight",
+                        isInvoiceOverdue(selectedInvoice) &&
+                          selectedOutstandingAmount > 0 &&
+                          "text-destructive",
                       )}
                     >
-                      {selectedAgingLabel}
-                    </span>
-                  }
-                />
-              </div>
-
-              <DescriptionList
-                className="grid gap-3 sm:grid-cols-2"
-                descriptionClassName="font-medium"
-                items={[
-                  {
-                    term: copy.invoiceDate,
-                    description: formatDate(selectedInvoice.invoiceDate),
-                  },
-                  {
-                    term: copy.dueDate,
-                    description: (
-                      <span
-                        className={cn(
-                          isInvoiceOverdue(selectedInvoice) &&
-                            "text-destructive",
-                        )}
-                      >
-                        {formatDate(selectedInvoice.dueDate)}
-                      </span>
-                    ),
-                  },
-                  {
-                    term: FORM_VI.subtotal,
-                    description: messages.inventory.common.currencyCompact(
-                      formatVND(selectedInvoice.subtotal),
-                    ),
-                  },
-                  {
-                    term: copy.vatBreakdown,
-                    description: (
-                      <div className="grid gap-1">
-                        {selectedInvoice.vatBreakdown.map((line) => (
-                          <div
-                            key={line.vatRate}
-                            className="flex items-center justify-between gap-3"
-                          >
-                            <span>
-                              {copy.vatBucketSummary(
-                                formatPercent(line.vatRate, 0),
-                                messages.inventory.common.currencyCompact(
-                                  formatVND(line.taxableAmount),
-                                ),
-                              )}
-                            </span>
-                            <span className="font-mono tabular-nums">
-                              {messages.inventory.common.currencyCompact(
-                                formatVND(line.vatAmount),
-                              )}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ),
-                  },
-                  {
-                    term: copy.payableFormulaLabel,
-                    description: copy.payableFormula(
-                      messages.inventory.common.currencyCompact(
+                      {messages.inventory.common.currencyCompact(
+                        formatVND(selectedOutstandingAmount),
+                      )}
+                    </ItemTitle>
+                    <ItemDescription className="line-clamp-none">
+                      {copy.totalInvoice}{" "}
+                      {messages.inventory.common.currencyCompact(
                         formatVND(selectedInvoice.amount),
-                      ),
-                      messages.inventory.common.currencyCompact(
+                      )}
+                      {" · "}
+                      {copy.paidAmount}{" "}
+                      {messages.inventory.common.currencyCompact(
                         formatVND(selectedInvoice.paidAmount),
-                      ),
-                      messages.inventory.common.currencyCompact(
-                        formatVND(selectedInvoice.creditAppliedAmount),
-                      ),
-                    ),
-                  },
-                  {
-                    term: copy.lastPayment,
-                    description: selectedLastPayment
-                      ? copy.lastPaymentSummary(
-                          formatDate(selectedLastPayment.paymentDate),
-                          getPaymentMethodLabel(
-                            selectedLastPayment.paymentMethod,
-                            copy,
-                          ),
-                          messages.inventory.common.currencyCompact(
-                            formatVND(selectedLastPayment.amount),
-                          ),
-                        )
-                      : copy.noPaymentHistory,
-                  },
-                  ...(selectedLastPayment?.referenceNote
-                    ? [
-                        {
-                          term: copy.paymentReference,
-                          description: selectedLastPayment.referenceNote,
-                        },
-                      ]
-                    : []),
-                  {
-                    term: copy.linkedGrn,
-                    description:
+                      )}
+                      {selectedInvoice.creditAppliedAmount > 0
+                        ? ` · ${copy.supplierCredit} ${messages.inventory.common.currencyCompact(
+                            formatVND(selectedInvoice.creditAppliedAmount),
+                          )}`
+                        : null}
+                    </ItemDescription>
+                  </ItemContent>
+                </Item>
+
+                {missingVatAttachment ? (
+                  <Item variant="outline" size="sm" className="items-start">
+                    <ItemContent className="gap-1">
+                      <ItemTitle size="heading" className="line-clamp-none">
+                        {copy.vatAttachmentMissing}
+                      </ItemTitle>
+                      <ItemDescription className="line-clamp-none">
+                        {canShowPayAction
+                          ? copy.paymentBlockedNoVatAttachment
+                          : copy.vatAttachmentHint}
+                      </ItemDescription>
+                    </ItemContent>
+                    {canAttachVatEvidence ? (
+                      <ItemActions>
+                        <Button
+                          variant={uploadIsPrimary ? "default" : "outline"}
+                          size={controlSize}
+                          className="relative"
+                          disabled={vatUploading || isPending}
+                          render={<label />}
+                        >
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                            className="absolute inset-0 cursor-pointer opacity-0"
+                            disabled={vatUploading || isPending}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              event.target.value = "";
+                              if (file) void handleVatAttachmentUpload(file);
+                            }}
+                          />
+                          {vatUploading ? (
+                            <Spinner className="size-4" />
+                          ) : (
+                            <IconUpload className="size-4" />
+                          )}
+                          {copy.vatAttachmentUpload}
+                        </Button>
+                      </ItemActions>
+                    ) : null}
+                  </Item>
+                ) : (
+                  <Item variant="outline" size="sm">
+                    <ItemContent>
+                      <ItemTitle size="heading" className="line-clamp-none">
+                        {copy.vatAttachmentReady}
+                      </ItemTitle>
+                    </ItemContent>
+                    <ItemActions>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size={controlSize}
+                        onClick={() => void handleOpenVatAttachment()}
+                      >
+                        {copy.vatAttachmentOpen}
+                      </Button>
+                    </ItemActions>
+                  </Item>
+                )}
+
+                <ItemGroup className="grid grid-cols-2 gap-2">
+                  <DetailFact
+                    label={copy.invoiceDate}
+                    value={formatDate(selectedInvoice.invoiceDate)}
+                  />
+                  <DetailFact
+                    label={copy.dueDate}
+                    value={formatDate(selectedInvoice.dueDate)}
+                    valueClassName={
+                      isInvoiceOverdue(selectedInvoice)
+                        ? "text-destructive"
+                        : undefined
+                    }
+                  />
+                  {vatSummaryLabel ? (
+                    <DetailFact
+                      label={copy.vat}
+                      value={
+                        <span className="flex flex-col gap-0.5">
+                          <span>{vatSummaryLabel}</span>
+                          <span className="font-mono tabular-nums">
+                            {messages.inventory.common.currencyCompact(
+                              formatVND(selectedInvoice.vatAmount),
+                            )}
+                          </span>
+                        </span>
+                      }
+                    />
+                  ) : null}
+                  <DetailFact
+                    label={copy.aging}
+                    value={selectedAgingLabel}
+                    valueClassName={
+                      isInvoiceOverdue(selectedInvoice)
+                        ? "text-destructive"
+                        : undefined
+                    }
+                  />
+                  <DetailFact
+                    label={copy.linkedGrn}
+                    value={
                       selectedInvoice.grnCode &&
                       selectedInvoice.grnId != null ? (
                         <Link
@@ -1511,78 +1875,119 @@ export function SupplierInvoicesClient({
                         </Link>
                       ) : (
                         copy.notLinked
-                      ),
-                  },
-                  {
-                    term: copy.linkedPo,
-                    description:
+                      )
+                    }
+                  />
+                  <DetailFact
+                    label={copy.linkedPo}
+                    value={
                       selectedInvoice.poCode && selectedInvoice.poId != null ? (
                         <span className="font-mono">
                           {selectedInvoice.poCode}
                         </span>
                       ) : (
                         copy.notLinked
-                      ),
-                  },
-                ]}
-              />
+                      )
+                    }
+                  />
+                  {selectedLastPayment ? (
+                    <DetailFact
+                      className="col-span-2"
+                      label={copy.lastPayment}
+                      value={copy.lastPaymentSummary(
+                        formatDate(selectedLastPayment.paymentDate),
+                        getPaymentMethodLabel(
+                          selectedLastPayment.paymentMethod,
+                          copy,
+                        ),
+                        messages.inventory.common.currencyCompact(
+                          formatVND(selectedLastPayment.amount),
+                        ),
+                      )}
+                    />
+                  ) : null}
+                </ItemGroup>
 
-              {selectedMissingMatchingEvidence ? (
-                <Alert className="border-warning/20 bg-warning/10 text-warning">
-                  <IconAlertTriangle />
-                  <AlertTitle>{copy.missingGrnTitle}</AlertTitle>
-                  <AlertDescription className="text-muted-foreground">
-                    {copy.missingGrnDescription}
-                  </AlertDescription>
-                </Alert>
-              ) : selectedInvoice.variance !== null &&
-                selectedInvoice.variance > 0 ? (
-                <Alert variant="destructive">
-                  <IconAlertTriangle />
-                  <AlertTitle>
-                    {copy.varianceTitle(
-                      formatPercent(selectedInvoice.variance, 3),
-                    )}
-                  </AlertTitle>
-                  <AlertDescription>
-                    {copy.varianceDescription}
-                    {selectedInvoice.grnId != null ? (
-                      <Link
-                        href={`${grnBasePath}/${selectedInvoice.grnId}`}
-                        className="block font-medium text-primary hover:underline"
-                      >
-                        {copy.viewGrnLine}
-                      </Link>
-                    ) : null}
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Alert className="border-success/20 bg-success/10 text-success">
-                  <IconCircleCheck />
-                  <AlertTitle>{copy.safeTitle}</AlertTitle>
-                  <AlertDescription className="text-muted-foreground">
-                    {copy.safeDescription}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
+                {showMatchProblem ? (
+                  selectedMissingMatchingEvidence ? (
+                    <Alert className="border-warning/20 bg-warning/10 text-warning">
+                      <IconAlertTriangle />
+                      <AlertTitle>{copy.missingGrnTitle}</AlertTitle>
+                      <AlertDescription className="text-muted-foreground">
+                        {copy.missingGrnDescription}
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert variant="destructive">
+                      <IconAlertTriangle />
+                      <AlertTitle>
+                        {copy.varianceTitle(
+                          formatPercent(selectedInvoice.variance ?? 0, 3),
+                        )}
+                      </AlertTitle>
+                      <AlertDescription>
+                        {copy.varianceDescription}
+                        {selectedInvoice.grnId != null ? (
+                          <Link
+                            href={`${grnBasePath}/${selectedInvoice.grnId}`}
+                            className="block font-medium text-primary hover:underline"
+                          >
+                            {copy.viewGrnLine}
+                          </Link>
+                        ) : null}
+                      </AlertDescription>
+                    </Alert>
+                  )
+                ) : null}
+              </div>
+
+              <SheetFooter>
+                <div className="flex flex-wrap gap-2">
+                  {canShowPayAction ? (
+                    <Button
+                      type="button"
+                      size="touch"
+                      className="flex-1"
+                      variant={payIsPrimary ? "default" : "outline"}
+                      onClick={openSupplierPaymentDialog}
+                      disabled={isPending || missingVatAttachment}
+                    >
+                      {copy.payAction}
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="touch"
+                    className={canShowPayAction ? "flex-1" : "w-full"}
+                    variant="outline"
+                    onClick={handleRecomputeMatching}
+                    disabled={isPending}
+                  >
+                    {copy.recomputeMatching}
+                  </Button>
+                </div>
+              </SheetFooter>
+            </>
           ) : (
-            <AppEmptyState
-              compact
-              title={copy.noAnalysisTitle}
-              description={copy.noAnalysisDescription}
-            />
+            <div className="px-3 py-4 sm:px-4">
+              <AppEmptyState
+                compact
+                title={copy.noAnalysisTitle}
+                description={copy.noAnalysisDescription}
+              />
+            </div>
           )}
-        </AppSection>
-      </div>
+        </SheetContent>
+      </Sheet>
 
       <FormDialog
         open={createOpen}
-        onOpenChange={setCreateOpen}
+        onOpenChange={handleCreateOpenChange}
         schema={supplierInvoiceSchema}
         defaultValues={createDefaultValues}
         entityKey="new-supplier-invoice"
         title={copy.createAction}
+        description={copy.createDescription}
         submitLabel={copy.saveInvoice}
         cancelLabel={ACTIONS_VI.cancel}
         successMessage={STATES_VI.saved}
@@ -1595,6 +2000,9 @@ export function SupplierInvoicesClient({
             suppliers={suppliers}
             grns={grns}
             copy={copy}
+            canAttachVatEvidence={canAttachVatEvidence}
+            pendingVatFile={pendingCreateVatFile}
+            onPendingVatFileChange={setPendingCreateVatFile}
           />
         )}
       </FormDialog>

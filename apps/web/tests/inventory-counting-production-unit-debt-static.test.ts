@@ -60,6 +60,8 @@ test("inventory unit option helpers delegate to one shared implementation", () =
   ]) {
     assert.match(source, /getDefaultIngredientUnit/);
   }
+  assert.match(countUnitsSource, /getLargestIngredientUnit/);
+  assert.match(countUnitsSource, /pickDefaultCountUnit/);
   assert.match(purchaseUnitsSource, /getLargestIngredientUnit/);
   assert.doesNotMatch(purchaseUnitsSource, /\.reduce</);
   assert.match(issueUnitsSource, /includeToBaseFactor: true/);

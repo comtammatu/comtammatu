@@ -39,7 +39,7 @@ export default async function PurchaseOrdersPage({
   let poQuery = supabase
     .from("purchase_orders")
     .select(
-      "id, po_number, display_id, status, ordered_at, supplier_id, branch_id, purchase_order_items(line_total)",
+      "id, po_number, display_id, status, ordered_at, notes, supplier_id, branch_id, purchase_order_items(id, quantity, unit_price_est, line_total, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)), goods_received_notes(id, grn_number, status, received_date)",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("ordered_at", { ascending: false })
@@ -147,21 +147,43 @@ export default async function PurchaseOrdersPage({
       : [];
   });
   const rows: PurchaseOrderRow[] = (poResult.data ?? []).map((po) => {
-    const totals = (po.purchase_order_items ?? []).flatMap((line) =>
-      line.line_total == null ? [] : [Number(line.line_total)],
+    const lines = (po.purchase_order_items ?? []).map((line) => {
+      const ingredient = line.ingredients as { name: string } | null;
+      const unit = line.units as { code: string; name: string | null } | null;
+      return {
+        id: line.id,
+        ingredientName: ingredient?.name ?? "Nguyên liệu",
+        quantity: Number(line.quantity),
+        unitLabel: unit?.name ?? unit?.code ?? "Đơn vị",
+        unitPriceEst:
+          line.unit_price_est == null ? null : Number(line.unit_price_est),
+        lineTotal: line.line_total == null ? null : Number(line.line_total),
+      };
+    });
+    const totals = lines.flatMap((line) =>
+      line.lineTotal == null ? [] : [line.lineTotal],
     );
+    const linkedGrns = (po.goods_received_notes ?? []).map((grn) => ({
+      id: grn.id,
+      code: grn.grn_number,
+      status: grn.status,
+      receivedAt: grn.received_date,
+    }));
     return {
       id: po.id,
       code: po.display_id ?? po.po_number,
       status: po.status,
       orderedAt: po.ordered_at,
+      notes: po.notes,
       supplierName: supplierNames.get(po.supplier_id) ?? "NCC",
       branchName: branchNames.get(po.branch_id) ?? "Chi nhánh",
-      lineCount: po.purchase_order_items.length,
+      lineCount: lines.length,
       estimatedTotal:
         totals.length > 0
           ? totals.reduce((sum, amount) => sum + amount, 0)
           : null,
+      lines,
+      linkedGrns,
     };
   });
 

@@ -5,20 +5,66 @@ import { EXPENSE_CATEGORIES_BY_GROUP } from "./expense-categories";
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
+export type ExpenseVatBreakdownLine = {
+  vatRate: number;
+  taxableAmount: number;
+  vatAmount: number;
+};
+
 export interface ExpenseRow {
   id: number;
   branch_id: number | null;
   expense_date: string;
   category: string;
   amount: number;
+  subtotal: number;
+  vat_amount: number;
+  vat_breakdown: ExpenseVatBreakdownLine[];
   payment_method: string;
   paid_at: string | null;
   transfer_content: string | null;
   vendor_name: string | null;
   note: string | null;
+  invoice_attachment_url: string | null;
   created_at: string;
   matchedEventIds: number[];
   matchedBankTransactionIds: number[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+export function mapExpenseVatBreakdown(
+  raw: unknown,
+  fallback: { subtotal: number; vatAmount: number },
+): ExpenseVatBreakdownLine[] {
+  const lines = Array.isArray(raw)
+    ? raw
+        .filter(isRecord)
+        .map((line) => ({
+          vatRate: Number(line.vat_rate),
+          taxableAmount: Number(line.taxable_amount),
+          vatAmount: Number(line.vat_amount),
+        }))
+        .filter(
+          (line) =>
+            [0, 5, 8, 10].includes(line.vatRate) &&
+            line.taxableAmount > 0 &&
+            line.vatAmount >= 0,
+        )
+        .sort((left, right) => left.vatRate - right.vatRate)
+    : [];
+
+  if (lines.length > 0) return lines;
+
+  return [
+    {
+      vatRate: 0,
+      taxableAmount: fallback.subtotal,
+      vatAmount: fallback.vatAmount,
+    },
+  ];
 }
 
 export type ExpenseMatchOption = ExpenseRow;
@@ -183,7 +229,7 @@ export async function loadExpenseMatchOptions(
   const { data: candidateRows, error } = await supabase
     .from("expenses")
     .select(
-      "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
+      "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
     )
     .eq("tenant_id", claims.tenant_id)
     .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
@@ -207,7 +253,7 @@ export async function loadExpenseMatchOptions(
     const includedResult = await supabase
       .from("expenses")
       .select(
-        "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
+        "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
       )
       .eq("tenant_id", claims.tenant_id)
       .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
@@ -238,20 +284,32 @@ export async function loadExpenseMatchOptions(
     ),
   ]);
 
-  return rows.map((row) => ({
-    id: row.id,
-    branch_id: row.branch_id,
-    expense_date: row.expense_date,
-    category: row.category,
-    amount: Number(row.amount),
-    payment_method: row.payment_method,
-    paid_at: row.paid_at,
-    transfer_content: row.transfer_content,
-    vendor_name: row.vendor_name,
-    note: row.note,
-    created_at: row.created_at,
-    matchedEventIds: matchedByExpense.get(row.id) ?? [],
-    matchedBankTransactionIds:
-      matchedByBankTransaction.get(row.id) ?? [],
-  }));
+  return rows.map((row) => {
+    const amount = Number(row.amount);
+    const subtotal = Number(row.subtotal ?? amount);
+    const vatAmount = Number(row.vat_amount ?? 0);
+    return {
+      id: row.id,
+      branch_id: row.branch_id,
+      expense_date: row.expense_date,
+      category: row.category,
+      amount,
+      subtotal,
+      vat_amount: vatAmount,
+      vat_breakdown: mapExpenseVatBreakdown(row.vat_breakdown, {
+        subtotal,
+        vatAmount,
+      }),
+      payment_method: row.payment_method,
+      paid_at: row.paid_at,
+      transfer_content: row.transfer_content,
+      vendor_name: row.vendor_name,
+      note: row.note,
+      invoice_attachment_url: row.invoice_attachment_url ?? null,
+      created_at: row.created_at,
+      matchedEventIds: matchedByExpense.get(row.id) ?? [],
+      matchedBankTransactionIds:
+        matchedByBankTransaction.get(row.id) ?? [],
+    };
+  });
 }

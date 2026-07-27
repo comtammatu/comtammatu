@@ -37,6 +37,7 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { cn } from "@comtammatu/ui";
+import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
 import {
   STOCK_ALL_CATEGORY_VALUE,
@@ -69,7 +70,10 @@ import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
 import { StockLocationBreakdownLine } from "./stock-location-breakdown";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
+import {
+  InventoryListFrame,
+  inventoryListFilterSelectClassName,
+} from "../_components/inventory-list-frame";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -188,14 +192,14 @@ function QuickActionButton({
   icon: Icon,
   label,
   primary,
-  size = "sm",
+  size = "field",
   className,
 }: {
   href: string;
   icon: typeof IconReceipt;
   label: string;
   primary?: boolean;
-  size?: "sm" | "touch";
+  size?: "field" | "touch";
   className?: string;
 }) {
   return (
@@ -230,6 +234,7 @@ export function StockClient({
 }) {
   const router = useRouter();
   const isCompactLayout = useStockCompactLayout();
+  const controlSize = useFormControlSize();
   const [activeCategory, setActiveCategory] = useState(
     STOCK_ALL_CATEGORY_VALUE,
   );
@@ -489,7 +494,10 @@ export function StockClient({
     <Button
       type="button"
       variant={stockFilter === "low" ? "secondary" : "outline"}
-      size={isCompactLayout ? "touch" : "sm"}
+      size={controlSize}
+      className={
+        controlSize === "touch" ? undefined : inventoryListFilterSelectClassName
+      }
       aria-pressed={stockFilter === "low"}
       onClick={() =>
         setStockFilter((current) => (current === "low" ? "all" : "low"))
@@ -506,7 +514,8 @@ export function StockClient({
 
   const searchControl = (
     <InputGroup
-      className={cn("w-full min-w-0", !isCompactLayout && "min-w-56 flex-1")}
+      size={controlSize}
+      className={cn("w-full min-w-0", controlSize === "field" && "min-w-56 flex-1")}
     >
       <InputGroupAddon>
         <IconSearch />
@@ -526,8 +535,12 @@ export function StockClient({
     <>
       <Select value={activeCategory} onValueChange={setActiveCategory}>
         <SelectTrigger
-          size={isCompactLayout ? "touch" : "default"}
-          className={isCompactLayout ? "w-full" : "min-w-40"}
+          size={controlSize}
+          className={
+            controlSize === "touch"
+              ? "w-full"
+              : inventoryListFilterSelectClassName
+          }
         >
           <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
         </SelectTrigger>
@@ -551,8 +564,12 @@ export function StockClient({
         onValueChange={(v) => setStockFilter(v as StockFilter)}
       >
         <SelectTrigger
-          size={isCompactLayout ? "touch" : "default"}
-          className={isCompactLayout ? "w-full" : "min-w-36"}
+          size={controlSize}
+          className={
+            controlSize === "touch"
+              ? "w-full"
+              : inventoryListFilterSelectClassName
+          }
         >
           <SelectValue placeholder={stockCopy.filters.statusPlaceholder} />
         </SelectTrigger>
@@ -579,8 +596,8 @@ export function StockClient({
       icon={IconReceipt}
       label={receiveActionLabel}
       primary
-      size={isCompactLayout ? "touch" : "sm"}
-      className={isCompactLayout ? "w-full sm:w-auto" : undefined}
+      size={controlSize}
+      className={controlSize === "touch" ? "w-full sm:w-auto" : undefined}
     />
   ) : null;
 
@@ -591,7 +608,7 @@ export function StockClient({
           href={actionHrefs.stocktake}
           icon={IconClipboardList}
           label={stockCopy.actions.stocktake}
-          size={isCompactLayout ? "touch" : "sm"}
+          size={controlSize}
         />
       ) : null}
       {actionPermissions.canWriteoff ? (
@@ -599,7 +616,7 @@ export function StockClient({
           href={actionHrefs.waste}
           icon={IconTrash}
           label={stockCopy.actions.waste}
-          size={isCompactLayout ? "touch" : "sm"}
+          size={controlSize}
         />
       ) : null}
     </>
@@ -613,7 +630,7 @@ export function StockClient({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" className="gap-1.5">
+          <Button variant="outline" size="field" className="gap-1.5">
             {stockCopy.actions.actionsDropdown}
             <IconChevronDown className="size-3.5" />
           </Button>

@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   InputGroup,
   InputGroupAddon,
@@ -81,7 +81,7 @@ export function RecipesClient({
   loadError?: string | null;
 }) {
   const router = useRouter();
-  const isTouchLayout = useIsMobile();
+  const controlSize = useFormControlSize();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMenuItemId, setEditingMenuItemId] = useState<
     number | undefined
@@ -230,10 +230,7 @@ export function RecipesClient({
     <AppToolbar
       variant="inline"
       search={
-        <InputGroup
-          size={isTouchLayout ? "touch" : "field"}
-          className="min-w-0 flex-1 sm:min-w-72"
-        >
+        <InputGroup size={controlSize} className="min-w-0 flex-1 sm:min-w-72">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>

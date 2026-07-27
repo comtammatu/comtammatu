@@ -164,6 +164,7 @@ test("bank deposits stay out of operating expense totals", () => {
 
 test("expense period totals load every row and fail closed on missing evidence", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
+  const financeActions = readWeb("app/(protected)/finance/actions.ts");
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
 
   assert.match(
@@ -179,6 +180,25 @@ test("expense period totals load every row and fail closed on missing evidence",
   assert.doesNotMatch(page, /fetchActualFoodCostTotal/);
 });
 
+test("expenses page settles session before parallel finance getAuthContext loaders", () => {
+  const page = readWeb("app/(protected)/finance/expenses/page.tsx");
+  const actions = readWeb("app/(protected)/finance/expense-actions.ts");
+  const financeActions = readWeb("app/(protected)/finance/actions.ts");
+
+  // Parallel loadAuthState + getAuthContext on the shared GoTrue client races
+  // and returns false-null ctx → soft expenses load error empty state.
+  assert.match(
+    page,
+    /const \{ claims \} = await loadAuthState\(\);[\s\S]*await Promise\.all\(\[\s*fetchAccessibleBranches\(\),[\s\S]*fetchExpenses\(/,
+  );
+  assert.doesNotMatch(
+    page,
+    /Promise\.all\(\[\s*loadAuthState\(\),\s*fetchAccessibleBranches\(\)/,
+  );
+  assert.match(actions, /MODULE_ACL\.finance\.allowedRoles/);
+  assert.match(financeActions, /MODULE_ACL\.finance\.allowedRoles/);
+});
+
 test("expense list separates its KPI summary from the data table", () => {
   const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
@@ -190,4 +210,44 @@ test("expense list separates its KPI summary from the data table", () => {
   );
   assert.doesNotMatch(client, /<AppSection[\s\S]*?headerHint=/);
   assert.doesNotMatch(successPage, /meta=/);
+});
+
+test("expense create captures immutable multi-rate VAT and optional attachment", () => {
+  const actions = readWeb("app/(protected)/finance/expense-actions.ts");
+  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const migration = readFileSync(
+    resolve(
+      import.meta.dirname,
+      "../../../supabase/migrations/20260727141702_expense_vat_and_attachment.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(actions, /vatBreakdown/);
+  assert.match(actions, /invoiceAttachmentUrl/);
+  assert.match(actions, /p_vat_breakdown/);
+  assert.doesNotMatch(
+    actions,
+    /create_expense_transfer_intent[\s\S]*?p_amount:/,
+  );
+  assert.match(client, /buildExpenseVatBreakdown/);
+  assert.match(client, /PhotoUploadInput/);
+  assert.match(client, /key: "vat"/);
+  assert.match(client, /key: "attachment"/);
+  assert.doesNotMatch(client, /được khấu trừ/);
+  assert.match(migration, /normalize_expense_vat_breakdown/);
+  assert.match(migration, /expense_vat_snapshot_immutable/);
+  assert.match(migration, /invoice_attachment_url/);
+  assert.match(migration, /finance:expense_create/);
+});
+
+test("expense list opens read-only detail from row click", () => {
+  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const messages = readWeb("lib/messages/finance.ts");
+
+  assert.match(client, /onRowClick=\{openDetail\}/);
+  assert.match(client, /copy\.detail\.viewAria/);
+  assert.match(client, /copy\.detail\.vatBreakdown/);
+  assert.match(client, /selectedExpense\.vat_breakdown\.map/);
+  assert.match(messages, /detail:\s*\{[\s\S]*title:\s*"Chi tiết khoản chi"/);
 });

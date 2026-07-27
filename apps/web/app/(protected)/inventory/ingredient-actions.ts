@@ -47,7 +47,7 @@ const unitRowSchema = z.object({
   unit_id: z.coerce.number().int().positive({ error: "Đơn vị không hợp lệ" }),
   to_base_factor: z.coerce
     .number()
-    .positive({ error: "Hệ số quy đổi phải lớn hơn 0" }),
+    .positive({ error: "Quy đổi phải lớn hơn 0" }),
   is_base: z.boolean(),
   anchor_unit_id: z.coerce.number().int().positive().nullable().optional(),
   anchor_factor: z.coerce.number().positive().nullable().optional(),

@@ -274,7 +274,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
         actions={
           <Button
             variant="outline"
-            size="touch"
+            size="lg"
             render={<Link href="/inventory/count-assignments" />}
           >
             <IconClipboardList aria-hidden="true" />

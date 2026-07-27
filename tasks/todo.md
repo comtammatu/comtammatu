@@ -5,6 +5,18 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Defer central production workspace cutover
+
+State: blocked
+Kind: feature
+Tier: T3
+Lane: inventory/central-ops
+Exit: Production runs only on `central_kitchen`; `/warehouse` and `/kitchen` workspaces exist after Phase 2 `operational_site` authority.
+Evidence: D082, ADR 0015/0017, architecture Phase 2/4 exit criteria.
+Blocker: Central procurement smoke proven on Greenfield; still depends on Greenfield authority cutover (Phase 2 / CTCP H2).
+
+- [ ] After Phase 2 authority lands, implement Phase 4 workspaces and move production off branch sites.
+
 ## Complete the CTCP authority and e-invoice cutover on current Greenfield
 
 State: doing
@@ -12,11 +24,11 @@ Kind: feature
 Tier: T3
 Lane: platform/security-finance
 Exit: The existing `comtammatu` deployment uses the current Greenfield project as its only target, legal identity and Viettel profile come from live Tenant data, VAT is explicit per sold line, and database authority no longer depends on HR positions or forged JWT scope.
-Evidence: Forward-only migration replay, generated types, authorization negative matrix, HĐĐT mixed-VAT/retry/replacement tests, repository gates, owner-approved current-target apply, and one authorized Viettel issue/reconcile smoke.
+Evidence: Greenfield is live target for `web.comtammatu.com`. Invoice-profile/VAT snapshot applied (`20260727104839` / local `20260727161500`). Authority foundation was applied then removed (`remove_unused_greenfield_authority`); runtime still uses position-derived JWT `user_role` / `MODULE_ACL`. Catalog/Viettel smoke and ADR 0015 negative matrix still open. Re-plan authority against D082 `branches.branch_kind` (not `operational_sites`).
 
-- [ ] Finish the scoped authority caller/RLS cutover on the current Greenfield schema; preserve existing Tenant, Branch, profile, and Auth bootstrap rows.
-- [ ] Apply the invoice-profile/VAT snapshot forward migration to the current Greenfield target and regenerate database types.
-- [ ] Complete catalog/RLS inspection, full repository gates, and the separately authorized Viettel smoke. Do not reset, rebaseline, create another project, or delete current identities.
+- [ ] Re-plan and implement scoped authority caller/RLS cutover on Greenfield under D082 site model; preserve Tenant, Branch, profile, and Auth bootstrap rows.
+- [x] Apply the invoice-profile/VAT snapshot forward migration to Greenfield and regenerate database types.
+- [ ] Complete catalog/RLS inspection, full repository gates, activate invoice profile after tenant legal/MST is complete, and the separately authorized Viettel smoke. Do not reset, rebaseline, create another project, or delete current identities.
 
 ## Restore fresh-install database ACL parity
 
@@ -111,6 +123,18 @@ Blocker: This cleanup targets the suspended retired target database and is not r
 - [ ] Revoke authenticated direct `UPDATE` on `payments` and drop legacy `create_supplier_payment` only after the required-key runtime proof.
 - [ ] Apply the cleanup only through the trusted registration/owner-operated Preview path; regenerate types from the explicit Production source and run repository gates plus database advisors.
 - [ ] Keep every `matu-prod` apply deferred while the retired target stack is suspended; run it only under the exact owner decision named in the Blocker.
+
+## Improve inventory unit UX (mixed stock + count default + SOP)
+
+State: blocked
+Kind: feature
+Tier: T2
+Lane: inventory/units
+Exit: Stock on-hand shows mixed packaging quantities; ingredient form guides output-unit choice; count flows default to purchase unit; SOP §2c documents unit selection.
+Evidence: Targeted `inventory-stock-unit-format` + `inventory-count-units` + counting static tests pass; web `tsc --noEmit` clean for owned paths.
+Blocker: Full `pnpm lint` / `pnpm build` fail on unrelated dirty-tree WIP — `auth.ts` missing required `getUser()` (PROXY-NEVER-CALL-GETUSER) and finance `supplier-invoices` `canAttachVatEvidence` prop mismatch. Recheck after those WIP lanes settle or are isolated.
+
+- [ ] Re-run `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` after unrelated auth/finance WIP is reconciled.
 
 ## Align KDS history authorization with route access
 

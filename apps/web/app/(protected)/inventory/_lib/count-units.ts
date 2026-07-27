@@ -2,6 +2,7 @@ import type { IngredientRow } from "@lib/inventory/types";
 import {
   getDefaultIngredientUnit,
   getIngredientUnitOptions,
+  getLargestIngredientUnit,
   type InventoryUnitOptionWithFactor,
 } from "@lib/inventory/unit-options";
 
@@ -19,11 +20,23 @@ export function getCountUnitOptions(
 }
 
 /**
- * Default counting unit for an ingredient: the base unit when present, else the
- * first available unit, else null.
+ * Default counting unit from already-built options: largest packaging
+ * (purchase) unit so operators count thùng/chai first; falls back to
+ * base/output when only one unit exists.
+ */
+export function pickDefaultCountUnit(
+  options: readonly CountUnitOption[],
+): CountUnitOption | null {
+  return (
+    getLargestIngredientUnit(options) ?? getDefaultIngredientUnit(options)
+  );
+}
+
+/**
+ * Default counting unit for an ingredient row (catalog helper).
  */
 export function getDefaultCountUnit(
   ingredient: IngredientRow | undefined,
 ): CountUnitOption | null {
-  return getDefaultIngredientUnit(getCountUnitOptions(ingredient));
+  return pickDefaultCountUnit(getCountUnitOptions(ingredient));
 }

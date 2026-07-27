@@ -22,6 +22,10 @@ import {
 import { messages } from "@lib/messages";
 import { formatQty } from "@lib/inventory/format";
 import {
+  getDefaultIngredientUnit,
+  getLargestIngredientUnit,
+} from "@lib/inventory/unit-options";
+import {
   StocktakeDraftSaverBadge,
   type DraftCounts,
   useStocktakeDraftSaver,
@@ -29,6 +33,10 @@ import {
 import { ZoneLockIndicator } from "@/(protected)/inventory/_components/zone-lock-indicator";
 import { StocktakeCountWizard } from "@/(protected)/inventory/stocktake/[id]/count/stocktake-count-wizard";
 import { submitCountRound } from "@/(protected)/inventory/stocktake-actions";
+
+function pickBranchDefaultCountUnit(options: BranchStocktakeCountUnit[]) {
+  return getLargestIngredientUnit(options) ?? getDefaultIngredientUnit(options);
+}
 
 function buildCountUnitPreview({
   quantity,
@@ -43,8 +51,9 @@ function buildCountUnitPreview({
     options.find((option) => option.isBase) ?? options[0] ?? null;
   const selectedUnit =
     selectedUnitId === null
-      ? baseUnit
+      ? pickBranchDefaultCountUnit(options) ?? baseUnit
       : (options.find((option) => option.unitId === selectedUnitId) ??
+        pickBranchDefaultCountUnit(options) ??
         baseUnit);
   if (!baseUnit || !selectedUnit || selectedUnit.isBase) return null;
 
@@ -85,8 +94,8 @@ export function BranchStocktakeCountClient({
     for (const [ingredientId, options] of Object.entries(
       data.unitOptionsByIngredient,
     )) {
-      const base = options.find((option) => option.isBase) ?? options[0];
-      if (base) next[Number(ingredientId)] = base.unitId;
+      const preferred = pickBranchDefaultCountUnit(options);
+      if (preferred) next[Number(ingredientId)] = preferred.unitId;
     }
     return next;
   });
@@ -119,9 +128,7 @@ export function BranchStocktakeCountClient({
       const selected =
         options.find(
           (option) => option.unitId === unitByIngredient[ingredientId],
-        ) ??
-        options.find((option) => option.isBase) ??
-        options[0];
+        ) ?? pickBranchDefaultCountUnit(options);
       if (selected) labels[ingredientId] = selected.label;
     }
     return labels;

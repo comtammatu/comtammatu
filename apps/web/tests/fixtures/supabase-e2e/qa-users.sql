@@ -35,6 +35,7 @@ BEGIN;
 DO $$
 DECLARE
   v_tenant BIGINT;
+  r RECORD;
 BEGIN
   SELECT id INTO v_tenant FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1;
   IF v_tenant IS NULL THEN
@@ -56,6 +57,16 @@ BEGIN
   SET branch_kind = EXCLUDED.branch_kind,
       is_active = true,
       updated_at = now();
+
+  FOR r IN
+    SELECT b.tenant_id, b.id
+    FROM public.branches AS b
+    WHERE b.tenant_id = v_tenant
+      AND b.branch_kind IN ('central_supply', 'central_kitchen')
+      AND b.is_active = true
+  LOOP
+    PERFORM public.ensure_branch_inventory_location_defaults(r.tenant_id, r.id);
+  END LOOP;
 END;
 $$;
 

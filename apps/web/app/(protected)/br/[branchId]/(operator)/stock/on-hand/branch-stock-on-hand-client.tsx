@@ -65,19 +65,25 @@ const stockFilterOptions: { value: StockFilter; label: string }[] = [
 ];
 
 function StockQuantity({ item }: { item: StockIngredient }) {
-  const { base } = formatStockUnits(item.qty, item.units, formatQty);
+  const { big, base } = formatStockUnits(item.qty, item.units, formatQty);
   const atRisk = isStockReorderRisk(item);
+  const primaryClass = cn(
+    "font-mono text-base font-semibold leading-5 tabular-nums",
+    atRisk ? "text-destructive" : "text-foreground",
+  );
 
   return (
     <div className="min-w-0 text-right">
-      <p
-        className={cn(
-          "font-mono text-base font-semibold leading-5 tabular-nums",
-          atRisk ? "text-destructive" : "text-foreground",
-        )}
-      >
-        {base}
-      </p>
+      {big === null ? (
+        <p className={primaryClass}>{base}</p>
+      ) : (
+        <div className="flex flex-col items-end leading-tight">
+          <p className={primaryClass}>{big}</p>
+          <p className="font-mono text-xs font-normal tabular-nums text-muted-foreground">
+            {base}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

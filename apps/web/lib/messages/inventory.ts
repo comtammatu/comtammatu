@@ -557,7 +557,16 @@ export const inventory = {
     loadFailed: "Không thể tải đơn đặt hàng.",
     pageTitle: "Đơn mua hàng",
     pageDescription:
-      "Lập đơn mua, duyệt một cấp và tạo phiếu nhập từ số lượng còn lại.",
+      "Lập đơn mua, duyệt một cấp, xem chi tiết và tạo phiếu nhập từ số lượng còn lại.",
+    viewDetail: "Xem đơn mua",
+    viewDetailAria: (code: string) => `Xem đơn mua ${code}`,
+    openLinkedGrn: "Mở phiếu nhập",
+    approveAction: "Duyệt mua",
+    createGrnAction: "Tạo phiếu nhập",
+    emptyLinesTitle: "Đơn mua chưa có dòng hàng",
+    emptyLinesDescription: "Đơn này chưa ghi nhận nguyên liệu đặt mua.",
+    branchLabel: "Chi nhánh",
+    noReceivedDate: "Chưa có ngày nhận",
     loadErrorTitle: "Không thể tải đơn mua hàng",
     loadErrorDescription: "Hãy tải lại trước khi tiếp tục mua hoặc nhận hàng.",
     noSupplierItems:
@@ -580,7 +589,7 @@ export const inventory = {
     list: "Danh sách đơn mua",
     draftEyebrow: "Procurement Draft",
     draftDescription:
-      "Lập đơn mua, xem gợi ý nhu cầu và giá tham khảo trong một màn hình.",
+      "Chọn nhà cung cấp, nơi nhận và các dòng nguyên liệu cần đặt.",
     lineCount: (count: number) => `${formatCount(count)} dòng`,
     totalAmountSuffix: (amount: string) => ` · ${amount} ₫`,
     creating: "Đang tạo…",
@@ -1245,6 +1254,8 @@ export const inventory = {
   supplierInvoices: {
     title: "Hóa đơn NCC",
     createAction: "Ghi nhận hóa đơn NCC",
+    createDescription:
+      "Ghi số hóa đơn, ngày và VAT theo chứng từ. Có thể liên kết phiếu nhập và đính kèm HĐ GTGT ngay khi lưu.",
     searchPlaceholder: "Tìm số hóa đơn, NCC, đơn mua hoặc mã phiếu nhập",
     allSuppliers: "Tất cả nhà cung cấp",
     supplierPlaceholder: "Nhà cung cấp",
@@ -1255,6 +1266,8 @@ export const inventory = {
     paymentPlaceholder: "Thanh toán",
     allPayments: "Tất cả thanh toán",
     overdueOnly: "Chỉ xem hóa đơn quá hạn",
+    groupByLabel: "Nhóm theo",
+    groupByAria: "Nhóm danh sách theo nhà cung cấp hoặc đơn mua",
     invoiceCount: (filtered: number, total: number) =>
       `${formatCount(filtered)} / ${formatCount(total)} hóa đơn`,
     groupCount: (groups: number, invoices: number) =>
@@ -1264,9 +1277,17 @@ export const inventory = {
     supplierGroup: "Nhà cung cấp",
     poGroup: "Đơn mua",
     noLinkedPo: "Chưa liên kết đơn mua",
+    invoiceCountHeader: "Số hóa đơn",
     invoiceGroupSummary: (count: number) => `${formatCount(count)} hóa đơn`,
+    invoiceCodesPreview: (codes: readonly string[]) => {
+      if (codes.length === 0) return "—";
+      if (codes.length <= 3) return codes.join(" · ");
+      return `${codes.slice(0, 2).join(" · ")} · +${formatCount(codes.length - 2)}`;
+    },
     overdueGroupSummary: (count: number) => `${formatCount(count)} quá hạn`,
     groupDetailAction: "Xem chi tiết",
+    selectInvoiceInGroup: "Hóa đơn trong nhóm",
+    selectInvoiceInGroupAria: "Chọn hóa đơn trong nhóm đang xem",
     emptyMatchedTitle: "Không tìm thấy hóa đơn phù hợp",
     emptyInitialTitle: "Chưa có hóa đơn NCC",
     emptyMatchedDescription: "Thử nới bộ lọc hoặc từ khóa để xem thêm kết quả.",
@@ -1317,6 +1338,26 @@ export const inventory = {
     },
     referenceNote: "Ghi chú thanh toán",
     referenceNotePlaceholder: "VD: mã giao dịch ngân hàng",
+    vatAttachmentLabel: "Hóa đơn GTGT đính kèm",
+    vatAttachmentRequired: "Bắt buộc trước khi thanh toán",
+    vatAttachmentMissing: "Chưa đính kèm HĐ GTGT",
+    vatAttachmentReady: "Đã đính kèm HĐ GTGT",
+    vatAttachmentUpload: "Tải lên HĐ GTGT",
+    vatAttachmentHint: "PDF hoặc ảnh, tối đa 10MB",
+    vatAttachmentOptionalHint:
+      "Tùy chọn lúc ghi nhận. Bắt buộc đính kèm trước khi thanh toán.",
+    vatAttachmentUploaded: "Đã đính kèm HĐ GTGT",
+    vatAttachmentUploadFailed: "Không thể tải lên HĐ GTGT",
+    vatAttachmentCreateFailed:
+      "Đã lưu hóa đơn nhưng chưa đính kèm được HĐ GTGT. Hãy tải lên ở chi tiết trước khi thanh toán.",
+    vatAttachmentRemindAfterCreate:
+      "Đã lưu hóa đơn. Hãy đính kèm HĐ GTGT trước khi thanh toán.",
+    vatAttachmentFileSelected: (name: string) => `Đã chọn: ${name}`,
+    vatAttachmentClear: "Bỏ file đã chọn",
+    vatAttachmentOpen: "Mở HĐ GTGT",
+    vatAttachmentOpenFailed: "Không thể mở file HĐ GTGT.",
+    paymentBlockedNoVatAttachment:
+      "Cần đính kèm HĐ GTGT trước khi ghi nhận thanh toán.",
     paymentOutstanding: (amount: string) => `Còn phải trả: ${amount}`,
     paymentRecorded: "Đã ghi nhận thanh toán NCC",
     paymentTooLarge: "Số tiền trả vượt quá phần còn phải trả.",
@@ -1337,13 +1378,19 @@ export const inventory = {
     safeDescription: "Tổng hóa đơn nằm trong ngưỡng đối soát.",
     noAnalysisTitle: "Chưa có hóa đơn để phân tích",
     noAnalysisDescription:
-      "Chọn một hóa đơn từ danh sách bên trái để xem chi tiết công nợ và trạng thái đối soát.",
+      "Chọn một hóa đơn từ danh sách để xem chi tiết công nợ và trạng thái đối soát.",
     chooseGrnOptional: "Chọn phiếu nhập (tùy chọn)",
     noLinkedGrn: "Không liên kết phiếu nhập",
     chooseSupplier: "Chọn nhà cung cấp",
+    invoiceNumberPlaceholder: "VD: 0001234",
+    documentSection: "Chứng từ",
     subtotalPlaceholder: "0",
     vat: "VAT đầu vào theo hóa đơn",
+    vatSection: "Thuế GTGT đầu vào đã ghi nhận",
+    vatSectionHint:
+      "Nhập theo hóa đơn. Đây là VAT đã ghi nhận, chưa kết luận được khấu trừ.",
     vatBreakdown: "Chi tiết VAT đầu vào đã ghi nhận",
+    vatBreakdownRequired: "Nhập ít nhất một mức thuế với tiền trước VAT lớn hơn 0.",
     taxableAtRate: (rate: string) => `Tiền trước VAT · ${rate}`,
     vatAtRate: (rate: string) => `Tiền VAT · ${rate}`,
     vatAutoPlaceholder: "Tự tính nếu để trống",
@@ -1355,6 +1402,8 @@ export const inventory = {
     saveInvoice: "Lưu hóa đơn",
     loadMore: "Tải thêm",
     loadMoreFailed: "Không thể tải thêm hóa đơn",
+    recomputeMatchingSuccess: "Đã tính lại đối soát 3-way.",
+    recomputeMatchingFailed: "Không thể tính lại đối soát.",
   },
   suppliers: {
     title: "Nhà cung cấp",

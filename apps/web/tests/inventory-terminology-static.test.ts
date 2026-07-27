@@ -25,14 +25,24 @@ test("ingredient unit dialog names only input and output roles", () => {
   const source = readWorkspaceFile(
     "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
+  const messages = readWorkspaceFile("lib/messages/inventory-master.ts");
 
   assert.match(source, /label=\{copy\.units\.inputUnit\}/);
   assert.match(source, /label=\{copy\.units\.outputUnit\}/);
+  assert.match(source, /ConversionFactorField/);
+  assert.match(source, /\{copy\.units\.conversion\}/);
+  assert.match(source, /\{inputUnitName\}/);
+  assert.match(source, /\{outputUnitName\}/);
+  assert.match(source, /text-muted-foreground">=<\/span>/);
   assert.doesNotMatch(source, /label=\{copy\.units\.colBase\}/);
+  assert.doesNotMatch(source, /description=\{copy\.units\./);
   assert.doesNotMatch(
     source,
     /previewCanonical|DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION|Đổi chiều quy đổi/,
   );
+  assert.match(messages, /conversion: "Quy đổi"/);
+  assert.doesNotMatch(messages, /Số đơn vị xuất \/ 1 đơn vị nhập/);
+  assert.doesNotMatch(messages, /1 đơn vị nhập = bao nhiêu đơn vị xuất/);
 });
 
 test("GRN entry labels purchase price and conversion without calling it cost basis", () => {

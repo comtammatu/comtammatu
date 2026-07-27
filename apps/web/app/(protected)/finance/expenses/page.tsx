@@ -2,6 +2,7 @@ import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
+import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchAccessibleBranches } from "../actions";
 import { fetchExpenses } from "../expense-actions";
@@ -23,6 +24,10 @@ export default async function ExpensesPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
+  // Settle cookie session before parallel getAuthContext/getUser fan-out.
+  // Racing loadAuthState with finance actions on the shared GoTrue client
+  // yields false-null ctx and the expenses soft load-error empty state.
+  const { claims } = await loadAuthState();
   const [branchesRes, expensesRes, canManageExpenses] = await Promise.all([
     fetchAccessibleBranches(),
     fetchExpenses({
@@ -77,6 +82,7 @@ export default async function ExpensesPage({
         totalAmount={totalAmount}
         todayBusinessDate={todayBusinessDate}
         canManageExpenses={canManageExpenses}
+        tenantId={claims.tenant_id}
       />
     </AppPage>
   );

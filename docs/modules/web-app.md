@@ -94,7 +94,7 @@ Các nguyên tắc đang được code phản ánh:
 
 Các detail pages của Inventory không còn chỉ là read-only shells:
 
-- `purchase-orders/**`: không còn App Router route; lịch sử PO chỉ hiển thị dạng tham chiếu trong GRN.
+- `purchase-orders`: danh sách Owner có dialog xem chi tiết (dòng hàng, ghi chú, GRN liên kết); duyệt PO và tạo phiếu nhập vẫn từ list/dialog.
 - `grn/[id]`: có action chốt nhập kho (`confirmGrn`)
 - `transfers/[id]`: đã wire đủ state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`
 - `supplier-invoices`: có tạo hóa đơn NCC và tính lại đối soát; ghi nhận thanh toán là Finance/AP handoff, không phải action Inventory

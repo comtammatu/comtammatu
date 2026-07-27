@@ -51,10 +51,16 @@ test("finance exposes input VAT invoices and supplier payments together", () => 
   assert.match(invoiceClient, /recordSupplierPayment/);
   assert.match(invoiceClient, /const VAT_BUCKET_FIELDS = \[/);
   assert.match(invoiceClient, /buildSupplierInvoiceVatBreakdown/);
+  assert.match(invoiceClient, /vatSection/);
+  assert.match(invoiceClient, /vatSectionHint/);
+  assert.match(invoiceClient, /vatBreakdownRequired/);
+  assert.match(invoiceClient, /grid gap-3 sm:grid-cols-2/);
+  assert.doesNotMatch(invoiceClient, /className="contents"/);
   assert.match(invoiceActions, /vatBreakdown: z\.array/);
   assert.match(invoiceActions, /create_supplier_invoice_with_vat_breakdown/);
   assert.match(invoiceRow, /row\.vat_breakdown/);
-  assert.match(invoiceClient, /selectedInvoice\.vatBreakdown\.map/);
+  assert.match(invoiceClient, /selectedInvoice\.vatBreakdown/);
+  assert.match(invoiceClient, /vatSummaryLabel/);
   assert.match(vatMigration, /ADD COLUMN vat_breakdown jsonb/);
   assert.match(vatMigration, /NEW\.subtotal := pg_catalog\.round/);
   assert.match(

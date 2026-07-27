@@ -71,6 +71,7 @@ import { calculateAttendanceWorkHours } from "./attendance-summary";
 import type { BranchOption } from "./_types";
 import { StatusBadge } from "@/components/status-badge";
 import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 import { AppDialog } from "@/components/form/form-dialog";
 import { Combobox } from "@/components/form/combobox";
 import {
@@ -157,6 +158,7 @@ export function AttendanceTable({
   initialEmployeeId = null,
   initialCalendarScope = "all",
 }: AttendanceTableProps) {
+  const controlSize = useFormControlSize();
   const router = useRouter();
   const isCalendarDetailTouch = useIsMobile();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -373,6 +375,7 @@ export function AttendanceTable({
                 }
               >
                 <SelectTrigger
+                  size={controlSize}
                   className="w-full sm:w-48"
                   aria-label={BRANCH_VI.select}
                 >
@@ -399,6 +402,7 @@ export function AttendanceTable({
                 }
               >
                 <SelectTrigger
+                  size={controlSize}
                   className="w-full sm:w-40"
                   aria-label="Tháng chấm công"
                 >
@@ -450,6 +454,7 @@ export function AttendanceTable({
                     }}
                   >
                     <SelectTrigger
+                      size={controlSize}
                       className="col-span-2 w-full sm:w-44"
                       aria-label={attendanceCopy.calendarScopeLabel}
                     >

@@ -131,13 +131,28 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 - `AppToolbar` đứng trước `DataTable` khi filter, sort, branch, kỳ hoặc action
   là URL/server state của trang. Inline toolbar của `DataTable` chỉ dành cho
   state local của chính bảng; không dựng hai toolbar cho cùng một control.
-- Owner Inventory LIST dùng domain wrapper `InventoryListFrame`
-  (`AppSection` + `contentFlush` + slot `toolbar`):
-  `AppPage` → `AppPageHeader` → `InventoryListFrame toolbar={<AppToolbar variant="inline" />}`
-  → `DataTable`. Inline toolbar không tô nền riêng (`bg-muted/*`); cùng bề mặt
-  card với bảng. Desktop empty luôn qua `DataTable` (`TableHeader` +
-  `TableEmptyStateRow`), không swap sang `AppEmptyState` thay cả bảng (trừ
-  error/load-failed).
+- Owner LIST dùng `AppListFrame` (`AppSection` + `contentFlush` + slot
+  `toolbar`):
+  `AppPage` → `AppPageHeader` → `AppListFrame toolbar={<AppToolbar variant="inline" />}`
+  → `DataTable`. Inventory giữ domain alias `InventoryListFrame` (re-export cùng
+  recipe + constant độ rộng filter). Tra cứu: `audit:ui-components --component AppListFrame`
+  hoặc `--component InventoryListFrame` / `--component management-list`.
+  Inline toolbar không tô nền riêng (`bg-muted/*`); cùng bề mặt card với bảng.
+  Desktop empty luôn qua `DataTable` (`TableHeader` + `TableEmptyStateRow`),
+  không swap sang `AppEmptyState` thay cả bảng (trừ error/load-failed). Desktop
+  filter `Select`/`InputGroup` dùng `size="field"` và độ rộng cố định
+  `inventoryListFilterSelectClassName` (`w-44 shrink-0`; wide `w-56` khi label
+  có count) trên Inventory. Header CTA LIST dùng `size="lg"` (operator/
+  embedded giữ `touch`). `SelectContent` mặc định `position="popper"` để menu
+  không chồng checkmark lên trigger. Filter card tách riêng chỉ khi filter
+  scope nhiều section (ví dụ Finance dashboard).
+- LIST filter density (Owner + shared `DataTable` toolbar): mọi
+  `SelectTrigger` / `InputGroup` / Combobox trong hàng filter dùng
+  `useFormControlSize()` → `touch` dưới `lg` (1024), `field` từ `lg` trở lên.
+  Cấm `size="default"` / `size="sm"` trong hàng filter LIST. Operator /
+  embedded ép `useFormControlSize("touch")`. Nút phụ cùng hàng (clear filter,
+  threshold toggle) cùng `controlSize`. Header CTA tạo mới vẫn `lg` (khác vai
+  trò filter).
 - `AppLinkCard` cho navigation/action card.
 - `KpiRow` cho grid responsive (1/2/3/4 cột) bọc các `KpiCard` chỉ khi đó là
   metric/stat-value.
@@ -145,6 +160,11 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 - `LinkCardGrid` cho grid responsive (1/2/3 cột) bọc các `AppLinkCard`.
 - `DocumentFormFrame` cho khung trang document/line-form (header + body cuộn +
   footer) compose `AppPage`; là page-section adapter, không phải chrome shell.
+  Tra cứu: `audit:ui-components --component DocumentFormFrame` hoặc
+  `--component management-document`.
+- `SettingsPageFrame` cho shell settings Owner (`AppPage` + `AppPageHeader` +
+  breadcrumb về `/settings`). Tra cứu: `--component SettingsPageFrame` hoặc
+  `--component management-settings`.
 - `AppDetailFooter` cho hàng footer leading/trailing ở trang chi tiết.
 
 Domain wrappers như Inventory/Employee/Owner có thể giữ API riêng để tránh sửa hàng loạt call site, nhưng phải delegate về các adapter này thay vì tự style lại `Card`, `Empty`, hoặc page container.
@@ -163,6 +183,9 @@ adapter và UI block. Tra cứu trước khi compose một surface mới:
 corepack pnpm audit:ui-components --component Card
 corepack pnpm audit:ui-components --component KpiCard
 corepack pnpm audit:ui-components --component InteractiveCard
+corepack pnpm audit:ui-components --component AppListFrame
+corepack pnpm audit:ui-components --component InventoryListFrame
+corepack pnpm audit:ui-components --component DocumentFormFrame
 corepack pnpm audit:ui-components --component BranchOperatorPage
 corepack pnpm audit:ui-components --component branch-touch-list
 ```
@@ -177,24 +200,44 @@ re-export của shared `InteractiveCard`, không phải một app adapter thứ 
 ## UI Block Selection
 
 `UI_BLOCK_REGISTRY` trong `scripts/ui-component-registry.mjs` là index cho các
-composition đã có thật. UI block đứng giữa archetype và component:
+composition đã có thật. UI block đứng giữa archetype và adapter:
 
 ```text
-actor/job → archetype → UI block → adapter/component → route
+actor/job → archetype → UI block (recipe) → adapter/component → route
 ```
 
 - Archetype sở hữu shape và state model của cả page.
 - UI block đặt tên cho một composition cụ thể theo plane, ví dụ
   `management-list`, `branch-touch-list`, `realtime-board`.
-- Adapter/component là code được import.
+- Adapter/component là code được import (`AppListFrame`, `InventoryListFrame`,
+  `DocumentFormFrame`, `BranchOperatorPage`, shared components…).
 - Route gắn data, authority, copy và mutation thật.
 
-UI block không tạo thư mục `blocks/`, package mới hoặc component `*Block`. Nó là
-recipe tra cứu có `archetypes`, `planes`, `need`, `use`, `fallback`,
-`forbidden`, `exemplar`; validator chặn source, exemplar, plane hoặc archetype
-không còn hợp lệ. Chỉ thêm block khi có ít nhất hai consumer thật, hoặc một
-critical workflow có exemplar được chấp thuận. Nếu không có block phù hợp, dùng
-archetype + route-scoped composition từ adapter hiện có.
+UI block không tạo thư mục `blocks/`, package mới hoặc component `*Block`
+(D086). Nó là recipe tra cứu có `archetypes`, `planes`, `need`, `use`,
+`fallback`, `forbidden`, `exemplar`; validator chặn source, exemplar, plane hoặc
+archetype không còn hợp lệ. Chỉ thêm block recipe khi có ít nhất hai consumer
+thật, hoặc một critical workflow có exemplar được chấp thuận. Khi composition
+lặp cần code dùng lại: **promote Adapter** đã đăng ký (hoặc mở rộng adapter
+hiện có), rồi cập nhật trường `use` của block recipe trỏ vào adapter đó — không
+nâng recipe thành import layer. Nếu không có block phù hợp, dùng archetype +
+route-scoped composition từ adapter hiện có.
+
+Owner LIST canonical:
+
+```text
+AppPage → AppPageHeader → AppListFrame toolbar={<AppToolbar variant="inline" />} → DataTable
+```
+
+Owner Inventory LIST giữ alias cùng recipe:
+
+```text
+AppPage → AppPageHeader → InventoryListFrame toolbar={<AppToolbar variant="inline" />} → DataTable
+```
+
+Owner DOC-WORKFLOW canonical: `DocumentFormFrame` (+ line `DataTable` / form
+fields). Branch LIST canonical: `BranchOperatorPage` + panel/controls +
+`ItemGroup` (không mang `DocumentFormFrame` / Owner `DataTable` sang branch).
 
 ## Stitch Adapter Workflow
 

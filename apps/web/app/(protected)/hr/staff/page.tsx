@@ -3,7 +3,7 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 import { APP_COPY_VI, UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { matchesSearch } from "@lib/search";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppListFrame } from "@/components/surface";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";
@@ -130,18 +130,24 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
           </>
         }
       />
-      <Suspense>
-        <StaffFilters
+      <AppListFrame
+        contentScroll
+        toolbar={
+          <Suspense>
+            <StaffFilters
+              branches={branchOptions}
+              positionOptions={positionOptions}
+            />
+          </Suspense>
+        }
+      >
+        <StaffTable
+          staff={staff}
           branches={branchOptions}
           positionOptions={positionOptions}
+          hasActiveFilters={hasActiveFilters}
         />
-      </Suspense>
-      <StaffTable
-        staff={staff}
-        branches={branchOptions}
-        positionOptions={positionOptions}
-        hasActiveFilters={hasActiveFilters}
-      />
+      </AppListFrame>
     </AppPage>
   );
 }

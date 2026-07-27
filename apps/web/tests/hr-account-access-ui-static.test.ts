@@ -21,7 +21,10 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
 
   assert.match(page, /q\?: string/);
   assert.match(page, /matchesSearch/);
+  assert.match(page, /<AppListFrame/);
   assert.match(filters, /<AppToolbar/);
+  assert.match(filters, /variant="inline"/);
+  assert.match(filters, /size=\{controlSize\}/);
   assert.match(filters, /router\.replace/);
   assert.match(table, /permissions\?tab=permissions/);
   assert.match(form, /copy\.accountSection/);

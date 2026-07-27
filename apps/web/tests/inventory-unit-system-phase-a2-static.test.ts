@@ -144,7 +144,7 @@ test("ingredient actions surface locked unit ladders with operator-safe copy", (
   );
 });
 
-test("ingredient editor hides multi-unit changes while backend locks remain", () => {
+test("ingredient editor locks unit roles only after stock movements", () => {
   assert.match(
     ingredientActions,
     /export async function fetchIngredientUnitLock/,
@@ -153,11 +153,14 @@ test("ingredient editor hides multi-unit changes while backend locks remain", ()
     ingredientActions,
     /\.from\("stock_movements"\)[\s\S]*\.select\("id", \{ count: "exact", head: true \}\)/,
   );
+  assert.match(ingredientDialog, /fetchIngredientUnitLock/);
+  assert.match(ingredientDialog, /disabled=\{unitsLocked\}/);
+  assert.doesNotMatch(ingredientDialog, /disabled=\{isEdit\}/);
   assert.doesNotMatch(ingredientClient, /fetchIngredientUnitLock/);
   assert.doesNotMatch(ingredientDialog, /useFieldArray|UnitsField/);
   assert.match(
     ingredientDialog,
-    /name="input_unit_id"[\s\S]*name="output_unit_id"[\s\S]*disabled=\{isEdit\}/,
+    /name="input_unit_id"[\s\S]*name="output_unit_id"/,
   );
 });
 

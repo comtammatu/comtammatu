@@ -20,9 +20,9 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { cn } from "@comtammatu/ui/lib/utils";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { AppToolbar } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
 import {
   FINANCE_RANGES,
@@ -114,7 +114,9 @@ export function FilterBar({
   className,
 }: FilterBarProps) {
   const router = useRouter();
-  const isTouchLayout = useIsMobile(1024);
+  const controlSize = useFormControlSize();
+  const optionSize = controlSize === "touch" ? "touch" : "default";
+  const filterActionSize = controlSize;
   const [isPending, startTransition] = useTransition();
 
   // Local draft for custom date range — only pushed on Apply click. All
@@ -212,7 +214,7 @@ export function FilterBar({
             >
               <SelectTrigger
                 aria-label={filterCopy.branch}
-                size={isTouchLayout ? "touch" : "default"}
+                size={controlSize}
                 className="w-full sm:w-48"
               >
                 <SelectValue placeholder={filterCopy.branchPlaceholder} />
@@ -220,7 +222,7 @@ export function FilterBar({
               <SelectContent>
                 <SelectItem
                   value={ALL_BRANCHES_VALUE}
-                  size={isTouchLayout ? "touch" : "default"}
+                  size={optionSize}
                 >
                   {messages.finance.common.allBranches}
                 </SelectItem>
@@ -228,7 +230,7 @@ export function FilterBar({
                   <SelectItem
                     key={b.id}
                     value={String(b.id)}
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={optionSize}
                   >
                     {b.name}
                   </SelectItem>
@@ -245,7 +247,7 @@ export function FilterBar({
             >
               <SelectTrigger
                 aria-label={filterCopy.range}
-                size={isTouchLayout ? "touch" : "default"}
+                size={controlSize}
                 className="w-full sm:w-40"
               >
                 <SelectValue />
@@ -255,7 +257,7 @@ export function FilterBar({
                   <SelectItem
                     key={range}
                     value={range}
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={optionSize}
                   >
                     {RANGE_LABEL[range]}
                   </SelectItem>
@@ -283,13 +285,13 @@ export function FilterBar({
               onValueChange={handleBranchChange}
               disabled={isPending}
             >
-              <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+              <SelectTrigger size={controlSize}>
                 <SelectValue placeholder={filterCopy.branchPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem
                   value={ALL_BRANCHES_VALUE}
-                  size={isTouchLayout ? "touch" : "default"}
+                  size={optionSize}
                 >
                   {messages.finance.common.allBranches}
                 </SelectItem>
@@ -297,7 +299,7 @@ export function FilterBar({
                   <SelectItem
                     key={b.id}
                     value={String(b.id)}
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={optionSize}
                   >
                     {b.name}
                   </SelectItem>
@@ -315,7 +317,7 @@ export function FilterBar({
               onValueChange={(v) => handleRangeChange(v as FinanceRange)}
               disabled={isPending}
             >
-              <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+              <SelectTrigger size={controlSize}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -323,7 +325,7 @@ export function FilterBar({
                   <SelectItem
                     key={range}
                     value={range}
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={optionSize}
                   >
                     {RANGE_LABEL[range]}
                   </SelectItem>
@@ -370,7 +372,7 @@ export function FilterBar({
               }
               disabled={isPending}
             >
-              <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+              <SelectTrigger size={controlSize}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -379,7 +381,7 @@ export function FilterBar({
                     <SelectItem
                       key={mode}
                       value={mode}
-                      size={isTouchLayout ? "touch" : "default"}
+                      size={optionSize}
                     >
                       {COMPARE_LABEL[mode]}
                     </SelectItem>
@@ -400,7 +402,7 @@ export function FilterBar({
               }
               disabled={isPending}
             >
-              <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
+              <SelectTrigger size={controlSize}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -408,7 +410,7 @@ export function FilterBar({
                   <SelectItem
                     key={p}
                     value={p}
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={optionSize}
                   >
                     {PAYMENT_LABEL[p]}
                   </SelectItem>
@@ -434,7 +436,7 @@ export function FilterBar({
               id="finance-from"
               type="date"
               value={draftFrom}
-              controlSize={isTouchLayout ? "touch" : "default"}
+              controlSize={controlSize}
               onChange={(e) => setDraftFrom(e.target.value)}
             />
           </div>
@@ -446,13 +448,13 @@ export function FilterBar({
               id="finance-to"
               type="date"
               value={draftTo}
-              controlSize={isTouchLayout ? "touch" : "default"}
+              controlSize={controlSize}
               onChange={(e) => setDraftTo(e.target.value)}
             />
           </div>
           <div className="flex items-end">
             <Button
-              size={isTouchLayout ? "touch" : "sm"}
+              size={filterActionSize}
               onClick={handleApplyCustom}
               disabled={
                 isPending ||

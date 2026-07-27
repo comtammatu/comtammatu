@@ -54,7 +54,21 @@ export type SupplierInvoiceGroup = {
   overdueCount: number;
   nextDueDate: string | null;
   primaryInvoice: SupplierInvoiceRow;
+  /** All invoices in the group, outstanding-first then code. */
+  invoices: SupplierInvoiceRow[];
 };
+
+function compareGroupInvoices(
+  left: SupplierInvoiceRow,
+  right: SupplierInvoiceRow,
+) {
+  const leftOutstanding = getSupplierInvoiceOutstandingAmount(left);
+  const rightOutstanding = getSupplierInvoiceOutstandingAmount(right);
+  if (rightOutstanding !== leftOutstanding) {
+    return rightOutstanding - leftOutstanding;
+  }
+  return left.code.localeCompare(right.code, "vi");
+}
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -195,9 +209,13 @@ export function groupSupplierInvoices(
   viewMode: SupplierInvoiceViewMode,
   today = getVNDateString(),
 ): SupplierInvoiceGroup[] {
-  type MutableGroup = Omit<SupplierInvoiceGroup, "primaryInvoice"> & {
+  type MutableGroup = Omit<
+    SupplierInvoiceGroup,
+    "primaryInvoice" | "invoices"
+  > & {
     firstInvoice: SupplierInvoiceRow;
     primaryOutstandingInvoice: SupplierInvoiceRow | null;
+    invoices: SupplierInvoiceRow[];
   };
 
   const groups = new Map<string, MutableGroup>();
@@ -221,12 +239,14 @@ export function groupSupplierInvoices(
         nextDueDate: null,
         firstInvoice: invoice,
         primaryOutstandingInvoice: null,
+        invoices: [],
       };
       groups.set(id, group);
     }
 
     const outstandingAmount = getSupplierInvoiceOutstandingAmount(invoice);
     group.invoiceCount += 1;
+    group.invoices.push(invoice);
     group.totalAmount += invoice.amount;
     group.paidAmount += invoice.paidAmount;
     group.creditAppliedAmount += invoice.creditAppliedAmount;
@@ -250,10 +270,14 @@ export function groupSupplierInvoices(
   }
 
   return Array.from(groups.values())
-    .map(({ firstInvoice, primaryOutstandingInvoice, ...group }) => ({
-      ...group,
-      primaryInvoice: primaryOutstandingInvoice ?? firstInvoice,
-    }))
+    .map(({ firstInvoice, primaryOutstandingInvoice, invoices, ...group }) => {
+      const sortedInvoices = invoices.toSorted(compareGroupInvoices);
+      return {
+        ...group,
+        invoices: sortedInvoices,
+        primaryInvoice: primaryOutstandingInvoice ?? firstInvoice,
+      };
+    })
     .sort((left, right) => {
       const amountDiff = right.outstandingAmount - left.outstandingAmount;
       if (amountDiff !== 0) return amountDiff;

@@ -30,27 +30,36 @@ export default async function SupplierInvoicesPage({
     (await resolveRequestedBranchId(params.branchId)) ?? undefined;
   const filters = parseSupplierInvoiceListFilters(params);
 
-  const [res, suppliersRes, grnsRes, authState, hasPayPermission] =
-    await Promise.all([
-      fetchSupplierInvoicesPage({
-        branchId: branchFilter,
-        query: filters.query,
-        supplierId: filters.supplierId ?? undefined,
-        matchStatus: filters.matchStatus ?? undefined,
-        paymentStatus: filters.paymentStatus ?? undefined,
-        overdueOnly: filters.overdueOnly,
-        viewMode: filters.viewMode,
-      }),
-      fetchSuppliers(),
-      fetchGrnIdsForDropdown(branchFilter),
-      loadAuthState(),
-      currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
-    ]);
+  const [
+    res,
+    suppliersRes,
+    grnsRes,
+    authState,
+    hasPayPermission,
+    hasInvoiceCreatePermission,
+  ] = await Promise.all([
+    fetchSupplierInvoicesPage({
+      branchId: branchFilter,
+      query: filters.query,
+      supplierId: filters.supplierId ?? undefined,
+      matchStatus: filters.matchStatus ?? undefined,
+      paymentStatus: filters.paymentStatus ?? undefined,
+      overdueOnly: filters.overdueOnly,
+      viewMode: filters.viewMode,
+    }),
+    fetchSuppliers(),
+    fetchGrnIdsForDropdown(branchFilter),
+    loadAuthState(),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
+    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE),
+  ]);
   if (!res.success || !suppliersRes.success || !grnsRes.success) {
     throw new Error("inventory.supplier_invoices.load_failed");
   }
-  const canPaySupplier =
-    authState.claims.user_role === "owner" && hasPayPermission;
+  const isOwner = authState.claims.user_role === "owner";
+  const canPaySupplier = isOwner && hasPayPermission;
+  const canAttachVatEvidence =
+    isOwner && (hasPayPermission || hasInvoiceCreatePermission);
   const page = res.data;
   const dbRows = (page?.items ?? []) as Array<Record<string, unknown>>;
   const initialHasMore = page?.hasMore ?? false;
@@ -88,7 +97,9 @@ export default async function SupplierInvoicesPage({
       initialTotalCount={page?.totalCount ?? 0}
       filters={filters}
       branchId={branchFilter}
+      tenantId={authState.claims.tenant_id}
       canPaySupplier={canPaySupplier}
+      canAttachVatEvidence={canAttachVatEvidence}
     />
   );
 }

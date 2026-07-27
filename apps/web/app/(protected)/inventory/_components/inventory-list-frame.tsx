@@ -1,35 +1,22 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { cn } from "@comtammatu/ui";
 import {
-  AppSection,
-  type AppSectionProps,
+  AppListFrame,
+  type AppListFrameProps,
 } from "@/components/surface";
 
-type InventoryListFrameProps = Omit<
-  AppSectionProps,
-  "children" | "className" | "contentFlush"
-> & {
-  children: ReactNode;
-  className?: string;
-  toolbar?: ReactNode;
-};
+/** Desktop LIST filter Select: fixed width, aligns with InputGroup size=field. */
+export const inventoryListFilterSelectClassName = "w-44 shrink-0";
 
+/** Wider LIST filter when option labels include counts. */
+export const inventoryListFilterSelectWideClassName = "w-56 shrink-0";
+
+export type InventoryListFrameProps = AppListFrameProps;
+
+/** Inventory domain alias for the shared Owner LIST frame. */
 export function InventoryListFrame({
   children,
-  className,
-  toolbar,
-  ...sectionProps
+  ...props
 }: InventoryListFrameProps) {
-  return (
-    <AppSection
-      {...sectionProps}
-      className={cn("overflow-hidden", className)}
-      contentFlush
-    >
-      {toolbar}
-      {children}
-    </AppSection>
-  );
+  return <AppListFrame {...props}>{children}</AppListFrame>;
 }

@@ -672,6 +672,8 @@ test("UI component registry classifies and explains every shared component and a
   for (const adapter of [
     "AppPage",
     "DataTable",
+    "DocumentFormFrame",
+    "InventoryListFrame",
     "FormDialog",
     "ReasonConfirmDialog",
     "PwaInstallHelpDialog",
@@ -689,6 +691,44 @@ test("UI component registry classifies and explains every shared component and a
   assert.deepEqual(
     registryModule.findComponentGuidance("KpiCard").map((entry) => entry.layer),
     ["app-adapter"],
+  );
+  assert.deepEqual(
+    registryModule
+      .findComponentGuidance("InventoryListFrame")
+      .map((entry) => entry.layer),
+    ["app-adapter"],
+  );
+  assert.deepEqual(
+    registryModule
+      .findComponentGuidance("DocumentFormFrame")
+      .map((entry) => entry.layer),
+    ["app-adapter"],
+  );
+  assert.deepEqual(
+    registryModule
+      .findComponentGuidance("SettingsPageFrame")
+      .map((entry) => entry.layer),
+    ["app-adapter"],
+  );
+  assert.deepEqual(
+    registryModule
+      .findComponentGuidance("management-list")
+      .map((entry) => entry.layer),
+    ["ui-block"],
+  );
+  assert.match(
+    registryModule.findComponentGuidance("management-list")[0]?.use ?? "",
+    /InventoryListFrame/,
+  );
+  assert.deepEqual(
+    registryModule
+      .findComponentGuidance("branch-touch-list")
+      .map((entry) => entry.layer),
+    ["ui-block"],
+  );
+  assert.match(
+    registryModule.findComponentGuidance("branch-touch-list")[0]?.use ?? "",
+    /BranchOperatorPage/,
   );
   assert.deepEqual(
     registryModule

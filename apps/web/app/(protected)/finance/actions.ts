@@ -2,7 +2,11 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  MODULE_ACL,
+  PERMISSION_KEYS,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { createInvoiceProvider } from "@lib/invoice-provider-init";
 import { messages } from "@lib/messages";
@@ -16,7 +20,8 @@ import {
 } from "./_lib/invoice-queries";
 import type { ManualInvoiceOrderPreview } from "./_lib/finance-types";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
+// Shared ref so React cache() on getAuthContext dedupes across finance loaders.
+const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 const financeActionErrors = messages.finance.actionErrors;
 const POS_INVOICE_ROLES: readonly StaffRole[] = [
   "owner",

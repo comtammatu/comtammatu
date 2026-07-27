@@ -235,7 +235,13 @@ accepted GRN value and a fully priced PO subtotal. AP balance and supplier
 payment use `total_amount = subtotal + vat_amount`. Multi-rate input invoices
 store one immutable `vat_breakdown` bucket per rate; database normalization
 derives the header totals and leaves the compatibility `vat_rate` null when
-more than one rate is present. The legacy
+more than one rate is present. Recording a supplier payment requires at least
+one HĐ GTGT file on `supplier_invoices.vat_invoice_attachment_path` (private
+bucket `supplier-invoice-attachments`); `record_supplier_payment` raises
+`vat_invoice_attachment_required` when missing. Attachment may be uploaded
+optionally during invoice create or later on the detail Sheet; the
+`attach_supplier_invoice_vat_evidence` action allows Owner with
+`finance:ap_pay` or `procurement:invoice_create` (matching the RPC). The legacy
 `/inventory/supplier-invoices` route remains a compatibility entry only; new
 GRN and report links use `/finance/supplier-invoices`.
 
@@ -243,10 +249,13 @@ There is no current `/accounting/*` app surface.
 
 ## VAT And Equipment Boundary
 
-Supplier invoice VAT is only `input_vat_recorded`. The current schema does not
-store deduction evidence, business-use allocation, declaration period, or
-adjustment state, so Finance must not label it `input_vat_deductible` or derive
-`vat_payable`.
+Supplier invoice VAT and operating-expense `expenses.vat_breakdown` are only
+`input_vat_recorded`. Optional `expenses.invoice_attachment_url` is supporting
+evidence for that recorded snapshot. The current schema does not store deduction
+evidence, business-use allocation, declaration period, or adjustment state, so
+Finance must not label either surface `input_vat_deductible` or derive
+`vat_payable`. Operating-expense KPI and cash totals continue to use gross
+`expenses.amount` (= subtotal + recorded VAT).
 
 Output VAT belongs to effective issued/corrected sales invoice snapshots. It is
 not revenue. Under the deduction method, the provisional relationship is

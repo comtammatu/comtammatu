@@ -18,6 +18,7 @@ export type SupplierInvoiceRow = {
   variance: number | null;
   invoiceDate: string | null;
   dueDate: string | null;
+  vatInvoiceAttachmentPath: string | null;
   paymentCount: number;
   lastPayment: SupplierInvoicePaymentSummary | null;
 };
@@ -177,6 +178,11 @@ export function mapSupplierInvoiceRow(
         : null,
     invoiceDate: (row.invoice_date as string) ?? null,
     dueDate: (row.due_date as string) ?? null,
+    vatInvoiceAttachmentPath:
+      typeof row.vat_invoice_attachment_path === "string" &&
+      row.vat_invoice_attachment_path.trim()
+        ? row.vat_invoice_attachment_path.trim()
+        : null,
     paymentCount: payments.length,
     lastPayment: payments[0] ?? null,
   };

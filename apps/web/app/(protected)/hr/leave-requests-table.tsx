@@ -45,7 +45,8 @@ import {
 } from "@lib/hr/leave-request-model";
 import { countInclusiveDays } from "@lib/hr/payroll-day-math";
 import { StatusBadge } from "@/components/status-badge";
-import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
+import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 import { FormDialog, TextareaField } from "@/components/form";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import {
@@ -81,6 +82,7 @@ function getEmployeeName(request: LeaveRequestRow): string {
 }
 
 export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
+  const controlSize = useFormControlSize();
   const [requests, setRequests] = useState<LeaveRequestRow[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
     branches[0]?.id ?? null,
@@ -396,57 +398,58 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <AppToolbar
-        filters={
-          <Select
-            value={selectedBranchId?.toString() ?? ""}
-            onValueChange={(value) => setSelectedBranchId(Number(value))}
-          >
-            <SelectTrigger
-              className="w-full sm:w-48"
-              aria-label={BRANCH_VI.select}
-            >
-              <SelectValue placeholder={BRANCH_VI.select} />
-            </SelectTrigger>
-            <SelectContent>
-              {branches.map((branch) => (
-                <SelectItem key={branch.id} value={branch.id.toString()}>
-                  {branch.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <>
+      <AppListFrame
+        contentScroll
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            filters={
+              <Select
+                value={selectedBranchId?.toString() ?? ""}
+                onValueChange={(value) => setSelectedBranchId(Number(value))}
+              >
+                <SelectTrigger
+                  size={controlSize}
+                  className="w-full sm:w-48"
+                  aria-label={BRANCH_VI.select}
+                >
+                  <SelectValue placeholder={BRANCH_VI.select} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+            actions={
+              <>
+                <span className="text-sm text-muted-foreground">
+                  {copy.summary(pendingRows.length, requests.length)}
+                </span>
+                {isPending ? <Spinner /> : null}
+              </>
+            }
+          />
         }
-        actions={
-          <>
-            <span className="text-sm text-muted-foreground">
-              {copy.summary(pendingRows.length, requests.length)}
-            </span>
-            {isPending ? <Spinner /> : null}
-          </>
-        }
-      />
-
-      <AppPageTabs
-        defaultValue="pending"
-        paramKey="leave-view"
-        items={[
-          { value: "pending", label: copy.pendingTab(pendingRows.length) },
-          {
-            value: "approved-month",
-            label: copy.approvedMonthTab,
-            count: approvedMonthRows.length,
-          },
-          { value: "history", label: copy.historyTab(historyRows.length) },
-        ]}
       >
-        <TabsContent value="pending">
-          <AppSection
-            title={copy.pendingTab(pendingRows.length)}
-            contentFlush
-            contentScroll
-          >
+        <AppPageTabs
+          defaultValue="pending"
+          paramKey="leave-view"
+          items={[
+            { value: "pending", label: copy.pendingTab(pendingRows.length) },
+            {
+              value: "approved-month",
+              label: copy.approvedMonthTab,
+              count: approvedMonthRows.length,
+            },
+            { value: "history", label: copy.historyTab(historyRows.length) },
+          ]}
+        >
+          <TabsContent value="pending" className="mt-0">
             {pendingRows.length === 0 && !isPending ? (
               <AppEmptyState
                 title={copy.emptyPendingTitle}
@@ -468,15 +471,15 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
                 }
               />
             )}
-          </AppSection>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="approved-month">
-          <div className="flex flex-col gap-4">
+          <TabsContent value="approved-month" className="mt-0">
             <AppToolbar
+              variant="inline"
               filters={
                 <Select value={approvedMonth} onValueChange={setApprovedMonth}>
                   <SelectTrigger
+                    size={controlSize}
                     className="w-40"
                     aria-label={copy.approvedMonthMonthLabel}
                   >
@@ -492,30 +495,18 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
                 </Select>
               }
             />
-            <AppSection
-              title={copy.approvedMonthTitle}
-              contentFlush
-              contentScroll
-            >
-              <DataTable
-                columns={historyColumns}
-                data={approvedMonthRows}
-                pageSize={25}
-                getRowKey={(request) => request.id}
-                mobileBreakpoint={1024}
-                rowClassName={() => (isPending ? "opacity-60" : undefined)}
-                mobileCardRender={(request) => renderLeaveMobileCard(request)}
-              />
-            </AppSection>
-          </div>
-        </TabsContent>
+            <DataTable
+              columns={historyColumns}
+              data={approvedMonthRows}
+              pageSize={25}
+              getRowKey={(request) => request.id}
+              mobileBreakpoint={1024}
+              rowClassName={() => (isPending ? "opacity-60" : undefined)}
+              mobileCardRender={(request) => renderLeaveMobileCard(request)}
+            />
+          </TabsContent>
 
-        <TabsContent value="history">
-          <AppSection
-            title={copy.historyTab(historyRows.length)}
-            contentFlush
-            contentScroll
-          >
+          <TabsContent value="history" className="mt-0">
             {historyRows.length === 0 && !isPending ? (
               <AppEmptyState
                 title={copy.emptyHistoryTitle}
@@ -533,9 +524,9 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
                 mobileCardRender={(request) => renderLeaveMobileCard(request)}
               />
             )}
-          </AppSection>
-        </TabsContent>
-      </AppPageTabs>
+          </TabsContent>
+        </AppPageTabs>
+      </AppListFrame>
 
       <FormDialog
         open={rejectTarget !== null}
@@ -571,6 +562,6 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
           />
         )}
       </FormDialog>
-    </div>
+    </>
   );
 }

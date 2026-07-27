@@ -16,41 +16,35 @@ import type { Session } from "@supabase/supabase-js";
  *
  * Wrapped in React `cache()` so within ONE RSC render, parallel actions
  * sharing the same `allowedRoles` ref (e.g. `MODULE_ACL.pos.allowedRoles`
- * imported from a single module) dedupe to one `getUser()` HTTP roundtrip
- * + one `getSession()` cookie read. POS reload calls 7 actions that all
- * pass `POS_ROLES` — without this cache the page paid 7× ~150-300ms to
- * Supabase Auth. Cache scope is per-request; production safety unchanged.
+ * imported from a single module) dedupe to one session cookie read.
+ * POS reload calls 7 actions that all pass `POS_ROLES` — without this
+ * cache the page repeated auth work per action. Cache scope is per-request;
+ * production safety unchanged.
  */
 export const getAuthContext = cache(async function getAuthContext(
   allowedRoles: readonly StaffRole[],
 ) {
   const supabase = await createClient();
 
-  // Server Actions use getUser() — it validates the JWT against Supabase Auth
-  // server, ensuring banned/deleted users are rejected immediately.
-  // Pages/layouts can use getSession() (middleware already verified), but
-  // mutations must re-verify for defense in depth.
+  // Align with loadAuthState: proxy (`apps/web/proxy.ts`) is the request auth
+  // gate. Prefer getSession() cookie claims over getUser().
   //
-  // Parallelize the two reads: getUser() makes an HTTP roundtrip to the Auth
-  // server while getSession() decodes the cookie locally. They have no
-  // dependency, so sequencing them only added latency. If getUser() rejects
-  // a banned user we still return null — the parallel session read is
-  // discarded harmlessly (no permission RPC has fired yet).
-  const [userRes, sessionRes] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase.auth.getSession(),
-  ]);
+  // getUser() maps Auth `session_not_found` to "Auth session missing!" even
+  // when the cookie JWT still authorizes PostgREST/RLS — that false-null made
+  // GRN / supplier-invoice / expense Server Action loaders return "Không có
+  // quyền" while purchase-orders (loadAuthState + direct select) succeeded.
+  // Do not Promise.all getUser+getSession (GoTrue client race).
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token || !session.user) return null;
 
-  const user = userRes.data.user;
-  if (!user) return null;
-
-  const session = sessionRes.data.session;
-  const claims = extractClaimsFromAccessToken(session?.access_token);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) return null;
 
   if (!allowedRoles.includes(claims.user_role)) return null;
 
-  return { supabase, claims, user };
+  return { supabase, claims, user: session.user };
 });
 
 type PermissionLike = PermissionKey | string;
@@ -88,8 +82,8 @@ const hasPermissionGrant = cache(async function hasPermissionGrant(
 
 // Cheap permission probe for callers that already have authenticated
 // `{ supabase, claims }`. Use this for UI hints like `canManageOrders` so the
-// action does NOT pay a second `getUser()` HTTP round-trip just to ask "does
-// this user also have key X?".
+// action does NOT re-enter getAuthContext just to ask "does this user also
+// have key X?".
 //
 // Always parallelize with the data fetch via `Promise.all` — the probe
 // has no dependency on the data result.

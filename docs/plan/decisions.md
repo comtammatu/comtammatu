@@ -17,11 +17,11 @@
 
 ## D000: Inventory branch and central site operating model (2026-06-19)
 
-**Decision (net, sau D078):** Inventory dùng `branches` làm site table; `branches.branch_kind` enum giữ `branch`, `central_supply`, `central_kitchen` cho lịch sử. Site vận hành active chỉ `branch`. Mỗi chi nhánh giữ **một** location stock-bearing `warehouse` (Kho chi nhánh). `central_supply` / `central_kitchen` và `location_kind='kitchen'` (Bếp CN) đã nghỉ vận hành — không seed/active mới. PO/GRN/stock levels/production/stock transfers ref `branch_id` trực tiếp.
+**Decision (net, sau D082 trên Greenfield):** Inventory dùng `branches` làm site table; `branches.branch_kind` gồm `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Site active trên `matu-greenfield-company`: cả ba kind. Mỗi site giữ **một** location stock-bearing `warehouse`. `location_kind='kitchen'` (Bếp CN) chỉ còn lịch sử. PO/GRN/stock levels/production/stock transfers ref `branch_id` trực tiếp. `(D073/D078 trên matu-prod đã freeze — không còn authority Greenfield; sửa bởi D082.)`
 
-**Transfer matrix** (trigger `enforce_stock_transfer_direction`): giữ cho lịch sử + đợt chuyển tồn cũ; vận hành mới không mở same-branch Kho↔Bếp và không mở cross-branch từ operator (D073/D078). Chỉ phiếu xuất/tiêu hao/write-off giảm tồn chi nhánh.
+**Transfer matrix** (trigger `enforce_stock_transfer_direction`): giữ cho lịch sử và chuyển tồn có chủ đích; không dùng transfer giả để tiêu hao/write-off.
 
-Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi nhánh); siết bởi D078 (một kho/chi nhánh). Canonical vận hành: `docs/ref/inventory.md`.
+Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp); D082 mở lại Kho Tổng + Bếp TT trên Greenfield. Canonical: `docs/ref/inventory.md`, ADR 0017.
 
 ## D002: Tenant-Branch 2-level thay vì Company-Brand-Branch 3-level (2026-04-01)
 
@@ -612,3 +612,25 @@ suất được snapshot theo dòng bán và cấu hình đã đăng ký. Financ
 vận hành, không tự trở thành sổ kế toán hoặc báo cáo tài chính. Canonical:
 `docs/plan/adr/0016-joint-stock-company-operating-model.md`,
 `docs/ref/legal-framework-2026.md` và `docs/ref/einvoice-tax.md`.
+
+## D085: Operating expense multi-rate VAT + optional HĐ GTGT attachment (2026-07-27)
+
+**Decision (owner):** `/finance/expenses` stores immutable multi-rate
+`vat_breakdown` (0/5/8/10) like supplier invoices; `amount` remains gross
+(= subtotal + VAT) for KPI/cash. Optional PDF/image attachment URL is evidence
+only. Both are `input_vat_recorded`, never deductible status or `vat_payable`.
+
+**Consequences:** Update create/transfer RPCs and list UI; do not merge with
+`supplier_invoices`; do not mutate VAT after insert.
+
+## D086: UI Block stays recipe metadata — promote reusable chrome via Adapter (2026-07-27)
+
+**Decision (owner):** Không mở tầng UI Block importable (`apps/web/.../blocks/`,
+component `*Block`). `UI_BLOCK_REGISTRY` giữ recipe + exemplar. Composition lặp
+(≥2 consumer) promote thành **Adapter** đã đăng ký (`InventoryListFrame`,
+`DocumentFormFrame`, `SettingsPageFrame`, `BranchOperator*`, …) rồi cập nhật
+trường `use` của block recipe. Shadcn Blocks chỉ đối chiếu anatomy, không phải
+runtime authority.
+
+**Canonical:** `docs/spec/design-system.md` § Artifact Ladder, `docs/modules/ui.md`
+§ UI Block Selection, `scripts/ui-component-registry.mjs`.

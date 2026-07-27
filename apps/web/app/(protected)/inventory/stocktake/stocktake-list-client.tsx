@@ -40,6 +40,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
+import { useFormControlSize } from "@/components/form/control-size";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import {
@@ -51,7 +52,10 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { Ban as IconBan } from "lucide-react";
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
+import {
+  InventoryListFrame,
+  inventoryListFilterSelectClassName,
+} from "../_components/inventory-list-frame";
 
 export interface StocktakeSessionRow {
   id: number;
@@ -141,6 +145,7 @@ export function StocktakeListClient({
   routeBase?: string;
   embedded?: boolean;
 }) {
+  const controlSize = useFormControlSize(embedded ? "touch" : "responsive");
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
@@ -246,7 +251,7 @@ export function StocktakeListClient({
   const stocktakeAction = (
     <Button
       type="button"
-      size={embedded ? "touch" : "default"}
+      size={embedded ? "touch" : "lg"}
       render={<Link href={`${routeBase}/new${branchQuery}`} />}
     >
       <IconClipboardCheck className="size-4" />
@@ -279,10 +284,7 @@ export function StocktakeListClient({
           <AppToolbar
             variant="inline"
             search={
-              <InputGroup
-                size={embedded ? "touch" : "field"}
-                className="w-full"
-              >
+              <InputGroup size={controlSize} className="w-full">
                 <InputGroupAddon>
                   <IconSearch />
                 </InputGroupAddon>
@@ -299,8 +301,12 @@ export function StocktakeListClient({
             filters={
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger
-                  size={embedded ? "touch" : "field"}
-                  className={embedded ? "w-full" : "min-w-44"}
+                  size={controlSize}
+                  className={
+                    controlSize === "touch"
+                      ? "w-full"
+                      : inventoryListFilterSelectClassName
+                  }
                 >
                   <SelectValue
                     placeholder={messages.inventory.stocktake.statusPlaceholder}

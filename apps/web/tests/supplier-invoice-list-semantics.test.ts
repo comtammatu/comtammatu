@@ -162,6 +162,7 @@ test("full-result group totals remain independent from cursor presentation", () 
   assert.equal(firstCursorPage.length, 50);
   assert.equal(fullResultGroups.length, 1);
   assert.equal(fullResultGroups[0]?.invoiceCount, 60);
+  assert.equal(fullResultGroups[0]?.invoices.length, 60);
   assert.equal(fullResultGroups[0]?.totalAmount, 6_000_000);
   assert.equal(fullResultGroups[0]?.paidAmount, 1_200_000);
   assert.equal(fullResultGroups[0]?.creditAppliedAmount, 300_000);
@@ -179,6 +180,31 @@ test("full-result group totals remain independent from cursor presentation", () 
     /const pageRows = afterCursor\.slice\(0, pageSize \+ 1\)/,
   );
   assert.doesNotMatch(action, /groupSupplierInvoices\(visibleRows/);
+});
+
+test("supplier invoice groups expose member codes for multi-invoice tracking", () => {
+  const unpaid = makeInvoice(1, {
+    code: "HD-SMOKE-NEG-002",
+    poId: 1,
+    poCode: "PO-2026-0001",
+    amount: 11_000,
+  });
+  const paid = makeInvoice(2, {
+    code: "HD-SMOKE-001",
+    poId: 1,
+    poCode: "PO-2026-0001",
+    amount: 165_000,
+    paidAmount: 165_000,
+    paymentStatus: "paid",
+  });
+
+  const [poGroup] = groupSupplierInvoices([paid, unpaid], "po", "2026-07-27");
+  assert.equal(poGroup?.invoiceCount, 2);
+  assert.deepEqual(
+    poGroup?.invoices.map((invoice) => invoice.code),
+    ["HD-SMOKE-NEG-002", "HD-SMOKE-001"],
+  );
+  assert.equal(poGroup?.primaryInvoice.code, "HD-SMOKE-NEG-002");
 });
 
 test("both Supplier Invoice route pages own filter state from searchParams", () => {

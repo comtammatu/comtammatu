@@ -62,11 +62,18 @@ test("responsive tables follow the Owner touch-shell breakpoint by default", () 
 test("table toolbar controls use touch sizing on mobile and tablet", () => {
   assert.match(
     source,
-    /<InputGroup[\s\S]{0,160}size=\{isTouchLayout \? "touch" : "default"\}/,
+    /const controlSize = isTouchLayout \? "touch" : "field"/,
   );
+  assert.match(source, /<InputGroup[\s\S]{0,160}size=\{controlSize\}/);
   assert.doesNotMatch(source, /isTouchLayout \? "h-12" : "h-7"/);
-  assert.match(source, /size=\{isTouchLayout \? "touch" : "default"\}/);
-  assert.match(source, /isTouchLayout \? "min-h-12 text-sm" : undefined/);
+  assert.doesNotMatch(
+    source,
+    /size=\{isTouchLayout \? "touch" : "default"\}/,
+  );
+  assert.match(
+    source,
+    /size=\{controlSize === "touch" \? "touch" : "default"\}/,
+  );
   assert.match(source, /type="search"/);
   assert.match(
     source,
@@ -110,8 +117,8 @@ test("growth lists opted in", () => {
   assert.match(ingredients, /pageSize=\{25\}/);
   assert.match(ingredients, /currentPage=\{currentPage\}/);
   assert.match(ingredients, /onPageChange=\{setCurrentPage\}/);
-  assert.match(ingredients, /useIsMobile\(1024\)/);
-  assert.match(ingredients, /isTouchLayout \? "touch" : "field"/);
+  assert.match(ingredients, /useFormControlSize\(\)/);
+  assert.match(ingredients, /size=\{controlSize\}/);
 
   for (const [rel, pageSize] of [
     ["../app/(protected)/finance/expenses/expenses-client.tsx", 50],

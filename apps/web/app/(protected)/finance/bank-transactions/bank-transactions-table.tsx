@@ -637,6 +637,7 @@ export function BankTransactionsTable({
   canLinkPayments,
 }: BankTransactionsTableProps) {
   const isTouchLayout = useIsMobile(1024);
+  const controlSize = isTouchLayout ? "touch" : "field";
   const [filter, setFilter] =
     React.useState<BankReconciliationFilter>("needs_review");
   const rows = React.useMemo<BankReconciliationRow[]>(
@@ -805,7 +806,7 @@ export function BankTransactionsTable({
               }}
             >
               <SelectTrigger
-                size={isTouchLayout ? "touch" : "default"}
+                size={controlSize}
                 className="min-w-36"
                 aria-label={copy.filters.label}
               >
@@ -816,7 +817,7 @@ export function BankTransactionsTable({
                   <SelectItem
                     key={value}
                     value={value}
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={controlSize === "touch" ? "touch" : "default"}
                   >
                     {label}
                   </SelectItem>

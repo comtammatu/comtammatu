@@ -44,13 +44,21 @@ export default async function FinanceSupplierInvoicesPage({
       />
     </AppPage>
   );
-  const [authState, canReadProcurement, hasPayPermission] = await Promise.all([
+  const [
+    authState,
+    canReadProcurement,
+    hasPayPermission,
+    hasInvoiceCreatePermission,
+  ] = await Promise.all([
     loadAuthState(),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
     currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
+    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE),
   ]);
-  const canPaySupplier =
-    authState.claims.user_role === "owner" && hasPayPermission;
+  const isOwner = authState.claims.user_role === "owner";
+  const canPaySupplier = isOwner && hasPayPermission;
+  const canAttachVatEvidence =
+    isOwner && (hasPayPermission || hasInvoiceCreatePermission);
 
   if (!canReadProcurement) {
     return (
@@ -188,7 +196,9 @@ export default async function FinanceSupplierInvoicesPage({
       initialTotalCount={page?.totalCount ?? 0}
       filters={filters}
       branchId={branchFilter}
+      tenantId={authState.claims.tenant_id}
       canPaySupplier={canPaySupplier}
+      canAttachVatEvidence={canAttachVatEvidence}
       eyebrow={copy.eyebrow}
       description={copy.description}
     />

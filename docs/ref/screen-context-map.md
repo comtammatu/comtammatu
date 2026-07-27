@@ -150,7 +150,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Mục tiêu Người dùng (Goal):** Nhìn tồn để quyết định đúng việc cần làm, nhập kho nhanh và tạo lệnh sản xuất không sai lệch.
 - **Luồng thao tác (Workflow):**
   - **Nhập kho (GRN):** Tạo phiếu nhập kho từ nhà cung cấp -> Kiểm đếm thực tế -> Xác nhận nhập kho (cập nhật tồn kho và tính lại giá vốn).
-  - **Đơn mua hàng (PO):** Owner lập PO nháp -> duyệt mua một cấp -> tạo GRN từ phần số lượng còn lại. Nhận trực tiếp tại Branch vẫn bắt đầu từ NCC và không bắt buộc PO.
+  - **Đơn mua hàng (PO):** Owner lập PO nháp -> duyệt mua một cấp -> tạo GRN từ phần số lượng còn lại. Từ danh sách `/inventory/purchase-orders`, bấm dòng hoặc menu ⋮ → **Xem đơn mua** để mở dialog chi tiết (dòng hàng, ghi chú, GRN liên kết). Nhận trực tiếp tại Branch vẫn bắt đầu từ NCC và không bắt buộc PO.
   - **Sản xuất:** Chọn thành phẩm và sản lượng -> Kiểm tra định mức/nguyên liệu khả dụng -> Tạo lệnh -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành lệnh.
   - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
   - **Điều chuyển (Transfer):** Operator không mở điều chuyển Kho↔Bếp hay cross-branch mới (D078 — một kho/chi nhánh). Lịch sử transfer còn ở Owner surface khi cần audit.
@@ -217,16 +217,19 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - Đối soát phiếu thực nhập (GRN) với hóa đơn NCC gửi đến. Đảm bảo doanh nghiệp chỉ thanh toán đúng lượng thực nhận và đơn giá trên chứng từ mua hàng, tránh thất thoát tài chính.
 - **Mục tiêu Người dùng (Goal):** Phát hiện nhanh các dòng hóa đơn bị lệch giá hoặc lệch lượng để yêu cầu NCC điều chỉnh trước khi bấm duyệt thanh toán.
 - **Luồng thao tác (Workflow):**
-  1. **Nhập hóa đơn:** Ghi số hóa đơn, ngày, giá trị trước VAT, thuế suất, tiền VAT và tổng phải trả.
+  1. **Nhập hóa đơn:** Ghi số hóa đơn, ngày và VAT đầu vào theo bucket 0/5/8/10 (tiền trước VAT + tiền VAT từng mức); có thể đính kèm HĐ GTGT ngay khi lưu (tùy chọn).
   2. **Liên kết:** Chọn một GRN đã xác nhận; hệ thống lấy NCC và PO liên quan từ GRN.
   3. **Đối soát:** So giá trị trước VAT với giá trị hàng thực nhận sau từ chối trên GRN và, khi PO đủ giá, với tổng PO. VAT không tham gia so giá trị hàng.
   4. **Xử lý chênh lệch:** Giữ trạng thái cần xử lý nếu vượt ngưỡng 2%; kế toán kiểm tra chứng từ trước khi trả.
-  5. **Thanh toán:** Ghi nhận theo tổng gồm VAT; trả NCC giảm tiền và công nợ, không tạo thêm chi phí.
+  5. **Đính kèm HĐ GTGT:** Nếu chưa tải lúc tạo, tải lên ít nhất một file PDF/ảnh vào `vat_invoice_attachment_path` (bucket private) trước khi thanh toán. Owner có `procurement:invoice_create` hoặc `finance:ap_pay` được đính kèm.
+  6. **Thanh toán:** Chỉ ghi nhận khi đã có file HĐ GTGT; trả theo tổng gồm VAT; giảm tiền và công nợ, không tạo thêm chi phí.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Tổng trước VAT, VAT, tổng phải trả, liên kết GRN/PO, trạng thái đối soát và công nợ.
+  - **Nên hiển thị:** Tổng trước VAT, VAT, tổng phải trả, liên kết GRN/PO, trạng thái đối soát và công nợ, trạng thái đính kèm HĐ GTGT; khi nhóm có nhiều hóa đơn thì chọn được từng hóa đơn trong nhóm.
   - **KHÔNG hiển thị:** Doanh thu bán cơm tấm, sơ đồ bàn ăn, ca làm việc của nhân viên phục vụ.
 - **Quy chuẩn UX/UI:**
-  - Bố cục màn hình rộng (width `xwide` tối thiểu `1600px` trên desktop) để hiển thị đủ các cột đối chiếu mà không phải cuộn ngang quá nhiều gây mỏi mắt và dễ nhìn sót số liệu.
+  - Bố cục màn hình rộng (width `xwide`); danh sách full-width. Chọn nhóm/hóa đơn mở `Sheet` phải (`sm:max-w-xl`) chứa chi tiết công nợ, HĐ GTGT, thanh toán và đối soát — không chiếm cột cố định cạnh bảng.
+  - Popup ghi nhận chia section chứng từ / VAT / ghi chú / đính kèm; mỗi suất thuế một hàng `tiền trước VAT | tiền VAT`.
+  - Sheet detail: tiêu đề là số HĐ; khối `Item` “còn phải trả” + đính kèm HĐ GTGT; meta ngày/hạn/VAT/tuổi nợ/GRN/PO trong `ItemGroup` lưới 2 cột (`DetailFact`); chỉ `Alert` khi thiếu đối soát hoặc lệch; không dùng raw `Card` / `DescriptionList` / KPI card / công thức / badge “đã khớp”. Footer: Thanh toán (nếu còn nợ) + Tính lại đối soát. Deep-link `?invoiceId=` mở sẵn Sheet.
 
 ---
 

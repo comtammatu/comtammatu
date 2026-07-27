@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { useFormControlSize } from "@/components/form/control-size";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   InputGroup,
@@ -165,7 +165,7 @@ export function SuppliersClient({
   initial: SupplierRow[];
   canManageItems: boolean;
 }) {
-  const isTouchLayout = useIsMobile();
+  const controlSize = useFormControlSize();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -325,10 +325,7 @@ export function SuppliersClient({
             <AppToolbar
               variant="inline"
               search={
-                <InputGroup
-                  size={isTouchLayout ? "touch" : "field"}
-                  className="w-full"
-                >
+                <InputGroup size={controlSize} className="w-full">
                   <InputGroupAddon>
                     <IconSearch />
                   </InputGroupAddon>

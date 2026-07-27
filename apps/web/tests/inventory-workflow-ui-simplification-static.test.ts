@@ -192,9 +192,14 @@ test("operations embedded lists keep management density instead of touch sizing"
   assert.doesNotMatch(transfers, /basePath\.startsWith\("\/br\/"\)/);
 
   for (const source of [grn, issues, transfers]) {
-    assert.doesNotMatch(source, /embedded \? "touch"/);
+    assert.doesNotMatch(source, /size=\{embedded \? "touch"/);
     assert.doesNotMatch(source, /embedded \|\| isOperator/);
   }
+
+  assert.match(
+    transfers,
+    /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
+  );
 });
 
 test("table empty rows render inline content instead of a dashed sub-card", () => {
@@ -302,8 +307,7 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     stock,
     /isFirstLoadEmpty \?[\s\S]{0,40}firstLoadEmptyState[\s\S]{0,40}<DataTable/,
   );
-  assert.match(frame, /<AppSection[\s\S]*contentFlush/);
-  assert.match(frame, /\{toolbar\}/);
+  assert.match(frame, /<AppListFrame \{\.\.\.props\}>/);
   assert.doesNotMatch(purchaseOrders, /<DataTable[\s\S]{0,500}searchable/);
   assert.doesNotMatch(recipes, /<DataTable[\s\S]{0,500}searchable/);
   assert.doesNotMatch(recipes, /recipes\.length === 0/);
@@ -350,6 +354,79 @@ test("migrated inventory lists use InventoryListFrame toolbar slot", () => {
   );
   assert.match(countSlips, /<InventoryListFrame title=/);
   assert.match(countAssignments, /<InventoryListFrame>/);
+});
+
+test("SelectContent defaults to popper and Inventory LIST filters share field width", () => {
+  const select = read("../../packages/ui/src/components/select.tsx");
+  const frame = read(
+    "app/(protected)/inventory/_components/inventory-list-frame.tsx",
+  );
+  const dataTable = read("app/components/data-table/data-table.tsx");
+  const stock = read("app/(protected)/inventory/stock/stock-client.tsx");
+  const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
+  const ingredients = read(
+    "app/(protected)/inventory/ingredients/ingredients-client.tsx",
+  );
+  const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
+  const transfers = read(
+    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  );
+  const stocktake = read(
+    "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
+  );
+  const invoices = read(
+    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+  );
+  const orders = read("app/(protected)/orders/orders-client.tsx");
+  const employeeTable = read("app/(protected)/hr/employee-table.tsx");
+
+  assert.match(select, /position = "popper"/);
+  assert.doesNotMatch(select, /position = "item-aligned"/);
+  assert.doesNotMatch(
+    select,
+    /data-\[position=popper\]:h-\(--anchor-height\)/,
+  );
+  assert.match(
+    frame,
+    /export const inventoryListFilterSelectClassName = "w-44 shrink-0"/,
+  );
+  assert.match(
+    frame,
+    /export const inventoryListFilterSelectWideClassName = "w-56 shrink-0"/,
+  );
+
+  for (const source of [stock, grn, ingredients, issues, stocktake, invoices]) {
+    assert.match(source, /inventoryListFilterSelectClassName/);
+  }
+  assert.match(transfers, /inventoryListFilterSelectWideClassName/);
+  assert.match(stock, /useFormControlSize\(\)/);
+  assert.match(stock, /size=\{controlSize\}/);
+  assert.match(grn, /useFormControlSize\(\)/);
+  assert.match(ingredients, /useFormControlSize\(\)/);
+  assert.match(
+    issues,
+    /useFormControlSize\(isOperator \? "touch" : "responsive"\)/,
+  );
+  assert.match(
+    transfers,
+    /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
+  );
+  assert.match(invoices, /size="lg"/);
+  assert.match(
+    stocktake,
+    /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
+  );
+  assert.match(stocktake, /size=\{embedded \? "touch" : "lg"\}/);
+  assert.match(orders, /useFormControlSize\(\)/);
+  assert.match(employeeTable, /useFormControlSize\(\)/);
+  assert.match(
+    dataTable,
+    /const controlSize = isTouchLayout \? "touch" : "field"/,
+  );
+  assert.doesNotMatch(
+    dataTable,
+    /size=\{isTouchLayout \? "touch" : "default"\}/,
+  );
 });
 
 test("stock never presents an all-location choice", () => {

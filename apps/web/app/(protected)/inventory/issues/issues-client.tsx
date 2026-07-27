@@ -34,6 +34,7 @@ import { downloadCsv } from "@/_lib/download-file";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { FormDialog, SelectField, TextareaField } from "@/components/form";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   AppPage,
   AppPageHeader,
@@ -47,7 +48,10 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { formatVND } from "@lib/inventory/format";
 import { tNav } from "../_lib/dictionary";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
+import {
+  InventoryListFrame,
+  inventoryListFilterSelectClassName,
+} from "../_components/inventory-list-frame";
 import { createStockIssueDraft } from "../issue-actions";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
@@ -197,7 +201,7 @@ export function IssuesClient({
   const [recordedSearch, setRecordedSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const isOperator = listBasePath.startsWith("/br/");
-  const controlSize = isOperator ? "touch" : "field";
+  const controlSize = useFormControlSize(isOperator ? "touch" : "responsive");
   const compactActionSize = isOperator ? "touch" : "sm";
   const fieldClassName = "w-full";
   const createIssueDefaultValues = useMemo<CreateIssueValues>(
@@ -494,7 +498,11 @@ export function IssuesClient({
           <Select value={activeStatus} onValueChange={setActiveStatus}>
             <SelectTrigger
               size={controlSize}
-              className={isOperator ? "w-full sm:w-48" : "w-48"}
+              className={
+                controlSize === "touch"
+                  ? "w-full"
+                  : inventoryListFilterSelectClassName
+              }
             >
               <SelectValue placeholder={INVENTORY_VI.allStatusesOption} />
             </SelectTrigger>
@@ -513,7 +521,11 @@ export function IssuesClient({
           <Select value={activeType} onValueChange={setActiveType}>
             <SelectTrigger
               size={controlSize}
-              className={isOperator ? "w-full sm:w-48" : "w-48"}
+              className={
+                controlSize === "touch"
+                  ? "w-full"
+                  : inventoryListFilterSelectClassName
+              }
             >
               <SelectValue placeholder={INVENTORY_VI.issueTypeFilterAll} />
             </SelectTrigger>
@@ -538,7 +550,7 @@ export function IssuesClient({
           <Button
             type="button"
             variant="ghost"
-            size={compactActionSize}
+            size={controlSize}
             onClick={() => {
               setActiveStatus("all");
               setActiveType("all");
@@ -580,7 +592,11 @@ export function IssuesClient({
           >
             <SelectTrigger
               size={controlSize}
-              className={isOperator ? "w-full" : "w-48"}
+              className={
+                controlSize === "touch"
+                  ? "w-full"
+                  : inventoryListFilterSelectClassName
+              }
             >
               <SelectValue placeholder={BRANCH_VI.select} />
             </SelectTrigger>
@@ -608,7 +624,7 @@ export function IssuesClient({
               {FORM_VI.fromDate}
             </Label>
             <Input
-              controlSize={isOperator ? "touch" : "field"}
+              controlSize={controlSize}
               id="recorded-start-date"
               type="date"
               value={recordedStartDate}
@@ -629,7 +645,7 @@ export function IssuesClient({
               {FORM_VI.toDate}
             </Label>
             <Input
-              controlSize={isOperator ? "touch" : "field"}
+              controlSize={controlSize}
               id="recorded-end-date"
               type="date"
               value={recordedEndDate}
@@ -655,7 +671,7 @@ export function IssuesClient({
           <Button
             type="button"
             variant="ghost"
-            size={compactActionSize}
+            size={controlSize}
             onClick={clearRecordedDateFilter}
           >
             <IconFilterX className="mr-1 size-4" />

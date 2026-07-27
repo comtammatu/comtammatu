@@ -36,6 +36,7 @@ import {
   AppToolbar,
 } from "@/components/surface";
 import { InventoryListFrame } from "../../../_components/inventory-list-frame";
+import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { createSupplierItem, deleteSupplierItem } from "./actions";
@@ -74,6 +75,7 @@ export function SupplierItemsClient({
   rows: SupplierItemRow[];
   canManage: boolean;
 }) {
+  const controlSize = useFormControlSize();
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -199,7 +201,7 @@ export function SupplierItemsClient({
             <AppToolbar
               variant="inline"
               search={
-                <InputGroup className="h-12 w-full sm:h-10">
+                <InputGroup size={controlSize} className="w-full">
                   <InputGroupAddon>
                     <IconSearch />
                   </InputGroupAddon>

@@ -159,12 +159,49 @@ test("supplier invoice payment action uses Owner-only idempotent AP RPC", () => 
   assert.match(source, /p_idempotency_key: data\.idempotencyKey/);
 });
 
+test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
+  const source = readWeb(
+    "app/(protected)/inventory/supplier-invoice-actions.ts",
+  );
+  const client = readWeb(
+    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+  );
+
+  assert.match(source, /attachSupplierInvoiceVatEvidence/);
+  assert.match(
+    source,
+    /anyPermission:\s*\[[\s\S]*FINANCE_AP_PAY[\s\S]*PROCUREMENT_INVOICE_CREATE/,
+  );
+  assert.match(client, /pendingCreateVatFile/);
+  assert.match(client, /uploadAndAttachVatEvidence/);
+  assert.match(client, /vatSection/);
+  assert.match(client, /invoiceCountHeader/);
+  assert.match(client, /invoiceCodesPreview/);
+  assert.match(client, /RowActionsMenu/);
+  assert.match(
+    client,
+    /viewMode === "supplier" \? \([\s\S]*group\.invoiceCount[\s\S]*\) : \(/,
+  );
+  assert.doesNotMatch(
+    client,
+    /key:\s*"aging"[\s\S]*header:\s*copy\.aging/,
+  );
+  assert.doesNotMatch(client, /analyzingShort : copy\.groupDetailAction/);
+  assert.match(client, /selectInvoiceInGroup/);
+  assert.match(client, /groupByLabel/);
+  assert.match(client, /selectedGroup\.invoices/);
+  assert.match(client, /uploadIsPrimary/);
+  assert.match(client, /payIsPrimary/);
+  assert.doesNotMatch(client, /className="contents"/);
+});
+
 test("supplier invoice client exposes payment only behind server permission", () => {
   const source = readWeb(
     "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
   );
 
   assert.match(source, /canPaySupplier/);
+  assert.match(source, /canAttachVatEvidence/);
   assert.match(source, /recordSupplierPayment/);
   assert.match(source, /paymentIntentKeyRef/);
   assert.match(source, /resolveSupplierPaymentIntentKey/);
@@ -190,6 +227,8 @@ test("supplier invoice payment visibility is explicitly Owner-only", () => {
     assert.match(source, /loadAuthState\(\)/);
     assert.match(source, /authState\.claims\.user_role === "owner"/);
     assert.match(source, /hasPayPermission/);
+    assert.match(source, /hasInvoiceCreatePermission/);
+    assert.match(source, /canAttachVatEvidence/);
   }
 });
 
@@ -242,8 +281,14 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
     clientSource,
     /nextRows = \[[\s\S]*exactRow,[\s\S]*nextRows\.filter\(\(invoice\) => invoice\.id !== exactRow\.id\)/,
   );
-  assert.match(clientSource, /isInvoiceDeepLink && "order-2 xl:order-1"/);
-  assert.match(clientSource, /isInvoiceDeepLink && "order-1 xl:order-2"/);
+  assert.match(clientSource, /openInvoiceDetail/);
+  assert.match(clientSource, /handleDetailOpenChange/);
+  assert.match(clientSource, /<Sheet[\s\S]*open=\{detailOpen\}/);
+  assert.match(clientSource, /SheetContent[\s\S]*side="right"/);
+  assert.doesNotMatch(
+    clientSource,
+    /xl:grid-cols-\[minmax\(0,1\.6fr\)_minmax\(320px,1fr\)\]/,
+  );
 });
 
 test("supplier invoice client groups payable review by supplier and PO", () => {
@@ -273,7 +318,9 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
   assert.match(client, /viewByPo/);
   assert.match(client, /invoiceGroups/);
   assert.match(client, /outstandingAmount/);
-  assert.match(client, /overdueAmount/);
+  assert.match(client, /RowActionsMenu/);
+  assert.doesNotMatch(client, /overdueAmount/);
+  assert.match(listModel, /overdueAmount/);
   assert.match(listModel, /creditAppliedAmount: number/);
   assert.match(listModel, /creditAppliedAmount: 0/);
   assert.match(
@@ -285,23 +332,33 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
     client.match(/formatVND\(group\.creditAppliedAmount\)/g)?.length,
     2,
   );
-  assert.equal(client.match(/copy\.supplierCredit/g)?.length, 2);
+  assert.equal(client.match(/copy\.supplierCredit/g)?.length, 3);
   assert.match(client, /lastPaymentSummary/);
 
   const inventoryMessages = readWeb("lib/messages/inventory.ts");
   assert.match(inventoryMessages, /supplierCredit: "Bù trừ NCC"/);
 });
 
-test("supplier invoice desktop layout does not squeeze the detail pane", () => {
+test("supplier invoice detail opens in a right Sheet instead of a pinned pane", () => {
   const source = readWeb(
     "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
   );
 
-  assert.match(source, /contentScroll/);
+  assert.match(source, /InventoryListFrame/);
+  assert.match(source, /SheetFooter/);
+  assert.match(source, /sm:max-w-xl/);
+  assert.match(source, /outstandingPayable/);
+  assert.match(source, /ItemGroup className="grid grid-cols-2 gap-2"/);
+  assert.match(source, /function DetailFact/);
+  assert.doesNotMatch(source, /AppSection/);
+  assert.doesNotMatch(source, /payableFormula/);
+  assert.doesNotMatch(source, /safeTitle/);
   assert.doesNotMatch(source, /key:\s*"supplier"/);
   assert.doesNotMatch(source, /key:\s*"remaining"/);
   assert.doesNotMatch(source, /sm:grid-cols-3/);
-  assert.match(source, /md:grid-cols-2/);
+  assert.doesNotMatch(source, /<KpiCard/);
+  assert.doesNotMatch(source, /DescriptionList/);
+  assert.doesNotMatch(source, /from "@comtammatu\/ui\/components\/card"/);
 });
 
 test("baseline keeps supplier payment ledger and invoice status together", () => {
@@ -318,6 +375,9 @@ test("supplier payment RPC requires matched GRN evidence", () => {
   const migration = readRoot(
     "supabase/migration-archive/20260715073331_harden_supplier_payment_idempotency.sql",
   );
+  const vatEvidence = readRoot(
+    "supabase/migrations/20260727190000_central_procurement_and_vat_evidence.sql",
+  );
   const acceptance = readRoot(
     "supabase/tests/supplier_payment_idempotency_test.sql",
   );
@@ -329,8 +389,10 @@ test("supplier payment RPC requires matched GRN evidence", () => {
   assert.match(migration, /invoice_missing_grn_for_payment/);
   assert.match(migration, /v_invoice\.matching_status <> 'matched'/);
   assert.match(migration, /invoice_not_matched_for_payment/);
+  assert.match(vatEvidence, /vat_invoice_attachment_required/);
   assert.match(actionSource, /invoice_missing_grn_for_payment/);
   assert.match(actionSource, /invoice_not_matched_for_payment/);
+  assert.match(actionSource, /vat_invoice_attachment_required/);
   assert.match(acceptance, /missing-GRN payment unexpectedly succeeded/);
   assert.match(acceptance, /unmatched invoice payment unexpectedly succeeded/);
 });

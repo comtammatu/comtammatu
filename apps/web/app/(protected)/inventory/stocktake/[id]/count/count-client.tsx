@@ -30,7 +30,10 @@ import {
   submitCountRound,
   type StocktakeLineBlind,
 } from "../../../stocktake-actions";
-import type { CountUnitOption } from "../../../_lib/count-units";
+import {
+  pickDefaultCountUnit,
+  type CountUnitOption,
+} from "../../../_lib/count-units";
 
 const toastNoCountsInput = "Chưa nhập số đếm nào";
 const toastSubmitRoundFailed = "Không thể gửi kết quả đếm";
@@ -51,8 +54,9 @@ function buildCountUnitPreview({
     options.find((option) => option.isBase) ?? options[0] ?? null;
   const selectedUnit =
     selectedUnitId == null
-      ? baseUnit
+      ? (pickDefaultCountUnit(options) ?? baseUnit)
       : (options.find((option) => option.unitId === selectedUnitId) ??
+        pickDefaultCountUnit(options) ??
         baseUnit);
   if (!baseUnit || !selectedUnit || selectedUnit.isBase) return null;
 
@@ -91,7 +95,7 @@ export function StocktakeCountClient({
   const router = useRouter();
   const [lines] = useState<StocktakeLineBlind[]>(initialLines);
   const [counts, setCounts] = useState<DraftCounts>({});
-  // Per-ingredient counting unit (entry_unit_id), defaulting to the base unit.
+  // Per-ingredient counting unit (entry_unit_id), defaulting to purchase/pack.
   const [unitByIngredient, setUnitByIngredient] = useState<
     Record<number, number>
   >(() => {
@@ -99,8 +103,8 @@ export function StocktakeCountClient({
     for (const [ingredientId, options] of Object.entries(
       unitOptionsByIngredient,
     )) {
-      const base = options.find((o) => o.isBase) ?? options[0];
-      if (base) next[Number(ingredientId)] = base.unitId;
+      const preferred = pickDefaultCountUnit(options);
+      if (preferred) next[Number(ingredientId)] = preferred.unitId;
     }
     return next;
   });
@@ -140,8 +144,7 @@ export function StocktakeCountClient({
       const id = Number(idStr);
       const selected =
         options.find((o) => o.unitId === unitByIngredient[id]) ??
-        options.find((o) => o.isBase) ??
-        options[0];
+        pickDefaultCountUnit(options);
       if (selected) map[id] = selected.label;
     }
     return map;

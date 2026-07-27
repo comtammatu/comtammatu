@@ -10,7 +10,7 @@
  */
 
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
@@ -20,6 +20,7 @@ import type { SepayRefundMatchOption } from "./_lib/sepay-bank-transaction-model
 import {
   fetchExpenseBankTransactionMatchMap,
   fetchExpenseMatchMap,
+  mapExpenseVatBreakdown,
   type ExpenseRow,
 } from "./_lib/expense-match-options";
 import {
@@ -27,14 +28,22 @@ import {
   EXPENSE_CATEGORY_VALUES,
   EXPENSE_PAYMENT_METHODS,
 } from "./_lib/expense-categories";
+import {
+  expenseGrossFromBreakdown,
+  expenseVatLineSchema,
+  refineExpenseVatBreakdown,
+  toExpenseVatBreakdownPayload,
+} from "./_lib/expense-vat";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
+// Shared ref with finance/actions so parallel RSC loaders hit one getAuthContext.
+const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export type {
   ExpenseMatchOption,
   ExpenseRow,
+  ExpenseVatBreakdownLine,
 } from "./_lib/expense-match-options";
 
 export interface CreateExpenseResult {
@@ -68,18 +77,37 @@ interface RefundSearchRow {
     | null;
 }
 
-const createExpenseSchema = z.object({
-  branchId: z.coerce.number().int().positive().nullable().optional(),
-  expenseDate: z.string().regex(BUSINESS_DATE, "Ngày không hợp lệ"),
-  category: z.enum(EXPENSE_CATEGORY_VALUES),
-  amount: z.coerce
-    .number()
-    .positive("Số tiền phải lớn hơn 0")
-    .max(10_000_000_000, "Số tiền quá lớn"),
-  paymentMethod: z.enum(EXPENSE_PAYMENT_METHODS),
-  vendorName: z.string().trim().max(200).optional(),
-  note: z.string().trim().max(500).optional(),
-});
+const createExpenseSchema = z
+  .object({
+    branchId: z.coerce.number().int().positive().nullable().optional(),
+    expenseDate: z.string().regex(BUSINESS_DATE, "Ngày không hợp lệ"),
+    category: z.enum(EXPENSE_CATEGORY_VALUES),
+    vatBreakdown: z.array(expenseVatLineSchema).min(1).max(4),
+    paymentMethod: z.enum(EXPENSE_PAYMENT_METHODS),
+    vendorName: z.string().trim().max(200).optional(),
+    note: z.string().trim().max(500).optional(),
+    invoiceAttachmentUrl: z
+      .string()
+      .trim()
+      .max(2048)
+      .optional()
+      .refine(
+        (value) =>
+          value == null ||
+          value.length === 0 ||
+          /^https?:\/\//i.test(value),
+        { error: "Đường dẫn hóa đơn không hợp lệ" },
+      ),
+  })
+  .superRefine((data, ctx) => {
+    refineExpenseVatBreakdown(data.vatBreakdown, (index, field, message) => {
+      ctx.addIssue({
+        code: "custom",
+        message,
+        path: ["vatBreakdown", index, field],
+      });
+    });
+  });
 
 export async function createExpense(
   input: z.infer<typeof createExpenseSchema>,
@@ -100,6 +128,11 @@ export async function createExpense(
 
   const { supabase, claims, user } = ctx;
   const branchId = parsed.data.branchId ?? null;
+  const vatBreakdown = toExpenseVatBreakdownPayload(parsed.data.vatBreakdown);
+  const amount = expenseGrossFromBreakdown(parsed.data.vatBreakdown);
+  if (!(amount > 0) || amount > 10_000_000_000) {
+    return { success: false, error: "Số tiền không hợp lệ" };
+  }
 
   if (
     parsed.data.category === "cogs_manual" ||
@@ -123,6 +156,11 @@ export async function createExpense(
 
   let expenseId: number;
   let transferContent: string | undefined;
+  const invoiceAttachmentUrl =
+    parsed.data.invoiceAttachmentUrl &&
+    parsed.data.invoiceAttachmentUrl.length > 0
+      ? parsed.data.invoiceAttachmentUrl
+      : null;
 
   if (parsed.data.paymentMethod === "transfer") {
     const { data, error } = await supabase.rpc(
@@ -132,9 +170,10 @@ export async function createExpense(
         p_branch_id: branchId as number,
         p_expense_date: parsed.data.expenseDate,
         p_category: parsed.data.category,
-        p_amount: parsed.data.amount,
+        p_vat_breakdown: vatBreakdown,
         p_vendor_name: parsed.data.vendorName || undefined,
         p_note: parsed.data.note || undefined,
+        p_invoice_attachment_url: invoiceAttachmentUrl || undefined,
       },
     );
     const created = data?.[0];
@@ -162,11 +201,15 @@ export async function createExpense(
         branch_id: branchId,
         expense_date: parsed.data.expenseDate,
         category: parsed.data.category,
-        amount: parsed.data.amount,
+        amount: 0,
+        subtotal: 0,
+        vat_amount: 0,
+        vat_breakdown: vatBreakdown,
         payment_method: parsed.data.paymentMethod,
         paid_at: paidAt,
         vendor_name: parsed.data.vendorName ?? null,
         note: parsed.data.note ?? null,
+        invoice_attachment_url: invoiceAttachmentUrl,
         created_by: user.id,
       })
       .select("id")
@@ -186,9 +229,11 @@ export async function createExpense(
     newData: {
       branch_id: branchId,
       category: parsed.data.category,
-      amount: parsed.data.amount,
+      amount,
+      vat_breakdown: vatBreakdown,
       payment_method: transferContent ? "unpaid" : parsed.data.paymentMethod,
       transfer_content: transferContent ?? null,
+      invoice_attachment_url: invoiceAttachmentUrl,
     },
   });
 
@@ -331,7 +376,7 @@ export async function fetchExpenses(params: {
     let query = supabase
       .from("expenses")
       .select(
-        "id, branch_id, expense_date, category, amount, payment_method, paid_at, transfer_content, vendor_name, note, created_at",
+        "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
       )
       .eq("tenant_id", claims.tenant_id)
       .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
@@ -351,19 +396,31 @@ export async function fetchExpenses(params: {
     }
 
     rows.push(
-      ...(data ?? []).map((row) => ({
-        id: row.id,
-        branch_id: row.branch_id,
-        expense_date: row.expense_date,
-        category: row.category,
-        amount: Number(row.amount),
-        payment_method: row.payment_method,
-        paid_at: row.paid_at,
-        transfer_content: row.transfer_content,
-        vendor_name: row.vendor_name,
-        note: row.note,
-        created_at: row.created_at,
-      })),
+      ...(data ?? []).map((row) => {
+        const amount = Number(row.amount);
+        const subtotal = Number(row.subtotal ?? amount);
+        const vatAmount = Number(row.vat_amount ?? 0);
+        return {
+          id: row.id,
+          branch_id: row.branch_id,
+          expense_date: row.expense_date,
+          category: row.category,
+          amount,
+          subtotal,
+          vat_amount: vatAmount,
+          vat_breakdown: mapExpenseVatBreakdown(row.vat_breakdown, {
+            subtotal,
+            vatAmount,
+          }),
+          payment_method: row.payment_method,
+          paid_at: row.paid_at,
+          transfer_content: row.transfer_content,
+          vendor_name: row.vendor_name,
+          note: row.note,
+          invoice_attachment_url: row.invoice_attachment_url ?? null,
+          created_at: row.created_at,
+        };
+      }),
     );
 
     if ((data?.length ?? 0) < pageSize) break;

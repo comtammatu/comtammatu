@@ -71,8 +71,12 @@ export function StaffFilters({ branches, positionOptions }: StaffFiltersProps) {
 
   return (
     <AppToolbar
+      variant="inline"
       search={
-        <InputGroup className="h-12 sm:h-10">
+        <InputGroup
+          size={controlSize}
+          className="min-w-0 flex-1 sm:min-w-64"
+        >
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -165,7 +169,7 @@ export function StaffFilters({ branches, positionOptions }: StaffFiltersProps) {
         hasActiveFilters ? (
           <Button
             variant="ghost"
-            size={controlSize === "touch" ? "touch" : "sm"}
+            size={controlSize}
             onClick={() => {
               setSearch("");
               replaceParams(new URLSearchParams());

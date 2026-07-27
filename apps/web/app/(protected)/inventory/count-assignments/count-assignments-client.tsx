@@ -386,7 +386,7 @@ export function CountAssignmentsClient({
         actions={
           <Button
             variant="outline"
-            size="touch"
+            size="lg"
             render={<Link href="/inventory/count-slips" />}
           >
             <IconFileText aria-hidden="true" />

@@ -46,6 +46,22 @@ test("purchase orders use the atomic create, approve, and receive RPC flow", () 
   );
 });
 
+test("PO create dialog keeps add-line below lines and notes compact", () => {
+  const client = read(
+    "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+  );
+
+  const fieldsBlock = client.slice(
+    client.indexOf("function PurchaseOrderFields"),
+    client.indexOf("export function PurchaseOrdersClient"),
+  );
+
+  assert.match(fieldsBlock, /fields\.map\([\s\S]*?poCopy\.addLine/);
+  assert.doesNotMatch(fieldsBlock, /TextareaField/);
+  assert.match(fieldsBlock, /TextField[\s\S]*name="notes"/);
+  assert.match(fieldsBlock, /placeholder=\{poCopy\.notesPlaceholder\}/);
+});
+
 test("PO receiving remains owner-control only and supports partial receipts", () => {
   const client = read(
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
@@ -53,7 +69,7 @@ test("PO receiving remains owner-control only and supports partial receipts", ()
   const baseline = read("supabase/migrations/20260727120000_baseline.sql");
 
   assert.match(client, /\["sent", "partially_received"\]/);
-  assert.match(client, /Tạo phiếu nhập/);
+  assert.match(client, /poCopy\.createGrnAction/);
   assert.match(
     baseline,
     /v_po\.status NOT IN \('sent', 'partially_received'\)/,
@@ -67,4 +83,29 @@ test("PO receiving remains owner-control only and supports partial receipts", ()
     ),
     false,
   );
+});
+
+test("PO list opens read-only detail and never shows an empty-action dash", () => {
+  const client = read(
+    "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+  );
+  const page = read(
+    "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
+  );
+
+  assert.match(client, /onRowClick=\{openDetail\}/);
+  assert.match(client, /key:\s*"view"/);
+  assert.match(client, /poCopy\.viewDetail/);
+  assert.match(client, /AppDialog/);
+  assert.match(client, /poCopy\.detail\.overviewLinesTitle/);
+  assert.match(client, /poCopy\.detail\.linkedGrnsTitle/);
+  assert.doesNotMatch(
+    client,
+    /items\.length > 0 \? \([\s\S]*RowActionsMenu[\s\S]*\) : \([\s\S]*text-muted-foreground[\s\S]*—/,
+  );
+  assert.match(
+    page,
+    /purchase_order_items\([\s\S]*ingredients\(name\)[\s\S]*units!purchase_order_items_entry_unit_id_fkey/,
+  );
+  assert.match(page, /goods_received_notes\(id, grn_number, status/);
 });

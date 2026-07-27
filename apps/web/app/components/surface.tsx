@@ -496,6 +496,34 @@ export function AppSection({
   );
 }
 
+export type AppListFrameProps = Omit<
+  AppSectionProps,
+  "children" | "className" | "contentFlush"
+> & {
+  children: ReactNode;
+  className?: string;
+  toolbar?: ReactNode;
+};
+
+/** Owner LIST card: optional inline toolbar + flush table/content. */
+export function AppListFrame({
+  children,
+  className,
+  toolbar,
+  ...sectionProps
+}: AppListFrameProps) {
+  return (
+    <AppSection
+      {...sectionProps}
+      className={cn("overflow-hidden", className)}
+      contentFlush
+    >
+      {toolbar}
+      {children}
+    </AppSection>
+  );
+}
+
 export type AppToolbarProps = {
   children?: ReactNode;
   className?: string;
@@ -530,7 +558,7 @@ export function AppToolbar({
         <ToolbarGroup className="min-w-0 flex-1 gap-2">{search}</ToolbarGroup>
       ) : null}
       {filters ? (
-        <ToolbarGroup className="gap-2">{filters}</ToolbarGroup>
+        <ToolbarGroup className="shrink-0 gap-2">{filters}</ToolbarGroup>
       ) : null}
       {bulk ? (
         <>

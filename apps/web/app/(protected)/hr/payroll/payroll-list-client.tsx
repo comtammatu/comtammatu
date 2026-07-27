@@ -49,6 +49,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { messages } from "@lib/messages";
 import { AttendanceCalendar } from "../attendance-calendar";
@@ -214,6 +215,7 @@ export function PayrollListClient({
   selectedSalaryStatus,
   calendarTarget,
 }: Props) {
+  const controlSize = useFormControlSize();
   const router = useRouter();
   const [search, setSearch] = useState(query);
   const [standardDays, setStandardDays] = useState(
@@ -583,7 +585,7 @@ export function PayrollListClient({
       <AppToolbar
         className="items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block"
         search={
-          <InputGroup className="w-full sm:w-64">
+          <InputGroup size={controlSize} className="w-full sm:w-64">
             <InputGroupAddon>
               <IconSearch aria-hidden />
             </InputGroupAddon>
@@ -599,6 +601,7 @@ export function PayrollListClient({
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <Input
               type="month"
+              controlSize={controlSize}
               value={monthValue(preview.year, preview.month)}
               onChange={(event) =>
                 replaceFilters({ month: event.target.value })
@@ -619,6 +622,7 @@ export function PayrollListClient({
               }
             >
               <SelectTrigger
+                size={controlSize}
                 className="w-full sm:w-44"
                 aria-label={copy.branch}
               >
@@ -642,6 +646,7 @@ export function PayrollListClient({
               }
             >
               <SelectTrigger
+                size={controlSize}
                 className="w-full sm:w-44"
                 aria-label={copy.salaryStatus}
               >

@@ -1587,12 +1587,16 @@ export type Database = {
           created_by: string | null
           expense_date: string
           id: number
+          invoice_attachment_url: string | null
           note: string | null
           paid_at: string | null
           payment_method: string
+          subtotal: number
           tenant_id: number
           transfer_content: string | null
           updated_at: string
+          vat_amount: number
+          vat_breakdown: Json
           vendor_name: string | null
         }
         Insert: {
@@ -1603,12 +1607,16 @@ export type Database = {
           created_by?: string | null
           expense_date: string
           id?: never
+          invoice_attachment_url?: string | null
           note?: string | null
           paid_at?: string | null
           payment_method?: string
+          subtotal: number
           tenant_id: number
           transfer_content?: string | null
           updated_at?: string
+          vat_amount: number
+          vat_breakdown?: Json
           vendor_name?: string | null
         }
         Update: {
@@ -1619,12 +1627,16 @@ export type Database = {
           created_by?: string | null
           expense_date?: string
           id?: never
+          invoice_attachment_url?: string | null
           note?: string | null
           paid_at?: string | null
           payment_method?: string
+          subtotal?: number
           tenant_id?: number
           transfer_content?: string | null
           updated_at?: string
+          vat_amount?: number
+          vat_breakdown?: Json
           vendor_name?: string | null
         }
         Relationships: [
@@ -8037,6 +8049,7 @@ export type Database = {
           updated_at: string
           vat_amount: number
           vat_breakdown: Json
+          vat_invoice_attachment_path: string | null
           vat_rate: number | null
         }
         Insert: {
@@ -8061,6 +8074,7 @@ export type Database = {
           updated_at?: string
           vat_amount: number
           vat_breakdown?: Json
+          vat_invoice_attachment_path?: string | null
           vat_rate?: number | null
         }
         Update: {
@@ -8085,6 +8099,7 @@ export type Database = {
           updated_at?: string
           vat_amount?: number
           vat_breakdown?: Json
+          vat_invoice_attachment_path?: string | null
           vat_rate?: number | null
         }
         Relationships: [
@@ -9874,6 +9889,10 @@ export type Database = {
         }
         Returns: Json
       }
+      attach_supplier_invoice_vat_evidence: {
+        Args: { p_invoice_id: number; p_storage_path: string }
+        Returns: undefined
+      }
       auth_branch_id: { Args: never; Returns: number }
       auth_is_owner: { Args: { p_user: string }; Returns: boolean }
       auth_role: { Args: never; Returns: string }
@@ -10132,11 +10151,12 @@ export type Database = {
       count_unread_notifications: { Args: never; Returns: number }
       create_expense_transfer_intent: {
         Args: {
-          p_amount: number
           p_branch_id: number
           p_category: string
           p_expense_date: string
+          p_invoice_attachment_url?: string
           p_note?: string
+          p_vat_breakdown: Json
           p_vendor_name?: string
         }
         Returns: {

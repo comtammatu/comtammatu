@@ -15,7 +15,7 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   InputGroup,
   InputGroupAddon,
@@ -49,7 +49,10 @@ import {
   type TransferListRow,
   type TransferTab,
 } from "./transfer-list-model";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
+import {
+  InventoryListFrame,
+  inventoryListFilterSelectWideClassName,
+} from "../_components/inventory-list-frame";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer };
@@ -87,7 +90,7 @@ export function TransfersListClient({
   pageTitle?: string;
   embedded?: boolean;
 }) {
-  const isTouchLayout = useIsMobile();
+  const controlSize = useFormControlSize(embedded ? "touch" : "responsive");
   const isOwner = userRole === "owner";
   const userBranchKind =
     userBranchId == null
@@ -254,7 +257,7 @@ export function TransfersListClient({
 
   const desktopCreateAction = canCreate ? (
     <Button
-      size={embedded ? "default" : "lg"}
+      size={embedded ? controlSize : "lg"}
       render={<Link href={createHref} />}
     >
       <IconPlus data-icon="inline-start" />
@@ -267,10 +270,7 @@ export function TransfersListClient({
       variant="inline"
       className="items-stretch sm:items-center"
       search={
-        <InputGroup
-          size={isTouchLayout ? "touch" : "field"}
-          className="w-full sm:flex-1"
-        >
+        <InputGroup size={controlSize} className="w-full sm:flex-1">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -294,8 +294,12 @@ export function TransfersListClient({
           onValueChange={(value) => setActiveTab(value as TransferTab)}
         >
           <SelectTrigger
-            size={isTouchLayout ? "touch" : "field"}
-            className="w-full sm:w-56"
+            size={controlSize}
+            className={
+              controlSize === "touch"
+                ? "w-full"
+                : inventoryListFilterSelectWideClassName
+            }
           >
             <SelectValue />
           </SelectTrigger>

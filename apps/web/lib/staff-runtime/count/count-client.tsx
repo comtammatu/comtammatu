@@ -160,6 +160,19 @@ function getBaseCountUnit(units: CountUnitChoice[]) {
   return units.find((unit) => unit.isBase) ?? units[0] ?? null;
 }
 
+function getDefaultCountUnitChoice(units: CountUnitChoice[]) {
+  const withFactor = units.filter(
+    (unit): unit is CountUnitChoice & { toBaseFactor: number } =>
+      unit.toBaseFactor != null &&
+      Number.isFinite(unit.toBaseFactor) &&
+      unit.toBaseFactor > 0,
+  );
+  if (withFactor.length === 0) return getBaseCountUnit(units);
+  return withFactor.reduce((best, unit) =>
+    unit.toBaseFactor > best.toBaseFactor ? unit : best,
+  );
+}
+
 function buildCountUnitPreview({
   quantity,
   entryUnitId,
@@ -172,8 +185,9 @@ function buildCountUnitPreview({
   const baseUnit = getBaseCountUnit(units);
   const entryUnit =
     entryUnitId == null
-      ? null
-      : (units.find((unit) => unit.unitId === entryUnitId) ?? null);
+      ? getDefaultCountUnitChoice(units)
+      : (units.find((unit) => unit.unitId === entryUnitId) ??
+        getDefaultCountUnitChoice(units));
   if (!baseUnit || !entryUnit || baseUnit.unitId === entryUnit.unitId) {
     return null;
   }
@@ -201,9 +215,9 @@ function buildDraftSummary({
   if (quantityValue === null) return null;
   const unit =
     entryUnitId == null
-      ? getBaseCountUnit(units)
+      ? getDefaultCountUnitChoice(units)
       : (units.find((item) => item.unitId === entryUnitId) ??
-        getBaseCountUnit(units));
+        getDefaultCountUnitChoice(units));
   return `${formatCountQuantity(quantityValue)}${unit?.code ? ` ${unit.code}` : ""}`;
 }
 
@@ -258,11 +272,13 @@ export function CountSlipClient({
     const seedRows: Array<[number, string, number | null, string]> = [];
     for (const assignment of activeGroup.assignments) {
       const prior = prefill[assignment.ingredientId];
-      const baseUnit = getBaseCountUnit(assignment.countUnits);
       const line = {
         quantity: prior?.quantity ?? "",
         note: prior?.note ?? "",
-        entryUnitId: prior?.entryUnitId ?? baseUnit?.unitId ?? null,
+        entryUnitId:
+          prior?.entryUnitId ??
+          getDefaultCountUnitChoice(assignment.countUnits)?.unitId ??
+          null,
       };
       next[assignment.ingredientId] = line;
       seedRows.push([
@@ -370,10 +386,10 @@ export function CountSlipClient({
       assignment == null
         ? null
         : entry?.entryUnitId == null
-          ? baseUnit
+          ? getDefaultCountUnitChoice(assignment.countUnits)
           : (assignment.countUnits.find(
               (unit) => unit.unitId === entry.entryUnitId,
-            ) ?? baseUnit);
+            ) ?? getDefaultCountUnitChoice(assignment.countUnits));
     const quantityPlaceholder = selectedUnit?.code
       ? `VD: 5 ${selectedUnit.code}`
       : "VD: 5";
@@ -405,7 +421,7 @@ export function CountSlipClient({
                 </SheetTitle>
                 <SheetDescription>
                   {baseUnit?.code
-                    ? `Đơn vị tồn chuẩn: ${baseUnit.code}`
+                    ? `Đơn vị xuất (tồn sổ): ${baseUnit.code}`
                     : "Nhập số đếm thực tế."}
                 </SheetDescription>
               </SheetHeader>

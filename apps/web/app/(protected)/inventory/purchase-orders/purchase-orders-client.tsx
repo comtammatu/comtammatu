@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check as IconCheck,
+  Eye as IconEye,
   PackagePlus as IconPackagePlus,
   Plus as IconPlus,
   Search as IconSearch,
@@ -17,6 +19,7 @@ import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,
   ItemActions,
@@ -25,19 +28,21 @@ import {
   ItemFooter,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import {
+  AppDialog,
   FormDialog,
   MoneyVndField,
   NumberField,
   SelectField,
-  TextareaField,
+  TextField,
 } from "@/components/form";
 import {
   DataTable,
@@ -47,13 +52,19 @@ import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  AppPage,
+  AppPageHeader,
+  AppToolbar,
+  DescriptionList,
+} from "@/components/surface";
 import {
   getStatusBadgeMeta,
   StatusBadge,
 } from "@/components/status-badge";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { InventoryListFrame } from "../_components/inventory-list-frame";
 import {
   approvePurchaseOrder,
@@ -63,15 +74,34 @@ import {
 
 const poCopy = messages.inventory.po;
 
+export type PurchaseOrderLineRow = {
+  id: number;
+  ingredientName: string;
+  quantity: number;
+  unitLabel: string;
+  unitPriceEst: number | null;
+  lineTotal: number | null;
+};
+
+export type PurchaseOrderLinkedGrn = {
+  id: number;
+  code: string;
+  status: string;
+  receivedAt: string | null;
+};
+
 export type PurchaseOrderRow = {
   id: number;
   code: string;
   status: string;
   orderedAt: string;
+  notes: string | null;
   supplierName: string;
   branchName: string;
   lineCount: number;
   estimatedTotal: number | null;
+  lines: PurchaseOrderLineRow[];
+  linkedGrns: PurchaseOrderLinkedGrn[];
 };
 
 export type PurchaseOrderOption = {
@@ -180,55 +210,56 @@ function PurchaseOrderLineFields({
   }, [form, unitOptions, unitPath]);
 
   return (
-    <Item variant="outline" className="grid gap-3 sm:grid-cols-12">
-      <SelectField
-        control={form.control}
-        name={ingredientPath}
-        label="Nguyên liệu"
-        options={ingredients.map((item) => ({
-          value: String(item.id),
-          label: item.name,
-        }))}
-        className="sm:col-span-4"
-        required
-      />
-      <NumberField
-        control={form.control}
-        name={`lines.${index}.quantity`}
-        label="Số lượng"
-        maxFractionDigits={3}
-        className="sm:col-span-2"
-        required
-      />
-      <SelectField
-        control={form.control}
-        name={unitPath}
-        label="Đơn vị"
-        options={unitOptions.map((unit) => ({
-          value: String(unit.id),
-          label: unit.name,
-        }))}
-        disabled={!ingredient}
-        className="sm:col-span-2"
-        required
-      />
-      <MoneyVndField
-        control={form.control}
-        name={`lines.${index}.unitPriceEst`}
-        label="Đơn giá dự kiến"
-        className="sm:col-span-3"
-      />
-      <div className="flex items-end sm:col-span-1">
+    <Item variant="outline" className="flex-col items-stretch gap-3">
+      <div className="flex items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <SelectField
+            control={form.control}
+            name={ingredientPath}
+            label="Nguyên liệu"
+            options={ingredients.map((item) => ({
+              value: String(item.id),
+              label: item.name,
+            }))}
+            required
+          />
+        </div>
         <Button
           type="button"
           variant="ghost"
           size="icon"
+          className="shrink-0"
           disabled={!canRemove}
           onClick={onRemove}
         >
           <IconTrash />
           <span className="sr-only">{poCopy.removeLineAria}</span>
         </Button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <NumberField
+          control={form.control}
+          name={`lines.${index}.quantity`}
+          label="Số lượng"
+          maxFractionDigits={3}
+          required
+        />
+        <SelectField
+          control={form.control}
+          name={unitPath}
+          label="Đơn vị"
+          options={unitOptions.map((unit) => ({
+            value: String(unit.id),
+            label: unit.name,
+          }))}
+          disabled={!ingredient}
+          required
+        />
+        <MoneyVndField
+          control={form.control}
+          name={`lines.${index}.unitPriceEst`}
+          label="Đơn giá dự kiến"
+        />
       </div>
     </Item>
   );
@@ -281,7 +312,7 @@ function PurchaseOrderFields({
         <SelectField
           control={form.control}
           name="branchId"
-          label="Chi nhánh nhận hàng"
+          label="Nơi nhận hàng"
           options={branches.map((item) => ({
             value: String(item.id),
             label: item.name,
@@ -289,18 +320,26 @@ function PurchaseOrderFields({
           required
         />
       </div>
-      <TextareaField
-        control={form.control}
-        name="notes"
-        label="Ghi chú"
-        rows={2}
-      />
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3">
         <p className="text-sm font-medium">{poCopy.linesTitle}</p>
+        {supplierId && supplierIngredients.length === 0 ? (
+          <p className="text-sm text-warning">{poCopy.noSupplierItems}</p>
+        ) : null}
+        {fields.map((field, index) => (
+          <PurchaseOrderLineFields
+            key={field.id}
+            form={form}
+            index={index}
+            ingredients={supplierIngredients}
+            canRemove={fields.length > 1}
+            onRemove={() => remove(index)}
+          />
+        ))}
         <Button
           type="button"
           variant="outline"
           size="sm"
+          className="self-start"
           disabled={supplierIngredients.length === 0}
           onClick={() => append(emptyLine())}
         >
@@ -308,19 +347,12 @@ function PurchaseOrderFields({
           {poCopy.addLine}
         </Button>
       </div>
-      {supplierId && supplierIngredients.length === 0 ? (
-        <p className="text-sm text-warning">{poCopy.noSupplierItems}</p>
-      ) : null}
-      {fields.map((field, index) => (
-        <PurchaseOrderLineFields
-          key={field.id}
-          form={form}
-          index={index}
-          ingredients={supplierIngredients}
-          canRemove={fields.length > 1}
-          onRemove={() => remove(index)}
-        />
-      ))}
+      <TextField
+        control={form.control}
+        name="notes"
+        label={FORM_VI.notes}
+        placeholder={poCopy.notesPlaceholder}
+      />
     </>
   );
 }
@@ -345,8 +377,9 @@ export function PurchaseOrdersClient({
   canCreateGrn: boolean;
 }) {
   const router = useRouter();
-  const isTouchLayout = useIsMobile();
+  const controlSize = useFormControlSize();
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedPoId, setSelectedPoId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -367,6 +400,7 @@ export function PurchaseOrdersClient({
             row.code,
             row.supplierName,
             row.branchName,
+            row.notes ?? "",
             getStatusBadgeMeta("purchase-order", row.status).label,
           ],
           search,
@@ -374,6 +408,18 @@ export function PurchaseOrdersClient({
       ),
     [rows, search],
   );
+  const selectedRow =
+    selectedPoId == null
+      ? null
+      : (rows.find((row) => row.id === selectedPoId) ?? null);
+
+  function openDetail(row: PurchaseOrderRow) {
+    setSelectedPoId(row.id);
+  }
+
+  function closeDetail() {
+    setSelectedPoId(null);
+  }
 
   function approve(row: PurchaseOrderRow) {
     startTransition(async () => {
@@ -411,11 +457,18 @@ export function PurchaseOrdersClient({
   }
 
   function renderActions(row: PurchaseOrderRow, touch = false) {
-    const items: RowActionItem[] = [];
+    const items: RowActionItem[] = [
+      {
+        key: "view",
+        label: poCopy.viewDetail,
+        icon: <IconEye data-icon="inline-start" />,
+        onSelect: () => openDetail(row),
+      },
+    ];
     if (row.status === "draft" && canApprove) {
       items.push({
         key: "approve",
-        label: "Duyệt mua",
+        label: poCopy.approveAction,
         icon: <IconCheck data-icon="inline-start" />,
         disabled: isPending || pendingId === row.id,
         onSelect: () => approve(row),
@@ -424,21 +477,54 @@ export function PurchaseOrdersClient({
     if (["sent", "partially_received"].includes(row.status) && canCreateGrn) {
       items.push({
         key: "receive",
-        label: "Tạo phiếu nhập",
+        label: poCopy.createGrnAction,
         icon: <IconPackagePlus data-icon="inline-start" />,
         disabled: isPending || pendingId === row.id,
         onSelect: () => createGrn(row),
       });
     }
-    return items.length > 0 ? (
-      <RowActionsMenu
-        items={items}
-        triggerSize={touch ? "icon-touch" : "icon"}
-      />
-    ) : (
-      <span className="text-muted-foreground">—</span>
+    return (
+      <div
+        className="flex justify-end"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <RowActionsMenu
+          items={items}
+          label={poCopy.viewDetailAria(row.code)}
+          triggerSize={touch ? "icon-touch" : "icon"}
+        />
+      </div>
     );
   }
+
+  const lineColumns: DataTableColumn<PurchaseOrderLineRow>[] = [
+    {
+      key: "item",
+      header: poCopy.detail.item,
+      render: (line) => line.ingredientName,
+    },
+    {
+      key: "qty",
+      header: poCopy.quantityShort,
+      className: "text-right font-mono tabular-nums",
+      render: (line) => `${line.quantity} ${line.unitLabel}`,
+    },
+    {
+      key: "price",
+      header: poCopy.unitPrice,
+      className: "text-right font-mono tabular-nums",
+      render: (line) =>
+        line.unitPriceEst == null ? "—" : formatVND(line.unitPriceEst),
+    },
+    {
+      key: "total",
+      header: poCopy.estimatedTotal,
+      className: "text-right font-mono tabular-nums",
+      render: (line) =>
+        line.lineTotal == null ? "—" : formatVND(line.lineTotal),
+    },
+  ];
 
   const columns: DataTableColumn<PurchaseOrderRow>[] = [
     {
@@ -488,10 +574,7 @@ export function PurchaseOrdersClient({
     <AppToolbar
       variant="inline"
       search={
-        <InputGroup
-          size={isTouchLayout ? "touch" : "field"}
-          className="min-w-0 flex-1 sm:min-w-72"
-        >
+        <InputGroup size={controlSize} className="min-w-0 flex-1 sm:min-w-72">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -511,6 +594,36 @@ export function PurchaseOrdersClient({
       }
     />
   );
+
+  const detailFooter =
+    selectedRow == null ? null : (
+      <>
+        {selectedRow.status === "draft" && canApprove ? (
+          <Button
+            type="button"
+            disabled={isPending || pendingId === selectedRow.id}
+            onClick={() => approve(selectedRow)}
+          >
+            <IconCheck data-icon="inline-start" />
+            {poCopy.approveAction}
+          </Button>
+        ) : null}
+        {["sent", "partially_received"].includes(selectedRow.status) &&
+        canCreateGrn ? (
+          <Button
+            type="button"
+            disabled={isPending || pendingId === selectedRow.id}
+            onClick={() => createGrn(selectedRow)}
+          >
+            <IconPackagePlus data-icon="inline-start" />
+            {poCopy.createGrnAction}
+          </Button>
+        ) : null}
+        <Button type="button" variant="outline" onClick={closeDetail}>
+          {ACTIONS_VI.close}
+        </Button>
+      </>
+    );
 
   return (
     <AppPage width="xwide" density="compact">
@@ -541,13 +654,31 @@ export function PurchaseOrdersClient({
           data={filteredRows}
           getRowKey={(row) => row.id}
           pageSize={50}
+          onRowClick={openDetail}
+          getRowAriaLabel={(row) => poCopy.viewDetailAria(row.code)}
+          getRowDataState={(row) =>
+            row.id === selectedPoId ? "selected" : undefined
+          }
           emptyTitle={poCopy.emptyInitialTitle}
           emptyDescription={poCopy.emptyInitialDescription}
           emptyIcon={
             <IconShoppingCart className="size-8 text-muted-foreground" />
           }
           mobileCardRender={(row) => (
-            <Item variant="outline">
+            <Item
+              variant="outline"
+              role="button"
+              tabIndex={0}
+              aria-label={poCopy.viewDetailAria(row.code)}
+              className="cursor-pointer"
+              onClick={() => openDetail(row)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openDetail(row);
+                }
+              }}
+            >
               <ItemContent>
                 <ItemTitle>{row.code}</ItemTitle>
                 <ItemDescription>
@@ -568,6 +699,139 @@ export function PurchaseOrdersClient({
           )}
         />
       </InventoryListFrame>
+
+      <AppDialog
+        open={selectedRow != null}
+        onOpenChange={(open) => {
+          if (!open) closeDetail();
+        }}
+        title={
+          selectedRow ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono">{selectedRow.code}</span>
+              <StatusBadge
+                domain="purchase-order"
+                value={selectedRow.status}
+              />
+            </div>
+          ) : (
+            poCopy.detail.title
+          )
+        }
+        description={
+          selectedRow
+            ? `${selectedRow.supplierName} · ${selectedRow.branchName} · ${formatVNDate(selectedRow.orderedAt)}`
+            : undefined
+        }
+        contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-5xl"
+        bodyClassName="min-h-0 overflow-hidden"
+        footer={detailFooter}
+      >
+        {selectedRow ? (
+          <>
+            <DescriptionList
+              className="sm:grid sm:grid-cols-3 sm:gap-4"
+              items={[
+                {
+                  term: poCopy.supplierRequired,
+                  description: selectedRow.supplierName,
+                },
+                {
+                  term: poCopy.branchLabel,
+                  description: selectedRow.branchName,
+                },
+                {
+                  term: poCopy.estimatedTotal,
+                  description:
+                    selectedRow.estimatedTotal == null
+                      ? "—"
+                      : formatVND(selectedRow.estimatedTotal),
+                },
+              ]}
+            />
+
+            <div className="flex min-h-0 flex-col gap-2">
+              <p className="text-sm font-medium">
+                {poCopy.detail.overviewLinesTitle}
+              </p>
+              <Frame className="h-72 min-h-0 overflow-hidden sm:h-80">
+                <ScrollArea className="h-full">
+                  <DataTable
+                    columns={lineColumns}
+                    data={selectedRow.lines}
+                    getRowKey={(line) => line.id}
+                    emptyTitle={poCopy.emptyLinesTitle}
+                    emptyDescription={poCopy.emptyLinesDescription}
+                    mobileCardRender={(line) => (
+                      <Item variant="muted" className="items-start">
+                        <ItemContent className="min-w-0">
+                          <ItemTitle className="break-words">
+                            {line.ingredientName}
+                          </ItemTitle>
+                          <ItemDescription>
+                            {line.quantity} {line.unitLabel}
+                            {line.unitPriceEst == null
+                              ? ""
+                              : ` · ${formatVND(line.unitPriceEst)}`}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemActions>
+                          <span className="font-mono tabular-nums">
+                            {line.lineTotal == null
+                              ? "—"
+                              : formatVND(line.lineTotal)}
+                          </span>
+                        </ItemActions>
+                      </Item>
+                    )}
+                  />
+                </ScrollArea>
+              </Frame>
+            </div>
+
+            {selectedRow.notes ? (
+              <p className="break-words text-sm italic text-muted-foreground">
+                {selectedRow.notes}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{poCopy.noNotes}</p>
+            )}
+
+            {selectedRow.linkedGrns.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">
+                  {poCopy.detail.linkedGrnsTitle}
+                </p>
+                <div className="flex flex-col gap-2">
+                  {selectedRow.linkedGrns.map((grn) => (
+                    <Item key={grn.id} variant="outline" size="sm">
+                      <ItemContent>
+                        <ItemTitle className="font-mono">{grn.code}</ItemTitle>
+                        <ItemDescription>
+                          {grn.receivedAt
+                            ? formatVNDate(grn.receivedAt)
+                            : poCopy.noReceivedDate}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions className="gap-2">
+                        <StatusBadge domain="inventory" value={grn.status} />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          render={<Link href={`/inventory/grn/${grn.id}`} />}
+                        >
+                          {poCopy.openLinkedGrn}
+                        </Button>
+                      </ItemActions>
+                    </Item>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </AppDialog>
 
       <FormDialog
         open={createOpen}

@@ -51,8 +51,10 @@ Decision order:
    page shape; the context map does not.
 3. Select the closest UI block from `UI_BLOCK_REGISTRY` through
    `corepack pnpm audit:ui-components --component <block>`. A block is a
-   composition recipe, not an import layer; use `none` when the route has no
-   repeated block.
+   composition recipe, not an import layer (D086); use `none` when the route has
+   no repeated block. Then look up the adapters named in the block `use` field
+   (for example `InventoryListFrame`, `DocumentFormFrame`, `BranchOperatorPage`)
+   before composing.
 4. Select shared primitives and adapters from `docs/modules/ui.md` § Shared
    Component Registry. External design output, including Stitch, may advise but
    cannot select or override the project contract.

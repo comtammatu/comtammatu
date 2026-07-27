@@ -221,6 +221,13 @@ export function StocktakeCountWizard({
     activeLine == null
       ? null
       : (unitByIngredient?.[activeLine.ingredientId] ??
+        activeUnitOptions.reduce<(typeof activeUnitOptions)[number] | null>(
+          (best, option) =>
+            best == null || option.toBaseFactor > best.toBaseFactor
+              ? option
+              : best,
+          null,
+        )?.unitId ??
         activeUnitOptions.find((option) => option.isBase)?.unitId ??
         activeUnitOptions[0]?.unitId ??
         null);

@@ -164,6 +164,7 @@ export function DataTable<T>({
   mobileFooter,
 }: DataTableProps<T>) {
   const isTouchLayout = useIsMobile(mobileBreakpoint);
+  const controlSize = isTouchLayout ? "touch" : "field";
   const isMobile = isTouchLayout && mobileCardRender != null;
   const [openContextRowKey, setOpenContextRowKey] = React.useState<
     string | number | null
@@ -216,7 +217,7 @@ export function DataTable<T>({
       search={
         searchable === true ? (
           <InputGroup
-            size={isTouchLayout ? "touch" : "default"}
+            size={controlSize}
             className="min-w-0 flex-1 sm:min-w-64"
           >
             <InputGroupAddon>
@@ -248,7 +249,7 @@ export function DataTable<T>({
                   }
                 >
                   <SelectTrigger
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={controlSize}
                     className="min-w-36"
                     aria-label={filter.label ?? filter.placeholder}
                   >
@@ -259,9 +260,7 @@ export function DataTable<T>({
                       <SelectItem
                         key={option.value}
                         value={option.value}
-                        className={
-                          isTouchLayout ? "min-h-12 text-sm" : undefined
-                        }
+                        size={controlSize === "touch" ? "touch" : "default"}
                       >
                         {option.label}
                       </SelectItem>

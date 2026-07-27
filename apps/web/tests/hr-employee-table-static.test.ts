@@ -47,10 +47,11 @@ test("employee list uses table columns for ordinal, salary, and contract type", 
   assert.match(source, /mobileCardRender=\{\(employee, index\) =>/);
 });
 
-test("employee list uses the same card surface as payroll tables", () => {
+test("employee list uses the shared Owner LIST frame", () => {
   assert.doesNotMatch(clientSource, /AppSection/);
+  assert.match(source, /<AppListFrame/);
+  assert.match(source, /variant="inline"/);
   assert.match(source, /<AppToolbar/);
-  assert.match(source, /<AppSection contentFlush contentScroll>/);
   assert.match(clientSource, /<EmployeeTable/);
 });
 

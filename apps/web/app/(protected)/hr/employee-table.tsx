@@ -37,7 +37,8 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppSection, AppToolbar } from "@/components/surface";
+import { AppListFrame, AppToolbar } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   CONTRACT_TYPE_OPTIONS,
   EmployeeFormDialog,
@@ -64,6 +65,7 @@ export function EmployeeTable({
   positionOptions,
   canManage,
 }: EmployeeTableProps) {
+  const controlSize = useFormControlSize();
   const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
@@ -242,123 +244,144 @@ export function EmployeeTable({
 
   return (
     <>
-      <AppToolbar
-        search={
-          <InputGroup className="min-w-0 flex-1 sm:min-w-64">
-            <InputGroupAddon>
-              <IconSearch aria-hidden />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              aria-label={messages.hr.client.employeeSearch}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={messages.hr.client.employeeSearch}
-            />
-          </InputGroup>
-        }
-        filters={
-          <>
-            <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger className="min-w-40" aria-label={BRANCH_VI.long}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>
-                  {messages.hr.client.allBranches}
-                </SelectItem>
-                <SelectItem value={UNASSIGNED_BRANCH_FILTER_VALUE}>
-                  {messages.hr.client.unassignedBranch}
-                </SelectItem>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={String(branch.id)}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={positionFilter} onValueChange={setPositionFilter}>
-              <SelectTrigger className="min-w-40" aria-label={STAFF_VI.role}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>
-                  {messages.hr.client.allPositions}
-                </SelectItem>
-                <SelectItem value={UNASSIGNED_POSITION_FILTER_VALUE}>
-                  {messages.hr.client.unassignedPosition}
-                </SelectItem>
-                {positionOptions.map((position) => (
-                  <SelectItem key={position.value} value={position.value}>
-                    {position.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {canManage ? (
-              <Select value={salaryFilter} onValueChange={setSalaryFilter}>
-                <SelectTrigger
-                  className="min-w-36"
-                  aria-label={messages.hr.client.salary}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_FILTER_VALUE}>
-                    {messages.hr.client.allSalaries}
-                  </SelectItem>
-                  <SelectItem value={SALARY_RECORDED_FILTER_VALUE}>
-                    {messages.hr.client.salaryRecorded}
-                  </SelectItem>
-                  <SelectItem value={SALARY_MISSING_FILTER_VALUE}>
-                    {messages.hr.client.salaryMissing}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            ) : null}
-            {canManage ? (
-              <Select
-                value={contractTypeFilter}
-                onValueChange={setContractTypeFilter}
+      <AppListFrame
+        contentScroll
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            search={
+              <InputGroup
+                size={controlSize}
+                className="min-w-0 flex-1 sm:min-w-64"
               >
-                <SelectTrigger
-                  className="min-w-40"
-                  aria-label={messages.hr.client.contractType}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_FILTER_VALUE}>
-                    {messages.hr.client.allContractTypes}
-                  </SelectItem>
-                  {CONTRACT_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                <InputGroupAddon>
+                  <IconSearch aria-hidden />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="search"
+                  aria-label={messages.hr.client.employeeSearch}
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={messages.hr.client.employeeSearch}
+                />
+              </InputGroup>
+            }
+            filters={
+              <>
+                <Select value={branchFilter} onValueChange={setBranchFilter}>
+                  <SelectTrigger
+                    size={controlSize}
+                    className="min-w-40"
+                    aria-label={BRANCH_VI.long}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER_VALUE}>
+                      {messages.hr.client.allBranches}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : null}
-          </>
+                    <SelectItem value={UNASSIGNED_BRANCH_FILTER_VALUE}>
+                      {messages.hr.client.unassignedBranch}
+                    </SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={String(branch.id)}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={positionFilter}
+                  onValueChange={setPositionFilter}
+                >
+                  <SelectTrigger
+                    size={controlSize}
+                    className="min-w-40"
+                    aria-label={STAFF_VI.role}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER_VALUE}>
+                      {messages.hr.client.allPositions}
+                    </SelectItem>
+                    <SelectItem value={UNASSIGNED_POSITION_FILTER_VALUE}>
+                      {messages.hr.client.unassignedPosition}
+                    </SelectItem>
+                    {positionOptions.map((position) => (
+                      <SelectItem key={position.value} value={position.value}>
+                        {position.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {canManage ? (
+                  <Select value={salaryFilter} onValueChange={setSalaryFilter}>
+                    <SelectTrigger
+                      size={controlSize}
+                      className="min-w-36"
+                      aria-label={messages.hr.client.salary}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_FILTER_VALUE}>
+                        {messages.hr.client.allSalaries}
+                      </SelectItem>
+                      <SelectItem value={SALARY_RECORDED_FILTER_VALUE}>
+                        {messages.hr.client.salaryRecorded}
+                      </SelectItem>
+                      <SelectItem value={SALARY_MISSING_FILTER_VALUE}>
+                        {messages.hr.client.salaryMissing}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                {canManage ? (
+                  <Select
+                    value={contractTypeFilter}
+                    onValueChange={setContractTypeFilter}
+                  >
+                    <SelectTrigger
+                      size={controlSize}
+                      className="min-w-40"
+                      aria-label={messages.hr.client.contractType}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_FILTER_VALUE}>
+                        {messages.hr.client.allContractTypes}
+                      </SelectItem>
+                      {CONTRACT_TYPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+              </>
+            }
+            actions={
+              <Button
+                variant="outline"
+                size={controlSize}
+                onClick={() => setShowInactive((current) => !current)}
+              >
+                {showInactive ? (
+                  <IconEyeOff data-icon="inline-start" />
+                ) : (
+                  <IconEye data-icon="inline-start" />
+                )}
+                {showInactive
+                  ? messages.hr.client.hideInactiveEmployees
+                  : messages.hr.client.showInactiveEmployees}
+              </Button>
+            }
+          />
         }
-        actions={
-          <Button
-            variant="outline"
-            size="touch"
-            onClick={() => setShowInactive((current) => !current)}
-          >
-            {showInactive ? (
-              <IconEyeOff data-icon="inline-start" />
-            ) : (
-              <IconEye data-icon="inline-start" />
-            )}
-            {showInactive
-              ? messages.hr.client.hideInactiveEmployees
-              : messages.hr.client.showInactiveEmployees}
-          </Button>
-        }
-      />
-      <AppSection contentFlush contentScroll>
+      >
         <DataTable
           columns={columns}
           data={filteredEmployees}
@@ -401,7 +424,7 @@ export function EmployeeTable({
             </Item>
           )}
         />
-      </AppSection>
+      </AppListFrame>
       {canManage ? (
         <EmployeeFormDialog
           open={!!editEmployee}

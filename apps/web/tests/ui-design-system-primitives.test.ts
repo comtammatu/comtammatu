@@ -60,8 +60,8 @@ test("app metrics use KpiCard without the retired Stat primitive", () => {
 
   assert.equal(exists("packages/ui/src/components/stat.tsx"), false);
   assert.doesNotMatch(read("docs/modules/ui.md"), /`stat`/);
-  assert.match(supplierInvoices, /import \{ KpiCard \}/);
-  assert.equal(supplierInvoices.match(/<KpiCard/g)?.length, 4);
+  assert.doesNotMatch(supplierInvoices, /import \{ KpiCard \}/);
+  assert.doesNotMatch(supplierInvoices, /<KpiCard/);
   assert.doesNotMatch(supplierInvoices, /components\/stat["']|<Stat(?:\s|>)/);
 });
 

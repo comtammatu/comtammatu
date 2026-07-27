@@ -39,7 +39,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { fetchOrders } from "./actions";
 import { OrderDetailContent, OrderDetailSheet } from "./order-detail-sheet";
 import { useIsXlUp } from "./_hooks/use-is-xl-up";
@@ -49,6 +48,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 
 const ORDER_COLUMNS: DataTableColumn<OrderRow>[] = [
   {
@@ -155,7 +155,7 @@ export function OrdersClient({
   // right column (design decision D063 W4b) — same OrderDetailContent body,
   // two mount points.
   const isXlUp = useIsXlUp();
-  const isTouchLayout = useIsMobile(1024);
+  const controlSize = useFormControlSize();
 
   // Filter state
   const [dateFrom, setDateFrom] = useState("");
@@ -311,7 +311,7 @@ export function OrdersClient({
             {FORM_VI.fromDate}
           </Label>
           <InputGroup
-            size={isTouchLayout ? "touch" : "default"}
+            size={controlSize}
             className="w-full sm:w-36"
           >
             <InputGroupInput
@@ -328,7 +328,7 @@ export function OrdersClient({
             {FORM_VI.toDate}
           </Label>
           <InputGroup
-            size={isTouchLayout ? "touch" : "default"}
+            size={controlSize}
             className="w-full sm:w-36"
           >
             <InputGroupInput
@@ -347,7 +347,7 @@ export function OrdersClient({
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger
               id="status-filter"
-              size={isTouchLayout ? "touch" : "default"}
+              size={controlSize}
               className="w-full sm:w-40"
             >
               <SelectValue placeholder="Tất cả" />
@@ -357,7 +357,7 @@ export function OrdersClient({
                 <SelectItem
                   key={value}
                   value={value}
-                  size={isTouchLayout ? "touch" : "default"}
+                  size={controlSize === "touch" ? "touch" : "default"}
                 >
                   {label}
                 </SelectItem>
@@ -374,7 +374,7 @@ export function OrdersClient({
             <Select value={branchId} onValueChange={setBranchId}>
               <SelectTrigger
                 id="branch-filter"
-                size={isTouchLayout ? "touch" : "default"}
+                size={controlSize}
                 className="w-full sm:w-44"
               >
                 <SelectValue placeholder={BRANCH_VI.selectAll} />
@@ -384,7 +384,7 @@ export function OrdersClient({
                   <SelectItem
                     key={b.id}
                     value={String(b.id)}
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={controlSize === "touch" ? "touch" : "default"}
                   >
                     {b.name}
                   </SelectItem>
@@ -398,7 +398,7 @@ export function OrdersClient({
           <Button
             onClick={handleFilter}
             disabled={isPending}
-            size={isTouchLayout ? "touch" : "sm"}
+            size={controlSize}
             className="flex-1 sm:flex-none"
           >
             {isPending && <Spinner className="mr-1.5 size-3.5" />}
@@ -409,7 +409,7 @@ export function OrdersClient({
               onClick={handleReset}
               disabled={isPending}
               variant="outline"
-              size={isTouchLayout ? "touch" : "sm"}
+              size={controlSize}
               className="flex-1 sm:flex-none"
             >
               Xóa bộ lọc
