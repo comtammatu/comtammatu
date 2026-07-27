@@ -128,3 +128,31 @@ Review depth (T1/T2/T3), tier triggers, and the four perspectives (PM / BA /
 Senior Dev / QA) are owned by `docs/agent/rules/workflow.md` → Review Depth —
 Tier By Risk. Cross-runtime review and arbitration are owned by
 `docs/agent/rules/orchestration.md`.
+
+## Cursor Cloud specific instructions
+
+Durable, non-obvious notes for Cloud Agents. Standard commands live in `## Commands`
+and `docs/ref/setup.md`; do not duplicate them here.
+
+- **Node 24 is required but not the PATH default.** The Cloud VM injects a Node 22
+  `node` shim at `/exec-daemon/node` that wins in `$PATH` even after `nvm use`. The
+  startup update script only installs dependencies; before running any command
+  (`dev`, `build`, `lint`, `test`), activate Node 24 first, e.g.
+  `export PATH="$HOME/.nvm/versions/node/v24.18.0/bin:$PATH"` (Node 24 is
+  pre-installed via nvm in the snapshot; `nvm install 24` if the path is absent).
+  Installs work on Node 22 (no `engine-strict`), but match the repo/CI on Node 24.
+- **Supabase Cloud credentials are required for anything data-backed.** Env is read
+  lazily when a Supabase client is constructed, so `corepack pnpm dev:web` boots and
+  serves `/login` with only placeholder env, but login, protected routes, POS/KDS,
+  and every core flow throw `Missing required Supabase env var` or fail auth without
+  real keys. Provide `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+  (or `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and `SUPABASE_SERVICE_ROLE_KEY` via
+  `apps/web/.env.local` or Cloud Secrets, plus a seeded test account. The registered
+  Greenfield dev ref and auth Custom Access Token Hook requirement are in
+  `docs/agent/rules/database.md` and `docs/ref/setup.md`.
+- **`corepack pnpm dev` starts web + print-agent.** The print-agent has no inbound
+  port and needs its own `apps/print-agent/.env.local`; use `corepack pnpm dev:web`
+  for web-only work.
+- **No local Supabase for workstation/Cloud dev.** Supabase Local Docker is CI-only
+  (`scripts/supabase-e2e-bringup.mjs`, `db:baseline:local-check`); it is not a Cloud
+  substitute for Cloud project credentials.
