@@ -48,8 +48,8 @@ import {
   STATES_VI,
 } from "@comtammatu/shared/messages";
 import {
+  getOrderTypeLabelVi,
   getPaymentMethodLabelVi,
-  ORDER_TYPE_LABELS_VI,
 } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
 import { AppEmptyState, DescriptionList } from "@/components/surface";
@@ -366,10 +366,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
     kdsSummary !== null &&
     (operationalTrace.item_summary.legacy_unclassified_quantity > 0 ||
       kdsSummary.legacyCompletedItemQuantity > 0);
-  const orderTypeLabel =
-    ORDER_TYPE_LABELS_VI[
-      order.order_type as keyof typeof ORDER_TYPE_LABELS_VI
-    ] ?? order.order_type;
+  const orderTypeLabel = getOrderTypeLabelVi(order.order_type);
   const orderChangeEntries = [
     ...(audit ?? []).map((entry) => ({
       key: `history-${String(entry.id)}`,

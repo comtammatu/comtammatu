@@ -49,6 +49,7 @@ import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { formatVND } from "@lib/inventory/format";
 import { tNav } from "../_lib/dictionary";
 import { createStockIssueDraft } from "../issue-actions";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
 import {
   ACTIONS_VI,
@@ -96,7 +97,7 @@ const ISSUE_TYPES = [
 
 function issueTypeLabel(type: string, branchKind: string | null): string {
   void branchKind;
-  return ISSUE_TYPES.find((o) => o.value === type)?.label ?? type;
+  return ISSUE_TYPES.find((o) => o.value === type)?.label ?? UNKNOWN_LABEL_VI;
 }
 
 const STATE_FILTER_OPTIONS = ["draft", "confirmed", "cancelled"].map(
@@ -452,7 +453,7 @@ export function IssuesClient({
     <>
       <Button
         type="button"
-        size={controlSize}
+        size={embedded ? controlSize : "lg"}
         onClick={() => setCreateOpen(true)}
       >
         <IconPlus className="size-4" />
@@ -462,7 +463,7 @@ export function IssuesClient({
         <Button
           type="button"
           variant="outline"
-          size={controlSize}
+          size={embedded ? controlSize : "lg"}
           onClick={handleExportIssuesCsv}
         >
           <IconFileDownload className="size-4" />

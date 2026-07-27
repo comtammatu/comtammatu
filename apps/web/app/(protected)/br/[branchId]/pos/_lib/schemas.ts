@@ -113,7 +113,7 @@ export const transferTableSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
   orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
   newTableId: z.coerce.number().int().positive({ error: "Bàn không hợp lệ" }),
   idempotencyKey: z
@@ -130,7 +130,7 @@ export const markOrderItemServedSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
   itemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
 });
 
@@ -149,7 +149,7 @@ export const submitOrderSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
   cart: cartStateSchema,
   posSessionId: z.coerce.number().int().positive().optional(),
   idempotencyKey: z
@@ -172,11 +172,11 @@ export const appendOrderItemsSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
   orderId: z.coerce
     .number()
     .int()
-    .positive({ error: "Order ID không hợp lệ" }),
+    .positive({ error: "Mã đơn hàng không hợp lệ" }),
   items: z.array(cartItemSchema).min(1, { error: "Cần ít nhất một món" }),
   idempotencyKey: z
     .string()
@@ -194,7 +194,7 @@ export const reserveDailyLimitHoldsSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
   holdToken: z.string().uuid({ error: "Mã giữ suất không hợp lệ" }),
   items: z.array(cartItemSchema),
   source: dailyLimitHoldSourceSchema,
@@ -204,6 +204,6 @@ export const releaseDailyLimitHoldsSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
   holdToken: z.string().uuid({ error: "Mã giữ suất không hợp lệ" }),
 });

@@ -7,7 +7,7 @@ export const finance = {
     loadTaxInvoiceIssueAttentionFailed: "Không thể tải hàng chờ HĐĐT.",
     loadRevenueRollupFailed: "Không thể tải dữ liệu doanh thu.",
     loadRevenueKpisFailed: "Không thể tải chỉ số KPI.",
-    loadDashboardSummaryFailed: "Không thể tải chỉ số dashboard.",
+    loadDashboardSummaryFailed: "Không thể tải chỉ số tổng quan.",
     loadOrdersFailed: "Không thể tải danh sách đơn.",
     loadCashVarianceFailed: "Không thể tải dữ liệu lệch tiền.",
     loadRevenueByHourFailed: "Không thể tải dữ liệu doanh thu theo giờ.",
@@ -200,7 +200,7 @@ export const finance = {
     sections: {
       periodResult: "Kết quả theo kỳ",
       followsFilters: "Theo bộ lọc",
-      inventory: "Tài sản hiện có",
+      inventory: "Tồn kho",
     },
     operators: {
       subtract: "trừ",
@@ -217,7 +217,8 @@ export const finance = {
       grossProfitHint: (margin: string) => `Biên gộp ${margin}`,
       grossProfitMissingHint: "Cần đủ giá vốn món",
       operatingExpense: "Chi phí vận hành",
-      operatingExpenseHint: "Không gồm giá vốn, nhập hàng và công nợ NCC",
+      operatingExpenseHint:
+        "Không gồm giá vốn, nhập hàng, công nợ và nguyên giá thiết bị/TSCĐ",
       operatingResult: "Kết quả vận hành",
       operatingResultHint: "Lợi nhuận gộp − chi phí vận hành",
       notCalculated: "Chưa tính",
@@ -243,8 +244,8 @@ export const finance = {
       revenue: "Doanh thu",
       bankTransactions: "Đối soát ngân hàng",
       expenses: "Chi phí vận hành",
-      supplierPayables: "HĐ GTGT & NCC",
-      invoices: "Hóa đơn điện tử",
+      supplierPayables: "VAT đầu vào & NCC",
+      invoices: "VAT đầu ra & HĐĐT",
       foodCost: "Giá vốn món",
     },
   },
@@ -253,7 +254,7 @@ export const finance = {
       eyebrow: "Tài chính",
       title: "Chi phí vận hành",
       description:
-        "Ghi nhận và theo dõi các khoản chi phí vận hành theo ngày phát sinh.",
+        "Ghi chi phí của kỳ; không đưa toàn bộ tiền mua thiết bị/TSCĐ vào đây.",
     },
     add: "Thêm khoản chi",
     listTitle: "Sổ chi phí vận hành",
@@ -351,7 +352,7 @@ export const finance = {
       gas_fuel: "Gas / nhiên liệu",
       salary: "Lương (tạm)",
       cogs_manual: "Điều chỉnh giá vốn món",
-      supplies: "Vật dụng / công cụ",
+      supplies: "Vật tư tiêu hao / công cụ nhỏ",
       repair: "Sửa chữa / bảo trì",
       marketing: "Marketing / khuyến mãi",
       fees_tax: "Phí ngân hàng / thuế",
@@ -371,9 +372,9 @@ export const finance = {
   },
   supplierInvoicesPage: {
     eyebrow: "Tài chính",
-    title: "Hóa đơn GTGT | Thanh toán NCC",
+    title: "VAT đầu vào | Thanh toán NCC",
     description:
-      "Nhập hóa đơn GTGT đầu vào, đối soát GRN và theo dõi thanh toán NCC.",
+      "VAT trên hóa đơn được ghi nhận theo chứng từ, chưa mặc định là VAT được khấu trừ.",
     noAccessTitle: "Không có quyền xem hóa đơn NCC",
     noAccessDescription:
       "Cần quyền xem đơn mua hàng và NCC để mở hàng đợi phải trả NCC.",
@@ -940,9 +941,9 @@ export const finance = {
   },
   invoicesPage: {
     eyebrow: "HĐĐT",
-    title: "Hóa đơn điện tử",
+    title: "VAT đầu ra & HĐĐT",
     description:
-      "Danh sách HĐĐT đã phát hành, đang ký, đã hủy hoặc bán cho người tiêu dùng.",
+      "Theo dõi HĐĐT bán ra, hủy, điều chỉnh và thay thế; chưa phải số GTGT phải nộp.",
     loadError: "Không thể tải danh sách hóa đơn điện tử",
   },
   links: {

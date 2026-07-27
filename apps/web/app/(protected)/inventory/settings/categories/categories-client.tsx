@@ -21,7 +21,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
-import { AppToolbar } from "@/components/surface";
+import { AppPageHeader, AppSection } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -150,44 +150,46 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
   ];
 
   return (
-    <div className="flex flex-col">
-      <AppToolbar
-        variant="inline"
+    <>
+      <AppPageHeader
+        eyebrow={copy.page.eyebrow}
+        title={copy.page.title}
+        description={copy.page.description}
         actions={
-          <Button onClick={openCreate}>
+          <Button size="lg" onClick={openCreate}>
             <IconPlus data-icon="inline-start" />
             {copy.add}
           </Button>
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        getRowKey={(row) => row.id}
-        emptyTitle={copy.empty}
-        emptyMode="no-data"
-        mobileCardRender={(row) => (
-          <Item variant="outline">
-            <ItemContent className="min-w-0">
-              <ItemTitle size="heading">
-                {row.name}
-              </ItemTitle>
-              <ItemDescription className="text-sm leading-6">
-                {copy.cols.sortOrder}: {row.sort_order}
-              </ItemDescription>
-              <div>
-                <Badge variant={row.is_active ? "success" : "secondary"}>
-                  {row.is_active ? copy.status.active : copy.status.inactive}
-                </Badge>
-              </div>
-            </ItemContent>
-            <ItemActions className="self-center">
-              <RowActions row={row} />
-            </ItemActions>
-          </Item>
-        )}
-      />
+      <AppSection className="overflow-hidden" contentFlush>
+        <DataTable
+          columns={columns}
+          data={rows}
+          getRowKey={(row) => row.id}
+          emptyTitle={copy.empty}
+          emptyMode="no-data"
+          mobileCardRender={(row) => (
+            <Item variant="outline">
+              <ItemContent className="min-w-0">
+                <ItemTitle size="heading">{row.name}</ItemTitle>
+                <ItemDescription className="text-sm leading-6">
+                  {copy.cols.sortOrder}: {row.sort_order}
+                </ItemDescription>
+                <div>
+                  <Badge variant={row.is_active ? "success" : "secondary"}>
+                    {row.is_active ? copy.status.active : copy.status.inactive}
+                  </Badge>
+                </div>
+              </ItemContent>
+              <ItemActions className="self-center">
+                <RowActions row={row} />
+              </ItemActions>
+            </Item>
+          )}
+        />
+      </AppSection>
 
       <FormDialog
         open={dialogOpen}
@@ -233,6 +235,6 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
           </>
         )}
       </FormDialog>
-    </div>
+    </>
   );
 }

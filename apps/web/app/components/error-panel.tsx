@@ -9,15 +9,10 @@ export type ErrorPanelProps = {
   reset: () => void;
 };
 
-export function ErrorPanel({ error, reset }: ErrorPanelProps) {
+export function ErrorPanel({ reset }: ErrorPanelProps) {
   return (
     <AppEmptyState mode="error" description={ERRORS_VI.fallback}>
       <Button onClick={reset}>{ACTIONS_VI.retry}</Button>
-      {error.digest ? (
-        <p className="w-full text-center font-mono text-xs text-muted-foreground">
-          {ERRORS_VI.errorCode}: {error.digest}
-        </p>
-      ) : null}
     </AppEmptyState>
   );
 }

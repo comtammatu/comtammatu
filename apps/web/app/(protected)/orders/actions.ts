@@ -527,7 +527,7 @@ export async function fetchOrderAuditLog(
 ): Promise<ActionResult<OrderAuditEntry[]>> {
   const parsed = auditOrderIdSchema.safeParse(orderId);
   if (!parsed.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+    return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -593,7 +593,7 @@ export async function fetchOrderItems(
 ): Promise<ActionResult<OrderItem[]>> {
   const parsed = auditOrderIdSchema.safeParse(orderId);
   if (!parsed.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+    return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -653,7 +653,7 @@ export async function fetchOrderOperationalTrace(
 ): Promise<ActionResult<OrderOperationalTrace>> {
   const parsed = auditOrderIdSchema.safeParse(orderId);
   if (!parsed.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+    return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(

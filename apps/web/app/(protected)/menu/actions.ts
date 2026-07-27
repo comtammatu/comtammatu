@@ -4,6 +4,7 @@ import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { parseVietnameseNumericImport } from "@comtammatu/shared/format";
 import { MENU_VI } from "@comtammatu/shared/messages";
+import { getCategoryTypeLabelVi } from "@comtammatu/shared/menu";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
@@ -430,13 +431,6 @@ export const saveSides = withAction(
 
 /* ─── Export / Import Menu ─── */
 
-const CATEGORY_TYPE_LABELS: Record<(typeof CATEGORY_TYPES)[number], string> = {
-  main_dish: "Món chính",
-  side_dish: "Món phụ",
-  drink: "Thức uống",
-  dessert: "Tráng miệng",
-};
-
 const CATEGORY_TYPE_BY_LABEL: Record<string, (typeof CATEGORY_TYPES)[number]> =
   {
     "món chính": "main_dish",
@@ -496,7 +490,7 @@ function buildMenuSheets(
 ): SheetDef[] {
   return [
     {
-      name: "Danh muc",
+      name: "Danh mục",
       columns: [
         { header: "Tên danh mục", key: "name", width: 28 },
         { header: "Loại", key: "type_label", width: 16 },
@@ -505,13 +499,13 @@ function buildMenuSheets(
       ],
       rows: categories.map((c) => ({
         name: c.name,
-        type_label: CATEGORY_TYPE_LABELS[c.type] ?? c.type,
+        type_label: getCategoryTypeLabelVi(c.type),
         sort_order: c.sort_order,
         is_active: c.is_active ? "Có" : "Không",
       })),
     },
     {
-      name: "Mon an",
+      name: "Món ăn",
       columns: [
         { header: "Tên món", key: "name", width: 32 },
         { header: "Danh mục", key: "category_name", width: 24 },
@@ -532,7 +526,7 @@ function buildMenuSheets(
       })),
     },
     {
-      name: "Bien the",
+      name: "Biến thể",
       columns: [
         { header: "Tên món", key: "item_name", width: 32 },
         { header: "Tên biến thể", key: "name", width: 24 },
@@ -547,10 +541,10 @@ function buildMenuSheets(
       })),
     },
     {
-      name: "Topping",
+      name: "Tùy chọn",
       columns: [
         { header: "Tên món", key: "item_name", width: 32 },
-        { header: "Tên topping", key: "name", width: 24 },
+        { header: "Tên tùy chọn", key: "name", width: 24 },
         { header: "Giá (VND)", key: "price", width: 14 },
         { header: "Thứ tự", key: "sort_order", width: 10 },
       ],
@@ -562,7 +556,7 @@ function buildMenuSheets(
       })),
     },
     {
-      name: "Mon phu",
+      name: "Món phụ",
       columns: [
         { header: "Món chính", key: "main_item_name", width: 32 },
         { header: "Món phụ", key: "side_item_name", width: 32 },
@@ -697,7 +691,7 @@ export async function exportMenu(
     return {
       success: true,
       data: {
-        filename: `menu-mon-an-${stamp}.csv`,
+        filename: `thuc-don-mon-an-${stamp}.csv`,
         base64: stringToBase64(csv),
         format: "csv",
       },
@@ -708,7 +702,7 @@ export async function exportMenu(
   return {
     success: true,
     data: {
-      filename: `menu-${stamp}.xlsx`,
+      filename: `thuc-don-${stamp}.xlsx`,
       base64: bufferToBase64(buf),
       format: "xlsx",
     },
@@ -858,7 +852,7 @@ export async function importMenu(
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return { success: false, error: "Thiếu file để import" };
+    return { success: false, error: "Thiếu file dữ liệu" };
   }
 
   let parsed;
@@ -867,9 +861,10 @@ export async function importMenu(
       maxRowsPerSheet: MAX_ROWS_PER_SHEET,
     });
   } catch (err) {
+    console.error("menu.import.parse_failed", { error: err });
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Không đọc được file",
+      error: "Không đọc được file.",
     };
   }
 
@@ -885,7 +880,7 @@ export async function importMenu(
     /bi[eê]n\s*th[eể]|variant/i.test(s.name),
   );
   const modifierSheet = parsed.sheets.find((s) =>
-    /topping|modifier/i.test(s.name),
+    /t[uù]y\s*ch[oọ]n|topping|modifier/i.test(s.name),
   );
   const sideSheet = parsed.sheets.find((s) =>
     /m[oó]n\s*ph[uụ]|side/i.test(s.name),
@@ -912,7 +907,7 @@ export async function importMenu(
       return {
         success: false,
         error:
-          'CSV không nhận diện được. Header phải có "Tên món" (import món ăn) hoặc "Tên danh mục" (import danh mục).',
+          'Không nhận diện được file CSV. Tiêu đề cột phải có "Tên món" (nhập món ăn) hoặc "Tên danh mục" (nhập danh mục).',
       };
     }
   }
@@ -1036,7 +1031,7 @@ export async function importMenu(
       .eq("tenant_id", claims.tenant_id);
 
     if (catErr) {
-      return { success: false, error: "Không thể tra danh mục để import món." };
+      return { success: false, error: "Không thể tra danh mục để nhập món." };
     }
 
     const categoryIdByName = new Map<string, number>();
@@ -1181,7 +1176,7 @@ export async function importMenu(
     if (itemErr) {
       return {
         success: false,
-        error: "Không thể tra món để import biến thể/topping/món phụ.",
+        error: "Không thể tra món để nhập biến thể, món thêm hoặc món phụ.",
       };
     }
     itemIdByName = new Map(
@@ -1329,7 +1324,7 @@ export async function importMenu(
       }
       const parsedRow = importModifierRowSchema.safeParse({
         item_name: raw["Tên món"] ?? raw["item_name"],
-        name: raw["Tên topping"] ?? raw["name"],
+        name: raw["Tên tùy chọn"] ?? raw["Tên topping"] ?? raw["name"],
         price,
         sort_order: sortOrder,
       });
@@ -1538,7 +1533,7 @@ export async function downloadMenuTemplate(): Promise<ActionResult> {
   return {
     success: true,
     data: {
-      filename: "menu-template.xlsx",
+      filename: "mau-thuc-don.xlsx",
       base64: bufferToBase64(buf),
       format: "xlsx" as const,
     },

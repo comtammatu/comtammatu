@@ -4,13 +4,13 @@ import { formatCount, formatPercent } from "../format/currency";
 export const INVENTORY_VI = {
   warehouse: "Kho hàng",
   settingsEyebrow: "Cài đặt kho",
-  importFromFile: "Import từ file",
+  importFromFile: "Nhập từ file",
   downloadTemplate: "Tải template (.xlsx)",
-  exportXlsx: "Export .xlsx",
-  exportCsv: "Export .csv",
+  exportXlsx: "Xuất .xlsx",
+  exportCsv: "Xuất .csv",
   chooseFileLabel: "Chọn file (.xlsx, .csv)",
   importResultHeading: "Kết quả",
-  importIngredientsTitle: "Import nguyên liệu từ file",
+  importIngredientsTitle: "Nhập nguyên liệu từ file",
   importBomTitle: "Nhập công thức sản xuất từ file",
   importBomDescription:
     "Hỗ trợ .xlsx và .csv. Mỗi thành phẩm trong file sẽ được thay toàn bộ dòng nguyên liệu.",
@@ -62,33 +62,33 @@ export const INVENTORY_VI = {
   createRecipeTitle: "Tạo định mức món bán",
   updateRecipeBtn: "Cập nhật định mức",
   saveRecipeBtn: "Lưu định mức",
-  holdingLock: "Bạn đang giữ lock",
+  holdingLock: "Bạn đang giữ quyền chỉnh sửa",
   extendLock: "Gia hạn",
-  lockHeldByOther: "Đã có người giữ",
-  lockLost: "Mất lock",
+  lockHeldByOther: "Đang có người khác chỉnh sửa",
+  lockLost: "Đã mất quyền chỉnh sửa",
   retryAcquireLock: "Thử lấy lại",
-  requestingLock: "Đang yêu cầu lock…",
-  lockError: "Lỗi lock",
-  noLock: "Chưa có lock",
-  lockAcquireFailed: "Không acquire được lock",
-  lockUnknownState: "Không rõ trạng thái lock",
-  userShiftCap: "Shift cap người dùng",
-  shiftCapTier2Warn: "⚠ Phiếu này sẽ trigger tier 2 → QLV phải duyệt",
+  requestingLock: "Đang xin quyền chỉnh sửa…",
+  lockError: "Không thể khóa chỉnh sửa",
+  noLock: "Chưa có quyền chỉnh sửa",
+  lockAcquireFailed: "Không lấy được quyền chỉnh sửa",
+  lockUnknownState: "Không xác định trạng thái chỉnh sửa",
+  userShiftCap: "Giới hạn theo ca của người dùng",
+  shiftCapTier2Warn: "⚠ Phiếu này sẽ chuyển mức 2 → QLV phải duyệt",
   loadingHistory15m: "Đang tải lịch sử 15 phút…",
   branchOverCapBanner:
-    "Đã vượt cap chi nhánh — hao hụt mới tự chuyển mức 2 (cần QLV duyệt).",
+    "Đã vượt giới hạn chi nhánh — hao hụt mới tự chuyển mức 2 (cần QLV duyệt).",
   branchNearCapBanner:
-    "Gần chạm cap branch — các phiếu waste tiếp theo có thể tự chuyển tier 2.",
+    "Gần chạm giới hạn chi nhánh — các phiếu hao hụt tiếp theo có thể tự chuyển mức 2.",
   stocktakeModeQuickDesc:
-    "Quick count cuối ca. Không có reviewer — variance được ghi log nhưng không block.",
+    "Đếm nhanh cuối ca. Không có người kiểm tra — chênh lệch được ghi nhận nhưng không chặn.",
   stocktakeModeCycleDesc:
-    "Đếm theo nhóm ABC — A mỗi tuần, B/C xoay vòng. Reviewer + QLV duyệt.",
+    "Đếm theo nhóm ABC — A mỗi tuần, B/C xoay vòng. Người kiểm tra và QLV duyệt.",
   stocktakeModeFullDesc:
-    "Full inventory, blind mode. Không hiển thị tồn hệ thống — counter nhập mù.",
+    "Kiểm kê toàn bộ theo chế độ đếm mù. Không hiển thị tồn hệ thống.",
   stocktakeModePeerDesc:
-    "Peer-cross: nhân sự CN khác đếm. Blind + double-check mọi nhóm.",
+    "Đếm chéo: nhân sự chi nhánh khác thực hiện. Mọi nhóm đều được đếm mù và kiểm tra lại.",
   stocktakeModeSpotDesc:
-    "QLV đột xuất. Có thể chỉ vài SKU. Blind default nhưng QLV override.",
+    "QLV kiểm tra đột xuất, có thể chỉ chọn vài SKU. Mặc định đếm mù; QLV có thể đổi.",
   selectStocktakeMode: "Chọn chế độ kiểm kê",
   selectReason: "Chọn lý do",
   uploadImagePdf: "Tải ảnh / PDF",
@@ -259,9 +259,9 @@ export const INVENTORY_VI = {
   productionRecipeEmptyDescription:
     "Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công thức cho thành phẩm.",
   noNote: "Không ghi chú",
-  productionRecipeImportExport: "Import / Export công thức",
+  productionRecipeImportExport: "Nhập / Xuất công thức",
   productionRecipeImportSuccess: (recipes: number, lines: number) =>
-    `Đã import ${recipes} công thức / ${lines} dòng`,
+    `Đã nhập ${recipes} công thức / ${lines} dòng`,
   productionRecipeImportSummary: (recipes: number, lines: number) =>
     `Đã cập nhật ${recipes} công thức sản xuất / ${lines} dòng nguyên liệu.`,
   productionInsufficientStock: "Không đủ tồn kho",
@@ -487,18 +487,18 @@ export const INVENTORY_VI = {
   lineItemCount: (count: number) => `${formatCount(count)} mặt hàng`,
   lockExpiresIn: (remaining: string) => `Hết hạn sau ${remaining}`,
   rollingTierOneTrigger: (threshold: string) =>
-    `→ trigger tier 1 (ảnh bắt buộc, ≥${threshold})`,
+    `→ chuyển sang mức 1 (cần ảnh, ≥${threshold})`,
   rollingSlipCount: (count: number) => `• ${formatCount(count)} phiếu`,
   shiftCapNearWarning: (remaining: string) =>
-    `Gần cap — thêm ${remaining} nữa sẽ cần duyệt`,
+    `Gần hạn mức — thêm ${remaining} nữa sẽ cần duyệt`,
   branchTodayUsage: (used: string, cap: string, percent: number) =>
-    `Branch hôm nay: ${used} / ${cap} (${formatPercent(percent)})`,
+    `Chi nhánh hôm nay: ${used} / ${cap} (${formatPercent(percent)})`,
   importSelectedFile: (name: string) => `Đã chọn: ${name}`,
   importIngredientsHintPrefix: "Hỗ trợ .xlsx và .csv. Dòng trùng",
   importIngredientsHintField: "tên nguyên liệu",
   importIngredientsHintSuffix: "sẽ được cập nhật.",
   importIngredientsSuccess: (inserted: number, updated: number) =>
-    `Đã import: +${inserted} / ${updated} cập nhật`,
+    `Đã nhập: +${inserted} / ${updated} cập nhật`,
   importIngredientsSummary: (inserted: number, updated: number) =>
     `Tạo mới ${inserted} · Cập nhật ${updated}`,
   importIssueLine: (row: number, message: string) => `[dòng ${row}] ${message}`,

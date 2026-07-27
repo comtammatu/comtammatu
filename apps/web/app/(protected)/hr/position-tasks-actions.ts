@@ -10,6 +10,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
@@ -210,7 +211,7 @@ export async function fetchPositionTasksData(): Promise<
         {
           id: position.id,
           code: position.code,
-          label: position.label_vi ?? position.code,
+          label: position.label_vi ?? UNKNOWN_LABEL_VI,
         },
       ];
     },

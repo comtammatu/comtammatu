@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
-import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { APP_COPY_VI, UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { matchesSearch } from "@lib/search";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { StaffTable } from "./staff-table";
@@ -90,7 +90,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     return [
       {
         value: position.code,
-        label: position.label_vi ?? position.code,
+        label: position.label_vi ?? UNKNOWN_LABEL_VI,
       },
     ];
   });

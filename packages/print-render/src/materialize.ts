@@ -107,7 +107,11 @@ export const payloadText = (payload: LoosePayload, field: string): string => {
       );
     case "payment_method_label": {
       const method = rawText(payload, "payment_method") || "unknown";
-      return PAYMENT_LABEL[method] ?? PAYMENT_LABEL_FULL[method] ?? method;
+      return (
+        PAYMENT_LABEL[method] ??
+        PAYMENT_LABEL_FULL[method] ??
+        PAYMENT_LABEL_FULL.unknown
+      );
     }
     case "cash_difference_sign":
       return diffSign(payloadNumber(payload, "cash_difference"));

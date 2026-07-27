@@ -30,7 +30,7 @@ import { fileURLToPath } from "node:url";
 // shell string concatenation.
 
 const PROTECTED_REFS = {
-  iexwsuaqqenyjiskawoj: "SUSPENDED HKD (matu-prod, frozen since baf3720f8)",
+  iexwsuaqqenyjiskawoj: "RETIRED TARGET (matu-prod, frozen since baf3720f8)",
   enloyfnuerqgaqderbwb:
     "GREENFIELD TARGET (matu-greenfield-company, same repo)",
 };
@@ -1518,7 +1518,7 @@ function block(reason) {
   console.error(
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
-      "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is suspended HKD matu-prod — guarded table/view/catalog reads only;",
+      "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is the retired target matu-prod — guarded table/view/catalog reads only;",
       "enloyfnuerqgaqderbwb is the same-repo Greenfield target — project/schema reads plus delegated bootstrap migration applies only;",
       "matu-prod writes, project-admin actions, deploy relinks, and reactivation remain blocked",
       "until a separate owner decision. Never disable this hook or its",

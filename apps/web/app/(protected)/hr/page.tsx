@@ -1,4 +1,5 @@
 import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchEmployees } from "./actions";
 import { HrClient } from "./hr-client";
@@ -32,7 +33,7 @@ export default async function HrPage() {
       return [];
     }
     return [
-      { value: position.code, label: position.label_vi ?? position.code },
+      { value: position.code, label: position.label_vi ?? UNKNOWN_LABEL_VI },
     ];
   });
 

@@ -7,7 +7,7 @@ test("VietQRProvider uses MB speaker payment code as transfer memo", async () =>
     apiKey: "",
     bankAccount: "19035551234567",
     bankCode: "TCB",
-    accountName: "HO KINH DOANH COM TAM MA TU",
+    accountName: "CONG TY CO PHAN CHEN SU",
   });
 
   const result = await provider.createPayment({

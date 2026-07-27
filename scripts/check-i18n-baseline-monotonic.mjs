@@ -21,9 +21,27 @@ function countOf(json) {
       : 0;
 }
 
+function countFileDisables(ref = "") {
+  const target = ref ? `${ref}:apps/web` : "apps/web";
+  try {
+    const output = execSync(
+      `git grep -l "eslint-disable i18n/no-inline-vietnamese" ${target}`,
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    ).trim();
+    return output ? output.split("\n").length : 0;
+  } catch {
+    return 0;
+  }
+}
+
 const current = countOf(readFileSync(FILE, "utf8"));
+const currentFileDisables = countFileDisables();
 
 let base;
+let baseFileDisables;
 try {
   base = countOf(
     execSync(`git show origin/main:${FILE}`, {
@@ -31,6 +49,7 @@ try {
       stdio: ["ignore", "pipe", "ignore"],
     }),
   );
+  baseFileDisables = countFileDisables("origin/main");
 } catch {
   console.warn(
     `[i18n-baseline] origin/main:${FILE} unavailable — skipping no-grow check.`,
@@ -38,9 +57,9 @@ try {
   process.exit(0);
 }
 
-if (current > base) {
+if (current > base || currentFileDisables > baseFileDisables) {
   console.error(
-    `[i18n-baseline] FAIL: inline-Vietnamese baseline grew ${base} -> ${current} (+${current - base}).\n` +
+    `[i18n-baseline] FAIL: baseline ${base} -> ${current}; file disables ${baseFileDisables} -> ${currentFileDisables}.\n` +
       `The baseline may only shrink. Extract the new strings into the copy contract\n` +
       `(packages/shared/src/messages/* or packages/shared/src/labels/vi.ts) instead of\n` +
       `grandfathering them via 'pnpm lint:i18n:baseline'.`,
@@ -49,5 +68,5 @@ if (current > base) {
 }
 
 console.log(
-  `[i18n-baseline] OK: ${current} <= ${base} (no growth vs origin/main).`,
+  `[i18n-baseline] OK: baseline ${current} <= ${base}; file disables ${currentFileDisables} <= ${baseFileDisables}.`,
 );

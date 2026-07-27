@@ -200,7 +200,10 @@ export function GrnListClient({
   );
   const hasActiveFilters = hasGrnListFilters(filters);
   const desktopActions = canCreate ? (
-    <Button size="sm" render={<Link href={`${basePath}/new`} />}>
+    <Button
+      size={withinOwnerTabs ? "default" : "lg"}
+      render={<Link href={`${basePath}/new`} />}
+    >
       <IconPlus className="size-4" />
       {INVENTORY_VI.newGrn}
     </Button>

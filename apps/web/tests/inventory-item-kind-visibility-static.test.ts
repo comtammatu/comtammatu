@@ -61,12 +61,12 @@ test("inventory stock responsive cards label item kind separately from category"
   assert.match(stockClientSource, /ITEM_KIND_LABELS/);
   assert.match(
     stockClientSource,
-    /ITEM_KIND_LABELS\[item\.itemKind\] \?\? item\.itemKind/,
+    /ITEM_KIND_LABELS\[item\.itemKind\] \?\? UNKNOWN_LABEL_VI/,
   );
   assert.match(stockClientSource, /CATEGORY_TONE_CLASS/);
   assert.match(branchStockClientSource, /ITEM_KIND_LABELS/);
   assert.match(
     branchStockClientSource,
-    /ITEM_KIND_LABELS\[item\.itemKind\] \?\? item\.itemKind/,
+    /ITEM_KIND_LABELS\[item\.itemKind\] \?\? UNKNOWN_LABEL_VI/,
   );
 });

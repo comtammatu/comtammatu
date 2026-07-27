@@ -12,12 +12,12 @@ const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const orderIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Order ID không hợp lệ" });
+  .positive({ error: "Mã đơn hàng không hợp lệ" });
 
 const jobIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Job ID không hợp lệ" });
+  .positive({ error: "Yêu cầu in không hợp lệ" });
 
 const AGENT_OFFLINE_THRESHOLD_MS = 60_000;
 
@@ -64,7 +64,7 @@ export async function sendToKitchen(
 ): Promise<ActionResult<KitchenEnqueueResult>> {
   const parsed = orderIdSchema.safeParse(orderId);
   if (!parsed.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+    return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -139,7 +139,7 @@ export async function printReceipt(
 > {
   const parsed = orderIdSchema.safeParse(orderId);
   if (!parsed.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+    return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -205,7 +205,7 @@ export async function printProvisionalBill(
 > {
   const parsed = orderIdSchema.safeParse(orderId);
   if (!parsed.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+    return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -307,7 +307,7 @@ export async function printProvisionalBill(
 export async function retryPrintJob(jobId: number): Promise<ActionResult> {
   const parsed = jobIdSchema.safeParse(jobId);
   if (!parsed.success) {
-    return { success: false, error: "Job ID không hợp lệ" };
+    return { success: false, error: "Yêu cầu in không hợp lệ" };
   }
 
   // Same gate as printReceipt: whoever may print may also retry a failed

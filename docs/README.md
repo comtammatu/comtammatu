@@ -4,7 +4,7 @@
 
 ## Trạng thái hiện tại
 
-- HKD stack `comtammatu + matu-prod + app.comtammatu.com` đã tạm ngưng từ
+- mô hình pháp nhân cũ stack `comtammatu + matu-prod + app.comtammatu.com` đã tạm ngưng từ
   commit `baf3720f8`; giữ làm historical/runtime evidence, không còn là active
   delivery target.
 - Active delivery tiếp tục ngay trong repo `comtammatu`, hướng tới
@@ -13,7 +13,6 @@
 - Active tracker: [tasks/todo.md](../tasks/todo.md)
 - Target architecture:
   [architecture/target-modules-tech-stack-project-structure.md](architecture/target-modules-tech-stack-project-structure.md)
-  và [architecture/target-auth-authorization.md](architecture/target-auth-authorization.md)
 - Superseded docs are not retained in this repo. Current contracts must live in `tasks/todo.md`, `docs/plan/adr/`, module docs, specs, runbooks, or canonical references.
 
 ## Đọc theo nhu cầu

@@ -47,7 +47,7 @@ export async function startStocktake(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
 
@@ -188,7 +188,7 @@ export async function submitCountRound(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
 
@@ -245,7 +245,7 @@ export async function saveStocktakeDraft(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
 
@@ -301,7 +301,7 @@ export async function acquireZoneLock(
     p_ttl_seconds: ttlSeconds,
   });
   if (error || !data) {
-    return { success: false, error: "Không acquire được lock" };
+    return { success: false, error: "Không lấy được quyền chỉnh sửa" };
   }
   const raw = data as Record<string, unknown>;
   return {
@@ -332,7 +332,7 @@ export async function heartbeatZoneLock(
     p_ttl_seconds: ttlSeconds,
   });
   if (error) {
-    return { success: false, error: "Lock không còn hoặc mất ownership" };
+    return { success: false, error: "Quyền chỉnh sửa không còn hiệu lực" };
   }
   return { success: true, data: { expiresAt: String(data ?? "") } };
 }
@@ -355,4 +355,3 @@ export async function releaseZoneLock(
   if (error) return { success: false, error: "Không release được" };
   return { success: true, data: { released: Boolean(data) } };
 }
-

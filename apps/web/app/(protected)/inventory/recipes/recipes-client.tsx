@@ -3,18 +3,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Pencil as IconPencil,
-  Plus as IconPlus,
-  Search as IconSearch,
-} from "lucide-react";
+import { Pencil as IconPencil, Plus as IconPlus } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -35,7 +26,6 @@ import {
   AppPageHeader,
   AppEmptyState,
   AppSection,
-  AppToolbar,
 } from "@/components/surface";
 import { formatVND } from "@lib/inventory/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
@@ -100,7 +90,8 @@ export function RecipesClient({
     );
   }, [recipes, search]);
 
-  const showNoResults = filteredRecipes.length === 0 && search.trim().length > 0;
+  const showNoResults =
+    filteredRecipes.length === 0 && search.trim().length > 0;
 
   function openCreate() {
     setEditingMenuItemId(undefined);
@@ -149,11 +140,15 @@ export function RecipesClient({
       render: (recipe) => (
         <div className="flex flex-col gap-1 text-sm">
           {recipe.items.length === 0 ? (
-            <span className="text-muted-foreground italic">Chưa có định mức</span>
+            <span className="text-muted-foreground italic">
+              Chưa có định mức
+            </span>
           ) : (
             recipe.items.map((item, i) => (
               <div key={i} className="flex justify-between gap-2">
-                <span className="text-muted-foreground">{item.ingredientName}</span>
+                <span className="text-muted-foreground">
+                  {item.ingredientName}
+                </span>
                 <span className="font-mono">
                   {item.qty} {item.unitLabel}
                 </span>
@@ -206,7 +201,10 @@ export function RecipesClient({
   if (loadError) {
     return (
       <AppPage width="xwide" density="compact">
-        <AppPageHeader eyebrow={messages.inventory.shell.moduleName} title={INVENTORY_VI.recipesPageTitle} />
+        <AppPageHeader
+          eyebrow={messages.inventory.shell.moduleName}
+          title={INVENTORY_VI.recipesPageTitle}
+        />
         <AppEmptyState
           mode="error"
           title={messages.inventory.recipes.loadFailedTitle}
@@ -222,62 +220,42 @@ export function RecipesClient({
         eyebrow={messages.inventory.shell.moduleName}
         title={INVENTORY_VI.recipesPageTitle}
         actions={
-          <Button type="button" size="touch" onClick={openCreate}>
+          <Button type="button" size="lg" onClick={openCreate}>
             <IconPlus data-icon="inline-start" />
             {INVENTORY_VI.recipeCreateAction}
           </Button>
         }
       />
-      {recipes.length === 0 ? (
-        <AppEmptyState
-          mode="no-data"
-          title={INVENTORY_VI.recipesEmptyTitle}
-          description={INVENTORY_VI.recipesEmptyDescription}
-          symbol="riceGrain"
-        />
-      ) : (
-        <>
-          <AppToolbar
-            search={
-              <InputGroup className="min-w-0 flex-1">
-                <InputGroupAddon>
-                  <IconSearch />
-                </InputGroupAddon>
-                <InputGroupInput
-                  type="search"
-                  aria-label={INVENTORY_VI.recipeSearchPlaceholder}
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={INVENTORY_VI.recipeSearchPlaceholder}
-                />
-              </InputGroup>
-            }
-          />
-          <AppSection className="overflow-hidden" contentFlush>
-            <DataTable
-              columns={columns}
-              data={filteredRecipes}
-              pageSize={25}
-              getRowKey={(recipe) => recipe.id}
-              emptyTitle={
-                showNoResults
-                  ? INVENTORY_VI.recipesEmptyFiltered
-                  : INVENTORY_VI.recipesEmptyTitle
+      <AppSection className="overflow-hidden" contentFlush>
+        <DataTable
+          columns={columns}
+          data={filteredRecipes}
+          searchable
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder={INVENTORY_VI.recipeSearchPlaceholder}
+          pageSize={25}
+          getRowKey={(recipe) => recipe.id}
+          emptyTitle={
+            showNoResults
+              ? INVENTORY_VI.recipesEmptyFiltered
+              : INVENTORY_VI.recipesEmptyTitle
+          }
+          emptyDescription={
+            showNoResults ? undefined : INVENTORY_VI.recipesEmptyDescription
+          }
+          emptyMode={showNoResults ? "no-results" : "no-data"}
+          mobileCardRender={(recipe) => (
+            <RecipeCard
+              recipe={recipe}
+              stockCapacity={
+                stockCapacityByMenuItemId[String(recipe.menuItemId)]
               }
-              emptyMode={showNoResults ? "no-results" : "no-data"}
-              mobileCardRender={(recipe) => (
-                <RecipeCard
-                  recipe={recipe}
-                  stockCapacity={
-                    stockCapacityByMenuItemId[String(recipe.menuItemId)]
-                  }
-                  onEdit={openEdit}
-                />
-              )}
+              onEdit={openEdit}
             />
-          </AppSection>
-        </>
-      )}
+          )}
+        />
+      </AppSection>
 
       <RecipeLineDialog
         open={dialogOpen}
@@ -319,11 +297,15 @@ function RecipeCard({
         </ItemDescription>
         <div className="flex flex-col gap-1 rounded-md bg-muted/30 p-2 text-sm mt-2 mb-2">
           {recipe.items.length === 0 ? (
-            <span className="text-muted-foreground italic">Chưa có định mức</span>
+            <span className="text-muted-foreground italic">
+              Chưa có định mức
+            </span>
           ) : (
             recipe.items.map((item, i) => (
               <div key={i} className="flex justify-between gap-2">
-                <span className="text-muted-foreground">{item.ingredientName}</span>
+                <span className="text-muted-foreground">
+                  {item.ingredientName}
+                </span>
                 <span className="font-mono">
                   {item.qty} {item.unitLabel}
                 </span>

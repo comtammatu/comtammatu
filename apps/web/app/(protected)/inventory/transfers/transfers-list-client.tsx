@@ -251,7 +251,10 @@ export function TransfersListClient({
   ];
 
   const desktopCreateAction = canCreate ? (
-    <Button size="sm" render={<Link href={createHref} />}>
+    <Button
+      size={embedded ? "default" : "lg"}
+      render={<Link href={createHref} />}
+    >
       <IconPlus data-icon="inline-start" />
       {createLabel}
     </Button>
@@ -315,11 +318,7 @@ export function TransfersListClient({
       emptyMode={search ? "no-results" : "no-data"}
       emptyIcon={emptyIcon}
       mobileCardRender={(r) => (
-        <MobileTransferCard
-          row={r}
-          tab={activeTab}
-          href={detailHref(r.id)}
-        />
+        <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} />
       )}
     />
   );

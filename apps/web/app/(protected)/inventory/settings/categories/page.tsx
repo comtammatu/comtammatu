@@ -1,9 +1,5 @@
 import { redirect } from "next/navigation";
-import {
-  AppEmptyState,
-  AppPageHeader,
-  AppSection,
-} from "@/components/surface";
+import { AppEmptyState, AppPageHeader } from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { messages } from "@lib/messages";
@@ -25,23 +21,22 @@ export default async function InventoryCategoriesPage() {
   const rows: CategoryRow[] = res.success ? (res.data ?? []) : [];
 
   return (
-    <div className="flex flex-col gap-4">
-      <AppPageHeader
-        eyebrow={copy.page.eyebrow}
-        title={copy.page.title}
-        description={copy.page.description}
-      />
-
+    <>
       {res.success ? (
-        <AppSection contentFlush>
-          <CategoriesClient rows={rows} />
-        </AppSection>
+        <CategoriesClient rows={rows} />
       ) : (
-        <AppEmptyState
-          mode="error"
-          title={messages.inventory.settings.categories.loadFailed}
-        />
+        <>
+          <AppPageHeader
+            eyebrow={copy.page.eyebrow}
+            title={copy.page.title}
+            description={copy.page.description}
+          />
+          <AppEmptyState
+            mode="error"
+            title={messages.inventory.settings.categories.loadFailed}
+          />
+        </>
       )}
-    </div>
+    </>
   );
 }

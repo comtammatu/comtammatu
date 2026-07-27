@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { formatCount } from "@comtammatu/shared/format";
 import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
-import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  getOrderTypeLabelVi,
+  UNKNOWN_LABEL_VI,
+} from "@comtammatu/shared/labels";
 import { KDS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -53,13 +56,12 @@ const KDS_COMPLETION_HISTORY_COPY = {
   reload: "Tải lại",
   truncated:
     "Ngày này có hơn 100 sự kiện. Đang hiển thị 100 sự kiện mới nhất; hãy lọc theo loại sự kiện để đối chiếu đầy đủ.",
-  legacySnapshot: "Snapshot lúc chuyển đổi; không phải lịch sử đầy đủ",
-  station: (name: string | null, id: number) =>
-    name ? `${name} · #${String(id)}` : `Trạm #${String(id)}`,
-  ticket: (id: number) => `Ticket #${String(id)}`,
+  legacySnapshot: "Dữ liệu lúc chuyển đổi; không phải lịch sử đầy đủ",
+  station: (name: string | null) => name ?? "Trạm không xác định",
+  ticket: "Phiếu bếp",
   actor: (name: string) => `Thao tác: ${name}`,
   unknownActor: "Không ghi nhận người thao tác",
-  printJobs: (count: number) => `${formatCount(count)} print job liên kết`,
+  printJobs: (count: number) => `${formatCount(count)} phiếu in liên kết`,
   itemLine: (quantity: number, name: string) =>
     `${String(quantity)}× ${name}`,
   sidesLine: (sides: string[]) => `Kèm: ${sides.join(", ")}`,
@@ -90,14 +92,8 @@ const PRINT_STATUS_LABELS: Record<string, string> = {
   expired: "hết hạn",
 };
 
-const ORDER_TYPE_LABELS: Record<string, string> = {
-  dine_in: ORDER_TYPE_LABELS_VI.dine_in,
-  takeaway: ORDER_TYPE_LABELS_VI.takeaway,
-  delivery: "Giao hàng",
-} as const;
-
 function getEntryContext(entry: KdsOperationalHistoryEntry): string {
-  const orderType = ORDER_TYPE_LABELS[entry.orderType] ?? entry.orderType;
+  const orderType = getOrderTypeLabelVi(entry.orderType);
   const table = entry.tableNumber === null ? null : `Bàn ${entry.tableNumber}`;
   return [orderType, table, `Đơn #${entry.orderNumber}`]
     .filter(Boolean)
@@ -310,11 +306,10 @@ export function KdsCompletionHistorySheet({
                           <Badge variant="outline">
                             {KDS_COMPLETION_HISTORY_COPY.station(
                               entry.stationName,
-                              entry.stationId,
                             )}
                           </Badge>
                           <Badge variant="outline">
-                            {KDS_COMPLETION_HISTORY_COPY.ticket(entry.ticketId)}
+                            {KDS_COMPLETION_HISTORY_COPY.ticket}
                           </Badge>
                         </div>
 
@@ -369,7 +364,8 @@ export function KdsCompletionHistorySheet({
                             {entry.printJobs
                               .map(
                                 (job) =>
-                                  `#${String(job.id)} (${PRINT_STATUS_LABELS[job.status] ?? "không xác định"})`,
+                                  PRINT_STATUS_LABELS[job.status] ??
+                                  UNKNOWN_LABEL_VI,
                               )
                               .join(", ")}
                           </p>

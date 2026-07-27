@@ -1,6 +1,7 @@
 # Cơm Tấm Má Tư — Bộ phần mềm quản lý vận hành và bán hàng
 
-Bộ phần mềm quản lý vận hành và bán hàng cho Hộ kinh doanh Cơm Tấm Má Tư.
+Bộ phần mềm quản lý vận hành và bán hàng cho thương hiệu Cơm Tấm Má Tư
+thuộc Công ty Cổ phần Chén Sứ.
 Single-tenant, multi-branch.
 
 Nhiệm vụ: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng, kho trừ đúng,
@@ -66,7 +67,7 @@ it elsewhere — point here.
   - **English** (agent rules, technical contracts, agent-internal staging): `docs/agent/rules/`, `docs/modules/`, `docs/spec/`, `docs/plan/adr/`, `docs/worklog/README.md`, `docs/CODEBASE_MAP.md`, `tasks/` (incl. `tasks/todo.md`, `tasks/lessons.md`, `tasks/regressions.md`), and root `AGENTS.md` / `CLAUDE.md`.
   - **English default, Vietnamese allowed for operator-facing checklists:** `docs/runbooks/`.
   - Root `README.md` is intentionally bilingual: Vietnamese mission/overview + English tech stack.
-- **One prose language per doc.** Within a single doc, explanatory prose stays in one language. Vietnamese domain/legal terms, UI-copy strings, role labels, env vars, and code identifiers are kept verbatim inside prose of either language and do NOT count as mixing — an English doc carrying verbatim Vietnamese domain nouns (e.g. HĐĐT, HKD, "doanh thu") is a correct English doc, not a half-translated one.
+- **One prose language per doc.** Within a single doc, explanatory prose stays in one language. Vietnamese domain/legal terms, UI-copy strings, role labels, env vars, and code identifiers are kept verbatim inside prose of either language and do NOT count as mixing — an English doc carrying verbatim Vietnamese domain nouns (e.g. HĐĐT, "chi nhánh", "doanh thu") is a correct English doc, not a half-translated one.
 
 ## Critical Constraints
 

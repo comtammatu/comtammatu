@@ -31,10 +31,7 @@ test("Branch home keeps management branch-local and exposes one Owner entry", ()
     1,
     "Branch home must expose exactly one Owner surface route",
   );
-  assert.match(
-    landing,
-    /ownerLinks = claims\.user_role === "owner"/,
-  );
+  assert.match(landing, /ownerLinks = claims\.user_role === "owner"/);
   assert.match(landing, /key: "owner-home"/);
   for (const moduleKey of [
     "menu",
@@ -69,13 +66,18 @@ test("Owner surface membership has one ACL source", () => {
 
 test("Owner surface root is a real responsive landing", () => {
   const owner = read("apps/web/app/_components/owner-overview.tsx");
+  const copy = read("apps/web/lib/messages/owner.ts");
 
   assert.match(owner, /<AppPage density="compact" width="wide">/);
   assert.match(owner, /<AppPageHeader/);
   assert.match(owner, /<AppSection/);
-  assert.match(owner, /<LinkCardGrid className="xl:grid-cols-3">/);
-  assert.match(owner, /<AppLinkCard/);
+  assert.match(owner, /lg:grid-cols-\[minmax\(0,2fr\)_minmax\(18rem,1fr\)\]/);
+  assert.match(owner, /<ItemGroup/);
+  assert.match(owner, /motion-safe:group-hover\/module-link:translate-x-1/);
+  assert.doesNotMatch(owner, /AppLinkCard|LinkCardGrid/);
   assert.doesNotMatch(owner, /KpiCard/);
+  assert.match(copy, /eyebrow: "Toàn hệ thống"/);
+  assert.doesNotMatch(copy, /Chỉ dành cho Owner/);
 });
 
 test("proxy resolves post-login destination without device context", () => {

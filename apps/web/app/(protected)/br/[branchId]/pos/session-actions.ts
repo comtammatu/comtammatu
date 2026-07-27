@@ -19,7 +19,7 @@ const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const branchIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Branch ID không hợp lệ" });
+  .positive({ error: "Mã chi nhánh không hợp lệ" });
 
 /* ─── fetchTablesForBranch ─── */
 
@@ -36,7 +36,7 @@ export async function fetchTablesForBranch(
 ): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -92,7 +92,7 @@ export async function fetchPosTerminals(
 ): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -176,7 +176,7 @@ export async function fetchActiveSession(
 ): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(

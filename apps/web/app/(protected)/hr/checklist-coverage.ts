@@ -1,3 +1,5 @@
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
+
 type CoverageTemplate = {
   id: number;
   name: string;
@@ -152,7 +154,7 @@ export function buildChecklistCoverage({
       const template = templateId == null ? null : templateById.get(templateId);
       return {
         id: position.id,
-        positionName: position.label_vi ?? position.code,
+        positionName: position.label_vi ?? UNKNOWN_LABEL_VI,
         checklistName: template?.name ?? null,
         employeeCount: employeeCountByPosition.get(position.code) ?? 0,
         hasConsumption: hasConsumption(templateId),

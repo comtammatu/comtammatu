@@ -172,7 +172,7 @@ test("autofill bank app links keep the exact VietQR payment facts", () => {
       bankCode: "MB",
       amount: 167_000,
       paymentCode: "MATU ABC123",
-      accountName: "HO KINH DOANH COM TAM MA TU",
+      accountName: "CONG TY CO PHAN CHEN SU",
     });
 
     assert.ok(href);
@@ -181,7 +181,7 @@ test("autofill bank app links keep the exact VietQR payment facts", () => {
     assert.equal(url.searchParams.get("ba"), "0123456789@mb");
     assert.equal(url.searchParams.get("am"), "167000");
     assert.equal(url.searchParams.get("tn"), "MATU ABC123");
-    assert.equal(url.searchParams.get("bn"), "HO KINH DOANH COM TAM MA TU");
+    assert.equal(url.searchParams.get("bn"), "CONG TY CO PHAN CHEN SU");
   }
 });
 

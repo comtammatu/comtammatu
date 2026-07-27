@@ -92,7 +92,7 @@ const importProductionRecipeRowSchema = z.object({
   ingredientId: z.number().int().positive(),
   quantity: z.number().positive({ error: "Số lượng phải lớn hơn 0" }),
   entryUnitId: z.number().int().positive().nullable(),
-  yieldFactor: z.number().positive({ error: "Yield phải lớn hơn 0" }),
+  yieldFactor: z.number().positive({ error: "Tỷ lệ thu hồi phải lớn hơn 0" }),
   note: z.string().trim().optional(),
 });
 
@@ -138,7 +138,7 @@ function mapProductionRecipeImportError(
     message?.includes("duplicate_ingredient") ||
     message?.includes("duplicate_finished_good")
   ) {
-    return "File import có dòng công thức bị trùng.";
+    return "File dữ liệu có dòng công thức bị trùng.";
   }
   if (message?.includes("finished_good_not_found")) {
     return "Có thành phẩm không còn hợp lệ.";
@@ -373,7 +373,7 @@ function buildProductionRecipeSheets(
 ): SheetDef[] {
   return [
     {
-      name: "Cong thuc san xuat",
+      name: "Công thức sản xuất",
       columns: [
         { header: "Mã thành phẩm", key: "finished_good_id", width: 14 },
         { header: "Thành phẩm", key: "finished_good_name", width: 32 },
@@ -381,7 +381,7 @@ function buildProductionRecipeSheets(
         { header: "Nguyên liệu", key: "ingredient_name", width: 32 },
         { header: "Số lượng", key: "quantity", width: 14 },
         { header: "Đơn vị", key: "unit", width: 12 },
-        { header: "Yield", key: "yield_factor", width: 10 },
+        { header: "Tỷ lệ thu hồi", key: "yield_factor", width: 14 },
         { header: "Ghi chú", key: "note", width: 28 },
       ],
       rows,
@@ -479,7 +479,7 @@ export async function downloadProductionRecipeTemplate(): Promise<
   return {
     success: true,
     data: {
-      filename: "cong-thuc-san-xuat-template.xlsx",
+      filename: "mau-cong-thuc-san-xuat.xlsx",
       base64: bufferToBase64(buf),
       format: "xlsx",
     },
@@ -541,7 +541,7 @@ export async function importProductionRecipes(
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return { success: false, error: "Thiếu file để import" };
+    return { success: false, error: "Thiếu file dữ liệu" };
   }
 
   let parsed;
@@ -728,13 +728,18 @@ export async function importProductionRecipes(
       return;
     }
 
-    const yieldRaw = readCell(raw, "Yield", "yield_factor");
+    const yieldRaw = readCell(
+      raw,
+      "Tỷ lệ thu hồi",
+      "Yield",
+      "yield_factor",
+    );
     const yieldFactor = yieldRaw ? parseCsvNumber(yieldRaw) : 1;
     if (yieldFactor == null) {
       issues.push({
         row: rowNumber,
-        field: "Yield",
-        message: "Yield không hợp lệ.",
+        field: "Tỷ lệ thu hồi",
+        message: "Tỷ lệ thu hồi không hợp lệ.",
       });
       return;
     }
@@ -790,7 +795,7 @@ export async function importProductionRecipes(
   }
 
   if (groups.size === 0) {
-    return { success: false, error: "Không có dòng hợp lệ nào để import" };
+    return { success: false, error: "Không có dòng hợp lệ nào để nhập" };
   }
 
   const sb = supabase as unknown as RpcClient;

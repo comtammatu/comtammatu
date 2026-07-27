@@ -326,7 +326,7 @@ test("Finance live copy stays operating-first without two-mode labels", () => {
   assert.match(financeMessages, /Thuế tạm tính/);
   assert.doesNotMatch(
     financeMessages,
-    /khách không lấy hóa đơn|khách hàng không lấy hóa đơn|khách lẻ không yêu cầu MST|trước VAT|VAT đầu ra/,
+    /khách không lấy hóa đơn|khách hàng không lấy hóa đơn|khách lẻ không yêu cầu MST|trước VAT/,
     "Finance live copy should keep operating labels terse and current",
   );
 });

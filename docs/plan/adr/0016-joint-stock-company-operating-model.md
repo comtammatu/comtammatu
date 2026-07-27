@@ -47,7 +47,7 @@ evidence under its original effective context.
 - Do not apply a migration or change provider credentials/template without
   exact-target authority and verified evidence.
 - Company-model source and documentation changes land incrementally behind the
-  existing seams in `comtammatu`; HKD records retain their historical context.
+  existing seams in `comtammatu`; retired legal model records retain their historical context.
 
 ## Authority
 

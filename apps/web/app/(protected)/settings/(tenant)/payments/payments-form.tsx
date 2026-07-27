@@ -238,7 +238,7 @@ export function PaymentsForm({
                   name="vietqr_account_name"
                   id="vietqr-account-name"
                   label={messages.settings.payments.accountName}
-                  placeholder="HO KINH DOANH COM TAM MA TU"
+                  placeholder="CONG TY CO PHAN CHEN SU"
                 />
               </div>
               <p className="text-2xs text-muted-foreground">

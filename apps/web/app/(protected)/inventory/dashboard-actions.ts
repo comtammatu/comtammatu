@@ -76,7 +76,7 @@ export async function getInventoryDashboard(
   });
 
   if (error || !data) {
-    return { success: false, error: "Không tải được dashboard" };
+    return { success: false, error: "Không tải được tổng quan kho" };
   }
 
   const raw = data as Record<string, unknown>;
@@ -142,4 +142,3 @@ export async function getInventoryDashboard(
     },
   };
 }
-

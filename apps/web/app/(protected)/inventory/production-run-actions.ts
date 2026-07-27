@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Json } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { getAuthContextWithAnyPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { PG_ERR } from "./_lib/constants";
@@ -294,13 +295,13 @@ export async function fetchProductionRuns(): Promise<
   ).map((row) => ({
     id: row.id,
     branch_id: row.branch_id,
-    branch_name: row.branches?.name ?? "Unknown",
+    branch_name: row.branches?.name ?? UNKNOWN_LABEL_VI,
     target_branch_id: row.target_branch_id ?? row.branch_id,
     target_branch_name:
-      row.target_branch?.name ?? row.branches?.name ?? "Unknown",
+      row.target_branch?.name ?? row.branches?.name ?? UNKNOWN_LABEL_VI,
     production_number: row.production_number,
     finished_good_id: row.finished_good_id,
-    finished_good_name: row.ingredients?.name ?? "Unknown",
+    finished_good_name: row.ingredients?.name ?? UNKNOWN_LABEL_VI,
     planned_quantity: Number(row.planned_quantity),
     actual_quantity:
       row.actual_quantity != null ? Number(row.actual_quantity) : null,
@@ -384,13 +385,13 @@ export async function fetchProductionRunById(
   const row: ProductionRunRow = {
     id: run.id,
     branch_id: run.branch_id,
-    branch_name: run.branches?.name ?? "Unknown",
+    branch_name: run.branches?.name ?? UNKNOWN_LABEL_VI,
     target_branch_id: run.target_branch_id ?? run.branch_id,
     target_branch_name:
-      run.target_branch?.name ?? run.branches?.name ?? "Unknown",
+      run.target_branch?.name ?? run.branches?.name ?? UNKNOWN_LABEL_VI,
     production_number: run.production_number,
     finished_good_id: run.finished_good_id,
-    finished_good_name: run.ingredients?.name ?? "Unknown",
+    finished_good_name: run.ingredients?.name ?? UNKNOWN_LABEL_VI,
     planned_quantity: Number(run.planned_quantity),
     actual_quantity:
       run.actual_quantity != null ? Number(run.actual_quantity) : null,

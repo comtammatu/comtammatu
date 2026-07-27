@@ -1,12 +1,11 @@
 # Auth & ACL Module
 
-> **Current auth contract:** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. Legacy role strings (`branch_manager`, `cashier`, …) are still emitted in JWT as `user_role` for backward compat — they're derived from `positions.code mapper`. Runtime code must not depend on `profiles.role` or `staff_role`.
-
 ## Overview
 
 Authentication and authorization for staff/operator surfaces. Protected requests pass through this module before reaching feature code. The auth chain spans four layers: Supabase Auth (identity), JWT custom claims hook (position + legacy-role injection), proxy.ts (route-level ACL enforcement), and RLS with `has_permission()` (row-level, permission-driven). Public customer surfaces such as `/br/[branchId]/runner` bypass staff login by design.
 
-**Owner:** `packages/shared/src/auth/` + `apps/web/proxy.ts` + `supabase/migrations/20260717151345_baseline.sql` + `supabase/migrations/*auth*`
+**Owner:** `packages/shared/src/auth/` + `apps/web/proxy.ts` +
+`supabase/migrations/20260727120000_baseline.sql` + active auth forwards
 
 Canonical role/scope/route boundaries live in `docs/spec/role-route-matrix.md`.
 `module-acl.ts` remains the runtime route fast-gate source of truth; route,
@@ -15,20 +14,20 @@ navigation, and default-landing changes must keep the spec, `module-acl.ts`,
 
 ## Layer Meanings
 
-Do not use Auth, ACL, PBAC, and RLS interchangeably. They answer different
-questions:
+Do not use Auth, route ACL, permission grants, and RLS interchangeably.
+They answer different questions.
 
 | Layer                         | Source of truth                                                                      | Owns                                                                                   | Does not own                                                              |
 | ----------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Auth identity                 | Supabase Auth + `profiles` + `positions`                                             | Who the signed-in user is, tenant/site assignment, active HR position                  | Route admission, action permission, row visibility                        |
 | Application role / route ACL  | `positions.code` mapper -> JWT `user_role`; `packages/shared/src/auth/module-acl.ts` | Whether a role can enter a module or route family                                      | Whether a button/action is allowed; whether DB rows are readable/writable |
-| PBAC permission grants        | `permission_keys`, `staff_permissions`, `role_templates`                             | Whether a user can perform an action, with branch/tenant scope and validity window     | Navigation, default home, HR display labels                               |
+| Permission grants             | `permission_keys`, `staff_permissions`, `role_templates`                             | Whether a user can perform an action, with branch/tenant scope and validity window     | Navigation, default home, HR display labels                               |
 | Server action / RPC gate      | `withAction`, `withFormAction`, direct RPC checks                                    | Zod input validation, action-level roles + permission checks, atomic mutation boundary | Replacing RLS                                                             |
 | RLS                           | Postgres policies + `has_permission()` / `has_permission_any()`                      | Final row-level enforcement for PostgREST/Data API access                              | UI affordances, route taxonomy, staff management semantics                |
 | Private Branch Realtime topic | Realtime RLS + `can_read_branch_ops(branch_id)`                                      | Active Owner tenant scope or active non-Owner assigned-branch subscription scope       | Granting business actions or widening scope through `staff_permissions`   |
 
 Vocabulary rule: `position_code` is the HR position; `user_role` is the
-canonical application role; `permission_key` is the PBAC action string. A
+canonical application role; `permission_key` is the legacy action string. A
 department or position is not a route role unless the mapper explicitly derives
 an application role from it.
 
@@ -48,9 +47,9 @@ an application role from it.
 | `apps/web/app/(public)/access-denied/page.tsx`        | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
 | `apps/web/app/_lib/auth.ts`                           | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
 | `apps/web/proxy.ts`                                   | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
-| `supabase/migrations/20260717151345_baseline.sql`     | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
-| `supabase/migrations/20260717151345_baseline.sql`     | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
-| `supabase/migrations/20260717151345_baseline.sql`     | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
+| `supabase/migrations/20260727120000_baseline.sql`     | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
+| `supabase/migrations/20260727120000_baseline.sql`     | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
+| `supabase/migrations/20260727120000_baseline.sql`     | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
 | `supabase/migrations/*branch_ops_realtime_scope.sql`  | Active profile/branch authorization for private `branch:{id}:ops` topics                       | Realtime scope gate       |
 | `apps/web/app/(protected)/hr/staff/[id]/permissions/` | HR UI for grant/revoke + audit (page + client + actions)                                       | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                    | Server helper `currentUserHasPermission()`                                                     | App-side permission reads |
@@ -75,7 +74,7 @@ These application roles are emitted in JWT `user_role`. They are derived from
 display names live in `positions.label_vi` / `positions.label_en` and must not
 gate authz. Unknown or retired position codes fail closed to `unassigned`.
 
-## RLS Gate Choice — Live PBAC vs JWT Bucket
+## RLS Gate Choice — Live Permission Grants vs JWT Role
 
 Two DB-side gates exist; pick the right one:
 
@@ -85,18 +84,18 @@ Two DB-side gates exist; pick the right one:
 **ACL contract notes:**
 
 - `refunds_update` uses `has_permission(branch_id,'orders:refund_approve')`; destructive refund approval must not depend on cached `auth_role()`.
-- `update_staff_profile` and `toggle_profile_active` require an active Owner and reconcile PBAC grants atomically; `set_branch_kind` gates on `settings:tenant`.
+- `update_staff_profile` and `toggle_profile_active` require an active Owner and reconcile legacy permission grants atomically; `set_branch_kind` gates on `settings:tenant`.
 - Branch-scope RPCs keep the branch predicate at the write boundary unless a shared helper is active in both policy and RPC surfaces.
 - `hr_payroll` policy scope is handled with the HRM payroll/base-salary work; do not add payroll permission keys outside that task.
 
 ## Invariants (post H3a, 2026-05-07)
 
-- **`profiles.position_id` is NOT NULL** + FK `ON DELETE RESTRICT`. Every active or inactive profile MUST point to a seeded position in its tenant. Enforced in `supabase/migrations/20260717151345_baseline.sql`.
+- **`profiles.position_id` is NOT NULL** + FK `ON DELETE RESTRICT`. Every active or inactive profile MUST point to a seeded position in its tenant. Enforced in `supabase/migrations/20260727120000_baseline.sql`.
   - `handle_new_user` requires explicit provisioning inputs `tenant_id`, `branch_id`, and `position_code`; missing or unknown positions fail closed.
   - `update_staff_profile` raises if Owner passes a `position_code` that does not resolve to an active assignable position for the tenant.
   - Deleting a position with active profiles raises `foreign_key_violation` (SQLSTATE 23503). Admins must reassign profiles before deleting.
 - **Owner identity has three separate meanings.** `tenants.representative` is a free-text legal-document name (TEXT, not UUID), `positions.code='owner'` is the current runtime owner-bypass / JWT role source, and `tenants.owner_user_id UUID NOT NULL` is the canonical owner auth identity column. Do not wire `representative` into auth. Do not add a dual-source `has_permission()` branch unless ADR 0005 is superseded by a new owner-gated decision.
-- **Private Branch Realtime follows live assignment, not PBAC breadth.**
+- **Private Branch Realtime follows live assignment, not permission-grant breadth.**
   `can_read_branch_ops(branch_id)` requires an active profile and active target
   branch in the caller's tenant. An active Owner may subscribe across active
   tenant branches; every non-Owner may subscribe only to `profiles.branch_id`.
@@ -134,14 +133,14 @@ Direct Data API access to `staff_permissions` is read-only for `authenticated`
 and unavailable to `anon`; clients must use the RPCs above for every write. A
 position or assigned-branch change through `update_staff_profile()` atomically
 replaces the position baseline. Other grant lifecycle changes must be made
-explicitly through PBAC RPCs. Applying a different canonical template is a
+explicitly through legacy permission RPCs. Applying a different canonical template is a
 supported additive exception: it adds capabilities but never changes the
 profile position, canonical role, route surface, or branch scope. Owner review
 is durable only when the matching `apply_template` audit row proves the grant
 was Owner-applied. The canonical cleanup blocks unaudited exceptions until the
 Owner explicitly revokes, then applies the intended template again. The Owner
 template and Owner-only permission keys can never be delegated to staff.
-`permission_keys.is_delegable_to_staff` is the fail-closed SSOT used by PBAC
+`permission_keys.is_delegable_to_staff` is the fail-closed SSOT used by permission
 checks, database writes, role templates, and the permission editor.
 
 Audit coverage is not yet uniform: new grants and revocations write
@@ -150,18 +149,18 @@ Audit coverage is not yet uniform: new grants and revocations write
 
 Owner is protected: RPCs refuse to touch a user whose position code is `owner` (governed separately via `tenants.representative`).
 
-## PBAC Operations
+## Legacy Permission Operations
 
-| Operation               | API / table                                                               | Meaning                                                                                                                               |
-| ----------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Create auth user        | Admin API + `handle_new_user()`                                           | Creates identity, profile, position, branch/site claim seed. Does not grant ad-hoc permissions.                                       |
-| Assign position         | `update_staff_profile(..., p_position_code := ..., p_branch_id := ...)`   | Owner-only assignment boundary. Position, branch, and active-state changes atomically replace PBAC grants from the position template. |
-| Grant permission        | `grant_permission(target, branch, key, ...)`                              | Adds one PBAC grant. Branch-scoped keys require `branch_id`; tenant-scoped keys require `branch_id IS NULL`.                          |
-| Apply template          | `apply_template_to_user(target, branch, template, ...)`                   | Copies a template snapshot into `staff_permissions`; later template edits do not auto-propagate.                                      |
-| Revoke permission       | `revoke_permission(target, branch, key)`                                  | Ends a PBAC grant and writes audit.                                                                                                   |
-| Enter Owner surface     | `proxy.ts` -> `isOwnerRoutePath()` -> `canAccess(user_role, "owner")`     | Owner-only surface admission before reusable module capabilities.                                                                     |
-| Enter route/module      | `proxy.ts` -> `resolveModuleFromPath()` -> `canAccess(user_role, module)` | Fast module capability admission only.                                                                                                |
-| Execute action/read row | `withAction` / RPC body / RLS policy -> `has_permission*()`               | Authoritative action and data gate.                                                                                                   |
+| Operation               | API / table                                                               | Meaning                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Create auth user        | Admin API + `handle_new_user()`                                           | Creates identity, profile, position, branch/site claim seed. Does not grant ad-hoc permissions.                                         |
+| Assign position         | `update_staff_profile(..., p_position_code := ..., p_branch_id := ...)`   | Owner-only assignment boundary. Position, branch, and active-state changes atomically replace legacy grants from the position template. |
+| Grant permission        | `grant_permission(target, branch, key, ...)`                              | Adds one legacy permission grant. Branch-scoped keys require `branch_id`; tenant-scoped keys require `branch_id IS NULL`.               |
+| Apply template          | `apply_template_to_user(target, branch, template, ...)`                   | Copies a template snapshot into `staff_permissions`; later template edits do not auto-propagate.                                        |
+| Revoke permission       | `revoke_permission(target, branch, key)`                                  | Ends a legacy permission grant and writes audit.                                                                                        |
+| Enter Owner surface     | `proxy.ts` -> `isOwnerRoutePath()` -> `canAccess(user_role, "owner")`     | Owner-only surface admission before reusable module capabilities.                                                                       |
+| Enter route/module      | `proxy.ts` -> `resolveModuleFromPath()` -> `canAccess(user_role, module)` | Fast module capability admission only.                                                                                                  |
+| Execute action/read row | `withAction` / RPC body / RLS policy -> `has_permission*()`               | Authoritative action and data gate.                                                                                                     |
 
 ## HR Permission Contract
 
@@ -170,14 +169,14 @@ Manager people oversight remain under `/br/[branchId]/*`, including
 `/br/[branchId]/team` and shift/profile routes. Checkout and leave approval
 routes are available to Owner and the assigned Branch Manager for that branch.
 
-| HR operation                          | Route ACL                                                                            | PBAC / action gate                                                                                      | Server action / RPC                                                                                                                         | RLS / table boundary                                                                            |
-| ------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Staff access create/update/deactivate | `staff` -> owner-only `/hr/staff/*`                                                  | `hr:manage_employee` plus `staff:assign_position`                                                       | `createStaff`, `updateStaff`, `toggleStaffActive`; `update_staff_profile`, `toggle_profile_active`                                          | `profiles`, `positions`, `staff_permissions`; assignment changes atomically replace PBAC grants |
-| Permission grant/revoke/template      | `staff` -> owner-only `/hr/staff/[id]/permissions`                                   | `staff:assign_permission`                                                                               | `grantPermissionAction`, `revokePermissionAction`, `applyTemplateAction`; `grant_permission`, `revoke_permission`, `apply_template_to_user` | `staff_permissions`, `permission_audit_log`; scope must match key definition                    |
-| Employee record, salary, HĐLĐ         | `hr` -> Owner-only Owner surface                                                     | Owner writes tenant employee and contract data                                                          | `createEmployeeAccount`, `updateEmployee`, `fetchEmployees`; active contract write via `employment_contracts`                               | `employees`, `employment_contracts`, `profiles`                                                 |
-| Global shift and position-task setup  | `hr` -> Owner-only Owner surface                                                     | Owner-only action roles                                                                                 | `createShift`, `updateShift`, `deactivateShift`, `setShiftBoundaries`, `savePositionTasks`                                                  | `shifts` and `position_shift_tasks` are tenant/global setup, not Branch staff runtime           |
-| Attendance and leave administration   | Owner: `/hr`; Owner + Branch Manager: `/br/[branchId]/shift/*-approvals`             | `hr:approve_leave_request`, `hr:approve_checkout`; Branch Manager grants must equal the assigned branch | `fetchAttendance`, `fetchAttendanceSummary`, `forceCloseStaleAttendance`, leave and checkout approval actions                               | RLS/RPC deny self-review, peer-manager review, and cross-branch review                          |
-| Branch people visibility              | Branch Manager: `/br/[branchId]/team`; staff self-service under shift/profile routes | Branch-scoped `staff:view`                                                                              | Branch-safe employee, attendance, and leave projections                                                                                     | Read-only projection; no employee, contract, payroll, HĐLĐ, BHXH, or permission write           |
+| HR operation                          | Route ACL                                                                            | Permission / action gate                                                                                | Server action / RPC                                                                                                                         | RLS / table boundary                                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Staff access create/update/deactivate | `staff` -> owner-only `/hr/staff/*`                                                  | `hr:manage_employee` plus `staff:assign_position`                                                       | `createStaff`, `updateStaff`, `toggleStaffActive`; `update_staff_profile`, `toggle_profile_active`                                          | `profiles`, `positions`, `staff_permissions`; assignment changes atomically replace legacy grants |
+| Permission grant/revoke/template      | `staff` -> owner-only `/hr/staff/[id]/permissions`                                   | `staff:assign_permission`                                                                               | `grantPermissionAction`, `revokePermissionAction`, `applyTemplateAction`; `grant_permission`, `revoke_permission`, `apply_template_to_user` | `staff_permissions`, `permission_audit_log`; scope must match key definition                      |
+| Employee record, salary, HĐLĐ         | `hr` -> Owner-only Owner surface                                                     | Owner writes tenant employee and contract data                                                          | `createEmployeeAccount`, `updateEmployee`, `fetchEmployees`; active contract write via `employment_contracts`                               | `employees`, `employment_contracts`, `profiles`                                                   |
+| Global shift and position-task setup  | `hr` -> Owner-only Owner surface                                                     | Owner-only action roles                                                                                 | `createShift`, `updateShift`, `deactivateShift`, `setShiftBoundaries`, `savePositionTasks`                                                  | `shifts` and `position_shift_tasks` are tenant/global setup, not Branch staff runtime             |
+| Attendance and leave administration   | Owner: `/hr`; Owner + Branch Manager: `/br/[branchId]/shift/*-approvals`             | `hr:approve_leave_request`, `hr:approve_checkout`; Branch Manager grants must equal the assigned branch | `fetchAttendance`, `fetchAttendanceSummary`, `forceCloseStaleAttendance`, leave and checkout approval actions                               | RLS/RPC deny self-review, peer-manager review, and cross-branch review                            |
+| Branch people visibility              | Branch Manager: `/br/[branchId]/team`; staff self-service under shift/profile routes | Branch-scoped `staff:view`                                                                              | Branch-safe employee, attendance, and leave projections                                                                                     | Read-only projection; no employee, contract, payroll, HĐLĐ, BHXH, or permission write             |
 
 Branch Manager gets branch-safe employee, attendance, and leave visibility plus
 same-branch checkout and leave approval. Tenant-wide HR setup, staff CRUD,

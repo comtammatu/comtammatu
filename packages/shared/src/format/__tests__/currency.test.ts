@@ -21,7 +21,7 @@ test("vi-VN display formatters use dot grouping and comma fractions", () => {
 test("inventory message percentages use the shared vi-VN formatter", () => {
   assert.equal(
     INVENTORY_VI.branchTodayUsage("1.000đ", "2.000đ", 12.5),
-    "Branch hôm nay: 1.000đ / 2.000đ (12,5%)",
+    "Chi nhánh hôm nay: 1.000đ / 2.000đ (12,5%)",
   );
 });
 

@@ -16,8 +16,8 @@ export const cashConfirmSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
-  orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
+  orderId: z.coerce.number().int().positive({ error: "Mã đơn hàng không hợp lệ" }),
   cashReceived: z.coerce
     .number()
     .nonnegative({ error: "Số tiền nhận không được âm" }),
@@ -40,7 +40,7 @@ export const createPaymentSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
   orderId: z.coerce.number().int().positive(),
   method: z.enum(["vietqr"]),
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
@@ -60,7 +60,7 @@ export const branchOnlyReadSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
 });
 
 /**
@@ -76,15 +76,15 @@ export const fetchPendingRemotePaymentSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
-  orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
+  orderId: z.coerce.number().int().positive({ error: "Mã đơn hàng không hợp lệ" }),
 });
 
 export const cancelPendingPaymentSchema = z.object({
   branchId: z.coerce
     .number()
     .int()
-    .positive({ error: "Branch ID không hợp lệ" }),
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
   paymentId: z.coerce
     .number()
     .int()

@@ -1143,7 +1143,7 @@ function ChecklistDetail({ record }: { record: AttendanceRecord }) {
       <AppEmptyState
         compact
         className="border-0 bg-transparent"
-        title="Ca này không có checklist snapshot."
+        title="Ca này không có dữ liệu danh sách kiểm tra đã lưu."
       />
     );
   }

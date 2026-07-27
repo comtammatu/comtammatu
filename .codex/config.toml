@@ -14,3 +14,7 @@ url = "https://mcp.vercel.com"
 
 [mcp_servers.openrouter]
 url = "https://mcp.openrouter.ai/mcp"
+
+[mcp_servers.stitch]
+command = "npx"
+args = ["-y", "@_davideast/stitch-mcp", "proxy"]

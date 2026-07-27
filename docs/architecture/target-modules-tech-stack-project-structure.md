@@ -48,15 +48,10 @@ hoặc workspace package.
 
 | Module                  | Sở hữu                                                                                         | Không sở hữu                                                   |
 | ----------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Identity & Access       | đăng nhập, Company/Tenant membership, role binding, capability, route resolution, RLS contract | hồ sơ nhân sự nghiệp vụ                                        |
+| Identity & Access       | đăng nhập, membership, Tenant grant, capability, route resolution, RLS contract                | hồ sơ nhân sự nghiệp vụ                                        |
 | Company Workforce       | nhân viên, phòng ban, vị trí, metadata hợp đồng, lịch làm, chấm công, nghỉ phép, payroll input | soạn/ký HĐLĐ pháp lý, quyền dữ liệu hiệu lực, bút toán kế toán |
 | Tenant & Sites          | Tenant, Kho Tổng, Bếp Trung Tâm, Chi nhánh, assignment tới site                                | workflow kho, sản xuất hoặc bán hàng                           |
 | Effective Configuration | Tenant default, site override, cấu hình hiệu lực và snapshot                                   | logic nghiệp vụ tiêu thụ cấu hình                              |
-
-Mô hình Identity & Access đầy đủ nằm tại
-[target-auth-authorization.md](target-auth-authorization.md). Trong kiến trúc
-mục tiêu, “Tenant grant” được gọi rõ là Tenant membership/access; role binding
-mới cấp capability.
 
 ### 3.2. Vận hành F&B
 
@@ -131,7 +126,7 @@ nhận tiêu hao và thành phẩm; Supply Chain không import ngược Central 
 
 | Concern       | Hợp đồng mục tiêu                                                                                                                                                                                           |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scope         | Company membership, Tenant membership và site assignment là ba quan hệ riêng. Site workspace mang site ID trên URL; Company/Tenant được derive server-side; RLS/RPC xác minh lại.                           |
+| Scope         | Company membership, Tenant grant và site assignment là ba quan hệ riêng. URL mang Tenant/site scope; RLS/RPC xác minh lại server-side.                                                                      |
 | Tiền          | Giá POS là gross đã gồm VAT. Tiền VND là `NUMERIC(...,0)` trong Postgres và `number` safe-integer theo đơn vị đồng trong TypeScript; quantity và VAT rate là field riêng, không dùng binary float cho tiền. |
 | Thời gian     | Lưu instant bằng `TIMESTAMPTZ`; business date và sellable window được tính theo timezone đã cấu hình của site, mặc định `Asia/Ho_Chi_Minh`.                                                                 |
 | Cấu hình      | Mỗi domain có typed default/override riêng; không dùng một mega JSON settings, recursive merge hoặc environment variable làm business configuration.                                                        |
@@ -241,12 +236,12 @@ package để giữ hai codebase.
 
 ### 5.2. Environment và Greenfield transition
 
-| Stage                 | Contract                                                                                                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| CI                    | Supabase Local chỉ tồn tại trong GitHub Actions để replay from-empty, chạy SQL tests và E2E; không là runtime target.                      |
-| Suspended HKD         | `matu-prod + app.comtammatu.com` dừng active delivery từ `baf3720f8`; không nhận writer/deploy mới nếu chưa có owner rollback decision.    |
-| Production candidate  | `matu-greenfield-company` là target đã đăng ký của cùng repo, không phải DEV; exact ref và quyền nằm trong Environment Registry.          |
-| Greenfield Production | Candidate chỉ thành Production trên `web.comtammatu.com` sau schema replay, RLS tests, backup/restore, provider/print smoke và owner gate. |
+| Stage                          | Contract                                                                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| CI                             | Supabase Local chỉ tồn tại trong GitHub Actions để replay from-empty, chạy SQL tests và E2E; không là runtime target.                      |
+| Suspended mô hình pháp nhân cũ | `matu-prod + app.comtammatu.com` dừng active delivery từ `baf3720f8`; không nhận writer/deploy mới nếu chưa có owner rollback decision.    |
+| Production candidate           | `matu-greenfield-company` là target đã đăng ký của cùng repo, không phải DEV; exact ref và quyền nằm trong Environment Registry.           |
+| Greenfield Production          | Candidate chỉ thành Production trên `web.comtammatu.com` sau schema replay, RLS tests, backup/restore, provider/print smoke và owner gate. |
 
 Không có persistent DEV, không dual-write và không import operational data cũ.
 Chỉ seed reference data bắt buộc; Company, Tenant, site, tài khoản và master data
@@ -264,7 +259,7 @@ cho Greenfield nằm trong
 `docs/plan/adr/0016-joint-stock-company-operating-model.md`.
 
 Trước giao dịch live đầu tiên, Greenfield Candidate phải là writer duy nhất.
-Suspended HKD stack không được tái kích hoạt song song; rollback trước giao dịch
+Suspended mô hình pháp nhân cũ stack không được tái kích hoạt song song; rollback trước giao dịch
 live đầu tiên cần một owner decision riêng.
 
 ### 5.3. Configuration và secrets
@@ -420,7 +415,6 @@ workflow có side effect.
 | Workspace            | Route family           | Module điều phối                           |
 | -------------------- | ---------------------- | ------------------------------------------ |
 | Company control room | `/`                    | Company Workforce, Finance, Tenant & Sites |
-| Bảo mật tài khoản    | `/me/security/*`       | Identity & Access                          |
 | Cá nhân              | `/me/*`                | Company Workforce                          |
 | Kho Tổng             | `/warehouse/:siteId/*` | Supply Chain                               |
 | Bếp Trung Tâm        | `/kitchen/:siteId/*`   | Central Production                         |
@@ -442,9 +436,8 @@ thể.
 3. Tenant là ranh giới vận hành F&B và chỉ nhận ba loại site đóng:
    `central_warehouse`, `central_kitchen`, `branch`. Không dựng cây site tổng
    quát, region hoặc organizational unit giả định.
-4. Site scope nằm trên URL của site workspace; Company/Tenant được derive
-   server-side từ membership và resource lineage. Không đưa scope vào tab
-   state, React Context hoặc `localStorage`.
+4. Scope hiệu lực nằm trên URL và authority server-side. Không đưa Tenant/site
+   vào tab state, React Context hoặc `localStorage`.
 5. V1 chỉ kích hoạt invoice profile doanh nghiệp của Viettel. Data model cho
    phép site tham chiếu profile khác, nhưng không xây luồng phát hành thứ hai
    khi chưa có tài khoản và nhu cầu đã được xác nhận.
@@ -461,9 +454,6 @@ thể.
 - `/br/:branchId`, `/br/:branchId/dashboard` và
   `/br/:branchId/settings` đang là ba landing page chồng trách nhiệm. Chúng phải
   trở thành một Branch Workspace cùng các deep route theo tác vụ.
-- Auth hiện tại neo một user vào một Tenant/Branch, suy `user_role` từ HR
-  position và dùng role list trong `MODULE_ACL`. Greenfield phải tạo authority
-  mới trước khi chuyển route; không copy các authority này làm target.
 - `apps/web/app/_lib/branch-context.ts` và dashboard tồn kho đang neo scope vào
   `branch`. Kho Tổng và Bếp Trung Tâm cần `operational_site` có kind rõ ràng,
   không giả làm Branch.
@@ -503,13 +493,13 @@ snapshot metadata cần đối soát, không lưu secret.
 
 ### 8.4. Các lát cắt triển khai
 
-| Phase                              | Kết quả nhỏ nhất phải đạt                                                                                                                       | Bề mặt sở hữu                                                                                    | Exit evidence                                                                                                                                                                                                        |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 — Greenfield Authority           | Same repo có Company tối thiểu, Tenant, `operational_site`, membership, assignment, scoped RBAC binding và capability trên candidate; không có Auth/data cũ | target migrations, guarded candidate type-source path, route-capability contract, RLS, RPC và SQL tests | Văn phòng không cần site; position/assignment không tự cấp quyền; revoke dùng dữ liệu live; worker không đọc chéo site; exact target ref được xác minh trước apply |
-| 2 — Branch Workspace               | `/br/:branchId` là control room duy nhất; dashboard được nhập vào workspace, settings landing bị loại bỏ nhưng deep settings còn nguyên         | operator home/dashboard/settings, target route registry, navigation và route tests               | authority Phase 1 đã source-ready; không còn landing cạnh tranh; deep link và capability guard đúng; route matrix, typecheck, lint và build đạt                                                                      |
-| 3 — Effective Configuration & HĐĐT | thay provider/env singleton bằng resolver `Tenant default → site override`; chỉ provision profile Doanh nghiệp Viettel; phát hành bất đồng bộ   | typed configuration, provider adapter, issue/replace/adjust jobs, line/profile snapshot và audit | test inherit/override/disabled; mixed-VAT gross-price reconcile; replacement/adjustment tái dùng snapshot; credential không tới client; một hóa đơn thật đi qua issue và reconcile; lỗi mạng không chặn hoàn tất đơn |
-| 4 — Kho Tổng và Bếp Trung Tâm      | hai workspace có scope, quyền và workflow riêng; không dùng shell hoặc kind của Branch                                                          | `/warehouse/:siteId/*`, `/kitchen/:siteId/*`, Supply Chain và Central Production                 | route/RLS chặn sai kind; tồn kho và sản xuất ghi qua RPC đúng authority                                                                                                                                              |
-| 5 — Workforce & Attendance         | Văn phòng chấm công theo Company policy; nhân sự vận hành chấm công theo assignment tới site                                                    | workforce, schedule, attendance, leave và payroll input                                          | test cả Company-scoped và site-scoped worker; không sinh Branch giả hoặc quyền ngầm từ phòng ban                                                                                                                     |
+| Phase                              | Kết quả nhỏ nhất phải đạt                                                                                                                        | Bề mặt sở hữu                                                                                    | Exit evidence                                                                                                                                                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — Branch Workspace               | `/br/:branchId` là control room duy nhất; dashboard được nhập vào workspace, settings landing bị loại bỏ nhưng deep settings còn nguyên          | operator home/dashboard/settings, route registry, ACL, navigation và route tests                 | không còn landing cạnh tranh; deep link và capability guard vẫn đúng; route matrix, typecheck, lint và build đạt                                                                                                     |
+| 2 — Greenfield authority           | Supabase mới có Company tối thiểu, Company workforce, Tenant, `operational_site`, membership, grant và assignment; không có migration dữ liệu cũ | migrations, RLS, RPC, auth claims, generated types và SQL tests                                  | chứng minh Văn phòng không cần Branch; worker site không đọc chéo site; target ref được xác minh trước khi apply                                                                                                     |
+| 3 — Effective Configuration & HĐĐT | thay provider/env singleton bằng resolver `Tenant default → site override`; chỉ provision profile Doanh nghiệp Viettel; phát hành bất đồng bộ    | typed configuration, provider adapter, issue/replace/adjust jobs, line/profile snapshot và audit | test inherit/override/disabled; mixed-VAT gross-price reconcile; replacement/adjustment tái dùng snapshot; credential không tới client; một hóa đơn thật đi qua issue và reconcile; lỗi mạng không chặn hoàn tất đơn |
+| 4 — Kho Tổng và Bếp Trung Tâm      | hai workspace có scope, quyền và workflow riêng; không dùng shell hoặc kind của Branch                                                           | `/warehouse/:siteId/*`, `/kitchen/:siteId/*`, Supply Chain và Central Production                 | route/RLS chặn sai kind; tồn kho và sản xuất ghi qua RPC đúng authority                                                                                                                                              |
+| 5 — Workforce & Attendance         | Văn phòng chấm công theo Company policy; nhân sự vận hành chấm công theo assignment tới site                                                     | workforce, schedule, attendance, leave và payroll input                                          | test cả Company-scoped và site-scoped worker; không sinh Branch giả hoặc quyền ngầm từ phòng ban                                                                                                                     |
 
 Mỗi phase chỉ tạo feature khi chuyển workflow thật. Route tiếp tục làm adapter;
 implementation trùng được xóa sau caller cuối cùng. Phase sau không bắt đầu nếu
@@ -518,8 +508,7 @@ exit evidence của phase trước chưa đạt.
 ## 9. Điều kiện chấp nhận
 
 - mỗi business rule có đúng một module sở hữu;
-- target `ROUTE_ACCESS` biểu diễn capability/scope/site kind, không chứa role
-  list và không tiếp tục phình theo từng landing page;
+- `MODULE_ACL` biểu diễn capability, không tiếp tục phình theo từng landing page;
 - route page không chứa transaction workflow lớn;
 - nhân viên Văn phòng không cần Branch giả;
 - Kho Tổng và Bếp Trung Tâm không dùng route hoặc shell của Chi nhánh;

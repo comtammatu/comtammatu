@@ -373,17 +373,27 @@ async function fetchUnpaidSupplierInvoiceRisk({
 
 // Payment/order desync ops alert: completed payments whose order is not marked
 // paid (the orphan-gateway risk from POS calling the provider before the DB
-// lock). Reuses the tenant-wide, finance:view-gated RPC; branch filter N/A.
+// lock). Reuses the finance:view-gated RPC and narrows its lookback to the
+// selected Vietnam-local period and branch.
 async function fetchPaymentOrderDesync({
   supabase,
-  since,
+  branchId,
+  startDate,
+  endDate,
 }: {
   supabase: SupabaseClient;
-  since: string;
+  branchId: number | null;
+  startDate: string;
+  endDate: string;
 }): Promise<{ count: number; amount: number }> {
-  const { data, error } = await supabase.rpc("find_payment_order_desync", {
-    p_since: since,
-  });
+  const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
+  let query = supabase
+    .rpc("find_payment_order_desync", { p_since: startIso })
+    .lt("payment_paid_at", endIso);
+  if (branchId != null) {
+    query = query.eq("branch_id", branchId);
+  }
+  const { data, error } = await query;
   if (error || !data) return { count: 0, amount: 0 };
   return {
     count: data.length,
@@ -843,7 +853,12 @@ export async function fetchFinanceCockpit(
       tenantId: claims.tenant_id,
       branchId: params.branch,
     }),
-    fetchPaymentOrderDesync({ supabase, since: resolved.start }),
+    fetchPaymentOrderDesync({
+      supabase,
+      branchId: params.branch,
+      startDate: resolved.start,
+      endDate: resolved.end,
+    }),
   ]);
 
   const branches = (

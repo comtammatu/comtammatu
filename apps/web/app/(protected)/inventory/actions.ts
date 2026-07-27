@@ -32,7 +32,7 @@ export async function createStocktakeSession(
 ): Promise<ActionResult> {
   const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
   if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(

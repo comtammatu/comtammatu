@@ -67,7 +67,7 @@ const toastSelectUnitForEachLine = "Chọn đơn vị cho mỗi dòng";
 const toastQtyExceedsStock = "Số lượng vượt tồn hiện tại.";
 const toastCreateFailed = "Không tạo được phiếu hủy";
 const toastPhotoRequired = (ingredientName: string, tier: number) =>
-  `Dòng "${ingredientName}" cần ảnh (tier ${tier})`;
+  `Dòng "${ingredientName}" cần ảnh (mức ${tier})`;
 const toastCreateSuccess = (
   issueNumber: string,
   itemsCreated: number,

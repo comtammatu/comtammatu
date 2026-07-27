@@ -14,9 +14,10 @@ five cards:
   VAT.
 - **Giá vốn món**: recorded ingredient cost for the paid orders in the period.
 - **Lợi nhuận gộp**: net revenue minus recorded food cost.
-- **Chi phí vận hành**: posted operating spend for rent,
-  utilities, payroll, repairs, supplies, marketing, fees/tax, and other
-  operating categories?
+- **Chi phí vận hành**: posted period expense for rent, utilities, payroll,
+  repairs, consumables/small tools, marketing, fees/tax, and other operating
+  categories. It excludes equipment acquisition that must be capitalized or
+  allocated over time.
 - **Kết quả vận hành**: gross profit minus recorded operating expense.
 
 Missing food-cost coverage makes both gross profit and operating result
@@ -60,8 +61,8 @@ updates accounts payable but does not create a second bank movement; the
 canonical outgoing `bank_transactions` row reduces bank funds whether or not
 it has been reconciled.
 
-Inventory sits in a separate filtered **Tài sản hiện có** section and is labeled
-**Giá trị tồn kho cuối kỳ**.
+Inventory sits in a separate filtered **Tồn kho** section and is labeled **Giá
+trị tồn kho cuối kỳ**. It is not a complete asset section.
 The attention queue remains the last section. Tax and GTGT reporting are not
 added to this landing formula; HĐĐT and tax workflows keep their existing
 separate routes and contracts.
@@ -240,6 +241,31 @@ GRN and report links use `/finance/supplier-invoices`.
 
 There is no current `/accounting/*` app surface.
 
+## VAT And Equipment Boundary
+
+Supplier invoice VAT is only `input_vat_recorded`. The current schema does not
+store deduction evidence, business-use allocation, declaration period, or
+adjustment state, so Finance must not label it `input_vat_deductible` or derive
+`vat_payable`.
+
+Output VAT belongs to effective issued/corrected sales invoice snapshots. It is
+not revenue. Under the deduction method, the provisional relationship is
+`output VAT - deductible input VAT +/- period adjustments`; other VAT methods
+must use their own registered contract.
+
+Equipment is classified before it reaches operating result:
+
+- qualifying fixed assets are recorded at cost; period depreciation is the
+  expense;
+- tools/equipment below the fixed-asset criteria are expensed or allocated over
+  time under the selected accounting policy;
+- consumables used in the period may be posted directly as operating expense.
+
+There is no asset register, placed-in-service date, useful-life policy,
+accumulated depreciation, or carrying-value source in the current product.
+Therefore Finance does not expose an equipment-value card. Add that surface
+only with the full source and reconciliation contract.
+
 ## Acceptance Criteria
 
 Finance Basic is operationally acceptable only when all of these are true:
@@ -267,6 +293,11 @@ Do not call the module "done" because enterprise-accounting objects exist in old
 
 - Chi phí vận hành is captured in `/finance/expenses`; keep it as an operating record, not a statutory journal entry.
 - Inventory value detail stays in Inventory; Finance shows only the current-value card.
+- Input invoice VAT is recorded by rate, but deductible input VAT and VAT
+  payable remain unavailable until evidence, allocation, period, and adjustment
+  states exist.
+- Equipment/fixed-asset value remains unavailable until an asset register and
+  depreciation/allocation workflow exist.
 - HĐĐT is active through Viettel S-invoice. The app owns per-order issuance,
   cancellation, and replacement; provider-side artifacts and status lookup stay
   in Viettel S-invoice operations rather than becoming Finance product surfaces.

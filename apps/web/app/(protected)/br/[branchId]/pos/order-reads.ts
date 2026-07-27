@@ -18,7 +18,7 @@ const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const branchIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Branch ID không hợp lệ" });
+  .positive({ error: "Mã chi nhánh không hợp lệ" });
 
 const sessionIdSchema = z.coerce
   .number()
@@ -28,7 +28,7 @@ const sessionIdSchema = z.coerce
 const orderIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Order ID không hợp lệ" });
+  .positive({ error: "Mã đơn hàng không hợp lệ" });
 
 /* ─── fetchActiveOrders ─── */
 
@@ -367,7 +367,7 @@ export async function fetchOrderForBill(
 ): Promise<ActionResult> {
   const parsedId = orderIdSchema.safeParse(orderId);
   if (!parsedId.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+    return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -594,7 +594,7 @@ export async function fetchOrderItemsForReorder(orderId: number): Promise<
 > {
   const parsedId = orderIdSchema.safeParse(orderId);
   if (!parsedId.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+    return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(

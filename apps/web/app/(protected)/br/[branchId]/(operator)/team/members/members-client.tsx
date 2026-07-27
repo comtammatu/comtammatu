@@ -374,7 +374,7 @@ export function MembersClient({
             description={
               hasActiveFilter
                 ? "Đổi từ khóa hoặc trạng thái để xem lại danh sách nhân viên chi nhánh."
-                : "Chi nhánh này chưa có nhân sự active nào được phân bổ."
+                : "Chi nhánh này chưa có nhân sự đang hoạt động nào được phân bổ."
             }
           />
         )}

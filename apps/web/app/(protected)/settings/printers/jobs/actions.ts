@@ -11,14 +11,14 @@ const MANAGER_ROLES = ["owner", "branch_manager"] as const;
 const jobIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Job ID không hợp lệ" });
+  .positive({ error: "Yêu cầu in không hợp lệ" });
 
 export async function retryJobFromMonitor(
   jobId: number,
 ): Promise<ActionResult> {
   const parsed = jobIdSchema.safeParse(jobId);
   if (!parsed.success) {
-    return { success: false, error: "Job ID không hợp lệ" };
+    return { success: false, error: "Yêu cầu in không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(

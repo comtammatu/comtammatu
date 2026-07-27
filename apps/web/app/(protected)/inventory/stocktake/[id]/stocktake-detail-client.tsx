@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { formatPercent } from "@comtammatu/shared/format";
-import { STOCKTAKE_SESSION_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
@@ -109,11 +108,8 @@ export function StocktakeDetailClient({
   const [lines, setLines] = useState<StocktakeLine[]>(initialLines);
   const [savedLines, setSavedLines] = useState<Set<number>>(new Set());
 
-  const statusLabel =
-    (STOCKTAKE_SESSION_STATUS_LABELS_VI as Record<string, string>)[
-      session.status
-    ] ?? session.status;
   const statusBadge = getStatusBadgeMeta("inventory", session.status);
+  const statusLabel = statusBadge.label;
 
   const countedCount = useMemo(
     () => lines.filter((l) => l.counted_quantity != null).length,

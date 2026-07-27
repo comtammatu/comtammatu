@@ -1,6 +1,7 @@
 # Cơm Tấm Má Tư
 
-Bộ phần mềm quản lý vận hành và bán hàng cho Hộ kinh doanh Cơm Tấm Má Tư.
+Bộ phần mềm quản lý vận hành và bán hàng cho thương hiệu Cơm Tấm Má Tư
+thuộc Công ty Cổ phần Chén Sứ.
 Single-tenant, multi-branch, đa kho.
 
 Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng,
@@ -11,16 +12,16 @@ Mô hình vận hành production: **Tenant → Chi nhánh**.
 
 ## Modules
 
-| #   | Module               | Scope                                                                                                | Status  |
-| --- | -------------------- | ---------------------------------------------------------------------------------------------------- | ------- |
-| M0  | Khung quản trị       | Buồng lái điều hành, sidebar, foundation, báo cáo điều hành                                          | SHIPPED |
-| M1  | Menu                 | Categories, items, variants, modifiers, sides                                                        | SHIPPED |
-| M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                             | SHIPPED |
-| M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                                 | SHIPPED |
-| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm).                                                           | SHIPPED |
-| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production                          | SHIPPED |
-| M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Enterprise COA/Journal outside HKD scope | PARTIAL |
-| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial           | PARTIAL |
+| #   | Module               | Scope                                                                                                                | Status  |
+| --- | -------------------- | -------------------------------------------------------------------------------------------------------------------- | ------- |
+| M0  | Khung quản trị       | Buồng lái điều hành, sidebar, foundation, báo cáo điều hành                                                          | SHIPPED |
+| M1  | Menu                 | Categories, items, variants, modifiers, sides                                                                        | SHIPPED |
+| M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                                             | SHIPPED |
+| M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                                                 | SHIPPED |
+| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm).                                                                           | SHIPPED |
+| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production                                          | SHIPPED |
+| M6  | Finance              | Finance Basic, HĐĐT theo VAT từng dòng, reconciliation, accountant export; Enterprise COA/Journal chưa thuộc phạm vi | PARTIAL |
+| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial                           | PARTIAL |
 
 Active tracker: [`tasks/todo.md`](tasks/todo.md).
 
@@ -133,4 +134,4 @@ corepack pnpm --filter @comtammatu/web guides:capture # Capture POS flow screens
 
 ## License
 
-Proprietary — Hộ kinh doanh Cơm Tấm Má Tư. All rights reserved.
+Proprietary — Công ty Cổ phần Chén Sứ. All rights reserved.

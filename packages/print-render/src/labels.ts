@@ -9,7 +9,7 @@ export const PAYMENT_LABEL: Record<string, string> = {
   bank_transfer: "Chuyển khoản",
 };
 
-export const PAYMENT_LABEL_FULL: Record<string, string> = {
+export const PAYMENT_LABEL_FULL: Record<string, string> & { unknown: string } = {
   cash: "Tiền mặt",
   vietqr: "Chuyển khoản (VietQR)",
   bank_transfer: "Chuyển khoản",

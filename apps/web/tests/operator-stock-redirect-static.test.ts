@@ -664,7 +664,7 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   assert.match(issuesPage, /embedded\?: boolean/);
   assert.match(issuesPage, /embedded=\{embedded\}/);
   assert.match(issuesPage, /scope\.outOfScope/);
-  assert.match(issuesPage, /listBasePath\?: string/);
+  assert.match(issuesPage, /listBasePath\?: InventoryRouteKey/);
   assert.match(issuesClient, /embedded\?: boolean/);
   assert.match(issuesClient, embeddedContentWrapperPattern);
   assert.match(issuesClient, /listBasePath = "\/inventory\/consumption"/);
@@ -1177,7 +1177,7 @@ test("operator stocktake routes keep session stocktake native to Branch", () => 
   assert.match(stocktakeModel, /canCompleteBranchStocktake/);
 });
 
-test("operator transfer routes keep list and detail Branch-scoped while Owner owns create", () => {
+test("operator transfer routes stay Branch-scoped while Owner keeps history only", () => {
   const transferRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx",
   );
@@ -1306,19 +1306,14 @@ test("operator transfer routes keep list and detail Branch-scoped while Owner ow
   );
 
   assert.match(transfersPage, /basePath = "\/inventory\/transfers"/);
+  assert.match(transfersPage, /createEnabled = false/);
   assert.match(transfersPage, /basePath=\{basePath\}/);
   assert.doesNotMatch(transfersPage, /createBasePath|supplierGrnBasePath/);
-  assert.match(transferNewPage, /basePath=\{basePath\}/);
-  assert.match(transferNewPage, /<DocumentFormFrame/);
-  assert.match(transferNewPage, /loadTransferCreatePageData/);
-  assert.match(transferNewPage, /queryBranchId: params\.branchId/);
-  assert.match(transferNewPage, /<CreateTransferForm/);
-  assert.doesNotMatch(transferNewPage, /BranchOperatorPage/);
-  assert.match(
+  assert.match(transferNewPage, /redirect\("\/inventory\/transfers"\)/);
+  assert.doesNotMatch(
     transferNewPage,
-    /withTransferBranchQuery\(basePath, data\.userBranchId\)/,
+    /CreateTransferForm|DocumentFormFrame|loadTransferCreatePageData|BranchOperatorPage/,
   );
-  assert.doesNotMatch(transferNewPage, /routeBranchId|embedded/);
   assert.match(transferCreateData, /import "server-only"/);
   assert.match(transferCreateData, /resolveInventoryListScope/);
   assert.match(transferCreateData, /fetchBranchesForTransfer/);

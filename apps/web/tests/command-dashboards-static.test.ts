@@ -103,7 +103,7 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(copy, /grossProfit: "Lợi nhuận gộp"/);
   assert.match(copy, /operatingExpense: "Chi phí vận hành"/);
   assert.match(copy, /operatingResult: "Kết quả vận hành"/);
-  assert.match(copy, /inventory: "Tài sản hiện có"/);
+  assert.match(copy, /inventory: "Tồn kho"/);
   assert.equal(
     (page.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
     4,
@@ -113,7 +113,10 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);
   assert.match(copy, /Đầu kỳ/);
-  assert.match(copy, /Không gồm giá vốn, nhập hàng và công nợ NCC/);
+  assert.match(
+    copy,
+    /Không gồm giá vốn, nhập hàng, công nợ và nguyên giá thiết bị\/TSCĐ/,
+  );
   assert.match(copy, /bankReconciliationLabel: "Đối soát ngân hàng"/);
   assert.match(page, /FinanceAttentionSection/);
   assert.doesNotMatch(copy, /cashDeltaTitle:/);

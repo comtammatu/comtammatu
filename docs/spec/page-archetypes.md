@@ -334,12 +334,16 @@ density="compact"` already owns width/padding. Return a bare flex
 
 ### LANDING
 
-**Exemplars:** `apps/web/app/(protected)/page.tsx` and
+**Exemplars:** `apps/web/app/page.tsx` and
 `apps/web/app/(protected)/settings/printers/page.tsx`.
 
 - Skeleton: `AppPage width="wide"` → `AppPageHeader` → `AppSection` per group
   → `LinkCardGrid` of `AppLinkCard` (`{title, description, href, icon, tone,
 badge}`).
+- Compact Owner root variant: `/` keeps the same groups and navigation order
+  but uses an asymmetric desktop group grid with `AppSection` → `ItemGroup` of
+  linked `Item` rows. It stays one column on phone and does not add KPI or
+  duplicate module controls.
 - No data tables. No KPI values beyond a small count badge on a link card.
 - Operator variant: `apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx`
   (`buildSettingsLinks`) uses the Branch plane recipe:

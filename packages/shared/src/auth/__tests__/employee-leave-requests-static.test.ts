@@ -100,14 +100,26 @@ test("Current baseline keeps leave approval RPCs scoped to the request branch", 
 test("Employee leave permission and generated type mirrors are wired", () => {
   const permissions = read("packages/shared/src/auth/permissions.ts");
   const dbTypes = read("packages/database/src/types/database.types.ts");
+  const seed = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
 
   for (const expected of [
     'HR_REQUEST_LEAVE: "hr:request_leave"',
     'HR_APPROVE_LEAVE_REQUEST: "hr:approve_leave_request"',
-    "PERMISSION_KEY_COUNT = 92",
+    "PERMISSION_KEY_COUNT = 90",
   ]) {
     assert.ok(permissions.includes(expected), `expected ${expected}`);
   }
+
+  const catalog = seed.match(
+    /INSERT INTO public\.permission_keys[\s\S]*?VALUES([\s\S]*?)ON CONFLICT \(key\) DO NOTHING;/,
+  );
+  const catalogValues = catalog?.[1];
+  assert.ok(catalogValues, "permission seed catalog must exist");
+  const seededKeys = [...catalogValues.matchAll(/\('([^']+)' *,/g)].map(
+    (match) => match[1],
+  );
+  assert.equal(seededKeys.length, 90);
+  assert.equal(new Set(seededKeys).size, 90);
 
   for (const expected of [
     "leave_requests: {",

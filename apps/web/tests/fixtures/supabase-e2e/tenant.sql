@@ -68,7 +68,7 @@ WHERE NOT EXISTS (
 --    gets id 1, matching prod / app expectations.
 INSERT INTO public.tenants (name, slug, legal_name, owner_user_id, settings)
 VALUES (
-  'Cơm Tấm Má Tư', 'comtammatu', 'HỘ KINH DOANH CƠM TẤM MÁ TƯ',
+  'Cơm Tấm Má Tư', 'comtammatu', 'CÔNG TY CỔ PHẦN CHÉN SỨ',
   'a0000002-0000-4000-8000-000000000002'::uuid, '{}'::jsonb
 )
 ON CONFLICT (slug) DO NOTHING;

@@ -6,33 +6,16 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("Owner transfer create stacks line controls at 320px and keeps named touch sizes", () => {
-  const form = read(
-    "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
-  );
+test("Owner transfer create route returns to read-only history", () => {
   const page = read(
     "apps/web/app/(protected)/inventory/transfers/new/page.tsx",
   );
 
-  assert.match(form, /useIsMobile\(1024\)/);
-  assert.match(form, /const controlSize = isTouchLayout \? "touch" : "field"/);
-  assert.match(
-    form,
-    /className="w-full flex-col items-stretch gap-3 sm:flex-row sm:flex-nowrap/,
+  assert.match(page, /redirect\("\/inventory\/transfers"\)/);
+  assert.doesNotMatch(
+    page,
+    /CreateTransferForm|DocumentFormFrame|loadTransferCreatePageData/,
   );
-  assert.match(
-    form,
-    /grid-cols-\[minmax\(0,1fr\)_3rem\][\s\S]*?col-span-2 w-full sm:w-40/,
-  );
-  assert.match(form, /<InputGroup[\s\S]*?size=\{controlSize\}/);
-  assert.match(
-    form,
-    /<InputGroupAddon align="inline-end" className="py-0">/,
-  );
-  assert.match(form, /controlSize=\{controlSize\}/);
-  assert.match(form, /size=\{removeActionSize\}/);
-  assert.doesNotMatch(form, /className="h-8 w-(?:16|20|32)"/);
-  assert.match(page, /size="touch"/);
 });
 
 test("Owner waste create propagates touch density through route-local controls", () => {

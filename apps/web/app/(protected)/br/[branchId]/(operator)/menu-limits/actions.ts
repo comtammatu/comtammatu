@@ -12,7 +12,7 @@ const LIMITS_ROLES = MODULE_ACL.branch_menu_limits.allowedRoles;
 const branchIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Branch ID không hợp lệ" });
+  .positive({ error: "Mã chi nhánh không hợp lệ" });
 
 const menuItemIdSchema = z.coerce
   .number()
@@ -41,7 +41,7 @@ export async function fetchBranchMenuDailyLimits(
 ): Promise<ActionResult<MenuLimitRow[]>> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const ctx = await getAuthContext(LIMITS_ROLES);

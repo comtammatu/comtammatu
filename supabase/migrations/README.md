@@ -65,13 +65,15 @@ the re-registration path.
 
 ## Existing environments
 
-- **Suspended HKD (`iexwsuaqqenyjiskawoj`)** keeps its applied migration history
-  and remains the temporary repository type source after cutoff `baf3720f8`; it
-  is not reset, migrated, relinked, or reactivated.
-- **Greenfield target (`enloyfnuerqgaqderbwb`)** is the same-repo candidate. It
-  installs the baseline plus active forwards with exact owner delegation and
-  without HKD data, Auth rows, or provider secrets. It becomes the type source
-  only after the guarded target switch and candidate schema proof land.
+- **Suspended retired target (`iexwsuaqqenyjiskawoj`)** keeps its applied migration history
+  after cutoff `baf3720f8`; it is not a repository type source and is not reset,
+  migrated, relinked, or reactivated.
+- **Greenfield target (`enloyfnuerqgaqderbwb`)** is the same-repo type source.
+  It runs the baseline plus active forwards. Current Auth, profile, position,
+  permission, and RLS objects remain the runtime contract. Existing candidate
+  Auth rows must not be treated as an empty environment.
+  Never copy retired target customer data, Auth rows, or provider secrets into this target.
+  Every migration apply still requires exact owner delegation.
 - Native Supabase Branching provides the disposable migration-replay target and
   requires the guard to verify the Production parent. Do not substitute a local
   database.

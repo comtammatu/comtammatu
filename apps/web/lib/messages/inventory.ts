@@ -1030,14 +1030,14 @@ export const inventory = {
   },
   settings: {
     title: "Cài đặt",
-    eyebrow: "Settings",
+    eyebrow: "Cài đặt",
     policyTitle: "Chính sách & mặc định",
     description:
-      "Chỉ giữ cấu hình hành vi/policy của kho. Dữ liệu danh mục nằm ở nhóm Quản lý.",
-    policyLayer: "Policy layer",
+      "Chỉ giữ chính sách vận hành và giá trị mặc định của kho. Dữ liệu danh mục nằm ở nhóm Quản lý.",
+    policyLayer: "Chính sách vận hành",
     thresholds: {
       title: "Ngưỡng tồn kho",
-      eyebrow: "Inventory thresholds",
+      eyebrow: "Ngưỡng tồn kho",
       description:
         "Một ngưỡng tồn tối thiểu cho từng nguyên liệu, dùng chung cho cảnh báo và đề xuất nhập thêm.",
       hint: "Tồn thực tế chạm hoặc thấp hơn ngưỡng này sẽ được cảnh báo.",
@@ -1344,8 +1344,8 @@ export const inventory = {
     noLinkedGrn: "Không liên kết phiếu nhập",
     chooseSupplier: "Chọn nhà cung cấp",
     subtotalPlaceholder: "0",
-    vat: "VAT",
-    vatBreakdown: "Chi tiết VAT",
+    vat: "VAT đầu vào theo hóa đơn",
+    vatBreakdown: "Chi tiết VAT đầu vào đã ghi nhận",
     taxableAtRate: (rate: string) => `Tiền trước VAT · ${rate}`,
     vatAtRate: (rate: string) => `Tiền VAT · ${rate}`,
     vatAutoPlaceholder: "Tự tính nếu để trống",
@@ -1353,7 +1353,7 @@ export const inventory = {
     vatBucketSummary: (rate: string, taxableAmount: string) =>
       `${rate} trên ${taxableAmount}`,
     matchingNotes: "Ghi chú đối soát",
-    matchingNotesPlaceholder: "Ghi chú thêm cho bước matching",
+    matchingNotesPlaceholder: "Ghi chú thêm cho bước đối soát",
     saveInvoice: "Lưu hóa đơn",
     loadMore: "Tải thêm",
     loadMoreFailed: "Không thể tải thêm hóa đơn",
@@ -1452,7 +1452,7 @@ export const inventory = {
     chooseBranchPlaceholder: "Chọn chi nhánh...",
     creatingClassic: "Đang tạo...",
     createClassic: "Tạo phiên",
-    zoneLockLost: "Mất zone lock — ngừng nhập số đếm",
+    zoneLockLost: "Mất quyền nhập khu vực — ngừng nhập số đếm",
     countNative: {
       countMode: (round: number) => `Đếm mù · R${round}`,
       countRatio: (done: number, total: number) =>

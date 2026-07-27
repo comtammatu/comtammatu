@@ -2,6 +2,7 @@ import type { AuditLogRow } from "@/_lib/audit";
 import { messages } from "@lib/messages";
 import { AppSection } from "@/components/surface";
 import { AuditHistoryList } from "@/components/audit-history-list";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
 type PermissionAuditEntry = {
   id: number;
@@ -16,16 +17,15 @@ type HistoryTabProps = {
   entries: PermissionAuditEntry[];
   branchNameById: Map<number, string>;
   actorNameById: Map<string, string>;
+  permissionLabelByKey: Map<string, string>;
 };
 
 export function HistoryTab({
   entries,
   branchNameById,
   actorNameById,
+  permissionLabelByKey,
 }: HistoryTabProps) {
-  // Project the permission audit rows onto the shared AuditLogRow contract.
-  // The composite `action` label carries the permission key and branch scope,
-  // and passes through the shared renderer's action map unchanged.
   const logs: AuditLogRow[] = entries.map((entry) => {
     const branchLabel =
       entry.branchId === null
@@ -34,10 +34,10 @@ export function HistoryTab({
           messages.owner.staffPermissions.branchFallback(entry.branchId));
     return {
       id: entry.id,
-      action: `${entry.action} · ${entry.permissionKey} · ${branchLabel}`,
+      action: `${messages.owner.staffAudit.actionLabels[entry.action] ?? UNKNOWN_LABEL_VI} · ${permissionLabelByKey.get(entry.permissionKey) ?? UNKNOWN_LABEL_VI} · ${branchLabel}`,
       entityType: "permission",
       entityId: entry.actorUserId,
-      userId: actorNameById.get(entry.actorUserId) ?? entry.actorUserId.slice(0, 8),
+      userId: actorNameById.get(entry.actorUserId) ?? UNKNOWN_LABEL_VI,
       createdAt: entry.at,
     };
   });

@@ -10,6 +10,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import {
   DataTable,
@@ -28,6 +29,7 @@ export interface PermissionAuditDisplayRow {
   branchId: number | null;
   branchName: string | null;
   permissionKey: string;
+  permissionLabel: string;
   action: string;
   at: string;
   validUntil: string | null;
@@ -39,8 +41,8 @@ function getActionVariant(action: string): BadgeVariant {
   return "default";
 }
 
-function UserLabel({ userId, name }: { userId: string; name: string | null }) {
-  return name ?? <code className="text-xs">{userId.slice(0, 8)}</code>;
+function UserLabel({ name }: { name: string | null }) {
+  return name ?? UNKNOWN_LABEL_VI;
 }
 
 export function PermissionAuditTable({
@@ -60,7 +62,9 @@ export function PermissionAuditTable({
       key: "action",
       header: copy.action,
       render: (row) => (
-        <Badge variant={getActionVariant(row.action)}>{row.action}</Badge>
+        <Badge variant={getActionVariant(row.action)}>
+          {copy.actionLabels[row.action] ?? UNKNOWN_LABEL_VI}
+        </Badge>
       ),
     },
     {
@@ -68,7 +72,7 @@ export function PermissionAuditTable({
       header: copy.actor,
       className: "text-sm",
       render: (row) => (
-        <UserLabel userId={row.actorUserId} name={row.actorName} />
+        <UserLabel name={row.actorName} />
       ),
     },
     {
@@ -80,7 +84,7 @@ export function PermissionAuditTable({
           href={`/hr/staff/${row.targetUserId}/permissions`}
           className="hover:underline"
         >
-          <UserLabel userId={row.targetUserId} name={row.targetName} />
+          <UserLabel name={row.targetName} />
         </Link>
       ),
     },
@@ -88,9 +92,7 @@ export function PermissionAuditTable({
       key: "permission",
       header: copy.permission,
       render: (row) => (
-        <code className="rounded-md bg-muted px-1.5 py-1 text-xs">
-          {row.permissionKey}
-        </code>
+        <span>{row.permissionLabel}</span>
       ),
     },
     {
@@ -100,7 +102,7 @@ export function PermissionAuditTable({
       render: (row) =>
         row.branchId === null
           ? copy.tenantWide
-          : (row.branchName ?? `#${row.branchId}`),
+          : (row.branchName ?? UNKNOWN_LABEL_VI),
     },
     {
       key: "expires",
@@ -122,12 +124,14 @@ export function PermissionAuditTable({
         <Item variant="outline">
           <ItemHeader>
             <ItemTitle>{formatVNDateTime(row.at)}</ItemTitle>
-            <Badge variant={getActionVariant(row.action)}>{row.action}</Badge>
+            <Badge variant={getActionVariant(row.action)}>
+              {copy.actionLabels[row.action] ?? UNKNOWN_LABEL_VI}
+            </Badge>
           </ItemHeader>
           <ItemContent>
             <ItemDescription>
               {copy.actor}:{" "}
-              <UserLabel userId={row.actorUserId} name={row.actorName} />
+              <UserLabel name={row.actorName} />
             </ItemDescription>
             <ItemDescription>
               {copy.target}:{" "}
@@ -135,15 +139,15 @@ export function PermissionAuditTable({
                 href={`/hr/staff/${row.targetUserId}/permissions`}
                 className="hover:underline"
               >
-                <UserLabel userId={row.targetUserId} name={row.targetName} />
+                <UserLabel name={row.targetName} />
               </Link>
             </ItemDescription>
-            <ItemDescription>{row.permissionKey}</ItemDescription>
+            <ItemDescription>{row.permissionLabel}</ItemDescription>
             <ItemDescription>
               {BRANCH_VI.long}:{" "}
               {row.branchId === null
                 ? copy.tenantWide
-                : (row.branchName ?? `#${row.branchId}`)}
+                : (row.branchName ?? UNKNOWN_LABEL_VI)}
             </ItemDescription>
             <ItemDescription>
               {copy.expires}:{" "}

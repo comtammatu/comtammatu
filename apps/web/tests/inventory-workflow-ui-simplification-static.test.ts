@@ -228,3 +228,41 @@ test("operations table columns do not override table typography role", () => {
     assert.doesNotMatch(block, /className:\s*"[^"]*\btext-muted-foreground\b/);
   }
 });
+
+test("Owner inventory management lists share the compact sectioned frame", () => {
+  const suppliers = read(
+    "app/(protected)/inventory/suppliers/suppliers-client.tsx",
+  );
+  const ingredients = read(
+    "app/(protected)/inventory/ingredients/ingredients-client.tsx",
+  );
+  const recipes = read("app/(protected)/inventory/recipes/recipes-client.tsx");
+
+  for (const source of [suppliers, ingredients, recipes]) {
+    assert.match(source, /<AppPage width="xwide" density="compact"/);
+    assert.match(
+      source,
+      /<AppSection className="overflow-hidden" contentFlush>/,
+    );
+  }
+
+  for (const source of [suppliers, ingredients]) {
+    assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  }
+
+  assert.match(recipes, /<DataTable[\s\S]{0,180}searchable/);
+  assert.doesNotMatch(recipes, /recipes\.length === 0/);
+});
+
+test("Inventory sidebar keeps workflow groups out of the visible sub-navigation", () => {
+  const shell = read(
+    "app/(protected)/inventory/_components/inventory-shell.tsx",
+  );
+
+  assert.match(shell, /title:\s*""/);
+  assert.match(
+    shell,
+    /withInventoryBranchNavScope\(baseTier2, currentBranchId\)\.flatMap\(/,
+  );
+  assert.match(shell, /\(group\) => group\.items/);
+});

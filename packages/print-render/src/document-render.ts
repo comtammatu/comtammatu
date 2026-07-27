@@ -37,6 +37,7 @@ import {
   BRAND_LOCKUP_NAME,
   BRAND_LOCKUP_TAGLINE,
   PAYMENT_LABEL,
+  PAYMENT_LABEL_FULL,
 } from "./labels";
 
 export type RenderOp =
@@ -536,7 +537,7 @@ function renderDocumentPaymentMethod(
   block: Extract<PrintDocumentBlock, { type: "paymentMethod" }>,
 ): RenderOp[] {
   if (!block.method) return [];
-  const label = PAYMENT_LABEL[block.method] ?? block.method;
+  const label = PAYMENT_LABEL[block.method] ?? PAYMENT_LABEL_FULL.unknown;
   return [ops.line(pair48("Thanh toán:", label))];
 }
 

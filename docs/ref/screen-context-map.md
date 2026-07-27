@@ -116,13 +116,14 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   toàn hệ thống về một nơi rõ ràng, tách khỏi công việc hằng ngày của Chi nhánh.
 - **Mục tiêu Người dùng (Goal):** Từ Chi nhánh mở một cửa Owner surface, sau
   đó chọn đúng mô-đun cần kiểm soát mà không đi qua nhiều shortcut rời rạc.
-- **Thông tin hiển thị:** Hai nhóm `Điều hành toàn hệ thống` và
-  `Nền tảng & thiết lập`; card link cho Tài chính, Đơn hàng, Kho hàng, Thực đơn,
+- **Thông tin hiển thị:** Hai nhóm `Điều hành` và `Nền tảng`; hàng điều hướng
+  cho Tài chính, Đơn hàng, Kho hàng, Thực đơn,
   Nhân sự, Chi nhánh và Cài đặt. Không hiển thị KPI khi chưa có contract dữ liệu
   Owner tương ứng.
-- **Quy chuẩn UX/UI:** Dùng `AppPage` + `AppSection` + `LinkCardGrid` +
-  `AppLinkCard`; không có Header/Breadcrumb dư thừa, các card là điểm vào chính.
-  1 cột trên phone, 2 cột trên tablet dọc và 3 cột trên desktop.
+- **Quy chuẩn UX/UI:** Dùng `AppPage` + `AppSection` + `ItemGroup` + `Item`;
+  không có Header/Breadcrumb dư thừa, toàn bộ hàng là điểm vào mô-đun.
+  Một cột trên phone, hai cột trên tablet dọc; desktop đặt nhóm Điều hành rộng
+  hơn nhóm Nền tảng nhưng giữ cùng thứ tự thông tin.
   Chỉ Owner được vào mọi route top-level của Owner surface.
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`, `/shift`, `/team`

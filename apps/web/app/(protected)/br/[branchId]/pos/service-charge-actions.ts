@@ -13,12 +13,12 @@ const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const branchIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Branch ID không hợp lệ" });
+  .positive({ error: "Mã chi nhánh không hợp lệ" });
 
 const orderIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Order ID không hợp lệ" });
+  .positive({ error: "Mã đơn hàng không hợp lệ" });
 
 const serviceChargeInputSchema = z.object({
   orderId: orderIdSchema,
@@ -91,7 +91,7 @@ export async function setOrderServiceCharge(
   if (!parsedBranch.success) {
     return {
       success: false,
-      error: "Branch ID không hợp lệ",
+      error: "Mã chi nhánh không hợp lệ",
       errorCode: POS_ERROR_CODES.INPUT_INVALID_BRANCH,
     };
   }

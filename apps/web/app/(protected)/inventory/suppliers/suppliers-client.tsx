@@ -21,7 +21,12 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  AppToolbar,
+} from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -302,68 +307,71 @@ export function SuppliersClient({
 
   return (
     <>
-      <AppPage width="wide" scroll>
+      <AppPage width="xwide" density="compact">
         <AppPageHeader
           eyebrow={messages.inventory.shell.moduleName}
           title={suppliersCopy.title}
           actions={
-            <Button type="button" size="touch" onClick={openCreate}>
-              <IconPlus className="size-4" />
+            <Button type="button" size="lg" onClick={openCreate}>
+              <IconPlus data-icon="inline-start" />
               {suppliersCopy.createAction}
             </Button>
           }
         />
-        <AppToolbar
-          search={
-            <InputGroup className="h-12 w-full sm:h-10">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="search"
-                name="supplier-search"
-                autoComplete="off"
-                placeholder={suppliersCopy.searchPlaceholder}
-                aria-label={suppliersCopy.searchPlaceholder}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                inputMode="search"
-              />
-            </InputGroup>
-          }
-          reset={
-            <Badge variant="outline" className="rounded-full">
-              {filtered.length}/{rows.length}
-            </Badge>
-          }
-        />
+        <AppSection className="overflow-hidden" contentFlush>
+          <AppToolbar
+            variant="inline"
+            search={
+              <InputGroup className="h-12 w-full sm:h-10">
+                <InputGroupAddon>
+                  <IconSearch />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="search"
+                  name="supplier-search"
+                  autoComplete="off"
+                  placeholder={suppliersCopy.searchPlaceholder}
+                  aria-label={suppliersCopy.searchPlaceholder}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  inputMode="search"
+                />
+              </InputGroup>
+            }
+            reset={
+              <Badge variant="outline">
+                {filtered.length}/{rows.length}
+              </Badge>
+            }
+          />
 
-        <DataTable
-          columns={columns}
-          data={filtered}
-          pageSize={25}
-          getRowKey={(s) => s.id}
-          emptyTitle={
-            search.trim()
-              ? suppliersCopy.emptySearchTitle
-              : suppliersCopy.emptyInitialTitle
-          }
-          emptyDescription={
-            search.trim()
-              ? suppliersCopy.emptySearchDescription
-              : suppliersCopy.emptyInitialDescription
-          }
-          emptyMode={search.trim() ? "no-results" : "no-data"}
-          mobileCardRender={(s, i) => (
-            <SupplierMobileCard
-              supplier={s}
-              index={i}
-              onEdit={openEdit}
-              onDelete={confirmDelete}
-              canManageItems={canManageItems}
-            />
-          )}
-        />
+          <DataTable
+            columns={columns}
+            data={filtered}
+            pageSize={25}
+            getRowKey={(s) => s.id}
+            emptyTitle={
+              search.trim()
+                ? suppliersCopy.emptySearchTitle
+                : suppliersCopy.emptyInitialTitle
+            }
+            emptyDescription={
+              search.trim()
+                ? suppliersCopy.emptySearchDescription
+                : suppliersCopy.emptyInitialDescription
+            }
+            emptyMode={search.trim() ? "no-results" : "no-data"}
+            mobileCardRender={(s, i) => (
+              <SupplierMobileCard
+                supplier={s}
+                index={i}
+                onEdit={openEdit}
+                onDelete={confirmDelete}
+                canManageItems={canManageItems}
+              />
+            )}
+          />
+        </AppSection>
       </AppPage>
 
       <SupplierDialog

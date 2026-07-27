@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { formatCount } from "@comtammatu/shared/format";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { INVENTORY_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import {
@@ -23,7 +24,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { StatusBadge } from "@/components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { AppSection } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import type { ProductionRunRow } from "../production-run-actions";
@@ -134,25 +135,33 @@ export function ProductionRunsClient({
     <AppSection
       className="overflow-hidden"
       contentFlush
-      icon={<IconListChecks />}
-      title={INVENTORY_VI.productionOrdersTab}
-      description={INVENTORY_VI.productionOrdersCardDescription}
-      badge={{
-        children: `${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`,
-        variant: "secondary",
-      }}
+      icon={embedded ? <IconListChecks /> : undefined}
+      title={embedded ? INVENTORY_VI.productionOrdersTab : undefined}
+      description={
+        embedded ? INVENTORY_VI.productionOrdersCardDescription : undefined
+      }
+      badge={
+        embedded
+          ? {
+              children: `${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`,
+              variant: "secondary",
+            }
+          : undefined
+      }
       action={
-        <Button
-          size={embedded ? "touch" : "default"}
-          render={
-            <Link
-              href={`${basePath}/new${branchId ? `?branchId=${branchId}` : ""}`}
-            />
-          }
-        >
-          <IconPlus data-icon="inline-start" />
-          {INVENTORY_VI.createOrderShort}
-        </Button>
+        embedded ? (
+          <Button
+            size="touch"
+            render={
+              <Link
+                href={`${basePath}/new${branchId ? `?branchId=${branchId}` : ""}`}
+              />
+            }
+          >
+            <IconPlus data-icon="inline-start" />
+            {INVENTORY_VI.createOrderShort}
+          </Button>
+        ) : undefined
       }
     >
       <DataTable
@@ -164,6 +173,13 @@ export function ProductionRunsClient({
         searchPlaceholder="Tìm số lệnh, thành phẩm, chi nhánh..."
         searchValue={search}
         onSearchChange={setSearch}
+        actions={
+          embedded ? null : (
+            <Badge variant="secondary">
+              {`${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`}
+            </Badge>
+          )
+        }
         filters={[
           {
             key: "status",
@@ -201,7 +217,7 @@ export function ProductionRunsClient({
 }
 
 function statusLabel(status: string) {
-  return STATUS_LABELS[status] ?? status;
+  return STATUS_LABELS[status] ?? getStatusBadgeMeta("inventory", status).label;
 }
 
 function ProductionRoute({

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
@@ -90,7 +91,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
   const grantList = grants ?? [];
   const auditList = recentAudit ?? [];
   const positionLabel = position
-    ? `${position.label_vi} (${position.code})`
+    ? position.label_vi
     : messages.owner.staffPermissions.positionUnassigned;
 
   // Resolve actor names for the "Lịch sử" tab
@@ -109,8 +110,14 @@ export default async function StaffPermissionsPage({ params }: Props) {
   );
 
   const defaultBranchName = profile.branch_id
-    ? (branchNameById.get(profile.branch_id) ?? String(profile.branch_id))
+    ? (branchNameById.get(profile.branch_id) ?? UNKNOWN_LABEL_VI)
     : messages.owner.staffPermissions.tenantWide;
+  const permissionLabelByKey = new Map(
+    permList.map((permission) => [
+      permission.key,
+      permission.description || UNKNOWN_LABEL_VI,
+    ]),
+  );
 
   return (
     <AppPage width="wide" density="compact">
@@ -205,6 +212,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
             }))}
             branchNameById={branchNameById}
             actorNameById={nameByUserId}
+            permissionLabelByKey={permissionLabelByKey}
           />
         </TabsContent>
       </AppPageTabs>

@@ -6,6 +6,7 @@ import {
   Eye as IconEye,
   EyeOff as IconEyeOff,
   Pencil as IconPencil,
+  Plus as IconPlus,
   Search as IconSearch,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -72,6 +73,7 @@ import {
   INVENTORY_VI,
   PRODUCT_VI,
 } from "@comtammatu/shared/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
 
 const ingredientFormCopy = messages.inventoryMaster.ingredientForm;
@@ -94,7 +96,7 @@ function categoryLabel(item: IngredientRow): string | null {
 }
 
 function itemKindLabel(item: IngredientRow): string {
-  return ITEM_KIND_LABELS[item.item_kind] ?? item.item_kind;
+  return ITEM_KIND_LABELS[item.item_kind] ?? UNKNOWN_LABEL_VI;
 }
 
 function categoryToneClass(
@@ -374,6 +376,7 @@ export function IngredientsClient({
 
   const filterBar = (
     <AppToolbar
+      variant="inline"
       search={
         <InputGroup
           size={isTouchLayout ? "touch" : "field"}
@@ -609,19 +612,20 @@ export function IngredientsClient({
   ];
 
   return (
-    <AppPage width="xwide" density="compact" scroll>
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow={messages.inventory.shell.moduleName}
         title={PRODUCT_VI.rawIngredient}
         actions={
-          <Button type="button" size="touch" onClick={openCreate}>
+          <Button type="button" size="lg" onClick={openCreate}>
+            <IconPlus data-icon="inline-start" />
             {INVENTORY_VI.createRawIngredient}
           </Button>
         }
       />
-      {filterBar}
 
       <AppSection className="overflow-hidden" contentFlush>
+        {filterBar}
         <DataTable
           columns={columns}
           data={filtered}

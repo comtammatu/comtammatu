@@ -15,7 +15,7 @@ const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const branchIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Branch ID không hợp lệ" });
+  .positive({ error: "Mã chi nhánh không hợp lệ" });
 
 // Matches the slim RPC RETURNS TABLE (PR-3) minus fields the client never
 // reads — see MenuItemDailyLimit.
@@ -111,7 +111,7 @@ export async function fetchMenuForPos(
 ): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   if (forceRefresh) {
@@ -241,7 +241,7 @@ export async function fetchDailyLimitsForPos(
 ): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(

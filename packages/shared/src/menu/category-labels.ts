@@ -1,3 +1,5 @@
+import { UNKNOWN_LABEL_VI } from "../labels/vi";
+
 export type CategoryType = "main_dish" | "side_dish" | "drink" | "dessert";
 
 export const SIDE_DISH_TYPE = "side_dish" as const;
@@ -10,3 +12,7 @@ export const CATEGORY_TYPE_LABELS = {
   drink: "Nước uống",
   dessert: "Tráng miệng",
 } satisfies Record<CategoryType, string> as Record<string, string>;
+
+export function getCategoryTypeLabelVi(type: string): string {
+  return CATEGORY_TYPE_LABELS[type] ?? UNKNOWN_LABEL_VI;
+}

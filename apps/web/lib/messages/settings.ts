@@ -256,7 +256,7 @@ export const settings = {
     stationName: "Tên trạm",
     position: "Thứ tự",
     categories: "Danh mục món ăn",
-    allFallback: "Tất cả (fallback)",
+    allFallback: "Tất cả (dự phòng)",
   },
   general: {
     identityTitle: "Định danh doanh nghiệp",
@@ -435,7 +435,7 @@ export const settings = {
     readinessKdsSetupReady: (count: number) =>
       `${formatCount(count)} trạm bếp active.`,
     readinessKdsSetupMissing:
-      "Chưa có trạm bếp active; có thể bán thủ công nếu quản lý chấp nhận fallback.",
+      "Chưa có trạm bếp hoạt động; có thể bán thủ công nếu quản lý chấp nhận phương án dự phòng.",
     readinessPaymentTitle: "Thanh toán & HĐĐT",
     readinessPaymentReady: (hddtReady: boolean) =>
       hddtReady
@@ -461,13 +461,13 @@ export const settings = {
     readinessPrinterOnline: "Agent in đang hoạt động.",
     readinessPrinterOffline: "Agent in offline — kiểm tra máy trạm in.",
     readinessPrinterNoConfig:
-      "Chưa có máy in active; được phép bán thủ công nếu quản lý chấp nhận fallback.",
+      "Chưa có máy in hoạt động; được phép bán thủ công nếu quản lý chấp nhận phương án dự phòng.",
     readinessPrinterNoAgent: "Chưa ghi nhận agent in cho chi nhánh.",
     readinessPrinterFailed: (count: number) =>
       `${formatCount(count)} lệnh in lỗi trong 24 giờ qua.`,
     readinessPrinterOnlineBadge: "Online",
     readinessPrinterOfflineBadge: "Offline",
-    readinessPrinterNoConfigBadge: "Fallback",
+    readinessPrinterNoConfigBadge: "Dự phòng",
     readinessPrinterCta: "Mở máy in",
     posSessionsLoadFailed: "Không thể tải ca POS",
     posSessionBillsLoadFailed: "Không thể tải đơn của ca POS",
@@ -481,7 +481,7 @@ export const settings = {
     readinessStaffReady: (count: number) =>
       `${formatCount(count)} nhân sự active được gán chi nhánh.`,
     readinessStaffMissing:
-      "Chưa thấy nhân sự active gán chi nhánh; kiểm tra trước khi mở ca thật.",
+      "Chưa thấy nhân sự đang hoạt động được gán chi nhánh; kiểm tra trước khi mở ca thật.",
     readinessStaffCta: "Mở nhân sự",
     readinessCheckoutTitle: "Duyệt kết ca",
     readinessCheckoutPending: (count: number) =>

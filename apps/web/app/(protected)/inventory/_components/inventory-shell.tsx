@@ -78,7 +78,14 @@ export function InventoryShell({
     ],
   );
   const tier2 = useMemo(
-    () => withInventoryBranchNavScope(baseTier2, currentBranchId),
+    () => [
+      {
+        title: "",
+        items: withInventoryBranchNavScope(baseTier2, currentBranchId).flatMap(
+          (group) => group.items,
+        ),
+      },
+    ],
     [baseTier2, currentBranchId],
   );
 

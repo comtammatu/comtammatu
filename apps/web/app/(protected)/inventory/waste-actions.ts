@@ -80,7 +80,7 @@ export async function createWasteEntry(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
 
@@ -187,7 +187,7 @@ export async function createWasteEntry(
 
   if (error) {
     if (error.code === "42501") {
-      return { success: false, error: "Không có quyền hoặc thiếu ảnh tier 1" };
+      return { success: false, error: "Không có quyền hoặc thiếu ảnh mức 1" };
     }
     if (error.code === "22023") {
       return {
@@ -249,7 +249,7 @@ export async function createExpiryWriteoff(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
 
@@ -350,7 +350,7 @@ export async function approveWaste(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
 

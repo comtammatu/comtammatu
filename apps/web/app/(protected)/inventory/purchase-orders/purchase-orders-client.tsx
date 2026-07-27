@@ -13,7 +13,6 @@ import { useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDate } from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
@@ -41,6 +40,10 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  getStatusBadgeMeta,
+  StatusBadge,
+} from "@/components/status-badge";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import {
@@ -313,14 +316,6 @@ function PurchaseOrderFields({
   );
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Nháp",
-  sent: "Đã duyệt",
-  partially_received: "Nhận một phần",
-  received: "Đã nhận đủ",
-  cancelled: "Đã hủy",
-};
-
 export function PurchaseOrdersClient({
   rows,
   suppliers,
@@ -362,7 +357,7 @@ export function PurchaseOrdersClient({
             row.code,
             row.supplierName,
             row.branchName,
-            STATUS_LABELS[row.status],
+            getStatusBadgeMeta("purchase-order", row.status).label,
           ],
           search,
         ),
@@ -457,9 +452,7 @@ export function PurchaseOrdersClient({
       key: "status",
       header: "Trạng thái",
       render: (row) => (
-        <Badge variant={row.status === "sent" ? "default" : "outline"}>
-          {STATUS_LABELS[row.status] ?? row.status}
-        </Badge>
+        <StatusBadge domain="purchase-order" value={row.status} />
       ),
     },
     {
@@ -491,6 +484,7 @@ export function PurchaseOrdersClient({
         actions={
           canCreate ? (
             <Button
+              size="lg"
               onClick={() => setCreateOpen(true)}
               disabled={
                 suppliers.length === 0 ||
@@ -504,7 +498,7 @@ export function PurchaseOrdersClient({
           ) : null
         }
       />
-      <AppSection contentFlush>
+      <AppSection className="overflow-hidden" contentFlush>
         <DataTable
           columns={columns}
           data={filteredRows}
@@ -534,9 +528,7 @@ export function PurchaseOrdersClient({
                 </ItemDescription>
               </ItemContent>
               <ItemFooter>
-                <Badge variant={row.status === "sent" ? "default" : "outline"}>
-                  {STATUS_LABELS[row.status] ?? row.status}
-                </Badge>
+                <StatusBadge domain="purchase-order" value={row.status} />
                 <ItemActions>{renderActions(row, true)}</ItemActions>
               </ItemFooter>
             </Item>

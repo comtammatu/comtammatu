@@ -23,6 +23,11 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { RowActionsMenu } from "@/components/row-actions-menu";
+import {
+  ROLE_LABEL_VI,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
 import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
 export interface BranchOption {
@@ -61,6 +66,14 @@ function StaffActiveBadge({ active }: { active: boolean | null }) {
       domain="active-state"
       value={active !== false ? "active" : "inactive"}
     />
+  );
+}
+
+function staffPositionLabel(member: StaffRow): string {
+  return (
+    member.position_label ??
+    ROLE_LABEL_VI[member.role as StaffRole] ??
+    UNKNOWN_LABEL_VI
   );
 }
 
@@ -157,7 +170,7 @@ export function StaffTable({
       header: STAFF_VI.role,
       render: (member) => (
         <Badge variant="secondary">
-          {member.position_label ?? member.role}
+          {staffPositionLabel(member)}
         </Badge>
       ),
     },
@@ -246,7 +259,7 @@ export function StaffTable({
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="flex flex-col gap-1">
                   <p className="text-muted-foreground">{STAFF_VI.role}</p>
-                  <p>{member.position_label ?? member.role}</p>
+                  <p>{staffPositionLabel(member)}</p>
                 </div>
                 <div className="flex flex-col gap-1">
                   <p className="text-muted-foreground">

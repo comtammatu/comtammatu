@@ -2,16 +2,13 @@ import { formatCount } from "@comtammatu/shared/format";
 
 export const owner = {
   dashboard: {
-    eyebrow: "Chỉ dành cho Owner",
-    title: "Quản trị",
-    description:
-      "Theo dõi, kiểm soát và thiết lập hoạt động toàn hệ thống từ một nơi.",
-    operationsTitle: "Điều hành toàn hệ thống",
-    operationsDescription:
-      "Mở từng mảng quản trị để xem dữ liệu và xử lý công việc ở cấp hệ thống.",
-    foundationTitle: "Nền tảng & thiết lập",
-    foundationDescription:
-      "Quản lý chi nhánh và các cấu hình dùng chung cho toàn hệ thống.",
+    eyebrow: "Toàn hệ thống",
+    title: "Trung tâm quản trị",
+    description: "Chọn mảng cần kiểm soát hoặc thiết lập.",
+    operationsTitle: "Điều hành",
+    operationsDescription: "Tài chính, bán hàng, kho, thực đơn và nhân sự.",
+    foundationTitle: "Nền tảng",
+    foundationDescription: "Chi nhánh và các thiết lập dùng chung.",
     financeDescription: "Dòng tiền, thu chi, đối soát và báo cáo tài chính.",
     ordersDescription: "Theo dõi đơn hàng và xử lý ngoại lệ bán hàng.",
     inventoryDescription: "Tồn kho, nhập hàng, kiểm kê và giá trị kho.",
@@ -19,7 +16,6 @@ export const owner = {
     hrDescription: "Nhân sự, ngày công, phân quyền và lương.",
     branchesDescription: "Danh sách và thông tin các chi nhánh.",
     settingsDescription: "Thanh toán, máy in và cấu hình toàn hệ thống.",
-    openModule: "Mở mô-đun",
   },
   nav: {
     ariaLabel: "Điều hướng quản trị",
@@ -82,6 +78,11 @@ export const owner = {
     empty: "Không có thay đổi nào.",
     time: "Thời gian",
     action: "Hành động",
+    actionLabels: {
+      grant: "Đã cấp",
+      revoke: "Đã thu hồi",
+      apply_template: "Đã áp dụng mẫu",
+    } as Record<string, string>,
     actor: "Người thao tác",
     target: "Đối tượng",
     permission: "Quyền",

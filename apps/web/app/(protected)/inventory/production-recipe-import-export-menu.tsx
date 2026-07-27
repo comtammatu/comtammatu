@@ -153,7 +153,7 @@ function ProductionRecipeImportDialog({
       selectedFileLabel={(fileName) => `Đã chọn: ${fileName}`}
       selectFileError={INVENTORY_VI.selectFile}
       resultTitle={INVENTORY_VI.importResultHeading}
-      submitLabel="Import"
+      submitLabel="Nhập dữ liệu"
       closeLabel={ACTIONS_VI.close}
       importAction={importProductionRecipes}
       successMessage={(summary) =>

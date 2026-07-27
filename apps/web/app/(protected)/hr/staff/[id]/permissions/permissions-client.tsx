@@ -25,7 +25,6 @@ import {
   Item,
   ItemActions,
   ItemContent,
-  ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
@@ -37,6 +36,7 @@ import { AppSection } from "@/components/surface";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { messages } from "@lib/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   applyTemplateAction,
   grantPermissionAction,
@@ -139,7 +139,7 @@ export function PermissionsClient({
       const options = groups.get(permission.module) ?? [];
       options.push({
         value: permission.key,
-        label: permission.description || permission.key,
+        label: permission.description || UNKNOWN_LABEL_VI,
       });
       groups.set(permission.module, options);
     }
@@ -171,6 +171,12 @@ export function PermissionsClient({
       : copy.sourceTemplate;
   }
 
+  function permissionLabel(grant: Grant): string {
+    return (
+      permissionByKey.get(grant.permissionKey)?.description ?? UNKNOWN_LABEL_VI
+    );
+  }
+
   function grantExpiry(grant: Grant) {
     if (!grant.validUntil) return copy.forever;
     const isExpired = new Date(grant.validUntil).getTime() <= Date.now();
@@ -178,15 +184,12 @@ export function PermissionsClient({
   }
 
   async function handleRevoke(grant: Grant) {
-    const description = permissionByKey.get(grant.permissionKey)?.description;
+    const description = permissionLabel(grant);
     const ok = await confirm({
       title: "Thu hồi quyền này?",
       description:
         "Nhân viên sẽ mất quyền truy cập tương ứng ngay sau khi thu hồi.",
-      details: [
-        { label: copy.permission, value: grant.permissionKey },
-        ...(description ? [{ label: "Mô tả", value: description }] : []),
-      ],
+      details: [{ label: copy.permission, value: description }],
       confirmText: "Thu hồi",
       variant: "destructive",
     });
@@ -202,7 +205,7 @@ export function PermissionsClient({
         toast.error(result.error ?? "Thất bại");
         return;
       }
-      toast.success(`Đã thu hồi ${grant.permissionKey}`);
+      toast.success(`Đã thu hồi ${description}`);
     });
   }
 
@@ -265,19 +268,9 @@ export function PermissionsClient({
       {
         key: "permission",
         header: copy.permission,
-        render: (grant) => {
-          const permission = permissionByKey.get(grant.permissionKey);
-          return (
-            <div className="flex flex-col gap-1">
-              <span className="font-medium">
-                {permission?.description ?? grant.permissionKey}
-              </span>
-              <span className="font-mono text-xs text-muted-foreground">
-                {grant.permissionKey}
-              </span>
-            </div>
-          );
-        },
+        render: (grant) => (
+          <span className="font-medium">{permissionLabel(grant)}</span>
+        ),
       },
       {
         key: "scope",
@@ -316,7 +309,7 @@ export function PermissionsClient({
             size="icon-sm"
             disabled={isPending}
             onClick={() => handleRevoke(grant)}
-            aria-label={`Thu hồi ${grant.permissionKey}`}
+            aria-label={`Thu hồi ${permissionLabel(grant)}`}
           >
             <IconTrash className="text-destructive" />
           </Button>
@@ -409,16 +402,10 @@ export function PermissionsClient({
           emptyTitle={`${targetFullName} chưa có quyền nào.`}
           emptyDescription="Áp dụng mẫu quyền hoặc thêm một quyền ngoại lệ."
           mobileCardRender={(grant) => {
-            const permission = permissionByKey.get(grant.permissionKey);
             return (
               <Item>
                 <ItemContent>
-                  <ItemTitle>
-                    {permission?.description ?? grant.permissionKey}
-                  </ItemTitle>
-                  <ItemDescription className="font-mono">
-                    {grant.permissionKey}
-                  </ItemDescription>
+                  <ItemTitle>{permissionLabel(grant)}</ItemTitle>
                   <div className="flex flex-wrap gap-2 pt-1 text-xs text-muted-foreground">
                     <span>{grantScope(grant)}</span>
                     <span>{grantSource(grant)}</span>
@@ -432,7 +419,7 @@ export function PermissionsClient({
                     size="icon-touch"
                     disabled={isPending}
                     onClick={() => handleRevoke(grant)}
-                    aria-label={`Thu hồi ${grant.permissionKey}`}
+                    aria-label={`Thu hồi ${permissionLabel(grant)}`}
                   >
                     <IconTrash className="text-destructive" />
                   </Button>

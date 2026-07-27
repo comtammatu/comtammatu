@@ -140,7 +140,7 @@ export type PermissionKey =
  * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
  * by a string-match test; bump when a migration adds/removes a catalog key.
  */
-export const PERMISSION_KEY_COUNT = 92;
+export const PERMISSION_KEY_COUNT = 90;
 
 /**
  * Pure function: check if a permission set contains a given key.

@@ -1,4 +1,5 @@
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import type { AuditLogRow } from "@/_lib/audit";
 import { AppEmptyState } from "@/components/surface";
@@ -43,5 +44,5 @@ function formatAction(action: string): string {
     "inventory.grn.created_from_po": "Tạo phiếu nhập từ PO",
     "inventory.grn.line_amended": "Sửa dòng phiếu nhập",
   };
-  return map[action] ?? action;
+  return action.includes(" · ") ? action : (map[action] ?? UNKNOWN_LABEL_VI);
 }

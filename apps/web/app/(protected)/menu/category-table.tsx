@@ -23,7 +23,7 @@ import { toggleCategoryActive } from "./actions";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { CATEGORY_TYPE_LABELS } from "./category-labels";
+import { getCategoryTypeLabelVi } from "./category-labels";
 import {
   DataTable,
   type DataTableColumn,
@@ -106,7 +106,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
           <span className="font-medium">{cat.name}</span>
           <div className="flex flex-col gap-1 sm:hidden">
             <p className="text-xs text-muted-foreground">
-              {CATEGORY_TYPE_LABELS[cat.type] ?? cat.type}
+              {getCategoryTypeLabelVi(cat.type)}
             </p>
             <p className="text-xs text-muted-foreground">
               Thứ tự {cat.sort_order}
@@ -121,7 +121,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
       className: "hidden sm:table-cell",
       render: (cat) => (
         <Badge variant="secondary">
-          {CATEGORY_TYPE_LABELS[cat.type] ?? cat.type}
+          {getCategoryTypeLabelVi(cat.type)}
         </Badge>
       ),
     },
@@ -164,7 +164,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
             <ItemContent>
               <ItemTitle>{cat.name}</ItemTitle>
               <ItemDescription>
-                {CATEGORY_TYPE_LABELS[cat.type] ?? cat.type} · Thứ tự{" "}
+                {getCategoryTypeLabelVi(cat.type)} · Thứ tự{" "}
                 {cat.sort_order}
               </ItemDescription>
             </ItemContent>

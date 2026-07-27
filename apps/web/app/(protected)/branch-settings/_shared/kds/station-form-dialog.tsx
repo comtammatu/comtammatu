@@ -140,7 +140,7 @@ export function StationFormDialog({
                   <Label>Danh mục món ăn</Label>
                   <p className="text-xs text-muted-foreground">
                     Chọn danh mục để trạm này tiếp nhận. Để trống = nhận tất cả
-                    món (fallback).
+                    món (dự phòng).
                   </p>
                   <Frame className="flex max-h-48 flex-col gap-2 overflow-y-auto p-3">
                     {categories.map((cat) => (

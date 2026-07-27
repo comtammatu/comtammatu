@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   AppEmptyState,
@@ -61,13 +62,14 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   // Audit log + branches list have no dependency on each other; profile
   // lookup needs the userIds from the audit rows, so it stays sequential.
   // Running audit + branches in parallel saves one RTT off TTFB.
-  const [auditResult, branchesResult] = await Promise.all([
+  const [auditResult, branchesResult, permissionKeysResult] = await Promise.all([
     query,
     supabase
       .from("branches")
       .select("id, name")
       .eq("branch_kind", "branch")
       .order("name"),
+    supabase.from("permission_keys").select("key, description"),
   ]);
   const auditRows = auditResult.data ?? [];
 
@@ -92,6 +94,12 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     (branches ?? []).map((b) => [b.id, b.name]),
   );
   const copy = messages.owner.staffAudit;
+  const permissionLabelByKey = new Map(
+    (permissionKeysResult.data ?? []).map((permission) => [
+      permission.key,
+      permission.description || UNKNOWN_LABEL_VI,
+    ]),
+  );
 
   // Target filter options derived from the visible rows. The active target is
   // appended even when no row surfaces it, so the Select can echo its value.
@@ -101,13 +109,13 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     if (!id || targetOptionById.has(id)) continue;
     targetOptionById.set(id, {
       id,
-      label: nameByUserId.get(id) ?? id.slice(0, 8),
+      label: nameByUserId.get(id) ?? UNKNOWN_LABEL_VI,
     });
   }
   if (params.target && !targetOptionById.has(params.target)) {
     targetOptionById.set(params.target, {
       id: params.target,
-      label: nameByUserId.get(params.target) ?? params.target.slice(0, 8),
+      label: nameByUserId.get(params.target) ?? UNKNOWN_LABEL_VI,
     });
   }
   const targetOptions = Array.from(targetOptionById.values()).sort((a, b) =>
@@ -133,6 +141,8 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
       branchName:
         r.branch_id === null ? null : (branchNameById.get(r.branch_id) ?? null),
       permissionKey: r.permission_key,
+      permissionLabel:
+        permissionLabelByKey.get(r.permission_key) ?? UNKNOWN_LABEL_VI,
       action: r.action,
       at: r.at,
       validUntil,

@@ -30,6 +30,21 @@ GTGT đầu vào được khấu trừ và kỳ hạch toán phải theo chính 
   khấu trừ khi đủ điều kiện hóa đơn/chứng từ/thanh toán. Không coi VAT là doanh
   thu hoặc lãi.
 
+Với phương pháp khấu trừ, chỉ dùng công thức sau khi đã khóa đúng kỳ và
+điều chỉnh:
+
+```text
+GTGT phải nộp
+= GTGT đầu ra
+- GTGT đầu vào được khấu trừ
++/- điều chỉnh của kỳ
+```
+
+Không dùng công thức này cho phương pháp trực tiếp. `GTGT đầu ra` là tổng VAT
+trên giao dịch bán ra thuộc kỳ theo chứng từ hiệu lực; không phải toàn bộ tiền
+khách trả. Hóa đơn hủy, điều chỉnh hoặc thay thế phải đi theo quan hệ chứng từ,
+không cộng cả bản cũ và bản mới.
+
 ## 3. HĐĐT từ máy tính tiền
 
 Khung hiện hành từ 01/07/2026 là Luật 108/2025, NĐ 252/2026, NĐ 254/2026,
@@ -73,15 +88,52 @@ Trước khi đưa vào export kế toán/khấu trừ:
    kiểm tra theo pháp luật áp dụng.
 5. Kỳ ghi nhận, giá trị vào tồn kho/tài sản/chi phí và công nợ được xác định.
 
+Từ 01/07/2025, hàng hóa/dịch vụ mua vào từ 5 triệu đồng trở lên, đã gồm VAT,
+phải có chứng từ thanh toán không dùng tiền mặt để đáp ứng điều kiện liên quan.
+Các lần mua cùng một người bán trong cùng ngày và trường hợp trả chậm/trả góp
+phải kiểm tra theo quy định chi tiết hiện hành; không tách hóa đơn hoặc dùng
+trạng thái `đã nhập` để suy ra đủ điều kiện.
+
 Hóa đơn đầu vào có nhiều mức thuế lưu một breakdown bất biến theo từng mức:
 giá trị trước VAT và tiền VAT đúng như chứng từ. Tổng `subtotal`, `vat_amount`
 và `total_amount` được suy ra từ breakdown; không dùng một thuế suất đại diện
 để tính ngược toàn hóa đơn.
 
-`is_vat_deductible` chỉ là kết quả phân loại có bằng chứng, không phải checkbox
-mặc định.
+Phải tách bốn trạng thái nghiệp vụ:
 
-## 5. Thuế TNDN
+| Trạng thái | Ý nghĩa |
+| --- | --- |
+| `input_vat_recorded` | VAT đúng như hóa đơn đầu vào đã nhập. |
+| `input_vat_pending_review` | Chưa đủ kiểm tra hồ sơ, mục đích sử dụng, thanh toán hoặc phân bổ. |
+| `input_vat_deductible` | Phần VAT đã có bằng chứng đáp ứng điều kiện khấu trừ. |
+| `input_vat_non_deductible` | Phần VAT không được khấu trừ theo kết luận có căn cứ. |
+
+Schema hiện chỉ lưu breakdown VAT trên hóa đơn. Chưa có trạng thái, bằng chứng
+thanh toán, phân bổ dùng chung, kỳ kê khai hoặc điều chỉnh để kết luận
+`input_vat_deductible`; vì vậy UI không được gọi VAT đã nhập là **GTGT được
+khấu trừ** hay tính **GTGT phải nộp**.
+
+## 5. Thiết bị, công cụ và VAT đầu vào
+
+Mua thiết bị không tự động là chi phí vận hành của kỳ:
+
+- Thiết bị đồng thời có lợi ích kinh tế trong tương lai, thời gian sử dụng trên
+  một năm và nguyên giá xác định tin cậy từ 30 triệu đồng là TSCĐ. Ghi nhận
+  nguyên giá tài sản; chỉ khấu hao kỳ được phân bổ vào chi phí sản xuất, kinh
+  doanh theo nơi sử dụng.
+- Thiết bị không đủ cả ba tiêu chí là công cụ/vật dụng. Giá trị được ghi trực
+  tiếp hoặc phân bổ dần vào chi phí theo chính sách kế toán và tính trọng yếu;
+  vẫn có thể cần theo dõi hiện vật.
+- Vật tư tiêu hao dùng trong kỳ mới là chi phí vận hành trực tiếp phù hợp.
+- VAT đầu vào đủ điều kiện khấu trừ được theo dõi riêng, không cộng vào nguyên
+  giá. VAT không được khấu trừ chỉ đưa vào nguyên giá/chi phí khi cách xử lý đó
+  phù hợp pháp luật và chính sách kế toán đã chọn.
+
+Finance hiện chưa có sổ TSCĐ/công cụ, ngày đưa vào sử dụng, nguyên giá, thời
+gian phân bổ, khấu hao lũy kế hoặc giá trị còn lại. Do đó chưa hiển thị **Giá
+trị thiết bị** như một số tài sản đáng tin cậy.
+
+## 6. Thuế TNDN
 
 Thuế TNDN dựa trên thu nhập tính thuế, không phải doanh thu POS hoặc số dư tiền.
 Theo pháp luật tại mốc kiểm tra, doanh nghiệp có thể thuộc diện miễn hoặc mức
@@ -92,7 +144,7 @@ Không hardcode ưu đãi. Finance chỉ hiển thị `thuế TNDN ước tính`
 quy tắc, nguồn dữ liệu và trạng thái `estimated`. Chỉ hiển thị **lợi nhuận sau
 thuế TNDN** sau kỳ kế toán đầy đủ và khóa sổ.
 
-## 6. Nguồn pháp lý
+## 7. Nguồn pháp lý
 
 Danh mục văn bản và ngày hiệu lực:
 [legal-framework-2026.md](legal-framework-2026.md).

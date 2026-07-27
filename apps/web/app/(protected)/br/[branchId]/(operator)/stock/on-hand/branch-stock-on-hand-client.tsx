@@ -12,6 +12,7 @@ import {
   Truck as IconTruck,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -135,7 +136,7 @@ function StockTouchRow({
           <StockRiskBadge item={item} />
         </div>
         <ItemDescription>
-          {[ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind, item.sku]
+          {[ITEM_KIND_LABELS[item.itemKind] ?? UNKNOWN_LABEL_VI, item.sku]
             .filter(Boolean)
             .join(" · ")}
         </ItemDescription>

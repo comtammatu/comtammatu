@@ -1,13 +1,19 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
+import ts from "typescript";
 
 const ROOT = process.cwd();
 
 const INCLUDE_DIRS = [
   "apps/web/app",
+  "apps/web/lib/messages",
+  "apps/print-agent/src",
   "docs",
+  "packages/print-render/src",
   "packages/shared/src/auth",
   "packages/shared/src/labels",
+  "packages/shared/src/messages",
+  "packages/ui/src",
 ];
 
 const EXCLUDED_RELATIVE_PATHS = new Set([
@@ -23,6 +29,9 @@ const EXCLUDED_PATH_SEGMENTS = new Set([
 ]);
 
 const ALLOWED_EXTENSIONS = new Set([".ts", ".tsx", ".md", ".html"]);
+const VI_DIACRITIC_PATTERN = /[À-ỹ]/;
+const TECHNICAL_UI_TERM_PATTERN =
+  /(?:\b(?:override|fallback|qty|gate|matching|cold-chain|lock|acquire|cap|credit|tier|zone|snapshot|ticket|import|export|dashboard)\b|(?:Branch|Job|Order) ID)/i;
 
 const CHECKS = [
   { pattern: /\bEmployee Portal\b/g, replacement: "Cổng nhân viên" },
@@ -65,6 +74,26 @@ const CHECKS = [
   { pattern: /\b(Ahamove|GrabFood|ShopeeFood|Baemin|ZaloPay|Zalo ZNS|SpeedSMS)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
   { pattern: /\b(QR Self-Order|Advanced Analytics|Delivery dispatch)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
   { pattern: /\b(Loyalty|Vouchers)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
+  { pattern: /submitLabel=["']Import["']/g, replacement: 'submitLabel="Nhập dữ liệu"' },
+  { pattern: /Ghi chú[^"\n]*\bmatching\b/gi, replacement: "dùng “đối soát”" },
+  { pattern: /Không tải được dashboard/gi, replacement: "dùng “tổng quan”" },
+];
+
+const UI_BOUNDARY_CHECKS = [
+  {
+    pattern:
+      /(?:[A-Z][A-Z0-9_]*|[\w$.]*labels)\s*\[\s*([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*\]\s*\?\?\s*\1\b/gi,
+    replacement: "dùng nhãn dự phòng an toàn, không trả lại mã thô",
+  },
+  {
+    pattern:
+      /(?:toast|notify)\.error\(\s*(?:error|err|upErr)\.message\b/g,
+    replacement: "ghi lỗi vào log và hiển thị ERRORS_VI.fallback",
+  },
+  {
+    pattern: /\{\s*error\.digest\b/g,
+    replacement: "không hiển thị digest trên UI",
+  },
 ];
 
 function hasAllowedExtension(file) {
@@ -77,6 +106,46 @@ function getLineNumber(text, index) {
     if (text[i] === "\n") line += 1;
   }
   return line;
+}
+
+function findTechnicalUiCopy(text, relPath) {
+  const sourceFile = ts.createSourceFile(
+    relPath,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    relPath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const matches = [];
+
+  function visit(node) {
+    const isCopyNode =
+      ts.isStringLiteralLike(node) ||
+      node.kind === ts.SyntaxKind.TemplateHead ||
+      node.kind === ts.SyntaxKind.TemplateMiddle ||
+      node.kind === ts.SyntaxKind.TemplateTail ||
+      node.kind === ts.SyntaxKind.JsxText;
+
+    if (isCopyNode) {
+      const value = "text" in node ? node.text : node.getText(sourceFile);
+      if (
+        VI_DIACRITIC_PATTERN.test(value) &&
+        TECHNICAL_UI_TERM_PATTERN.test(value)
+      ) {
+        matches.push({
+          line:
+            sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
+              .line + 1,
+          value,
+        });
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return matches;
 }
 
 async function collectFiles(dir, files = []) {
@@ -146,6 +215,47 @@ async function main() {
           `${relPath}:${getLineNumber(text, index)} — "${match[0]}" → ${check.replacement}`,
         );
       }
+    }
+
+    if (relPath.endsWith(".ts") || relPath.endsWith(".tsx")) {
+      for (const match of findTechnicalUiCopy(text, relPath)) {
+        failures.push(
+          `${relPath}:${match.line} — "${match.value}" → dùng thuật ngữ tiếng Việt trên nội dung hiển thị`,
+        );
+      }
+      for (const check of UI_BOUNDARY_CHECKS) {
+        const matches = [...text.matchAll(check.pattern)];
+        for (const match of matches) {
+          const index = match.index ?? 0;
+          failures.push(
+            `${relPath}:${getLineNumber(text, index)} — "${match[0]}" → ${check.replacement}`,
+          );
+        }
+      }
+    }
+  }
+
+  const unsafeFixture = await readFile(
+    join(ROOT, "scripts/fixtures/lint-copy/unsafe-ui.tsx"),
+    "utf8",
+  );
+  if (!findTechnicalUiCopy(unsafeFixture, "unsafe-ui.tsx").length) {
+    failures.push(
+      "lint-copy fixture không kích hoạt guard thuật ngữ kỹ thuật trên UI",
+    );
+  }
+  for (const check of UI_BOUNDARY_CHECKS) {
+    if (![...unsafeFixture.matchAll(check.pattern)].length) {
+      failures.push(`lint-copy fixture không kích hoạt guard: ${check.replacement}`);
+    }
+  }
+  const safeFixture = await readFile(
+    join(ROOT, "scripts/fixtures/lint-copy/safe-acronyms.tsx"),
+    "utf8",
+  );
+  for (const check of [...CHECKS, ...UI_BOUNDARY_CHECKS]) {
+    if ([...safeFixture.matchAll(check.pattern)].length) {
+      failures.push(`lint-copy báo sai với fixture viết tắt hợp lệ: ${check.replacement}`);
     }
   }
 

@@ -77,7 +77,7 @@ export function MenuImportExportMenu() {
               ) : (
                 <IconFileSpreadsheet className="mr-2 size-4" />
               )}
-              Import / Export
+              {MENU_VI.importExport}
             </Button>
           }
         />
@@ -133,7 +133,7 @@ function MenuImportDialog({
       selectedFileLabel={(fileName) => `Đã chọn: ${fileName}`}
       selectFileError={INVENTORY_VI.selectFile}
       resultTitle={INVENTORY_VI.importResultHeading}
-      submitLabel="Import"
+      submitLabel="Nhập dữ liệu"
       closeLabel={ACTIONS_VI.close}
       importAction={importMenu}
       successMessage={() => MENU_VI.importSuccess}

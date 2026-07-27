@@ -8,7 +8,7 @@ import {
   formatVND,
 } from "@lib/inventory/format";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
-import { tRoute } from "../_lib/dictionary";
+import { tRoute, type InventoryRouteKey } from "../_lib/dictionary";
 import { getEmbeddedIngredientBaseUnitDisplayName } from "../_lib/unit-display";
 import { IssuesClient } from "./issues-client";
 import type {
@@ -33,8 +33,8 @@ function movementSourceLabel(reason: unknown): string {
 
   if (rawReason.startsWith("matu-platform import:")) {
     return transferCode
-      ? `Import matu-platform · ${transferCode}`
-      : "Import matu-platform";
+      ? `Đồng bộ từ matu-platform · ${transferCode}`
+      : "Đồng bộ từ matu-platform";
   }
   if (/tiêu hao|tieu hao/i.test(rawReason)) return "Báo cáo tiêu hao";
   if (rawReason) return rawReason;
@@ -119,7 +119,7 @@ interface IssuesPageContentProps {
     endDate?: string | string[];
     startDate?: string | string[];
   }>;
-  listBasePath?: string;
+  listBasePath?: InventoryRouteKey;
   detailBasePath?: string;
   scope?: IssuesScope;
   embedded?: boolean;

@@ -1,4 +1,4 @@
-import { ORDER_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
+import { getOrderTypeLabelVi } from "@comtammatu/shared/labels";
 import { getKdsTicketDisplayStatus } from "./order-status";
 
 /**
@@ -13,13 +13,8 @@ export function shouldShowTicketStatusBadge(status: string): boolean {
   return getKdsTicketDisplayStatus(status) !== "pending";
 }
 
-const ORDER_TYPE_CONFIG: Record<string, { label: string }> = {
-  dine_in: { label: ORDER_TYPE_LABELS_VI.dine_in },
-  takeaway: { label: ORDER_TYPE_LABELS_VI.takeaway },
-};
-
 export function getOrderTypeLabel(orderType: string): string {
-  return ORDER_TYPE_CONFIG[orderType]?.label ?? orderType;
+  return getOrderTypeLabelVi(orderType);
 }
 
 function formatKitchenTicketDisplay(ticketNumber: string): string {

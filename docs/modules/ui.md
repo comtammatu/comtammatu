@@ -210,6 +210,9 @@ Luồng dùng Stitch:
 Khi visual contract đổi, repo đổi trước rồi mới sync mirror Stitch. Khi chỉ có
 Stitch output đổi, runtime và docs không tự động thay đổi.
 
+Cấu hình Google Stitch MCP Server được khai báo tại `.mcp.json` / `.codex/config.toml` thông qua `@_davideast/stitch-mcp` (`npx -y @_davideast/stitch-mcp proxy`).
+
+
 ## Branch Operator Landing
 
 Branch home là surface mobile-first cho nhân viên và quản lý chi nhánh ở

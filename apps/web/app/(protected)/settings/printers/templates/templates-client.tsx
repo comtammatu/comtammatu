@@ -58,6 +58,7 @@ import {
   type TemplateBlock,
 } from "@comtammatu/print-render/templates";
 import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
 import {
   previewPrintTemplate,
@@ -146,7 +147,7 @@ const FREE_BLOCK_TYPES = ["text", "row", "divider", "spacer"] as const;
 const MAX_BLOCKS = 160;
 
 function blockLabel(type: string): string {
-  return BLOCK_LABEL[type] ?? type;
+  return BLOCK_LABEL[type] ?? UNKNOWN_LABEL_VI;
 }
 
 function hasCondition(block: TemplateBlock): boolean {

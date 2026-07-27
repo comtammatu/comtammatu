@@ -43,13 +43,13 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 **Decision:** `apps/print-agent` chỉ hỗ trợ LAN printer transport. Không runtime flag chọn transport, không USB capability columns, không USB native binding. LAN-only enforced trong baseline: `printers` CHECK `printers_connection_type_lan_only` (`connection_type='lan'`), không cột `usb_*`, `printer_agents` không cột `transport`; `src/usb.ts` đã gỡ. Branch rollout = terminal-linked Android gateway + LAN printer.
 
-## D012: Tier-2 trim + gộp role POS — định hướng phần mềm hỗ trợ Hộ Kinh Doanh (2026-06-10)
+## D012: Tier-2 trim + gộp role POS — định hướng vận hành tinh gọn (2026-06-10)
 
 **Decision:**
 
 1. LOẠI khỏi backlog (không đề xuất lại): Local-First/offline POS, VNPay (VietQR đủ), native POS Flutter/Capacitor (PWA chạy ổn — tái khẳng định bởi D062).
 2. Role POS: sàn bán hàng dùng application role `cashier`; phục vụ là công việc trong ca, không phải role auth riêng.
-3. Mọi tính năng mới qua **phễu "phần mềm hỗ trợ HKD"**: giảm thao tác chủ + nhân viên hiện có; không thêm nghi thức quản trị (phân ca, duyệt nhiều tầng, kế toán doanh nghiệp) HKD không dùng.
+3. Mọi tính năng mới qua **phễu vận hành tinh gọn**: giảm thao tác chủ + nhân viên hiện có; không thêm nghi thức quản trị không phục vụ vận hành thực tế.
 
 ## D014: Chương trình hợp nhất tầng molecule UI — W0–W6 (2026-06-11)
 
@@ -61,13 +61,13 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 1. `comtammatu` là repo sản phẩm duy nhất. Không fork repo, không dựng
    app/package tree hoặc runtime sản phẩm song song.
-2. HKD stack `matu-prod + app.comtammatu.com` tạm ngưng active delivery từ
+2. mô hình pháp nhân cũ stack `matu-prod + app.comtammatu.com` tạm ngưng active delivery từ
    commit `baf3720f8`. Nó giữ historical/runtime evidence và temporary type
    source, nhưng không nhận writer, deploy hoặc relink mới nếu chưa có owner
    rollback decision.
 3. Mọi delivery sau cutoff tiếp tục trong repo này và hướng tới
    `matu-greenfield-company + web.comtammatu.com`.
-4. Không dual-write, không import Auth/dữ liệu vận hành/provider secrets từ HKD.
+4. Không dual-write, không import Auth/dữ liệu vận hành/provider secrets từ mô hình pháp nhân cũ.
    Greenfield chỉ thành Production sau schema replay, negative tests,
    backup/restore, provider/print smoke và owner promotion gate.
 
@@ -84,7 +84,7 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 ## D017: Owner là L0 Tenant Control; Branch Manager dùng L1 Branch Runtime (2026-06-13, sửa 2026-07-18)
 
-**Decision (net):** Product framing = `bộ phần mềm quản lý vận hành và bán hàng` cho HKD. Owner vào trực tiếp `/`; các module L0 ổn định là `/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, `/branches`, `/settings`. `branch_manager` vào `/br/{branchId}` và chỉ dùng workflow branch-native. Role/route là cổng bề mặt; action + row access tiếp tục qua permission keys, RPC/RLS và branch scope.
+**Decision (net):** Product framing = `bộ phần mềm quản lý vận hành và bán hàng`. Owner vào trực tiếp `/`; các module L0 ổn định là `/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, `/branches`, `/settings`. `branch_manager` vào `/br/{branchId}` và chỉ dùng workflow branch-native. Role/route là cổng bề mặt; action + row access tiếp tục qua permission keys, RPC/RLS và branch scope.
 
 **Canonical:** `docs/spec/role-route-matrix.md`. Không đặt workflow branch-scoped vào route L0.
 
@@ -96,9 +96,9 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 **Decision (net, sau D050/ADR 0012):** (1) 2 họ chrome, không có họ thứ 3 — **Owner control** = `AppShell` cho Owner tại `/` và các domain route family, **Branch** = Operator plane `/br/[branchId]/*` + station chrome (POS/KDS/Runner); (2) một capability = một route home theo `role-route-matrix.md`; (3) padding một chủ = `AppPage`; (4) nav là data — mọi sidebar/bottom-nav project từ `nav-config.ts`, cấm `ShellNavGroup[]` literal trong shell. Canonical + gates: `docs/spec/design-system.md` § Structural Governance. Đảo điểm nào phải sửa quyết định này trước.
 
-## D020: Enterprise Accounting / TT 200 / VAS is outside the HKD product (2026-06-13)
+## D020: Enterprise Accounting / TT 200 / VAS is outside the product (2026-06-13)
 
-**Decision:** Enterprise accounting / TT 200 / VAS KHÔNG thuộc product contract. Finance authority = HKD operating finance. `accounting_periods` close/reopen là DB-only owner support, không app route nào expose. Tái lập enterprise-accounting → phải sửa quyết định này + ADR 0006 trước. Canonical: `docs/modules/finance.md` § Accounting Advanced Boundary; migration chain thuộc ADR 0006.
+**Decision:** Enterprise accounting / TT 200 / VAS KHÔNG thuộc product contract. Finance authority = operating finance. `accounting_periods` close/reopen là DB-only owner support, không app route nào expose. Tái lập enterprise-accounting → phải sửa quyết định này + ADR 0006 trước. Canonical: `docs/modules/finance.md` § Accounting Advanced Boundary; migration chain thuộc ADR 0006.
 
 ## D022: HĐĐT lập realtime tại payment; không nháp-local sau thanh toán (2026-06-14)
 
@@ -114,7 +114,7 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 1. `standard_days` = số công chuẩn owner chọn cho tháng đang xem (mặc định 26) + clamp `working/standard ≤ 1`. Đây là tham số preview, **không** là một kỳ lương cần tạo trước; giá trị được snapshot khi chốt bảng lương.
 2. Việc trong ca: cấu hình theo vị trí — chi tiết thuộc D052 (đã thay mô hình template/override cũ).
-3. Lương qua HĐLĐ active trong kỳ khi có, fallback `employees.base_salary` cho dữ liệu HKD cũ.
+3. Lương qua HĐLĐ active trong kỳ khi có, fallback `employees.base_salary` cho dữ liệu hiện có.
 4. Ca làm: GIỮ (D027), đặt ở "Thiết lập".
 5. Lương live chỉ đọc các nguồn vận hành hiện tại: ca đã checkout, đơn nghỉ đã duyệt, HĐLĐ/hồ sơ nhân viên và điều chỉnh lương có nguồn. `payroll_entries` chỉ là snapshot bất biến sau khi chốt, không là nguồn tính lại.
 6. HR chỉ **chốt nghĩa vụ lương**. Thanh toán tiền mặt/chuyển khoản và bằng chứng đối soát thuộc Finance `expenses` (category `salary`); HR không được đánh dấu `paid`.
@@ -156,11 +156,11 @@ Công thức metric canonical: `docs/ref/operational-data-contract.md`. Mở r�
 
 **Phán quyết (net):**
 
-- (a) Payroll HKD có HĐLĐ/BHXH tối thiểu — canonical `docs/ref/labor-contracts.md` + `payroll-pit.md`.
+- (a) Payroll có HĐLĐ/BHXH tối thiểu — canonical `docs/ref/labor-contracts.md` + `payroll-pit.md`.
 - (b) **Runner = đồng hồ chờ:** chỉ hiện đơn ĐANG LÀM (`['pending','preparing']`, không lane `ready`), không mang nghĩa "Gọi số", có thang tuổi + overflow.
 - (c) Tách hóa đơn không thuộc payment contract hiện hành; muốn mở phải có
   decision mới và atomic multi-payment RPC.
-- (d) Danh tính HKD: SSoT = `tenants.legal_name`/`tax_code` (KHÔNG `system_settings`).
+- (d) Danh tính pháp nhân: SSoT = `tenants.legal_name`/`tax_code` (KHÔNG `system_settings`).
 - (e) VAT derive theo bậc qua `resolve_gtgt_rate` + shared mirror, không hardcode; HĐ cũ 8% = sửa-tiến (đối soát hồi tố là việc kế toán). Canonical: `docs/ref/einvoice-tax.md` § 2.1.
 - (f) Hạ ưu tiên: refund sum-guard (unreachable), `refundOrderPayment` 2-RPC non-atomic (rough-edge).
 
@@ -241,7 +241,7 @@ cùng một slice.
 
 **Decision (net):** Greenfield `matu-greenfield-company` là type source duy nhất
 và `pnpm db:types` phải nhận literal `SUPABASE_PROJECT_ID` của ref Greenfield.
-HKD `matu-prod` không còn là type source. Vercel Preview bị tắt và không nhận
+mô hình pháp nhân cũ `matu-prod` không còn là type source. Vercel Preview bị tắt và không nhận
 Supabase ENV. Preview Branch chỉ được owner vận hành on-demand; agent-side
 mutation vẫn cần trusted registration. Per-PR auto-provision vẫn Parked đến khi
 target, seed safety, teardown, spend, env binding và trusted registration được
@@ -584,12 +584,10 @@ repo `comtammatu` trên target `matu-greenfield-company`. Kho Bếp TT và workf
 `production` thuộc site `central_kitchen`; không khôi phục Production tại chi
 nhánh.
 
-**Consequences:** `matu-prod` giữ freeze như suspended HKD stack.
-`matu-greenfield-company` là target delivery tương lai của cùng repo, không tự
-promote trước khi đủ gate và không dùng writer/domain cũ.
-Authority Greenfield nằm tại
-`docs/plan/adr/0015-greenfield-authorization-model.md`; phạm vi AP/vận hành
-trung tâm nằm tại `docs/plan/adr/0017-ap-central-operations.md`.
+**Consequences:** `matu-prod` giữ freeze như suspended mô hình pháp nhân cũ stack.
+`matu-greenfield-company` là target delivery hiện tại của cùng repo, không dùng
+writer/domain cũ. Phạm vi AP/vận hành trung tâm nằm tại
+`docs/plan/adr/0017-ap-central-operations.md`.
 
 ## D083: PO một cấp + VAT món + Finance HĐ GTGT/NCC (2026-07-27)
 
@@ -605,7 +603,7 @@ thanh toán NCC trên surface hiện có.
 ## D084: Mô hình pháp lý công ty cổ phần sau cutoff (2026-07-27)
 
 **Decision (owner):** Delivery sau `baf3720f8` trong repo `comtammatu` được mô
-hình hóa cho Công ty Cổ Phần Chén Sứ. Historical HKD records trên `matu-prod`
+hình hóa cho Công ty Cổ Phần Chén Sứ. Historical mô hình pháp nhân cũ records trên `matu-prod`
 giữ nguyên legal context tại thời điểm phát sinh; không được diễn giải hồi tố
 theo mô hình công ty.
 

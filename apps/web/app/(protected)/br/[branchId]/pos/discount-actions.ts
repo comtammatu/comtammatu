@@ -18,12 +18,12 @@ const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const branchIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Branch ID không hợp lệ" });
+  .positive({ error: "Mã chi nhánh không hợp lệ" });
 
 const orderIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Order ID không hợp lệ" });
+  .positive({ error: "Mã đơn hàng không hợp lệ" });
 
 const orderItemIdSchema = z.coerce
   .number()
@@ -196,7 +196,7 @@ export async function applyOrderDiscount(
   if (!parsedBranch.success) {
     return {
       success: false,
-      error: "Branch ID không hợp lệ",
+      error: "Mã chi nhánh không hợp lệ",
       errorCode: POS_ERROR_CODES.INPUT_INVALID_BRANCH,
     };
   }
@@ -293,7 +293,7 @@ export async function clearOrderDiscount(
 ): Promise<ActionResult<{ order_id: number; total_amount: number }>> {
   const parsedBranch = branchIdSchema.safeParse(branchId);
   if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const parsed = clearDiscountInputSchema.safeParse({ orderId, reason });
@@ -434,7 +434,7 @@ export async function applyOrderItemDiscount(
   if (!parsedBranch.success) {
     return {
       success: false,
-      error: "Branch ID không hợp lệ",
+      error: "Mã chi nhánh không hợp lệ",
       errorCode: POS_ERROR_CODES.INPUT_INVALID_BRANCH,
     };
   }
@@ -522,7 +522,7 @@ export async function clearOrderItemDiscount(
   if (!parsedBranch.success) {
     return {
       success: false,
-      error: "Branch ID không hợp lệ",
+      error: "Mã chi nhánh không hợp lệ",
       errorCode: POS_ERROR_CODES.INPUT_INVALID_BRANCH,
     };
   }
@@ -644,7 +644,7 @@ export async function splitOrder(
   if (!parsedBranch.success) {
     return {
       success: false,
-      error: "Branch ID không hợp lệ",
+      error: "Mã chi nhánh không hợp lệ",
       errorCode: POS_ERROR_CODES.INPUT_INVALID_BRANCH,
     };
   }
@@ -764,7 +764,7 @@ export async function mergeOrders(
   if (!parsedBranch.success) {
     return {
       success: false,
-      error: "Branch ID không hợp lệ",
+      error: "Mã chi nhánh không hợp lệ",
       errorCode: POS_ERROR_CODES.INPUT_INVALID_BRANCH,
     };
   }

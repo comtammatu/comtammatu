@@ -1,7 +1,7 @@
 # Architecture Landing
 
 Điểm vào chung cho tài liệu kiến trúc cấp hệ thống. `docs/ref/glossary.md` mô tả
-vocabulary của source hiện tại; HKD runtime `matu-prod + app.comtammatu.com` đã
+vocabulary của source hiện tại; mô hình pháp nhân cũ runtime `matu-prod + app.comtammatu.com` đã
 tạm ngưng từ commit `baf3720f8`.
 
 Target Greenfield được triển khai tiếp trong chính repo `comtammatu`, dùng
@@ -14,9 +14,7 @@ phẩm song song.
 - [../ref/glossary.md](../ref/glossary.md) — current-state vocabulary của hệ thống đang chạy
 - [../spec/architecture.md](../spec/architecture.md) — tổng quan kiến trúc hệ thống hiện tại
 - [target-modules-tech-stack-project-structure.md](target-modules-tech-stack-project-structure.md) — Modules, Tech Specs, Infra và Project Structure mục tiêu
-- [target-auth-authorization.md](target-auth-authorization.md) — Auth, scoped RBAC, route access, RLS và RPC mục tiêu
 - [../plan/decisions.md](../plan/decisions.md) — net-effect decisions, gồm D015/D082
-- [../plan/adr/0015-greenfield-authorization-model.md](../plan/adr/0015-greenfield-authorization-model.md) — authorization target cho same-repo transition
 - [../spec/database-schema.md](../spec/database-schema.md) — schema chuẩn và ranh giới dữ liệu
 - [../modules/auth.md](../modules/auth.md) — Auth, JWT claims và ACL của hệ thống hiện tại
 - [../ref/business-context.md](../ref/business-context.md) — business boundary và phạm vi sản phẩm

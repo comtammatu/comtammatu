@@ -57,13 +57,13 @@ Không tạo hóa đơn mới chỉ vì ứng dụng chưa có số hóa đơn.
 
 ## Xử Lý Lỗi
 
-| Tình huống | Xử lý |
-| --- | --- |
-| Bản nháp có `last_error` | Sửa dữ liệu/cấu hình rồi dùng phát hành lại trên `/finance/invoices` |
-| CQT từ chối cấp mã | Kiểm MST, mẫu số, ký hiệu và dữ liệu người mua |
-| Timeout hoặc trạng thái `signing`/`submitted` kéo dài | Tra `provider_ref` trên Viettel; không phát hành trùng |
-| Cần PDF/XML | Tải từ Viettel S-invoice và lưu theo quy trình chứng từ của đơn vị |
-| Cần hủy/thay thế | Dùng thao tác trên `/finance/invoices`, sau đó đối chiếu kết quả trên Viettel |
+| Tình huống                                            | Xử lý                                                                         |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Bản nháp có `last_error`                              | Sửa dữ liệu/cấu hình rồi dùng phát hành lại trên `/finance/invoices`          |
+| CQT từ chối cấp mã                                    | Kiểm MST, mẫu số, ký hiệu và dữ liệu người mua                                |
+| Timeout hoặc trạng thái `signing`/`submitted` kéo dài | Tra `provider_ref` trên Viettel; không phát hành trùng                        |
+| Cần PDF/XML                                           | Tải từ Viettel S-invoice và lưu theo quy trình chứng từ của đơn vị            |
+| Cần hủy/thay thế                                      | Dùng thao tác trên `/finance/invoices`, sau đó đối chiếu kết quả trên Viettel |
 
 ## Verify Gate
 

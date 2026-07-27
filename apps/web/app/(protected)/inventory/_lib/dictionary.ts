@@ -3,6 +3,7 @@ import {
   type LabelContext,
   type LabelVariants,
 } from "./labels";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
 // ---------------------------------------------------------------------------
 // Dictionary — centralized Vietnamese labels for the Inventory module
@@ -15,7 +16,7 @@ interface InventoryDictionary {
   terms: Record<string, LabelVariants>;
 }
 
-const VI_DICTIONARY: InventoryDictionary = {
+const VI_DICTIONARY = {
   // ------------------------------------------------------------------
   // Sidebar navigation items
   // ------------------------------------------------------------------
@@ -78,7 +79,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     draft: { long: "Nháp" },
     confirmed: { short: "Xác nhận", long: "Đã xác nhận" },
     sent: { long: "Đã gửi" },
-    credited: { long: "Đã ghi credit" },
+    credited: { long: "Đã ghi có" },
     refunded: { long: "Đã hoàn tiền" },
     partially_received: { short: "Nhận một phần", long: "Đã nhận một phần" },
     in_transit: { short: "Đang giao", long: "Đang vận chuyển" },
@@ -136,7 +137,11 @@ const VI_DICTIONARY: InventoryDictionary = {
     branchKitchen: { short: "Bếp", long: "Bếp chi nhánh" },
     productionStorage: { short: "Kho SX", long: "Kho sản xuất" },
   },
-};
+} satisfies InventoryDictionary;
+
+export type InventoryNavKey = keyof typeof VI_DICTIONARY.navigation;
+export type InventoryRouteKey = keyof typeof VI_DICTIONARY.routes;
+export type InventoryTermKey = keyof typeof VI_DICTIONARY.terms;
 
 // ---------------------------------------------------------------------------
 // Accessor functions
@@ -146,31 +151,29 @@ export function tStatus(
   status: string,
   context: LabelContext = "table",
 ): string {
-  const variants = VI_DICTIONARY.status[status];
-  if (!variants) return status;
+  const variants =
+    VI_DICTIONARY.status[status as keyof typeof VI_DICTIONARY.status];
+  if (!variants) return UNKNOWN_LABEL_VI;
   return resolveLabelByContext(variants, context);
 }
 
 export function tNav(
-  key: string,
+  key: InventoryNavKey,
   context: LabelContext = "navigation",
 ): string {
-  const variants = VI_DICTIONARY.navigation[key];
-  if (!variants) return key;
-  return resolveLabelByContext(variants, context);
+  return resolveLabelByContext(VI_DICTIONARY.navigation[key], context);
 }
 
 export function tRoute(
-  path: string,
+  path: InventoryRouteKey,
   context: LabelContext = "heading",
 ): string {
-  const variants = VI_DICTIONARY.routes[path];
-  if (!variants) return path;
-  return resolveLabelByContext(variants, context);
+  return resolveLabelByContext(VI_DICTIONARY.routes[path], context);
 }
 
-export function tTerm(key: string, context: LabelContext = "table"): string {
-  const variants = VI_DICTIONARY.terms[key];
-  if (!variants) return key;
-  return resolveLabelByContext(variants, context);
+export function tTerm(
+  key: InventoryTermKey,
+  context: LabelContext = "table",
+): string {
+  return resolveLabelByContext(VI_DICTIONARY.terms[key], context);
 }

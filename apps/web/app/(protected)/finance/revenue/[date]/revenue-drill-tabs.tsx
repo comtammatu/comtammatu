@@ -13,6 +13,10 @@ import Link from "next/link";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  getOrderTypeLabelVi,
+  getPaymentMethodLabelVi,
+} from "@comtammatu/shared/labels";
 import { AppEmptyState, AppSection, KpiRow } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
@@ -27,16 +31,6 @@ import { messages } from "@lib/messages";
 import type { HourSummary, OrderRow } from "./_lib/revenue-drill-types";
 
 const copy = messages.finance.revenue.drill;
-
-const ORDER_TYPE_LABEL: Record<string, string> = {
-  dine_in: "Tại bàn",
-  takeaway: "Mang về",
-};
-
-const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  cash: "Tiền mặt",
-  vietqr: "VietQR",
-};
 
 interface RevenueDrillTabsProps {
   orders: OrderRow[];
@@ -113,7 +107,7 @@ export function RevenueDrillTabs({
     {
       key: "type",
       header: "Loại",
-      render: (row) => ORDER_TYPE_LABEL[row.order_type] ?? row.order_type,
+      render: (row) => getOrderTypeLabelVi(row.order_type),
     },
     {
       key: "branch",
@@ -196,7 +190,7 @@ export function RevenueDrillTabs({
         <div className="flex flex-col gap-1">
           <span>
             {row.payment_method
-              ? (PAYMENT_METHOD_LABEL[row.payment_method] ?? row.payment_method)
+              ? getPaymentMethodLabelVi(row.payment_method)
               : "—"}
           </span>
           {row.reconciliation_status === "missing" ? (
@@ -349,7 +343,7 @@ export function RevenueDrillTabs({
                   <ItemTitle>{row.order_number}</ItemTitle>
                   <ItemDescription>
                     {formatVNTime(row.paid_at)} ·{" "}
-                    {ORDER_TYPE_LABEL[row.order_type] ?? row.order_type}
+                    {getOrderTypeLabelVi(row.order_type)}
                   </ItemDescription>
                   <ItemDescription>
                     {formatCount(row.main_dish_quantity)} phần cơm đã ghi nhận ·{" "}
@@ -393,8 +387,7 @@ export function RevenueDrillTabs({
                 <ItemFooter>
                   <span className="text-xs text-muted-foreground">
                     {row.payment_method
-                      ? (PAYMENT_METHOD_LABEL[row.payment_method] ??
-                        row.payment_method)
+                      ? getPaymentMethodLabelVi(row.payment_method)
                       : "—"}
                   </span>
                   <span className="font-mono text-sm font-semibold tabular-nums">

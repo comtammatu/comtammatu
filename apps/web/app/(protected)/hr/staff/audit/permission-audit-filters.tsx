@@ -15,6 +15,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { useFormControlSize } from "@/components/form/control-size";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
 export interface PermissionAuditTargetOption {
   id: string;
@@ -103,7 +104,7 @@ export function PermissionAuditFilters({
                 </SelectItem>
                 {ACTION_VALUES.map((action) => (
                   <SelectItem key={action} value={action} size={optionSize}>
-                    {action}
+                    {copy.actionLabels[action] ?? UNKNOWN_LABEL_VI}
                   </SelectItem>
                 ))}
               </SelectContent>

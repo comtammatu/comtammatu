@@ -279,6 +279,19 @@ test("receipt appends a customer invoice QR without bank-account rows", () => {
   assert.ok(!lines.includes("THÔNG TIN TÀI KHOẢN NGÂN HÀNG"));
 });
 
+test("receipt hides unknown payment method keys", () => {
+  const document = materializeDocument("receipt", {
+    ...SAMPLE_PAYLOADS.receipt,
+    payment_method: "new_provider_method",
+  });
+  const lines = renderDocumentToOps(document).flatMap((op) =>
+    op.kind === "line" ? [op.text] : [],
+  );
+
+  assert.ok(lines.some((line) => line.includes("Thanh toán:") && line.includes("Khác")));
+  assert.ok(lines.every((line) => !line.includes("new_provider_method")));
+});
+
 test("receipt render keeps compact item table with category total rows", () => {
   const ops = renderDocumentToOps(
     buildFallbackDocument(SAMPLE_PAYLOADS.receipt),

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   ArrowRightToLine as IconArrowBarRight,
   ClipboardList as IconClipboardList,
@@ -437,7 +438,7 @@ export function StockClient({
       className: "min-w-28",
       render: (item) => (
         <Badge variant="secondary">
-          {ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind}
+          {ITEM_KIND_LABELS[item.itemKind] ?? UNKNOWN_LABEL_VI}
         </Badge>
       ),
     },
@@ -712,7 +713,7 @@ export function StockClient({
               </Badge>
             ) : null}
             <Badge variant="secondary">
-              {ITEM_KIND_LABELS[item.itemKind] ?? item.itemKind}
+              {ITEM_KIND_LABELS[item.itemKind] ?? UNKNOWN_LABEL_VI}
             </Badge>
             <span className="font-mono text-xs text-muted-foreground">
               {item.sku || inventoryCommon.noValue}

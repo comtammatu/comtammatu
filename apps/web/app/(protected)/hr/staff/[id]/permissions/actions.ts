@@ -45,7 +45,7 @@ export async function grantPermissionAction(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input",
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
   const ctx = await getAuthContextWithPermission(
@@ -77,7 +77,7 @@ export async function revokePermissionAction(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input",
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
   const ctx = await getAuthContextWithPermission(
@@ -107,7 +107,7 @@ export async function applyTemplateAction(
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input",
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
   const ctx = await getAuthContextWithPermission(

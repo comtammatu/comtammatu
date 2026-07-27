@@ -12,9 +12,11 @@ import {
   PAYROLL_PERIOD_STATUS_LABELS_VI,
   PAYMENT_RECORD_STATUS_LABELS_VI,
   PRINT_JOB_STATUS_LABELS_VI,
+  PURCHASE_ORDER_STATUS_LABELS_VI,
   REFUND_STATUS_LABELS_VI,
   TABLE_STATUS_LABELS_VI,
   TAX_INVOICE_STATUS_LABELS_VI,
+  UNKNOWN_LABEL_VI,
 } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
@@ -217,6 +219,17 @@ const STATUS_DOMAINS = {
       suspended: "secondary",
     },
   },
+  "purchase-order": {
+    labels: PURCHASE_ORDER_STATUS_LABELS_VI,
+    fallbackVariant: "secondary",
+    variants: {
+      draft: "secondary",
+      sent: "success",
+      partially_received: "warning",
+      received: "success",
+      cancelled: "destructive",
+    },
+  },
   "expiry-urgency": {
     labels: INVENTORY_STATUS_LABELS_VI,
     variants: {
@@ -235,7 +248,7 @@ export function getStatusBadgeMeta(
 ): { label: string; variant: BadgeVariant } {
   const config: DomainConfig = STATUS_DOMAINS[domain];
   return {
-    label: config.labels[value] ?? value,
+    label: config.labels[value] ?? UNKNOWN_LABEL_VI,
     variant: config.variants[value] ?? config.fallbackVariant ?? "outline",
   };
 }

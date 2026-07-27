@@ -8,6 +8,7 @@ import { parseVietnameseNumericImport } from "@comtammatu/shared/format";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { VALIDATION_VI } from "@comtammatu/shared/messages";
 import { getVNDateString } from "@comtammatu/shared/time";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   INVENTORY_CATALOG_ROLES,
   INVENTORY_OPS_ROLES,
@@ -553,7 +554,7 @@ interface ExportIngredientRow {
 function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
   return [
     {
-      name: "Nguyen lieu",
+      name: "Nguyên liệu",
       columns: [
         { header: "Tên nguyên liệu", key: "name", width: 32 },
         { header: "SKU", key: "sku", width: 14 },
@@ -568,15 +569,15 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
         name: r.name,
         sku: r.sku ?? "",
         category: r.category ?? "",
-        item_kind_label: ITEM_KIND_LABELS[r.item_kind] ?? r.item_kind,
+        item_kind_label: ITEM_KIND_LABELS[r.item_kind] ?? UNKNOWN_LABEL_VI,
         unit_cost: r.unit_cost ?? "",
         min_stock_level: r.min_stock_level,
-        storage_label: STORAGE_LABELS[r.storage_type] ?? r.storage_type,
+        storage_label: STORAGE_LABELS[r.storage_type] ?? UNKNOWN_LABEL_VI,
         is_active: r.is_active ? "Có" : "Không",
       })),
     },
     {
-      name: "Don vi",
+      name: "Đơn vị",
       columns: [
         { header: "Tên nguyên liệu", key: "ingredient_name", width: 32 },
         { header: "Mã đơn vị", key: "unit_code", width: 14 },
@@ -752,7 +753,7 @@ function mapBulkIngredientImportError(
     code === PG_ERR.INSUFFICIENT_PRIVILEGE ||
     message?.includes("forbidden")
   ) {
-    return "Không có quyền import nguyên liệu.";
+    return "Không có quyền nhập nguyên liệu.";
   }
   if (message?.includes("duplicate_import_name")) {
     return "File có tên nguyên liệu bị trùng.";
@@ -764,22 +765,22 @@ function mapBulkIngredientImportError(
     return "Có nhóm nguyên liệu không còn hợp lệ.";
   }
   if (message?.includes("bulk_import_base_unit_change_forbidden")) {
-    return "Không thể đổi đơn vị tồn chuẩn qua import; giữ đơn vị hiện tại hoặc tạo nguyên liệu mới.";
+    return "Không thể đổi đơn vị tồn chuẩn khi nhập dữ liệu; giữ đơn vị hiện tại hoặc tạo nguyên liệu mới.";
   }
   if (
     message?.includes("ingredient_unit_in_use_by_recipe") ||
     message?.includes("ingredient_unit_in_use_by_production_recipe") ||
     message?.includes("production_recipes_ingredient_entry_unit_fkey")
   ) {
-    return "Đơn vị đang dùng trong công thức sản xuất hoặc công thức món; không thể xóa qua import.";
+    return "Đơn vị đang dùng trong công thức sản xuất hoặc công thức món; không thể xóa khi nhập dữ liệu.";
   }
   if (code === PG_ERR.UNIQUE_VIOLATION) {
     return "Tên hoặc SKU nguyên liệu bị trùng.";
   }
   if (code === PG_ERR.FK_VIOLATION || code === PG_ERR.CHECK_VIOLATION) {
-    return "Dữ liệu import chưa hợp lệ.";
+    return "Dữ liệu nhập chưa hợp lệ.";
   }
-  return "Không thể import nguyên liệu.";
+  return "Không thể nhập nguyên liệu.";
 }
 
 export async function importIngredients(
@@ -793,7 +794,7 @@ export async function importIngredients(
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return { success: false, error: "Thiếu file để import" };
+    return { success: false, error: "Thiếu file dữ liệu" };
   }
 
   let parsed;
@@ -802,9 +803,10 @@ export async function importIngredients(
       maxRowsPerSheet: MAX_ROWS_PER_SHEET,
     });
   } catch (err) {
+    console.error("inventory.ingredients.import_parse_failed", { error: err });
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Không đọc được file",
+      error: "Không đọc được file.",
     };
   }
 
@@ -896,7 +898,7 @@ export async function importIngredients(
   }
 
   if (valid.length === 0) {
-    return { success: false, error: "Không có dòng hợp lệ nào để import" };
+    return { success: false, error: "Không có dòng hợp lệ nào để nhập" };
   }
 
   const { data: summary, error: rpcErr } = await (
@@ -970,7 +972,7 @@ export async function downloadIngredientTemplate(): Promise<ActionResult> {
   return {
     success: true,
     data: {
-      filename: "nguyen-lieu-template.xlsx",
+      filename: "mau-nguyen-lieu.xlsx",
       base64: bufferToBase64(buf),
       format: "xlsx" as const,
     },

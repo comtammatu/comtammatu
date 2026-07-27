@@ -16,6 +16,8 @@ export {
   PAYROLL_PERIOD_STATUS_LABELS_VI,
   CONSUMPTION_REPORT_STATUS_LABELS_VI,
   INVENTORY_STATUS_LABELS_VI,
+  PURCHASE_ORDER_STATUS_LABELS_VI,
+  UNKNOWN_LABEL_VI,
   getModuleLabelVi,
   getInventorySiteKindLabelVi,
   getInventorySiteLabelVi,
@@ -50,5 +52,6 @@ export {
   TAX_INVOICE_STATUS_LABELS_VI,
   STOCKTAKE_SESSION_STATUS_LABELS_VI,
   COUNT_SLIP_STATUS_LABELS_VI,
+  getOrderTypeLabelVi,
   getPaymentMethodLabelVi,
 } from "./vi";

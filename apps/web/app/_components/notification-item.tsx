@@ -15,6 +15,7 @@ import {
 import type { NotificationItem as NotificationItemModel } from "@/(protected)/notifications/actions";
 import { messages } from "@lib/messages";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
 function iconFor(kind: string) {
   switch (kind) {
@@ -88,7 +89,8 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
   const Icon = iconFor(item.kind);
   const tone = toneFor(item.severity);
   const unread = item.read_at === null;
-  const kindLabel = messages.notifications.kindLabel[item.kind] ?? item.kind;
+  const kindLabel =
+    messages.notifications.kindLabel[item.kind] ?? UNKNOWN_LABEL_VI;
 
   const handleRead = () => {
     if (unread) onRead(item.id);

@@ -42,7 +42,7 @@ export async function resolveExistingInvoiceForOrder(orderId: number): Promise<
 > {
   const parsed = z.coerce.number().int().positive().safeParse(orderId);
   if (!parsed.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+    return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -712,7 +712,7 @@ export async function fetchRevenueRollup(
     .nullable()
     .safeParse(branchId);
   if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const parsedStart = z.string().date().safeParse(startDate);
@@ -772,7 +772,7 @@ export async function fetchRevenueKpis(
     .nullable()
     .safeParse(branchId);
   if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const parsedStart = z.string().date().safeParse(startDate);
@@ -832,7 +832,7 @@ export async function fetchFinanceDashboardSummary(
     endDate,
   });
   if (!parsed.success || parsed.data.startDate > parsed.data.endDate) {
-    return { success: false, error: "Tham số dashboard không hợp lệ." };
+    return { success: false, error: "Tham số tổng quan không hợp lệ." };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -872,7 +872,7 @@ export async function fetchOrdersForDay(
 ): Promise<ActionResult> {
   const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
   if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const parsedDate = z.string().date().safeParse(date);
@@ -923,7 +923,7 @@ export async function fetchCashVarianceSummary(
     .nullable()
     .safeParse(branchId);
   if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const parsedStart = z.string().date().safeParse(startDate);
@@ -975,7 +975,7 @@ export async function fetchRevenueByHour(
     .nullable()
     .safeParse(branchId);
   if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const parsedStart = z.string().date().safeParse(startDate);
@@ -1023,7 +1023,7 @@ export async function fetchRevenueByCashier(
     .nullable()
     .safeParse(branchId);
   if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const parsedStart = z.string().date().safeParse(startDate);
@@ -1097,7 +1097,7 @@ export async function fetchTopItems(
     .nullable()
     .safeParse(branchId);
   if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return { success: false, error: "Mã chi nhánh không hợp lệ" };
   }
 
   const parsedStart = z.string().date().safeParse(startDate);

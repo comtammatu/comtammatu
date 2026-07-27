@@ -24,7 +24,7 @@ export interface KdsOperationalHistoryResult {
 const branchIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Branch ID không hợp lệ" });
+  .positive({ error: "Mã chi nhánh không hợp lệ" });
 
 const completionHistorySchema = z.object({
   branchId: branchIdSchema,

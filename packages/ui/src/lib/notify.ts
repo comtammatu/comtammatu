@@ -9,7 +9,7 @@ export const notify = {
     return toast.success(msg, opts);
   },
   error(msg?: string | null, opts?: NotifyOptions) {
-    return toast.error(msg ?? FALLBACK_ERROR, opts);
+    return toast.error(msg?.trim() || FALLBACK_ERROR, opts);
   },
   warning(msg: string, opts?: NotifyOptions) {
     return toast.warning(msg, opts);
@@ -28,10 +28,14 @@ export const notify = {
       error?: string | ((err: unknown) => string);
     },
   ) {
+    const error = m.error;
     return toast.promise(p, {
       loading: m.loading,
       success: m.success,
-      error: m.error ?? FALLBACK_ERROR,
+      error:
+        typeof error === "function"
+          ? (err) => error(err).trim() || FALLBACK_ERROR
+          : error?.trim() || FALLBACK_ERROR,
     });
   },
   dismiss(id?: string | number) {

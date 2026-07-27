@@ -43,6 +43,12 @@ Finance hiện là **tài chính vận hành**, không phải sổ cái hoặc b
 - Giá trị tồn kho cuối kỳ là tài sản, không cộng/trừ trực tiếp vào kết quả.
 - Bán/tiêu hao đã duyệt mới chuyển giá trị liên quan vào giá vốn.
 - Hao hụt, hư hỏng, giảm giá được ghi nhận theo chứng từ điều chỉnh phù hợp.
+- Mua thiết bị không tự động là chi phí vận hành: TSCĐ ghi nhận theo nguyên giá
+  và khấu hao theo kỳ; công cụ/vật dụng ghi trực tiếp hoặc phân bổ dần theo
+  chính sách kế toán. Chỉ phần khấu hao/phân bổ của kỳ mới đi vào kết quả.
+- VAT trên hóa đơn NCC là VAT đầu vào đã ghi nhận, chưa tự động là VAT được
+  khấu trừ. VAT đầu ra, VAT đầu vào được khấu trừ và điều chỉnh phải đủ contract
+  kỳ thuế trước khi tính GTGT phải nộp.
 
 ```text
 Kết quả vận hành

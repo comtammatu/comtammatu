@@ -2,6 +2,8 @@ export type SiteKind = "branch" | "central_supply" | "central_kitchen";
 
 export type InventoryLocationLabelLength = "short" | "long";
 
+export const UNKNOWN_LABEL_VI = "Không xác định";
+
 export type ModuleLabelKey =
   | "owner"
   | "menu"
@@ -167,7 +169,7 @@ export const INVENTORY_STATUS_LABELS_VI = {
   draft: "Nháp",
   confirmed: "Xác nhận",
   sent: "Đã gửi",
-  credited: "Đã ghi credit",
+  credited: "Đã ghi có",
   refunded: "Đã hoàn tiền",
   partially_received: "Nhận một phần",
   in_transit: "Đang giao",
@@ -198,6 +200,14 @@ export const INVENTORY_STATUS_LABELS_VI = {
   suspended: "Tạm ngưng",
 } as const;
 
+export const PURCHASE_ORDER_STATUS_LABELS_VI = {
+  draft: "Nháp",
+  sent: "Đã duyệt",
+  partially_received: "Nhận một phần",
+  received: "Đã nhận đủ",
+  cancelled: "Đã hủy",
+} as const;
+
 export function resolveSiteKind(site: SiteLike): SiteKind {
   if (
     site.branch_kind === "central_supply" ||
@@ -209,17 +219,17 @@ export function resolveSiteKind(site: SiteLike): SiteKind {
 }
 
 export function getSiteKindLabelVi(siteKind: string): string {
-  return (
-    SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? SITE_KIND_LABELS_VI.branch
-  );
+  return SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? UNKNOWN_LABEL_VI;
 }
 
 export function getInventorySiteKindLabelVi(siteKind: string): string {
-  return INVENTORY_SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? siteKind;
+  return (
+    INVENTORY_SITE_KIND_LABELS_VI[siteKind as SiteKind] ?? UNKNOWN_LABEL_VI
+  );
 }
 
 export function getModuleLabelVi(moduleKey: string): string {
-  return MODULE_LABELS_VI[moduleKey as ModuleLabelKey] ?? moduleKey;
+  return MODULE_LABELS_VI[moduleKey as ModuleLabelKey] ?? UNKNOWN_LABEL_VI;
 }
 
 export function getInventorySiteLabelVi(site: SiteLike): string {
@@ -230,7 +240,8 @@ export function normalizeInventoryLocationNameVi(
   name: string | null | undefined,
 ): string {
   if (!name) return "";
-  return LEGACY_INVENTORY_LOCATION_NAMES_VI[name] ?? name;
+  const normalized = LEGACY_INVENTORY_LOCATION_NAMES_VI[name];
+  return normalized === undefined ? name : normalized;
 }
 
 export function getInventoryLocationKindLabelVi({
@@ -300,20 +311,20 @@ export const VARIANCE_TIER_HINT_VI = {
   0: "Trong ngưỡng",
   1: "Lệch ±15–30%",
   2: "Lệch ±30–100% — cần ghi chú",
-  3: "Lệch ≥100% — cần override QLV",
+  3: "Lệch ≥100% — cần quản lý vùng cho phép",
 } as const;
 
 /** Baseline source names for GRN variance */
 export const BASELINE_SOURCE_LABELS_VI = {
   same_supplier: "NCC cùng",
-  any_supplier: "NCC khác (fallback)",
+  any_supplier: "Nhà cung cấp khác (dự phòng)",
   none: "Chưa đủ lịch sử",
-  paused: "Tạm dừng (sau override)",
+  paused: "Tạm dừng (sau khi cho phép)",
 } as const;
 
 /** Waste tier names (Q1 spec) */
 export const WASTE_TIER_LABELS_VI = {
-  0: "Không gate",
+  0: "Không chặn",
   1: "Cần ảnh",
   2: "Cần ảnh + duyệt QLV",
 } as const;
@@ -365,11 +376,11 @@ export const HARDBLOCK_REASON_LABELS_VI = {
 export const AUTO_APPROVE_CONDITION_LABELS_VI = {
   c1_has_po: "Có đơn hàng (PO)",
   c2_variance_ok: "Lệch giá ≤ 30%",
-  c3_line_totals_diff: "Tổng & dòng khớp (±3% / 10% qty / 15% price)",
+  c3_line_totals_diff: "Tổng và dòng khớp (±3% / 10% số lượng / 15% giá)",
   c4_no_quality_issue: "Không lỗi chất lượng",
   c5_value_cap: "Tổng ≤ 10 triệu",
   c6_supplier_history: "NCC đã có ≥ 3 GRN/90 ngày",
-  c7_no_manual_review: "Không thuộc cold-chain",
+  c7_no_manual_review: "Không thuộc chuỗi lạnh",
   c8_trust_score_ok: "Điểm tin cậy ≥ 70",
 } as const;
 
@@ -379,15 +390,17 @@ export const AUTO_APPROVE_FAIL_REASON_VI = {
   variance_tier_gt1: "Lệch giá vượt ngưỡng",
   line_totals_diff: "Tổng/dòng lệch quá",
   quality_issue: "Có dòng lỗi chất lượng",
-  value_cap: "Vượt cap giá trị",
+  value_cap: "Vượt hạn mức giá trị",
   supplier_history_lt3: "NCC chưa đủ lịch sử",
-  ingredient_manual_review: "Có cold-chain SKU",
+  ingredient_manual_review: "Có mặt hàng chuỗi lạnh",
   trust_score_lt70: "Điểm tin cậy chưa đủ",
 } as const;
 
 /** Waste reason code label helper */
 export function getWasteReasonLabelVi(code: string): string {
-  return (WASTE_REASON_LABELS_VI as Record<string, string>)[code] ?? code;
+  return (
+    (WASTE_REASON_LABELS_VI as Record<string, string>)[code] ?? UNKNOWN_LABEL_VI
+  );
 }
 
 // ─── Payment method labels ────────────────────────────────────────────────
@@ -461,7 +474,10 @@ export function getPaymentMethodLabelVi(
   method: string | null | undefined,
 ): string {
   if (!method) return "";
-  return (PAYMENT_METHOD_LABELS_VI as Record<string, string>)[method] ?? method;
+  return (
+    (PAYMENT_METHOD_LABELS_VI as Record<string, string>)[method] ??
+    UNKNOWN_LABEL_VI
+  );
 }
 
 /** tables.status (DB tables_status_check). */
@@ -506,6 +522,16 @@ export const ORDER_TYPE_LABELS_VI = {
   dine_in: "Tại bàn",
   takeaway: "Mang về",
 } as const;
+
+export function getOrderTypeLabelVi(
+  orderType: string | null | undefined,
+): string {
+  if (!orderType) return "";
+  return (
+    (ORDER_TYPE_LABELS_VI as Record<string, string>)[orderType] ??
+    UNKNOWN_LABEL_VI
+  );
+}
 
 /** tax_invoices.status (DB tax_invoices_status_check). */
 export const TAX_INVOICE_STATUS_LABELS_VI = {

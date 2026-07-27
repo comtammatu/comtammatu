@@ -23,12 +23,12 @@
 
 **Lựa chọn**: ✅ **Tích hợp Payment**
 
-| Thuộc tính | Giá trị                                                      |
-| ---------- | ------------------------------------------------------------ |
-| Loại       | EMVCo/NAPAS bank-transfer payload                            |
+| Thuộc tính | Giá trị                                                        |
+| ---------- | -------------------------------------------------------------- |
+| Loại       | EMVCo/NAPAS bank-transfer payload                              |
 | Generation | Sinh payload cục bộ trong provider; không gọi VietQR image API |
-| Settlement | SePay evidence webhook hoặc cashier xác nhận theo quyền      |
-| Cấu hình   | Tài khoản nhận tiền sống trong Owner settings                |
+| Settlement | SePay evidence webhook hoặc cashier xác nhận theo quyền        |
+| Cấu hình   | Tài khoản nhận tiền sống trong Owner settings                  |
 
 **Cách hoạt động**: Mỗi đơn có mã chuyển khoản cố định trong
 `orders.payment_code`: `<configured prefix> + space + 12 ký tự chữ/số`. Phiếu

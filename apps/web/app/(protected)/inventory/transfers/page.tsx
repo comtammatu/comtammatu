@@ -28,7 +28,7 @@ export async function TransfersPageContent({
   searchParams,
   routeBranchId,
   basePath = "/inventory/transfers",
-  createEnabled = true,
+  createEnabled = false,
   initialTab = "receive",
   pageTitle,
   embedded = false,

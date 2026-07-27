@@ -70,8 +70,8 @@ test("Inventory ingredient editor keeps two operational unit roles", () => {
   assert.doesNotMatch(issueDetail, /hidden lg:block">\{pageLayout\}/);
 });
 
-test("Owner page-header actions use the named touch button size", () => {
-  const paths = [
+test("Owner page-header actions use named button sizes", () => {
+  const touchPaths = [
     "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
     "apps/web/app/(protected)/hr/attendance/page.tsx",
     "apps/web/app/(protected)/hr/hr-client.tsx",
@@ -80,14 +80,11 @@ test("Owner page-header actions use the named touch button size", () => {
     "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
     "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
     "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
-    "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx",
     "apps/web/app/(protected)/inventory/inventory-value-panel.tsx",
-    "apps/web/app/(protected)/inventory/recipes/recipes-client.tsx",
     "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
-    "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx",
   ];
 
-  for (const path of paths) {
+  for (const path of touchPaths) {
     const source = read(path);
     const headerStart = source.indexOf("<AppPageHeader");
     const actionsStart = source.indexOf("actions={", headerStart);
@@ -97,6 +94,20 @@ test("Owner page-header actions use the named touch button size", () => {
       actionBlock,
       /<Button[\s\S]{0,240}size="touch"/,
       `${path} must size its header button for touch`,
+    );
+  }
+
+  for (const path of [
+    "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx",
+    "apps/web/app/(protected)/inventory/recipes/recipes-client.tsx",
+    "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx",
+  ]) {
+    const source = read(path);
+    const actionsStart = source.indexOf("actions={");
+    assert.match(
+      source.slice(actionsStart, actionsStart + 500),
+      /<Button[\s\S]{0,240}size="lg"/,
+      `${path} must use the page-header button size`,
     );
   }
 

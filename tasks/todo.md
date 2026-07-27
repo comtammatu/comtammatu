@@ -5,16 +5,18 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
-## Switch same-repo delivery to the Greenfield stack
+## Complete the CTCP authority and e-invoice cutover on current Greenfield
 
-State: ready
-Kind: maintenance
+State: doing
+Kind: feature
 Tier: T3
-Lane: platform/environment-transition
-Exit: Delivery after `baf3720f8` stays in `comtammatu`, targets the registered `matu-greenfield-company` project and `web.comtammatu.com`, while `matu-prod + app.comtammatu.com` remain fail-closed as the suspended HKD stack.
-Evidence: Environment Registry and guard fixtures, candidate from-empty replay, guarded type-source proof, target deployment binding, repository gates, and T3 review.
+Lane: platform/security-finance
+Exit: The existing `comtammatu` deployment uses the current Greenfield project as its only target, legal identity and Viettel profile come from live Tenant data, VAT is explicit per sold line, and database authority no longer depends on HR positions or forged JWT scope.
+Evidence: Forward-only migration replay, generated types, authorization negative matrix, HĐĐT mixed-VAT/retry/replacement tests, repository gates, owner-approved current-target apply, and one authorized Viettel issue/reconcile smoke.
 
-- [ ] Implement the guarded Greenfield type-source and deployment binding without reactivating, relinking, or writing to the suspended HKD stack.
+- [ ] Finish the scoped authority caller/RLS cutover on the current Greenfield schema; preserve existing Tenant, Branch, profile, and Auth bootstrap rows.
+- [ ] Apply the invoice-profile/VAT snapshot forward migration to the current Greenfield target and regenerate database types.
+- [ ] Complete catalog/RLS inspection, full repository gates, and the separately authorized Viettel smoke. Do not reset, rebaseline, create another project, or delete current identities.
 
 ## Restore fresh-install database ACL parity
 
@@ -104,11 +106,11 @@ Tier: T3
 Lane: finance/payments
 Exit: Legacy `create_supplier_payment` and authenticated direct `payments` UPDATE are absent; owner-operated Preview schema/type/advisor gates pass; the separately owner-delegated Production apply and smoke are evidenced.
 Evidence: Deployed required-key proof from the preceding outcome, catalog and ACL checks, generated-type no-diff, repository gates, advisors, and explicit Production apply/smoke evidence.
-Blocker: This cleanup targets the suspended HKD database and is not required for Greenfield delivery. Recheck only after an explicit owner decision reopens HKD maintenance or authorizes retention cleanup.
+Blocker: This cleanup targets the suspended retired target database and is not required for Greenfield delivery. Recheck only after an explicit owner decision reopens retired target maintenance or authorizes retention cleanup.
 
 - [ ] Revoke authenticated direct `UPDATE` on `payments` and drop legacy `create_supplier_payment` only after the required-key runtime proof.
 - [ ] Apply the cleanup only through the trusted registration/owner-operated Preview path; regenerate types from the explicit Production source and run repository gates plus database advisors.
-- [ ] Keep every `matu-prod` apply deferred while the HKD stack is suspended; run it only under the exact owner decision named in the Blocker.
+- [ ] Keep every `matu-prod` apply deferred while the retired target stack is suspended; run it only under the exact owner decision named in the Blocker.
 
 ## Align KDS history authorization with route access
 

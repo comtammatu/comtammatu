@@ -9,7 +9,7 @@ import { Frame } from "@comtammatu/ui/components/frame";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 
-import { ACTIONS_VI, MENU_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, MENU_VI } from "@comtammatu/shared/messages";
 const BUCKET = "menu-images";
 const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
@@ -92,7 +92,8 @@ export function MenuImageInput({
           contentType: "image/webp",
         });
       if (upErr) {
-        toast.error(upErr.message);
+        console.error("[menu-image] upload failed", upErr);
+        toast.error(ERRORS_VI.fallback);
         return;
       }
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);

@@ -51,7 +51,7 @@ từ HR position. Giả định đó không biểu diễn đúng:
 - quyền Company, Tenant và site tồn tại độc lập;
 - thu hồi quyền phải có hiệu lực mà không chờ refresh role trong JWT.
 
-Greenfield không copy hoặc vá nullable quanh các authority HKD sau:
+Greenfield không copy hoặc vá nullable quanh authority của retired target:
 
 - `profiles.tenant_id`, `profiles.branch_id` làm scope duy nhất;
 - `position_code → user_role`;

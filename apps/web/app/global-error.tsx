@@ -28,7 +28,6 @@ function readMode(): MatuThemeMode {
 }
 
 export default function GlobalError({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };
@@ -62,18 +61,6 @@ export default function GlobalError({
           <p style={{ color: colors.muted, marginTop: "0.5rem" }}>
             {ERRORS_VI.fallback}
           </p>
-          {error.digest ? (
-            <p
-              style={{
-                fontFamily: "monospace",
-                fontSize: "0.75rem",
-                color: colors.muted,
-                marginTop: "0.5rem",
-              }}
-            >
-              {ERRORS_VI.errorCode}: {error.digest}
-            </p>
-          ) : null}
           <button
             onClick={reset}
             style={{

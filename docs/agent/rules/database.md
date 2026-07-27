@@ -9,25 +9,25 @@ constraints; `docs/modules/database.md` and `docs/modules/auth.md` own architect
 Verify the ref before every Supabase MCP, CLI, or SQL call. This registry wins
 over older task notes, regressions, and memory.
 
-| Ref                    | What it is                                                            | Agent rights                                                                                                                              |
-| ---------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `iexwsuaqqenyjiskawoj` | **PRODUCTION** — suspended HKD `matu-prod` (frozen since `baf3720f8`) | Table/view/catalog reads only. No write, migration apply, data repair, deploy relink, reactivation, or type generation.                    |
-| `enloyfnuerqgaqderbwb` | **GREENFIELD** — same-repo target `matu-greenfield-company`           | Project/schema reads, delegated bootstrap migrations, and the repository type source.                                                     |
+| Ref                    | What it is                                                                       | Agent rights                                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `iexwsuaqqenyjiskawoj` | **PRODUCTION** — suspended retired target `matu-prod` (frozen since `baf3720f8`) | Table/view/catalog reads only. No write, migration apply, data repair, deploy relink, reactivation, or type generation. |
+| `enloyfnuerqgaqderbwb` | **GREENFIELD** — same-repo target `matu-greenfield-company`                      | Project/schema reads, delegated bootstrap migrations, and the repository type source.                                   |
 
 ### Vercel Deployment Registry
 
-| Project ID                         | Project                    | Required Supabase ref  | Deploy rights from this repo               |
-| ---------------------------------- | -------------------------- | ---------------------- | ------------------------------------------ |
-| `prj_OGyJLaxEcceuckDoOUWth60FasXC` | `matu-greenfield-company`  | `enloyfnuerqgaqderbwb` | Sole allowed Production deploy target.     |
-| `prj_yqb5ZzH4rP3aQgtdgZ58ViVk9MxG` | suspended HKD `comtammatu` | `iexwsuaqqenyjiskawoj` | Block every new deploy from this repo.     |
+| Project ID                         | Project                               | Required Supabase ref  | Deploy rights from this repo           |
+| ---------------------------------- | ------------------------------------- | ---------------------- | -------------------------------------- |
+| `prj_OGyJLaxEcceuckDoOUWth60FasXC` | `matu-greenfield-company`             | `enloyfnuerqgaqderbwb` | Sole allowed Production deploy target. |
+| `prj_yqb5ZzH4rP3aQgtdgZ58ViVk9MxG` | suspended retired target `comtammatu` | `iexwsuaqqenyjiskawoj` | Block every new deploy from this repo. |
 
-- `matu-prod` is the suspended HKD database. The HKD stack stopped active
+- `matu-prod` is the suspended retired target database. The retired target stack stopped active
   delivery at `baf3720f8`; it must not receive
   schema, data-repair, project-admin, deploy-relink, or runtime reactivation
   mutations without a separate owner decision.
 - The registered Greenfield project is the future database/runtime target for
   this repository. It may replay the active baseline and forward migrations with
-  exact owner delegation, but must not receive HKD customer data, Auth rows,
+  exact owner delegation, but must not receive retired target customer data, Auth rows,
   provider secrets, or operational traffic before promotion.
   `corepack pnpm db:types` requires the literal registered Greenfield
   `SUPABASE_PROJECT_ID` and rejects a missing or different ref. Type generation
@@ -104,7 +104,7 @@ over older task notes, regressions, and memory.
   chain. Every apply requires the literal registered Greenfield ref and explicit
   owner delegation in the current session. Stored-link state is never authority,
   Greenfield is the repository type source, and bootstrap data must contain no
-  HKD customer data, Auth rows, or provider secrets.
+  retired target customer data, Auth rows, or provider secrets.
 - Delegation never authorizes changing or disabling repo guards. If the guarded
   runtime still blocks the operation, the owner applies outside it or provides a
   scoped approval path.
