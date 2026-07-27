@@ -19,7 +19,7 @@ function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
 
 // Plain formatter so the assertions stay independent of the vi-VN Intl
 // output used in the app.
-const plain = (n: number): string => String(n);
+const plain = (n: number): string => String(Math.round(n * 1000) / 1000);
 
 test("quantity formatter hides meaningless 3-digit decimal tails", () => {
   assert.equal(formatQty(300), "300");
@@ -27,7 +27,7 @@ test("quantity formatter hides meaningless 3-digit decimal tails", () => {
   assert.equal(formatQty(300.125), "300,125");
 });
 
-test("multi-unit stock shows a whole-count step breakdown on top", () => {
+test("multi-unit stock shows the largest configured unit and exact base total", () => {
   const units = [
     unit({ unit_code: "g", to_base_factor: 1, is_base: true }),
     unit({ unit_code: "kg", to_base_factor: 1000 }),
@@ -36,11 +36,11 @@ test("multi-unit stock shows a whole-count step breakdown on top", () => {
 
   const { big, base } = formatStockUnits(17000, units, plain);
 
-  assert.equal(big, "1 cây 5 kg");
+  assert.equal(big, "1.417 cây");
   assert.equal(base, "17000 g");
 });
 
-test("two-unit stock decomposes into both rungs", () => {
+test("two-unit stock converts the full base quantity", () => {
   const units = [
     unit({ unit_code: "lon", to_base_factor: 1, is_base: true }),
     unit({ unit_code: "thùng", to_base_factor: 24 }),
@@ -48,11 +48,11 @@ test("two-unit stock decomposes into both rungs", () => {
 
   const { big, base } = formatStockUnits(500, units, plain);
 
-  assert.equal(big, "20 thùng 20 lon");
+  assert.equal(big, "20.833 thùng");
   assert.equal(base, "500 lon");
 });
 
-test("step breakdown skips zero levels", () => {
+test("largest-unit conversion keeps fractional quantities", () => {
   const units = [
     unit({ unit_code: "ml", to_base_factor: 1, is_base: true }),
     unit({ unit_code: "chai", to_base_factor: 250 }),
@@ -61,8 +61,20 @@ test("step breakdown skips zero levels", () => {
 
   const { big, base } = formatStockUnits(18750, units, plain);
 
-  assert.equal(big, "3 thùng 15 chai");
+  assert.equal(big, "3.75 thùng");
   assert.equal(base, "18750 ml");
+});
+
+test("largest unit remains visible below one full unit", () => {
+  const units = [
+    unit({ unit_code: "ml", to_base_factor: 1, is_base: true }),
+    unit({ unit_code: "thùng", to_base_factor: 5000 }),
+  ];
+
+  const { big, base } = formatStockUnits(125, units, plain);
+
+  assert.equal(big, "0.025 thùng");
+  assert.equal(base, "125 ml");
 });
 
 test("single-unit ingredient renders base only (big is null)", () => {

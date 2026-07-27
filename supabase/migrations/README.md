@@ -65,12 +65,13 @@ the re-registration path.
 
 ## Existing environments
 
-- **Production (`iexwsuaqqenyjiskawoj`)** remains the operational database and
-  repository type source. It keeps its applied migration history and is not
-  reset to the baseline.
-- **Greenfield (`enloyfnuerqgaqderbwb`)** is the registered persistent bootstrap
-  target. It installs the baseline plus active forwards without Production data
-  or provider secrets.
+- **Suspended HKD (`iexwsuaqqenyjiskawoj`)** keeps its applied migration history
+  and remains the temporary repository type source after cutoff `baf3720f8`; it
+  is not reset, migrated, relinked, or reactivated.
+- **Greenfield target (`enloyfnuerqgaqderbwb`)** is the same-repo candidate. It
+  installs the baseline plus active forwards with exact owner delegation and
+  without HKD data, Auth rows, or provider secrets. It becomes the type source
+  only after the guarded target switch and candidate schema proof land.
 - Native Supabase Branching provides the disposable migration-replay target and
   requires the guard to verify the Production parent. Do not substitute a local
   database.

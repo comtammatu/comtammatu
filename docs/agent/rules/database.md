@@ -9,22 +9,27 @@ constraints; `docs/modules/database.md` and `docs/modules/auth.md` own architect
 Verify the ref before every Supabase MCP, CLI, or SQL call. This registry wins
 over older task notes, regressions, and memory.
 
-| Ref                    | What it is                                     | Agent rights                                                                                               |
-| ---------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `iexwsuaqqenyjiskawoj` | **PRODUCTION** — the only comtammatu database  | Table/view/catalog reads only by default. Writes require explicit owner delegation in the current session. |
-| `enloyfnuerqgaqderbwb` | **GREENFIELD** — `matu-greenfield-company`     | Project/schema reads and bootstrap migrations with explicit owner delegation in the current session. Never the repository type source. |
-| `dyksphedgzqsqjqgxzog` | `matu-platform` production — separate codebase | Do not touch.                                                                                              |
+| Ref                    | What it is                                                            | Agent rights                                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `iexwsuaqqenyjiskawoj` | **PRODUCTION** — suspended HKD `matu-prod` (frozen since `baf3720f8`) | Table/view/catalog reads only. No write, migration apply, data repair, deploy relink, reactivation, or type generation.                    |
+| `enloyfnuerqgaqderbwb` | **GREENFIELD** — same-repo target `matu-greenfield-company`           | Project/schema reads, delegated bootstrap migrations, and the repository type source.                                                     |
 
-`Do not touch` prohibits both reads and writes through CLI, SQL, HTTP, and
-project-scoped MCP tools; it is not the guarded-read policy used for comtammatu
-Production or Greenfield.
+### Vercel Deployment Registry
 
-- Production is the only operational comtammatu database and the only repository
-  type source. The registered Greenfield project is a separate persistent
-  bootstrap target: it may replay the active baseline and forward migrations,
-  but it must not receive Production customer data, provider secrets, or
-  operational traffic until the owner promotes it through a separate decision.
-  `corepack pnpm db:types` requires the literal registered Production
+| Project ID                         | Project                    | Required Supabase ref  | Deploy rights from this repo               |
+| ---------------------------------- | -------------------------- | ---------------------- | ------------------------------------------ |
+| `prj_OGyJLaxEcceuckDoOUWth60FasXC` | `matu-greenfield-company`  | `enloyfnuerqgaqderbwb` | Sole allowed Production deploy target.     |
+| `prj_yqb5ZzH4rP3aQgtdgZ58ViVk9MxG` | suspended HKD `comtammatu` | `iexwsuaqqenyjiskawoj` | Block every new deploy from this repo.     |
+
+- `matu-prod` is the suspended HKD database. The HKD stack stopped active
+  delivery at `baf3720f8`; it must not receive
+  schema, data-repair, project-admin, deploy-relink, or runtime reactivation
+  mutations without a separate owner decision.
+- The registered Greenfield project is the future database/runtime target for
+  this repository. It may replay the active baseline and forward migrations with
+  exact owner delegation, but must not receive HKD customer data, Auth rows,
+  provider secrets, or operational traffic before promotion.
+  `corepack pnpm db:types` requires the literal registered Greenfield
   `SUPABASE_PROJECT_ID` and rejects a missing or different ref. Type generation
   is read-only and does not grant schema-write authority.
 - Use an on-demand Preview Branch for isolated migration replay or disposable
@@ -98,8 +103,8 @@ Production or Greenfield.
 - Greenfield bootstrap uses the committed active baseline plus forward migration
   chain. Every apply requires the literal registered Greenfield ref and explicit
   owner delegation in the current session. Stored-link state is never authority,
-  Greenfield is never a type source, and bootstrap data must contain no
-  Production customer data or provider secrets.
+  Greenfield is the repository type source, and bootstrap data must contain no
+  HKD customer data, Auth rows, or provider secrets.
 - Delegation never authorizes changing or disabling repo guards. If the guarded
   runtime still blocks the operation, the owner applies outside it or provides a
   scoped approval path.

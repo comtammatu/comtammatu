@@ -5,10 +5,10 @@
 >
 > Quyết định liên quan: [ADR 0015](../plan/adr/0015-greenfield-authorization-model.md).
 
-Tài liệu này sở hữu mô hình đích cho Auth, route ACL, RBAC, policy,
-RLS và RPC của `comtammatu-greenfield`. `docs/modules/auth.md` tiếp tục mô tả
-hiện trạng cho tới khi Greenfield Authority được triển khai và chứng minh trên
-Production Candidate.
+Tài liệu này sở hữu mô hình đích cho Auth, route ACL, RBAC, policy, RLS và RPC
+được triển khai trong repo `comtammatu` rồi chứng minh trên
+`matu-greenfield-company`. `docs/modules/auth.md` tiếp tục mô tả source hiện tại
+cho tới khi từng caller được chuyển qua Greenfield Authority.
 
 ## 1. Quyết định ngắn
 
@@ -51,7 +51,7 @@ từ HR position. Giả định đó không biểu diễn đúng:
 - quyền Company, Tenant và site tồn tại độc lập;
 - thu hồi quyền phải có hiệu lực mà không chờ refresh role trong JWT.
 
-Greenfield không copy hoặc vá nullable quanh các authority sau:
+Greenfield không copy hoặc vá nullable quanh các authority HKD sau:
 
 - `profiles.tenant_id`, `profiles.branch_id` làm scope duy nhất;
 - `position_code → user_role`;
@@ -253,9 +253,10 @@ route admission, UX projection và gọi database authority.
 
 ## 7. Route ACL mục tiêu
 
-Current `MODULE_ACL` không được extract sang Greenfield. Thay bằng một registry
-typed, tạm gọi `ROUTE_ACCESS`, không chứa `allowedRoles`. Bảng sau chỉ minh họa
-các route family; registry thật phải cover toàn bộ protected route:
+Current `MODULE_ACL` không được nhân đôi thành authority Greenfield song song.
+Nó được thay tại cùng seam bằng một registry typed, tạm gọi `ROUTE_ACCESS`, không
+chứa `allowedRoles`. Bảng sau chỉ minh họa các route family; registry thật phải
+cover toàn bộ protected route:
 
 | Route family           | Capability                   | Scope source                  | Site kind           |
 | ---------------------- | ---------------------------- | ----------------------------- | ------------------- |

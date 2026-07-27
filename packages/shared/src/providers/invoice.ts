@@ -17,6 +17,8 @@ export interface InvoiceLineItem {
   quantity: number;
   unitPrice: number;
   amount: number;
+  /** VAT percentage snapshotted from the sold item. */
+  vatRate?: number;
   /** Discount allocated to this legal line in the same basis as `amount`. */
   discountAmount?: number;
 }

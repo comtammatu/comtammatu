@@ -76,10 +76,11 @@ interface RecipeLinesEditorProps<T extends FieldValues> {
   errors: FieldErrors<T>;
   ingredients: RecipeLineIngredient[];
   name?: Path<T> & ArrayPath<T>;
-  /** false → unit label input readOnly + auto-fill only when empty; true → editable + auto-fill on change. */
+  /** false → use the ingredient output unit; true → allow any configured unit. */
   unitEditable?: boolean;
   /** true → render the bulk-add MultiSelectCombobox. */
   bulkAdd?: boolean;
+  showYield?: boolean;
 }
 
 export function RecipeLinesEditor<T extends FieldValues>({
@@ -91,6 +92,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
   name = "lines" as Path<T> & ArrayPath<T>,
   unitEditable = false,
   bulkAdd = false,
+  showYield = true,
 }: RecipeLinesEditorProps<T>) {
   const { fields, append, remove, replace } = useFieldArray<T, ArrayPath<T>>({
     control,
@@ -104,8 +106,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
   }, [ingredients]);
 
   const lineErrors = (errors as Record<string, unknown>)[name] as
-    | Array<FieldErrors<RecipeLineRowValue> | undefined>
-    | undefined;
+    Array<FieldErrors<RecipeLineRowValue> | undefined> | undefined;
 
   const rows = fields as unknown as Array<RecipeLineRowValue & { id: string }>;
 
@@ -151,26 +152,15 @@ export function RecipeLinesEditor<T extends FieldValues>({
     const unitLabelPath = `${name}.${index}.unitLabel` as Path<T>;
     const entryUnitPath = `${name}.${index}.entry_unit_id` as Path<T>;
     const defaultUnit = getDefaultProductionUnit(ing);
-    if (unitEditable) {
-      setValue(unitLabelPath, (defaultUnit?.label ?? ing.unitLabel) as never, {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      setValue(
-        entryUnitPath,
-        (defaultUnit ? String(defaultUnit.unitId) : "") as never,
-        { shouldDirty: true },
-      );
-    } else {
-      const currentUnit = getValues(unitLabelPath);
-      if (!currentUnit) {
-        setValue(unitLabelPath, (defaultUnit?.label ?? ing.unitLabel) as never);
-        setValue(
-          entryUnitPath,
-          (defaultUnit ? String(defaultUnit.unitId) : "") as never,
-        );
-      }
-    }
+    setValue(unitLabelPath, (defaultUnit?.label ?? ing.unitLabel) as never, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue(
+      entryUnitPath,
+      (defaultUnit ? String(defaultUnit.unitId) : "") as never,
+      { shouldDirty: true },
+    );
   }
 
   return (
@@ -213,8 +203,12 @@ export function RecipeLinesEditor<T extends FieldValues>({
           <div className="col-span-3">{PRODUCT_VI.rawIngredient}</div>
           <div className="col-span-2">{FORM_VI.quantity}</div>
           <div className="col-span-2">{FORM_VI.unit}</div>
-          <div className="col-span-2">{INVENTORY_VI.yield}</div>
-          <div className="col-span-2">{FORM_VI.notes}</div>
+          {showYield ? (
+            <div className="col-span-2">{INVENTORY_VI.yield}</div>
+          ) : null}
+          <div className={showYield ? "col-span-2" : "col-span-4"}>
+            {FORM_VI.notes}
+          </div>
           <div />
         </div>
 
@@ -230,6 +224,8 @@ export function RecipeLinesEditor<T extends FieldValues>({
               ingredientMap={ingredientMap}
               rowError={lineErrors?.[index]}
               canRemove={rows.length > 1}
+              unitEditable={unitEditable}
+              showYield={showYield}
               onRemove={() => remove(index)}
               onIngredientChange={(value) =>
                 handleIngredientChange(index, value)
@@ -251,6 +247,8 @@ function RecipeLineRow<T extends FieldValues>({
   ingredientMap,
   rowError,
   canRemove,
+  unitEditable,
+  showYield,
   onRemove,
   onIngredientChange,
 }: {
@@ -262,6 +260,8 @@ function RecipeLineRow<T extends FieldValues>({
   ingredientMap: Map<number, RecipeLineIngredient>;
   rowError: FieldErrors<RecipeLineRowValue> | undefined;
   canRemove: boolean;
+  unitEditable: boolean;
+  showYield: boolean;
   onRemove: () => void;
   onIngredientChange: (value: string) => void;
 }) {
@@ -273,8 +273,7 @@ function RecipeLineRow<T extends FieldValues>({
   const noteName = `${name}.${index}.note` as Path<T>;
 
   const selectedIngredientId = useWatch({ control, name: ingredientName }) as
-    | string
-    | undefined;
+    string | undefined;
   const selectedIngredient = selectedIngredientId
     ? ingredientMap.get(Number(selectedIngredientId))
     : undefined;
@@ -335,7 +334,7 @@ function RecipeLineRow<T extends FieldValues>({
         </div>
 
         <div className="min-w-0 md:col-span-2">
-          {unitOptions.length > 0 ? (
+          {unitEditable && unitOptions.length > 0 ? (
             <Controller
               control={control}
               name={entryUnitName}
@@ -398,29 +397,36 @@ function RecipeLineRow<T extends FieldValues>({
           )}
         </div>
 
-        <div className="min-w-0 md:col-span-2">
-          <Controller
-            control={control}
-            name={yieldName}
-            render={({ field }) => (
-              <FormattedNumberInput
-                value={field.value ?? ""}
-                onValueChange={field.onChange}
-                onBlur={field.onBlur}
-                ref={field.ref}
-                name={field.name}
-                maxFractionDigits={6}
-                aria-invalid={!!rowError?.yield_factor}
-                className={cn(
-                  "h-9",
-                  rowError?.yield_factor && "border-destructive",
-                )}
-              />
-            )}
-          />
-        </div>
+        {showYield ? (
+          <div className="min-w-0 md:col-span-2">
+            <Controller
+              control={control}
+              name={yieldName}
+              render={({ field }) => (
+                <FormattedNumberInput
+                  value={field.value ?? ""}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  name={field.name}
+                  maxFractionDigits={6}
+                  aria-invalid={!!rowError?.yield_factor}
+                  className={cn(
+                    "h-9",
+                    rowError?.yield_factor && "border-destructive",
+                  )}
+                />
+              )}
+            />
+          </div>
+        ) : null}
 
-        <div className="min-w-0 md:col-span-2">
+        <div
+          className={cn(
+            "min-w-0",
+            showYield ? "md:col-span-2" : "md:col-span-4",
+          )}
+        >
           <Controller
             control={control}
             name={noteName}

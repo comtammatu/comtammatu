@@ -115,20 +115,20 @@ function mapCatalogRpcError(
   message: string | undefined,
 ): string {
   if (message?.includes("inventory_unit_ladder_locked_by_stock_movements")) {
-    return "Nguyên liệu đã có lịch sử tồn kho; đơn vị tồn chuẩn và quy đổi hiện hữu đã khóa. Chỉ thêm đơn vị mới nếu cần cách nhập hoặc đếm khác.";
+    return "Nguyên liệu đã có lịch sử tồn kho; đơn vị nhập, đơn vị xuất và quy đổi hiện hữu đã khóa.";
   }
   if (
     message?.includes("ingredient_unit_in_use_by_recipe") ||
     message?.includes("ingredient_unit_in_use_by_production_recipe") ||
     message?.includes("production_recipes_ingredient_entry_unit_fkey")
   ) {
-    return "Đơn vị đang dùng trong công thức sản xuất hoặc công thức món; không thể xóa. Giữ đơn vị trong thang quy đổi hoặc sửa công thức trước.";
+    return "Đơn vị đang dùng trong công thức sản xuất hoặc định mức món; không thể thay đổi.";
   }
   if (
     message?.includes("unit not found") ||
     message?.includes("unit_not_found")
   ) {
-    return "Đơn vị tồn chuẩn không hợp lệ";
+    return "Đơn vị nhập hoặc đơn vị xuất không hợp lệ";
   }
   if (
     message?.includes("category not found") ||

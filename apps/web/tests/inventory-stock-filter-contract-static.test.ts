@@ -25,12 +25,11 @@ test("inventory stock status and category filters have one control source", () =
   assert.match(stockClientSource, /header: stockCopy\.table\.stock/);
   assert.match(
     stockClientSource,
-    /bulk=\{\s*!isCompactLayout \? \(\s*<div[^>]*>\s*\{filterControls\}\s*\{workSignalCluster\}/s,
+    /flex min-w-0 flex-1 flex-wrap items-center gap-2/,
   );
-  assert.doesNotMatch(
-    stockClientSource,
-    /aria-pressed=\{stockFilter === "low"\}/,
-  );
+  assert.match(stockClientSource, /aria-pressed=\{stockFilter === "low"\}/);
+  assert.doesNotMatch(stockClientSource, /stockCopy\.metrics\.pending/);
+  assert.doesNotMatch(stockClientSource, /pendingWorkCount/);
 });
 
 test("inventory stock low filter matches the under-threshold predicate", () => {

@@ -14,7 +14,6 @@ export interface FoodCostRecipeLine {
   ingredientId: number;
   quantity: number;
   entryUnitId: number | null;
-  yieldFactor: number;
   fallbackUnitCost: number;
   units: IngredientUnitRow[];
 }
@@ -91,7 +90,6 @@ export function buildFoodCostRows({
     const costPerUnit = recipeRows.reduce((sum, recipe) => {
       const baseQuantity = getRecipeLineBaseQuantity({
         quantity: recipe.quantity,
-        yieldFactor: recipe.yieldFactor,
         entryUnitId: recipe.entryUnitId,
         units: recipe.units,
       });

@@ -16,12 +16,18 @@ The Greenfield target needs one Company, one Tenant, and operational sites of
 kind `central_warehouse`, `central_kitchen`, or `branch`. Revocation and row
 isolation must not depend on a JWT role refresh.
 
+Greenfield is the database and authorization target for the existing
+`comtammatu` repository after cutoff `baf3720f8`. It is not a repository fork
+or parallel product.
+
 The term PBAC is ambiguous between permission-based and policy-based access
 control, so it cannot be a durable architecture name.
 
 ## Decision
 
 - Keep Supabase Auth for identity and session management.
+- Replace authority behind the existing database, auth, route, and module seams
+  in this repository. Do not create a parallel app/package tree for Greenfield.
 - Use standard JWT identity/session claims only. Do not place roles,
   capabilities, Tenant memberships, or site assignments in JWTs, and do not add
   a custom access-token hook in V1.
@@ -82,6 +88,8 @@ control, so it cannot be a durable architecture name.
   capability grant model or delegation matrix requires a demonstrated use case.
 - The Greenfield Authority slice must be source-ready and candidate-proven
   before Branch Workspace migration.
+- Existing runtime modules stay authoritative until their callers cross the new
+  seam; remove legacy implementation only after the last caller moves.
 
 ## Revisit triggers
 

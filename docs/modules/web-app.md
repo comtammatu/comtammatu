@@ -152,5 +152,5 @@ Browser request
 - **Staff runtime đã live:** profile, clock, attendance, schedule, leave request,
   và payslip nằm trong Branch. HR Owner surface và `/hr/payroll/*` chỉ dành
   cho Owner.
-- **Finance mặc định là tài chính vận hành HKD:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Các route kế toán doanh nghiệp và đóng/mở lại kỳ không nằm trong app surface hiện tại.
+- **Finance mặc định là tài chính vận hành:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Sổ kế toán doanh nghiệp, BCTC và đóng/mở lại kỳ chưa nằm trong app surface hiện tại.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ config danh mục nguyên liệu, đơn vị, một ngưỡng tồn `Min`, và QC; `page.tsx` redirect theo permission về categories/units/qc. Catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`.

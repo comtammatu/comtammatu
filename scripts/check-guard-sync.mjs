@@ -20,6 +20,7 @@ const ADAPTER_PATHS = [".claude/settings.json", ".codex/hooks.json"];
 const TYPEGEN_PATH = "scripts/gen-types.mjs";
 const E2E_BRINGUP_PATH = "scripts/supabase-e2e-bringup.mjs";
 const GREENFIELD_PUSH_PATH = "scripts/supabase-greenfield-push.mjs";
+const VERCEL_ENV_GUARD_PATH = "scripts/check-preview-supabase-env.mjs";
 
 const errors = [];
 
@@ -78,29 +79,6 @@ if (hookSource.includes("APPROVED_NON_PROD_REFS")) {
   fail(`${HOOK_PATH}: broad non-production allowlist must not return`);
 }
 
-const documentedNoTouchRefs = [
-  ...registrySection.matchAll(
-    /^\|\s*`([a-z0-9]{20})`\s*\|.*\|\s*Do not touch\.\s*\|$/gm,
-  ),
-].map((match) => match[1]);
-const noTouchBlock = hookSource.match(
-  /const NO_TOUCH_REFS = new Set\(\[([\s\S]*?)\]\);/,
-);
-const hookNoTouchRefs = noTouchBlock
-  ? [...noTouchBlock[1].matchAll(/"([a-z0-9]{20})"/g)].map(
-      (match) => match[1],
-    )
-  : [];
-if (
-  documentedNoTouchRefs.length === 0 ||
-  documentedNoTouchRefs.length !== hookNoTouchRefs.length ||
-  documentedNoTouchRefs.some((ref) => !hookNoTouchRefs.includes(ref))
-) {
-  fail(
-    `${HOOK_PATH}: NO_TOUCH_REFS must exactly match Environment Registry rows whose rights are Do not touch.`,
-  );
-}
-
 const documentedGreenfieldRefs = [
   ...registrySection.matchAll(
     /^\|\s*`([a-z0-9]{20})`\s*\|\s*\*\*GREENFIELD\*\*/gm,
@@ -136,6 +114,19 @@ const hookPreviewParentRef = hookSource.match(
 if (hookPreviewParentRef !== documentedProdRef) {
   fail(
     `${HOOK_PATH}: APPROVED_PREVIEW_PARENT_REF must equal the documented Production ref`,
+  );
+}
+const documentedVercelCandidate = registrySection.match(
+  /^\|\s*`(prj_[A-Za-z0-9]+)`\s*\|\s*`matu-greenfield-company`\s*\|\s*`([a-z0-9]{20})`\s*\|\s*Sole allowed Production deploy target\.\s*\|$/m,
+);
+const documentedVercelProjectId = documentedVercelCandidate?.[1];
+const documentedVercelSupabaseRef = documentedVercelCandidate?.[2];
+if (
+  !documentedVercelProjectId ||
+  documentedVercelSupabaseRef !== documentedGreenfieldRefs[0]
+) {
+  fail(
+    `${REGISTRY_PATH}: Vercel candidate must bind one project ID to the registered Greenfield ref`,
   );
 }
 if (!fs.existsSync(path.join(REPO_ROOT, CODEX_CONFIG_PATH))) {
@@ -308,13 +299,13 @@ if (!fs.existsSync(typegenPath)) {
   const typegenSource = fs.readFileSync(typegenPath, "utf8");
   if (
     !typegenSource.includes(
-      `const PRODUCTION_PROJECT_ID = "${documentedProdRef}";`,
+      `const TYPE_SOURCE_PROJECT_ID = "${documentedGreenfieldRefs[0]}";`,
     ) ||
     typegenSource.includes(".env.local") ||
-    !typegenSource.includes("requestedProjectId !== PRODUCTION_PROJECT_ID")
+    !typegenSource.includes("requestedProjectId !== TYPE_SOURCE_PROJECT_ID")
   ) {
     fail(
-      `${TYPEGEN_PATH}: typegen must bind only to registered Production without .env.local or stored-link fallback`,
+      `${TYPEGEN_PATH}: typegen must bind only to registered Greenfield without .env.local or stored-link fallback`,
     );
   }
   const rejectedTarget = spawnSync("node", [typegenPath], {
@@ -323,7 +314,7 @@ if (!fs.existsSync(typegenPath)) {
     encoding: "utf8",
   });
   if (rejectedTarget.status === 0) {
-    fail(`${TYPEGEN_PATH}: must reject any non-Production type source`);
+    fail(`${TYPEGEN_PATH}: must reject any non-Greenfield type source`);
   }
   const missingTarget = spawnSync("node", [typegenPath], {
     cwd: REPO_ROOT,
@@ -331,7 +322,7 @@ if (!fs.existsSync(typegenPath)) {
     encoding: "utf8",
   });
   if (missingTarget.status === 0) {
-    fail(`${TYPEGEN_PATH}: must require an explicit Production type source`);
+    fail(`${TYPEGEN_PATH}: must require an explicit Greenfield type source`);
   }
 }
 
@@ -387,12 +378,37 @@ if (!fs.existsSync(greenfieldPushPath)) {
   }
 }
 
+const vercelEnvGuardPath = path.join(REPO_ROOT, VERCEL_ENV_GUARD_PATH);
+if (!fs.existsSync(vercelEnvGuardPath)) {
+  fail(`${VERCEL_ENV_GUARD_PATH} does not exist`);
+} else {
+  const vercelEnvGuardSource = fs.readFileSync(vercelEnvGuardPath, "utf8");
+  if (
+    !vercelEnvGuardSource.includes(
+      `const GREENFIELD_VERCEL_PROJECT_ID = "${documentedVercelProjectId}";`,
+    ) ||
+    !vercelEnvGuardSource.includes(
+      `const GREENFIELD_SUPABASE_REF = "${documentedVercelSupabaseRef}";`,
+    )
+  ) {
+    fail(
+      `${VERCEL_ENV_GUARD_PATH}: Production target must match the Vercel Deployment Registry`,
+    );
+  }
+  const selfTest = spawnSync("node", [vercelEnvGuardPath, "--self-test"], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+  });
+  if (selfTest.status !== 0) {
+    fail(`${VERCEL_ENV_GUARD_PATH}: self-test failed`);
+  }
+}
+
 // 4. Behavior fixtures: replay canonical tool calls through the hook and
 // assert exit codes, so blocking cannot silently regress. Fixture strings
 // here are file contents — the runtime hooks only scan Bash command lines.
 const PROD = documentedProdRef ?? "iexwsuaqqenyjiskawoj";
 const GREENFIELD = documentedGreenfieldRefs[0] ?? "enloyfnuerqgaqderbwb";
-const NO_TOUCH = hookNoTouchRefs[0] ?? "dyksphedgzqsqjqgxzog";
 const UNREGISTERED_REF = "abcdefghijklmnopqrst";
 const TRUSTED_PREVIEW = "prvwabcdefghijklmnop";
 const WRONG_PARENT_PREVIEW = "wrngabcdefghijklmnop";
@@ -501,11 +517,6 @@ const FIXTURES = [
     "allow: echo argument is not a Supabase executable",
     0,
     bash("echo supabase link"),
-  ],
-  [
-    "allow: repository search may mention no-touch ref and database client",
-    0,
-    bash(`rg -n "${NO_TOUCH}|supabase" docs tasks scripts`),
   ],
   [
     "block: version-qualified Supabase CLI cannot bypass guard",
@@ -750,13 +761,6 @@ const FIXTURES = [
     "block: psql write SQL vs prod host",
     2,
     bash(`psql -X postgres://u@db.${PROD}.supabase.co/postgres -c "drop table x"`),
-  ],
-  [
-    "block: psql read against separate-codebase no-touch ref",
-    2,
-    bash(
-      `psql -X postgres://u@db.${NO_TOUCH}.supabase.co/postgres -c "select 1"`,
-    ),
   ],
   [
     "block: psql write SQL vs unregistered host",
@@ -1280,13 +1284,6 @@ const FIXTURES = [
     bash(`curl https://${PROD}.supabase.co/rest/v1/orders`),
   ],
   [
-    "block: curl read against separate-codebase no-touch ref",
-    2,
-    bash(
-      `curl -q https://${NO_TOUCH}.supabase.co/rest/v1/orders?select=id`,
-    ),
-  ],
-  [
     "block: mcp execute_sql write vs prod",
     2,
     mcp("execute_sql", {
@@ -1351,11 +1348,6 @@ const FIXTURES = [
     mcp("create_branch", { project_id: PROD }),
   ],
   [
-    "block: mcp create_branch cannot target separate-codebase parent",
-    2,
-    mcp("create_branch", { project_id: NO_TOUCH }),
-  ],
-  [
     "block: mcp create_branch cannot target an unregistered parent",
     2,
     mcp("create_branch", { project_id: UNREGISTERED_REF }),
@@ -1364,14 +1356,6 @@ const FIXTURES = [
     "allow: mcp delete_branch with a verified Production parent",
     0,
     mcp("delete_branch", { project_id: PROD, branch_id: TRUSTED_PREVIEW }),
-  ],
-  [
-    "block: mcp delete_branch cannot target separate-codebase parent",
-    2,
-    mcp("delete_branch", {
-      project_id: NO_TOUCH,
-      branch_id: "preview-branch",
-    }),
   ],
   [
     "block: mcp delete_branch cannot target an unregistered parent",
@@ -1413,11 +1397,6 @@ const FIXTURES = [
     bash(`supabase branches create test --project-ref ${PROD}`),
   ],
   [
-    "block: Preview creation against separate-codebase parent",
-    2,
-    bash(`supabase branches create test --project-ref ${NO_TOUCH}`),
-  ],
-  [
     "block: Preview creation against unknown parent",
     2,
     bash("supabase branches create test --project-ref abcdefabcdefabcdefab"),
@@ -1448,11 +1427,6 @@ const FIXTURES = [
     "block: Supabase CLI read with unregistered target",
     2,
     bash("supabase branches list --project-ref abcdefabcdefabcdefab"),
-  ],
-  [
-    "block: Supabase CLI read against separate-codebase no-touch ref",
-    2,
-    bash(`supabase branches list --project-ref ${NO_TOUCH}`),
   ],
   [
     "block: Production db dump cannot expose table data",
@@ -1887,24 +1861,6 @@ const FIXTURES = [
     }),
   ],
   [
-    "block: project-scoped MCP read vs separate-codebase no-touch ref",
-    2,
-    mcpConnectorLive("list_tables", {
-      project_id: NO_TOUCH,
-      schemas: ["public"],
-    }),
-  ],
-  [
-    "block: execute_sql read vs separate-codebase no-touch ref",
-    2,
-    mcp("execute_sql", { project_id: NO_TOUCH, query: "select 1" }),
-  ],
-  [
-    "block: get_project read vs separate-codebase no-touch ref",
-    2,
-    mcpConnectorLive("get_project", { id: NO_TOUCH }),
-  ],
-  [
     "allow: mcp execute_sql EXPLAIN format vs prod",
     0,
     mcp("execute_sql", {
@@ -2233,5 +2189,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `[guard-sync] hook, pinned Codex MCP, ${ADAPTER_PATHS.length} adapter configs, Environment Registry, and ${FIXTURES.length} behavior fixtures in sync (${hookRefs.length} protected refs, ${hookNoTouchRefs.length} no-touch ref)`,
+  `[guard-sync] hook, pinned Codex MCP, ${ADAPTER_PATHS.length} adapter configs, Environment Registry, and ${FIXTURES.length} behavior fixtures in sync (${hookRefs.length} protected refs)`,
 );

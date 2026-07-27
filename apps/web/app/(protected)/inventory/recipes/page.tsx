@@ -28,7 +28,6 @@ type MenuItemRow = {
     quantity: number | string | null;
     entry_unit_id: number | string | null;
     note: string | null;
-    yield_factor: number | string | null;
     ingredients: {
       id: number;
       name: string;
@@ -58,7 +57,7 @@ export default async function RecipesPage({
       branchId != null
         ? fetchBranchMenuStockCapacity(branchId)
         : Promise.resolve({ success: true as const, data: {} }),
-      ]);
+    ]);
 
   const dbRows = recipesRes.success ? (recipesRes.data as MenuItemRow[]) : [];
 
@@ -80,7 +79,10 @@ export default async function RecipesPage({
     ? (ingredientsRes.data as Array<{
         id: number;
         name: string;
-        ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
+        ingredient_units?: {
+          is_base: boolean;
+          units: { code: string } | null;
+        }[];
         units?: IngredientUnitRow[];
       }>)
     : [];
@@ -99,30 +101,32 @@ export default async function RecipesPage({
           wac != null ? wac : Number(line.ingredients?.unit_cost ?? 0);
         const entryUnitId =
           line.entry_unit_id == null ? null : Number(line.entry_unit_id);
-        const yieldFactor = Number(line.yield_factor ?? 1);
         const catalogIngredient = ingredientById.get(ingredientId);
-        const baseQuantity = getRecipeLineBaseQuantity({
+        const outputQuantity = getRecipeLineBaseQuantity({
           quantity: qty,
-          yieldFactor,
           entryUnitId,
           units: catalogIngredient?.units,
         });
+        const outputUnit =
+          catalogIngredient?.units?.find(
+            (unit) => unit.is_active && unit.is_base,
+          ) ?? catalogIngredient?.units?.find((unit) => unit.is_base);
+        const outputUnitId = outputUnit?.unit_id ?? entryUnitId;
         const fallbackUnit =
-          line.ingredients?.ingredient_units?.find((u) => u.is_base)?.units?.code ??
-          "";
+          line.ingredients?.ingredient_units?.find((u) => u.is_base)?.units
+            ?.code ?? "";
         return {
           ingredientId,
           ingredientName: line.ingredients?.name ?? "—",
-          qty,
+          qty: outputQuantity,
           unitLabel: getIngredientUnitDisplayName(
             catalogIngredient?.units,
-            entryUnitId,
+            outputUnitId,
             fallbackUnit,
           ),
-          entryUnitId,
-          yieldFactor,
+          entryUnitId: outputUnitId,
           note: line.note ?? null,
-          lineCost: baseQuantity * unitCost,
+          lineCost: outputQuantity * unitCost,
         };
       });
 
@@ -137,7 +141,8 @@ export default async function RecipesPage({
         estimatedCost,
         items,
       };
-    });
+    })
+    .filter((recipe) => recipe.items.length > 0);
 
   const menuItems: MenuItemOption[] = menuItemsRes.success
     ? (menuItemsRes.data as Array<{ id: number; name: string }>).map((mi) => ({

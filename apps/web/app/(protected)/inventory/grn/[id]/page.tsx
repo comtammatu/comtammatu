@@ -36,7 +36,7 @@ export async function GRNDetailPageContent({
   routeBranchId,
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
-  supplierInvoicesBasePath = "/inventory/supplier-invoices",
+  supplierInvoicesBasePath = "/finance/supplier-invoices",
 }: GRNDetailPageContentProps) {
   const result = await loadGrnDetailResult(grnId, routeBranchId);
   if (!result.data) {

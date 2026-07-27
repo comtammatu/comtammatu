@@ -52,7 +52,6 @@ export type RecipeItem = {
   qty: number;
   unitLabel: string;
   entryUnitId: number | null;
-  yieldFactor: number;
   note: string | null;
   lineCost: number;
 };
@@ -117,7 +116,6 @@ export function RecipesClient({
         quantity: item.qty,
         unitLabel: item.unitLabel,
         entryUnitId: item.entryUnitId,
-        yieldFactor: item.yieldFactor,
         note: item.note,
       })),
     );

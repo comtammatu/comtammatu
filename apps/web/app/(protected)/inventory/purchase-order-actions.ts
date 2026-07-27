@@ -7,7 +7,7 @@ import {
   isProcurementBranchInScope,
 } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
-import { withAction } from "@/_lib/with-action";
+import { withAction, type ActionContext } from "@/_lib/with-action";
 
 const poIdSchema = z.object({
   poId: z.coerce.number().int().positive(),
@@ -40,6 +40,29 @@ const poSchema = z
     }
   });
 
+async function validateSupplierIngredients(
+  supabase: ActionContext["supabase"],
+  tenantId: number,
+  supplierId: number,
+  ingredientIds: number[],
+): Promise<string | null> {
+  const expected = new Set(ingredientIds);
+  if (expected.size === 0) return "Đơn mua chưa có nguyên liệu.";
+  const { data, error } = await supabase
+    .from("supplier_items")
+    .select("ingredient_id")
+    .eq("tenant_id", tenantId)
+    .eq("supplier_id", supplierId)
+    .eq("is_active", true)
+    .in("ingredient_id", [...expected]);
+
+  if (error) return "Không thể kiểm tra nguyên liệu theo nhà cung cấp.";
+  const allowed = new Set((data ?? []).map((item) => item.ingredient_id));
+  return [...expected].every((id) => allowed.has(id))
+    ? null
+    : "Có nguyên liệu chưa được gán cho nhà cung cấp.";
+}
+
 export const createPurchaseOrderWithLines = withAction(
   {
     roles: PROCUREMENT_ROLES,
@@ -60,6 +83,16 @@ export const createPurchaseOrderWithLines = withAction(
       };
     }
 
+    const supplierItemError = await validateSupplierIngredients(
+      supabase,
+      claims.tenant_id,
+      data.supplierId,
+      data.lines.map((line) => line.ingredientId),
+    );
+    if (supplierItemError) {
+      return { success: false, error: supplierItemError };
+    }
+
     const { data: result, error } = await supabase.rpc(
       "create_purchase_order_with_lines",
       {
@@ -76,6 +109,12 @@ export const createPurchaseOrderWithLines = withAction(
     );
 
     if (error) {
+      if (error.message.includes("supplier_item_mapping_required")) {
+        return {
+          success: false,
+          error: "Có nguyên liệu chưa được gán cho nhà cung cấp.",
+        };
+      }
       const errors: Record<string, string> = {
         "22023": "Dữ liệu dòng PO không hợp lệ.",
         "28000": "Phiên đăng nhập đã hết hạn.",
@@ -109,7 +148,9 @@ export const approvePurchaseOrder = withAction(
   async ({ poId }, { supabase, claims }) => {
     const { data: po, error: loadError } = await supabase
       .from("purchase_orders")
-      .select("branch_id, status")
+      .select(
+        "branch_id, status, supplier_id, purchase_order_items(ingredient_id)",
+      )
       .eq("tenant_id", claims.tenant_id)
       .eq("id", poId)
       .maybeSingle();
@@ -129,11 +170,26 @@ export const approvePurchaseOrder = withAction(
     if (po.status !== "draft") {
       return { success: false, error: "Chỉ duyệt PO đang ở trạng thái nháp." };
     }
+    const supplierItemError = await validateSupplierIngredients(
+      supabase,
+      claims.tenant_id,
+      po.supplier_id,
+      po.purchase_order_items.map((item) => item.ingredient_id),
+    );
+    if (supplierItemError) {
+      return { success: false, error: supplierItemError };
+    }
 
     const { error } = await supabase.rpc("approve_purchase_order", {
       p_po_id: poId,
     });
     if (error) {
+      if (error.message.includes("supplier_item_mapping_required")) {
+        return {
+          success: false,
+          error: "Có nguyên liệu chưa được gán cho nhà cung cấp.",
+        };
+      }
       return { success: false, error: "Không thể duyệt PO." };
     }
 
@@ -151,7 +207,9 @@ export const createGrnFromPurchaseOrder = withAction(
   async ({ poId }, { supabase, claims }) => {
     const { data: po, error: loadError } = await supabase
       .from("purchase_orders")
-      .select("branch_id, status")
+      .select(
+        "branch_id, status, supplier_id, purchase_order_items(ingredient_id)",
+      )
       .eq("tenant_id", claims.tenant_id)
       .eq("id", poId)
       .maybeSingle();
@@ -171,6 +229,15 @@ export const createGrnFromPurchaseOrder = withAction(
     if (!["sent", "partially_received"].includes(po.status)) {
       return { success: false, error: "PO chưa được duyệt hoặc đã nhận đủ." };
     }
+    const supplierItemError = await validateSupplierIngredients(
+      supabase,
+      claims.tenant_id,
+      po.supplier_id,
+      po.purchase_order_items.map((item) => item.ingredient_id),
+    );
+    if (supplierItemError) {
+      return { success: false, error: supplierItemError };
+    }
 
     const { data: result, error } = await supabase.rpc(
       "create_grn_from_approved_po",
@@ -179,6 +246,12 @@ export const createGrnFromPurchaseOrder = withAction(
       },
     );
     if (error) {
+      if (error.message.includes("supplier_item_mapping_required")) {
+        return {
+          success: false,
+          error: "Có nguyên liệu chưa được gán cho nhà cung cấp.",
+        };
+      }
       return { success: false, error: "Không thể tạo phiếu nhập từ PO." };
     }
 

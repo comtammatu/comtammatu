@@ -69,6 +69,7 @@ export type PurchaseOrderOption = {
 
 export type PurchaseOrderIngredient = PurchaseOrderOption & {
   units: PurchaseOrderOption[];
+  supplierIds: number[];
 };
 
 const lineSchema = z.object({
@@ -141,6 +142,18 @@ function PurchaseOrderLineFields({
   const ingredient =
     ingredients.find((item) => item.id === Number(ingredientId)) ?? null;
   const unitOptions = ingredient?.units ?? [];
+
+  useEffect(() => {
+    if (!ingredientId || ingredient) return;
+    form.setValue(ingredientPath, "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue(unitPath, "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [form, ingredient, ingredientId, ingredientPath, unitPath]);
 
   useEffect(() => {
     const current = form.getValues(unitPath);
@@ -228,6 +241,17 @@ function PurchaseOrderFields({
     control: form.control,
     name: "lines",
   });
+  const supplierId = useWatch({
+    control: form.control,
+    name: "supplierId",
+  });
+  const supplierIngredients = useMemo(
+    () =>
+      ingredients.filter((item) =>
+        item.supplierIds.includes(Number(supplierId)),
+      ),
+    [ingredients, supplierId],
+  );
 
   return (
     <>
@@ -265,18 +289,22 @@ function PurchaseOrderFields({
           type="button"
           variant="outline"
           size="sm"
+          disabled={supplierIngredients.length === 0}
           onClick={() => append(emptyLine())}
         >
           <IconPlus />
           {poCopy.addLine}
         </Button>
       </div>
+      {supplierId && supplierIngredients.length === 0 ? (
+        <p className="text-sm text-warning">{poCopy.noSupplierItems}</p>
+      ) : null}
       {fields.map((field, index) => (
         <PurchaseOrderLineFields
           key={field.id}
           form={form}
           index={index}
-          ingredients={ingredients}
+          ingredients={supplierIngredients}
           canRemove={fields.length > 1}
           onRemove={() => remove(index)}
         />

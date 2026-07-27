@@ -198,7 +198,11 @@ test("bills show VAT rates only when present and after adjustments", () => {
     const withoutVat = renderDocumentToOps(buildFallbackDocument(payload))
       .flatMap((op) => (op.kind === "line" ? [op.text] : []));
     assert.ok(
-      !withoutVat.some((line) => line.trimStart().startsWith("VAT")),
+      !withoutVat.some(
+        (line) =>
+          line.startsWith("Tiền thuế GTGT") ||
+          line.startsWith("- Thuế GTGT"),
+      ),
       `${kind} must hide VAT without a tax breakdown`,
     );
 
@@ -215,21 +219,28 @@ test("bills show VAT rates only when present and after adjustments", () => {
     const discountIndex = withVat.findIndex((line) =>
       line.includes("Chiết khấu"),
     );
-    const vat8Index = withVat.findIndex((line) =>
-      line.startsWith("VAT 8% (đã gồm)"),
+    const taxTotalIndex = withVat.findIndex((line) =>
+      line.startsWith("Tiền thuế GTGT (đã gồm)"),
     );
     const vat10Index = withVat.findIndex((line) =>
-      line.startsWith("VAT 10% (đã gồm)"),
+      line.startsWith("- Thuế GTGT (10%)"),
+    );
+    const vat8Index = withVat.findIndex((line) =>
+      line.startsWith("- Thuế GTGT (8%)"),
     );
     const totalIndex = withVat.findIndex((line) =>
       line.includes("TỔNG CỘNG"),
     );
 
+    assert.ok(withVat[taxTotalIndex]?.endsWith("9.966đ"));
+    assert.ok(withVat[vat10Index]?.endsWith("1.818đ"));
+    assert.ok(withVat[vat8Index]?.endsWith("8.148đ"));
     assert.ok(
-      discountIndex < vat8Index &&
-        vat8Index < vat10Index &&
-        vat10Index < totalIndex,
-      `${kind} must render sorted VAT rates after discount and before total`,
+      discountIndex < taxTotalIndex &&
+        taxTotalIndex < vat10Index &&
+        vat10Index < vat8Index &&
+        vat8Index < totalIndex,
+      `${kind} must render VAT total and descending rates after discount`,
     );
   }
 });

@@ -21,23 +21,22 @@ test("inventory messages use the standardized cost and value terms", () => {
   assert.doesNotMatch(source, /theo WAC/);
 });
 
-test("ingredient unit dialog always previews canonical conversion to base stock unit", () => {
+test("ingredient unit dialog names only input and output roles", () => {
   const source = readWorkspaceFile(
     "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
 
-  assert.match(source, /previewCanonical/);
-  assert.match(source, /DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION/);
-  assert.doesNotMatch(source, /Đổi chiều quy đổi/);
-  assert.doesNotMatch(source, /displayAnchorFactor/);
-  assert.doesNotMatch(source, /preferredConversionInputDirection/);
-  assert.doesNotMatch(source, /toStoredAnchorFactor/);
+  assert.match(source, /label=\{copy\.units\.inputUnit\}/);
+  assert.match(source, /label=\{copy\.units\.outputUnit\}/);
+  assert.doesNotMatch(source, /label=\{copy\.units\.colBase\}/);
+  assert.doesNotMatch(
+    source,
+    /previewCanonical|DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION|Đổi chiều quy đổi/,
+  );
 });
 
 test("GRN entry labels purchase price and conversion without calling it cost basis", () => {
-  const source = readWorkspaceFile(
-    "lib/inventory/grn-create-copy.ts",
-  );
+  const source = readWorkspaceFile("lib/inventory/grn-create-copy.ts");
 
   assert.match(source, /unitCostTitle: "Đơn giá nhập"/);
   assert.match(source, /unitPriceUnit: \(unit: string, unitCost: number\) =>/);
@@ -77,8 +76,14 @@ test("operator-facing inventory copy does not reintroduce branch abbreviations",
   const dictionary = readWorkspaceFile(
     "app/(protected)/inventory/_lib/dictionary.ts",
   );
-  assert.match(dictionary, /branchWarehouse: \{ short: "Kho", long: "Kho chi nhánh" \}/);
-  assert.match(dictionary, /branchKitchen: \{ short: "Bếp", long: "Bếp chi nhánh" \}/);
+  assert.match(
+    dictionary,
+    /branchWarehouse: \{ short: "Kho", long: "Kho chi nhánh" \}/,
+  );
+  assert.match(
+    dictionary,
+    /branchKitchen: \{ short: "Bếp", long: "Bếp chi nhánh" \}/,
+  );
 
   const migration = readWorkspaceFile(
     "../../supabase/migration-archive/20260710101500_normalize_inventory_location_display_names.sql",

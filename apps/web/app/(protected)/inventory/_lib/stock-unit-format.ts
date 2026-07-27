@@ -1,9 +1,6 @@
 import type { IngredientUnitRow } from "@lib/inventory/types";
 
-// Two-line view of a base-unit stock quantity: a whole-count step breakdown
-// across every unit rung (biggest -> smallest, skipping zero levels) on top,
-// and the exact total in the base unit below. `big` is null when the ingredient
-// has a single unit (only the base) so callers render one line.
+// Show the configured largest-unit conversion and the exact base-unit total.
 export function formatStockUnits(
   qtyBase: number,
   units: IngredientUnitRow[] | undefined,
@@ -17,25 +14,23 @@ export function formatStockUnits(
   const baseCode = baseRow?.unit_code ?? "";
   const base = `${formatNumber(qtyBase)} ${baseCode}`.trim();
 
-  // Ladder biggest -> smallest; the base unit (to_base 1) is the last rung.
-  const ladder = [...usable].sort(
-    (a, b) => b.to_base_factor - a.to_base_factor,
+  const biggest = usable.reduce<IngredientUnitRow | undefined>(
+    (current, unit) =>
+      current === undefined || unit.to_base_factor > current.to_base_factor
+        ? unit
+        : current,
+    undefined,
   );
-  const biggest = ladder[0];
-
-  if (ladder.length <= 1 || biggest === undefined || biggest.to_base_factor <= 1) {
+  if (
+    usable.length <= 1 ||
+    biggest === undefined ||
+    biggest.to_base_factor <= 1
+  ) {
     return { big: null, base };
   }
 
-  let remaining = qtyBase;
-  const parts: string[] = [];
-  for (const u of ladder) {
-    const whole = Math.floor(remaining / u.to_base_factor + 1e-9);
-    if (whole > 0) {
-      parts.push(`${formatNumber(whole)} ${u.unit_code}`);
-      remaining -= whole * u.to_base_factor;
-    }
-  }
-
-  return { big: parts.length ? parts.join(" ") : null, base };
+  return {
+    big: `${formatNumber(qtyBase / biggest.to_base_factor)} ${biggest.unit_code}`,
+    base,
+  };
 }

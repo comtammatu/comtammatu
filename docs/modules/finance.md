@@ -2,7 +2,9 @@
 
 ## Product Boundary
 
-Enterprise accounting is outside the current Finance product boundary.
+Statutory enterprise accounting is an obligation of the company, but a general
+ledger and financial statements are outside the current Finance product
+boundary.
 
 Finance Basic is the default Finance experience when `/finance` opens as
 `Tổng quan tài chính`. The first section shows one period-result formula across
@@ -65,9 +67,8 @@ added to this landing formula; HĐĐT and tax workflows keep their existing
 separate routes and contracts.
 
 Do not expand Finance by default into a full enterprise accounting product.
-The current business model is HKD, so the Finance surface must serve restaurant
-operating finance first: daily money, stock value, food cost, expenses, HĐĐT,
-and accountant export.
+The Finance surface serves restaurant operating finance first: daily money,
+stock value, food cost, expenses, HĐĐT, AP and accountant export.
 
 Finance metrics, cards, titles, and overview summaries must also follow
 `docs/ref/operational-data-contract.md`. Do not add a new finance KPI or reuse a
@@ -83,15 +84,15 @@ screens to every operator from day one.
 
 | Stage | Key                    | Default audience               | Product intent                                                                         |
 | ----- | ---------------------- | ------------------------------ | -------------------------------------------------------------------------------------- |
-| 1     | `hkd_basic`            | Hộ kinh doanh / one-shop owner | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
-| 2     | `branch_control`       | Multi-branch owner / operator  | Compare branches using the same formulas as HKD Basic, then drill into outliers        |
+| 1     | `operating_basic`      | Owner / operator               | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
+| 2     | `branch_control`       | Multi-branch owner / operator  | Compare branches using the same operating formulas, then drill into outliers           |
 | 3     | `accountant_reporting` | Accountant / reporting owner   | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports       |
 
-The default `/finance` experience must start at `hkd_basic`. It may reveal
+The default `/finance` experience must start at `operating_basic`. It may reveal
 `branch_control` comparison only when the user has more than one accessible
 branch. Accountant-reporting routes stay available by permission, but they must
-not become the default Finance landing while the business is still using HKD
-level operating reports.
+not become the default Finance landing while the operating dataset is not a
+complete accounting close.
 
 ### Finance Basic
 
@@ -204,8 +205,10 @@ they never add or subtract a second bank movement.
 
 ### Accounting Advanced Boundary (D020)
 
-Má Tư operates as a Hộ kinh doanh on single-entry bookkeeping (TT 152/2025).
-Enterprise double-entry accounting (TT 200 / VAS) is outside the current Finance scope.
+The company must formally select and apply the accounting regime appropriate to
+its size and conditions (TT 99/2025, TT 133/2016 or TT 58/2026 as applicable).
+The current Finance surface is not the statutory general ledger, tax
+finalization or financial statements.
 
 `accounting_periods` and the close/reopen RPCs remain database-only owner-gated
 support. No current app route exposes period close/reopen. Reopening that scope
@@ -225,6 +228,15 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 
 Inventory owns the detailed stock-value workspace. Finance displays only the
 current inventory-value card and does not expose a duplicate inventory route.
+
+Supplier invoice matching compares the pre-VAT `subtotal` with confirmed net
+accepted GRN value and a fully priced PO subtotal. AP balance and supplier
+payment use `total_amount = subtotal + vat_amount`. Multi-rate input invoices
+store one immutable `vat_breakdown` bucket per rate; database normalization
+derives the header totals and leaves the compatibility `vat_rate` null when
+more than one rate is present. The legacy
+`/inventory/supplier-invoices` route remains a compatibility entry only; new
+GRN and report links use `/finance/supplier-invoices`.
 
 There is no current `/accounting/*` app surface.
 
@@ -247,13 +259,13 @@ Do not implement new Accounting Advanced work until Finance Basic passes the acc
 
 Do not add new finance KPIs unless they answer a daily operator question or a required accountant export question.
 
-Do not expose VAS/TT200 routes as the primary Finance experience for owner or branch operations while Má Tư is operating as HKD.
+Do not expose statutory accounting routes as the primary Finance experience for owner or branch operations.
 
 Do not call the module "done" because enterprise-accounting objects exist in old migrations or archived references. Restaurant finance readiness is operating cash, revenue, expense, HĐĐT, inventory value, and accountant export.
 
 ## Current Gaps
 
-- Chi phí vận hành is captured in `/finance/expenses`; keep it as single-entry HKD operating expense, not enterprise accounting.
+- Chi phí vận hành is captured in `/finance/expenses`; keep it as an operating record, not a statutory journal entry.
 - Inventory value detail stays in Inventory; Finance shows only the current-value card.
 - HĐĐT is active through Viettel S-invoice. The app owns per-order issuance,
   cancellation, and replacement; provider-side artifacts and status lookup stay

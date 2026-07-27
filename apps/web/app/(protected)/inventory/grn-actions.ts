@@ -239,8 +239,9 @@ export async function fetchGrnIdsForDropdown(
   const { supabase, claims } = ctx;
   let query = supabase
     .from("goods_received_notes")
-    .select("id, grn_number, supplier_id, suppliers ( id, name )")
+    .select("id, grn_number, supplier_id, po_id, suppliers ( id, name )")
     .eq("tenant_id", claims.tenant_id)
+    .eq("status", "confirmed")
     .order("received_date", { ascending: false })
     .limit(100);
   if (branchId != null) query = query.eq("branch_id", branchId);
@@ -676,7 +677,7 @@ export const upsertGrnLine = withAction(
   async (data, { supabase, claims }) => {
     const { data: grn, error: grnError } = await supabase
       .from("goods_received_notes")
-      .select("id, status, branch_id")
+      .select("id, status, branch_id, supplier_id")
       .eq("id", data.grnId)
       .eq("tenant_id", claims.tenant_id)
       .single();
@@ -694,6 +695,28 @@ export const upsertGrnLine = withAction(
       return {
         success: false,
         error: "Bạn chỉ được chỉnh sửa phiếu nhập của kho mình.",
+      };
+    }
+
+    const { data: supplierItem, error: supplierItemError } = await supabase
+      .from("supplier_items")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("supplier_id", grn.supplier_id)
+      .eq("ingredient_id", data.ingredientId)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (supplierItemError) {
+      return {
+        success: false,
+        error: "Không thể kiểm tra nguyên liệu theo nhà cung cấp.",
+      };
+    }
+    if (!supplierItem) {
+      return {
+        success: false,
+        error: "Nguyên liệu chưa được gán cho nhà cung cấp.",
       };
     }
 
@@ -743,6 +766,12 @@ export const upsertGrnLine = withAction(
       )
       .select("id, baseline_variance_pct, baseline_sample_n")
       .single();
+    if (error?.message.includes("supplier_item_mapping_required")) {
+      return {
+        success: false,
+        error: "Nguyên liệu chưa được gán cho nhà cung cấp.",
+      };
+    }
     if (error || !row) {
       return { success: false, error: "Không thể lưu dòng phiếu nhập." };
     }
@@ -809,7 +838,49 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     PERMISSION_KEYS.PROCUREMENT_GRN_CONFIRM,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  const { data: grn, error: grnError } = await supabase
+    .from("goods_received_notes")
+    .select("supplier_id, grn_items(ingredient_id)")
+    .eq("id", id.data)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+  if (grnError || !grn) {
+    return { success: false, error: "Không tìm thấy phiếu nhập." };
+  }
+  const ingredientIds = [
+    ...new Set(grn.grn_items.map((item) => item.ingredient_id)),
+  ];
+  if (ingredientIds.length === 0) {
+    return { success: false, error: "Phiếu nhập chưa có nguyên liệu." };
+  }
+  const { data: supplierItems, error: supplierItemsError } = await supabase
+    .from("supplier_items")
+    .select("ingredient_id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("supplier_id", grn.supplier_id)
+    .eq("is_active", true)
+    .in("ingredient_id", ingredientIds);
+  if (supplierItemsError) {
+    return {
+      success: false,
+      error: "Không thể kiểm tra nguyên liệu theo nhà cung cấp.",
+    };
+  }
+  const allowedIngredientIds = new Set(
+    (supplierItems ?? []).map((item) => item.ingredient_id),
+  );
+  if (
+    ingredientIds.some(
+      (ingredientId) => !allowedIngredientIds.has(ingredientId),
+    )
+  ) {
+    return {
+      success: false,
+      error: "Phiếu có nguyên liệu chưa được gán cho nhà cung cấp.",
+    };
+  }
 
   const { data, error } = await supabase.rpc("confirm_goods_receipt_note", {
     p_grn_id: id.data,
@@ -846,6 +917,12 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
       return {
         success: false,
         error: messages.inventory.grn.confirmQcPricePhotoRequired,
+      };
+    }
+    if (error.message.includes("supplier_item_mapping_required")) {
+      return {
+        success: false,
+        error: "Phiếu có nguyên liệu chưa được gán cho nhà cung cấp.",
       };
     }
     return { success: false, error: "Không thể xác nhận phiếu nhập." };

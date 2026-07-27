@@ -57,7 +57,7 @@ export async function updateTenantIdentity(
   if (error) {
     return {
       success: false,
-      error: "Không thể lưu định danh hộ kinh doanh. Vui lòng thử lại.",
+      error: "Không thể lưu định danh doanh nghiệp. Vui lòng thử lại.",
     };
   }
 

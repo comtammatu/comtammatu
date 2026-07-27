@@ -1,7 +1,25 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
 import { getRecipeLineBaseQuantity } from "../app/(protected)/inventory/_lib/recipe-cost";
 import type { IngredientUnitRow } from "../lib/inventory/types";
+
+const recipeActionsSource = readFileSync(
+  join(process.cwd(), "app/(protected)/inventory/recipe-actions.ts"),
+  "utf8",
+);
+const recipesPageSource = readFileSync(
+  join(process.cwd(), "app/(protected)/inventory/recipes/page.tsx"),
+  "utf8",
+);
+const recipeDialogSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
+  ),
+  "utf8",
+);
 
 function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
   return {
@@ -25,7 +43,6 @@ test("recipe display cost quantity follows inventory base-unit conversion", () =
   assert.equal(
     getRecipeLineBaseQuantity({
       quantity: 2,
-      yieldFactor: 1,
       entryUnitId: 2,
       units,
     }),
@@ -33,24 +50,32 @@ test("recipe display cost quantity follows inventory base-unit conversion", () =
   );
 });
 
-test("recipe display cost quantity applies yield factor before costing", () => {
-  assert.equal(
-    getRecipeLineBaseQuantity({
-      quantity: 2,
-      yieldFactor: 0.8,
-      entryUnitId: null,
-    }),
-    2.5,
-  );
-});
-
 test("recipe display cost quantity keeps unitless lines unchanged", () => {
   assert.equal(
     getRecipeLineBaseQuantity({
       quantity: 3,
-      yieldFactor: 1,
       entryUnitId: null,
     }),
     3,
   );
+});
+
+test("menu recipes use the ingredient output unit for quantity and writes", () => {
+  assert.match(recipesPageSource, /qty: outputQuantity/);
+  assert.match(recipesPageSource, /entryUnitId: outputUnitId/);
+  assert.doesNotMatch(recipeDialogSource, /\bunitEditable\b/);
+  assert.match(recipeActionsSource, /\.eq\("is_base", true\)/);
+  assert.match(
+    recipeActionsSource,
+    /entry_unit_id: outputUnitByIngredient\.get\(line\.ingredientId\)/,
+  );
+});
+
+test("recipe WAC reads only active stock-bearing locations", () => {
+  assert.match(recipeActionsSource, /fetchStockBearingLocationIds/);
+  assert.match(
+    recipeActionsSource,
+    /\.in\("location_id", stockBearingLocationIds\)/,
+  );
+  assert.doesNotMatch(recipeActionsSource, /branches\.branch_kind/);
 });

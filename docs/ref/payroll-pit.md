@@ -1,12 +1,11 @@
 # Thuế TNCN & Lương — Personal Income Tax & Payroll
 
-> Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
+> Áp dụng: doanh nghiệp Cơm Tấm Má Tư
 > Khung pháp lý (đến 07/2026): Luật Thuế TNCN 2025 (109/2025/QH15, hiệu lực
 > chung 01/07/2026, biểu thuế + giảm trừ mới áp dụng **từ kỳ tính thuế 2026 =
 > 01/01/2026**) + NĐ 253/2026/NĐ-CP + TT 87/2026/TT-BTC; NQ 110/2025/UBTVQH15
 > (giảm trừ gia cảnh mới từ kỳ tính thuế 2026); Luật BHXH 2024 (41/2024/QH15) +
-> NĐ 158/2025 (BHXH bắt buộc, gồm chủ
-> hộ kinh doanh); NĐ 73/2024 (lương cơ sở 2,34tr → trần BHXH 46,8tr, đến
+> NĐ 158/2025 (BHXH bắt buộc); NĐ 73/2024 (lương cơ sở 2,34tr → trần BHXH 46,8tr, đến
 > 30/06/2026) → **NĐ 161/2026 (lương cơ sở 2,53tr → trần BHXH 50,6tr từ
 > 01/07/2026)**; NĐ 293/2025 (lương tối thiểu vùng từ 01/01/2026). Luật Thuế
 > TNCN 2007/TT 111/2013 chỉ còn dùng cho quyết toán các kỳ ≤ 2025.
@@ -214,7 +213,7 @@ CREATE TABLE payroll_entries (
   bhtn_employee       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 1%
   total_insurance_employee NUMERIC(15,2) NOT NULL,
 
-  -- Bảo hiểm NSDLĐ đóng (chi phí hộ kinh doanh)
+  -- Bảo hiểm NSDLĐ đóng (chi phí doanh nghiệp)
   bhxh_employer       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 17.5%
   bhyt_employer       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 3%
   bhtn_employer       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 1%
@@ -315,8 +314,8 @@ toán các kỳ ≤ 2025 (version `effectiveFrom` ≤ `2024-07-01`).
 ### 6.1 Quyết toán theo ủy quyền
 
 Nếu NLĐ chỉ có thu nhập từ 1 nơi → có thể **ủy quyền quyết toán** cho NSDLĐ
-theo điều kiện pháp luật thuế hiện hành. Với Cơm Tấm Má Tư, NSDLĐ là Hộ kinh
-doanh/chủ hộ, không phải CTCP.
+theo điều kiện pháp luật thuế hiện hành. Với Cơm Tấm Má Tư, NSDLĐ là doanh
+nghiệp.
 
 **Hạn quyết toán**: ngày 31/3 năm kế tiếp (ví dụ: quyết toán năm 2025 → 31/3/2026).
 
@@ -368,30 +367,15 @@ Total labor cost = Gross salary
                  = Gross × (1 + 21.5%) ≈ Gross × 1.215
 ```
 
-Ví dụ: Nhân viên lương gross 10 triệu → HKD/NSDLĐ thực tế chi khoảng 12.15 triệu/tháng.
+Ví dụ: Nhân viên lương gross 10 triệu → doanh nghiệp/NSDLĐ thực tế chi khoảng 12,15 triệu/tháng.
 
-### 7.1 BHXH bắt buộc của chủ hộ kinh doanh (từ 01/07/2025)
+### 7.1 Người quản lý doanh nghiệp và thành viên HĐQT
 
-Theo Luật BHXH 2024 + NĐ 158/2025/NĐ-CP: chủ hộ của HKD có đăng ký kinh
-doanh **nộp thuế theo phương pháp kê khai** thuộc diện BHXH bắt buộc từ
-01/07/2025 (chủ hộ HKD khác: từ 01/07/2029; trừ người đang hưởng lương
-hưu/trợ cấp BHXH hoặc đã đủ tuổi nghỉ hưu). Chủ hộ tự chọn mức tiền lương làm
-căn cứ đóng, không thấp hơn mức tham chiếu và không quá 20 lần mức tham chiếu.
-
-Tỷ lệ tự đóng toàn bộ (chủ hộ chịu cả phần NLĐ lẫn NSDLĐ):
-
-| Khoản | Tỷ lệ | Ghi chú |
-| --- | --- | --- |
-| BHXH | **25%** | 3% ốm đau-thai sản + 22% hưu trí-tử tuất |
-| BHYT | **4,5%** | |
-| **Tổng** | **29,5%** | trên mức tiền lương đã chọn |
-
-- Mức tham chiếu = lương cơ sở: **2,34tr đến 30/06/2026** → **2,53tr từ
-  01/07/2026** (NĐ 161/2026). BHXH tối thiểu = 25% × mức tham chiếu (585.000đ →
-  632.500đ); trần = 20× mức tham chiếu (46,8tr → 50,6tr).
-- Khoản này nằm **ngoài bảng lương nhân viên** — theo dõi như chi phí của chủ hộ.
-  Lưu ý: lương chủ hộ **không** là chi phí được trừ khi tính TNCN theo (doanh thu
-  − chi phí) ở nhóm > 3 tỷ (NĐ 68/2026 — xem `einvoice-tax.md` §4).
+Đối tượng và căn cứ đóng của người quản lý doanh nghiệp, thành viên HĐQT,
+Giám đốc/Tổng giám đốc phụ thuộc chức danh, việc hưởng tiền lương và quan hệ
+lao động thực tế theo Luật BHXH 41/2024 và NĐ 158/2025. Không suy từ application
+role `owner` hoặc tư cách cổ đông. Kế toán/HR phải xác nhận từng hồ sơ trước khi
+đưa vào payroll.
 
 ---
 

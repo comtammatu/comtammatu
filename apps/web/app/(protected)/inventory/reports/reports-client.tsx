@@ -212,7 +212,7 @@ export function ReportsClient({
               type="button"
               variant="outline"
               className="w-full text-muted-foreground"
-              render={<Link href="/inventory/supplier-invoices" />}
+              render={<Link href="/finance/supplier-invoices" />}
             >
               {messages.inventory.reports.openSupplierDebt}
             </Button>

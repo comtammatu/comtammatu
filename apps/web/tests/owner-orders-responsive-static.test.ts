@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 
@@ -100,16 +100,9 @@ test("Owner order and refund controls use named touch variants below desktop", (
   assert.doesNotMatch(pageBody, /size=\{embedded \? "touch" : "sm"\}/);
 });
 
-test("Ingredient Import and Export owns touch sizing for its trigger and items", () => {
-  const source = read(INGREDIENT_IMPORT_EXPORT);
-
-  assert.match(source, /useIsMobile\(1024\)/);
-  assert.equal(
-    (source.match(/size=\{isTouchLayout \? "touch" : "default"\}/g) ?? [])
-      .length,
-    5,
-  );
-  assert.equal(source.match(/<DropdownMenuItem/g)?.length, 4);
+test("Ingredients no longer exposes Import and Export", () => {
+  assert.equal(existsSync(resolve(repoRoot, INGREDIENT_IMPORT_EXPORT)), false);
+  assert.doesNotMatch(read(INGREDIENTS_CLIENT), /IngredientImportExportMenu/);
 });
 
 test("invoice mobile cards wrap touch actions without forcing page overflow", () => {

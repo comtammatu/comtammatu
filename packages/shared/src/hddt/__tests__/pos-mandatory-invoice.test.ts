@@ -317,28 +317,32 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   );
 });
 
-test("per-order HKD HĐĐT never carries VAT", () => {
+test("order lines snapshot item VAT without annual-revenue inference", () => {
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
+  const providerInitSrc = read("apps/web/lib/invoice-provider-init.ts");
   const migration = read(
-    "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
+    "supabase/migrations/20260727130000_snapshot_menu_item_vat_rate.sql",
   );
 
   assert.match(
     migration,
-    /'subtotal', v_order\.total_amount,[\s\S]*'vatRate', 0,[\s\S]*'vatAmount', 0/,
-    "HKD HĐĐT subtotal must be the paid total, not a reverse VAT split",
+    /SELECT menu_items\.vat_rate[\s\S]*NEW\.vat_rate := v_vat_rate/,
+    "order item VAT must be snapshotted from the sold menu item",
   );
-  assert.match(
+  assert.doesNotMatch(
     migration,
-    /v_order\.total_amount,[\s\S]*0,[\s\S]*0,[\s\S]*v_order\.total_amount,[\s\S]*'viettel'/,
-    "HKD HĐĐT must not carry VAT rate or VAT amount",
+    /NEW\.vat_rate := public\.resolve_gtgt_rate/,
+    "order item VAT must not be inferred from annual revenue",
   );
   assert.ok(
     !createSrc.includes("resolveSalesTaxProfile") &&
-      !createSrc.includes("estimateAnnualRevenue") &&
-      !createSrc.includes("item.vat_rate") &&
-      !createSrc.includes("status, vat_rate"),
-    "per-order HĐĐT must not derive VAT from tax profiles or order_items",
+      !createSrc.includes("estimateAnnualRevenue"),
+    "HĐĐT issuance must not use the retired annual-revenue tax resolver",
+  );
+  assert.match(
+    providerInitSrc,
+    /\/\^\[12\]\\\//,
+    "invoice provider initialization must accept supported enterprise VAT and direct-sales templates",
   );
 });
 

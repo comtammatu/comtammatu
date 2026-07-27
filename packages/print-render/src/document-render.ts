@@ -328,7 +328,7 @@ function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
   if ((p.discount_amount ?? 0) > 0 && p.discount_note) {
     if (p.discount_note) out.push(ops.line(`  Lý do: ${p.discount_note}`));
   }
-  for (const tax of [...(p.tax_breakdowns ?? [])]
+  const taxBreakdowns = [...(p.tax_breakdowns ?? [])]
     .filter(
       ({ rate, amount }) =>
         Number.isFinite(rate) &&
@@ -336,11 +336,24 @@ function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
         Number.isFinite(amount) &&
         amount >= 0,
     )
-    .sort((a, b) => a.rate - b.rate)) {
+    .sort((a, b) => b.rate - a.rate);
+  if (taxBreakdowns.length > 0) {
     out.push(
       ops.line(
         pair48(
-          `VAT ${formatPercent(tax.rate, 2)} (đã gồm)`,
+          "Tiền thuế GTGT (đã gồm)",
+          fmtMoney(
+            taxBreakdowns.reduce((total, tax) => total + tax.amount, 0),
+          ),
+        ),
+      ),
+    );
+  }
+  for (const tax of taxBreakdowns) {
+    out.push(
+      ops.line(
+        pair48(
+          `- Thuế GTGT (${formatPercent(tax.rate, 2)})`,
           fmtMoney(tax.amount),
         ),
       ),

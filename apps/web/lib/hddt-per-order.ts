@@ -71,6 +71,7 @@ const draftOrderItemSchema = z.object({
   unit_price: z.union([z.number(), z.string()]).nullable(),
   subtotal: z.union([z.number(), z.string()]).nullable().optional(),
   discount_amount: z.union([z.number(), z.string()]).nullable().optional(),
+  vat_rate: z.union([z.number(), z.string()]).nullable().optional(),
   modifiers: z.unknown().optional(),
   sides: z.unknown().optional(),
   status: z.string().nullable(),

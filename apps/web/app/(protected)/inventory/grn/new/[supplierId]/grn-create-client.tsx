@@ -318,8 +318,16 @@ export function GrnCreateClient({
           <AppEmptyState
             compact
             icon={<IconSearch />}
-            title={GRN_CREATE_COPY.emptyTitle}
-            description={GRN_CREATE_COPY.emptyDescription}
+            title={
+              data.ingredients.length === 0
+                ? GRN_CREATE_COPY.emptySupplierTitle
+                : GRN_CREATE_COPY.emptyTitle
+            }
+            description={
+              data.ingredients.length === 0
+                ? GRN_CREATE_COPY.emptySupplierDescription
+                : GRN_CREATE_COPY.emptyDescription
+            }
           />
         ) : (
           controller.filtered.map((ingredient) => {

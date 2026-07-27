@@ -939,7 +939,7 @@ export const finance = {
     noVariance: "Không còn ca lệch quỹ cần xử lý trong kỳ.",
   },
   invoicesPage: {
-    eyebrow: "HĐĐT HKD",
+    eyebrow: "HĐĐT",
     title: "Hóa đơn điện tử",
     description:
       "Danh sách HĐĐT đã phát hành, đang ký, đã hủy hoặc bán cho người tiêu dùng.",
@@ -957,7 +957,7 @@ export const finance = {
     },
     overview: {
       label: "Tổng quan tài chính",
-      description: "Màn hình chính cho tài chính vận hành HKD.",
+      description: "Màn hình chính cho tài chính vận hành.",
     },
   },
   foodCost: {

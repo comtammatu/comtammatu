@@ -29,6 +29,9 @@ test("supplier invoice outstanding amount subtracts paid and credited value", ()
     poCode: null,
     matchStatus: "matched",
     paymentStatus: "partial",
+    subtotal: 92_593,
+    vatAmount: 7_407,
+    vatBreakdown: [{ vatRate: 8, taxableAmount: 92_593, vatAmount: 7_407 }],
     amount: 100_000,
     paidAmount: 40_000,
     creditAppliedAmount: 0,
@@ -62,6 +65,13 @@ test("supplier invoice mapper keeps latest supplier payment for AP drilldown", (
     id: 1,
     supplier_id: 2,
     invoice_number: "NCC-001",
+    subtotal: 92_593,
+    vat_rate: 8,
+    vat_amount: 7_407,
+    vat_breakdown: [
+      { vat_rate: 5, taxable_amount: 40_000, vat_amount: 2_000 },
+      { vat_rate: 8, taxable_amount: 52_593, vat_amount: 5_407 },
+    ],
     total_amount: 100_000,
     paid_amount: 50_000,
     credit_applied_amount: 10_000,
@@ -90,6 +100,12 @@ test("supplier invoice mapper keeps latest supplier payment for AP drilldown", (
 
   assert.equal(row.paymentCount, 2);
   assert.equal(row.creditAppliedAmount, 10_000);
+  assert.equal(row.subtotal, 92_593);
+  assert.equal(row.vatAmount, 7_407);
+  assert.deepEqual(row.vatBreakdown, [
+    { vatRate: 5, taxableAmount: 40_000, vatAmount: 2_000 },
+    { vatRate: 8, taxableAmount: 52_593, vatAmount: 5_407 },
+  ]);
   assert.equal(getSupplierInvoiceOutstandingAmount(row), 40_000);
   assert.equal(row.lastPayment?.id, 11);
   assert.equal(row.lastPayment?.paymentMethod, "bank_transfer");

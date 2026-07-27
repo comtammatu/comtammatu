@@ -45,27 +45,22 @@ import {
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
-import { formatDecimal, formatVND } from "@lib/inventory/format";
+import { formatVND } from "@lib/inventory/format";
 import {
   CATEGORY_TONE_CLASS,
   ITEM_KIND_LABELS,
   ITEM_KIND_OPTIONS,
 } from "../_lib/constants";
 import {
-  fetchIngredientUnitLock,
   fetchIngredients,
   toggleIngredientActive,
 } from "../ingredient-actions";
-import {
-  IngredientDialog,
-  type IngredientUnitLockState,
-} from "./ingredient-dialog";
+import { IngredientDialog } from "./ingredient-dialog";
 import type {
   CategoryOption,
   IngredientRow,
   UnitOption,
 } from "@lib/inventory/types";
-import { IngredientImportExportMenu } from "./import-export-menu";
 import {
   getDisplayReferenceCost,
   type ReferenceCost,
@@ -81,13 +76,6 @@ import { messages } from "@lib/messages";
 
 const ingredientFormCopy = messages.inventoryMaster.ingredientForm;
 const ingredientListCopy = messages.inventory.ingredients.list;
-const preservationOptions = [
-  { value: "all", label: ingredientListCopy.preservationAll },
-  { value: "refrigerated", label: ingredientListCopy.preservationRefrigerated },
-  { value: "frozen", label: ingredientListCopy.preservationFrozen },
-  { value: "ambient", label: ingredientListCopy.preservationAmbient },
-];
-
 const activeOptions = [
   { value: "active", label: ingredientListCopy.activeOnly },
   { value: "all", label: ingredientListCopy.includeHidden },
@@ -100,12 +88,6 @@ const itemKindOptions = [
   },
   ...ITEM_KIND_OPTIONS,
 ] as const;
-
-function storageLabel(type: string | null): string {
-  if (type === "refrigerated") return "0–4°C";
-  if (type === "frozen") return "−18°C";
-  return ingredientListCopy.storageAmbient;
-}
 
 function categoryLabel(item: IngredientRow): string | null {
   return item.category_name ?? item.category ?? null;
@@ -125,22 +107,6 @@ function categoryToneClass(
     CATEGORY_TONE_CLASS[category] ??
     "bg-muted text-muted-foreground"
   );
-}
-
-function unitsSummary(item: IngredientRow): string {
-  const units = item.units ?? [];
-  if (units.length === 0) {
-    return "—";
-  }
-  return units
-    .slice()
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((u) =>
-      u.is_base
-        ? `${u.unit_code} (${ingredientFormCopy.units.baseTag})`
-        : `${u.unit_code} ×${formatDecimal(u.to_base_factor, 6)}`,
-    )
-    .join(" · ");
 }
 
 function formatReferenceCost(cost: ReferenceCost): string {
@@ -198,17 +164,10 @@ function IngredientMobileCard({
             <Badge variant="secondary" className="text-xs">
               {itemKindLabel(item)}
             </Badge>
-            <span className="text-xs text-muted-foreground">
-              {storageLabel(item.storage_type)}
-            </span>
           </div>
         </div>
       </div>
       <div className="flex flex-col gap-2 px-4 py-2 text-sm">
-        <div>
-          <p className="text-xs text-muted-foreground">{FORM_VI.unit}</p>
-          <p className="line-clamp-2 font-medium">{unitsSummary(item)}</p>
-        </div>
         <div>
           <p className="text-xs text-muted-foreground">
             {ingredientListCopy.colThresholds}
@@ -272,19 +231,15 @@ export function IngredientsClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [itemKind, setItemKind] = useState(allItemKindsValue);
-  const [preservation, setPreservation] = useState("all");
   const [activeFilter, setActiveFilter] = useState<"active" | "all">("active");
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] =
     useState<IngredientRow | null>(null);
-  const [unitLockState, setUnitLockState] =
-    useState<IngredientUnitLockState>("editable");
   const [isPending, startTransition] = useTransition();
   const isTouchLayout = useIsMobile(1024);
 
   const lastUpdatedAtRef = useRef<string | null>(null);
-  const unitLockRequestRef = useRef(0);
 
   // Initialize the water-mark cursor from initial rows
   if (lastUpdatedAtRef.current === null && initial.length > 0) {
@@ -325,31 +280,24 @@ export function IngredientsClient({
     if (itemKind !== allItemKindsValue) {
       result = result.filter((item) => item.item_kind === itemKind);
     }
-    if (preservation !== "all") {
-      result = result.filter(
-        (item) => (item.storage_type ?? "ambient") === preservation,
-      );
-    }
     if (searchQuery.trim()) {
       result = result.filter((item) =>
         matchesSearch([item.name, item.sku], searchQuery),
       );
     }
     return result;
-  }, [rows, activeFilter, category, itemKind, preservation, searchQuery]);
+  }, [rows, activeFilter, category, itemKind, searchQuery]);
 
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     category !== "all" ||
     itemKind !== allItemKindsValue ||
-    preservation !== "all" ||
     activeFilter !== "active";
 
   function clearFilters() {
     setSearchQuery("");
     setCategory("all");
     setItemKind(allItemKindsValue);
-    setPreservation("all");
     setActiveFilter("active");
     setCurrentPage(1);
   }
@@ -395,26 +343,13 @@ export function IngredientsClient({
   }
 
   function openCreate() {
-    unitLockRequestRef.current += 1;
     setEditingIngredient(null);
-    setUnitLockState("editable");
     setDialogOpen(true);
   }
 
-  async function openEdit(row: IngredientRow) {
-    const requestId = unitLockRequestRef.current + 1;
-    unitLockRequestRef.current = requestId;
+  function openEdit(row: IngredientRow) {
     setEditingIngredient(row);
-    setUnitLockState("checking");
     setDialogOpen(true);
-    const result = await fetchIngredientUnitLock(row.id);
-    if (unitLockRequestRef.current !== requestId) return;
-    if (!result.success || !result.data) {
-      setUnitLockState("unavailable");
-      toast.error(result.error ?? ingredientListCopy.reloadFailed);
-      return;
-    }
-    setUnitLockState(result.data.locked ? "locked" : "editable");
   }
 
   function handleToggleActive(item: IngredientRow) {
@@ -521,32 +456,6 @@ export function IngredientsClient({
           </Select>
 
           <Select
-            value={preservation}
-            onValueChange={(value) => {
-              setPreservation(value);
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger
-              size={isTouchLayout ? "touch" : "field"}
-              className="w-36 sm:w-40"
-            >
-              <SelectValue placeholder={ingredientListCopy.preservationAll} />
-            </SelectTrigger>
-            <SelectContent>
-              {preservationOptions.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  className={isTouchLayout ? "min-h-12 text-sm" : undefined}
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
             value={activeFilter}
             onValueChange={(value) => {
               setActiveFilter(value as "active" | "all");
@@ -628,24 +537,9 @@ export function IngredientsClient({
               </Badge>
               <Badge variant="secondary">{itemKindLabel(item)}</Badge>
             </div>
-            <span className="text-xs text-muted-foreground">
-              {storageLabel(item.storage_type)}
-            </span>
           </div>
         );
       },
-    },
-    {
-      key: "unit",
-      header: FORM_VI.unit,
-      className: "min-w-44",
-      render: (item) => (
-        <div className="flex flex-col gap-1">
-          <span className="line-clamp-2 text-sm font-medium text-foreground">
-            {unitsSummary(item)}
-          </span>
-        </div>
-      ),
     },
     {
       key: "thresholds",
@@ -720,12 +614,9 @@ export function IngredientsClient({
         eyebrow={messages.inventory.shell.moduleName}
         title={PRODUCT_VI.rawIngredient}
         actions={
-          <div className="flex items-center gap-2">
-            <IngredientImportExportMenu onImported={reload} />
-            <Button type="button" size="touch" onClick={openCreate}>
-              {INVENTORY_VI.createRawIngredient}
-            </Button>
-          </div>
+          <Button type="button" size="touch" onClick={openCreate}>
+            {INVENTORY_VI.createRawIngredient}
+          </Button>
         }
       />
       {filterBar}
@@ -767,7 +658,6 @@ export function IngredientsClient({
         ingredient={editingIngredient}
         unitOptions={unitOptions}
         categoryOptions={categoryOptions}
-        unitLockState={unitLockState}
         onSaved={reload}
       />
     </AppPage>

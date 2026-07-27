@@ -38,7 +38,12 @@ import { CurrentFundsSection } from "./components/current-funds-section";
 
 const financeCopy = messages.finance;
 const powerLiteCopy = financeCopy.powerLite;
-const HKD_RANGES: readonly FinanceRange[] = ["today", "yesterday", "7d", "mtd"];
+const OPERATING_RANGES: readonly FinanceRange[] = [
+  "today",
+  "yesterday",
+  "7d",
+  "mtd",
+];
 const formulaOperatorClass =
   "flex min-h-6 items-center justify-center font-heading text-lg font-semibold text-muted-foreground xl:min-h-0 xl:self-center";
 
@@ -116,7 +121,7 @@ export default async function FinancePage({
         params={params}
         branches={cockpit.branches}
         basePath="/finance"
-        ranges={HKD_RANGES}
+        ranges={OPERATING_RANGES}
         hide={["granularity", "compare"]}
         compact
       />

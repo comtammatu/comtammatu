@@ -467,12 +467,11 @@ export function StockClient({
       header: stockCopy.table.wac,
       className: "min-w-28 text-right",
       render: (item) => (
-        <div className="flex flex-col items-end gap-1">
-          <span className="font-mono tabular-nums">
-            {item.cost > 0 ? formatVND(item.cost) : inventoryCommon.noValue}
-          </span>
-          <span className="text-xs text-muted-foreground">₫ / {item.unit}</span>
-        </div>
+        <span className="font-mono tabular-nums">
+          {item.cost > 0
+            ? `${inventoryCommon.currencyCompact(formatVND(item.cost))}/${item.unit}`
+            : inventoryCommon.noValue}
+        </span>
       ),
     },
     {
@@ -513,24 +512,23 @@ export function StockClient({
     },
   ];
 
-  // Work signals stay read-only so status filtering has one control.
-  const workSignalCluster = (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-        {stockCopy.metrics.underThreshold}
-        <Badge
-          variant={summary.underThresholdCount > 0 ? "warning" : "secondary"}
-        >
-          {summary.underThresholdCount}
-        </Badge>
-      </span>
-      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-        {stockCopy.metrics.pending}
-        <Badge variant={summary.pendingWorkCount > 0 ? "warning" : "secondary"}>
-          {summary.pendingWorkCount}
-        </Badge>
-      </span>
-    </div>
+  const underThresholdButton = (
+    <Button
+      type="button"
+      variant={stockFilter === "low" ? "secondary" : "outline"}
+      size={isCompactLayout ? "touch" : "sm"}
+      aria-pressed={stockFilter === "low"}
+      onClick={() =>
+        setStockFilter((current) => (current === "low" ? "all" : "low"))
+      }
+    >
+      {stockCopy.metrics.underThreshold}
+      <Badge
+        variant={summary.underThresholdCount > 0 ? "warning" : "secondary"}
+      >
+        {summary.underThresholdCount}
+      </Badge>
+    </Button>
   );
 
   const searchControl = (
@@ -849,14 +847,16 @@ export function StockClient({
 
       <AppToolbar
         variant="card"
-        search={searchControl}
-        bulk={
-          !isCompactLayout ? (
-            <div className="flex flex-wrap items-center gap-2">
+        search={
+          isCompactLayout ? (
+            searchControl
+          ) : (
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              {searchControl}
               {filterControls}
-              {workSignalCluster}
+              {underThresholdButton}
             </div>
-          ) : undefined
+          )
         }
         actions={
           isCompactLayout ? (
@@ -882,7 +882,7 @@ export function StockClient({
           collapsible
           defaultOpen={false}
         >
-          {workSignalCluster}
+          {underThresholdButton}
           <div className="grid gap-2 sm:grid-cols-2">{filterControls}</div>
           <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
         </AppSection>

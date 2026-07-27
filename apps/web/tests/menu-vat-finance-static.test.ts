@@ -25,11 +25,63 @@ test("menu VAT is validated at the form, action, and database boundaries", () =>
 
 test("finance exposes input VAT invoices and supplier payments together", () => {
   const financeCopy = read("apps/web/lib/messages/finance.ts");
+  const invoiceActions = read(
+    "apps/web/app/(protected)/inventory/supplier-invoice-actions.ts",
+  );
   const invoiceClient = read(
     "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+  );
+  const invoiceRow = read(
+    "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoice-row.ts",
+  );
+  const vatMigration = read(
+    "supabase/migrations/20260727140255_add_supplier_invoice_vat_breakdown.sql",
   );
 
   assert.match(financeCopy, /Hóa đơn GTGT \| Thanh toán NCC/);
   assert.match(invoiceClient, /recordSupplierPayment/);
-  assert.match(invoiceClient, /vatRate: z\.enum\(\["0", "5", "8", "10"\]\)/);
+  assert.match(invoiceClient, /const VAT_BUCKET_FIELDS = \[/);
+  assert.match(invoiceClient, /buildSupplierInvoiceVatBreakdown/);
+  assert.match(invoiceActions, /vatBreakdown: z\.array/);
+  assert.match(invoiceActions, /create_supplier_invoice_with_vat_breakdown/);
+  assert.match(invoiceRow, /row\.vat_breakdown/);
+  assert.match(invoiceClient, /selectedInvoice\.vatBreakdown\.map/);
+  assert.match(vatMigration, /ADD COLUMN vat_breakdown jsonb/);
+  assert.match(vatMigration, /NEW\.subtotal := pg_catalog\.round/);
+  assert.match(
+    vatMigration,
+    /NEW\.total_amount := NEW\.subtotal \+ NEW\.vat_amount/,
+  );
+  assert.match(vatMigration, /NEW\.vat_rate := CASE WHEN v_line_count = 1/);
+  assert.match(vatMigration, /duplicate_supplier_invoice_vat_rate/);
+  assert.match(vatMigration, /supplier_invoice_vat_snapshot_immutable/);
+});
+
+test("supplier invoice matching uses confirmed net GRN value before VAT", () => {
+  const migration = read(
+    "supabase/migrations/20260727140000_fix_supplier_invoice_net_matching.sql",
+  );
+  const invoiceActions = read(
+    "apps/web/app/(protected)/inventory/supplier-invoice-actions.ts",
+  );
+  const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
+  const vatMigration = read(
+    "supabase/migrations/20260727140255_add_supplier_invoice_vat_breakdown.sql",
+  );
+
+  assert.match(
+    migration,
+    /\(received_quantity - COALESCE\(rejected_quantity, 0\)\) \* unit_cost/,
+  );
+  assert.match(migration, /abs\(v_invoice\.subtotal - v_grn_subtotal\)/);
+  assert.doesNotMatch(
+    migration,
+    /v_invoice\.total_amount[\s\S]*v_grn_subtotal/,
+  );
+  assert.match(migration, /v_grn\.status <> 'confirmed'/);
+  assert.match(migration, /COALESCE\(v_invoice\.po_id, v_grn\.po_id\)/);
+  assert.match(invoiceActions, /create_supplier_invoice_with_vat_breakdown/);
+  assert.match(vatMigration, /v_grn\.status <> 'confirmed'/);
+  assert.match(vatMigration, /v_effective_po_id := v_grn\.po_id/);
+  assert.match(grnActions, /\.eq\("status", "confirmed"\)/);
 });

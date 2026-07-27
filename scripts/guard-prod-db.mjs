@@ -30,13 +30,12 @@ import { fileURLToPath } from "node:url";
 // shell string concatenation.
 
 const PROTECTED_REFS = {
-  iexwsuaqqenyjiskawoj: "PRODUCTION (comtammatu)",
-  enloyfnuerqgaqderbwb: "GREENFIELD (matu-greenfield-company)",
-  dyksphedgzqsqjqgxzog: "matu-platform production (separate codebase)",
+  iexwsuaqqenyjiskawoj: "SUSPENDED HKD (matu-prod, frozen since baf3720f8)",
+  enloyfnuerqgaqderbwb:
+    "GREENFIELD TARGET (matu-greenfield-company, same repo)",
 };
 
 const GREENFIELD_WRITE_REFS = new Set(["enloyfnuerqgaqderbwb"]);
-const NO_TOUCH_REFS = new Set(["dyksphedgzqsqjqgxzog"]);
 
 const APPROVED_PREVIEW_PARENT_REF = "iexwsuaqqenyjiskawoj";
 
@@ -1519,12 +1518,11 @@ function block(reason) {
   console.error(
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
-      "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is PRODUCTION — guarded table/view/catalog reads only;",
-      "enloyfnuerqgaqderbwb is the registered Greenfield bootstrap target; only migration applies are allowed;",
-      "dyksphedgzqsqjqgxzog belongs to a different codebase and must not be accessed;",
-      "migrations ship as file → PR → owner applies. If the owner explicitly delegated a prod write",
-      "in this session, the owner applies it outside the guarded runtime or provides a scoped",
-      "approval path. Never disable this hook or its runtime wiring.",
+      "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is suspended HKD matu-prod — guarded table/view/catalog reads only;",
+      "enloyfnuerqgaqderbwb is the same-repo Greenfield target — project/schema reads plus delegated bootstrap migration applies only;",
+      "matu-prod writes, project-admin actions, deploy relinks, and reactivation remain blocked",
+      "until a separate owner decision. Never disable this hook or its",
+      "runtime wiring.",
     ].join("\n"),
   );
   process.exit(2);
@@ -1583,10 +1581,6 @@ if (toolName === "Bash") {
 
   for (const segment of segments) {
     const detectedDatabaseClient = databaseClient(segment);
-    const noTouchRef = [...NO_TOUCH_REFS].find((ref) => segment.includes(ref));
-    if (noTouchRef && detectedDatabaseClient) {
-      block(`command against no-touch ref ${noTouchRef}`);
-    }
     const cliArgs = supabaseCliArgs(segment);
     if (cliArgs) {
       const isReadOnly = readOnlySupabaseCli(cliArgs);
@@ -1813,9 +1807,6 @@ if (mcpMatch) {
   const greenfield = GREENFIELD_WRITE_REFS.has(target);
   const preview = !label ? trustedPreviewProject(target) : null;
   const approvedNonProd = greenfield || preview !== null;
-  if (NO_TOUCH_REFS.has(target)) {
-    block(`${action} against no-touch ref ${target}`);
-  }
   if (!approvedNonProd && !label) {
     block(`${action} against unregistered Supabase ref ${target}`);
   }

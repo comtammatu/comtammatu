@@ -7,7 +7,7 @@ import {
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { addVNDateDays, getVNDateString } from "@comtammatu/shared/time";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "./_lib/auth";
@@ -27,6 +27,14 @@ const ROLES = PROCUREMENT_ROLES;
 
 /* ─── Supplier Invoices (3-way match: PO ↔ GRN ↔ Invoice) ─── */
 
+const supplierInvoiceVatLineSchema = z.object({
+  vatRate: z.coerce.number().refine((value) => [0, 5, 8, 10].includes(value), {
+    error: "Thuế GTGT không hợp lệ.",
+  }),
+  taxableAmount: z.coerce.number().positive(),
+  vatAmount: z.coerce.number().min(0),
+});
+
 const invoiceSchema = z
   .object({
     supplierId: z.coerce.number().int().positive(),
@@ -34,25 +42,53 @@ const invoiceSchema = z
     poId: z.coerce.number().int().positive().optional().nullable(),
     invoiceNumber: z.string().min(1),
     invoiceDate: z.string(),
-    subtotal: z.coerce.number().min(0),
-    // HKD does not deduct input VAT by default (einvoice-tax.md §4.1/§4.3) —
-    // the field stays editable for cost/reconciliation, but the system must
-    // not presume the supplier charged 8%.
-    vatRate: z.coerce
-      .number()
-      .refine((value) => [0, 5, 8, 10].includes(value), {
-        error: "Thuế GTGT không hợp lệ.",
-      })
-      .default(0),
-    vatAmount: z.coerce.number().min(0),
-    totalAmount: z.coerce.number().min(0),
+    vatBreakdown: z.array(supplierInvoiceVatLineSchema).min(1).max(4),
     matchingNotes: z.string().optional(),
     dueDate: z.string().optional().nullable(),
   })
-  .refine((d) => Math.abs(d.totalAmount - (d.subtotal + d.vatAmount)) <= 1, {
-    message: "Tổng tiền phải bằng tạm tính cộng thuế GTGT.",
-    path: ["totalAmount"],
+  .superRefine((data, ctx) => {
+    const rates = new Set<number>();
+    for (const [index, line] of data.vatBreakdown.entries()) {
+      if (rates.has(line.vatRate)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Mỗi mức thuế GTGT chỉ được nhập một lần.",
+          path: ["vatBreakdown", index, "vatRate"],
+        });
+      }
+      if (line.vatRate === 0 && line.vatAmount !== 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Mức thuế 0% phải có tiền thuế bằng 0.",
+          path: ["vatBreakdown", index, "vatAmount"],
+        });
+      }
+      rates.add(line.vatRate);
+    }
   });
+
+type CreateSupplierInvoiceRpcClient = {
+  rpc: (
+    fn: "create_supplier_invoice_with_vat_breakdown",
+    args: {
+      p_supplier_id: number;
+      p_grn_id: number | null;
+      p_po_id: number | null;
+      p_invoice_number: string;
+      p_invoice_date: string;
+      p_vat_breakdown: Array<{
+        vat_rate: number;
+        taxable_amount: number;
+        vat_amount: number;
+      }>;
+      p_matching_notes: string | null;
+      p_due_date: string | null;
+    },
+  ) => PromiseLike<{
+    data: number | null;
+    error: { code?: string; message?: string } | null;
+  }>;
+};
 
 const supplierPaymentSchema = z.object({
   invoiceId: z.coerce.number().int().positive(),
@@ -70,42 +106,23 @@ export const createSupplierInvoice = withAction(
     schema: invoiceSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
   },
-  async (data, { supabase, claims, user }) => {
-    // Auto-compute due_date from supplier payment_terms_days if not provided
-    let dueDate: string | null = data.dueDate ?? null;
-    if (!dueDate) {
-      const { data: supplier } = await supabase
-        .from("suppliers")
-        .select("payment_terms_days")
-        .eq("id", data.supplierId)
-        .eq("tenant_id", claims.tenant_id)
-        .single();
-      const termsDays = supplier?.payment_terms_days ?? null;
-      if (termsDays && termsDays > 0) {
-        dueDate = addVNDateDays(data.invoiceDate, termsDays);
-      }
-    }
-
-    const { data: row, error } = await supabase
-      .from("supplier_invoices")
-      .insert({
-        tenant_id: claims.tenant_id,
-        supplier_id: data.supplierId,
-        grn_id: data.grnId ?? null,
-        po_id: data.poId ?? null,
-        invoice_number: data.invoiceNumber,
-        invoice_date: data.invoiceDate,
-        subtotal: data.subtotal,
-        vat_rate: data.vatRate,
-        vat_amount: data.vatAmount,
-        total_amount: data.totalAmount,
-        matching_notes: data.matchingNotes ?? null,
-        created_by: user.id,
-        due_date: dueDate,
-        payment_status: "unpaid",
-      })
-      .select("id")
-      .single();
+  async (data, { supabase }) => {
+    const { data: invoiceId, error } = await (
+      supabase as unknown as CreateSupplierInvoiceRpcClient
+    ).rpc("create_supplier_invoice_with_vat_breakdown", {
+      p_supplier_id: data.supplierId,
+      p_grn_id: data.grnId ?? null,
+      p_po_id: data.poId ?? null,
+      p_invoice_number: data.invoiceNumber,
+      p_invoice_date: data.invoiceDate,
+      p_vat_breakdown: data.vatBreakdown.map((line) => ({
+        vat_rate: line.vatRate,
+        taxable_amount: line.taxableAmount,
+        vat_amount: line.vatAmount,
+      })),
+      p_matching_notes: data.matchingNotes ?? null,
+      p_due_date: data.dueDate ?? null,
+    });
     if (error) {
       if (error.code === PG_ERR.UNIQUE_VIOLATION) {
         return {
@@ -113,14 +130,38 @@ export const createSupplierInvoice = withAction(
           error: "Số hóa đơn đã tồn tại cho NCC này.",
         };
       }
+      if (error.code === "42501") {
+        return {
+          success: false,
+          error: "Không có quyền tạo hóa đơn NCC.",
+        };
+      }
+      if (error.message?.includes("grn_not_confirmed")) {
+        return {
+          success: false,
+          error: "Chỉ liên kết hóa đơn với phiếu nhập đã xác nhận.",
+        };
+      }
+      if (error.message?.includes("grn_supplier_mismatch")) {
+        return {
+          success: false,
+          error: "Nhà cung cấp không khớp với phiếu nhập.",
+        };
+      }
+      if (error.message?.includes("supplier_invoice_vat_breakdown")) {
+        return {
+          success: false,
+          error: "Chi tiết thuế GTGT của hóa đơn không hợp lệ.",
+        };
+      }
       return { success: false, error: "Không thể tạo hóa đơn NCC." };
     }
 
     // Auto-trigger 3-way matching (non-fatal — invoice creation still succeeds)
-    if (row?.id) {
+    if (invoiceId) {
       const { error: matchErr } = await supabase.rpc(
         "recompute_supplier_invoice_matching",
-        { p_invoice_id: row.id },
+        { p_invoice_id: invoiceId },
       );
       if (matchErr) {
         console.error("inventory.supplier_invoice.auto_matching_failed", {
@@ -130,7 +171,7 @@ export const createSupplierInvoice = withAction(
       }
     }
 
-    return { success: true, data: row };
+    return { success: true, data: { id: Number(invoiceId) } };
   },
 );
 
@@ -209,7 +250,7 @@ const supplierInvoiceSelect = (branchId?: number) => {
     branchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
-  return `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), ${grnSelect}`;
+  return `id, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, total_amount, matching_status, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), ${grnSelect}`;
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;

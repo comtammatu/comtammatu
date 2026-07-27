@@ -11,6 +11,7 @@ import { messages } from "@lib/messages";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
+import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 
 /* ─── Recipes (branch WAC + menu-item recipes) ─── */
 
@@ -27,13 +28,12 @@ const recipeLineSchema = z.object({
   quantity: z.coerce.number().positive(),
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   note: z.string().optional().nullable(),
-  yieldFactor: z.coerce.number().positive().default(1.0),
 });
 
 const recipeBatchSchema = z.object({
   menuItemId: z.coerce.number().int().positive(),
   oldMenuItemId: z.coerce.number().int().positive().optional().nullable(),
-  lines: z.array(recipeLineSchema),
+  lines: z.array(recipeLineSchema).min(1),
 });
 
 export async function fetchRecipes(): Promise<ActionResult> {
@@ -50,7 +50,7 @@ export async function fetchRecipes(): Promise<ActionResult> {
       id, name, updated_at,
       menu_categories ( name ),
       recipes (
-        ingredient_id, quantity, entry_unit_id, note, yield_factor,
+        ingredient_id, quantity, entry_unit_id, note,
         ingredients (
           id,
           name,
@@ -78,9 +78,7 @@ export async function fetchRecipes(): Promise<ActionResult> {
 // WAC = the actual average cost (avg_unit_cost) in branch stock levels.
 export async function fetchBranchWacMap(
   branchId?: number | null,
-): Promise<
-  ActionResult<Record<string, number>>
-> {
+): Promise<ActionResult<Record<string, number>>> {
   const parsedBranchId = optionalBranchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Chi nhánh không hợp lệ." };
@@ -93,13 +91,20 @@ export async function fetchBranchWacMap(
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
+  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+    supabase,
+    tenantId: claims.tenant_id,
+    branchId: parsedBranchId.data ?? undefined,
+  });
+  if (stockBearingLocationIds.length === 0) {
+    return { success: true, data: {} };
+  }
+
   let query = supabase
     .from("stock_levels")
-    .select(
-      "ingredient_id, avg_unit_cost, branch_id, branches!inner ( branch_kind )",
-    )
+    .select("ingredient_id, avg_unit_cost, branch_id")
     .eq("tenant_id", claims.tenant_id)
-    .eq("branches.branch_kind", "branch")
+    .in("location_id", stockBearingLocationIds)
     .not("avg_unit_cost", "is", null);
 
   if (parsedBranchId.data != null) {
@@ -142,7 +147,7 @@ export async function fetchBranchWacMap(
 // Live recipe × warehouse-stock sellable portions per dish for one branch.
 export async function fetchBranchMenuStockCapacity(
   branchId: number,
- ): Promise<ActionResult<Record<string, number>>> {
+): Promise<ActionResult<Record<string, number>>> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Chi nhánh không hợp lệ." };
@@ -185,19 +190,47 @@ export const upsertRecipeLines = withAction(
   {
     roles: INVENTORY_CATALOG_ROLES,
     schema: recipeBatchSchema,
-    anyPermission: [
-      ...CATALOG_MANAGE_PERMISSIONS,
-      PERMISSION_KEYS.MENU_WRITE,
-    ],
+    anyPermission: [...CATALOG_MANAGE_PERMISSIONS, PERMISSION_KEYS.MENU_WRITE],
   },
-  async (data, { supabase }) => {
+  async (data, { supabase, claims }) => {
+    const ingredientIds = [
+      ...new Set(data.lines.map((line) => line.ingredientId)),
+    ];
+    const { data: outputUnits, error: outputUnitsError } = await supabase
+      .from("ingredient_units")
+      .select("ingredient_id, unit_id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_base", true)
+      .eq("is_active", true)
+      .in("ingredient_id", ingredientIds);
+    if (outputUnitsError) {
+      return { success: false, error: messages.inventory.recipes.saveFailed };
+    }
+
+    const outputUnitByIngredient = new Map(
+      (outputUnits ?? []).map((unit) => [unit.ingredient_id, unit.unit_id]),
+    );
+    if (
+      data.lines.some((line) => {
+        const outputUnitId = outputUnitByIngredient.get(line.ingredientId);
+        return (
+          outputUnitId == null ||
+          (line.entryUnitId != null && line.entryUnitId !== outputUnitId)
+        );
+      })
+    ) {
+      return {
+        success: false,
+        error: messages.inventory.recipes.outputUnitRequired,
+      };
+    }
+
     const lines = data.lines.map((line) => ({
-        ingredient_id: line.ingredientId,
-        quantity: line.quantity,
-        entry_unit_id: line.entryUnitId ?? null,
-        note: line.note ?? null,
-        yield_factor: line.yieldFactor,
-      }));
+      ingredient_id: line.ingredientId,
+      quantity: line.quantity,
+      entry_unit_id: outputUnitByIngredient.get(line.ingredientId) ?? null,
+      note: line.note ?? null,
+    }));
 
     const { error } = await supabase.rpc("upsert_recipe_lines", {
       p_menu_item_id: data.menuItemId,

@@ -24,7 +24,7 @@ function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
   };
 }
 
-test("finance food cost uses recipe unit conversion, yield, and branch WAC", () => {
+test("finance food cost uses recipe unit conversion and branch WAC", () => {
   const units = [
     unit({ unit_id: 1, unit_code: "g", to_base_factor: 1, is_base: true }),
     unit({ unit_id: 2, unit_code: "kg", to_base_factor: 1000 }),
@@ -54,7 +54,6 @@ test("finance food cost uses recipe unit conversion, yield, and branch WAC", () 
         ingredientId: 7,
         quantity: 0.5,
         entryUnitId: 2,
-        yieldFactor: 0.5,
         fallbackUnitCost: 1,
         units,
       },
@@ -68,16 +67,16 @@ test("finance food cost uses recipe unit conversion, yield, and branch WAC", () 
   const branchOne = rows.find((row) => row.branch_id === 1);
   const branchTwo = rows.find((row) => row.branch_id === 2);
 
-  assert.equal(branchOne?.ingredient_cost, 20_000);
-  assert.equal(branchOne?.unit_ingredient_cost, 10_000);
-  assert.equal(branchOne?.food_cost_pct, 20);
-  assert.equal(branchOne?.gross_profit, 80_000);
-  assert.equal(branchOne?.gross_margin_pct, 80);
-  assert.equal(branchTwo?.ingredient_cost, 20_000);
-  assert.equal(branchTwo?.food_cost_pct, 33.33);
-  assert.equal(branchTwo?.unit_ingredient_cost, 20_000);
-  assert.equal(branchTwo?.gross_profit, 40_000);
-  assert.equal(branchTwo?.gross_margin_pct, 66.67);
+  assert.equal(branchOne?.ingredient_cost, 10_000);
+  assert.equal(branchOne?.unit_ingredient_cost, 5_000);
+  assert.equal(branchOne?.food_cost_pct, 10);
+  assert.equal(branchOne?.gross_profit, 90_000);
+  assert.equal(branchOne?.gross_margin_pct, 90);
+  assert.equal(branchTwo?.ingredient_cost, 10_000);
+  assert.equal(branchTwo?.food_cost_pct, 16.67);
+  assert.equal(branchTwo?.unit_ingredient_cost, 10_000);
+  assert.equal(branchTwo?.gross_profit, 50_000);
+  assert.equal(branchTwo?.gross_margin_pct, 83.33);
 });
 
 test("finance food cost action aggregates sales via SQL RPC", () => {

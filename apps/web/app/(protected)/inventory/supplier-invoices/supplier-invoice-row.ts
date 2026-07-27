@@ -9,6 +9,9 @@ export type SupplierInvoiceRow = {
   poCode: string | null;
   matchStatus: string;
   paymentStatus: string;
+  subtotal: number;
+  vatAmount: number;
+  vatBreakdown: SupplierInvoiceVatBreakdownLine[];
   amount: number;
   paidAmount: number;
   creditAppliedAmount: number;
@@ -17,6 +20,12 @@ export type SupplierInvoiceRow = {
   dueDate: string | null;
   paymentCount: number;
   lastPayment: SupplierInvoicePaymentSummary | null;
+};
+
+export type SupplierInvoiceVatBreakdownLine = {
+  vatRate: number;
+  taxableAmount: number;
+  vatAmount: number;
 };
 
 export type SupplierInvoicePaymentSummary = {
@@ -82,6 +91,38 @@ function mapSupplierPayment(
   };
 }
 
+function getSupplierInvoiceVatBreakdown(
+  row: Record<string, unknown>,
+): SupplierInvoiceVatBreakdownLine[] {
+  const raw = row.vat_breakdown;
+  const lines = Array.isArray(raw)
+    ? raw
+        .filter(isRecord)
+        .map((line) => ({
+          vatRate: Number(line.vat_rate),
+          taxableAmount: Number(line.taxable_amount),
+          vatAmount: Number(line.vat_amount),
+        }))
+        .filter(
+          (line) =>
+            [0, 5, 8, 10].includes(line.vatRate) &&
+            line.taxableAmount > 0 &&
+            line.vatAmount >= 0,
+        )
+        .sort((left, right) => left.vatRate - right.vatRate)
+    : [];
+
+  if (lines.length > 0) return lines;
+
+  return [
+    {
+      vatRate: Number(row.vat_rate ?? 0),
+      taxableAmount: Number(row.subtotal ?? 0),
+      vatAmount: Number(row.vat_amount ?? 0),
+    },
+  ];
+}
+
 export function mapSupplierInvoiceRow(
   row: Record<string, unknown>,
 ): SupplierInvoiceRow {
@@ -124,6 +165,9 @@ export function mapSupplierInvoiceRow(
       paidAmount,
       creditAppliedAmount,
     }),
+    subtotal: Number(row.subtotal ?? 0),
+    vatAmount: Number(row.vat_amount ?? 0),
+    vatBreakdown: getSupplierInvoiceVatBreakdown(row),
     amount,
     paidAmount,
     creditAppliedAmount,

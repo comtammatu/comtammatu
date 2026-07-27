@@ -395,6 +395,23 @@ test("validators pass for VAT 10% mixed inventory", () => {
   assertValidators(result, 10);
 });
 
+test("VAT template uses the snapshotted rate on each line", () => {
+  const result = buildSinvoiceItemInfo(
+    [
+      { ...item("Cơm", 1, 108_000), vatRate: 8 },
+      { ...item("Bia", 1, 110_000), vatRate: 10 },
+    ],
+    0,
+    true,
+  );
+
+  assert.deepEqual(
+    result.itemInfo.map((line) => line.taxPercentage),
+    [8, 10],
+  );
+  assert.equal(result.sumLineTax, 18_000);
+});
+
 test("qty=0 edge case does not crash", () => {
   const result = buildSinvoiceItemInfo([item("Ghost line", 0, 0)], 8, true);
   const [line] = result.itemInfo;
@@ -930,7 +947,7 @@ test("createInvoice: sends direct-sales line discount and discounted summary", a
   }
 });
 
-test("createInvoice: HKD direct-sales payload has no VAT for TC-260706-015-PH shape", async () => {
+test("createInvoice: direct-sales template payload has no VAT for TC-260706-015-PH shape", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{
     input: Parameters<typeof fetch>[0];

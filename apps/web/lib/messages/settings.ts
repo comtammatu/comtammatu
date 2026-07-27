@@ -42,17 +42,17 @@ export const settings = {
     settingsHomeEyebrow: "Quản trị hệ thống",
     settingsHomeTitle: "Cài đặt",
     settingsHomeDescription:
-      "Chọn đúng nhóm thiết lập cho hộ kinh doanh, thu tiền POS hoặc thiết bị in.",
+      "Chọn đúng nhóm thiết lập cho doanh nghiệp, thu tiền POS hoặc thiết bị in.",
     settingsHomeLink: "Tất cả cài đặt",
-    tenantSettingsTitle: "Hộ kinh doanh và thu tiền",
+    tenantSettingsTitle: "Doanh nghiệp và thu tiền",
     tenantSettingsDescription:
       "Thiết lập dùng xuyên suốt POS, HĐĐT và đối soát giao dịch.",
     printSettingsTitle: "Thiết bị và in ấn",
     printSettingsDescription:
       "Quản lý máy in, mẫu phiếu và hàng đợi in theo từng điểm vận hành.",
-    generalTitle: "Hộ kinh doanh",
+    generalTitle: "Doanh nghiệp",
     generalDescription:
-      "Định danh hộ kinh doanh (pháp danh, mã số thuế, địa chỉ, người đại diện) — in trên hóa đơn và chứng từ.",
+      "Định danh doanh nghiệp (tên pháp lý, mã số thuế, địa chỉ, người đại diện theo pháp luật) — in trên hóa đơn và chứng từ.",
     kdsTitle: "Trạm bếp (KDS)",
     kdsDescription: "Quản lý trạm hiển thị bếp và gán danh mục món ăn",
     paymentsTitle: "Thanh toán POS",
@@ -259,14 +259,14 @@ export const settings = {
     allFallback: "Tất cả (fallback)",
   },
   general: {
-    identityTitle: "Định danh hộ kinh doanh",
+    identityTitle: "Định danh doanh nghiệp",
     identityDescription: "Thông tin này in trên hóa đơn và chứng từ HĐĐT.",
-    legalNameLabel: "Tên pháp danh / hộ kinh doanh",
+    legalNameLabel: "Tên pháp lý doanh nghiệp",
     taxCodeLabel: "Mã số thuế",
     legalAddressLabel: "Địa chỉ đăng ký kinh doanh",
     representativeLabel: "Người đại diện",
     saveIdentity: "Lưu định danh",
-    identitySaved: "Đã lưu định danh hộ kinh doanh",
+    identitySaved: "Đã lưu định danh doanh nghiệp",
   },
   payments: {
     saved: "Đã lưu cài đặt thanh toán",

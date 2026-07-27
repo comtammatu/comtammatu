@@ -184,21 +184,22 @@ AR tăng, AP đến hạn, hoặc tiền nền tảng chưa settlement.
 Chỉ dùng `doanh thu trên ghế-giờ` khi dine-in capacity là bottleneck và hệ thống
 có số ghế/giờ mở cửa đủ tin cậy.
 
-## Thuế, HĐĐT và HKD
+## Thuế, HĐĐT và doanh nghiệp
 
-### HKD hiện hành
+### Chủ thể và đăng ký thuế
 
-Định nghĩa chủ thể và nghĩa vụ thuế HKD (`household_business`, `registered_owner`,
-`taxable_revenue`, `vat_payable`, `pit_business_payable`, `tax_withholding`,
-`hkd_accounting_book`...) nằm ở `glossary.md`. Term riêng của file này:
+Định nghĩa chủ thể và nghĩa vụ doanh nghiệp (`joint_stock_company`,
+`legal_representative`, `beneficial_owner`, `taxable_revenue`, `vat_payable`,
+`cit_payable`, `tax_withholding`, `enterprise_accounting_book`...) nằm ở
+`glossary.md`. Term riêng của file này:
 
 | term_en            | label_vi     | Nghĩa chuẩn                               | Không lẫn với      |
 | ------------------ | ------------ | ----------------------------------------- | ------------------ |
-| `tax_registration` | đăng ký thuế | Thông tin MST/tên/địa chỉ theo hồ sơ HKD. | brand display name |
+| `tax_registration` | đăng ký thuế | Thông tin MST/tên/địa chỉ theo hồ sơ doanh nghiệp. | brand display name |
 
-Không gọi Má Tư là CTCP/công ty/doanh nghiệp trong UI hoặc docs vận hành hiện
-hành. Nếu cần nói mô hình doanh nghiệp, phải nói đó là comparison hoặc future
-conversion, không phải trạng thái hiện tại.
+Tên thương hiệu không thay cho tên pháp lý. Application role `owner` không tự
+đồng nghĩa với cổ đông, người đại diện theo pháp luật hoặc người quản lý doanh
+nghiệp.
 
 ### HĐĐT và chứng từ bán ra
 
@@ -215,18 +216,18 @@ conversion, không phải trạng thái hiện tại.
 Không hứa “hóa đơn đủ pháp lý” nếu chưa xác minh provider, mã CQT, XML/PDF gốc,
 trạng thái phát hành, và dữ liệu truyền CQT.
 
-### HKD trực tiếp và doanh nghiệp khấu trừ
+### Phương pháp GTGT và kế toán doanh nghiệp
 
-| Chủ đề      | HKD hiện hành                                                        | Doanh nghiệp/phương pháp khác                          |
-| ----------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| Chủ thể     | Hộ kinh doanh/chủ hộ                                                 | Công ty/pháp nhân                                      |
-| Kế toán     | Sổ HKD, vận hành đơn giản, export theo regime HKD                    | Có thể cần double-entry, BCTC, VAS/TT200               |
-| VAT đầu vào | Không mặc định khấu trừ nếu đang theo phương pháp trực tiếp          | Có thể khấu trừ nếu đủ điều kiện và đăng ký            |
-| HĐĐT        | Theo ngưỡng/phương pháp HKD và provider                              | Theo chế độ doanh nghiệp                               |
-| Báo cáo     | Daily close, cash, revenue, expense, inventory, HĐĐT, export kế toán | P&L, balance sheet, general ledger, tax reports đầy đủ |
+| Chủ đề      | Ranh giới hiện hành |
+| ----------- | ------------------- |
+| Chủ thể     | Công ty cổ phần là pháp nhân; Branch là phạm vi vận hành phụ thuộc. |
+| Kế toán     | Chọn TT 99, TT 133 hoặc TT 58 theo điều kiện; Finance app chưa phải sổ cái/BCTC. |
+| VAT đầu vào | Chỉ khấu trừ khi đúng phương pháp và đủ điều kiện chứng từ/thanh toán. |
+| HĐĐT        | Theo NĐ 254/2026, TT 91/2026 và cấu hình provider đã đăng ký. |
+| Báo cáo     | Daily close và dashboard vận hành tách khỏi P&L, balance sheet, general ledger và tax reports đã khóa sổ. |
 
-Agent không được tự thêm balance sheet, general ledger, input VAT credit, VAS
-reporting vào Finance Basic khi business model vẫn là HKD.
+Agent không được trình bày balance sheet, general ledger, input VAT credit hoặc
+lợi nhuận sau thuế như số tin cậy nếu contract và dữ liệu kế toán chưa đầy đủ.
 
 ## Lao động, nhân sự và payroll
 
@@ -297,7 +298,7 @@ Số luật về giảm trừ, biểu thuế, mức đóng, trần bảo hiểm 
 ### Khi gặp luật/thuế
 
 1. Phân loại domain:
-   - Thuế HKD/GTGT/HĐĐT/chứng từ vào-ra dùng `einvoice-tax.md`.
+   - Thuế GTGT/TNDN/HĐĐT/chứng từ vào-ra dùng `einvoice-tax.md`.
    - TNCN lương/payroll/BHXH/BHYT/BHTN/HĐLĐ dùng `payroll-pit.md` và
      `labor-contracts.md`.
 2. Đọc `legal-framework-2026.md` trước khi khẳng định bất kỳ căn cứ, mức, ngưỡng hoặc thời hạn pháp lý nào.
@@ -321,7 +322,7 @@ Số luật về giảm trừ, biểu thuế, mức đóng, trần bảo hiểm 
 - Black Box Intelligence, COGS and RevPASH glossary:
   <https://blackboxintelligence.com/resources/restaurant-glossary/cost-of-goods-sold-cogs/>,
   <https://blackboxintelligence.com/resources/restaurant-glossary/revenue-per-available-seat-hour/>
-- Chính phủ/Cơ quan thuế, HKD/HĐĐT 2026:
-  <https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/4/141-ndcp.signed.pdf>,
-  <https://xaydungchinhsach.chinhphu.vn/mot-so-noi-dung-moi-cua-nghi-dinh-so-70-2025-nd-cp-ve-hoa-don-chung-tu-119250403074719995.htm>,
-  <https://vanban.chinhphu.vn/?docid=216533&pageid=27160>
+- Chính phủ/Cơ quan thuế, doanh nghiệp và HĐĐT 2026:
+  <https://vanban.chinhphu.vn/?classid=1&docid=214562&orggroupid=1&pageid=27160>,
+  <https://vanban.chinhphu.vn/?classid=1&docid=218689&orggroupid=2&pageid=27160>,
+  <https://congbao.chinhphu.vn/van-ban/thong-tu-so-99-2025-tt-btc-46529/59634.htm>

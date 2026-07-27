@@ -52,6 +52,7 @@ export default async function PurchaseOrdersPage({
     poResult,
     supplierResult,
     ingredientResult,
+    supplierItemResult,
     procurementBranches,
     canCreate,
     canApprove,
@@ -73,13 +74,24 @@ export default async function PurchaseOrdersPage({
       .eq("is_active", true)
       .order("name")
       .limit(500),
+    supabase
+      .from("supplier_items")
+      .select("supplier_id, ingredient_id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .limit(2000),
     fetchProcurementBranches(supabase, claims.tenant_id),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_APPROVE),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
   ]);
 
-  if (poResult.error || supplierResult.error || ingredientResult.error) {
+  if (
+    poResult.error ||
+    supplierResult.error ||
+    ingredientResult.error ||
+    supplierItemResult.error
+  ) {
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader eyebrow="Kho hàng" title={copy.pageTitle} />
@@ -104,6 +116,13 @@ export default async function PurchaseOrdersPage({
   const supplierNames = new Map(
     suppliers.map((supplier) => [supplier.id, supplier.name]),
   );
+  const supplierIdsByIngredient = new Map<number, Set<number>>();
+  for (const item of supplierItemResult.data ?? []) {
+    const supplierIds =
+      supplierIdsByIngredient.get(item.ingredient_id) ?? new Set<number>();
+    supplierIds.add(item.supplier_id);
+    supplierIdsByIngredient.set(item.ingredient_id, supplierIds);
+  }
   const ingredients: PurchaseOrderIngredient[] = (
     ingredientResult.data ?? []
   ).flatMap((ingredient) => {
@@ -115,7 +134,16 @@ export default async function PurchaseOrdersPage({
         name: unit.units?.name ?? unit.units?.code ?? "Đơn vị",
       }));
     return units?.length
-      ? [{ id: ingredient.id, name: ingredient.name, units }]
+      ? [
+          {
+            id: ingredient.id,
+            name: ingredient.name,
+            units,
+            supplierIds: [
+              ...(supplierIdsByIngredient.get(ingredient.id) ?? []),
+            ],
+          },
+        ]
       : [];
   });
   const rows: PurchaseOrderRow[] = (poResult.data ?? []).map((po) => {

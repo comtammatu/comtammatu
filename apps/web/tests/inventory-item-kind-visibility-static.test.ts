@@ -46,26 +46,15 @@ test("inventory ingredients filters expose search metadata and reset action", ()
   assert.match(ingredientsClientSource, /ACTIONS_VI\.clearFilters/);
 });
 
-test("ingredient unit conversion form previews the canonical base quantity", () => {
-  assert.match(
+test("ingredient form exposes only input and output unit roles", () => {
+  assert.match(ingredientDialogSource, /name="input_unit_id"/);
+  assert.match(ingredientDialogSource, /name="output_unit_id"/);
+  assert.match(ingredientDialogSource, /name="input_to_output_factor"/);
+  assert.match(ingredientDialogSource, /disabled=\{isEdit\}/);
+  assert.doesNotMatch(
     ingredientDialogSource,
-    /append\(makeSecondaryRow\(baseUnitId\)\)/,
+    /makeSecondaryRow|previewCanonical|anchor_input_direction/,
   );
-  assert.match(ingredientDialogSource, /copy\.units\.previewCanonical\(/);
-  assert.match(ingredientDialogSource, /const usesBaseAnchor =/);
-  assert.match(ingredientDialogSource, /anchor_input_direction/);
-  assert.doesNotMatch(ingredientDialogSource, /displayAnchorFactor/);
-  assert.doesNotMatch(ingredientDialogSource, /toStoredAnchorFactor/);
-  assert.doesNotMatch(ingredientDialogSource, /IconArrowLeftRight/);
-  assert.match(
-    ingredientDialogSource,
-    /name=\{`units\.\$\{index\}\.anchor_factor`\}/,
-  );
-  assert.match(
-    ingredientDialogSource,
-    /name=\{`units\.\$\{index\}\.anchor_unit_id`\}/,
-  );
-  assert.match(ingredientDialogSource, /usesBaseAnchor && baseUnit/);
 });
 
 test("inventory stock responsive cards label item kind separately from category", () => {

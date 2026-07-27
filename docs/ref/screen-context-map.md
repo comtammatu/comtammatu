@@ -208,21 +208,21 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ---
 
-### 2.7. Đối soát hóa đơn NCC (Supplier Invoice Match) — `/inventory/supplier-invoices`
+### 2.7. Đối soát hóa đơn NCC (Supplier Invoice Match) — `/finance/supplier-invoices`
 
 - **Archetype:** `LIST`.
 - **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
-  - Đối soát phiếu thực nhập (GRN) với hóa đơn NCC gửi đến. Đảm bảo HKD chỉ thanh toán đúng lượng thực nhận và đơn giá trên chứng từ mua hàng, tránh thất thoát tài chính.
+  - Đối soát phiếu thực nhập (GRN) với hóa đơn NCC gửi đến. Đảm bảo doanh nghiệp chỉ thanh toán đúng lượng thực nhận và đơn giá trên chứng từ mua hàng, tránh thất thoát tài chính.
 - **Mục tiêu Người dùng (Goal):** Phát hiện nhanh các dòng hóa đơn bị lệch giá hoặc lệch lượng để yêu cầu NCC điều chỉnh trước khi bấm duyệt thanh toán.
 - **Luồng thao tác (Workflow):**
-  1. **Nhập hóa đơn:** Tạo hồ sơ hóa đơn NCC mới (số hóa đơn, ngày, tổng tiền thuế).
-  2. **Liên kết:** Chọn các phiếu nhập kho (GRN) tương ứng của hóa đơn đó.
-  3. **Đối soát:** Hệ thống tự động so khớp từng dòng hóa đơn với số lượng và đơn giá thực nhận trên GRN.
-  4. **Xử lý chênh lệch:** Đánh dấu "Hợp lệ" nếu khớp; hoặc ghi chú "Lệch giá" / "Lệch lượng" để kế toán làm việc lại với NCC.
-  5. **Duyệt:** Bấm "Duyệt thanh toán" để chuyển trạng thái sang hàng chờ chi của phân hệ tài chính.
+  1. **Nhập hóa đơn:** Ghi số hóa đơn, ngày, giá trị trước VAT, thuế suất, tiền VAT và tổng phải trả.
+  2. **Liên kết:** Chọn một GRN đã xác nhận; hệ thống lấy NCC và PO liên quan từ GRN.
+  3. **Đối soát:** So giá trị trước VAT với giá trị hàng thực nhận sau từ chối trên GRN và, khi PO đủ giá, với tổng PO. VAT không tham gia so giá trị hàng.
+  4. **Xử lý chênh lệch:** Giữ trạng thái cần xử lý nếu vượt ngưỡng 2%; kế toán kiểm tra chứng từ trước khi trả.
+  5. **Thanh toán:** Ghi nhận theo tổng gồm VAT; trả NCC giảm tiền và công nợ, không tạo thêm chi phí.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Giao diện so sánh song song các dòng mặt hàng; Ký hiệu cảnh báo đỏ tại các vị trí phát hiện chênh lệch đơn giá hoặc số lượng.
+  - **Nên hiển thị:** Tổng trước VAT, VAT, tổng phải trả, liên kết GRN/PO, trạng thái đối soát và công nợ.
   - **KHÔNG hiển thị:** Doanh thu bán cơm tấm, sơ đồ bàn ăn, ca làm việc của nhân viên phục vụ.
 - **Quy chuẩn UX/UI:**
   - Bố cục màn hình rộng (width `xwide` tối thiểu `1600px` trên desktop) để hiển thị đủ các cột đối chiếu mà không phải cuộn ngang quá nhiều gây mỏi mắt và dễ nhìn sót số liệu.
@@ -255,7 +255,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Archetype:** `DASHBOARD`.
 - **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
-  - Cung cấp công thức kết quả vận hành rõ ràng cho HKD theo kỳ, đồng thời tách số dư hiện có và giá trị tồn kho.
+  - Cung cấp công thức kết quả vận hành rõ ràng theo kỳ, đồng thời tách số dư hiện có và giá trị tồn kho.
 - **Mục tiêu Người dùng (Goal):** Nhìn một màn để biết doanh thu thuần còn lại bao nhiêu sau giá vốn món và chi phí vận hành; mở báo cáo chuyên biệt khi cần đối chiếu.
 - **Luồng thao tác (Workflow):**
   1. **Chọn kỳ báo cáo:** Lọc theo ngày hôm nay / Tuần này / Tháng này / Chọn khoảng ngày.
@@ -268,7 +268,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - **Nên hiển thị:** Năm KPI kết quả theo kỳ, số dư hiện có, giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
   - **Không lặp:** Finance chỉ hiển thị card Giá trị tồn kho cuối kỳ; bảng chi tiết tồn kho thuộc Inventory.
   - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì không tính Lợi nhuận gộp và Kết quả vận hành; chưa ghi nhận chi phí thì không tính Kết quả vận hành.
-  - **KHÔNG hiển thị:** Card GTGT/VAT trong đợt này, nút tạo order, các bước chế biến món ăn, hoặc phân tích tài chính doanh nghiệp cổ phần không áp dụng cho mô hình HKD.
+  - **KHÔNG hiển thị:** `Lợi nhuận sau thuế TNDN` khi chưa đủ sổ kế toán và khóa sổ, nút tạo order, hoặc các bước chế biến món ăn.
 - **Quy chuẩn UX/UI:**
   - Mọi số liệu tiền tệ phải được định dạng chuẩn VND bằng hàm `formatVND` (ví dụ: `150.000đ`, không viết `150k` hay `150000`).
   - Desktop hiển thị năm card kết quả trên một hàng, có dấu `−` và `=` nối công thức; tablet hai cột; mobile một cột. Dùng lại `KpiCard`, `KpiRow` và `AppSection`.

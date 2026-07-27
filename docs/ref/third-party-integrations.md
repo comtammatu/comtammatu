@@ -69,7 +69,7 @@ SePay đẩy evidence webhook, hoặc cashier xác nhận theo quyền khi cần
 | Onboarding | 48h, cần MST + giấy phép KD + TmnCode                               |
 | Best for   | Visa/Mastercard, du khách nước ngoài                                |
 
-**Lý do loại bỏ**: Đã loại khỏi roadmap theo D012 (2026-06-10). Phức tạp onboarding, phí cao hơn; không có nhu cầu card payment trong mô hình HKD hiện tại.
+**Lý do loại bỏ**: Đã loại khỏi roadmap theo D012 (2026-06-10). Phức tạp onboarding, phí cao hơn; chưa có nhu cầu card payment đã được xác nhận.
 
 ---
 
@@ -92,7 +92,7 @@ SePay đẩy evidence webhook, hoặc cashier xác nhận theo quyền khi cần
 
 - Provider pháp lý đang có và đang vận hành thực tế cho Cơm Tấm Má Tư.
 - Runtime chỉ register `ViettelSinvoiceProvider`; không còn MISA/meInvoice implementation hay provider switch.
-- Một bộ `SINVOICE_*` env đơn giản hơn cho single-tenant HKD.
+- Một bộ `SINVOICE_*` env đơn giản hơn cho sản phẩm single-tenant hiện tại.
 
 **Auth flow**:
 

@@ -43,9 +43,9 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
 7. Chỉ seed bằng dữ liệu non-production, không secret và không customer data.
 8. Chạy schema/RLS/RPC tests, smoke flow cần thiết và security advisors trên
    Preview đã được phép mutation.
-9. Sau khi migration được apply lên Production theo quyền hiện hành, chạy
-   `corepack pnpm db:types` và review diff; Preview không phải type source của
-   repository.
+9. Sau khi migration được apply lên Greenfield type source theo quyền hiện hành,
+   chạy `corepack pnpm db:types` và review diff; Preview không phải type source
+   của repository.
 10. Thu thập evidence: ref, migration versions, test result và cleanup result.
 11. Xóa Preview Branch trong cùng task và xác minh resource không còn. Nếu xóa
     hoặc xác minh thất bại, giữ task ở trạng thái blocked và báo owner.

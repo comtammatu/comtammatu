@@ -4,6 +4,10 @@
 >
 > `docs/spec/architecture.md` tiếp tục là nguồn mô tả hiện trạng. Package
 > manifests và `pnpm-lock.yaml` sở hữu phiên bản dependency chính xác.
+>
+> Kiến trúc này được triển khai trong repo `comtammatu` sau cutoff
+> `baf3720f8`. Greenfield là database/runtime target mới của cùng codebase, không
+> phải repo fork hoặc sản phẩm song song.
 
 ## 1. Bối cảnh
 
@@ -150,7 +154,7 @@ nhận tiêu hao và thành phẩm; Supply Chain không import ngược Central 
   reconcile về cùng tổng gross.
 - Công thức gross-to-net, thứ tự phân bổ discount và rounding per-line/per-rate
   chỉ được triển khai sau khi có fixture được kế toán duyệt và tài khoản Viettel
-  chấp nhận. Không suy ra từ luồng HKD mẫu `2/...` hiện tại.
+  chấp nhận. Không suy ra từ một template/provider mẫu hiện tại.
 - Thay profile, template, series hoặc VAT sau thanh toán chỉ áp dụng cho giao
   dịch mới. Hóa đơn draft, replacement và reconciliation tiếp tục dùng snapshot
   đã khóa.
@@ -231,29 +235,37 @@ Hệ thống giữ ba đơn vị triển khai:
 Business module không trở thành deployable unit riêng. External provider được
 kết nối qua adapter server-side của web hoặc worker đã được chứng minh là cần.
 
-### 5.2. Environment và greenfield cutover
+Source đích nằm trong chính repo `comtammatu`. Các phase thay implementation
+phía sau seam hiện hữu rồi chuyển caller; không nhân đôi route, module hoặc
+package để giữ hai codebase.
 
-| Stage                | Contract                                                                                                                                                  |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CI                   | Supabase Local chỉ tồn tại trong GitHub Actions để replay from-empty, chạy SQL tests và E2E; không là runtime target.                                     |
-| Current Production   | Tiếp tục là current-state authority cho tới cutover; sau cutover chỉ read-only trong retention window đã chốt.                                            |
-| Production candidate | Supabase Project mới, không phải DEV. Không được query/apply trước khi exact ref và quyền được thêm đồng bộ vào Environment Registry cùng guard adapters. |
-| Production           | Candidate chỉ trở thành Production sau schema replay, RLS negative tests, backup/restore proof, provider/print smoke và owner cutover gate.               |
+### 5.2. Environment và Greenfield transition
+
+| Stage                 | Contract                                                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| CI                    | Supabase Local chỉ tồn tại trong GitHub Actions để replay from-empty, chạy SQL tests và E2E; không là runtime target.                      |
+| Suspended HKD         | `matu-prod + app.comtammatu.com` dừng active delivery từ `baf3720f8`; không nhận writer/deploy mới nếu chưa có owner rollback decision.    |
+| Production candidate  | `matu-greenfield-company` là target đã đăng ký của cùng repo, không phải DEV; exact ref và quyền nằm trong Environment Registry.          |
+| Greenfield Production | Candidate chỉ thành Production trên `web.comtammatu.com` sau schema replay, RLS tests, backup/restore, provider/print smoke và owner gate. |
 
 Không có persistent DEV, không dual-write và không import operational data cũ.
 Chỉ seed reference data bắt buộc; Company, Tenant, site, tài khoản và master data
 được provision rõ ràng trên target. Vercel Preview tiếp tục fail closed cho tới
 khi có một candidate binding được guard xác minh.
 
+`db:types` chỉ đọc Greenfield candidate qua literal registered ref đã được guard
+đồng bộ; `matu-prod` không còn là type source. `app.comtammatu.com` không được
+relink thành Greenfield; target domain là `web.comtammatu.com`.
+
 Rollback bằng đổi Vercel/agent target chỉ hợp lệ trước giao dịch live đầu tiên.
 Sau mốc đó, khôi phục hoặc sửa tiến trên target; quay lại project cũ sẽ tạo
-split-brain về payment, HĐĐT và tồn kho. Quyết định đầy đủ nằm trong
-`docs/plan/adr/0014-greenfield-company-tenant-cutover.md`.
+split-brain về payment, HĐĐT và tồn kho. Quyết định mô hình pháp lý hiện hành
+cho Greenfield nằm trong
+`docs/plan/adr/0016-joint-stock-company-operating-model.md`.
 
-Trước giao dịch live đầu tiên, current Production phải vào write fence: dừng
-cron/webhook ingress, thu hồi credential của runtime/agent cũ và chứng minh không
-còn writer. Pre-live rollback phải mở lại authority cũ một cách có kiểm soát;
-không được để hai project cùng nhận ghi.
+Trước giao dịch live đầu tiên, Greenfield Candidate phải là writer duy nhất.
+Suspended HKD stack không được tái kích hoạt song song; rollback trước giao dịch
+live đầu tiên cần một owner decision riêng.
 
 ### 5.3. Configuration và secrets
 
@@ -433,9 +445,9 @@ thể.
 4. Site scope nằm trên URL của site workspace; Company/Tenant được derive
    server-side từ membership và resource lineage. Không đưa scope vào tab
    state, React Context hoặc `localStorage`.
-5. V1 chỉ kích hoạt invoice profile Doanh nghiệp của Viettel. Data model cho
-   phép site tham chiếu profile khác, nhưng không xây luồng HKD khi chưa có pháp
-   nhân, tài khoản và nhu cầu phát hành thứ hai đã được xác nhận.
+5. V1 chỉ kích hoạt invoice profile doanh nghiệp của Viettel. Data model cho
+   phép site tham chiếu profile khác, nhưng không xây luồng phát hành thứ hai
+   khi chưa có tài khoản và nhu cầu đã được xác nhận.
 
 ### 8.2. Những seam hiện trạng phải thay
 
@@ -493,7 +505,7 @@ snapshot metadata cần đối soát, không lưu secret.
 
 | Phase                              | Kết quả nhỏ nhất phải đạt                                                                                                                       | Bề mặt sở hữu                                                                                    | Exit evidence                                                                                                                                                                                                        |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 — Greenfield Authority           | Supabase mới có Company tối thiểu, Tenant, `operational_site`, membership, assignment, scoped RBAC binding và capability; không có Auth/data cũ | target migrations, route-capability contract, RLS, RPC, generated types và SQL tests             | Văn phòng không cần site; position/assignment không tự cấp quyền; revoke dùng dữ liệu live; worker không đọc chéo site; exact target ref được xác minh trước apply                                                   |
+| 1 — Greenfield Authority           | Same repo có Company tối thiểu, Tenant, `operational_site`, membership, assignment, scoped RBAC binding và capability trên candidate; không có Auth/data cũ | target migrations, guarded candidate type-source path, route-capability contract, RLS, RPC và SQL tests | Văn phòng không cần site; position/assignment không tự cấp quyền; revoke dùng dữ liệu live; worker không đọc chéo site; exact target ref được xác minh trước apply |
 | 2 — Branch Workspace               | `/br/:branchId` là control room duy nhất; dashboard được nhập vào workspace, settings landing bị loại bỏ nhưng deep settings còn nguyên         | operator home/dashboard/settings, target route registry, navigation và route tests               | authority Phase 1 đã source-ready; không còn landing cạnh tranh; deep link và capability guard đúng; route matrix, typecheck, lint và build đạt                                                                      |
 | 3 — Effective Configuration & HĐĐT | thay provider/env singleton bằng resolver `Tenant default → site override`; chỉ provision profile Doanh nghiệp Viettel; phát hành bất đồng bộ   | typed configuration, provider adapter, issue/replace/adjust jobs, line/profile snapshot và audit | test inherit/override/disabled; mixed-VAT gross-price reconcile; replacement/adjustment tái dùng snapshot; credential không tới client; một hóa đơn thật đi qua issue và reconcile; lỗi mạng không chặn hoàn tất đơn |
 | 4 — Kho Tổng và Bếp Trung Tâm      | hai workspace có scope, quyền và workflow riêng; không dùng shell hoặc kind của Branch                                                          | `/warehouse/:siteId/*`, `/kitchen/:siteId/*`, Supply Chain và Central Production                 | route/RLS chặn sai kind; tồn kho và sản xuất ghi qua RPC đúng authority                                                                                                                                              |
@@ -513,8 +525,9 @@ exit evidence của phase trước chưa đạt.
 - Kho Tổng và Bếp Trung Tâm không dùng route hoặc shell của Chi nhánh;
 - web và print-agent chia sẻ đúng rendering contract, không chia sẻ app code;
 - không có `service_role` trên máy tại site;
-- current Production không còn writer trước giao dịch live đầu tiên trên target;
-- backup/restore và pre-live rollback được chứng minh trước cutover;
+- Greenfield Candidate là writer duy nhất của Greenfield trước giao dịch live
+  đầu tiên;
+- backup/restore và pre-live rollback được chứng minh trước promotion;
 - không có package mới nếu chưa có consumer chéo runtime;
 - task graph vẫn chạy qua `turbo run`;
 - thay đổi module không làm yếu Zod, RPC, ACL hoặc RLS.

@@ -19,6 +19,9 @@ export const GRN_CREATE_COPY = {
   searchPlaceholder: "Tìm theo tên hoặc mã SKU",
   emptyTitle: "Không thấy nguyên liệu",
   emptyDescription: "Thử từ khóa khác hoặc kiểm tra lại danh mục.",
+  emptySupplierTitle: "NCC chưa được gán nguyên liệu",
+  emptySupplierDescription:
+    "Cấu hình tại Danh mục → Nhà cung cấp trước khi lập phiếu nhập.",
   panelEmptyTitle: "Chưa chọn mặt hàng",
   panelEmptyDescription: "Chọn một nguyên liệu ở danh sách để sửa thông tin.",
   optionalNote: "Ghi chú (tùy chọn)",

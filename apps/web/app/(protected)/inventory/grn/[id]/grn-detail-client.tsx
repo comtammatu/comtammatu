@@ -60,7 +60,7 @@ export function GRNDetailClient({
   auditLogs = [],
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
-  supplierInvoicesBasePath = "/inventory/supplier-invoices",
+  supplierInvoicesBasePath = "/finance/supplier-invoices",
   embedded = false,
 }: {
   grn: GRNDetail;

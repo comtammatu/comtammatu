@@ -310,6 +310,7 @@ export const inventory = {
     branchWacLoadFailed: "Không thể tải WAC chi nhánh.",
     capacityLoadFailed: "Không thể tải phần bán được.",
     saveFailed: "Không thể lưu định mức món bán.",
+    outputUnitRequired: "Định mức phải dùng đơn vị xuất của nguyên liệu.",
     menuItemsLoadFailed: "Không thể tải món.",
   },
   productionRecipes: {
@@ -559,6 +560,8 @@ export const inventory = {
       "Lập đơn mua, duyệt một cấp và tạo phiếu nhập từ số lượng còn lại.",
     loadErrorTitle: "Không thể tải đơn mua hàng",
     loadErrorDescription: "Hãy tải lại trước khi tiếp tục mua hoặc nhận hàng.",
+    noSupplierItems:
+      "NCC chưa được gán nguyên liệu. Cấu hình tại Danh mục → Nhà cung cấp.",
     detailLoadFailed: "Không thể tải chi tiết đơn đặt hàng.",
     linkedGrnsLoadFailed: "Không thể tải phiếu nhập liên kết.",
     receivingLoadFailed: "Không thể tải đơn mua chờ nhận.",
@@ -1342,6 +1345,13 @@ export const inventory = {
     chooseSupplier: "Chọn nhà cung cấp",
     subtotalPlaceholder: "0",
     vat: "VAT",
+    vatBreakdown: "Chi tiết VAT",
+    taxableAtRate: (rate: string) => `Tiền trước VAT · ${rate}`,
+    vatAtRate: (rate: string) => `Tiền VAT · ${rate}`,
+    vatAutoPlaceholder: "Tự tính nếu để trống",
+    invalidAmount: "Số tiền không hợp lệ.",
+    vatBucketSummary: (rate: string, taxableAmount: string) =>
+      `${rate} trên ${taxableAmount}`,
     matchingNotes: "Ghi chú đối soát",
     matchingNotesPlaceholder: "Ghi chú thêm cho bước matching",
     saveInvoice: "Lưu hóa đơn",
@@ -1363,6 +1373,32 @@ export const inventory = {
     emptySearchDescription: "Thử tên, mã số thuế hoặc số điện thoại khác.",
     emptyInitialDescription: 'Nhấn "Thêm nhà cung cấp" để bắt đầu.',
     loadFailed: "Không thể tải nhà cung cấp.",
+    items: {
+      eyebrow: "Nguyên liệu theo NCC",
+      description:
+        "Danh sách nguyên liệu được phép dùng khi lập đơn mua và phiếu nhập.",
+      openAria: (name: string) => `Quản lý nguyên liệu của ${name}`,
+      addAction: "Gán nguyên liệu",
+      addTitle: "Gán nguyên liệu cho nhà cung cấp",
+      addSubmit: "Gán nguyên liệu",
+      addSuccess: "Đã gán nguyên liệu",
+      ingredient: "Nguyên liệu",
+      internalSku: "SKU nội bộ",
+      supplierSku: "Mã hàng NCC",
+      supplierSkuPlaceholder: "Mã trên báo giá hoặc phiếu giao",
+      searchPlaceholder: "Tìm nguyên liệu hoặc mã hàng",
+      emptyTitle: "NCC chưa được gán nguyên liệu",
+      emptyDescription:
+        'Nhấn "Gán nguyên liệu" để cho phép dùng trong PO và GRN.',
+      emptySearchTitle: "Không tìm thấy nguyên liệu phù hợp",
+      emptySearchDescription: "Thử tên hoặc mã hàng khác.",
+      removeTitle: "Bỏ gán nguyên liệu?",
+      removeDescription: (ingredient: string, supplier: string) =>
+        `${ingredient} sẽ không còn được chọn khi mua hoặc nhập hàng từ ${supplier}.`,
+      removeAction: "Bỏ gán",
+      removeSuccess: "Đã bỏ gán nguyên liệu",
+      removeAria: (name: string) => `Bỏ gán ${name}`,
+    },
   },
   stocktake: {
     created: "Tạo phiếu kiểm kê {code} thành công",

@@ -296,7 +296,7 @@ test("Finance top-items side-item fanout avoids PL/pgSQL output-column ambiguity
   );
 });
 
-test("Finance live copy stays HKD operating-first without two-mode labels", () => {
+test("Finance live copy stays operating-first without two-mode labels", () => {
   const financeMessages = read("apps/web/lib/messages/finance.ts");
   const financeTypes = read(
     "apps/web/app/(protected)/finance/_lib/finance-types.ts",
@@ -327,6 +327,6 @@ test("Finance live copy stays HKD operating-first without two-mode labels", () =
   assert.doesNotMatch(
     financeMessages,
     /khách không lấy hóa đơn|khách hàng không lấy hóa đơn|khách lẻ không yêu cầu MST|trước VAT|VAT đầu ra/,
-    "Finance live copy should keep HKD-facing labels terse and current",
+    "Finance live copy should keep operating labels terse and current",
   );
 });

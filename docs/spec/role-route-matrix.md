@@ -6,7 +6,7 @@ role inheritance, and route authorization.
 ## Product Frame
 
 Cơm Tấm Má Tư is a single-tenant, multi-branch operations and sales system for
-an HKD F&B business. It has ERP-like coverage across purchasing, receiving,
+a joint-stock F&B company. It has ERP-like coverage across purchasing, receiving,
 inventory, production, sales, payments, finance, HR, printing, and reporting,
 but product-facing language remains `bộ phần mềm quản lý vận hành và bán hàng`.
 Use `ERP` only for architecture comparison, scope comparison, or internal
@@ -51,7 +51,7 @@ reference framing.
 | Inventory Oversight | `/inventory/*`                                                                                                                                     | L0      | `owner`                                                      | Tenant inventory, GRN, stocktake, production, consumption, waste, and reports. Branch daily stock work stays under `/br/[branchId]/stock/*`. |
 | Orders Oversight    | `/orders/*`                                                                                                                                        | L0      | `owner`                                                      | Tenant order oversight and exception handling. Branch order work stays under `/br/[branchId]/orders`.                                        |
 | HR Administration   | `/hr/*`                                                                                                                                            | L0      | `owner`                                                      | Tenant-wide staff CRUD, attendance, leave, payroll, labor contracts, compensation, insurance, accounts, and permissions.                     |
-| Finance             | `/finance/*`                                                                                                                                       | L0      | `owner`                                                      | HKD operating finance, revenue, expenses, cash summary, inventory value handoff, food-cost signal, tax-support exports, and HĐĐT support.    |
+| Finance             | `/finance/*`                                                                                                                                       | L0      | `owner`                                                      | Operating finance, revenue, expenses, cash summary, inventory value handoff, food-cost signal, tax-support exports, and HĐĐT support.        |
 | Ca của tôi / Hồ sơ  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                                                               | L1/self | branch-pinned roles                                          | Personal day-flow and profile surfaces: clock, workday tasks, schedule, leave request, payslip. Not an HR admin substitute.                  |
 
 ## HR Administration Semantics

@@ -24,9 +24,9 @@ export function ensureInvoiceProviderRegistered(): void {
   const templateCode = process.env["SINVOICE_TEMPLATE_CODE"];
   const invoiceSeries = process.env["SINVOICE_INVOICE_SERIES"];
   if (!username || !password || !templateCode || !invoiceSeries) return;
-  if (!templateCode.startsWith("2/")) {
+  if (!/^[12]\//.test(templateCode)) {
     console.error(
-      "[invoice-provider-init] Unsupported SINVOICE_TEMPLATE_CODE for HKD direct-sales invoices.",
+      "[invoice-provider-init] Unsupported SINVOICE_TEMPLATE_CODE.",
     );
     return;
   }

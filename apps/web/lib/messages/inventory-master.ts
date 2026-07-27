@@ -115,6 +115,10 @@ export const INGREDIENT_FORM_VI = {
     all: "Tất cả nhóm",
   },
   units: {
+    inputUnit: "Đơn vị nhập",
+    outputUnit: "Đơn vị xuất",
+    inputToOutputFactor: "Số đơn vị xuất / 1 đơn vị nhập",
+    sameUnitFactorOne: "Hai vai trò cùng đơn vị thì hệ số phải bằng 1",
     sectionLabel: "Đơn vị tồn và quy đổi",
     add: "Thêm đơn vị",
     empty: "Chưa có đơn vị nào.",

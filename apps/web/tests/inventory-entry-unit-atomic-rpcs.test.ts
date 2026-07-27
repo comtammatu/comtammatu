@@ -325,14 +325,14 @@ test.skip("direct table writes derive persisted unit text from the entry unit ca
   }
 });
 
-test("menu recipe editor resets entry unit when changing ingredient", () => {
+test("menu recipe editor fixes entry unit to the ingredient output unit", () => {
   const editor = section(
     "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
     "<RecipeLinesEditor",
     "/>",
   );
 
-  assert.match(editor, /\bunitEditable\b/);
+  assert.doesNotMatch(editor, /\bunitEditable\b/);
 });
 
 test("recipe runtime DTOs expose unitLabel instead of retired unit text", () => {

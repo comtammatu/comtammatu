@@ -5,7 +5,6 @@ export * from "./settings/index";
 export * from "./kds/index";
 export * from "./runner/index";
 export * from "./runtime/env";
-export * from "./tax/resolve-sales-tax";
 export * from "./time/vietnam";
 export type { ActionResult } from "./types/action-result";
 export { CATEGORY_TYPE_LABELS, SIDE_DISH_TYPE } from "./menu/category-labels";

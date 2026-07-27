@@ -1,6 +1,6 @@
 # Kho Hàng — Inventory Management
 
-> Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư — quản lý kho nguyên liệu và thành phẩm F&B
+> Áp dụng: doanh nghiệp Cơm Tấm Má Tư — quản lý kho nguyên liệu và thành phẩm F&B
 > Phạm vi: **PO mua hàng tại Owner control + nhập NCC tại chi nhánh + sản xuất tại chi nhánh + tiêu hao + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, payment status và AP aging là Finance handoff; không phải gate đóng ngày Inventory.
 
 ---
@@ -87,21 +87,33 @@ Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu
 
 ### 2.1 Hệ đơn vị
 
-Đơn vị kho không còn nằm trên cột text của `ingredients`. Contract hiện tại:
+Đơn vị kho không còn nằm trên cột text của `ingredients`. Mỗi nguyên liệu chỉ có
+hai vai trò nghiệp vụ:
 
-- `units`: registry đơn vị dùng chung theo tenant, gồm đơn vị chuẩn và đơn vị đóng gói.
-- `ingredient_units`: danh mục đơn vị cho từng nguyên liệu, có đúng một dòng `is_base = true`; UI gọi dòng này là **Đơn vị tồn chuẩn**.
-- `entry_unit_id`: đơn vị người dùng nhập trên chứng từ; UI gọi là **Đơn vị nhập**
-  trong GRN/issue/waste và **Đơn vị đếm** trong kiểm kê; khóa tới `units.id`.
-- `to_base_factor`: **Quy đổi về tồn chuẩn**, luôn hiểu là `1 đơn vị nhập/đếm = N đơn vị tồn chuẩn`; UI hiển thị canonical như `1 thùng = 24 chai`.
+- **Đơn vị nhập:** đơn vị dùng khi nhận/mua nguyên liệu.
+- **Đơn vị xuất:** đơn vị dùng để trừ tồn và nhập định mức món bán.
+- Quy đổi luôn đọc là `1 đơn vị nhập = N đơn vị xuất`. Hai vai trò có thể dùng
+  cùng một đơn vị; khi đó hệ số là `1`.
 
-> **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`, và giá vốn BQ luôn lưu theo **đơn vị tồn chuẩn**. Chứng từ GRN, issue, waste, stocktake, recipe và production có thể nhập theo `entry_unit_id`; RPC/action phải quy đổi qua `ingredient_units`, không tin unit text từ client.
+`units` vẫn là registry dùng chung theo tenant. `ingredient_units.is_base` và
+`to_base_factor` là chi tiết tương thích kỹ thuật của ledger hiện hữu:
+`is_base = true` ánh xạ sang **Đơn vị xuất**; không hiển thị khái niệm “đơn vị
+gốc/tồn chuẩn” trên UI. Dữ liệu lịch sử có thể còn dòng quy đổi phụ để đọc chứng
+từ cũ, nhưng UI Ingredients chỉ trình bày hai vai trò trên.
 
-Sau khi nguyên liệu đã có `stock_movements`, đơn vị tồn chuẩn và hệ số của các đơn vị hiện hữu là lịch sử kế toán kho nên không được sửa hoặc xóa. UI phải kiểm tra trước và khóa các dòng này; nếu cần cách nhập/đếm mới thì thêm một `ingredient_unit` mới. RPC `upsert_ingredient_catalog` vẫn là authority cuối và từ chối mọi thay đổi có thể diễn giải lại ledger cũ. Mã trong registry `units` cũng không được đổi sau khi đã gán; chỉ được ngừng dùng hoặc tạo đơn vị mới.
+> **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`
+> và giá vốn BQ lưu theo **Đơn vị xuất**. Chứng từ nhận hàng có thể ghi
+> `entry_unit_id` theo Đơn vị nhập; RPC/action phải quy đổi qua
+> `ingredient_units`, không tin unit text từ client.
+
+Sau khi nguyên liệu đã có `stock_movements`, hai đơn vị và hệ số quy đổi hiện hữu
+là lịch sử kế toán kho nên không được sửa hoặc xóa. RPC
+`upsert_ingredient_catalog` vẫn là authority cuối và từ chối thay đổi có thể
+diễn giải lại ledger cũ.
 
 ### 2.2 Database — bảng `ingredients`
 
-Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` là **giá nhập tham chiếu**; **giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` và tính trên **đơn vị tồn chuẩn**.
+Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` là **giá nhập tham chiếu**; **giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` và tính trên **Đơn vị xuất**.
 
 - `item_kind = raw_material`: nguyên liệu đầu vào.
 - `item_kind = finished_good`: thành phẩm sản xuất tại chi nhánh hoặc hàng chuẩn bị sẵn được giữ ở stock-bearing location của chi nhánh.
@@ -109,14 +121,18 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 ### 2.3 Tồn kho theo chi nhánh — bảng `stock_levels`
 
 - **Khóa:** theo `(tenant_id, branch_id, location_id, ingredient_id)` — flow mới chỉ cộng tồn vận hành từ stock-bearing locations.
-- **`current_quantity`:** tồn thực theo **đơn vị tồn chuẩn** của nguyên liệu trong `ingredient_units`.
-- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó, tính theo **đơn vị tồn chuẩn**, cập nhật khi **GRN** (tại Kho CN của chi nhánh) và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất).
+- **`current_quantity`:** tồn thực theo **Đơn vị xuất** của nguyên liệu.
+- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó, tính theo **Đơn vị xuất**, cập nhật khi **GRN** (tại Kho CN của chi nhánh) và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất).
 
 ---
 
 ## 3. Công thức (Recipes)
 
-Định mức nguyên liệu theo `menu_item`. Dùng để **xuất kho** (`consumption`) khi đơn hàng chuyển sang `completed` (thực hiện bằng RPC, không lặp HTTP). `recipes.quantity` là số lượng theo `recipes.entry_unit_id`; khi ghi movement phải quy đổi về base unit trước khi trừ tồn và tính WAC.
+Định mức nguyên liệu theo `menu_item`. Dùng để **xuất kho** (`consumption`) khi
+đơn hàng chuyển sang `completed` (thực hiện bằng RPC, không lặp HTTP).
+`recipes.quantity` luôn là lượng tiêu hao trực tiếp theo **Đơn vị xuất** của
+nguyên liệu và `recipes.entry_unit_id` phải trỏ tới đơn vị đó. Định mức món bán
+không có Yield.
 
 ```sql
 -- Mục tiêu schema (triển khai theo migration)
@@ -128,7 +144,7 @@ CREATE TABLE recipes (
   quantity        NUMERIC(15,3) NOT NULL,
   entry_unit_id   BIGINT REFERENCES units(id),
   note            TEXT,
-  yield_factor    NUMERIC(15,6) NOT NULL DEFAULT 1,
+  yield_factor    NUMERIC(15,6) NOT NULL DEFAULT 1, -- tương thích SQL; ứng dụng luôn dùng 1
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (menu_item_id, ingredient_id, tenant_id)
 );
@@ -169,11 +185,11 @@ Quy tắc kế hoạch so với thực tế:
   thực tế rồi ghi consumption, output, stock level và trạng thái trong cùng một
   giao dịch.
 
-### 3c. Yield Factor — hao hụt sơ chế
+### 3c. Yield Factor của công thức sản xuất — hao hụt sơ chế
 
 > Boundary: đây là current Inventory control; không kéo theo multi-level BOM hay costing engine mới.
 
-- `yield_factor` biểu diễn tỷ lệ giữ lại sau sơ chế.
+- `production_recipes.yield_factor` biểu diễn tỷ lệ giữ lại sau sơ chế; không áp dụng cho `recipes` của món bán.
 - Mặc định `1.0` = không hao hụt; ví dụ `0.85` = 15% hao hụt.
 - Khi áp dụng, lượng gross để mua / tiêu hao được tính:
 
@@ -215,7 +231,8 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 
 ### 5.1 Quy trình
 
-1. Thiết lập **NCC** và điều khoản thanh toán.
+1. Thiết lập **NCC**, điều khoản thanh toán và gán nguyên liệu NCC được phép
+   cung cấp trong `supplier_items`.
 2. Với đơn mua có kế hoạch: Owner lập PO nháp → người có quyền duyệt chuyển
    sang `sent`; mua trực tiếp có thể bỏ qua PO.
 3. NCC giao hàng → tạo GRN từ PO đã duyệt hoặc lập **GRN supplier-first**;
@@ -226,6 +243,18 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
    nhận thanh toán NCC theo số dư còn phải trả.
 
 **Nguyên tắc:** Giá nhập theo **GRN** (thực nhận), không theo số đặt PO. `grn_items.unit_cost` là **Đơn giá nhập** (`₫ / đơn vị nhập`), không phải giá vốn BQ. GRN chỉ được tạo tại site stock-bearing (`branch`).
+
+PO và GRN mới chỉ nhận nguyên liệu có mapping `supplier_items.is_active = true`
+với NCC của chứng từ. UI lọc ngay sau khi chọn NCC; Server Action và database
+trigger cùng từ chối dòng không khớp. Bỏ mapping không sửa chứng từ lịch sử,
+nhưng ngăn chọn mới và ngăn duyệt/chốt chứng từ nháp còn chứa dòng đó.
+
+Đối soát tiền dùng cùng một cơ sở trước VAT: `supplier_invoices.subtotal` so
+với tổng `(received_quantity - rejected_quantity) × unit_cost` của GRN và tổng
+PO khi mọi dòng PO đã có giá. `vat_amount` chỉ cộng vào công nợ phải trả; không
+làm tăng giá trị hàng nhận trong bước đối soát này.
+`supplier_invoices.vat_breakdown` giữ từng nhóm 0%/5%/8%/10% của chứng từ;
+header `subtotal`, `vat_amount` và `total_amount` được suy ra từ tổng các nhóm.
 
 ### 5.2 Schema tham chiếu — `goods_received_notes` / `grn_items`
 

@@ -85,7 +85,6 @@ export async function fetchFoodCost(
       ingredient_id,
       quantity,
       entry_unit_id,
-      yield_factor,
       ingredients (
         unit_cost,
         ingredient_units!ingredient_units_ingredient_tenant_fkey (
@@ -126,7 +125,6 @@ export async function fetchFoodCost(
     ingredient_id: number | null;
     quantity: number | string | null;
     entry_unit_id: number | null;
-    yield_factor: number | string | null;
     ingredients: IngredientRelation | IngredientRelation[];
   };
 
@@ -158,7 +156,6 @@ export async function fetchFoodCost(
       ingredientId: row.ingredient_id,
       quantity: Number(row.quantity ?? 0),
       entryUnitId: row.entry_unit_id,
-      yieldFactor: Number(row.yield_factor ?? 1),
       fallbackUnitCost: Number(ingredient?.unit_cost ?? 0),
       units,
     });

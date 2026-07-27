@@ -14,10 +14,7 @@ test("Owner bottom nav fits one module action and four destinations", () => {
   assert.doesNotMatch(source, /min-w-16/);
   assert.match(source, /visible\.slice\(0, MAX_VISIBLE_ITEMS - 1\), active/);
   assert.match(source, /const deepNavItems = flattenNavGroups\(tier2\);/);
-  assert.match(
-    source,
-    /deepNavItems\.length > 0 \? deepNavItems : tier1/,
-  );
+  assert.match(source, /deepNavItems\.length > 0 \? deepNavItems : tier1/);
   assert.match(source, /aria-expanded=\{openMobile\}/);
 });
 
@@ -30,10 +27,7 @@ test("Owner mobile shell keeps the module drawer available on the root landing",
     source,
     /\{showBottomNav \? <OwnerBottomNav tier1=\{tier1\} tier2=\{tier2\} \/> : null\}/,
   );
-  assert.match(
-    source,
-    /<ThemeMenuItem className="min-h-12 text-sm" \/>/,
-  );
+  assert.match(source, /<ThemeMenuItem className="min-h-12 text-sm" \/>/);
   assert.match(source, /useIsMobile\(1024\)/);
   assert.match(source, /className="min-h-12 w-full text-sm"/);
   assert.match(
@@ -56,15 +50,13 @@ test("Inventory branch selector keeps touch targets through tablet widths", () =
   );
 });
 
-test("Inventory mobile controls render one interactive tree with named touch sizes", () => {
+test("Inventory ingredient editor keeps two operational unit roles", () => {
   const ingredientDialog = read(
     "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
-  assert.match(
-    ingredientDialog,
-    /size="icon-touch"[\s\S]{0,180}className="md:hidden flex-shrink-0"/,
-  );
-  assert.doesNotMatch(ingredientDialog, /className="h-9 w-9 md:hidden/);
+  assert.match(ingredientDialog, /name="input_unit_id"/);
+  assert.match(ingredientDialog, /name="output_unit_id"/);
+  assert.doesNotMatch(ingredientDialog, /useFieldArray|IconTrash/);
 
   const issueDetail = read(
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
@@ -112,7 +104,10 @@ test("Owner page-header actions use the named touch button size", () => {
     "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
   );
   const grnActionsStart = grnCreate.indexOf("actions={");
-  const grnActionBlock = grnCreate.slice(grnActionsStart, grnActionsStart + 600);
+  const grnActionBlock = grnCreate.slice(
+    grnActionsStart,
+    grnActionsStart + 600,
+  );
   assert.doesNotMatch(grnActionBlock, /\bh-8\b/);
 });
 
@@ -158,6 +153,9 @@ test("single-Min threshold cards stay touch-safe and paginate the growth list", 
 
   assert.match(source, /pageSize=\{25\}/);
   assert.doesNotMatch(source, /sm:grid-cols-3/);
-  assert.equal(source.match(/h-12 text-right tabular-nums lg:h-10/g)?.length, 2);
+  assert.equal(
+    source.match(/h-12 text-right tabular-nums lg:h-10/g)?.length,
+    2,
+  );
   assert.match(source, /<Checkbox[\s\S]*size="touch"/);
 });

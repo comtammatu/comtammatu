@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import {
+  PackageSearch as IconPackageSearch,
   Pencil as IconPencil,
   Plus as IconPlus,
   Search as IconSearch,
@@ -73,11 +75,13 @@ function SupplierMobileCard({
   index,
   onEdit,
   onDelete,
+  canManageItems,
 }: {
   supplier: SupplierRow;
   index: number;
   onEdit: (row: SupplierRow) => void;
   onDelete: (row: SupplierRow) => void;
+  canManageItems: boolean;
 }) {
   return (
     <InteractiveCard
@@ -111,6 +115,18 @@ function SupplierMobileCard({
           )}
         </div>
         <div className="flex items-center gap-1">
+          {canManageItems ? (
+            <Button
+              variant="ghost"
+              size="icon-touch"
+              render={
+                <Link href={`/inventory/suppliers/${supplier.id}/items`} />
+              }
+              aria-label={suppliersCopy.items.openAria(supplier.name)}
+            >
+              <IconPackageSearch className="size-4" />
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"
@@ -136,7 +152,13 @@ function SupplierMobileCard({
   );
 }
 
-export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
+export function SuppliersClient({
+  initial,
+  canManageItems,
+}: {
+  initial: SupplierRow[];
+  canManageItems: boolean;
+}) {
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -244,6 +266,16 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
       className: "w-24 text-right",
       render: (s) => (
         <div className="flex items-center justify-end gap-1">
+          {canManageItems ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              render={<Link href={`/inventory/suppliers/${s.id}/items`} />}
+              aria-label={suppliersCopy.items.openAria(s.name)}
+            >
+              <IconPackageSearch className="size-4" />
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"
@@ -328,6 +360,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
               index={i}
               onEdit={openEdit}
               onDelete={confirmDelete}
+              canManageItems={canManageItems}
             />
           )}
         />

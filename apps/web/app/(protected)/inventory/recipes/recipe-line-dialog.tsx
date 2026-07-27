@@ -26,7 +26,6 @@ export interface RecipeLineDraft {
   quantity: number;
   unitLabel: string;
   entryUnitId: number | null;
-  yieldFactor: number;
   note: string | null;
 }
 
@@ -40,10 +39,6 @@ const recipeLineRowSchema = z.object({
     .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
   unitLabel: z.string().optional(),
   entry_unit_id: z.string().optional(),
-  yield_factor: z
-    .string()
-    .min(1, { error: INVENTORY_VI.enterYield })
-    .refine((v) => Number(v) > 0, { error: INVENTORY_VI.yieldPositive }),
   note: z.string().max(200, { error: INVENTORY_VI.noteMax200 }).optional(),
 });
 
@@ -71,7 +66,6 @@ const EMPTY_ROW: RecipeLineRow = {
   quantity: "",
   unitLabel: "",
   entry_unit_id: "",
-  yield_factor: "1",
   note: "",
 };
 
@@ -110,7 +104,6 @@ export function RecipeLineDialog({
               quantity: String(l.quantity),
               unitLabel: l.unitLabel,
               entry_unit_id: l.entryUnitId ? String(l.entryUnitId) : "",
-              yield_factor: String(l.yieldFactor),
               note: l.note ?? "",
             }))
           : [EMPTY_ROW],
@@ -132,7 +125,6 @@ export function RecipeLineDialog({
       ingredientId: Number(row.ingredient_id),
       quantity: Number(row.quantity),
       entryUnitId: row.entry_unit_id ? Number(row.entry_unit_id) : null,
-      yieldFactor: Number(row.yield_factor || "1"),
       note: row.note?.trim() ? row.note.trim() : null,
     }));
 
@@ -206,7 +198,7 @@ export function RecipeLineDialog({
                 errors={errors}
                 ingredients={ingredients}
                 bulkAdd
-                unitEditable
+                showYield={false}
               />
 
               {linesRootError && (
@@ -214,9 +206,6 @@ export function RecipeLineDialog({
                   {linesRootError}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground">
-                {INVENTORY_VI.yieldHint}
-              </p>
             </div>
           </>
         );

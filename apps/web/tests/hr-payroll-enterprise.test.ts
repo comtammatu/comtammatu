@@ -204,7 +204,7 @@ test("Payroll snapshot persists through one atomic RPC and never marks payment",
   );
 });
 
-test("HKD payroll migration adds annual leave quota and payroll day snapshots", () => {
+test("enterprise payroll migration adds annual leave quota and payroll day snapshots", () => {
   for (const expected of [
     "CREATE TABLE public.annual_leave_entitlements",
     "CONSTRAINT annual_leave_entitlements_employee_year_key UNIQUE",
@@ -226,7 +226,7 @@ test("HKD payroll migration adds annual leave quota and payroll day snapshots", 
   }
 });
 
-test("HKD leave approval migration allows payroll to split unpaid overflow", () => {
+test("enterprise leave approval migration allows payroll to split unpaid overflow", () => {
   assert.match(
     monthlyAnnualLeaveMigrationSource,
     /CREATE OR REPLACE FUNCTION public\.approve_leave_request/,
@@ -272,13 +272,13 @@ test("Contract insurance migration opens HĐLĐ writes and syncs BHXH cache", ()
   }
 });
 
-// Regression: shared engine math under the HKD model (insuranceBaseSalary=0).
+// Regression: shared engine math when insuranceBaseSalary=0.
 // Numbers are derived from the versioned legal tables — do NOT hardcode rates
 // here; these assert the end-to-end output the action persists.
 // effectiveDate 2026-06-30 resolves to the 2026 tax-year version: 15.5M personal
 // / 6.2M dependent (NQ 110/2025) + 5-bracket PIT (Luật 109/2025, áp dụng từ kỳ
 // tính thuế 2026).
-const HKD = {
+const NO_INSURANCE = {
   insuranceBaseSalary: 0,
   taxExemptAllowances: 0,
   charityDeduction: 0,
@@ -287,9 +287,9 @@ const HKD = {
   effectiveDate: "2026-06-30",
 } as const;
 
-test("HKD engine: 12M / 0 dependents → PIT 0, BHXH 0", () => {
+test("payroll engine: 12M / 0 dependents → PIT 0, BHXH 0", () => {
   const r = calculatePayrollEntry({
-    ...HKD,
+    ...NO_INSURANCE,
     grossTotal: 12_000_000,
     dependentCount: 0,
   });
@@ -299,9 +299,9 @@ test("HKD engine: 12M / 0 dependents → PIT 0, BHXH 0", () => {
   assert.equal(r.netSalary, 12_000_000);
 });
 
-test("HKD engine: 25M / 1 dependent → taxable 3.3M, PIT 165k, BHXH 0", () => {
+test("payroll engine: 25M / 1 dependent → taxable 3.3M, PIT 165k, BHXH 0", () => {
   const r = calculatePayrollEntry({
-    ...HKD,
+    ...NO_INSURANCE,
     grossTotal: 25_000_000,
     dependentCount: 1,
   });
@@ -312,7 +312,7 @@ test("HKD engine: 25M / 1 dependent → taxable 3.3M, PIT 165k, BHXH 0", () => {
 
 test("BHXH engine: 25M gross and insurance base → NLĐ pays 10.5%", () => {
   const r = calculatePayrollEntry({
-    ...HKD,
+    ...NO_INSURANCE,
     grossTotal: 25_000_000,
     insuranceBaseSalary: 25_000_000,
     dependentCount: 1,
@@ -324,9 +324,9 @@ test("BHXH engine: 25M gross and insurance base → NLĐ pays 10.5%", () => {
   assert.equal(r.netSalary, 22_341_250);
 });
 
-test("HKD engine: 35M / 0 dependents → taxable 19.5M, BHXH 0", () => {
+test("payroll engine: 35M / 0 dependents → taxable 19.5M, BHXH 0", () => {
   const r = calculatePayrollEntry({
-    ...HKD,
+    ...NO_INSURANCE,
     grossTotal: 35_000_000,
     dependentCount: 0,
   });

@@ -1,6 +1,6 @@
 # Hợp Đồng Lao Động — Labor Contracts
 
-> Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
+> Áp dụng: doanh nghiệp Cơm Tấm Má Tư
 > Khung pháp lý: Bộ luật Lao động 2019 (BLLĐ), NĐ 145/2020, TT 10/2020
 
 ---
@@ -9,21 +9,24 @@
 
 ### 1.1 Theo thời hạn (Điều 20 BLLĐ 2019)
 
-| Loại                               | Thời hạn    | Ký tối đa | Ghi chú                                        |
-| ---------------------------------- | ----------- | --------- | ---------------------------------------------- |
-| **Không xác định thời hạn**        | Vô thời hạn | —         | Mặc định sau khi hết 2 HĐ có thời hạn          |
-| **Xác định thời hạn**              | 12–36 tháng | 2 lần     | Lần 3 → phải ký không xác định thời hạn        |
-| **Theo mùa vụ / công việc cụ thể** | < 12 tháng  | 1 lần     | Không gia hạn được — ký loại khác nếu tiếp tục |
+| Loại                        | Thời hạn          | Ghi chú |
+| --------------------------- | ----------------- | ------- |
+| **Không xác định thời hạn** | Không xác định    | Không có ngày chấm dứt hiệu lực |
+| **Xác định thời hạn**       | Không quá 36 tháng | Khi hết hạn và tiếp tục làm việc, áp quy tắc ký lại/chuyển loại tại Điều 20 |
 
 > ⚠️ **Rule**: Nếu NLĐ đã ký 2 HĐ xác định thời hạn liên tiếp → hợp đồng thứ 3 bắt buộc là không xác định thời hạn. Hệ thống phải **cảnh báo** HR trước khi ký HĐ thứ 3.
 
 ### 1.2 Hợp đồng thử việc (Điều 24–27 BLLĐ 2019)
 
-| Vị trí                                      | Thời gian thử việc tối đa |
-| ------------------------------------------- | ------------------------- |
-| Quản lý (branch_manager trở lên)            | 60 ngày                   |
-| Nhân viên kỹ thuật / chuyên môn             | 60 ngày                   |
-| Nhân viên phổ thông (cashier, chef, kitchen_helper) | 30 ngày          |
+| Nhóm công việc theo luật | Thời gian thử việc tối đa |
+| --- | ---: |
+| Người quản lý doanh nghiệp theo Luật Doanh nghiệp | 180 ngày |
+| Chức danh cần trình độ cao đẳng trở lên | 60 ngày |
+| Chức danh cần trình độ trung cấp, công nhân kỹ thuật, nhân viên nghiệp vụ | 30 ngày |
+| Công việc khác | 6 ngày làm việc |
+
+Không suy thời hạn chỉ từ application role; HR phải map theo chức danh và yêu
+cầu trình độ thực tế.
 
 - Lương thử việc ≥ **85%** lương chính thức của vị trí đó
 - Không đóng BHXH trong thời gian thử việc (nếu HĐ thử việc riêng)
@@ -79,8 +82,7 @@ sở 2,34tr, NĐ 73/2024) đến 30/06/2026, **50,600,000 VND/tháng** (lương 
 
 - Đóng **hàng tháng**, hạn nộp: ngày **cuối tháng** của tháng phát sinh
 - Nộp qua cổng BHXH điện tử (baohiemxahoi.gov.vn) hoặc ngân hàng liên kết.
-  Trong docs nội bộ, phía Hộ kinh doanh được gọi bằng thuật ngữ pháp lý chung
-  là **NSDLĐ** thay vì "công ty".
+  Trong docs nội bộ, doanh nghiệp ở phía thuê lao động được gọi là **NSDLĐ**.
 
 ---
 
@@ -92,7 +94,7 @@ sở 2,34tr, NĐ 73/2024) đến 30/06/2026, **50,600,000 VND/tháng** (lương 
 | ------------------------------- | ------------- | ------------- |
 | Không xác định thời hạn         | **45 ngày**   | **45 ngày**   |
 | Xác định thời hạn (12–36 tháng) | **30 ngày**   | **30 ngày**   |
-| Mùa vụ < 12 tháng               | **3 ngày**    | **3 ngày**    |
+| Xác định thời hạn < 12 tháng    | **3 ngày làm việc** | **3 ngày làm việc** |
 
 **Các trường hợp không cần báo trước** (NLĐ được nghỉ ngay):
 
@@ -124,7 +126,7 @@ CREATE TABLE employees (
   bank_name               TEXT,
 
   -- Lương & BH
-  base_salary             NUMERIC(15,2),                            -- Lương gộp (payroll HKD đọc trực tiếp — D031)
+  base_salary             NUMERIC(15,2),                            -- Lương gộp (payroll fallback đọc trực tiếp — D031)
   insurance_base_salary   NUMERIC(15,2) NOT NULL DEFAULT 0,         -- Mức lương đóng BH (0 = BHXH off)
 
   -- Việc làm
@@ -217,12 +219,12 @@ payroll_entries.insurance_base (immutable snapshot)
 2. Sửa `employees` trực tiếp không qua HĐ → mất audit trail, cơ quan BHXH kiểm tra không khớp
 3. Payroll lấy từ `employees` thay vì HĐ hiện hành → HĐ mới có hiệu lực giữa tháng sẽ lấy sai mức
 
-> **Runtime contract**: Payroll lấy `insurance_base_salary` từ `employment_contracts` active khi có HĐLĐ, rồi fallback về `employees` cho dữ liệu HKD cũ. `payroll_entries.insurance_base` là snapshot — KHÔNG bao giờ thay đổi sau khi payroll approved.
+> **Runtime contract**: Payroll lấy `insurance_base_salary` từ `employment_contracts` active khi có HĐLĐ, rồi fallback về `employees` cho dữ liệu legacy chưa chuẩn hóa. `payroll_entries.insurance_base` là snapshot — KHÔNG bao giờ thay đổi sau khi payroll approved.
 
-### 5.4 Mô hình tính lương HKD có HĐLĐ/BHXH tối thiểu (đang áp dụng)
+### 5.4 Mô hình tính lương doanh nghiệp có HĐLĐ/BHXH tối thiểu
 
 Theo cập nhật owner ngày 26/06/2026, payroll trong app dùng HĐLĐ khi có nhưng
-vẫn giữ fallback hồ sơ nhân viên để không làm gãy dữ liệu HKD cũ:
+vẫn giữ fallback hồ sơ nhân viên để không làm gãy dữ liệu legacy:
 
 - `calculatePayroll` (`apps/web/app/(protected)/hr/payroll-actions.ts`) đọc
   `employment_contracts` active trong kỳ và ưu tiên:

@@ -12,7 +12,7 @@ import type {
 } from "../_lib/finance-types";
 
 // Operational queue strip — keep the default Finance support queue focused on
-// HKD operating checks. Accounting-close tiles exist for direct support routes,
+// Operating checks. Accounting-close tiles exist for direct support routes,
 // but are not part of the pilot default set.
 //
 // Architect §1: extracted from finance-client.tsx:485-547 so the same

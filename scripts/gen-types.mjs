@@ -7,7 +7,7 @@
 // work the same way on cmd vs sh. Lesson #11–#13 in `tasks/lessons.md`.
 //
 // Behavior:
-// - Generates from Production only after an explicit matching project ref.
+// - Generates from the registered Greenfield type source only after an explicit matching project ref.
 //   Typegen is read-only and never loads stored env or link state.
 // - Captures only stdout; CLI update notice on stderr is shown in console
 //   but never poisons the types file.
@@ -16,11 +16,11 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 
-const PRODUCTION_PROJECT_ID = "iexwsuaqqenyjiskawoj";
+const TYPE_SOURCE_PROJECT_ID = "enloyfnuerqgaqderbwb";
 const requestedProjectId = process.env["SUPABASE_PROJECT_ID"]?.trim();
-if (requestedProjectId !== PRODUCTION_PROJECT_ID) {
+if (requestedProjectId !== TYPE_SOURCE_PROJECT_ID) {
   console.error(
-    `gen-types: SUPABASE_PROJECT_ID must explicitly match Production ${PRODUCTION_PROJECT_ID}.`,
+    `gen-types: SUPABASE_PROJECT_ID must explicitly match Greenfield ${TYPE_SOURCE_PROJECT_ID}.`,
   );
   process.exit(1);
 }
@@ -60,7 +60,7 @@ let types = runTypegen("pnpm", [
   "types",
   "typescript",
   "--project-id",
-  PRODUCTION_PROJECT_ID,
+  TYPE_SOURCE_PROJECT_ID,
 ]);
 
 types = sanitizeTypes(types);

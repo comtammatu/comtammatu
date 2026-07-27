@@ -30,13 +30,11 @@ import {
   buildSinvoiceTransactionUuid,
   getInvoiceProvider,
 } from "@comtammatu/shared/providers";
-import { resolveSalesTaxProfile } from "@comtammatu/shared/tax";
 import {
   applyInvoiceLineDiscount,
   buildInvoiceLineItemsFromOrderItems,
 } from "@comtammatu/shared/hddt";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
-import { estimateAnnualRevenue } from "@lib/estimate-annual-revenue";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
@@ -158,44 +156,31 @@ export async function replaceTaxInvoice(
   const orderTotal = Number(order.total_amount);
   const itemGrossSum = activeItems.reduce((s, i) => s + Number(i.subtotal), 0);
 
-  let subtotal: number;
-  let vatAmount: number;
-  let vatRate: number;
-
-  if (itemGrossSum > 0) {
-    const scale = orderTotal / itemGrossSum;
-    const grossByRate = new Map<number, number>();
-    for (const item of activeItems) {
-      const rate = Number(item.vat_rate);
-      const gross = Number(item.subtotal) * scale;
-      grossByRate.set(rate, (grossByRate.get(rate) ?? 0) + gross);
+  if (itemGrossSum <= 0) {
+    return {
+      success: false,
+      error: "Dữ liệu dòng món không đủ để thay thế HĐĐT.",
+    };
+  }
+  const scale = orderTotal / itemGrossSum;
+  const grossByRate = new Map<number, number>();
+  for (const item of activeItems) {
+    const rate = Number(item.vat_rate);
+    const gross = Number(item.subtotal) * scale;
+    grossByRate.set(rate, (grossByRate.get(rate) ?? 0) + gross);
+  }
+  let subtotal = 0;
+  let vatAmount = 0;
+  let vatRate = 0;
+  let predominantGross = -1;
+  for (const [rate, gross] of grossByRate) {
+    const lineSubtotal = gross / (1 + rate / 100);
+    subtotal += lineSubtotal;
+    vatAmount += gross - lineSubtotal;
+    if (gross > predominantGross) {
+      vatRate = rate;
+      predominantGross = gross;
     }
-    let sumSub = 0;
-    let sumVat = 0;
-    let predRate = 0;
-    let predGross = -1;
-    for (const [rate, gross] of grossByRate) {
-      const lineSub = gross / (1 + rate / 100);
-      const lineVat = gross - lineSub;
-      sumSub += lineSub;
-      sumVat += lineVat;
-      if (gross > predGross) {
-        predRate = rate;
-        predGross = gross;
-      }
-    }
-    subtotal = sumSub;
-    vatAmount = sumVat;
-    vatRate = predRate;
-  } else {
-    // Derive the header rate from the HKD revenue-tier GTGT resolver
-    // (annual-revenue group), consistent with createTaxInvoice.
-    vatRate = resolveSalesTaxProfile({
-      annualRevenue: await estimateAnnualRevenue(supabase, claims.tenant_id),
-      effectiveDate: new Date(),
-    }).gtgtRate;
-    subtotal = vatRate > 0 ? orderTotal / (1 + vatRate / 100) : orderTotal;
-    vatAmount = orderTotal - subtotal;
   }
 
   ensureInvoiceProviderRegistered();

@@ -55,15 +55,24 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp + sản xuất tại chi
 
 **Decision:** Hợp nhất molecule theo wave; mỗi molecule = contract trong `docs/spec/design-system.md` + ratchet trong `scripts/check-ui-contract.mjs` (allowlist baseline chỉ giảm). W5 chi tiết ở D019; W6 (decompose god-components) còn lại. Canonical: `docs/spec/design-system.md` § Component Authority.
 
-## D015: Chuyển giao Company/Tenant sang Supabase mới (2026-06-12, sửa 2026-07-26)
+## D015: Chuyển delivery cùng repo sang Greenfield stack (2026-06-12, sửa 2026-07-27)
 
 **Decision:**
 
-1. Production hiện tại tiếp tục là nguồn chuẩn cho trạng thái đang chạy cho tới khi chuyển giao.
-2. Kiến trúc Company/Tenant dùng một Supabase production candidate mới; không nhập dữ liệu vận hành cũ, không ghi song song và không tạo môi trường DEV thường trực.
-3. Không truy vấn hoặc áp migration vào target trước khi mã project chính xác và quyền được đăng ký trong Environment Registry cùng guard adapters. Candidate chỉ thành Production sau kiểm chứng và cổng duyệt chuyển giao của Owner.
+1. `comtammatu` là repo sản phẩm duy nhất. Không fork repo, không dựng
+   app/package tree hoặc runtime sản phẩm song song.
+2. HKD stack `matu-prod + app.comtammatu.com` tạm ngưng active delivery từ
+   commit `baf3720f8`. Nó giữ historical/runtime evidence và temporary type
+   source, nhưng không nhận writer, deploy hoặc relink mới nếu chưa có owner
+   rollback decision.
+3. Mọi delivery sau cutoff tiếp tục trong repo này và hướng tới
+   `matu-greenfield-company + web.comtammatu.com`.
+4. Không dual-write, không import Auth/dữ liệu vận hành/provider secrets từ HKD.
+   Greenfield chỉ thành Production sau schema replay, negative tests,
+   backup/restore, provider/print smoke và owner promotion gate.
 
-**Canonical:** `docs/plan/adr/0014-greenfield-company-tenant-cutover.md`.
+**Canonical:** `docs/architecture/target-modules-tech-stack-project-structure.md`
+§5.2 và ADR 0015. D084 sở hữu mô hình pháp lý sau cutoff.
 
 ## D016: POS trừ Kho chi nhánh theo outcome bán hàng — mặc định (2026-05-28, sửa 2026-07-11)
 
@@ -228,14 +237,15 @@ cùng một slice.
 
 **Decision:** "Thông báo trên thiết bị" = popup OS từ client qua `Notification` API khi PWA đang mở (Realtime INSERT → refetch → `showNotification`); KHÔNG có lớp Web Push server (VAPID/cron/ledger đã gỡ). Đánh đổi chấp nhận: không thông báo khi app đóng. Popup bắn cho MỌI severity nhìn thấy được (gồm `info` `pos.order_new`). In-app feed giữ nguyên. Canonical: `docs/spec/toast-notification-system.md`. Đảo phải sửa bản ghi này trước.
 
-## D047: Production type source; Preview runtime disabled (2026-06-27, cập nhật 2026-07-20)
+## D047: Registered Greenfield type source; Preview runtime disabled (2026-06-27, cập nhật 2026-07-27)
 
-**Decision (net):** Production là type source duy nhất và `pnpm db:types` phải
-nhận literal `SUPABASE_PROJECT_ID` của ref Production. Không có persistent
-non-production database; Vercel Preview bị tắt và không nhận Supabase ENV.
-Preview Branch chỉ được owner vận hành on-demand; agent-side mutation vẫn cần
-trusted registration. Per-PR auto-provision vẫn Parked đến khi target, seed
-safety, teardown, spend, env binding và trusted registration được chứng minh.
+**Decision (net):** Greenfield `matu-greenfield-company` là type source duy nhất
+và `pnpm db:types` phải nhận literal `SUPABASE_PROJECT_ID` của ref Greenfield.
+HKD `matu-prod` không còn là type source. Vercel Preview bị tắt và không nhận
+Supabase ENV. Preview Branch chỉ được owner vận hành on-demand; agent-side
+mutation vẫn cần trusted registration. Per-PR auto-provision vẫn Parked đến khi
+target, seed safety, teardown, spend, env binding và trusted registration được
+chứng minh.
 Canonical: `docs/agent/rules/database.md` +
 `docs/runbooks/db/preview-branch-setup.md`.
 
@@ -565,3 +575,42 @@ Mode `voice`-only vẫn đọc ngay.
 
 **Consequences:** Câu đọc rõ hơn mà không tăng gain giả hoặc đọc lặp. Âm lượng
 thực tế tối đa vẫn phụ thuộc media volume và loa của thiết bị.
+
+## D082: Mở lại lộ trình AP và vận hành trung tâm (2026-07-27)
+
+**Decision (owner):** Bổ sung hai track Greenfield: Thanh toán NCC trong
+Finance/AP; và Kho Tổng cùng Bếp Trung Tâm. Hai track được triển khai tiếp trong
+repo `comtammatu` trên target `matu-greenfield-company`. Kho Bếp TT và workflow
+`production` thuộc site `central_kitchen`; không khôi phục Production tại chi
+nhánh.
+
+**Consequences:** `matu-prod` giữ freeze như suspended HKD stack.
+`matu-greenfield-company` là target delivery tương lai của cùng repo, không tự
+promote trước khi đủ gate và không dùng writer/domain cũ.
+Authority Greenfield nằm tại
+`docs/plan/adr/0015-greenfield-authorization-model.md`; phạm vi AP/vận hành
+trung tâm nằm tại `docs/plan/adr/0017-ap-central-operations.md`.
+
+## D083: PO một cấp + VAT món + Finance HĐ GTGT/NCC (2026-07-27)
+
+**Decision (owner):** Trên Greenfield target: (1) Menu lưu `vat_rate` theo từng món với tập giá trị
+`0 | 5 | 8 | 10`; `base_price` là giá bán đã gồm VAT nên POS không cộng VAT
+thêm khi thanh toán. HĐĐT snapshot thuế suất từng dòng; template và phương pháp
+tính thuế phải khớp cấu hình doanh nghiệp/provider đã đăng ký. (2) PO Owner
+control có đúng một cấp `draft → sent → partially_received | received`; không
+mở PR hoặc duyệt nhiều cấp. (3) Branch vẫn nhập NCC supplier-first; PO không
+xuất hiện trên Branch runtime. (4) Finance gom hóa đơn đầu vào, đối soát GRN và
+thanh toán NCC trên surface hiện có.
+
+## D084: Mô hình pháp lý công ty cổ phần sau cutoff (2026-07-27)
+
+**Decision (owner):** Delivery sau `baf3720f8` trong repo `comtammatu` được mô
+hình hóa cho Công ty Cổ Phần Chén Sứ. Historical HKD records trên `matu-prod`
+giữ nguyên legal context tại thời điểm phát sinh; không được diễn giải hồi tố
+theo mô hình công ty.
+
+**Consequences:** Không suy phương pháp/thuế suất GTGT từ doanh thu năm; thuế
+suất được snapshot theo dòng bán và cấu hình đã đăng ký. Finance hiện là bề mặt
+vận hành, không tự trở thành sổ kế toán hoặc báo cáo tài chính. Canonical:
+`docs/plan/adr/0016-joint-stock-company-operating-model.md`,
+`docs/ref/legal-framework-2026.md` và `docs/ref/einvoice-tax.md`.

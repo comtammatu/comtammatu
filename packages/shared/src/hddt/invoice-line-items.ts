@@ -7,6 +7,7 @@ export interface OrderItemForInvoiceLines {
   unit_price: number | string | null;
   subtotal?: number | string | null;
   discount_amount?: number | string | null;
+  vat_rate?: number | string | null;
   modifiers?: unknown;
   sides?: unknown;
 }
@@ -98,12 +99,14 @@ function buildAggregateLine(item: OrderItemForInvoiceLines): InvoiceLineItem {
     quantity,
     unitPrice,
     amount,
+    ...(item.vat_rate == null ? {} : { vatRate: toNumber(item.vat_rate) }),
   };
 }
 
 function buildOptionLine(
   option: PricedOption,
   parentQuantity: number,
+  vatRate: number,
 ): InvoiceLineItem {
   const quantity = parentQuantity * option.quantityPerParent;
   return {
@@ -112,6 +115,7 @@ function buildOptionLine(
     quantity,
     unitPrice: option.unitPrice,
     amount: roundMoney(option.unitPrice * quantity),
+    vatRate,
   };
 }
 
@@ -121,7 +125,12 @@ function aggregateDuplicateLines(
   const byKey = new Map<string, InvoiceLineItem>();
 
   for (const line of lines) {
-    const key = JSON.stringify([line.name, line.unit, line.unitPrice]);
+    const key = JSON.stringify([
+      line.name,
+      line.unit,
+      line.unitPrice,
+      line.vatRate,
+    ]);
     const existing = byKey.get(key);
     if (!existing) {
       byKey.set(key, { ...line });
@@ -148,6 +157,7 @@ function cloneWithNormalizedDiscount(line: InvoiceLineItem): InvoiceLineItem {
     quantity: line.quantity,
     unitPrice: line.unitPrice,
     amount: line.amount,
+    ...(line.vatRate == null ? {} : { vatRate: line.vatRate }),
   };
   const amount = Math.max(0, Math.round(toNumber(line.amount)));
   const existingDiscount = Math.min(
@@ -252,6 +262,7 @@ export function buildInvoiceLineItemsFromOrderItems(
       0,
     );
     const baseUnit = roundMoney(unitPrice - optionUnitTotal);
+    const vatRate = toNumber(item.vat_rate);
 
     if (baseUnit < 0) {
       itemLines.push(buildAggregateLine(item));
@@ -262,15 +273,16 @@ export function buildInvoiceLineItemsFromOrderItems(
         quantity: parentQuantity,
         unitPrice: baseUnit,
         amount: roundMoney(baseUnit * parentQuantity),
+        vatRate,
       });
     }
 
     if (baseUnit >= 0) {
       for (const modifier of modifiers) {
-        itemLines.push(buildOptionLine(modifier, parentQuantity));
+        itemLines.push(buildOptionLine(modifier, parentQuantity, vatRate));
       }
       for (const side of sides) {
-        itemLines.push(buildOptionLine(side, parentQuantity));
+        itemLines.push(buildOptionLine(side, parentQuantity, vatRate));
       }
 
       if (baseUnit === 0 && modifiers.length === 0 && sides.length === 0) {

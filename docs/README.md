@@ -4,11 +4,16 @@
 
 ## Trạng thái hiện tại
 
-- Active delivery track: production đang vận hành in-place trên repo
-  `comtammatu`; current work phải bám runtime truth của chính repo này.
+- HKD stack `comtammatu + matu-prod + app.comtammatu.com` đã tạm ngưng từ
+  commit `baf3720f8`; giữ làm historical/runtime evidence, không còn là active
+  delivery target.
+- Active delivery tiếp tục ngay trong repo `comtammatu`, hướng tới
+  `matu-greenfield-company + web.comtammatu.com`. Greenfield là database/runtime
+  target của cùng codebase, không phải repo hoặc sản phẩm song song.
 - Active tracker: [tasks/todo.md](../tasks/todo.md)
-- Greenfield delivery plan:
-  [plan/greenfield/README.md](plan/greenfield/README.md)
+- Target architecture:
+  [architecture/target-modules-tech-stack-project-structure.md](architecture/target-modules-tech-stack-project-structure.md)
+  và [architecture/target-auth-authorization.md](architecture/target-auth-authorization.md)
 - Superseded docs are not retained in this repo. Current contracts must live in `tasks/todo.md`, `docs/plan/adr/`, module docs, specs, runbooks, or canonical references.
 
 ## Đọc theo nhu cầu
@@ -23,9 +28,8 @@
 - Finance active boundary: [modules/finance.md](modules/finance.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
 - Feature/module architecture: `docs/modules/*`, `docs/spec/*`
-- Active planning:
-  [plan/greenfield/README.md](plan/greenfield/README.md),
-  `tasks/todo.md`, `docs/plan/adr/*`
+- Active planning: `tasks/todo.md`, `docs/plan/decisions.md`,
+  `docs/plan/adr/*`
 - Readiness checklist và smoke gates: [runbooks/README.md](runbooks/README.md)
 - Worklog policy: [worklog/README.md](worklog/README.md)
 - Xuất tri thức agent dạng OKF tạm thời: `pnpm docs:okf` -> `.tmp/okf/`

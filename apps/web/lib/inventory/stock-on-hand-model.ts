@@ -42,9 +42,6 @@ export type StockIngredient = {
 
 export type StockWorkSummary = {
   underThresholdCount: number;
-  pendingGrnCount: number;
-  pendingTransferCount: number;
-  pendingWorkCount: number;
 };
 
 export type StockActionPermissions = {

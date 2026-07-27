@@ -17,7 +17,7 @@ The rejected alternative was to add `tenants.owner_user_id UUID` and immediately
 
 Three concepts were conflated in original code:
 
-1. `tenants.representative TEXT` — HKD owner / registered representative name for legal documents
+1. `tenants.representative TEXT` — legal representative name for legal documents
 2. `positions.code='owner'` — HR label (display, JWT user_role derivation)
 3. (none) — Canonical auth identity for RLS owner-bypass
 
@@ -31,7 +31,7 @@ Three concepts were conflated in original code:
 
 | Column                   | Type                              | Purpose                                    | Owner-bypass?              |
 | ------------------------ | --------------------------------- | ------------------------------------------ | -------------------------- |
-| `tenants.representative` | TEXT                              | HKD owner / registered representative name | ❌ Never                   |
+| `tenants.representative` | TEXT                              | Legal representative name                  | ❌ Never                   |
 | `positions.code='owner'` | (lookup via profiles.position_id) | HR label, JWT user_role source             | ✅ Currently               |
 | `tenants.owner_user_id`  | UUID FK auth.users                | Canonical auth identity column             | ❌ Not used by current RLS |
 

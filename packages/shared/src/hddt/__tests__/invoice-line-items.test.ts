@@ -47,6 +47,23 @@ test("expands paid modifiers into separate HĐĐT lines", () => {
   );
 });
 
+test("propagates the sold item VAT rate to every legal line", () => {
+  const lines = buildInvoiceLineItemsFromOrderItems([
+    {
+      item_name: "Cơm sườn",
+      quantity: 1,
+      unit_price: 50_000,
+      vat_rate: 8,
+      modifiers: [{ name: "Trứng", price: 5_000 }],
+    },
+  ]);
+
+  assert.deepEqual(
+    lines.map((line) => line.vatRate),
+    [8, 8],
+  );
+});
+
 test("allocates order discount across legal invoice lines", () => {
   const lines = buildInvoiceLineItemsFromOrderItems([
     {

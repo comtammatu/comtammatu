@@ -136,7 +136,7 @@ test("ingredient actions surface locked unit ladders with operator-safe copy", (
   );
   assert.match(
     ingredientActions,
-    /Nguyên liệu đã có lịch sử tồn kho; đơn vị tồn chuẩn và quy đổi hiện hữu đã khóa\./,
+    /Nguyên liệu đã có lịch sử tồn kho; đơn vị nhập, đơn vị xuất và quy đổi hiện hữu đã khóa\./,
   );
   assert.match(
     ingredientActions,
@@ -144,7 +144,7 @@ test("ingredient actions surface locked unit ladders with operator-safe copy", (
   );
 });
 
-test("ingredient editor checks the ledger before enabling unit changes", () => {
+test("ingredient editor hides multi-unit changes while backend locks remain", () => {
   assert.match(
     ingredientActions,
     /export async function fetchIngredientUnitLock/,
@@ -153,11 +153,12 @@ test("ingredient editor checks the ledger before enabling unit changes", () => {
     ingredientActions,
     /\.from\("stock_movements"\)[\s\S]*\.select\("id", \{ count: "exact", head: true \}\)/,
   );
-  assert.match(ingredientClient, /setUnitLockState\("checking"\)/);
-  assert.match(ingredientClient, /fetchIngredientUnitLock\(row\.id\)/);
-  assert.match(ingredientDialog, /disabled=\{rowLocked\}/);
-  assert.match(ingredientDialog, /disabled=\{baseLocked\}/);
-  assert.match(ingredientDialog, /unitLockState === "locked"/);
+  assert.doesNotMatch(ingredientClient, /fetchIngredientUnitLock/);
+  assert.doesNotMatch(ingredientDialog, /useFieldArray|UnitsField/);
+  assert.match(
+    ingredientDialog,
+    /name="input_unit_id"[\s\S]*name="output_unit_id"[\s\S]*disabled=\{isEdit\}/,
+  );
 });
 
 test("global units cannot be renamed after they are assigned", () => {

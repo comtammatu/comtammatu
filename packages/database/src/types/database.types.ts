@@ -7983,7 +7983,8 @@ export type Database = {
           total_amount: number
           updated_at: string
           vat_amount: number
-          vat_rate: number
+          vat_breakdown: Json
+          vat_rate: number | null
         }
         Insert: {
           created_at?: string
@@ -8006,7 +8007,8 @@ export type Database = {
           total_amount: number
           updated_at?: string
           vat_amount: number
-          vat_rate?: number
+          vat_breakdown?: Json
+          vat_rate?: number | null
         }
         Update: {
           created_at?: string
@@ -8029,7 +8031,8 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           vat_amount?: number
-          vat_rate?: number
+          vat_breakdown?: Json
+          vat_rate?: number | null
         }
         Relationships: [
           {
@@ -10192,6 +10195,19 @@ export type Database = {
         Args: { p_branch_id: number; p_location_id?: number }
         Returns: Json
       }
+      create_supplier_invoice_with_vat_breakdown: {
+        Args: {
+          p_due_date: string
+          p_grn_id: number
+          p_invoice_date: string
+          p_invoice_number: string
+          p_matching_notes: string
+          p_po_id: number
+          p_supplier_id: number
+          p_vat_breakdown: Json
+        }
+        Returns: number
+      }
       create_supplier_payment: {
         Args: {
           p_amount: number
@@ -11457,10 +11473,6 @@ export type Database = {
       }
       resolve_branch_printer_for_type: {
         Args: { p_branch_id: number; p_print_type: string; p_tenant_id: number }
-        Returns: number
-      }
-      resolve_gtgt_rate: {
-        Args: { p_at_date?: string; p_tenant_id: number }
         Returns: number
       }
       resolve_po_price: {

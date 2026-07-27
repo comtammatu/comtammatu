@@ -5,6 +5,17 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Switch same-repo delivery to the Greenfield stack
+
+State: ready
+Kind: maintenance
+Tier: T3
+Lane: platform/environment-transition
+Exit: Delivery after `baf3720f8` stays in `comtammatu`, targets the registered `matu-greenfield-company` project and `web.comtammatu.com`, while `matu-prod + app.comtammatu.com` remain fail-closed as the suspended HKD stack.
+Evidence: Environment Registry and guard fixtures, candidate from-empty replay, guarded type-source proof, target deployment binding, repository gates, and T3 review.
+
+- [ ] Implement the guarded Greenfield type-source and deployment binding without reactivating, relinking, or writing to the suspended HKD stack.
+
 ## Restore fresh-install database ACL parity
 
 State: verify
@@ -93,11 +104,11 @@ Tier: T3
 Lane: finance/payments
 Exit: Legacy `create_supplier_payment` and authenticated direct `payments` UPDATE are absent; owner-operated Preview schema/type/advisor gates pass; the separately owner-delegated Production apply and smoke are evidenced.
 Evidence: Deployed required-key proof from the preceding outcome, catalog and ACL checks, generated-type no-diff, repository gates, advisors, and explicit Production apply/smoke evidence.
-Blocker: Destructive cleanup depends on “Verify the Finance payment cutover” passing its Exit. Recheck after the deployed required-key proof and an owner-operated Preview path are available; Production still requires explicit owner delegation in that session.
+Blocker: This cleanup targets the suspended HKD database and is not required for Greenfield delivery. Recheck only after an explicit owner decision reopens HKD maintenance or authorizes retention cleanup.
 
 - [ ] Revoke authenticated direct `UPDATE` on `payments` and drop legacy `create_supplier_payment` only after the required-key runtime proof.
 - [ ] Apply the cleanup only through the trusted registration/owner-operated Preview path; regenerate types from the explicit Production source and run repository gates plus database advisors.
-- [ ] Perform the separately owner-delegated Production apply and smoke only after every prior gate is evidenced.
+- [ ] Keep every `matu-prod` apply deferred while the HKD stack is suspended; run it only under the exact owner decision named in the Blocker.
 
 ## Align KDS history authorization with route access
 

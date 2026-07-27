@@ -335,23 +335,29 @@ export function buildSinvoiceItemInfo(
   }
 
   const itemInfo: SinvoiceItemInfo[] = items.map((item, index) => {
+    const lineVatRate = item.vatRate ?? vatRate;
     const lineGross = callerPassesGross
       ? item.amount
-      : item.amount * (1 + vatRate / 100);
+      : item.amount * (1 + lineVatRate / 100);
 
     const qty = item.quantity;
     const grossUnitPrice = qty > 0 ? lineGross / qty : 0;
-    const netUnitPrice = Math.round(grossUnitPrice / (1 + vatRate / 100));
+    const netUnitPrice = Math.round(grossUnitPrice / (1 + lineVatRate / 100));
     const lineNet = netUnitPrice * qty;
     const grossDiscount = callerPassesGross
       ? normalizeMoney(item.discountAmount)
-      : normalizeMoney(item.discountAmount) * (1 + vatRate / 100);
+      : normalizeMoney(item.discountAmount) * (1 + lineVatRate / 100);
     const lineDiscount = clampMoney(
-      findNetDiscountForGrossTarget(lineNet, vatRate, lineGross, grossDiscount),
+      findNetDiscountForGrossTarget(
+        lineNet,
+        lineVatRate,
+        lineGross,
+        grossDiscount,
+      ),
       lineNet,
     );
     const taxableAmount = lineNet - lineDiscount;
-    const lineTax = Math.round((taxableAmount * vatRate) / 100);
+    const lineTax = Math.round((taxableAmount * lineVatRate) / 100);
 
     return {
       lineNumber: index + 1,
@@ -369,7 +375,7 @@ export function buildSinvoiceItemInfo(
       itemDiscount: lineDiscount,
       itemNote: null,
       isIncreaseItem: null,
-      taxPercentage: vatRate,
+      taxPercentage: lineVatRate,
       taxAmount: lineTax,
     };
   });
@@ -550,6 +556,34 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       );
     }
     const totalAmountAfterDiscount = sumLineNet - sumLineDiscount;
+    const taxBreakdowns =
+      pricingMode === "direct_sales_gross"
+        ? []
+        : Array.from(
+            itemInfo.reduce(
+              (groups, line) => {
+                if (line.selection !== 1) return groups;
+                const rate = line.taxPercentage ?? 0;
+                const current = groups.get(rate) ?? {
+                  taxPercentage: rate,
+                  taxableAmount: 0,
+                  taxAmount: 0,
+                };
+                current.taxableAmount += line.itemTotalAmountAfterDiscount;
+                current.taxAmount += line.taxAmount ?? 0;
+                groups.set(rate, current);
+                return groups;
+              },
+              new Map<
+                number,
+                {
+                  taxPercentage: number;
+                  taxableAmount: number;
+                  taxAmount: number;
+                }
+              >(),
+            ),
+          ).map(([, breakdown]) => breakdown);
 
     const isReplacement = !!request.replacement;
     const generalInvoiceInfo: Record<string, unknown> = {
@@ -622,18 +656,7 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         discountAmount: sumLineDiscount,
         totalAmountWithTaxInWords: null,
       },
-      // mẫu-2 (direct_sales_gross): no tax breakdown — sales invoice has no
-      // thuế-suất. mẫu-1 (VAT): one breakdown carrying the real rate.
-      taxBreakdowns:
-        pricingMode === "direct_sales_gross"
-          ? []
-          : [
-              {
-                taxPercentage: request.vatRate,
-                taxableAmount: totalAmountAfterDiscount,
-                taxAmount: sumLineTax,
-              },
-            ],
+      taxBreakdowns,
     };
 
     return { body, transactionUuid };

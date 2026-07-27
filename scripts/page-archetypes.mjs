@@ -171,6 +171,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/stocktake/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/stocktake/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/suppliers/[id]/items/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/suppliers/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/transfers/new/page.tsx": "DOC-WORKFLOW",
@@ -349,6 +350,11 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/suppliers/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/suppliers/[id]/items/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,

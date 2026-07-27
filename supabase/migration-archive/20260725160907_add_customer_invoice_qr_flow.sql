@@ -200,6 +200,7 @@ BEGIN
             'unit_price', item.unit_price,
             'subtotal', item.subtotal,
             'discount_amount', item.discount_amount,
+            'vat_rate', item.vat_rate,
             'modifiers', item.modifiers,
             'sides', item.sides,
             'status', item.status

@@ -131,19 +131,67 @@ const PAYMENT_FILTER_OPTIONS = SUPPLIER_INVOICE_PAYMENT_STATUSES.map(
   }),
 );
 
-const supplierInvoiceSchema = z.object({
-  grnId: z.string(),
-  supplierId: z.string().min(1, { error: FORM_VI.required }),
-  invoiceNumber: z.string().trim().min(1, { error: FORM_VI.required }),
-  invoiceDate: z.string().min(1, { error: FORM_VI.required }),
-  subtotal: z.string().refine((value) => Number(value) > 0, {
-    error: FORM_VI.required,
-  }),
-  vatRate: z.enum(["0", "5", "8", "10"]),
-  matchingNotes: z.string().trim().optional(),
-});
+const VAT_BUCKET_FIELDS = [
+  { rate: 0, taxableField: "vat0Taxable", vatField: null },
+  { rate: 5, taxableField: "vat5Taxable", vatField: "vat5Amount" },
+  { rate: 8, taxableField: "vat8Taxable", vatField: "vat8Amount" },
+  { rate: 10, taxableField: "vat10Taxable", vatField: "vat10Amount" },
+] as const;
+
+const optionalMoneySchema = z.string().refine(
+  (value) => {
+    if (!value.trim()) return true;
+    const amount = Number(value);
+    return Number.isFinite(amount) && amount >= 0;
+  },
+  { error: messages.inventory.supplierInvoices.invalidAmount },
+);
+
+const supplierInvoiceSchema = z
+  .object({
+    grnId: z.string(),
+    supplierId: z.string().min(1, { error: FORM_VI.required }),
+    invoiceNumber: z.string().trim().min(1, { error: FORM_VI.required }),
+    invoiceDate: z.string().min(1, { error: FORM_VI.required }),
+    vat0Taxable: optionalMoneySchema,
+    vat5Taxable: optionalMoneySchema,
+    vat5Amount: optionalMoneySchema,
+    vat8Taxable: optionalMoneySchema,
+    vat8Amount: optionalMoneySchema,
+    vat10Taxable: optionalMoneySchema,
+    vat10Amount: optionalMoneySchema,
+    matchingNotes: z.string().trim().optional(),
+  })
+  .refine(
+    (data) =>
+      VAT_BUCKET_FIELDS.some(
+        (bucket) => Number(data[bucket.taxableField] || 0) > 0,
+      ),
+    {
+      error: FORM_VI.required,
+      path: ["vat0Taxable"],
+    },
+  );
 
 type SupplierInvoiceFormValues = z.infer<typeof supplierInvoiceSchema>;
+
+function buildSupplierInvoiceVatBreakdown(values: SupplierInvoiceFormValues) {
+  return VAT_BUCKET_FIELDS.flatMap((bucket) => {
+    const taxableAmount = Number(values[bucket.taxableField] || 0);
+    if (taxableAmount <= 0) return [];
+
+    const enteredVat =
+      bucket.vatField != null ? values[bucket.vatField].trim() : "";
+    const vatAmount =
+      bucket.rate === 0
+        ? 0
+        : enteredVat
+          ? Number(enteredVat)
+          : Math.round(taxableAmount * bucket.rate) / 100;
+
+    return [{ vatRate: bucket.rate, taxableAmount, vatAmount }];
+  });
+}
 
 const supplierPaymentSchema = z.object({
   amount: z.string().refine((value) => Number(value) > 0, {
@@ -163,10 +211,13 @@ function createSupplierInvoiceDefaultValues(
     supplierId: "",
     invoiceNumber: "",
     invoiceDate: getVNDateString(),
-    subtotal: "",
-    // HKD does not deduct input VAT by default (einvoice-tax.md §4.1/§4.3) —
-    // field stays editable so the actual supplier-charged rate can be recorded.
-    vatRate: "0",
+    vat0Taxable: "",
+    vat5Taxable: "",
+    vat5Amount: "",
+    vat8Taxable: "",
+    vat8Amount: "",
+    vat10Taxable: "",
+    vat10Amount: "",
     matchingNotes: "",
   };
 }
@@ -238,16 +289,18 @@ function SupplierInvoiceCreateFields({
   copy: typeof messages.inventory.supplierInvoices;
 }) {
   const grnId = form.watch("grnId");
-  const subtotal = form.watch("subtotal");
-  const vatRate = form.watch("vatRate");
+  const formValues = form.watch();
   const selectedGrn =
     grnId !== "none"
       ? (grns.find((option) => option.id === Number(grnId)) ?? null)
       : null;
-  const numericSubtotal = Number(subtotal || 0);
-  const numericVatRate = Number(vatRate || 0);
-  const vatAmount = Math.round(numericSubtotal * numericVatRate) / 100;
-  const totalAmount = numericSubtotal + vatAmount;
+  const vatBreakdown = buildSupplierInvoiceVatBreakdown(formValues);
+  const subtotal = vatBreakdown.reduce(
+    (sum, line) => sum + line.taxableAmount,
+    0,
+  );
+  const vatAmount = vatBreakdown.reduce((sum, line) => sum + line.vatAmount, 0);
+  const totalAmount = subtotal + vatAmount;
 
   useEffect(() => {
     if (!selectedGrn) {
@@ -316,27 +369,49 @@ function SupplierInvoiceCreateFields({
         required
       />
       <div className="grid gap-3 sm:grid-cols-2">
-        <MoneyVndField
-          control={form.control}
-          name="subtotal"
-          label={FORM_VI.subtotal}
-          placeholder={copy.subtotalPlaceholder}
-          required
-        />
-        <SelectField
-          control={form.control}
-          name="vatRate"
-          label={`${copy.vat} %`}
-          options={[
-            { value: "0", label: "0%" },
-            { value: "5", label: "5%" },
-            { value: "8", label: "8%" },
-            { value: "10", label: "10%" },
-          ]}
-          required
-        />
+        {VAT_BUCKET_FIELDS.map((bucket) => {
+          const rate = formatPercent(bucket.rate, 0);
+          return (
+            <div key={bucket.rate} className="contents">
+              <MoneyVndField
+                control={form.control}
+                name={bucket.taxableField}
+                label={copy.taxableAtRate(rate)}
+                placeholder={copy.subtotalPlaceholder}
+              />
+              {bucket.vatField != null ? (
+                <MoneyVndField
+                  control={form.control}
+                  name={bucket.vatField}
+                  label={copy.vatAtRate(rate)}
+                  placeholder={copy.vatAutoPlaceholder}
+                />
+              ) : null}
+            </div>
+          );
+        })}
       </div>
       <NoteCallout tone="muted">
+        {vatBreakdown.map((line) => (
+          <div
+            key={line.vatRate}
+            className="mb-2 flex items-center justify-between gap-3"
+          >
+            <span className="text-muted-foreground">
+              {copy.vatBucketSummary(
+                formatPercent(line.vatRate, 0),
+                messages.inventory.common.currencyCompact(
+                  formatVND(line.taxableAmount),
+                ),
+              )}
+            </span>
+            <span className="font-mono tabular-nums">
+              {messages.inventory.common.currencyCompact(
+                formatVND(line.vatAmount),
+              )}
+            </span>
+          </div>
+        ))}
         <div className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground">{copy.vat}</span>
           <span className="font-mono tabular-nums">
@@ -699,19 +774,12 @@ export function SupplierInvoicesClient({
         : null;
     const resolvedSupplierId =
       selectedGrn?.supplierId ?? Number(values.supplierId || 0);
-    const numericSubtotal = Number(values.subtotal || 0);
-    const numericVatRate = Number(values.vatRate || 0);
-    const vatAmount = Math.round(numericSubtotal * numericVatRate) / 100;
-    const totalAmount = numericSubtotal + vatAmount;
     const res = await createSupplierInvoice({
       supplierId: resolvedSupplierId,
       grnId: selectedGrn?.id ?? null,
       invoiceNumber: values.invoiceNumber.trim(),
       invoiceDate: values.invoiceDate,
-      subtotal: numericSubtotal,
-      vatRate: numericVatRate,
-      vatAmount,
-      totalAmount,
+      vatBreakdown: buildSupplierInvoiceVatBreakdown(values),
       matchingNotes: values.matchingNotes?.trim() || undefined,
     });
 
@@ -1357,6 +1425,39 @@ export function SupplierInvoicesClient({
                       >
                         {formatDate(selectedInvoice.dueDate)}
                       </span>
+                    ),
+                  },
+                  {
+                    term: FORM_VI.subtotal,
+                    description: messages.inventory.common.currencyCompact(
+                      formatVND(selectedInvoice.subtotal),
+                    ),
+                  },
+                  {
+                    term: copy.vatBreakdown,
+                    description: (
+                      <div className="grid gap-1">
+                        {selectedInvoice.vatBreakdown.map((line) => (
+                          <div
+                            key={line.vatRate}
+                            className="flex items-center justify-between gap-3"
+                          >
+                            <span>
+                              {copy.vatBucketSummary(
+                                formatPercent(line.vatRate, 0),
+                                messages.inventory.common.currencyCompact(
+                                  formatVND(line.taxableAmount),
+                                ),
+                              )}
+                            </span>
+                            <span className="font-mono tabular-nums">
+                              {messages.inventory.common.currencyCompact(
+                                formatVND(line.vatAmount),
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     ),
                   },
                   {

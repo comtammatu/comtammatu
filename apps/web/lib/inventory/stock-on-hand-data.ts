@@ -119,9 +119,6 @@ export async function loadStockOnHandPageData({
   const [
     ingredientsResult,
     stockResult,
-    pendingGrnResult,
-    outboundTransferResult,
-    inboundTransferResult,
     canReceiveGrn,
     canReceiveTransfer,
     canCreateTransfer,
@@ -141,24 +138,6 @@ export async function loadStockOnHandPageData({
           .in("location_id", stockBearingLocationIds)
           .order("ingredient_id")
       : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("goods_received_notes")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", branchId)
-      .eq("status", "draft"),
-    supabase
-      .from("stock_transfers")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("from_branch_id", branchId)
-      .in("status", ["draft", "confirmed_ship"]),
-    supabase
-      .from("stock_transfers")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("to_branch_id", branchId)
-      .in("status", ["in_transit", "confirmed_receive"]),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     currentUserHasPermission(
       branchId,
@@ -326,15 +305,7 @@ export async function loadStockOnHandPageData({
   }
 
   const underThresholdCount = ingredients.filter(isStockReorderRisk).length;
-  const pendingGrnCount = pendingGrnResult.count ?? 0;
-  const pendingTransferCount =
-    (outboundTransferResult.count ?? 0) + (inboundTransferResult.count ?? 0);
-  const summary: StockWorkSummary = {
-    underThresholdCount,
-    pendingGrnCount,
-    pendingTransferCount,
-    pendingWorkCount: pendingGrnCount + pendingTransferCount,
-  };
+  const summary: StockWorkSummary = { underThresholdCount };
   const permissions: StockActionPermissions = {
     canReceiveGrn,
     canReceiveTransfer,
