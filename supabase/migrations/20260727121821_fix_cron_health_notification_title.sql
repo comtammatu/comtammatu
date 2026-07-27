@@ -1,11 +1,9 @@
+-- Restore check_cron_jobs_health notification contract after
+-- 20260727120004_reregister_managed_cron_jobs dropped required title/body
+-- (Postgres 23502 NOT NULL on notifications.title) and weakened search_path /
+-- target_roles relative to the baseline + 20260721160235 fix.
+
 BEGIN;
-
-CREATE TABLE IF NOT EXISTS private.cron_job_health_grace (
-  jobid bigint PRIMARY KEY,
-  registered_at timestamptz NOT NULL DEFAULT now()
-);
-
-REVOKE ALL ON TABLE private.cron_job_health_grace FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.check_cron_jobs_health()
 RETURNS void
@@ -152,57 +150,5 @@ $$;
 REVOKE ALL ON FUNCTION public.check_cron_jobs_health()
 FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.check_cron_jobs_health() TO service_role;
-
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM public.orders LIMIT 1) THEN
-    RETURN;
-  END IF;
-
-  PERFORM cron.unschedule(jobid)
-  FROM cron.job
-  WHERE jobname IN (
-    'auto_close_periods',
-    'check_cron_jobs_health_job',
-    'cleanup-abandoned-payments',
-    'compute_branch_daily_waste_caps',
-    'refresh_abc_classification',
-    'refresh_mv_inventory_stock_current',
-    'scan-inventory-alerts-daily',
-    'weekly_grn_override_report',
-    'weekly_waste_report',
-    'refresh_mv_grn_price_baseline',
-    'refresh-finance-views-daily'
-  );
-
-  PERFORM cron.schedule('auto_close_periods',                 '0 19 * * *',    'SELECT public.auto_close_periods();');
-  PERFORM cron.schedule('check_cron_jobs_health_job',          '*/30 * * * *', 'SELECT public.check_cron_jobs_health();');
-  PERFORM cron.schedule('cleanup-abandoned-payments',          '0 * * * *',    'SELECT public.cleanup_abandoned_payments()');
-  PERFORM cron.schedule('compute_branch_daily_waste_caps',     '30 17 * * *',  'SELECT public.compute_branch_daily_waste_caps();');
-  PERFORM cron.schedule('refresh_abc_classification',          '0 19 * * 6',   'SELECT public.refresh_abc_classification();');
-  PERFORM cron.schedule('refresh_mv_inventory_stock_current',  '*/15 * * * *', 'SET LOCAL statement_timeout = ''2min''; SELECT public.refresh_inventory_dashboard();');
-  PERFORM cron.schedule('scan-inventory-alerts-daily',         '0 23 * * *',   'SELECT public.scan_inventory_alerts();');
-  PERFORM cron.schedule('weekly_grn_override_report',          '0 2 * * 5',    'SELECT public.weekly_grn_override_report();');
-  PERFORM cron.schedule('weekly_waste_report',                 '0 2 * * 1',    'SELECT public.weekly_waste_report();');
-
-  INSERT INTO private.cron_job_health_grace (jobid, registered_at)
-  SELECT jobid, now()
-  FROM cron.job
-  WHERE jobname IN (
-    'auto_close_periods',
-    'cleanup-abandoned-payments',
-    'compute_branch_daily_waste_caps',
-    'refresh_abc_classification',
-    'refresh_mv_inventory_stock_current',
-    'scan-inventory-alerts-daily',
-    'weekly_grn_override_report',
-    'weekly_waste_report'
-  )
-  ON CONFLICT (jobid) DO UPDATE
-  SET registered_at = EXCLUDED.registered_at;
-
-  PERFORM pg_reload_conf();
-END;
-$$;
 
 COMMIT;

@@ -67,4 +67,9 @@ test("managed cron jobs are re-registered from the canonical fold", () => {
     /ON CONFLICT \(tenant_id, dedup_key\)\s+WHERE dedup_key IS NOT NULL/,
   );
   assert.match(cronMigration, /PERFORM pg_reload_conf\(\)/);
+  assert.match(cronMigration, /SET search_path TO ''/);
+  assert.match(cronMigration, /title,\s*body,/);
+  assert.match(cronMigration, /'Tác vụ tự động cần kiểm tra'/);
+  assert.match(cronMigration, /ARRAY\['owner'\]::text\[\]/);
+  assert.doesNotMatch(cronMigration, /ARRAY\['owner',\s*'admin'\]/);
 });
