@@ -554,6 +554,11 @@ export const inventory = {
     supplierFilterAria: "Lọc theo nhà cung cấp",
     noNotes: "Không có ghi chú",
     loadFailed: "Không thể tải đơn đặt hàng.",
+    pageTitle: "Đơn mua hàng",
+    pageDescription:
+      "Lập PO, duyệt mua một cấp và tạo phiếu nhập từ số lượng còn lại.",
+    loadErrorTitle: "Không thể tải đơn mua hàng",
+    loadErrorDescription: "Hãy tải lại trước khi tiếp tục mua hoặc nhận hàng.",
     detailLoadFailed: "Không thể tải chi tiết đơn đặt hàng.",
     linkedGrnsLoadFailed: "Không thể tải phiếu nhập liên kết.",
     receivingLoadFailed: "Không thể tải đơn mua chờ nhận.",
@@ -610,6 +615,7 @@ export const inventory = {
     emptyIngredientsDescription:
       "Thêm dòng bên dưới hoặc chọn nhanh từ gợi ý đặt hàng để bắt đầu tạo đơn mua.",
     removeLineAria: "Xóa dòng",
+    linesTitle: "Hàng mua",
     ingredientPlaceholder: "+ Chọn nguyên liệu",
     ingredientSearchPlaceholder: "Tìm tên, SKU, danh mục...",
     quantityShort: "SL",

@@ -44,7 +44,13 @@ export const MENU_VI = {
   itemNameLabel: "Tên món",
   itemNamePlaceholder: "VD: Cơm sườn cốt lết",
   selectCategoryPlaceholder: "Chọn danh mục",
-  basePriceLabel: "Giá gốc (VND)",
+  basePriceLabel: "Giá bán đã gồm VAT (VND)",
+  basePriceTableLabel: "Giá bán đã gồm VAT",
+  vatRateLabel: "Thuế suất GTGT",
+  vatRateDescription:
+    "VAT đã nằm trong giá bán; không cộng thêm khi thanh toán.",
+  vatInclusivePriceSummary: (price: string, rate: string) =>
+    `${price} đã gồm VAT · Thuế suất ${rate}`,
   descriptionLabel: "Mô tả",
   descriptionPlaceholder: "Mô tả ngắn về món ăn",
   itemImageLabel: "Ảnh món",

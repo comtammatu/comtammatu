@@ -50,7 +50,6 @@ import {
   Combobox,
   FormDialog,
   MoneyVndField,
-  NumberField,
   SelectField,
   TextareaField,
   TextField,
@@ -140,13 +139,7 @@ const supplierInvoiceSchema = z.object({
   subtotal: z.string().refine((value) => Number(value) > 0, {
     error: FORM_VI.required,
   }),
-  vatRate: z.string().refine(
-    (value) => {
-      const numericValue = Number(value || 0);
-      return Number.isFinite(numericValue) && numericValue >= 0;
-    },
-    { error: FORM_VI.required },
-  ),
+  vatRate: z.enum(["0", "5", "8", "10"]),
   matchingNotes: z.string().trim().optional(),
 });
 
@@ -330,12 +323,16 @@ function SupplierInvoiceCreateFields({
           placeholder={copy.subtotalPlaceholder}
           required
         />
-        <NumberField
+        <SelectField
           control={form.control}
           name="vatRate"
           label={`${copy.vat} %`}
-          maxFractionDigits={1}
-          placeholder="0"
+          options={[
+            { value: "0", label: "0%" },
+            { value: "5", label: "5%" },
+            { value: "8", label: "8%" },
+            { value: "10", label: "10%" },
+          ]}
           required
         />
       </div>
@@ -900,9 +897,7 @@ export function SupplierInvoicesClient({
       className: "min-w-56",
       render: (group) => (
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="truncate text-foreground">
-            {group.title}
-          </p>
+          <p className="truncate text-foreground">{group.title}</p>
           <p className="text-xs text-muted-foreground">{group.subtitle}</p>
           {group.overdueCount > 0 ? (
             <Badge

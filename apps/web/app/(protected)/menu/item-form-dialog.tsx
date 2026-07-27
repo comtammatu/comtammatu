@@ -29,6 +29,7 @@ const itemSchema = z.object({
     .trim()
     .min(1, { error: MENU_VI.priceRequired })
     .refine((v) => Number(v) >= 0, { error: MENU_VI.priceInvalid }),
+  vat_rate: z.enum(["0", "5", "8", "10"]),
   description: z
     .string()
     .max(500, { error: MENU_VI.descriptionMax })
@@ -43,6 +44,7 @@ function toFormValues(item: ItemRow | null | undefined): ItemFormValues {
     name: item?.name ?? "",
     category_id: item?.category_id != null ? String(item.category_id) : "",
     base_price: item?.base_price != null ? String(item.base_price) : "",
+    vat_rate: String(item?.vat_rate ?? 0) as ItemFormValues["vat_rate"],
     description: item?.description ?? "",
     image_url: item?.image_url ?? null,
   };
@@ -117,6 +119,19 @@ export function ItemFormDialog({
             label={MENU_VI.basePriceLabel}
             maxFractionDigits={0}
             placeholder="35.000"
+            required
+          />
+          <SelectField
+            control={form.control}
+            name="vat_rate"
+            label={MENU_VI.vatRateLabel}
+            description={MENU_VI.vatRateDescription}
+            options={[
+              { value: "0", label: "0%" },
+              { value: "5", label: "5%" },
+              { value: "8", label: "8%" },
+              { value: "10", label: "10%" },
+            ]}
             required
           />
           <TextareaField

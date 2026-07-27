@@ -26,7 +26,7 @@ export default async function MenuPage() {
     supabase
       .from("menu_items")
       .select(
-        "id, name, description, base_price, category_id, image_url, is_active, sort_order, menu_categories(name, type)",
+        "id, name, description, base_price, vat_rate, category_id, image_url, is_active, sort_order, menu_categories(name, type)",
       )
       .order("sort_order")
       .order("name"),
@@ -55,6 +55,7 @@ export default async function MenuPage() {
     name: item.name,
     description: item.description,
     base_price: item.base_price,
+    vat_rate: item.vat_rate,
     category_id: item.category_id,
     category_name: item.menu_categories?.name ?? "—",
     category_type: item.menu_categories?.type ?? "main_dish",

@@ -153,6 +153,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/production/page.tsx": "LANDING",
   "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/recipes/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/reports/page.tsx": "REPORT",
   "apps/web/app/(protected)/inventory/settings/categories/page.tsx":
@@ -273,6 +274,11 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/production/[id]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,

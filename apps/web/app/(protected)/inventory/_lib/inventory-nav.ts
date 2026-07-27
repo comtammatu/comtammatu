@@ -5,6 +5,7 @@ import {
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
   PackagePlus as IconPackagePlus,
+  ShoppingCart as IconShoppingCart,
   Settings as IconSettings,
   Users as IconUsers,
   Utensils as IconToolsKitchen,
@@ -87,6 +88,11 @@ export function resolveInventoryNav({
               href: "/inventory/grn",
               label: "Nhập kho",
               icon: IconPackagePlus,
+            },
+            {
+              href: "/inventory/purchase-orders",
+              label: "Đơn mua hàng",
+              icon: IconShoppingCart,
             },
           ]
         : []),

@@ -3503,6 +3503,7 @@ export type Database = {
           sort_order: number
           tenant_id: number
           updated_at: string
+          vat_rate: number
         }
         Insert: {
           base_price: number
@@ -3516,6 +3517,7 @@ export type Database = {
           sort_order?: number
           tenant_id: number
           updated_at?: string
+          vat_rate?: number
         }
         Update: {
           base_price?: number
@@ -3529,6 +3531,7 @@ export type Database = {
           sort_order?: number
           tenant_id?: number
           updated_at?: string
+          vat_rate?: number
         }
         Relationships: [
           {
@@ -9746,6 +9749,7 @@ export type Database = {
         Args: { p_request_id: number }
         Returns: undefined
       }
+      approve_purchase_order: { Args: { p_po_id: number }; Returns: Json }
       approve_waste: {
         Args: { p_decision: string; p_issue_id: number; p_note?: string }
         Returns: undefined
@@ -10070,6 +10074,7 @@ export type Database = {
         }
         Returns: Json
       }
+      create_grn_from_approved_po: { Args: { p_po_id: number }; Returns: Json }
       create_grn_from_po: { Args: { p_po_id: number }; Returns: Json }
       create_order: {
         Args: {

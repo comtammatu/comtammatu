@@ -402,7 +402,7 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `menu_engineering`         | phân tích menu                | Phân loại món theo popularity và contribution margin.                        | báo cáo doanh thu đơn thuần   |
 | `item_popularity`          | độ phổ biến món               | Tỷ trọng món trong product mix.                                              | profitability                 |
 | `item_contribution_margin` | lãi đóng góp theo món         | Net item sales - variable cost của món.                                      | gross profit toàn cửa hàng    |
-| `menu_price`               | giá bán menu                  | Giá niêm yết trước discount/VAT policy.                                      | net sales                     |
+| `menu_price`               | giá bán menu                  | Giá niêm yết đã gồm VAT, trước discount; không cộng VAT lần hai tại POS.      | net sales                     |
 
 ### Tax/HKD boundaries
 
