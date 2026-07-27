@@ -59,6 +59,12 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
     "/inventory/suppliers",
     "/inventory/ingredients",
     "/inventory/recipes",
+    "/inventory/stocktake",
+    "/inventory/count-assignments",
+    "/inventory/count-slips",
+    "/inventory/reports",
+    "/inventory/waste/approvals",
+    "/finance/supplier-invoices",
   ]) {
     assert.equal(
       visible.has(href),
@@ -69,40 +75,13 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
 
   for (const href of [
     "/inventory/operations",
-    "/inventory/supplier-invoices",
-    "/inventory/stocktake",
-    "/inventory/count-assignments",
-    "/inventory/count-slips",
-    "/inventory/reports",
-  ]) {
-    assert.equal(
-      visible.has(href),
-      false,
-      `${href} must stay out of the simplified sidebar`,
-    );
-  }
-});
-
-test("inventory sidebar removes duplicate stock-control and finance entries", () => {
-  const groups = resolveInventoryNav({
-    userRole: "owner",
-    showProcurement: true,
-    showProduction: true,
-    showCatalogManagement: true,
-    showSettings: true,
-  });
-  const visible = hrefs(groups);
-  for (const href of [
-    "/inventory/stocktake",
-    "/inventory/count-assignments",
-    "/inventory/count-slips",
-    "/inventory/reports",
+    "/inventory/purchase-orders",
     "/inventory/supplier-invoices",
   ]) {
     assert.equal(
       visible.has(href),
       false,
-      `${href} stays out of the simplified sidebar`,
+      `${href} must stay out of the Inventory sidebar`,
     );
   }
 });
@@ -184,9 +163,10 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
     [
       "0 · Nay",
       "1 · Kiểm soát tồn",
-      "2 · Nhập/Nhận/Đối soát",
+      "2 · Nhập/Điều chuyển",
       "3 · Sản xuất",
-      "4 · Danh mục & thiết lập",
+      "4 · Hao hụt & AP",
+      "5 · Danh mục & thiết lập",
     ],
   );
   assert.deepEqual(
@@ -196,6 +176,7 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
       "/inventory/stock",
       "/inventory/grn",
       "/inventory/production",
+      "/inventory/waste/approvals",
       "/inventory/settings",
     ],
   );

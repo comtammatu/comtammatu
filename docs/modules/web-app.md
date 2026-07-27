@@ -94,10 +94,14 @@ Các nguyên tắc đang được code phản ánh:
 
 Các detail pages của Inventory không còn chỉ là read-only shells:
 
-- `purchase-orders`: danh sách Owner có dialog xem chi tiết (dòng hàng, ghi chú, GRN liên kết); duyệt PO và tạo phiếu nhập vẫn từ list/dialog.
+- `purchase-orders`: frozen non-nav route (ADR 0018 **C1** / D073). Route and
+  RPC history may remain for integrity; no Inventory nav entry, no new DETAIL,
+  no further daily-UI investment.
+- `supplier-invoices`: Finance home at `/finance/supplier-invoices`;
+  `/inventory/supplier-invoices` is a `REDIRECT-SHIM` (ADR 0018). Invoice create /
+  match and AP payment handoff live on the Finance surface.
 - `grn/[id]`: có action chốt nhập kho (`confirmGrn`)
 - `transfers/[id]`: đã wire đủ state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`
-- `supplier-invoices`: có tạo hóa đơn NCC và tính lại đối soát; ghi nhận thanh toán là Finance/AP handoff, không phải action Inventory
 - `supplier-returns`: không thuộc daily Inventory UI; stock-return/credit-note/AP đi qua quyết định riêng trước khi có CTA
 - `stocktake/conflicts` và `stocktake/[id]/escalate`: conflict/recount/escalation không nằm trong daily UI; current stocktake flow là open/count/complete
 

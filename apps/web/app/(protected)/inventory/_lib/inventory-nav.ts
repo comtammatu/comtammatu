@@ -1,14 +1,18 @@
 import {
   ArrowRightLeft as IconArrowRightLeft,
+  ChartColumn as IconChartColumn,
   CircleMinus as IconCircleMinus,
+  ClipboardCheck as IconClipboardCheck,
+  ClipboardList as IconClipboardList,
   FileText as IconFileText,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
   PackagePlus as IconPackagePlus,
-  ShoppingCart as IconShoppingCart,
   Settings as IconSettings,
+  Trash2 as IconTrash2,
   Users as IconUsers,
   Utensils as IconToolsKitchen,
+  Wallet as IconWallet,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
@@ -35,8 +39,8 @@ export function withInventoryBranchNavScope(
   }));
 }
 
-// Inventory sidebar nav as data (D019 § D). Role/scope-computed, so it is a
-// resolver rather than a static record; it stays in the inventory _lib
+// Inventory sidebar nav as data (D019 § D / ADR 0018). Role/scope-computed, so
+// it is a resolver rather than a static record; it stays in the inventory _lib
 // because it reads the inventory dictionary. The shell projects it instead of
 // holding a ShellNavGroup[] literal.
 export function resolveInventoryNav({
@@ -76,11 +80,31 @@ export function resolveInventoryNav({
         label: tNav("stock", "navigation"),
         icon: IconPackage,
       },
+      {
+        href: "/inventory/stocktake",
+        label: tNav("stocktake", "navigation"),
+        icon: IconClipboardList,
+      },
+      {
+        href: "/inventory/count-assignments",
+        label: "Phiếu giao đếm",
+        icon: IconClipboardCheck,
+      },
+      {
+        href: "/inventory/count-slips",
+        label: "Phiếu đếm",
+        icon: IconClipboardCheck,
+      },
+      {
+        href: "/inventory/reports",
+        label: tNav("reports", "navigation"),
+        icon: IconChartColumn,
+      },
     ],
   });
 
   groups.push({
-    title: "2 · Nhập/Nhận/Đối soát",
+    title: "2 · Nhập/Điều chuyển",
     items: [
       ...(showProcurement
         ? [
@@ -89,23 +113,18 @@ export function resolveInventoryNav({
               label: "Nhập kho",
               icon: IconPackagePlus,
             },
-            {
-              href: "/inventory/purchase-orders",
-              label: "Đơn mua hàng",
-              icon: IconShoppingCart,
-            },
           ]
         : []),
+      {
+        href: "/inventory/transfers",
+        label: "Điều chuyển",
+        icon: IconArrowRightLeft,
+      },
       {
         href: "/inventory/consumption",
         label: "Tiêu hao",
         icon: IconCircleMinus,
         matchPrefixes: ["/inventory/issues"],
-      },
-      {
-        href: "/inventory/transfers",
-        label: "Điều chuyển",
-        icon: IconArrowRightLeft,
       },
     ],
   });
@@ -127,6 +146,27 @@ export function resolveInventoryNav({
       ],
     });
   }
+
+  const costItems: ShellNavGroup["items"] = [
+    {
+      href: "/inventory/waste/approvals",
+      label: "Duyệt hao hụt",
+      icon: IconTrash2,
+      matchPrefixes: ["/inventory/waste/"],
+    },
+  ];
+  if (showProcurement) {
+    costItems.push({
+      // Finance owns supplier invoices (ADR 0018); Inventory nav deep-links.
+      href: "/finance/supplier-invoices",
+      label: tNav("supplierInvoices", "navigation"),
+      icon: IconWallet,
+    });
+  }
+  groups.push({
+    title: "4 · Hao hụt & AP",
+    items: costItems,
+  });
 
   const isBranchManager = userRole === "branch_manager";
   const catalogItems: ShellNavGroup["items"] = [];
@@ -166,7 +206,7 @@ export function resolveInventoryNav({
 
   if (catalogItems.length > 0) {
     groups.push({
-      title: "4 · Danh mục & thiết lập",
+      title: "5 · Danh mục & thiết lập",
       items: catalogItems,
     });
   }

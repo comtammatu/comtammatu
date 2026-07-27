@@ -398,9 +398,11 @@ Branch stock workflow áp dụng cùng ranh giới này:
   `routeBranchId`/`embedded` từ Owner surface clients.
 - Owner surface `/inventory/count-assignments` và `/inventory/count-slips` là hai
   management `LIST` responsive độc lập: desktop dùng `DataTable`, thao tác hiển
-  thị bằng nút và mở `AppDialog`; mobile fallback chỉ là card responsive của
-  cùng table adapter. Owner surface không dùng swipe, long-press, `Drawer`, `Sheet` hay
-  presenter Branch.
+  thị bằng nút và mở `AppDialog` (D1, cùng depth với Branch bottom `Sheet`);
+  mobile fallback chỉ là card responsive của cùng table adapter. Owner không
+  dùng Branch presenter. Owner `Sheet` vẫn hợp lệ cho D1 addressable overlay
+  khác (ví dụ Finance supplier invoices — ADR 0018); không dùng `Drawer` làm
+  Owner primary view path.
 - `/br/[branchId]/stock/waste` là Branch-native touch `DOC-WORKFLOW`: URL khóa
   chi nhánh, màn chính giữ location/cap và `ItemGroup` của các dòng đã chọn;
   điện thoại sửa một dòng trong bottom `Sheet`, tablet chỉ mở rộng thành hai
@@ -415,7 +417,10 @@ Branch stock workflow áp dụng cùng ranh giới này:
   `WasteApprovalsPageContent`, `WasteApprovalsClient`, `DocumentFormFrame`,
   `DataTable`, hoặc chrome Owner surface.
 - Purchase orders và supplier returns đã rút khỏi UI hằng ngày ở cả Branch và
-  Owner surface theo D073. GRN supplier-first; hàng NCC bị từ chối đi qua Báo hao hụt.
+  Owner surface theo D073 / ADR 0018 **C1**: `/inventory/purchase-orders` is a
+  frozen non-nav route (keep route/RPC; no sidebar entry, no new DETAIL, no
+  further daily-UI investment). GRN supplier-first; hàng NCC bị từ chối đi qua
+  Báo hao hụt.
   DB/RPC/history và integrity gate của chứng từ cũ vẫn được giữ, nhưng không có
   nav, route mutation hay presenter để tạo mới.
 - `/br/[branchId]/stock/reports` là Branch-native touch `REPORT`: cố định đúng
@@ -461,6 +466,16 @@ management gom về một tab "Quản lý chi nhánh", còn deep nav nằm trong
 của tab đang active. Trên mobile `<md`, bottom-nav ưu tiên `tier2` và chỉ có một
 tab "Mô-đun" mở drawer sidebar đầy đủ. Từ tablet `md` trở lên, bottom-nav ẩn và
 Owner surface dùng một sidebar cố định.
+
+Scroll model (inset panel): `SidebarProvider` khóa viewport (`h-svh overflow-hidden`);
+`SidebarInset` giữ khung card cố định (`overflow-hidden`, desktop `max-h` bù
+margin inset); chỉ vùng nội dung trong panel cuộn (`overflow-y-auto
+overscroll-contain`, `data-owner-shell-scroll`). `AppPageHeader` sticky `top-0`
+và publish `--app-page-header-offset` lên scrollport. Filter LIST freeze dưới
+header qua: (1) `AppListFrame`/`InventoryListFrame` toolbar slot (tự sticky),
+hoặc (2) `AppToolbar sticky`, hoặc (3) `AppPageStickyChrome` /
+`APP_PAGE_STICKY_FILTER_CLASSNAME` cho filter bar tùy biến. Không đổi chrome
+Branch/Operations.
 
 Shell mới cần chứng minh job chrome riêng, giữ đúng plane authority, và dùng
 navigation resolver hiện hành. Guard chỉ giữ outcome đo được: navigation không
@@ -570,11 +585,31 @@ Sidebar labels phải ngắn và scan được trong sidebar cố định. Tên 
 
 ### Overlay Decision
 
-- Page: long form, nhiều dòng, keyboard-heavy workflow như GRN 20 line, transfer detail edit, stocktake session.
-- Sheet: focused data entry/action ngắn; bottom sheet trên mobile và side sheet trên desktop khi implementation cần responsive surface.
-- `AppDialog`: short non-form detail/task overlay.
-- Dialog component: approved exceptional contextual task only.
-- AlertDialog: destructive/irreversible confirm nhu void order, deactivate, inactive lifecycle transition.
+Plane-neutral tree (ADR 0018 / `design-system.md` § C.1). Answer in order; stop
+at the first match.
+
+1. **Destructive / irreversible, no input?** → `confirm()`. With a required
+   reason → `ReasonConfirmDialog` / AlertDialog family.
+2. **Is this a task (it ends) or a view (it is a place)?**
+   - *Task* → not addressable. Continue at 3.
+   - *View* → addressable. Continue at 4.
+3. **Task frame:** structured fields → `FormDialog`. Single bounded decision,
+   no form → `AppDialog`. Touch plane, one-at-a-time entry → bottom `Sheet` /
+   `Drawer`. Raw `Dialog` requires an approved exception.
+4. **View weight:** line array, audit/`Lịch sử` tab, stage footer, or more than
+   one primary action → **Page** (DETAIL or DOC-WORKFLOW). Otherwise →
+   **addressable overlay** bound to `?<entity>Id=` (Owner: side `Sheet` or
+   `AppDialog`; Branch: bottom `Sheet`).
+
+`Popover` never renders a record view or a multi-step workflow. `Drawer` is a
+touch-plane frame, not a second Owner overlay tier.
+
+### AppPage width defaults
+
+Owner management LIST and DETAIL default to `AppPage width="xwide"` (optionally
+`density="compact"`). DOC-WORKFLOW defaults to `width="wide"`. Deviation is
+allowed when the UI Advisor Gate states the reading task that motivates it.
+`AppPage` is nesting-aware — set width once per page.
 
 ### Audit And Permission Decision
 

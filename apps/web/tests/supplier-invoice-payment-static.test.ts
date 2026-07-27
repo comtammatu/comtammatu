@@ -223,13 +223,14 @@ test("supplier invoice payment visibility is explicitly Owner-only", () => {
     "app/(protected)/inventory/supplier-invoices/page.tsx",
   );
 
-  for (const source of [financePage, inventoryPage]) {
-    assert.match(source, /loadAuthState\(\)/);
-    assert.match(source, /authState\.claims\.user_role === "owner"/);
-    assert.match(source, /hasPayPermission/);
-    assert.match(source, /hasInvoiceCreatePermission/);
-    assert.match(source, /canAttachVatEvidence/);
-  }
+  assert.match(financePage, /loadAuthState\(\)/);
+  assert.match(financePage, /authState\.claims\.user_role === "owner"/);
+  assert.match(financePage, /hasPayPermission/);
+  assert.match(financePage, /hasInvoiceCreatePermission/);
+  assert.match(financePage, /canAttachVatEvidence/);
+  // ADR 0018 — Inventory route is a redirect shim to Finance home.
+  assert.match(inventoryPage, /redirect\(/);
+  assert.match(inventoryPage, /\/finance\/supplier-invoices/);
 });
 
 test("finance supplier invoice deep links load the exact scoped invoice", () => {

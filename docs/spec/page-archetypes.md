@@ -181,9 +181,10 @@ rather than staying a near-empty category.
 
 - Skeleton: an appropriate `AppPage` width → `AppPageHeader` (eyebrow = module
   name, `actions` = primary create CTA) → a coordinated filter/control region
-  → `DataTable` when values need tabular comparison. Choose width from the
-  dataset, reading task, and primary viewport; prove density in the rendered
-  surface rather than pinning every LIST to one utility tier.
+  → `DataTable` when values need tabular comparison. Owner management LIST /
+  DETAIL default to `width="xwide"` (see `docs/modules/ui.md` AppPage width
+  defaults); prove any other width in the rendered surface with the reading
+  task that motivates it.
 - Data display: `DataTable` with `mobileCardRender` for the phone card list
   and the `Table` primitive for desktop — same fields, status colors, and
   actions at both breakpoints. Cursor pagination through the shared
@@ -191,8 +192,24 @@ rather than staying a near-empty category.
 - States: `TableEmptyStateRow` / `AppEmptyState` for empty/no-results;
   `PageSkeleton` loading; `ErrorPanel` error.
 - Status/money/date: per § 1 shared vocabulary.
-- Quick create/edit: `FormDialog`. Row click → the family's canonical detail
-  deep-link (`{basePath}/{id}`).
+- Quick create/edit: `FormDialog`. Row open follows Record Depth
+  (`design-system.md` § C.1 / ADR 0018): D2 → `{basePath}/{id}`; D1 view →
+  addressable overlay (`?<entity>Id=`); D1 task → `FormDialog` / short
+  `AppDialog` without a URL.
+- **Row actions.** Build one `RowActionItem[]` per row
+  (`apps/web/app/components/row-actions-menu.tsx`). Feed it to `RowActionsMenu`
+  for the visible action cell and to `RowActionsContextMenuItems` through
+  `DataTable renderRowContextMenu` for the right-click / long-press door. Any
+  management LIST that renders an action cell MUST also wire
+  `renderRowContextMenu` from the same array. Mobile cards expose the same
+  array through the same `RowActionsMenu`. A LIST with **no action cell** is
+  legal (ADR 0018 **C4**) — transfers/production may open via row body only;
+  do not invent a menu when there are no row actions. ContextMenu is required
+  only when an action cell is rendered.
+- **Forbidden on LIST rows:** a route-local `DropdownMenu` assembled instead of
+  `RowActionItem[]`; an overflow trigger that is actually a `Link` or bare icon
+  row; a long-press destination that differs from the row body's destination;
+  the context menu as the only path to any action.
 - Navigation: back/breadcrumb per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
 ### EMBED-WRAPPER

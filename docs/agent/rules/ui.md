@@ -43,6 +43,13 @@ change type, and authority granted by the task. Complete
 - POS and KDS use one vocabulary for the same workflow state.
 - Destructive actions are separated from primary actions and require explicit
   confirmation or a safe recovery path.
+- A row has one view path. If a record already has a DETAIL route, no overlay
+  may render a second view of it (Record Depth / ADR 0018).
+- `Popover` is for pickers and compact anchored controls only — never a record
+  view, never a multi-step workflow.
+- An overflow affordance (`⋯`) must open a real menu built from the shared
+  `RowActionItem[]`. An `⋯` that is a link, or a bare icon pair standing in for
+  a menu, is drift.
 - Use Má Tư DS shared components and approved surface adapters before route-local raw
   styling. Before composing a new surface, run
   `corepack pnpm audit:ui-components --component <name>` for the closest shared

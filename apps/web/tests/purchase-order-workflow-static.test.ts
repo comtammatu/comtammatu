@@ -24,7 +24,8 @@ test("purchase orders use the atomic create, approve, and receive RPC flow", () 
     ),
     true,
   );
-  assert.match(nav, /\/inventory\/purchase-orders/);
+  // ADR 0018 / D073 — PO withdrawn from daily IA; route/RPC history may remain.
+  assert.doesNotMatch(nav, /\/inventory\/purchase-orders/);
   assert.match(actions, /PROCUREMENT_PO_CREATE/);
   assert.match(actions, /PROCUREMENT_PO_APPROVE/);
   assert.match(actions, /PROCUREMENT_GRN_CREATE/);
@@ -84,6 +85,7 @@ test("PO receiving remains owner-control only and supports partial receipts", ()
     false,
   );
 });
+
 
 test("PO list opens read-only detail and never shows an empty-action dash", () => {
   const client = read(

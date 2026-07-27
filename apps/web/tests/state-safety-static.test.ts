@@ -191,7 +191,6 @@ test("Inventory lists and reports do not render load failures as empty data", ()
     ["transfers/page.tsx", "inventory.transfers.load_failed"],
     ["stocktake/page.tsx", "inventory.stocktake.load_failed"],
     ["production/page.tsx", "inventory.production.load_failed"],
-    ["supplier-invoices/page.tsx", "inventory.supplier_invoices.load_failed"],
     ["issues/page.tsx", "inventory.issues.load_failed"],
     ["reports/page.tsx", "inventory.reports.load_failed"],
     ["count-assignments/page.tsx", "inventory.count_assignments.load_failed"],
@@ -206,6 +205,12 @@ test("Inventory lists and reports do not render load failures as empty data", ()
       route,
     );
   }
+
+  const invoiceShim = read(
+    "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx",
+  );
+  assert.match(invoiceShim, /redirect\(/);
+  assert.match(invoiceShim, /\/finance\/supplier-invoices/);
 });
 
 test("Owner sticky detail footer reserves the fixed bottom navigation", () => {

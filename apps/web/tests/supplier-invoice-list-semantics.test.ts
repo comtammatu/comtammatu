@@ -207,22 +207,24 @@ test("supplier invoice groups expose member codes for multi-invoice tracking", (
   assert.equal(poGroup?.primaryInvoice.code, "HD-SMOKE-NEG-002");
 });
 
-test("both Supplier Invoice route pages own filter state from searchParams", () => {
-  for (const path of [
-    "app/(protected)/inventory/supplier-invoices/page.tsx",
+test("Finance Supplier Invoice route owns filter state; Inventory redirects", () => {
+  const financePage = readWeb(
     "app/(protected)/finance/supplier-invoices/page.tsx",
-  ]) {
-    const source = readWeb(path);
-    assert.match(source, /parseSupplierInvoiceListFilters\(params\)/, path);
-    assert.match(source, /query: filters\.query/, path);
-    assert.match(
-      source,
-      /supplierId: filters\.supplierId \?\? undefined/,
-      path,
-    );
-    assert.match(source, /initialTotalCount=/, path);
-    assert.match(source, /initialGroups=/, path);
-  }
+  );
+  assert.match(financePage, /parseSupplierInvoiceListFilters\(params\)/);
+  assert.match(financePage, /query: filters\.query/);
+  assert.match(
+    financePage,
+    /supplierId: filters\.supplierId \?\? undefined/,
+  );
+  assert.match(financePage, /initialTotalCount=/);
+  assert.match(financePage, /initialGroups=/);
+
+  const inventoryPage = readWeb(
+    "app/(protected)/inventory/supplier-invoices/page.tsx",
+  );
+  assert.match(inventoryPage, /redirect\(/);
+  assert.match(inventoryPage, /\/finance\/supplier-invoices/);
 
   const client = readWeb(
     "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",

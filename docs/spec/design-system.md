@@ -762,23 +762,27 @@ allowlist.
 - Keep procurement and inventory terms aligned with `docs/ref/glossary.md`.
 - Dense tables are expected, but row actions and destructive actions must stay visually separated.
 - Route IA must stay anchored to three operator flows:
-  1. Nhập hàng: Owner PO một cấp khi cần; Branch supplier-first GRN,
-     receiving/QC, Finance/AP handoff.
-  2. Kiểm soát tồn: one-warehouse stock on hand, stocktake,
-     waste/adjustment and reporting.
+  1. Nhập hàng: Branch supplier-first GRN, receiving/QC, Finance/AP handoff
+     at `/finance/supplier-invoices` (ADR 0018). Purchase orders stay withdrawn
+     from daily UI (D073).
+  2. Kiểm soát tồn: one-warehouse stock on hand, stocktake, count
+     assignment/slip review, waste/adjustment and reporting.
   3. Sản xuất/tiêu hao: current branch production run, sale-consumption and
      write-off workflows.
-- Owner control may use the one-step PO flow before GRN; Branch receiving
-  remains supplier-first. Do not introduce supplier return, lot/expiry, production
-  order, or same-branch warehouse-to-kitchen transfer into daily UI.
+- Branch receiving remains supplier-first. Do not introduce supplier return,
+  lot/expiry, production order, purchase-order daily UI, or same-branch
+  warehouse-to-kitchen transfer into daily UI.
 - Sidebar group labels must be compact enough for the fixed sidebar. Use detail page headings and breadcrumbs for full workflow wording.
 - Complex Inventory forms use RHF + Zod + app form helpers when they have line arrays, more than four fields, inline pre-submit validation, or pending submit UX. Plain `<form action>` is only for auth, sign out, or single-reason confirmations.
 - Use Sonner for success/action-level feedback, inline field errors for validation, and `/access-denied?reason=` only for permission, auth, or scope failures.
 - Entity audit history belongs inline on detail pages as a `Lich su` tab filtered by `audit_logs.entity_type` and `audit_logs.entity_id`. Tenant-wide audit search is a compliance surface, not the MVP detail-view default.
-- Page is for long forms and line-heavy workflows, Sheet is for focused data entry, Dialog is for short contextual tasks, and AlertDialog is for destructive or irreversible confirmation.
-- Count-assignment checklist editing is an approved short contextual `Dialog`
-  only when bounded to one employee and one clear/save assignment set; long
-  stocktake or line-heavy forms still use Page/Sheet.
+- Overlay selection follows the plane-neutral Record Depth / Overlay Decision
+  tree in `docs/modules/ui.md` (ADR 0018). Inventory keeps only surface-specific
+  exceptions here.
+- Count-assignment checklist editing is an approved Owner D1 `AppDialog`
+  (Branch counterpart: bottom `Sheet` at the same depth) only when bounded to
+  one employee and one clear/save assignment set; long stocktake or line-heavy
+  forms still use Page/`DocumentFormFrame`.
 - Inventory money, quantity, tax-rate, and business-date inputs must use the shared app form wrappers instead of ad hoc parsing or `type="number"`.
 - Hide permanently unauthorized actions. Show disabled controls with explanatory copy only for temporary operational blockers such as missing shift, locked period, or incomplete prerequisite state.
 
@@ -834,6 +838,13 @@ contract change; route-local chrome outside this list is drift.
    `app-shell.tsx`; responsive Owner `DataTable` adapters use the same 1024px
    default. The phone breakpoint (`useIsMobile()` = 768) still governs
    toaster/POS unless a route supplies an explicit override.
+   Scroll: the inset `SidebarInset` card is viewport-bounded; the sidebar
+   background and rounded panel frame stay fixed while only the inset content
+   region scrolls (`data-owner-shell-scroll`). `AppPageHeader` sticks at the top
+   of that scrollport and publishes `--app-page-header-offset`. Owner LIST
+   filters stack under the header via `AppListFrame`/`InventoryListFrame`
+   toolbar (automatic), `AppToolbar sticky`, or `AppPageStickyChrome` /
+   `APP_PAGE_STICKY_FILTER_CLASSNAME` for custom filter bars.
 2. Branch runtime chrome — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
    branch home, staff daily work under `/br/[branchId]/shift/*`, stock action
@@ -899,6 +910,47 @@ frames are the reference implementations, not a frozen filename registry.
   asserts (a) each page resolves via `module-acl` to one family, (b) each
   navigable leaf has an inbound nav entry, (c) no two nav items in a shell share
   an `href`.
+
+### C.1 Record Depth And Row Open
+
+Every LIST row represents a record. A record has exactly one **canonical view**
+and exactly one **address** for that view. Opening a record view always changes
+the URL. Tasks that end (short CRUD, confirm) are not views and are not
+addressable. Full decision table: ADR 0018.
+
+Declare each record's depth once per family:
+
+- **D2 (default for staged documents)** — DETAIL route `{basePath}/{id}`; row
+  click navigates there.
+- **D1 (addressable overlay)** — no DETAIL route; view opens in an overlay bound
+  to one list query parameter (`?<entity>Id=`), written with `router.replace`,
+  hydrated from the server on first load, and cleared on close. Owner may use
+  side `Sheet` or `AppDialog`; Branch may use bottom `Sheet` / `Drawer` at the
+  same depth.
+- **D1 task (non-addressable)** — `FormDialog` / short `AppDialog` for master
+  CRUD or a single bounded decision that ends.
+- **D3** — line-array authoring only; never a row-open target for an existing
+  record's canonical view.
+- **D0 queue** — named card/decision surfaces (for example Owner waste
+  approvals) where the card is the work, not a tabular row open.
+
+A record escalates from D1 view to D2 when **any** of the following is true: it
+renders a line array, an audit/`Lịch sử` tab, a stage-transition footer, or more
+than one primary action. Recipes that remain D1 task (`FormDialog`) escalate
+when BOM lines **> 12** (ADR 0018 **C3**).
+
+**Forbidden:** a record with two views (DETAIL route and a separate overlay view
+of the same record); a record view reachable only from ephemeral component
+state; a row whose body click and whose context/long-press lead to different
+destinations; `Popover` as a record view.
+
+**Three doors** share one `RowActionItem[]`: row body, `RowActionsMenu` action
+cell, and `renderRowContextMenu`. Context menu is additive only. Zero-action
+LIST rows (no action cell) are legal when the row body alone is the view path
+(ADR 0018 **C4**).
+
+**Planes:** Owner and Branch MUST declare the same depth for the same record and
+MAY use different frames at that depth. A depth mismatch across planes is drift.
 
 #### Canonical operator-home skeleton (no KPI)
 
