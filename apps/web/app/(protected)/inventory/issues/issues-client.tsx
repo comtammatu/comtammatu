@@ -37,7 +37,6 @@ import { FormDialog, SelectField, TextareaField } from "@/components/form";
 import {
   AppPage,
   AppPageHeader,
-  AppSection,
   AppToolbar,
 } from "@/components/surface";
 import {
@@ -48,6 +47,7 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { formatVND } from "@lib/inventory/format";
 import { tNav } from "../_lib/dictionary";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 import { createStockIssueDraft } from "../issue-actions";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
@@ -197,9 +197,9 @@ export function IssuesClient({
   const [recordedSearch, setRecordedSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const isOperator = listBasePath.startsWith("/br/");
-  const controlSize = isOperator ? "touch" : "default";
+  const controlSize = isOperator ? "touch" : "field";
   const compactActionSize = isOperator ? "touch" : "sm";
-  const fieldClassName = isOperator ? "h-12 w-full sm:h-10" : "h-10 w-full";
+  const fieldClassName = "w-full";
   const createIssueDefaultValues = useMemo<CreateIssueValues>(
     () => ({
       branchId: defaultBranchId ? String(defaultBranchId) : "",
@@ -478,7 +478,7 @@ export function IssuesClient({
       variant="inline"
       className="items-stretch sm:items-center"
       search={
-        <InputGroup className={fieldClassName}>
+        <InputGroup size={controlSize} className={fieldClassName}>
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -561,12 +561,7 @@ export function IssuesClient({
       variant="inline"
       className="items-stretch sm:items-center"
       search={
-        <InputGroup
-          className={cn(
-            "min-w-56 flex-1",
-            isOperator ? "h-12 sm:h-10" : "h-10",
-          )}
-        >
+        <InputGroup size={controlSize} className="min-w-56 flex-1">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -843,7 +838,7 @@ export function IssuesClient({
       )}
 
       {(recordedConsumptions.length > 0 || showsRecordedConsumption) && (
-        <AppSection
+        <InventoryListFrame
           title={INVENTORY_VI.recordedConsumptionTitle}
           headerHint={visibleRecordedConsumptionHint}
           action={
@@ -857,12 +852,11 @@ export function IssuesClient({
               {INVENTORY_VI.exportCsvAction}
             </Button>
           }
-          contentFlush
           size={embedded ? "sm" : "default"}
           collapsible
           defaultOpen={!embedded}
+          toolbar={recordedConsumptionFilterBar}
         >
-          {recordedConsumptionFilterBar}
           <div className="grid gap-3 border-b p-3 sm:grid-cols-3">
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">
@@ -900,15 +894,13 @@ export function IssuesClient({
             emptyMode="no-data"
             mobileCardRender={renderRecordedConsumptionCard}
           />
-        </AppSection>
+        </InventoryListFrame>
       )}
 
-      <AppSection
+      <InventoryListFrame
         title={issueListTitle}
-        className="overflow-hidden"
-        contentFlush
+        toolbar={filterBar}
       >
-        {filterBar}
         <DataTable
           columns={issueColumns}
           data={filtered}
@@ -923,7 +915,7 @@ export function IssuesClient({
           emptyMode={hasActiveFilters ? "no-results" : "no-data"}
           mobileCardRender={renderIssueCard}
         />
-      </AppSection>
+      </InventoryListFrame>
 
       <FormDialog
         open={createOpen}

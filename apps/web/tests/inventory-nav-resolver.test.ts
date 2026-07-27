@@ -208,6 +208,14 @@ test("inventory shell does not duplicate workflow navigation inside page content
   );
 });
 
+test("inventory shell keeps inventory navigation as one unlabelled sidebar group", () => {
+  assert.match(
+    shellSource,
+    /title:\s*""/,
+  );
+  assert.match(shellSource, /\.flatMap\(\(group\) => group\.items\)/);
+});
+
 test("inventory settings sub-pages stay internal routes, not sidebar items", () => {
   const groups = resolveInventoryNav({
     userRole: "owner",

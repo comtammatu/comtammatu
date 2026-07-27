@@ -27,6 +27,7 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { AppSection } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 import type { ProductionRunRow } from "../production-run-actions";
 
 const ALL_STATUS_VALUE = "_all";
@@ -131,87 +132,87 @@ export function ProductionRunsClient({
     ];
   }, [basePath]);
 
+  const table = (
+    <DataTable
+      data={filteredItems}
+      columns={columns}
+      pageSize={50}
+      getRowKey={(row) => row.id.toString()}
+      searchable
+      searchPlaceholder="Tìm số lệnh, thành phẩm, chi nhánh..."
+      searchValue={search}
+      onSearchChange={setSearch}
+      actions={
+        embedded ? null : (
+          <Badge variant="secondary">
+            {`${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`}
+          </Badge>
+        )
+      }
+      filters={[
+        {
+          key: "status",
+          placeholder: FORM_VI.status,
+          options: [
+            { value: ALL_STATUS_VALUE, label: "Tất cả trạng thái" },
+            ...statusOptions.map((status) => ({
+              value: status,
+              label: statusLabel(status),
+            })),
+          ],
+        },
+      ]}
+      filterValues={{ status: statusFilter }}
+      onFilterChange={(_key, value) => setStatusFilter(value)}
+      emptyTitle={
+        search || statusFilter !== ALL_STATUS_VALUE
+          ? "Không tìm thấy lệnh phù hợp"
+          : INVENTORY_VI.productionOrdersEmptyTitle
+      }
+      emptyDescription={
+        search || statusFilter !== ALL_STATUS_VALUE
+          ? "Đổi từ khóa hoặc trạng thái để xem lại danh sách lệnh."
+          : INVENTORY_VI.productionOrdersEmptyDescription
+      }
+      emptyMode={
+        search || statusFilter !== ALL_STATUS_VALUE ? "no-results" : "no-data"
+      }
+      mobileCardRender={(row) => (
+        <ProductionRunCard row={row} href={`${basePath}/${row.id}`} />
+      )}
+    />
+  );
+
+  if (!embedded) {
+    return <InventoryListFrame>{table}</InventoryListFrame>;
+  }
+
   return (
     <AppSection
       className="overflow-hidden"
       contentFlush
-      icon={embedded ? <IconListChecks /> : undefined}
-      title={embedded ? INVENTORY_VI.productionOrdersTab : undefined}
-      description={
-        embedded ? INVENTORY_VI.productionOrdersCardDescription : undefined
-      }
-      badge={
-        embedded
-          ? {
-              children: `${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`,
-              variant: "secondary",
-            }
-          : undefined
-      }
+      icon={<IconListChecks />}
+      title={INVENTORY_VI.productionOrdersTab}
+      description={INVENTORY_VI.productionOrdersCardDescription}
+      badge={{
+        children: `${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`,
+        variant: "secondary",
+      }}
       action={
-        embedded ? (
-          <Button
-            size="touch"
-            render={
-              <Link
-                href={`${basePath}/new${branchId ? `?branchId=${branchId}` : ""}`}
-              />
-            }
-          >
-            <IconPlus data-icon="inline-start" />
-            {INVENTORY_VI.createOrderShort}
-          </Button>
-        ) : undefined
+        <Button
+          size="touch"
+          render={
+            <Link
+              href={`${basePath}/new${branchId ? `?branchId=${branchId}` : ""}`}
+            />
+          }
+        >
+          <IconPlus data-icon="inline-start" />
+          {INVENTORY_VI.createOrderShort}
+        </Button>
       }
     >
-      <DataTable
-        data={filteredItems}
-        columns={columns}
-        pageSize={50}
-        getRowKey={(row) => row.id.toString()}
-        searchable
-        searchPlaceholder="Tìm số lệnh, thành phẩm, chi nhánh..."
-        searchValue={search}
-        onSearchChange={setSearch}
-        actions={
-          embedded ? null : (
-            <Badge variant="secondary">
-              {`${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`}
-            </Badge>
-          )
-        }
-        filters={[
-          {
-            key: "status",
-            placeholder: FORM_VI.status,
-            options: [
-              { value: ALL_STATUS_VALUE, label: "Tất cả trạng thái" },
-              ...statusOptions.map((status) => ({
-                value: status,
-                label: statusLabel(status),
-              })),
-            ],
-          },
-        ]}
-        filterValues={{ status: statusFilter }}
-        onFilterChange={(_key, value) => setStatusFilter(value)}
-        emptyTitle={
-          search || statusFilter !== ALL_STATUS_VALUE
-            ? "Không tìm thấy lệnh phù hợp"
-            : INVENTORY_VI.productionOrdersEmptyTitle
-        }
-        emptyDescription={
-          search || statusFilter !== ALL_STATUS_VALUE
-            ? "Đổi từ khóa hoặc trạng thái để xem lại danh sách lệnh."
-            : INVENTORY_VI.productionOrdersEmptyDescription
-        }
-        emptyMode={
-          search || statusFilter !== ALL_STATUS_VALUE ? "no-results" : "no-data"
-        }
-        mobileCardRender={(row) => (
-          <ProductionRunCard row={row} href={`${basePath}/${row.id}`} />
-        )}
-      />
+      {table}
     </AppSection>
   );
 }

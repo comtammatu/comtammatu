@@ -5,6 +5,7 @@ import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { messages } from "@lib/messages";
 import { fetchCategories, type CategoryRow } from "./categories-actions";
 import { CategoriesClient } from "./categories-client";
+import { InventoryListFrame } from "../../_components/inventory-list-frame";
 
 const copy = messages.inventoryMaster.categories;
 
@@ -27,14 +28,16 @@ export default async function InventoryCategoriesPage() {
       ) : (
         <>
           <AppPageHeader
-            eyebrow={copy.page.eyebrow}
+            eyebrow={messages.inventory.shell.moduleName}
             title={copy.page.title}
             description={copy.page.description}
           />
-          <AppEmptyState
-            mode="error"
-            title={messages.inventory.settings.categories.loadFailed}
-          />
+          <InventoryListFrame>
+            <AppEmptyState
+              mode="error"
+              title={messages.inventory.settings.categories.loadFailed}
+            />
+          </InventoryListFrame>
         </>
       )}
     </>

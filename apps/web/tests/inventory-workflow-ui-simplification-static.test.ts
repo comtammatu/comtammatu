@@ -154,10 +154,7 @@ test("operations tabs use the same sectioned list chrome", () => {
   );
 
   for (const source of [grn, issues, transfers]) {
-    assert.match(
-      source,
-      /<AppSection[\s\S]{0,120}className="overflow-hidden"[\s\S]{0,120}contentFlush/,
-    );
+    assert.match(source, /<InventoryListFrame/);
     assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
     assert.match(source, /<AppToolbar[\s\S]{0,500}search=\{/);
     assert.match(source, /<AppToolbar[\s\S]{0,1200}filters=\{/);
@@ -229,7 +226,8 @@ test("operations table columns do not override table typography role", () => {
   }
 });
 
-test("Owner inventory management lists share the compact sectioned frame", () => {
+test("Owner inventory lists share one frame for toolbar, table header, and empty state", () => {
+  const stock = read("app/(protected)/inventory/stock/stock-client.tsx");
   const suppliers = read(
     "app/(protected)/inventory/suppliers/suppliers-client.tsx",
   );
@@ -237,32 +235,100 @@ test("Owner inventory management lists share the compact sectioned frame", () =>
     "app/(protected)/inventory/ingredients/ingredients-client.tsx",
   );
   const recipes = read("app/(protected)/inventory/recipes/recipes-client.tsx");
+  const purchaseOrders = read(
+    "app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+  );
+  const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
+  const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
+  const transfers = read(
+    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  );
+  const stocktake = read(
+    "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
+  );
+  const production = read(
+    "app/(protected)/inventory/production/production-runs-client.tsx",
+  );
+  const categories = read(
+    "app/(protected)/inventory/settings/categories/categories-client.tsx",
+  );
+  const units = read(
+    "app/(protected)/inventory/settings/units/units-client.tsx",
+  );
+  const thresholds = read(
+    "app/(protected)/inventory/settings/thresholds/page.tsx",
+  );
+  const frame = read(
+    "app/(protected)/inventory/_components/inventory-list-frame.tsx",
+  );
+
+  assert.match(
+    stock,
+    /width=\{isCompactLayout \? "narrow" : "xwide"\}[\s\S]{0,80}density="compact"/,
+  );
 
   for (const source of [suppliers, ingredients, recipes]) {
     assert.match(source, /<AppPage width="xwide" density="compact"/);
-    assert.match(
-      source,
-      /<AppSection className="overflow-hidden" contentFlush>/,
-    );
+  }
+
+  for (const source of [
+    stock,
+    suppliers,
+    ingredients,
+    recipes,
+    purchaseOrders,
+    grn,
+    issues,
+    transfers,
+    stocktake,
+    production,
+    categories,
+    units,
+    thresholds,
+  ]) {
+    assert.match(source, /<InventoryListFrame/);
   }
 
   for (const source of [suppliers, ingredients]) {
     assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
   }
 
-  assert.match(recipes, /<DataTable[\s\S]{0,180}searchable/);
+  assert.match(
+    stock,
+    /variant=\{isCompactLayout \? "card" : "inline"\}/,
+  );
+  assert.match(frame, /<AppSection[\s\S]*contentFlush/);
+  assert.match(frame, /\{toolbar\}/);
+  assert.doesNotMatch(purchaseOrders, /<DataTable[\s\S]{0,500}searchable/);
+  assert.doesNotMatch(recipes, /<DataTable[\s\S]{0,500}searchable/);
   assert.doesNotMatch(recipes, /recipes\.length === 0/);
 });
 
-test("Inventory sidebar keeps workflow groups out of the visible sub-navigation", () => {
+test("stock never presents an all-location choice", () => {
+  const stockModel = read("lib/inventory/stock-on-hand-model.ts");
+  const ownerStocktake = read(
+    "app/(protected)/inventory/stocktake/new/new-session-client.tsx",
+  );
+  const branchStocktake = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/stocktake/new/branch-stocktake-new-client.tsx",
+  );
+  const inventoryMessages = read("lib/messages/inventory.ts");
+
+  for (const source of [stockModel, ownerStocktake, branchStocktake]) {
+    assert.doesNotMatch(source, /allLocations|locationOptional/);
+  }
+  assert.doesNotMatch(inventoryMessages, /Mọi vị trí|Tất cả vị trí kho/);
+  assert.match(ownerStocktake, /const selectedWarehouse = useMemo/);
+  assert.match(branchStocktake, /const selectedWarehouse =/);
+  assert.match(ownerStocktake, /locationId: selectedWarehouse\.id/);
+  assert.match(branchStocktake, /locationId: selectedWarehouse\.id/);
+});
+
+test("Inventory sidebar keeps workflow labels out of the visible sub-navigation", () => {
   const shell = read(
     "app/(protected)/inventory/_components/inventory-shell.tsx",
   );
 
   assert.match(shell, /title:\s*""/);
-  assert.match(
-    shell,
-    /withInventoryBranchNavScope\(baseTier2, currentBranchId\)\.flatMap\(/,
-  );
-  assert.match(shell, /\(group\) => group\.items/);
+  assert.match(shell, /\.flatMap\(\(group\) => group\.items\)/);
 });

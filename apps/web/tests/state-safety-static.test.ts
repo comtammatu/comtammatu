@@ -127,7 +127,7 @@ test("writable settings and finance pages fail closed when initial data cannot l
   );
 
   assert.match(general, /data: tenant, error/);
-  assert.match(general, /error \|\| !identity/);
+  assert.match(general, /tenantError \|\| invoiceProfileError \|\| !identity/);
   assert.match(payments, /data: rows, error/);
   assert.match(payments, /\{error \? \(/);
   assert.match(foodCost, /const loadFailed =/);

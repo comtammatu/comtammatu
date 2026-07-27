@@ -53,7 +53,6 @@ import {
   isStockReorderRisk,
   type StockFilter,
   type StockIngredient,
-  type StockLocationFilter,
 } from "@lib/inventory/stock-on-hand-model";
 import { messages } from "@lib/messages";
 
@@ -63,15 +62,6 @@ const stockFilterOptions: { value: StockFilter; label: string }[] = [
   { value: "in_stock", label: stockCopy.filters.inStock },
   { value: "low", label: stockCopy.filters.low },
   { value: "out", label: stockCopy.filters.out },
-];
-
-const locationFilterOptions: {
-  value: StockLocationFilter;
-  label: string;
-}[] = [
-  { value: "all", label: stockCopy.filters.allLocations },
-  { value: "warehouse", label: stockCopy.filters.locationWarehouse },
-  { value: "kitchen", label: stockCopy.filters.locationKitchen },
 ];
 
 function StockQuantity({ item }: { item: StockIngredient }) {
@@ -169,41 +159,23 @@ export function BranchStockOnHandClient({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState(STOCK_ALL_CATEGORY_VALUE);
   const [status, setStatus] = useState<StockFilter>("all");
-  const [location, setLocation] = useState<StockLocationFilter>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const { categories, hasUncategorized } = useMemo(
     () => getStockOnHandCategories(ingredients),
     [ingredients],
   );
-  const hasMultipleStockLocations = useMemo(() => {
-    const locationKinds = new Set(
-      ingredients.flatMap(
-        (ingredient) =>
-          ingredient.locationBreakdown?.map((row) => row.locationKind) ?? [],
-      ),
-    );
-
-    return locationKinds.size > 1;
-  }, [ingredients]);
-  const filters = { category, location, query, status };
+  const filters = { category, query, status };
   const filtered = useMemo(
     () => filterStockOnHandIngredients(ingredients, filters),
-    [ingredients, category, location, query, status],
+    [ingredients, category, query, status],
   );
   const filtersActive = hasStockOnHandFilters(filters);
   const facetCount = [
     category !== STOCK_ALL_CATEGORY_VALUE,
     status !== "all",
-    location !== "all",
   ].filter(Boolean).length;
   const isFirstLoadEmpty = !filtersActive && isPristineStockOnHand(ingredients);
-  const locationScopeLabel =
-    location === "warehouse"
-      ? stockCopy.filters.locationWarehouse
-      : location === "kitchen"
-        ? stockCopy.filters.locationKitchen
-        : null;
   const showReceiveAction =
     canCreateGrn && !coreDataLoadFailed && underThresholdCount === 0;
 
@@ -211,7 +183,6 @@ export function BranchStockOnHandClient({
     setQuery("");
     setCategory(STOCK_ALL_CATEGORY_VALUE);
     setStatus("all");
-    setLocation("all");
     setFiltersOpen(false);
   }
 
@@ -349,9 +320,7 @@ export function BranchStockOnHandClient({
                 className={cn(
                   "w-full gap-2",
                   filtersOpen ? "grid" : "hidden",
-                  hasMultipleStockLocations
-                    ? "sm:grid-cols-3"
-                    : "sm:grid-cols-2",
+                  "sm:grid-cols-2",
                 )}
               >
                 <Select
@@ -375,32 +344,6 @@ export function BranchStockOnHandClient({
                     ))}
                   </SelectContent>
                 </Select>
-
-                {hasMultipleStockLocations ? (
-                  <Select
-                    value={location}
-                    onValueChange={(value) =>
-                      setLocation(value as StockLocationFilter)
-                    }
-                  >
-                    <SelectTrigger size="touch" className="w-full">
-                      <SelectValue
-                        placeholder={stockCopy.filters.locationPlaceholder}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationFilterOptions.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          size="touch"
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : null}
 
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger size="touch" className="w-full">
@@ -428,17 +371,7 @@ export function BranchStockOnHandClient({
             </div>
 
             {filtersActive ? (
-              <div
-                className={cn(
-                  "flex flex-wrap items-center gap-2",
-                  locationScopeLabel ? "justify-between" : "justify-end",
-                )}
-              >
-                {locationScopeLabel ? (
-                  <Badge variant="outline">
-                    {stockCopy.filters.locationScope(locationScopeLabel)}
-                  </Badge>
-                ) : null}
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 <Button
                   type="button"
                   variant="ghost"

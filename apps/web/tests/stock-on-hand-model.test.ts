@@ -6,7 +6,6 @@ import {
   filterStockOnHandIngredients,
   hasStockOnHandFilters,
   isPristineStockOnHand,
-  scopeStockIngredientToLocation,
   type StockIngredient,
   type StockOnHandFilters,
 } from "../lib/inventory/stock-on-hand-model";
@@ -35,7 +34,6 @@ function makeIngredient(patch: Partial<StockIngredient> = {}): StockIngredient {
 
 const defaultFilters: StockOnHandFilters = {
   category: STOCK_ALL_CATEGORY_VALUE,
-  location: "all",
   query: "",
   status: "all",
 };
@@ -88,43 +86,6 @@ test("stock filters combine search, category, and minimum-threshold risk", () =>
   );
 });
 
-test("location scope recomputes quantity, status, and fallback cost", () => {
-  const scoped = scopeStockIngredientToLocation(
-    makeIngredient({
-      min: 3,
-      locationBreakdown: [
-        {
-          locationId: 10,
-          name: "Warehouse",
-          code: "WH",
-          locationKind: "warehouse",
-          qty: 2,
-          avgUnitCost: null,
-          lastCountedAt: "2026-07-01T00:00:00.000Z",
-        },
-        {
-          locationId: 20,
-          name: "Kitchen",
-          code: "KT",
-          locationKind: "kitchen",
-          qty: 8,
-          avgUnitCost: 30,
-          lastCountedAt: "2026-07-02T00:00:00.000Z",
-        },
-      ],
-    }),
-    "warehouse",
-  );
-
-  assert.equal(scoped.qty, 2);
-  assert.equal(scoped.cost, 15);
-  assert.equal(scoped.status, "low");
-  assert.deepEqual(
-    scoped.locationBreakdown?.map((row) => row.locationKind),
-    ["warehouse"],
-  );
-});
-
 test("pristine stock and active filter state remain distinct", () => {
   assert.equal(
     isPristineStockOnHand([
@@ -133,8 +94,5 @@ test("pristine stock and active filter state remain distinct", () => {
     true,
   );
   assert.equal(hasStockOnHandFilters(defaultFilters), false);
-  assert.equal(
-    hasStockOnHandFilters({ ...defaultFilters, location: "kitchen" }),
-    true,
-  );
+  assert.equal(hasStockOnHandFilters({ ...defaultFilters, status: "low" }), true);
 });

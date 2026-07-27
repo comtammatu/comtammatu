@@ -81,9 +81,10 @@ export function InventoryShell({
     () => [
       {
         title: "",
-        items: withInventoryBranchNavScope(baseTier2, currentBranchId).flatMap(
-          (group) => group.items,
-        ),
+        items: withInventoryBranchNavScope(
+          baseTier2,
+          currentBranchId,
+        ).flatMap((group) => group.items),
       },
     ],
     [baseTier2, currentBranchId],

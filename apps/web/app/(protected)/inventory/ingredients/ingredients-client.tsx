@@ -37,7 +37,6 @@ import { matchesSearch } from "@lib/search";
 import {
   AppPageHeader,
   AppPage,
-  AppSection,
   AppToolbar,
 } from "@/components/surface";
 import {
@@ -75,6 +74,7 @@ import {
 } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 
 const ingredientFormCopy = messages.inventoryMaster.ingredientForm;
 const ingredientListCopy = messages.inventory.ingredients.list;
@@ -624,8 +624,7 @@ export function IngredientsClient({
         }
       />
 
-      <AppSection className="overflow-hidden" contentFlush>
-        {filterBar}
+      <InventoryListFrame toolbar={filterBar}>
         <DataTable
           columns={columns}
           data={filtered}
@@ -654,7 +653,7 @@ export function IngredientsClient({
           currentPage={currentPage}
           onPageChange={setCurrentPage}
         />
-      </AppSection>
+      </InventoryListFrame>
 
       <IngredientDialog
         open={dialogOpen}

@@ -72,12 +72,10 @@ export function NewStocktakeSessionClient({
   const router = useRouter();
   const [mode, setMode] = useState<StocktakeMode>("daily");
   const [branchId, setBranchId] = useState<number | null>(defaultBranchId);
-  const [locationId, setLocationId] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     setBranchId(defaultBranchId);
-    setLocationId(null);
   }, [defaultBranchId]);
 
   const meta = getModeMeta(mode);
@@ -87,6 +85,13 @@ export function NewStocktakeSessionClient({
     () => (branchId ? locations.filter((l) => l.branchId === branchId) : []),
     [branchId, locations],
   );
+  const selectedWarehouse = useMemo(
+    () =>
+      branchLocations.find((location) => location.kind === "warehouse") ??
+      branchLocations[0] ??
+      null,
+    [branchLocations],
+  );
   const operatorFlow = messages.inventory.operatorFlow;
 
   function submit() {
@@ -94,10 +99,14 @@ export function NewStocktakeSessionClient({
       toast.error(messages.inventory.stocktake.selectBranchFirst);
       return;
     }
+    if (!selectedWarehouse) {
+      toast.error(messages.inventory.stocktake.warehouseRequired);
+      return;
+    }
     startTransition(async () => {
       const res = await startStocktake({
         branchId,
-        locationId: locationId ?? undefined,
+        locationId: selectedWarehouse.id,
         mode,
       });
       if (!res.success || !res.data) {
@@ -186,10 +195,7 @@ export function NewStocktakeSessionClient({
             >
               <Select
                 value={branchId ? String(branchId) : ""}
-                onValueChange={(v) => {
-                  setBranchId(Number(v));
-                  setLocationId(null);
-                }}
+                onValueChange={(v) => setBranchId(Number(v))}
               >
                 <SelectTrigger
                   id="stocktake-branch"
@@ -209,40 +215,6 @@ export function NewStocktakeSessionClient({
               </Select>
             </FormField>
 
-            <FormField
-              controlId="stocktake-location"
-              label={messages.inventory.stocktake.locationOptional}
-              disabled={!branchId || branchLocations.length === 0}
-            >
-              <Select
-                value={locationId ? String(locationId) : "__all__"}
-                onValueChange={(v) =>
-                  setLocationId(v === "__all__" ? null : Number(v))
-                }
-                disabled={!branchId || branchLocations.length === 0}
-              >
-                <SelectTrigger
-                  id="stocktake-location"
-                  size={embedded ? "touch" : "field"}
-                  className="w-full"
-                >
-                  <SelectValue
-                    placeholder={messages.inventory.stocktake.allLocations}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">
-                    {messages.inventory.stocktake.allLocations}
-                  </SelectItem>
-                  {branchLocations.map((l) => (
-                    <SelectItem key={l.id} value={String(l.id)}>
-                      {l.name}
-                      {l.kind ? ` · ${l.kind}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
           </div>
 
           <Item variant="outline" size="sm">
@@ -297,11 +269,10 @@ export function NewStocktakeSessionClient({
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">
-              {messages.inventory.stocktake.location}
+              {messages.inventory.stock.filters.locationWarehouse}
             </span>
             <span className="font-medium">
-              {locations.find((l) => l.id === locationId)?.name ??
-                messages.inventory.common.all}
+              {selectedWarehouse?.name ?? "—"}
             </span>
           </div>
           {embedded ? null : startButton}

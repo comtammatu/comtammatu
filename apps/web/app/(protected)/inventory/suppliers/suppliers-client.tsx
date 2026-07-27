@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   InputGroup,
@@ -20,11 +21,11 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 import { matchesSearch } from "@lib/search";
 import {
   AppPage,
   AppPageHeader,
-  AppSection,
   AppToolbar,
 } from "@/components/surface";
 import {
@@ -164,6 +165,7 @@ export function SuppliersClient({
   initial: SupplierRow[];
   canManageItems: boolean;
 }) {
+  const isTouchLayout = useIsMobile();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -318,33 +320,38 @@ export function SuppliersClient({
             </Button>
           }
         />
-        <AppSection className="overflow-hidden" contentFlush>
-          <AppToolbar
-            variant="inline"
-            search={
-              <InputGroup className="h-12 w-full sm:h-10">
-                <InputGroupAddon>
-                  <IconSearch />
-                </InputGroupAddon>
-                <InputGroupInput
-                  type="search"
-                  name="supplier-search"
-                  autoComplete="off"
-                  placeholder={suppliersCopy.searchPlaceholder}
-                  aria-label={suppliersCopy.searchPlaceholder}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  inputMode="search"
-                />
-              </InputGroup>
-            }
-            reset={
-              <Badge variant="outline">
-                {filtered.length}/{rows.length}
-              </Badge>
-            }
-          />
-
+        <InventoryListFrame
+          toolbar={
+            <AppToolbar
+              variant="inline"
+              search={
+                <InputGroup
+                  size={isTouchLayout ? "touch" : "field"}
+                  className="w-full"
+                >
+                  <InputGroupAddon>
+                    <IconSearch />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    type="search"
+                    name="supplier-search"
+                    autoComplete="off"
+                    placeholder={suppliersCopy.searchPlaceholder}
+                    aria-label={suppliersCopy.searchPlaceholder}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    inputMode="search"
+                  />
+                </InputGroup>
+              }
+              reset={
+                <Badge variant="outline">
+                  {filtered.length}/{rows.length}
+                </Badge>
+              }
+            />
+          }
+        >
           <DataTable
             columns={columns}
             data={filtered}
@@ -371,7 +378,7 @@ export function SuppliersClient({
               />
             )}
           />
-        </AppSection>
+        </InventoryListFrame>
       </AppPage>
 
       <SupplierDialog

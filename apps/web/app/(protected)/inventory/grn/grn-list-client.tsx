@@ -22,6 +22,7 @@ import {
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   InputGroup,
@@ -71,6 +72,7 @@ import {
   type GrnRow,
 } from "@lib/inventory/grn-list-model";
 import { messages } from "@lib/messages";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 
 export type { GrnDraftRow, GrnRow } from "@lib/inventory/grn-list-model";
 
@@ -106,6 +108,7 @@ export function GrnListClient({
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<GrnListStatusFilter>("all");
+  const isTouchLayout = useIsMobile();
   const router = useRouter();
   const grnColumns: DataTableColumn<GrnRow>[] = [
     {
@@ -226,7 +229,10 @@ export function GrnListClient({
         variant="inline"
         className="items-stretch max-sm:[&>[data-slot=separator]]:hidden max-sm:[&>[data-slot=toolbar-group]:first-child]:basis-full sm:items-center"
         search={
-          <InputGroup className="min-h-10 w-full sm:h-10">
+          <InputGroup
+            size={isTouchLayout ? "touch" : "field"}
+            className="w-full"
+          >
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
@@ -248,8 +254,8 @@ export function GrnListClient({
             }
           >
             <SelectTrigger
-              size="default"
-              className="min-h-10 w-full sm:h-10 sm:w-44"
+              size={isTouchLayout ? "touch" : "field"}
+              className="w-full sm:w-44"
             >
               <SelectValue placeholder={FORM_VI.status} />
             </SelectTrigger>
@@ -292,11 +298,7 @@ export function GrnListClient({
     </>
   );
 
-  const listBody = (
-    <AppSection className="overflow-hidden" contentFlush>
-      {listTable}
-    </AppSection>
-  );
+  const listBody = <InventoryListFrame>{listTable}</InventoryListFrame>;
 
   const draftsContent = draftsLoadFailed ? (
     <AppEmptyState

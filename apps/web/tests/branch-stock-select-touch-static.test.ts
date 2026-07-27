@@ -12,9 +12,7 @@ const stockSelectOwners = [
   "app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/branch-stock-issue-detail-client.tsx",
   "app/(protected)/br/[branchId]/(operator)/stock/issues/branch-stock-issues-list-client.tsx",
   "app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
-  "app/(protected)/br/[branchId]/(operator)/stock/production/new/branch-production-new-client.tsx",
   "app/(protected)/br/[branchId]/(operator)/stock/stocktake/branch-stocktake-list-client.tsx",
-  "app/(protected)/br/[branchId]/(operator)/stock/stocktake/new/branch-stocktake-new-client.tsx",
   "app/(protected)/br/[branchId]/(operator)/stock/waste/branch-waste-create-client.tsx",
   "lib/staff-runtime/count/count-client.tsx",
 ] as const;

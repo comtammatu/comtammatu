@@ -14,12 +14,14 @@ const tenantIdentitySchema = z.object({
   tax_code: z
     .string()
     .trim()
-    .refine((v) => v === "" || /^\d{10}(-?\d{3})?$/.test(v), {
-      error: "Mã số thuế phải là 10 hoặc 13 chữ số",
+    .refine((v) => v === "" || /^\d{10}(-\d{3})?$/.test(v), {
+      error: "Mã số thuế phải là 10 chữ số hoặc 13 chữ số có dấu gạch nối",
     }),
   legal_address: z.string().trim(),
   representative: z.string().trim(),
 });
+
+const activateInvoiceProfileSchema = z.object({}).strict();
 
 export async function updateTenantIdentity(
   _prev: ActionResult | null,
@@ -63,4 +65,51 @@ export async function updateTenantIdentity(
 
   revalidateSurfacePath("/settings/general");
   return { success: true };
+}
+
+export async function activateInvoiceProfile(
+  input: unknown,
+): Promise<ActionResult<{ profileId: number }>> {
+  const parsed = activateInvoiceProfileSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    TENANT_STRATEGY_SETTINGS_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await ctx.supabase.rpc("activate_invoice_profile");
+  if (error) {
+    if (error.code === "23514") {
+      return {
+        success: false,
+        error: "Hồ sơ pháp lý chưa đầy đủ hoặc mã số thuế không khớp.",
+      };
+    }
+    if (error.code === "P0002") {
+      return {
+        success: false,
+        error: "Không tìm thấy cấu hình HĐĐT để kích hoạt.",
+      };
+    }
+    if (error.code === "42501") {
+      return { success: false, error: "Không có quyền" };
+    }
+    return {
+      success: false,
+      error: "Không thể kích hoạt HĐĐT. Vui lòng thử lại.",
+    };
+  }
+  if (typeof data !== "number" || !Number.isSafeInteger(data) || data <= 0) {
+    return {
+      success: false,
+      error: "Không thể xác nhận trạng thái kích hoạt HĐĐT.",
+    };
+  }
+
+  revalidateSurfacePath("/settings/general");
+  return { success: true, data: { profileId: data } };
 }

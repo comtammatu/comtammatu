@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { TextField, valuesToFormData } from "@/components/form";
 import { SettingsFormSection } from "@/components/settings-form-section";
 import { messages } from "@lib/messages";
-import { updateTenantIdentity } from "./actions";
+import { activateInvoiceProfile, updateTenantIdentity } from "./actions";
 
 const copy = messages.settings.general;
 
@@ -20,8 +22,8 @@ const identitySchema = z.object({
   tax_code: z
     .string()
     .trim()
-    .refine((v) => !v || /^\d{10}(-?\d{3})?$/.test(v), {
-      error: "Mã số thuế phải là 10 hoặc 13 chữ số",
+    .refine((v) => !v || /^\d{10}(-\d{3})?$/.test(v), {
+      error: "Mã số thuế phải là 10 chữ số hoặc 13 chữ số có dấu gạch nối",
     }),
   legal_address: z.string().trim(),
   representative: z.string().trim(),
@@ -31,25 +33,46 @@ type IdentityFormValues = z.infer<typeof identitySchema>;
 
 interface SettingsFormProps {
   identity: IdentityFormValues;
+  invoiceProfile: {
+    id: number;
+    version: number;
+    template_code: string;
+    invoice_series: string;
+    status: string;
+    seller_tax_code: string | null;
+  } | null;
 }
 
-export function SettingsForm({ identity }: SettingsFormProps) {
+export function SettingsForm({ identity, invoiceProfile }: SettingsFormProps) {
+  const router = useRouter();
   const [isIdentityPending, startIdentityTransition] = useTransition();
+  const [isActivationPending, startActivationTransition] = useTransition();
   const [identityError, setIdentityError] = useState<string | null>(null);
+  const [activationError, setActivationError] = useState<string | null>(null);
 
-  const identityForm = useForm<
-    IdentityFormValues,
-    unknown,
-    IdentityFormValues
-  >({
-    resolver: zodResolver(identitySchema),
-    defaultValues: {
-      legal_name: identity.legal_name,
-      tax_code: identity.tax_code,
-      legal_address: identity.legal_address,
-      representative: identity.representative,
+  const identityForm = useForm<IdentityFormValues, unknown, IdentityFormValues>(
+    {
+      resolver: zodResolver(identitySchema),
+      defaultValues: {
+        legal_name: identity.legal_name,
+        tax_code: identity.tax_code,
+        legal_address: identity.legal_address,
+        representative: identity.representative,
+      },
     },
-  });
+  );
+  const currentIdentity = identityForm.watch();
+  const identityComplete =
+    currentIdentity.legal_name.trim() !== "" &&
+    /^\d{10}(-\d{3})?$/.test(currentIdentity.tax_code.trim()) &&
+    currentIdentity.legal_address.trim() !== "" &&
+    currentIdentity.representative.trim() !== "";
+  const identitySaved = !identityForm.formState.isDirty;
+  const canActivate =
+    invoiceProfile?.status === "draft" &&
+    identityComplete &&
+    identitySaved &&
+    !isActivationPending;
 
   function onIdentityValid(values: IdentityFormValues) {
     startIdentityTransition(async () => {
@@ -60,7 +83,40 @@ export function SettingsForm({ identity }: SettingsFormProps) {
         setIdentityError(result.error ?? ERRORS_VI.fallback);
         return;
       }
+      identityForm.reset(values);
       toast.success(copy.identitySaved);
+    });
+  }
+
+  async function onActivateInvoiceProfile() {
+    if (!invoiceProfile) return;
+    const confirmed = await confirm({
+      title: copy.activationConfirmTitle,
+      description: copy.activationConfirmDescription,
+      confirmText: copy.activateInvoiceProfile,
+      details: [
+        { label: copy.taxCodeLabel, value: currentIdentity.tax_code },
+        {
+          label: copy.templateCodeLabel,
+          value: invoiceProfile.template_code,
+        },
+        {
+          label: copy.invoiceSeriesLabel,
+          value: invoiceProfile.invoice_series,
+        },
+      ],
+    });
+    if (!confirmed) return;
+
+    startActivationTransition(async () => {
+      setActivationError(null);
+      const result = await activateInvoiceProfile({});
+      if (!result.success) {
+        setActivationError(result.error ?? ERRORS_VI.fallback);
+        return;
+      }
+      toast.success(copy.invoiceProfileActivated);
+      router.refresh();
     });
   }
 
@@ -105,11 +161,71 @@ export function SettingsForm({ identity }: SettingsFormProps) {
       )}
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={isIdentityPending}>
+        <Button
+          type="submit"
+          disabled={isIdentityPending || !identityForm.formState.isDirty}
+        >
           {isIdentityPending && <Spinner className="mr-2" />}
           {copy.saveIdentity}
         </Button>
       </div>
+
+      <SettingsFormSection
+        title={copy.invoiceProfileTitle}
+        description={copy.invoiceProfileDescription}
+      >
+        {invoiceProfile ? (
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <p className="text-muted-foreground">{copy.templateCodeLabel}</p>
+              <p className="font-medium">{invoiceProfile.template_code}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">{copy.invoiceSeriesLabel}</p>
+              <p className="font-medium">{invoiceProfile.invoice_series}</p>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="text-muted-foreground">{copy.profileStatusLabel}</p>
+              <p className="font-medium">
+                {invoiceProfile.status === "active"
+                  ? copy.profileStatusActive
+                  : copy.profileStatusDraft}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-destructive" role="alert">
+            {copy.invoiceProfileMissing}
+          </p>
+        )}
+
+        {invoiceProfile?.status === "draft" && (
+          <>
+            <p className="text-sm text-muted-foreground">
+              {!identityComplete
+                ? copy.activationRequiresIdentity
+                : !identitySaved
+                  ? copy.activationSaveFirst
+                  : copy.activationReady}
+            </p>
+            {activationError && (
+              <p className="text-sm text-destructive" role="alert">
+                {activationError}
+              </p>
+            )}
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                disabled={!canActivate}
+                onClick={onActivateInvoiceProfile}
+              >
+                {isActivationPending && <Spinner className="mr-2" />}
+                {copy.activateInvoiceProfile}
+              </Button>
+            </div>
+          </>
+        )}
+      </SettingsFormSection>
     </form>
   );
 }

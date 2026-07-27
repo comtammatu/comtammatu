@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft as IconArrowLeft,
@@ -10,20 +10,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
   ItemContent,
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
@@ -58,19 +50,22 @@ export function BranchStocktakeNewClient({
   const router = useRouter();
   const stocktakeBasePath = `/br/${branchId}/stock/stocktake`;
   const [mode, setMode] = useState<StocktakeMode>("daily");
-  const [locationId, setLocationId] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
   const modeMeta = getModeMeta(mode);
-  const selectedLocation = useMemo(
-    () => locations.find((location) => location.id === locationId) ?? null,
-    [locationId, locations],
-  );
+  const selectedWarehouse =
+    locations.find((location) => location.kind === "warehouse") ??
+    locations[0] ??
+    null;
 
   function submit() {
+    if (!selectedWarehouse) {
+      toast.error(stocktakeCopy.warehouseRequired);
+      return;
+    }
     startTransition(async () => {
       const result = await startStocktake({
         branchId,
-        locationId: locationId ?? undefined,
+        locationId: selectedWarehouse.id,
         mode,
       });
       if (!result.success || !result.data) {
@@ -143,39 +138,6 @@ export function BranchStocktakeNewClient({
           >
             <StocktakeModeSelector value={mode} onChange={setMode} />
 
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <Label>{stocktakeCopy.locationOptional}</Label>
-              <Select
-                value={locationId === null ? "__all__" : String(locationId)}
-                onValueChange={(value) =>
-                  setLocationId(value === "__all__" ? null : Number(value))
-                }
-              >
-                <SelectTrigger
-                  aria-label={stocktakeCopy.locationOptional}
-                  size="touch"
-                  className="w-full"
-                >
-                  <SelectValue placeholder={stocktakeCopy.allLocations} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" size="touch">
-                    {stocktakeCopy.allLocations}
-                  </SelectItem>
-                  {locations.map((location) => (
-                    <SelectItem
-                      key={location.id}
-                      value={String(location.id)}
-                      size="touch"
-                    >
-                      {location.name}
-                      {location.kind ? ` · ${location.kind}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <Item variant="outline" size="sm">
               <ItemContent className="min-w-0 flex-1">
                 <ItemTitle className="text-sm font-medium">
@@ -205,8 +167,8 @@ export function BranchStocktakeNewClient({
                 { label: "Chi nhánh", value: branchName },
                 { label: stocktakeCopy.mode, value: mode },
                 {
-                  label: stocktakeCopy.location,
-                  value: selectedLocation?.name ?? stocktakeCopy.allLocations,
+                  label: messages.inventory.stock.filters.locationWarehouse,
+                  value: selectedWarehouse?.name ?? "—",
                 },
                 {
                   label: stocktakeCopy.blindMode,

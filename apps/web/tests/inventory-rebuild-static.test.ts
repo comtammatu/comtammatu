@@ -268,14 +268,9 @@ test.skip("stock and inventory value include branch kitchen stock locations", ()
     "app/(protected)/inventory/stock/stock-location-breakdown.tsx",
   );
   assert.match(stockModel, /locationBreakdown\?: StockLocationBreakdown/);
-  assert.match(
-    stockModel,
-    /type StockLocationFilter = "all" \| "warehouse" \| "kitchen"/,
-  );
-  assert.match(stockClient, /locationFilterOptions/);
-  assert.match(stockModel, /scopeStockIngredientToLocation/);
-  assert.match(stockModel, /row\.locationKind === location/);
-  assert.match(stockClient, /locationFilterControl/);
+  assert.doesNotMatch(stockClient, /locationFilterOptions/);
+  assert.doesNotMatch(stockClient, /locationFilterControl/);
+  assert.doesNotMatch(branchStockClient, /locationFilterOptions/);
   assert.match(stockClient, /StockLocationBreakdownLine/);
   assert.match(stockMessages, /locationWarehouse: "Kho"/);
   assert.match(stockMessages, /locationKitchen: "Bếp"/);
@@ -311,6 +306,18 @@ test.skip("stock and inventory value include branch kitchen stock locations", ()
     /INSERT INTO public\.stock_levels[\s\S]*current_quantity[\s\S]*SELECT[\s\S]*0,/,
     "cleanup migration should seed zero kitchen stock rows without changing quantities",
   );
+});
+
+test("stock never exposes a location filter", () => {
+  const stockClient = readWeb(
+    "app/(protected)/inventory/stock/stock-client.tsx",
+  );
+  const branchStockClient = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
+  );
+
+  assert.doesNotMatch(stockClient, /locationFilterOptions|locationFilterControl/);
+  assert.doesNotMatch(branchStockClient, /locationFilterOptions|locationFilterControl/);
 });
 
 test.skip("finance gross profit uses actual approved consumption, not mv_food_cost", () => {

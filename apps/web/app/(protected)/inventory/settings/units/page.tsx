@@ -5,6 +5,7 @@ import { UNITS_MASTER_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { messages } from "@lib/messages";
 import { fetchUnits, type UnitRow } from "./units-actions";
 import { UnitsClient } from "./units-client";
+import { InventoryListFrame } from "../../_components/inventory-list-frame";
 
 const copy = messages.inventoryMaster.units;
 
@@ -23,7 +24,7 @@ export default async function InventoryUnitsPage() {
   return (
     <div className="flex flex-col gap-4">
       <AppPageHeader
-        eyebrow={copy.page.eyebrow}
+        eyebrow={messages.inventory.shell.moduleName}
         title={copy.page.title}
         description={copy.page.description}
       />
@@ -31,10 +32,12 @@ export default async function InventoryUnitsPage() {
       {res.success ? (
         <UnitsClient rows={rows} />
       ) : (
-        <AppEmptyState
-          mode="error"
-          title={messages.inventory.settings.units.loadFailed}
-        />
+        <InventoryListFrame>
+          <AppEmptyState
+            mode="error"
+            title={messages.inventory.settings.units.loadFailed}
+          />
+        </InventoryListFrame>
       )}
     </div>
   );

@@ -51,6 +51,7 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { Ban as IconBan } from "lucide-react";
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 
 export interface StocktakeSessionRow {
   id: number;
@@ -273,87 +274,96 @@ export function StocktakeListClient({
           actions={stocktakeAction}
         />
       )}
-      <AppToolbar
-        variant={embedded ? "inline" : "card"}
-        search={
-          <InputGroup className="h-12 w-full sm:h-10">
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              aria-label={messages.inventory.stocktake.searchPlaceholder}
-              placeholder={messages.inventory.stocktake.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              inputMode="search"
-            />
-          </InputGroup>
-        }
-        filters={
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger
-              size={embedded ? "touch" : "default"}
-              className={embedded ? "w-full" : "min-w-44"}
-            >
-              <SelectValue
-                placeholder={messages.inventory.stocktake.statusPlaceholder}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {messages.inventory.stocktake.allStatuses}
-              </SelectItem>
-              <SelectItem value="in_progress">
-                {messages.inventory.stocktake.inProgressCount(
-                  statusCounts["in_progress"] ?? 0,
-                )}
-              </SelectItem>
-              <SelectItem value="completed">
-                {messages.inventory.stocktake.completedCount(
-                  statusCounts["completed"] ?? 0,
-                )}
-              </SelectItem>
-              <SelectItem value="cancelled">
-                {messages.inventory.stocktake.cancelledCount(
-                  statusCounts["cancelled"] ?? 0,
-                )}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        }
-        reset={
-          rows.length > 0 ? (
-            <Badge variant="outline" className="rounded-full">
-              {filtered.length}/{rows.length}
-            </Badge>
-          ) : undefined
-        }
-      />
-
-      <DataTable
-        columns={columns}
-        data={filtered}
-        pageSize={50}
-        getRowKey={(r) => r.id}
-        emptyTitle={
-          isFiltered
-            ? messages.inventory.stocktake.noSessionsMatched
-            : messages.inventory.stocktake.noSessions
-        }
-        emptyDescription={
-          isFiltered ? undefined : messages.inventory.stocktake.noSessionsHint
-        }
-        emptyMode={isFiltered ? "no-results" : "no-data"}
-        emptyIcon={<IconClipboardCheck />}
-        mobileCardRender={(r) => (
-          <StocktakeSessionCard
-            row={r}
-            routeBase={routeBase}
-            onOpenDrawer={setDrawerRow}
+      <InventoryListFrame
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            search={
+              <InputGroup
+                size={embedded ? "touch" : "field"}
+                className="w-full"
+              >
+                <InputGroupAddon>
+                  <IconSearch />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="search"
+                  aria-label={messages.inventory.stocktake.searchPlaceholder}
+                  placeholder={messages.inventory.stocktake.searchPlaceholder}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  inputMode="search"
+                />
+              </InputGroup>
+            }
+            filters={
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger
+                  size={embedded ? "touch" : "field"}
+                  className={embedded ? "w-full" : "min-w-44"}
+                >
+                  <SelectValue
+                    placeholder={messages.inventory.stocktake.statusPlaceholder}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {messages.inventory.stocktake.allStatuses}
+                  </SelectItem>
+                  <SelectItem value="in_progress">
+                    {messages.inventory.stocktake.inProgressCount(
+                      statusCounts["in_progress"] ?? 0,
+                    )}
+                  </SelectItem>
+                  <SelectItem value="completed">
+                    {messages.inventory.stocktake.completedCount(
+                      statusCounts["completed"] ?? 0,
+                    )}
+                  </SelectItem>
+                  <SelectItem value="cancelled">
+                    {messages.inventory.stocktake.cancelledCount(
+                      statusCounts["cancelled"] ?? 0,
+                    )}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            }
+            reset={
+              rows.length > 0 ? (
+                <Badge variant="outline" className="rounded-full">
+                  {filtered.length}/{rows.length}
+                </Badge>
+              ) : undefined
+            }
           />
-        )}
-      />
+        }
+      >
+        <DataTable
+          columns={columns}
+          data={filtered}
+          pageSize={50}
+          getRowKey={(r) => r.id}
+          emptyTitle={
+            isFiltered
+              ? messages.inventory.stocktake.noSessionsMatched
+              : messages.inventory.stocktake.noSessions
+          }
+          emptyDescription={
+            isFiltered
+              ? undefined
+              : messages.inventory.stocktake.noSessionsHint
+          }
+          emptyMode={isFiltered ? "no-results" : "no-data"}
+          emptyIcon={<IconClipboardCheck />}
+          mobileCardRender={(r) => (
+            <StocktakeSessionCard
+              row={r}
+              routeBase={routeBase}
+              onOpenDrawer={setDrawerRow}
+            />
+          )}
+        />
+      </InventoryListFrame>
       <Drawer
         open={!!drawerRow}
         onOpenChange={(open) => !open && setDrawerRow(null)}

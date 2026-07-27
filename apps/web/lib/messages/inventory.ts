@@ -707,7 +707,6 @@ export const inventory = {
     filters: {
       all: "Tất cả",
       allStatuses: "Mọi trạng thái",
-      allLocations: "Mọi vị trí",
       allCategories: "Mọi danh mục",
       inStock: "Còn hàng",
       low: "Thấp",
@@ -716,7 +715,6 @@ export const inventory = {
       categoryPlaceholder: "Danh mục",
       noCategory: "Chưa phân loại",
       statusPlaceholder: "Trạng thái",
-      locationPlaceholder: "Vị trí",
       locationWarehouse: "Kho",
       locationKitchen: "Bếp",
       searchPlaceholder: "Tìm nhanh: tên hoặc SKU",
@@ -1415,8 +1413,7 @@ export const inventory = {
       "Chọn chế độ và chi nhánh. Hệ thống sẽ tạo danh sách theo phân hạng ABC.",
     startLoadFailed: "Không thể tải dữ liệu để bắt đầu kiểm kê.",
     modeTitle: "Chế độ kiểm kê",
-    locationOptional: "Vị trí kho (tuỳ chọn)",
-    allLocations: "Tất cả vị trí kho",
+    warehouseRequired: "Chi nhánh chưa có kho để kiểm kê.",
     blindMode: "Đếm mù",
     defaultByMode: (state: string) =>
       `Mặc định theo chế độ: ${state}. Thay đổi qua chính sách kiểm kê (có lưu vết).`,

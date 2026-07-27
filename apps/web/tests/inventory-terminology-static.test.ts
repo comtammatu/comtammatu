@@ -55,7 +55,7 @@ test("stock value surfaces use avg cost then reference cost fallback", () => {
 
   assert.match(listSource, /inventoryLineValue/);
   assert.match(listSource, /ingredients \( unit_cost \)/);
-  assert.match(modelSource, /row\.avgUnitCost \?\? ingredient\.referenceCost/);
+  assert.match(listSource, /stock\?\.avgUnitCost \?\? referenceCost/);
   assert.match(detailSource, /movementUnitCost/);
   assert.doesNotMatch(detailSource, /stockCopy\.table\.wac:\{" "\}/);
 });

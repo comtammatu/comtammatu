@@ -29,6 +29,7 @@ import {
 } from "@/components/data-table/data-table";
 import { FormDialog, TextField } from "@/components/form";
 import { messages } from "@lib/messages";
+import { InventoryListFrame } from "../../_components/inventory-list-frame";
 import {
   createUnit,
   deleteUnit,
@@ -267,33 +268,33 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
         </div>
       </AppSection>
 
-      <AppSection
+      <InventoryListFrame
         title={copy.packaging.title}
         description={copy.packaging.description}
-        contentFlush
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            actions={
+              <div className="flex flex-wrap items-center gap-3">
+                <Field orientation="horizontal" className="w-auto">
+                  <FieldLabel htmlFor="units-show-inactive">
+                    {copy.showInactive}
+                  </FieldLabel>
+                  <Switch
+                    id="units-show-inactive"
+                    checked={showInactive}
+                    onCheckedChange={setShowInactive}
+                  />
+                </Field>
+                <Button size="touch" onClick={openCreate}>
+                  <IconPlus data-icon="inline-start" />
+                  {copy.add}
+                </Button>
+              </div>
+            }
+          />
+        }
       >
-        <AppToolbar
-          variant="inline"
-          actions={
-            <div className="flex flex-wrap items-center gap-3">
-              <Field orientation="horizontal" className="w-auto">
-                <FieldLabel htmlFor="units-show-inactive">
-                  {copy.showInactive}
-                </FieldLabel>
-                <Switch
-                  id="units-show-inactive"
-                  checked={showInactive}
-                  onCheckedChange={setShowInactive}
-                />
-              </Field>
-              <Button size="touch" onClick={openCreate}>
-                <IconPlus data-icon="inline-start" />
-                {copy.add}
-              </Button>
-            </div>
-          }
-        />
-
         <DataTable
           columns={columns}
           data={packagingRows}
@@ -316,7 +317,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
             </Item>
           )}
         />
-      </AppSection>
+      </InventoryListFrame>
 
       <FormDialog
         open={dialogOpen}

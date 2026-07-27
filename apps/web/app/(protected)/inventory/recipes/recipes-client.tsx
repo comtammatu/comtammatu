@@ -3,9 +3,19 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil as IconPencil, Plus as IconPlus } from "lucide-react";
+import {
+  Pencil as IconPencil,
+  Plus as IconPlus,
+  Search as IconSearch,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -25,7 +35,7 @@ import {
   AppPage,
   AppPageHeader,
   AppEmptyState,
-  AppSection,
+  AppToolbar,
 } from "@/components/surface";
 import { formatVND } from "@lib/inventory/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
@@ -35,6 +45,7 @@ import type {
   RecipeLineDraft,
 } from "./recipe-line-dialog";
 import { messages } from "@lib/messages";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 
 export type RecipeItem = {
   ingredientId: number;
@@ -70,6 +81,7 @@ export function RecipesClient({
   loadError?: string | null;
 }) {
   const router = useRouter();
+  const isTouchLayout = useIsMobile();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMenuItemId, setEditingMenuItemId] = useState<
     number | undefined
@@ -214,6 +226,34 @@ export function RecipesClient({
     );
   }
 
+  const listToolbar = (
+    <AppToolbar
+      variant="inline"
+      search={
+        <InputGroup
+          size={isTouchLayout ? "touch" : "field"}
+          className="min-w-0 flex-1 sm:min-w-72"
+        >
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            aria-label={INVENTORY_VI.recipeSearchPlaceholder}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={INVENTORY_VI.recipeSearchPlaceholder}
+          />
+        </InputGroup>
+      }
+      reset={
+        <Badge variant="outline">
+          {filteredRecipes.length}/{recipes.length}
+        </Badge>
+      }
+    />
+  );
+
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
@@ -226,14 +266,10 @@ export function RecipesClient({
           </Button>
         }
       />
-      <AppSection className="overflow-hidden" contentFlush>
+      <InventoryListFrame toolbar={listToolbar}>
         <DataTable
           columns={columns}
           data={filteredRecipes}
-          searchable
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder={INVENTORY_VI.recipeSearchPlaceholder}
           pageSize={25}
           getRowKey={(recipe) => recipe.id}
           emptyTitle={
@@ -255,7 +291,7 @@ export function RecipesClient({
             />
           )}
         />
-      </AppSection>
+      </InventoryListFrame>
 
       <RecipeLineDialog
         open={dialogOpen}

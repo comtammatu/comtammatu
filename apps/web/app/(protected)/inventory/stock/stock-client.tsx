@@ -48,7 +48,6 @@ import {
   type StockActionPermissions,
   type StockFilter,
   type StockIngredient,
-  type StockLocationFilter,
   type StockWorkSummary,
 } from "@lib/inventory/stock-on-hand-model";
 import {
@@ -70,6 +69,7 @@ import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
 import { StockLocationBreakdownLine } from "./stock-location-breakdown";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -105,11 +105,6 @@ const stockFilterOptions: { value: StockFilter; label: string }[] = [
   { value: "in_stock", label: stockCopy.filters.inStock },
   { value: "low", label: stockCopy.filters.low },
   { value: "out", label: stockCopy.filters.out },
-];
-
-const locationFilterOptions: { value: StockLocationFilter; label: string }[] = [
-  { value: "all", label: stockCopy.filters.allLocations },
-  { value: "warehouse", label: stockCopy.filters.locationWarehouse },
 ];
 
 // Two-line stock quantity: largest unit on top (emphasis class from caller),
@@ -240,8 +235,6 @@ export function StockClient({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
-  const [locationFilter, setLocationFilter] =
-    useState<StockLocationFilter>("all");
   const [adjustTarget, setAdjustTarget] = useState<StockIngredient | null>(
     null,
   );
@@ -256,13 +249,12 @@ export function StockClient({
 
   const filters = {
     category: activeCategory,
-    location: locationFilter,
     query: searchQuery,
     status: stockFilter,
   } as const;
   const filtered = useMemo(
     () => filterStockOnHandIngredients(ingredients, filters),
-    [ingredients, activeCategory, stockFilter, searchQuery, locationFilter],
+    [ingredients, activeCategory, stockFilter, searchQuery],
   );
   const filtersActive = hasStockOnHandFilters(filters);
 
@@ -375,26 +367,6 @@ export function StockClient({
 
     return rowActions;
   };
-  const locationFilterControl = (
-    <Select
-      value={locationFilter}
-      onValueChange={(v) => setLocationFilter(v as StockLocationFilter)}
-    >
-      <SelectTrigger
-        size={isCompactLayout ? "touch" : "default"}
-        className={isCompactLayout ? "w-full" : "min-w-32"}
-      >
-        <SelectValue placeholder={stockCopy.filters.locationPlaceholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {locationFilterOptions.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
   const stockColumns: DataTableColumn<StockIngredient>[] = [
     {
       key: "ingredient",
@@ -592,8 +564,6 @@ export function StockClient({
           ))}
         </SelectContent>
       </Select>
-
-      {locationFilterControl}
     </>
   );
 
@@ -813,6 +783,50 @@ export function StockClient({
     </InteractiveCard>
   );
 
+  const stockToolbar = (
+    <AppToolbar
+      variant={isCompactLayout ? "card" : "inline"}
+      search={
+        isCompactLayout ? (
+          searchControl
+        ) : (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            {searchControl}
+            {filterControls}
+            {underThresholdButton}
+          </div>
+        )
+      }
+      actions={
+        isCompactLayout ? (
+          primaryReceiveAction
+        ) : (
+          <>
+            {primaryReceiveAction}
+            {desktopSecondaryActionsDropdown}
+          </>
+        )
+      }
+      reset={resultCountBadge}
+    />
+  );
+
+  const firstLoadEmptyState = (
+    <AppEmptyState
+      compact={!isCompactLayout}
+      title={stockCopy.empty.firstLoadTitle}
+      description={stockCopy.empty.firstLoadHint}
+      symbol="riceGrain"
+    >
+      {actionPermissions.canReceiveGrn && actionHrefs.receive ? (
+        <Button size="sm" render={<Link href={actionHrefs.receive} />}>
+          <IconTruck className="size-4" />
+          {stockCopy.actions.receiveGrn}
+        </Button>
+      ) : null}
+    </AppEmptyState>
+  );
+
   const content = (
     <>
       <AppPageHeader
@@ -846,110 +860,79 @@ export function StockClient({
         }
       />
 
-      <AppToolbar
-        variant="card"
-        search={
-          isCompactLayout ? (
-            searchControl
-          ) : (
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              {searchControl}
-              {filterControls}
-              {underThresholdButton}
-            </div>
-          )
-        }
-        actions={
-          isCompactLayout ? (
-            primaryReceiveAction
-          ) : (
-            <>
-              {primaryReceiveAction}
-              {desktopSecondaryActionsDropdown}
-            </>
-          )
-        }
-        reset={resultCountBadge}
-      />
-
       {isCompactLayout ? (
-        <AppSection
-          title={stockCopy.filters.controlsTitle}
-          badge={{
-            children: `${filtered.length}/${ingredients.length}`,
-            variant: "outline",
-          }}
-          size="sm"
-          collapsible
-          defaultOpen={false}
-        >
-          {underThresholdButton}
-          <div className="grid gap-2 sm:grid-cols-2">{filterControls}</div>
-          <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
-        </AppSection>
-      ) : null}
-
-      {isFirstLoadEmpty ? (
-        <AppEmptyState
-          title={stockCopy.empty.firstLoadTitle}
-          description={stockCopy.empty.firstLoadHint}
-          symbol="riceGrain"
-        >
-          {actionPermissions.canReceiveGrn && actionHrefs.receive ? (
-            <Button size="sm" render={<Link href={actionHrefs.receive} />}>
-              <IconTruck className="size-4" />
-              {stockCopy.actions.receiveGrn}
-            </Button>
-          ) : null}
-        </AppEmptyState>
-      ) : isCompactLayout ? (
-        <div className="flex flex-col gap-2">
-          {filtered.length === 0 ? (
-            <AppEmptyState
-              compact
-              title={
+        <>
+          {stockToolbar}
+          <AppSection
+            title={stockCopy.filters.controlsTitle}
+            badge={{
+              children: `${filtered.length}/${ingredients.length}`,
+              variant: "outline",
+            }}
+            size="sm"
+            collapsible
+            defaultOpen={false}
+          >
+            {underThresholdButton}
+            <div className="grid gap-2 sm:grid-cols-2">{filterControls}</div>
+            <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
+          </AppSection>
+          {isFirstLoadEmpty ? (
+            firstLoadEmptyState
+          ) : (
+            <div className="flex flex-col gap-2">
+              {filtered.length === 0 ? (
+                <AppEmptyState
+                  compact
+                  title={
+                    searchQuery.trim()
+                      ? stockCopy.empty.search
+                      : stockCopy.empty.noData
+                  }
+                  description={
+                    searchQuery.trim()
+                      ? stockCopy.empty.searchDescription
+                      : stockCopy.empty.noDataDescription
+                  }
+                  symbol="riceGrain"
+                />
+              ) : (
+                filtered.map((item) => renderStockMobileCard(item))
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <InventoryListFrame toolbar={stockToolbar}>
+          {isFirstLoadEmpty ? (
+            firstLoadEmptyState
+          ) : (
+            <DataTable
+              columns={stockColumns}
+              data={filtered}
+              pageSize={25}
+              getRowKey={(item) => item.id}
+              emptyTitle={
                 searchQuery.trim()
                   ? stockCopy.empty.search
                   : stockCopy.empty.noData
               }
-              description={
+              emptyDescription={
                 searchQuery.trim()
                   ? stockCopy.empty.searchDescription
                   : stockCopy.empty.noDataDescription
               }
-              symbol="riceGrain"
+              emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
+              renderRowContextMenu={(item) => (
+                <RowActionsContextMenuItems items={getStockRowActions(item)} />
+              )}
+              getRowDataState={(item) =>
+                openActionRowId === item.id ? "selected" : undefined
+              }
+              mobileCardRender={(item) => renderStockMobileCard(item)}
             />
-          ) : (
-            filtered.map((item) => renderStockMobileCard(item))
           )}
-        </div>
-      ) : (
-        <AppSection className="overflow-hidden" contentFlush>
-          <DataTable
-            columns={stockColumns}
-            data={filtered}
-            pageSize={25}
-            getRowKey={(item) => item.id}
-            emptyTitle={
-              searchQuery.trim()
-                ? stockCopy.empty.search
-                : stockCopy.empty.noData
-            }
-            emptyDescription={
-              searchQuery.trim()
-                ? stockCopy.empty.searchDescription
-                : stockCopy.empty.noDataDescription
-            }
-            emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
-            renderRowContextMenu={(item) => (
-              <RowActionsContextMenuItems items={getStockRowActions(item)} />
-            )}
-            getRowDataState={(item) =>
-              openActionRowId === item.id ? "selected" : undefined
-            }
-            mobileCardRender={(item) => renderStockMobileCard(item)}
-          />
-        </AppSection>
+        </InventoryListFrame>
       )}
 
       {adjustTarget ? (

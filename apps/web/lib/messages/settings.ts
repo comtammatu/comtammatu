@@ -267,6 +267,25 @@ export const settings = {
     representativeLabel: "Người đại diện",
     saveIdentity: "Lưu định danh",
     identitySaved: "Đã lưu định danh doanh nghiệp",
+    invoiceProfileTitle: "Phát hành HĐĐT Viettel",
+    invoiceProfileDescription:
+      "Mẫu số và ký hiệu được lưu cùng hồ sơ phát hành; mã số thuế lấy từ định danh doanh nghiệp.",
+    templateCodeLabel: "Mẫu số",
+    invoiceSeriesLabel: "Ký hiệu",
+    profileStatusLabel: "Trạng thái",
+    profileStatusDraft: "Chờ kích hoạt",
+    profileStatusActive: "Đã kích hoạt",
+    invoiceProfileMissing: "Chưa có cấu hình HĐĐT để kích hoạt.",
+    activationRequiresIdentity:
+      "Nhập đủ tên pháp lý, mã số thuế, địa chỉ và người đại diện.",
+    activationSaveFirst: "Lưu thay đổi định danh trước khi kích hoạt.",
+    activationReady:
+      "Sau khi kích hoạt, cấu hình này sẽ được dùng cho hóa đơn mới.",
+    activateInvoiceProfile: "Kích hoạt HĐĐT",
+    activationConfirmTitle: "Xác nhận kích hoạt HĐĐT",
+    activationConfirmDescription:
+      "Kiểm tra đúng mã số thuế, mẫu số và ký hiệu trước khi kích hoạt.",
+    invoiceProfileActivated: "Đã kích hoạt HĐĐT",
   },
   payments: {
     saved: "Đã lưu cài đặt thanh toán",

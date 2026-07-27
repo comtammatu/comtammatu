@@ -1,4 +1,3 @@
-import { formatVNDate } from "@comtammatu/shared/time";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
@@ -8,7 +7,6 @@ export const STOCK_NO_CATEGORY_VALUE = "__none__";
 
 export type StockStatus = "normal" | "low" | "out";
 export type StockFilter = "all" | "in_stock" | "low" | "out";
-export type StockLocationFilter = "all" | "warehouse" | "kitchen";
 
 export type StockLocationBreakdown = {
   locationId: number;
@@ -66,7 +64,6 @@ export interface StockOnHandPageData {
 
 export interface StockOnHandFilters {
   category: string;
-  location: StockLocationFilter;
   query: string;
   status: StockFilter;
 }
@@ -113,39 +110,6 @@ export function shouldShowStockLocationBreakdown(
   );
 }
 
-export function scopeStockIngredientToLocation(
-  ingredient: StockIngredient,
-  location: StockLocationFilter,
-): StockIngredient {
-  if (location === "all") return ingredient;
-
-  const rows =
-    ingredient.locationBreakdown?.filter(
-      (row) => row.locationKind === location,
-    ) ?? [];
-  const qty = rows.reduce((sum, row) => sum + row.qty, 0);
-  const costBasis = rows.reduce(
-    (sum, row) => sum + row.qty * (row.avgUnitCost ?? ingredient.referenceCost),
-    0,
-  );
-  const latestCount = rows
-    .map((row) => row.lastCountedAt)
-    .filter((value): value is string => Boolean(value))
-    .sort()
-    .at(-1);
-
-  return {
-    ...ingredient,
-    qty,
-    cost: qty > 0 ? costBasis / qty : ingredient.cost,
-    status: computeStockStatus(qty, ingredient.min),
-    lastCount: latestCount
-      ? formatVNDate(latestCount)
-      : messages.inventory.common.noValue,
-    locationBreakdown: rows,
-  };
-}
-
 export function getStockOnHandCategories(ingredients: StockIngredient[]) {
   const categories = [
     ...new Set(
@@ -164,8 +128,7 @@ export function hasStockOnHandFilters(filters: StockOnHandFilters): boolean {
   return (
     filters.query.trim() !== "" ||
     filters.category !== STOCK_ALL_CATEGORY_VALUE ||
-    filters.status !== "all" ||
-    filters.location !== "all"
+    filters.status !== "all"
   );
 }
 
@@ -185,9 +148,7 @@ export function filterStockOnHandIngredients(
   ingredients: StockIngredient[],
   filters: StockOnHandFilters,
 ): StockIngredient[] {
-  let result = ingredients.map((ingredient) =>
-    scopeStockIngredientToLocation(ingredient, filters.location),
-  );
+  let result = [...ingredients];
 
   if (filters.category === STOCK_NO_CATEGORY_VALUE) {
     result = result.filter((ingredient) => !ingredient.category);

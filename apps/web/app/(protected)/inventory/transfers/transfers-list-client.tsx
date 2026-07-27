@@ -15,6 +15,7 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   InputGroup,
   InputGroupAddon,
@@ -37,7 +38,6 @@ import type { BranchForTransfer } from "@lib/inventory/transfer-create-model";
 import {
   AppPage,
   AppPageHeader,
-  AppSection,
   AppToolbar,
 } from "@/components/surface";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
@@ -49,6 +49,7 @@ import {
   type TransferListRow,
   type TransferTab,
 } from "./transfer-list-model";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer };
@@ -86,6 +87,7 @@ export function TransfersListClient({
   pageTitle?: string;
   embedded?: boolean;
 }) {
+  const isTouchLayout = useIsMobile();
   const isOwner = userRole === "owner";
   const userBranchKind =
     userBranchId == null
@@ -265,7 +267,10 @@ export function TransfersListClient({
       variant="inline"
       className="items-stretch sm:items-center"
       search={
-        <InputGroup className="min-h-10 w-full sm:h-10 sm:flex-1">
+        <InputGroup
+          size={isTouchLayout ? "touch" : "field"}
+          className="w-full sm:flex-1"
+        >
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -289,8 +294,8 @@ export function TransfersListClient({
           onValueChange={(value) => setActiveTab(value as TransferTab)}
         >
           <SelectTrigger
-            size="default"
-            className="min-h-10 w-full sm:h-10 sm:w-56"
+            size={isTouchLayout ? "touch" : "field"}
+            className="w-full sm:w-56"
           >
             <SelectValue />
           </SelectTrigger>
@@ -323,10 +328,9 @@ export function TransfersListClient({
     />
   );
   const desktopList = (
-    <AppSection className="overflow-hidden" contentFlush>
-      {desktopToolbar}
+    <InventoryListFrame toolbar={desktopToolbar}>
       {desktopTable}
-    </AppSection>
+    </InventoryListFrame>
   );
 
   if (embedded) {
