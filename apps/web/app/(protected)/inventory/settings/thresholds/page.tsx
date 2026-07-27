@@ -48,15 +48,13 @@ export default async function InventoryThresholdsPage() {
         description={copy.description}
       />
 
-      <InventoryListFrame>
-        {!res.success ? (
+      {!res.success ? (
+        <InventoryListFrame>
           <AppEmptyState mode="error" title={copy.loadFailed} />
-        ) : rows.length === 0 ? (
-          <AppEmptyState title={copy.empty} symbol="riceGrain" />
-        ) : (
-          <ThresholdsClient rows={rows} />
-        )}
-      </InventoryListFrame>
+        </InventoryListFrame>
+      ) : (
+        <ThresholdsClient rows={rows} />
+      )}
     </div>
   );
 }

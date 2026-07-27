@@ -212,6 +212,59 @@ export function GrnListClient({
     </Button>
   ) : null;
 
+  const listToolbar = (
+    <AppToolbar
+      variant="inline"
+      className="items-stretch max-sm:[&>[data-slot=separator]]:hidden max-sm:[&>[data-slot=toolbar-group]:first-child]:basis-full sm:items-center"
+      search={
+        <InputGroup
+          size={isTouchLayout ? "touch" : "field"}
+          className="w-full"
+        >
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            aria-label={INVENTORY_VI.grnSearchPlaceholder}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={INVENTORY_VI.grnSearchPlaceholder}
+            inputMode="search"
+          />
+        </InputGroup>
+      }
+      filters={
+        <Select
+          value={statusFilter}
+          onValueChange={(value) =>
+            setStatusFilter(value as GrnListStatusFilter)
+          }
+        >
+          <SelectTrigger
+            size={isTouchLayout ? "touch" : "field"}
+            className="w-full sm:w-44"
+          >
+            <SelectValue placeholder={FORM_VI.status} />
+          </SelectTrigger>
+          <SelectContent>
+            {statusFilterOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
+      bulk={
+        <Badge variant="outline">
+          {INVENTORY_VI.grnListCount(filtered.length)}
+        </Badge>
+      }
+      actions={withinOwnerTabs ? desktopActions : null}
+    />
+  );
+
   const listTable = grnsLoadFailed ? (
     <AppEmptyState
       compact
@@ -224,81 +277,32 @@ export function GrnListClient({
       </Button>
     </AppEmptyState>
   ) : (
-    <>
-      <AppToolbar
-        variant="inline"
-        className="items-stretch max-sm:[&>[data-slot=separator]]:hidden max-sm:[&>[data-slot=toolbar-group]:first-child]:basis-full sm:items-center"
-        search={
-          <InputGroup
-            size={isTouchLayout ? "touch" : "field"}
-            className="w-full"
-          >
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              aria-label={INVENTORY_VI.grnSearchPlaceholder}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={INVENTORY_VI.grnSearchPlaceholder}
-              inputMode="search"
-            />
-          </InputGroup>
-        }
-        filters={
-          <Select
-            value={statusFilter}
-            onValueChange={(value) =>
-              setStatusFilter(value as GrnListStatusFilter)
-            }
-          >
-            <SelectTrigger
-              size={isTouchLayout ? "touch" : "field"}
-              className="w-full sm:w-44"
-            >
-              <SelectValue placeholder={FORM_VI.status} />
-            </SelectTrigger>
-            <SelectContent>
-              {statusFilterOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        }
-        bulk={
-          <Badge variant="outline">
-            {INVENTORY_VI.grnListCount(filtered.length)}
-          </Badge>
-        }
-        actions={withinOwnerTabs ? desktopActions : null}
-      />
-
-      <DataTable
-        columns={grnColumns}
-        data={filtered}
-        getRowKey={(grn) => grn.id}
-        pageSize={50}
-        emptyTitle={
-          hasActiveFilters
-            ? INVENTORY_VI.grnNotFoundFiltered
-            : INVENTORY_VI.grnEmptyNoData
-        }
-        emptyMode={hasActiveFilters ? "no-results" : "no-data"}
-        emptyIcon={<IconReceipt className="size-5" />}
-        rowClassName={(grn) =>
-          grn.status === "cancelled" ? "opacity-60" : undefined
-        }
-        mobileCardRender={(grn) => (
-          <GrnMobileCard grn={grn} basePath={basePath} />
-        )}
-      />
-    </>
+    <DataTable
+      columns={grnColumns}
+      data={filtered}
+      getRowKey={(grn) => grn.id}
+      pageSize={50}
+      emptyTitle={
+        hasActiveFilters
+          ? INVENTORY_VI.grnNotFoundFiltered
+          : INVENTORY_VI.grnEmptyNoData
+      }
+      emptyMode={hasActiveFilters ? "no-results" : "no-data"}
+      emptyIcon={<IconReceipt className="size-5" />}
+      rowClassName={(grn) =>
+        grn.status === "cancelled" ? "opacity-60" : undefined
+      }
+      mobileCardRender={(grn) => (
+        <GrnMobileCard grn={grn} basePath={basePath} />
+      )}
+    />
   );
 
-  const listBody = <InventoryListFrame>{listTable}</InventoryListFrame>;
+  const listBody = (
+    <InventoryListFrame toolbar={grnsLoadFailed ? undefined : listToolbar}>
+      {listTable}
+    </InventoryListFrame>
+  );
 
   const draftsContent = draftsLoadFailed ? (
     <AppEmptyState

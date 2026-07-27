@@ -20,12 +20,12 @@ import {
 } from "@/components/data-table/data-table";
 import { FormDialog, QuantityField, QuantityInput } from "@/components/form";
 import { AppDetailFooter, AppToolbar } from "@/components/surface";
+import { InventoryListFrame } from "../../_components/inventory-list-frame";
 import { messages } from "@lib/messages";
 import { bulkUpdateIngredientThresholds } from "./actions";
 
 const copy = messages.inventory.settings.thresholds;
 const ariaSelectRowPrefix = "Chọn ";
-const emptyTitleLabel = "Chưa có nguyên liệu cần cấu hình ngưỡng";
 const invalidThresholdLabel = "Ngưỡng tồn phải là số không âm.";
 
 const bulkThresholdSchema = z.object({
@@ -180,25 +180,28 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
   ];
 
   return (
-    <div className="flex flex-col">
-      <AppToolbar variant="inline" className="justify-between">
-        <span className="text-xs text-muted-foreground">{copy.hint}</span>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={selected.size === 0}
-          onClick={() => setBulkOpen(true)}
-        >
-          {copy.bulk.applyTo(selected.size)}
-        </Button>
-      </AppToolbar>
-
+    <>
+    <InventoryListFrame
+      toolbar={
+        <AppToolbar variant="inline" className="justify-between">
+          <span className="text-xs text-muted-foreground">{copy.hint}</span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={selected.size === 0}
+            onClick={() => setBulkOpen(true)}
+          >
+            {copy.bulk.applyTo(selected.size)}
+          </Button>
+        </AppToolbar>
+      }
+    >
       <DataTable
         columns={columns}
         data={editable}
         getRowKey={(row) => row.id}
-        emptyTitle={emptyTitleLabel}
+        emptyTitle={copy.empty}
         emptyMode="no-data"
         rowClassName={(row) =>
           rowIsDirty(row)
@@ -265,6 +268,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
           </Button>
         }
       />
+    </InventoryListFrame>
 
       <FormDialog
         open={bulkOpen}
@@ -298,6 +302,6 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
           />
         )}
       </FormDialog>
-    </div>
+    </>
   );
 }

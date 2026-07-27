@@ -131,6 +131,13 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 - `AppToolbar` đứng trước `DataTable` khi filter, sort, branch, kỳ hoặc action
   là URL/server state của trang. Inline toolbar của `DataTable` chỉ dành cho
   state local của chính bảng; không dựng hai toolbar cho cùng một control.
+- Owner Inventory LIST dùng domain wrapper `InventoryListFrame`
+  (`AppSection` + `contentFlush` + slot `toolbar`):
+  `AppPage` → `AppPageHeader` → `InventoryListFrame toolbar={<AppToolbar variant="inline" />}`
+  → `DataTable`. Inline toolbar không tô nền riêng (`bg-muted/*`); cùng bề mặt
+  card với bảng. Desktop empty luôn qua `DataTable` (`TableHeader` +
+  `TableEmptyStateRow`), không swap sang `AppEmptyState` thay cả bảng (trừ
+  error/load-failed).
 - `AppLinkCard` cho navigation/action card.
 - `KpiRow` cho grid responsive (1/2/3/4 cột) bọc các `KpiCard` chỉ khi đó là
   metric/stat-value.

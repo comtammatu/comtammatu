@@ -253,9 +253,6 @@ export function IssuesClient({
     initialRecordedStartDate !== "" || initialRecordedEndDate !== "";
   const hasRecordedServerFilter =
     hasRecordedDateFilter || initialRecordedBranchId !== null;
-  const recordedConsumptionHeaderHint = recordedIsLimited
-    ? INVENTORY_VI.rowCountRecent(recordedConsumptions.length)
-    : INVENTORY_VI.grnDraftLineCount(recordedConsumptions.length);
   const recordedBranchOptions = branches.filter(
     (branch) => branch.branchKind === "branch",
   );
@@ -666,6 +663,22 @@ export function IssuesClient({
           </Button>
         ) : null
       }
+      bulk={
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span>
+            {INVENTORY_VI.visibleRowsLabel}:{" "}
+            <span className="font-mono font-semibold text-foreground">
+              {visibleRecordedConsumptions.length}/{recordedConsumptions.length}
+            </span>
+          </span>
+          <span>
+            {INVENTORY_VI.totalAmountLabel}:{" "}
+            <span className="font-mono font-semibold text-foreground">
+              {formatVND(visibleRecordedConsumptionTotal)}
+            </span>
+          </span>
+        </div>
+      }
     />
   );
 
@@ -857,33 +870,6 @@ export function IssuesClient({
           defaultOpen={!embedded}
           toolbar={recordedConsumptionFilterBar}
         >
-          <div className="grid gap-3 border-b p-3 sm:grid-cols-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">
-                {INVENTORY_VI.visibleRowsLabel}
-              </span>
-              <span className="font-mono text-sm font-semibold">
-                {visibleRecordedConsumptions.length}/
-                {recordedConsumptions.length}
-              </span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">
-                {INVENTORY_VI.totalAmountLabel}
-              </span>
-              <span className="font-mono text-sm font-semibold">
-                {formatVND(visibleRecordedConsumptionTotal)}
-              </span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">
-                {INVENTORY_VI.scopeLabel}
-              </span>
-              <span className="text-sm font-medium">
-                {recordedConsumptionHeaderHint}
-              </span>
-            </div>
-          </div>
           <DataTable
             columns={recordedConsumptionColumns}
             data={visibleRecordedConsumptions}

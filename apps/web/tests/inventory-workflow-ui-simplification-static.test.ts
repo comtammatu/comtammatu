@@ -293,15 +293,63 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
   }
 
-  assert.match(
+  assert.match(stock, /variant="inline"/);
+  assert.doesNotMatch(
     stock,
     /variant=\{isCompactLayout \? "card" : "inline"\}/,
+  );
+  assert.doesNotMatch(
+    stock,
+    /isFirstLoadEmpty \?[\s\S]{0,40}firstLoadEmptyState[\s\S]{0,40}<DataTable/,
   );
   assert.match(frame, /<AppSection[\s\S]*contentFlush/);
   assert.match(frame, /\{toolbar\}/);
   assert.doesNotMatch(purchaseOrders, /<DataTable[\s\S]{0,500}searchable/);
   assert.doesNotMatch(recipes, /<DataTable[\s\S]{0,500}searchable/);
   assert.doesNotMatch(recipes, /recipes\.length === 0/);
+});
+
+test("AppToolbar inline shares card surface without muted fill", () => {
+  const surface = read("app/components/surface.tsx");
+  assert.match(
+    surface,
+    /if \(variant === "inline"\) \{[\s\S]{0,120}<Toolbar className=\{cn\("gap-3 border-b border-border p-3"/,
+  );
+  assert.doesNotMatch(
+    surface,
+    /variant === "inline"[\s\S]{0,160}bg-muted\/30/,
+  );
+});
+
+test("migrated inventory lists use InventoryListFrame toolbar slot", () => {
+  const invoices = read(
+    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+  );
+  const supplierItems = read(
+    "app/(protected)/inventory/suppliers/[id]/items/supplier-items-client.tsx",
+  );
+  const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
+  const countSlips = read(
+    "app/(protected)/inventory/count-slips/count-slips-client.tsx",
+  );
+  const countAssignments = read(
+    "app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
+  );
+  const thresholdsClient = read(
+    "app/(protected)/inventory/settings/thresholds/thresholds-client.tsx",
+  );
+
+  for (const source of [invoices, supplierItems, thresholdsClient]) {
+    assert.match(source, /<InventoryListFrame[\s\S]{0,800}toolbar=\{/);
+    assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  }
+
+  assert.match(
+    grn,
+    /<InventoryListFrame toolbar=\{grnsLoadFailed \? undefined : listToolbar\}>/,
+  );
+  assert.match(countSlips, /<InventoryListFrame title=/);
+  assert.match(countAssignments, /<InventoryListFrame>/);
 });
 
 test("stock never presents an all-location choice", () => {

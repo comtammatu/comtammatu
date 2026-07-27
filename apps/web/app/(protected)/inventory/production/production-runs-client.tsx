@@ -25,7 +25,6 @@ import {
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
-import { AppSection } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import { InventoryListFrame } from "../_components/inventory-list-frame";
 import type { ProductionRunRow } from "../production-run-actions";
@@ -188,9 +187,7 @@ export function ProductionRunsClient({
   }
 
   return (
-    <AppSection
-      className="overflow-hidden"
-      contentFlush
+    <InventoryListFrame
       icon={<IconListChecks />}
       title={INVENTORY_VI.productionOrdersTab}
       description={INVENTORY_VI.productionOrdersCardDescription}
@@ -213,7 +210,7 @@ export function ProductionRunsClient({
       }
     >
       {table}
-    </AppSection>
+    </InventoryListFrame>
   );
 }
 

@@ -554,7 +554,7 @@ export function AppToolbar({
 
   if (variant === "inline") {
     return (
-      <Toolbar className={cn("gap-3 border-b bg-muted/30 p-3", className)}>
+      <Toolbar className={cn("gap-3 border-b border-border p-3", className)}>
         {content}
       </Toolbar>
     );

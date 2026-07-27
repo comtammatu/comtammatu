@@ -63,6 +63,7 @@ import {
   AppToolbar,
   DescriptionList,
 } from "@/components/surface";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 import {
   createSupplierInvoice,
   fetchSupplierInvoicesPage,
@@ -1174,116 +1175,116 @@ export function SupplierInvoicesClient({
             isInvoiceDeepLink && "order-2 xl:order-1",
           )}
         >
-          <AppToolbar
-            className="[&>[data-slot=toolbar-group]:first-child]:min-w-64"
-            search={
-              <InputGroup size={controlSize} className="min-w-0 flex-1">
-                <InputGroupAddon>
-                  <IconSearch />
-                </InputGroupAddon>
-                <InputGroupInput
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={copy.searchPlaceholder}
-                  aria-label={copy.searchPlaceholder}
-                />
-              </InputGroup>
-            }
-            filters={
-              <>
-                <Combobox
-                  value={supplierFilter}
-                  onValueChange={(value) =>
-                    replaceListParam(
-                      "supplierId",
-                      value === ALL_FILTER_VALUE ? null : value,
-                    )
-                  }
-                  options={[
-                    { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
-                    ...supplierOptions,
-                  ]}
-                  placeholder={copy.supplierPlaceholder}
-                  searchPlaceholder={copy.supplierSearchPlaceholder}
-                  aria-label={copy.supplierFilterAria}
-                  size={controlSize}
-                  triggerClassName="w-48"
-                />
-
-                <Select
-                  value={matchStatusFilter}
-                  onValueChange={(value) =>
-                    replaceListParam(
-                      "matchStatus",
-                      value === ALL_FILTER_VALUE ? null : value,
-                    )
-                  }
-                >
-                  <SelectTrigger size={controlSize} className="w-48">
-                    <SelectValue placeholder={copy.matchingPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      value={ALL_FILTER_VALUE}
-                      size={controlSize === "touch" ? "touch" : "default"}
-                    >
-                      {copy.allMatching}
-                    </SelectItem>
-                    {MATCH_FILTER_OPTIONS.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        size={controlSize === "touch" ? "touch" : "default"}
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={paymentStatusFilter}
-                  onValueChange={(value) =>
-                    replaceListParam(
-                      "paymentStatus",
-                      value === ALL_FILTER_VALUE ? null : value,
-                    )
-                  }
-                >
-                  <SelectTrigger size={controlSize} className="w-48">
-                    <SelectValue placeholder={copy.paymentPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      value={ALL_FILTER_VALUE}
-                      size={controlSize === "touch" ? "touch" : "default"}
-                    >
-                      {copy.allPayments}
-                    </SelectItem>
-                    {PAYMENT_FILTER_OPTIONS.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        size={controlSize === "touch" ? "touch" : "default"}
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            }
-            actions={viewModeActions}
-          />
-
-          <AppSection
+          <InventoryListFrame
             title={
               viewMode === "supplier" ? copy.viewBySupplier : copy.viewByPo
             }
             headerHint={copy.groupCount(allInvoiceGroups.length, totalCount)}
-            contentFlush
-            contentScroll
+            toolbar={
+              <AppToolbar
+                variant="inline"
+                className="[&>[data-slot=toolbar-group]:first-child]:min-w-64"
+                search={
+                  <InputGroup size={controlSize} className="min-w-0 flex-1">
+                    <InputGroupAddon>
+                      <IconSearch />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      type="search"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder={copy.searchPlaceholder}
+                      aria-label={copy.searchPlaceholder}
+                    />
+                  </InputGroup>
+                }
+                filters={
+                  <>
+                    <Combobox
+                      value={supplierFilter}
+                      onValueChange={(value) =>
+                        replaceListParam(
+                          "supplierId",
+                          value === ALL_FILTER_VALUE ? null : value,
+                        )
+                      }
+                      options={[
+                        { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
+                        ...supplierOptions,
+                      ]}
+                      placeholder={copy.supplierPlaceholder}
+                      searchPlaceholder={copy.supplierSearchPlaceholder}
+                      aria-label={copy.supplierFilterAria}
+                      size={controlSize}
+                      triggerClassName="w-48"
+                    />
+
+                    <Select
+                      value={matchStatusFilter}
+                      onValueChange={(value) =>
+                        replaceListParam(
+                          "matchStatus",
+                          value === ALL_FILTER_VALUE ? null : value,
+                        )
+                      }
+                    >
+                      <SelectTrigger size={controlSize} className="w-48">
+                        <SelectValue placeholder={copy.matchingPlaceholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          value={ALL_FILTER_VALUE}
+                          size={controlSize === "touch" ? "touch" : "default"}
+                        >
+                          {copy.allMatching}
+                        </SelectItem>
+                        {MATCH_FILTER_OPTIONS.map((option) => (
+                          <SelectItem
+                            key={option.value}
+                            value={option.value}
+                            size={controlSize === "touch" ? "touch" : "default"}
+                          >
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={paymentStatusFilter}
+                      onValueChange={(value) =>
+                        replaceListParam(
+                          "paymentStatus",
+                          value === ALL_FILTER_VALUE ? null : value,
+                        )
+                      }
+                    >
+                      <SelectTrigger size={controlSize} className="w-48">
+                        <SelectValue placeholder={copy.paymentPlaceholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          value={ALL_FILTER_VALUE}
+                          size={controlSize === "touch" ? "touch" : "default"}
+                        >
+                          {copy.allPayments}
+                        </SelectItem>
+                        {PAYMENT_FILTER_OPTIONS.map((option) => (
+                          <SelectItem
+                            key={option.value}
+                            value={option.value}
+                            size={controlSize === "touch" ? "touch" : "default"}
+                          >
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                }
+                actions={viewModeActions}
+              />
+            }
           >
             <DataTable
               columns={invoiceGroupColumns}
@@ -1326,7 +1327,7 @@ export function SupplierInvoicesClient({
                 </Button>
               </div>
             ) : null}
-          </AppSection>
+          </InventoryListFrame>
         </div>
 
         <AppSection

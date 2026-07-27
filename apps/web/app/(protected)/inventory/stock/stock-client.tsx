@@ -785,7 +785,7 @@ export function StockClient({
 
   const stockToolbar = (
     <AppToolbar
-      variant={isCompactLayout ? "card" : "inline"}
+      variant="inline"
       search={
         isCompactLayout ? (
           searchControl
@@ -904,34 +904,36 @@ export function StockClient({
         </>
       ) : (
         <InventoryListFrame toolbar={stockToolbar}>
-          {isFirstLoadEmpty ? (
-            firstLoadEmptyState
-          ) : (
-            <DataTable
-              columns={stockColumns}
-              data={filtered}
-              pageSize={25}
-              getRowKey={(item) => item.id}
-              emptyTitle={
-                searchQuery.trim()
+          <DataTable
+            columns={stockColumns}
+            data={filtered}
+            pageSize={25}
+            getRowKey={(item) => item.id}
+            emptyTitle={
+              isFirstLoadEmpty
+                ? stockCopy.empty.firstLoadTitle
+                : searchQuery.trim()
                   ? stockCopy.empty.search
                   : stockCopy.empty.noData
-              }
-              emptyDescription={
-                searchQuery.trim()
+            }
+            emptyDescription={
+              isFirstLoadEmpty
+                ? stockCopy.empty.firstLoadHint
+                : searchQuery.trim()
                   ? stockCopy.empty.searchDescription
                   : stockCopy.empty.noDataDescription
-              }
-              emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
-              renderRowContextMenu={(item) => (
-                <RowActionsContextMenuItems items={getStockRowActions(item)} />
-              )}
-              getRowDataState={(item) =>
-                openActionRowId === item.id ? "selected" : undefined
-              }
-              mobileCardRender={(item) => renderStockMobileCard(item)}
-            />
-          )}
+            }
+            emptyMode={
+              isFirstLoadEmpty || !searchQuery.trim() ? "no-data" : "no-results"
+            }
+            renderRowContextMenu={(item) => (
+              <RowActionsContextMenuItems items={getStockRowActions(item)} />
+            )}
+            getRowDataState={(item) =>
+              openActionRowId === item.id ? "selected" : undefined
+            }
+            mobileCardRender={(item) => renderStockMobileCard(item)}
+          />
         </InventoryListFrame>
       )}
 

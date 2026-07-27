@@ -38,6 +38,7 @@ import {
 } from "@/components/data-table/data-table";
 import { AppDialog } from "@/components/form";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
 import type {
@@ -286,23 +287,14 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
         }}
       />
 
-      <section className="flex flex-col gap-3" aria-labelledby="pending-slips">
-        <h2 id="pending-slips" className="font-heading text-base font-semibold">
-          Chờ duyệt
-        </h2>
+      <InventoryListFrame title="Chờ duyệt">
         {renderTable(pending)}
-      </section>
+      </InventoryListFrame>
 
       {history.length > 0 ? (
-        <section className="flex flex-col gap-3" aria-labelledby="slip-history">
-          <h2
-            id="slip-history"
-            className="font-heading text-base font-semibold"
-          >
-            {INVENTORY_VI.countSlipHistoryTitle}
-          </h2>
+        <InventoryListFrame title={INVENTORY_VI.countSlipHistoryTitle}>
           {renderTable(history, true)}
-        </section>
+        </InventoryListFrame>
       ) : null}
 
       <CountSlipReviewDialog

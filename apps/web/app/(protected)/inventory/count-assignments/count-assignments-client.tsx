@@ -47,6 +47,7 @@ import {
 } from "@/components/data-table/data-table";
 import { AppDialog } from "@/components/form";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { InventoryListFrame } from "../_components/inventory-list-frame";
 import { matchesSearch } from "@lib/search";
 import type {
   CountAssignmentEmployee,
@@ -451,66 +452,70 @@ export function CountAssignmentsClient({
       ) : null}
 
       {!scopeReady ? (
-        <AppEmptyState
-          mode="no-data"
-          title={INVENTORY_VI.countAssignNoWarehouseTitle}
-          description={INVENTORY_VI.countAssignNoWarehouseDescription}
-          symbol="riceGrain"
-        />
+        <InventoryListFrame>
+          <AppEmptyState
+            mode="no-data"
+            title={INVENTORY_VI.countAssignNoWarehouseTitle}
+            description={INVENTORY_VI.countAssignNoWarehouseDescription}
+            symbol="riceGrain"
+          />
+        </InventoryListFrame>
       ) : (
-        <DataTable
-          columns={columns}
-          data={visibleEmployees}
-          getRowKey={(employee) => employee.id}
-          searchable
-          searchValue={employeeSearch}
-          onSearchChange={setEmployeeSearch}
-          searchPlaceholder="Tìm nhân viên…"
-          emptyMode={employeeSearch.trim() ? "no-results" : "no-data"}
-          emptyTitle={INVENTORY_VI.countAssignNoEmployeesTitle}
-          emptyDescription={INVENTORY_VI.countAssignNoEmployeesDescription}
-          mobileCardRender={(employee) => {
-            const selectedIds = selectionByEmployee[String(employee.id)] ?? [];
-            return (
-              <Item variant="outline" className="items-start">
-                <ItemContent className="min-w-0">
-                  <ItemTitle>{employee.name}</ItemTitle>
-                  <ItemDescription>
-                    {selectedIds.length > 0
-                      ? `${selectedIds.length} mặt hàng`
-                      : "Chưa gán mặt hàng"}
-                  </ItemDescription>
-                  <AssignmentBadges
-                    selectedIds={selectedIds}
-                    ingredientMap={ingredientMap}
-                  />
-                </ItemContent>
-                <ItemActions className="flex-col">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="touch"
-                    disabled={isPending}
-                    onClick={() => openEditor(employee)}
-                  >
-                    <IconPencil aria-hidden="true" />
-                    {ACTIONS_VI.edit}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="touch"
-                    disabled={isPending || selectedIds.length === 0}
-                    onClick={() => void handleClear(employee)}
-                  >
-                    <IconTrash aria-hidden="true" />
-                    {ACTIONS_VI.delete}
-                  </Button>
-                </ItemActions>
-              </Item>
-            );
-          }}
-        />
+        <InventoryListFrame>
+          <DataTable
+            columns={columns}
+            data={visibleEmployees}
+            getRowKey={(employee) => employee.id}
+            searchable
+            searchValue={employeeSearch}
+            onSearchChange={setEmployeeSearch}
+            searchPlaceholder="Tìm nhân viên…"
+            emptyMode={employeeSearch.trim() ? "no-results" : "no-data"}
+            emptyTitle={INVENTORY_VI.countAssignNoEmployeesTitle}
+            emptyDescription={INVENTORY_VI.countAssignNoEmployeesDescription}
+            mobileCardRender={(employee) => {
+              const selectedIds = selectionByEmployee[String(employee.id)] ?? [];
+              return (
+                <Item variant="outline" className="items-start">
+                  <ItemContent className="min-w-0">
+                    <ItemTitle>{employee.name}</ItemTitle>
+                    <ItemDescription>
+                      {selectedIds.length > 0
+                        ? `${selectedIds.length} mặt hàng`
+                        : "Chưa gán mặt hàng"}
+                    </ItemDescription>
+                    <AssignmentBadges
+                      selectedIds={selectedIds}
+                      ingredientMap={ingredientMap}
+                    />
+                  </ItemContent>
+                  <ItemActions className="flex-col">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      disabled={isPending}
+                      onClick={() => openEditor(employee)}
+                    >
+                      <IconPencil aria-hidden="true" />
+                      {ACTIONS_VI.edit}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="touch"
+                      disabled={isPending || selectedIds.length === 0}
+                      onClick={() => void handleClear(employee)}
+                    >
+                      <IconTrash aria-hidden="true" />
+                      {ACTIONS_VI.delete}
+                    </Button>
+                  </ItemActions>
+                </Item>
+              );
+            }}
+          />
+        </InventoryListFrame>
       )}
 
       <AppDialog

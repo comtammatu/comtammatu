@@ -35,6 +35,7 @@ import {
   AppPageHeader,
   AppToolbar,
 } from "@/components/surface";
+import { InventoryListFrame } from "../../../_components/inventory-list-frame";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { createSupplierItem, deleteSupplierItem } from "./actions";
@@ -193,67 +194,75 @@ export function SupplierItemsClient({
             ) : null
           }
         />
-        <AppToolbar
-          search={
-            <InputGroup className="h-12 w-full sm:h-10">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={copy.searchPlaceholder}
-                aria-label={copy.searchPlaceholder}
-              />
-            </InputGroup>
+        <InventoryListFrame
+          toolbar={
+            <AppToolbar
+              variant="inline"
+              search={
+                <InputGroup className="h-12 w-full sm:h-10">
+                  <InputGroupAddon>
+                    <IconSearch />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder={copy.searchPlaceholder}
+                    aria-label={copy.searchPlaceholder}
+                  />
+                </InputGroup>
+              }
+              reset={
+                <Badge variant="outline" className="rounded-full">
+                  {filtered.length}/{rows.length}
+                </Badge>
+              }
+            />
           }
-          reset={
-            <Badge variant="outline" className="rounded-full">
-              {filtered.length}/{rows.length}
-            </Badge>
-          }
-        />
-        <DataTable
-          columns={columns}
-          data={filtered}
-          getRowKey={(row) => row.id}
-          pageSize={25}
-          emptyTitle={search.trim() ? copy.emptySearchTitle : copy.emptyTitle}
-          emptyDescription={
-            search.trim() ? copy.emptySearchDescription : copy.emptyDescription
-          }
-          emptyMode={search.trim() ? "no-results" : "no-data"}
-          mobileCardRender={(row) => (
-            <Item variant="outline">
-              <ItemContent>
-                <ItemTitle>{row.ingredientName}</ItemTitle>
-                <ItemDescription>
-                  {copy.supplierSku}: {row.supplierSkuCode}
-                </ItemDescription>
-                {row.ingredientSku ? (
+        >
+          <DataTable
+            columns={columns}
+            data={filtered}
+            getRowKey={(row) => row.id}
+            pageSize={25}
+            emptyTitle={search.trim() ? copy.emptySearchTitle : copy.emptyTitle}
+            emptyDescription={
+              search.trim()
+                ? copy.emptySearchDescription
+                : copy.emptyDescription
+            }
+            emptyMode={search.trim() ? "no-results" : "no-data"}
+            mobileCardRender={(row) => (
+              <Item variant="outline">
+                <ItemContent>
+                  <ItemTitle>{row.ingredientName}</ItemTitle>
                   <ItemDescription>
-                    {copy.internalSku}: {row.ingredientSku}
+                    {copy.supplierSku}: {row.supplierSkuCode}
                   </ItemDescription>
+                  {row.ingredientSku ? (
+                    <ItemDescription>
+                      {copy.internalSku}: {row.ingredientSku}
+                    </ItemDescription>
+                  ) : null}
+                </ItemContent>
+                {canManage ? (
+                  <ItemActions>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-touch"
+                      disabled={isPending}
+                      onClick={() => remove(row)}
+                      aria-label={copy.removeAria(row.ingredientName)}
+                    >
+                      <IconTrash />
+                    </Button>
+                  </ItemActions>
                 ) : null}
-              </ItemContent>
-              {canManage ? (
-                <ItemActions>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-touch"
-                    disabled={isPending}
-                    onClick={() => remove(row)}
-                    aria-label={copy.removeAria(row.ingredientName)}
-                  >
-                    <IconTrash />
-                  </Button>
-                </ItemActions>
-              ) : null}
-            </Item>
-          )}
-        />
+              </Item>
+            )}
+          />
+        </InventoryListFrame>
       </AppPage>
 
       <FormDialog

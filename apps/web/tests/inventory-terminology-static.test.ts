@@ -48,7 +48,6 @@ test("GRN entry labels purchase price and conversion without calling it cost bas
 
 test("stock value surfaces use avg cost then reference cost fallback", () => {
   const listSource = readWorkspaceFile("lib/inventory/stock-on-hand-data.ts");
-  const modelSource = readWorkspaceFile("lib/inventory/stock-on-hand-model.ts");
   const detailSource = readWorkspaceFile(
     "app/(protected)/inventory/stock/[ingredientId]/page.tsx",
   );
