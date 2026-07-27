@@ -1,7 +1,7 @@
 # Kho Hàng — Inventory Management
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư — quản lý kho nguyên liệu và thành phẩm F&B
-> Phạm vi: **nhập NCC tại chi nhánh + sản xuất tại chi nhánh + tiêu hao + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, payment status và AP aging là Finance handoff; không phải gate đóng ngày Inventory.
+> Phạm vi: **PO mua hàng tại Owner control + nhập NCC tại chi nhánh + sản xuất tại chi nhánh + tiêu hao + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, payment status và AP aging là Finance handoff; không phải gate đóng ngày Inventory.
 
 ---
 
@@ -21,11 +21,11 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                             | Không chuyển sang FIFO engine                          |
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                                          | Không mở lot-first ledger / batch accounting           |
 | Mô hình site                    | `branches.branch_kind` enum giữ lịch sử; site active là chi nhánh (`branch`) với **một** location stock-bearing `warehouse` (Kho chi nhánh). `location_kind='kitchen'` (Bếp CN) và site `central_*` đã nghỉ vận hành (D078). | V1 không tạo bảng `inventory_sites`                    |
-| GRN / NCC                       | Nhập supplier-first qua GRN + RPC `confirm_goods_receipt_note`; PO chỉ còn dữ liệu lịch sử                                                                                                                                   | Không mở PR/PO workflow nhiều bước                     |
-| Luân chuyển nội bộ              | Branch không mở Kho↔Bếp hay cross-branch mới (D078). `stock_transfers` lịch sử giữ trong DB/Owner surface read-only.                                                                                                       | Không dùng `stock_transfer` cho tiêu hao/xuất hủy thật |
+| PO / GRN / NCC                  | Owner lập PO, duyệt một cấp (`draft → sent`) và tạo GRN từ PO; GRN supplier-first vẫn hợp lệ khi mua trực tiếp                                                                                                               | Không mở PR hoặc duyệt nhiều cấp                       |
+| Luân chuyển nội bộ              | Branch không mở Kho↔Bếp hay cross-branch mới (D078). `stock_transfers` lịch sử giữ trong DB/Owner surface read-only.                                                                                                         | Không dùng `stock_transfer` cho tiêu hao/xuất hủy thật |
 | HĐ NCC                          | `supplier_invoices` và đối soát với hàng thực nhận là Finance handoff                                                                                                                                                        | Không mở payment proposal engine trong Inventory       |
 | `recipes` + xuất kho theo order | `recipes` + RPC tiêu hao theo order                                                                                                                                                                                          | Không mở multi-level BOM                               |
-| Thành phẩm + production landing     | `item_kind`, `production_recipes`, `production_runs`, route production tại chi nhánh (`branch`, D068)                                                                                                                        | Không mở labor / overhead / WIP accounting đầy đủ      |
+| Thành phẩm + production landing | `item_kind`, `production_recipes`, `production_runs`, route production tại chi nhánh (`branch`, D068)                                                                                                                        | Không mở labor / overhead / WIP accounting đầy đủ      |
 | Hao hụt / sự cố                 | Waste/write-off + approvals và issue log; supplier return không còn daily surface                                                                                                                                            | Không mở claim/insurance workflow                      |
 
 ## Scope Boundary
@@ -216,11 +216,14 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 ### 5.1 Quy trình
 
 1. Thiết lập **NCC** và điều khoản thanh toán.
-2. NCC giao hàng → kiểm đếm, QC.
-3. Lập **GRN supplier-first** với số thực nhận + đơn giá theo **đơn vị nhập**.
+2. Với đơn mua có kế hoạch: Owner lập PO nháp → người có quyền duyệt chuyển
+   sang `sent`; mua trực tiếp có thể bỏ qua PO.
+3. NCC giao hàng → tạo GRN từ PO đã duyệt hoặc lập **GRN supplier-first**;
+   kiểm đếm, QC theo số thực nhận + đơn giá theo **đơn vị nhập**.
 4. **Xác nhận GRN** (RPC) → quy đổi về đơn vị tồn chuẩn, cập nhật tồn Kho CN
    và giá vốn BQ atomically.
-5. Nếu Finance cần đối soát, nhập **supplier_invoice** và so với GRN thực nhận.
+5. Finance nhập **supplier_invoice** (HĐ GTGT đầu vào), đối soát GRN và ghi
+   nhận thanh toán NCC theo số dư còn phải trả.
 
 **Nguyên tắc:** Giá nhập theo **GRN** (thực nhận), không theo số đặt PO. `grn_items.unit_cost` là **Đơn giá nhập** (`₫ / đơn vị nhập`), không phải giá vốn BQ. GRN chỉ được tạo tại site stock-bearing (`branch`).
 

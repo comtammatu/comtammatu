@@ -486,7 +486,8 @@ allowlist, not a precedent for stretching another archetype's definition:
     — Branch-runtime GRN source selection. It shares the source loader and
     pure supplier model with Owner surface, but presents suppliers as full-row touch
     actions and canonicalizes supplier selection into the Branch route.
-    Purchase orders are retired from daily use; GRN is supplier-first.
+    Branch receiving stays supplier-first; the optional PO flow belongs to
+    Owner control.
     Classified **LIST** (Branch touch source variant); the
     document-line form remains a separate workflow stage.
 13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`

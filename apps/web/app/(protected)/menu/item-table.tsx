@@ -10,7 +10,7 @@ import {
   Utensils as IconToolsKitchen,
   Image as IconImage,
 } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -34,12 +34,13 @@ import {
 } from "@/components/data-table/data-table";
 import { RowActionsMenu } from "@/components/row-actions-menu";
 
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, MENU_VI } from "@comtammatu/shared/messages";
 export interface ItemRow {
   id: number;
   name: string;
   description: string | null;
   base_price: number;
+  vat_rate: number;
   category_id: number;
   category_name: string;
   category_type: string;
@@ -154,7 +155,10 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
               {item.category_name}
             </p>
             <p className="text-xs font-medium text-foreground">
-              {formatVND(item.base_price)}
+              {MENU_VI.vatInclusivePriceSummary(
+                formatVND(item.base_price),
+                formatPercent(item.vat_rate),
+              )}
             </p>
           </div>
         </div>
@@ -168,9 +172,15 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
     },
     {
       key: "price",
-      header: FORM_VI.price,
+      header: MENU_VI.basePriceTableLabel,
       className: "hidden text-right font-mono md:table-cell",
       render: (item) => formatVND(item.base_price),
+    },
+    {
+      key: "vat",
+      header: "VAT",
+      className: "hidden text-right font-mono md:table-cell",
+      render: (item) => formatPercent(item.vat_rate),
     },
     {
       key: "status",
@@ -209,7 +219,11 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
             <ItemContent>
               <ItemTitle>{item.name}</ItemTitle>
               <ItemDescription>
-                {item.category_name} · {formatVND(item.base_price)}
+                {item.category_name} ·{" "}
+                {MENU_VI.vatInclusivePriceSummary(
+                  formatVND(item.base_price),
+                  formatPercent(item.vat_rate),
+                )}
               </ItemDescription>
               {item.description ? (
                 <ItemDescription>{item.description}</ItemDescription>

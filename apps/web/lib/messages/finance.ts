@@ -243,7 +243,7 @@ export const finance = {
       revenue: "Doanh thu",
       bankTransactions: "Đối soát ngân hàng",
       expenses: "Chi phí vận hành",
-      supplierPayables: "Phải trả NCC",
+      supplierPayables: "HĐ GTGT & NCC",
       invoices: "Hóa đơn điện tử",
       foodCost: "Giá vốn món",
     },
@@ -371,9 +371,9 @@ export const finance = {
   },
   supplierInvoicesPage: {
     eyebrow: "Tài chính",
-    title: "Hóa đơn NCC",
+    title: "Hóa đơn GTGT | Thanh toán NCC",
     description:
-      "Đối soát hóa đơn mua và công nợ NCC; không tính vào Chi phí vận hành.",
+      "Nhập hóa đơn GTGT đầu vào, đối soát GRN và theo dõi thanh toán NCC.",
     noAccessTitle: "Không có quyền xem hóa đơn NCC",
     noAccessDescription:
       "Cần quyền xem đơn mua hàng và NCC để mở hàng đợi phải trả NCC.",

@@ -25,6 +25,7 @@ import {
 const MENU_MANAGER_ROLES = MODULE_ACL.menu.allowedRoles;
 
 const CATEGORY_TYPES = ["main_dish", "side_dish", "drink", "dessert"] as const;
+const VAT_RATES = [0, 5, 8, 10] as const;
 
 function mapDbError(code: string | undefined): string {
   if (code === "23505") return "Tên đã tồn tại";
@@ -66,6 +67,12 @@ const createItemSchema = z.object({
     .max(100, { error: "Tên món tối đa 100 ký tự" }),
   category_id: z.coerce.number().int().positive({ error: "Chọn danh mục" }),
   base_price: z.coerce.number().min(0, { error: "Giá không hợp lệ" }),
+  vat_rate: z.coerce
+    .number()
+    .refine(
+      (value) => VAT_RATES.includes(value as (typeof VAT_RATES)[number]),
+      { error: "Thuế GTGT không hợp lệ" },
+    ),
   description: z
     .string()
     .max(500, { error: "Mô tả tối đa 500 ký tự" })
@@ -82,6 +89,12 @@ const updateItemSchema = z.object({
     .max(100, { error: "Tên món tối đa 100 ký tự" }),
   category_id: z.coerce.number().int().positive({ error: "Chọn danh mục" }),
   base_price: z.coerce.number().min(0, { error: "Giá không hợp lệ" }),
+  vat_rate: z.coerce
+    .number()
+    .refine(
+      (value) => VAT_RATES.includes(value as (typeof VAT_RATES)[number]),
+      { error: "Thuế GTGT không hợp lệ" },
+    ),
   description: z
     .string()
     .max(500, { error: "Mô tả tối đa 500 ký tự" })
@@ -229,6 +242,7 @@ export const createItem = withFormAction(
       name: fd.get("name"),
       category_id: fd.get("category_id"),
       base_price: fd.get("base_price"),
+      vat_rate: fd.get("vat_rate"),
       description: fd.get("description") ?? "",
       image_url: fd.get("image_url") ?? "",
     }),
@@ -239,6 +253,7 @@ export const createItem = withFormAction(
       category_id: data.category_id,
       name: data.name,
       base_price: data.base_price,
+      vat_rate: data.vat_rate,
       description: data.description || null,
       image_url: data.image_url || null,
     });
@@ -263,6 +278,7 @@ export const updateItem = withFormAction(
       name: fd.get("name"),
       category_id: fd.get("category_id"),
       base_price: fd.get("base_price"),
+      vat_rate: fd.get("vat_rate"),
       description: fd.get("description") ?? "",
       image_url: fd.get("image_url") ?? "",
     }),
@@ -274,6 +290,7 @@ export const updateItem = withFormAction(
         name: data.name,
         category_id: data.category_id,
         base_price: data.base_price,
+        vat_rate: data.vat_rate,
         description: data.description || null,
         image_url: data.image_url || null,
       })

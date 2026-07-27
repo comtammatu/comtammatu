@@ -758,12 +758,14 @@ allowlist.
 - Keep procurement and inventory terms aligned with `docs/ref/glossary.md`.
 - Dense tables are expected, but row actions and destructive actions must stay visually separated.
 - Route IA must stay anchored to three operator flows:
-  1. Nhập hàng: supplier-first GRN, receiving/QC, Finance/AP handoff.
+  1. Nhập hàng: Owner PO một cấp khi cần; Branch supplier-first GRN,
+     receiving/QC, Finance/AP handoff.
   2. Kiểm soát tồn: one-warehouse stock on hand, stocktake,
      waste/adjustment and reporting.
   3. Sản xuất/tiêu hao: current branch production run, sale-consumption and
      write-off workflows.
-- Do not reintroduce purchase order, supplier return, lot/expiry, production
+- Owner control may use the one-step PO flow before GRN; Branch receiving
+  remains supplier-first. Do not introduce supplier return, lot/expiry, production
   order, or same-branch warehouse-to-kitchen transfer into daily UI.
 - Sidebar group labels must be compact enough for the fixed sidebar. Use detail page headings and breadcrumbs for full workflow wording.
 - Complex Inventory forms use RHF + Zod + app form helpers when they have line arrays, more than four fields, inline pre-submit validation, or pending submit UX. Plain `<form action>` is only for auth, sign out, or single-reason confirmations.

@@ -38,7 +38,12 @@ const invoiceSchema = z
     // HKD does not deduct input VAT by default (einvoice-tax.md §4.1/§4.3) —
     // the field stays editable for cost/reconciliation, but the system must
     // not presume the supplier charged 8%.
-    vatRate: z.coerce.number().min(0).default(0),
+    vatRate: z.coerce
+      .number()
+      .refine((value) => [0, 5, 8, 10].includes(value), {
+        error: "Thuế GTGT không hợp lệ.",
+      })
+      .default(0),
     vatAmount: z.coerce.number().min(0),
     totalAmount: z.coerce.number().min(0),
     matchingNotes: z.string().optional(),
