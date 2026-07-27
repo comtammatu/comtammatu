@@ -19,6 +19,7 @@ const CODEX_CONFIG_PATH = ".codex/config.toml";
 const ADAPTER_PATHS = [".claude/settings.json", ".codex/hooks.json"];
 const TYPEGEN_PATH = "scripts/gen-types.mjs";
 const E2E_BRINGUP_PATH = "scripts/supabase-e2e-bringup.mjs";
+const GREENFIELD_PUSH_PATH = "scripts/supabase-greenfield-push.mjs";
 
 const errors = [];
 
@@ -74,7 +75,7 @@ for (const ref of hookRefs) {
 }
 
 if (hookSource.includes("APPROVED_NON_PROD_REFS")) {
-  fail(`${REGISTRY_PATH} and ${HOOK_PATH}: persistent non-production target must not remain`);
+  fail(`${HOOK_PATH}: broad non-production allowlist must not return`);
 }
 
 const documentedNoTouchRefs = [
@@ -97,6 +98,29 @@ if (
 ) {
   fail(
     `${HOOK_PATH}: NO_TOUCH_REFS must exactly match Environment Registry rows whose rights are Do not touch.`,
+  );
+}
+
+const documentedGreenfieldRefs = [
+  ...registrySection.matchAll(
+    /^\|\s*`([a-z0-9]{20})`\s*\|\s*\*\*GREENFIELD\*\*/gm,
+  ),
+].map((match) => match[1]);
+const greenfieldBlock = hookSource.match(
+  /const GREENFIELD_WRITE_REFS = new Set\(\[([\s\S]*?)\]\);/,
+);
+const hookGreenfieldRefs = greenfieldBlock
+  ? [...greenfieldBlock[1].matchAll(/"([a-z0-9]{20})"/g)].map(
+      (match) => match[1],
+    )
+  : [];
+if (
+  documentedGreenfieldRefs.length === 0 ||
+  documentedGreenfieldRefs.length !== hookGreenfieldRefs.length ||
+  documentedGreenfieldRefs.some((ref) => !hookGreenfieldRefs.includes(ref))
+) {
+  fail(
+    `${HOOK_PATH}: GREENFIELD_WRITE_REFS must exactly match Environment Registry GREENFIELD rows.`,
   );
 }
 
@@ -336,10 +360,38 @@ if (!fs.existsSync(e2eBringupPath)) {
   }
 }
 
+const greenfieldPushPath = path.join(REPO_ROOT, GREENFIELD_PUSH_PATH);
+if (!fs.existsSync(greenfieldPushPath)) {
+  fail(`${GREENFIELD_PUSH_PATH} does not exist`);
+} else {
+  const greenfieldPushSource = fs.readFileSync(greenfieldPushPath, "utf8");
+  if (
+    !greenfieldPushSource.includes(
+      `const GREENFIELD_PROJECT_REF = "${documentedGreenfieldRefs[0]}";`,
+    ) ||
+    !greenfieldPushSource.includes('env["SUPABASE_DB_URL"]') ||
+    !greenfieldPushSource.includes('"--db-url"') ||
+    !greenfieldPushSource.includes("url.href") ||
+    greenfieldPushSource.includes(documentedProdRef)
+  ) {
+    fail(
+      `${GREENFIELD_PUSH_PATH}: must bind the full secret URL only to the registered Greenfield ref`,
+    );
+  }
+  const selfTest = spawnSync("node", [greenfieldPushPath, "--self-test"], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+  });
+  if (selfTest.status !== 0) {
+    fail(`${GREENFIELD_PUSH_PATH}: self-test failed`);
+  }
+}
+
 // 4. Behavior fixtures: replay canonical tool calls through the hook and
 // assert exit codes, so blocking cannot silently regress. Fixture strings
 // here are file contents — the runtime hooks only scan Bash command lines.
 const PROD = documentedProdRef ?? "iexwsuaqqenyjiskawoj";
+const GREENFIELD = documentedGreenfieldRefs[0] ?? "enloyfnuerqgaqderbwb";
 const NO_TOUCH = hookNoTouchRefs[0] ?? "dyksphedgzqsqjqgxzog";
 const UNREGISTERED_REF = "abcdefghijklmnopqrst";
 const TRUSTED_PREVIEW = "prvwabcdefghijklmnop";
@@ -374,7 +426,7 @@ const previewFixtureBranches = {
   [WRONG_PARENT_PREVIEW]: {
     id: "wrong-parent-branch-id",
     project_ref: WRONG_PARENT_PREVIEW,
-    parent_project_ref: NO_TOUCH,
+    parent_project_ref: UNREGISTERED_REF,
   },
   [MISMATCHED_PREVIEW]: {
     id: "mismatched-branch-id",
@@ -501,6 +553,13 @@ const FIXTURES = [
     0,
     bash(
       `supabase db push --db-url postgres://u@db.${TRUSTED_PREVIEW}.supabase.co/postgres`,
+    ),
+  ],
+  [
+    "allow: supabase db push with explicit registered Greenfield URL",
+    0,
+    bash(
+      `supabase db push --db-url postgres://u@db.${GREENFIELD}.supabase.co/postgres`,
     ),
   ],
   [
@@ -1261,6 +1320,27 @@ const FIXTURES = [
     mcp("update_storage_config", { project_id: UNREGISTERED_REF, file_size_limit: 1 }),
   ],
   [
+    "block: mcp update_storage_config remains unsupported on Greenfield",
+    2,
+    mcp("update_storage_config", { project_id: GREENFIELD, file_size_limit: 1 }),
+  ],
+  [
+    "block: mcp execute_sql write remains unsupported on Greenfield",
+    2,
+    mcp("execute_sql", {
+      project_id: GREENFIELD,
+      query: "update orders set note = null",
+    }),
+  ],
+  [
+    "allow: mcp execute_sql read vs registered Greenfield",
+    0,
+    mcp("execute_sql", {
+      project_id: GREENFIELD,
+      query: "select count(*) from information_schema.tables",
+    }),
+  ],
+  [
     "block: mcp apply_migration empty ref fails closed",
     2,
     mcp("apply_migration", {}),
@@ -1273,7 +1353,7 @@ const FIXTURES = [
   [
     "block: mcp create_branch cannot target separate-codebase parent",
     2,
-    mcp("create_branch", { project_id: "dyksphedgzqsqjqgxzog" }),
+    mcp("create_branch", { project_id: NO_TOUCH }),
   ],
   [
     "block: mcp create_branch cannot target an unregistered parent",
@@ -1289,7 +1369,7 @@ const FIXTURES = [
     "block: mcp delete_branch cannot target separate-codebase parent",
     2,
     mcp("delete_branch", {
-      project_id: "dyksphedgzqsqjqgxzog",
+      project_id: NO_TOUCH,
       branch_id: "preview-branch",
     }),
   ],
@@ -1335,7 +1415,7 @@ const FIXTURES = [
   [
     "block: Preview creation against separate-codebase parent",
     2,
-    bash(`supabase branches create test --project-ref dyksphedgzqsqjqgxzog`),
+    bash(`supabase branches create test --project-ref ${NO_TOUCH}`),
   ],
   [
     "block: Preview creation against unknown parent",
@@ -1370,6 +1450,11 @@ const FIXTURES = [
     bash("supabase branches list --project-ref abcdefabcdefabcdefab"),
   ],
   [
+    "block: Supabase CLI read against separate-codebase no-touch ref",
+    2,
+    bash(`supabase branches list --project-ref ${NO_TOUCH}`),
+  ],
+  [
     "block: Production db dump cannot expose table data",
     2,
     bash(
@@ -1389,11 +1474,6 @@ const FIXTURES = [
     bash(
       `supabase inspect db long-running-queries --db-url postgres://u@db.${UNREGISTERED_REF}.supabase.co/postgres`,
     ),
-  ],
-  [
-    "block: Supabase CLI read against separate-codebase no-touch ref",
-    2,
-    bash(`supabase branches list --project-ref ${NO_TOUCH}`),
   ],
   [
     "allow: Supabase migration read with literal Production DB URL",
@@ -1742,6 +1822,14 @@ const FIXTURES = [
     mcp("list_tables", { project_id: PROD, schemas: ["public"] }),
   ],
   [
+    "allow: connector MCP table read vs registered Greenfield",
+    0,
+    mcpConnectorLive("list_tables", {
+      project_id: GREENFIELD,
+      schemas: ["public"],
+    }),
+  ],
+  [
     "allow: MCP extension catalog read vs prod",
     0,
     mcp("list_extensions", { project_id: PROD }),
@@ -2015,6 +2103,15 @@ const FIXTURES = [
     "allow: mcp write vs a Preview verified from the Production parent",
     0,
     mcp("apply_migration", { project_id: TRUSTED_PREVIEW }),
+  ],
+  [
+    "allow: connector MCP migration vs registered Greenfield",
+    0,
+    mcpConnectorLive("apply_migration", {
+      project_id: GREENFIELD,
+      name: "bootstrap_probe",
+      query: "select 1",
+    }),
   ],
   [
     "block: mcp write vs a Preview with the wrong parent",

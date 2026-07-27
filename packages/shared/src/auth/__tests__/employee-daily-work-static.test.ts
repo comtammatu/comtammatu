@@ -361,7 +361,7 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
   const workStateSrc = read(
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
   );
-  const baselineSrc = read("supabase/migrations/20260720035548_baseline.sql");
+  const baselineSrc = read("supabase/migrations/20260727120000_baseline.sql");
   const countGateMigrationSrc = read(
     "supabase/migration-archive/20260629183853_require_inventory_count_checkout_gate.sql",
   );

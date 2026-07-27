@@ -31,7 +31,7 @@ const guestCancelMigration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260725122220_allow_guest_cancel_vietqr.sql",
+    "supabase/migration-archive/20260725122220_allow_guest_cancel_vietqr.sql",
   ),
   "utf8",
 );

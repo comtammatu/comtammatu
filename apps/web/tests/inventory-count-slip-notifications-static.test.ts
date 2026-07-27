@@ -27,7 +27,7 @@ function functionBlock(source: string, name: string) {
 
 test("count-slip RPCs emit durable notifications with review links", () => {
   const baselineSql = normalizePgDumpSql(
-    readRepoFile("supabase/migrations/20260720035548_baseline.sql"),
+    readRepoFile("supabase/migrations/20260727120000_baseline.sql"),
   );
   const repairSql = readRepoFile(
     "supabase/migration-archive/20260716182000_restore_missed_runtime_contracts.sql",

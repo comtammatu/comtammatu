@@ -12,7 +12,7 @@ const migration = readRepo(
   "supabase/migration-archive/20260703160000_inventory_unit_system_phase_a.sql",
 );
 const baseline = normalizePgDumpSql(
-  readRepo("supabase/migrations/20260720035548_baseline.sql"),
+  readRepo("supabase/migrations/20260727120000_baseline.sql"),
 );
 
 test("Phase A migration adds the two-tier unit schema additively", () => {

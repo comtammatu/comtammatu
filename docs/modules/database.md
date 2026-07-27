@@ -127,10 +127,10 @@ GRANT SELECT ON public.{table} TO authenticated;
 
 ## Migration Conventions
 
-Fresh installs are baseline-first. `supabase/migrations/20260720035548_baseline.sql`
+Fresh installs are baseline-first. `supabase/migrations/20260727120000_baseline.sql`
 is the public+private schema install path; the managed surfaces (extensions, storage
 policies, realtime, and cron) are folded into the chain as the forward migration
-`supabase/migrations/20260720035549_fold_managed_surfaces.sql`, applied automatically.
+`supabase/migrations/20260727120001_fold_managed_surfaces.sql`, applied automatically.
 Forward migrations live in `supabase/migrations/` with timestamp-prefixed
 filenames after the baseline.
 

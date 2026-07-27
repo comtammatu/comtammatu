@@ -33,7 +33,7 @@ test("SePay only completes payment; the durable job owns HĐĐT recovery", () =>
   const finance = read("apps/web/app/(protected)/finance/actions.ts");
   const vercel = read("apps/web/vercel.json");
   const migration = read(
-    "supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
+    "supabase/migration-archive/20260721120000_hddt_payment_completion_worker.sql",
   );
 
   assert.match(webhook, /"reconcile_sepay_order_evidence"/);
@@ -53,10 +53,10 @@ test("SePay only completes payment; the durable job owns HĐĐT recovery", () =>
 test("provider-issued result is reconciled atomically and never written directly", () => {
   const issuer = read("apps/web/lib/hddt-per-order.ts");
   const migration = read(
-    "supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
+    "supabase/migration-archive/20260721120000_hddt_payment_completion_worker.sql",
   );
   const bindingFix = read(
-    "supabase/migrations/20260721211000_bind_tax_invoice_job_on_reconcile.sql",
+    "supabase/migration-archive/20260721211000_bind_tax_invoice_job_on_reconcile.sql",
   );
 
   assert.match(issuer, /reconcile_tax_invoice_provider_issued/);
@@ -80,7 +80,7 @@ test("provider-issued result is reconciled atomically and never written directly
 
 test("internal payment helper and two-argument cash overload are not callable directly", () => {
   const migration = read(
-    "supabase/migrations/20260721211000_bind_tax_invoice_job_on_reconcile.sql",
+    "supabase/migration-archive/20260721211000_bind_tax_invoice_job_on_reconcile.sql",
   );
 
   assert.match(
@@ -95,7 +95,7 @@ test("internal payment helper and two-argument cash overload are not callable di
 
 test("only the service worker can claim or finalize HĐĐT jobs", () => {
   const migration = read(
-    "supabase/migrations/20260721121000_harden_tax_invoice_issue_job_acl.sql",
+    "supabase/migration-archive/20260721121000_harden_tax_invoice_issue_job_acl.sql",
   );
 
   for (const signature of [
@@ -126,7 +126,7 @@ test("one-shot HĐĐT worker claims only the requested job", () => {
   const issuer = read("apps/web/lib/hddt-per-order.ts");
   const route = read("apps/web/app/api/cron/tax-invoice-issue/route.ts");
   const migration = read(
-    "supabase/migrations/20260721210937_add_scoped_tax_invoice_job_claim.sql",
+    "supabase/migration-archive/20260721210937_add_scoped_tax_invoice_job_claim.sql",
   );
 
   assert.match(

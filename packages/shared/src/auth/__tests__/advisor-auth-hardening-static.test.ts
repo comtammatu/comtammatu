@@ -7,28 +7,28 @@ const repoRoot = resolve(import.meta.dirname, "..", "..", "..", "..", "..");
 const rlsMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260726013758_optimize_auth_rls_initplans.sql",
+    "supabase/migration-archive/20260726013758_optimize_auth_rls_initplans.sql",
   ),
   "utf8",
 );
 const branchOverrideMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260726020500_restrict_branch_override_verification.sql",
+    "supabase/migration-archive/20260726020500_restrict_branch_override_verification.sql",
   ),
   "utf8",
 );
 const readPerformanceMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260726023000_optimize_hddt_attendance_reads.sql",
+    "supabase/migration-archive/20260726023000_optimize_hddt_attendance_reads.sql",
   ),
   "utf8",
 );
 const menuAvailabilityMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260726030000_optimize_menu_availability_capacity.sql",
+    "supabase/migration-archive/20260726030000_optimize_menu_availability_capacity.sql",
   ),
   "utf8",
 );

@@ -7,7 +7,7 @@ const migration = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260724030942_enforce_self_order_payment_fingerprint_v1.sql",
+    "supabase/migration-archive/20260724030942_enforce_self_order_payment_fingerprint_v1.sql",
   ),
   "utf8",
 );
@@ -15,7 +15,7 @@ const baseline = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260720035548_baseline.sql",
+    "supabase/migrations/20260727120000_baseline.sql",
   ),
   "utf8",
 );

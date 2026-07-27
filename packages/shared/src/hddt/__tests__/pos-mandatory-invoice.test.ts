@@ -112,7 +112,7 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
   const src = read("apps/web/lib/hddt-per-order.ts");
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
   const migration = read(
-    "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
+    "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
   );
 
   assert.ok(
@@ -169,7 +169,7 @@ test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
   const listSrc = read("apps/web/app/(protected)/finance/invoice-list.tsx");
   const attentionMigration = read(
-    "supabase/migrations/20260726130118_enrich_hddt_issue_attention_identifiers.sql",
+    "supabase/migration-archive/20260726130118_enrich_hddt_issue_attention_identifiers.sql",
   );
 
   assert.ok(
@@ -231,10 +231,10 @@ test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
 test("Finance requeues only the exact blocked HĐĐT job", () => {
   const actionSrc = read("apps/web/app/(protected)/finance/actions.ts");
   const workerMigration = read(
-    "supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
+    "supabase/migration-archive/20260721120000_hddt_payment_completion_worker.sql",
   );
   const qrMigration = read(
-    "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
+    "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
   );
 
   assert.match(actionSrc, /requeue_tax_invoice_issue_job/);
@@ -258,7 +258,7 @@ test("Finance requeues only the exact blocked HĐĐT job", () => {
 test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
   const migration = read(
-    "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
+    "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
   );
   const replaceSrc = read(
     "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
@@ -320,7 +320,7 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
 test("per-order HKD HĐĐT never carries VAT", () => {
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
   const migration = read(
-    "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
+    "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
   );
 
   assert.match(

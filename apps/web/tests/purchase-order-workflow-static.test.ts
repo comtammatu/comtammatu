@@ -50,7 +50,7 @@ test("PO receiving remains owner-control only and supports partial receipts", ()
   const client = read(
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
-  const baseline = read("supabase/migrations/20260720035548_baseline.sql");
+  const baseline = read("supabase/migrations/20260727120000_baseline.sql");
 
   assert.match(client, /\["sent", "partially_received"\]/);
   assert.match(client, /Tạo phiếu nhập/);

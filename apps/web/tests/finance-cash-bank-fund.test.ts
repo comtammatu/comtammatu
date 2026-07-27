@@ -56,7 +56,7 @@ test("finance landing presents immutable book funds", () => {
 test("current funds load from one tenant-wide PostgreSQL snapshot", () => {
   const cockpit = read("apps/web/app/(protected)/finance/_lib/cash-cockpit.ts");
   const migration = read(
-    "supabase/migrations/20260726160405_remove_pos_variance_from_current_funds.sql",
+    "supabase/migration-archive/20260726160405_remove_pos_variance_from_current_funds.sql",
   );
 
   assert.match(cockpit, /\.rpc\("get_finance_current_funds"\)/);
@@ -110,10 +110,10 @@ test("current funds load from one tenant-wide PostgreSQL snapshot", () => {
 test("finance funds use one immutable append-only ledger contract", () => {
   const action = read("apps/web/app/(protected)/finance/cash-actions.ts");
   const migration = read(
-    "supabase/migrations/20260726140000_immutable_finance_fund_ledger.sql",
+    "supabase/migration-archive/20260726140000_immutable_finance_fund_ledger.sql",
   );
   const currentFundsMigration = read(
-    "supabase/migrations/20260726160405_remove_pos_variance_from_current_funds.sql",
+    "supabase/migration-archive/20260726160405_remove_pos_variance_from_current_funds.sql",
   );
   const databaseTypes = read("packages/database/src/types/database.types.ts");
   const databaseTest = read("supabase/tests/finance_current_funds_test.sql");

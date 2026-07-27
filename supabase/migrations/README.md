@@ -1,6 +1,6 @@
 # Supabase migrations — baseline-first
 
-`20260720035548_baseline.sql` is the self-contained install for a fresh
+`20260727120000_baseline.sql` is the self-contained install for a fresh
 environment: a point-in-time `pg_dump` of the production `public` + `private`
 schemas. `private` is emitted first so public triggers/policies that reference
 `private.*` resolve, and `check_function_bodies` is disabled at the top so the
@@ -19,7 +19,7 @@ for every action.
 
 ## What's here
 
-- `20260720035548_baseline.sql` — full `public` + `private` schema: tables,
+- `20260727120000_baseline.sql` — full `public` + `private` schema: tables,
   functions, RLS policies, indexes, grants, materialized views, the auth hook
   (`custom_access_token_hook` + its grant), and the `private` schema helpers.
   Apply first on a fresh env. Self-contained — no separate bootstrap file.
@@ -31,7 +31,7 @@ for every action.
 
 `pg_dump --schema=public --schema=private` excludes Supabase-managed surfaces, so
 they are folded back in as the forward migration
-`20260720035549_fold_managed_surfaces.sql`. It is idempotent (`CREATE … IF NOT
+`20260727120001_fold_managed_surfaces.sql`. It is idempotent (`CREATE … IF NOT
 EXISTS`, `DROP … IF EXISTS` + recreate, `DO $$ … $$` guards) and applied
 automatically by `supabase db start` / `supabase db reset` / Supabase Branching as
 part of the chain — there is no separate manual apply step:
@@ -49,26 +49,28 @@ part of the chain — there is no separate manual apply step:
 The fold migration is the single source of truth for managed surfaces.
 
 The public/private baseline cannot carry triggers owned by `auth.users`.
-`20260720035550_restore_auth_user_profile_trigger.sql` restores the canonical
+`20260727120002_restore_auth_user_profile_trigger.sql` restores the canonical
 `on_auth_user_created` trigger after the baseline, so hosted Auth signups invoke
 `public.handle_new_user()` on a fresh Cloud environment.
 
 The baseline also emits materialized views `WITH NO DATA`.
-`20260720035551_initialize_materialized_views.sql` populates only uninitialized
+`20260727120003_initialize_materialized_views.sql` populates only uninitialized
 current views before runtime functions use concurrent refresh.
 
 A managed-state reset can leave the pg_cron launcher on its previous job cache.
-`20260720035552_reregister_managed_cron_jobs.sql` re-registers the canonical jobs
+`20260727120004_reregister_managed_cron_jobs.sql` re-registers the canonical jobs
 only while the environment has no orders, records a one-cadence health grace for
 new job ids, and reloads the launcher configuration. Populated Production skips
 the re-registration path.
 
 ## Existing environments
 
-- **Production (`iexwsuaqqenyjiskawoj`)** is the only persistent comtammatu
-  database and the repository type source. It keeps its applied migration
-  history and is not reset to the baseline; the baseline is for fresh Preview
-  environments only.
+- **Production (`iexwsuaqqenyjiskawoj`)** remains the operational database and
+  repository type source. It keeps its applied migration history and is not
+  reset to the baseline.
+- **Greenfield (`enloyfnuerqgaqderbwb`)** is the registered persistent bootstrap
+  target. It installs the baseline plus active forwards without Production data
+  or provider secrets.
 - Native Supabase Branching provides the disposable migration-replay target and
   requires the guard to verify the Production parent. Do not substitute a local
   database.

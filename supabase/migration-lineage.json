@@ -1,5 +1,5 @@
 {
-  "baselineFile": "supabase/migrations/20260720035548_baseline.sql",
-  "baselineVersion": "20260720035548",
-  "baselineSha256": "b94dd3137464a09f81269fcc4b71919f9028fb6e8c2a4704673743234fbb380f"
+  "baselineFile": "supabase/migrations/20260727120000_baseline.sql",
+  "baselineVersion": "20260727120000",
+  "baselineSha256": "42123b41a9cfa2d92303bc61cfc916b025033caee415ade29a029060dd8d7d3a"
 }

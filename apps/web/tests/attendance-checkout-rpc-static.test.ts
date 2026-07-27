@@ -19,7 +19,7 @@ const overnightBusinessDateMigration = read(
   "supabase/migration-archive/20260711143450_fix_overnight_attendance_business_date.sql",
 );
 const inventoryShiftScopeMigration = read(
-  "supabase/migrations/20260722074001_fix_attendance_checkout_inventory_shift_scope.sql",
+  "supabase/migration-archive/20260722074001_fix_attendance_checkout_inventory_shift_scope.sql",
 );
 
 test("attendance checkout notification upsert has a matching unique arbiter", () => {

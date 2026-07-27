@@ -83,7 +83,7 @@ const unlimitedWhenDeductionOffMigration = readFileSync(
 );
 
 const baselineSource = readFileSync(
-  join(process.cwd(), "../../supabase/migrations/20260720035548_baseline.sql"),
+  join(process.cwd(), "../../supabase/migrations/20260727120000_baseline.sql"),
   "utf8",
 );
 

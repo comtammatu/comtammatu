@@ -25,7 +25,7 @@ const baseline = normalizePgDumpSql(
     join(
       process.cwd(),
       "../..",
-      "supabase/migrations/20260720035548_baseline.sql",
+      "supabase/migrations/20260727120000_baseline.sql",
     ),
     "utf8",
   ),

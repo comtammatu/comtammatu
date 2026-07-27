@@ -23,10 +23,10 @@ const staffActions = read(
   "app/(protected)/br/[branchId]/pos/self-order-actions.ts",
 );
 const workerMigration = read(
-  "../../supabase/migrations/20260721120000_hddt_payment_completion_worker.sql",
+  "../../supabase/migration-archive/20260721120000_hddt_payment_completion_worker.sql",
 );
 const snapshotFixMigration = read(
-  "../../supabase/migrations/20260726170000_preserve_cash_invoice_snapshot.sql",
+  "../../supabase/migration-archive/20260726170000_preserve_cash_invoice_snapshot.sql",
 );
 
 function functionBlock(source: string, name: string): string {

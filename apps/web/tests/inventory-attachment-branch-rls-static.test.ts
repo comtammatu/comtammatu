@@ -10,7 +10,7 @@ function readRepo(path: string): string {
 }
 
 const migration = readRepo(
-  "supabase/migrations/20260726174857_qualify_inventory_attachment_policy_path.sql",
+  "supabase/migration-archive/20260726174857_qualify_inventory_attachment_policy_path.sql",
 );
 const wastePhotoUpload = readRepo(
   "apps/web/app/(protected)/inventory/_components/waste-photo-upload.tsx",

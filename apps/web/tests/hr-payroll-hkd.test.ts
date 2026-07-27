@@ -40,7 +40,7 @@ const monthlyAnnualLeaveMigrationSource = readFileSync(
 const policyHelperBoundaryMigrationSource = readFileSync(
   join(
     process.cwd(),
-    "../../supabase/migrations/20260726053209_remove_direct_auth_is_owner_policy_calls.sql",
+    "../../supabase/migration-archive/20260726053209_remove_direct_auth_is_owner_policy_calls.sql",
   ),
   "utf8",
 );

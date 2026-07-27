@@ -102,7 +102,7 @@ test("finance food cost uses the active branch warehouse WAC", () => {
 
 test("paid menu-item sales allocate order discounts before calculating gross profit", () => {
   const migration = read(
-    "supabase/migrations/20260720120000_fix_paid_menu_item_sales_aggregation.sql",
+    "supabase/migration-archive/20260720120000_fix_paid_menu_item_sales_aggregation.sql",
   );
 
   assert.match(migration, /FROM public\.payments p/);

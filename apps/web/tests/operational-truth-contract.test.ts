@@ -7,25 +7,25 @@ function read(path: string): string {
 }
 
 const evidenceMigration = read(
-  "../../../supabase/migrations/20260725141050_add_order_kds_operational_evidence.sql",
+  "../../../supabase/migration-archive/20260725141050_add_order_kds_operational_evidence.sql",
 );
 const baselineMigration = read(
-  "../../../supabase/migrations/20260720035548_baseline.sql",
+  "../../../supabase/migrations/20260727120000_baseline.sql",
 );
 const reconciliationMigration = read(
-  "../../../supabase/migrations/20260725141240_repair_sepay_canonical_reconciliation.sql",
+  "../../../supabase/migration-archive/20260725141240_repair_sepay_canonical_reconciliation.sql",
 );
 const financeMigration = read(
-  "../../../supabase/migrations/20260725141900_unify_order_finance_operational_truth.sql",
+  "../../../supabase/migration-archive/20260725141900_unify_order_finance_operational_truth.sql",
 );
 const posReportMigration = read(
-  "../../../supabase/migrations/20260725142100_fix_pos_session_payment_reporting.sql",
+  "../../../supabase/migration-archive/20260725142100_fix_pos_session_payment_reporting.sql",
 );
 const printMigration = read(
-  "../../../supabase/migrations/20260725142200_canonicalize_shift_close_print_evidence.sql",
+  "../../../supabase/migration-archive/20260725142200_canonicalize_shift_close_print_evidence.sql",
 );
 const revenueAuthorityMigration = read(
-  "../../../supabase/migrations/20260725142300_fix_revenue_payment_authority.sql",
+  "../../../supabase/migration-archive/20260725142300_fix_revenue_payment_authority.sql",
 );
 const databaseContractTest = read(
   "../../../supabase/tests/order_kds_payment_revenue_operational_truth_test.sql",

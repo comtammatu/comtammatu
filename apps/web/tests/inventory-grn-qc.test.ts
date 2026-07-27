@@ -23,7 +23,7 @@ test("GRN QC flags only price variance beyond the fixed 15 percent boundary", ()
 
 test("GRN confirmation has a database QC boundary and safe action errors", () => {
   const migration = readFileSync(
-    "../../supabase/migrations/20260726035701_enforce_grn_qc_before_confirm.sql",
+    "../../supabase/migration-archive/20260726035701_enforce_grn_qc_before_confirm.sql",
     "utf8",
   );
   const action = readFileSync(
@@ -48,7 +48,7 @@ test("GRN confirmation has a database QC boundary and safe action errors", () =>
 
 test("GRN price baseline uses normalized 30-day supplier history and requires evidence", () => {
   const migration = readFileSync(
-    "../../supabase/migrations/20260726041556_restore_grn_price_baseline.sql",
+    "../../supabase/migration-archive/20260726041556_restore_grn_price_baseline.sql",
     "utf8",
   );
   const action = readFileSync(

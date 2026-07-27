@@ -31,7 +31,7 @@ const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 test("bank reconciliation index alignment is replay-safe", () => {
   const baseline = read(
-    "supabase/migrations/20260720035548_baseline.sql",
+    "supabase/migrations/20260727120000_baseline.sql",
   );
 
   assert.match(
@@ -672,7 +672,7 @@ test("signed SePay server failures can be replayed but client failures stay bloc
 
 test("Owner replay of signed SePay evidence is exact, atomic, and audited", () => {
   const migration = read(
-    "supabase/migrations/20260721174543_replay_signed_sepay_payment_evidence.sql",
+    "supabase/migration-archive/20260721174543_replay_signed_sepay_payment_evidence.sql",
   );
   const action = read(
     "apps/web/app/(protected)/finance/bank-webhook-review-actions.ts",

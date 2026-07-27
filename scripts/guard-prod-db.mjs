@@ -13,7 +13,8 @@ import { fileURLToPath } from "node:url";
 // replays behavior fixtures so regex edits cannot silently weaken blocking.
 //
 // Blocks (exit 2): state-mutating Supabase CLI subcommands unless a supported
-// command binds its literal database URL to a verified Preview Branch; psql
+// command binds its literal database URL to a verified Preview Branch or the
+// registered Greenfield bootstrap target; psql
 // writes against a protected or unverified connection; pg_restore toward a
 // protected or unverified target; HTTP writes plus non-catalog Production
 // reads; and
@@ -30,9 +31,11 @@ import { fileURLToPath } from "node:url";
 
 const PROTECTED_REFS = {
   iexwsuaqqenyjiskawoj: "PRODUCTION (comtammatu)",
+  enloyfnuerqgaqderbwb: "GREENFIELD (matu-greenfield-company)",
   dyksphedgzqsqjqgxzog: "matu-platform production (separate codebase)",
 };
 
+const GREENFIELD_WRITE_REFS = new Set(["enloyfnuerqgaqderbwb"]);
 const NO_TOUCH_REFS = new Set(["dyksphedgzqsqjqgxzog"]);
 
 const APPROVED_PREVIEW_PARENT_REF = "iexwsuaqqenyjiskawoj";
@@ -50,7 +53,11 @@ const LIBPQ_UNVERIFIED_ENV = [
 ];
 
 function registeredReadableRef(ref) {
-  return ref === APPROVED_PREVIEW_PARENT_REF || trustedPreviewProject(ref) !== null;
+  return (
+    ref === APPROVED_PREVIEW_PARENT_REF ||
+    GREENFIELD_WRITE_REFS.has(ref) ||
+    trustedPreviewProject(ref) !== null
+  );
 }
 
 function codexSupabaseBindingVerified() {
@@ -1513,7 +1520,8 @@ function block(reason) {
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
       "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is PRODUCTION — guarded table/view/catalog reads only;",
-      "dyksphedgzqsqjqgxzog belongs to a different codebase. Preview writes require a branch verified as a child of iexwsuaqqenyjiskawoj;",
+      "enloyfnuerqgaqderbwb is the registered Greenfield bootstrap target; only migration applies are allowed;",
+      "dyksphedgzqsqjqgxzog belongs to a different codebase and must not be accessed;",
       "migrations ship as file → PR → owner applies. If the owner explicitly delegated a prod write",
       "in this session, the owner applies it outside the guarded runtime or provides a scoped",
       "approval path. Never disable this hook or its runtime wiring.",
@@ -1579,10 +1587,6 @@ if (toolName === "Bash") {
     if (noTouchRef && detectedDatabaseClient) {
       block(`command against no-touch ref ${noTouchRef}`);
     }
-    const refHit = Object.keys(PROTECTED_REFS).find((ref) =>
-      segment.includes(ref),
-    );
-
     const cliArgs = supabaseCliArgs(segment);
     if (cliArgs) {
       const isReadOnly = readOnlySupabaseCli(cliArgs);
@@ -1602,7 +1606,7 @@ if (toolName === "Bash") {
       const hasUnresolvedDbUrl = dbUrls.some(
         (url) => containsShellParameter(url) || url.includes("`"),
       );
-      const cliTargetsPreview =
+      const cliTargetsWritable =
         allowPreviewTarget &&
         isDbPush &&
         !hasUnresolvedDbUrl &&
@@ -1610,7 +1614,8 @@ if (toolName === "Bash") {
         dbUrls.length === 1 &&
         readTargetRef !== null &&
         readTargetRef !== APPROVED_PREVIEW_PARENT_REF &&
-        trustedPreviewProject(readTargetRef) !== null;
+        (GREENFIELD_WRITE_REFS.has(readTargetRef) ||
+          trustedPreviewProject(readTargetRef) !== null);
 
       if (isReadOnly) {
         if (!isUnboundSafe && !readTargetRef) {
@@ -1634,9 +1639,9 @@ if (toolName === "Bash") {
           block("Preview branch creation without the registered parent ref");
         }
       } else if (isDbPush) {
-        if (refHit || !cliTargetsPreview) {
+        if (!cliTargetsWritable) {
           block(
-            "Supabase db push without a verified Preview Branch target",
+            "Supabase db push without a verified Preview Branch or registered Greenfield target",
           );
         }
       } else {
@@ -1805,8 +1810,9 @@ if (mcpMatch) {
   const label = Object.hasOwn(PROTECTED_REFS, target)
     ? PROTECTED_REFS[target]
     : undefined;
+  const greenfield = GREENFIELD_WRITE_REFS.has(target);
   const preview = !label ? trustedPreviewProject(target) : null;
-  const approvedNonProd = preview !== null;
+  const approvedNonProd = greenfield || preview !== null;
   if (NO_TOUCH_REFS.has(target)) {
     block(`${action} against no-touch ref ${target}`);
   }
@@ -1843,7 +1849,26 @@ if (mcpMatch) {
     block(`${action} is outside the Production database catalog read allowlist`);
   }
 
-  if (approvedNonProd) {
+  if (greenfield) {
+    if (action === "apply_migration") {
+      process.exit(0);
+    }
+    if (action === "execute_sql") {
+      if (!guardedReadOnlySql(executeQuery)) {
+        block("execute_sql write against the registered Greenfield target");
+      }
+      const unsafeFunction = unsafeSqlFunction(executeQuery);
+      if (unsafeFunction) {
+        block(
+          `execute_sql calling non-whitelisted function ${unsafeFunction}() against the registered Greenfield target`,
+        );
+      }
+      process.exit(0);
+    }
+    block(`${action} against the registered Greenfield target`);
+  }
+
+  if (preview !== null) {
     if (
       action === "apply_migration" ||
       action === "execute_sql" ||
@@ -1852,7 +1877,7 @@ if (mcpMatch) {
       process.exit(0);
     }
     block(
-      `${action} against a trusted Preview branch`,
+      `${action} against an approved writable target`,
     );
   }
 

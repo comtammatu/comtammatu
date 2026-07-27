@@ -290,7 +290,7 @@ test("supplier invoice desktop layout does not squeeze the detail pane", () => {
 
 test("baseline keeps supplier payment ledger and invoice status together", () => {
   const source = normalizePgDumpSql(
-    readRoot("supabase/migrations/20260720035548_baseline.sql"),
+    readRoot("supabase/migrations/20260727120000_baseline.sql"),
   );
 
   assert.match(source, /CREATE FUNCTION public\.create_supplier_payment/);
@@ -391,7 +391,7 @@ test("supplier returns are unique per active GRN", () => {
 });
 
 test("supplier invoice matching requires linked GRN evidence", () => {
-  const baseline = readRoot("supabase/migrations/20260720035548_baseline.sql");
+  const baseline = readRoot("supabase/migrations/20260727120000_baseline.sql");
   const migration = readRoot(
     "supabase/migration-archive/20260708062218_supplier_invoice_missing_grn_pending.sql",
   );

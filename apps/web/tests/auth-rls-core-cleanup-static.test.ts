@@ -36,7 +36,7 @@ const staffPermissionBoundaryMigration = readFileSync(
 const authUserProfileTriggerMigration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260720035550_restore_auth_user_profile_trigger.sql",
+    "supabase/migrations/20260727120002_restore_auth_user_profile_trigger.sql",
   ),
   "utf8",
 );

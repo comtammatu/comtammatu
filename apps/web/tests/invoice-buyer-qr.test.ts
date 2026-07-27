@@ -6,7 +6,7 @@ import { test } from "node:test";
 const root = join(process.cwd(), "../..");
 const readRepo = (path: string) => readFileSync(join(root, path), "utf8");
 const migration = readRepo(
-  "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
+  "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
 );
 const worker = readRepo("apps/web/lib/tax-invoice-issue-worker.ts");
 
