@@ -38,10 +38,7 @@ test("long press cancels click after movement and exposes keyboard activation", 
 });
 
 test("long press cards preserve vertical scrolling and composed swipe cards keep keyboard handlers", () => {
-  const touchCardPaths = [
-    "apps/web/app/(protected)/hr/shifts-table.tsx",
-    "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
-  ];
+  const touchCardPaths = ["apps/web/app/(protected)/hr/shifts-table.tsx"];
 
   for (const path of touchCardPaths) {
     const source = read(path);
@@ -51,7 +48,6 @@ test("long press cards preserve vertical scrolling and composed swipe cards keep
 
   for (const path of [
     "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx",
-    "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
   ]) {
     const source = read(path);
     assert.match(source, /<InteractiveCard\s+render=\{<Link href=/);
@@ -59,11 +55,14 @@ test("long press cards preserve vertical scrolling and composed swipe cards keep
     assert.doesNotMatch(source, /<Drawer/);
   }
 
-  const stocktake = read(
+  for (const path of [
+    "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
     "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
-  );
-  assert.match(stocktake, /size="icon-touch"/);
-  assert.match(stocktake, /onClick=\{\(\) => onOpenDrawer\(row\)\}/);
+  ]) {
+    const source = read(path);
+    assert.doesNotMatch(source, /useLongPress/);
+    assert.doesNotMatch(source, /<Drawer/);
+  }
 
   for (const path of [
     "apps/web/lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
@@ -191,7 +190,7 @@ test("Inventory lists and reports do not render load failures as empty data", ()
     ["transfers/page.tsx", "inventory.transfers.load_failed"],
     ["stocktake/page.tsx", "inventory.stocktake.load_failed"],
     ["production/page.tsx", "inventory.production.load_failed"],
-    ["issues/page.tsx", "inventory.issues.load_failed"],
+    ["issues/issues-page-content.tsx", "inventory.issues.load_failed"],
     ["reports/page.tsx", "inventory.reports.load_failed"],
     ["count-assignments/page.tsx", "inventory.count_assignments.load_failed"],
     ["count-slips/page.tsx", "inventory.count_slips.load_failed"],

@@ -288,16 +288,21 @@ test("GRN supplier lines require an entered current unit price", () => {
   );
   assert.match(editor, /edit\.unitCost != null/);
   assert.match(editor, /edit\.unitCost > 0/);
-  assert.match(editor, /GRN_CREATE_COPY\.varianceReference\(variance\)/);
-  assert.match(editor, /GRN_CREATE_COPY\.lastCostReference/);
+  assert.match(editor, /GRN_CREATE_COPY\.priorPriceLine\(/);
+  assert.doesNotMatch(editor, /rounded-md bg-muted\/50/);
+  assert.doesNotMatch(editor, /unitPriceUnit/);
+  assert.doesNotMatch(editor, /varianceReference/);
   assert.match(
     readRepo(
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
     ),
-    /GRN_CREATE_COPY\.varianceReference\(variance\)/,
+    /GRN_CREATE_COPY\.priorPriceLine\(/,
   );
   assert.match(controller, /lines: existingDraft\?\.lines \?\? recentLines/);
-  assert.match(controller, /const hasMissingPrice = draft\.lines\.some/);
+  assert.match(
+    controller,
+    /hasMissingPrice = showPurchasePrice[\s\S]*draft\.lines\.some/,
+  );
   assert.match(controller, /!hasMissingPrice/);
   assert.match(client, /GRN_CREATE_COPY\.linePriceRequired/);
   assert.match(data, /\.from\("goods_received_notes"\)/);

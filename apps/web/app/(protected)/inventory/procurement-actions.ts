@@ -3,8 +3,12 @@
  * sibling files.
  *
  * Prefer importing directly from the domain-specific files:
- * - supplier-actions.ts   — supplier CRUD
- * - grn-actions.ts — GRN + invoices + recipes + AP payment
+ * - supplier-actions.ts — supplier CRUD
+ * - grn-actions.ts — GRN
+ * - recipe-actions.ts — recipes
+ * - purchase-order-actions.ts — PO
+ *
+ * Supplier invoice / AP actions live under finance/supplier-invoice-actions.ts.
  */
 export {
   fetchSuppliers,
@@ -21,14 +25,6 @@ export {
   confirmGrn,
 } from "./grn-actions";
 export {
-  attachSupplierInvoiceVatEvidence,
-  createSupplierInvoice,
-  fetchSupplierInvoicesPage,
-  recordSupplierPayment,
-  recomputeInvoiceMatching,
-} from "./supplier-invoice-actions";
-export type { SupplierInvoiceCursor } from "./supplier-invoice-actions";
-export {
   fetchRecipes,
   fetchBranchWacMap,
   fetchBranchMenuStockCapacity,
@@ -39,5 +35,6 @@ export type { RecentActivityItem } from "./grn-actions";
 export {
   approvePurchaseOrder,
   createGrnFromPurchaseOrder,
+  createPurchaseOrderFromGrn,
   createPurchaseOrderWithLines,
 } from "./purchase-order-actions";

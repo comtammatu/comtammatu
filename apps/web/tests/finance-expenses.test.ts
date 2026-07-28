@@ -4,9 +4,11 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 import {
   classifyExpensePaymentState,
+  expenseNeedsAction,
   isExpenseVisibleForBankMatch,
   isOperatingExpenseCategory,
 } from "../app/(protected)/finance/_lib/expense-categories";
+import { parseExpenseListState } from "../app/(protected)/finance/expenses/expense-list-state";
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
@@ -164,7 +166,6 @@ test("bank deposits stay out of operating expense totals", () => {
 
 test("expense period totals load every row and fail closed on missing evidence", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
-  const financeActions = readWeb("app/(protected)/finance/actions.ts");
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
 
   assert.match(
@@ -206,10 +207,68 @@ test("expense list separates its KPI summary from the data table", () => {
 
   assert.match(
     client,
-    /<KpiRow density="compact">[\s\S]*?<KpiCard[\s\S]*?label=\{copy\.totalLabel\}[\s\S]*?hint=\{copy\.totalHint\(formatCount\(rows\.length\)\)\}/,
+    /<KpiRow density="compact">[\s\S]*?<KpiCard[\s\S]*?label=\{copy\.totalLabel\}[\s\S]*?hint=\{copy\.totalHint\(formatCount\(summary\.operatingCount\)\)\}/,
   );
   assert.doesNotMatch(client, /<AppSection[\s\S]*?headerHint=/);
   assert.doesNotMatch(successPage, /meta=/);
+});
+
+test("operating KPI counts only the rows it sums", () => {
+  const page = readWeb("app/(protected)/finance/expenses/page.tsx");
+
+  // The label says "chi phí vận hành"; a count over every ledger row (incl.
+  // bank_deposit / cogs_manual) would not match the amount above it.
+  assert.match(
+    page,
+    /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal \+= row\.amount;[\s\S]*?acc\.operatingCount \+= 1;/,
+  );
+  assert.doesNotMatch(page, /formatCount\(rows\.length\)/);
+});
+
+test("expense triage filter shares one needs-action definition with its KPI", () => {
+  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const page = readWeb("app/(protected)/finance/expenses/page.tsx");
+
+  assert.equal(
+    expenseNeedsAction({ payment_method: "unpaid", paid_at: null }),
+    true,
+  );
+  assert.equal(
+    expenseNeedsAction({
+      payment_method: "transfer",
+      paid_at: "2026-07-09T01:00:00.000Z",
+      matchedEventIds: [],
+    }),
+    true,
+  );
+  assert.equal(
+    expenseNeedsAction({
+      payment_method: "transfer",
+      paid_at: "2026-07-09T01:00:00.000Z",
+      matchedEventIds: [7],
+    }),
+    false,
+  );
+  assert.equal(
+    expenseNeedsAction({
+      payment_method: "cash",
+      paid_at: "2026-07-09T01:00:00.000Z",
+    }),
+    false,
+  );
+
+  assert.equal(parseExpenseListState("pending"), "pending");
+  assert.equal(parseExpenseListState(["pending", "paid"]), "pending");
+  assert.equal(parseExpenseListState("paid"), null);
+  assert.equal(parseExpenseListState(undefined), null);
+
+  // List URL owns the filter (ADR 0018) and the table renders the filtered set.
+  assert.match(page, /stateFilter=\{parseExpenseListState\(sp\.state\)\}/);
+  assert.match(page, /if \(expenseNeedsAction\(row\)\)/);
+  assert.match(client, /rows\.filter\(expenseNeedsAction\)/);
+  assert.match(client, /data=\{visibleRows\}/);
+  assert.match(client, /next\.set\(EXPENSE_LIST_STATE_PARAM, "pending"\)/);
+  assert.match(client, /aria-pressed=\{showOnlyNeedsAction\}/);
 });
 
 test("expense create captures immutable multi-rate VAT and optional attachment", () => {

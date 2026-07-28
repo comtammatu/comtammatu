@@ -12,7 +12,7 @@ export const SELF_ORDER_VI = {
     "Thiết bị này chưa được xác nhận cho lượt bàn hiện tại.",
   joinRequiredTitle: "Xác nhận thiết bị cho bàn này",
   joinRequiredDescription:
-    "Bàn đang có lượt phục vụ. Nhân viên cần xác nhận thiết bị trước khi bạn xem hoá đơn hoặc gọi thêm.",
+    "Nhân viên cần xác nhận thiết bị trước khi bạn xem hoá đơn hoặc gọi thêm.",
   requestJoin: "Xin tham gia bàn",
   devicePendingTitle: "Đang chờ nhân viên xác nhận",
   originPendingDescription:
@@ -25,17 +25,17 @@ export const SELF_ORDER_VI = {
     `Thiết bị cần được xác nhận trước ${time}.`,
   deviceAccessDeniedTitle: "Thiết bị không còn quyền truy cập",
   deviceRejectedDescription:
-    "Nhân viên đã từ chối thiết bị này cho lượt bàn hiện tại. Vui lòng gọi nhân viên nếu cần hỗ trợ.",
+    "Nhân viên đã từ chối thiết bị cho lượt bàn này. Vui lòng gọi nhân viên.",
   deviceRevokedDescription:
-    "Nhân viên đã thu hồi quyền của thiết bị này cho lượt bàn hiện tại. Quyền truy cập chỉ mở lại ở lượt bàn mới.",
+    "Nhân viên đã thu hồi quyền của thiết bị cho lượt bàn này.",
   deviceExpiredTitle: "Xác nhận thiết bị đã hết hạn",
   deviceExpiredDescription:
-    "Món trong giỏ vẫn được giữ. Vui lòng gửi lại; nếu trạng thái bàn vừa đổi, hệ thống sẽ yêu cầu thử lại một lần.",
+    "Món trong giỏ vẫn được giữ. Vui lòng gửi lại.",
   submitJoinBatch: "Gửi món · Xin tham gia bàn",
   pairingCodeInvalid: "Mã xác nhận không đúng hoặc đã hết hạn.",
   rateLimited: "Bạn thao tác quá nhanh. Vui lòng đợi một chút rồi thử lại.",
   trustedNetworkRequired:
-    "Chưa xác định được kết nối an toàn. Vui lòng dùng mạng tại cửa hàng hoặc gọi nhân viên.",
+    "Vui lòng dùng mạng tại cửa hàng hoặc gọi nhân viên.",
   branchFallback: "Cơm Tấm Má Tư",
   tableLabel: (tableNumber: number | string) => `Bàn ${tableNumber}`,
   pendingApprovalTitle: "Đã gửi món",
@@ -81,7 +81,7 @@ export const SELF_ORDER_VI = {
   customizeDescription:
     "Chọn tuỳ biến, ghi chú và số lượng trước khi thêm vào giỏ.",
   variantLabel: "Loại",
-  modifierLabel: "Topping",
+  modifierLabel: "Món thêm",
   sidesLabel: "Món kèm",
   itemNoteLabel: "Ghi chú món",
   itemNotePlaceholder: "Ví dụ: ít mỡ, không hành...",
@@ -102,7 +102,7 @@ export const SELF_ORDER_VI = {
   refreshFailed: "Không cập nhật được, đang dùng dữ liệu cũ.",
   historyRestoreTitle: "Đang kiểm tra lại lượt bàn",
   historyRestoreDescription:
-    "Trang vừa được mở lại. Hệ thống cần tải trạng thái mới trước khi hiển thị món và hoá đơn.",
+    "Đang tải lại trạng thái bàn trước khi hiển thị món và hoá đơn.",
   historyRestoreFailed:
     "Chưa thể tải trạng thái mới. Vui lòng kết nối mạng và thử lại.",
   retryRefresh: "Thử lại",
@@ -113,11 +113,11 @@ export const SELF_ORDER_VI = {
   posSessionClosed: "Ca POS đang đóng. Vui lòng gọi nhân viên để được hỗ trợ.",
   staffPosSessionClosed: "Ca POS đang đóng. Mở ca trước khi duyệt QR gọi món.",
   pendingPaymentBlocked:
-    "Bàn đang có yêu cầu thanh toán. Vui lòng gọi nhân viên nếu cần đổi món hoặc cách thanh toán.",
+    "Bàn đang có yêu cầu thanh toán. Gọi nhân viên nếu cần đổi.",
   activePaymentIntent:
-    "Bàn đang có một yêu cầu thanh toán. Vui lòng dùng yêu cầu hiện tại hoặc gọi nhân viên hỗ trợ.",
+    "Bàn đang có yêu cầu thanh toán. Dùng yêu cầu hiện tại hoặc gọi nhân viên.",
   paymentCancelStaffRequired:
-    "Yêu cầu thanh toán đang được xử lý. Vui lòng gọi nhân viên nếu cần huỷ hoặc đổi cách thanh toán.",
+    "Yêu cầu thanh toán đang xử lý. Gọi nhân viên nếu cần huỷ hoặc đổi.",
   cancelVietQr: "Huỷ mã QR",
   cancelVietQrTitle: "Huỷ mã QR thanh toán?",
   cancelVietQrDescription:
@@ -159,7 +159,7 @@ export const SELF_ORDER_VI = {
   openBankApp: "Mở ứng dụng",
   chooseBankAppTitle: "Chọn ứng dụng",
   chooseBankAppDescription:
-    "Liên kết gửi sẵn thông tin VietQR. Hãy kiểm tra người nhận, số tiền và nội dung trước khi xác nhận.",
+    "Kiểm tra người nhận, số tiền và nội dung trước khi xác nhận.",
   bankAppsLoading: "Đang tải danh sách ứng dụng...",
   bankAppsLoadFailed: "Không tải được danh sách ứng dụng.",
   saveVietQr: "Lưu QR",
@@ -167,7 +167,7 @@ export const SELF_ORDER_VI = {
   paymentDescription: "Chọn cách thanh toán sau khi nhân viên đã duyệt món.",
   buyerTitle: "Thông tin HĐĐT",
   buyerDescription:
-    "HĐĐT vẫn được phát hành cho đơn đã thanh toán. Nhập MST nếu bạn cần thông tin người mua trên hóa đơn.",
+    "HĐĐT vẫn được phát hành. Nhập MST nếu cần ghi người mua trên hóa đơn.",
   buyerNoInvoice: "Không cần ghi thông tin người mua (vẫn xuất HĐĐT)",
   buyerName: "Tên người mua / công ty",
   buyerTaxCode: "Mã số thuế",
@@ -241,20 +241,19 @@ export const SELF_ORDER_VI = {
   statusRejected: "Đã từ chối",
   ctaAwaitingApproval: "Đã gửi món",
   ctaAwaitingApprovalHint:
-    "Nhân viên đã nhận lượt gọi món đầu tiên. Vui lòng đợi một chút để gọi thêm.",
+    "Nhân viên đã nhận lượt gọi. Đợi một chút để gọi thêm.",
   awaitingCalloutTitle: "Đang chờ nhân viên xác nhận",
   awaitingCalloutDescription:
     "Yêu cầu mở bàn đã được gửi. Bạn vẫn có thể xem thực đơn trong lúc chờ.",
   acknowledge: "Đã hiểu",
   ctaAwaitingDevice: "Đang chờ xác nhận thiết bị",
   ctaAwaitingDeviceHint:
-    "Giỏ món chưa được gửi. Sau khi nhân viên xác nhận thiết bị, hãy bấm Gửi món.",
+    "Nhân viên xác nhận thiết bị xong, hãy bấm Gửi món.",
   ctaRejected: "Đã từ chối",
-  ctaRejectedHint:
-    "Lượt gọi đã bị huỷ. Xem chi tiết ở tab Hoá đơn, hoặc gọi nhân viên để được hỗ trợ.",
+  ctaRejectedHint: "Lượt gọi đã bị huỷ. Xem chi tiết ở tab Hoá đơn.",
   rejectedCalloutTitle: "Yêu cầu gọi món bị từ chối",
   rejectedCalloutDescription:
-    "Món chưa được thêm vào đơn của bàn. Kiểm tra lại giỏ hoặc gọi nhân viên, rồi gửi lại.",
+    "Món chưa vào đơn của bàn. Kiểm tra lại giỏ rồi gửi lại.",
   resubmitRejected: "Gửi lại",
   billItemColumn: "Món",
   billQuantityColumn: "SL",

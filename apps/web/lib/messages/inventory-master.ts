@@ -2,18 +2,16 @@ export const UNITS_VI = {
   page: {
     eyebrow: "Quản lý nguyên liệu",
     title: "Đơn vị đo",
-    description:
-      "Danh mục đơn vị dùng chung. Quy đổi cụ thể được cấu hình theo từng nguyên liệu.",
+    description: "Đơn vị dùng chung. Quy đổi cấu hình theo từng nguyên liệu.",
   },
   add: "Thêm đơn vị",
   empty: "Chưa có đơn vị nào. Thêm đơn vị đầu tiên để bắt đầu.",
-  emptyPackaging:
-    "Chưa có đơn vị đóng gói nào. Thêm đơn vị đầu tiên để bắt đầu.",
+  emptyPackaging: "Chưa có đơn vị đóng gói. Thêm đơn vị đầu tiên.",
   showInactive: "Hiện đơn vị đã ngừng dùng",
   standard: {
     title: "Đơn vị chuẩn",
     description:
-      "Đơn vị đo hệ thống (khối lượng và thể tích). Hệ số quy đổi cố định, không thể chỉnh sửa.",
+      "Đơn vị đo hệ thống. Hệ số quy đổi cố định, không sửa được.",
     mass: "Khối lượng",
     volume: "Thể tích",
     factor: (unit: string) => `1 = ${unit}`,
@@ -21,7 +19,7 @@ export const UNITS_VI = {
   packaging: {
     title: "Đơn vị đóng gói",
     description:
-      "Có thể đổi mã trước khi gán nguyên liệu. Sau khi đã gán, chỉ được ngừng dùng; hãy tạo đơn vị mới nếu cần cách gọi khác.",
+      "Chỉ đổi mã trước khi gán nguyên liệu. Sau khi gán, chỉ được ngừng dùng.",
   },
   cols: {
     code: "Mã",
@@ -66,8 +64,7 @@ export const CATEGORIES_VI = {
   page: {
     eyebrow: "Quản lý nguyên liệu",
     title: "Nhóm nguyên liệu",
-    description:
-      "Phân nhóm nguyên liệu để lọc, báo cáo và gán màu hiển thị trong danh mục.",
+    description: "Phân nhóm nguyên liệu để lọc, báo cáo và gán màu hiển thị.",
   },
   add: "Thêm nhóm",
   empty: "Chưa có nhóm nào. Thêm nhóm đầu tiên để bắt đầu.",
@@ -123,12 +120,11 @@ export const INGREDIENT_FORM_VI = {
     conversionAriaFallback: "Số đơn vị xuất trong 1 đơn vị nhập",
     unitPending: "…",
     sameUnitFactorOne: "Cùng đơn vị thì quy đổi phải là 1",
-    unitsBriefHint:
-      "Tồn và định mức theo đơn vị xuất. Chia nhỏ: ml/g; nguyên đơn vị: chai/lon.",
+    unitsBriefHint: "Tồn và định mức theo đơn vị xuất (ml/g hoặc chai/lon).",
     sectionLabel: "Đơn vị tồn và quy đổi",
     add: "Thêm đơn vị",
     empty: "Chưa có đơn vị nào.",
-    hint: "Chọn đơn vị xuất đủ nhỏ cho bếp (ml/g khi chia nhỏ; chai/lon khi dùng nguyên). Đơn vị nhập là cách NCC giao hàng. Sau khi có phiếu kho, đơn vị và quy đổi hiện hữu bị khóa.",
+    hint: "Đơn vị xuất theo mức bếp dùng, nhập theo cách NCC giao. Có phiếu kho thì khóa.",
     colUnit: "Đơn vị",
     colFactor: "Quy đổi về tồn chuẩn",
     colAnchor: "Quy đổi theo",

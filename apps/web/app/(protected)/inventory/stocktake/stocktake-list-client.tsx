@@ -1,13 +1,12 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRight as IconArrowRight,
+  ArrowRightToLine as IconArrowBarRight,
+  Ban as IconBan,
   ClipboardCheck as IconClipboardCheck,
-  EllipsisVertical as IconDotsVertical,
   Search as IconSearch,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
@@ -15,14 +14,6 @@ import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { useLongPress } from "@lib/hooks/use-long-press";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@comtammatu/ui/components/drawer";
 import { cancelStocktake } from "../actions";
 import { toast } from "@comtammatu/ui/components/sonner";
 
@@ -49,7 +40,11 @@ import {
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { Ban as IconBan } from "lucide-react";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import {
@@ -59,6 +54,7 @@ import {
 
 export interface StocktakeSessionRow {
   id: number;
+  session_number?: string | null;
   branch_id: number;
   started_at: string | null;
   completed_at: string | null;
@@ -67,6 +63,10 @@ export interface StocktakeSessionRow {
   created_at: string;
   created_by: string;
   branches: { id: number; name: string } | null;
+}
+
+function stocktakeCode(row: Pick<StocktakeSessionRow, "id" | "session_number">): string {
+  return row.session_number?.trim() || `KK-${row.id}`;
 }
 
 export interface BranchOption {
@@ -80,48 +80,51 @@ function formatDateShort(dateStr: string | null): string {
   return formatVNDate(dateStr);
 }
 
+function stocktakeDetailHref(routeBase: string, row: StocktakeSessionRow): string {
+  return `${routeBase}/${row.id}?branchId=${row.branch_id}`;
+}
+
 function StocktakeSessionCard({
   row,
-  routeBase,
-  onOpenDrawer,
+  actions,
+  onOpen,
 }: {
   row: StocktakeSessionRow;
-  routeBase: string;
-  onOpenDrawer: (row: StocktakeSessionRow) => void;
+  actions: RowActionItem[];
+  onOpen: (row: StocktakeSessionRow) => void;
 }) {
-  const router = useRouter();
-
-  const longPress = useLongPress({
-    onLongPress: () => onOpenDrawer(row),
-    onClick: () =>
-      router.push(`${routeBase}/${row.id}?branchId=${row.branch_id}`),
-  });
-
   return (
     <InteractiveCard
       minHeight="mobile"
       padding="default"
-      className="flex-col items-stretch touch-pan-y select-none cursor-pointer"
-      {...longPress}
+      className="flex-col items-stretch cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(row)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(row);
+        }
+      }}
     >
       <div className="flex items-center gap-2">
-        <span className="flex-1 font-mono text-sm font-medium pointer-events-none">
-          KK-{row.id}
+        <span className="flex-1 font-mono text-sm font-medium">
+          {stocktakeCode(row)}
         </span>
-        <span className="pointer-events-none">
-          <StatusBadge domain="inventory" value={row.status} />
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-touch"
-          aria-label={`${FORM_VI.action} KK-${row.id}`}
-          onClick={() => onOpenDrawer(row)}
+        <StatusBadge domain="inventory" value={row.status} />
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
         >
-          <IconDotsVertical />
-        </Button>
+          <RowActionsMenu
+            items={actions}
+            label={`${FORM_VI.action} ${stocktakeCode(row)}`}
+            triggerSize="icon-touch"
+          />
+        </div>
       </div>
-      <div className="flex items-center justify-between text-xs text-muted-foreground pointer-events-none">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{row.branches?.name ?? "—"}</span>
         <span className="tabular-nums">
           {formatDateShort(row.started_at ?? row.created_at)}
@@ -150,8 +153,8 @@ export function StocktakeListClient({
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const branchQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
-  const [drawerRow, setDrawerRow] = useState<StocktakeSessionRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
   async function handleCancelSession(id: number) {
@@ -171,10 +174,42 @@ export function StocktakeListClient({
         return;
       }
       toast.success("Hủy phiếu thành công");
-      setDrawerRow(null);
       router.refresh();
     });
   }
+
+  const openStocktakeDetail = (row: StocktakeSessionRow) => {
+    router.push(stocktakeDetailHref(routeBase, row));
+  };
+
+  const getStocktakeRowActions = (
+    row: StocktakeSessionRow,
+  ): RowActionItem[] => {
+    const items: RowActionItem[] = [
+      {
+        key: "view",
+        label: ACTIONS_VI.viewDetails,
+        icon: <IconArrowBarRight />,
+        href: stocktakeDetailHref(routeBase, row),
+      },
+    ];
+
+    if (row.status === "in_progress") {
+      items.push({
+        key: "cancel",
+        label: "Hủy phiếu",
+        icon: <IconBan />,
+        destructive: true,
+        disabled: isPending,
+        separatorBefore: true,
+        onSelect: () => {
+          void handleCancelSession(row.id);
+        },
+      });
+    }
+
+    return items;
+  };
 
   useEffect(() => {
     setRows(initial);
@@ -196,7 +231,7 @@ export function StocktakeListClient({
     const q = search.trim();
     if (q) {
       list = list.filter((r) =>
-        matchesSearch([`KK-${r.id}`, r.branches?.name], q),
+        matchesSearch([stocktakeCode(r), r.branches?.name], q),
       );
     }
     return list;
@@ -210,7 +245,7 @@ export function StocktakeListClient({
       key: "code",
       header: messages.inventory.stocktake.sessionCode,
       className: "font-mono text-sm font-medium",
-      render: (r) => `KK-${r.id}`,
+      render: (r) => stocktakeCode(r),
     },
     {
       key: "branch",
@@ -230,21 +265,28 @@ export function StocktakeListClient({
       render: (r) => <StatusBadge domain="inventory" value={r.status} />,
     },
     {
-      key: "details",
-      header: "",
-      className: "w-10",
-      render: (r) => (
-        <Button
-          variant="ghost"
-          size="icon-lg"
-          aria-label={messages.inventory.stocktake.detailsAria}
-          render={
-            <Link href={`${routeBase}/${r.id}?branchId=${r.branch_id}`} />
-          }
-        >
-          <IconArrowRight className="size-4" />
-        </Button>
-      ),
+      key: "actions",
+      header: <span className="sr-only">{FORM_VI.action}</span>,
+      className: "w-10 text-right",
+      render: (r) => {
+        const items = getStocktakeRowActions(r);
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <RowActionsMenu
+              items={items}
+              label={messages.inventory.stocktake.detailsAria}
+              triggerSize="icon-sm"
+              open={openActionRowId === r.id}
+              onOpenChange={(open) =>
+                setOpenActionRowId(open ? r.id : null)
+              }
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -361,56 +403,22 @@ export function StocktakeListClient({
           }
           emptyMode={isFiltered ? "no-results" : "no-data"}
           emptyIcon={<IconClipboardCheck />}
+          onRowClick={openStocktakeDetail}
+          getRowDataState={(r) =>
+            openActionRowId === r.id ? "selected" : undefined
+          }
+          renderRowContextMenu={(r) => (
+            <RowActionsContextMenuItems items={getStocktakeRowActions(r)} />
+          )}
           mobileCardRender={(r) => (
             <StocktakeSessionCard
               row={r}
-              routeBase={routeBase}
-              onOpenDrawer={setDrawerRow}
+              actions={getStocktakeRowActions(r)}
+              onOpen={openStocktakeDetail}
             />
           )}
         />
       </InventoryListFrame>
-      <Drawer
-        open={!!drawerRow}
-        onOpenChange={(open) => !open && setDrawerRow(null)}
-      >
-        <DrawerContent>
-          {drawerRow && (
-            <>
-              <DrawerHeader>
-                <DrawerTitle>KK-{drawerRow.id}</DrawerTitle>
-                <DrawerDescription>
-                  {drawerRow.branches?.name ?? "—"}
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="p-4 flex flex-col gap-3">
-                <Button
-                  variant="default"
-                  className="w-full"
-                  onClick={() =>
-                    router.push(
-                      `${routeBase}/${drawerRow.id}?branchId=${drawerRow.branch_id}`,
-                    )
-                  }
-                >
-                  Xem chi tiết
-                </Button>
-                {drawerRow.status === "in_progress" && (
-                  <Button
-                    variant="destructive"
-                    className="w-full"
-                    disabled={isPending}
-                    onClick={() => handleCancelSession(drawerRow.id)}
-                  >
-                    <IconBan className="mr-2 h-4 w-4" />
-                    Hủy phiếu
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-        </DrawerContent>
-      </Drawer>
     </>
   );
 

@@ -46,6 +46,8 @@ export type GrnCreatePageData = {
     id: number;
     lines: GrnCreateServerDraftLine[];
   } | null;
+  /** D088: false for branch_manager — prices stripped from payload. */
+  showPurchasePrice: boolean;
 };
 
 export type GrnLineEditState = {

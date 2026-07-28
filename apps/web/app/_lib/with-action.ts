@@ -6,6 +6,7 @@ import {
   getAuthContextWithAnyPermission,
   getAuthContextWithPermission,
 } from "./auth";
+import { isRevokedAuthSessionError } from "./auth-session-liveness";
 
 /** Context provided to action handlers after auth succeeds. */
 export type ActionContext = NonNullable<
@@ -148,36 +149,77 @@ type PositionalActionOptions<
 const DEFAULT_VALIDATION_ERROR = "Dữ liệu không hợp lệ";
 const FORBIDDEN_ERROR = "Không có quyền";
 const BRANCH_SCOPE_UNSET_ERROR = "Tài khoản chưa được gán chi nhánh";
+const SESSION_EXPIRED_ERROR =
+  "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+const SESSION_EXPIRED_CODE = "session_expired";
+
+/**
+ * Mutation-path Auth liveness. `getAuthContext` stays getSession-only so RSC
+ * loaders do not map Auth `session_not_found` to soft "Không có quyền" while
+ * PostgREST still accepts the cookie JWT (GRN/expense). Mutating wrappers
+ * probe Auth here and MUST surface session_expired + local signOut — never
+ * collapse revoked Auth into the forbidden copy.
+ *
+ * Incomplete test fakes without `auth.getUser` skip the probe.
+ */
+async function ensureLiveAuthSession(ctx: ActionContext): Promise<boolean> {
+  const getUser = ctx.supabase.auth?.getUser;
+  if (typeof getUser !== "function") return true;
+
+  const { error } = await getUser.call(ctx.supabase.auth);
+  if (!error) return true;
+  if (!isRevokedAuthSessionError(error)) return true;
+
+  try {
+    await ctx.supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // Best-effort cookie clear; structured session_expired still returned.
+  }
+  return false;
+}
+
+type ResolvedActionAuth =
+  | { kind: "ok"; ctx: ActionContext }
+  | { kind: "forbidden" }
+  | { kind: "session_expired" };
 
 async function resolveActionContext<TSchema extends z.ZodType>(
   opts: AuthOptions<TSchema>,
   data: z.infer<TSchema>,
-): Promise<ActionContext | null> {
+): Promise<ResolvedActionAuth> {
+  let ctx: ActionContext | null;
   if (opts.customAuth) {
-    return opts.customAuth(data);
-  }
-
-  if (!opts.roles) {
+    ctx = await opts.customAuth(data);
+  } else if (!opts.roles) {
     // Compile-time mistake: caller forgot both `roles` and `customAuth`.
     // Fail closed rather than allowing a wide-open action.
-    return null;
+    ctx = null;
+  } else {
+    const branchId = opts.permissionBranchId?.(data);
+
+    if (opts.anyPermission) {
+      ctx = await getAuthContextWithAnyPermission(
+        opts.roles,
+        opts.anyPermission,
+        branchId,
+      );
+    } else if (opts.permission) {
+      ctx = await getAuthContextWithPermission(
+        opts.roles,
+        opts.permission,
+        branchId,
+      );
+    } else {
+      ctx = await getAuthContext(opts.roles);
+    }
   }
 
-  const branchId = opts.permissionBranchId?.(data);
+  if (!ctx) return { kind: "forbidden" };
 
-  if (opts.anyPermission) {
-    return getAuthContextWithAnyPermission(
-      opts.roles,
-      opts.anyPermission,
-      branchId,
-    );
-  }
+  const live = await ensureLiveAuthSession(ctx);
+  if (!live) return { kind: "session_expired" };
 
-  if (opts.permission) {
-    return getAuthContextWithPermission(opts.roles, opts.permission, branchId);
-  }
-
-  return getAuthContext(opts.roles);
+  return { kind: "ok", ctx };
 }
 
 function actionFailure<TData = unknown>(
@@ -278,13 +320,17 @@ export function withAction<TSchema extends z.ZodType, TData = unknown>(
       );
     }
 
-    const ctx = await resolveActionContext(opts, result.data);
-    if (!ctx) {
+    const auth = await resolveActionContext(opts, result.data);
+    if (auth.kind === "session_expired") {
+      return actionFailure<TData>(SESSION_EXPIRED_ERROR, SESSION_EXPIRED_CODE);
+    }
+    if (auth.kind === "forbidden") {
       return actionFailure<TData>(
         opts.forbiddenError ?? FORBIDDEN_ERROR,
         opts.forbiddenErrorCode,
       );
     }
+    const ctx = auth.ctx;
 
     if (
       opts.requireBranchScope &&
@@ -338,13 +384,17 @@ export function withActionPositional<
       );
     }
 
-    const ctx = await resolveActionContext(opts, result.data);
-    if (!ctx) {
+    const auth = await resolveActionContext(opts, result.data);
+    if (auth.kind === "session_expired") {
+      return actionFailure<TData>(SESSION_EXPIRED_ERROR, SESSION_EXPIRED_CODE);
+    }
+    if (auth.kind === "forbidden") {
       return actionFailure<TData>(
         opts.forbiddenError ?? FORBIDDEN_ERROR,
         opts.forbiddenErrorCode,
       );
     }
+    const ctx = auth.ctx;
 
     if (
       opts.requireBranchScope &&
@@ -409,13 +459,17 @@ export function withFormAction<TSchema extends z.ZodType, TData = unknown>(
       );
     }
 
-    const ctx = await resolveActionContext(opts, result.data);
-    if (!ctx) {
+    const auth = await resolveActionContext(opts, result.data);
+    if (auth.kind === "session_expired") {
+      return actionFailure<TData>(SESSION_EXPIRED_ERROR, SESSION_EXPIRED_CODE);
+    }
+    if (auth.kind === "forbidden") {
       return actionFailure<TData>(
         opts.forbiddenError ?? FORBIDDEN_ERROR,
         opts.forbiddenErrorCode,
       );
     }
+    const ctx = auth.ctx;
 
     if (
       opts.requireBranchScope &&

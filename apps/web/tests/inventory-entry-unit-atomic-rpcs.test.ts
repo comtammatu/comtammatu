@@ -76,7 +76,7 @@ test("active inventory reads do not select dropped unit columns", () => {
       [/ingredients\s*\(\s*id,\s*name,\s*unit,\s*purchase_unit\s*\)/],
     ],
     [
-      "apps/web/app/(protected)/inventory/issues/page.tsx",
+      "apps/web/app/(protected)/inventory/issues/issues-page-content.tsx",
       [/ingredients\s*\(\s*name,\s*unit\s*\)/],
     ],
     [

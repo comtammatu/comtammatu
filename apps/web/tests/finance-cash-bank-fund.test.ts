@@ -30,9 +30,18 @@ test("finance landing presents immutable book funds", () => {
   assert.match(currentFunds, /cash\.hasOpening[\s\S]*cash\.bankOnHand/);
   assert.match(copy, /cashOnHand: "Tiền mặt theo sổ"/);
   assert.match(copy, /bankOnHand: "Tiền trong ngân hàng"/);
-  assert.match(copy, /verifying: "Đang xác minh"/);
-  assert.match(copy, /onHandTitle: "Số dư hiện có"/);
-  assert.match(copy, /onHandDescription: "Toàn quán · không theo bộ lọc"/);
+  assert.match(copy, /verifying: "Chưa mở sổ"/);
+  assert.match(copy, /onHandTitle: "Tiền đang có"/);
+  assert.doesNotMatch(copy, /onHandDescription|followsFilters/);
+  assert.doesNotMatch(
+    copy,
+    /"(?:[^"]*Cutover[^"]*|[^"]*cutover kiểm soát[^"]*|Theo bộ lọc|không theo bộ lọc)"/,
+  );
+  assert.doesNotMatch(
+    page,
+    /description=\{financeCopy\.basic\.sections\.followsFilters\}/,
+  );
+  assert.doesNotMatch(currentFunds, /onHandDescription/);
   assert.match(
     currentFunds,
     /className="grid-cols-1 md:grid-cols-2 xl:grid-cols-2"/,

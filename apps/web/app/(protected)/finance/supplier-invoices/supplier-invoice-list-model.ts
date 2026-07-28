@@ -20,12 +20,16 @@ export const SUPPLIER_INVOICE_PAYMENT_STATUSES = [
 
 export const SUPPLIER_INVOICE_VIEW_MODES = ["supplier", "po"] as const;
 
+export const SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS = ["missing"] as const;
+
 export type SupplierInvoiceMatchStatus =
   (typeof SUPPLIER_INVOICE_MATCH_STATUSES)[number];
 export type SupplierInvoicePaymentStatus =
   (typeof SUPPLIER_INVOICE_PAYMENT_STATUSES)[number];
 export type SupplierInvoiceViewMode =
   (typeof SUPPLIER_INVOICE_VIEW_MODES)[number];
+export type SupplierInvoiceVatEvidenceFilter =
+  (typeof SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS)[number];
 
 export type SupplierInvoiceListFilters = {
   query: string;
@@ -33,6 +37,7 @@ export type SupplierInvoiceListFilters = {
   matchStatus: SupplierInvoiceMatchStatus | null;
   paymentStatus: SupplierInvoicePaymentStatus | null;
   overdueOnly: boolean;
+  vatEvidence: SupplierInvoiceVatEvidenceFilter | null;
   viewMode: SupplierInvoiceViewMode;
 };
 
@@ -52,6 +57,9 @@ export type SupplierInvoiceGroup = {
   outstandingAmount: number;
   overdueAmount: number;
   overdueCount: number;
+  /** Payable invoices still blocked by a missing HĐ GTGT attachment. */
+  missingVatCount: number;
+  missingVatAmount: number;
   nextDueDate: string | null;
   primaryInvoice: SupplierInvoiceRow;
   /** All invoices in the group, outstanding-first then code. */
@@ -105,6 +113,12 @@ export function parseSupplierInvoiceListFilters(
       ? rawPaymentStatus
       : null,
     overdueOnly: firstParam(params.overdue) === "1",
+    vatEvidence: isOneOf(
+      firstParam(params.vat),
+      SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS,
+    )
+      ? "missing"
+      : null,
     viewMode: isOneOf(rawViewMode, SUPPLIER_INVOICE_VIEW_MODES)
       ? rawViewMode
       : "supplier",
@@ -118,6 +132,7 @@ export function supplierInvoiceFiltersKey(filters: SupplierInvoiceListFilters) {
     filters.matchStatus ?? "",
     filters.paymentStatus ?? "",
     filters.overdueOnly ? "1" : "0",
+    filters.vatEvidence ?? "",
     filters.viewMode,
   ].join("|");
 }
@@ -130,7 +145,8 @@ export function hasSupplierInvoiceListFilters(
     filters.supplierId != null ||
     filters.matchStatus != null ||
     filters.paymentStatus != null ||
-    filters.overdueOnly
+    filters.overdueOnly ||
+    filters.vatEvidence != null
   );
 }
 
@@ -154,6 +170,23 @@ export function isSupplierInvoiceOverdue(
   }
 
   return diffVNDateDays(invoice.dueDate, today) > 0;
+}
+
+/**
+ * Payment is blocked server-side until an HĐ GTGT file is attached
+ * (`vat_invoice_attachment_required`). Only payable invoices can be blocked,
+ * so a settled invoice without a file is not an operator task.
+ */
+export function isSupplierInvoiceMissingVatEvidence(
+  invoice: Pick<
+    SupplierInvoiceRow,
+    "amount" | "creditAppliedAmount" | "paidAmount" | "vatInvoiceAttachmentPath"
+  >,
+) {
+  return (
+    getSupplierInvoiceOutstandingAmount(invoice) > 0 &&
+    invoice.vatInvoiceAttachmentPath == null
+  );
 }
 
 export function filterSupplierInvoices(
@@ -184,6 +217,13 @@ export function filterSupplierInvoices(
     }
 
     if (filters.overdueOnly && !isSupplierInvoiceOverdue(invoice, today)) {
+      return false;
+    }
+
+    if (
+      filters.vatEvidence === "missing" &&
+      !isSupplierInvoiceMissingVatEvidence(invoice)
+    ) {
       return false;
     }
 
@@ -236,6 +276,8 @@ export function groupSupplierInvoices(
         outstandingAmount: 0,
         overdueAmount: 0,
         overdueCount: 0,
+        missingVatCount: 0,
+        missingVatAmount: 0,
         nextDueDate: null,
         firstInvoice: invoice,
         primaryOutstandingInvoice: null,
@@ -266,6 +308,11 @@ export function groupSupplierInvoices(
     if (isSupplierInvoiceOverdue(invoice, today)) {
       group.overdueCount += 1;
       group.overdueAmount += outstandingAmount;
+    }
+
+    if (isSupplierInvoiceMissingVatEvidence(invoice)) {
+      group.missingVatCount += 1;
+      group.missingVatAmount += outstandingAmount;
     }
   }
 

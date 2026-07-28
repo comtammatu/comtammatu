@@ -343,7 +343,7 @@ export const createEmployeeAccount = withAction(
       if (templateBranchId === undefined) {
         return {
           success: false,
-          error: "Checklist template không tồn tại hoặc đã bị ngưng sử dụng.",
+          error: "Mẫu checklist không tồn tại hoặc đã bị ngưng sử dụng.",
         };
       }
       if (
@@ -352,7 +352,7 @@ export const createEmployeeAccount = withAction(
       ) {
         return {
           success: false,
-          error: "Checklist template không thuộc phạm vi chi nhánh này.",
+          error: "Mẫu checklist không thuộc phạm vi chi nhánh này.",
         };
       }
     }
@@ -561,13 +561,13 @@ export const updateEmployee = withAction(
       if (templateBranchId === undefined) {
         return {
           success: false,
-          error: "Checklist template không tồn tại hoặc đã bị ngưng sử dụng.",
+          error: "Mẫu checklist không tồn tại hoặc đã bị ngưng sử dụng.",
         };
       }
       if (templateBranchId != null && templateBranchId !== finalBranchId) {
         return {
           success: false,
-          error: "Checklist template không thuộc phạm vi chi nhánh này.",
+          error: "Mẫu checklist không thuộc phạm vi chi nhánh này.",
         };
       }
     }

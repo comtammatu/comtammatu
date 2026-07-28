@@ -2,6 +2,7 @@ export type BranchStocktakeStatus = "in_progress" | "completed" | "cancelled";
 
 export type BranchStocktakeSession = {
   id: number;
+  sessionNumber: string;
   branchId: number;
   startedAt: string | null;
   completedAt: string | null;
@@ -12,6 +13,12 @@ export type BranchStocktakeSession = {
   totalItems: number;
   countedItems: number;
 };
+
+export function branchStocktakeCode(
+  session: Pick<BranchStocktakeSession, "id" | "sessionNumber">,
+): string {
+  return session.sessionNumber.trim() || `KK-${session.id}`;
+}
 
 export type BranchStocktakeLocation = {
   id: number;
@@ -65,6 +72,7 @@ export type BranchStocktakeCountLine = {
 
 export type BranchStocktakeCountData = {
   sessionId: number;
+  sessionNumber: string;
   branchId: number;
   status: BranchStocktakeStatus;
   blindMode: boolean;

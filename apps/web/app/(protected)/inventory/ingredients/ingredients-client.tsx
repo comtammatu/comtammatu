@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useTransition, useRef } from "react";
 import {
-  Ellipsis as IconDots,
   Eye as IconEye,
   EyeOff as IconEyeOff,
   Pencil as IconPencil,
@@ -11,13 +10,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   InputGroup,
@@ -31,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
@@ -78,6 +71,11 @@ import {
   InventoryListFrame,
   inventoryListFilterSelectClassName,
 } from "../_components/inventory-list-frame";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 
 const ingredientFormCopy = messages.inventoryMaster.ingredientForm;
 const ingredientListCopy = messages.inventory.ingredients.list;
@@ -129,23 +127,30 @@ function ThresholdBadges({ item }: { item: IngredientRow }) {
 
 function IngredientMobileCard({
   item,
-  isPending,
   toneMap,
-  onToggleActive,
-  onEdit,
+  actions,
+  onOpen,
 }: {
   item: IngredientRow;
-  isPending: boolean;
   toneMap: Map<string, string>;
-  onToggleActive: (item: IngredientRow) => void;
-  onEdit: (item: IngredientRow) => void;
+  actions: RowActionItem[];
+  onOpen: (item: IngredientRow) => void;
 }) {
   const category = categoryLabel(item);
   const referenceCost = getDisplayReferenceCost(item);
   return (
     <InteractiveCard
       minHeight="tap"
-      className="flex-col items-stretch gap-1 p-0"
+      className="flex-col items-stretch gap-1 p-0 cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(item)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(item);
+        }
+      }}
     >
       <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
         <div className="min-w-0 flex-1">
@@ -171,6 +176,16 @@ function IngredientMobileCard({
             </Badge>
           </div>
         </div>
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <RowActionsMenu
+            items={actions}
+            label={ingredientListCopy.rowActionsAria(item.name)}
+            triggerSize="icon-touch"
+          />
+        </div>
       </div>
       <div className="flex flex-col gap-2 px-4 py-2 text-sm">
         <div>
@@ -187,36 +202,6 @@ function IngredientMobileCard({
               {formatReferenceCost(referenceCost)}
             </span>
           ) : null}
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            size="icon-touch"
-            variant="ghost"
-            onClick={() => onToggleActive(item)}
-            aria-label={
-              item.is_active
-                ? ingredientListCopy.hideAria(item.name)
-                : ingredientListCopy.showAria(item.name)
-            }
-            disabled={isPending}
-          >
-            {item.is_active ? (
-              <IconEyeOff className="size-4" />
-            ) : (
-              <IconEye className="size-4" />
-            )}
-          </Button>
-          <Button
-            type="button"
-            size="touch"
-            variant="ghost"
-            onClick={() => onEdit(item)}
-            aria-label={ingredientListCopy.editAria(item.name)}
-          >
-            <IconPencil data-icon="inline-start" />
-            {ACTIONS_VI.edit}
-          </Button>
         </div>
       </div>
     </InteractiveCard>
@@ -242,6 +227,8 @@ export function IngredientsClient({
   const [editingIngredient, setEditingIngredient] =
     useState<IngredientRow | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
+  const isTouchLayout = useIsMobile(1024);
   const controlSize = useFormControlSize();
 
   const lastUpdatedAtRef = useRef<string | null>(null);
@@ -377,12 +364,31 @@ export function IngredientsClient({
     });
   }
 
+  const getIngredientRowActions = (item: IngredientRow): RowActionItem[] => [
+    {
+      key: "edit",
+      label: ACTIONS_VI.edit,
+      icon: <IconPencil />,
+      onSelect: () => openEdit(item),
+    },
+    {
+      key: "toggle-active",
+      label: item.is_active
+        ? ingredientListCopy.hideAction
+        : ingredientListCopy.showAction,
+      icon: item.is_active ? <IconEyeOff /> : <IconEye />,
+      disabled: isPending,
+      separatorBefore: true,
+      onSelect: () => handleToggleActive(item),
+    },
+  ];
+
   const filterBar = (
     <AppToolbar
       variant="inline"
       search={
         <InputGroup
-          size={controlSize}
+          size={isTouchLayout ? "touch" : "field"}
           className="min-w-0 flex-1 sm:min-w-72"
         >
           <InputGroupAddon>
@@ -586,43 +592,25 @@ export function IngredientsClient({
       key: "actions",
       header: <span className="sr-only">{FORM_VI.action}</span>,
       className: "w-12 text-right",
-      render: (item) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label={ingredientListCopy.rowActionsAria(item.name)}
-                disabled={isPending}
-              >
-                <IconDots className="size-4" />
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => openEdit(item)}>
-              <IconPencil className="mr-2 size-4" />
-              {ACTIONS_VI.edit}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleToggleActive(item)}>
-              {item.is_active ? (
-                <>
-                  <IconEyeOff className="mr-2 size-4" />
-                  {ingredientListCopy.hideAction}
-                </>
-              ) : (
-                <>
-                  <IconEye className="mr-2 size-4" />
-                  {ingredientListCopy.showAction}
-                </>
-              )}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      render: (item) => {
+        const items = getIngredientRowActions(item);
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <RowActionsMenu
+              items={items}
+              label={ingredientListCopy.rowActionsAria(item.name)}
+              triggerSize="icon-sm"
+              open={openActionRowId === item.id}
+              onOpenChange={(open) =>
+                setOpenActionRowId(open ? item.id : null)
+              }
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -655,13 +643,19 @@ export function IngredientsClient({
               : ingredientListCopy.emptyDescription
           }
           emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
+          onRowClick={openEdit}
+          getRowDataState={(item) =>
+            openActionRowId === item.id ? "selected" : undefined
+          }
+          renderRowContextMenu={(item) => (
+            <RowActionsContextMenuItems items={getIngredientRowActions(item)} />
+          )}
           mobileCardRender={(item) => (
             <IngredientMobileCard
               item={item}
-              isPending={isPending}
               toneMap={toneMap}
-              onToggleActive={handleToggleActive}
-              onEdit={openEdit}
+              actions={getIngredientRowActions(item)}
+              onOpen={openEdit}
             />
           )}
           pageSize={25}

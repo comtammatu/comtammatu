@@ -1663,6 +1663,176 @@ export type Database = {
           },
         ]
       }
+      feedback_qr_codes: {
+        Row: {
+          branch_id: number
+          created_at: string
+          created_by: string | null
+          id: number
+          is_active: boolean
+          label: string
+          rotated_at: string | null
+          table_id: number | null
+          tenant_id: number
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          is_active?: boolean
+          label: string
+          rotated_at?: string | null
+          table_id?: number | null
+          tenant_id: number
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          is_active?: boolean
+          label?: string
+          rotated_at?: string | null
+          table_id?: number | null
+          tenant_id?: number
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_qr_codes_branch_tenant_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "feedback_qr_codes_branch_tenant_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "feedback_qr_codes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_qr_codes_table_scope_fkey"
+            columns: ["table_id", "tenant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id", "tenant_id", "branch_id"]
+          },
+          {
+            foreignKeyName: "feedback_qr_codes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_rate_buckets: {
+        Row: {
+          created_at: string
+          expires_at: string
+          hits: number
+          scope_hash: string
+          scope_type: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          hits: number
+          scope_hash: string
+          scope_type: string
+          updated_at?: string
+          window_start: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          hits?: number
+          scope_hash?: string
+          scope_type?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      feedbacks: {
+        Row: {
+          branch_id: number
+          client_submission_id: string
+          comment: string | null
+          created_at: string
+          id: number
+          qr_code_id: number
+          rating: number
+          tenant_id: number
+        }
+        Insert: {
+          branch_id: number
+          client_submission_id: string
+          comment?: string | null
+          created_at?: string
+          id?: never
+          qr_code_id: number
+          rating: number
+          tenant_id: number
+        }
+        Update: {
+          branch_id?: number
+          client_submission_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: never
+          qr_code_id?: number
+          rating?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbacks_branch_tenant_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "feedbacks_branch_tenant_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "feedbacks_qr_code_id_fkey"
+            columns: ["qr_code_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_qr_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_fund_entries: {
         Row: {
           bank_delta: number
@@ -2632,6 +2802,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           shift_id: number | null
+          slip_number: string
           status: string
           submitted_at: string | null
           submitted_by: string | null
@@ -2650,6 +2821,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           shift_id?: number | null
+          slip_number: string
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -2668,6 +2840,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           shift_id?: number | null
+          slip_number?: string
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -7702,6 +7875,7 @@ export type Database = {
           offline_enabled: boolean
           offline_enabled_at: string | null
           offline_enabled_by: string | null
+          session_number: string
           started_at: string
           status: string
           tenant_id: number
@@ -7728,6 +7902,7 @@ export type Database = {
           offline_enabled?: boolean
           offline_enabled_at?: string | null
           offline_enabled_by?: string | null
+          session_number: string
           started_at?: string
           status?: string
           tenant_id: number
@@ -7754,6 +7929,7 @@ export type Database = {
           offline_enabled?: boolean
           offline_enabled_at?: string | null
           offline_enabled_by?: string | null
+          session_number?: string
           started_at?: string
           status?: string
           tenant_id?: number
@@ -9217,6 +9393,38 @@ export type Database = {
           },
         ]
       }
+      tenant_inventory_doc_counters: {
+        Row: {
+          doc_kind: string
+          next_seq: number
+          tenant_id: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          doc_kind: string
+          next_seq?: number
+          tenant_id: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          doc_kind?: string
+          next_seq?: number
+          tenant_id?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_inventory_doc_counters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_po_counters: {
         Row: {
           next_seq: number
@@ -10251,6 +10459,10 @@ export type Database = {
         }
         Returns: Json
       }
+      create_purchase_order_from_grn: {
+        Args: { p_grn_id: number }
+        Returns: Json
+      }
       create_purchase_order_with_lines: {
         Args: {
           p_branch_id: number
@@ -10494,6 +10706,15 @@ export type Database = {
       extend_express_window: {
         Args: { p_branch_id: number; p_minutes: number; p_note: string }
         Returns: string
+      }
+      feedback_take_rate_bucket: {
+        Args: {
+          p_limit: number
+          p_scope_hash: string
+          p_scope_type: string
+          p_window_seconds: number
+        }
+        Returns: number
       }
       fetch_tax_invoice_issue_attention: { Args: never; Returns: Json }
       finalize_paid_order: {
@@ -11227,6 +11448,10 @@ export type Database = {
         }
         Returns: Json
       }
+      next_inventory_doc_number: {
+        Args: { p_doc_kind: string; p_tenant_id: number }
+        Returns: string
+      }
       next_po_display_id: { Args: { p_tenant_id: number }; Returns: string }
       order_payment_code_is_exposed: {
         Args: {
@@ -11915,6 +12140,16 @@ export type Database = {
       }
       submit_count_round: {
         Args: { p_counts: Json; p_round_no: number; p_session_id: number }
+        Returns: Json
+      }
+      submit_feedback: {
+        Args: {
+          p_client_submission_id: string
+          p_comment: string
+          p_ip_hash: string
+          p_rating: number
+          p_token: string
+        }
         Returns: Json
       }
       submit_inventory_count_slip: {

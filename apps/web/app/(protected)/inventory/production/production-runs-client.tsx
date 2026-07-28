@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight as IconArrowRight,
-  ChevronRight as IconChevronRight,
   ListChecks as IconListChecks,
   Plus as IconPlus,
 } from "lucide-react";
@@ -45,6 +45,7 @@ export function ProductionRunsClient({
   basePath,
   embedded,
 }: ProductionRunsClientProps) {
+  const router = useRouter();
   const [items] = useState<ProductionRunRow[]>(initial);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_STATUS_VALUE);
@@ -78,18 +79,21 @@ export function ProductionRunsClient({
     });
   }, [items, search, statusFilter]);
 
+  function detailHref(row: ProductionRunRow): string {
+    return `${basePath}/${row.id}`;
+  }
+
+  function openProductionDetail(row: ProductionRunRow) {
+    router.push(detailHref(row));
+  }
+
   const columns = useMemo<DataTableColumn<ProductionRunRow>[]>(() => {
     return [
       {
         key: "production_number",
         header: INVENTORY_VI.productionNumber,
         render: (row) => (
-          <Link
-            href={`${basePath}/${row.id}`}
-            className="font-medium hover:underline text-primary"
-          >
-            {row.production_number}
-          </Link>
+          <span className="font-mono font-medium">{row.production_number}</span>
         ),
       },
       {
@@ -129,7 +133,7 @@ export function ProductionRunsClient({
         ),
       },
     ];
-  }, [basePath]);
+  }, []);
 
   const table = (
     <DataTable
@@ -176,8 +180,12 @@ export function ProductionRunsClient({
       emptyMode={
         search || statusFilter !== ALL_STATUS_VALUE ? "no-results" : "no-data"
       }
+      onRowClick={openProductionDetail}
+      getRowAriaLabel={(row) =>
+        `${INVENTORY_VI.productionNumber} ${row.production_number}`
+      }
       mobileCardRender={(row) => (
-        <ProductionRunCard row={row} href={`${basePath}/${row.id}`} />
+        <ProductionRunCard row={row} href={detailHref(row)} />
       )}
     />
   );
@@ -272,7 +280,6 @@ function ProductionRunCard({
           />
         </p>
       </div>
-      <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
     </InteractiveCard>
   );
 }

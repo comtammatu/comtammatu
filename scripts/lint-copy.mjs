@@ -31,7 +31,7 @@ const EXCLUDED_PATH_SEGMENTS = new Set([
 const ALLOWED_EXTENSIONS = new Set([".ts", ".tsx", ".md", ".html"]);
 const VI_DIACRITIC_PATTERN = /[À-ỹ]/;
 const TECHNICAL_UI_TERM_PATTERN =
-  /(?:\b(?:override|fallback|qty|gate|matching|cold-chain|lock|acquire|cap|credit|tier|zone|snapshot|ticket|import|export|dashboard)\b|(?:Branch|Job|Order) ID)/i;
+  /(?:\b(?:override|fallback|qty|gate|matching|cold-chain|lock|acquire|cap|credit|tier|zone|snapshot|ticket|import|export|dashboard|yield|ad-hoc|template|online|offline|topping|blind|sku)\b|\bpeer\s+cross\b|(?:Branch|Job|Order) ID)/i;
 
 const CHECKS = [
   { pattern: /\bEmployee Portal\b/g, replacement: "Cổng nhân viên" },
@@ -77,7 +77,61 @@ const CHECKS = [
   { pattern: /submitLabel=["']Import["']/g, replacement: 'submitLabel="Nhập dữ liệu"' },
   { pattern: /Ghi chú[^"\n]*\bmatching\b/gi, replacement: "dùng “đối soát”" },
   { pattern: /Không tải được dashboard/gi, replacement: "dùng “tổng quan”" },
+  { pattern: /\bpeer\s+cross\b/gi, replacement: "đếm chéo" },
+  {
+    pattern: /Kiểm kê tháng\s*\(\s*blind\s*\)/gi,
+    replacement: "Kiểm kê tháng · đếm mù",
+  },
+  {
+    pattern: /Kiểm kê quý\s*\(\s*peer\s+cross\s*\)/gi,
+    replacement: "Kiểm kê quý · đếm chéo",
+  },
+  {
+    pattern: /Nhóm A\s*\(\s*top\s+80%\s*\)/gi,
+    replacement: "Nhóm A · 80% giá trị",
+  },
+  {
+    pattern: /Có đơn hàng\s*\(\s*PO\s*\)/g,
+    replacement: "Có đơn đặt hàng",
+  },
+  { pattern: /\bThiếu PO\b/g, replacement: "Thiếu đơn đặt hàng" },
+  { pattern: /\bDanh sách GRN\b/g, replacement: "Danh sách phiếu nhập" },
+  { pattern: /\bMã GRN\b/g, replacement: "Mã phiếu nhập" },
+  { pattern: /\bWO\s*\/\s*PXK\b/g, replacement: "Phiếu xuất kho" },
+  {
+    pattern: /Tải template\b/gi,
+    replacement: "Tải mẫu",
+  },
+  {
+    pattern: /Không tạo được template\b/gi,
+    replacement: "Không tạo được mẫu",
+  },
 ];
+
+/** Phrase denylist that only applies to operator UI source (not docs). */
+const UI_ONLY_CHECKS = [
+  { pattern: /\bad-hoc\b/gi, replacement: "nhập thẳng / không theo đơn" },
+  { pattern: /\bTopping\b/g, replacement: "Món thêm" },
+  {
+    pattern: /["']Online["']/g,
+    replacement: '"Đang kết nối"',
+  },
+  {
+    pattern: /["']Offline["']/g,
+    replacement: '"Mất kết nối"',
+  },
+];
+
+function isUiCopyPath(relPath) {
+  return (
+    relPath.startsWith("apps/web/") ||
+    relPath.startsWith("packages/shared/src/messages/") ||
+    relPath.startsWith("packages/shared/src/labels/") ||
+    relPath.startsWith("packages/ui/src/") ||
+    relPath.startsWith("apps/print-agent/src/") ||
+    relPath.startsWith("packages/print-render/src/")
+  );
+}
 
 const UI_BOUNDARY_CHECKS = [
   {
@@ -95,6 +149,50 @@ const UI_BOUNDARY_CHECKS = [
     replacement: "không hiển thị digest trên UI",
   },
 ];
+
+/** Vietnamese operator copy must not embed procurement acronyms in a sentence. */
+const EMBEDDED_PROCUREMENT_ACRONYM_PATTERN =
+  /\b(?:PO|GRN)\b/;
+
+function findEmbeddedProcurementAcronymCopy(text, relPath) {
+  const sourceFile = ts.createSourceFile(
+    relPath,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    relPath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const matches = [];
+
+  function visit(node) {
+    const isCopyNode =
+      ts.isStringLiteralLike(node) ||
+      node.kind === ts.SyntaxKind.TemplateHead ||
+      node.kind === ts.SyntaxKind.TemplateMiddle ||
+      node.kind === ts.SyntaxKind.TemplateTail ||
+      node.kind === ts.SyntaxKind.JsxText;
+
+    if (isCopyNode) {
+      const value = "text" in node ? node.text : node.getText(sourceFile);
+      if (
+        VI_DIACRITIC_PATTERN.test(value) &&
+        EMBEDDED_PROCUREMENT_ACRONYM_PATTERN.test(value)
+      ) {
+        matches.push({
+          line:
+            sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
+              .line + 1,
+          value,
+        });
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return matches;
+}
 
 function hasAllowedExtension(file) {
   return [...ALLOWED_EXTENSIONS].some((ext) => file.endsWith(ext));
@@ -217,10 +315,27 @@ async function main() {
       }
     }
 
+    if (isUiCopyPath(relPath)) {
+      for (const check of UI_ONLY_CHECKS) {
+        const matches = [...text.matchAll(check.pattern)];
+        for (const match of matches) {
+          const index = match.index ?? 0;
+          failures.push(
+            `${relPath}:${getLineNumber(text, index)} — "${match[0]}" → ${check.replacement}`,
+          );
+        }
+      }
+    }
+
     if (relPath.endsWith(".ts") || relPath.endsWith(".tsx")) {
       for (const match of findTechnicalUiCopy(text, relPath)) {
         failures.push(
           `${relPath}:${match.line} — "${match.value}" → dùng thuật ngữ tiếng Việt trên nội dung hiển thị`,
+        );
+      }
+      for (const match of findEmbeddedProcurementAcronymCopy(text, relPath)) {
+        failures.push(
+          `${relPath}:${match.line} — "${match.value}" → dùng “phiếu nhập” / “đơn đặt hàng” trong câu; acronym chỉ pill/badge`,
         );
       }
       for (const check of UI_BOUNDARY_CHECKS) {
@@ -244,6 +359,25 @@ async function main() {
       "lint-copy fixture không kích hoạt guard thuật ngữ kỹ thuật trên UI",
     );
   }
+  const unsafeLoanwordFixture =
+    'const copy = "Yield mặc định 1.0 (không hao hụt)";\n';
+  if (!findTechnicalUiCopy(unsafeLoanwordFixture, "unsafe-loanword.tsx").length) {
+    failures.push(
+      "lint-copy fixture không kích hoạt guard loanword UI (Yield/template/…)",
+    );
+  }
+  const unsafeAcronymSentence =
+    'const copy = "Chọn PO để tạo GRN";\n';
+  if (
+    !findEmbeddedProcurementAcronymCopy(
+      unsafeAcronymSentence,
+      "unsafe-acronym.tsx",
+    ).length
+  ) {
+    failures.push(
+      "lint-copy fixture không kích hoạt guard acronym nhúng trong câu Việt",
+    );
+  }
   for (const check of UI_BOUNDARY_CHECKS) {
     if (![...unsafeFixture.matchAll(check.pattern)].length) {
       failures.push(`lint-copy fixture không kích hoạt guard: ${check.replacement}`);
@@ -253,7 +387,7 @@ async function main() {
     join(ROOT, "scripts/fixtures/lint-copy/safe-acronyms.tsx"),
     "utf8",
   );
-  for (const check of [...CHECKS, ...UI_BOUNDARY_CHECKS]) {
+  for (const check of [...CHECKS, ...UI_ONLY_CHECKS, ...UI_BOUNDARY_CHECKS]) {
     if ([...safeFixture.matchAll(check.pattern)].length) {
       failures.push(`lint-copy báo sai với fixture viết tắt hợp lệ: ${check.replacement}`);
     }

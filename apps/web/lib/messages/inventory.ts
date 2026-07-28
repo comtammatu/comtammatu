@@ -53,7 +53,7 @@ export const inventory = {
     ],
     kitchenDispatchTitle: "Xuất thành phẩm",
     kitchenDispatchDescription:
-      "Chọn Chi nhánh nhận, thêm thành phẩm từ tồn Bếp Trung Tâm, rồi tạo phiếu xuất.",
+      "Chọn Chi nhánh nhận, thêm thành phẩm, rồi tạo phiếu xuất.",
     kitchenDispatchSteps: [
       { label: "Chọn Chi nhánh", hint: "giao đến bếp Chi nhánh" },
       { label: "Thêm thành phẩm", hint: "chạm nhập số lượng" },
@@ -71,7 +71,7 @@ export const inventory = {
     productionRecipeLoadFailed: "Không thể tải công thức sản xuất",
     productionRecipeLoading: "Đang tải định mức nguyên liệu...",
     productionRecipeDescription:
-      "Chuẩn bị thành phẩm, nguyên liệu, rồi lưu công thức trước khi tạo lệnh.",
+      "Chuẩn bị thành phẩm, nguyên liệu rồi lưu công thức.",
     productionRecipeSteps: [
       { label: "Có thành phẩm", hint: "món Bếp TT sẽ làm" },
       { label: "Có nguyên liệu", hint: "đầu vào để trừ kho" },
@@ -90,7 +90,7 @@ export const inventory = {
     operatorStockSecondaryTitle: "Theo dõi & thiết lập",
     operationalMetricsTitle: "Số liệu vận hành",
     operationalMetricsDescription:
-      "Theo dõi nhanh số lượng việc đang mở; xử lý qua phiếu ở các mục bên dưới.",
+      "Số việc đang mở; xử lý qua phiếu ở các mục bên dưới.",
     shiftTasksTitle: "Việc cần làm ngay trong ca",
     pendingTasks: (count: number) =>
       `${formatCount(count)} việc đang chờ xử lý`,
@@ -129,7 +129,7 @@ export const inventory = {
     dataAsOfLabel: "Dữ liệu",
     dataDegradedTitle: "Dữ liệu chưa đầy đủ",
     dataDegradedDescription: (items: string) =>
-      `Một số số liệu chưa tải được: ${items}. Các phần còn lại vẫn hiển thị theo dữ liệu hiện có.`,
+      `Chưa tải được: ${items}. Phần còn lại hiển thị theo dữ liệu hiện có.`,
     degradedItems: {
       stockValue: "giá trị tồn kho",
       transfers: "điều chuyển",
@@ -147,7 +147,7 @@ export const inventory = {
     oversightAllClearHint: "Không có luồng đang chờ theo dõi.",
     oversightStockTitle: "1. Tình hình tồn",
     oversightStockDescription:
-      "Xem giá trị tồn, tồn thấp và các điểm cần quản lý theo phạm vi được phân quyền.",
+      "Giá trị tồn và tồn thấp theo phạm vi được phân quyền.",
     oversightStockMetricLabel: "điểm cần xem",
     lowStockStatus: (count: number) =>
       count > 0 ? `${formatCount(count)} tồn thấp` : "Đầy đủ tồn",
@@ -161,7 +161,7 @@ export const inventory = {
     viewAlertsAction: "Xem cảnh báo",
     oversightMovementTitle: "3. Luồng đang xử lý",
     oversightMovementDescription:
-      "Theo dõi chứng từ đang chạy giữa các điểm vận hành mà không mở hành động thao tác trực tiếp.",
+      "Chứng từ đang chạy giữa các điểm vận hành.",
     runningSlipsMetricLabel: "chứng từ đang chạy",
     inboundOutboundStatus: (inbound: number, outbound: number) =>
       `${formatCount(inbound)} đến / ${formatCount(outbound)} đi`,
@@ -177,7 +177,7 @@ export const inventory = {
     productionFlowTitle: "3. Sản xuất",
     catalogFlowTitle: "4. Danh mục & thiết lập",
     controlDescription:
-      "Nắm tồn hiện tại, kiểm kê, tồn thấp và các lệch số cần xử lý trong ngày.",
+      "Tồn hiện tại, kiểm kê, tồn thấp và lệch số trong ngày.",
     controlMetricLabel: "điểm cần kiểm soát",
     sourceBranchDescription:
       "Chi nhánh nhận hàng qua điều chuyển nội bộ và đối soát số thực nhận.",
@@ -187,7 +187,7 @@ export const inventory = {
     inboundNeedReceiveStatus: (count: number) =>
       `${formatCount(count)} yêu cầu cần nhận`,
     catalogDescription:
-      "Sửa nguyên liệu, đơn vị tính và nhà cung cấp dùng cho nhập kho và sản xuất.",
+      "Nguyên liệu, đơn vị tính và nhà cung cấp dùng cho kho.",
     catalogMetricValue: "3",
     catalogMetricLabel: "mục chính",
     catalogStatusLabel: "Nguyên liệu / ĐVT / NCC",
@@ -235,7 +235,7 @@ export const inventory = {
   },
   ingredients: {
     list: {
-      searchPlaceholder: "Tìm theo tên hoặc SKU",
+      searchPlaceholder: "Tìm theo tên hoặc mã hàng",
       preservationAll: "Mọi bảo quản",
       preservationRefrigerated: "Mát",
       preservationFrozen: "Đông lạnh",
@@ -273,7 +273,7 @@ export const inventory = {
       nameLabel: "Tên nguyên liệu",
       nameRequired: "Tên nguyên liệu không được trống",
       namePlaceholder: "VD: Sườn cốt lết",
-      skuLabel: "Mã SKU",
+      skuLabel: "Mã hàng",
       referenceCostLabel: "Giá nhập tham chiếu (VND)",
       itemKindLabel: "Loại hàng",
       minStockLabel: "Tồn tối thiểu",
@@ -322,6 +322,7 @@ export const inventory = {
     updated: "Cập nhật phiếu nhập {code} thành công",
     approved: "Đã duyệt phiếu nhập {code}",
     cancelled: "Đã hủy phiếu nhập {code}",
+    createFailed: "Không thể tạo phiếu nhập.",
     loadFailed: "Không thể tải phiếu nhập.",
     notFound: "Không tìm thấy phiếu nhập.",
     recentActivityLoadFailed: "Không thể tải hoạt động gần đây.",
@@ -331,7 +332,7 @@ export const inventory = {
     warehouseLoadFailed: "Không thể xác định kho nhận.",
     warehouseMissing: "Chi nhánh chưa có kho đang hoạt động để nhận hàng.",
     warehouseAmbiguous:
-      "Chi nhánh có nhiều kho đang hoạt động. Vui lòng xử lý cấu hình kho trước khi tạo phiếu nhập.",
+      "Chi nhánh có nhiều kho hoạt động. Cấu hình lại kho trước khi tạo phiếu nhập.",
     confirmed: "Đã chốt nhập kho",
     confirmedWithReview:
       "Đã chốt nhập kho. {count} dòng cần kiểm tra giá lệch lớn.",
@@ -339,6 +340,14 @@ export const inventory = {
     saveLinesFailed: "{name}: {reason}",
     saveLinesOk: "Đã lưu {ok}/{total} dòng.",
     confirmFailed: "Không thể chốt nhập kho.",
+    confirmRequiresApprovedPo:
+      "Chưa thể chốt nhập kho. Cần đơn đặt hàng đã duyệt gắn với phiếu nhập này (tạo đơn đặt hàng từ phiếu nhập nháp rồi duyệt).",
+    confirmNotDraft: "Chỉ chốt được phiếu nhập ở trạng thái nháp.",
+    createPoFromGrnAction: "Tạo đơn đặt hàng từ phiếu nhập",
+    createPoFromGrnDone: "Đã tạo đơn đặt hàng nháp từ phiếu nhập.",
+    createPoFromGrnFailed: "Không thể tạo đơn đặt hàng từ phiếu nhập.",
+    confirmBlockedNeedsApprovedPo:
+      "Chốt nhập kho chỉ mở sau khi đơn đặt hàng liên kết đã được duyệt.",
     confirmQcQuantityInvalid:
       "Kết quả kiểm nhận chưa khớp số lượng từ chối. Kiểm tra lại từng mặt hàng.",
     confirmQcReasonRequired: "Hàng nhận một phần hoặc từ chối phải có lý do.",
@@ -351,17 +360,20 @@ export const inventory = {
     confirmBlockedByDirty: "Vui lòng lưu thay đổi trước khi chốt.",
     approveConfirmTitle: "Duyệt phiếu nhập?",
     approveConfirmDesc:
-      "Sau khi duyệt, phiếu nhập không thể chỉnh sửa và tồn kho sẽ được cập nhật.",
+      "Sau khi duyệt, phiếu không thể sửa và tồn kho sẽ cập nhật.",
     cancelConfirmTitle: "Hủy phiếu nhập?",
     cancelConfirmDesc: "Phiếu nhập sẽ bị đánh dấu hủy và không thể hòan tác.",
     confirmGrnTitle: "Chốt nhập kho?",
     confirmGrnDesc:
-      "Sau khi chốt, phiếu nhập không thể chỉnh sửa và tồn kho sẽ được cập nhật ngay.",
+      "Sau khi chốt, phiếu không thể sửa và tồn kho cập nhật ngay.",
     confirmGrnAction: "Chốt nhập kho",
     detailTitle: "Chi tiết phiếu nhập",
+    documentTab: "Phiếu nhập",
+    historyTab: "Lịch sử",
+    historySectionTitle: "Lịch sử chỉnh sửa",
     back: "Quay lại",
     draftSavedReviewHint:
-      "Đã lưu nháp. Kiểm tra số lượng, giá và hàng hư hỏng rồi Chốt nhập kho.",
+      "Đã lưu nháp. Kiểm tra số lượng, giá rồi chốt nhập kho.",
     documentLabel: "Phiếu nhập kho",
     linkedPo: "Đơn mua liên kết",
     createInvoice: "Tạo hóa đơn NCC",
@@ -380,12 +392,14 @@ export const inventory = {
     viewAllLines: (count: number) => `Xem tất cả ${formatCount(count)} dòng →`,
     overviewLinesEmpty: "Phiếu chưa có dòng nào.",
     lineHeaderName: "Nguyên liệu",
+    lineHeaderOrdered: "SL đặt",
     lineHeaderQty: "SL nhận",
+    lineHeaderRejected: "Từ chối",
     lineHeaderCost: "Đơn giá nhập",
     lineHeaderTotal: "Thành tiền",
     lineHeaderStatus: "Trạng thái",
     draftQcHint:
-      "Chọn kết quả kiểm nhận cho từng mặt hàng. Hàng nhận một phần hoặc từ chối phải có số lượng, lý do và ảnh.",
+      "Chọn kết quả kiểm nhận. Nhận một phần hoặc từ chối cần số lượng, lý do và ảnh.",
     finalizedLineCount: (count: number) => `${formatCount(count)} dòng đã chốt`,
     addLine: "Thêm dòng",
     qcSummary: "Tổng hợp QC",
@@ -442,12 +456,12 @@ export const inventory = {
       action: "Đổi kho nhận",
       title: "Đổi kho nhận phiếu nháp",
       description:
-        "Dùng khi phiếu còn nháp và chưa nhập kho. Hệ thống chỉ đổi kho nhận trên phiếu hiện tại, không tạo phiếu mới hoặc lệnh chuyển kho.",
+        "Dùng khi phiếu còn nháp. Chỉ đổi kho nhận, không tạo phiếu mới.",
       targetLocationLabel: "Kho nhận mới *",
       targetLocationPlaceholder: "Chọn kho nhận mới",
       noTargetLocations: "Chưa có kho nhận khác đủ quyền để đổi phiếu nháp.",
       warning:
-        "Các dòng số lượng và đơn giá đã lưu sẽ được giữ nguyên. Nếu phiếu đang gắn đơn mua, chỉ được đổi kho nhận trong cùng chi nhánh.",
+        "Số lượng và đơn giá giữ nguyên. Đã gắn đơn mua thì chỉ đổi kho cùng chi nhánh.",
       submit: "Lưu kho nhận",
       success: "Đã đổi kho nhận phiếu nháp.",
       invalidLocation: "Chọn kho nhận mới hợp lệ.",
@@ -457,7 +471,7 @@ export const inventory = {
       action: "Hủy & tạo lại",
       title: "Tạo lại phiếu ở kho nhận mới",
       description:
-        "Dùng khi phiếu đã chốt bị nhập sai chi nhánh/kho nhận. Hệ thống hủy phiếu cũ, đảo tồn nguồn, rồi tạo bản phiếu mới tại kho nhận mới.",
+        "Dùng khi phiếu đã chốt sai kho nhận. Hủy phiếu cũ, đảo tồn, tạo phiếu mới.",
       targetLocationLabel: "Kho nhận mới *",
       targetLocationPlaceholder: "Chọn kho nhận mới",
       noTargetLocations: "Chưa có kho nhận khác đủ quyền để tạo lại phiếu.",
@@ -467,7 +481,7 @@ export const inventory = {
       reasonMinLength: "Lý do tối thiểu 10 ký tự.",
       reasonMaxLength: "Lý do tối đa 500 ký tự.",
       warning:
-        "Không dùng cho hàng đã chuyển kho thực tế. Nếu hàng thật đã đi qua kho cũ, tạo phiếu điều chuyển nội bộ thay vì tạo lại phiếu nhập kho.",
+        "Không dùng cho hàng đã chuyển kho thực tế; hãy tạo phiếu điều chuyển nội bộ.",
       submit: "Tạo lại phiếu",
       success: (code: string) => `Đã tạo phiếu nhập mới ${code}.`,
       invalidLocation: "Chọn kho nhận mới hợp lệ.",
@@ -476,7 +490,7 @@ export const inventory = {
       title: "Thêm dòng phiếu nhập",
       ingredientLabel: "Nguyên liệu *",
       ingredientPlaceholder: "Chọn nguyên liệu",
-      ingredientSearchPlaceholder: "Tìm tên, SKU, danh mục...",
+      ingredientSearchPlaceholder: "Tìm tên, mã hàng, danh mục...",
       quantityLabel: "Số lượng nhận *",
       unitLabel: "Đơn vị nhập *",
       selectUnit: "Chọn đơn vị",
@@ -557,7 +571,7 @@ export const inventory = {
     loadFailed: "Không thể tải đơn đặt hàng.",
     pageTitle: "Đơn mua hàng",
     pageDescription:
-      "Lập đơn mua, duyệt một cấp, xem chi tiết và tạo phiếu nhập từ số lượng còn lại.",
+      "Lập đơn mua, duyệt và tạo phiếu nhập từ số lượng còn lại.",
     viewDetail: "Xem đơn mua",
     viewDetailAria: (code: string) => `Xem đơn mua ${code}`,
     openLinkedGrn: "Mở phiếu nhập",
@@ -612,8 +626,7 @@ export const inventory = {
     addAll: (count: number) => `Thêm tất cả (${formatCount(count)})`,
     suggestionsLoadFailed: "Không thể tải gợi ý.",
     stableStockTitle: "Tồn kho đang ổn định",
-    stableStockDescription:
-      "Hệ thống chưa phát hiện nguyên liệu nào cần ưu tiên đặt thêm trong giai đoạn này.",
+    stableStockDescription: "Chưa có nguyên liệu nào cần đặt thêm.",
     low: "Thấp",
     suggestionDescription: (stock: string, average: string) =>
       `Tồn: ${stock} · TB: ~${average}/ngày`,
@@ -625,11 +638,11 @@ export const inventory = {
     selectUnit: "Chọn ĐV",
     emptyIngredientsTitle: "Chưa có nguyên liệu",
     emptyIngredientsDescription:
-      "Thêm dòng bên dưới hoặc chọn nhanh từ gợi ý đặt hàng để bắt đầu tạo đơn mua.",
+      "Thêm dòng bên dưới hoặc chọn từ gợi ý đặt hàng.",
     removeLineAria: "Xóa dòng",
     linesTitle: "Hàng mua",
     ingredientPlaceholder: "+ Chọn nguyên liệu",
-    ingredientSearchPlaceholder: "Tìm tên, SKU, danh mục...",
+    ingredientSearchPlaceholder: "Tìm tên, mã hàng, danh mục...",
     quantityShort: "SL",
     pricePlaceholder: "Giá",
     priceOptionalPlaceholder: "Giá (tùy chọn)",
@@ -652,7 +665,7 @@ export const inventory = {
       title: "Chi tiết đơn hàng",
       landingLabel: "Nhập hàng chi nhánh",
       meta: (supplier: string, date: string, sentAt: string) =>
-        `${supplier} • ${date} • Gửi NCC ${sentAt} • Bước mở đầu của quy trình mua hàng`,
+        `${supplier} • ${date} • Gửi NCC ${sentAt}`,
       goodsTotal: "Tổng tiền hàng",
       steps: {
         draft: "Nháp",
@@ -664,7 +677,7 @@ export const inventory = {
       },
       itemCatalogTitle: "Danh mục đặt mua",
       itemCatalogDescription: (count: number) =>
-        `${formatCount(count)} mặt hàng trong đơn mua này trước khi chuyển sang bước nhập kho.`,
+        `${formatCount(count)} mặt hàng trong đơn mua này.`,
       item: "Mặt hàng",
       priceVariance: "Biến động giá",
       saveLine: "Lưu dòng",
@@ -712,7 +725,7 @@ export const inventory = {
       "Quét nhanh tồn thực tế theo nguyên liệu và vị trí trong chi nhánh.",
     loadFailed: "Không thể tải tồn kho",
     loadFailedDescription:
-      "Dữ liệu tồn hiện tại chưa tải được. Thử lại trước khi xử lý nghiệp vụ kho.",
+      "Chưa tải được tồn hiện tại. Thử lại trước khi xử lý.",
     filters: {
       all: "Tất cả",
       allStatuses: "Mọi trạng thái",
@@ -726,7 +739,7 @@ export const inventory = {
       statusPlaceholder: "Trạng thái",
       locationWarehouse: "Kho",
       locationKitchen: "Bếp",
-      searchPlaceholder: "Tìm nhanh: tên hoặc SKU",
+      searchPlaceholder: "Tìm nhanh: tên hoặc mã hàng",
       controlsTitle: "Tóm tắt & bộ lọc",
       operatorTasksTitle: "Việc kho hôm nay",
       resultSummary: (visible: number, total: number) =>
@@ -754,8 +767,7 @@ export const inventory = {
       title: "Cần bổ sung",
       description: (count: number) =>
         `${formatCount(count)} nguyên liệu đã chạm ngưỡng tồn kho.`,
-      listHint:
-        "Các mặt hàng cần xử lý được xếp đầu danh sách để kiểm tra trước.",
+      listHint: "Mặt hàng cần xử lý được xếp đầu danh sách.",
     },
     metrics: {
       selectedWarehouse: "Kho chọn",
@@ -768,10 +780,9 @@ export const inventory = {
       noData: "Chưa có dữ liệu tồn kho",
       searchDescription: "Thử từ khóa hoặc bộ lọc khác.",
       noDataDescription:
-        "Dữ liệu tồn kho sẽ xuất hiện khi có nguyên liệu và giao dịch phát sinh.",
+        "Dữ liệu hiện khi có nguyên liệu và giao dịch phát sinh.",
       firstLoadTitle: "Chưa có dữ liệu nhập kho",
-      firstLoadHint:
-        "Danh mục đã có nguyên liệu nhưng chưa có phiếu nhập. Bắt đầu từ đơn đặt hàng.",
+      firstLoadHint: "Đã có nguyên liệu nhưng chưa có phiếu nhập.",
     },
     table: {
       stock: "Tồn",
@@ -804,12 +815,12 @@ export const inventory = {
         "Chỉ tính các vị trí được phép giữ tồn vận hành của chi nhánh.",
       noLocationStockTitle: "Chưa có tồn theo vị trí",
       noLocationStockDescription:
-        "Nguyên liệu này chưa có stock level ở kho vận hành của chi nhánh.",
+        "Chưa có tồn ở kho vận hành của chi nhánh.",
       movementTitle: "Lịch sử biến động",
       movementHint: (count: number) => `${formatCount(count)}/30 gần nhất`,
       noMovementTitle: "Chưa có biến động",
       noMovementDescription:
-        "Ledger sẽ xuất hiện sau nhập, điều chuyển, kiểm kê hoặc xuất dùng.",
+        "Biến động hiện sau nhập, điều chuyển, kiểm kê hoặc xuất dùng.",
       operationTitle: "Nghiệp vụ nhanh",
       thresholdTitle: "Ngưỡng vận hành",
       branchScope: "Chi nhánh",
@@ -915,8 +926,7 @@ export const inventory = {
     confirmFailed: "Không thể xác nhận phiếu xuất.",
     confirmOk: "Đã xác nhận xuất kho và trừ tồn.",
     cancelTitle: "Hủy phiếu xuất?",
-    cancelDescription:
-      "Phiếu xuất sẽ chuyển sang trạng thái hủy và không thể xác nhận nữa.",
+    cancelDescription: "Phiếu xuất sẽ bị hủy và không thể xác nhận nữa.",
     cancelConfirmAction: "Xác nhận hủy",
     cancelKeepAction: "Không hủy",
     cancelFailed: "Không thể hủy phiếu xuất.",
@@ -952,12 +962,11 @@ export const inventory = {
     saveLineAction: "Lưu dòng",
     ingredientLabel: "Nguyên liệu *",
     ingredientPlaceholder: "Chọn nguyên liệu",
-    ingredientSearchPlaceholder: "Tìm tên, SKU, danh mục...",
+    ingredientSearchPlaceholder: "Tìm tên, mã hàng, danh mục...",
     quantityLabel: "Số lượng xuất",
     unitLabel: "Đơn vị *",
     selectUnit: "Chọn đơn vị",
-    wacAutoHint:
-      "Giá vốn BQ tự áp dụng thành đơn giá ghi sổ tại thời điểm xác nhận phiếu.",
+    wacAutoHint: "Giá vốn BQ thành đơn giá ghi sổ khi xác nhận phiếu.",
     reasonLabel: "Lý do xuất",
     reasonPlaceholder: "Ví dụ: cấp phát cho bếp chuẩn bị ca chiều",
   },
@@ -997,10 +1006,10 @@ export const inventory = {
       "Tiêu hao thực tế chưa vượt ngưỡng cảnh báo trong tháng này.",
     branchMovementTitle: "Biến động theo nguyên liệu",
     branchMovementDescription:
-      "Ưu tiên nguyên liệu biến động nhiều nhất, mỗi số luôn đúng đơn vị tính.",
+      "Nguyên liệu biến động nhiều nhất, theo đúng đơn vị tính.",
     branchMovementEmptyTitle: "Chưa có biến động kho",
     branchMovementEmptyDescription:
-      "Nhập, điều chuyển hoặc tiêu hao trong tháng sẽ xuất hiện tại đây.",
+      "Nhập, điều chuyển hoặc tiêu hao sẽ hiện tại đây.",
     branchLoadFailed: "Không thể tải báo cáo kho",
     branchUnitUnavailable: "chưa có đơn vị",
     branchActual: "Thực tế",
@@ -1039,18 +1048,17 @@ export const inventory = {
     title: "Cài đặt",
     eyebrow: "Cài đặt",
     policyTitle: "Chính sách & mặc định",
-    description:
-      "Chỉ giữ chính sách vận hành và giá trị mặc định của kho. Dữ liệu danh mục nằm ở nhóm Quản lý.",
+    description: "Chính sách vận hành và giá trị mặc định của kho.",
     policyLayer: "Chính sách vận hành",
     thresholds: {
       title: "Ngưỡng tồn kho",
       eyebrow: "Ngưỡng tồn kho",
       description:
-        "Một ngưỡng tồn tối thiểu cho từng nguyên liệu, dùng chung cho cảnh báo và đề xuất nhập thêm.",
+        "Một ngưỡng tồn tối thiểu mỗi nguyên liệu, dùng cho cảnh báo và đề xuất.",
       hint: "Tồn thực tế chạm hoặc thấp hơn ngưỡng này sẽ được cảnh báo.",
       cols: {
         ingredient: "Nguyên liệu",
-        sku: "SKU",
+        sku: "Mã hàng",
         unit: "Đơn vị",
         min: "Tồn tối thiểu",
       },
@@ -1116,7 +1124,7 @@ export const inventory = {
     createSuccess: "Đã tạo phiếu điều chuyển.",
     createDataLoadFailedTitle: "Chưa tải đủ dữ liệu tạo phiếu",
     createDataLoadFailedDescription:
-      "Không thể tải kho, nguyên liệu hoặc tồn nguồn. Tải lại trang trước khi tạo phiếu.",
+      "Không tải được kho, nguyên liệu hoặc tồn nguồn. Tải lại trang.",
     emptyIngredientsTitle: "Chưa có nguyên liệu",
     emptyIngredientsDescription:
       "Thêm ít nhất một nguyên liệu để tạo phiếu luân chuyển.",
@@ -1153,7 +1161,7 @@ export const inventory = {
     lineAmount: "Thành tiền",
     emptyTransferItemsTitle: "Chưa có nguyên liệu điều chuyển",
     emptyTransferItemsDescription:
-      "Danh sách mặt hàng sẽ xuất hiện tại đây khi yêu cầu có dòng hàng.",
+      "Danh sách mặt hàng sẽ hiện khi yêu cầu có dòng hàng.",
     ingredientValue: "Giá trị nguyên liệu",
     shippingFee: "Phí vận chuyển",
     totalTransferValue: "Tổng giá trị luân chuyển",
@@ -1194,10 +1202,10 @@ export const inventory = {
       receiveFrom: (branch: string) => `từ ${branch}`,
       receiveNotReady: "Yêu cầu chưa ở trạng thái nhận",
       receiveNotReadyDescription:
-        "Mở yêu cầu chuyển hàng để xem chi tiết hoặc chờ kho gửi xác nhận xuất.",
+        "Mở yêu cầu để xem chi tiết hoặc chờ kho gửi xác nhận xuất.",
       receiveWaitingTransit: "Phiếu đã xuất, chưa chuyển sang vận chuyển",
       receiveWaitingTransitDescription:
-        "Kho gửi cần chuyển phiếu sang đang vận chuyển trước khi chi nhánh nhận hàng.",
+        "Kho gửi cần chuyển phiếu sang đang vận chuyển trước khi nhận.",
       receiveOpenDetail: "Mở yêu cầu chuyển hàng",
       receiveBackToList: "Quay lại danh sách nhận",
       receiveSuccess: "Đã nhận hàng thành công.",
@@ -1255,7 +1263,7 @@ export const inventory = {
     title: "Hóa đơn NCC",
     createAction: "Ghi nhận hóa đơn NCC",
     createDescription:
-      "Ghi số hóa đơn, ngày và VAT theo chứng từ. Có thể liên kết phiếu nhập và đính kèm HĐ GTGT ngay khi lưu.",
+      "Ghi số hóa đơn, ngày và VAT; có thể liên kết phiếu nhập.",
     searchPlaceholder: "Tìm số hóa đơn, NCC, đơn mua hoặc mã phiếu nhập",
     allSuppliers: "Tất cả nhà cung cấp",
     supplierPlaceholder: "Nhà cung cấp",
@@ -1266,6 +1274,8 @@ export const inventory = {
     paymentPlaceholder: "Thanh toán",
     allPayments: "Tất cả thanh toán",
     overdueOnly: "Chỉ xem hóa đơn quá hạn",
+    vatMissingOnly: "Thiếu HĐ GTGT",
+    vatMissingOnlyAria: "Chỉ xem hóa đơn còn nợ chưa đính kèm HĐ GTGT",
     groupByLabel: "Nhóm theo",
     groupByAria: "Nhóm danh sách theo nhà cung cấp hoặc đơn mua",
     invoiceCount: (filtered: number, total: number) =>
@@ -1285,6 +1295,8 @@ export const inventory = {
       return `${codes.slice(0, 2).join(" · ")} · +${formatCount(codes.length - 2)}`;
     },
     overdueGroupSummary: (count: number) => `${formatCount(count)} quá hạn`,
+    vatMissingGroupSummary: (count: number) =>
+      `${formatCount(count)} thiếu HĐ GTGT`,
     groupDetailAction: "Xem chi tiết",
     selectInvoiceInGroup: "Hóa đơn trong nhóm",
     selectInvoiceInGroupAria: "Chọn hóa đơn trong nhóm đang xem",
@@ -1345,11 +1357,11 @@ export const inventory = {
     vatAttachmentUpload: "Tải lên HĐ GTGT",
     vatAttachmentHint: "PDF hoặc ảnh, tối đa 10MB",
     vatAttachmentOptionalHint:
-      "Tùy chọn lúc ghi nhận. Bắt buộc đính kèm trước khi thanh toán.",
+      "Tùy chọn khi ghi nhận. Bắt buộc trước khi thanh toán.",
     vatAttachmentUploaded: "Đã đính kèm HĐ GTGT",
     vatAttachmentUploadFailed: "Không thể tải lên HĐ GTGT",
     vatAttachmentCreateFailed:
-      "Đã lưu hóa đơn nhưng chưa đính kèm được HĐ GTGT. Hãy tải lên ở chi tiết trước khi thanh toán.",
+      "Đã lưu hóa đơn nhưng chưa đính kèm HĐ GTGT. Tải lên trước khi thanh toán.",
     vatAttachmentRemindAfterCreate:
       "Đã lưu hóa đơn. Hãy đính kèm HĐ GTGT trước khi thanh toán.",
     vatAttachmentFileSelected: (name: string) => `Đã chọn: ${name}`,
@@ -1363,13 +1375,13 @@ export const inventory = {
     paymentTooLarge: "Số tiền trả vượt quá phần còn phải trả.",
     noPaymentInvoice: "Chưa chọn hóa đơn để thanh toán.",
     paymentRetrySameIntent:
-      "Chưa xác nhận được kết quả. Hãy thử lại ngay trên biểu mẫu này.",
+      "Chưa xác nhận được kết quả. Thử lại trên biểu mẫu này.",
     linkedGrn: "Phiếu nhập liên kết",
     linkedPo: "Đơn mua liên kết",
     notLinked: "Chưa liên kết",
     varianceTitle: (percent: string) => `Chênh lệch đối soát ${percent}`,
     varianceDescription:
-      "Kiểm tra lại số lượng, đơn giá hoặc phụ phí trước khi xác nhận thanh toán.",
+      "Kiểm tra số lượng, đơn giá hoặc phụ phí trước khi thanh toán.",
     viewGrnLine: "Xem dòng phiếu nhập liên quan →",
     missingGrnTitle: "Chưa thể đối soát",
     missingGrnDescription:
@@ -1378,7 +1390,7 @@ export const inventory = {
     safeDescription: "Tổng hóa đơn nằm trong ngưỡng đối soát.",
     noAnalysisTitle: "Chưa có hóa đơn để phân tích",
     noAnalysisDescription:
-      "Chọn một hóa đơn từ danh sách để xem chi tiết công nợ và trạng thái đối soát.",
+      "Chọn hóa đơn để xem công nợ và trạng thái đối soát.",
     chooseGrnOptional: "Chọn phiếu nhập (tùy chọn)",
     noLinkedGrn: "Không liên kết phiếu nhập",
     chooseSupplier: "Chọn nhà cung cấp",
@@ -1388,7 +1400,7 @@ export const inventory = {
     vat: "VAT đầu vào theo hóa đơn",
     vatSection: "Thuế GTGT đầu vào đã ghi nhận",
     vatSectionHint:
-      "Nhập theo hóa đơn. Đây là VAT đã ghi nhận, chưa kết luận được khấu trừ.",
+      "Nhập theo hóa đơn. VAT đã ghi nhận, chưa kết luận khấu trừ.",
     vatBreakdown: "Chi tiết VAT đầu vào đã ghi nhận",
     vatBreakdownRequired: "Nhập ít nhất một mức thuế với tiền trước VAT lớn hơn 0.",
     taxableAtRate: (rate: string) => `Tiền trước VAT · ${rate}`,
@@ -1430,13 +1442,13 @@ export const inventory = {
       addSubmit: "Gán nguyên liệu",
       addSuccess: "Đã gán nguyên liệu",
       ingredient: "Nguyên liệu",
-      internalSku: "SKU nội bộ",
+      internalSku: "Mã hàng nội bộ",
       supplierSku: "Mã hàng NCC",
       supplierSkuPlaceholder: "Mã trên báo giá hoặc phiếu giao",
       searchPlaceholder: "Tìm nguyên liệu hoặc mã hàng",
       emptyTitle: "NCC chưa được gán nguyên liệu",
       emptyDescription:
-        'Nhấn "Gán nguyên liệu" để cho phép dùng trong PO và GRN.',
+        'Nhấn "Gán nguyên liệu" để dùng trong đơn đặt hàng và phiếu nhập.',
       emptySearchTitle: "Không tìm thấy nguyên liệu phù hợp",
       emptySearchDescription: "Thử tên hoặc mã hàng khác.",
       removeTitle: "Bỏ gán nguyên liệu?",
@@ -1459,7 +1471,7 @@ export const inventory = {
       `Đã tạo phiên #${sessionId} — ${formatCount(lineCount)} dòng`,
     startTitle: "Bắt đầu kiểm kê",
     startDescription:
-      "Chọn chế độ và chi nhánh. Hệ thống sẽ tạo danh sách theo phân hạng ABC.",
+      "Chọn chế độ và chi nhánh. Danh sách tạo theo phân hạng ABC.",
     startLoadFailed: "Không thể tải dữ liệu để bắt đầu kiểm kê.",
     modeTitle: "Chế độ kiểm kê",
     warehouseRequired: "Chi nhánh chưa có kho để kiểm kê.",
@@ -1489,8 +1501,7 @@ export const inventory = {
     searchPlaceholder: "Tìm mã phiên hoặc tên chi nhánh...",
     noSessionsMatched: "Không tìm thấy phiên nào",
     noSessions: "Chưa có phiên kiểm kê nào",
-    noSessionsHint:
-      "Mở phiên kiểm kê để bắt đầu đếm tồn kho thực tế và đối soát với hệ thống.",
+    noSessionsHint: "Mở phiên kiểm kê để đếm tồn thực tế và đối soát.",
     sessionCode: "Mã phiên",
     startedAt: "Ngày bắt đầu",
     detailsAria: "Chi tiết",
@@ -1528,7 +1539,7 @@ export const inventory = {
         `Tiến độ: ${formatCount(counted)}/${formatCount(total)} đã đếm (${percent})`,
       cancelledTitle: "Phiên kiểm kê đã bị hủy",
       cancelledDescription:
-        "Dữ liệu đếm trước đó không còn hiệu lực và phiên này không thể tiếp tục chỉnh sửa.",
+        "Dữ liệu đếm không còn hiệu lực; phiên không thể chỉnh sửa.",
       updateFailed: "Không thể cập nhật",
       completeFailed: "Không thể hoàn tất kiểm kê.",
       completeOk: "Đã hoàn tất kiểm kê",
@@ -1536,16 +1547,15 @@ export const inventory = {
       cancelOk: "Đã hủy phiên kiểm kê",
       completeDialogTitle: "Chốt kết quả kiểm kê?",
       completeDialogDescription:
-        "Tính chênh lệch và cập nhật tồn kho. Sau khi chốt, phiên chuyển sang đối chiếu kết quả.",
+        "Tính chênh lệch và cập nhật tồn kho. Phiên chuyển sang đối chiếu.",
       processing: "Đang xử lý...",
       completeResultAction: "Chốt kết quả",
       cancelDialogTitle: "Hủy phiên kiểm kê?",
       cancelDialogDescription:
-        "Tất cả dữ liệu đã đếm sẽ bị hủy và không còn được đối chiếu trong phiên này.",
+        "Toàn bộ dữ liệu đã đếm sẽ bị hủy, không thể đối chiếu lại.",
       confirmCancelAction: "Xác nhận hủy",
       emptyCountTitle: "Không có nguyên liệu để kiểm kê",
-      emptyCountDescription:
-        "Kho hiện chưa có dòng tồn nào cần thực hiện kiểm kê trong phiên này.",
+      emptyCountDescription: "Kho chưa có dòng tồn nào cần kiểm kê.",
       saved: "Đã lưu",
       countedQtyPlaceholder: "SL thực đếm",
       reasonPlaceholder: "Lý do",
@@ -1557,8 +1567,7 @@ export const inventory = {
         review: "1-5% (cần xem lại)",
         severe: ">5% (nghiêm trọng)",
         emptyTitle: "Không có dữ liệu kiểm kê",
-        emptyDescription:
-          "Kết quả chênh lệch sẽ xuất hiện tại đây sau khi phiên kiểm kê có dữ liệu.",
+        emptyDescription: "Kết quả chênh lệch sẽ hiện khi phiên có dữ liệu.",
         systemQty: "SL hệ thống",
         countedQty: "SL thực đếm",
         variance: "Chênh lệch",
@@ -1566,7 +1575,7 @@ export const inventory = {
         countedShort: "Đếm",
         nextActionTitle: "Xử lý chênh lệch",
         nextActionDescription: (count: number) =>
-          `${formatCount(count)} dòng lệch tồn cần rà soát trong báo cáo biến động kho trước khi tạo nghiệp vụ mới.`,
+          `${formatCount(count)} dòng lệch cần rà soát trong báo cáo biến động kho.`,
         nextActionCta: "Xem biến động kho",
       },
     },
@@ -1575,11 +1584,11 @@ export const inventory = {
     title: "Phiếu hao hụt / hủy hàng",
     loadFailedTitle: "Không thể tải dữ liệu phiếu hao hụt",
     loadFailedDescription:
-      "Chưa thể xác nhận vị trí kho, tồn hiện tại và ngưỡng kiểm soát. Vui lòng tải lại.",
+      "Chưa xác nhận được vị trí kho, tồn và ngưỡng kiểm soát. Tải lại.",
     shiftPrefix: "ca:",
     generalInfoTitle: "Thông tin chung",
     generalInfoDescription:
-      "Các dòng sẽ tự tính mức kiểm soát. Dòng mức 1 trở lên cần ảnh; mức 2 cần QLV duyệt và người tạo phiếu không tự duyệt.",
+      "Mức kiểm soát tự tính. Mức 1 cần ảnh; mức 2 cần QLV khác duyệt.",
     location: "Vị trí kho",
     chooseLocation: "Chọn vị trí kho",
     generalNotes: "Ghi chú chung (tùy chọn)",

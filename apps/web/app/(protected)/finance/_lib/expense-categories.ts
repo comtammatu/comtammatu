@@ -111,6 +111,22 @@ export function classifyExpensePaymentState(expense: {
   return "cash_paid";
 }
 
+/**
+ * Rows the operator still owes work on: money not yet paid out, or a transfer
+ * without bank evidence. Single source for the expenses KPI and list filter so
+ * the count and the filtered rows can never disagree.
+ */
+export function expenseNeedsAction(expense: {
+  payment_method: string;
+  paid_at: string | null;
+  transfer_content?: string | null;
+  matchedEventIds?: readonly number[];
+  matchedBankTransactionIds?: readonly number[];
+}): boolean {
+  const state = classifyExpensePaymentState(expense);
+  return state === "unpaid" || state === "transfer_needs_match";
+}
+
 export function isExpenseVisibleForBankMatch(
   expense: {
     category: string;

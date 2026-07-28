@@ -74,7 +74,7 @@ diff trước khi chạy full gate.
 
 ## Current funds canary
 
-- [ ] Chưa có opening thì UI hiển thị `Đang xác minh`; không dùng ba setting cũ
+- [ ] Chưa có opening thì UI hiển thị `Chưa mở sổ`; không dùng ba setting cũ
       để suy ra số dư.
 - [ ] Opening cash/bank chỉ tạo một lần; mọi sửa sai sau đó là adjustment
       append-only có reason và idempotency key.

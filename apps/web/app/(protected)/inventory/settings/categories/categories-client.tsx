@@ -26,8 +26,14 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import { FormDialog, NumberField, TextField } from "@/components/form";
 import { messages } from "@lib/messages";
+import { FORM_VI } from "@comtammatu/shared/messages";
 import { InventoryListFrame } from "../../_components/inventory-list-frame";
 import {
   createCategory,
@@ -104,19 +110,25 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
       }
     : NEW_CATEGORY_DEFAULTS;
 
-  function RowActions({ row }: { row: CategoryRow }) {
-    return (
-      <div className="flex items-center justify-end gap-1">
-        <Button variant="ghost" size="icon" onClick={() => openEdit(row)}>
-          <IconPencil className="size-4" />
-          <span className="sr-only">{copy.edit}</span>
-        </Button>
-        <Button variant="ghost" size="icon" onClick={() => handleDelete(row)}>
-          <IconTrash className="size-4 text-destructive" />
-          <span className="sr-only">{copy.delete.action}</span>
-        </Button>
-      </div>
-    );
+  function getCategoryRowActions(row: CategoryRow): RowActionItem[] {
+    return [
+      {
+        key: "edit",
+        label: copy.edit,
+        icon: <IconPencil />,
+        onSelect: () => openEdit(row),
+      },
+      {
+        key: "delete",
+        label: copy.delete.action,
+        icon: <IconTrash />,
+        destructive: true,
+        separatorBefore: true,
+        onSelect: () => {
+          void handleDelete(row);
+        },
+      },
+    ];
   }
 
   const columns: DataTableColumn<CategoryRow>[] = [
@@ -144,9 +156,23 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
     },
     {
       key: "actions",
-      header: "",
-      className: "w-24",
-      render: (row) => <RowActions row={row} />,
+      header: FORM_VI.action,
+      className: "w-14",
+      render: (row) => {
+        const items = getCategoryRowActions(row);
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <RowActionsMenu
+              items={items}
+              label={FORM_VI.action}
+              triggerSize="icon-sm"
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -169,10 +195,14 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
           columns={columns}
           data={rows}
           getRowKey={(row) => row.id}
+          onRowClick={openEdit}
+          renderRowContextMenu={(row) => (
+            <RowActionsContextMenuItems items={getCategoryRowActions(row)} />
+          )}
           emptyTitle={copy.empty}
           emptyMode="no-data"
           mobileCardRender={(row) => (
-            <Item variant="outline">
+            <Item variant="outline" onClick={() => openEdit(row)}>
               <ItemContent className="min-w-0">
                 <ItemTitle size="heading">{row.name}</ItemTitle>
                 <ItemDescription className="text-sm leading-6">
@@ -185,7 +215,13 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
                 </div>
               </ItemContent>
               <ItemActions className="self-center">
-                <RowActions row={row} />
+                <div onClick={(event) => event.stopPropagation()}>
+                  <RowActionsMenu
+                    items={getCategoryRowActions(row)}
+                    label={FORM_VI.action}
+                    triggerSize="icon-touch"
+                  />
+                </div>
               </ItemActions>
             </Item>
           )}

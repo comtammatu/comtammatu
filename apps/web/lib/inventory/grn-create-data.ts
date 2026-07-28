@@ -3,6 +3,7 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import {
   canAccess,
+  canViewPurchasePrice,
   PERMISSION_KEYS,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
@@ -280,6 +281,26 @@ export async function loadGrnCreatePageData({
     }
   }
 
+  const showPurchasePrice = canViewPurchasePrice(claims.user_role);
+  const projectedIngredients = showPurchasePrice
+    ? ingredients
+    : ingredients.map((ingredient) => ({ ...ingredient, unit_cost: null }));
+  const projectedRecentLines = showPurchasePrice
+    ? recentLines
+    : recentLines.map((line) => ({ ...line, unitCost: null }));
+  const projectedDraft =
+    existingDraft == null
+      ? null
+      : showPurchasePrice
+        ? existingDraft
+        : {
+            ...existingDraft,
+            lines: existingDraft.lines.map((line) => ({
+              ...line,
+              unitCost: 0,
+            })),
+          };
+
   const initialBranchId = draftRow?.branch_id ?? defaultBranchId;
   const initialLocationId = draftRow?.location_id ?? null;
 
@@ -293,8 +314,9 @@ export async function loadGrnCreatePageData({
     locationOptions,
     initialLocationId,
     canSwitchBranch: routeBranchId == null,
-    ingredients,
-    recentLines,
-    existingDraft,
+    ingredients: projectedIngredients,
+    recentLines: projectedRecentLines,
+    existingDraft: projectedDraft,
+    showPurchasePrice,
   };
 }

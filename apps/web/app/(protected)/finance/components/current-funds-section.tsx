@@ -141,7 +141,6 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
       <AppSection
         size="sm"
         title={copy.cash.onHandTitle}
-        description={copy.cash.onHandDescription}
         action={
           <Button
             variant="outline"
@@ -154,7 +153,7 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
             {cash.hasOpening
               ? copy.cash.adjustmentAction
               : cash.legacySettingsPresent
-                ? copy.cash.legacyCutoverAction
+                ? copy.cash.legacyBlockedAction
                 : copy.cash.setOpening}
           </Button>
         }

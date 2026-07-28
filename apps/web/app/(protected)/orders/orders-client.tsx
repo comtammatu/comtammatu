@@ -113,11 +113,11 @@ const ORDER_COLUMNS: DataTableColumn<OrderRow>[] = [
 
 const ORDERS_COPY = {
   inProgressLabel: "Đang xử lý",
-  inProgressHint: "Đơn chưa hoàn tất, trên toàn bộ kết quả lọc.",
+  inProgressHint: "Đơn chưa hoàn tất trong kết quả lọc.",
   paidLabel: "Đơn đã thanh toán",
-  paidHint: "Số đơn đã thu tiền, trên toàn bộ kết quả lọc.",
+  paidHint: "Đơn đã thu tiền trong kết quả lọc.",
   revenueLabel: "Doanh thu đã thu",
-  revenueHint: "Chỉ tính đơn đã thanh toán, trên toàn bộ kết quả lọc.",
+  revenueHint: "Chỉ tính đơn đã thanh toán.",
   listCountNote: (shown: number, total: number) =>
     total > shown
       ? `Hiển thị 50 đơn mới nhất trong ${String(total)} đơn`
@@ -305,7 +305,7 @@ export function OrdersClient({
       </KpiRow>
 
       {/* ─── Filter bar ─── */}
-      <AppToolbar className="items-end">
+      <AppToolbar sticky className="items-end">
         <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="date-from" className="text-xs">
             {FORM_VI.fromDate}
@@ -428,7 +428,7 @@ export function OrdersClient({
       {/* ─── Table ─── */}
       <AppSection
         title="Danh sách đơn"
-        description="Theo dõi trạng thái, thanh toán và tổng tiền của từng đơn hàng."
+        description="Trạng thái, thanh toán và tổng tiền từng đơn."
         contentFlush
         contentScroll
       >
@@ -441,7 +441,7 @@ export function OrdersClient({
           emptyTitle="Không có đơn hàng nào"
           emptyDescription={
             hasFilters
-              ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+              ? "Thử xóa bộ lọc hoặc đổi mốc thời gian."
               : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
           }
           emptyIcon={<IconShoppingBag />}

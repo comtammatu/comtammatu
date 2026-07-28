@@ -3,16 +3,16 @@ import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
-import {
-  fetchGrnIdsForDropdown,
-  fetchSupplierInvoicesPage,
-} from "../../inventory/procurement-actions";
-import type { SupplierInvoiceCursor } from "../../inventory/procurement-actions";
+import { fetchGrnIdsForDropdown } from "../../inventory/procurement-actions";
 import { fetchSuppliers } from "../../inventory/supplier-actions";
+import {
+  fetchSupplierInvoicesPage,
+  type SupplierInvoiceCursor,
+} from "../supplier-invoice-actions";
 import { resolveRequestedBranchId } from "../../inventory/_lib/inventory-scope";
-import { SupplierInvoicesClient } from "../../inventory/supplier-invoices/supplier-invoices-client";
-import { parseSupplierInvoiceListFilters } from "../../inventory/supplier-invoices/supplier-invoice-list-model";
-import { mapSupplierInvoiceRow } from "../../inventory/supplier-invoices/supplier-invoice-row";
+import { SupplierInvoicesClient } from "./supplier-invoices-client";
+import { parseSupplierInvoiceListFilters } from "./supplier-invoice-list-model";
+import { mapSupplierInvoiceRow } from "./supplier-invoice-row";
 
 export default async function FinanceSupplierInvoicesPage({
   searchParams,
@@ -26,6 +26,7 @@ export default async function FinanceSupplierInvoicesPage({
     matchStatus?: string | string[];
     paymentStatus?: string | string[];
     overdue?: string | string[];
+    vat?: string | string[];
     view?: string | string[];
   }>;
 }) {
@@ -107,6 +108,7 @@ export default async function FinanceSupplierInvoicesPage({
       matchStatus: filters.matchStatus ?? undefined,
       paymentStatus: filters.paymentStatus ?? undefined,
       overdueOnly: filters.overdueOnly,
+      vatEvidence: filters.vatEvidence ?? undefined,
       viewMode: filters.viewMode,
     }),
     fetchSuppliers(),

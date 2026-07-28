@@ -284,7 +284,7 @@ export const employee = {
     calendarScopeAll: "Tất cả ngày",
     calendarScopeAttention: "Cần xử lý",
     calendarAttentionDescription:
-      "Chỉ mở chi tiết cho ca treo; khi đã chọn nhân viên, gồm cả nghỉ chờ duyệt. Ngày còn lại được làm mờ.",
+      "Chỉ mở chi tiết cho ca treo và nghỉ chờ duyệt; ngày khác làm mờ.",
     calendarAttention: "Cần xử lý",
     calendarNoAttention: "Không cần xử lý",
     calendarAttentionEmpty:
@@ -440,7 +440,7 @@ export const employee = {
       "Mở đúng khu vực theo vai trò và chi nhánh hiện tại.",
     missingProfileTitle: "Chưa có hồ sơ nhân viên",
     missingProfileDescription:
-      "Tài khoản chưa được liên kết hồ sơ nhân viên. Kiểm tra thông tin cá nhân hoặc liên hệ quản lý.",
+      "Tài khoản chưa liên kết hồ sơ nhân viên. Liên hệ quản lý.",
     openProfile: "Mở hồ sơ",
   },
   leave: {

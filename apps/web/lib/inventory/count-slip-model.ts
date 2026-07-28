@@ -27,6 +27,7 @@ export type CountSlipLineView = {
 
 export type CountSlipRow = {
   id: number;
+  slipNumber: string;
   branchName: string;
   locationName: string;
   employeeName: string;

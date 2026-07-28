@@ -71,7 +71,7 @@ test("touch Combobox density includes popup search and options", () => {
 
 test("supplier invoice toolbar consumes the responsive control contract", () => {
   const source = read(
-    "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
   assert.match(source, /const controlSize = useFormControlSize\(\)/);
@@ -86,5 +86,5 @@ test("supplier invoice toolbar consumes the responsive control contract", () => 
     source.match(/<SelectTrigger\s[\s\S]*?size=\{controlSize\}/g)?.length,
     4,
   );
-  assert.equal(source.match(/size=\{controlSize\}/g)?.length, 8);
+  assert.equal(source.match(/size=\{controlSize\}/g)?.length, 10);
 });

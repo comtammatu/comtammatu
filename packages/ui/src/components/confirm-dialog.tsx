@@ -99,41 +99,54 @@ export function ConfirmDialog({
 }
 
 export function ConfirmDialogProvider() {
-  const [pending, setPending] = React.useState<PendingConfirm | null>(null);
+  const resolveRef = React.useRef<PendingConfirm["resolve"] | null>(null);
+  const [opts, setOpts] = React.useState<ConfirmOptions | null>(null);
   const [open, setOpen] = React.useState(false);
+
+  // Settling through a ref keeps each request single-shot: a superseded or
+  // already-answered request can never be resolved twice, and its awaiting
+  // caller always resumes instead of hanging in a pending state.
+  const settle = React.useCallback((result: boolean) => {
+    const resolve = resolveRef.current;
+    resolveRef.current = null;
+    resolve?.(result);
+  }, []);
 
   React.useEffect(() => {
     const handler = (e: Event) => {
-      const ev = e as CustomEvent<PendingConfirm>;
-      setPending(ev.detail);
+      const { opts: next, resolve } = (e as CustomEvent<PendingConfirm>).detail;
+      settle(false);
+      resolveRef.current = resolve;
+      setOpts(next);
       setOpen(true);
     };
     bus.addEventListener(CONFIRM_EVENT, handler);
     return () => bus.removeEventListener(CONFIRM_EVENT, handler);
-  }, []);
+  }, [settle]);
 
-  const settle = React.useCallback(
+  React.useEffect(() => () => settle(false), [settle]);
+
+  const answer = React.useCallback(
     (result: boolean) => {
-      pending?.resolve(result);
+      settle(result);
       setOpen(false);
-    },
-    [pending],
-  );
-
-  const handleOpenChange = React.useCallback(
-    (next: boolean) => {
-      if (!next) settle(false);
-      else setOpen(true);
     },
     [settle],
   );
 
-  const opts = pending?.opts;
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (!next) answer(false);
+      else setOpen(true);
+    },
+    [answer],
+  );
+
   return (
     <ConfirmDialog
       open={open}
       onOpenChange={handleOpenChange}
-      onConfirm={() => settle(true)}
+      onConfirm={() => answer(true)}
       title={opts?.title ?? ""}
       description={opts?.description}
       details={opts?.details}

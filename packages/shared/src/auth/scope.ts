@@ -153,7 +153,10 @@ export function resolvePostLoginRedirect(
   }
 
   if (isOwnerRoutePath(targetUrl.pathname) && claims.user_role !== "owner") {
-    return fallback;
+    const ownerModuleKey = resolveModuleFromPath(targetUrl.pathname);
+    if (!ownerModuleKey || !canAccess(claims.user_role, ownerModuleKey)) {
+      return fallback;
+    }
   }
 
   const moduleKey = resolveModuleFromPath(targetUrl.pathname);

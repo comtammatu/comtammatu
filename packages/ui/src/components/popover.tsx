@@ -4,6 +4,10 @@ import * as React from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
 import { cn } from "../lib/utils";
+import {
+  FLOATING_POSITION_METHOD,
+  floatingCollisionBoundary,
+} from "../lib/floating-layer";
 
 function Popover({
   ...props
@@ -21,6 +25,8 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  positionMethod = FLOATING_POSITION_METHOD,
+  collisionBoundary = floatingCollisionBoundary(),
   children,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Positioner>) {
@@ -29,6 +35,8 @@ function PopoverContent({
       <PopoverPrimitive.Positioner
         align={align}
         sideOffset={sideOffset}
+        positionMethod={positionMethod}
+        collisionBoundary={collisionBoundary}
         className="isolate z-50"
         {...props}
       >

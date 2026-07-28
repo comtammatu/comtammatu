@@ -35,7 +35,7 @@ Below the period result, keep the tenant-wide current-funds row:
   Incoming amounts add and outgoing amounts subtract.
 
 These two balances do not follow the page's period or branch filter. Show
-`Đang xác minh` until the Owner has created one verified opening through
+`Chưa mở sổ` until the Owner has created one verified opening through
 `initialize_finance_funds`. The opening is the first delta from zero at its
 verified boundary and cannot be edited or deleted. Corrections use
 `create_finance_fund_adjustment`; they never replace the opening.
@@ -43,10 +43,9 @@ verified boundary and cannot be edited or deleted. Corrections use
 Legacy `cash_opening_balance`, `bank_opening_balance`, and `cash_opening_date`
 settings remain frozen as investigation evidence and are never a calculation
 fallback. Their presence blocks interactive initialization and requires a
-controlled cutover. A verified cutover uses the exact server timestamp; a
-project-start day may use 00:00 Vietnam time only when the evidence proves the
-balance at that boundary. Otherwise, describe it honestly as a verified
-cutover rather than a project-start opening.
+controlled handoff. Operator UI must not say "cutover": the default boundary is
+"Ngay bây giờ" (exact server timestamp); "Từ 0 giờ ngày bắt đầu" uses 00:00
+Vietnam time only when evidence proves the balance at that boundary.
 
 `bank_transactions` is the bank-ledger source of truth. Signed SePay webhooks
 and Owner-imported SePay exports are idempotent ingestion paths keyed by the
@@ -183,19 +182,20 @@ the bank-reconciliation workflow; changing the payment method never rewrites a
 
 ### Owner and Accountant Visibility
 
-The current application authorization model exposes Finance to `owner`; there
-is no canonical `accountant` staff role. Therefore:
+**Product contract (D088):** authenticated `accountant` is a first-class
+application role with `/finance` operational authority and an Inventory PO
+slice. Runtime MODULE_ACL admits `owner` and `accountant` to `/finance`;
+fund initialization and privileged fund adjustments remain Owner-only.
 
-| Actor | Current system access | Must review or act on |
+| Actor | System access (D088) | Must review or act on |
 | --- | --- | --- |
-| Owner | Tenant-wide `/finance`; owner-only bank import/reconciliation, payment-method correction, one-time fund initialization, and append-only fund adjustments | Daily landing metrics and formulas; current cash/bank opening and adjustments; exact POS cash variances; unmatched SePay movements; VietQR payments missing bank evidence; operating expenses; AP; HĐĐT; inventory opening/closing evidence; exports |
-| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance, bank import/reconciliation, opening-balance, fund-adjustment, or payment-correction authority | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds |
-| Accountant | No authenticated Finance role or write authority in the current model | Receive Owner-controlled revenue/payment exports, canonical SePay evidence, expense/AP evidence, HĐĐT evidence, and inventory opening/closing evidence; report discrepancies back to the Owner |
+| Owner | Tenant-wide `/finance`; oversight plus fund initialization / privileged exceptions | Daily landing metrics; cash/bank; POS cash variances; SePay unmatched; VietQR missing bank evidence; expenses; AP; HĐĐT; inventory opening/closing; exports; staff permission grants |
+| Accountant | `/finance` view + approve + create operating expenses, supplier invoices, AP pay, bank (NH), payment-method correction (PTTT); Inventory PO view/create/approve (same person may create and approve) | Same operating review set as Owner for money workflows they are granted; create PO from GRN draft and approve before warehouse confirm (D083/D088) |
+| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance; no purchase-price / chain-PO visibility | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds |
 
-The system must not silently map `office` or another position to Finance
-access. A separate authenticated accountant workspace requires an explicit
-Owner decision on role, tenant/branch scope, read-only versus action
-permissions, period-close authority, and production profile remediation.
+Operators must not silently map `office` or a retired position code to Finance. Period-close
+enterprise accounting remains outside the product (D020). JWT roles added for
+accountant / central sites are temporary until ADR 0015 Authority.
 
 Every money-changing or classification-changing workflow leaves a durable
 audit action: `bank_transactions.sepay_import`,
@@ -242,8 +242,12 @@ bucket `supplier-invoice-attachments`); `record_supplier_payment` raises
 optionally during invoice create or later on the detail Sheet; the
 `attach_supplier_invoice_vat_evidence` action allows Owner with
 `finance:ap_pay` or `procurement:invoice_create` (matching the RPC). The legacy
-`/inventory/supplier-invoices` route remains a compatibility entry only; new
-GRN and report links use `/finance/supplier-invoices`.
+`/inventory/supplier-invoices` route remains a compatibility `REDIRECT-SHIM`
+only (ADR 0018); new GRN and report links use `/finance/supplier-invoices`.
+The LIST client, row mapper, and list model live under
+`apps/web/app/(protected)/finance/supplier-invoices/` (Wave 2 Record Depth).
+Procurement Server Actions for create/match/pay may still live under Inventory
+`procurement-actions` / `supplier-invoice-actions` as the RPC boundary.
 
 There is no current `/accounting/*` app surface.
 
@@ -317,9 +321,11 @@ Do not call the module "done" because enterprise-accounting objects exist in old
 ## Source Files
 
 - `apps/web/app/(protected)/finance/*`
+- `apps/web/app/(protected)/finance/supplier-invoices/*`
 - `apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/*`
 - `apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts`
-- `apps/web/app/(protected)/inventory/supplier-invoices/*`
+- `apps/web/app/(protected)/finance/supplier-invoice-actions.ts`
+- `apps/web/app/(protected)/inventory/supplier-invoices/page.tsx` (REDIRECT-SHIM)
 - `apps/web/app/(protected)/inventory/report-actions.ts`
 - `packages/shared/src/auth/module-acl.ts`
 - `packages/shared/src/auth/nav-config.ts`

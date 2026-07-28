@@ -10,7 +10,7 @@ export default function RootError({ error, reset }: ErrorPanelProps) {
       className="flex min-h-dvh items-center justify-center p-4"
     >
       <div className="w-full max-w-xl">
-        <ErrorPanel error={error} reset={reset} />
+        <ErrorPanel error={error} reset={reset} allowSignOut />
       </div>
     </main>
   );

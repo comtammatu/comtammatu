@@ -84,7 +84,7 @@ function PosSessionTopBarComponent({
             Exit / close-shift live here to keep the header small — and to
             avoid a mis-tap on "Chốt ca" mid-payment. The F10 hotkey still
             opens close-shift quickly on desktop. */}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-2">
           <PrinterStatusIndicator branchId={branchId} />
           <PosMoreMenu
             branchId={branchId}

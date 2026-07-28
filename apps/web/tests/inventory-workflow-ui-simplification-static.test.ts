@@ -54,7 +54,7 @@ test("Branch keeps separate roles while Owner combines consumption and waste", (
   );
   assert.match(branchIssueData, /isBranchInternalIssueType/);
   assert.match(ownerConsumption, /scope="all"/);
-  assert.match(ownerConsumption, /detailBasePath="\/inventory\/issues"/);
+  assert.match(ownerConsumption, /detailBasePath="\/inventory\/consumption"/);
   assert.match(
     dictionary,
     /issues: \{ short: "Sự cố kho", long: "Sự cố kho" \}/,
@@ -128,6 +128,43 @@ test("consumption list combines POS ledger rows with operational and waste slips
   assert.match(
     messages,
     /combinedConsumptionCreateAction: "Tạo phiếu tiêu hao \/ hao hụt"/,
+  );
+});
+
+test("recorded consumption toolbar keeps one baseline and separate slots", () => {
+  const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
+
+  assert.match(
+    issues,
+    /const recordedConsumptionFilterBar = \(\s*<AppToolbar\s+variant="inline"\s+className="items-center"/,
+  );
+  assert.doesNotMatch(
+    issues,
+    /recordedConsumptionFilterBar[\s\S]{0,200}items-stretch/,
+  );
+  assert.match(
+    issues,
+    /recordedConsumptionFilterBar[\s\S]*?search=\{\s*<InputGroup size=\{controlSize\} className="min-w-0 flex-1"/,
+  );
+  assert.match(
+    issues,
+    /recordedConsumptionFilterBar[\s\S]*?filters=\{\s*<>[\s\S]*?Select[\s\S]*?items=\{recordedBranchSelectItems\}/,
+  );
+  assert.match(
+    issues,
+    /id="recorded-start-date"[\s\S]*?aria-label=\{FORM_VI\.fromDate\}/,
+  );
+  assert.match(
+    issues,
+    /id="recorded-end-date"[\s\S]*?aria-label=\{FORM_VI\.toDate\}/,
+  );
+  assert.doesNotMatch(
+    issues,
+    /htmlFor="recorded-start-date"|htmlFor="recorded-end-date"/,
+  );
+  assert.doesNotMatch(
+    issues,
+    /recordedConsumptionFilterBar[\s\S]*?search=\{\s*<>[\s\S]*?<Select/,
   );
 });
 
@@ -317,7 +354,7 @@ test("AppToolbar inline shares card surface without muted fill", () => {
   const surface = read("app/components/surface.tsx");
   assert.match(
     surface,
-    /if \(variant === "inline"\) \{[\s\S]{0,120}<Toolbar className=\{cn\("gap-3 border-b border-border p-3"/,
+    /if \(variant === "inline"\) \{[\s\S]{0,200}<Toolbar[\s\S]{0,80}className=\{cn\(\s*"gap-3 overflow-visible border-b border-border p-3"/,
   );
   assert.doesNotMatch(
     surface,
@@ -327,7 +364,7 @@ test("AppToolbar inline shares card surface without muted fill", () => {
 
 test("migrated inventory lists use InventoryListFrame toolbar slot", () => {
   const invoices = read(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
   const supplierItems = read(
     "app/(protected)/inventory/suppliers/[id]/items/supplier-items-client.tsx",
@@ -358,6 +395,7 @@ test("migrated inventory lists use InventoryListFrame toolbar slot", () => {
 
 test("SelectContent defaults to popper and Inventory LIST filters share field width", () => {
   const select = read("../../packages/ui/src/components/select.tsx");
+  const surface = read("app/components/surface.tsx");
   const frame = read(
     "app/(protected)/inventory/_components/inventory-list-frame.tsx",
   );
@@ -375,16 +413,27 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
   );
   const invoices = read(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
   const orders = read("app/(protected)/orders/orders-client.tsx");
   const employeeTable = read("app/(protected)/hr/employee-table.tsx");
 
   assert.match(select, /position = "popper"/);
+  assert.match(select, /positionMethod = FLOATING_POSITION_METHOD/);
+  assert.match(select, /collisionBoundary = floatingCollisionBoundary\(\)/);
   assert.doesNotMatch(select, /position = "item-aligned"/);
   assert.doesNotMatch(
     select,
     /data-\[position=popper\]:h-\(--anchor-height\)/,
+  );
+  assert.match(surface, /className=\{cn\("overflow-visible", className\)\}/);
+  assert.match(
+    surface,
+    /ToolbarGroup className="relative z-0 min-w-0 flex-1 gap-2"/,
+  );
+  assert.match(
+    surface,
+    /ToolbarGroup className="relative z-10 shrink-0 gap-2"/,
   );
   assert.match(
     frame,
@@ -393,6 +442,15 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
   assert.match(
     frame,
     /export const inventoryListFilterSelectWideClassName = "w-56 shrink-0"/,
+  );
+  assert.match(stock, /search=\{searchControl\}/);
+  assert.match(
+    stock,
+    /filters=\{\s*isCompactLayout \? undefined : \(\s*<>\s*\{filterControls\}/,
+  );
+  assert.doesNotMatch(
+    stock,
+    /search=\{\s*isCompactLayout \? \(\s*searchControl/,
   );
 
   for (const source of [stock, grn, ingredients, issues, stocktake, invoices]) {

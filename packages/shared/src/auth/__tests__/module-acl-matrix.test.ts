@@ -20,6 +20,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
   owner: [
     "owner",
     "branch_dashboard",
+    "branch_feedback",
     "branch_menu_limits",
     "branch_pos_sessions",
     "branch_settings",
@@ -29,6 +30,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "branches",
     "employee_checkout_approvals",
     "employee_leave_approvals",
+    "feedback",
     "finance",
     "hr",
     "hr_payroll",
@@ -45,6 +47,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
   ],
   branch_manager: [
     "branch_dashboard",
+    "branch_feedback",
     "branch_menu_limits",
     "branch_pos_sessions",
     "branch_settings",
@@ -62,6 +65,9 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
   cashier: ["branch_orders", "notifications", "branch_home", "pos", "runner"],
   chef: ["kds", "notifications", "branch_home", "runner"],
   branch_staff: ["notifications", "branch_home"],
+  accountant: ["finance", "inventory", "notifications"],
+  central_supply_ops: ["inventory", "notifications"],
+  central_kitchen_lead: ["inventory", "notifications"],
 };
 
 for (const [role, expected] of Object.entries(EXPECTED_MATRIX)) {

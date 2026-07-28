@@ -15,7 +15,7 @@ test("global skip navigation lands in every primary route plane", () => {
     [
       "Owner",
       "apps/web/app/components/app-shell.tsx",
-      /<SidebarInset id="main-content" tabIndex=\{-1\}/,
+      /<SidebarInset[\s\S]*?id="main-content"[\s\S]*?tabIndex=\{-1\}/,
     ],
     [
       "operator",

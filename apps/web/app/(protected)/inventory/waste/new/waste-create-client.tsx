@@ -24,8 +24,6 @@ import { Trash as IconTrash } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form/combobox";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
-import { ItemGroup } from "@comtammatu/ui/components/item";
-import { Frame } from "@comtammatu/ui/components/frame";
 import { WasteReasonDropdown } from "@/(protected)/inventory/_components/waste-reason-dropdown";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
 import { WastePhotoUpload } from "@/(protected)/inventory/_components/waste-photo-upload";
@@ -373,7 +371,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
             res.data?.requiresApproval ?? false,
           ),
         );
-        router.push(`/inventory/issues/${res.data?.issueId}`);
+        router.push(`/inventory/consumption/${res.data?.issueId}`);
       } catch (error) {
         console.error("inventory.waste.create_failed", error);
         toast.error(toastCreateFailed);
@@ -450,7 +448,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
         </div>
       </AppSection>
 
-      <ItemGroup className="flex flex-col gap-3 p-0 rounded-none border-0">
+      <div className="flex flex-col gap-3">
         {lines.map((line, idx) => {
           const qty = Number(line.quantity) || 0;
           const cost = Number(line.unitCost) || 0;
@@ -493,234 +491,229 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
             forcePhotoLineUids.has(line.uid) ||
             line.photoUrls.length > 0;
           return (
-            <Frame key={line.uid} className="flex flex-col items-stretch">
-              <div className="p-4 pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-heading text-sm font-semibold">
-                    {messages.inventory.waste.lineTitle(idx + 1)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <WasteTierBadge
-                      tier={preview.tier}
-                      photoRequired={preview.photoRequired}
-                      approvalRequired={preview.approvalRequired}
-                    />
-                    {lines.length > 1 ? (
-                      <Button
-                        size={removeActionSize}
-                        variant="ghost"
-                        type="button"
-                        onClick={() => removeLine(line.uid)}
-                        disabled={isSubmitting}
-                        aria-label={messages.inventory.waste.removeLineAria}
-                        className="text-destructive"
-                      >
-                        <IconTrash className="size-4" />
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 p-4 pt-0">
-                <div>
-                  <Label>{PRODUCT_VI.rawIngredient}</Label>
-                  <Combobox
-                    options={ingredientOptions}
-                    value={
-                      line.ingredientId !== null
-                        ? String(line.ingredientId)
-                        : ""
-                    }
-                    onValueChange={(v) => handleIngredientChange(line.uid, v)}
-                    placeholder={messages.inventory.waste.chooseIngredient}
-                    size={controlSize}
-                    className="w-full"
+            <AppSection
+              key={line.uid}
+              size="sm"
+              title={messages.inventory.waste.lineTitle(idx + 1)}
+              action={
+                <div className="flex items-center gap-2">
+                  <WasteTierBadge
+                    tier={preview.tier}
+                    photoRequired={preview.photoRequired}
+                    approvalRequired={preview.approvalRequired}
                   />
-                </div>
-
-                {lineIssueUnits.length > 0 ? (
-                  <div>
-                    <Label htmlFor={`unit-${line.uid}`}>{FORM_VI.unit}</Label>
-                    <Select
-                      value={line.entryUnitId}
-                      onValueChange={(v) => {
-                        const opt = lineIssueUnits.find(
-                          (u) => String(u.unitId) === v,
-                        );
-                        const nextMaxEntryQuantity = getIssueMaxEntryQuantity(
-                          locationStock?.quantity ?? 0,
-                          opt,
-                        );
-                        updateLine(line.uid, {
-                          entryUnitId: v,
-                          unit: opt?.label ?? line.unit,
-                          quantity: clampIssueEntryQuantity(
-                            line.quantity,
-                            nextMaxEntryQuantity,
-                          ),
-                        });
-                      }}
+                  {lines.length > 1 ? (
+                    <Button
+                      size={removeActionSize}
+                      variant="ghost"
+                      type="button"
+                      onClick={() => removeLine(line.uid)}
                       disabled={isSubmitting}
+                      aria-label={messages.inventory.waste.removeLineAria}
+                      className="text-destructive"
                     >
-                      <SelectTrigger
-                        id={`unit-${line.uid}`}
-                        size={controlSize}
-                        className="w-full"
-                      >
-                        <SelectValue
-                          placeholder={messages.inventory.transfer.selectUnit}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lineIssueUnits.map((u) => (
-                          <SelectItem
-                            key={u.unitId}
-                            value={String(u.unitId)}
-                            size={optionSize}
-                          >
-                            {u.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : null}
-
-                <AntiSplitRollingMeter
-                  branchId={context.branch.id}
-                  ingredientId={line.ingredientId}
-                  pendingDelta={value}
-                  ingredientName={
-                    line.ingredientId
-                      ? ingredientById.get(line.ingredientId)?.name
-                      : undefined
+                      <IconTrash className="size-4" />
+                    </Button>
+                  ) : null}
+                </div>
+              }
+            >
+              <div>
+                <Label>{PRODUCT_VI.rawIngredient}</Label>
+                <Combobox
+                  options={ingredientOptions}
+                  value={
+                    line.ingredientId !== null
+                      ? String(line.ingredientId)
+                      : ""
                   }
-                  onStatusChange={(status) =>
-                    handleRollingStatusChange(line.uid, status)
-                  }
+                  onValueChange={(v) => handleIngredientChange(line.uid, v)}
+                  placeholder={messages.inventory.waste.chooseIngredient}
+                  size={controlSize}
+                  className="w-full"
                 />
+              </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor={`qty-${line.uid}`}>
-                      {FORM_VI.quantity}
-                    </Label>
-                    <InputGroup size={controlSize}>
-                      <FormattedNumberInput
-                        id={`qty-${line.uid}`}
-                        maxFractionDigits={3}
-                        value={line.quantity}
-                        onValueChange={(value) =>
-                          updateLine(line.uid, {
-                            quantity: clampIssueEntryQuantity(
-                              value,
-                              maxEntryQuantity,
-                            ),
-                          })
-                        }
-                        disabled={isSubmitting}
-                        placeholder="0"
-                        className="h-full"
-                      />
-                      {maxQuantityValue ? (
-                        <InputGroupAddon align="inline-end" className="py-0">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size={isTouchLayout ? "touch" : "sm"}
-                            className="shadow-none"
-                            onClick={() =>
-                              updateLine(line.uid, {
-                                quantity: maxQuantityValue,
-                              })
-                            }
-                            disabled={isSubmitting}
-                          >
-                            {FORM_VI.max}
-                          </Button>
-                        </InputGroupAddon>
-                      ) : null}
-                    </InputGroup>
-                  </div>
-                  <div>
-                    <Label htmlFor={`cost-${line.uid}`}>
-                      {messages.inventory.waste.unitCostLabel(
-                        selectedIngredient?.unit ?? line.unit,
-                      )}
-                    </Label>
-                    <div
-                      id={`cost-${line.uid}`}
-                      className="flex h-10 items-center bg-muted/30 px-3 font-mono text-sm tabular-nums"
-                    >
-                      {cost > 0 ? formatVND(cost) : labelNoWac}
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                      {messages.inventory.waste.value(formatVND(value))}
-                    </p>
-                    {locationStock ? (
-                      <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                        {labelLocationStock(
-                          formatQty(locationStock.quantity),
-                          selectedIngredient?.unit ?? line.unit,
-                        )}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
+              {lineIssueUnits.length > 0 ? (
                 <div>
-                  <Label htmlFor={`reason-${line.uid}`}>{FORM_VI.reason}</Label>
-                  <WasteReasonDropdown
-                    id={`reason-${line.uid}`}
-                    value={line.reasonCode as never}
-                    onChange={(v) => updateLine(line.uid, { reasonCode: v })}
+                  <Label htmlFor={`unit-${line.uid}`}>{FORM_VI.unit}</Label>
+                  <Select
+                    value={line.entryUnitId}
+                    onValueChange={(v) => {
+                      const opt = lineIssueUnits.find(
+                        (u) => String(u.unitId) === v,
+                      );
+                      const nextMaxEntryQuantity = getIssueMaxEntryQuantity(
+                        locationStock?.quantity ?? 0,
+                        opt,
+                      );
+                      updateLine(line.uid, {
+                        entryUnitId: v,
+                        unit: opt?.label ?? line.unit,
+                        quantity: clampIssueEntryQuantity(
+                          line.quantity,
+                          nextMaxEntryQuantity,
+                        ),
+                      });
+                    }}
                     disabled={isSubmitting}
-                    size={controlSize}
-                    className="w-full"
-                  />
+                  >
+                    <SelectTrigger
+                      id={`unit-${line.uid}`}
+                      size={controlSize}
+                      className="w-full"
+                    >
+                      <SelectValue
+                        placeholder={messages.inventory.transfer.selectUnit}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lineIssueUnits.map((u) => (
+                        <SelectItem
+                          key={u.unitId}
+                          value={String(u.unitId)}
+                          size={optionSize}
+                        >
+                          {u.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              ) : null}
 
-                {showPhotoUpload ? (
-                  <div>
-                    <Label>
-                      {messages.inventory.waste.proofPhotoLabel(
-                        preview.tier === 0 ? 1 : preview.tier,
-                      )}
-                    </Label>
-                    <WastePhotoUpload
-                      tenantId={context.tenantId}
-                      branchId={context.branch.id}
-                      issueId={`draft-${line.uid}`}
-                      value={line.photoUrls[0] ?? null}
-                      onChange={(url) =>
+              <AntiSplitRollingMeter
+                branchId={context.branch.id}
+                ingredientId={line.ingredientId}
+                pendingDelta={value}
+                ingredientName={
+                  line.ingredientId
+                    ? ingredientById.get(line.ingredientId)?.name
+                    : undefined
+                }
+                onStatusChange={(status) =>
+                  handleRollingStatusChange(line.uid, status)
+                }
+              />
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor={`qty-${line.uid}`}>{FORM_VI.quantity}</Label>
+                  <InputGroup size={controlSize}>
+                    <FormattedNumberInput
+                      id={`qty-${line.uid}`}
+                      maxFractionDigits={3}
+                      value={line.quantity}
+                      onValueChange={(value) =>
                         updateLine(line.uid, {
-                          photoUrls: url ? [url] : [],
+                          quantity: clampIssueEntryQuantity(
+                            value,
+                            maxEntryQuantity,
+                          ),
                         })
                       }
                       disabled={isSubmitting}
+                      placeholder="0"
+                      className="h-full"
                     />
-                  </div>
-                ) : null}
-
+                    {maxQuantityValue ? (
+                      <InputGroupAddon align="inline-end" className="py-0">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size={isTouchLayout ? "touch" : "sm"}
+                          className="shadow-none"
+                          onClick={() =>
+                            updateLine(line.uid, {
+                              quantity: maxQuantityValue,
+                            })
+                          }
+                          disabled={isSubmitting}
+                        >
+                          {FORM_VI.max}
+                        </Button>
+                      </InputGroupAddon>
+                    ) : null}
+                  </InputGroup>
+                </div>
                 <div>
-                  <Label htmlFor={`note-${line.uid}`}>
-                    {messages.inventory.waste.lineNotes}
+                  <Label htmlFor={`cost-${line.uid}`}>
+                    {messages.inventory.waste.unitCostLabel(
+                      selectedIngredient?.unit ?? line.unit,
+                    )}
                   </Label>
-                  <Textarea
-                    id={`note-${line.uid}`}
-                    value={line.note}
-                    onChange={(e) =>
-                      updateLine(line.uid, { note: e.target.value })
-                    }
-                    disabled={isSubmitting}
-                    rows={2}
-                  />
+                  <div
+                    id={`cost-${line.uid}`}
+                    className="flex h-10 items-center bg-muted/30 px-3 font-mono text-sm tabular-nums"
+                  >
+                    {cost > 0 ? formatVND(cost) : labelNoWac}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                    {messages.inventory.waste.value(formatVND(value))}
+                  </p>
+                  {locationStock ? (
+                    <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                      {labelLocationStock(
+                        formatQty(locationStock.quantity),
+                        selectedIngredient?.unit ?? line.unit,
+                      )}
+                    </p>
+                  ) : null}
                 </div>
               </div>
-            </Frame>
+
+              <div>
+                <Label htmlFor={`reason-${line.uid}`}>{FORM_VI.reason}</Label>
+                <WasteReasonDropdown
+                  id={`reason-${line.uid}`}
+                  value={line.reasonCode as never}
+                  onChange={(v) => updateLine(line.uid, { reasonCode: v })}
+                  disabled={isSubmitting}
+                  size={controlSize}
+                  className="w-full"
+                />
+              </div>
+
+              {showPhotoUpload ? (
+                <div>
+                  <Label>
+                    {messages.inventory.waste.proofPhotoLabel(
+                      preview.tier === 0 ? 1 : preview.tier,
+                    )}
+                  </Label>
+                  <WastePhotoUpload
+                    tenantId={context.tenantId}
+                    branchId={context.branch.id}
+                    issueId={`draft-${line.uid}`}
+                    value={line.photoUrls[0] ?? null}
+                    onChange={(url) =>
+                      updateLine(line.uid, {
+                        photoUrls: url ? [url] : [],
+                      })
+                    }
+                    disabled={isSubmitting}
+                  />
+                </div>
+              ) : null}
+
+              <div>
+                <Label htmlFor={`note-${line.uid}`}>
+                  {messages.inventory.waste.lineNotes}
+                </Label>
+                <Textarea
+                  id={`note-${line.uid}`}
+                  value={line.note}
+                  onChange={(e) =>
+                    updateLine(line.uid, { note: e.target.value })
+                  }
+                  disabled={isSubmitting}
+                  rows={2}
+                />
+              </div>
+            </AppSection>
           );
         })}
-      </ItemGroup>
+      </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Button
@@ -750,7 +743,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
             variant="outline"
             size={actionSize}
             className="w-full sm:w-auto"
-            onClick={() => router.push("/inventory/issues")}
+            onClick={() => router.push("/inventory/consumption")}
             disabled={isSubmitting}
           >
             {ACTIONS_VI.cancel}

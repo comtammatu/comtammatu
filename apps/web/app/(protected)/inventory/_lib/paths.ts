@@ -3,12 +3,9 @@ export type InventoryRouteBase = "/inventory";
 export type InventoryPaths = {
   home: InventoryRouteBase;
   stock: string;
-  operations: string;
-  operationTab: (
-    tab: "grn" | "consumption" | "issues" | "transfers",
-  ) => string;
-  receiving: string;
   grn: string;
+  purchaseOrders: string;
+  /** Canonical Finance AP home (supplier invoices live under Finance). */
   supplierInvoices: string;
   transfers: string;
   transferDetail: (id: number) => string;
@@ -19,13 +16,13 @@ export type InventoryPaths = {
   reports: string;
   production: string;
   consumption: string;
+  /** Prefer `consumption`; `/inventory/issues` redirects there. */
   issues: string;
   suppliers: string;
   ingredients: string;
   recipes: string;
   settings: string;
   units: string;
-  expiry: string;
 };
 
 function joinInventoryPath(base: InventoryRouteBase, segment: string): string {
@@ -36,11 +33,9 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
   return {
     home: base,
     stock: joinInventoryPath(base, "/stock"),
-    operations: joinInventoryPath(base, "/operations"),
-    operationTab: (tab) => `${joinInventoryPath(base, "/operations")}?tab=${tab}`,
-    receiving: joinInventoryPath(base, "/receiving"),
     grn: joinInventoryPath(base, "/grn"),
-    supplierInvoices: joinInventoryPath(base, "/supplier-invoices"),
+    purchaseOrders: joinInventoryPath(base, "/purchase-orders"),
+    supplierInvoices: "/finance/supplier-invoices",
     transfers: joinInventoryPath(base, "/transfers"),
     transferDetail: (id: number) => joinInventoryPath(base, `/transfers/${id}`),
     stocktake: joinInventoryPath(base, "/stocktake"),
@@ -57,6 +52,5 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
     recipes: joinInventoryPath(base, "/recipes"),
     settings: joinInventoryPath(base, "/settings"),
     units: joinInventoryPath(base, "/settings/units"),
-    expiry: joinInventoryPath(base, "/expiry"),
   };
 }

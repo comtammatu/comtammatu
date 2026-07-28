@@ -1,7 +1,7 @@
 import "server-only";
 
 import { notFound } from "next/navigation";
-import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, PROCUREMENT_ROLES, canViewPurchasePrice } from "@comtammatu/shared/auth";
 import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
@@ -26,6 +26,7 @@ export type GrnDetailData = {
   auditLogs: AuditLogRow[];
   canEditDraft: boolean;
   canConfirm: boolean;
+  canCreatePoFromGrn: boolean;
   canAdjustStock: boolean;
   canAmendConfirmed: boolean;
   recreateLocationOptions: RecreateReceivingLocationOption[];
@@ -83,7 +84,7 @@ export async function loadGrnDetailResult(
       supplier_id: number;
       branches: { id: number; name: string } | null;
       suppliers: { id: number; name: string } | null;
-      purchase_orders: { id: number; po_number: string } | null;
+      purchase_orders: { id: number; po_number: string; status: string } | null;
     };
     lines: Array<{
       id: number;
@@ -132,6 +133,9 @@ export async function loadGrnDetailResult(
   const ingredientById = new Map(
     ingredients.map((ingredient) => [ingredient.id, ingredient]),
   );
+  const showPurchasePrice = canViewPurchasePrice(
+    context?.claims.user_role ?? "branch_staff",
+  );
 
   const items: GrnDetail["items"] = (data.lines ?? []).map((line) => {
     const ingredient = line.ingredients;
@@ -157,24 +161,33 @@ export async function loadGrnDetailResult(
       name: ingredient?.name ?? "—",
       sku: "",
       poQuantity: line.po_quantity != null ? Number(line.po_quantity) : null,
-      poUnitPrice:
-        line.po_unit_price != null ? Number(line.po_unit_price) : null,
+      poUnitPrice: showPurchasePrice
+        ? line.po_unit_price != null
+          ? Number(line.po_unit_price)
+          : null
+        : null,
       required: Number(line.po_quantity ?? line.received_quantity ?? 0),
       actual: received,
       accepted: received - rejected,
       rejected,
       rejectionReason: line.rejection_reason ?? "",
       rejectedPhotoUrl: line.rejected_photo_url ?? "",
-      priceOverrideNote: line.price_override_note ?? "",
-      priceOverridePhotoUrl: line.price_override_photo_url ?? "",
-      priceVariancePct:
-        line.price_variance_pct != null
+      priceOverrideNote: showPurchasePrice
+        ? (line.price_override_note ?? "")
+        : "",
+      priceOverridePhotoUrl: showPurchasePrice
+        ? (line.price_override_photo_url ?? "")
+        : "",
+      priceVariancePct: showPurchasePrice
+        ? line.price_variance_pct != null
           ? Number(line.price_variance_pct)
-          : null,
-      baselineVariancePct:
-        line.baseline_variance_pct != null
+          : null
+        : null,
+      baselineVariancePct: showPurchasePrice
+        ? line.baseline_variance_pct != null
           ? Number(line.baseline_variance_pct)
-          : null,
+          : null
+        : null,
       baselineSampleN:
         line.baseline_sample_n != null ? Number(line.baseline_sample_n) : null,
       requiresReview: Boolean(line.requires_review),
@@ -189,7 +202,7 @@ export async function loadGrnDetailResult(
         fallbackUnit,
       ),
       entryUnitId,
-      cost: Number(line.unit_cost ?? 0),
+      cost: showPurchasePrice ? Number(line.unit_cost ?? 0) : 0,
       temp:
         line.receiving_temperature != null
           ? `${line.receiving_temperature}°C`
@@ -207,6 +220,7 @@ export async function loadGrnDetailResult(
     code: data.grn.grn_number ?? "",
     poCode: purchaseOrder?.po_number ?? "",
     poId: purchaseOrder?.id,
+    poStatus: purchaseOrder?.status ?? null,
     invoiceId: data.invoiceId ?? null,
     branchId: data.grn.branch_id,
     locationId: data.grn.location_id ?? null,
@@ -214,7 +228,9 @@ export async function loadGrnDetailResult(
     supplierId: data.grn.supplier_id,
     supplier: supplier?.name ?? "—",
     date: data.grn.received_date ? formatDate(data.grn.received_date) : "—",
-    total: items.reduce((sum, item) => sum + item.cost * item.accepted, 0),
+    total: showPurchasePrice
+      ? items.reduce((sum, item) => sum + item.cost * item.accepted, 0)
+      : 0,
     tax: 0,
     status: data.grn.status ?? "draft",
     items,
@@ -226,8 +242,13 @@ export async function loadGrnDetailResult(
     },
   };
 
-  const [canAdjustStock, canEditDraft, canConfirm, canAmendConfirmed] =
-    await Promise.all([
+  const [
+    canAdjustStock,
+    canEditDraft,
+    canConfirmPermission,
+    canAmendConfirmed,
+    canCreatePoFromGrn,
+  ] = await Promise.all([
       currentUserHasPermission(
         data.grn.branch_id,
         PERMISSION_KEYS.INVENTORY_WRITE,
@@ -244,7 +265,23 @@ export async function loadGrnDetailResult(
         data.grn.branch_id,
         PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
       ),
+      currentUserHasPermission(
+        data.grn.branch_id,
+        PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+      ),
     ]);
+  const poApproved =
+    purchaseOrder != null &&
+    (purchaseOrder.status === "sent" ||
+      purchaseOrder.status === "partially_received");
+  const canConfirm =
+    canConfirmPermission &&
+    data.grn.status === "draft" &&
+    poApproved;
+  const canCreatePoFromGrnDraft =
+    canCreatePoFromGrn &&
+    data.grn.status === "draft" &&
+    purchaseOrder == null;
   const recreateLocationOptions = await loadRecreateLocationOptions({
     context,
     status: data.grn.status,
@@ -264,6 +301,7 @@ export async function loadGrnDetailResult(
       auditLogs,
       canEditDraft,
       canConfirm,
+      canCreatePoFromGrn: canCreatePoFromGrnDraft,
       canAdjustStock,
       canAmendConfirmed,
       recreateLocationOptions,

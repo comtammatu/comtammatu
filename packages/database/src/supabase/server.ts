@@ -13,7 +13,7 @@ import { getSupabaseUrl, getSupabaseAnonKey } from "./_env";
  * itself request-scoped — the cookieStore captured on the first call is the
  * same one any later caller would receive. Server Actions run in a separate
  * render scope, so each Action gets a fresh client. Never wrap downstream
- * callers that depend on a live `getUser()` HTTP check (banned-user revoke).
+ * callers that depend on a live Auth probe (mutation `withAction` liveness).
  */
 export const createClient = cache(async () => {
   const cookieStore = await cookies();

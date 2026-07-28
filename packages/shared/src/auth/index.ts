@@ -29,12 +29,13 @@ export {
   getSafeInternalReturnTo,
   resolvePostLoginRedirect,
 } from "./scope";
-export { getInventoryValueVisibility } from "./inventory-value";
+export { getInventoryValueVisibility, canViewPurchasePrice } from "./inventory-value";
 export type { InventoryValueVisibility } from "./inventory-value";
 export {
   INVENTORY_CATALOG_ROLES,
   INVENTORY_OPS_ROLES,
   PROCUREMENT_ROLES,
+  PO_MUTATE_ROLES,
   SUPPLIER_RETURN_ROLES,
   isBranchScopedProcurementRole,
   isProcurementBranchInScope,

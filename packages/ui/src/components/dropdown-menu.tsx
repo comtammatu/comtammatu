@@ -5,6 +5,10 @@ import { Menu as DropdownMenuPrimitive } from "@base-ui/react/menu";
 
 import { cn } from "../lib/utils";
 import {
+  FLOATING_POSITION_METHOD,
+  floatingCollisionBoundary,
+} from "../lib/floating-layer";
+import {
   Check as IconCheck,
   ChevronRight as IconChevronRight,
 } from "lucide-react";
@@ -45,6 +49,8 @@ function DropdownMenuContent({
   className,
   align = "start",
   sideOffset = 4,
+  positionMethod = FLOATING_POSITION_METHOD,
+  collisionBoundary = floatingCollisionBoundary(),
   children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Positioner>) {
@@ -53,6 +59,8 @@ function DropdownMenuContent({
       <DropdownMenuPrimitive.Positioner
         align={align}
         sideOffset={sideOffset}
+        positionMethod={positionMethod}
+        collisionBoundary={collisionBoundary}
         className="isolate z-50 outline-none"
         {...props}
       >

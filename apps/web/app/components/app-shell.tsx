@@ -96,13 +96,15 @@ export function AppShell({
   return (
     <SidebarProvider
       open={true}
+      className="h-svh overflow-hidden"
       style={
-        showBottomNav
-          ? ({
-              "--app-bottom-nav-offset":
-                "calc(3.5rem + max(0.5rem, env(safe-area-inset-bottom)))",
-            } as CSSProperties)
-          : undefined
+        {
+          // Sticky detail footers read this offset; without a bottom nav the
+          // footer still has to clear the home indicator.
+          "--app-bottom-nav-offset": showBottomNav
+            ? "calc(3.5rem + max(0.5rem, env(safe-area-inset-bottom)))"
+            : "env(safe-area-inset-bottom)",
+        } as CSSProperties
       }
     >
       <Sidebar variant="inset" collapsible="offcanvas">
@@ -248,12 +250,23 @@ export function AppShell({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset id="main-content" tabIndex={-1} className="chrome-safe-pt">
+      <SidebarInset
+        id="main-content"
+        tabIndex={-1}
+        className="chrome-safe-pt min-h-0 overflow-hidden lg:max-h-[calc(100svh-1rem)]"
+      >
         <div
-          className={cn("flex-1 p-3 md:p-4", showBottomNav && "pb-24 lg:pb-4")}
+          data-owner-shell-scroll=""
+          className={cn(
+            // flex-col + child flex-1: short DETAIL pages fill the scrollport
+            // so AppPage footer (mt-auto) docks to the panel bottom. Desktop
+            // pb-0 so sticky CTA can sit flush; mobile keeps bottom-nav clearance.
+            "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3 md:px-4 md:pt-4",
+            showBottomNav ? "pb-24 lg:pb-0" : "pb-3 md:pb-4",
+          )}
         >
           <AppShellPaddingBoundary>
-            <div className="flex min-h-0 flex-col gap-4">{children}</div>
+            <div className="flex min-h-0 flex-1 flex-col gap-4">{children}</div>
           </AppShellPaddingBoundary>
         </div>
       </SidebarInset>

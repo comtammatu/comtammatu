@@ -558,3 +558,8 @@ BEGIN
   );
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.ensure_branch_inventory_location_defaults(bigint, bigint) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ensure_branch_inventory_location_defaults(bigint, bigint) FROM anon, authenticated;
+REVOKE ALL ON FUNCTION public.trg_ensure_branch_inventory_location_defaults() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trg_ensure_branch_inventory_location_defaults() FROM anon, authenticated;

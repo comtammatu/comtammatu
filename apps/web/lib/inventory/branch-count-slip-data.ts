@@ -101,6 +101,7 @@ export async function loadBranchCountSlipData(
     .select(
       `
       id,
+      slip_number,
       branch_id,
       location_id,
       employee_id,
@@ -208,6 +209,10 @@ export async function loadBranchCountSlipData(
     const lines = slipLines(slip.inventory_count_slip_lines);
     return {
       id: slip.id,
+      slipNumber:
+        typeof slip.slip_number === "string" && slip.slip_number.trim()
+          ? slip.slip_number
+          : `PD-${slip.id}`,
       branchName,
       locationName:
         embeddedString(slip.inventory_locations, "name") ??

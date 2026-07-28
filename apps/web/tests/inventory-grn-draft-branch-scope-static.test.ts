@@ -122,14 +122,16 @@ test("GRN free drafts and PO-linked drafts do not share the same unique slot", (
     poDraftMigration,
     /WHERE status = 'draft' AND created_by IS NOT NULL AND po_id IS NOT NULL;/,
   );
+  assert.match(grnListClient, /grnDraftHref\(basePath,\s*draft\)/);
   assert.match(
-    grnListClient,
+    grnListModel,
     /draft\.poId != null\s*\?\s*`\$\{basePath\}\/\$\{draft\.grnId\}`/,
   );
   assert.match(
-    grnListClient,
-    /:\s*newGrnSupplierHref\(basePath,\s*draft\.supplierId,\s*draft\.branchId\)/,
+    grnListModel,
+    /newGrnSupplierHref\(basePath,\s*draft\.supplierId,\s*draft\.branchId\)/,
   );
+  assert.match(grnListModel, /export function grnDraftHref/);
   assert.match(grnListModel, /export function newGrnSupplierHref/);
   assert.match(grnListModel, /branchId: number/);
   assert.match(grnListModel, /branchId: String\(branchId\)/);
@@ -137,7 +139,7 @@ test("GRN free drafts and PO-linked drafts do not share the same unique slot", (
     branchGrnListClient,
     /grnSourceSupplierHref\(`\$\{basePath\}\/new`, draft\.supplierId\)/,
   );
-  assert.match(grnListClient, /draft\.poCode\s*\?/);
+  assert.match(grnListClient, /draft\.poId != null && draft\.poCode/);
   assert.match(grnListClient, /grn\.poId != null && grn\.poCode/);
 });
 

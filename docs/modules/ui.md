@@ -119,8 +119,12 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 `apps/web/app/components/surface.tsx` là adapter layer duy nhất cho các pattern lặp lại ở app level:
 
 - `AppPage` cho content container/width/scroll rhythm.
-- `AppPageHeader` cho page heading, description, badge, action.
-- `AppSection` cho card-backed section.
+- `AppPageHeader` cho page heading, description, badge, action. Description
+  `line-clamp-2` trên `max-sm` (ẩn hẳn khi `compactOnMobile`).
+- `AppSection` cho card-backed section. `CardDescription` qua adapter dùng
+  `line-clamp-2 break-words`; `headerHint` truncate. Secondary copy: page/section
+  ≈ ≤80 ký tự, KPI/field hint ≈ ≤60; bỏ prop khi trùng title. `FieldDescription`
+  không clamp — rút copy. Dialog hủy/hoàn tiền/SePay giữ đủ rủi ro.
 - `AppToolbar` cho filter/action toolbar.
 - `AppEmptyState` cho empty/no-result/no-access/error state.
 - `Table` trong `packages/ui` chỉ là semantic desktop component; route không
@@ -143,9 +147,13 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
   filter `Select`/`InputGroup` dùng `size="field"` và độ rộng cố định
   `inventoryListFilterSelectClassName` (`w-44 shrink-0`; wide `w-56` khi label
   có count) trên Inventory. Header CTA LIST dùng `size="lg"` (operator/
-  embedded giữ `touch`). `SelectContent` mặc định `position="popper"` để menu
-  không chồng checkmark lên trigger. Filter card tách riêng chỉ khi filter
-  scope nhiều section (ví dụ Finance dashboard).
+  embedded giữ `touch`). `SelectContent` mặc định `position="popper"`,
+  `positionMethod="fixed"`, và `collisionBoundary` = `document.documentElement`
+  để menu không flip vào hàng Search trong `Card`/`AppListFrame` (tránh
+  `clipping-ancestors`). `AppListFrame` dùng `overflow-visible`; `AppToolbar`
+  giữ search `z-0` và filters/actions `z-10`. Filter phải vào slot `filters`,
+  không nhét vào slot `search`. Filter card tách riêng chỉ khi filter scope
+  nhiều section (ví dụ Finance dashboard).
 - LIST filter density (Owner + shared `DataTable` toolbar): mọi
   `SelectTrigger` / `InputGroup` / Combobox trong hàng filter dùng
   `useFormControlSize()` → `touch` dưới `lg` (1024), `field` từ `lg` trở lên.
@@ -400,7 +408,9 @@ Branch stock workflow áp dụng cùng ranh giới này:
   management `LIST` responsive độc lập: desktop dùng `DataTable`, thao tác hiển
   thị bằng nút và mở `AppDialog` (D1, cùng depth với Branch bottom `Sheet`);
   mobile fallback chỉ là card responsive của cùng table adapter. Owner không
-  dùng Branch presenter. Owner `Sheet` vẫn hợp lệ cho D1 addressable overlay
+  dùng Branch presenter. Wave 3 (ADR 0018 **C2**) gắn D1 view có địa chỉ URL với
+  `?assignmentId=` (employee id) và `?slipId=`; id không hợp lệ hoặc ngoài scope
+  được gỡ khỏi URL. Owner `Sheet` vẫn hợp lệ cho D1 addressable overlay
   khác (ví dụ Finance supplier invoices — ADR 0018); không dùng `Drawer` làm
   Owner primary view path.
 - `/br/[branchId]/stock/waste` là Branch-native touch `DOC-WORKFLOW`: URL khóa
@@ -416,13 +426,11 @@ Branch stock workflow áp dụng cùng ranh giới này:
   four-eye rule và xác nhận mutation; phiếu tự tạo chỉ đọc. Không import
   `WasteApprovalsPageContent`, `WasteApprovalsClient`, `DocumentFormFrame`,
   `DataTable`, hoặc chrome Owner surface.
-- Purchase orders và supplier returns đã rút khỏi UI hằng ngày ở cả Branch và
-  Owner surface theo D073 / ADR 0018 **C1**: `/inventory/purchase-orders` is a
-  frozen non-nav route (keep route/RPC; no sidebar entry, no new DETAIL, no
-  further daily-UI investment). GRN supplier-first; hàng NCC bị từ chối đi qua
-  Báo hao hụt.
-  DB/RPC/history và integrity gate của chứng từ cũ vẫn được giữ, nhưng không có
-  nav, route mutation hay presenter để tạo mới.
+- Purchase orders trở lại Inventory sidebar Owner surface theo ADR 0018 **C1**
+  (Owner restore 2026-07-28): `/inventory/purchase-orders` là LIST **Đơn mua hàng**
+  (keep route/RPC; no new DETAIL; Wave 4 row-open ratchet không mở rộng vào PO).
+  Supplier returns vẫn ngoài daily UI. GRN supplier-first; hàng NCC bị từ chối
+  đi qua Báo hao hụt.
 - `/br/[branchId]/stock/reports` là Branch-native touch `REPORT`: cố định đúng
   chi nhánh URL và tháng hiện tại, ưu tiên chênh lệch tiêu hao warning/critical
   rồi biến động của từng nguyên liệu có drill-in vào tồn thực. Mỗi số lượng luôn
@@ -437,13 +445,21 @@ Branch stock workflow áp dụng cùng ranh giới này:
   `GrnListClient` management presentation: branch, tổng giá trị và desktop
   `DataTable` vẫn thuộc Owner surface; client này không nhận diện `/br/` để đổi layout.
 - Owner surface `/inventory/grn/new/[supplierId]` giữ `DocumentFormFrame` và desktop
-  line editor trong `GrnCreateClient`; Owner surface và Branch chỉ chia sẻ loader,
+  line editor trong `GrnCreateClient`. Owner GRN create DOC composition:
+  dense context (`Kho nhận` / receiving pickers) → single lines `AppSection`
+  (`Mặt hàng trên phiếu` DataTable + **Thêm mặt hàng** action) → catalog search
+  lives in progressive `AppDialog` (pick ingredient → desk panel / sheet editor)
+  → sticky `AppDetailFooter` (count + running total SSOT, confirm CTA). Do not
+  stack a second always-on catalog `AppSection` under the lines table. Draft
+  DETAIL (`/inventory/grn/[id]` draft) uses the same single-lines + add-dialog
+  structure (`AddGrnLineDialog`). Owner surface và Branch chỉ chia sẻ loader,
   typed controller, line-editor primitive, và server action, không chia sẻ
   presentation mode hoặc route branching.
 - Branch `/br/[branchId]/stock/transfer` chỉ giữ hàng chờ nhận, lịch sử và detail
   điều chuyển; Branch không có route hoặc CTA tạo mới. Detail giữ số lượng từng
   dòng và thao tác nhận được cấp quyền; audit history, correction sau chốt và tạo
-  phiếu tại `/inventory/transfers/new` thuộc Owner surface management.
+  phiếu tạo mới Owner đã rút (`/inventory/transfers/new` chỉ còn
+  `REDIRECT-SHIM` về list).
 - EMBED-WRAPPER chỉ là transition cho deep workflow chưa tách presentation; khi
   route đã có native Branch presentation thì cập nhật `scripts/page-archetypes.mjs`
   khỏi `EMBED-WRAPPER` để guard không cho lùi lại.
@@ -470,12 +486,16 @@ Owner surface dùng một sidebar cố định.
 Scroll model (inset panel): `SidebarProvider` khóa viewport (`h-svh overflow-hidden`);
 `SidebarInset` giữ khung card cố định (`overflow-hidden`, desktop `max-h` bù
 margin inset); chỉ vùng nội dung trong panel cuộn (`overflow-y-auto
-overscroll-contain`, `data-owner-shell-scroll`). `AppPageHeader` sticky `top-0`
-và publish `--app-page-header-offset` lên scrollport. Filter LIST freeze dưới
-header qua: (1) `AppListFrame`/`InventoryListFrame` toolbar slot (tự sticky),
-hoặc (2) `AppToolbar sticky`, hoặc (3) `AppPageStickyChrome` /
-`APP_PAGE_STICKY_FILTER_CLASSNAME` cho filter bar tùy biến. Không đổi chrome
-Branch/Operations.
+overscroll-contain`, `data-owner-shell-scroll`). `AppPageHeader` cuộn cùng nội dung
+— không sticky/freeze ngoài scrollport (sẽ chiếm chiều cao cố định và tạo khoảng
+trống / cuộn thừa trên dashboard). Filter LIST freeze ở đỉnh shell scrollport qua:
+(1) `AppListFrame`/`InventoryListFrame` toolbar slot (tự sticky), hoặc (2)
+`AppToolbar sticky`, hoặc (3) `AppPageStickyChrome` /
+`APP_PAGE_STICKY_FILTER_CLASSNAME` cho filter bar tùy biến. Không sticky filter
+nằm trên KPI/dashboard cards (ví dụ Finance `FilterBar`) — sẽ đè section kế
+tiếp khi cuộn. `AppPage scroll` bên trong `AppShellPaddingBoundary` không tạo
+scrollport thứ hai (giữ `overflow-visible`) để sticky filter neo đúng vào shell
+scrollport. Không đổi chrome Branch/Operations.
 
 Shell mới cần chứng minh job chrome riêng, giữ đúng plane authority, và dùng
 navigation resolver hiện hành. Guard chỉ giữ outcome đo được: navigation không

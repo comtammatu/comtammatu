@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import {
   PackageSearch as IconPackageSearch,
   Pencil as IconPencil,
@@ -33,6 +32,11 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";
@@ -79,21 +83,20 @@ function SupplierAvatar({
 function SupplierMobileCard({
   supplier,
   index,
-  onEdit,
-  onDelete,
-  canManageItems,
+  actions,
+  onOpen,
 }: {
   supplier: SupplierRow;
   index: number;
-  onEdit: (row: SupplierRow) => void;
-  onDelete: (row: SupplierRow) => void;
-  canManageItems: boolean;
+  actions: RowActionItem[];
+  onOpen: (row: SupplierRow) => void;
 }) {
   return (
     <InteractiveCard
       minHeight="mobile"
       padding="default"
       className="flex-col items-stretch gap-2"
+      onClick={() => onOpen(supplier)}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">
@@ -105,54 +108,29 @@ function SupplierMobileCard({
             </p>
           </div>
         </div>
-        <StatusBadge
-          domain="inventory"
-          value={supplier.is_active ? "active" : "suspended"}
-          size="sm"
-        />
+        <div
+          className="flex items-center gap-2"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <StatusBadge
+            domain="inventory"
+            value={supplier.is_active ? "active" : "suspended"}
+            size="sm"
+          />
+          <RowActionsMenu
+            items={actions}
+            label={FORM_VI.action}
+            triggerSize="icon-touch"
+          />
+        </div>
       </div>
-      <div className="flex items-center justify-between border-t pt-2">
-        <div className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
-          {supplier.tax_code && (
-            <span className="font-mono">MST: {supplier.tax_code}</span>
-          )}
-          {supplier.address && (
-            <span className="truncate">{supplier.address}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          {canManageItems ? (
-            <Button
-              variant="ghost"
-              size="icon-touch"
-              render={
-                <Link href={`/inventory/suppliers/${supplier.id}/items`} />
-              }
-              aria-label={suppliersCopy.items.openAria(supplier.name)}
-            >
-              <IconPackageSearch className="size-4" />
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit(supplier)}
-            aria-label={`Sửa ${supplier.name}`}
-          >
-            <IconPencil className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(supplier)}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            aria-label={`Xóa ${supplier.name}`}
-          >
-            <IconTrash className="size-4" />
-          </Button>
-        </div>
+      <div className="flex min-w-0 flex-col gap-1 border-t pt-2 text-xs text-muted-foreground">
+        {supplier.tax_code && (
+          <span className="font-mono">MST: {supplier.tax_code}</span>
+        )}
+        {supplier.address && (
+          <span className="truncate">{supplier.address}</span>
+        )}
       </div>
     </InteractiveCard>
   );
@@ -220,6 +198,35 @@ export function SuppliersClient({
     handleDelete(supplier.id);
   }
 
+  const getSupplierRowActions = (s: SupplierRow): RowActionItem[] => [
+    ...(canManageItems
+      ? [
+          {
+            key: "items",
+            label: suppliersCopy.items.openAria(s.name),
+            icon: <IconPackageSearch />,
+            href: `/inventory/suppliers/${s.id}/items`,
+          } satisfies RowActionItem,
+        ]
+      : []),
+    {
+      key: "edit",
+      label: ACTIONS_VI.edit,
+      icon: <IconPencil />,
+      onSelect: () => openEdit(s),
+    },
+    {
+      key: "delete",
+      label: ACTIONS_VI.delete,
+      icon: <IconTrash />,
+      destructive: true,
+      separatorBefore: true,
+      onSelect: () => {
+        void confirmDelete(s);
+      },
+    },
+  ];
+
   const columns: DataTableColumn<SupplierRow>[] = [
     {
       key: "name",
@@ -270,40 +277,22 @@ export function SuppliersClient({
     {
       key: "actions",
       header: FORM_VI.action,
-      className: "w-24 text-right",
-      render: (s) => (
-        <div className="flex items-center justify-end gap-1">
-          {canManageItems ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              render={<Link href={`/inventory/suppliers/${s.id}/items`} />}
-              aria-label={suppliersCopy.items.openAria(s.name)}
-            >
-              <IconPackageSearch className="size-4" />
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openEdit(s)}
-            aria-label={`Sửa ${s.name}`}
+      className: "w-14 text-right",
+      render: (s) => {
+        const items = getSupplierRowActions(s);
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
           >
-            <IconPencil className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => confirmDelete(s)}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            aria-label={`Xóa ${s.name}`}
-          >
-            <IconTrash className="size-4" />
-          </Button>
-        </div>
-      ),
+            <RowActionsMenu
+              items={items}
+              label={FORM_VI.action}
+              triggerSize="icon-sm"
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -354,6 +343,10 @@ export function SuppliersClient({
             data={filtered}
             pageSize={25}
             getRowKey={(s) => s.id}
+            onRowClick={openEdit}
+            renderRowContextMenu={(s) => (
+              <RowActionsContextMenuItems items={getSupplierRowActions(s)} />
+            )}
             emptyTitle={
               search.trim()
                 ? suppliersCopy.emptySearchTitle
@@ -369,9 +362,8 @@ export function SuppliersClient({
               <SupplierMobileCard
                 supplier={s}
                 index={i}
-                onEdit={openEdit}
-                onDelete={confirmDelete}
-                canManageItems={canManageItems}
+                actions={getSupplierRowActions(s)}
+                onOpen={openEdit}
               />
             )}
           />

@@ -8,7 +8,7 @@ import {
   mapSupplierInvoiceRow,
   resolveSupplierPaymentIntentKey,
   type SupplierInvoiceRow,
-} from "../app/(protected)/inventory/supplier-invoices/supplier-invoice-row";
+} from "../app/(protected)/finance/supplier-invoices/supplier-invoice-row";
 import { normalizePgDumpSql } from "./sql-test-utils";
 
 const readWeb = (path: string) =>
@@ -148,7 +148,7 @@ test("supplier payment retry keeps one intent key after an ambiguous failure", (
 
 test("supplier invoice payment action uses Owner-only idempotent AP RPC", () => {
   const source = readWeb(
-    "app/(protected)/inventory/supplier-invoice-actions.ts",
+    "app/(protected)/finance/supplier-invoice-actions.ts",
   );
 
   assert.match(source, /recordSupplierPayment/);
@@ -161,10 +161,10 @@ test("supplier invoice payment action uses Owner-only idempotent AP RPC", () => 
 
 test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
   const source = readWeb(
-    "app/(protected)/inventory/supplier-invoice-actions.ts",
+    "app/(protected)/finance/supplier-invoice-actions.ts",
   );
   const client = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
   assert.match(source, /attachSupplierInvoiceVatEvidence/);
@@ -197,7 +197,7 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
 
 test("supplier invoice client exposes payment only behind server permission", () => {
   const source = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
   assert.match(source, /canPaySupplier/);
@@ -228,7 +228,7 @@ test("supplier invoice payment visibility is explicitly Owner-only", () => {
   assert.match(financePage, /hasPayPermission/);
   assert.match(financePage, /hasInvoiceCreatePermission/);
   assert.match(financePage, /canAttachVatEvidence/);
-  // ADR 0018 — Inventory route is a redirect shim to Finance home.
+  // ADR 0018 — Inventory route redirects to Finance home.
   assert.match(inventoryPage, /redirect\(/);
   assert.match(inventoryPage, /\/finance\/supplier-invoices/);
 });
@@ -238,10 +238,10 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
     "app/(protected)/finance/supplier-invoices/page.tsx",
   );
   const actionSource = readWeb(
-    "app/(protected)/inventory/supplier-invoice-actions.ts",
+    "app/(protected)/finance/supplier-invoice-actions.ts",
   );
   const clientSource = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
   assert.match(financePage, /requestedInvoiceId/);
@@ -294,16 +294,16 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
 
 test("supplier invoice client groups payable review by supplier and PO", () => {
   const actionSource = readWeb(
-    "app/(protected)/inventory/supplier-invoice-actions.ts",
+    "app/(protected)/finance/supplier-invoice-actions.ts",
   );
   const mapper = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoice-row.ts",
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
   );
   const client = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
   const listModel = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoice-list-model.ts",
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-list-model.ts",
   );
 
   assert.match(actionSource, /purchase_orders \( id, po_number \)/);
@@ -342,7 +342,7 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
 
 test("supplier invoice detail opens in a right Sheet instead of a pinned pane", () => {
   const source = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
   assert.match(source, /InventoryListFrame/);
@@ -383,7 +383,7 @@ test("supplier payment RPC requires matched GRN evidence", () => {
     "supabase/tests/supplier_payment_idempotency_test.sql",
   );
   const actionSource = readWeb(
-    "app/(protected)/inventory/supplier-invoice-actions.ts",
+    "app/(protected)/finance/supplier-invoice-actions.ts",
   );
 
   assert.match(migration, /v_invoice\.grn_id IS NULL/);
@@ -475,10 +475,10 @@ test("supplier invoice matching requires linked GRN evidence", () => {
     "supabase/migration-archive/20260708062218_supplier_invoice_missing_grn_pending.sql",
   );
   const mapper = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoice-row.ts",
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
   );
   const client = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
   assert.match(baseline, /IF v_inv\.grn_id IS NULL THEN/);

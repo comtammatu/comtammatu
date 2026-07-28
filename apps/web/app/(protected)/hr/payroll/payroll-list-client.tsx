@@ -583,6 +583,7 @@ export function PayrollListClient({
   return (
     <>
       <AppToolbar
+        sticky
         className="items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block"
         search={
           <InputGroup size={controlSize} className="w-full sm:w-64">

@@ -6,13 +6,14 @@ import {
   filterSupplierInvoices,
   groupSupplierInvoices,
   hasSupplierInvoiceListFilters,
+  isSupplierInvoiceMissingVatEvidence,
   parseSupplierInvoiceListFilters,
   type SupplierInvoiceListFilters,
-} from "../app/(protected)/inventory/supplier-invoices/supplier-invoice-list-model";
+} from "../app/(protected)/finance/supplier-invoices/supplier-invoice-list-model";
 import {
   mapSupplierInvoiceRow,
   type SupplierInvoiceRow,
-} from "../app/(protected)/inventory/supplier-invoices/supplier-invoice-row";
+} from "../app/(protected)/finance/supplier-invoices/supplier-invoice-row";
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
@@ -23,6 +24,7 @@ const DEFAULT_FILTERS: SupplierInvoiceListFilters = {
   matchStatus: null,
   paymentStatus: null,
   overdueOnly: false,
+  vatEvidence: null,
   viewMode: "supplier",
 };
 
@@ -50,6 +52,7 @@ function makeInvoice(
     variance: null,
     invoiceDate: `2026-07-${String((id % 28) + 1).padStart(2, "0")}`,
     dueDate: "2026-07-10",
+    vatInvoiceAttachmentPath: `1/invoice-${id}.pdf`,
     paymentCount: 0,
     lastPayment: null,
     ...overrides,
@@ -63,6 +66,7 @@ test("supplier invoice URL filters parse canonical values and ignore invalid sta
     matchStatus: "discrepancy",
     paymentStatus: "partial",
     overdue: "1",
+    vat: "missing",
     view: "po",
   });
 
@@ -72,6 +76,7 @@ test("supplier invoice URL filters parse canonical values and ignore invalid sta
     matchStatus: "discrepancy",
     paymentStatus: "partial",
     overdueOnly: true,
+    vatEvidence: "missing",
     viewMode: "po",
   });
   assert.equal(hasSupplierInvoiceListFilters(parsed), true);
@@ -82,10 +87,56 @@ test("supplier invoice URL filters parse canonical values and ignore invalid sta
       matchStatus: "unknown",
       paymentStatus: "unknown",
       overdue: "true",
+      vat: "attached",
       view: "unknown",
     }),
     DEFAULT_FILTERS,
   );
+  assert.equal(
+    hasSupplierInvoiceListFilters({
+      ...DEFAULT_FILTERS,
+      vatEvidence: "missing",
+    }),
+    true,
+  );
+});
+
+test("missing HĐ GTGT is a payable-only blocker surfaced on list and group", () => {
+  const blocked = makeInvoice(1, {
+    code: "HD-NO-VAT",
+    vatInvoiceAttachmentPath: null,
+    amount: 200_000,
+  });
+  const settledWithoutFile = makeInvoice(2, {
+    code: "HD-CREDIT-SETTLED",
+    vatInvoiceAttachmentPath: null,
+    amount: 100_000,
+    creditAppliedAmount: 100_000,
+    paymentStatus: "paid",
+  });
+  const ready = makeInvoice(3, { code: "HD-READY", amount: 50_000 });
+
+  assert.equal(isSupplierInvoiceMissingVatEvidence(blocked), true);
+  assert.equal(isSupplierInvoiceMissingVatEvidence(settledWithoutFile), false);
+  assert.equal(isSupplierInvoiceMissingVatEvidence(ready), false);
+
+  assert.deepEqual(
+    filterSupplierInvoices(
+      [blocked, settledWithoutFile, ready],
+      { ...DEFAULT_FILTERS, vatEvidence: "missing" },
+      "2026-07-09",
+    ).map((invoice) => invoice.code),
+    ["HD-NO-VAT"],
+  );
+
+  const [group] = groupSupplierInvoices(
+    [blocked, settledWithoutFile, ready],
+    "supplier",
+    "2026-07-09",
+  );
+  assert.equal(group?.invoiceCount, 3);
+  assert.equal(group?.missingVatCount, 1);
+  assert.equal(group?.missingVatAmount, 200_000);
 });
 
 test("server-owned search finds an invoice beyond the first cursor page", () => {
@@ -169,7 +220,7 @@ test("full-result group totals remain independent from cursor presentation", () 
   assert.equal(fullResultGroups[0]?.outstandingAmount, 4_500_000);
 
   const action = readWeb(
-    "app/(protected)/inventory/supplier-invoice-actions.ts",
+    "app/(protected)/finance/supplier-invoice-actions.ts",
   );
   assert.match(
     action,
@@ -227,10 +278,35 @@ test("Finance Supplier Invoice route owns filter state; Inventory redirects", ()
   assert.match(inventoryPage, /\/finance\/supplier-invoices/);
 
   const client = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
   assert.match(client, /router\.replace\(/);
   assert.match(client, /replaceListParam\("q", normalized \|\| null\)/);
   assert.match(client, /allInvoiceGroups\.length,[\s\S]*totalCount/);
   assert.doesNotMatch(client, /const filteredInvoices/);
+});
+
+test("VAT-evidence blocker is filterable from the list, not only from the record", () => {
+  const financePage = readWeb(
+    "app/(protected)/finance/supplier-invoices/page.tsx",
+  );
+  const action = readWeb(
+    "app/(protected)/finance/supplier-invoice-actions.ts",
+  );
+  const client = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  );
+
+  assert.match(financePage, /vatEvidence: filters\.vatEvidence \?\? undefined/);
+  assert.match(
+    action,
+    /vatEvidence: z\.enum\(SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS\)/,
+  );
+  assert.match(action, /vatEvidence: vatEvidence \?\? null/);
+  assert.match(
+    client,
+    /replaceListParam\("vat", showOnlyMissingVat \? null : "missing"\)/,
+  );
+  assert.match(client, /copy\.vatMissingGroupSummary\(group\.missingVatCount\)/);
+  assert.match(client, /isSupplierInvoiceMissingVatEvidence\(invoice\)/);
 });

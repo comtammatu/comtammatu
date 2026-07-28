@@ -27,27 +27,27 @@ test("menu VAT is validated at the form, action, and database boundaries", () =>
   assert.match(actions, /vat_rate: parsedRow\.data\.vat_rate/);
   assert.match(migration, /CHECK \(vat_rate IN \(0, 5, 8, 10\)\)/);
   assert.match(menuCopy, /Giá bán đã gồm VAT/);
-  assert.match(menuCopy, /không cộng thêm khi thanh toán/);
+  assert.match(menuCopy, /không cộng thêm khi thu/);
   assert.match(migration, /VAT must not be added again at checkout/);
 });
 
 test("finance exposes input VAT invoices and supplier payments together", () => {
   const financeCopy = read("apps/web/lib/messages/finance.ts");
   const invoiceActions = read(
-    "apps/web/app/(protected)/inventory/supplier-invoice-actions.ts",
+    "apps/web/app/(protected)/finance/supplier-invoice-actions.ts",
   );
   const invoiceClient = read(
-    "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
   const invoiceRow = read(
-    "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoice-row.ts",
+    "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
   );
   const vatMigration = read(
     "supabase/migrations/20260727140255_add_supplier_invoice_vat_breakdown.sql",
   );
 
   assert.match(financeCopy, /VAT đầu vào \| Thanh toán NCC/);
-  assert.match(financeCopy, /chưa mặc định là VAT được khấu trừ/);
+  assert.match(financeCopy, /chưa mặc định được khấu trừ/);
   assert.match(invoiceClient, /recordSupplierPayment/);
   assert.match(invoiceClient, /const VAT_BUCKET_FIELDS = \[/);
   assert.match(invoiceClient, /buildSupplierInvoiceVatBreakdown/);
@@ -77,7 +77,7 @@ test("finance separates inventory, equipment acquisition, and period expense", (
   const inventoryCopy = read("apps/web/lib/messages/inventory.ts");
 
   assert.match(financeCopy, /inventory: "Tồn kho"/);
-  assert.match(financeCopy, /nguyên giá thiết bị\/TSCĐ/);
+  assert.match(financeCopy, /thiết bị\/TSCĐ/);
   assert.match(financeCopy, /Vật tư tiêu hao \/ công cụ nhỏ/);
   assert.match(inventoryCopy, /VAT đầu vào theo hóa đơn/);
   assert.match(inventoryCopy, /VAT đầu vào đã ghi nhận/);
@@ -88,7 +88,7 @@ test("supplier invoice matching uses confirmed net GRN value before VAT", () => 
     "supabase/migrations/20260727140000_fix_supplier_invoice_net_matching.sql",
   );
   const invoiceActions = read(
-    "apps/web/app/(protected)/inventory/supplier-invoice-actions.ts",
+    "apps/web/app/(protected)/finance/supplier-invoice-actions.ts",
   );
   const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const vatMigration = read(

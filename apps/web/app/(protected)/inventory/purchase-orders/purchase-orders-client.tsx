@@ -421,38 +421,46 @@ export function PurchaseOrdersClient({
     setSelectedPoId(null);
   }
 
-  function approve(row: PurchaseOrderRow) {
+  async function approve(row: PurchaseOrderRow) {
+    // confirm() must run outside startTransition — transition-deferred
+    // setState can leave the AlertDialog closed after menu/sheet interactions.
+    const accepted = await confirm({
+      title: `Duyệt ${row.code}?`,
+      description:
+        "Sau khi duyệt, đơn đặt hàng có thể được dùng để tạo phiếu nhập kho.",
+      confirmText: "Duyệt mua",
+    });
+    if (!accepted) return;
+    setPendingId(row.id);
     startTransition(async () => {
-      const accepted = await confirm({
-        title: `Duyệt ${row.code}?`,
-        description:
-          "Sau khi duyệt, PO có thể được dùng để tạo phiếu nhập kho.",
-        confirmText: "Duyệt mua",
-      });
-      if (!accepted) return;
-      setPendingId(row.id);
-      const result = await approvePurchaseOrder({ poId: row.id });
-      setPendingId(null);
-      if (!result.success) {
-        toast.error(result.error);
-        return;
+      try {
+        const result = await approvePurchaseOrder({ poId: row.id });
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success(`Đã duyệt ${row.code}`);
+        router.refresh();
+      } finally {
+        setPendingId(null);
       }
-      toast.success(`Đã duyệt ${row.code}`);
-      router.refresh();
     });
   }
 
   function createGrn(row: PurchaseOrderRow) {
     setPendingId(row.id);
     startTransition(async () => {
-      const result = await createGrnFromPurchaseOrder({ poId: row.id });
-      setPendingId(null);
-      if (!result.success || !result.data) {
-        toast.error(result.error);
-        return;
+      try {
+        const result = await createGrnFromPurchaseOrder({ poId: row.id });
+        if (!result.success || !result.data) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success("Đã tạo phiếu nhập từ đơn đặt hàng");
+        router.push(`/inventory/grn/${result.data.id}`);
+      } finally {
+        setPendingId(null);
       }
-      toast.success("Đã tạo phiếu nhập từ PO");
-      router.push(`/inventory/grn/${result.data.id}`);
     });
   }
 
@@ -471,7 +479,9 @@ export function PurchaseOrdersClient({
         label: poCopy.approveAction,
         icon: <IconCheck data-icon="inline-start" />,
         disabled: isPending || pendingId === row.id,
-        onSelect: () => approve(row),
+        onSelect: () => {
+          void approve(row);
+        },
       });
     }
     if (["sent", "partially_received"].includes(row.status) && canCreateGrn) {
@@ -529,9 +539,19 @@ export function PurchaseOrdersClient({
   const columns: DataTableColumn<PurchaseOrderRow>[] = [
     {
       key: "code",
-      header: "Số PO",
+      header: "Số đơn đặt hàng",
       render: (row) => (
-        <span className="font-mono font-medium">{row.code}</span>
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0 font-mono font-medium"
+          onClick={(event) => {
+            event.stopPropagation();
+            openDetail(row);
+          }}
+        >
+          {row.code}
+        </Button>
       ),
     },
     {
@@ -602,7 +622,9 @@ export function PurchaseOrdersClient({
           <Button
             type="button"
             disabled={isPending || pendingId === selectedRow.id}
-            onClick={() => approve(selectedRow)}
+            onClick={() => {
+              void approve(selectedRow);
+            }}
           >
             <IconCheck data-icon="inline-start" />
             {poCopy.approveAction}
@@ -840,7 +862,7 @@ export function PurchaseOrdersClient({
         description={poCopy.draftDescription}
         schema={poFormSchema}
         defaultValues={defaultValues}
-        submitLabel="Lưu PO nháp"
+        submitLabel="Lưu đơn nháp"
         contentClassName="sm:max-w-3xl"
         onSubmit={(values) =>
           createPurchaseOrderWithLines({
@@ -857,7 +879,7 @@ export function PurchaseOrdersClient({
           })
         }
         onSuccess={() => {
-          toast.success("Đã tạo PO nháp");
+          toast.success("Đã tạo đơn đặt hàng nháp");
           router.refresh();
         }}
       >

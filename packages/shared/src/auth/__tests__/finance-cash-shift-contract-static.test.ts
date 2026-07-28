@@ -198,16 +198,19 @@ test("completed payment method is the enforced order mirror source", () => {
   );
 });
 
-test("Finance stays owner-only until Accountant authority is explicitly decided", () => {
+test("Finance admits accountant per D088 (temporary until ADR 0015)", () => {
   assert.match(
     moduleAcl,
-    /finance:\s*\{[\s\S]*?allowedRoles:\s*\["owner"\]/,
+    /finance:\s*\{[\s\S]*?allowedRoles:\s*\[["']owner["'],\s*["']accountant["']\]/,
   );
   const staffRoles =
     /export const STAFF_ROLES = \[([\s\S]*?)\] as const/.exec(roleTypes)?.[1];
   assert.ok(staffRoles);
-  assert.doesNotMatch(staffRoles, /accountant|office/);
-  assert.match(financeModuleDoc, /Accountant \| No authenticated Finance role/);
+  assert.match(staffRoles, /accountant/);
+  assert.match(staffRoles, /central_supply_ops/);
+  assert.match(staffRoles, /central_kitchen_lead/);
+  assert.doesNotMatch(staffRoles, /\boffice\b/);
+  assert.match(financeModuleDoc, /authenticated `accountant`/);
   assert.match(financeModuleDoc, /must not silently map `office`/);
-  assert.match(financeModuleDoc, /period-close authority/);
+  assert.match(financeModuleDoc, /period-close/i);
 });

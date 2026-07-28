@@ -41,7 +41,7 @@ function formatAction(action: string): string {
     reject: "Từ chối",
     complete: "Hoàn thành",
     void: "Vô hiệu",
-    "inventory.grn.created_from_po": "Tạo phiếu nhập từ PO",
+    "inventory.grn.created_from_po": "Tạo phiếu nhập từ đơn đặt hàng",
     "inventory.grn.line_amended": "Sửa dòng phiếu nhập",
   };
   return action.includes(" · ") ? action : (map[action] ?? UNKNOWN_LABEL_VI);

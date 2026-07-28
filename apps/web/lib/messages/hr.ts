@@ -26,10 +26,9 @@ export const hr = {
     },
     attendanceTitle: "Chấm công và ngày công theo ca",
     attendanceDescription:
-      "Theo dõi vào/ra ca, checklist bắt buộc, mục tiêu hao bếp khi được giao và ca treo.",
+      "Theo dõi vào/ra ca, checklist bắt buộc và ca treo.",
     setupTitle: "Thiết lập ca làm và việc trong ca",
-    setupDescription:
-      "Ca làm là xương sống chấm công; mỗi vị trí có việc trong ca riêng để nhân viên nhận đúng danh sách khi vào ca.",
+    setupDescription: "Khung ca và việc trong ca theo từng vị trí.",
     setupSteps: {
       leavePolicy: {
         title: "Ngày công & phép",
@@ -40,7 +39,7 @@ export const hr = {
       shifts: {
         title: "Bước 1: Ca làm",
         description:
-          "Tạo các khung ca để checklist và bảng công bám đúng thời điểm vào ca, trong ca, kết ca.",
+          "Tạo khung ca để checklist và bảng công bám đúng thời điểm.",
         hint: "Nền vận hành",
       },
     },
@@ -51,8 +50,7 @@ export const hr = {
       monthlyLeaveDaysLabel: "Phép tháng",
       monthlyLeaveDaysDescription:
         "Mỗi tháng, số ngày nghỉ có lương được phân bổ trước từ quota này.",
-      allocationHint:
-        "Ví dụ: 27 ngày công và 2 phép tháng. Nhân viên còn 7 phép năm, nghỉ 3 ngày trong tháng sẽ tính 2 phép tháng + 1 phép năm.",
+      allocationHint: "Ví dụ: nghỉ 3 ngày = 2 phép tháng + 1 phép năm.",
       save: "Lưu chính sách",
       saved: "Đã lưu ngày công và phép tháng.",
       saveFailed: "Không thể lưu ngày công và phép tháng.",
@@ -247,7 +245,7 @@ export const hr = {
     live: {
       title: "Lương",
       description:
-        "Bảng lương tạm tính theo ngày công, nghỉ phép đã duyệt, mức lương trong hồ sơ/HĐLĐ và các khoản điều chỉnh của tháng đã chọn. Chốt sau khi kiểm tra.",
+        "Tạm tính theo ngày công, nghỉ phép, mức lương và điều chỉnh trong tháng.",
       loadFailedTitle: "Không thể tải bảng lương",
       loadFailedDescription:
         "Không tải được dữ liệu để tính lương. Hãy tải lại hoặc kiểm tra quyền truy cập.",
@@ -262,7 +260,7 @@ export const hr = {
       calendarAllTitle: "Lịch công toàn bộ",
       calendarEmployeeTitle: (employeeName: string) => `Lịch công · ${employeeName}`,
       calendarDescription:
-        "Xem ngày công, giờ công và nghỉ phép trong kỳ lương đang chọn; chọn một ngày để mở lượt chấm.",
+        "Ngày công, giờ công và nghỉ phép trong kỳ lương đang chọn.",
       calendarOpenRow: (employeeName: string) =>
         `Mở lịch công của ${employeeName}`,
       workdays: "Số ngày công",
@@ -278,20 +276,19 @@ export const hr = {
       snapshot: "Chốt bảng lương",
       snapshotting: "Đang chốt",
       snapshotConfirmDescription:
-        "Bảng lương tháng này sẽ được chốt và khóa. Thanh toán và chứng từ được xử lý tại phân hệ Tài chính.",
+        "Bảng lương tháng này sẽ bị khóa. Thanh toán xử lý tại Tài chính.",
       cancel: "Hủy",
       snapshotDescription:
-        "Sau khi chốt, bảng lương được khóa. Thanh toán và chứng từ được xử lý tại phân hệ Tài chính.",
+        "Sau khi chốt, bảng lương bị khóa. Thanh toán xử lý tại Tài chính.",
       snapshotAllBranchesRequired:
-        "Chỉ có thể chốt khi đang xem tất cả chi nhánh để bảng lương gồm đủ toàn hệ thống.",
+        "Chỉ chốt được khi đang xem tất cả chi nhánh.",
       snapshotLocked: "Đã chốt",
       snapshotOpen: "Chưa chốt",
       preflight: {
         title: "Kiểm tra trước chốt lương",
         blockedBadge: "Cần xử lý",
         readyBadge: "Sẵn sàng chốt",
-        blockedDescription:
-          "Xử lý hết các điểm dưới đây trước khi chốt. Hệ thống không tự sửa công, phép hoặc hồ sơ lương.",
+        blockedDescription: "Xử lý hết các điểm dưới đây trước khi chốt.",
         readyDescription:
           "Không có dữ liệu đang chặn việc chốt bảng lương cho kỳ đã chọn.",
         allBranches: "toàn hệ thống",
@@ -317,7 +314,7 @@ export const hr = {
       adjustmentTitle: (employeeName: string) =>
         `Điều chỉnh lương · ${employeeName}`,
       adjustmentDescription:
-        "Khoản điều chỉnh được tính ngay vào bảng lương tháng đang chọn và không sửa được sau khi chốt.",
+        "Tính ngay vào bảng lương tháng đang chọn; khóa sau khi chốt.",
       adjustmentSave: "Lưu điều chỉnh",
       adjustmentSaved: "Đã lưu điều chỉnh lương",
       adjustmentDeleted: "Đã xoá điều chỉnh lương",

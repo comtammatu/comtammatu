@@ -78,7 +78,11 @@ function unitKey(ingredientId: number, unitId: number): string {
   return `${ingredientId}:${unitId}`;
 }
 
-export async function CountSlipsPageContent() {
+export async function CountSlipsPageContent({
+  initialSlipId = null,
+}: {
+  initialSlipId?: number | null;
+} = {}) {
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
@@ -93,6 +97,7 @@ export async function CountSlipsPageContent() {
     .select(
       `
       id,
+      slip_number,
       branch_id,
       location_id,
       employee_id,
@@ -216,6 +221,10 @@ export async function CountSlipsPageContent() {
     const lines = slipLines(slip.inventory_count_slip_lines);
     return {
       id: slip.id,
+      slipNumber:
+        typeof slip.slip_number === "string" && slip.slip_number.trim()
+          ? slip.slip_number
+          : `PD-${slip.id}`,
       branchName: embeddedName(slip.branches) ?? `CN #${slip.branch_id}`,
       locationName:
         embeddedName(slip.inventory_locations) ?? `Kho #${slip.location_id}`,
@@ -255,9 +264,29 @@ export async function CountSlipsPageContent() {
     };
   });
 
-  return <CountSlipsClient initial={rows} />;
+  const resolvedSlipId =
+    initialSlipId != null && rows.some((row) => row.id === initialSlipId)
+      ? initialSlipId
+      : null;
+
+  return (
+    <CountSlipsClient initial={rows} initialSlipId={resolvedSlipId} />
+  );
 }
 
-export default async function CountSlipsPage() {
-  return <CountSlipsPageContent />;
+function parsePositiveId(value: string | string[] | undefined): number | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export default async function CountSlipsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ slipId?: string | string[] }>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const initialSlipId = parsePositiveId(params.slipId);
+  return <CountSlipsPageContent initialSlipId={initialSlipId} />;
 }

@@ -13,26 +13,33 @@ export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
  * Coarse route/action gate for GRN + shared procurement reads + suppliers.
  * `branch_manager` is admitted (D068) so a branch can receive directly from a
  * supplier; the fine differentiation is the per-action permission key + grant
- * (branch_manager holds GRN/supplier/production keys, never recipe/invoice).
- * Owner is tenant-wide via `has_permission` / `auth_is_owner` and may procure
- * for `branch`, `central_supply`, and `central_kitchen` destinations (D082).
- * Branch managers remain own-branch only and never receive central site scope
- * through this helper.
+ * (branch_manager holds GRN/supplier/production keys, never recipe/invoice/PO).
+ * D088 temporary until ADR 0015: accountant (PO slice) and central site roles
+ * (GRN draft/confirm; no PO mutate via grants). Owner remains tenant-wide via
+ * `has_permission` / `auth_is_owner` and may procure for `branch`,
+ * `central_supply`, and `central_kitchen` destinations (D082).
  */
 export const PROCUREMENT_ROLES: readonly StaffRole[] = [
   "owner",
+  "accountant",
+  "central_supply_ops",
+  "central_kitchen_lead",
   "branch_manager",
 ];
 
 /**
- * Procurement roles whose write scope is a single pinned branch. Their claims
- * carry a non-null `branch_id`, so the caller compares
+ * Procurement roles whose write scope is a single pinned branch/site. Their
+ * claims carry a non-null `branch_id`, so the caller compares
  * `effectiveBranchId === targetBranchId` for strict own-branch writes. Shared
  * by GRN actions (one copy — no MIRROR drift). Roles NOT listed here (e.g.
- * owner) are tenant-wide and bypass the equality check.
+ * owner, accountant) are tenant-wide and bypass the equality check.
  */
 export function isBranchScopedProcurementRole(role: string): boolean {
-  return role === "branch_manager";
+  return (
+    role === "branch_manager" ||
+    role === "central_supply_ops" ||
+    role === "central_kitchen_lead"
+  );
 }
 
 /**
@@ -52,7 +59,16 @@ export function isProcurementBranchInScope(
   return effectiveBranchId === targetBranchId;
 }
 
-/** Phiếu trả NCC + credit notes. */
+/**
+ * Roles allowed to create/approve purchase orders (D088).
+ * Central warehouse roles and branch_manager are intentionally excluded —
+ * they draft GRN only; accountant|owner own the PO slice.
+ */
+export const PO_MUTATE_ROLES: readonly StaffRole[] = [
+  "owner",
+  "accountant",
+] as const;
+
 export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",

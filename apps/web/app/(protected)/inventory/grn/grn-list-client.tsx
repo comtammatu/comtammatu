@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  EllipsisVertical as IconDotsVertical,
+  ArrowRightToLine as IconArrowBarRight,
   FileText as IconFileText,
   Pencil as IconPencil,
   Plus as IconPlus,
@@ -30,14 +30,6 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemFooter,
-  ItemHeader,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -58,15 +50,21 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
 import { discardGrnDraft } from "../grn-actions";
 import { formatVND } from "@lib/inventory/format";
 import { tNav } from "../_lib/dictionary";
 import {
+  filterGrnDraftRows,
   filterGrnListRows,
   grnDetailHref,
+  grnDraftHref,
   hasGrnListFilters,
-  newGrnSupplierHref,
   type GrnDraftRow,
   type GrnListStatusFilter,
   type GrnRow,
@@ -111,8 +109,23 @@ export function GrnListClient({
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<GrnListStatusFilter>("all");
+  const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const controlSize = useFormControlSize();
   const router = useRouter();
+
+  const getGrnRowActions = (grn: GrnRow): RowActionItem[] => [
+    {
+      key: "view",
+      label: ACTIONS_VI.viewDetails,
+      icon: <IconArrowBarRight />,
+      href: grnDetailHref(basePath, grn.id),
+    },
+  ];
+
+  const openGrnDetail = (grn: GrnRow) => {
+    router.push(grnDetailHref(basePath, grn.id));
+  };
+
   const grnColumns: DataTableColumn<GrnRow>[] = [
     {
       key: "code",
@@ -184,18 +197,27 @@ export function GrnListClient({
     },
     {
       key: "actions",
-      header: "",
-      className: "w-10",
-      render: (grn) => (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`${ACTIONS_VI.viewDetails} ${grn.code}`}
-          render={<Link href={grnDetailHref(basePath, grn.id)} />}
-        >
-          <IconDotsVertical className="size-4" />
-        </Button>
-      ),
+      header: <span className="sr-only">{FORM_VI.action}</span>,
+      className: "w-10 text-right",
+      render: (grn) => {
+        const items = getGrnRowActions(grn);
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <RowActionsMenu
+              items={items}
+              label={`${ACTIONS_VI.viewDetails} ${grn.code}`}
+              triggerSize="icon-sm"
+              open={openActionRowId === grn.id}
+              onOpenChange={(open) =>
+                setOpenActionRowId(open ? grn.id : null)
+              }
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -296,8 +318,19 @@ export function GrnListClient({
       rowClassName={(grn) =>
         grn.status === "cancelled" ? "opacity-60" : undefined
       }
+      onRowClick={openGrnDetail}
+      getRowDataState={(grn) =>
+        openActionRowId === grn.id ? "selected" : undefined
+      }
+      renderRowContextMenu={(grn) => (
+        <RowActionsContextMenuItems items={getGrnRowActions(grn)} />
+      )}
       mobileCardRender={(grn) => (
-        <GrnMobileCard grn={grn} basePath={basePath} />
+        <GrnMobileCard
+          grn={grn}
+          actions={getGrnRowActions(grn)}
+          onOpen={openGrnDetail}
+        />
       )}
     />
   );
@@ -384,14 +417,19 @@ function GrnDraftsTab({
   basePath: string;
 }) {
   const router = useRouter();
+  const controlSize = useFormControlSize();
+  const [search, setSearch] = useState("");
   const [pending, setPending] = useState(false);
+  const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
+
+  const filtered = useMemo(
+    () => filterGrnDraftRows(drafts, search),
+    [drafts, search],
+  );
+  const hasActiveSearch = search.trim() !== "";
 
   function openDraft(draft: GrnDraftRow) {
-    router.push(
-      draft.poId != null
-        ? `${basePath}/${draft.grnId}`
-        : newGrnSupplierHref(basePath, draft.supplierId, draft.branchId),
-    );
+    router.push(grnDraftHref(basePath, draft));
   }
 
   async function handleDiscard(draft: GrnDraftRow) {
@@ -414,6 +452,119 @@ function GrnDraftsTab({
     }
   }
 
+  const getDraftRowActions = (draft: GrnDraftRow): RowActionItem[] => [
+    {
+      key: "continue",
+      label: INVENTORY_VI.grnDraftContinue,
+      icon: <IconPencil />,
+      href: grnDraftHref(basePath, draft),
+      disabled: pending,
+    },
+    {
+      key: "discard",
+      label: ACTIONS_VI.delete,
+      icon: <IconTrash />,
+      destructive: true,
+      disabled: pending,
+      separatorBefore: true,
+      onSelect: () => {
+        void handleDiscard(draft);
+      },
+    },
+  ];
+
+  const draftColumns: DataTableColumn<GrnDraftRow>[] = [
+    {
+      key: "code",
+      header: INVENTORY_VI.grnCode,
+      render: (draft) => (
+        <Link
+          href={grnDraftHref(basePath, draft)}
+          className="font-mono text-primary hover:underline"
+        >
+          {draft.grnNumber}
+        </Link>
+      ),
+    },
+    {
+      key: "supplier",
+      header: INVENTORY_VI.supplier,
+      render: (draft) => draft.supplierName,
+    },
+    {
+      key: "branch",
+      header: messages.inventory.grn.receivingWarehouse,
+      render: (draft) => draft.branchName,
+    },
+    {
+      key: "po",
+      header: INVENTORY_VI.linkedPo,
+      render: (draft) =>
+        draft.poId != null && draft.poCode ? (
+          <span className="font-mono">{draft.poCode}</span>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      key: "updated",
+      header: ACTIONS_VI.update,
+      render: (draft) => (
+        <span className="font-mono tabular-nums text-muted-foreground">
+          {formatVNDateTime(draft.updatedAt)}
+        </span>
+      ),
+    },
+    {
+      key: "lines",
+      header: INVENTORY_VI.lineCountLabel,
+      className: "text-right",
+      render: (draft) => (
+        <span className="font-mono tabular-nums">
+          {INVENTORY_VI.grnDraftLineCount(draft.lineCount)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (draft) => (
+        <div className="flex flex-wrap items-center gap-1">
+          <StatusBadge domain="inventory" value="draft" size="sm" />
+          {draft.qcIssueCount > 0 ? (
+            <Badge variant="warning">
+              {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
+            </Badge>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "actions",
+      header: <span className="sr-only">{FORM_VI.action}</span>,
+      className: "w-10 text-right",
+      render: (draft) => {
+        const items = getDraftRowActions(draft);
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <RowActionsMenu
+              items={items}
+              label={`${INVENTORY_VI.grnDraftContinue} ${draft.grnNumber}`}
+              triggerSize="icon-sm"
+              open={openActionRowId === draft.grnId}
+              onOpenChange={(open) =>
+                setOpenActionRowId(open ? draft.grnId : null)
+              }
+            />
+          </div>
+        );
+      },
+    },
+  ];
+
   if (drafts.length === 0) {
     return (
       <AppEmptyState
@@ -426,72 +577,151 @@ function GrnDraftsTab({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {drafts.map((draft) => (
-        <Item key={draft.grnId} variant="outline">
-          <ItemHeader>
-            <div className="min-w-0">
-              <ItemTitle className="text-base">{draft.supplierName}</ItemTitle>
-              <ItemDescription>
-                {draft.poCode
-                  ? `${draft.grnNumber} • ${draft.branchName} • PO ${draft.poCode}`
-                  : `${draft.grnNumber} • ${draft.branchName}`}
-              </ItemDescription>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {INVENTORY_VI.grnDraftUpdatedAt(
-                  formatVNDateTime(draft.updatedAt),
-                )}
-              </p>
-            </div>
-            <Badge variant="outline" className="rounded-full px-3 py-1">
-              {INVENTORY_VI.grnDraftLineCount(draft.lineCount)}
+    <InventoryListFrame
+      toolbar={
+        <AppToolbar
+          variant="inline"
+          className="items-stretch max-sm:[&>[data-slot=separator]]:hidden max-sm:[&>[data-slot=toolbar-group]:first-child]:basis-full sm:items-center"
+          search={
+            <InputGroup size={controlSize} className="w-full">
+              <InputGroupAddon>
+                <IconSearch />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="search"
+                aria-label={INVENTORY_VI.grnSearchPlaceholder}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={INVENTORY_VI.grnSearchPlaceholder}
+                inputMode="search"
+              />
+            </InputGroup>
+          }
+          bulk={
+            <Badge variant="outline">
+              {INVENTORY_VI.grnListCount(filtered.length)}
             </Badge>
-            {draft.qcIssueCount > 0 ? (
-              <Badge variant="warning" className="rounded-full px-3 py-1">
-                {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
-              </Badge>
-            ) : null}
-          </ItemHeader>
-
-          <ItemContent className="hidden" />
-          <ItemFooter>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                className="flex-1"
-                onClick={() => openDraft(draft)}
-                disabled={pending}
-              >
-                <IconPencil className="size-4" />
-                {INVENTORY_VI.grnDraftContinue}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => handleDiscard(draft)}
-                disabled={pending}
-              >
-                <IconTrash className="size-4" />
-                {ACTIONS_VI.delete}
-              </Button>
-            </div>
-          </ItemFooter>
-        </Item>
-      ))}
-    </div>
+          }
+        />
+      }
+    >
+      <DataTable
+        columns={draftColumns}
+        data={filtered}
+        getRowKey={(draft) => draft.grnId}
+        pageSize={50}
+        emptyTitle={
+          hasActiveSearch
+            ? INVENTORY_VI.grnNotFoundFiltered
+            : INVENTORY_VI.grnDraftsEmptyTitle
+        }
+        emptyMode={hasActiveSearch ? "no-results" : "no-data"}
+        emptyIcon={<IconFileText className="size-5" />}
+        onRowClick={openDraft}
+        getRowDataState={(draft) =>
+          openActionRowId === draft.grnId ? "selected" : undefined
+        }
+        renderRowContextMenu={(draft) => (
+          <RowActionsContextMenuItems items={getDraftRowActions(draft)} />
+        )}
+        mobileCardRender={(draft) => (
+          <GrnDraftMobileCard
+            draft={draft}
+            actions={getDraftRowActions(draft)}
+            onOpen={openDraft}
+          />
+        )}
+      />
+    </InventoryListFrame>
   );
 }
 
-function GrnMobileCard({ grn, basePath }: { grn: GrnRow; basePath: string }) {
+function GrnDraftMobileCard({
+  draft,
+  actions,
+  onOpen,
+}: {
+  draft: GrnDraftRow;
+  actions: RowActionItem[];
+  onOpen: (draft: GrnDraftRow) => void;
+}) {
   return (
     <InteractiveCard
-      render={<Link href={grnDetailHref(basePath, grn.id)} />}
       minHeight="mobile"
       padding="default"
       className="justify-between touch-manipulation cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(draft)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(draft);
+        }
+      }}
     >
-      <div className="min-w-0 flex flex-1 flex-col gap-1 pointer-events-none">
+      <div className="min-w-0 flex flex-1 flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm font-semibold">
+            {draft.grnNumber}
+          </span>
+          <StatusBadge domain="inventory" value="draft" size="sm" />
+          {draft.qcIssueCount > 0 ? (
+            <Badge variant="warning">
+              {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
+            </Badge>
+          ) : null}
+        </div>
+        <p className="truncate text-xs text-muted-foreground">
+          {draft.supplierName}
+          {` • ${draft.branchName}`}
+          {draft.poId != null && draft.poCode ? ` • Đơn ${draft.poCode}` : ""}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {INVENTORY_VI.grnDraftUpdatedAt(formatVNDateTime(draft.updatedAt))}
+          {` • ${INVENTORY_VI.grnDraftLineCount(draft.lineCount)}`}
+        </p>
+      </div>
+      <div
+        className="flex shrink-0 items-center"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <RowActionsMenu
+          items={actions}
+          label={`${INVENTORY_VI.grnDraftContinue} ${draft.grnNumber}`}
+          triggerSize="icon-touch"
+        />
+      </div>
+    </InteractiveCard>
+  );
+}
+
+function GrnMobileCard({
+  grn,
+  actions,
+  onOpen,
+}: {
+  grn: GrnRow;
+  actions: RowActionItem[];
+  onOpen: (grn: GrnRow) => void;
+}) {
+  return (
+    <InteractiveCard
+      minHeight="mobile"
+      padding="default"
+      className="justify-between touch-manipulation cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(grn)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(grn);
+        }
+      }}
+    >
+      <div className="min-w-0 flex flex-1 flex-col gap-1">
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm font-semibold">{grn.code}</span>
           <StatusBadge domain="inventory" value={grn.status} size="sm" />
@@ -504,14 +734,26 @@ function GrnMobileCard({ grn, basePath }: { grn: GrnRow; basePath: string }) {
         <p className="truncate text-xs text-muted-foreground">
           {grn.supplierName}
           {` • ${grn.branchName}`}
-          {grn.poId != null && grn.poCode ? ` • PO ${grn.poCode}` : ""}
+          {grn.poId != null && grn.poCode ? ` • Đơn ${grn.poCode}` : ""}
         </p>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-1 pointer-events-none">
-        <span className="text-xs text-muted-foreground">{grn.date || "—"}</span>
-        <span className="font-mono text-sm font-semibold">
-          {formatVND(grn.total)}
-        </span>
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-xs text-muted-foreground">{grn.date || "—"}</span>
+          <span className="font-mono text-sm font-semibold">
+            {formatVND(grn.total)}
+          </span>
+        </div>
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <RowActionsMenu
+            items={actions}
+            label={`${ACTIONS_VI.viewDetails} ${grn.code}`}
+            triggerSize="icon-touch"
+          />
+        </div>
       </div>
     </InteractiveCard>
   );

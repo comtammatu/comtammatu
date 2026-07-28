@@ -80,3 +80,32 @@ export function newGrnSupplierHref(
   });
   return `${basePath}/new?${params.toString()}`;
 }
+
+/** PO-linked drafts resume on DETAIL; free drafts resume on create with supplier+branch. */
+export function grnDraftHref(
+  basePath: string,
+  draft: Pick<GrnDraftRow, "grnId" | "poId" | "supplierId" | "branchId">,
+): string {
+  return draft.poId != null
+    ? `${basePath}/${draft.grnId}`
+    : newGrnSupplierHref(basePath, draft.supplierId, draft.branchId);
+}
+
+type GrnDraftSearchRow = Pick<
+  GrnDraftRow,
+  "grnNumber" | "supplierName" | "branchName" | "poCode"
+>;
+
+export function filterGrnDraftRows<T extends GrnDraftSearchRow>(
+  rows: T[],
+  query: string,
+): T[] {
+  const trimmed = query.trim();
+  if (!trimmed) return rows;
+  return rows.filter((row) =>
+    matchesSearch(
+      [row.grnNumber, row.supplierName, row.branchName, row.poCode ?? ""],
+      trimmed,
+    ),
+  );
+}

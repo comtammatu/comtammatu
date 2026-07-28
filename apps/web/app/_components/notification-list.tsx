@@ -75,7 +75,7 @@ const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
     target_roles: ["owner"],
     kind: "workflow.grn_pending",
     severity: "info",
-    title: "GRN đang chờ duyệt",
+    title: "Phiếu nhập đang chờ duyệt",
     body: "Phiếu nhập cần đối chiếu chứng từ.",
     entity_type: "grn",
     entity_id: 3,

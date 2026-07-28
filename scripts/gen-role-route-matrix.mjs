@@ -320,6 +320,27 @@ function derivePostLoginHomes(staffRoles, ownerRoles) {
       continue;
     }
 
+    // Mirror packages/shared/src/auth/login-destination.ts (D088).
+    if (role === "accountant") {
+      rows.push({
+        role,
+        desktop: "/finance",
+        phone: "/finance",
+        note: "D088 temporary until ADR 0015: accountant lands on Finance.",
+      });
+      continue;
+    }
+
+    if (role === "central_supply_ops" || role === "central_kitchen_lead") {
+      rows.push({
+        role,
+        desktop: "/inventory",
+        phone: "/inventory",
+        note: "D088 temporary until ADR 0015: central site roles land on Inventory L0.",
+      });
+      continue;
+    }
+
     rows.push({
       role,
       desktop: "/br/{branchId} (Branch home for the claimed branch)",

@@ -88,7 +88,7 @@ function OwnerStockIngredientDetail({
     receive: `/inventory/grn?branchId=${data.branchId}`,
     transfer: `/inventory/transfers?branchId=${data.branchId}`,
     stocktake: `/inventory/stocktake?branchId=${data.branchId}`,
-    issues: "/inventory/issues",
+    issues: "/inventory/consumption",
     waste: `/inventory/waste/new?branchId=${data.branchId}`,
   };
 

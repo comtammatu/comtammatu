@@ -91,7 +91,7 @@ test("shared inventory PageContents and extracted loaders route scope-read throu
     "transfers/page.tsx",
     "stocktake/page.tsx",
     "stocktake/new/page.tsx",
-    "issues/page.tsx",
+    "issues/issues-page-content.tsx",
   ];
 
   for (const relPath of pageContentFiles) {

@@ -127,11 +127,11 @@ function formatTopicText(topic: string, payload: OutboxPayload): string {
       ? formatPercent(variance, 2)
       : "?";
     return [
-      `🚨 GRN cần kiểm tra giá lệch ${varianceLabel}`,
+      `🚨 Phiếu nhập cần kiểm tra giá lệch ${varianceLabel}`,
       `Phiếu: ${payload.grn_number ?? "?"} (${payload.branch_name ?? "?"})`,
       `NCC: ${payload.supplier_name ?? "?"}`,
       `Nguyên liệu: ${payload.ingredient_name ?? "?"}`,
-      `Giá PO: ${payload.po_unit_price ?? "?"} → giá nhập: ${payload.unit_cost ?? "?"}`,
+      `Giá đơn đặt hàng: ${payload.po_unit_price ?? "?"} → giá nhập: ${payload.unit_cost ?? "?"}`,
       payload.override_note ? `Lý do: ${payload.override_note}` : null,
     ]
       .filter(Boolean)

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import {
   Banknote as IconBanknote,
@@ -11,6 +11,7 @@ import {
   Plus as IconPlus,
   RotateCcw as IconRotateCcw,
   Trash2 as IconTrash,
+  TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
 import { formatCount, formatPercent, formatVND } from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
@@ -62,10 +63,15 @@ import {
   EXPENSE_CATEGORY_GROUPS,
   EXPENSE_PAYMENT_METHODS,
   classifyExpensePaymentState,
+  expenseNeedsAction,
   type ExpenseCategory,
   type ExpensePaymentMethod,
 } from "../_lib/expense-categories";
 import type { FinanceParams } from "../_lib/finance-params";
+import {
+  EXPENSE_LIST_STATE_PARAM,
+  type ExpenseListStateFilter,
+} from "./expense-list-state";
 import {
   createExpense,
   deleteExpense,
@@ -97,11 +103,19 @@ interface Branch {
   name: string;
 }
 
+interface ExpenseListSummary {
+  operatingTotal: number;
+  operatingCount: number;
+  needsActionTotal: number;
+  needsActionCount: number;
+}
+
 interface Props {
   params: FinanceParams;
   branches: Branch[];
   rows: ExpenseRow[];
-  totalAmount: number;
+  summary: ExpenseListSummary;
+  stateFilter: ExpenseListStateFilter | null;
   todayBusinessDate: string;
   canManageExpenses: boolean;
   tenantId: number;
@@ -200,13 +214,21 @@ export function ExpensesClient({
   params,
   branches,
   rows,
-  totalAmount,
+  summary,
+  stateFilter,
   todayBusinessDate,
   canManageExpenses,
   tenantId,
 }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isTouchLayout = useIsMobile(1024);
+  const showOnlyNeedsAction = stateFilter === "pending";
+  const visibleRows = useMemo(
+    () => (showOnlyNeedsAction ? rows.filter(expenseNeedsAction) : rows),
+    [rows, showOnlyNeedsAction],
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState<number | null>(
     null,
@@ -233,6 +255,16 @@ export function ExpensesClient({
 
   function closeDetail() {
     setSelectedExpenseId(null);
+  }
+
+  function toggleNeedsActionFilter() {
+    const next = new URLSearchParams(searchParams.toString());
+    if (showOnlyNeedsAction) next.delete(EXPENSE_LIST_STATE_PARAM);
+    else next.set(EXPENSE_LIST_STATE_PARAM, "pending");
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
   }
 
   function categoryLabel(category: string) {
@@ -570,9 +602,16 @@ export function ExpensesClient({
       <KpiRow density="compact">
         <KpiCard
           label={copy.totalLabel}
-          value={formatVND(totalAmount)}
-          hint={copy.totalHint(formatCount(rows.length))}
+          value={formatVND(summary.operatingTotal)}
+          hint={copy.totalHint(formatCount(summary.operatingCount))}
           tone="primary"
+          density="compact"
+        />
+        <KpiCard
+          label={copy.needsActionLabel}
+          value={formatVND(summary.needsActionTotal)}
+          hint={copy.needsActionHint(formatCount(summary.needsActionCount))}
+          tone={summary.needsActionCount > 0 ? "warning" : "neutral"}
           density="compact"
         />
       </KpiRow>
@@ -580,22 +619,34 @@ export function ExpensesClient({
       <AppSection
         title={copy.listTitle}
         action={
-          canManageExpenses ? (
+          <div className="flex flex-wrap gap-2">
             <Button
+              type="button"
               size={isTouchLayout ? "touch" : "default"}
-              onClick={() => setDialogOpen(true)}
+              variant={showOnlyNeedsAction ? "default" : "outline"}
+              onClick={toggleNeedsActionFilter}
+              aria-pressed={showOnlyNeedsAction}
             >
-              <IconPlus data-icon="inline-start" />
-              {copy.add}
+              <IconAlertTriangle data-icon="inline-start" />
+              {copy.needsActionFilter}
             </Button>
-          ) : null
+            {canManageExpenses ? (
+              <Button
+                size={isTouchLayout ? "touch" : "default"}
+                onClick={() => setDialogOpen(true)}
+              >
+                <IconPlus data-icon="inline-start" />
+                {copy.add}
+              </Button>
+            ) : null}
+          </div>
         }
         contentFlush
         contentScroll
       >
         <DataTable
           columns={columns}
-          data={rows}
+          data={visibleRows}
           pageSize={50}
           getRowKey={(row) => row.id}
           onRowClick={openDetail}
@@ -606,8 +657,14 @@ export function ExpensesClient({
             row.id === selectedExpenseId ? "selected" : undefined
           }
           emptyMode="no-data"
-          emptyTitle={copy.empty.title}
-          emptyDescription={copy.empty.description}
+          emptyTitle={
+            showOnlyNeedsAction ? copy.empty.clearedTitle : copy.empty.title
+          }
+          emptyDescription={
+            showOnlyNeedsAction
+              ? copy.empty.clearedDescription
+              : copy.empty.description
+          }
           mobileCardRender={(row) => {
             const detail = expenseDetail(row);
             const actionItems = getExpenseRowActions(row);

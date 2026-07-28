@@ -1,5 +1,5 @@
 // Generic action verbs (Vietnamese). Use for buttons, links, menu items where
-// the action is generic. Domain-specific actions ("Duyệt PO", "Hủy đơn POS")
+// the action is generic. Domain-specific actions ("Duyệt đơn đặt hàng", "Hủy đơn POS")
 // stay in their module dictionaries.
 export const ACTIONS_VI = {
   save: "Lưu",
@@ -19,6 +19,7 @@ export const ACTIONS_VI = {
   submit: "Gửi",
   back: "Quay lại",
   goHome: "Về trang chính",
+  goDefaultHome: "Về trang mặc định",
   next: "Tiếp",
   previous: "Trước",
   refresh: "Làm mới",
@@ -44,6 +45,7 @@ export const ACTIONS_VI = {
   selectAll: "Chọn tất cả",
   deselectAll: "Bỏ chọn",
   signIn: "Đăng nhập",
+  signInAgain: "Đăng nhập lại",
   signOut: "Đăng xuất",
   prevPage: "Trang trước",
   nextPage: "Trang sau",

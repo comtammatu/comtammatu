@@ -124,7 +124,7 @@ function MenuImportDialog({
       title={MENU_VI.importDialogTitle}
       description={
         <>
-          Hỗ trợ file .xlsx với 2 sheet: <strong>Danh muc</strong> và{" "}
+          File .xlsx gồm 2 sheet: <strong>Danh muc</strong> và{" "}
           <strong>Mon an</strong>. Tên trùng sẽ được cập nhật.
         </>
       }
@@ -151,7 +151,7 @@ function MenuImportDialog({
             <li>Biến thể: {summary.variantsItemsReplaced} món được thay thế</li>
           ) : null}
           {summary.modifiersItemsReplaced > 0 ? (
-            <li>Topping: {summary.modifiersItemsReplaced} món được thay thế</li>
+            <li>Món thêm: {summary.modifiersItemsReplaced} món được thay thế</li>
           ) : null}
           {summary.sidesItemsReplaced > 0 ? (
             <li>Món phụ: {summary.sidesItemsReplaced} món được thay thế</li>

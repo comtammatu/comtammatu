@@ -5,6 +5,13 @@ import {
   ArrowLeft as IconArrowLeft,
   ShieldAlert as IconShieldExclamation,
 } from "lucide-react";
+import { createClient } from "@comtammatu/database/supabase/server";
+import {
+  extractClaimsFromAccessToken,
+  getDefaultRedirect,
+  resolveBlockedState,
+} from "@comtammatu/shared/auth";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   Badge,
   type BadgeProps,
@@ -14,7 +21,6 @@ import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { AppSection } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
 import { BRAND_NAME } from "@/components/brand";
-import { resolveBlockedState } from "@comtammatu/shared/auth";
 
 type ToneClass = "danger" | "warning" | "neutral";
 
@@ -34,11 +40,27 @@ interface AccessDeniedPageProps {
   }>;
 }
 
+async function resolveDefaultHomeHref(): Promise<string> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return "/login";
+    const claims = extractClaimsFromAccessToken(session.access_token);
+    if (!claims) return "/login";
+    return getDefaultRedirect(claims);
+  } catch {
+    return "/login";
+  }
+}
+
 export default async function AccessDeniedPage({
   searchParams,
 }: AccessDeniedPageProps) {
   const { reason, from } = await searchParams;
   const { copy } = resolveBlockedState(reason);
+  const homeHref = await resolveDefaultHomeHref();
 
   return (
     <div className="flex w-full max-w-xl flex-col gap-4">
@@ -71,10 +93,10 @@ export default async function AccessDeniedPage({
           <Button
             size="touch"
             className="flex-1"
-            render={<Link href="/" replace />}
+            render={<Link href={homeHref} replace />}
           >
             <IconArrowLeft className="size-4" />
-            Về trang mặc định
+            {ACTIONS_VI.goDefaultHome}
           </Button>
           <form action="/api/auth/signout" method="post" className="flex-1">
             <Button
@@ -83,7 +105,7 @@ export default async function AccessDeniedPage({
               size="touch"
               className="w-full"
             >
-              Đăng xuất
+              {ACTIONS_VI.signInAgain}
             </Button>
           </form>
         </div>

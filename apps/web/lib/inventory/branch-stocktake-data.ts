@@ -31,6 +31,7 @@ import type {
 
 type SessionListRow = {
   id: number;
+  session_number?: string | null;
   branch_id: number;
   started_at: string | null;
   completed_at: string | null;
@@ -73,6 +74,7 @@ type StocktakeDetailRow = {
 
 type StocktakeSessionRow = {
   id: number;
+  session_number?: string | null;
   branch_id: number;
   started_at: string | null;
   completed_at: string | null;
@@ -83,6 +85,12 @@ type StocktakeSessionRow = {
   current_round: number | null;
   notes: string | null;
 };
+
+function toSessionNumber(
+  row: Pick<StocktakeSessionRow, "id" | "session_number">,
+): string {
+  return row.session_number?.trim() || `KK-${row.id}`;
+}
 
 type UnitRow = {
   id: number;
@@ -103,6 +111,7 @@ function toStatus(value: string): BranchStocktakeStatus {
 function toBranchStocktakeSession(row: SessionListRow): BranchStocktakeSession {
   return {
     id: row.id,
+    sessionNumber: toSessionNumber(row),
     branchId: row.branch_id,
     startedAt: row.started_at,
     completedAt: row.completed_at,
@@ -197,7 +206,7 @@ export async function loadBranchStocktakeDetailData(
   const { data: sessionRow } = await supabase
     .from("stocktake_sessions")
     .select(
-      "id, branch_id, started_at, completed_at, created_at, created_by, status, blind_mode, current_round, notes",
+      "id, session_number, branch_id, started_at, completed_at, created_at, created_by, status, blind_mode, current_round, notes",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("id", stocktakeId)
@@ -254,6 +263,7 @@ export async function loadBranchStocktakeDetailData(
   return {
     session: {
       id: session.id,
+      sessionNumber: toSessionNumber(session),
       branchId: session.branch_id,
       startedAt: session.started_at,
       completedAt: session.completed_at,
@@ -280,7 +290,7 @@ export async function loadBranchStocktakeCountData(
 
   const { data: sessionRow } = await supabase
     .from("stocktake_sessions")
-    .select("id, tenant_id, branch_id, status, blind_mode")
+    .select("id, session_number, tenant_id, branch_id, status, blind_mode")
     .eq("tenant_id", claims.tenant_id)
     .eq("id", stocktakeId)
     .maybeSingle();
@@ -328,6 +338,7 @@ export async function loadBranchStocktakeCountData(
 
   return {
     sessionId: stocktakeId,
+    sessionNumber: toSessionNumber(sessionRow),
     branchId: routeBranchId,
     status: toStatus(sessionRow.status),
     blindMode: sessionRow.blind_mode === true,

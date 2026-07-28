@@ -1,7 +1,11 @@
 import "server-only";
 
 import { notFound, redirect } from "next/navigation";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import {
+  canViewPurchasePrice,
+  getInventoryValueVisibility,
+  PERMISSION_KEYS,
+} from "@comtammatu/shared/auth";
 import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
@@ -230,6 +234,14 @@ export async function loadStockOnHandPageData({
     });
   }
 
+  const role = claims.user_role;
+  const valueVisibility = getInventoryValueVisibility(role);
+  const canViewTotal = valueVisibility.system;
+  const canViewBranch = valueVisibility.branch;
+  // D088: strip purchase/WAC unit costs from payloads when role or surface denies.
+  const showUnitCosts =
+    includeValuation && canViewPurchasePrice(role);
+
   const ingredients: StockIngredient[] = dbIngredients
     .filter((row) => {
       const currentQuantity = stockMap.get(row.id)?.currentQuantity ?? 0;
@@ -238,11 +250,19 @@ export async function loadStockOnHandPageData({
     .map((row) => {
       const stock = stockMap.get(row.id);
       const qty = stock?.currentQuantity ?? 0;
-      const referenceCost = row.unit_cost ?? 0;
-      const cost = stock?.avgUnitCost ?? referenceCost;
+      const referenceCost = showUnitCosts ? (row.unit_cost ?? 0) : 0;
+      const cost = showUnitCosts
+        ? (stock?.avgUnitCost ?? referenceCost)
+        : 0;
       const min = row.min_stock_level ?? 0;
       const max = row.max_stock_level ?? 0;
       const reorder = row.reorder_point ?? 0;
+      const locationBreakdown = (locationMap.get(row.id) ?? []).map(
+        (location) =>
+          showUnitCosts
+            ? location
+            : { ...location, avgUnitCost: null },
+      );
 
       return {
         id: row.id,
@@ -261,13 +281,9 @@ export async function loadStockOnHandPageData({
         status: computeStockStatus(qty, min),
         lastCount: stock?.lastCountedAt ? formatDate(stock.lastCountedAt) : "—",
         temp: storageTemp(row.storage_type),
-        locationBreakdown: locationMap.get(row.id) ?? [],
+        locationBreakdown,
       };
     });
-
-  const role = claims.user_role;
-  const canViewTotal = role === "owner";
-  const canViewBranch = canViewTotal || role === "branch_manager";
   const branchValue =
     includeValuation && canViewBranch
       ? ingredients.reduce(

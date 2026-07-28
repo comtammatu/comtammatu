@@ -120,6 +120,7 @@ type BranchGrnCreateLineSheetProps = {
   onRemove: () => void;
   onPatch: (patch: Partial<GrnLineEditState>) => void;
   onUnitChange: (unitId: number, label: string) => void;
+  showPurchasePrice?: boolean;
 };
 
 export function BranchGrnCreateLineSheet({
@@ -129,6 +130,7 @@ export function BranchGrnCreateLineSheet({
   onRemove,
   onPatch,
   onUnitChange,
+  showPurchasePrice = true,
 }: BranchGrnCreateLineSheetProps) {
   const [numericField, setNumericField] = useState<"quantity" | "cost" | null>(
     null,
@@ -138,6 +140,7 @@ export function BranchGrnCreateLineSheet({
     ? getReferenceCostForUnit(edit.ingredient, edit.entryUnitId, edit.unit)
     : null;
   const variance =
+    showPurchasePrice &&
     edit?.unitCost != null &&
     edit.unitCost > 0 &&
     referenceCost != null &&
@@ -147,8 +150,8 @@ export function BranchGrnCreateLineSheet({
   const valid =
     edit != null &&
     edit.quantity > 0 &&
-    edit.unitCost != null &&
-    edit.unitCost > 0;
+    (!showPurchasePrice ||
+      (edit.unitCost != null && edit.unitCost > 0));
   const baseConversionPreview = edit ? buildBaseConversionPreview(edit) : null;
 
   return (
@@ -170,10 +173,11 @@ export function BranchGrnCreateLineSheet({
                 <SheetTitle className="text-lg font-semibold">
                   {edit.ingredient.name}
                 </SheetTitle>
-                <p className="text-xs text-muted-foreground">
-                  {edit.ingredient.sku ? `${edit.ingredient.sku} · ` : ""}
-                  {GRN_CREATE_COPY.unitLabel(edit.unit)}
-                </p>
+                {edit.ingredient.sku ? (
+                  <p className="text-xs text-muted-foreground">
+                    {edit.ingredient.sku}
+                  </p>
+                ) : null}
               </SheetHeader>
 
               <div className="p-4">
@@ -223,53 +227,53 @@ export function BranchGrnCreateLineSheet({
                   <div className="grid grid-cols-2 gap-3">
                     <NumberPadValueField
                       id="branch-grn-create-quantity"
-                      label={`${FORM_VI.quantity} (${edit.unit})`}
+                      label={FORM_VI.quantity}
                       value={
                         edit.quantity > 0 ? formatQty(edit.quantity) : null
                       }
                       emptyLabel="Nhập số"
                       onClick={() => setNumericField("quantity")}
                     />
-                    <NumberPadValueField
-                      id="branch-grn-create-cost"
-                      label={GRN_CREATE_COPY.unitCostTitle}
-                      value={
-                        edit.unitCost != null && edit.unitCost > 0
-                          ? GRN_CREATE_COPY.moneyVnd(edit.unitCost)
-                          : null
+                    {showPurchasePrice ? (
+                      <NumberPadValueField
+                        id="branch-grn-create-cost"
+                        label={GRN_CREATE_COPY.unitCostTitle}
+                        value={
+                          edit.unitCost != null && edit.unitCost > 0
+                            ? GRN_CREATE_COPY.moneyVnd(edit.unitCost)
+                            : null
+                        }
+                        emptyLabel={GRN_CREATE_COPY.priceRequired}
+                        onClick={() => setNumericField("cost")}
+                      />
+                    ) : null}
+                  </div>
+
+                  {showPurchasePrice && referenceCost ? (
+                    <p
+                      className={
+                        variance != null &&
+                        Math.abs(variance) > DEFAULT_VARIANCE_WARNING
+                          ? "text-xs font-medium text-warning"
+                          : "text-xs text-muted-foreground"
                       }
-                      emptyLabel={GRN_CREATE_COPY.priceRequired}
-                      onClick={() => setNumericField("cost")}
-                    />
-                  </div>
+                    >
+                      {GRN_CREATE_COPY.priorPriceLine(
+                        referenceCost.value,
+                        referenceCost.unit || edit.unit,
+                        variance,
+                      )}
+                    </p>
+                  ) : null}
 
-                  <div className="rounded-md bg-muted/50 px-3 py-3">
-                    {edit.unitCost == null || edit.unitCost <= 0 ? (
-                      <p className="text-sm font-medium text-warning">
-                        {GRN_CREATE_COPY.priceRequired}
-                      </p>
-                    ) : null}
-                    {referenceCost ? (
-                      <p className="text-xs text-muted-foreground">
-                        {GRN_CREATE_COPY.lastCostReference(
-                          referenceCost.value,
-                          referenceCost.unit || edit.unit,
-                        )}
-                      </p>
-                    ) : null}
-                    {variance != null ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {GRN_CREATE_COPY.varianceReference(variance)}
-                      </p>
-                    ) : null}
-                    {baseConversionPreview ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {baseConversionPreview}
-                      </p>
-                    ) : null}
-                  </div>
+                  {baseConversionPreview ? (
+                    <p className="text-xs text-muted-foreground">
+                      {baseConversionPreview}
+                    </p>
+                  ) : null}
 
-                  {variance != null &&
+                  {showPurchasePrice &&
+                  variance != null &&
                   Math.abs(variance) > DEFAULT_VARIANCE_WARNING ? (
                     <Alert variant="destructive">
                       <IconAlertTriangle className="size-4" />

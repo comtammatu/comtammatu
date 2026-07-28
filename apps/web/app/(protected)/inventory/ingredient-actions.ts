@@ -775,7 +775,7 @@ function mapBulkIngredientImportError(
     return "Đơn vị đang dùng trong công thức sản xuất hoặc công thức món; không thể xóa khi nhập dữ liệu.";
   }
   if (code === PG_ERR.UNIQUE_VIOLATION) {
-    return "Tên hoặc SKU nguyên liệu bị trùng.";
+    return "Tên hoặc mã hàng nguyên liệu bị trùng.";
   }
   if (code === PG_ERR.FK_VIOLATION || code === PG_ERR.CHECK_VIOLATION) {
     return "Dữ liệu nhập chưa hợp lệ.";

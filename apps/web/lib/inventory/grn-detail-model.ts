@@ -38,6 +38,7 @@ export type GrnDetail = {
   code: string;
   poCode: string;
   poId?: number;
+  poStatus?: string | null;
   invoiceId: number | null;
   branchId: number;
   locationId: number | null;

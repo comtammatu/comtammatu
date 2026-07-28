@@ -7,6 +7,20 @@ export function getDefaultRedirect(claims: JwtClaims): string {
     return "/";
   }
 
+  // D088 temporary until ADR 0015: accountant lands on Finance.
+  if (claims.user_role === "accountant" && canAccess(claims.user_role, "finance")) {
+    return "/finance";
+  }
+
+  // D088 temporary until ADR 0015: central site roles land on Inventory L0.
+  if (
+    (claims.user_role === "central_supply_ops" ||
+      claims.user_role === "central_kitchen_lead") &&
+    canAccess(claims.user_role, "inventory")
+  ) {
+    return "/inventory";
+  }
+
   if (
     claims.branch_id != null &&
     canAccess(claims.user_role, "branch_home")

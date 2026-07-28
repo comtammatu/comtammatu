@@ -650,6 +650,32 @@ breakpoint switch can remount them safely.
   `no-native-dialog`). Hand-rolled `AlertDialog` stays only for flows that
   collect input (reason, quantity) before confirming.
 
+### Floating Layer
+
+Anchored floating surfaces resolve their geometry against the viewport, not
+against whichever ancestor happens to clip. The contract is single-sourced in
+`packages/ui/src/lib/floating-layer.ts` and applies to four primitives:
+`Select`, `Popover`, `DropdownMenu`, and `Combobox` (single + multi-select).
+
+| Rule                | Contract                                                                                                    |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Position method     | Positioner `positionMethod` = `FLOATING_POSITION_METHOD` (`"fixed"`)                                        |
+| Collision boundary  | Positioner `collisionBoundary` = `floatingCollisionBoundary()` (`document.documentElement`, SSR-safe)       |
+| Portal              | Content renders inside the primitive's `Portal`; a floating layer never stays in the anchor's DOM subtree   |
+| Stacking            | Positioner owns `isolate z-50`; callers do not raise `z-index` to escape a clip                             |
+| Elevation           | `shadow-effect-popover` per § Elevation / Shadow                                                            |
+
+`clipping-ancestors` is not an accepted boundary for these primitives: a `Card`
+or toolbar with `overflow-hidden` would otherwise force the panel to flip back
+over its own trigger. A component may override `positionMethod` or
+`collisionBoundary` only when the anchor is inside a scroll container that must
+carry the panel with it, and the override stays local to that component.
+
+Fixing an anchored-panel clip by changing tokens, `z-index`, or ancestor
+`overflow` at the call site is drift — correct it at this contract. Route- and
+adapter-level application notes (LIST toolbars, `AppListFrame`, `AppToolbar`
+slots and sizing) live in `docs/modules/ui.md`.
+
 ### Status vocabulary
 
 Business-state labels and badge colors are single-sourced:
@@ -762,16 +788,16 @@ allowlist.
 - Keep procurement and inventory terms aligned with `docs/ref/glossary.md`.
 - Dense tables are expected, but row actions and destructive actions must stay visually separated.
 - Route IA must stay anchored to three operator flows:
-  1. Nhập hàng: Branch supplier-first GRN, receiving/QC, Finance/AP handoff
-     at `/finance/supplier-invoices` (ADR 0018). Purchase orders stay withdrawn
-     from daily UI (D073).
+  1. Nhập hàng: Branch supplier-first GRN, receiving/QC, Owner **Đơn mua hàng**
+     sidebar LIST, Finance/AP handoff at `/finance/supplier-invoices` (ADR 0018).
   2. Kiểm soát tồn: one-warehouse stock on hand, stocktake, count
      assignment/slip review, waste/adjustment and reporting.
   3. Sản xuất/tiêu hao: current branch production run, sale-consumption and
      write-off workflows.
 - Branch receiving remains supplier-first. Do not introduce supplier return,
-  lot/expiry, production order, purchase-order daily UI, or same-branch
-  warehouse-to-kitchen transfer into daily UI.
+  lot/expiry, production order DETAIL, or same-branch warehouse-to-kitchen
+  transfer into daily UI. Inventory sidebar stays the short daily set (stock,
+  GRN, PO, consumption, transfers, production, catalog).
 - Sidebar group labels must be compact enough for the fixed sidebar. Use detail page headings and breadcrumbs for full workflow wording.
 - Complex Inventory forms use RHF + Zod + app form helpers when they have line arrays, more than four fields, inline pre-submit validation, or pending submit UX. Plain `<form action>` is only for auth, sign out, or single-reason confirmations.
 - Use Sonner for success/action-level feedback, inline field errors for validation, and `/access-denied?reason=` only for permission, auth, or scope failures.
@@ -840,11 +866,14 @@ contract change; route-local chrome outside this list is drift.
    toaster/POS unless a route supplies an explicit override.
    Scroll: the inset `SidebarInset` card is viewport-bounded; the sidebar
    background and rounded panel frame stay fixed while only the inset content
-   region scrolls (`data-owner-shell-scroll`). `AppPageHeader` sticks at the top
-   of that scrollport and publishes `--app-page-header-offset`. Owner LIST
-   filters stack under the header via `AppListFrame`/`InventoryListFrame`
+   region scrolls (`data-owner-shell-scroll`). `AppPageHeader` scrolls with page
+   content (do not sticky/freeze it outside the scrollport — that reserves empty
+   body chrome and crushes dashboard aesthetics). Owner LIST filters stick at
+   the top of the shell scrollport via `AppListFrame`/`InventoryListFrame`
    toolbar (automatic), `AppToolbar sticky`, or `AppPageStickyChrome` /
-   `APP_PAGE_STICKY_FILTER_CLASSNAME` for custom filter bars.
+   `APP_PAGE_STICKY_FILTER_CLASSNAME`. Do not sticky a page-level filter that
+   sits above KPI/dashboard cards (e.g. Finance `FilterBar`) — stuck chrome
+   will crush the next section while scrolling.
 2. Branch runtime chrome — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
    branch home, staff daily work under `/br/[branchId]/shift/*`, stock action
@@ -932,7 +961,9 @@ Declare each record's depth once per family:
 - **D3** — line-array authoring only; never a row-open target for an existing
   record's canonical view.
 - **D0 queue** — named card/decision surfaces (for example Owner waste
-  approvals) where the card is the work, not a tabular row open.
+  approvals) where the card is the work, not a tabular row open. Owner chrome
+  is `AppPage` + `AppSection` decision cards — never `InventoryListFrame` /
+  `DataTable`.
 
 A record escalates from D1 view to D2 when **any** of the following is true: it
 renders a line array, an audit/`Lịch sử` tab, a stage-transition footer, or more
@@ -1040,7 +1071,7 @@ Route-level transition states are part of the design system, not per-page improv
 
 - Every route family exposes `loading.tsx` built from `PageSkeleton` / `PageSpinner` (`apps/web/app/components/page-skeleton.tsx`). Do not hand-roll new ad-hoc route skeleton layouts; POS keeps its purpose-built `PosPageSkeleton`.
 - KDS, runner, and other realtime boards use `PageSpinner`, never a placeholder board skeleton — fake tickets on an operational screen are forbidden.
-- Every route family exposes `error.tsx` delegating to `ErrorPanel` (`apps/web/app/components/error-panel.tsx`): `AppEmptyState mode="error"`, retry via `reset()`, and the error digest in small mono print. `apps/web/app/global-error.tsx` is the single surface allowed to use inline styles, because root CSS may be unavailable when it renders; its raw retry control still keeps the `44px` minimum touch target.
+- Every route family exposes `error.tsx` delegating to `ErrorPanel` (`apps/web/app/components/error-panel.tsx`): `AppEmptyState mode="error"` with retry via `reset()` as the sole primary action at `size="touch"`. Sign-out is not a peer of retry: `ErrorPanel` renders it only under the opt-in `allowSignOut` prop, at subordinate weight (`variant="ghost" size="sm"`), and only the app-wide boundary `apps/web/app/error.tsx` enables it. Station and route-family boundaries (POS, KDS, runner, operator stock/settings, and the owner families) stay retry-only so a mis-tap cannot end a session mid-service. `apps/web/app/global-error.tsx` is the single surface allowed to use inline styles, because root CSS may be unavailable when it renders; its raw retry control still keeps the `44px` minimum touch target.
 - Not-found renders through `NotFoundPanel` (`apps/web/app/components/not-found-panel.tsx`); `apps/web/app/not-found.tsx` covers the app, and per-family `not-found.tsx` exists only where `notFound()` is called and a shell is worth preserving.
 - Copy for these frames comes from `@comtammatu/shared/messages` (`ACTIONS_VI`, `STATES_VI`, `ERRORS_VI`); do not inline new Vietnamese strings here.
 - `app-presentation-state-copy` keeps route-local loading/empty/error copy in shared messages/adapters across `apps/web/app/**/*.tsx`. Payment/action/data `.ts` copy is reported as `actionDataStateCopy` by `audit:ui-components` and blocked by `app-action-data-state-copy`.
@@ -1053,6 +1084,8 @@ Route-level transition states are part of the design system, not per-page improv
 - Copy source ladder: business meaning and spelling in `docs/ref/glossary.md`; shared domain labels in `packages/shared/src/labels/vi.ts`; generic actions/states/errors in `@comtammatu/shared/messages` or `apps/web/lib/messages/*`; legal-fixed labels in `packages/shared/src/labels/legal-fixed.ts`; route-specific adapters in the relevant domain dictionary.
 - Before adding labels, update or consume the correct source in that ladder rather than adding ad-hoc inline synonyms.
 - Utility copy beats marketing copy on app surfaces.
+- Secondary copy budget: page/`AppSection` description ≈ one idea, ≤ ~80 characters; KPI/field hint ≈ ≤ ~60 characters. Drop the prop when it restates the title or does not change the next action. Destructive confirm copy (refund, void, SePay) keeps the risk meaning; only trim fluff.
+- Layout safety: `AppSection` descriptions use `line-clamp-2`; `AppPageHeader` descriptions clamp to two lines on `max-sm` (and stay hidden when `compactOnMobile`); `CompareChip` hints truncate. Do not clamp `FieldDescription` — shorten the copy instead. `CardDescription` primitive stays unclamped so dialogs can show full text.
 
 ## Rebuild Rules For Agents
 

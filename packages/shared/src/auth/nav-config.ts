@@ -55,6 +55,11 @@ export const OWNER_NAV_GROUPS: NavGroupConfig[] = [
       },
       { moduleKey: "finance", icon: "Wallet", label: "Tài chính" },
       { moduleKey: "orders", icon: "ClipboardList", label: "Đơn hàng" },
+      {
+        moduleKey: "feedback",
+        icon: "MessageSquareHeart",
+        label: "Phản hồi",
+      },
       { moduleKey: "inventory", icon: "Package", label: "Kho hàng" },
       { moduleKey: "menu", icon: "Utensils", label: "Thực đơn" },
       { moduleKey: "hr", icon: "Briefcase", label: APP_COPY_VI.hrWorkspace },
@@ -85,6 +90,12 @@ export const BRANCH_MANAGEMENT_ITEMS: BranchManagementNavItemConfig[] = [
     moduleKey: "branch_settings",
     icon: "Settings",
     hrefTemplate: "/br/{branchId}/settings",
+  },
+  {
+    moduleKey: "branch_feedback",
+    icon: "MessageSquareHeart",
+    hrefTemplate: "/br/{branchId}/feedback",
+    label: "Phản hồi",
   },
 ];
 

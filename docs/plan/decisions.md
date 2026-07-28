@@ -82,11 +82,11 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp); D082 mở lại Kho T�
 
 Đảo policy mặc định phải sửa quyết định này trước.
 
-## D017: Owner là L0 Tenant Control; Branch Manager dùng L1 Branch Runtime (2026-06-13, sửa 2026-07-18)
+## D017: Owner là L0 Tenant Control; Branch Manager dùng L1 Branch Runtime (2026-06-13, sửa 2026-07-18, sửa bởi D088)
 
-**Decision (net):** Product framing = `bộ phần mềm quản lý vận hành và bán hàng`. Owner vào trực tiếp `/`; các module L0 ổn định là `/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, `/branches`, `/settings`. `branch_manager` vào `/br/{branchId}` và chỉ dùng workflow branch-native. Role/route là cổng bề mặt; action + row access tiếp tục qua permission keys, RPC/RLS và branch scope.
+**Decision (net sau D088):** Product framing = `bộ phần mềm quản lý vận hành và bán hàng`. Owner vào trực tiếp `/` với full L0. Module L0 ổn định: `/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, `/branches`, `/settings`. **Kế toán** (`accountant`) được vào `/finance` và slice PO trên `/inventory` theo D088 — không mở HR tenant / gán quyền. **Kho Tổng / Bếp TT** dùng surface gắn site trung tâm (không giả QL CN). `branch_manager` vào `/br/{branchId}` và chỉ dùng workflow branch-native; **không** xem giá mua/PO chuỗi. Role/route là cổng bề mặt; action + row access tiếp tục qua permission keys, RPC/RLS và branch/site scope.
 
-**Canonical:** `docs/spec/role-route-matrix.md`. Không đặt workflow branch-scoped vào route L0.
+**Canonical:** `docs/spec/role-route-matrix.md`, D088. Không đặt workflow branch-scoped vào route L0.
 
 ## D018: Bỏ tenant-admin phụ — gộp vào `owner` (2026-06-13)
 
@@ -98,7 +98,7 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp); D082 mở lại Kho T�
 
 ## D020: Enterprise Accounting / TT 200 / VAS is outside the product (2026-06-13)
 
-**Decision:** Enterprise accounting / TT 200 / VAS KHÔNG thuộc product contract. Finance authority = operating finance. `accounting_periods` close/reopen là DB-only owner support, không app route nào expose. Tái lập enterprise-accounting → phải sửa quyết định này + ADR 0006 trước. Canonical: `docs/modules/finance.md` § Accounting Advanced Boundary; migration chain thuộc ADR 0006.
+**Decision:** Enterprise accounting / TT 200 / VAS KHÔNG thuộc product contract. Finance authority = operating finance. `accounting_periods` close/reopen là DB-only owner support, không app route nào expose. Tái lập enterprise-accounting → phải sửa quyết định này trước. Canonical: `docs/modules/finance.md` § Accounting Advanced Boundary.
 
 ## D022: HĐĐT lập realtime tại payment; không nháp-local sau thanh toán (2026-06-14)
 
@@ -318,9 +318,7 @@ Scope: Owner control People/Branch IA thuộc D048; "Việc trong ca" thuộc D0
 
 ## D055: Operator plane qua active branch context (2026-07-02)
 
-**Decision (net):** Không soft-route theo thiết bị hay loại site. Owner vào `/`;
-mọi branch-pinned role vào `/br/{branchId}` từ JWT. Thiếu hoặc lệch branch scope
-thì fail closed. Canonical: `docs/spec/role-route-matrix.md`.
+**Decision:** Net-effect gộp vào D017 (Owner `/`, branch-pinned `/br/{branchId}`, fail closed khi lệch scope). Canonical: `docs/spec/role-route-matrix.md`.
 
 ## D056: Operator GRN-receive route + hướng consumption (2026-07-02)
 
@@ -343,11 +341,7 @@ sống trong machine registry. Mọi surface đổi phải QA phone, tablet và 
 
 ## D059: Branch-complete native workflow (2026-07-03)
 
-**Decision (net, sau ADR 0012):** Mỗi active branch-pinned role phải làm được job được cấp
-quyền trong Branch runtime mà không đi qua Owner control bridge. Branch home là home;
-Owner control chỉ còn một shortcut có kiểm quyền cho Owner.
-Branch presenter touch-native có thể chia sẻ loader/model/action với Management,
-nhưng không chia sẻ chrome hoặc desktop-first presenter.
+**Decision:** Net-effect gộp vào D058 (Branch runtime đủ job tại chỗ; không Owner-control bridge; không chia sẻ Owner chrome).
 
 ## D060: Inventory workflow — WAC, không lot/FIFO/requisition (2026-07-03)
 
@@ -359,9 +353,7 @@ stocktake và ledger/RPC hiện hành là correctness boundary. Canonical:
 
 ## D061: Management Inventory oversight (2026-07-03)
 
-**Decision (net sau D078):** Management workspace có thể đọc tồn, kiểm kê và
-lịch sử transfer để oversight; Branch runtime sở hữu thao tác tại chỗ. Không dùng
-oversight entry để tái mở same-branch Kho↔Bếp hoặc cross-branch transfer mới.
+**Decision:** Net-effect gộp vào D058 (Management = oversight dense; Branch = thao tác tại chỗ). Không tái mở Kho↔Bếp / cross-branch transfer qua oversight (D078).
 
 ## D062: Native-quality PWA là hướng giao (mở rộng D012, KHÔNG rewrite native) (2026-07-03)
 
@@ -369,10 +361,7 @@ oversight entry để tái mở same-branch Kho↔Bếp hoặc cross-branch tran
 
 ## D063: Desktop mode cho Management chrome (2026-07-03)
 
-**Decision (net):** Management dùng cùng `SidebarProvider` với icon-collapse,
-không dựng rail thứ hai. Module phẳng không bọc group một-item trùng tên. Width,
-density và master-detail phải theo design system/page archetype, không giữ backlog
-triển khai trong decision log.
+**Decision:** Net-effect gộp vào D058 (Management dense desktop-responsive trên cùng `SidebarProvider`/design-system density; không rail thứ hai).
 
 ## D064: POS capacity and manual quota (2026-07-04)
 
@@ -395,16 +384,11 @@ Trigger inert khi flag OFF. Đảo phải sửa bản ghi này trước.
 
 ## D066: Central-site context — superseded (2026-07-04)
 
-**Decision (net sau D073/D076/D077/D078):** Central-site operator context, tiles,
-roles và Owner control card đã hết hiệu lực. `branch_kind` central values chỉ giữ cho
-lịch sử; POS/KDS/Runner và Branch home chỉ operate active `branch` kind.
+**Decision:** Superseded. Net hiện hành: D073/D078 (branch-only ops trên matu-prod freeze) và D082 (mở lại central kinds trên Greenfield). Không còn operator context/tiles/roles central riêng.
 
 ## D067: Branch Inventory native presentation (2026-07-04)
 
-**Decision (net sau D073/D078):** Central-supply landing đã nghỉ. Durable rule còn
-lại: Branch stock routes dùng touch-native presenter và chia sẻ loader/model/action
-với Management khi phù hợp; không nhúng desktop presenter hoặc tạo shell mới.
-GRN bắt đầu từ NCC, không từ PO.
+**Decision:** Net-effect gộp vào D058 (Branch stock touch-native; chia sẻ loader/model/action, không Owner chrome). GRN supplier-first: D056/D060.
 
 ## D068: Kho CN tự nhận NCC (GRN) + sản xuất tại chi nhánh — branch_manager, own-branch (2026-07-05)
 
@@ -473,28 +457,19 @@ GRN bắt đầu từ NCC, không từ PO.
 
 **Consequences:** Bàn kẹt và `revoked ⇒ in lại QR` biến mất vì không còn session để kẹt và không còn `revoked`; `trg_order_release_table` có sẵn lo phần trả bàn. `self_order_batches` chết vì lịch sử lượt đã nằm sẵn ở `kitchen_send_batches`. Còn 6 RPC. Chưa có màn admin bật/tắt `self_order_enabled` hay in QR bàn — lỗ hổng đã biết, ngoài scope đợt này. Canonical: `docs/spec/self-order-guest-ui.md`. `docs/spec/self-order-motion-design.md` phải rà lại vì nó tham chiếu Tabs + cart cũ.
 
-## D076: Năm application role đang hoạt động (2026-07-10, sửa 2026-07-18)
+## D076: Application roles đang hoạt động (2026-07-10, sửa 2026-07-18, sửa bởi D088)
 
-**Decision:** `STAFF_ROLES` có đúng 5 giá trị:
-`owner | branch_manager | cashier | chef | branch_staff`. Position HR không tự
-tạo application role; chỉ mapping canonical trong TypeScript và SQL mới phát sinh
-quyền route. Giá trị ngoài tập này fail closed, không auto-remap. Canonical:
-`packages/shared/src/auth/types.ts` và bảng generated trong
-`docs/spec/role-route-matrix.md`.
+**Decision (net sau D088):** `STAFF_ROLES` canonical gồm
+`owner | accountant | central_supply_ops | central_kitchen_lead | branch_manager | cashier | chef | branch_staff`.
+Position HR không tự tạo application role; chỉ mapping canonical trong TypeScript
+và SQL mới phát sinh quyền route. Giá trị ngoài tập này fail closed, không
+auto-remap. Ba role L0/site mới là **adapter tạm** trên JWT-role hôm nay; đích
+Authority là ADR 0015 (D088). Canonical: `packages/shared/src/auth/types.ts` và
+bảng generated trong `docs/spec/role-route-matrix.md`.
 
 ## D077: Owner `/`, Branch `/br/[branchId]` (2026-07-10, thay thế 2026-07-18)
 
-**Decision:**
-
-1. Owner vào trực tiếp `/`; đây là L0 overview và launcher duy nhất.
-2. Branch-pinned role vào `/br/{branchId}` từ JWT; thiếu hoặc lệch scope thì fail closed.
-3. Owner và Branch dùng hai shell; không render chéo hoặc quảng bá route L0 cho role chi nhánh.
-4. Branch Manager quản lý vận hành đúng chi nhánh: đọc thông tin nhân sự/ngày công/nghỉ phép và duyệt kết ca/nghỉ phép cho nhân viên cấp dưới; không tự duyệt, không duyệt Branch Manager khác, không CRUD hồ sơ, không xem lương/HĐLĐ/BHXH.
-5. Route ngoài matrix không có alias, redirect hoặc field context theo thiết bị.
-
-**Consequences:** Canonical runtime là `login-destination.ts`, `scope.ts`,
-`route-resolution.ts`, `route-map.ts`, `nav-resolution.ts`, `proxy.ts`, Owner
-root page và Branch home page.
+**Decision:** Net-effect gộp vào D017 (routing) + D026 (Branch Manager HR boundary). Canonical runtime: `login-destination.ts`, `scope.ts`, `route-resolution.ts`, `route-map.ts`, `nav-resolution.ts`, `proxy.ts`.
 
 ## D078: Tắt Bếp chi nhánh — một kho duy nhất mỗi chi nhánh (2026-07-10)
 
@@ -589,16 +564,19 @@ nhánh.
 writer/domain cũ. Phạm vi AP/vận hành trung tâm nằm tại
 `docs/plan/adr/0017-ap-central-operations.md`.
 
-## D083: PO một cấp + VAT món + Finance HĐ GTGT/NCC (2026-07-27)
+## D083: PO một cấp + VAT món + Finance HĐ GTGT/NCC (2026-07-27, sửa bởi D088)
 
-**Decision (owner):** Trên Greenfield target: (1) Menu lưu `vat_rate` theo từng món với tập giá trị
+**Decision (owner, net sau D088):** Trên Greenfield target: (1) Menu lưu `vat_rate` theo từng món với tập giá trị
 `0 | 5 | 8 | 10`; `base_price` là giá bán đã gồm VAT nên POS không cộng VAT
 thêm khi thanh toán. HĐĐT snapshot thuế suất từng dòng; template và phương pháp
-tính thuế phải khớp cấu hình doanh nghiệp/provider đã đăng ký. (2) PO Owner
-control có đúng một cấp `draft → sent → partially_received | received`; không
-mở PR hoặc duyệt nhiều cấp. (3) Branch vẫn nhập NCC supplier-first; PO không
-xuất hiện trên Branch runtime. (4) Finance gom hóa đơn đầu vào, đối soát GRN và
-thanh toán NCC trên surface hiện có.
+tính thuế phải khớp cấu hình doanh nghiệp/provider đã đăng ký. (2) PO một cấp
+`draft → sent → partially_received | received`; không entity PR riêng, không duyệt
+nhiều cấp. Actor tạo/duyệt PO = Owner hoặc **Kế toán**; **một người được vừa tạo
+vừa duyệt**. (3) Nhu cầu mua từ kho = **GRN draft**; Kho Tổng / Bếp TT (và kho CN
+theo cùng gate) **không** tạo/duyệt PO. (4) **Confirm GRN / nhập tồn chỉ khi** có
+PO liên kết đã duyệt (`sent` trở lên theo status machine hiện hành). PO không
+xuất hiện trên Branch runtime UI. (5) Finance gom hóa đơn đầu vào, đối soát GRN
+và thanh toán NCC — Kế toán thao tác theo D088.
 
 ## D084: Mô hình pháp lý công ty cổ phần sau cutoff (2026-07-27)
 
@@ -634,3 +612,38 @@ runtime authority.
 
 **Canonical:** `docs/spec/design-system.md` § Artifact Ladder, `docs/modules/ui.md`
 § UI Block Selection, `scripts/ui-component-registry.mjs`.
+
+## D087: Mã chứng từ Inventory tuần tự PREFIX-YYYY-#### (2026-07-28)
+
+**Decision:** Phiếu kho mới (GRN, điều chuyển, xuất kho, hao hụt, lệnh SX, kiểm
+kê, phiếu đếm) nhận mã tuần tự `{PREFIX}-{YYYY}-{####}` qua
+`next_inventory_doc_number` (năm VN). PO giữ `next_po_display_id`. Không rewrite
+mã lịch sử; tiêu hao HRM giữ `THB-{report_id}`.
+
+**Canonical:** `docs/ref/inventory.md` § Mã chứng từ kho.
+
+## D088: Phân vai vận hành B đầy đủ — Kế toán · Kho Tổng · Bếp TT + luồng GRN draft→PO (2026-07-28)
+
+**Decision (owner):** Triển khai **phương án B đầy đủ** trên JWT-role hiện tại
+(trước ADR 0015), chấp nhận nợ migrate sang Authority C sau:
+
+1. **Roles/Positions tạm:** `accountant` (Kế toán), `central_supply_ops` (Quản lý
+   kho Tổng), `central_kitchen_lead` (Bếp trưởng Bếp TT) — bổ sung vào
+   `STAFF_ROLES` + Position map + templates + `MODULE_ACL` (sửa D076/D017).
+2. **Kế toán:** login; `/finance` xem/duyệt/tạo chi phí · HĐ NCC · thanh toán AP ·
+   NH · PTTT; slice PO trên `/inventory` (xem/tạo/duyệt). Không HR/gán quyền.
+3. **SoD PO:** không bắt buộc tách tạo≠duyệt — Owner hoặc Kế toán được một người
+   vừa tạo vừa duyệt.
+4. **Kho Tổng / Bếp TT:** nhân sự riêng; tạo/sửa **GRN draft**; không tạo/duyệt PO;
+   confirm nhập kho sau khi PO duyệt. Bếp TT thêm production tại
+   `central_kitchen`.
+5. **Luồng mua:** `GRN draft → Kế toán tạo PO từ GRN → duyệt PO → confirm GRN`.
+   Không entity “Yêu cầu mua hàng”. Confirm GRN **fail closed** nếu thiếu PO đã
+   duyệt (sửa D083).
+6. **QL CN:** giữ L1; **không** xem giá mua / PO chuỗi.
+7. Ba role mới đánh dấu temporary until ADR 0015; Position không trở thành
+   authority vĩnh viễn trong docs product.
+
+**Canonical:** `.omc/plans/role-split-operational-personas.md`,
+`.omc/plans/b-full-ops-roles-workplan.md`, `docs/modules/finance.md` § Owner and
+Accountant Visibility, `docs/ref/inventory.md` § PO/GRN, `docs/spec/role-route-matrix.md`.

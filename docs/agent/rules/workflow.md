@@ -87,6 +87,9 @@ Before marking implementation complete:
 1. Run `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build`.
    For release-grade or broad slices, run `corepack pnpm verify`.
 2. Run targeted tests for the changed behavior and inspect the task-scoped diff.
+   Treat a background-shell completion notification as "finished", not
+   "succeeded" — read the command output file for `Failed:` / non-zero exits
+   before trusting a green notification.
 3. Re-index CodeGraph after source, SQL, or generated-type changes.
 4. Give the checker a machine-readable declaration: set `REVIEW_TIER=Tn` for a
    local run, and include a bare `T1`/`T2`/`T3` token in a commit message inside

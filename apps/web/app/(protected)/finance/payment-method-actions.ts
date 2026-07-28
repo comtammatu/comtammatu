@@ -11,13 +11,13 @@
  */
 
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
+const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 
 const correctPaymentMethodSchema = z.object({
   orderId: z.coerce.number().int().positive(),

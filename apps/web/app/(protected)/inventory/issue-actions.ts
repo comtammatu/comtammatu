@@ -1,6 +1,5 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
@@ -13,6 +12,7 @@ import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import type { TenantSupabase } from "@lib/inventory/types";
+import { allocateInventoryDocNumber } from "./_lib/inventory-doc-number";
 import {
   getEmbeddedIngredientBaseUnitDisplayName,
   getEmbeddedUnitDisplayName,
@@ -29,9 +29,9 @@ function revalidateStockIssueSurfaces({
   branchId: number;
   issueType: string;
 }) {
-  revalidatePath("/inventory/issues");
   revalidatePath("/inventory/consumption");
-  revalidatePath(`/inventory/issues/${issueId}`);
+  revalidatePath("/inventory/consumption");
+  revalidatePath(`/inventory/consumption/${issueId}`);
   revalidatePath(`/inventory/consumption/${issueId}`);
   const branchSurface = issueType === "consumption" ? "consumption" : "issues";
   revalidatePath(`/br/${branchId}/stock/${branchSurface}`);
@@ -156,7 +156,15 @@ export const createStockIssueDraft = withAction(
       };
     }
 
-    const issueNumber = `PXK-${randomUUID().slice(0, 8)}`;
+    const allocated = await allocateInventoryDocNumber(
+      supabase,
+      claims.tenant_id,
+      "issue",
+    );
+    if (!allocated.ok) {
+      return { success: false, error: "Không thể tạo mã phiếu xuất." };
+    }
+    const issueNumber = allocated.code;
     const sourceLocationId = await resolveIssueSourceLocation(
       supabase,
       claims.tenant_id,

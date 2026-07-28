@@ -9,6 +9,7 @@ import {
 test("GRN detail lookup accepts safe numeric IDs and GRN document numbers", () => {
   assert.equal(isGrnLookupParam("42"), true);
   assert.equal(isGrnLookupParam("GRN-20260710-01"), true);
+  assert.equal(isGrnLookupParam("GRN-2026-0001"), true);
   assert.equal(isGrnLookupParam("0"), false);
   assert.equal(isGrnLookupParam("GRN-"), false);
   assert.equal(isGrnLookupParam("../../42"), false);

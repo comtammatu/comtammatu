@@ -29,6 +29,7 @@ type DashboardTransfer = {
 
 type DashboardStocktake = {
   id: number;
+  session_number?: string | null;
   status: string;
   total_items?: number | null;
   counted_items?: number | null;
@@ -289,7 +290,7 @@ export async function loadInventoryDashboardData(
 
     return {
       id: s.id,
-      code: `ST-${String(s.id)}`,
+      code: s.session_number?.trim() || `KK-${String(s.id)}`,
       branchName: s.branches?.name ?? "",
       progress,
       status: s.status,

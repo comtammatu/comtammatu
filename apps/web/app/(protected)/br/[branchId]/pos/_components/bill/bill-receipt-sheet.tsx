@@ -464,7 +464,7 @@ export function BillReceipt({
   const disabledReason = canConfirmPaid
     ? null
     : !isOnline
-      ? "Mất kết nối — không thể thanh toán khi offline"
+      ? "Mất kết nối — không thể thanh toán khi mất mạng"
       : selectedMethod === "cash"
         ? "Khách chưa thanh toán đủ tổng đơn"
         : "Chưa tạo mã chuyển khoản";
@@ -932,7 +932,7 @@ export function BillReceipt({
       if (result.success) {
         if (result.data?.agent_offline) {
           toast.warning(
-            "Máy in đang offline — phiếu tạm tính sẽ in khi kết nối lại",
+            "Máy in đang mất kết nối — phiếu tạm tính sẽ in khi kết nối lại",
           );
         } else {
           toast.success("Đã gửi phiếu tạm tính tới máy in");
@@ -952,7 +952,7 @@ export function BillReceipt({
       const result = await printReceipt(orderId);
       if (result.success) {
         if (result.data?.agent_offline) {
-          toast.warning("Máy in đang offline — hóa đơn sẽ in khi kết nối lại");
+          toast.warning("Máy in đang mất kết nối — hóa đơn sẽ in khi kết nối lại");
         } else {
           toast.success("Đã gửi hóa đơn tới máy in");
         }

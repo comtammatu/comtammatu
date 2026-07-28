@@ -21,7 +21,7 @@ export const catalog = {
     title: "Nguyên liệu",
     add: "Thêm nguyên liệu",
     empty: "Chưa có nguyên liệu nào",
-    searchPlaceholder: "Tìm theo tên hoặc SKU",
+    searchPlaceholder: "Tìm theo tên hoặc mã hàng",
     editAria: (name: string) => `Sửa nguyên liệu ${name}`,
     archiveAria: (name: string) => `Ẩn nguyên liệu ${name}`,
     restoreAria: (name: string) => `Hiện nguyên liệu ${name}`,

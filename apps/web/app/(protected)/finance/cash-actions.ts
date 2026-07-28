@@ -1,13 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
+/** Fund bootstrap / privileged ledger writes stay Owner-only (D088). */
+const OWNER_FUND_ROLES = ["owner"] as const;
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_FUND_AMOUNT = 100_000_000_000;
 const requiredFundAmount = z.preprocess(
@@ -21,8 +22,8 @@ const initializeFinanceFundsSchema = z.object({
   bankBalance: requiredFundAmount,
   boundaryMode: z.enum(["cutover_now", "project_start_day"]),
   date: z.string().regex(BUSINESS_DATE, "Ngày mở sổ không hợp lệ"),
-  reason: z.string().trim().min(5, "Cần ghi rõ bằng chứng đối chiếu").max(500),
-  confirmed: z.boolean().refine(Boolean, "Cần xác nhận mốc mở sổ bất biến"),
+  reason: z.string().trim().min(5, "Cần ghi nguồn số hoặc ghi chú").max(500),
+  confirmed: z.boolean().refine(Boolean, "Cần xác nhận trước khi lưu"),
   idempotencyKey: z.string().uuid(),
 });
 
@@ -52,19 +53,19 @@ function financeFundError(
     return "Yêu cầu này đã được dùng với dữ liệu khác. Hãy đóng và mở lại biểu mẫu.";
   }
   if (message.includes("finance_funds_already_initialized")) {
-    return "Mốc mở sổ đã được ghi nhận và không thể thay đổi.";
+    return "Số dư đầu đã được ghi và không thể thay đổi.";
   }
   if (message.includes("finance_fund_legacy_cutover_required")) {
-    return "Dữ liệu tồn quỹ cũ cần được xác minh qua quy trình cutover kiểm soát.";
+    return "Có số dư cũ chưa chốt. Liên hệ hỗ trợ trước khi mở sổ mới.";
   }
   if (message.includes("finance_funds_not_initialized")) {
-    return "Cần ghi nhận mốc mở sổ trước khi điều chỉnh.";
+    return "Cần nhập số dư đầu trước khi điều chỉnh.";
   }
 
   console.error("[finance:funds] write failed", operation, error.code);
   return operation === "opening"
-    ? "Không thể ghi nhận mốc mở sổ."
-    : "Không thể ghi nhận điều chỉnh.";
+    ? "Không thể mở sổ quỹ."
+    : "Không thể điều chỉnh số dư.";
 }
 
 export async function initializeFinanceFunds(
@@ -86,7 +87,7 @@ export async function initializeFinanceFunds(
   }
 
   const ctx = await getAuthContextWithPermission(
-    FINANCE_ROLES,
+    OWNER_FUND_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền." };
@@ -120,7 +121,7 @@ export async function createFinanceFundAdjustment(
   }
 
   const ctx = await getAuthContextWithPermission(
-    FINANCE_ROLES,
+    OWNER_FUND_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền." };

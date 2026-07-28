@@ -60,13 +60,14 @@ test("Owner list and finance controls use actual touch-sized fields below deskto
   const ingredients = read(INGREDIENTS_CLIENT);
   const dataTable = read(DATA_TABLE);
 
-  for (const source of [financeFilter, currentFunds, ingredients]) {
-    assert.match(source, /useIsMobile\(1024\)/);
-  }
+  assert.match(financeFilter, /useFormControlSize\(\)/);
+  assert.match(currentFunds, /useIsMobile\(1024\)/);
+  assert.match(ingredients, /useIsMobile\(1024\)/);
+  assert.match(ingredients, /useFormControlSize\(\)/);
   assert.match(dataTable, /mobileBreakpoint = 1024/);
   assert.match(dataTable, /useIsMobile\(mobileBreakpoint\)/);
 
-  assert.match(financeFilter, /size=\{isTouchLayout \? "touch" : "default"\}/);
+  assert.match(financeFilter, /size=\{controlSize\}/);
   assert.match(currentFunds, /size=\{isTouchLayout \? "touch" : "sm"\}/);
   assert.match(
     ingredients,
@@ -74,8 +75,9 @@ test("Owner list and finance controls use actual touch-sized fields below deskto
   );
   assert.match(
     dataTable,
-    /<InputGroup[\s\S]{0,160}size=\{isTouchLayout \? "touch" : "default"\}/,
+    /const controlSize = isTouchLayout \? "touch" : "field"/,
   );
+  assert.match(dataTable, /<InputGroup[\s\S]{0,160}size=\{controlSize\}/);
   assert.doesNotMatch(dataTable, /isTouchLayout \? "h-12" : "h-7"/);
 });
 
@@ -84,17 +86,20 @@ test("Owner order and refund controls use named touch variants below desktop", (
   const refunds = read(REFUNDS_CLIENT);
   const pageBody = read(ORDERS_PAGE_BODY);
 
-  for (const source of [orders, refunds]) {
-    assert.match(source, /useIsMobile\(1024\)/);
-    assert.match(source, /size=\{isTouchLayout \? "touch" : "default"\}/);
-  }
+  assert.match(orders, /useFormControlSize\(\)/);
+  assert.match(refunds, /useIsMobile\(1024\)/);
+  assert.match(orders, /size=\{controlSize\}/);
+  assert.match(
+    orders,
+    /size=\{controlSize === "touch" \? "touch" : "default"\}/,
+  );
+  assert.match(refunds, /size=\{isTouchLayout \? "touch" : "default"\}/);
 
   assert.equal(
-    (orders.match(/<InputGroup(?:\s|>)[\s\S]*?size=\{isTouchLayout/g) ?? [])
+    (orders.match(/<InputGroup(?:\s|>)[\s\S]*?size=\{controlSize/g) ?? [])
       .length,
     2,
   );
-  assert.match(orders, /size=\{isTouchLayout \? "touch" : "sm"\}/);
   assert.match(refunds, /actionSize=\{isTouchLayout \? "touch" : "default"\}/);
   assert.match(pageBody, /size="touch"/);
   assert.doesNotMatch(pageBody, /size=\{embedded \? "touch" : "sm"\}/);

@@ -27,8 +27,14 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import { FormDialog, TextField } from "@/components/form";
 import { messages } from "@lib/messages";
+import { FORM_VI } from "@comtammatu/shared/messages";
 import { InventoryListFrame } from "../../_components/inventory-list-frame";
 import {
   createUnit,
@@ -161,41 +167,37 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
     );
   }
 
-  function RowActions({ row }: { row: UnitRow }) {
-    return (
-      <div className="flex items-center justify-end gap-1">
-        {!row.inUse ? (
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            onClick={() => openEdit(row)}
-          >
-            <IconPencil className="size-4" />
-            <span className="sr-only">{copy.edit}</span>
-          </Button>
-        ) : null}
-        {row.inUse ? (
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            disabled={!row.is_active}
-            onClick={() => handleDeactivate(row)}
-          >
-            <IconPause className="size-4 text-warning" />
-            <span className="sr-only">{copy.deactivate.action}</span>
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon-touch"
-            onClick={() => handleDelete(row)}
-          >
-            <IconTrash className="size-4 text-destructive" />
-            <span className="sr-only">{copy.delete.action}</span>
-          </Button>
-        )}
-      </div>
-    );
+  function getUnitRowActions(row: UnitRow): RowActionItem[] {
+    const items: RowActionItem[] = [];
+    if (!row.inUse) {
+      items.push({
+        key: "edit",
+        label: copy.edit,
+        icon: <IconPencil />,
+        onSelect: () => openEdit(row),
+      });
+      items.push({
+        key: "delete",
+        label: copy.delete.action,
+        icon: <IconTrash />,
+        destructive: true,
+        separatorBefore: true,
+        onSelect: () => {
+          void handleDelete(row);
+        },
+      });
+      return items;
+    }
+    items.push({
+      key: "deactivate",
+      label: copy.deactivate.action,
+      icon: <IconPause />,
+      disabled: !row.is_active,
+      onSelect: () => {
+        void handleDeactivate(row);
+      },
+    });
+    return items;
   }
 
   const columns: DataTableColumn<UnitRow>[] = [
@@ -213,9 +215,23 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
     },
     {
       key: "actions",
-      header: "",
-      className: "w-28",
-      render: (row) => <RowActions row={row} />,
+      header: FORM_VI.action,
+      className: "w-14",
+      render: (row) => {
+        const items = getUnitRowActions(row);
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <RowActionsMenu
+              items={items}
+              label={FORM_VI.action}
+              triggerSize="icon-sm"
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -299,10 +315,21 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
           columns={columns}
           data={packagingRows}
           getRowKey={(row) => row.id}
+          onRowClick={(row) => {
+            if (!row.inUse) openEdit(row);
+          }}
+          renderRowContextMenu={(row) => (
+            <RowActionsContextMenuItems items={getUnitRowActions(row)} />
+          )}
           emptyTitle={copy.emptyPackaging}
           emptyMode="no-data"
           mobileCardRender={(row) => (
-            <Item variant="outline">
+            <Item
+              variant="outline"
+              onClick={() => {
+                if (!row.inUse) openEdit(row);
+              }}
+            >
               <ItemContent className="min-w-0">
                 <ItemTitle size="heading" className="font-mono">
                   {row.code}
@@ -312,7 +339,13 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
                 </ItemDescription>
               </ItemContent>
               <ItemActions className="self-center">
-                <RowActions row={row} />
+                <div onClick={(event) => event.stopPropagation()}>
+                  <RowActionsMenu
+                    items={getUnitRowActions(row)}
+                    label={FORM_VI.action}
+                    triggerSize="icon-touch"
+                  />
+                </div>
               </ItemActions>
             </Item>
           )}

@@ -1,8 +1,10 @@
+import { Truck as IconTruck } from "lucide-react";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   AppBackLink,
   AppEmptyState,
   AppPageHeader,
+  AppSection,
   DocumentFormFrame,
 } from "@/components/surface";
 import { loadGrnSourcePageData } from "@lib/inventory/grn-source-data";
@@ -47,7 +49,8 @@ export async function GrnNewPageContent({ searchParams }: GrnNewPageProps) {
           description={INVENTORY_VI.chooseSourceDescription}
         />
       }
-      width="narrow"
+      width="wide"
+      density="compact"
     >
       {data.suppliersLoadFailed ? (
         <AppEmptyState
@@ -56,12 +59,29 @@ export async function GrnNewPageContent({ searchParams }: GrnNewPageProps) {
           title={INVENTORY_VI.grnSupplierLoadFailed}
         />
       ) : (
-        <SupplierPicker
-          suppliers={data.suppliers}
-          basePath="/inventory/grn/new"
-          branchId={data.branchId}
-          canCreate={data.canCreateSupplier}
-        />
+        <AppSection
+          size="sm"
+          title={INVENTORY_VI.receiveBySupplierTitle}
+          description={INVENTORY_VI.receiveBySupplierDescription}
+          icon={<IconTruck />}
+          badge={
+            data.suppliers.length > 0
+              ? {
+                  children: INVENTORY_VI.supplierCountBadge(
+                    data.suppliers.length,
+                  ),
+                }
+              : undefined
+          }
+          contentClassName="gap-3"
+        >
+          <SupplierPicker
+            suppliers={data.suppliers}
+            basePath="/inventory/grn/new"
+            branchId={data.branchId}
+            canCreate={data.canCreateSupplier}
+          />
+        </AppSection>
       )}
     </DocumentFormFrame>
   );

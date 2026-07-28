@@ -1,8 +1,5 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 import { loadProductionSurfaceData } from "../../production-data";
 import { ProductionNewClient } from "./production-new-client";
-import { AppPage, AppPageHeader } from "@/components/surface";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 export default async function ProductionNewPage({
   searchParams,
@@ -29,20 +26,13 @@ export default async function ProductionNewPage({
   );
 
   return (
-    <AppPage width="wide" density="compact">
-      <AppPageHeader
-        eyebrow={INVENTORY_VI.warehouse}
-        title="Tạo lệnh sản xuất mới"
-        description={INVENTORY_VI.productionOrdersCardDescription}
-      />
-      <ProductionNewClient
-        branches={productionBranches}
-        targetBranches={targetBranches}
-        locations={locations}
-        finishedGoods={finishedGoodsWithRecipes}
-        initialBranchId={routeBranchId}
-        basePath="/inventory/production"
-      />
-    </AppPage>
+    <ProductionNewClient
+      branches={productionBranches}
+      targetBranches={targetBranches}
+      locations={locations}
+      finishedGoods={finishedGoodsWithRecipes}
+      initialBranchId={routeBranchId}
+      basePath="/inventory/production"
+    />
   );
 }

@@ -5,6 +5,7 @@ import {
   ClipboardList as IconClipboardList,
   Key as IconKey,
   LayoutDashboard as IconLayoutDashboard,
+  MessageSquareHeart as IconMessageSquareHeart,
   Package as IconPackage,
   Printer as IconPrinter,
   ReceiptText as IconReceiptText,
@@ -43,6 +44,7 @@ const OWNER_ICON_MAP: Record<string, ElementType> = {
   Briefcase: IconBriefcase,
   Building2: IconBuilding2,
   ReceiptText: IconReceiptText,
+  MessageSquareHeart: IconMessageSquareHeart,
 };
 
 function mapItem(item: ResolvedNavLink): ShellNavItem {

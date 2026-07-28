@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
-const operationsSource = readFileSync(
-  "app/(protected)/inventory/operations/page.tsx",
-  "utf8",
-);
 const consumptionSource = readFileSync(
   "app/(protected)/inventory/consumption/page.tsx",
   "utf8",
@@ -16,10 +12,13 @@ const issuesSource = readFileSync(
 );
 
 test("consumption combines operational usage and waste while keeping issue details", () => {
+  assert.equal(
+    existsSync("app/(protected)/inventory/operations/page.tsx"),
+    false,
+  );
   assert.match(
     consumptionSource,
-    /scope="all"[\s\S]*listBasePath="\/inventory\/consumption"[\s\S]*detailBasePath="\/inventory\/issues"/,
+    /scope="all"[\s\S]*listBasePath="\/inventory\/consumption"[\s\S]*detailBasePath="\/inventory\/consumption"/,
   );
-  assert.match(operationsSource, /tab === "consumption" \|\| tab === "issues"/);
-  assert.match(issuesSource, /`\/inventory\/consumption\?\$\{query\}`/);
+  assert.match(issuesSource, /redirect\([\s\S]*\/inventory\/consumption/);
 });

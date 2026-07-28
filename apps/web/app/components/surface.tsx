@@ -97,8 +97,21 @@ export function AppShellPaddingBoundary({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Cancels Owner shell mobile `pb-24` so a sticky CTA can dock above the bottom
+ * nav. Desktop shell uses `lg:pb-0`, so no lg negative margin is required.
+ */
+export const APP_PAGE_STICKY_FOOTER_SHELL_BLEED_CLASSNAME =
+  "in-[[data-owner-shell-scroll]]:-mb-24 in-[[data-owner-shell-scroll]]:lg:mb-0";
+
 export type AppPageProps = {
   children: ReactNode;
+  /**
+   * Full-width slot below the width-constrained body. Use for sticky
+   * `AppDetailFooter` so the CTA can bleed to Owner shell panel edges
+   * instead of sitting inside the centered max-width column.
+   */
+  footer?: ReactNode;
   as?: "div" | "main";
   id?: string;
   tabIndex?: -1;
@@ -113,6 +126,7 @@ export type AppPageProps = {
 
 export function AppPage({
   children,
+  footer,
   as = "div",
   id,
   tabIndex,
@@ -129,6 +143,10 @@ export function AppPage({
   const nesting = useContext(SurfaceNestingContext);
   const applyPadding = padded && !nesting.padded;
   const applyMaxWidth = !nesting.constrained;
+  // Owner shell already owns the scrollport. A second overflow-auto here
+  // steals sticky containing-block from LIST filters and lets the inset
+  // panel chrome scroll away.
+  const applyInnerScroll = scroll && !nesting.padded;
   return (
     <SurfaceNestingContext.Provider value={SURFACE_NESTING_PAGE}>
       <Root
@@ -136,8 +154,12 @@ export function AppPage({
         tabIndex={tabIndex}
         className={cn(
           "min-h-0 flex-1",
-          scroll ? "no-scrollbar overflow-auto" : "overflow-visible",
+          applyInnerScroll ? "no-scrollbar overflow-auto" : "overflow-visible",
           applyPadding && (isCompact ? "p-3" : "p-4"),
+          // Owner shell child is flex-1; grow and push `footer` to the panel
+          // bottom when the body is short. Sticky still pins while scrolling.
+          footer != null && "flex flex-col in-[[data-owner-shell-scroll]]:flex-1",
+          footer != null ? APP_PAGE_STICKY_FOOTER_SHELL_BLEED_CLASSNAME : null,
           className,
         )}
       >
@@ -155,10 +177,22 @@ export function AppPage({
         >
           {children}
         </div>
+        {footer != null ? (
+          <div className="mt-auto w-full shrink-0">{footer}</div>
+        ) : null}
       </Root>
     </SurfaceNestingContext.Provider>
   );
 }
+
+/**
+ * Sticky LIST filter/toolbar chrome inside the Owner shell scrollport.
+ * Use for page-level filters that are not already in AppListFrame's toolbar
+ * slot. Do not use above KPI/dashboard cards — stuck chrome crushes the next
+ * section while scrolling.
+ */
+export const APP_PAGE_STICKY_FILTER_CLASSNAME =
+  "sticky top-0 z-10 bg-background";
 
 export type AppPageHeaderProps = {
   title: ReactNode;
@@ -195,7 +229,7 @@ export function AppPageHeader({
   const Heading = headingLevel;
 
   return (
-    <>
+    <div>
       <header
         className={cn(
           "flex flex-col gap-2",
@@ -236,6 +270,7 @@ export function AppPageHeader({
               <div
                 className={cn(
                   "max-w-3xl text-sm leading-6 text-muted-foreground",
+                  "max-sm:line-clamp-2 max-sm:break-words",
                   compactOnMobile && "max-sm:hidden",
                 )}
               >
@@ -266,7 +301,25 @@ export function AppPageHeader({
         </div>
       </header>
       {tabs ? <div>{tabs}</div> : null}
-    </>
+    </div>
+  );
+}
+
+/**
+ * Sticky wrapper for Owner LIST filter chrome that is not rendered through
+ * AppListFrame's toolbar slot. Sticks at the top of the Owner shell scrollport.
+ */
+export function AppPageStickyChrome({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn(APP_PAGE_STICKY_FILTER_CLASSNAME, className)}>
+      {children}
+    </div>
   );
 }
 
@@ -430,7 +483,7 @@ export function AppSection({
   return (
     <Card size={size} className={cn(SECTION_TONE_CLASSNAME[tone], className)}>
       {hasHeader ? (
-        <CardHeader className="has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
+        <CardHeader className="shrink-0 has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
           <CardTitle
             as={headingLevel}
             className={cn(
@@ -453,13 +506,15 @@ export function AppSection({
               <span className="min-w-0 break-words leading-snug">{title}</span>
             </span>
             {headerHint ? (
-              <span className="shrink-0 text-xs font-medium text-muted-foreground sm:text-right">
+              <span className="max-w-[10rem] shrink-0 truncate text-xs font-medium text-muted-foreground sm:max-w-xs sm:text-right">
                 {headerHint}
               </span>
             ) : null}
           </CardTitle>
           {description ? (
-            <CardDescription>{description}</CardDescription>
+            <CardDescription className="min-w-0 line-clamp-2 break-words">
+              {description}
+            </CardDescription>
           ) : null}
           {badge || action || chevronAction ? (
             <CardAction className="col-start-1 row-span-1 row-start-auto justify-self-start flex flex-wrap items-center justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end sm:justify-end">
@@ -488,7 +543,7 @@ export function AppSection({
         </CardContent>
       ) : null}
       {open && footer ? (
-        <CardFooter className="flex items-center justify-end gap-2 border-t">
+        <CardFooter className="flex shrink-0 items-center justify-end gap-2 border-t">
           {footer}
         </CardFooter>
       ) : null}
@@ -515,10 +570,22 @@ export function AppListFrame({
   return (
     <AppSection
       {...sectionProps}
-      className={cn("overflow-hidden", className)}
+      // Override Card `overflow-hidden` so toolbar Select/Dropdown collision
+      // and any non-portaled layer are not clipped by the LIST frame.
+      className={cn("overflow-visible", className)}
       contentFlush
     >
-      {toolbar}
+      {toolbar ? (
+        <div
+          className={cn(
+            APP_PAGE_STICKY_FILTER_CLASSNAME,
+            // Match the LIST card surface when stuck over scrolling rows.
+            "bg-card",
+          )}
+        >
+          {toolbar}
+        </div>
+      ) : null}
       {children}
     </AppSection>
   );
@@ -528,6 +595,13 @@ export type AppToolbarProps = {
   children?: ReactNode;
   className?: string;
   variant?: "card" | "inline";
+  /**
+   * Stick at the top of the Owner shell scrollport. Use for page-level LIST
+   * filters rendered as a sibling of the table (not via AppListFrame toolbar).
+   * Prefer AppListFrame's toolbar slot when possible. Do not sticky above
+   * KPI/dashboard cards.
+   */
+  sticky?: boolean;
   search?: ReactNode;
   filters?: ReactNode;
   bulk?: ReactNode;
@@ -539,6 +613,7 @@ export function AppToolbar({
   children,
   className,
   variant = "card",
+  sticky = false,
   search,
   filters,
   bulk,
@@ -555,15 +630,19 @@ export function AppToolbar({
   const content = hasSlots ? (
     <>
       {search ? (
-        <ToolbarGroup className="min-w-0 flex-1 gap-2">{search}</ToolbarGroup>
+        <ToolbarGroup className="relative z-0 min-w-0 flex-1 gap-2">
+          {search}
+        </ToolbarGroup>
       ) : null}
       {filters ? (
-        <ToolbarGroup className="shrink-0 gap-2">{filters}</ToolbarGroup>
+        <ToolbarGroup className="relative z-10 shrink-0 gap-2">
+          {filters}
+        </ToolbarGroup>
       ) : null}
       {bulk ? (
         <>
           <Separator orientation="vertical" className="h-6" />
-          <ToolbarGroup className="gap-2">{bulk}</ToolbarGroup>
+          <ToolbarGroup className="relative z-10 gap-2">{bulk}</ToolbarGroup>
         </>
       ) : null}
       {actions ? (
@@ -571,25 +650,40 @@ export function AppToolbar({
           {search || filters || bulk ? (
             <Separator orientation="vertical" className="h-6" />
           ) : null}
-          <ToolbarGroup className="gap-2">{actions}</ToolbarGroup>
+          <ToolbarGroup className="relative z-10 gap-2">{actions}</ToolbarGroup>
         </>
       ) : null}
-      {reset ? <ToolbarGroup className="gap-2">{reset}</ToolbarGroup> : null}
+      {reset ? (
+        <ToolbarGroup className="relative z-10 gap-2">{reset}</ToolbarGroup>
+      ) : null}
     </>
   ) : (
     children
   );
 
   if (variant === "inline") {
-    return (
-      <Toolbar className={cn("gap-3 border-b border-border p-3", className)}>
+    const inlineToolbar = (
+      <Toolbar
+        className={cn(
+          "gap-3 overflow-visible border-b border-border p-3",
+          className,
+        )}
+      >
         {content}
       </Toolbar>
+    );
+    return sticky ? (
+      <div className={APP_PAGE_STICKY_FILTER_CLASSNAME}>{inlineToolbar}</div>
+    ) : (
+      inlineToolbar
     );
   }
 
   return (
-    <Card size="sm">
+    <Card
+      size="sm"
+      className={sticky ? APP_PAGE_STICKY_FILTER_CLASSNAME : undefined}
+    >
       <CardContent>
         <Toolbar className={cn("gap-3", className)}>{content}</Toolbar>
       </CardContent>
@@ -633,12 +727,12 @@ export function DocumentFormFrame({
       mobile={mobile}
       className={className}
       contentClassName={contentClassName}
+      footer={footer}
     >
       {header}
       <div className={cn("flex min-w-0 flex-col gap-4", bodyClassName)}>
         {children}
       </div>
-      {footer}
     </AppPage>
   );
 }
@@ -1032,7 +1126,19 @@ export function AppDetailFooter({
           ? "sm:flex-col sm:items-stretch"
           : "sm:flex-row sm:items-center sm:justify-between",
         sticky
-          ? "sticky bottom-[var(--app-bottom-nav-offset,0px)] z-10 gap-2 bg-background p-2 shadow-lg [&_[data-slot=button]]:w-full sm:[&_[data-slot=button]]:w-auto lg:bottom-0"
+          ? [
+              // Sticky CTA: pin to scrollport bottom while scrolling; AppPage
+              // footer slot uses min-h-full + mt-auto so short pages also dock.
+              "sticky bottom-[var(--app-bottom-nav-offset,0px)] z-10 gap-2 border-border bg-background py-2 shadow-lg lg:bottom-0",
+              // Do not use w-full with -mx bleed: width:100% keeps the border box
+              // at the parent width so background/CTA never reach the panel edge.
+              "px-2 [&_[data-slot=button]]:w-full sm:[&_[data-slot=button]]:w-auto",
+              // Owner shell horizontal pad (`px-3 md:px-4`): widen + pull to panel.
+              "in-[[data-owner-shell-scroll]]:w-[calc(100%+1.5rem)] in-[[data-owner-shell-scroll]]:md:w-[calc(100%+2rem)]",
+              "in-[[data-owner-shell-scroll]]:-mx-3 in-[[data-owner-shell-scroll]]:md:-mx-4",
+              "in-[[data-owner-shell-scroll]]:px-3 in-[[data-owner-shell-scroll]]:md:px-4",
+              "in-[[data-owner-shell-scroll]]:lg:rounded-b-lg",
+            ]
           : "gap-3 py-6",
         className,
       )}

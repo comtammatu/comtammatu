@@ -1,9 +1,9 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory count review management copy */
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Check as IconCheck,
   ClipboardCheck as IconClipboardCheck,
@@ -92,17 +92,18 @@ function renderSlipMobileRow(row: CountSlipRow, onOpen: () => void) {
       type="button"
       variant="ghost"
       className="h-auto w-full justify-stretch p-0 text-left"
-      aria-label={`Xem phiếu đếm của ${row.employeeName}`}
+      aria-label={`Xem phiếu đếm ${row.slipNumber} của ${row.employeeName}`}
       onClick={onOpen}
     >
       <Item variant="outline" className="items-start">
         <ItemContent className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ItemTitle className="min-w-0 truncate">
-              {row.employeeName}
+            <ItemTitle className="min-w-0 truncate font-mono tabular-nums">
+              {row.slipNumber}
             </ItemTitle>
             <StatusBadge domain="count-slip" value={row.status} />
           </div>
+          <ItemDescription className="truncate">{row.employeeName}</ItemDescription>
           <ItemDescription className="break-words">
             {row.branchName} · {row.locationName}
             {row.shiftName ? ` · ${row.shiftName}` : ""}
@@ -129,13 +130,74 @@ function renderSlipMobileRow(row: CountSlipRow, onOpen: () => void) {
   );
 }
 
-export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
+export function CountSlipsClient({
+  initial,
+  initialSlipId = null,
+}: {
+  initial: CountSlipRow[];
+  initialSlipId?: number | null;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
   const [rows, setRows] = useState(initial);
-  const [selectedSlipId, setSelectedSlipId] = useState<number | null>(null);
+  const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
+    initialSlipId,
+  );
 
   useEffect(() => {
     setRows(initial);
   }, [initial]);
+
+  const replaceSlipId = useCallback(
+    (slipId: number | null) => {
+      const next = new URLSearchParams(searchParams.toString());
+      if (slipId == null) next.delete("slipId");
+      else next.set("slipId", String(slipId));
+      const query = next.toString();
+      startTransition(() => {
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      });
+    },
+    [pathname, router, searchParams, startTransition],
+  );
+
+  useEffect(() => {
+    const raw = searchParams.get("slipId");
+    if (raw == null || raw === "") {
+      setSelectedSlipId(null);
+      return;
+    }
+    const parsed = Number(raw);
+    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+      setSelectedSlipId(null);
+      replaceSlipId(null);
+      return;
+    }
+    const exists = rows.some((row) => row.id === parsed);
+    if (!exists) {
+      setSelectedSlipId(null);
+      replaceSlipId(null);
+      return;
+    }
+    setSelectedSlipId(parsed);
+  }, [replaceSlipId, rows, searchParams]);
+
+  const openSlip = useCallback(
+    (slipId: number) => {
+      setSelectedSlipId(slipId);
+      replaceSlipId(slipId);
+    },
+    [replaceSlipId],
+  );
+
+  const closeSlip = useCallback(() => {
+    setSelectedSlipId(null);
+    replaceSlipId(null);
+  }, [replaceSlipId]);
 
   const { pending, history } = useMemo(() => {
     const pendingRows: CountSlipRow[] = [];
@@ -155,10 +217,16 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
     setRows((current) =>
       current.map((row) => (row.id === slipId ? { ...row, status } : row)),
     );
-    setSelectedSlipId(null);
+    closeSlip();
   }
 
   const columns: DataTableColumn<CountSlipRow>[] = [
+    {
+      key: "code",
+      header: "Mã phiếu",
+      className: "w-36 font-mono text-sm tabular-nums",
+      render: (row) => row.slipNumber,
+    },
     {
       key: "employee",
       header: "Nhân viên",
@@ -245,8 +313,10 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
         data={data}
         pageSize={50}
         getRowKey={(row) => row.id}
-        onRowClick={(row) => setSelectedSlipId(row.id)}
-        getRowAriaLabel={(row) => `Xem phiếu đếm của ${row.employeeName}`}
+        onRowClick={(row) => openSlip(row.id)}
+        getRowAriaLabel={(row) =>
+          `Xem phiếu đếm ${row.slipNumber} của ${row.employeeName}`
+        }
         emptyTitle={
           historyTable
             ? "Chưa có lịch sử phiếu đếm"
@@ -259,7 +329,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
         }
         emptyIcon={<IconClipboardCheck />}
         mobileCardRender={(row) =>
-          renderSlipMobileRow(row, () => setSelectedSlipId(row.id))
+          renderSlipMobileRow(row, () => openSlip(row.id))
         }
       />
     );
@@ -274,7 +344,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
         actions={
           <Button
             variant="outline"
-            size="lg"
+            size="touch"
             render={<Link href="/inventory/count-assignments" />}
           >
             <IconClipboardList aria-hidden="true" />
@@ -299,7 +369,7 @@ export function CountSlipsClient({ initial }: { initial: CountSlipRow[] }) {
 
       <CountSlipReviewDialog
         row={selectedRow}
-        onClose={() => setSelectedSlipId(null)}
+        onClose={closeSlip}
         onStatusChange={applyStatus}
       />
     </AppPage>
@@ -339,6 +409,7 @@ function CountSlipReviewDialog({
       title: INVENTORY_VI.countSlipApproveTitle,
       description: INVENTORY_VI.countSlipApproveDescription,
       details: [
+        { label: "Mã phiếu", value: activeRow.slipNumber },
         { label: STAFF_VI.long, value: activeRow.employeeName },
         {
           label: INVENTORY_VI.warehouseShort,
@@ -518,13 +589,14 @@ function CountSlipReviewDialog({
       }}
       title={
         <div className="flex flex-wrap items-center gap-2">
-          <span>{activeRow.employeeName}</span>
+          <span className="font-mono tabular-nums">{activeRow.slipNumber}</span>
           <StatusBadge domain="count-slip" value={activeRow.status} />
         </div>
       }
       description={
         <span className="break-words">
-          {activeRow.branchName} · {activeRow.locationName}
+          {activeRow.employeeName} · {activeRow.branchName} ·{" "}
+          {activeRow.locationName}
           {activeRow.shiftName ? ` · ${activeRow.shiftName}` : ""} ·{" "}
           {INVENTORY_VI.countDateAt(formatVNDate(activeRow.countDate))}
         </span>

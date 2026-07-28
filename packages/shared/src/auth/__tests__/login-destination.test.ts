@@ -27,6 +27,21 @@ test("branch-pinned roles land at their branch root", () => {
   assert.equal(getDefaultRedirect(claims("branch_staff", 5)), "/br/5");
 });
 
+test("D088 accountant lands at finance", () => {
+  assert.equal(getDefaultRedirect(claims("accountant", null)), "/finance");
+});
+
+test("D088 central site roles land at inventory", () => {
+  assert.equal(
+    getDefaultRedirect(claims("central_supply_ops", 15)),
+    "/inventory",
+  );
+  assert.equal(
+    getDefaultRedirect(claims("central_kitchen_lead", 16)),
+    "/inventory",
+  );
+});
+
 test("branch roles without branch scope fail closed", () => {
   assert.equal(
     getDefaultRedirect(claims("branch_staff", null)),

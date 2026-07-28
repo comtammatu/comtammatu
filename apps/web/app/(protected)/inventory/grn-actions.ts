@@ -1,6 +1,5 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { JwtClaims } from "@comtammatu/shared/auth";
@@ -16,6 +15,7 @@ import { resolveSoleGrnWarehouseLocation } from "@lib/inventory/grn-create-model
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
+import { allocateInventoryDocNumber } from "./_lib/inventory-doc-number";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { dispatchNotificationOutbox } from "./notifications-actions";
 
@@ -266,7 +266,7 @@ export async function fetchGrnDetail(
   const grnQuery = supabase
     .from("goods_received_notes")
     .select(
-      "*, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders ( id, po_number )",
+      "*, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders ( id, po_number, status )",
     )
     .eq("tenant_id", claims.tenant_id);
   const { data: grn, error: e1 } = await (
@@ -396,7 +396,15 @@ export const createGrnDraft = withAction(
       targetLocationId = location.id;
     }
 
-    const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
+    const allocated = await allocateInventoryDocNumber(
+      supabase,
+      claims.tenant_id,
+      "grn",
+    );
+    if (!allocated.ok) {
+      return { success: false, error: messages.inventory.grn.createFailed };
+    }
+    const grnNumber = allocated.code;
     const { data: row, error } = await supabase
       .from("goods_received_notes")
       .insert({
@@ -919,13 +927,25 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
         error: messages.inventory.grn.confirmQcPricePhotoRequired,
       };
     }
+    if (error.message.includes("grn_confirm_requires_approved_po")) {
+      return {
+        success: false,
+        error: messages.inventory.grn.confirmRequiresApprovedPo,
+      };
+    }
+    if (error.message.includes("grn_not_draft")) {
+      return {
+        success: false,
+        error: messages.inventory.grn.confirmNotDraft,
+      };
+    }
     if (error.message.includes("supplier_item_mapping_required")) {
       return {
         success: false,
         error: "Phiếu có nguyên liệu chưa được gán cho nhà cung cấp.",
       };
     }
-    return { success: false, error: "Không thể xác nhận phiếu nhập." };
+    return { success: false, error: messages.inventory.grn.confirmFailed };
   }
 
   const reviewCount =

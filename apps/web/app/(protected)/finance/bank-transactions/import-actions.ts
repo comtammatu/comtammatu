@@ -2,13 +2,13 @@
 
 import { z } from "zod";
 import type { Json } from "@comtammatu/database";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { parseSpreadsheetFile } from "@/_lib/spreadsheet";
 import { parseSepayExportRows } from "../_lib/sepay-export-model";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
+const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 const importSchema = z.object({
   file: z
     .instanceof(File)

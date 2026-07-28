@@ -1,4 +1,4 @@
-import { IssueDetailPageContent } from "../../issues/[id]/page";
+import { IssueDetailPageContent } from "../../issues/issue-detail-page-content";
 
 export default async function ConsumptionDetailPage({
   params,

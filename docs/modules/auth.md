@@ -45,7 +45,8 @@ an application role from it.
 | `packages/shared/src/auth/app-discovery.ts`           | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
 | `packages/shared/src/auth/blocked-state.ts`           | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract     |
 | `apps/web/app/(public)/access-denied/page.tsx`        | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
-| `apps/web/app/_lib/auth.ts`                           | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
+| `apps/web/app/_lib/auth.ts`                           | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy session/claims invariant violated; probes Auth liveness and redirects revoked zombie JWTs to `/api/auth/signout` | Layout claims + liveness helper |
+| `apps/web/app/_lib/auth-session-liveness.ts`          | `probeAuthSessionLiveness()` — Auth `getUser` probe for protected RSC; redirect on revoke | Far-from-expiry zombie clear |
 | `apps/web/proxy.ts`                                   | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
 | `supabase/migrations/20260727120000_baseline.sql`     | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
 | `supabase/migrations/20260727120000_baseline.sql`     | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
@@ -63,7 +64,10 @@ Manager/Staff discovery contains Branch groups only.
 
 ```
 owner                          ← governance + tenant-wide oversight, vận hành + catalog NL, procurement
-├── branch_manager             ← single branch command + operations
+├── accountant                 ← /finance + Inventory PO slice (D088; temporary until ADR 0015)
+├── central_supply_ops         ← Kho Tổng site ops / GRN draft (D088; temporary until ADR 0015)
+├── central_kitchen_lead       ← Bếp TT production + GRN draft (D088; temporary until ADR 0015)
+├── branch_manager             ← single branch command + operations (no purchase-price view — D088)
 ├── cashier                    ← POS (/br/[branchId]/pos)
 ├── chef                       ← KDS (/br/[branchId]/kds)
 └── branch_staff               ← branch runtime without POS/KDS specialty
@@ -73,6 +77,10 @@ These application roles are emitted in JWT `user_role`. They are derived from
 `positions.code` through the mapper in shared auth and SQL. HR
 display names live in `positions.label_vi` / `positions.label_en` and must not
 gate authz. Unknown or retired position codes fail closed to `unassigned`.
+D088 expands the set beyond the former five-role baseline; the three new roles
+are JWT-role adapters and must migrate under ADR 0015 Authority. Runtime ACL,
+login destinations, and role templates follow D088 Wave 1+; treat the tree above
+as the live product contract until ADR 0015 replaces temporary JWT roles.
 
 ## RLS Gate Choice — Live Permission Grants vs JWT Role
 
@@ -217,7 +225,7 @@ permission enforcement.
 
 The `proxy(request)` function evaluates in order:
 
-1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied`, and exact `/br/[branchId]/runner` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
+1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied`, and exact `/br/[branchId]/runner` (`route-resolution.ts:isPublicAppPath`). `/r` and `/api/feedback` are public guest feedback surfaces (QR scan and submit API). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
 2. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo)`; unauthenticated users see the form.
 3. **Unauthenticated → `/login`**.
 4. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
@@ -236,7 +244,11 @@ direct links.
 
 > _After `proxy()` returns on a protected path, any layout or page downstream can assume: the user is authenticated, claims are valid, the role has module access, and — for protected branch-scoped `/br/[branchId]/*` surfaces — branch scope matches._
 
-`loadAuthState()` throws if the invariant is violated. This surfaces proxy gaps via `error.tsx` rather than masking them with silent redirects.
+`loadAuthState()` throws if the proxy session/claims invariant is violated
+(surfaces gaps via `error.tsx`). Separately, when Auth session is revoked while
+the cookie JWT is still valid, `loadAuthState` redirects to GET
+`/api/auth/signout` via `probeAuthSessionLiveness` — that is Auth liveness
+recovery, not a second ACL gate.
 
 ## Failure Modes
 
@@ -248,8 +260,16 @@ direct links.
 | RLS blocks silently               | `{ data: null, error: null }` — no error thrown                                                       | Check GRANT + RLS policy for the table                                                                                                  |
 | Role not in MODULE_ACL            | `canAccess()` returns false, user redirected                                                          | Add role to MODULE_ACL for the module                                                                                                   |
 | Stale JWT after role change       | Old role persists until token refresh                                                                 | Call `supabase.auth.refreshSession()` or wait for proxy `updateSession()`                                                               |
+| Zombie JWT after global signOut   | Peer tab still has valid access JWT; refresh terminal (`session_not_found` / refresh_token_*) while auth-js proactive-preserve would keep session | Middleware forces anonymous + deletion cookies when terminal refresh observed (even if access still valid). Mutations via `withAction` return `session_expired` after `getUser` liveness. Protected `loadAuthState` probes Auth via `probeAuthSessionLiveness` and redirects revoked sessions to GET `/api/auth/signout` (cookie clear). Residual: public Runner (intentional) and any staff surface that skips `loadAuthState`. See `ZOMBIE-JWT-AFTER-GLOBAL-SIGNOUT`. |
 
 > **Login error consolidation (2026-05-07):** All post-validation failure modes (wrong creds, no session, no claims) return the same generic Vietnamese copy `"Email hoặc mật khẩu không đúng"` to prevent credential-validity enumeration. Distinguishing context lives only in structured server logs. See regression rule `LOGIN-MESSAGE-MUST-BE-GENERIC` and `apps/web/app/(public)/(auth)/login/actions.ts`.
+
+### Proxy session refresh vs Auth liveness
+
+- **Proxy / middleware:** `getSession()` only (`PROXY-NEVER-CALL-GETUSER`). Near-expiry refresh runs automatically; terminal refresh failures clear the session. Middleware additionally overrides auth-js proactive-preserve so a still-valid access JWT cannot outlive a dead refresh token on that request path.
+- **RSC `getAuthContext`:** cookie `getSession()` claims only — do not add `getUser()` here (GRN/expense false-deny).
+- **Protected RSC `loadAuthState`:** cookie `getSession()` plus Auth liveness via `probeAuthSessionLiveness` (`apps/web/app/_lib/auth-session-liveness.ts`). Revoked Auth → redirect to GET `/api/auth/signout` (Route Handler Set-Cookie). This closes the far-from-expiry zombie window on layouts/pages that call `loadAuthState` (including POS layout).
+- **Mutations (`withAction*`):** Auth liveness via `getUser()`; revoked Auth → `session_expired` + local `signOut`, never soft "Không có quyền".
 
 ## Blocked-State Reasons
 
@@ -290,5 +310,5 @@ Single canonical helper for "send a blocked user somewhere they can read what ha
 - **JWT claims over DB lookup per request:** Performance. Claims are verified cryptographically without a DB round-trip. Trade-off: stale data until token refresh.
 - **SECURITY DEFINER on hook:** Required by Supabase — the auth hook must read `profiles` which RLS would block during token minting.
 - **Single ACL source:** `module-acl.ts` prevents drift between proxy, nav, and layout guards.
-- **Single gate = proxy:** layouts and pages must not re-check session/claims/ACL. `loadAuthState()` throws (not redirects) if claims are missing; proxy remains the only route gate.
+- **Single gate = proxy:** layouts and pages must not re-check session/claims/ACL. `loadAuthState()` throws (not redirects) if claims are missing; proxy remains the only route gate. Auth-session revoke recovery (redirect to signout) is liveness, not ACL.
 - **Invite-only (no self-signup):** Business requirement — staff are added by managers via Admin API with pre-set `tenant_id` + `role`.

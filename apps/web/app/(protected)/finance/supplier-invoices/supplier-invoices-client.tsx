@@ -16,6 +16,7 @@ import { z } from "zod";
 import {
   TriangleAlert as IconAlertTriangle,
   Eye as IconEye,
+  ReceiptText as IconReceipt,
   Search as IconSearch,
   Trash as IconTrash,
   Upload as IconUpload,
@@ -82,17 +83,17 @@ import {
 import {
   InventoryListFrame,
   inventoryListFilterSelectClassName,
-} from "../_components/inventory-list-frame";
+} from "../../inventory/_components/inventory-list-frame";
 import {
   attachSupplierInvoiceVatEvidence,
   createSupplierInvoice,
   fetchSupplierInvoicesPage,
   recordSupplierPayment,
   recomputeInvoiceMatching,
-} from "../procurement-actions";
+  type SupplierInvoiceCursor,
+} from "../supplier-invoice-actions";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import type { SupplierInvoiceCursor } from "../procurement-actions";
 import {
   getSupplierInvoiceOutstandingAmount,
   mapSupplierInvoiceRow,
@@ -103,6 +104,7 @@ import {
   getSupplierInvoiceDisplayMatchStatus as getDisplayMatchStatus,
   getSupplierInvoiceGroupId,
   hasSupplierInvoiceListFilters,
+  isSupplierInvoiceMissingVatEvidence,
   isSupplierInvoiceOverdue as isInvoiceOverdue,
   supplierInvoiceFiltersKey,
   SUPPLIER_INVOICE_MATCH_STATUSES,
@@ -112,7 +114,11 @@ import {
   type SupplierInvoiceViewMode,
 } from "./supplier-invoice-list-model";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
-import { RowActionsMenu } from "@/components/row-actions-menu";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 
 import { formatPercent } from "@comtammatu/shared/format";
 import { formatVND } from "@lib/inventory/format";
@@ -315,7 +321,7 @@ function DetailFact({
 }) {
   return (
     <Item variant="outline" size="sm" className={cn("items-start", className)}>
-      <ItemContent className="gap-0.5">
+      <ItemContent className="gap-1">
         <ItemDescription className="line-clamp-none">{label}</ItemDescription>
         <ItemTitle
           size="heading"
@@ -678,6 +684,7 @@ export function SupplierInvoicesClient({
   const paymentStatusFilter = filters.paymentStatus ?? ALL_FILTER_VALUE;
   const viewMode: SupplierInvoiceViewMode = filters.viewMode;
   const showOnlyOverdue = filters.overdueOnly;
+  const showOnlyMissingVat = filters.vatEvidence === "missing";
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
     preselectInvoiceId,
   );
@@ -706,6 +713,7 @@ export function SupplierInvoicesClient({
       matchStatus: filters.matchStatus ?? undefined,
       paymentStatus: filters.paymentStatus ?? undefined,
       overdueOnly: filters.overdueOnly,
+      vatEvidence: filters.vatEvidence ?? undefined,
       viewMode: filters.viewMode,
     }),
     [filters],
@@ -1193,11 +1201,18 @@ export function SupplierInvoicesClient({
               </p>
             ) : null}
           </div>
-          {group.overdueCount > 0 ? (
-            <Badge variant="outline" className="border-destructive/20">
-              {copy.overdueGroupSummary(group.overdueCount)}
-            </Badge>
-          ) : null}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {group.overdueCount > 0 ? (
+              <Badge variant="outline" className="border-destructive/20">
+                {copy.overdueGroupSummary(group.overdueCount)}
+              </Badge>
+            ) : null}
+            {group.missingVatCount > 0 ? (
+              <Badge variant="outline" className="border-warning/20">
+                {copy.vatMissingGroupSummary(group.missingVatCount)}
+              </Badge>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-4 grid gap-2 text-sm">
@@ -1248,6 +1263,23 @@ export function SupplierInvoicesClient({
     );
   };
 
+  const getSupplierInvoiceGroupRowActions = (
+    group: SupplierInvoiceGroup,
+  ): RowActionItem[] => {
+    const primaryInvoice = getPrimaryInvoice(group);
+    return [
+      {
+        key: "view",
+        label: copy.groupDetailAction,
+        icon: <IconEye data-icon="inline-start" />,
+        disabled: primaryInvoice == null,
+        onSelect: () => {
+          if (primaryInvoice) openInvoiceDetail(primaryInvoice.id);
+        },
+      },
+    ];
+  };
+
   const invoiceGroupColumns: DataTableColumn<SupplierInvoiceGroup>[] = [
     {
       key: "group",
@@ -1257,14 +1289,24 @@ export function SupplierInvoicesClient({
         <div className="flex min-w-0 flex-col gap-1">
           <p className="truncate text-foreground">{group.title}</p>
           <p className="text-xs text-muted-foreground">{group.subtitle}</p>
-          {group.overdueCount > 0 ? (
-            <Badge
-              variant="outline"
-              className="w-fit border-destructive/20 text-xs"
-            >
-              {copy.overdueGroupSummary(group.overdueCount)}
-            </Badge>
-          ) : null}
+          <div className="flex flex-wrap gap-1">
+            {group.overdueCount > 0 ? (
+              <Badge
+                variant="outline"
+                className="w-fit border-destructive/20 text-xs"
+              >
+                {copy.overdueGroupSummary(group.overdueCount)}
+              </Badge>
+            ) : null}
+            {group.missingVatCount > 0 ? (
+              <Badge
+                variant="outline"
+                className="w-fit border-warning/20 text-xs"
+              >
+                {copy.vatMissingGroupSummary(group.missingVatCount)}
+              </Badge>
+            ) : null}
+          </div>
         </div>
       ),
     },
@@ -1346,7 +1388,7 @@ export function SupplierInvoicesClient({
       header: "",
       className: "w-12 text-right",
       render: (group) => {
-        const primaryInvoice = getPrimaryInvoice(group);
+        const items = getSupplierInvoiceGroupRowActions(group);
 
         return (
           <div
@@ -1355,17 +1397,7 @@ export function SupplierInvoicesClient({
             onKeyDown={(event) => event.stopPropagation()}
           >
             <RowActionsMenu
-              items={[
-                {
-                  key: "view",
-                  label: copy.groupDetailAction,
-                  icon: <IconEye data-icon="inline-start" />,
-                  disabled: primaryInvoice == null,
-                  onSelect: () => {
-                    if (primaryInvoice) openInvoiceDetail(primaryInvoice.id);
-                  },
-                },
-              ]}
+              items={items}
               label={`${copy.groupDetailAction}: ${group.title}`}
               triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
             />
@@ -1420,6 +1452,19 @@ export function SupplierInvoicesClient({
       >
         <IconAlertTriangle data-icon="inline-start" />
         {copy.overdueOnly}
+      </Button>
+      <Button
+        type="button"
+        size={controlSize}
+        variant={showOnlyMissingVat ? "default" : "outline"}
+        onClick={() =>
+          replaceListParam("vat", showOnlyMissingVat ? null : "missing")
+        }
+        aria-pressed={showOnlyMissingVat}
+        aria-label={copy.vatMissingOnlyAria}
+      >
+        <IconReceipt data-icon="inline-start" />
+        {copy.vatMissingOnly}
       </Button>
     </div>
   );
@@ -1484,7 +1529,7 @@ export function SupplierInvoicesClient({
         actions={
           <Button
             type="button"
-            size="lg"
+            size="touch"
             onClick={() => setCreateOpen(true)}
           >
             {copy.createAction}
@@ -1649,6 +1694,11 @@ export function SupplierInvoicesClient({
                   ? "selected"
                   : undefined
               }
+              renderRowContextMenu={(group) => (
+                <RowActionsContextMenuItems
+                  items={getSupplierInvoiceGroupRowActions(group)}
+                />
+              )}
               mobileCardRender={renderInvoiceGroupCard}
             />
             {hasMore ? (
@@ -1670,7 +1720,7 @@ export function SupplierInvoicesClient({
         <SheetContent
           side="right"
           size="lg"
-          className="w-full gap-0 p-0 sm:max-w-xl"
+          className="w-full gap-1 p-0 sm:max-w-xl"
         >
           <SheetHeader>
             <SheetTitle className="font-mono">{detailTitle}</SheetTitle>
@@ -1719,6 +1769,12 @@ export function SupplierInvoicesClient({
                               getSupplierInvoiceOutstandingAmount(invoice),
                             ),
                           )}
+                          {isSupplierInvoiceMissingVatEvidence(invoice) ? (
+                            <span className="text-warning">
+                              {" · "}
+                              {copy.vatAttachmentMissing}
+                            </span>
+                          ) : null}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1842,7 +1898,7 @@ export function SupplierInvoicesClient({
                     <DetailFact
                       label={copy.vat}
                       value={
-                        <span className="flex flex-col gap-0.5">
+                        <span className="flex flex-col gap-1">
                           <span>{vatSummaryLabel}</span>
                           <span className="font-mono tabular-nums">
                             {messages.inventory.common.currencyCompact(

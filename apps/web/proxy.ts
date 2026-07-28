@@ -183,11 +183,14 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  // Owner routes are an owner-only surface. Capability keys such as
-  // inventory and orders remain shared with Branch-native routes, so this
-  // surface gate must run before the per-module capability gate below.
+  // Owner-plane routes default to owner-only. D088 temporary roles may access
+  // specific ModuleKeys (finance / inventory) via MODULE_ACL — admit those
+  // before bouncing non-owners to their landing page.
   if (isOwnerRoutePath(pathname) && claims.user_role !== "owner") {
-    return redirectToDefaultLanding(request, response, claims);
+    const ownerModuleKey: ModuleKey | null = resolveModuleFromPath(pathname);
+    if (!ownerModuleKey || !canAccess(claims.user_role, ownerModuleKey)) {
+      return redirectToDefaultLanding(request, response, claims);
+    }
   }
 
   // Module ACL: each route resolves to a ModuleKey, and the user's role must

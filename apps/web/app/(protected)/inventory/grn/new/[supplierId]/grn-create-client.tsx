@@ -6,9 +6,11 @@ import {
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
   Pencil as IconPencil,
+  Plus as IconPlus,
   Search as IconSearch,
   Trash as IconTrash,
 } from "lucide-react";
+import { cn } from "@comtammatu/ui";
 import {
   InputGroup,
   InputGroupAddon,
@@ -16,8 +18,6 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Button } from "@comtammatu/ui/components/button";
-import { Frame } from "@comtammatu/ui/components/frame";
-import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
   Select,
   SelectContent,
@@ -26,11 +26,13 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { Item } from "@comtammatu/ui/components/item";
 import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import {
   GrnLineEditFields,
   GrnLineEditSheet,
 } from "@/(protected)/inventory/_components/grn-line-editor";
+import { AppDialog } from "@/components/form/form-dialog";
 import { FormField } from "@/components/form/form-field";
 import {
   AppBackLink,
@@ -40,13 +42,20 @@ import {
   AppSection,
   DocumentFormFrame,
 } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
+import { formatQty } from "@lib/inventory/format";
 import { getDisplayReferenceCost } from "@lib/inventory/reference-cost";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import type {
   GrnCreatePageData,
   GrnLineEditState,
 } from "@lib/inventory/grn-create-model";
+import { getGrnLocationKindLabel } from "@lib/inventory/grn-create-model";
+import type { GrnDraftLine } from "@lib/inventory/grn-draft";
 import { useGrnCreateController } from "@lib/inventory/use-grn-create-controller";
 import { messages } from "@lib/messages";
 
@@ -84,6 +93,73 @@ function useIsDesktopLineEdit(): boolean {
   );
 }
 
+function DraftLineMobileCard({
+  line,
+  onEdit,
+  onRemove,
+}: {
+  line: GrnDraftLine;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
+  const hasPrice = line.unitCost != null && line.unitCost > 0;
+  const lineTotal =
+    hasPrice && line.unitCost != null ? line.quantity * line.unitCost : null;
+
+  return (
+    <Item variant="outline" className="items-start gap-3 px-3 py-2.5">
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={onEdit}
+        className="h-auto min-w-0 flex-1 justify-start px-0 py-0 text-left"
+      >
+        <span className="flex min-w-0 flex-col">
+        <p className="truncate text-sm font-semibold leading-tight">
+          {line.ingredientName}
+        </p>
+        <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+          {formatQty(line.quantity)} {line.unit}
+          {hasPrice && line.unitCost != null
+            ? ` · ${GRN_CREATE_COPY.moneyVnd(line.unitCost)}/${line.unit}`
+            : ""}
+        </p>
+        {lineTotal != null ? (
+          <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
+            {GRN_CREATE_COPY.moneyVnd(lineTotal)}
+          </p>
+        ) : (
+          <p className="mt-0.5 text-xs font-medium text-warning">
+            {GRN_CREATE_COPY.priceRequired}
+          </p>
+        )}
+        </span>
+      </Button>
+      <div className="flex shrink-0 items-center gap-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-lg"
+          onClick={onEdit}
+          aria-label={GRN_CREATE_COPY.editLineAria}
+        >
+          <IconPencil className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-lg"
+          className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={onRemove}
+          aria-label={GRN_CREATE_COPY.deleteLineAria}
+        >
+          <IconTrash className="size-4" />
+        </Button>
+      </div>
+    </Item>
+  );
+}
+
 export function GrnCreateClient({
   basePath = "/inventory/grn/new",
   grnBasePath = "/inventory/grn",
@@ -95,209 +171,288 @@ export function GrnCreateClient({
     grnBasePath,
   });
   const isDesktopLineEdit = useIsDesktopLineEdit();
+  const showDeskEditor = isDesktopLineEdit && controller.edit != null;
+  const showBothReceivingPickers =
+    controller.showBranchPicker && controller.showLocationPicker;
+  const [catalogOpen, setCatalogOpen] = React.useState(false);
+  const grnCopy = messages.inventory.grn;
+  const inventoryCommon = messages.inventory.common;
+
+  function openCatalogPicker() {
+    setCatalogOpen(true);
+  }
+
+  function handleCatalogOpenChange(open: boolean) {
+    setCatalogOpen(open);
+    if (!open) controller.setQuery("");
+  }
+
+  function pickCatalogIngredient(ingredientId: number) {
+    handleCatalogOpenChange(false);
+    controller.openEdit(ingredientId);
+  }
+
+  const draftLineColumns: DataTableColumn<GrnDraftLine>[] = [
+    {
+      key: "name",
+      header: grnCopy.lineHeaderName,
+      render: (line) => (
+        <p className="min-w-0 truncate font-medium">{line.ingredientName}</p>
+      ),
+    },
+    {
+      key: "qty",
+      header: inventoryCommon.quantityShort,
+      className: "w-28 text-right",
+      render: (line) => (
+        <span className="font-mono tabular-nums">
+          {formatQty(line.quantity)} {line.unit}
+        </span>
+      ),
+    },
+    {
+      key: "cost",
+      header: grnCopy.lineHeaderCost,
+      className: "w-32 text-right",
+      render: (line) =>
+        !data.showPurchasePrice ? (
+          <span className="text-muted-foreground">{inventoryCommon.noValue}</span>
+        ) : line.unitCost != null && line.unitCost > 0 ? (
+          <span className="font-mono tabular-nums">
+            {GRN_CREATE_COPY.moneyVnd(line.unitCost)}
+          </span>
+        ) : (
+          <span className="font-medium text-warning">
+            {GRN_CREATE_COPY.priceRequired}
+          </span>
+        ),
+    },
+    {
+      key: "total",
+      header: grnCopy.lineHeaderTotal,
+      className: "w-32 text-right",
+      render: (line) =>
+        data.showPurchasePrice &&
+        line.unitCost != null &&
+        line.unitCost > 0 ? (
+          <span className="font-mono font-semibold tabular-nums">
+            {GRN_CREATE_COPY.moneyVnd(line.quantity * line.unitCost)}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">
+            {inventoryCommon.noValue}
+          </span>
+        ),
+    },
+    {
+      key: "actions",
+      header: (
+        <span className="sr-only">{GRN_CREATE_COPY.lineActionsAria}</span>
+      ),
+      className: "w-24 text-right",
+      render: (line) => (
+        <div
+          className="flex items-center justify-end gap-1"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => controller.openEdit(line.ingredientId)}
+            aria-label={GRN_CREATE_COPY.editLineAria}
+          >
+            <IconPencil className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => void controller.removeLine(line.ingredientId)}
+            aria-label={GRN_CREATE_COPY.deleteLineAria}
+          >
+            <IconTrash className="size-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   const warehouseField = (
-    <div className="grid gap-3">
-      <FormField
-        controlId={
-          data.procurementBranches.length > 0
-            ? "grn-receiving-branch"
-            : undefined
-        }
-        label={messages.inventory.grn.receivingWarehouse}
-        disabled={
-          !controller.showBranchPicker ||
-          controller.submitting ||
-          controller.receivingSiteSaving
-        }
-      >
-        {data.procurementBranches.length > 0 ? (
-          <Select
-            value={
-              controller.branchId != null ? String(controller.branchId) : ""
-            }
-            onValueChange={controller.handleBranchChange}
-            disabled={
-              !controller.showBranchPicker ||
-              controller.submitting ||
-              controller.receivingSiteSaving
-            }
-          >
-            <SelectTrigger
-              id="grn-receiving-branch"
-              size="field"
-              className="w-full"
+    <div
+      className={cn(
+        "grid gap-3",
+        showBothReceivingPickers ? "sm:grid-cols-2" : "sm:grid-cols-1",
+      )}
+    >
+      {controller.showBranchPicker ? (
+        <FormField
+          controlId={
+            data.procurementBranches.length > 0
+              ? "grn-receiving-branch"
+              : undefined
+          }
+          label={
+            showBothReceivingPickers
+              ? GRN_CREATE_COPY.receivingBranch
+              : grnCopy.receivingWarehouse
+          }
+          disabled={controller.submitting || controller.receivingSiteSaving}
+        >
+          {data.procurementBranches.length > 0 ? (
+            <Select
+              value={
+                controller.branchId != null ? String(controller.branchId) : ""
+              }
+              onValueChange={controller.handleBranchChange}
+              disabled={
+                controller.submitting || controller.receivingSiteSaving
+              }
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {data.procurementBranches.map((branch) => (
-                <SelectItem key={branch.id} value={String(branch.id)}>
-                  {branch.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <p className="text-sm font-medium">{controller.selectedBranchName}</p>
-        )}
-      </FormField>
-      <FormField
-        controlId={
-          controller.branchLocations.length > 0
-            ? "grn-receiving-location"
-            : undefined
-        }
-        label={GRN_CREATE_COPY.receivingLocation}
-        disabled={
-          !controller.showLocationPicker ||
-          controller.submitting ||
-          controller.receivingSiteSaving
-        }
-      >
-        {controller.branchLocations.length > 0 ? (
+              <SelectTrigger
+                id="grn-receiving-branch"
+                size="field"
+                className="w-full"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {data.procurementBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={String(branch.id)}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="text-sm font-medium">{controller.selectedBranchName}</p>
+          )}
+        </FormField>
+      ) : null}
+
+      {controller.showLocationPicker ? (
+        <FormField
+          controlId="grn-receiving-location"
+          label={GRN_CREATE_COPY.receivingLocation}
+          description={
+            showBothReceivingPickers
+              ? GRN_CREATE_COPY.receivingLocationHint
+              : undefined
+          }
+          disabled={controller.submitting || controller.receivingSiteSaving}
+        >
           <Select
             value={
               controller.locationId != null ? String(controller.locationId) : ""
             }
             onValueChange={controller.handleLocationChange}
-            disabled={
-              !controller.showLocationPicker ||
-              controller.submitting ||
-              controller.receivingSiteSaving
-            }
+            disabled={controller.submitting || controller.receivingSiteSaving}
           >
             <SelectTrigger
               id="grn-receiving-location"
               size="field"
               className="w-full"
             >
-              <SelectValue />
+              <SelectValue
+                placeholder={GRN_CREATE_COPY.locationUnselected}
+              />
             </SelectTrigger>
             <SelectContent>
               {controller.branchLocations.map((location) => (
                 <SelectItem key={location.id} value={String(location.id)}>
-                  {location.branchName} · {location.name}
+                  {getGrnLocationKindLabel(location)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        ) : (
-          <p className="text-sm font-medium">
-            {GRN_CREATE_COPY.locationUnselected}
-          </p>
-        )}
-      </FormField>
+        </FormField>
+      ) : null}
+
+      {controller.receivingSiteSaving ? (
+        <p
+          className={cn(
+            "text-xs text-muted-foreground",
+            showBothReceivingPickers && "sm:col-span-2",
+          )}
+        >
+          {GRN_CREATE_COPY.receivingLocationSaving}
+        </p>
+      ) : null}
     </div>
   );
 
-  const documentSummary = (
-    <AppSection size="sm" title={messages.inventory.grn.documentLabel}>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-md bg-muted/50 px-3 py-2">
-          <SectionLabel density="dense">
-            {messages.inventory.grn.supplier}
-          </SectionLabel>
-          <p className="truncate text-sm font-semibold">
-            {controller.supplier.name}
-          </p>
-        </div>
-        {controller.showWarehouseEditor ? (
-          <Frame className="p-3 sm:col-span-2">
-            {warehouseField}
-            {controller.receivingSiteSaving ? (
-              <p className="mt-2 text-xs text-muted-foreground">
-                {GRN_CREATE_COPY.receivingLocationSaving}
-              </p>
-            ) : null}
-          </Frame>
-        ) : (
-          <div className="rounded-md bg-muted/50 px-3 py-2">
-            <SectionLabel density="dense">
-              {GRN_CREATE_COPY.receivingLocation}
-            </SectionLabel>
-            <p className="truncate text-sm font-semibold">
-              {controller.selectedBranchName} ·{" "}
-              {controller.selectedLocationName}
-            </p>
-          </div>
-        )}
-      </div>
+  const contextStrip = (
+    <div className="flex flex-col gap-3">
+      {controller.showWarehouseEditor ? (
+        warehouseField
+      ) : (
+        <p className="min-w-0 text-sm">
+          <span className="text-muted-foreground">
+            {grnCopy.receivingWarehouse}{" "}
+          </span>
+          <span className="font-semibold text-foreground">
+            {controller.selectedBranchName} · {controller.selectedLocationName}
+          </span>
+        </p>
+      )}
+    </div>
+  );
+
+  const draftLinesSection = (
+    <AppSection
+      size="sm"
+      title={GRN_CREATE_COPY.draftLinesTitle}
+      contentClassName="gap-2"
+      action={
+        <Button
+          type="button"
+          variant="outline"
+          size="touch"
+          onClick={openCatalogPicker}
+          disabled={controller.submitting}
+        >
+          <IconPlus className="size-4" />
+          {GRN_CREATE_COPY.addItem}
+        </Button>
+      }
+    >
+      {controller.lineCount === 0 ? (
+        <AppEmptyState
+          compact
+          icon={<IconSearch />}
+          title={GRN_CREATE_COPY.draftEmptyTitle}
+          description={GRN_CREATE_COPY.draftEmptyDescription}
+        />
+      ) : (
+        <DataTable
+          columns={draftLineColumns}
+          data={controller.draft.lines}
+          getRowKey={(line) => line.ingredientId}
+          onRowClick={(line) => controller.openEdit(line.ingredientId)}
+          emptyTitle={GRN_CREATE_COPY.draftEmptyTitle}
+          emptyDescription={GRN_CREATE_COPY.draftEmptyDescription}
+          mobileCardRender={(line) => (
+            <DraftLineMobileCard
+              line={line}
+              onEdit={() => controller.openEdit(line.ingredientId)}
+              onRemove={() => void controller.removeLine(line.ingredientId)}
+            />
+          )}
+        />
+      )}
     </AppSection>
   );
 
-  const listColumn = (
-    <>
-      {documentSummary}
-      {controller.lineCount > 0 ? (
-        <AppSection size="sm" contentClassName="gap-2">
-          <div className="flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-            <span>{GRN_CREATE_COPY.addedSummary(controller.lineCount)}</span>
-            <span className="text-foreground">
-              {GRN_CREATE_COPY.moneyVnd(controller.total)}
-            </span>
-          </div>
-          <div className="flex flex-col gap-2">
-            {controller.draft.lines.map((line) => (
-              <div
-                key={line.ingredientId}
-                className="flex items-center justify-between gap-3 rounded-md bg-muted/30 px-3 py-2"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold leading-tight">
-                    {line.ingredientName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {line.unitCost != null && line.unitCost > 0 ? (
-                      <>
-                        {GRN_CREATE_COPY.lineUnitCost(
-                          line.quantity,
-                          line.unit,
-                          line.unitCost,
-                        )}{" "}
-                        <span className="font-medium text-foreground">
-                          {GRN_CREATE_COPY.moneyVnd(
-                            line.quantity * line.unitCost,
-                          )}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="font-medium text-warning">
-                        {GRN_CREATE_COPY.linePriceRequired(
-                          line.quantity,
-                          line.unit,
-                        )}
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-lg"
-                    onClick={() => controller.openEdit(line.ingredientId)}
-                    aria-label={GRN_CREATE_COPY.editLineAria}
-                  >
-                    <IconPencil className="size-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-lg"
-                    className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => controller.removeLine(line.ingredientId)}
-                    aria-label={GRN_CREATE_COPY.deleteLineAria}
-                  >
-                    <IconTrash className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </AppSection>
-      ) : null}
-
+  const catalogPickerDialog = (
+    <AppDialog
+      open={catalogOpen}
+      onOpenChange={handleCatalogOpenChange}
+      title={GRN_CREATE_COPY.catalogTitle}
+      contentClassName="sm:max-w-lg"
+      bodyClassName="gap-3"
+    >
       <InputGroup className="h-12 rounded-lg">
         <InputGroupAddon>
           <IconSearch />
@@ -310,10 +465,11 @@ export function GrnCreateClient({
           placeholder={GRN_CREATE_COPY.searchPlaceholder}
           className="text-base"
           inputMode="search"
+          autoFocus
         />
       </InputGroup>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex max-h-[min(28rem,55dvh)] flex-col gap-2 overflow-y-auto">
         {controller.filtered.length === 0 ? (
           <AppEmptyState
             compact
@@ -342,7 +498,7 @@ export function GrnCreateClient({
                 render={
                   <button
                     type="button"
-                    onClick={() => controller.openEdit(ingredient.id)}
+                    onClick={() => pickCatalogIngredient(ingredient.id)}
                     className="w-full text-left"
                   />
                 }
@@ -375,14 +531,7 @@ export function GrnCreateClient({
           })
         )}
       </div>
-
-      {controller.submitError ? (
-        <Alert variant="destructive">
-          <IconAlertTriangle className="size-4" />
-          <AlertDescription>{controller.submitError}</AlertDescription>
-        </Alert>
-      ) : null}
-    </>
+    </AppDialog>
   );
 
   const header = (
@@ -394,7 +543,6 @@ export function GrnCreateClient({
       }
       eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
       title={controller.supplier.name}
-      description={GRN_CREATE_COPY.newReceiptDescription}
       actions={
         controller.lineCount > 0 ? (
           <Button
@@ -414,23 +562,46 @@ export function GrnCreateClient({
 
   const body = (
     <>
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6">
-        <div className="flex flex-col gap-3">{listColumn}</div>
-        <div className="hidden lg:block">
-          <LineEditPanel
-            edit={controller.edit}
-            onClose={controller.closeEdit}
-            onSave={controller.saveLine}
-            onRemove={() => {
-              if (!controller.edit) return;
-              void controller.removeLine(controller.edit.ingredient.id);
-              controller.closeEdit();
-            }}
-            onPatch={controller.patchEdit}
-            onUnitChange={controller.updateEditUnit}
-          />
+      <div className="flex min-w-0 flex-col gap-3">
+        {contextStrip}
+
+        <div
+          className={cn(
+            // pb-24 clears sticky AppDetailFooter; desk editor max-h stays above it.
+            "flex min-w-0 flex-col gap-3 pb-24",
+            showDeskEditor &&
+              "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:items-start lg:gap-4",
+          )}
+        >
+          <div className="flex min-w-0 flex-col gap-3">
+            {draftLinesSection}
+            {controller.submitError ? (
+              <Alert variant="destructive">
+                <IconAlertTriangle className="size-4" />
+                <AlertDescription>{controller.submitError}</AlertDescription>
+              </Alert>
+            ) : null}
+          </div>
+
+          {showDeskEditor && controller.edit ? (
+            <aside className="hidden lg:sticky lg:top-3 lg:z-0 lg:flex lg:max-h-[calc(100dvh-8.5rem)] lg:flex-col lg:overflow-hidden">
+              <LineEditPanel
+                edit={controller.edit}
+                onClose={controller.closeEdit}
+                onSave={controller.saveLine}
+                onRemove={() => {
+                  void controller.removeLine(controller.edit!.ingredient.id);
+                  controller.closeEdit();
+                }}
+                onPatch={controller.patchEdit}
+                onUnitChange={controller.updateEditUnit}
+              />
+            </aside>
+          ) : null}
         </div>
       </div>
+
+      {catalogPickerDialog}
 
       <GrnLineEditSheet
         edit={isDesktopLineEdit ? null : controller.edit}
@@ -450,43 +621,54 @@ export function GrnCreateClient({
 
   const footer = (
     <AppDetailFooter
-      className="border-0 p-0 shadow-none"
-      trailing={
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
-          <Button
-            type="button"
-            size="touch-lg"
-            onClick={controller.submit}
-            disabled={!controller.canSubmit}
-          >
-            {controller.submitting ? (
-              <>
-                <Spinner className="size-5" />
-                {STATES_VI.saving}
-              </>
-            ) : controller.lineCount === 0 ? (
-              GRN_CREATE_COPY.addItemToContinue
-            ) : (
-              GRN_CREATE_COPY.reviewBeforeConfirm(
-                controller.lineCount,
-                controller.total,
-              )
+      sticky
+      leading={
+        controller.lineCount > 0 ? (
+          <p className="min-w-0 font-mono text-sm font-semibold tabular-nums">
+            {GRN_CREATE_COPY.footerLineSummary(
+              controller.lineCount,
+              controller.total,
             )}
-          </Button>
-        </div>
+          </p>
+        ) : undefined
+      }
+      trailing={
+        <Button
+          type="button"
+          size="touch-lg"
+          className="sm:min-w-80"
+          onClick={controller.submit}
+          disabled={!controller.canSubmit}
+        >
+          {controller.submitting ? (
+            <>
+              <Spinner className="size-5" />
+              {STATES_VI.saving}
+            </>
+          ) : controller.lineCount === 0 ? (
+            GRN_CREATE_COPY.addItemToContinue
+          ) : (
+            GRN_CREATE_COPY.reviewBeforeConfirm
+          )}
+        </Button>
       }
     />
   );
 
   return (
-    <DocumentFormFrame header={header} width="wide" footer={footer}>
+    <DocumentFormFrame
+      header={header}
+      width="wide"
+      density="compact"
+      footer={footer}
+    >
       {body}
     </DocumentFormFrame>
   );
 }
 
 type LineEditPanelProps = {
-  edit: GrnLineEditState | null;
+  edit: GrnLineEditState;
   onClose: () => void;
   onSave: () => void;
   onRemove: () => void;
@@ -503,32 +685,15 @@ function LineEditPanel({
   onUnitChange,
 }: LineEditPanelProps) {
   const valid =
-    edit != null &&
-    edit.quantity > 0 &&
-    edit.unitCost != null &&
-    edit.unitCost > 0;
-
-  if (!edit) {
-    return (
-      <AppSection contentClassName="items-center justify-center py-10 text-center">
-        <p className="text-sm font-medium text-muted-foreground">
-          {GRN_CREATE_COPY.panelEmptyTitle}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {GRN_CREATE_COPY.panelEmptyDescription}
-        </p>
-      </AppSection>
-    );
-  }
+    edit.quantity > 0 && edit.unitCost != null && edit.unitCost > 0;
 
   return (
     <AppSection
+      size="sm"
       title={edit.ingredient.name}
-      description={
-        edit.ingredient.sku
-          ? `${edit.ingredient.sku} · ${GRN_CREATE_COPY.unitLabel(edit.unit)}`
-          : GRN_CREATE_COPY.unitLabel(edit.unit)
-      }
+      description={edit.ingredient.sku || undefined}
+      className="flex min-h-0 max-h-full flex-col overflow-hidden"
+      contentClassName="min-h-0 flex-1 gap-3 overflow-y-auto"
       footer={
         <div className="flex w-full flex-col gap-2">
           <Button
@@ -537,13 +702,16 @@ function LineEditPanel({
             onClick={onSave}
             disabled={!valid}
           >
-            {edit.line ? "Cập nhật" : "Thêm vào phiếu"}
+            {edit.line
+              ? GRN_CREATE_COPY.updateLineOnReceipt
+              : GRN_CREATE_COPY.addLineToReceipt}
           </Button>
           <div className="flex items-center gap-2">
             {edit.line ? (
               <Button
                 type="button"
                 variant="destructive"
+                size="sm"
                 onClick={onRemove}
                 className="flex-1"
               >
@@ -553,6 +721,7 @@ function LineEditPanel({
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={onClose}
               className="flex-1"
             >

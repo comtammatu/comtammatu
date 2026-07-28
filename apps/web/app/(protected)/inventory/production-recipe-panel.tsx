@@ -602,7 +602,7 @@ export function ProductionRecipePanel({
     },
     {
       key: "yield",
-      header: "Yield",
+      header: INVENTORY_VI.yield,
       render: (recipe) => formatQuantity(recipe.yield_factor),
     },
     {
@@ -865,7 +865,7 @@ function RecipeLineItemCard({
             </Badge>
           </div>
           <ItemDescription className="truncate text-xs">
-            Yield {formatQuantity(recipe.yield_factor)}{" "}
+            {INVENTORY_VI.yield} {formatQuantity(recipe.yield_factor)}{" "}
             {recipe.note ? `· ${recipe.note}` : ""}
           </ItemDescription>
         </ItemContent>
@@ -906,7 +906,7 @@ function RecipeLineItemCard({
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          Yield {formatQuantity(recipe.yield_factor)} ·{" "}
+          {INVENTORY_VI.yield} {formatQuantity(recipe.yield_factor)} ·{" "}
           {recipe.note ?? INVENTORY_VI.noNote}
         </ItemDescription>
       </ItemContent>

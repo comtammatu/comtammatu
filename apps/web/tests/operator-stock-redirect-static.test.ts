@@ -198,7 +198,7 @@ test("operator count-slip approvals render inside the branch operator shell", ()
   assert.match(branchDataSource, /import "server-only"/);
   assert.match(branchDataSource, /resolveInventoryListScope/);
   assert.match(branchDataSource, /PERMISSION_KEYS\.INVENTORY_COUNT_APPROVE/);
-  assert.match(globalSource, /export async function CountSlipsPageContent\(\)/);
+  assert.match(globalSource, /export async function CountSlipsPageContent\(/);
   assert.doesNotMatch(globalSource, /routeBranchId/);
   assert.doesNotMatch(clientSource, /embedded|branchScoped/);
 });
@@ -535,7 +535,9 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   const branchReportsModel = read(
     "apps/web/lib/inventory/branch-stock-report-model.ts",
   );
-  const issuesPage = read("apps/web/app/(protected)/inventory/issues/page.tsx");
+  const issuesPage = read(
+    "apps/web/app/(protected)/inventory/issues/issues-page-content.tsx",
+  );
   const issuesClient = read(
     "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
   );
@@ -759,7 +761,7 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   );
   assert.match(
     grnListClient,
-    /render=\{<Link href=\{grnDetailHref\(basePath, grn\.id\)\} \/>\}/,
+    /href=\{grnDetailHref\(basePath, grn\.id\)\}/,
   );
   assert.match(grnListClient, /touch-manipulation cursor-pointer/);
   assert.doesNotMatch(grnListClient, /useLongPress/);

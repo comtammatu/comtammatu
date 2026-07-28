@@ -19,7 +19,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppDetailFooter, AppSection } from "@/components/surface";
+import { AppDetailFooter, AppSection, DescriptionList } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -236,12 +236,10 @@ export function ProductionDetailClient({
   const summaryItems: Array<{
     term: string;
     description: ReactNode;
-    className?: string;
   }> = [
     {
       term: "Chi nhánh",
       description: branchSummary,
-      className: "sm:col-span-2",
     },
     { term: "Ngày tạo", description: formatVNDate(run.created_at) },
     { term: "Thành phẩm", description: run.finished_good_name },
@@ -255,7 +253,6 @@ export function ProductionDetailClient({
     summaryItems.push({
       term: "Ghi chú",
       description: run.notes,
-      className: "sm:col-span-2 lg:col-span-4",
     });
   }
 
@@ -318,21 +315,11 @@ export function ProductionDetailClient({
   return (
     <div className="flex w-full flex-col gap-3">
       <AppSection title="Tổng quan lệnh">
-        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {summaryItems.map((item) => (
-            <div
-              key={item.term}
-              className={`flex min-w-0 flex-col gap-1 ${item.className ?? ""}`}
-            >
-              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {item.term}
-              </dt>
-              <dd className="min-w-0 text-sm leading-6 font-medium">
-                {item.description}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <DescriptionList
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          descriptionClassName="font-medium"
+          items={summaryItems}
+        />
       </AppSection>
 
       {canEdit ? (
@@ -441,16 +428,16 @@ export function ProductionDetailClient({
 
       {run.status === "completed" ? (
         <AppSection title="Kết quả hoàn tất">
-          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex min-w-0 flex-col gap-1">
-              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Số lượng thực tế
-              </dt>
-              <dd className="text-sm leading-6 font-medium">
-                {formatQty(run.actual_quantity ?? 0)} {unit}
-              </dd>
-            </div>
-          </dl>
+          <DescriptionList
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            descriptionClassName="font-medium"
+            items={[
+              {
+                term: "Số lượng thực tế",
+                description: `${formatQty(run.actual_quantity ?? 0)} ${unit}`,
+              },
+            ]}
+          />
         </AppSection>
       ) : null}
 

@@ -81,6 +81,22 @@ for (const forwardText of migrationTexts.slice(1)) {
   )) {
     migrationDelegable.delete(match[1]);
   }
+  for (const match of forwardText.matchAll(
+    /UPDATE public\.permission_keys\s+SET is_delegable_to_staff = true[\s\S]*?WHERE key = ANY \(ARRAY\[([\s\S]*?)\]::text\[\]\)/g,
+  )) {
+    for (const key of parseKeys(match[1])) migrationDelegable.add(key);
+  }
+  for (const match of forwardText.matchAll(
+    /UPDATE public\.permission_keys\s+SET is_delegable_to_staff = true[\s\S]*?WHERE key = '([a-z_]+:[a-z_]+)'/g,
+  )) {
+    migrationDelegable.add(match[1]);
+  }
+  // Fresh catalog rows inserted already delegable (key, module, label, scope, true).
+  for (const match of forwardText.matchAll(
+    /\('([a-z_]+:[a-z_]+)',\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*true\)/g,
+  )) {
+    migrationDelegable.add(match[1]);
+  }
 }
 const missingDelegable = [...migrationDelegable]
   .filter((key) => !seedDelegable.has(key))

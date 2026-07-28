@@ -6,6 +6,10 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cn } from "../lib/utils";
 import { fieldTriggerChrome } from "../lib/field-trigger";
 import {
+  FLOATING_POSITION_METHOD,
+  floatingCollisionBoundary,
+} from "../lib/floating-layer";
+import {
   Check as IconCheck,
   ChevronDown as IconChevronDown,
   ChevronUp as IconChevronUp,
@@ -116,6 +120,9 @@ function SelectContent({
   children,
   position = "popper",
   align = "start",
+  positionMethod = FLOATING_POSITION_METHOD,
+  // LIST toolbars sit inside Card overflow; clipping-ancestors flips into search.
+  collisionBoundary = floatingCollisionBoundary(),
   ...props
 }: SelectContentProps) {
   return (
@@ -123,6 +130,8 @@ function SelectContent({
       <SelectPrimitive.Positioner
         align={align}
         alignItemWithTrigger={position === "item-aligned"}
+        positionMethod={positionMethod}
+        collisionBoundary={collisionBoundary}
         className="isolate z-50"
         {...props}
       >

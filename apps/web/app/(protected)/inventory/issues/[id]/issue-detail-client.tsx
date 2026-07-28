@@ -34,7 +34,6 @@ import {
   ItemFooter,
   ItemHeader,
   ItemTitle,
-  ItemGroup,
 } from "@comtammatu/ui/components/item";
 import {
   Combobox,
@@ -406,8 +405,8 @@ export function IssueDetailClient({
   const pageLayout = (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        {/* Left Column: Ingredients List Table + Audit History */}
-        <div className="flex flex-col gap-4">
+        {/* Lines + history: second on phone, primary column on desktop */}
+        <div className="order-2 flex flex-col gap-4 lg:order-1">
           <AppSection
             title={tTerm("ingredientsList")}
             description={
@@ -419,6 +418,7 @@ export function IssueDetailClient({
               isDraft ? (
                 <Button
                   onClick={() => setAddDialogOpen(true)}
+                  size={isTouchLayout ? "touch" : "default"}
                   className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
                 >
                   <IconCirclePlus className="size-4" />
@@ -482,8 +482,11 @@ export function IssueDetailClient({
               />
             )}
 
-            <Frame className="flex justify-end border-border/60 bg-muted/30 p-4">
-              <div className="flex w-full max-w-sm flex-col gap-3">
+            <Item
+              variant="outline"
+              className="flex-col items-stretch gap-3 bg-muted/30 p-4"
+            >
+              <div className="flex w-full max-w-sm flex-col gap-3 self-end">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
                     {ISSUES_VI.totalLinesColon}
@@ -511,7 +514,7 @@ export function IssueDetailClient({
                   </div>
                 </div>
               </div>
-            </Frame>
+            </Item>
           </AppSection>
 
           {/* Audit History (Collapsible) */}
@@ -524,11 +527,11 @@ export function IssueDetailClient({
           </AppSection>
         </div>
 
-        {/* Right Column: Metadata Overview + Notes */}
-        <div className="flex flex-col gap-4">
+        {/* Overview: first on phone, sidebar on desktop */}
+        <div className="order-1 flex flex-col gap-4 lg:order-2">
           <AppSection title={ISSUES_VI.overviewTab}>
             <DescriptionList
-              className="grid gap-3"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1"
               descriptionClassName="font-semibold"
               items={[
                 {
@@ -573,10 +576,12 @@ export function IssueDetailClient({
 
       {isDraft ? (
         <AppDetailFooter
+          sticky={isTouchLayout}
           leading={
             <Button
               type="button"
               variant="ghost"
+              size={isTouchLayout ? "touch" : "default"}
               onClick={handleCancelIssue}
               className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-60"
               disabled={isPending}
@@ -590,6 +595,7 @@ export function IssueDetailClient({
               <Badge variant="secondary">{ISSUES_VI.draftAutoSaved}</Badge>
               <Button
                 type="button"
+                size={isTouchLayout ? "touch-lg" : "default"}
                 onClick={handleConfirmIssue}
                 disabled={isPending || lines.length === 0}
               >
@@ -603,207 +609,11 @@ export function IssueDetailClient({
     </div>
   );
 
-  const mobileLayout = (
-    <div className="flex flex-col gap-4">
-      {/* 1. Tổng quan xuất kho */}
-      <AppSection title={ISSUES_VI.overviewTab} size="sm">
-        <DescriptionList
-          className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"
-          descriptionClassName="font-semibold text-right"
-          items={[
-            {
-              term: ISSUES_VI.businessKindLabel,
-              description: surface.label,
-            },
-            {
-              term: `${BRANCH_VI.long} xuất`,
-              description: issueBranchName,
-            },
-            {
-              term: ISSUES_VI.totalLines,
-              description: String(lines.length).padStart(2, "0"),
-            },
-            {
-              term: ISSUES_VI.sourceLabel,
-              description: getIssueSourceLabel(issue),
-            },
-            {
-              term: ISSUES_VI.totalValue,
-              description: (
-                <span className="text-primary font-bold">
-                  {messages.inventory.common.currency(formatVND(totalAmount))}
-                </span>
-              ),
-            },
-          ]}
-        />
-      </AppSection>
-
-      {/* Ghi chú nếu có */}
-      {issue.notes ? (
-        <AppSection
-          title={surface.noteLabel}
-          size="sm"
-          collapsible
-          defaultOpen={false}
-        >
-          <p className="break-words text-sm text-muted-foreground">
-            {issue.notes}
-          </p>
-        </AppSection>
-      ) : null}
-
-      {/* 2. Danh sách sản phẩm */}
-      <AppSection
-        title={tTerm("ingredientsList")}
-        description={
-          isDraft
-            ? ISSUES_VI.draftAutoSaveHint
-            : ISSUES_VI.finalizedReadOnlyHint
-        }
-        action={
-          isDraft ? (
-            <Button
-              onClick={() => setAddDialogOpen(true)}
-              size="touch"
-              className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
-            >
-              <IconCirclePlus className="size-4" />
-              {ISSUES_VI.addLinePrefixed(
-                tTerm("ingredient", "button").toLowerCase(),
-              )}
-            </Button>
-          ) : canAdjustStock && lines.length > 0 ? (
-            <DocumentStockCorrectionDialog
-              documentType="issue"
-              documentId={issue.id}
-              documentCode={issue.issue_number}
-              branchOptions={[
-                {
-                  id: issue.branch_id,
-                  name:
-                    issue.branches?.name ??
-                    ISSUES_VI.branchRef(issue.branch_id),
-                },
-              ]}
-              itemOptions={lines.map((line) => ({
-                ingredientId: line.ingredient_id,
-                name: line.ingredients?.name ?? `#${line.ingredient_id}`,
-                unit: line.unit ?? line.ingredients?.unit ?? "",
-              }))}
-            />
-          ) : null
-        }
-        size="sm"
-      >
-        {lines.length === 0 ? (
-          <AppEmptyState
-            mode="no-data"
-            title={
-              isDraft
-                ? ISSUES_VI.emptyLinesDraftTitle
-                : ISSUES_VI.emptyLinesTitle(surface.label)
-            }
-            description={
-              isDraft
-                ? ISSUES_VI.emptyLinesDraftDescription(
-                    surface.confirmAction.toLowerCase(),
-                  )
-                : ISSUES_VI.emptyLinesFinalizedDescription
-            }
-            compact
-          />
-        ) : (
-          <ItemGroup className="gap-2 p-0 rounded-none border-0">
-            {lines.map((item) => (
-              <IssueLineMobileCard
-                key={item.id}
-                item={item}
-                isDraft={isDraft}
-                isPending={isPending}
-                amount={lineAmount(item)}
-                onDelete={handleDeleteLine}
-              />
-            ))}
-          </ItemGroup>
-        )}
-
-        {lines.length > 0 && (
-          <Item
-            variant="outline"
-            className="mt-4 flex-col items-stretch gap-2 p-3 text-sm bg-muted/30"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">
-                {ISSUES_VI.totalLinesColon}
-              </span>
-              <span className="font-bold">
-                {String(lines.length).padStart(2, "0")}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">
-                {ISSUES_VI.goodsSubtotalColon}
-              </span>
-              <span className="font-bold">{formatVND(totalAmount)}</span>
-            </div>
-            <div className="flex items-center justify-between border-t border-border pt-2">
-              <span className="font-bold">{ISSUES_VI.grandTotalCaps}</span>
-              <span className="font-mono font-semibold text-primary">
-                {messages.inventory.common.currency(formatVND(totalAmount))}
-              </span>
-            </div>
-          </Item>
-        )}
-      </AppSection>
-
-      {/* 3. Lịch sử */}
-      <AppSection
-        title={historySectionTitle}
-        size="sm"
-        collapsible
-        defaultOpen={false}
-      >
-        <AuditHistoryList logs={auditLogs} />
-      </AppSection>
-
-      {/* 4. Action Footer */}
-      {isDraft ? (
-        <AppDetailFooter
-          sticky
-          leading={
-            <Button
-              type="button"
-              variant="ghost"
-              size="touch"
-              onClick={handleCancelIssue}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-60"
-              disabled={isPending}
-            >
-              <IconX className="size-5" />
-              {ISSUES_VI.cancelIssueAction}
-            </Button>
-          }
-          trailing={
-            <>
-              <Badge variant="secondary">{ISSUES_VI.draftAutoSaved}</Badge>
-              <Button
-                type="button"
-                size="touch-lg"
-                onClick={handleConfirmIssue}
-                disabled={isPending || lines.length === 0}
-              >
-                <IconCircleCheck className="size-5" />
-                {surface.confirmAction}
-              </Button>
-            </>
-          }
-        />
-      ) : null}
-    </div>
+  const content = isTouchLayout ? (
+    <div className="min-w-0">{pageLayout}</div>
+  ) : (
+    pageLayout
   );
-
-  const content = isTouchLayout ? mobileLayout : pageLayout;
 
   return (
     <AppPage width="xwide" density="compact">

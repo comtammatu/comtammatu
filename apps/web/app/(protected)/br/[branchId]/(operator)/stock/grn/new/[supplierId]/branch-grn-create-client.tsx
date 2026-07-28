@@ -71,7 +71,7 @@ export function BranchGrnCreateClient({
   return (
     <BranchOperatorPage
       title={GRN_CREATE_COPY.newReceiptEyebrow}
-      description={GRN_CREATE_COPY.newReceiptDescription}
+      description={controller.supplier.name}
       hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
@@ -103,7 +103,6 @@ export function BranchGrnCreateClient({
             <BranchOperatorPanel
               size="sm"
               title={controller.supplier.name}
-              description={GRN_CREATE_COPY.newReceiptDescription}
               icon={IconReceipt}
               contentClassName="gap-3"
             >
@@ -364,10 +363,7 @@ export function BranchGrnCreateClient({
                 ) : controller.lineCount === 0 ? (
                   GRN_CREATE_COPY.addItemToContinue
                 ) : (
-                  GRN_CREATE_COPY.reviewBeforeConfirm(
-                    controller.lineCount,
-                    controller.total,
-                  )
+                  GRN_CREATE_COPY.reviewBeforeConfirm
                 )}
               </Button>
             </div>

@@ -9,6 +9,7 @@ export type ModuleLabelKey =
   | "menu"
   | "inventory"
   | "orders"
+  | "feedback"
   | "staff"
   | "hr"
   | "hr_payroll"
@@ -26,6 +27,7 @@ export type ModuleLabelKey =
   | "branch_team"
   | "branch_stock"
   | "branch_orders"
+  | "branch_feedback"
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
   | "notifications";
@@ -39,6 +41,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   menu: "Thực đơn",
   inventory: "Kho hàng",
   orders: "Đơn hàng bán",
+  feedback: "Phản hồi",
   staff: "Nhân viên",
   hr: "Nhân sự",
   hr_payroll: "Lương",
@@ -56,6 +59,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_team: "Đội hôm nay",
   branch_stock: "Kho chi nhánh",
   branch_orders: "Đơn hàng chi nhánh",
+  branch_feedback: "Phản hồi chi nhánh",
   employee_checkout_approvals: "Duyệt kết ca",
   employee_leave_approvals: "Duyệt nghỉ phép",
   notifications: "Thông báo",
@@ -349,17 +353,17 @@ export const WASTE_REASON_LABELS_VI = {
 /** Stocktake session mode (Q2 spec) */
 export const STOCKTAKE_MODE_LABELS_VI = {
   daily: "Kiểm kê ngày",
-  weekly: "Kiểm kê tuần (ABC)",
-  monthly: "Kiểm kê tháng (blind)",
-  quarterly: "Kiểm kê quý (peer cross)",
+  weekly: "Kiểm kê tuần theo nhóm",
+  monthly: "Kiểm kê tháng · đếm mù",
+  quarterly: "Kiểm kê quý · đếm chéo",
   spot: "Kiểm tra đột xuất",
 } as const;
 
 /** ABC class Pareto tiers */
 export const ABC_CLASS_LABELS_VI = {
-  A: "Nhóm A (top 80%)",
-  B: "Nhóm B (15%)",
-  C: "Nhóm C (5%)",
+  A: "Nhóm A · 80% giá trị",
+  B: "Nhóm B · 15% giá trị",
+  C: "Nhóm C · 5% giá trị",
 } as const;
 
 /** Hardblock override reason codes (Q3 §B5) */
@@ -374,19 +378,19 @@ export const HARDBLOCK_REASON_LABELS_VI = {
 
 /** GRN auto-approve 8 conditions (Q4a spec) */
 export const AUTO_APPROVE_CONDITION_LABELS_VI = {
-  c1_has_po: "Có đơn hàng (PO)",
+  c1_has_po: "Có đơn đặt hàng",
   c2_variance_ok: "Lệch giá ≤ 30%",
   c3_line_totals_diff: "Tổng và dòng khớp (±3% / 10% số lượng / 15% giá)",
   c4_no_quality_issue: "Không lỗi chất lượng",
   c5_value_cap: "Tổng ≤ 10 triệu",
-  c6_supplier_history: "NCC đã có ≥ 3 GRN/90 ngày",
+  c6_supplier_history: "NCC đã có ≥ 3 phiếu nhập / 90 ngày",
   c7_no_manual_review: "Không thuộc chuỗi lạnh",
   c8_trust_score_ok: "Điểm tin cậy ≥ 70",
 } as const;
 
 /** Failed reason codes from grn_is_auto_approvable */
 export const AUTO_APPROVE_FAIL_REASON_VI = {
-  no_po: "Thiếu PO",
+  no_po: "Thiếu đơn đặt hàng",
   variance_tier_gt1: "Lệch giá vượt ngưỡng",
   line_totals_diff: "Tổng/dòng lệch quá",
   quality_issue: "Có dòng lỗi chất lượng",

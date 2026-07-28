@@ -5,10 +5,8 @@ import { ORDERS_VI } from "@comtammatu/shared/messages";
 
 export const ORDERS_COPY = {
   eyebrow: "Điều phối giao dịch",
-  description:
-    "Theo dõi đơn bán và hoàn tiền trong cùng một nơi để xử lý nhanh.",
-  operatorDescription:
-    "Ưu tiên đơn đang xử lý; mở lịch sử gần đây khi cần tra cứu.",
+  description: "Theo dõi đơn bán và hoàn tiền trong cùng một nơi.",
+  operatorDescription: "Ưu tiên đơn đang xử lý; tra cứu ở tab Gần đây.",
   reportsAction: "Báo cáo",
   tabOrders: "Danh sách đơn",
   tabRefunds: "Hoàn tiền",

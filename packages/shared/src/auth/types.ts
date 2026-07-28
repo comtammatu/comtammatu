@@ -1,13 +1,19 @@
 /**
  * Application authorization roles, ordered by privilege level.
  *
- * Owner surface routes are owner-only. `MODULE_ACL` still describes reusable
- * capabilities because Branch-native routes share keys such as `inventory` and
- * `orders`. Central-site soft-routing is gone; `BranchKind` enum values remain
- * for historical inventory rows only.
+ * Owner surface routes are primarily owner-only; D088 adds temporary L0
+ * adapters (`accountant`, `central_supply_ops`, `central_kitchen_lead`) until
+ * ADR 0015 Authority. Branch-native routes use dedicated ModuleKeys
+ * (`branch_stock`, `branch_orders`, …) plus the permission namespace for
+ * action grants — they do not share Owner `inventory` / `orders` ModuleKeys.
+ * `BranchKind` enum values remain for historical inventory rows and for
+ * central-site pin of the two central ops roles.
  */
 export const STAFF_ROLES = [
   "owner",
+  "accountant",
+  "central_supply_ops",
+  "central_kitchen_lead",
   "branch_manager",
   "cashier",
   "chef",
@@ -19,8 +25,11 @@ export type StaffRole = (typeof STAFF_ROLES)[number];
 /** Roles that operate at branch level (POS/KDS) */
 export const BRANCH_ROLES: readonly StaffRole[] = ["cashier", "chef"] as const;
 
-/** Roles that do not require branch scope */
-export const TENANT_LEVEL_ROLES: readonly StaffRole[] = ["owner"] as const;
+/** Roles that do not require branch scope (temporary until ADR 0015). */
+export const TENANT_LEVEL_ROLES: readonly StaffRole[] = [
+  "owner",
+  "accountant",
+] as const;
 
 /** Roles that managers can create/edit from the current staff screen */
 export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
@@ -29,12 +38,14 @@ export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
   "chef",
 ] as const;
 
-/** Operational roles that must belong to a branch. */
+/** Operational roles that must belong to a branch or central site. */
 export const BRANCH_REQUIRED_OPERATIONAL_ROLES: readonly StaffRole[] = [
   "cashier",
   "chef",
   "branch_manager",
   "branch_staff",
+  "central_supply_ops",
+  "central_kitchen_lead",
 ] as const;
 
 /**
@@ -70,6 +81,9 @@ export function canManageTenantStrategySettings(role: StaffRole): boolean {
  */
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   owner: "Chủ sở hữu",
+  accountant: "Kế toán",
+  central_supply_ops: "Quản lý kho Tổng",
+  central_kitchen_lead: "Bếp trưởng Bếp TT",
   branch_manager: "Quản lý chi nhánh",
   cashier: "Thu ngân",
   chef: "Bếp",
@@ -82,9 +96,15 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
  * (the SQL twin is the latest position-mapper migration). Unknown codes return
  * "unassigned" (fail-safe). Codes outside this map never gain an access
  * bucket implicitly.
+ *
+ * D088 roles (`accountant`, `central_supply_ops`, `central_kitchen_lead`) are
+ * temporary JWT-role adapters until ADR 0015.
  */
 const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   owner: "owner",
+  accountant: "accountant",
+  central_supply_ops: "central_supply_ops",
+  central_kitchen_lead: "central_kitchen_lead",
   branch_manager: "branch_manager",
   cleaner: "branch_staff",
   guard: "branch_staff",
@@ -100,6 +120,9 @@ export type BranchKind = "branch" | "central_supply" | "central_kitchen";
 const POSITION_CODE_TO_REQUIRED_BRANCH_KIND: Record<string, BranchKind | null> =
   {
     owner: null,
+    accountant: null,
+    central_supply_ops: "central_supply",
+    central_kitchen_lead: "central_kitchen",
     branch_manager: "branch",
     cashier: "branch",
     chef: "branch",

@@ -1829,10 +1829,8 @@ const LIST_WIDTH_TIER_PINNED_PAGES = [
     .map(([file]) => file),
   "apps/web/app/(protected)/inventory/grn/page.tsx",
   "apps/web/app/(protected)/inventory/ingredients/page.tsx",
-  "apps/web/app/(protected)/inventory/issues/page.tsx",
   "apps/web/app/(protected)/inventory/recipes/page.tsx",
   "apps/web/app/(protected)/inventory/stocktake/page.tsx",
-  "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx",
   "apps/web/app/(protected)/inventory/transfers/page.tsx",
 ];
 

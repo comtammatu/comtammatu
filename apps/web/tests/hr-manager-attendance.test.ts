@@ -282,7 +282,7 @@ test("calendar attention scope uses the stale-shift predicate and pending leave 
 test("calendar controls preserve a compact, non-scrolling mobile presentation", () => {
   assert.match(
     attendanceTableSource,
-    /<AppToolbar\s+className="items-stretch[^"]*\[&>\[data-slot=toolbar-group\]\]:w-full[^"]*"[\s\S]*<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">/,
+    /<AppToolbar[\s\S]*className="items-stretch[^"]*\[&>\[data-slot=toolbar-group\]\]:w-full[^"]*"[\s\S]*<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">/,
     "calendar filters should form a compact two-column control group on phones",
   );
   assert.match(

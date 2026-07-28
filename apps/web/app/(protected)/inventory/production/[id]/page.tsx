@@ -11,6 +11,7 @@ import {
   AppPageHeader,
 } from "@/components/surface";
 import { getStatusBadgeMeta } from "@/components/status-badge";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 export default async function ProductionDetailPage({
   params,
@@ -40,8 +41,9 @@ export default async function ProductionDetailPage({
     : (recipeRes.error ?? "Không thể kiểm tra định mức và tồn kho.");
 
   return (
-    <AppPage width="wide" density="compact">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
+        eyebrow={INVENTORY_VI.warehouse}
         title={`Lệnh sản xuất ${run.production_number}`}
         badge={{
           children: statusBadge.label,

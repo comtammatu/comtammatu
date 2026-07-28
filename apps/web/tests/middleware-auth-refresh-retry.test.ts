@@ -28,6 +28,19 @@ function expiredAuthRequest(): NextRequest {
   });
 }
 
+/** Access token still valid but inside EXPIRY_MARGIN_MS (90s) so refresh runs. */
+function nearExpiryAuthRequest(): NextRequest {
+  const session = {
+    access_token: "still-valid-access-token",
+    refresh_token: "revoked-refresh-token",
+    expires_at: Math.floor(Date.now() / 1000) + 30,
+  };
+  const cookie = `base64-${Buffer.from(JSON.stringify(session)).toString("base64url")}`;
+  return new NextRequest("https://app.example.test/orders", {
+    headers: { cookie: `${authCookieName}=${cookie}` },
+  });
+}
+
 function mockSupabaseEnv(t: TestContext) {
   const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const previousKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -153,6 +166,31 @@ test("middleware clears invalid refresh tokens returned as validation_failed", a
   assert.equal(response.cookies.get(authCookieName)?.value, "");
   assert.equal(response.cookies.get(authCookieName)?.maxAge, 0);
   assert.equal(errorLog.mock.calls.length, 0);
+});
+
+test("middleware clears still-valid access when terminal refresh would preserve", async (t) => {
+  for (const errorCode of terminalSessionCodes) {
+    await t.test(errorCode, async (t) => {
+      mockSupabaseEnv(t);
+      const errorLog = t.mock.method(console, "error", () => undefined);
+      const fetcher: typeof fetch = async () =>
+        new Response(
+          JSON.stringify({
+            error_code: errorCode,
+            msg: "Session is terminal",
+          }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        );
+      t.mock.method(globalThis, "fetch", fetcher);
+
+      const { response, session } = await updateSession(nearExpiryAuthRequest());
+
+      assert.equal(session, null);
+      assert.equal(response.cookies.get(authCookieName)?.value, "");
+      assert.equal(response.cookies.get(authCookieName)?.maxAge, 0);
+      assert.equal(errorLog.mock.calls.length, 0);
+    });
+  }
 });
 
 test("middleware does not turn unrelated auth failures into logout redirects", async (t) => {

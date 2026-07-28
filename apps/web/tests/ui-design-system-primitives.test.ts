@@ -55,7 +55,7 @@ test("Má Tư DS primitive parity files are present in the shared UI package", (
 
 test("app metrics use KpiCard without the retired Stat primitive", () => {
   const supplierInvoices = read(
-    "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
   assert.equal(exists("packages/ui/src/components/stat.tsx"), false);
@@ -73,6 +73,31 @@ test("linked KpiCard applies hover feedback to its full card surface", () => {
   assert.match(kpiCard, /hover:bg-muted\/50 hover:shadow-effect-card-hover/);
   assert.match(kpiCard, /compareHint = "so với kỳ trước"/);
   assert.doesNotMatch(kpiCard, /compareHint = "vs kỳ trước"/);
+});
+
+test("AppSection and AppPageHeader clamp secondary description copy", () => {
+  const surface = read("apps/web/app/components/surface.tsx");
+  const compareChip = read("apps/web/app/components/kpi/compare-chip.tsx");
+  const card = read("packages/ui/src/components/card.tsx");
+
+  assert.match(
+    surface,
+    /CardDescription className="min-w-0 line-clamp-2 break-words"/,
+  );
+  assert.match(surface, /max-sm:line-clamp-2 max-sm:break-words/);
+  assert.match(
+    surface,
+    /max-w-\[10rem\] shrink-0 truncate[\s\S]*sm:max-w-xs/,
+  );
+  assert.match(
+    compareChip,
+    /max-w-\[12rem\] truncate font-normal text-muted-foreground/,
+  );
+  assert.match(card, /min-w-0 text-xs\/relaxed text-muted-foreground/);
+  assert.doesNotMatch(
+    card,
+    /function CardDescription[\s\S]*?line-clamp-2/,
+  );
 });
 
 test("shared primitives use Base UI behavior without Radix", () => {
@@ -228,6 +253,28 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(uiPackage, /"@base-ui\/react": "1\.6\.0"/);
 });
 
+test("confirm dialog settles every request exactly once", () => {
+  const source = read("packages/ui/src/components/confirm-dialog.tsx");
+
+  // The awaited resolver lives in a ref that is cleared before it is called, so
+  // a request can never resolve twice and callers cannot be left pending.
+  assert.match(source, /resolveRef = React\.useRef/);
+  assert.match(
+    source,
+    /const resolve = resolveRef\.current;\s*resolveRef\.current = null;\s*resolve\?\.\(result\);/,
+  );
+  assert.doesNotMatch(source, /pending\?\.resolve/);
+
+  // A superseded request must settle before the next one takes over the dialog.
+  assert.match(
+    source,
+    /settle\(false\);\s*resolveRef\.current = resolve;\s*setOpts\(next\);/,
+  );
+
+  // Unmounting the provider releases any caller still awaiting an answer.
+  assert.match(source, /React\.useEffect\(\(\) => \(\) => settle\(false\), \[settle\]\)/);
+});
+
 test("Base render composition preserves semantic link elements", () => {
   const button = renderToStaticMarkup(
     createElement(
@@ -269,6 +316,7 @@ test("Base render composition preserves semantic link elements", () => {
 
 test("Base floating layers stack above app chrome and Select resolves labels", () => {
   const selectSource = read("packages/ui/src/components/select.tsx");
+  const floatingLayer = read("packages/ui/src/lib/floating-layer.ts");
   const floatingSources = [
     read("packages/ui/src/components/combobox.tsx"),
     read("packages/ui/src/components/context-menu.tsx"),
@@ -278,6 +326,18 @@ test("Base floating layers stack above app chrome and Select resolves labels", (
     read("packages/ui/src/components/tag-input.tsx"),
     read("packages/ui/src/components/tooltip.tsx"),
   ];
+
+  assert.match(floatingLayer, /FLOATING_POSITION_METHOD = "fixed"/);
+  assert.match(floatingLayer, /document\.documentElement/);
+  assert.match(selectSource, /positionMethod = FLOATING_POSITION_METHOD/);
+  assert.match(
+    selectSource,
+    /collisionBoundary = floatingCollisionBoundary\(\)/,
+  );
+  assert.match(
+    read("packages/ui/src/components/dropdown-menu.tsx"),
+    /positionMethod = FLOATING_POSITION_METHOD/,
+  );
 
   for (const source of floatingSources) {
     assert.match(

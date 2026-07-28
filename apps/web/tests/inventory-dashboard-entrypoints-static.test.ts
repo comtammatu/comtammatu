@@ -4,6 +4,10 @@ import { test } from "node:test";
 
 const source = readFileSync("app/(protected)/inventory/dashboard-client.tsx", "utf8");
 const messageSource = readFileSync("lib/messages/inventory.ts", "utf8");
+const pathsSource = readFileSync(
+  "app/(protected)/inventory/_lib/paths.ts",
+  "utf8",
+);
 
 test("inventory dashboard keeps the four owner entrypoint groups visible", () => {
   for (const text of [
@@ -16,8 +20,9 @@ test("inventory dashboard keeps the four owner entrypoint groups visible", () =>
     "href: paths.suppliers",
     "href: paths.countAssignments",
     "href: paths.countSlips",
-    "paths.operationTab(\"grn\")",
-    "paths.operationTab(\"transfers\")",
+    "href: paths.grn",
+    "href: paths.purchaseOrders",
+    "href: paths.transfers",
     "if (props.showProduction)",
     "href: paths.production",
     "label: messages.inventory.dashboard.productionCommandAction",
@@ -45,5 +50,17 @@ test("inventory dashboard keeps the four owner entrypoint groups visible", () =>
   assert.match(
     messageSource,
     /headerTagline:\s*"Điểm vào: kiểm soát tồn · giao dịch kho · sản xuất · danh mục."/,
+  );
+});
+
+test("inventory dashboard and paths ban new /operations?tab= entrypoints", () => {
+  assert.doesNotMatch(source, /operationTab/);
+  assert.doesNotMatch(source, /\/operations\?tab=/);
+  assert.doesNotMatch(pathsSource, /operationTab/);
+  assert.doesNotMatch(pathsSource, /receiving|expiry/);
+  assert.match(pathsSource, /purchaseOrders:/);
+  assert.match(
+    pathsSource,
+    /supplierInvoices:\s*"\/finance\/supplier-invoices"/,
   );
 });

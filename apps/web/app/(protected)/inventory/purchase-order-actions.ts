@@ -3,6 +3,7 @@
 import { z } from "zod";
 import {
   PERMISSION_KEYS,
+  PO_MUTATE_ROLES,
   PROCUREMENT_ROLES,
   isProcurementBranchInScope,
 } from "@comtammatu/shared/auth";
@@ -65,7 +66,7 @@ async function validateSupplierIngredients(
 
 export const createPurchaseOrderWithLines = withAction(
   {
-    roles: PROCUREMENT_ROLES,
+    roles: PO_MUTATE_ROLES,
     schema: poSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
   },
@@ -79,7 +80,7 @@ export const createPurchaseOrderWithLines = withAction(
     ) {
       return {
         success: false,
-        error: "Bạn chỉ được tạo PO cho chi nhánh mình.",
+        error: "Bạn chỉ được tạo đơn đặt hàng cho chi nhánh mình.",
       };
     }
 
@@ -116,9 +117,9 @@ export const createPurchaseOrderWithLines = withAction(
         };
       }
       const errors: Record<string, string> = {
-        "22023": "Dữ liệu dòng PO không hợp lệ.",
+        "22023": "Dữ liệu dòng đơn đặt hàng không hợp lệ.",
         "28000": "Phiên đăng nhập đã hết hạn.",
-        "42501": "Bạn không có quyền tạo PO.",
+        "42501": "Bạn không có quyền tạo đơn đặt hàng.",
         P0002: "Chi nhánh hoặc nhà cung cấp không hợp lệ.",
       };
       return {
@@ -131,7 +132,7 @@ export const createPurchaseOrderWithLines = withAction(
       .object({ id: z.coerce.number().int().positive() })
       .safeParse(result);
     if (!parsed.success) {
-      return { success: false, error: "Phản hồi tạo PO không hợp lệ." };
+      return { success: false, error: "Phản hồi tạo đơn đặt hàng không hợp lệ." };
     }
 
     revalidateSurfacePath("/inventory/purchase-orders");
@@ -139,9 +140,93 @@ export const createPurchaseOrderWithLines = withAction(
   },
 );
 
+const grnIdSchema = z.object({
+  grnId: z.coerce.number().int().positive(),
+});
+
+/** D088: create draft PO from GRN draft and link it. */
+export const createPurchaseOrderFromGrn = withAction(
+  {
+    roles: PO_MUTATE_ROLES,
+    schema: grnIdSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  },
+  async ({ grnId }, { supabase, claims }) => {
+    const { data: grn, error: loadError } = await supabase
+      .from("goods_received_notes")
+      .select("id, branch_id, status, po_id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("id", grnId)
+      .maybeSingle();
+
+    if (loadError || !grn) {
+      return { success: false, error: "Không tìm thấy phiếu nhập." };
+    }
+    if (
+      !isProcurementBranchInScope(
+        claims.user_role,
+        claims.branch_id,
+        grn.branch_id,
+      )
+    ) {
+      return {
+        success: false,
+        error: "Phiếu nhập nằm ngoài phạm vi địa điểm của bạn.",
+      };
+    }
+    if (grn.status !== "draft") {
+      return { success: false, error: "Chỉ tạo đơn mua từ phiếu nhập nháp." };
+    }
+    if (grn.po_id != null) {
+      return { success: false, error: "Phiếu nhập đã gắn đơn mua." };
+    }
+
+    const { data: result, error } = await supabase.rpc(
+      // D088 RPC may lag generated types until Greenfield apply + db:types.
+      "create_purchase_order_from_grn" as never,
+      { p_grn_id: grnId } as never,
+    );
+
+    if (error) {
+      const errors: Record<string, string> = {
+        grn_not_draft: "Chỉ tạo đơn mua từ phiếu nhập nháp.",
+        grn_already_linked_to_po: "Phiếu nhập đã gắn đơn mua.",
+        grn_has_no_receivable_lines: "Phiếu nhập chưa có dòng nhận hợp lệ.",
+        "28000": "Phiên đăng nhập đã hết hạn.",
+        "42501": "Bạn không có quyền tạo đơn đặt hàng.",
+        P0002: "Không tìm thấy phiếu nhập hoặc địa điểm không hợp lệ.",
+      };
+      for (const [token, message] of Object.entries(errors)) {
+        if (error.message.includes(token) || error.code === token) {
+          return { success: false, error: message };
+        }
+      }
+      return { success: false, error: "Không thể tạo đơn mua từ phiếu nhập." };
+    }
+
+    const parsed = z
+      .object({
+        po_id: z.coerce.number().int().positive(),
+        display_id: z.string().optional(),
+      })
+      .safeParse(result);
+    if (!parsed.success) {
+      return { success: false, error: "Phản hồi tạo đơn mua không hợp lệ." };
+    }
+
+    revalidateSurfacePath("/inventory/purchase-orders");
+    revalidateSurfacePath("/inventory/grn");
+    revalidateSurfacePath(`/inventory/grn/${grnId}`);
+    return {
+      success: true,
+      data: { id: parsed.data.po_id, displayId: parsed.data.display_id },
+    };
+  },
+);
+
 export const approvePurchaseOrder = withAction(
   {
-    roles: PROCUREMENT_ROLES,
+    roles: PO_MUTATE_ROLES,
     schema: poIdSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
   },
@@ -156,7 +241,7 @@ export const approvePurchaseOrder = withAction(
       .maybeSingle();
 
     if (loadError || !po) {
-      return { success: false, error: "Không tìm thấy PO." };
+      return { success: false, error: "Không tìm thấy đơn đặt hàng." };
     }
     if (
       !isProcurementBranchInScope(
@@ -165,10 +250,10 @@ export const approvePurchaseOrder = withAction(
         po.branch_id,
       )
     ) {
-      return { success: false, error: "PO nằm ngoài phạm vi chi nhánh." };
+      return { success: false, error: "Đơn đặt hàng nằm ngoài phạm vi chi nhánh." };
     }
     if (po.status !== "draft") {
-      return { success: false, error: "Chỉ duyệt PO đang ở trạng thái nháp." };
+      return { success: false, error: "Chỉ duyệt đơn đặt hàng đang ở trạng thái nháp." };
     }
     const supplierItemError = await validateSupplierIngredients(
       supabase,
@@ -190,7 +275,7 @@ export const approvePurchaseOrder = withAction(
           error: "Có nguyên liệu chưa được gán cho nhà cung cấp.",
         };
       }
-      return { success: false, error: "Không thể duyệt PO." };
+      return { success: false, error: "Không thể duyệt đơn đặt hàng." };
     }
 
     revalidateSurfacePath("/inventory/purchase-orders");
@@ -215,7 +300,7 @@ export const createGrnFromPurchaseOrder = withAction(
       .maybeSingle();
 
     if (loadError || !po) {
-      return { success: false, error: "Không tìm thấy PO." };
+      return { success: false, error: "Không tìm thấy đơn đặt hàng." };
     }
     if (
       !isProcurementBranchInScope(
@@ -224,10 +309,10 @@ export const createGrnFromPurchaseOrder = withAction(
         po.branch_id,
       )
     ) {
-      return { success: false, error: "PO nằm ngoài phạm vi chi nhánh." };
+      return { success: false, error: "Đơn đặt hàng nằm ngoài phạm vi chi nhánh." };
     }
     if (!["sent", "partially_received"].includes(po.status)) {
-      return { success: false, error: "PO chưa được duyệt hoặc đã nhận đủ." };
+      return { success: false, error: "Đơn đặt hàng chưa được duyệt hoặc đã nhận đủ." };
     }
     const supplierItemError = await validateSupplierIngredients(
       supabase,
@@ -252,7 +337,7 @@ export const createGrnFromPurchaseOrder = withAction(
           error: "Có nguyên liệu chưa được gán cho nhà cung cấp.",
         };
       }
-      return { success: false, error: "Không thể tạo phiếu nhập từ PO." };
+      return { success: false, error: "Không thể tạo phiếu nhập từ đơn đặt hàng." };
     }
 
     const parsed = z

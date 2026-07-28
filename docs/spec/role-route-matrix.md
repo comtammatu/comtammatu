@@ -133,12 +133,13 @@ by direct URL or as a redirect target.
 | ---------- | ---------- | ------------- | ------------------------------ |
 | `owner` | `/` | Chủ sở hữu | Owner nav |
 | `menu` | `/menu` | Chủ sở hữu | Owner nav |
-| `inventory` | `/inventory` | Chủ sở hữu | Owner nav |
+| `inventory` | `/inventory` | Chủ sở hữu, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT | Owner nav |
 | `orders` | `/orders` | Chủ sở hữu | Owner nav |
+| `feedback` | `/feedback` | Chủ sở hữu | Owner nav |
 | `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
 | `hr` | `/hr` | Chủ sở hữu | Owner nav |
 | `hr_payroll` | `/hr/payroll` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
-| `finance` | `/finance` | Chủ sở hữu | Owner nav |
+| `finance` | `/finance` | Chủ sở hữu, Kế toán | Owner nav |
 | `branches` | `/branches` | Chủ sở hữu | Owner nav |
 | `settings` | `/settings` | Chủ sở hữu | Owner nav |
 | `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
@@ -152,9 +153,10 @@ by direct URL or as a redirect target.
 | `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (my_shift) |
 | `branch_stock` | `/br/*/stock` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals); Operator tile (stock) |
 | `branch_orders` | `/br/*/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (sales_kitchen) |
+| `branch_feedback` | `/br/*/feedback` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
 | `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
-| `notifications` | `/notifications` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
+| `notifications` | `/notifications` | Chủ sở hữu, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 
 ## Route Family Contracts (generated)
 
@@ -166,11 +168,12 @@ declared before their broader siblings.
 
 | Family id | Surface | Entry path | Match prefixes | Module keys | Requires branchId |
 | --------- | ------- | ---------- | --------------- | ----------- | ------------------ |
-| `public` | public | `/login` | `/login`, `/access-denied`, `/api/health`, `/api/webhooks`, `/manifest.webmanifest`, `/sw.js` | — | no |
+| `public` | public | `/login` | `/login`, `/access-denied`, `/api/health`, `/api/webhooks`, `/manifest.webmanifest`, `/sw.js`, `/r`, `/api/feedback` | — | no |
 | `owner` | owner | `/` | `/` | `owner` | no |
 | `settings` | owner | `/settings` | `/settings` | `settings` | no |
 | `menu` | owner | `/menu` | `/menu` | `menu` | no |
 | `orders` | owner | `/orders` | `/orders` | `orders` | no |
+| `feedback` | owner | `/feedback` | `/feedback` | `feedback` | no |
 | `inventory` | owner | `/inventory` | `/inventory` | `inventory` | no |
 | `finance` | owner | `/finance` | `/finance` | `finance` | no |
 | `branches` | owner | `/branches` | `/branches` | `branches` | no |
@@ -188,6 +191,7 @@ declared before their broader siblings.
 | `branch-settings` | branch_management | `/br/[branchId]/settings` | `/br/[branchId]/settings` | `branch_settings` | yes |
 | `branch-dashboard` | branch_management | `/br/[branchId]/dashboard` | `/br/[branchId]/dashboard` | `branch_dashboard` | yes |
 | `branch-team` | branch_management | `/br/[branchId]/team` | `/br/[branchId]/team` | `branch_team` | yes |
+| `branch-feedback` | branch_management | `/br/[branchId]/feedback` | `/br/[branchId]/feedback` | `branch_feedback` | yes |
 | `pos` | branch_operation | `/br/[branchId]/pos` | `/br/[branchId]/pos` | `pos` | yes |
 | `kds` | branch_operation | `/br/[branchId]/kds` | `/br/[branchId]/kds` | `kds` | yes |
 | `runner` | branch_operation | `/br/[branchId]/runner` | `/br/[branchId]/runner` | `runner` | yes |
@@ -200,6 +204,9 @@ no-`returnTo` case — i.e. where a fresh login actually lands.
 | Role | Desktop context | Phone / station context | Notes |
 | ---- | ------------------------- | ------------------------ | ----- |
 | Chủ sở hữu (`owner`) | / (Owner overview) | / (Owner overview) | Owner enters the L0 surface directly and opens a branch explicitly when needed. |
+| Kế toán (`accountant`) | /finance | /finance | D088 temporary until ADR 0015: accountant lands on Finance. |
+| Quản lý kho Tổng (`central_supply_ops`) | /inventory | /inventory | D088 temporary until ADR 0015: central site roles land on Inventory L0. |
+| Bếp trưởng Bếp TT (`central_kitchen_lead`) | /inventory | /inventory | D088 temporary until ADR 0015: central site roles land on Inventory L0. |
 | Quản lý chi nhánh (`branch_manager`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
 | Thu ngân (`cashier`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
 | Bếp (`chef`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
@@ -219,11 +226,12 @@ separate gates (route bucket here, permission key at the mutation site).
 | settings | `/settings` | owner | `settings:branch`, `settings:branch_network`, `settings:integrations`, `settings:tenant` |
 | menu | `/menu` | owner | `menu:manage_category`, `menu:publish`, `menu:read`, `menu:write` |
 | orders | `/orders` | owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
+| feedback | `/feedback` | owner | `feedback:manage_qr`, `feedback:view` |
 | inventory | `/inventory` | owner | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
 | finance | `/finance` | owner | `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`, `finance:payroll_approve`, `finance:payroll_calculate`, `finance:view` |
 | branches | `/branches` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | hr | `/hr` | owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
-| notifications | `/notifications` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| notifications | `/notifications` | accountant/branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-home | `/br/[branchId]` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-shift-checkout-approvals | `/br/[branchId]/shift/checkout-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-shift-leave-approvals | `/br/[branchId]/shift/leave-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
@@ -236,6 +244,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | branch-settings | `/br/[branchId]/settings` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-dashboard | `/br/[branchId]/dashboard` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-team | `/br/[branchId]/team` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| branch-feedback | `/br/[branchId]/feedback` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | pos | `/br/[branchId]/pos` | branch_manager/cashier/owner | `pos:apply_discount`, `pos:close_shift`, `pos:close_shift_variance_override`, `pos:confirm_payment`, `pos:open_cashbox`, `pos:print`, `pos:reprint_receipt`, `pos:send_kitchen`, `pos:use`, `pos:void_order`, `pos:void_paid_order` |
 | kds | `/br/[branchId]/kds` | branch_manager/chef/owner | `kds:mark_ready`, `kds:recall`, `kds:use` |
 | runner | `/br/[branchId]/runner` | branch_manager/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |

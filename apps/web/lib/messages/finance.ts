@@ -24,7 +24,7 @@ export const finance = {
     refundReasonPlaceholder:
       "Ví dụ: Thu ngân bấm thanh toán nhầm khi khách chưa đồng ý.",
     refundWarning:
-      "Đảo thanh toán đã hoàn tất (hoàn tiền cho khách) và phục hồi kho. HĐĐT đã phát hành KHÔNG tự hủy — hủy/thay thế riêng nếu cần.",
+      "Hoàn tiền cho khách và phục hồi kho. HĐĐT đã phát hành KHÔNG tự hủy — hủy/thay thế riêng nếu cần.",
     refundConfirm: "Hoàn tiền",
     refundCancel: "Không",
     refundSuccess: "Đã hoàn tiền / đảo thanh toán",
@@ -32,7 +32,7 @@ export const finance = {
     methodFix: "Sửa phương thức",
     methodFixDialogTitle: "Sửa phương thức thanh toán",
     methodFixWarning:
-      "Sửa phương thức sẽ đồng bộ thanh toán, đơn và dự thu ca POS. Đổi sang VietQR phải đối soát với giao dịch ngân hàng; giao dịch đã có bằng chứng ngân hàng không thể đổi sang Tiền mặt. Không ảnh hưởng HĐĐT đã phát hành.",
+      "Đồng bộ thanh toán, đơn và dự thu ca. Đổi sang VietQR phải đối soát NH; đã có bằng chứng NH thì không đổi sang tiền mặt. Không ảnh hưởng HĐĐT đã phát hành.",
     methodFixNewLabel: "Phương thức đúng",
     methodFixReasonLabel: (min: number) => `Lý do sửa (tối thiểu ${min} ký tự)`,
     methodFixReasonPlaceholder:
@@ -46,8 +46,7 @@ export const finance = {
     manualIssue: {
       button: "Xuất HĐ cho đơn cũ",
       title: "Xuất HĐĐT cho đơn đã thanh toán",
-      description:
-        "Khách quay lại xin hóa đơn cho đơn đã trả tiền trước đó — tra theo chi nhánh + mã đơn rồi xuất HĐĐT.",
+      description: "Tra chi nhánh + mã đơn đã trả tiền để xuất HĐĐT.",
       branchLabel: "Chi nhánh",
       branchPlaceholder: "Chọn chi nhánh",
       orderNumberLabel: "Mã đơn",
@@ -85,37 +84,31 @@ export const finance = {
     mainLabel: "Tài chính",
     defaultPageTitle: "Tài chính",
     crumbLabel: "Vận hành · Tài chính",
-    description:
-      "Theo dõi doanh thu thuần, lợi nhuận gộp, chi phí vận hành và tồn kho.",
+    description: "Doanh thu thuần, biên gộp, chi phí và tồn kho.",
   },
   page: {
     eyebrow: "Báo cáo vận hành",
     title: "Tài chính của quán",
-    description: "Kết quả theo kỳ, số dư hiện có, tồn kho và việc cần xử lý.",
+    description: "Kết quả kỳ, tiền đang có, tồn kho và việc cần xử lý.",
   },
   powerLite: {
     eyebrow: "Báo cáo vận hành",
     title: "Tổng quan tài chính",
     cashTitle: "Doanh thu",
-    cashDescription: "Thanh toán hoàn tất và cách tiền đi vào quỹ.",
+    cashDescription: "Thanh toán hoàn tất theo phương thức.",
     profitTitle: "Lợi nhuận gộp",
-    profitDescription: "Lấy doanh thu thuần, trừ giá vốn món đã ghi nhận.",
+    profitDescription: "Doanh thu thuần − giá vốn món.",
     inventoryCashTitle: "Giá trị tồn kho",
-    inventoryCashDescription:
-      "Tổng giá trị tồn kho hiện tại và nguyên liệu đang giữ nhiều vốn nhất.",
+    inventoryCashDescription: "Tồn hiện tại và nguyên liệu giữ nhiều vốn.",
     expenseTitle: "Chi phí vận hành",
-    expenseDescription:
-      "Chi phí vận hành đã ghi nhận trong kỳ, không gồm giá vốn món.",
+    expenseDescription: "Chi phí đã ghi trong kỳ · không gồm giá vốn món.",
     stageTitle: "Mức báo cáo đang dùng",
     inventoryTitle: "Tiền đang nằm trong kho",
-    inventoryDescription:
-      "Top nguyên liệu giữ nhiều vốn nhất theo tồn kho hiện tại và giá vốn đang có.",
+    inventoryDescription: "Nguyên liệu giữ nhiều vốn nhất theo tồn hiện tại.",
     topItemsTitle: "Món kéo doanh thu",
-    topItemsDescription:
-      "Món chính và món ăn kèm bán tốt trong đúng khoảng đang xem; dùng để đối chiếu nhanh với biên gộp.",
+    topItemsDescription: "Món chính và kèm bán tốt trong kỳ đang xem.",
     branchTitle: "So sánh chi nhánh",
-    branchDescription:
-      "Chỉ hiện khi bạn có nhiều chi nhánh. Công thức vẫn giống màn hình cơ bản của chủ quán.",
+    branchDescription: "Chỉ hiện khi có nhiều chi nhánh.",
     grossMarginLine: (margin: string) => `${margin} biên gộp`,
     stageBranchControl: "Theo dõi nhiều chi nhánh",
     stageCompanyReporting: "Hỗ trợ kế toán để riêng",
@@ -140,8 +133,7 @@ export const finance = {
     hddtComplianceNeedsWorkDescription: (count: string) =>
       `${count} HĐĐT cần kiểm tra hoặc hoàn tất.`,
     hddtNoDataTitle: "Chưa có dữ liệu HĐĐT",
-    hddtNoDataDescription:
-      "Khi có đơn đã thanh toán và hóa đơn phát sinh, trạng thái HĐĐT sẽ hiện tại đây.",
+    hddtNoDataDescription: "HĐĐT hiện sau khi có đơn đã thanh toán.",
     labels: {
       orders: "Số đơn",
       ordersLine: (count: string) => `${count} đơn đã thanh toán`,
@@ -173,11 +165,9 @@ export const finance = {
         `${transactions} sao kê · ${transactionAmount}; ${payments} VietQR · ${paymentAmount}`,
       operatingExpenseLabel: "Chi phí vận hành",
       operatingExpenseRecorded: "Đã ghi nhận chi phí vận hành trong kỳ",
-      operatingExpenseMissing:
-        "Chưa ghi nhận chi phí vận hành; không lấy tiền nhập hàng để đoán thay.",
+      operatingExpenseMissing: "Chưa ghi chi phí vận hành trong kỳ.",
       missingCostLabel: "Thiếu giá vốn món",
-      missingCostHint:
-        "Có món bán ra nhưng chưa đủ giá vốn món để tính lợi nhuận gộp.",
+      missingCostHint: "Có món bán nhưng chưa đủ giá vốn để tính biên gộp.",
       missingCostCoverageHint: (covered: string, total: string) =>
         `${covered}/${total} đơn có giá vốn món`,
       highFoodCostHint: (itemName: string, margin: string) =>
@@ -198,8 +188,7 @@ export const finance = {
     dateMeta: (date: string, branch: string) => `${date} · ${branch}`,
     periodMeta: (start: string, end: string) => `${start} → ${end}`,
     sections: {
-      periodResult: "Kết quả theo kỳ",
-      followsFilters: "Theo bộ lọc",
+      periodResult: "Kết quả kinh doanh",
       inventory: "Tồn kho",
     },
     operators: {
@@ -208,7 +197,7 @@ export const finance = {
     },
     kpis: {
       netRevenue: "Doanh thu thuần",
-      netRevenueHint: "Giá món − giảm giá trên đơn · chưa VAT",
+      netRevenueHint: "Giá món − giảm giá · chưa VAT",
       ingredientCost: "Giá vốn món",
       ingredientCostHint: (covered: string, total: string) =>
         `${covered}/${total} đơn có giá vốn`,
@@ -217,8 +206,7 @@ export const finance = {
       grossProfitHint: (margin: string) => `Biên gộp ${margin}`,
       grossProfitMissingHint: "Cần đủ giá vốn món",
       operatingExpense: "Chi phí vận hành",
-      operatingExpenseHint:
-        "Không gồm giá vốn, nhập hàng, công nợ và nguyên giá thiết bị/TSCĐ",
+      operatingExpenseHint: "Thuê, điện, lương… · không gồm nhập hàng",
       operatingResult: "Kết quả vận hành",
       operatingResultHint: "Lợi nhuận gộp − chi phí vận hành",
       notCalculated: "Chưa tính",
@@ -227,10 +215,10 @@ export const finance = {
       inventoryValueHint: (opening: string) => `Đầu kỳ ${opening}`,
       inventoryOpeningCompare: "so với tồn đầu kỳ",
       cashOnHand: "Tiền mặt theo sổ",
-      cashOnHandMissing: "Chưa đặt mốc tồn quỹ",
+      cashOnHandMissing: "Chưa nhập số dư đầu",
       bankOnHand: "Tiền trong ngân hàng",
-      bankOnHandMissing: "Chưa đặt mốc ngân hàng",
-      currentFundsScope: "Toàn quán",
+      bankOnHandMissing: "Chưa nhập số dư đầu",
+      currentFundsScope: "Cả quán",
     },
   },
   nav: {
@@ -253,45 +241,45 @@ export const finance = {
     page: {
       eyebrow: "Tài chính",
       title: "Chi phí vận hành",
-      description:
-        "Ghi chi phí của kỳ; không đưa toàn bộ tiền mua thiết bị/TSCĐ vào đây.",
+      description: "Không ghi mua thiết bị/TSCĐ vào đây.",
     },
     add: "Thêm khoản chi",
     listTitle: "Sổ chi phí vận hành",
     totalLabel: "Tổng chi phí vận hành trong kỳ",
-    totalHint: (count: string) => `${count} khoản đã ghi`,
+    totalHint: (count: string) => `${count} khoản chi phí vận hành`,
+    needsActionLabel: "Cần xử lý",
+    needsActionHint: (count: string) => `${count} khoản chưa trả hoặc chờ khớp NH`,
+    needsActionFilter: "Cần xử lý",
     loadErrorTitle: "Không thể tải sổ Chi phí vận hành",
-    loadErrorDescription:
-      "Chưa thể xác nhận số liệu Chi phí vận hành trong kỳ này. Hãy tải lại trước khi tiếp tục đối soát.",
-    tenantLevel: "Toàn quán",
+    loadErrorDescription: "Không tải được số liệu kỳ này. Thử tải lại.",
+    tenantLevel: "Cả quán",
     empty: {
       title: "Chưa có khoản chi trong kỳ",
-      description: "Thêm khoản chi để theo dõi chi phí vận hành và dòng tiền.",
+      description: "Thêm khoản chi để theo dõi chi phí và dòng tiền.",
+      clearedTitle: "Không còn khoản chi cần xử lý",
+      clearedDescription: "Mọi khoản trong kỳ đã trả và đã khớp ngân hàng.",
     },
     form: {
       title: "Thêm khoản chi phí vận hành",
       date: "Ngày phát sinh",
       branch: "Chi nhánh",
-      branchTenantLevel: "Toàn quán (không theo chi nhánh)",
+      branchTenantLevel: "Cả quán",
       category: "Khoản mục",
       categoryPlaceholder: "Chọn khoản mục",
       amount: "Số tiền",
       method: "Ghi nhận thanh toán",
       methodPlaceholder: "Chọn phương thức",
       methodHints: {
-        cash: "Ghi nhận toàn bộ khoản chi đã trả bằng tiền mặt.",
-        transfer:
-          "Tạo nội dung chuyển khoản; chỉ đánh dấu đã trả sau khi SePay khớp giao dịch.",
-        unpaid:
-          "Lưu khoản chi phát sinh để trả sau. Chưa làm giảm tiền mặt hoặc số dư ngân hàng.",
+        cash: "Ghi đã trả bằng tiền mặt.",
+        transfer: "Tạo nội dung CK; đánh dấu đã trả khi SePay khớp.",
+        unpaid: "Lưu để trả sau · chưa trừ tiền mặt/NH.",
       },
       vendor: "Nơi chi",
       vendorPlaceholder: "Tùy chọn",
       note: "Ghi chú",
       notePlaceholder: "Tùy chọn",
       vatSection: "Thuế GTGT đầu vào đã ghi nhận",
-      vatSectionHint:
-        "Nhập theo hóa đơn. Đây là VAT đã ghi nhận, chưa kết luận được khấu trừ.",
+      vatSectionHint: "Theo hóa đơn · chưa kết luận khấu trừ.",
       taxableAtRate: (rate: string) => `Trước thuế ${rate}`,
       vatAtRate: (rate: string) => `GTGT ${rate}`,
       taxablePlaceholder: "0",
@@ -309,7 +297,7 @@ export const finance = {
     transferInstruction: {
       title: "Nội dung chuyển khoản",
       description:
-        "Chuyển đúng số tiền của khoản chi trong một giao dịch và dùng nguyên nội dung dưới đây. SePay sẽ tự khớp sau khi ngân hàng ghi nhận.",
+        "Chuyển đúng số tiền và dùng nguyên nội dung dưới đây. SePay tự khớp sau khi NH ghi nhận.",
       codeLabel: "Nội dung cần nhập",
       detail: (content: string) => `Nội dung CK: ${content}`,
       copy: "Sao chép nội dung",
@@ -323,7 +311,7 @@ export const finance = {
       cash: "Ghi nhận đã trả tiền mặt",
       cashTitle: "Xác nhận đã trả tiền mặt?",
       cashConfirm: (amount: string) =>
-        `Toàn bộ khoản chi ${amount} sẽ được ghi nhận đã trả bằng tiền mặt vào lúc này.`,
+        `Ghi nhận đã trả ${amount} bằng tiền mặt ngay bây giờ?`,
       cashCta: "Đã trả tiền mặt",
       keepUnpaid: "Chưa",
       cashSuccess: "Đã ghi nhận trả tiền mặt",
@@ -331,7 +319,7 @@ export const finance = {
       cancelTransfer: "Bỏ nội dung chuyển khoản",
       cancelTransferTitle: "Bỏ nội dung chuyển khoản?",
       cancelTransferConfirm: (content: string) =>
-        `Nội dung ${content} sẽ không còn được dùng để tự khớp SePay. Việc này không hủy giao dịch ngân hàng; chỉ tiếp tục nếu chưa chuyển tiền.`,
+        `Bỏ nội dung ${content} khỏi khớp SePay? Không hủy giao dịch NH — chỉ tiếp tục nếu chưa chuyển tiền.`,
       cancelTransferCta: "Bỏ nội dung",
       keepTransfer: "Giữ nội dung",
       cancelTransferSuccess: "Đã bỏ nội dung và đưa khoản chi về Chưa trả",
@@ -401,30 +389,24 @@ export const finance = {
   supplierInvoicesPage: {
     eyebrow: "Tài chính",
     title: "VAT đầu vào | Thanh toán NCC",
-    description:
-      "VAT trên hóa đơn được ghi nhận theo chứng từ, chưa mặc định là VAT được khấu trừ.",
+    description: "VAT theo chứng từ · chưa mặc định được khấu trừ.",
     noAccessTitle: "Không có quyền xem hóa đơn NCC",
-    noAccessDescription:
-      "Cần quyền xem đơn mua hàng và NCC để mở hàng đợi phải trả NCC.",
+    noAccessDescription: "Cần quyền xem đơn mua và NCC.",
     loadErrorTitle: "Không thể tải hóa đơn NCC",
-    loadErrorDescription:
-      "Chưa thể xác nhận hóa đơn hoặc công nợ đang chọn. Hãy tải lại trước khi ghi nhận thanh toán.",
+    loadErrorDescription: "Không tải được hóa đơn/công nợ. Thử tải lại.",
     notFoundTitle: "Không tìm thấy hóa đơn NCC",
-    notFoundDescription:
-      "Hóa đơn không tồn tại hoặc không thuộc phạm vi chi nhánh đang xem.",
+    notFoundDescription: "Hóa đơn không tồn tại hoặc ngoài phạm vi chi nhánh.",
   },
   cash: {
-    onHandTitle: "Số dư hiện có",
-    onHandDescription: "Toàn quán · không theo bộ lọc",
-    verifying: "Đang xác minh",
-    setOpening: "Ghi nhận mốc mở sổ",
+    onHandTitle: "Tiền đang có",
+    verifying: "Chưa mở sổ",
+    setOpening: "Nhập số dư đầu",
     adjustmentAction: "Điều chỉnh số dư",
-    noOpening:
-      "Chưa có mốc mở sổ được xác minh nên hệ thống chưa trình bày số dư.",
+    noOpening: "Nhập số dư tiền mặt và ngân hàng để bắt đầu theo dõi.",
     noOpeningLegacy:
-      "Dữ liệu tồn quỹ cũ được giữ làm bằng chứng điều tra, không dùng để tính số dư và chỉ được chốt qua cutover kiểm soát.",
-    legacyCutoverAction: "Chờ cutover xác minh",
-    openingMeta: (date: string) => `Mở sổ ${date}`,
+      "Đã có số dư cũ chưa chốt. Liên hệ hỗ trợ trước khi mở sổ mới.",
+    legacyBlockedAction: "Chờ chốt số dư cũ",
+    openingMeta: (date: string) => `Từ ${date}`,
     calculationDetails: "Xem cách tính",
     onHandBreakdown: (
       opening: string,
@@ -433,7 +415,7 @@ export const finance = {
       adjustments: string,
     ) =>
       `Tiền mặt: ${opening} + thu ${cashIn} − chi ${cashOut} + điều chỉnh ${adjustments}`,
-    bankTitle: "Ngân hàng toàn quán",
+    bankTitle: "Ngân hàng cả quán",
     bankTransactionsAction: "Giao dịch",
     bankBreakdown: (
       opening: string,
@@ -442,68 +424,62 @@ export const finance = {
       adjustments: string,
     ) =>
       `Ngân hàng: ${opening} + vào ${bankIn} − ra ${bankOut} + điều chỉnh ${adjustments}`,
-    openingTitle: "Ghi nhận mốc mở sổ",
-    openingDescription:
-      "Nhập số theo sổ có bằng chứng đáng tin cậy. Mốc này chỉ được ghi một lần và không thể sửa hoặc xóa.",
-    openingBalanceLabel: "Tiền mặt theo sổ tại mốc",
-    openingBankLabel: "Tiền ngân hàng theo sổ tại mốc",
-    openingAmountRequired: "Cần nhập số tiền tại mốc mở sổ",
-    openingAmountInvalid: "Số tiền mở sổ không hợp lệ",
-    openingBoundaryLabel: "Loại mốc mở sổ",
-    openingBoundaryNow: "Cutover được xác minh ngay lúc ghi nhận",
-    openingBoundaryProjectStart: "Đầu ngày bắt đầu dự án đã được chứng minh",
+    openingTitle: "Nhập số dư đầu",
+    openingDescription: "Chỉ ghi một lần. Sau này chỉ điều chỉnh, không sửa số này.",
+    openingBalanceLabel: "Tiền mặt",
+    openingBankLabel: "Tiền ngân hàng",
+    openingAmountRequired: "Cần nhập số tiền",
+    openingAmountInvalid: "Số tiền không hợp lệ",
+    openingBoundaryLabel: "Tính từ lúc nào?",
+    openingBoundaryNow: "Ngay bây giờ",
+    openingBoundaryProjectStart: "Từ 0 giờ ngày bắt đầu",
     openingBoundaryDescription:
-      "Cutover dùng thời điểm chính xác của máy chủ. Chỉ chọn đầu ngày dự án khi có bằng chứng số dư đúng tại 00:00.",
-    openingDateLabel: "Ngày bắt đầu dự án",
-    openingDateInvalid: "Ngày bắt đầu dự án không hợp lệ",
-    openingDateDescription:
-      "Hệ thống dùng đúng 00:00 giờ Việt Nam của ngày này; đây là ranh giới bất biến, không phải bộ lọc.",
-    openingReasonLabel: "Bằng chứng xác minh",
-    openingReasonDescription:
-      "Ghi nguồn sổ, biên bản hoặc tài liệu dùng để xác nhận hai số mở sổ.",
-    openingReasonRequired: "Cần ghi rõ bằng chứng xác minh",
-    openingReasonTooLong: "Bằng chứng xác minh tối đa 500 ký tự",
+      "Chọn ngày bắt đầu chỉ khi có sổ chứng minh số dư lúc 0 giờ.",
+    openingDateLabel: "Ngày bắt đầu",
+    openingDateInvalid: "Ngày bắt đầu không hợp lệ",
+    openingDateDescription: "Tính từ 0 giờ ngày này (giờ Việt Nam).",
+    openingReasonLabel: "Nguồn số / ghi chú",
+    openingReasonDescription: "Ví dụ: sổ quỹ, biên bản kiểm đếm.",
+    openingReasonRequired: "Cần ghi nguồn số hoặc ghi chú",
+    openingReasonTooLong: "Ghi chú tối đa 500 ký tự",
     openingConfirmation:
-      "Tôi đã đối chiếu số tiền, mốc thời gian và bằng chứng; mốc mở sổ này không thể sửa hoặc xóa.",
-    openingConfirmationRequired: "Cần xác nhận mốc mở sổ bất biến",
+      "Tôi đã kiểm số; sau khi xác nhận không sửa hoặc xóa được.",
+    openingConfirmationRequired: "Cần xác nhận trước khi lưu",
     openingSubmit: "Xác nhận mở sổ",
-    openingSuccess: "Đã ghi nhận mốc mở sổ",
-    adjustmentTitle: "Ghi nhận điều chỉnh",
+    openingSuccess: "Đã mở sổ quỹ",
+    adjustmentTitle: "Điều chỉnh số dư",
     adjustmentDescription:
-      "Chỉ dùng cho sai lệch đã kiểm chứng nhưng chưa có trong luồng chuẩn. Không dùng thay thanh toán, hoàn tiền, chi phí, thanh toán nhà cung cấp, chốt ca POS, giao dịch ngân hàng hoặc nộp tiền mặt vào ngân hàng.",
+      "Chỉ khi đã kiểm và chưa ghi ở thanh toán, chi phí, trả NCC, chốt ca hoặc sao kê.",
     adjustmentCashLabel: "Điều chỉnh tiền mặt",
     adjustmentBankLabel: "Điều chỉnh tiền ngân hàng",
-    adjustmentSignedHint: "Nhập số dương để tăng, số âm để giảm.",
+    adjustmentSignedHint: "Số dương tăng, số âm giảm.",
     adjustmentAmountInvalid: "Số tiền điều chỉnh không hợp lệ",
-    adjustmentReasonLabel: "Lý do và bằng chứng đối chiếu",
-    adjustmentReasonDescription:
-      "Nêu nguyên nhân, chứng từ hoặc biên bản làm căn cứ điều chỉnh.",
-    adjustmentReasonRequired: "Cần ghi rõ lý do và bằng chứng đối chiếu",
-    adjustmentReasonTooLong: "Lý do và bằng chứng tối đa 500 ký tự",
+    adjustmentReasonLabel: "Lý do",
+    adjustmentReasonDescription: "Nêu nguyên nhân và chứng từ.",
+    adjustmentReasonRequired: "Cần ghi lý do",
+    adjustmentReasonTooLong: "Lý do tối đa 500 ký tự",
     adjustmentConfirmation:
-      "Tôi xác nhận khoản này chưa được ghi ở luồng chuẩn; bút toán sẽ đổi số dư theo sổ và không thể xóa.",
-    adjustmentConfirmationRequired: "Cần xác nhận bút toán điều chỉnh",
-    adjustmentZero: "Cần nhập ít nhất một khoản điều chỉnh khác 0",
-    adjustmentSubmit: "Xác nhận điều chỉnh sổ",
-    adjustmentSuccess: "Đã ghi nhận điều chỉnh",
-    transferTitle: "Chuyển tiền mặt vào ngân hàng",
+      "Tôi xác nhận khoản này chưa được ghi ở chỗ khác; không xóa được sau khi lưu.",
+    adjustmentConfirmationRequired: "Cần xác nhận trước khi lưu",
+    adjustmentZero: "Cần nhập ít nhất một khoản khác 0",
+    adjustmentSubmit: "Xác nhận điều chỉnh",
+    adjustmentSuccess: "Đã điều chỉnh số dư",
+    transferTitle: "Nộp tiền mặt vào ngân hàng",
     transferAction: "Chuyển tiền",
     transferDescription:
-      "Rút bớt tiền mặt trong quỹ để nộp vào tài khoản ngân hàng. Nếu có mã tham chiếu giao dịch (đã nộp), tiền trong ngân hàng sẽ không được cộng thêm lần nữa.",
+      "Giảm tiền mặt, tăng NH. Có mã SePay thì không cộng NH lần nữa.",
     transferAmountLabel: "Số tiền mặt nộp (VNĐ)",
-    transferRefLabel: "Mã tham chiếu SePay (không bắt buộc)",
+    transferRefLabel: "Mã SePay (không bắt buộc)",
     transferSubmit: "Lưu chuyển tiền",
-    transferSuccess: "Đã chuyển tiền mặt vào ngân hàng",
+    transferSuccess: "Đã nộp tiền mặt vào ngân hàng",
   },
   bankTransactions: {
     eyebrow: "Tài chính",
     title: "Đối soát ngân hàng",
-    description:
-      "Xử lý sao kê SePay và thanh toán VietQR thiếu bằng chứng ngân hàng.",
+    description: "Sao kê SePay và VietQR thiếu bằng chứng NH.",
     importAction: "Nhập file SePay",
     importTitle: "Nhập lịch sử giao dịch SePay",
-    importDescription:
-      "Chọn file CSV xuất trực tiếp từ SePay. Giao dịch đã có sẽ không bị cộng lại.",
+    importDescription: "CSV từ SePay. Giao dịch đã có không bị cộng lại.",
     importFileLabel: "File CSV SePay",
     importHint: "Tối đa 5.000 giao dịch mỗi lần nhập.",
     importSubmit: "Nhập giao dịch",
@@ -555,10 +531,9 @@ export const finance = {
     filteredEmptyDescription: "Đổi bộ lọc để xem nhóm giao dịch khác.",
     unmatchedMoneyInListTitle: "Tiền vào cần kiểm tra",
     unmatchedMoneyInListDescription:
-      "Giao dịch tiền vào chưa được phân loại; kiểm mã tham chiếu trước khi gắn thanh toán VietQR hoặc xác nhận nộp tiền mặt.",
+      "Tiền vào chưa phân loại — kiểm mã trước khi gắn VietQR hoặc nộp tiền mặt.",
     unmatchedMoneyOutListTitle: "Tiền ra cần kiểm tra",
-    unmatchedMoneyOutListDescription:
-      "Giao dịch tiền ra chưa gắn khoản chi hoặc khoản trả NCC.",
+    unmatchedMoneyOutListDescription: "Tiền ra chưa gắn khoản chi hoặc trả NCC.",
     unmatchedMoneyInTable: {
       time: "Thời gian",
       amount: "Số tiền",
@@ -586,11 +561,11 @@ export const finance = {
       openConflictOrder: "Mở đơn",
       linkTitle: "Khớp giao dịch tiền vào",
       linkDescription:
-        "Dùng mã trên sao kê để khớp đúng thanh toán VietQR. Thanh toán chỉ được hoàn tất khi có bằng chứng SePay hợp lệ.",
+        "Khớp thanh toán VietQR bằng mã trên sao kê. Cần bằng chứng SePay hợp lệ.",
       linkInputLabel: "Mã thanh toán trên sao kê",
       linkInputPlaceholder: "Ví dụ: MATU ABC123",
       linkInputHelp:
-        "Mã được điền sẵn khi SePay cung cấp. Nếu chưa có bằng chứng hợp lệ, hãy gửi lại giao dịch từ cổng SePay.",
+        "Điền sẵn khi SePay có mã. Thiếu bằng chứng thì gửi lại từ cổng SePay.",
       linkAction: "Khớp",
       linkPaymentAction: "Gắn thanh toán",
       linkPending: "Đang gắn",
@@ -600,21 +575,20 @@ export const finance = {
       linkError: "Không thể gắn giao dịch với thanh toán VietQR.",
       cashDepositTitle: "Nộp tiền mặt vào tài khoản",
       cashDepositDescription:
-        "Xác nhận sao kê này là tiền mặt đã nộp vào ngân hàng, không tính là chi phí vận hành.",
+        "Sao kê này là tiền mặt nộp vào NH · không phải chi phí vận hành.",
       cashDepositAction: "Nộp tiền mặt",
       cashDepositPending: "Đang ghi nhận",
       cashDepositConfirmTitle: "Xác nhận nộp tiền mặt?",
       cashDepositConfirm: (amount: string) =>
-        `Ghi nhận ${amount} đã chuyển từ quỹ tiền mặt sang tài khoản ngân hàng theo sao kê này?`,
+        `Ghi nhận ${amount} từ quỹ tiền mặt sang NH theo sao kê này?`,
       cashDepositSuccess: "Đã ghi nhận nộp tiền mặt vào tài khoản.",
       cashDepositError: "Không thể ghi nhận nộp tiền mặt.",
       emptyTitle: "Không còn tiền vào cần kiểm tra",
-      emptyDescription:
-        "Khi mọi giao dịch tiền vào đều khớp đơn hoặc thanh toán, danh sách này sẽ trống.",
+      emptyDescription: "Danh sách trống khi mọi tiền vào đã khớp.",
     },
     missingWebhookListTitle: "Thanh toán VietQR thiếu bằng chứng ngân hàng",
     missingWebhookListDescription:
-      "Các thanh toán VietQR đã thu tiền nhưng chưa thấy giao dịch ngân hàng hợp lệ.",
+      "Đã thu VietQR nhưng chưa thấy giao dịch NH hợp lệ.",
     missingWebhookTable: {
       payment: "Thanh toán",
       order: "Đơn",
@@ -632,13 +606,11 @@ export const finance = {
       reviewStatusSuccess: "Đã cập nhật trạng thái.",
       reviewStatusError: "Không thể cập nhật trạng thái.",
       emptyTitle: "Không còn thanh toán thiếu bằng chứng",
-      emptyDescription:
-        "Khi mọi thanh toán VietQR gần nhất đều có giao dịch ngân hàng hợp lệ, danh sách này sẽ trống.",
+      emptyDescription: "Trống khi mọi VietQR gần nhất đã có sao kê NH.",
     },
     listTitle: "Đối soát ngân hàng",
     emptyTitle: "Chưa có dữ liệu đối soát",
-    emptyDescription:
-      "Sao kê SePay và thanh toán VietQR thiếu bằng chứng sẽ hiện ở đây.",
+    emptyDescription: "Sao kê SePay và VietQR thiếu bằng chứng hiện ở đây.",
     reconciliationStatus: "Trạng thái",
     reconciliationStateLabels: {
       matched: "Đã khớp",
@@ -712,9 +684,9 @@ export const finance = {
     matchedTransferIntentDetail: "Tự động khớp bằng nội dung chuyển khoản",
     transferIntentLabel: "Nội dung chuyển khoản",
     transferIntentExclusiveHint:
-      "Khoản có nội dung chuyển khoản được khớp riêng. Chọn khoản này nếu sao kê dùng đúng nội dung và số tiền.",
+      "Khớp riêng khi sao kê đúng nội dung CK và số tiền.",
     transferIntentSelectionHint:
-      "Đã chọn khoản có nội dung chuyển khoản. Bỏ chọn khoản này nếu cần chia giao dịch cho nhiều khoản.",
+      "Đã chọn khoản CK. Bỏ chọn nếu cần chia cho nhiều khoản.",
     matchAction: "Khớp",
     unmatched: "Chưa khớp",
     matchSuccess: "Đã khớp thành công",
@@ -748,15 +720,14 @@ export const finance = {
     voidedAmount: "Hoàn / hủy",
     featureCta: "Mở",
     workflowTitle: "Luồng nghiệp vụ",
-    workflowDescription:
-      "Các khu vực vận hành dùng để kiểm tra doanh thu, hóa đơn và đối soát.",
+    workflowDescription: "Kiểm tra doanh thu, hóa đơn và đối soát.",
     tabs: {
       revenue: "Doanh thu",
       invoices: (count: number) => `Hóa đơn điện tử (${formatCount(count)})`,
     },
     workQueue: {
       title: "Việc cần kiểm tra",
-      description: "Các điểm vận hành cần nhìn sau báo cáo doanh thu.",
+      description: "Điểm cần nhìn sau báo cáo doanh thu.",
       period: "Kỳ khóa sổ",
       invoicesAttention: "HĐĐT cần xử lý",
       invoicesAttentionHint: "Nháp, đang ký hoặc đã gửi nhưng chưa có mã CQT",
@@ -833,8 +804,7 @@ export const finance = {
     page: {
       eyebrow: "Báo cáo doanh thu",
       title: "Doanh thu",
-      description:
-        "Theo dõi doanh thu thuần, tổng tiền đã thu và số đơn theo kỳ.",
+      description: "Doanh thu thuần, tiền thu và số đơn theo kỳ.",
       meta: (branch: string, range: string, granularity: string) =>
         `${branch} · ${range} · ${granularity}`,
     },
@@ -845,7 +815,7 @@ export const finance = {
     },
     kpi: {
       netRevenue: "Doanh thu thuần",
-      netRevenueHint: "Giá món − giảm giá trên đơn · chưa VAT",
+      netRevenueHint: "Giá món − giảm giá · chưa VAT",
       orderCount: "Số đơn hoàn thành",
       orderCountHint: "Đơn đã thanh toán trong kỳ",
       aovOrder: "Bình quân/đơn",
@@ -872,18 +842,15 @@ export const finance = {
     },
     heatmap: {
       title: "Khung giờ cao điểm",
-      description:
-        "Doanh thu thuần theo ngày trong tuần và giờ. Chọn ô để xem chi tiết.",
-      tooLargeRange:
-        "Khoảng đang xem vượt quá 90 ngày — chọn khoảng nhỏ hơn để xem khung giờ.",
+      description: "Doanh thu thuần theo ngày và giờ. Chọn ô để xem chi tiết.",
+      tooLargeRange: "Khoảng > 90 ngày — chọn nhỏ hơn để xem khung giờ.",
       empty: "Chưa có đơn nào trong khoảng này.",
       tooLargeEmpty: "Chọn khoảng ≤ 90 ngày để xem khung giờ.",
     },
     periodTable: {
       title: "Bảng doanh thu thuần theo kỳ",
-      descriptionAll:
-        "Tổng hợp toàn bộ chi nhánh — bấm vào ngày để xem chi tiết.",
-      descriptionSingle: "Bấm vào ngày để xem danh sách đơn trong ngày.",
+      descriptionAll: "Tất cả chi nhánh — bấm ngày để xem chi tiết.",
+      descriptionSingle: "Bấm ngày để xem đơn trong ngày.",
       empty: "Chưa có dữ liệu trong khoảng này.",
       colPeriod: "Kỳ",
       colOrders: "Đơn",
@@ -893,10 +860,8 @@ export const finance = {
     },
     cashierTable: {
       title: "Năng suất thu ngân",
-      description:
-        "Top thu ngân theo doanh thu thuần — đối chiếu với bảng lệch quỹ bên dưới.",
-      tooLargeRange:
-        "Khoảng đang xem vượt quá 90 ngày — chọn khoảng nhỏ hơn để xem theo thu ngân.",
+      description: "Top thu ngân theo doanh thu thuần · đối chiếu lệch quỹ.",
+      tooLargeRange: "Khoảng > 90 ngày — chọn nhỏ hơn để xem theo thu ngân.",
       empty: "Chưa có dữ liệu thu ngân.",
       tooLargeEmpty: "Chọn khoảng ≤ 90 ngày để xem theo thu ngân.",
       colCashier: "Thu ngân",
@@ -906,8 +871,7 @@ export const finance = {
     },
     topItems: {
       title: "Top món bán chạy",
-      description:
-        "Tách món chính và món ăn kèm theo đúng khoảng ngày, chi nhánh đang lọc.",
+      description: "Món chính và kèm theo kỳ và chi nhánh đang lọc.",
       empty: "Chưa có dữ liệu món.",
       colName: "Tên món",
       colQty: "SL",
@@ -932,7 +896,7 @@ export const finance = {
       invalidDate: "Ngày không hợp lệ.",
       selectBranchTitle: (date: string) => `Chi tiết doanh thu ngày ${date}`,
       selectBranchDescription:
-        'Xem chi tiết từ chế độ "Tất cả chi nhánh" cần chọn cụ thể chi nhánh để hiển thị danh sách đơn theo giờ.',
+        "Chọn chi nhánh để xem đơn theo giờ từ chế độ Tất cả.",
       selectBranchSectionTitle: "Chọn chi nhánh",
       noBranchAccess: "Bạn chưa có quyền xem chi nhánh nào.",
       detailTitle: (branch: string, date: string) => `${branch} · ${date}`,
@@ -958,7 +922,7 @@ export const finance = {
   },
   cashVarianceCard: {
     title: "Lệch quỹ cần xử lý",
-    description: "Ca POS đã đóng, lệch vượt ngưỡng và chưa có hướng xử lý.",
+    description: "Ca đã đóng, lệch vượt ngưỡng, chưa có hướng xử lý.",
     closedSessions: "Ca lệch",
     netVariance: "Lệch ròng",
     short: (count: number) => `Thiếu ${formatCount(count)} ca`,
@@ -970,23 +934,21 @@ export const finance = {
   invoicesPage: {
     eyebrow: "HĐĐT",
     title: "VAT đầu ra & HĐĐT",
-    description:
-      "Theo dõi HĐĐT bán ra, hủy, điều chỉnh và thay thế; chưa phải số GTGT phải nộp.",
+    description: "HĐĐT bán ra, hủy, điều chỉnh · chưa phải GTGT phải nộp.",
     loadError: "Không thể tải danh sách hóa đơn điện tử",
   },
   links: {
     revenue: {
       label: "Báo cáo doanh thu",
-      description:
-        "Tổng tiền đã thu và doanh thu thuần theo kỳ, chi nhánh và phương thức thanh toán.",
+      description: "Tiền thu và doanh thu thuần theo kỳ / chi nhánh / PTTT.",
     },
     foodCost: {
       label: "Giá vốn món",
-      description: "Theo dõi WAC, giá vốn món và biên lãi món bán.",
+      description: "WAC, giá vốn và biên lãi món bán.",
     },
     overview: {
       label: "Tổng quan tài chính",
-      description: "Màn hình chính cho tài chính vận hành.",
+      description: "Màn hình chính tài chính vận hành.",
     },
   },
   foodCost: {

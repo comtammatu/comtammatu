@@ -5,7 +5,7 @@ export const INVENTORY_VI = {
   warehouse: "Kho hàng",
   settingsEyebrow: "Cài đặt kho",
   importFromFile: "Nhập từ file",
-  downloadTemplate: "Tải template (.xlsx)",
+  downloadTemplate: "Tải mẫu (.xlsx)",
   exportXlsx: "Xuất .xlsx",
   exportCsv: "Xuất .csv",
   chooseFileLabel: "Chọn file (.xlsx, .csv)",
@@ -13,7 +13,7 @@ export const INVENTORY_VI = {
   importIngredientsTitle: "Nhập nguyên liệu từ file",
   importBomTitle: "Nhập công thức sản xuất từ file",
   importBomDescription:
-    "Hỗ trợ .xlsx và .csv. Mỗi thành phẩm trong file sẽ được thay toàn bộ dòng nguyên liệu.",
+    "Hỗ trợ .xlsx và .csv. Mỗi thành phẩm sẽ được thay toàn bộ dòng nguyên liệu.",
   importErrorDetailHeading: "Chi tiết dòng lỗi",
   createProductionOrder: "Tạo lệnh sản xuất",
   productionNumber: "Số lệnh",
@@ -32,17 +32,17 @@ export const INVENTORY_VI = {
   productionRecipesTab: "Công thức sản xuất",
   productionBackToHub: "Về trạm sản xuất",
   productionOrdersCardDescription:
-    "Lập, xác nhận và điều chỉnh lệnh sản xuất để trừ nguyên liệu và nhập thành phẩm.",
+    "Lập và xác nhận lệnh sản xuất để trừ nguyên liệu, nhập thành phẩm.",
   productionOrdersMetricLabel: "lệnh",
   productionOpenOrders: "Mở lệnh sản xuất",
   productionDraftBadge: (count: number) => `${formatCount(count)} lệnh nháp`,
   productionRecipesCardDescription:
-    "Cấu hình Công thức thành phẩm: nguyên liệu và định lượng cho từng mẻ sản xuất.",
+    "Nguyên liệu và định lượng cho từng mẻ sản xuất.",
   productionRecipesMetricLabel: "Công thức thành phẩm",
   productionOpenRecipes: "Mở công thức",
   productionCatalogCardTitle: "Danh mục nguyên liệu",
   productionCatalogCardDescription:
-    "Quản lý thành phẩm và nguyên liệu đầu vào dùng cho nhập kho và sản xuất.",
+    "Thành phẩm và nguyên liệu đầu vào cho kho và sản xuất.",
   productionCatalogMetricLabel: "danh mục",
   productionOpenCatalog: "Mở danh mục",
   selectIngredient: "Chọn nguyên liệu",
@@ -54,8 +54,8 @@ export const INVENTORY_VI = {
   ingredientListLabel: "Danh sách nguyên liệu *",
   selectMultipleIngredients: "Chọn nhiều nguyên liệu",
   addOneRow: "Thêm 1 dòng",
-  yield: "Yield",
-  yieldHint: "Yield mặc định 1.0 (không hao hụt). 0.85 = hao 15% khi chế biến.",
+  yield: "Tỷ lệ thu hồi",
+  yieldHint: "Mặc định 1.0 (không hao hụt); 0.85 = hao 15%.",
   recipeDescription:
     "Lượng nguyên liệu cho 1 phần món trên menu (khác công thức sản xuất).",
   editRecipeTitle: "Sửa định mức món bán",
@@ -78,17 +78,17 @@ export const INVENTORY_VI = {
   branchOverCapBanner:
     "Đã vượt giới hạn chi nhánh — hao hụt mới tự chuyển mức 2 (cần QLV duyệt).",
   branchNearCapBanner:
-    "Gần chạm giới hạn chi nhánh — các phiếu hao hụt tiếp theo có thể tự chuyển mức 2.",
+    "Gần chạm giới hạn chi nhánh — phiếu tiếp theo có thể chuyển mức 2.",
   stocktakeModeQuickDesc:
-    "Đếm nhanh cuối ca. Không có người kiểm tra — chênh lệch được ghi nhận nhưng không chặn.",
+    "Đếm nhanh cuối ca. Không có người kiểm tra, chênh lệch không chặn.",
   stocktakeModeCycleDesc:
     "Đếm theo nhóm ABC — A mỗi tuần, B/C xoay vòng. Người kiểm tra và QLV duyệt.",
   stocktakeModeFullDesc:
     "Kiểm kê toàn bộ theo chế độ đếm mù. Không hiển thị tồn hệ thống.",
   stocktakeModePeerDesc:
-    "Đếm chéo: nhân sự chi nhánh khác thực hiện. Mọi nhóm đều được đếm mù và kiểm tra lại.",
+    "Đếm chéo: nhân sự chi nhánh khác đếm mù và kiểm tra lại.",
   stocktakeModeSpotDesc:
-    "QLV kiểm tra đột xuất, có thể chỉ chọn vài SKU. Mặc định đếm mù; QLV có thể đổi.",
+    "QLV kiểm tra đột xuất, chọn vài mặt hàng. Mặc định đếm mù.",
   selectStocktakeMode: "Chọn chế độ kiểm kê",
   selectReason: "Chọn lý do",
   uploadImagePdf: "Tải ảnh / PDF",
@@ -100,23 +100,25 @@ export const INVENTORY_VI = {
   noAuditHistory: "Chưa có lịch sử thao tác",
   systemActor: "Hệ thống",
   selectFile: "Vui lòng chọn file",
-  templateCreateFailed: "Không tạo được template",
+  templateCreateFailed: "Không tạo được mẫu",
   partialReceive: "Nhận một phần",
   today: "Nay",
   yesterday: "Hôm qua",
-  grnListBackLabel: "Danh sách GRN",
+  grnListBackLabel: "Danh sách phiếu nhập",
   receivingEyebrow: "Nhập hàng",
   chooseSourceTitle: "Chọn nguồn nhập",
   chooseSourceDescription:
-    "Nhập hàng theo nhà cung cấp — không cần PO. Hoặc nhận theo PO đã đặt.",
+    "Chọn nhà cung cấp để mở phiếu nhập. Có thể tìm hoặc tạo mới.",
   receiveBySupplierTitle: "Nhận theo nhà cung cấp",
-  receiveBySupplierDescription: "Chọn NCC rồi nhập hàng — không cần PO.",
-  receiveByPoTitle: "Nhận theo PO đã đặt",
-  adhocBySupplierHeading: "Nhập ad-hoc theo nhà cung cấp",
+  receiveBySupplierDescription:
+    "Chọn NCC rồi nhập hàng — không cần đơn đặt hàng.",
+  receiveByPoTitle: "Nhận theo đơn đặt hàng đã đặt",
+  adhocBySupplierHeading: "Nhập thẳng theo nhà cung cấp",
   noSupplierTitle: "Chưa có nhà cung cấp",
   noSupplierDescription:
     "Thêm nhà cung cấp ở mục Quản lý trước khi tạo phiếu nhập.",
   supplier: "Nhà cung cấp",
+  supplierCountBadge: (count: number) => `${formatCount(count)} nhà cung cấp`,
   supplierSearchPlaceholder: "Tìm hoặc thêm nhà cung cấp",
   supplierNotFound: "Không tìm thấy nhà cung cấp",
   grnReviewLinesHint: "Kiểm từng dòng — chạm để sửa",
@@ -124,7 +126,7 @@ export const INVENTORY_VI = {
   productionOperatorDoneTodayTitle: "Hoàn tất hôm nay",
   productionOperatorCreateTitle: "Tạo lệnh sản xuất",
   productionOperatorCreateHint:
-    "Chọn thành phẩm, kiểm thiếu nguyên liệu, rồi chốt để ghi tiêu hao và nhập thành phẩm.",
+    "Chọn thành phẩm, kiểm nguyên liệu, rồi chốt lệnh.",
   productionOperatorRecipesLink: "Công thức",
   productionOperatorConfigLink: "Cấu hình",
   productionOperatorEmpty: "Chưa có lệnh sản xuất hôm nay",
@@ -135,20 +137,19 @@ export const INVENTORY_VI = {
   grnCreateSupplierPending: "Đang tạo nhà cung cấp…",
   grnCreateSupplierFailed: "Không thể tạo nhà cung cấp.",
   grnSupplierLoadFailed: "Không thể tải nhà cung cấp.",
-  grnCode: "Mã GRN",
-  linkedPo: "PO liên kết",
+  grnCode: "Mã phiếu nhập",
+  linkedPo: "Đơn đặt hàng liên kết",
   receiveDate: "Ngày kiểm nhận",
   draft: "Nháp",
-  choosePoToCreateGrn: "Chọn PO để tạo GRN",
+  choosePoToCreateGrn: "Chọn đơn đặt hàng để tạo phiếu nhập",
   newGrn: "Phiếu nhập hàng mới",
-  grnSearchPlaceholder: "Tìm mã GRN, nhà cung cấp, PO...",
+  grnSearchPlaceholder: "Tìm mã phiếu nhập, nhà cung cấp, đơn đặt hàng...",
   grnListCount: (count: number) => `${formatCount(count)} phiếu`,
   grnNotFoundFiltered: "Không tìm thấy phiếu nhập phù hợp",
   grnEmptyNoData: "Chưa có phiếu nhập kho nào",
   grnListTab: "Danh sách",
   grnDraftsEmptyTitle: "Chưa có phiếu nháp",
-  grnDraftsEmptyDescription:
-    "Bắt đầu tạo phiếu nhập để hệ thống lưu lại tiến độ cho bạn.",
+  grnDraftsEmptyDescription: "Tạo phiếu nhập để hệ thống lưu tiến độ.",
   grnDraftUpdatedAt: (date: string) => `Cập nhật lúc ${date}`,
   grnDraftLineCount: (count: number) => `${formatCount(count)} dòng`,
   grnDraftContinue: "Tiếp tục",
@@ -156,17 +157,16 @@ export const INVENTORY_VI = {
   createWasteTitle: "Tạo phiếu hao hụt",
   wasteFeatureDisabledTitle: "Chưa bật ghi nhận hao hụt",
   wasteFeatureDisabledBranchHint:
-    "Chi nhánh chưa bật ghi nhận hao hụt. Báo quản lý trước khi ghi ngoài quy trình.",
+    "Chi nhánh chưa bật ghi nhận hao hụt. Báo quản lý.",
   branchRequiredTitle: "Cần chọn chi nhánh",
-  branchRequiredWasteHint:
-    "Chọn chi nhánh ở thanh điều hướng trước khi tạo phiếu hao hụt mới.",
+  branchRequiredWasteHint: "Chọn chi nhánh trước khi tạo phiếu hao hụt.",
   settingsSectionNav: "Mục cài đặt kho",
   recipeMinIngredients: "Định mức món bán phải có ít nhất 1 nguyên liệu",
   recipeDuplicateIngredient: "Nguyên liệu trùng lặp. Gộp chung vào 1 dòng.",
   selectMenuItemRequired: "Vui lòng chọn món bán",
   noteMax200: "Ghi chú tối đa 200 ký tự",
-  enterYield: "Nhập yield",
-  yieldPositive: "Yield phải > 0",
+  enterYield: "Nhập tỷ lệ thu hồi",
+  yieldPositive: "Tỷ lệ thu hồi phải > 0",
   enterQuantity: "Nhập số lượng",
   quantityPositive: "Số lượng phải > 0",
   unitRequired: "Đơn vị không được trống",
@@ -194,15 +194,15 @@ export const INVENTORY_VI = {
   productionStatCatalogHint: (finishedGoods: number, rawMaterials: number) =>
     `${finishedGoods} thành phẩm / ${rawMaterials} nguyên liệu`,
   productionStandardFlowHint:
-    "Quy trình chuẩn: nhận nguyên liệu, chốt công thức, xác nhận lệnh để trừ nguyên liệu và nhập thành phẩm.",
+    "Quy trình chuẩn: nhận nguyên liệu, chốt công thức, xác nhận lệnh.",
   productionRecoveryMissingFinishedGood:
     "Tạo ít nhất một thành phẩm để mở công thức sản xuất, rồi quay lại lập lệnh.",
   productionRecoveryMissingFinishedGoodNoPerm:
-    "Cần đội quản trị danh mục tạo ít nhất một thành phẩm trước khi lập công thức và lệnh sản xuất.",
+    "Cần đội quản trị tạo ít nhất một thành phẩm trước khi lập công thức.",
   productionRecoveryMissingRawMaterial:
-    "Tạo nguyên liệu đầu vào để hoàn thiện công thức trước khi xác nhận sản xuất.",
+    "Tạo nguyên liệu đầu vào để hoàn thiện công thức.",
   productionRecoveryMissingRawMaterialNoPerm:
-    "Cần đội quản trị danh mục bổ sung nguyên liệu đầu vào trước khi hoàn thiện công thức sản xuất.",
+    "Cần đội quản trị bổ sung nguyên liệu đầu vào trước khi lập công thức.",
   productionRecoveryMissingRecipe:
     "Cấu hình ít nhất một công thức sản xuất trước khi xác nhận lệnh.",
   productionRecoveryMissingRecipeNoPerm:
@@ -257,7 +257,7 @@ export const INVENTORY_VI = {
   productionRecipeSave: "Lưu công thức",
   productionRecipeEmptyTitle: "Chưa có công thức nào",
   productionRecipeEmptyDescription:
-    "Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công thức cho thành phẩm.",
+    "Thêm ít nhất một dòng nguyên liệu để cấu hình công thức.",
   noNote: "Không ghi chú",
   productionRecipeImportExport: "Nhập / Xuất công thức",
   productionRecipeImportSuccess: (recipes: number, lines: number) =>
@@ -273,10 +273,10 @@ export const INVENTORY_VI = {
   productionCostEstimateSuffix: "(tạm tính)",
   productionOrdersEmptyTitle: "Chưa có lệnh sản xuất nào",
   productionOrdersEmptyDescription:
-    "Tạo lệnh mới khi công thức và nguyên liệu đã sẵn sàng tại Bếp Trung Tâm.",
+    "Tạo lệnh khi công thức và nguyên liệu đã sẵn sàng.",
   productionShortageTitle: "Thiếu nguyên liệu để sản xuất",
   productionShortageDescription: (productionNumber: string) =>
-    `Lệnh ${productionNumber} chưa đủ nguyên liệu tại Bếp Trung Tâm. Bổ sung tồn trong Bếp Trung Tâm trước khi xác nhận lại.`,
+    `Lệnh ${productionNumber} chưa đủ nguyên liệu tại Bếp Trung Tâm. Bổ sung tồn rồi xác nhận lại.`,
   productionShortageEmptyTitle: "Không có dòng thiếu nguyên liệu",
   shortageNeeded: "Cần",
   shortageOnHand: "Tồn",
@@ -285,7 +285,7 @@ export const INVENTORY_VI = {
   storageTypeLabel: "Kiểu lưu trữ",
   quickFinishedGoodTitle: "Thêm thành phẩm mới",
   quickFinishedGoodIntro:
-    "Danh sách trong công thức sản xuất lấy từ danh mục nguyên liệu có loại Thành phẩm. Tạo mới ở đây để dùng ngay cho công thức.",
+    "Tạo thành phẩm mới ở đây để dùng ngay cho công thức sản xuất.",
   finishedGoodNameLabel: "Tên thành phẩm",
   quickFinishedGoodNamePlaceholder: "VD: Sườn nướng sơ chế",
   quickFinishedGoodUnitPlaceholder: "khay, kg, lít...",
@@ -296,7 +296,7 @@ export const INVENTORY_VI = {
     "Đã tạo thành phẩm nhưng không đọc được mã mới.",
   quickRawIngredientTitle: "Thêm nguyên liệu mới",
   quickRawIngredientIntro:
-    "Tạo nhanh nguyên liệu đầu vào để hoàn thiện công thức và chuẩn bị cho lệnh sản xuất.",
+    "Tạo nhanh nguyên liệu đầu vào cho công thức sản xuất.",
   rawIngredientNameLabel: "Tên nguyên liệu",
   quickRawIngredientNamePlaceholder: "VD: Nước mắm pha",
   quickRawIngredientUnitPlaceholder: "kg, lít, chai...",
@@ -341,14 +341,14 @@ export const INVENTORY_VI = {
   scopeLabel: "Phạm vi",
   recordedEmptyTitle: "Chưa có tiêu hao đã ghi nhận",
   recordedEmptyDescription:
-    "Tiêu hao từ POS, phiếu thủ công và nguồn vận hành khác sẽ xuất hiện ở đây sau khi ghi sổ.",
+    "Tiêu hao từ POS, phiếu thủ công và nguồn khác sẽ hiện ở đây.",
   manualConsumptionSlipsTitle: "Phiếu tiêu hao thủ công",
   manualConsumptionCreateAction: "Tạo phiếu tiêu hao thủ công",
   manualConsumptionCreateDescription:
     "Phiếu này chỉ dùng cho tiêu hao nhập tay ngoài đơn POS.",
   manualConsumptionEmptyTitle: "Chưa có phiếu tiêu hao thủ công",
   manualConsumptionEmptyDescription:
-    "Phần này chỉ theo dõi chứng từ nhập tay; các dòng đã ghi sổ nằm ở mục tiêu hao đã ghi nhận.",
+    "Chỉ theo dõi chứng từ nhập tay; dòng đã ghi sổ nằm ở mục tiêu hao đã ghi nhận.",
   combinedConsumptionSlipsTitle: "Phiếu vận hành và hao hụt",
   combinedConsumptionCreateAction: "Tạo phiếu tiêu hao / hao hụt",
   combinedConsumptionCreateDescription:
@@ -356,8 +356,8 @@ export const INVENTORY_VI = {
   combinedConsumptionEmptyTitle: "Chưa có phiếu vận hành hoặc hao hụt",
   combinedConsumptionEmptyDescription:
     "Tạo phiếu khi cần ghi tiêu hao ngoài POS, hao hụt hoặc xuất khác.",
-  issueSlipsTitle: "WO / PXK khác",
-  issueCreateAction: "Tạo WO/PXK khác",
+  issueSlipsTitle: "Phiếu xuất kho khác",
+  issueCreateAction: "Tạo phiếu xuất kho khác",
   issueEmptyFiltered: "Không tìm thấy phiếu phù hợp",
   issueEmptyNoData: "Chưa có phiếu nào",
   issueEmptyDescription: "Điều chỉnh bộ lọc hoặc tạo phiếu mới để bắt đầu.",
@@ -365,7 +365,7 @@ export const INVENTORY_VI = {
   issueNotesPlaceholder: "Nhập ghi chú cho phiếu",
   countSlipTitle: "Duyệt phiếu đếm tồn",
   countSlipDescription:
-    "Đối chiếu số đếm với tồn hệ thống. Duyệt để ghi điều chỉnh kho, hoặc yêu cầu nhân viên đếm lại.",
+    "Đối chiếu số đếm với tồn hệ thống, rồi duyệt hoặc yêu cầu đếm lại.",
   countSlipPendingBadge: (count: number) => `${formatCount(count)} chờ duyệt`,
   countSlipEmptyTitle: "Không có phiếu đếm chờ duyệt",
   countSlipEmptyDescription:
@@ -373,7 +373,7 @@ export const INVENTORY_VI = {
   countSlipHistoryTitle: "Đã xử lý gần đây",
   countSlipApproveTitle: "Duyệt phiếu đếm tồn?",
   countSlipApproveDescription:
-    "Hệ thống sẽ ghi điều chỉnh kho theo số đếm và không thể hoàn tác từ màn này.",
+    "Ghi điều chỉnh kho theo số đếm, không thể hoàn tác.",
   warehouseShort: "Kho",
   lineCountLabel: "Số dòng",
   countSlipApproveFailed: "Không duyệt được phiếu đếm.",
@@ -408,7 +408,7 @@ export const INVENTORY_VI = {
   countAssignEyebrow: "Kiểm kê",
   countAssignTitle: "Phân công đếm tồn",
   countAssignDescription:
-    "Giao danh sách hàng cần kiểm kê cho từng nhân viên tại kho chi nhánh hiện tại.",
+    "Giao danh sách hàng cần kiểm kê cho từng nhân viên.",
   countAssignShiftLabel: "Ca đếm tồn",
   countAssignAllShifts: "Áp dụng mọi ca",
   countAssignAssignedSummary: (assigned: number, total: number) =>
@@ -425,8 +425,7 @@ export const INVENTORY_VI = {
   countAssignEditAction: "Chỉnh sửa",
   countAssignAssignedBadge: (count: number) =>
     `Nguyên liệu được giao (${formatCount(count)} thành phẩm)`,
-  countAssignAddDescription:
-    "Chọn nhân viên và thành phẩm cần kiểm kê tại kho chi nhánh hiện tại.",
+  countAssignAddDescription: "Chọn nhân viên và thành phẩm cần kiểm kê.",
   countAssignSaveFailed: "Không thể lưu phân công.",
   countAssignSaved: (name: string, count: number) =>
     `Đã lưu phân công cho ${name} (${formatCount(count)} mặt hàng)`,
@@ -471,7 +470,7 @@ export const INVENTORY_VI = {
   recipeEditAction: "Sửa định mức",
   recipesEmptyTitle: "Chưa có định mức món bán nào",
   recipesEmptyDescription:
-    'Định mức món bán là lượng nguyên liệu tiêu hao khi bán 1 phần menu item. Nhấn "Tạo định mức" để bắt đầu.',
+    'Lượng nguyên liệu tiêu hao khi bán 1 phần món. Nhấn "Tạo định mức" để bắt đầu.',
   recipesEmptyFiltered: "Không tìm thấy định mức phù hợp",
   recipeSearchPlaceholder: "Tìm theo tên món hoặc nhóm",
   recipeColMenuItem: "Món bán",
@@ -503,12 +502,12 @@ export const INVENTORY_VI = {
     `Tạo mới ${inserted} · Cập nhật ${updated}`,
   importIssueLine: (row: number, message: string) => `[dòng ${row}] ${message}`,
   dashboardSourceProcurementDescription:
-    "Theo dõi GRN, hóa đơn NCC và lệch giá/số lượng trước khi hàng vào tồn.",
-  dashboardDraftGrnLabel: "GRN nháp",
+    "Phiếu nhập, hóa đơn NCC và lệch giá trước khi hàng vào tồn.",
+  dashboardDraftGrnLabel: "Phiếu nhập nháp",
   dashboardPrepareReceivingHint: "Mở phiếu nhập và chọn NCC.",
-  dashboardGrnPriceReviewLabel: "GRN cần kiểm tra giá",
+  dashboardGrnPriceReviewLabel: "Phiếu nhập cần kiểm tra giá",
   dashboardGrnPriceReviewTask: (count: number) =>
-    `${formatCount(count)} dòng GRN cần kiểm tra giá`,
+    `${formatCount(count)} dòng phiếu nhập cần kiểm tra giá`,
   dashboardGrnPriceVarianceHint: "Giá nhập cần rà soát trong 30 ngày qua.",
   // Production surface guards — generalized copy (D068): production runs at the
   // central kitchen or at a branch, not central-kitchen-only.

@@ -146,9 +146,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/grn/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/grn/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/ingredients/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "DETAIL",
-  "apps/web/app/(protected)/inventory/issues/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/operations/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/issues/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD",
   "apps/web/app/(protected)/inventory/production/page.tsx": "LANDING",
   "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC-WORKFLOW",
@@ -174,7 +173,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/suppliers/[id]/items/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/suppliers/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": "DETAIL",
-  "apps/web/app/(protected)/inventory/transfers/new/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/inventory/transfers/new/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/transfers/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/waste/new/page.tsx": "DOC-WORKFLOW",
@@ -186,6 +185,12 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/offline/page.tsx": "GATE/AUTH",
   "apps/web/app/q/[token]/page.tsx": "PUBLIC-WORKFLOW",
   "apps/web/app/q/invoice/[token]/page.tsx": "PUBLIC-WORKFLOW",
+  "apps/web/app/r/[token]/page.tsx": "PUBLIC-WORKFLOW",
+  "apps/web/app/(protected)/feedback/page.tsx": "LIST",
+  "apps/web/app/(protected)/feedback/qr/page.tsx": "LIST",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/page.tsx": "LIST",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/qr/page.tsx":
+    "LIST",
 };
 
 const PAGE_DISPOSITION_OVERRIDES = {
@@ -195,6 +200,31 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/q/[token]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/r/[token]/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/feedback/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/feedback/qr/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/br/[branchId]/(operator)/feedback/qr/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,
@@ -300,11 +330,6 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/reports/page.tsx": {
-    status: "tune",
-    evidence: "implemented-static",
-    final: false,
-  },
-  "apps/web/app/(protected)/inventory/settings/qc/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,

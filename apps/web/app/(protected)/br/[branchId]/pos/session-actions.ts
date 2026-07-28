@@ -518,7 +518,7 @@ export const closePosSession = withActionPositional(
         ? (printRes as { reason?: string }).reason
         : undefined;
       if (skipReason === "no_printer") {
-        printWarning = "Đã chốt ca. Máy in offline — không in được phiếu chốt.";
+        printWarning = "Đã chốt ca. Máy in mất kết nối — không in được phiếu chốt.";
       }
     }
 

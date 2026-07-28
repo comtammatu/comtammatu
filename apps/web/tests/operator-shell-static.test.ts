@@ -41,6 +41,7 @@ test("operator bottom nav stays limited to daily jobs", () => {
   assert.ok(bottomNav.includes("showBranchManagement"));
   assert.match(bottomNav, /`\/br\/\$\{branchId\}\/team`/);
   assert.match(bottomNav, /`\/br\/\$\{branchId\}\/stock`/);
+  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/feedback`/);
   assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/dashboard`/);
   assert.doesNotMatch(bottomNav, /label: APP_COPY_VI\.operations/);
   assert.doesNotMatch(bottomNav, /icon: LayoutDashboard/);

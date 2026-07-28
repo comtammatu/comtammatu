@@ -94,6 +94,9 @@ SELECT t.id, v.code, v.label_vi, v.label_en, true, true
 FROM public.tenants t
 CROSS JOIN (VALUES
   ('owner',             'Chủ sở hữu',            'Owner'),
+  ('accountant',        'Kế toán',               'Accountant'),
+  ('central_supply_ops','Quản lý kho Tổng',      'Central Supply Ops'),
+  ('central_kitchen_lead','Bếp trưởng Bếp TT',   'Central Kitchen Lead'),
   ('branch_manager',    'Quản lý chi nhánh',     'Branch Manager'),
   ('kitchen_counter',   'Quầy bếp',              'Kitchen Counter'),
   ('chef',              'Bếp',                   'Chef'),
@@ -199,7 +202,9 @@ VALUES
   ('staff:view','staff','Xem danh sách nhân viên','either'),
   ('supplier_return:confirm','inventory_procurement','Xác nhận/gửi phiếu trả hàng NCC','branch'),
   ('supplier_return:create','inventory_procurement','Tạo phiếu trả hàng nhà cung cấp','branch'),
-  ('supplier_return:read','inventory_procurement','Xem phiếu trả hàng nhà cung cấp','either')
+  ('supplier_return:read','inventory_procurement','Xem phiếu trả hàng nhà cung cấp','either'),
+  ('feedback:view','feedback','Xem phản hồi khách hàng','branch'),
+  ('feedback:manage_qr','feedback','Tạo/xoay/vô hiệu hoá mã QR phản hồi','branch')
 ON CONFLICT (key) DO NOTHING;
 
 UPDATE public.permission_keys
@@ -244,7 +249,11 @@ SET is_delegable_to_staff = key = ANY (ARRAY[
   'printer:manage',
   'procurement:grn_confirm',
   'procurement:grn_create',
+  'procurement:invoice_create',
+  'procurement:invoice_match',
   'procurement:override_code_rotate',
+  'procurement:po_approve',
+  'procurement:po_create',
   'procurement:price_list_read',
   'procurement:read',
   'procurement:supplier_manage',
@@ -254,7 +263,13 @@ SET is_delegable_to_staff = key = ANY (ARRAY[
   'staff:view',
   'supplier_return:confirm',
   'supplier_return:create',
-  'supplier_return:read'
+  'supplier_return:read',
+  'feedback:view',
+  'feedback:manage_qr',
+  'finance:view',
+  'finance:expense_create',
+  'finance:expense_approve',
+  'finance:ap_pay'
 ]::text[]);
 
 -- 5) Role templates (mirrored from prod permission_keys; one per position_code).
@@ -269,8 +284,11 @@ CROSS JOIN (VALUES
   ('grill_counter', 'grill_counter', ARRAY['hr:request_leave','kds:mark_ready','kds:use']),
   ('cleaner', 'cleaner', ARRAY['hr:request_leave']),
   ('guard', 'guard', ARRAY['hr:request_leave']),
-  ('branch_manager', 'branch_manager', ARRAY['dashboard:view','hr:approve_checkout','hr:approve_leave_request','hr:request_leave','hr:view_employee','inventory:adjust_approve','inventory:count_approve','inventory:count_assign','inventory:grn_express_extend','inventory:item_review_override_set','inventory:production_confirm','inventory:production_create','inventory:read','inventory:stocktake_complete','inventory:stocktake_create','inventory:stocktake_recount','inventory:transfer_receive','inventory:waste_approve','inventory:write','inventory:writeoff','kds:mark_ready','kds:recall','kds:use','menu:read','orders:read','orders:void','orders:write','pos:apply_discount','pos:close_shift','pos:close_shift_variance_override','pos:confirm_payment','pos:open_cashbox','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use','pos:void_order','printer:manage','procurement:grn_confirm','procurement:grn_create','procurement:override_code_rotate','procurement:price_list_read','procurement:read','procurement:supplier_manage','reports:export','reports:view_branch','settings:branch','staff:view','supplier_return:confirm','supplier_return:create','supplier_return:read']),
-  ('owner', 'owner', ARRAY['accounting:period_reopen','crm:campaign_send','crm:read','crm:write','dashboard:view','finance:ap_pay','finance:expense_approve','finance:expense_create','finance:payroll_approve','finance:payroll_calculate','finance:view','hr:approve_leave_request','hr:approve_checkout','hr:manage_employee','hr:request_leave','hr:view_employee','inventory:adjust_approve','inventory:catalog_review_policy_set','inventory:grn_express_configure','inventory:grn_express_extend','inventory:grn_hardblock_override','inventory:item_review_override_set','inventory:production_confirm','inventory:production_create','inventory:read','inventory:stocktake_complete','inventory:stocktake_create','inventory:stocktake_recount','inventory:stocktake_unblind','inventory:transfer_create','inventory:transfer_receive','inventory:transfer_ship','inventory:units_master','inventory:waste_approve','inventory:waste_bypass_photo','inventory:write','inventory:writeoff','kds:mark_ready','kds:recall','kds:use','menu:manage_category','menu:publish','menu:read','menu:write','orders:read','orders:refund','orders:refund_approve','orders:void','orders:write','pos:apply_discount','pos:close_shift','pos:close_shift_variance_override','pos:confirm_payment','pos:open_cashbox','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use','pos:void_order','printer:manage','procurement:grn_amend','procurement:grn_confirm','procurement:grn_create','procurement:invoice_create','procurement:invoice_match','procurement:override_code_rotate','procurement:po_approve','procurement:po_create','procurement:price_list_read','procurement:price_list_write','procurement:read','procurement:supplier_manage','reports:export','reports:pit_export','reports:view_branch','reports:view_tenant','settings:branch','settings:integrations','settings:tenant','staff:assign_permission','staff:assign_position','staff:manage','staff:view'])
+  ('accountant', 'accountant', ARRAY['finance:ap_pay','finance:expense_approve','finance:expense_create','finance:view','procurement:invoice_create','procurement:invoice_match','procurement:po_approve','procurement:po_create','procurement:read']),
+  ('central_supply_ops', 'central_supply_ops', ARRAY['hr:request_leave','inventory:count_approve','inventory:count_assign','inventory:read','inventory:stocktake_complete','inventory:stocktake_create','inventory:stocktake_recount','inventory:waste_approve','inventory:write','inventory:writeoff','procurement:grn_confirm','procurement:grn_create','procurement:price_list_read','procurement:read','procurement:supplier_manage']),
+  ('central_kitchen_lead', 'central_kitchen_lead', ARRAY['hr:request_leave','inventory:count_approve','inventory:count_assign','inventory:production_confirm','inventory:production_create','inventory:read','inventory:stocktake_complete','inventory:stocktake_create','inventory:stocktake_recount','inventory:waste_approve','inventory:write','inventory:writeoff','procurement:grn_confirm','procurement:grn_create','procurement:price_list_read','procurement:read','procurement:supplier_manage']),
+  ('branch_manager', 'branch_manager', ARRAY['dashboard:view','feedback:manage_qr','feedback:view','hr:approve_checkout','hr:approve_leave_request','hr:request_leave','hr:view_employee','inventory:adjust_approve','inventory:count_approve','inventory:count_assign','inventory:grn_express_extend','inventory:item_review_override_set','inventory:production_confirm','inventory:production_create','inventory:read','inventory:stocktake_complete','inventory:stocktake_create','inventory:stocktake_recount','inventory:transfer_receive','inventory:waste_approve','inventory:write','inventory:writeoff','kds:mark_ready','kds:recall','kds:use','menu:read','orders:read','orders:void','orders:write','pos:apply_discount','pos:close_shift','pos:close_shift_variance_override','pos:confirm_payment','pos:open_cashbox','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use','pos:void_order','printer:manage','procurement:grn_confirm','procurement:grn_create','procurement:override_code_rotate','procurement:price_list_read','procurement:read','procurement:supplier_manage','reports:export','reports:view_branch','settings:branch','staff:view','supplier_return:confirm','supplier_return:create','supplier_return:read']),
+  ('owner', 'owner', ARRAY['accounting:period_reopen','crm:campaign_send','crm:read','crm:write','dashboard:view','feedback:manage_qr','feedback:view','finance:ap_pay','finance:expense_approve','finance:expense_create','finance:payroll_approve','finance:payroll_calculate','finance:view','hr:approve_leave_request','hr:approve_checkout','hr:manage_employee','hr:request_leave','hr:view_employee','inventory:adjust_approve','inventory:catalog_review_policy_set','inventory:grn_express_configure','inventory:grn_express_extend','inventory:grn_hardblock_override','inventory:item_review_override_set','inventory:production_confirm','inventory:production_create','inventory:read','inventory:stocktake_complete','inventory:stocktake_create','inventory:stocktake_recount','inventory:stocktake_unblind','inventory:transfer_create','inventory:transfer_receive','inventory:transfer_ship','inventory:units_master','inventory:waste_approve','inventory:waste_bypass_photo','inventory:write','inventory:writeoff','kds:mark_ready','kds:recall','kds:use','menu:manage_category','menu:publish','menu:read','menu:write','orders:read','orders:refund','orders:refund_approve','orders:void','orders:write','pos:apply_discount','pos:close_shift','pos:close_shift_variance_override','pos:confirm_payment','pos:open_cashbox','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use','pos:void_order','printer:manage','procurement:grn_amend','procurement:grn_confirm','procurement:grn_create','procurement:invoice_create','procurement:invoice_match','procurement:override_code_rotate','procurement:po_approve','procurement:po_create','procurement:price_list_read','procurement:price_list_write','procurement:read','procurement:supplier_manage','reports:export','reports:pit_export','reports:view_branch','reports:view_tenant','settings:branch','settings:integrations','settings:tenant','staff:assign_permission','staff:assign_position','staff:manage','staff:view'])
 ) AS v(name, position_code, permission_keys)
 WHERE t.slug = 'comtammatu'
   AND NOT EXISTS (

@@ -336,7 +336,13 @@ test("GRN create resolves the Branch warehouse on the server", () => {
   assert.match(grnCreateController, /targetLocationId: nextLocationId/);
   assert.match(
     grnCreateClient,
-    /\{controller\.showWarehouseEditor \? \([\s\S]*\{warehouseField\}/,
+    /controller\.showWarehouseEditor \?[\s\S]*warehouseField/,
+    "warehouse editor mounts when branch and/or location can switch",
+  );
+  assert.match(
+    grnCreateClient,
+    /controller\.showLocationPicker \?/,
+    "location field only mounts when multiple stock locations exist",
   );
   assert.doesNotMatch(grnCreateClient, /branchLocked/);
 });

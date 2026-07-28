@@ -17,17 +17,42 @@ const GUARDS = [
     paths: [
       "apps/web/proxy.ts",
       "packages/database/src/supabase/middleware.ts",
+      "apps/web/app/_lib/auth.ts",
     ],
     reason:
-      "proxy/middleware route on getSession() (cookie decode + auto-refresh), never getUser() (HTTP roundtrip per nav)",
+      "proxy/middleware/getAuthContext route on getSession(); never getUser() (nav latency / GRN false-null). Protected RSC Auth liveness is loadAuthState → auth-session-liveness, not auth.ts getAuthContext",
   },
   {
-    rule: "PROXY-NEVER-CALL-GETUSER",
+    rule: "ZOMBIE-JWT-AFTER-GLOBAL-SIGNOUT",
     expect: "present",
-    pattern: /\.getUser\(\)/,
+    pattern: /ensureLiveAuthSession|auth\.getUser|SESSION_EXPIRED_CODE/,
+    paths: ["apps/web/app/_lib/with-action.ts"],
+    reason:
+      "mutation wrappers probe Auth via getUser and map revoked sessions to session_expired, not forbidden",
+  },
+  {
+    rule: "ZOMBIE-JWT-AFTER-GLOBAL-SIGNOUT",
+    expect: "present",
+    pattern: /probeAuthSessionLiveness|auth\?\.getUser|AUTH_SESSION_CLEAR_PATH/,
+    paths: ["apps/web/app/_lib/auth-session-liveness.ts"],
+    reason:
+      "protected RSC navigations probe Auth liveness and redirect revoked sessions to cookie-clear signout",
+  },
+  {
+    rule: "ZOMBIE-JWT-AFTER-GLOBAL-SIGNOUT",
+    expect: "present",
+    pattern: /probeAuthSessionLiveness/,
     paths: ["apps/web/app/_lib/auth.ts"],
     reason:
-      "Server Action auth context MUST keep getUser() HTTP validation (banned-user defense-in-depth)",
+      "loadAuthState calls probeAuthSessionLiveness for far-from-expiry zombie JWT on protected navigation",
+  },
+  {
+    rule: "ZOMBIE-JWT-AFTER-GLOBAL-SIGNOUT",
+    expect: "present",
+    pattern: /export async function GET\(/,
+    paths: ["apps/web/app/api/auth/signout/route.ts"],
+    reason:
+      "signout Route Handler accepts GET so RSC redirect can Set-Cookie-clear a revoked zombie session",
   },
   {
     rule: "MULTI-KEY-PERMISSION-PARALLEL",
@@ -73,6 +98,48 @@ const GUARDS = [
       "calculatePayableDays caps completed workdays + paid annual leave at standard_days, preventing overpay when attendance exceeds the standard period",
   },
 ];
+
+/** Balanced-brace scan: forbid await confirm( inside startTransition(…). */
+function findConfirmInsideStartTransition(relRoots) {
+  const hits = [];
+  for (const relRoot of relRoots) {
+    for (const file of resolveFiles(relRoot)) {
+      const code = stripComments(fs.readFileSync(file, "utf8"));
+      let searchFrom = 0;
+      while (true) {
+        const start = code.indexOf("startTransition(", searchFrom);
+        if (start < 0) break;
+        const openParen = start + "startTransition".length;
+        if (code[openParen] !== "(") {
+          searchFrom = start + 1;
+          continue;
+        }
+        let depth = 0;
+        let end = -1;
+        for (let i = openParen; i < code.length; i++) {
+          const ch = code[i];
+          if (ch === "(") depth++;
+          else if (ch === ")") {
+            depth--;
+            if (depth === 0) {
+              end = i;
+              break;
+            }
+          }
+        }
+        if (end < 0) break;
+        const body = code.slice(openParen, end + 1);
+        if (/await\s+confirm\s*\(/.test(body)) {
+          const rel = path.relative(REPO_ROOT, file);
+          const line = code.slice(0, start).split("\n").length;
+          hits.push(`${rel}:${line}`);
+        }
+        searchFrom = end + 1;
+      }
+    }
+  }
+  return hits;
+}
 
 const CODE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs"];
 
@@ -131,6 +198,16 @@ for (const guard of GUARDS) {
   }
 }
 
+const confirmInTransitionHits = findConfirmInsideStartTransition([
+  "apps/web/app",
+  "apps/web/lib",
+]);
+if (confirmInTransitionHits.length > 0) {
+  failures.push(
+    `[CONFIRM-OUTSIDE-STARTTRANSITION] await confirm( inside startTransition( at ${confirmInTransitionHits.join(", ")} — confirm() must run before startTransition so AlertDialog can open after menu/sheet teardown`,
+  );
+}
+
 if (failures.length > 0) {
   console.error("Regression guard check failed:");
   for (const failure of failures) console.error(`- ${failure}`);
@@ -140,7 +217,10 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-const ruleCount = new Set(GUARDS.map((guard) => guard.rule)).size;
+const ruleCount = new Set([
+  ...GUARDS.map((guard) => guard.rule),
+  "CONFIRM-OUTSIDE-STARTTRANSITION",
+]).size;
 console.log(
-  `Regression guards: ${GUARDS.length} guards over ${ruleCount} rules in sync.`,
+  `Regression guards: ${GUARDS.length} pattern guards + 1 structural guard over ${ruleCount} rules in sync.`,
 );

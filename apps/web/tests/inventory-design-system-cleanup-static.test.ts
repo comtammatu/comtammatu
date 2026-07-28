@@ -45,8 +45,12 @@ test("inventory search inputs expose native semantics and accessible names", () 
     const source = readFileSync(file, "utf8");
     const inputs = source.match(/<InputGroupInput\b[\s\S]*?\/>/g) ?? [];
     return inputs.flatMap((input) => {
+      // Only free-text controls are search fields; a filter that declares a
+      // native type (date, number) keeps that type and still needs a name.
+      const declaredType = /\btype="([a-z]+)"/.exec(input)?.[1] ?? "text";
+      const isSearchField = declaredType === "text";
       const missing = [
-        !/\btype="search"/.test(input) ? "type=search" : null,
+        isSearchField ? "type=search" : null,
         !/\baria-label=/.test(input) ? "aria-label" : null,
       ].filter(Boolean);
       return missing.length > 0

@@ -182,7 +182,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         actions: [
           {
             label: messages.inventory.dashboard.trackAction,
-            href: paths.operationTab("transfers"),
+            href: paths.transfers,
             primary: true,
           },
           { label: tNav("reports", "navigation"), href: paths.reports },
@@ -195,14 +195,18 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     ? [
         {
           label: tNav("grn", "navigation"),
-          href: paths.operationTab("grn"),
+          href: paths.grn,
           primary: true,
+        },
+        {
+          label: "Đơn mua hàng",
+          href: paths.purchaseOrders,
         },
       ]
     : [
         {
           label: messages.inventory.dashboard.inboundSlipsAction,
-          href: paths.operationTab("transfers"),
+          href: paths.transfers,
           primary: true,
         },
         { label: tNav("stock", "navigation"), href: paths.stock },
@@ -233,7 +237,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         props.siteKind === "branch"
           ? messages.inventory.dashboard.receiveTransferAction
           : tNav("transfers", "navigation"),
-      href: paths.operationTab("transfers"),
+      href: paths.transfers,
     },
   ];
 
@@ -436,7 +440,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         key: "oversight-flow",
         title: messages.inventory.dashboard.flowsAwaitingWatch(activeTransfers),
         description: messages.inventory.dashboard.watchBetweenSites,
-        href: paths.operationTab("transfers"),
+        href: paths.transfers,
         icon: <IconArrowLeftRight className="size-4" />,
         severity: "info",
       });
@@ -481,7 +485,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         key: "recv",
         title: messages.inventory.dashboard.inboundConfirmTask(inbound.length),
         description: messages.inventory.dashboard.inboundReceiveHint,
-        href: paths.operationTab("transfers"),
+        href: paths.transfers,
         icon: <IconTruck className="size-4" />,
         severity: "primary",
       });
@@ -513,7 +517,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         reorderAlerts.length,
       ),
       description: INVENTORY_VI.dashboardPrepareReceivingHint,
-      href: paths.operationTab("grn"),
+      href: paths.grn,
       icon: <IconReceipt className="size-4" />,
       severity: "destructive",
     });
@@ -522,7 +526,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       key: "price-review",
       title: INVENTORY_VI.dashboardGrnPriceReviewTask(props.priceReviewCount),
       description: INVENTORY_VI.dashboardGrnPriceVarianceHint,
-      href: paths.operationTab("grn"),
+      href: paths.grn,
       icon: <IconReceipt className="size-4" />,
       severity: "warning",
     });
@@ -671,7 +675,7 @@ export function DashboardClient(props: DashboardProps) {
               render={
                 <Link
                   href={withBranch(
-                    showProcurement ? paths.operationTab("grn") : paths.stock,
+                    showProcurement ? paths.grn : paths.stock,
                   )}
                 />
               }
@@ -685,7 +689,7 @@ export function DashboardClient(props: DashboardProps) {
               <AppLinkCard
                 key={`r-${item.ingredientId}-${item.branchId}`}
                 href={withBranch(
-                  showProcurement ? paths.operationTab("grn") : paths.stock,
+                  showProcurement ? paths.grn : paths.stock,
                 )}
                 title={item.name}
                 description={messages.inventory.dashboard.reorderStatus(

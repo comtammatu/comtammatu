@@ -1,9 +1,9 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: inventory management copy */
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   FileText as IconFileText,
   Pencil as IconPencil,
@@ -71,6 +71,7 @@ interface Props {
   employees: EmployeeRow[];
   ingredients: IngredientOption[];
   assignmentsByEmployee: Record<string, number[]>;
+  initialAssignmentId?: number | null;
 }
 
 const ALL_SHIFTS_VALUE = "all";
@@ -92,15 +93,18 @@ function buildShiftScopeHref({
   branchId,
   locationId,
   shiftId,
+  assignmentId,
 }: {
   branchId: number | null;
   locationId: number | null;
   shiftId: ShiftScopeValue;
+  assignmentId?: number | null;
 }) {
   const params = new URLSearchParams();
   if (branchId !== null) params.set("branchId", String(branchId));
   if (locationId !== null) params.set("locationId", String(locationId));
   if (shiftId !== null) params.set("shiftId", String(shiftId));
+  if (assignmentId != null) params.set("assignmentId", String(assignmentId));
   const query = params.toString();
   return query
     ? `/inventory/count-assignments?${query}`
@@ -141,20 +145,91 @@ export function CountAssignmentsClient({
   employees,
   ingredients,
   assignmentsByEmployee,
+  initialAssignmentId = null,
 }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [activeEmployeeId, setActiveEmployeeId] = useState<number | null>(null);
+  const [activeEmployeeId, setActiveEmployeeId] = useState<number | null>(
+    initialAssignmentId,
+  );
   const [ingredientSearch, setIngredientSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
-  const [draftIds, setDraftIds] = useState<number[]>([]);
+  const [draftIds, setDraftIds] = useState<number[]>(() =>
+    initialAssignmentId == null
+      ? []
+      : (assignmentsByEmployee[String(initialAssignmentId)] ?? []),
+  );
   const [selectionByEmployee, setSelectionByEmployee] = useState<
     Record<string, number[]>
   >(() => seedSelections(employees, assignmentsByEmployee));
+  const selectionByEmployeeRef = useRef(selectionByEmployee);
+  selectionByEmployeeRef.current = selectionByEmployee;
+  const activeEmployeeIdRef = useRef(activeEmployeeId);
+  activeEmployeeIdRef.current = activeEmployeeId;
 
   useEffect(() => {
     setSelectionByEmployee(seedSelections(employees, assignmentsByEmployee));
   }, [employees, assignmentsByEmployee]);
+
+  const replaceAssignmentId = useCallback(
+    (assignmentId: number | null) => {
+      const next = new URLSearchParams(searchParams.toString());
+      if (assignmentId == null) next.delete("assignmentId");
+      else next.set("assignmentId", String(assignmentId));
+      const query = next.toString();
+      startTransition(() => {
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      });
+    },
+    [pathname, router, searchParams, startTransition],
+  );
+
+  // Sync active employee from URL only — do not depend on selection drafts.
+  useEffect(() => {
+    const raw = searchParams.get("assignmentId");
+    if (raw == null || raw === "") {
+      setActiveEmployeeId(null);
+      return;
+    }
+    const parsed = Number(raw);
+    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+      setActiveEmployeeId(null);
+      replaceAssignmentId(null);
+      return;
+    }
+    const employee = employees.find((row) => row.id === parsed);
+    if (!employee) {
+      setActiveEmployeeId(null);
+      replaceAssignmentId(null);
+      return;
+    }
+    setActiveEmployeeId(employee.id);
+  }, [employees, replaceAssignmentId, searchParams]);
+
+  // Load draft when the addressable employee changes (open / deep-link / close).
+  useEffect(() => {
+    if (activeEmployeeId == null) {
+      setDraftIds([]);
+      setIngredientSearch("");
+      return;
+    }
+    setDraftIds(
+      selectionByEmployeeRef.current[String(activeEmployeeId)] ?? [],
+    );
+    setIngredientSearch("");
+  }, [activeEmployeeId]);
+
+  // Reseed draft when server assignments refresh (location/shift scope) while
+  // the addressable editor stays open.
+  useEffect(() => {
+    const employeeId = activeEmployeeIdRef.current;
+    if (employeeId == null) return;
+    setDraftIds(assignmentsByEmployee[String(employeeId)] ?? []);
+  }, [assignmentsByEmployee]);
 
   const ingredientMap = useMemo(
     () => new Map(ingredients.map((ingredient) => [ingredient.id, ingredient])),
@@ -192,12 +267,14 @@ export function CountAssignmentsClient({
     setDraftIds(selectionByEmployee[String(employee.id)] ?? []);
     setIngredientSearch("");
     setActiveEmployeeId(employee.id);
+    replaceAssignmentId(employee.id);
   }
 
   function closeEditor() {
     if (isPending) return;
     setActiveEmployeeId(null);
     setIngredientSearch("");
+    replaceAssignmentId(null);
   }
 
   function toggleIngredient(id: number) {
@@ -240,6 +317,7 @@ export function CountAssignmentsClient({
           : INVENTORY_VI.countAssignSaved(activeEmployee.name, nextIds.length),
       );
       setActiveEmployeeId(null);
+      replaceAssignmentId(null);
       router.refresh();
     });
   }
@@ -290,11 +368,13 @@ export function CountAssignmentsClient({
         : parsedShiftId !== null && Number.isFinite(parsedShiftId)
           ? parsedShiftId
           : null;
+    // Keep addressable editor open across shift filter changes (same employee roster).
     router.replace(
       buildShiftScopeHref({
         branchId: selectedBranchId,
         locationId: selectedLocationId,
         shiftId: nextShiftId,
+        assignmentId: activeEmployeeId,
       }),
     );
   }
@@ -302,6 +382,7 @@ export function CountAssignmentsClient({
   function changeLocationScope(value: string) {
     const nextLocationId = Number.parseInt(value, 10);
     if (!Number.isFinite(nextLocationId)) return;
+    // Keep addressable editor open across location filter changes (same employee roster).
     router.replace(
       buildShiftScopeHref({
         branchId: selectedBranchId,
@@ -310,6 +391,7 @@ export function CountAssignmentsClient({
           showShiftPicker && selectedShiftId === null
             ? ALL_SHIFTS_VALUE
             : selectedShiftId,
+        assignmentId: activeEmployeeId,
       }),
     );
   }
@@ -386,7 +468,7 @@ export function CountAssignmentsClient({
         actions={
           <Button
             variant="outline"
-            size="lg"
+            size="touch"
             render={<Link href="/inventory/count-slips" />}
           >
             <IconFileText aria-hidden="true" />

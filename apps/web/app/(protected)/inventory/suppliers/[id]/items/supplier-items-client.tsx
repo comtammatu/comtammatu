@@ -30,6 +30,11 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
+import {
   AppBackLink,
   AppPage,
   AppPageHeader,
@@ -39,6 +44,7 @@ import { InventoryListFrame } from "../../../_components/inventory-list-frame";
 import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
+import { FORM_VI } from "@comtammatu/shared/messages";
 import { createSupplierItem, deleteSupplierItem } from "./actions";
 
 export type SupplierIngredientOption = {
@@ -103,16 +109,17 @@ export function SupplierItemsClient({
     [rows, search],
   );
 
-  function remove(row: SupplierItemRow) {
-    startTransition(async () => {
-      const accepted = await confirm({
-        title: copy.removeTitle,
-        description: copy.removeDescription(row.ingredientName, supplier.name),
-        confirmText: copy.removeAction,
-        variant: "destructive",
-      });
-      if (!accepted) return;
+  async function remove(row: SupplierItemRow) {
+    // confirm() must run outside startTransition — same deadlock as PO approve.
+    const accepted = await confirm({
+      title: copy.removeTitle,
+      description: copy.removeDescription(row.ingredientName, supplier.name),
+      confirmText: copy.removeAction,
+      variant: "destructive",
+    });
+    if (!accepted) return;
 
+    startTransition(async () => {
       const result = await deleteSupplierItem({
         supplierId: supplier.id,
         itemId: row.id,
@@ -125,6 +132,19 @@ export function SupplierItemsClient({
       router.refresh();
     });
   }
+
+  const getSupplierItemRowActions = (row: SupplierItemRow): RowActionItem[] => [
+    {
+      key: "remove",
+      label: copy.removeAria(row.ingredientName),
+      icon: <IconTrash />,
+      destructive: true,
+      disabled: isPending,
+      onSelect: () => {
+        void remove(row);
+      },
+    },
+  ];
 
   const columns: DataTableColumn<SupplierItemRow>[] = [
     {
@@ -150,24 +170,30 @@ export function SupplierItemsClient({
         <span className="font-mono text-sm">{row.supplierSkuCode}</span>
       ),
     },
-    {
-      key: "actions",
-      header: "",
-      className: "w-12",
-      render: (row) =>
-        canManage ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            disabled={isPending}
-            onClick={() => remove(row)}
-            aria-label={copy.removeAria(row.ingredientName)}
-          >
-            <IconTrash />
-          </Button>
-        ) : null,
-    },
+    ...(canManage
+      ? [
+          {
+            key: "actions",
+            header: FORM_VI.action,
+            className: "w-14",
+            render: (row: SupplierItemRow) => {
+              const items = getSupplierItemRowActions(row);
+              return (
+                <div
+                  className="flex justify-end"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <RowActionsMenu
+                    items={items}
+                    label={FORM_VI.action}
+                    triggerSize="icon-sm"
+                  />
+                </div>
+              );
+            },
+          } satisfies DataTableColumn<SupplierItemRow>,
+        ]
+      : []),
   ];
 
   return (
@@ -227,6 +253,15 @@ export function SupplierItemsClient({
             data={filtered}
             getRowKey={(row) => row.id}
             pageSize={25}
+            renderRowContextMenu={
+              canManage
+                ? (row) => (
+                    <RowActionsContextMenuItems
+                      items={getSupplierItemRowActions(row)}
+                    />
+                  )
+                : undefined
+            }
             emptyTitle={search.trim() ? copy.emptySearchTitle : copy.emptyTitle}
             emptyDescription={
               search.trim()
@@ -248,17 +283,14 @@ export function SupplierItemsClient({
                   ) : null}
                 </ItemContent>
                 {canManage ? (
-                  <ItemActions>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-touch"
-                      disabled={isPending}
-                      onClick={() => remove(row)}
-                      aria-label={copy.removeAria(row.ingredientName)}
-                    >
-                      <IconTrash />
-                    </Button>
+                  <ItemActions className="self-center">
+                    <div onClick={(event) => event.stopPropagation()}>
+                      <RowActionsMenu
+                        items={getSupplierItemRowActions(row)}
+                        label={FORM_VI.action}
+                        triggerSize="icon-touch"
+                      />
+                    </div>
                   </ItemActions>
                 ) : null}
               </Item>

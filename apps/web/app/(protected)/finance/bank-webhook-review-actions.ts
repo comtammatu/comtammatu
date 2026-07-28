@@ -1,6 +1,6 @@
 "use server";
 
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { z } from "zod";
@@ -8,7 +8,7 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { SEPAY_BANK_WEBHOOK_REVIEW_VALUES } from "./_lib/sepay-bank-transaction-model";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
+const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 
 const reviewMissingBankWebhookPaymentSchema = z.object({
   paymentId: z.coerce.number().int().positive(),

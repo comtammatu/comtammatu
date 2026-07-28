@@ -151,6 +151,7 @@ test("valid request uses snapshotted profile and reconciled totals", async () =>
       summarizeInfo: Record<string, unknown>;
       taxBreakdowns: Array<Record<string, unknown>>;
     };
+    assert.equal(body.generalInvoiceInfo["invoiceType"], "1");
     assert.equal(body.generalInvoiceInfo["templateCode"], "1/001");
     assert.equal(body.generalInvoiceInfo["invoiceSeries"], "C26TCS");
     assert.equal(body.summarizeInfo["totalAmountWithTax"], 218_000);

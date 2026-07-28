@@ -10,8 +10,12 @@ import {
   parseFinanceParams,
   resolveFinanceRange,
 } from "../_lib/finance-params";
-import { isOperatingExpenseCategory } from "../_lib/expense-categories";
+import {
+  expenseNeedsAction,
+  isOperatingExpenseCategory,
+} from "../_lib/expense-categories";
 import { ExpensesClient } from "./expenses-client";
+import { parseExpenseListState } from "./expense-list-state";
 
 const copy = messages.finance.expenses;
 
@@ -24,7 +28,7 @@ export default async function ExpensesPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
-  // Settle cookie session before parallel getAuthContext/getUser fan-out.
+  // Settle cookie session before parallel getAuthContext fan-out.
   // Racing loadAuthState with finance actions on the shared GoTrue client
   // yields false-null ctx and the expenses soft load-error empty state.
   const { claims } = await loadAuthState();
@@ -61,10 +65,24 @@ export default async function ExpensesPage({
     name: string;
   }[];
   const rows = expensesRes.data ?? [];
-  const totalAmount = rows.reduce(
-    (sum, row) =>
-      isOperatingExpenseCategory(row.category) ? sum + row.amount : sum,
-    0,
+  const summary = rows.reduce(
+    (acc, row) => {
+      if (isOperatingExpenseCategory(row.category)) {
+        acc.operatingTotal += row.amount;
+        acc.operatingCount += 1;
+      }
+      if (expenseNeedsAction(row)) {
+        acc.needsActionTotal += row.amount;
+        acc.needsActionCount += 1;
+      }
+      return acc;
+    },
+    {
+      operatingTotal: 0,
+      operatingCount: 0,
+      needsActionTotal: 0,
+      needsActionCount: 0,
+    },
   );
   const todayBusinessDate = getVNDateString();
 
@@ -79,7 +97,8 @@ export default async function ExpensesPage({
         params={params}
         branches={branches}
         rows={rows}
-        totalAmount={totalAmount}
+        summary={summary}
+        stateFilter={parseExpenseListState(sp.state)}
         todayBusinessDate={todayBusinessDate}
         canManageExpenses={canManageExpenses}
         tenantId={claims.tenant_id}

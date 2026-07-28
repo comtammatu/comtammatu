@@ -126,11 +126,7 @@ export default async function FinancePage({
         compact
       />
 
-      <AppSection
-        size="sm"
-        title={financeCopy.basic.sections.periodResult}
-        description={financeCopy.basic.sections.followsFilters}
-      >
+      <AppSection size="sm" title={financeCopy.basic.sections.periodResult}>
         <KpiRow
           density="compact"
           className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
@@ -260,11 +256,7 @@ export default async function FinancePage({
 
       <CurrentFundsSection cash={cash} />
 
-      <AppSection
-        size="sm"
-        title={financeCopy.basic.sections.inventory}
-        description={financeCopy.basic.sections.followsFilters}
-      >
+      <AppSection size="sm" title={financeCopy.basic.sections.inventory}>
         <KpiRow
           density="compact"
           className="grid-cols-1 sm:grid-cols-1 lg:grid-cols-1 xl:grid-cols-1"

@@ -174,7 +174,7 @@ test("Payroll UI uses operator terms for the unclosed and closed states", () => 
 
   assert.match(
     payrollMessagesSource,
-    /Bảng lương tạm tính theo ngày công, nghỉ phép đã duyệt, mức lương trong hồ sơ\/HĐLĐ và các khoản điều chỉnh của tháng đã chọn\./,
+    /Tạm tính theo ngày công, nghỉ phép, mức lương và điều chỉnh trong tháng\./,
   );
   assert.match(payrollMessagesSource, /Tình trạng tính lương/);
   assert.match(payrollMessagesSource, /Đủ thông tin tính lương/);

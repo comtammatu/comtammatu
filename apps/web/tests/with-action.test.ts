@@ -26,9 +26,19 @@ const withActionSource = () =>
 function fakeCtx(overrides?: {
   role?: ActionContext["claims"]["user_role"];
   branch_id?: number | null;
+  getUserError?: { name?: string; code?: string } | null;
 }): ActionContext {
+  const getUserError = overrides?.getUserError;
   return {
-    supabase: {} as ActionContext["supabase"],
+    supabase: {
+      auth: {
+        getUser: async () =>
+          getUserError
+            ? { data: { user: null }, error: getUserError }
+            : { data: { user: { id: "user-1" } }, error: null },
+        signOut: async () => ({ error: null }),
+      },
+    } as ActionContext["supabase"],
     user: {} as ActionContext["user"],
     claims: {
       user_role: overrides?.role ?? "owner",
@@ -69,6 +79,36 @@ test("withAction returns forbidden when customAuth returns null", async () => {
   const result = await action({ orderItemId: 1, reason: "valid reason" });
   assert.equal(result.success, false);
   assert.equal(result.error, "Không có quyền");
+});
+
+test("withAction maps revoked Auth session to session_expired not forbidden", async () => {
+  const action = withAction(
+    {
+      schema: sampleSchema,
+      customAuth: async () =>
+        fakeCtx({
+          getUserError: {
+            name: "AuthSessionMissingError",
+            code: "session_not_found",
+          },
+        }),
+    },
+    async () => ({ success: true }),
+  );
+
+  const result = await action({ orderItemId: 1, reason: "valid reason" });
+  assert.equal(result.success, false);
+  assert.equal(result.errorCode, "session_expired");
+  assert.match(result.error ?? "", /đăng nhập lại/i);
+  assert.notEqual(result.error, "Không có quyền");
+});
+
+test("withAction source probes getUser for mutation Auth liveness", () => {
+  const source = withActionSource();
+  assert.match(source, /ensureLiveAuthSession/);
+  assert.match(source, /auth\.getUser/);
+  assert.match(source, /SESSION_EXPIRED_CODE/);
+  assert.match(source, /signOut\(\{\s*scope:\s*["']local["']/);
 });
 
 test("withAction passes parsed data and ctx to handler on success", async () => {

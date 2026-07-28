@@ -13,7 +13,8 @@ export const ERRORS_VI = {
   saveFailed: "Không thể lưu, vui lòng thử lại",
   loadFailed: "Không thể tải dữ liệu",
   pageNotFound: "Không tìm thấy trang",
-  pageNotFoundHint: "Đường dẫn không tồn tại hoặc nội dung đã bị xóa",
+  pageNotFoundHint:
+    "Đường dẫn không tồn tại hoặc nội dung đã bị xóa. Nếu vừa đổi quyền hoặc bị đăng xuất, hãy đăng nhập lại.",
   errorCode: "Mã lỗi",
 } as const;
 

@@ -121,7 +121,7 @@ export function PrinterStatusIndicator({
 
   // A failed job outranks the heartbeat tone: agent online + dead printer
   // looked healthy before — the count is the actual paper-out-of-tray truth.
-  const offlineTitle = `Agent ${status.agentId ?? ""} offline lần cuối ${formatVNDateTime(status.lastSeenAt)}`;
+  const offlineTitle = `Agent ${status.agentId ?? ""} mất kết nối lần cuối ${formatVNDateTime(status.lastSeenAt)}`;
   const badge =
     failedCount > 0 ? (
       <Badge

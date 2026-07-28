@@ -10,6 +10,8 @@ export const PUBLIC_APP_PATHS = [
   "/access-denied",
   "/q",
   "/api/self-order",
+  "/r",
+  "/api/feedback",
 ] as const;
 
 export const INVENTORY_PROCUREMENT_PREFIXES = [
@@ -29,7 +31,6 @@ export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/count-assignments",
   "/inventory/count-slips",
   "/inventory/issues",
-  "/inventory/operations",
   "/inventory/production",
   "/inventory/reports",
   "/inventory/stock",
@@ -43,6 +44,7 @@ export const OWNER_ROUTE_PREFIXES = [
   "/settings",
   "/menu",
   "/orders",
+  "/feedback",
   "/inventory",
   "/finance",
   "/branches",
@@ -103,6 +105,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (matchesPathPrefix(pathname, "/branches")) return "branches";
   if (matchesPathPrefix(pathname, "/menu")) return "menu";
   if (matchesPathPrefix(pathname, "/orders")) return "orders";
+  if (matchesPathPrefix(pathname, "/feedback")) return "feedback";
   if (matchesPathPrefix(pathname, "/hr/staff")) return "staff";
   if (matchesPathPrefix(pathname, "/hr/payroll")) return "hr_payroll";
   if (matchesPathPrefix(pathname, "/hr")) return "hr";
@@ -122,6 +125,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/orders(?:\/|$)/.test(pathname)) return "branch_orders";
   if (/^\/br\/\d+\/dashboard(?:\/|$)/.test(pathname)) return "branch_dashboard";
   if (/^\/br\/\d+\/team(?:\/|$)/.test(pathname)) return "branch_team";
+  if (/^\/br\/\d+\/feedback(?:\/|$)/.test(pathname)) return "branch_feedback";
   if (/^\/br\/\d+\/menu-limits(?:\/|$)/.test(pathname))
     return "branch_menu_limits";
   if (/^\/br\/\d+\/settings\/menu-limits(?:\/|$)/.test(pathname)) return null;

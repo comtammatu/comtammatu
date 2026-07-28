@@ -30,6 +30,8 @@ test("error surfaces hide digest and blank notifications use a fallback", () => 
 
   assert.doesNotMatch(globalError, /\{\s*error\.digest\b/);
   assert.doesNotMatch(errorPanel, /\{\s*error\.digest\b/);
+  assert.match(errorPanel, /action=["']\/api\/auth\/signout["']/);
+  assert.match(errorPanel, /ACTIONS_VI\.signInAgain/);
   assert.match(notify, /msg\?\.trim\(\)\s*\|\|\s*FALLBACK_ERROR/);
   assert.match(notify, /error\(err\)\.trim\(\)\s*\|\|\s*FALLBACK_ERROR/);
   assert.match(notify, /error\?\.trim\(\)\s*\|\|\s*FALLBACK_ERROR/);

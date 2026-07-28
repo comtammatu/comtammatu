@@ -12,22 +12,19 @@
    - Rule: For M:1 embeds, treat the FK field as `{ ... } | null` (object), matching runtime. Use `row.parent as unknown as { ... } | null` (or pre-typed interface) to bridge supabase-js typegen quirk. Match `apps/web/app/(protected)/hr/attendance-table.tsx` (`record.shifts?.name`).
    - Prevention: Whenever you write `?.[0]?` on a select-embed, stop and check direction: if `child.fk → parent.pk` (M:1) it is an object, not an array; reserve `[0]` for reverse 1:M embeds.
 
-2. **Next.js 16.2 webpack + serwist intermittent cache poisoning**
-   - Pattern: After regenerating `database.types.ts` mid-session, `pnpm build` failed with `uncaughtException TypeError: Cannot read properties of undefined (reading 'length') at ignore-listed frames` — error originates in Next.js / serwist internals, not user code. Compile passed; the failure was in the post-compile manifest step. Clearing `.next` + `.turbo` resolved.
-   - Rule: When `pnpm build` fails with a `TypeError ... ignore-listed frames` from inside Next.js / serwist after a types regeneration, the cause is webpack/serwist manifest desync — not code. Clear `apps/web/.next` and `apps/web/.turbo` and rebuild. Use `pnpm clean:web && pnpm build` as the single recovery sequence.
-   - Prevention: Added `pnpm clean:web` script at root (uses `node scripts/clean-web.mjs`, cross-platform). When changing types in mid-session, default to clean rebuild to avoid the trap.
-
-3. **Bash `run_in_background` notification exit-code is unreliable; ALWAYS read the output file**
-   - Rule: Treat the bg-completion notification as "done", not "succeeded" — for chained pnpm/turbo invocations the notification can report exit 0 while the output contains `ELIFECYCLE ... exit code 1` / `Failed to type check`. The output file's own summary (`Tasks: N successful` / `Failed:` token) is authoritative.
-   - Prevention: `tail -10 <output_file>` after every bg notification; exit-0 + `Failed:` line = real failure.
-
-4. **turbo `test` cache masks cross-package source-introspection failures**
+2. **turbo `test` cache masks cross-package source-introspection failures**
    - Pattern: A test in package A reads ANOTHER package's source via `readFileSync` and asserts on its content (e.g. `packages/shared/src/kds/__tests__/auto-kitchen-print-trigger.test.ts` reads `apps/web/.../pos/print-actions.ts` and asserts it keeps `deferred_to: "kds_completion"`). Deleting/moving code in `apps/web` does NOT invalidate `@comtammatu/shared#test`'s turbo cache (cache key is package-scoped), so local `pnpm test`/`pnpm verify` replays a STALE pass while fresh CI fails.
    - Rule: When a change deletes/moves source that a cross-package source-introspection test reads, the per-package turbo cache will not catch the break locally — caught a `sendToKitchen` deletion only at CI (2026-06-17).
    - Prevention: After deletions/moves of code that any test reads as a file, run `pnpm exec turbo run test --force` locally before pushing. Treat a green cached `pnpm test` as "inputs unchanged", not "verified". CI runs fresh and is authoritative.
 
-5. **Code that depends on an unapplied migration must never sit on the `main` ref, even unpushed**
+3. **Code that depends on an unapplied migration must never sit on the `main` ref, even unpushed**
    - Pattern: A fast-forward of local `main` put RPC-calling code onto the branch while its additive migration was still only a file. A parallel session then pushed `main`; Vercel auto-deployed production from it, and `/orders`, food-cost, and the consumption-variance report ran against three RPCs that did not exist in production for ~3h15m (2026-07-10). `/orders` was the worst case: it destructures only `{ data }` from the `rpc()` call, so the missing function surfaced as **0 orders / 0 revenue** instead of an error.
    - Rule: "Unpushed" is not a safety boundary in a repo where other sessions share the working tree and push `main`. Migration-dependent code stays on a feature branch until the migration is applied to production; apply first, then fast-forward `main`.
    - Rule: Never put additive and destructive DDL in one migration file. `CREATE FUNCTION new_thing` plus `DROP FUNCTION old_thing` need opposite deploy orders (additive: apply before deploy; destructive: deploy before apply), so one file cannot be applied safely in either order. Split them and apply the drop only after the deploy is verified.
    - Prevention: Before any `git merge --ff-only` onto `main`, ask whether the branch calls an RPC/column production lacks; if so, apply the additive migration first. When assessing blast radius, read the destructuring: a Server Action that ignores `error` from `.rpc()` turns a missing function into silently wrong numbers rather than a visible failure.
+
+4. **Owner GRN create DOC is one lines region + progressive add, not dual AppSections**
+   - Pattern: Early GRN create stacked `Mặt hàng trên phiếu` (draft DataTable) and `Danh mục nguyên liệu` (always-visible search list) as sibling `AppSection`s. That duplicated vertical space and competed with the sticky footer / desk editor.
+   - Rule: Owner GRN create (`/inventory/grn/new/[supplierId]`) and draft DETAIL share one composition: dense context (`Kho nhận`) → single lines table with **Thêm mặt hàng** / add affordance → catalog search in overlay (`AppDialog` / `AddGrnLineDialog`) → progressive line editor (desk panel / sheet) → sticky `AppDetailFooter` SSOT. Catalog is never a second always-on page section.
+   - Rule: The progressive line editor is an overlay for unit / qty / unit price only — keep fields dense. Do not restate unit in the header subtitle, under qty, or as a unit-price echo; do not stack a tall prior-price comparison card with a separate variance Alert that repeats the same numbers. One compact prior-price line + a single Alert when over threshold.
+   - Prevention: Prefer `docs/modules/ui.md` Owner GRN create DOC bullet and `grn-create-ux-static` / Wave E static tests before restoring an always-on catalog list under the lines table.

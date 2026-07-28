@@ -6,6 +6,7 @@ import { catalog } from "./catalog";
 import { common } from "./common";
 import { employee } from "./employee";
 import { finance } from "./finance";
+import { feedbackCopy } from "./feedback";
 import { hr } from "./hr";
 import { inventory } from "./inventory";
 import {
@@ -25,6 +26,7 @@ export const messages = {
   auth,
   employee,
   finance,
+  feedback: feedbackCopy,
   hr,
   inventory,
   inventoryMaster: {

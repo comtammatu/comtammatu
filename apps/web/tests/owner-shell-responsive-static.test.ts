@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
@@ -37,6 +37,194 @@ test("Owner mobile shell keeps the module drawer available on the root landing",
   assert.doesNotMatch(source, /brand-pattern-caro/);
 });
 
+test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () => {
+  const source = read("apps/web/app/components/app-shell.tsx");
+
+  assert.match(source, /className="h-svh overflow-hidden"/);
+  assert.match(
+    source,
+    /chrome-safe-pt min-h-0 overflow-hidden lg:max-h-\[calc\(100svh-1rem\)\]/,
+  );
+  assert.match(
+    source,
+    /flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3 md:px-4 md:pt-4/,
+  );
+  assert.match(source, /data-owner-shell-scroll=""/);
+  assert.match(source, /showBottomNav \? "pb-24 lg:pb-0" : "pb-3 md:pb-4"/);
+  assert.match(source, /<AppShellPaddingBoundary>/);
+  assert.match(
+    source,
+    /flex min-h-0 flex-1 flex-col gap-4/,
+    "Owner shell content fills scrollport for docked sticky footers",
+  );
+
+  const surface = read("apps/web/app/components/surface.tsx");
+  // Page header scrolls with content — freezing it outside the scrollport
+  // reserved empty body chrome and crushed dashboard aesthetics.
+  assert.doesNotMatch(
+    surface,
+    /function AppPageHeader\([\s\S]*?sticky top-0 z-10 bg-background/,
+  );
+  assert.doesNotMatch(surface, /createPortal|OwnerPageChromeHostContext|ownsOwnerScroll/);
+  assert.doesNotMatch(surface, /APP_PAGE_HEADER_OFFSET_VAR|data-owner-page-chrome/);
+  assert.match(surface, /APP_PAGE_STICKY_FILTER_CLASSNAME/);
+  assert.match(surface, /function AppPageStickyChrome\(/);
+  assert.match(
+    surface,
+    /function AppListFrame\([\s\S]*?APP_PAGE_STICKY_FILTER_CLASSNAME[\s\S]*?bg-card/,
+  );
+  assert.match(surface, /sticky\?: boolean/);
+  assert.match(
+    surface,
+    /const applyInnerScroll = scroll && !nesting\.padded/,
+  );
+});
+
+test("Owner sibling LIST filter bars opt into sticky stack", () => {
+  const wired = [
+    [
+      "apps/web/app/(protected)/orders/orders-client.tsx",
+      /<AppToolbar sticky className="items-end">/,
+    ],
+    [
+      "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",
+      /<AppToolbar\s+sticky/,
+    ],
+    [
+      "apps/web/app/(protected)/hr/attendance-table.tsx",
+      /<AppToolbar\s+sticky/,
+    ],
+    [
+      "apps/web/app/(protected)/hr/staff/audit/permission-audit-filters.tsx",
+      /<AppToolbar\s+sticky/,
+    ],
+    [
+      "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
+      /<AppToolbar\s+sticky=\{isCompactLayout\}/,
+    ],
+  ] as const;
+
+  for (const [path, pattern] of wired) {
+    assert.match(read(path), pattern, `${path} must sticky its page filter bar`);
+  }
+
+  // Finance FilterBar sits above KPI/dashboard cards — sticky crushes the
+  // next section while scrolling. LIST pages use AppListFrame toolbar sticky.
+  assert.doesNotMatch(
+    read("apps/web/app/(protected)/finance/components/filter-bar.tsx"),
+    /<AppToolbar\s+sticky/,
+  );
+});
+
+test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt", () => {
+  /** Non-filter toolbars / shared Branch-only clients — do not require sticky. */
+  const allowlist = new Map<string, string>([
+    [
+      "apps/web/app/(protected)/orders/orders-client.tsx",
+      "count/badge summary bar under sticky filters",
+    ],
+    [
+      "apps/web/app/(protected)/orders/refunds-client.tsx",
+      "action/status bar, not LIST filters",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/settings/settings-section-nav.tsx",
+      "settings section nav chips, not LIST filters",
+    ],
+    [
+      "apps/web/app/(protected)/hr/staff/staff-filters.tsx",
+      "rendered only inside AppListFrame toolbar on staff/page.tsx",
+    ],
+    [
+      "apps/web/app/(protected)/finance/components/filter-bar.tsx",
+      "dashboard/KPI pages — sticky would crush sections below",
+    ],
+    [
+      "apps/web/app/(protected)/branch-settings/_shared/pos/terminals-client.tsx",
+      "Branch settings client (operator chrome), not Owner shell",
+    ],
+    [
+      "apps/web/app/(protected)/branch-settings/_shared/tables/tables-client.tsx",
+      "Branch settings client (operator chrome), not Owner shell",
+    ],
+    [
+      "apps/web/app/(protected)/branch-settings/_shared/kds/stations-client.tsx",
+      "Branch settings client (operator chrome), not Owner shell",
+    ],
+  ]);
+
+  const protectedRoot = resolve(repoRoot, "apps/web/app/(protected)");
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      const st = statSync(full);
+      if (st.isDirectory()) {
+        if (entry === "br") continue;
+        walk(full);
+        continue;
+      }
+      if (entry.endsWith(".tsx")) files.push(full);
+    }
+  };
+  walk(protectedRoot);
+
+  const filterSlotToolbar =
+    /<AppToolbar\b[\s\S]{0,400}?\b(?:filters|search)=/;
+  const stickyToolbar = /<AppToolbar\b[^>]*\bsticky\b|<AppToolbar\s+sticky\b/;
+  const listFrame = /\b(?:AppListFrame|InventoryListFrame)\b/;
+  const toolbarSlot = /\btoolbar=\{/;
+
+  for (const abs of files) {
+    const rel = abs.slice(repoRoot.length + 1);
+    const source = readFileSync(abs, "utf8");
+    if (!filterSlotToolbar.test(source)) continue;
+    if (allowlist.has(rel)) continue;
+
+    const coveredByFrame = listFrame.test(source) && toolbarSlot.test(source);
+    const coveredBySticky = stickyToolbar.test(source);
+    assert.ok(
+      coveredByFrame || coveredBySticky,
+      `${rel} has AppToolbar search/filters but neither AppListFrame toolbar sticky wrap nor AppToolbar sticky — add sticky, move into AppListFrame toolbar, or allowlist with reason`,
+    );
+  }
+
+  // Keep staff-filters pinned to the framed slot (double-sticky would stack wrong).
+  const staffPage = read("apps/web/app/(protected)/hr/staff/page.tsx");
+  assert.match(
+    staffPage,
+    /<AppListFrame[\s\S]*?toolbar=\{\s*<Suspense>\s*<StaffFilters/,
+  );
+  assert.doesNotMatch(
+    read("apps/web/app/(protected)/hr/staff/staff-filters.tsx"),
+    /<AppToolbar\s+sticky/,
+  );
+});
+
+test("Owner AppPageHeader tabs slot must not embed full AppPageTabs bodies", () => {
+  for (const path of [
+    "apps/web/app/(protected)/orders/orders-page-body.tsx",
+    "apps/web/app/(protected)/menu/page.tsx",
+  ]) {
+    const source = read(path);
+    assert.doesNotMatch(
+      source,
+      /tabs=\{\s*<AppPageTabs[\s\S]*?<TabsContent/,
+          `${path} must keep TabsContent outside AppPageHeader chrome`,
+    );
+  }
+});
+
+test("Owner shell scroll invariant is documented", () => {
+  const designSystem = read("docs/spec/design-system.md");
+  const uiModule = read("docs/modules/ui.md");
+  assert.match(designSystem, /data-owner-shell-scroll/);
+  assert.match(designSystem, /AppPageHeader` scrolls with page\s+content/);
+  assert.match(uiModule, /data-owner-shell-scroll/);
+  assert.match(uiModule, /AppPageStickyChrome/);
+  assert.match(uiModule, /AppPageHeader` cuộn cùng nội dung/);
+});
+
 test("Inventory branch selector keeps touch targets through tablet widths", () => {
   const source = read(
     "apps/web/app/(protected)/inventory/_components/inventory-branch-filter.tsx",
@@ -62,10 +250,7 @@ test("Inventory ingredient editor keeps two operational unit roles", () => {
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   );
   assert.match(issueDetail, /useIsMobile\(1024\)/);
-  assert.match(
-    issueDetail,
-    /const content = isTouchLayout \? mobileLayout : pageLayout;/,
-  );
+  assert.match(issueDetail, /const content = isTouchLayout \? \(/);
   assert.doesNotMatch(issueDetail, /lg:hidden">\{mobileLayout\}/);
   assert.doesNotMatch(issueDetail, /hidden lg:block">\{pageLayout\}/);
 });
@@ -81,7 +266,7 @@ test("Owner page-header actions use named button sizes", () => {
     "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
     "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
     "apps/web/app/(protected)/inventory/inventory-value-panel.tsx",
-    "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   ];
 
   for (const path of touchPaths) {

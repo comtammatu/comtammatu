@@ -86,8 +86,8 @@ export function OrdersPageBody({
             {ORDERS_COPY.reportsAction}
           </Button>
         }
-        tabs={content}
       />
+      {content}
     </AppPage>
   );
 }

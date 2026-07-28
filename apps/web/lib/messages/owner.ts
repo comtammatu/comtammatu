@@ -39,7 +39,7 @@ export const owner = {
     createTitle: "Tạo tài khoản",
     editTitle: "Chỉnh sửa tài khoản",
     createDescription:
-      "Tạo tài khoản, gán chức vụ và chi nhánh. Thiết lập quyền truy cập ở bước tiếp theo.",
+      "Gán chức vụ và chi nhánh; thiết lập quyền ở bước sau.",
     editDescription: "Cập nhật hồ sơ, chức vụ và chi nhánh làm việc.",
     createSuccess: "Đã tạo tài khoản",
     createContinuePermissions: "Đã tạo tài khoản. Tiếp tục thiết lập quyền.",
@@ -54,7 +54,7 @@ export const owner = {
   staffPage: {
     title: "Tài khoản & quyền",
     description:
-      "Tạo tài khoản, gán chức vụ và thiết lập quyền truy cập theo chi nhánh. Hồ sơ nhân sự, chấm công và lương ở mục Nhân sự.",
+      "Tài khoản, chức vụ và quyền theo chi nhánh. Hồ sơ và lương ở mục Nhân sự.",
     createAccount: "Tạo tài khoản",
     hrLink: "Nhân sự",
     moreActions: "Thao tác khác",
@@ -73,7 +73,7 @@ export const owner = {
     linkLabel: "Nhật ký quyền hạn",
     title: "Nhật ký quyền hạn",
     description:
-      "Mọi thao tác gán/thu hồi quyền và áp dụng mẫu quyền. Ghi nhật ký không thay đổi được.",
+      "Mọi thao tác gán, thu hồi và áp dụng mẫu quyền. Không sửa được.",
     recentItems: (count: number) => `${formatCount(count)} mục gần nhất`,
     empty: "Không có thay đổi nào.",
     time: "Thời gian",

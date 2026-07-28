@@ -141,18 +141,21 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.5. Phân hệ Kho hàng (Inventory Workspace) — `/inventory` & `/br/[branchId]/stock`
 
-- **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/grn`, bước chọn NCC `/br/[branchId]/stock/grn/new`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/operations` và `/inventory/supplier-invoices` là `REDIRECT-SHIM` (invoices → `/finance/supplier-invoices`, ADR 0018). `/inventory/purchase-orders` is a frozen non-nav route (C1) — not a live LIST in daily IA. Detail consumption và issue Branch thuộc `DETAIL`; form dòng GRN và phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
-- **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`);
-  `/br/[branchId]/stock` dành cho Quản lý chi nhánh (`branch_manager`) và Owner
-  hỗ trợ, với action tiếp tục bị permission + branch scope giới hạn.
+- **Planes (ADR 0012 / 0018):** Owner `/inventory/*` và Branch Stock
+  `/br/[branchId]/stock/*` là hai plane tách chrome/IA. Owner filter site mọi
+  `branch_kind` ngang hàng. Branch Stock không mirror Owner sidebar/tile.
+- **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/grn`, bước chọn NCC `/br/[branchId]/stock/grn/new`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new`, `/inventory/issues`, `/inventory/issues/[id]`, và `/inventory/supplier-invoices` là `REDIRECT-SHIM` (invoices → `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. `/inventory/purchase-orders` is an Owner sidebar LIST (**Đơn mua hàng**, C1 restore). Detail consumption và issue Branch thuộc `DETAIL`; form dòng GRN và phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
+- **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`) trên
+  mọi site; `/br/[branchId]/stock` dành cho Quản lý chi nhánh (`branch_manager`)
+  và thao tác ca — plane riêng, action bị permission + branch scope giới hạn.
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Kiểm soát chính xác số lượng nguyên liệu tồn kho thực tế, tính toán giá vốn hàng bán (WAC), giảm thiểu hao hụt/thất thoát nguyên liệu và tối ưu hóa chi phí mua hàng.
 - **Mục tiêu Người dùng (Goal):** Nhìn tồn để quyết định đúng việc cần làm, nhập kho nhanh và tạo lệnh sản xuất không sai lệch.
 - **Luồng thao tác (Workflow):**
   - **Nhập kho (GRN):** Tạo phiếu nhập kho từ nhà cung cấp -> Kiểm đếm thực tế -> Xác nhận nhập kho (cập nhật tồn kho và tính lại giá vốn).
-  - **Đơn mua hàng (PO):** đã rút khỏi daily UI (ADR 0018 / D073). Không còn
-    entry sidebar Inventory; route/RPC lịch sử có thể còn. Nhận hàng Branch vẫn
-    bắt đầu từ NCC (GRN supplier-first), không bắt buộc PO.
+  - **Đơn mua hàng (PO):** entry sidebar Inventory Owner surface (**Đơn mua hàng**,
+    ADR 0018 **C1** restore). Nhận hàng Branch vẫn bắt đầu từ NCC (GRN
+    supplier-first), không bắt buộc PO.
   - **Sản xuất:** Chọn thành phẩm và sản lượng -> Kiểm tra định mức/nguyên liệu khả dụng -> Tạo lệnh -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành lệnh.
   - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
   - **Điều chuyển (Transfer):** Operator không mở điều chuyển Kho↔Bếp hay cross-branch mới (D078 — một kho/chi nhánh). Lịch sử transfer còn ở Owner surface khi cần audit.

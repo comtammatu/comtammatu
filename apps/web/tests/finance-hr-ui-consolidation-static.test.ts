@@ -45,7 +45,10 @@ test("Finance analysis routes use compact Design System composition", () => {
   assert.match(expenses, /<AppSection[\s\S]*title=\{copy\.listTitle\}/);
   assert.match(expenses, /<DataTable/);
   assert.match(expenses, /<KpiRow density="compact">/);
-  assert.equal((expenses.match(/<KpiCard/g) ?? []).length, 1);
+  // Period total + the actionable "cần xử lý" counterpart. Nothing else on a
+  // LIST route earns KPI real estate.
+  assert.equal((expenses.match(/<KpiCard/g) ?? []).length, 2);
+  assert.match(expenses, /label=\{copy\.needsActionLabel\}/);
   assert.match(expenses, /expensePaymentMethod\(row\)/);
 
   assert.equal((foodCost.match(/<KpiCard/g) ?? []).length, 2);

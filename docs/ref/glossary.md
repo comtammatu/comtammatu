@@ -115,19 +115,25 @@ Không dùng label lai trong UI hoặc copy vận hành:
   để tạo một label.
 - Nếu cần giải thích trong docs, đặt thuật ngữ ở cột riêng:
   `canonical_term = net_sales_before_vat`, `label_vi = doanh thu thuần`.
-- Nếu UI cần cực ngắn, dùng một trong hai: nhãn tiếng Việt ngắn hoặc acronym
-  đứng riêng, ví dụ `Phiếu nhập` hoặc `GRN`, không dùng `Phiếu nhập (GRN)`.
+- UI mặc định dùng `long` hoặc `short` tiếng Việt. `acronym` chỉ dùng ở chỗ
+  cực ngắn: status pill, icon label, chart legend, KPI chip. Không nhúng
+  acronym vào câu/heading/form label (ví dụ dùng `Danh sách phiếu nhập`, không
+  `Danh sách GRN`; dùng `Thiếu đơn đặt hàng`, không `Thiếu PO`).
+- Nếu UI cần cực ngắn và người đọc đã quen vocabulary, được dùng acronym đứng
+  riêng (ví dụ pill `GRN`), không ghép song ngữ `Phiếu nhập (GRN)`.
 
 ## Whitelist English được giữ lại
 
 Chỉ giữ English trong một trong các nhóm sau:
 
 - Acronym hoặc thuật ngữ chuyên ngành đã chốt: `POS`, `KDS`, `Owner surface`, `tenant`, `ERP`,
-  `PO`, `GRN`, `WAC`, `PIT`, `AOV`, `COGS`.
+  `PO`, `GRN`, `WAC`, `PIT`, `AOV`, `COGS`. Trên UI vận hành thường, ưu tiên
+  `label_vi`/`short` tiếng Việt; acronym chỉ ở pill/badge/icon label.
 - Tên công nghệ, framework, hoặc vendor: `Supabase`, `Next.js`, `React`,
   `Tailwind`, `TypeScript`, `VietQR`, `Viettel S-invoice`.
 - Proper noun, code identifier, route, schema, enum, RPC, payload field, HTTP
   verb, env var.
+- Đuôi/định dạng file khi nói về file: `.xlsx`, `.csv`, `PDF`.
 - Cột `canonical_term`, command, code sample, hoặc nguồn nghiên cứu trong docs.
 
 Nếu không thuộc một trong các nhóm trên thì mặc định phải ưu tiên tiếng Việt.
@@ -153,6 +159,13 @@ và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán h
 | `financial health`                               | `sức khỏe tài chính` chỉ khi đã định nghĩa bộ metric; nếu không, dùng metric cụ thể              |
 | `food cost` trong UI thường                      | `giá vốn món` hoặc `chi phí nguyên liệu`                                                         |
 | `webhook`, `drill-down`, `hover` trong UI thường | `lỗi đồng bộ`, `xem chi tiết`, `rê chuột` hoặc hướng dẫn thao tác phù hợp                        |
+| `Yield` / `yield` trong UI                       | `tỷ lệ thu hồi`                                                                                  |
+| `template` trong UI                              | `mẫu`                                                                                            |
+| `ad-hoc`                                         | `nhập thẳng` / `không theo đơn` tùy ngữ cảnh                                                     |
+| `Online` / `Offline` trong UI                    | `Đang kết nối` / `Mất kết nối`                                                                   |
+| `Topping`                                        | `Món thêm`                                                                                       |
+| `blind` / `peer cross` trong UI                  | `đếm mù` / `đếm chéo`                                                                            |
+| `GRN` / `PO` nhúng trong câu UI                  | `phiếu nhập` / `đơn đặt hàng` (acronym chỉ pill/badge)                                           |
 
 ### Owner surface
 
@@ -473,15 +486,16 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | Canonical term          | Nhãn chuẩn                          | Định nghĩa                                                                                                   | Không dùng                            |
 | ----------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
 | `purchase_order`        | đơn đặt hàng NCC                    | Đơn mua gửi nhà cung cấp.                                                                                    | đơn hàng bán                          |
-| `goods_received_note`   | phiếu nhập kho                      | Hàng thực nhận từ NCC tại kho chi nhánh.                                                                     | hóa đơn NCC, phiếu nhận chung         |
+| `goods_received_note`   | phiếu nhập kho                      | Hàng thực nhận từ NCC tại kho chi nhánh. Mã chứng từ: `GRN-YYYY-####`.                                       | hóa đơn NCC, phiếu nhận chung         |
 | `supplier_invoice`      | hóa đơn NCC                         | Hóa đơn đầu vào từ NCC.                                                                                      | HĐĐT bán ra, phiếu nhập kho           |
 | `supplier_payment`      | thanh toán NCC                      | Giao dịch trả tiền cho nhà cung cấp.                                                                         | food cost, PO, GRN                    |
 | `stock_level`           | tồn kho                             | Snapshot số lượng + WAC tại location.                                                                        | số lượng đặt mua                      |
 | `stock_movement`        | biến động tồn kho                   | Ledger append-only của nhập/xuất/transfer/consumption/adjustment.                                            | giao dịch chung nếu cần rõ movement   |
-| `stock_transfer`        | phiếu điều chuyển nội bộ            | Luân chuyển tồn giữa hai location/site theo Inventory contract.                                              | tiêu hao, bán hàng, food cost         |
-| `stock_issue`           | phiếu xuất kho                      | Xuất dùng nội bộ khi runtime thật sự dùng chứng từ issue.                                                    | transfer nếu có location nhận tồn     |
+| `stock_transfer`        | phiếu điều chuyển nội bộ            | Luân chuyển tồn giữa hai location/site theo Inventory contract. Mã chứng từ: `DC-YYYY-####`.                 | tiêu hao, bán hàng, food cost         |
+| `stock_issue`           | phiếu xuất kho                      | Xuất dùng nội bộ khi runtime thật sự dùng chứng từ issue. Mã thủ công: `PXK-YYYY-####`; hao hụt: `HH-YYYY-####`. | transfer nếu có location nhận tồn  |
 | `consumption`           | tiêu hao                            | Trừ tồn vì bán hàng, sản xuất, hư hỏng, hoặc sử dụng bếp đã được duyệt.                                      | transfer, PO, hóa đơn NCC             |
-| `stocktake`             | kiểm kê                             | Đếm thực tế và điều chỉnh.                                                                                   | kiểm kho nếu cần term chuẩn           |
+| `stocktake`             | kiểm kê                             | Đếm thực tế và điều chỉnh. Mã phiên: `KK-YYYY-####`.                                                         | kiểm kho nếu cần term chuẩn           |
+| `inventory_count_slip`  | phiếu đếm                           | Phiếu đếm nguyên liệu theo phân công. Mã: `PD-YYYY-####`.                                                    | phiên kiểm kê                         |
 | `entry_unit_id`         | đơn vị nhập / đơn vị đếm            | Đơn vị người dùng nhập trên PO/GRN/transfer/issue/waste; trong kiểm kê là đơn vị đếm.                        | đơn vị tồn chuẩn, text unit từ client |
 | `base_unit`             | đơn vị tồn chuẩn                    | Đơn vị duy nhất `is_base = true` của nguyên liệu; ledger và tồn chuẩn lưu theo đơn vị này.                   | đơn vị nhập, đơn vị đóng gói          |
 | `to_base_factor`        | quy đổi về tồn chuẩn                | Hệ số quy đổi dạng `1 đơn vị nhập/đếm = N đơn vị tồn chuẩn`. UI hiển thị canonical như `1 thùng = 24 chai`.  | hệ số đảo chiều                       |
@@ -493,7 +507,7 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `finished_good`         | thành phẩm                          | Hàng sản xuất tại chi nhánh hoặc giữ tồn sẵn tại chi nhánh.                                                  | món bán nếu đang nói menu             |
 | `recipe`                | định mức (món bán)                  | Định mức nguyên liệu tiêu hao cho một món bán.                                                               | công thức (production)                |
 | `production_recipe`     | công thức (sản xuất)                | Định mức nguyên liệu (BOM) để sản xuất ra thành phẩm.                                                        | định mức (POS)                        |
-| `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại chi nhánh; entity runtime là `production_runs`.                                            | work order                            |
+| `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại chi nhánh; entity runtime là `production_runs`. Mã: `LSX-YYYY-####`.                       | work order                            |
 | `three_way_matching`    | đối soát 3 chứng từ                 | Đối chiếu `PO`, `GRN`, `supplier_invoice`.                                                                   | matching chung                        |
 | `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Costing chuẩn hiện tại.                                                                                      | FIFO nếu hệ thống không dùng          |
 
@@ -572,11 +586,13 @@ thích.
 | --------- | ------------------------------------------------------------------ | ------------------------------------------------------- |
 | `long`    | heading, table cell, description, form label, tooltip dài          | Mọi canonical term quan trọng đều có `long`             |
 | `short`   | button, tab, badge, sidebar nav, mobile chip, table header compact | Chỉ thêm khi `long` dài hoặc xuất hiện trong nav/button |
-| `acronym` | KPI card, status pill 2-4 ký tự, icon label, chart legend          | Chỉ dùng khi người đọc đã quen vocabulary               |
+| `acronym` | KPI card, status pill 2-4 ký tự, icon label, chart legend          | Chỉ dùng khi người đọc đã quen vocabulary; mặc định ưu tiên `short` tiếng Việt |
 
 Nếu `short == long` thì bỏ cột short. `acronym` phải nằm trong whitelist hoặc là
 viết tắt tiếng Việt chính thức. UI chỉ được dùng một biến thể tại một vị trí:
 `long`, `short`, hoặc `acronym`; không ghép nhiều biến thể thành một label.
+Heading, mô tả, form label, placeholder, và empty state dùng tiếng Việt đầy đủ
+hoặc `short`; không nhúng acronym whitelist vào câu.
 
 ### Tổ chức và địa điểm
 

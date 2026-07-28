@@ -19,7 +19,7 @@ export const pos = {
     reorderLoadFailed: "Không thể tải món",
     voidPaidTitle: "Huỷ đơn sau khi đã hoàn tiền?",
     voidPaidDesc:
-      "Chỉ tiếp tục sau khi tiền đã thực sự trả cho khách. Hệ thống ghi nhận hoàn tiền, huỷ đơn và HĐĐT liên quan; hệ thống không tự chuyển tiền. Không thể hoàn tác.",
+      "Chỉ tiếp tục sau khi tiền đã thực sự trả cho khách. Hệ thống ghi nhận hoàn tiền, huỷ đơn và HĐĐT liên quan nhưng không tự chuyển tiền. Không thể hoàn tác.",
     voidPaidKeep: "Giữ đơn",
     voidPaidConfirm: "Xác nhận đã hoàn & huỷ đơn",
     voidPaidPlaceholder: "Lý do (≥ 20 ký tự)",
@@ -125,7 +125,7 @@ export const pos = {
     methodsTitle: "Phương thức thanh toán",
     reprint: "In lại",
     offlineWillSelect: "Mất mạng — sẽ tự chọn",
-    offlineWhenOnline: "khi online.",
+    offlineWhenOnline: "khi có mạng lại.",
     cashReceived: "Tổng nhận",
     cashChange: "Tiền trả khách",
     cashShort: (amount: string) => `Thiếu ${amount}`,
@@ -223,7 +223,7 @@ export const pos = {
     activeHoldDemandCount: (quantity: number) =>
       `${quantity} suất quy đổi đang giữ`,
     availabilityRuleHint:
-      "Số được bán thêm do hệ thống quyết định theo trần thủ công, tồn quy đổi, đơn đang xử lý và giữ chỗ. Không cộng hoặc trừ các số này bằng tay.",
+      "Số được bán thêm tính từ trần thủ công, tồn kho và đơn đang xử lý.",
     soldProgressAria: (sold: number, limit: number) =>
       `Đã bán ${sold} trên ${limit} phần giới hạn`,
     limitInputAria: (name: string) => `Giới hạn bán ${name}`,

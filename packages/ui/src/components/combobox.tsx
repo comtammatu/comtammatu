@@ -10,6 +10,10 @@ import {
 
 import { cn } from "../lib/utils";
 import { fieldTriggerChrome } from "../lib/field-trigger";
+import {
+  FLOATING_POSITION_METHOD,
+  floatingCollisionBoundary,
+} from "../lib/floating-layer";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 
@@ -126,6 +130,8 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
           <BaseCombobox.Positioner
             align="start"
             sideOffset={4}
+            positionMethod={FLOATING_POSITION_METHOD}
+            collisionBoundary={floatingCollisionBoundary()}
             className="isolate z-50"
           >
             <BaseCombobox.Popup
@@ -292,6 +298,8 @@ function MultiSelectCombobox({
         <BaseCombobox.Positioner
           align="start"
           sideOffset={4}
+          positionMethod={FLOATING_POSITION_METHOD}
+          collisionBoundary={floatingCollisionBoundary()}
           className="isolate z-50"
         >
           <BaseCombobox.Popup className="w-(--anchor-width) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-effect-popover">

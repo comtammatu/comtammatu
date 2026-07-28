@@ -137,7 +137,7 @@ export function stockMovementBadgeVariant(
 export function stockMovementReferenceLabel(
   movement: StockIngredientDetailMovement,
 ): string | null {
-  if (movement.grnId != null) return `GRN #${movement.grnId}`;
+  if (movement.grnId != null) return `Phiếu nhập #${movement.grnId}`;
   if (movement.transferId != null) {
     return stockCopy.movement.transferRef(movement.transferId);
   }
@@ -179,6 +179,6 @@ export function stockMovementReferenceHref({
   if (movement.transferId != null) {
     return `/inventory/transfers/${movement.transferId}`;
   }
-  if (movement.issueId != null) return `/inventory/issues/${movement.issueId}`;
+  if (movement.issueId != null) return `/inventory/consumption/${movement.issueId}`;
   return `/inventory/reports?branchId=${branchId}`;
 }

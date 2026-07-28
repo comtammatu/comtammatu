@@ -107,8 +107,7 @@ const PRINTER_COPY = {
   noCategories: "Chưa gán danh mục món",
   slotLabel: "Vị trí máy in",
   samplePrinterPlaceholder: "Ví dụ: Xprinter XP-T80A",
-  lanPortHelp:
-    "Mặc định port 9100 (ESC/POS raw). Chỉ đổi khi máy in yêu cầu port khác.",
+  lanPortHelp: "Mặc định 9100. Chỉ đổi khi máy in yêu cầu port khác.",
   paperWidthLabel: "Khổ giấy",
   printTypesLabel: "Loại phiếu in trên máy này",
   categoriesLabel: "Danh mục món in trên máy này",
@@ -175,7 +174,7 @@ export function PrintersClient(props: {
             key={branch.id}
             title={branch.name}
             badge={{
-              children: `Agent: ${agent?.is_online ? "Online" : "Offline"}`,
+              children: `Agent: ${agent?.is_online ? "Đang kết nối" : "Mất kết nối"}`,
               variant: agent?.is_online ? "default" : "outline",
             }}
           >

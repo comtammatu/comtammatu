@@ -477,7 +477,8 @@ test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () =>
   assert.equal(isPublicAppPath("/br/3/runner"), true);
   assert.equal(isPublicAppPath("/br/3/runner/"), true);
   assert.equal(isRunnerPublicDisplayPath("/br/3/runner"), true);
-  assert.equal(isPublicAppPath("/r/abc123"), false);
+  assert.equal(isPublicAppPath("/r/abc123DEF4567"), true);
+  assert.equal(isPublicAppPath("/api/feedback/abc123DEF4567"), true);
   assert.equal(isPublicAppPath("/br/3/pos"), false);
   assert.equal(isPublicAppPath("/br/3/kds"), false);
   assert.equal(isPublicAppPath("/br/3/settings/manifest.webmanifest"), false);
@@ -706,7 +707,7 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   );
   assert.deepEqual(
     branchManagementGroup?.items.map((app) => app.moduleKey),
-    ["branch_dashboard", "branch_settings"],
+    ["branch_dashboard", "branch_settings", "branch_feedback"],
   );
   assert.deepEqual(
     branchOperationGroup?.items.map((app) => app.moduleKey),

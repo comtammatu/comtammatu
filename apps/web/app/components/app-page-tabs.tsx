@@ -5,6 +5,7 @@ import { formatCount } from "@comtammatu/shared/format";
 import { TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { UrlTabs } from "@/_components/url-tabs";
+import { APP_PAGE_STICKY_FILTER_CLASSNAME } from "@/components/surface";
 
 type AppPageTabItem = {
   value: string;
@@ -20,6 +21,8 @@ export type AppPageTabsProps = {
   paramKey?: string;
   children?: ReactNode;
   className?: string;
+  /** Stick the tab list at the top of the Owner shell scrollport. */
+  stickyList?: boolean;
 };
 
 export function AppPageTabs({
@@ -28,11 +31,31 @@ export function AppPageTabs({
   paramKey,
   children,
   className,
+  stickyList = false,
 }: AppPageTabsProps) {
   const initial = items.some((item) => item.value === defaultValue)
     ? defaultValue
     : items[0]?.value;
   if (!initial) return null;
+  const list = (
+    <TabsList variant="toolbar" size="touch">
+      {items.map((item) => (
+        <TabsTrigger
+          key={item.value}
+          value={item.value}
+          disabled={item.disabled}
+        >
+          <span>{item.label}</span>
+          {typeof item.count === "number" ? (
+            <Badge variant="secondary" className="ml-1.5 font-mono">
+              {formatCount(item.count)}
+            </Badge>
+          ) : null}
+          {item.badge}
+        </TabsTrigger>
+      ))}
+    </TabsList>
+  );
   return (
     <UrlTabs
       paramKey={paramKey}
@@ -40,23 +63,11 @@ export function AppPageTabs({
       validValues={items.map((item) => item.value)}
       className={className}
     >
-      <TabsList variant="toolbar" size="touch">
-        {items.map((item) => (
-          <TabsTrigger
-            key={item.value}
-            value={item.value}
-            disabled={item.disabled}
-          >
-            <span>{item.label}</span>
-            {typeof item.count === "number" ? (
-              <Badge variant="secondary" className="ml-1.5 font-mono">
-                {formatCount(item.count)}
-              </Badge>
-            ) : null}
-            {item.badge}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      {stickyList ? (
+        <div className={APP_PAGE_STICKY_FILTER_CLASSNAME}>{list}</div>
+      ) : (
+        list
+      )}
       {children}
     </UrlTabs>
   );

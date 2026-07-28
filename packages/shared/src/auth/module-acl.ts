@@ -28,6 +28,8 @@ export type ModuleKey =
   | "branch_team"
   | "branch_stock"
   | "branch_orders"
+  | "feedback"
+  | "branch_feedback"
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
   | "notifications";
@@ -51,13 +53,24 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   inventory: {
     path: "/inventory",
-    allowedRoles: ["owner"],
+    // D088 temporary until ADR 0015: accountant PO slice + central site GRN/ops.
+    allowedRoles: [
+      "owner",
+      "accountant",
+      "central_supply_ops",
+      "central_kitchen_lead",
+    ],
     label: getModuleLabelVi("inventory"),
   },
   orders: {
     path: "/orders",
     allowedRoles: ["owner"],
     label: getModuleLabelVi("orders"),
+  },
+  feedback: {
+    path: "/feedback",
+    allowedRoles: ["owner"],
+    label: getModuleLabelVi("feedback"),
   },
   staff: {
     path: "/hr/staff",
@@ -76,7 +89,8 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   finance: {
     path: "/finance",
-    allowedRoles: ["owner"],
+    // D088 temporary until ADR 0015: authenticated accountant.
+    allowedRoles: ["owner", "accountant"],
     label: getModuleLabelVi("finance"),
   },
   branches: {
@@ -154,6 +168,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/orders",
     allowedRoles: ["owner", "branch_manager", "cashier"],
     label: getModuleLabelVi("branch_orders"),
+  },
+  branch_feedback: {
+    path: "/br/*/feedback",
+    allowedRoles: ["owner", "branch_manager"],
+    label: getModuleLabelVi("branch_feedback"),
   },
   employee_checkout_approvals: {
     path: "/br/*/shift/checkout-approvals",

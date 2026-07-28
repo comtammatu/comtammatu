@@ -52,6 +52,7 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
 
   for (const href of [
     "/inventory/grn",
+    "/inventory/purchase-orders",
     "/inventory/consumption",
     "/inventory/transfers",
     "/inventory/production",
@@ -59,12 +60,6 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
     "/inventory/suppliers",
     "/inventory/ingredients",
     "/inventory/recipes",
-    "/inventory/stocktake",
-    "/inventory/count-assignments",
-    "/inventory/count-slips",
-    "/inventory/reports",
-    "/inventory/waste/approvals",
-    "/finance/supplier-invoices",
   ]) {
     assert.equal(
       visible.has(href),
@@ -75,13 +70,44 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
 
   for (const href of [
     "/inventory/operations",
-    "/inventory/purchase-orders",
     "/inventory/supplier-invoices",
+    "/inventory/stocktake",
+    "/inventory/count-assignments",
+    "/inventory/count-slips",
+    "/inventory/reports",
+    "/inventory/waste/approvals",
+    "/finance/supplier-invoices",
   ]) {
     assert.equal(
       visible.has(href),
       false,
-      `${href} must stay out of the Inventory sidebar`,
+      `${href} must stay out of the simplified sidebar`,
+    );
+  }
+});
+
+test("inventory sidebar removes duplicate stock-control and finance entries", () => {
+  const groups = resolveInventoryNav({
+    userRole: "owner",
+    showProcurement: true,
+    showProduction: true,
+    showCatalogManagement: true,
+    showSettings: true,
+  });
+  const visible = hrefs(groups);
+  for (const href of [
+    "/inventory/stocktake",
+    "/inventory/count-assignments",
+    "/inventory/count-slips",
+    "/inventory/reports",
+    "/inventory/supplier-invoices",
+    "/inventory/waste/approvals",
+    "/finance/supplier-invoices",
+  ]) {
+    assert.equal(
+      visible.has(href),
+      false,
+      `${href} stays out of the simplified sidebar`,
     );
   }
 });
@@ -163,10 +189,9 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
     [
       "0 · Nay",
       "1 · Kiểm soát tồn",
-      "2 · Nhập/Điều chuyển",
+      "2 · Nhập hàng",
       "3 · Sản xuất",
-      "4 · Hao hụt & AP",
-      "5 · Danh mục & thiết lập",
+      "4 · Danh mục & thiết lập",
     ],
   );
   assert.deepEqual(
@@ -176,7 +201,6 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
       "/inventory/stock",
       "/inventory/grn",
       "/inventory/production",
-      "/inventory/waste/approvals",
       "/inventory/settings",
     ],
   );
@@ -187,14 +211,6 @@ test("inventory shell does not duplicate workflow navigation inside page content
     shellSource,
     /InventoryWorkflowRail|resolveInventoryWorkflowGroups|workflowAria/,
   );
-});
-
-test("inventory shell keeps inventory navigation as one unlabelled sidebar group", () => {
-  assert.match(
-    shellSource,
-    /title:\s*""/,
-  );
-  assert.match(shellSource, /\.flatMap\(\(group\) => group\.items\)/);
 });
 
 test("inventory settings sub-pages stay internal routes, not sidebar items", () => {

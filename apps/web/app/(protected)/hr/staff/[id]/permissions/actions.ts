@@ -141,13 +141,13 @@ function mapRpcError(msg: string): string {
   if (msg.includes("branch_not_in_tenant"))
     return "Chi nhánh không thuộc tenant.";
   if (msg.includes("unknown_permission_key_in_template"))
-    return "Template có permission key không hợp lệ.";
+    return "Mẫu có khóa quyền không hợp lệ.";
   if (msg.includes("unknown_permission_key"))
     return "Permission key không hợp lệ.";
   if (msg.includes("template_not_in_tenant"))
-    return "Template không thuộc tenant.";
+    return "Mẫu không thuộc doanh nghiệp.";
   if (msg.includes("owner_template_cannot_be_applied_to_staff"))
-    return "Không thể áp template Owner cho nhân sự.";
+    return "Không thể áp mẫu Owner cho nhân sự.";
   if (msg.includes("owner_only_permission_cannot_be_delegated"))
     return "Quyền này chỉ dành cho Owner.";
   if (msg.includes("permission_scope_requires_branch"))
@@ -155,7 +155,7 @@ function mapRpcError(msg: string): string {
   if (msg.includes("permission_scope_requires_tenant"))
     return "Quyền này phải gán ở phạm vi toàn quán.";
   if (msg.includes("permission_scope_mismatch"))
-    return "Template không khớp phạm vi. Chọn lại phạm vi phù hợp.";
+    return "Mẫu không khớp phạm vi. Chọn lại phạm vi phù hợp.";
   if (msg.includes("cannot_self_assign_permissions"))
     return "Không thể tự thay đổi quyền của chính mình.";
   if (msg.includes("invalid_validity_window"))

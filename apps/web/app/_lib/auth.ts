@@ -7,6 +7,7 @@ import type {
   StaffRole,
 } from "@comtammatu/shared/auth";
 import type { Session } from "@supabase/supabase-js";
+import { probeAuthSessionLiveness } from "./auth-session-liveness";
 
 /**
  * Get authenticated user context with role authorization.
@@ -34,6 +35,9 @@ export const getAuthContext = cache(async function getAuthContext(
   // GRN / supplier-invoice / expense Server Action loaders return "Không có
   // quyền" while purchase-orders (loadAuthState + direct select) succeeded.
   // Do not Promise.all getUser+getSession (GoTrue client race).
+  // Mutation Auth liveness lives in withAction (`ensureLiveAuthSession`);
+  // protected RSC Auth liveness lives in loadAuthState (not here).
+  // Do not add getUser here — see regressions ZOMBIE-JWT-AFTER-GLOBAL-SIGNOUT.
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -159,17 +163,20 @@ type LoadedAuthState = {
 
 /**
  * Read auth state for a layout or page. Trusts the proxy (`apps/web/proxy.ts`)
- * as the single auth gate — callers MUST NOT re-check session, claims, or
- * module ACL. If anything is missing here, the proxy invariant is broken.
+ * as the single route gate for session/claims/ACL. Callers MUST NOT re-check
+ * module ACL. If session/claims are missing here, the proxy invariant is
+ * broken — throw so `error.tsx` surfaces the gap (do not silently redirect).
  *
- * Throws instead of silently redirecting so the failure surfaces via
- * `error.tsx` boundaries rather than masking the bug.
+ * Separately probes Auth session liveness (`probeAuthSessionLiveness`) so a
+ * far-from-expiry zombie JWT after global signOut redirects to cookie-clear
+ * signout instead of serving authenticated UI. That is Auth liveness, not a
+ * second ACL gate — `getAuthContext` stays getSession-only (GRN false-deny).
  *
  * Returns the Supabase client so callers can avoid creating a second one.
  *
  * Wrapped in React `cache()` so repeated calls within ONE RSC render share
  * the same `{supabase, session, claims}` snapshot — eliminates duplicate
- * `getSession()` cookie parses when both a layout and its page (or multiple
+ * `getSession()` / liveness probe when both a layout and its page (or multiple
  * helpers like `getEmployeeContext`) read auth state. Cache scope is
  * per-request; production safety unchanged.
  */
@@ -191,6 +198,10 @@ export const loadAuthState = cache(async (): Promise<LoadedAuthState> => {
       "loadAuthState: claims missing — proxy should have redirected to /access-denied (missing-auth-context).",
     );
   }
+
+  // Far-from-expiry zombie: cookie JWT still valid, Auth session revoked.
+  // Redirect (not throw) so recovery clears cookies via Route Handler.
+  await probeAuthSessionLiveness(supabase);
 
   return { supabase, session, claims };
 });

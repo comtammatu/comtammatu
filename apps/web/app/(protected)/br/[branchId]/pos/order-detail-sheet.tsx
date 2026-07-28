@@ -873,7 +873,7 @@ export function OrderDetailSheet({
       const r = await printReceipt(orderId);
       if (r.success) {
         if (r.data?.agent_offline) {
-          notify.warning("Máy in đang offline — hóa đơn sẽ in khi kết nối lại");
+          notify.warning("Máy in đang mất kết nối — hóa đơn sẽ in khi kết nối lại");
         } else {
           notify.success("Đã gửi hóa đơn tới máy in");
         }

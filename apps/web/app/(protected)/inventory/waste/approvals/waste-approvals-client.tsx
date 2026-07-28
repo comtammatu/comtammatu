@@ -7,10 +7,8 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { cn } from "@comtammatu/ui";
 import { Check as IconCheck, X as IconX } from "lucide-react";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
-import { Frame } from "@comtammatu/ui/components/frame";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
 import { approveWaste } from "@/(protected)/inventory/waste-actions";
 import {
@@ -20,7 +18,12 @@ import {
 } from "@comtammatu/shared/format";
 import { getWasteReasonLabelVi } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { messages } from "@lib/messages";
 import type { PendingWasteRow } from "@lib/inventory/waste-approval-model";
 
@@ -68,7 +71,7 @@ export function WasteApprovalsClient({
       ) : rows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
-        <ItemGroup className="flex flex-col gap-3 rounded-none border-0 p-0">
+        <div className="flex flex-col gap-3">
           {rows.map((row) => (
             <WasteApprovalCard
               key={row.issueId}
@@ -80,7 +83,7 @@ export function WasteApprovalsClient({
               }
             />
           ))}
-        </ItemGroup>
+        </div>
       )}
     </AppPage>
   );
@@ -127,151 +130,147 @@ function WasteApprovalCard({
   }
 
   return (
-    <Frame
-      className={cn(
-        "flex flex-col items-stretch",
-        row.isSelfCreated && "border-warning/20 bg-warning/10",
-      )}
-    >
-      <div className="p-4 pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <div className="font-heading text-base flex items-center gap-2 font-semibold">
-              {row.issueNumber}
-              <Badge variant="outline" className="text-xs">
-                {row.branchName}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                {row.shiftKey}
-              </Badge>
-              {row.sourceType !== "manual" ? (
-                <Badge variant="secondary" className="text-xs">
-                  {row.sourceType}
-                </Badge>
-              ) : null}
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {row.createdByName}
-              {row.isSelfCreated ? (
-                <Badge className="ml-2 bg-warning/15 text-warning border-warning/20 border text-xs">
-                  {copy.selfCreatedBadge}
-                </Badge>
-              ) : null}
-              {" • "}
-              {formatVNDateTime(row.issuedAt)}
-            </p>
+    <AppSection
+      size="sm"
+      tone={row.isSelfCreated ? "warning" : "default"}
+      title={
+        <span className="flex flex-wrap items-center gap-2">
+          {row.issueNumber}
+          <Badge variant="outline" className="text-xs">
+            {row.branchName}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {row.shiftKey}
+          </Badge>
+          {row.sourceType !== "manual" ? (
+            <Badge variant="secondary" className="text-xs">
+              {row.sourceType}
+            </Badge>
+          ) : null}
+        </span>
+      }
+      description={
+        <>
+          {row.createdByName}
+          {row.isSelfCreated ? (
+            <Badge className="ml-2 border border-warning/20 bg-warning/15 text-xs text-warning">
+              {copy.selfCreatedBadge}
+            </Badge>
+          ) : null}
+          {" • "}
+          {formatVNDateTime(row.issuedAt)}
+        </>
+      }
+      action={
+        <div className="text-right">
+          <div className="text-lg font-semibold tabular-nums">
+            {formatVND(row.totalValue)}
           </div>
-          <div className="text-right">
-            <div className="text-lg font-semibold tabular-nums">
-              {formatVND(row.totalValue)}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {copy.lineCount(row.items.length)}
-            </div>
+          <div className="text-xs text-muted-foreground">
+            {copy.lineCount(row.items.length)}
           </div>
         </div>
-      </div>
-      <div className="flex flex-col gap-3 p-4 pt-0">
-        <ItemGroup className="flex flex-col gap-2 p-0 rounded-none border-0">
-          {row.items.map((it) => (
-            <Item
-              key={it.itemId}
-              variant="muted"
-              className="bg-muted/30 flex flex-col items-stretch"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium">
-                    {it.ingredientName}{" "}
-                    <span className="text-muted-foreground">
-                      — {formatQuantity(it.quantity)} {it.unit}
-                      {it.unitCost !== null
-                        ? ` × ${formatVND(it.unitCost)}`
-                        : ""}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {copy.reason(getWasteReasonLabelVi(it.reasonCode))}
-                    {typeof it.qtyRatio === "number" && it.qtyRatio > 0
-                      ? copy.qtyRatio(formatPercent(it.qtyRatio * 100, 0))
+      }
+    >
+      <ItemGroup className="flex flex-col gap-2 rounded-none border-0 p-0">
+        {row.items.map((it) => (
+          <Item
+            key={it.itemId}
+            variant="muted"
+            className="flex flex-col items-stretch bg-muted/30"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">
+                  {it.ingredientName}{" "}
+                  <span className="text-muted-foreground">
+                    — {formatQuantity(it.quantity)} {it.unit}
+                    {it.unitCost !== null
+                      ? ` × ${formatVND(it.unitCost)}`
                       : ""}
-                    {typeof it.rolling15MinSum === "number" &&
-                    it.rolling15MinSum > 0
-                      ? copy.rolling15m(formatVND(it.rolling15MinSum))
-                      : ""}
-                  </div>
+                  </span>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <div className="font-medium tabular-nums">
-                    {formatVND(it.totalCost)}
-                  </div>
-                  <WasteTierBadge tier={it.wasteTier} compact />
+                <div className="text-xs text-muted-foreground">
+                  {copy.reason(getWasteReasonLabelVi(it.reasonCode))}
+                  {typeof it.qtyRatio === "number" && it.qtyRatio > 0
+                    ? copy.qtyRatio(formatPercent(it.qtyRatio * 100, 0))
+                    : ""}
+                  {typeof it.rolling15MinSum === "number" &&
+                  it.rolling15MinSum > 0
+                    ? copy.rolling15m(formatVND(it.rolling15MinSum))
+                    : ""}
                 </div>
               </div>
-              {it.photoUrls.length > 0 ? (
-                <div className="mt-2 flex gap-2">
-                  {it.photoUrls.map((url) => (
-                    <a
-                      key={url}
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary underline"
-                    >
-                      {copy.viewPhoto}
-                    </a>
-                  ))}
+              <div className="flex flex-col items-end gap-1">
+                <div className="font-medium tabular-nums">
+                  {formatVND(it.totalCost)}
                 </div>
-              ) : null}
-            </Item>
-          ))}
-        </ItemGroup>
+                <WasteTierBadge tier={it.wasteTier} compact />
+              </div>
+            </div>
+            {it.photoUrls.length > 0 ? (
+              <div className="mt-2 flex gap-2">
+                {it.photoUrls.map((url) => (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary underline"
+                  >
+                    {copy.viewPhoto}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </Item>
+        ))}
+      </ItemGroup>
 
-        {row.notes ? (
-          <p className="line-clamp-2 break-words text-xs italic text-muted-foreground">
-            {copy.notes(row.notes)}
-          </p>
-        ) : null}
+      {row.notes ? (
+        <p className="line-clamp-2 break-words text-xs italic text-muted-foreground">
+          {copy.notes(row.notes)}
+        </p>
+      ) : null}
 
-        <div>
-          <Textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            disabled={pending !== null || row.isSelfCreated}
-            rows={2}
-            placeholder={copy.reviewNotePlaceholder}
-          />
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="default"
-            onClick={() => handleDecision("rejected")}
-            disabled={pending !== null || row.isSelfCreated}
-            className="text-destructive"
-          >
-            {pending === "rejected" ? (
-              <Spinner />
-            ) : (
-              <IconX className="size-4" />
-            )}
-            {copy.reject}
-          </Button>
-          <Button
-            size="default"
-            onClick={() => handleDecision("approved")}
-            disabled={pending !== null || row.isSelfCreated}
-          >
-            {pending === "approved" ? (
-              <Spinner />
-            ) : (
-              <IconCheck className="size-4" />
-            )}
-            {copy.approve}
-          </Button>
-        </div>
+      <div>
+        <Textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          disabled={pending !== null || row.isSelfCreated}
+          rows={2}
+          placeholder={copy.reviewNotePlaceholder}
+        />
       </div>
-    </Frame>
+
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          size="default"
+          onClick={() => handleDecision("rejected")}
+          disabled={pending !== null || row.isSelfCreated}
+          className="text-destructive"
+        >
+          {pending === "rejected" ? (
+            <Spinner />
+          ) : (
+            <IconX className="size-4" />
+          )}
+          {copy.reject}
+        </Button>
+        <Button
+          size="default"
+          onClick={() => handleDecision("approved")}
+          disabled={pending !== null || row.isSelfCreated}
+        >
+          {pending === "approved" ? (
+            <Spinner />
+          ) : (
+            <IconCheck className="size-4" />
+          )}
+          {copy.approve}
+        </Button>
+      </div>
+    </AppSection>
   );
 }

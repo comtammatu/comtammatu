@@ -80,10 +80,8 @@ function resolveBlockedLink(
 export function resolveOwnerDiscoveryGroups(
   role: StaffRole,
 ): DiscoveredAppGroup[] {
-  if (!canAccess(role, "owner")) {
-    return [];
-  }
-
+  // D088: filter by per-module ACL so accountant / central roles see their
+  // allowed L0 slices without requiring the owner home ModuleKey.
   return OWNER_NAV_GROUPS.map((group) => ({
     title: group.title,
     surface: "owner" as const,

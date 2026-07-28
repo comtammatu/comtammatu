@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Home, Package, Users } from "lucide-react";
+import { Clock, Home, MessageSquareHeart, Package, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { AppBottomNav } from "@/components/app-bottom-nav";
@@ -56,6 +56,13 @@ export function OperatorBottomNav({
             icon: Package,
             exact: false,
             matchPrefixes: [`/br/${branchId}/stock`],
+          },
+          {
+            href: `/br/${branchId}/feedback`,
+            label: "Phản hồi",
+            icon: MessageSquareHeart,
+            exact: false,
+            matchPrefixes: [`/br/${branchId}/feedback`],
           },
         ]
       : []),

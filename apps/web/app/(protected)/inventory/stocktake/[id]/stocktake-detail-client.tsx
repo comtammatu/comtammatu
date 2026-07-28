@@ -62,6 +62,7 @@ const labelCompletedAt = "Hoàn tất lúc";
 
 interface StocktakeSession {
   id: number;
+  session_number?: string | null;
   branch_id: number;
   started_at: string | null;
   completed_at: string | null;
@@ -69,6 +70,10 @@ interface StocktakeSession {
   notes: string | null;
   created_at: string;
   created_by: string;
+}
+
+function stocktakeCode(session: Pick<StocktakeSession, "id" | "session_number">): string {
+  return session.session_number?.trim() || `KK-${session.id}`;
 }
 
 interface StocktakeLine {
@@ -397,7 +402,7 @@ export function StocktakeDetailClient({
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate font-mono text-sm font-semibold">
-              {`KK-${session.id}`}
+              {stocktakeCode(session)}
             </p>
             <p className="truncate text-xs text-muted-foreground">
               {headerDescription}
@@ -424,7 +429,7 @@ export function StocktakeDetailClient({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow={eyebrowLabel}
-        title={`KK-${session.id}`}
+        title={stocktakeCode(session)}
         description={headerDescription}
         badge={{
           children: statusLabel,

@@ -31,9 +31,12 @@ import {
 } from "@comtammatu/ui/components/alert";
 import { Combobox } from "@/components/form/combobox";
 import {
+  AppBackLink,
   AppDetailFooter,
   AppEmptyState,
+  AppPageHeader,
   AppSection,
+  DocumentFormFrame,
 } from "@/components/surface";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import {
@@ -41,7 +44,7 @@ import {
   fetchProductionRecipeContext,
   type ProductionRecipeIngredient,
 } from "../../production-run-actions";
-import { tTerm } from "../../_lib/dictionary";
+import { tRoute, tTerm } from "../../_lib/dictionary";
 import { messages } from "@lib/messages";
 import { getIngredientUnitOptions } from "@lib/inventory/unit-options";
 import {
@@ -55,6 +58,7 @@ import type {
 } from "../../production-types";
 import { formatQty } from "@lib/inventory/format";
 import { formatDecimalInputValue } from "@comtammatu/shared/format";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 
 interface ProductionNewClientProps {
   branches: BranchOption[];
@@ -646,7 +650,7 @@ export function ProductionNewClient({
         </AppSection>
       ) : null}
 
-      <AppSection title="Ghi chú" description="Thông tin thêm cho ca sản xuất.">
+      <AppSection title="Ghi chú">
         <Textarea
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
@@ -679,27 +683,43 @@ export function ProductionNewClient({
     </Button>
   );
 
+  const footer = (
+    <AppDetailFooter
+      sticky={embedded}
+      className={embedded ? undefined : "border-0 py-0"}
+      leading={footerLeading}
+      trailing={footerTrailing}
+    />
+  );
+
   if (embedded) {
     return (
       <div className="flex w-full flex-col gap-3">
         <div className="flex flex-col gap-3">{body}</div>
-        <AppDetailFooter
-          sticky
-          leading={footerLeading}
-          trailing={footerTrailing}
-        />
+        {footer}
       </div>
     );
   }
 
   return (
-    <div className="flex w-full flex-col gap-3">
-      <div className="flex flex-col gap-3">{body}</div>
-      <AppDetailFooter
-        className="border-0 py-0"
-        leading={footerLeading}
-        trailing={footerTrailing}
-      />
-    </div>
+    <DocumentFormFrame
+      header={
+        <AppPageHeader
+          eyebrow={INVENTORY_VI.warehouse}
+          title={INVENTORY_VI.createProductionOrder}
+          description={INVENTORY_VI.productionOrdersCardDescription}
+          breadcrumb={
+            <AppBackLink href={basePath}>
+              {tRoute("/inventory/production")}
+            </AppBackLink>
+          }
+        />
+      }
+      width="wide"
+      density="compact"
+      footer={footer}
+    >
+      {body}
+    </DocumentFormFrame>
   );
 }

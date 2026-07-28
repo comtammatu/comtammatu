@@ -90,7 +90,7 @@ test("mobile Owner surface bottom nav reuses the shell nav model", () => {
   );
   assert.match(
     appShell,
-    /showBottomNav && "pb-24 lg:pb-4"/,
+    /showBottomNav \? "pb-24 lg:pb-0"/,
     "AppShell bottom padding must reserve bottom-nav space through tablet portrait, matching the lg bottom-nav breakpoint (D068 §3)",
   );
   assert.match(

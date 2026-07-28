@@ -1,6 +1,5 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
@@ -19,6 +18,9 @@ import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compa
 import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { getEmbeddedUnitDisplayName } from "./_lib/unit-display";
+
+/** Placeholder for RPC param; create_stock_transfer_draft allocates DC-YYYY-####. */
+const TRANSFER_NUMBER_SERVER_ALLOCATED = "";
 
 const ROLES = INVENTORY_OPS_ROLES;
 const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = ["branch_manager"];
@@ -406,8 +408,6 @@ export async function createStockTransfer(
     return { success: false, error: "Không có quyền tạo phiếu chuyển." };
   }
 
-  const transferNumber = `TRF-${randomUUID().slice(0, 8)}`;
-
   // Resolve locations if not provided
   const fromLocationId =
     parsed.data.fromLocationId ??
@@ -488,7 +488,7 @@ export async function createStockTransfer(
     p_to_branch_id: toBranchId,
     p_from_location_id: fromLocationId,
     p_to_location_id: toLocationId,
-    p_transfer_number: transferNumber,
+    p_transfer_number: TRANSFER_NUMBER_SERVER_ALLOCATED,
     p_notes: parsed.data.notes ?? undefined,
     p_vehicle_info: parsed.data.vehicleInfo ?? undefined,
     p_lines: transferLines,

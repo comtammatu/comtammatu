@@ -292,7 +292,7 @@ function printSkipReasonToWarning(
   reason: string | undefined,
 ): string | undefined {
   if (reason === "no_printer") {
-    return "Đã hủy món. Máy in bếp offline — báo bếp trực tiếp.";
+    return "Đã hủy món. Máy in bếp mất kết nối — báo bếp trực tiếp.";
   }
   if (reason === "no_slot") {
     return "Đã hủy món. Món không thuộc khu vực bếp (đồ uống chai?) — báo bar trực tiếp.";
@@ -425,7 +425,7 @@ function reducePrintSkipReasonToWarning(
   reason: string | undefined,
 ): string | undefined {
   if (reason === "no_printer") {
-    return "Đã giảm SL. Máy in bếp offline — báo bếp trực tiếp.";
+    return "Đã giảm SL. Máy in bếp mất kết nối — báo bếp trực tiếp.";
   }
   if (reason === "no_slot") {
     return "Đã giảm SL. Món không thuộc khu vực bếp (đồ uống chai?) — báo bar trực tiếp.";
@@ -532,7 +532,7 @@ export function cancelSkipReasonsToWarning(
   if (skipped <= 0) return undefined;
   const has = (k: string) => reasons.some((r) => r.startsWith(k));
   if (has("no_printer")) {
-    return `Đã hủy đơn. ${skipped} món bếp/bar không nhận được phiếu báo hủy (máy in offline) — báo trực tiếp.`;
+    return `Đã hủy đơn. ${skipped} món bếp/bar không nhận được phiếu báo hủy (máy in mất kết nối) — báo trực tiếp.`;
   }
   if (has("no_slot")) {
     return `Đã hủy đơn. ${skipped} món không có khu vực bếp (đồ uống chai?) — báo bar trực tiếp.`;
@@ -633,7 +633,7 @@ export function editPrintSkipReasonToWarning(
   reason: string | undefined,
 ): string | undefined {
   if (reason === "no_printer") {
-    return "Đã cập nhật món. Máy in bếp offline hoặc chưa nhận loại phiếu này — báo bếp trực tiếp.";
+    return "Đã cập nhật món. Máy in bếp mất kết nối hoặc chưa nhận loại phiếu này — báo bếp trực tiếp.";
   }
   if (reason === "no_slot") {
     return "Đã cập nhật món. Món không thuộc khu vực bếp/bar — báo trực tiếp.";

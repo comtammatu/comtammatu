@@ -118,7 +118,7 @@ export function QuickStockIssueDialog({
   branchId,
   open,
   target,
-  issueBasePath = "/inventory/issues",
+  issueBasePath = "/inventory/consumption",
   onOpenChange,
 }: QuickStockIssueDialogProps) {
   const router = useRouter();

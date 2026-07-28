@@ -1,6 +1,6 @@
 // Generic form/table labels (Vietnamese). For form labels, table headers,
 // and column captions whose meaning is the same across modules.
-// Domain-specific labels (e.g., "Tên ca", "Mã PO") stay in module dicts.
+// Domain-specific labels (e.g., "Tên ca", "Mã đơn đặt hàng") stay in module dicts.
 export const FORM_VI = {
   name: "Tên",
   status: "Trạng thái",

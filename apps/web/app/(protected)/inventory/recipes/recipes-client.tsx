@@ -26,11 +26,16 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { matchesSearch } from "@lib/search";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import {
   AppPage,
   AppPageHeader,
@@ -129,6 +134,15 @@ export function RecipesClient({
     router.refresh();
   }
 
+  const getRecipeRowActions = (recipe: RecipeRow): RowActionItem[] => [
+    {
+      key: "edit",
+      label: INVENTORY_VI.recipeEditAction,
+      icon: <IconPencil />,
+      onSelect: () => openEdit(recipe),
+    },
+  ];
+
   const columns: DataTableColumn<RecipeRow>[] = [
     {
       key: "name",
@@ -192,21 +206,23 @@ export function RecipesClient({
     },
     {
       key: "actions",
-      header: "",
-      className: "w-32",
-      render: (recipe) => (
-        <div className="flex items-center justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => openEdit(recipe)}
+      header: FORM_VI.action,
+      className: "w-14",
+      render: (recipe) => {
+        const items = getRecipeRowActions(recipe);
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
           >
-            <IconPencil className="size-4" />
-            {INVENTORY_VI.recipeEditAction}
-          </Button>
-        </div>
-      ),
+            <RowActionsMenu
+              items={items}
+              label={FORM_VI.action}
+              triggerSize="icon-sm"
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -269,6 +285,10 @@ export function RecipesClient({
           data={filteredRecipes}
           pageSize={25}
           getRowKey={(recipe) => recipe.id}
+          onRowClick={openEdit}
+          renderRowContextMenu={(recipe) => (
+            <RowActionsContextMenuItems items={getRecipeRowActions(recipe)} />
+          )}
           emptyTitle={
             showNoResults
               ? INVENTORY_VI.recipesEmptyFiltered
@@ -284,7 +304,8 @@ export function RecipesClient({
               stockCapacity={
                 stockCapacityByMenuItemId[String(recipe.menuItemId)]
               }
-              onEdit={openEdit}
+              actions={getRecipeRowActions(recipe)}
+              onOpen={openEdit}
             />
           )}
         />
@@ -307,14 +328,16 @@ export function RecipesClient({
 function RecipeCard({
   recipe,
   stockCapacity,
-  onEdit,
+  actions,
+  onOpen,
 }: {
   recipe: RecipeRow;
   stockCapacity: number | undefined;
-  onEdit: (recipe: RecipeRow) => void;
+  actions: RowActionItem[];
+  onOpen: (recipe: RecipeRow) => void;
 }) {
   return (
-    <Item variant="outline">
+    <Item variant="outline" onClick={() => onOpen(recipe)}>
       <ItemHeader>
         <ItemTitle>{recipe.name}</ItemTitle>
         {recipe.category ? (
@@ -357,15 +380,13 @@ function RecipeCard({
       </ItemContent>
       <ItemFooter>
         <ItemActions>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onEdit(recipe)}
-          >
-            <IconPencil className="size-4" />
-            {INVENTORY_VI.recipeEditAction}
-          </Button>
+          <div onClick={(event) => event.stopPropagation()}>
+            <RowActionsMenu
+              items={actions}
+              label={FORM_VI.action}
+              triggerSize="icon-touch"
+            />
+          </div>
         </ItemActions>
       </ItemFooter>
     </Item>

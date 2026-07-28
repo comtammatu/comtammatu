@@ -53,7 +53,7 @@ export const POS_VI = {
   keepCurrentTable: "Giữ bàn hiện tại",
   mergeLoadFailed: "Không thể tải danh sách đơn cùng bàn.",
   mergePctBlock:
-    "Đơn hiện tại đang giảm theo %. Vui lòng bỏ chiết khấu trước khi gộp (% không cộng dồn được).",
+    "Bỏ chiết khấu % trước khi gộp; % không cộng dồn được.",
   mergeEmpty: "Không có đơn nào khác cùng bàn để gộp.",
   mergeConfirm: "Gộp vào đơn này",
   takeawayContext: "Mang về",
@@ -67,7 +67,7 @@ export const POS_VI = {
   buyerNoInvoice: "Khách không lấy hóa đơn (vẫn xuất HĐĐT)",
   hddtTitle: "HĐĐT",
   hddtDescription:
-    "Hệ thống phát hành HĐĐT sau khi thu tiền. Chỉ nhập thông tin người mua khi khách cần ghi MST.",
+    "HĐĐT phát hành sau khi thu tiền. Chỉ nhập người mua khi khách cần MST.",
   buyerNameLabel: "Tên người mua / công ty",
   buyerNamePlaceholder: "Tên khách / công ty",
   taxCodeLabel: "Mã số thuế",
@@ -83,17 +83,17 @@ export const POS_VI = {
   printerNoneTitle: "Chưa có máy in nào kết nối cho chi nhánh này",
   printerUnregisteredLong: "Máy in: chưa đăng ký",
   printerNoneShort: "Chưa có",
-  printerOnlineLong: "Máy in: online",
-  printerOnlineShort: "Online",
-  printerOfflineLong: "Máy in: offline",
-  printerOfflineShort: "Offline",
+  printerOnlineLong: "Máy in: đang kết nối",
+  printerOnlineShort: "Đang kết nối",
+  printerOfflineLong: "Máy in: mất kết nối",
+  printerOfflineShort: "Mất kết nối",
   printerConfigTitle: "Cấu hình máy in của chi nhánh",
   shellSessionErrorTitle: "Không mở được POS",
   shellSessionErrorFallback: "Chưa lấy được ca làm hiện tại.",
   shellSessionErrorBadge: "Sự cố tải ca làm",
   shellNoShiftTitle: "Chưa có ca mở",
   shellNoShiftDescription:
-    "Bạn không có quyền mở ca. Liên hệ thu ngân hoặc quản lý chi nhánh để mở ca trước khi nhận đơn.",
+    "Bạn không có quyền mở ca. Liên hệ thu ngân hoặc quản lý chi nhánh.",
   shellNoShiftBadge: "Chờ mở ca",
   shellTerminalsErrorTitle: "Không thể tải máy POS",
   shellTerminalsErrorFallback: "Chưa tải được danh sách máy POS.",
@@ -133,7 +133,7 @@ export const POS_VI = {
   discountTitle: "Chiết khấu",
   reasonPrefix: "Lý do: ",
   discountNoteHint: (trimLen: number) =>
-    `Tối thiểu 3 ký tự. (${trimLen}/3) — dùng cho cả "Áp dụng" và "Bỏ chiết khấu" (lưu vào nhật ký kiểm toán).`,
+    `Tối thiểu 3 ký tự (${trimLen}/3). Lý do được lưu vào nhật ký.`,
   serviceChargeNoteHint: (trimLen: number) =>
     `Tối thiểu 3 ký tự. (${trimLen}/3)`,
 } as const;

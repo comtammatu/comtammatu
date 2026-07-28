@@ -40,6 +40,23 @@ export function resolveRoleHomeLink(
     };
   }
 
+  if (role === "accountant" && canAccess(role, "finance")) {
+    return {
+      label: MODULE_ACL.finance.label,
+      href: MODULE_ACL.finance.path,
+    };
+  }
+
+  if (
+    (role === "central_supply_ops" || role === "central_kitchen_lead") &&
+    canAccess(role, "inventory")
+  ) {
+    return {
+      label: MODULE_ACL.inventory.label,
+      href: MODULE_ACL.inventory.path,
+    };
+  }
+
   if (branchId != null && branchId > 0 && canAccess(role, "branch_home")) {
     return {
       label: APP_COPY_VI.branchHome,

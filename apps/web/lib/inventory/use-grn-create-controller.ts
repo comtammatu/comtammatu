@@ -41,6 +41,7 @@ export function useGrnCreateController({
   ingredients,
   recentLines,
   existingDraft,
+  showPurchasePrice = true,
   basePath,
   grnBasePath,
 }: UseGrnCreateControllerOptions) {
@@ -183,16 +184,17 @@ export function useGrnCreateController({
   }
 
   async function saveLine() {
+    if (!edit || edit.quantity <= 0) {
+      return;
+    }
     if (
-      !edit ||
-      edit.quantity <= 0 ||
-      edit.unitCost == null ||
-      edit.unitCost <= 0
+      showPurchasePrice &&
+      (edit.unitCost == null || edit.unitCost <= 0)
     ) {
       return;
     }
 
-    const unitCost = edit.unitCost;
+    const unitCost = showPurchasePrice ? (edit.unitCost ?? 0) : 0;
     setSubmitError(null);
     try {
       const grnId = await ensureServerDraft();
@@ -278,6 +280,7 @@ export function useGrnCreateController({
       return;
     }
     if (
+      showPurchasePrice &&
       draft.lines.some((line) => line.unitCost == null || line.unitCost <= 0)
     ) {
       setSubmitError(GRN_CREATE_COPY.toastMissingPrices);
@@ -307,9 +310,11 @@ export function useGrnCreateController({
 
   const total = draftTotal(draft);
   const lineCount = draft.lines.length;
-  const hasMissingPrice = draft.lines.some(
-    (line) => line.unitCost == null || line.unitCost <= 0,
-  );
+  const hasMissingPrice = showPurchasePrice
+    ? draft.lines.some(
+        (line) => line.unitCost == null || line.unitCost <= 0,
+      )
+    : false;
   const canSubmit =
     lineCount > 0 && !hasMissingPrice && !submitting && !receivingSiteSaving;
   const branchLocations = locationOptions.filter(

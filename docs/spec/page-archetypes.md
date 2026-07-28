@@ -123,7 +123,7 @@ export default async function XPage({ searchParams }: { searchParams?: ... }) {
   those routes share loaders/models/actions and own a touch-native composition.
 - Exemplars: `apps/web/app/(protected)/inventory/grn/page.tsx`,
   `apps/web/app/(protected)/inventory/grn/[id]/page.tsx`,
-  `apps/web/app/(protected)/inventory/transfers/new/page.tsx`,
+  `apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx`,
   `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`
   (`ClockPageContent` from `apps/web/lib/staff-runtime/clock/page.tsx`).
 
@@ -310,7 +310,7 @@ density="compact"` already owns width/padding. Return a bare flex
 
 ### DOC-WORKFLOW
 
-**Exemplar:** `apps/web/app/(protected)/inventory/transfers/new/page.tsx`.
+**Exemplar:** `apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx`.
 
 - Skeleton: `DocumentFormFrame` (`apps/web/app/components/surface.tsx:476`) —
   header + scrollable body + footer, composing `AppPage`. **Mandatory for new

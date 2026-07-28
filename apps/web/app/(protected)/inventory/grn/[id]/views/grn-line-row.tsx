@@ -44,6 +44,7 @@ export function LineRow({
   onChange,
   onDelete,
   onAmend,
+  chrome = "card",
 }: {
   tenantId: number;
   grnId: number;
@@ -55,6 +56,8 @@ export function LineRow({
   onChange: (p: Partial<EditableLine>) => void;
   onDelete: () => void;
   onAmend: () => void;
+  /** `plain` drops Item chrome for sheet / desk editors. */
+  chrome?: "card" | "plain";
 }) {
   const baselineVariance = line.baselineVariancePct;
   const variance =
@@ -168,8 +171,8 @@ export function LineRow({
   }
 
   // Draft mode — editable
-  return (
-    <Item variant="outline" className="flex-col items-stretch gap-3 p-4">
+  const draftHeader =
+    chrome === "plain" ? null : (
       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="font-bold">{line.name}</p>
@@ -204,6 +207,23 @@ export function LineRow({
           </Button>
         </div>
       </div>
+    );
+
+  const draftFields = (
+    <>
+      {draftHeader}
+
+      {chrome === "plain" && line.dirty ? (
+        <Badge variant="outline" className="w-fit text-xs">
+          {grnCopy.line.unsaved}
+        </Badge>
+      ) : null}
+
+      {chrome === "plain" ? (
+        <p className={`text-sm ${varianceTone}`}>
+          {varianceLabel}: {variancesLabel}
+        </p>
+      ) : null}
 
       <Field id={`quality-${idx}`} label={grnCopy.line.qualityStatusLabel}>
         <Select
@@ -388,6 +408,16 @@ export function LineRow({
           </Select>
         </Field>
       ) : null}
+    </>
+  );
+
+  if (chrome === "plain") {
+    return <div className="flex flex-col gap-3">{draftFields}</div>;
+  }
+
+  return (
+    <Item variant="outline" className="flex-col items-stretch gap-3 p-4">
+      {draftFields}
     </Item>
   );
 }

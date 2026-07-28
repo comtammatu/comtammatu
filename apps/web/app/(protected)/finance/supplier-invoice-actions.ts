@@ -10,13 +10,14 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
-import { getAuthContextWithPermission } from "./_lib/auth";
-import { PG_ERR } from "./_lib/constants";
+import { getAuthContextWithPermission } from "@/_lib/auth";
+import { PG_ERR } from "@/(protected)/inventory/_lib/constants";
 import {
   filterSupplierInvoices,
   groupSupplierInvoices,
   SUPPLIER_INVOICE_MATCH_STATUSES,
   SUPPLIER_INVOICE_PAYMENT_STATUSES,
+  SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS,
   SUPPLIER_INVOICE_VIEW_MODES,
   type SupplierInvoiceGroup,
   type SupplierInvoiceListFilters,
@@ -361,6 +362,7 @@ const fetchSupplierInvoicesPaginatedSchema = z.object({
   matchStatus: z.enum(SUPPLIER_INVOICE_MATCH_STATUSES).optional(),
   paymentStatus: z.enum(SUPPLIER_INVOICE_PAYMENT_STATUSES).optional(),
   overdueOnly: z.boolean().optional().default(false),
+  vatEvidence: z.enum(SUPPLIER_INVOICE_VAT_EVIDENCE_FILTERS).optional(),
   viewMode: z.enum(SUPPLIER_INVOICE_VIEW_MODES).optional().default("supplier"),
   before: supplierInvoiceCursorSchema.optional(),
   pageSize: z.coerce
@@ -399,6 +401,7 @@ export async function fetchSupplierInvoicesPage(
     matchStatus,
     paymentStatus,
     overdueOnly,
+    vatEvidence,
     viewMode,
     before,
     pageSize,
@@ -457,6 +460,7 @@ export async function fetchSupplierInvoicesPage(
     matchStatus: matchStatus ?? null,
     paymentStatus: paymentStatus ?? null,
     overdueOnly,
+    vatEvidence: vatEvidence ?? null,
     viewMode,
   };
   const today = getVNDateString();

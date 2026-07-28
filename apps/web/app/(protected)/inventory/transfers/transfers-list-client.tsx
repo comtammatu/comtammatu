@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight as IconArrowRight,
   CircleCheck as IconCircleCheck,
-  ChevronRight as IconChevronRight,
   PackagePlus as IconPackageImport,
   PackageX as IconPackageOff,
   Plus as IconPlus,
@@ -54,7 +54,7 @@ import {
   inventoryListFilterSelectWideClassName,
 } from "../_components/inventory-list-frame";
 
-import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer };
 export type { TransferListRow, TransferTab };
 
@@ -90,6 +90,7 @@ export function TransfersListClient({
   pageTitle?: string;
   embedded?: boolean;
 }) {
+  const router = useRouter();
   const controlSize = useFormControlSize(embedded ? "touch" : "responsive");
   const isOwner = userRole === "owner";
   const userBranchKind =
@@ -169,6 +170,10 @@ export function TransfersListClient({
     return `${basePath}/${id}${scopeQuery}`;
   }
 
+  function openTransferDetail(row: TransferListRow) {
+    router.push(detailHref(row.id));
+  }
+
   const emptyIcon =
     activeTab === "receive" ? (
       <IconPackageImport />
@@ -237,21 +242,6 @@ export function TransfersListClient({
           : r.received_at
             ? `${receivedLabelPrefix}${formatVNDate(r.received_at)}`
             : "—",
-    },
-    {
-      key: "open",
-      header: "",
-      className: "w-10",
-      render: (r) => (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`${ACTIONS_VI.viewDetails} ${r.transfer_number}`}
-          render={<Link href={detailHref(r.id)} />}
-        >
-          <IconArrowRight className="size-4" />
-        </Button>
-      ),
     },
   ];
 
@@ -326,6 +316,8 @@ export function TransfersListClient({
       emptyDescription={emptyDescription}
       emptyMode={search ? "no-results" : "no-data"}
       emptyIcon={emptyIcon}
+      onRowClick={openTransferDetail}
+      getRowAriaLabel={(r) => `${copy.list.transferNumber} ${r.transfer_number}`}
       mobileCardRender={(r) => (
         <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} />
       )}
@@ -396,7 +388,6 @@ function MobileTransferCard({
           </p>
         )}
       </div>
-      <IconChevronRight className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
     </InteractiveCard>
   );
 }

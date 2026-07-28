@@ -52,10 +52,10 @@ test("central site location defaults and seed migration exists", () => {
 
 test("supplier payment action maps vat_invoice_attachment_required", () => {
   const action = readWeb(
-    "app/(protected)/inventory/supplier-invoice-actions.ts",
+    "app/(protected)/finance/supplier-invoice-actions.ts",
   );
   const client = readWeb(
-    "app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx",
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
   assert.match(action, /vat_invoice_attachment_required/);
@@ -76,16 +76,18 @@ test("supplier payment action maps vat_invoice_attachment_required", () => {
   assert.match(client, /vatAttachmentOptionalHint/);
 });
 
-test("getAuthContext uses getSession like loadAuthState (no getUser gate)", () => {
+test("getAuthContext uses getSession only (no getUser gate; GRN false-deny)", () => {
   const source = readWeb("app/_lib/auth.ts");
 
   // getUser() maps Auth session_not_found → "Auth session missing!" while the
   // cookie JWT still authorizes PostgREST — GRN/invoice RSC loaders then
   // returned "Không có quyền" though purchase-orders (loadAuthState) worked.
+  // Far-from-expiry Auth liveness lives in loadAuthState →
+  // probeAuthSessionLiveness (redirect), not here.
   const getAuthStart = source.indexOf("export const getAuthContext");
-  const loadAuthStart = source.indexOf("export const loadAuthState");
-  assert.ok(getAuthStart >= 0 && loadAuthStart > getAuthStart);
-  const getAuthBody = source.slice(getAuthStart, loadAuthStart);
+  const getAuthEnd = source.indexOf("type PermissionLike", getAuthStart);
+  assert.ok(getAuthStart >= 0 && getAuthEnd > getAuthStart);
+  const getAuthBody = source.slice(getAuthStart, getAuthEnd);
 
   assert.match(getAuthBody, /await supabase\.auth\.getSession\(\)/);
   assert.doesNotMatch(getAuthBody, /supabase\.auth\.getUser\(/);
@@ -93,5 +95,6 @@ test("getAuthContext uses getSession like loadAuthState (no getUser gate)", () =
     getAuthBody,
     /Promise\.all\(\[\s*supabase\.auth\.getUser/,
   );
+  assert.doesNotMatch(getAuthBody, /probeAuthSessionLiveness/);
   assert.match(getAuthBody, /user:\s*session\.user/);
 });

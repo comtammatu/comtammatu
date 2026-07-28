@@ -133,7 +133,7 @@ test.skip("consumption route is first-class while issues route remains compatibl
   const consumptionDetailPage = readWeb(
     "app/(protected)/inventory/consumption/[id]/page.tsx",
   );
-  const issuesPage = readWeb("app/(protected)/inventory/issues/page.tsx");
+  const issuesShim = readWeb("app/(protected)/inventory/issues/page.tsx");
   const issuesClient = readWeb(
     "app/(protected)/inventory/issues/issues-client.tsx",
   );
@@ -146,22 +146,25 @@ test.skip("consumption route is first-class while issues route remains compatibl
     inventoryPaths,
     /consumption: joinInventoryPath\(base, "\/consumption"\)/,
   );
-  // consumption routes are real wrappers scoped to issue_type='consumption',
-  // not byte-identical re-exports of the internal-issues route.
   assert.match(
     consumptionPage,
-    /import \{ IssuesPageContent \} from "\.\.\/issues\/page"/,
+    /import \{ IssuesPageContent \} from "\.\.\/issues\/issues-page-content"/,
   );
-  assert.match(consumptionPage, /scope="consumption"/);
+  assert.match(consumptionPage, /scope="all"/);
   assert.match(consumptionPage, /listBasePath="\/inventory\/consumption"/);
   assert.match(
+    consumptionPage,
+    /detailBasePath="\/inventory\/consumption"/,
+  );
+  assert.match(
     consumptionDetailPage,
-    /import \{ IssueDetailPageContent \} from "\.\.\/\.\.\/issues\/\[id\]\/page"/,
+    /import \{ IssueDetailPageContent \} from "\.\.\/\.\.\/issues\/issue-detail-page-content"/,
   );
   assert.match(
     consumptionDetailPage,
     /listBasePath="\/inventory\/consumption"/,
   );
+  assert.match(issuesShim, /redirect\([\s\S]*\/inventory\/consumption/);
   assert.match(issuesClient, /\/inventory\/consumption/);
   assert.match(issueDetailClient, /\/inventory\/consumption/);
   // Copy moved to the message catalog (i18n sweep) — pin the ref in the

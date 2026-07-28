@@ -5,21 +5,18 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import {
-  ArrowRight as IconArrowRight,
+  ArrowRightToLine as IconArrowBarRight,
   FileDown as IconFileDownload,
   FilterX as IconFilterX,
-  EllipsisVertical as IconDotsVertical,
   Plus as IconPlus,
   Search as IconSearch,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
+  InputGroupText,
 } from "@comtammatu/ui/components/input-group";
 import {
   Select,
@@ -45,6 +42,11 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { formatVND } from "@lib/inventory/format";
 import { tNav } from "../_lib/dictionary";
@@ -200,10 +202,10 @@ export function IssuesClient({
   );
   const [recordedSearch, setRecordedSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const isOperator = listBasePath.startsWith("/br/");
   const controlSize = useFormControlSize(isOperator ? "touch" : "responsive");
   const compactActionSize = isOperator ? "touch" : "sm";
-  const fieldClassName = "w-full";
   const createIssueDefaultValues = useMemo<CreateIssueValues>(
     () => ({
       branchId: defaultBranchId ? String(defaultBranchId) : "",
@@ -212,6 +214,21 @@ export function IssuesClient({
     }),
     [defaultBranchId, defaultIssueType],
   );
+
+  const issueDetailHref = (item: IssueRow) => `${detailBasePath}/${item.id}`;
+
+  const getIssueRowActions = (item: IssueRow): RowActionItem[] => [
+    {
+      key: "view",
+      label: ACTIONS_VI.viewDetails,
+      icon: <IconArrowBarRight />,
+      href: issueDetailHref(item),
+    },
+  ];
+
+  const openIssueDetail = (item: IssueRow) => {
+    router.push(issueDetailHref(item));
+  };
   const allowedCreateIssueTypes = ISSUE_TYPES.filter((option) =>
     allowedIssueTypes.includes(option.value),
   );
@@ -326,7 +343,7 @@ export function IssuesClient({
     (sum, row) => sum + row.totalCostValue,
     0,
   );
-  const visibleRecordedConsumptionHint = recordedIsLimited
+  const visibleRecordedConsumptionRatio = recordedIsLimited
     ? INVENTORY_VI.rowRatioRecent(
         visibleRecordedConsumptions.length,
         recordedConsumptions.length,
@@ -335,6 +352,17 @@ export function IssuesClient({
         visibleRecordedConsumptions.length,
         recordedConsumptions.length,
       );
+  const visibleRecordedConsumptionHint = (
+    <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+      <span>{visibleRecordedConsumptionRatio}</span>
+      <span>
+        {INVENTORY_VI.totalAmountLabel}:{" "}
+        <span className="font-mono font-semibold text-foreground">
+          {formatVND(visibleRecordedConsumptionTotal)}
+        </span>
+      </span>
+    </span>
+  );
 
   function handleExportIssuesCsv() {
     if (filtered.length === 0) {
@@ -477,9 +505,9 @@ export function IssuesClient({
   const filterBar = (
     <AppToolbar
       variant="inline"
-      className="items-stretch sm:items-center"
+      className="items-center"
       search={
-        <InputGroup size={controlSize} className={fieldClassName}>
+        <InputGroup size={controlSize} className="min-w-0 flex-1">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -539,11 +567,6 @@ export function IssuesClient({
           </Select>
         </>
       }
-      bulk={
-        <Badge variant="outline" className="rounded-full">
-          {filtered.length}/{issues.length}
-        </Badge>
-      }
       actions={embedded ? issueActions : null}
       reset={
         hasActiveFilters ? (
@@ -565,12 +588,22 @@ export function IssuesClient({
     />
   );
 
+  const recordedBranchSelectItems = [
+    ...(canSelectAllRecordedBranches
+      ? [{ value: "all", label: BRANCH_VI.selectAll }]
+      : []),
+    ...visibleRecordedBranchOptions.map((branch) => ({
+      value: String(branch.id),
+      label: branch.name,
+    })),
+  ];
+
   const recordedConsumptionFilterBar = (
     <AppToolbar
       variant="inline"
-      className="items-stretch sm:items-center"
+      className="items-center"
       search={
-        <InputGroup size={controlSize} className="min-w-56 flex-1">
+        <InputGroup size={controlSize} className="min-w-0 flex-1">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
@@ -589,9 +622,11 @@ export function IssuesClient({
           <Select
             value={selectedRecordedBranchId}
             onValueChange={setRecordedBranchId}
+            items={recordedBranchSelectItems}
           >
             <SelectTrigger
               size={controlSize}
+              aria-label={BRANCH_VI.select}
               className={
                 controlSize === "touch"
                   ? "w-full"
@@ -601,58 +636,49 @@ export function IssuesClient({
               <SelectValue placeholder={BRANCH_VI.select} />
             </SelectTrigger>
             <SelectContent>
-              {canSelectAllRecordedBranches ? (
-                <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
-              ) : null}
-              {visibleRecordedBranchOptions.map((branch) => (
-                <SelectItem key={branch.id} value={String(branch.id)}>
-                  {branch.name}
+              {recordedBranchSelectItems.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <div
+          <InputGroup
+            size={controlSize}
             className={cn(
-              "flex flex-col gap-1",
-              isOperator ? "w-full sm:w-auto sm:min-w-40" : "min-w-40",
+              "bg-background",
+              isOperator ? "w-full sm:w-52" : "w-52 shrink-0",
             )}
           >
-            <Label
-              htmlFor="recorded-start-date"
-              className="text-xs font-medium text-muted-foreground font-normal"
-            >
-              {FORM_VI.fromDate}
-            </Label>
-            <Input
-              controlSize={controlSize}
+            <InputGroupAddon>
+              <InputGroupText>{FORM_VI.fromDate}</InputGroupText>
+            </InputGroupAddon>
+            <InputGroupInput
               id="recorded-start-date"
               type="date"
+              aria-label={FORM_VI.fromDate}
               value={recordedStartDate}
               onChange={(event) => setRecordedStartDate(event.target.value)}
-              className={cn("bg-background", isOperator ? "w-full" : "w-40")}
             />
-          </div>
-          <div
+          </InputGroup>
+          <InputGroup
+            size={controlSize}
             className={cn(
-              "flex flex-col gap-1",
-              isOperator ? "w-full sm:w-auto sm:min-w-40" : "min-w-40",
+              "bg-background",
+              isOperator ? "w-full sm:w-52" : "w-52 shrink-0",
             )}
           >
-            <Label
-              htmlFor="recorded-end-date"
-              className="text-xs font-medium text-muted-foreground font-normal"
-            >
-              {FORM_VI.toDate}
-            </Label>
-            <Input
-              controlSize={controlSize}
+            <InputGroupAddon>
+              <InputGroupText>{FORM_VI.toDate}</InputGroupText>
+            </InputGroupAddon>
+            <InputGroupInput
               id="recorded-end-date"
               type="date"
+              aria-label={FORM_VI.toDate}
               value={recordedEndDate}
               onChange={(event) => setRecordedEndDate(event.target.value)}
-              className={cn("bg-background", isOperator ? "w-full" : "w-40")}
             />
-          </div>
+          </InputGroup>
         </>
       }
       actions={
@@ -678,22 +704,6 @@ export function IssuesClient({
             {ACTIONS_VI.clearFilter}
           </Button>
         ) : null
-      }
-      bulk={
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>
-            {INVENTORY_VI.visibleRowsLabel}:{" "}
-            <span className="font-mono font-semibold text-foreground">
-              {visibleRecordedConsumptions.length}/{recordedConsumptions.length}
-            </span>
-          </span>
-          <span>
-            {INVENTORY_VI.totalAmountLabel}:{" "}
-            <span className="font-mono font-semibold text-foreground">
-              {formatVND(visibleRecordedConsumptionTotal)}
-            </span>
-          </span>
-        </div>
       }
     />
   );
@@ -739,18 +749,27 @@ export function IssuesClient({
     },
     {
       key: "actions",
-      header: "",
-      className: "w-10",
-      render: (item) => (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`${ACTIONS_VI.viewDetails} ${item.code}`}
-          render={<Link href={`${detailBasePath}/${item.id}`} />}
-        >
-          <IconDotsVertical className="size-4" />
-        </Button>
-      ),
+      header: <span className="sr-only">{FORM_VI.action}</span>,
+      className: "w-10 text-right",
+      render: (item) => {
+        const items = getIssueRowActions(item);
+        return (
+          <div
+            className="flex justify-end"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <RowActionsMenu
+              items={items}
+              label={`${ACTIONS_VI.viewDetails} ${item.code}`}
+              triggerSize="icon-sm"
+              open={openActionRowId === item.id}
+              onOpenChange={(open) =>
+                setOpenActionRowId(open ? item.id : null)
+              }
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -812,27 +831,48 @@ export function IssuesClient({
       },
     ];
 
-  const renderIssueCard = (item: IssueRow) => (
-    <InteractiveCard
-      minHeight="mobile"
-      padding="default"
-      render={<Link href={`${detailBasePath}/${item.id}`} className="block" />}
-    >
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-semibold">{item.code}</span>
-          <StatusBadge domain="inventory" value={item.status} size="sm" />
+  const renderIssueCard = (item: IssueRow) => {
+    const actions = getIssueRowActions(item);
+    return (
+      <InteractiveCard
+        minHeight="mobile"
+        padding="default"
+        className="cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onClick={() => openIssueDetail(item)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openIssueDetail(item);
+          }
+        }}
+      >
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-sm font-semibold">{item.code}</span>
+            <StatusBadge domain="inventory" value={item.status} size="sm" />
+          </div>
+          <p className="truncate text-xs text-muted-foreground">
+            {item.branchName}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {issueTypeLabel(item.type, item.branchKind)} &middot; {item.date}
+          </p>
         </div>
-        <p className="truncate text-xs text-muted-foreground">
-          {item.branchName}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {issueTypeLabel(item.type, item.branchKind)} &middot; {item.date}
-        </p>
-      </div>
-      <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
-    </InteractiveCard>
-  );
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <RowActionsMenu
+            items={actions}
+            label={`${ACTIONS_VI.viewDetails} ${item.code}`}
+            triggerSize="icon-touch"
+          />
+        </div>
+      </InteractiveCard>
+    );
+  };
 
   const renderRecordedConsumptionCard = (item: RecordedConsumptionRow) => (
     <InteractiveCard minHeight="tap" padding="compact">
@@ -901,6 +941,7 @@ export function IssuesClient({
 
       <InventoryListFrame
         title={issueListTitle}
+        headerHint={INVENTORY_VI.rowRatio(filtered.length, issues.length)}
         toolbar={filterBar}
       >
         <DataTable
@@ -915,6 +956,13 @@ export function IssuesClient({
           }
           emptyDescription={issueEmptyDescription}
           emptyMode={hasActiveFilters ? "no-results" : "no-data"}
+          onRowClick={openIssueDetail}
+          getRowDataState={(item) =>
+            openActionRowId === item.id ? "selected" : undefined
+          }
+          renderRowContextMenu={(item) => (
+            <RowActionsContextMenuItems items={getIssueRowActions(item)} />
+          )}
           mobileCardRender={renderIssueCard}
         />
       </InventoryListFrame>

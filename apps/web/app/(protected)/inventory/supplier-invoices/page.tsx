@@ -16,7 +16,7 @@ function appendParam(
   }
 }
 
-/** REDIRECT-SHIM — Finance owns supplier invoices (ADR 0018). */
+/** Redirect to Finance supplier invoices (ADR 0018). */
 export default async function InventorySupplierInvoicesRedirectPage({
   searchParams,
 }: InventorySupplierInvoicesRedirectProps) {

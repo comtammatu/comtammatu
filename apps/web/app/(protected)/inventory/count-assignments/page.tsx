@@ -22,7 +22,16 @@ interface CountAssignmentsPageContentProps {
     branchId?: string | string[];
     locationId?: string | string[];
     shiftId?: string | string[];
+    assignmentId?: string | string[];
   }>;
+  initialAssignmentId?: number | null;
+}
+
+function parsePositiveId(value: string | string[] | undefined): number | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 type IngredientCountOptionRow = {
@@ -45,6 +54,7 @@ function countLocationLabel(
 
 export async function CountAssignmentsPageContent({
   searchParams,
+  initialAssignmentId = null,
 }: CountAssignmentsPageContentProps) {
   const params = searchParams ? await searchParams : {};
 
@@ -258,6 +268,12 @@ export async function CountAssignmentsPageContent({
     }
   }
 
+  const resolvedAssignmentId =
+    initialAssignmentId != null &&
+    employees.some((employee) => employee.id === initialAssignmentId)
+      ? initialAssignmentId
+      : null;
+
   return (
     <CountAssignmentsClient
       selectedBranchId={selectedBranchId}
@@ -268,6 +284,7 @@ export async function CountAssignmentsPageContent({
       employees={employees}
       ingredients={ingredients}
       assignmentsByEmployee={assignmentsByEmployee}
+      initialAssignmentId={resolvedAssignmentId}
     />
   );
 }
@@ -279,7 +296,15 @@ export default async function CountAssignmentsPage({
     branchId?: string | string[];
     locationId?: string | string[];
     shiftId?: string | string[];
+    assignmentId?: string | string[];
   }>;
 }) {
-  return <CountAssignmentsPageContent searchParams={searchParams} />;
+  const params = searchParams ? await searchParams : {};
+  const initialAssignmentId = parsePositiveId(params.assignmentId);
+  return (
+    <CountAssignmentsPageContent
+      searchParams={searchParams}
+      initialAssignmentId={initialAssignmentId}
+    />
+  );
 }

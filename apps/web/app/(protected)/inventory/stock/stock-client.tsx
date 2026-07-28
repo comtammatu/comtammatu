@@ -292,11 +292,8 @@ export function StockClient({
     );
   }
 
-  const filteredValue = filtered.reduce(
-    (sum, item) => sum + stockValue(item),
-    0,
-  );
-  const visibleTotalValue = branchValue ?? filteredValue;
+  // D088: never recompute a money total from row costs when branchValue is denied.
+  const visibleTotalValue = branchValue;
   const liveLabel = formatVNDate(new Date());
   const stockDetailHref = (ingredientId: number) =>
     branchHref(branchId, `/inventory/stock/${ingredientId}`);
@@ -532,7 +529,7 @@ export function StockClient({
   );
 
   const filterControls = (
-    <>
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
       <Select value={activeCategory} onValueChange={setActiveCategory}>
         <SelectTrigger
           size={controlSize}
@@ -581,7 +578,7 @@ export function StockClient({
           ))}
         </SelectContent>
       </Select>
-    </>
+    </div>
   );
 
   const resultCountBadge = !isFirstLoadEmpty ? (
@@ -802,16 +799,15 @@ export function StockClient({
 
   const stockToolbar = (
     <AppToolbar
+      sticky={isCompactLayout}
       variant="inline"
-      search={
-        isCompactLayout ? (
-          searchControl
-        ) : (
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            {searchControl}
+      search={searchControl}
+      filters={
+        isCompactLayout ? undefined : (
+          <>
             {filterControls}
             {underThresholdButton}
-          </div>
+          </>
         )
       }
       actions={
@@ -851,12 +847,16 @@ export function StockClient({
         title={stockCopy.title}
         meta={
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="inline-flex items-center gap-1.5">
-              <span>{stockCopy.metrics.selectedWarehouse}</span>
-              <span className="font-mono font-semibold tabular-nums text-foreground">
-                {inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
+            {visibleTotalValue != null ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span>{stockCopy.metrics.selectedWarehouse}</span>
+                <span className="font-mono font-semibold tabular-nums text-foreground">
+                  {inventoryCommon.currencyCompact(
+                    formatVND(visibleTotalValue),
+                  )}
+                </span>
               </span>
-            </span>
+            ) : null}
             {totalValue != null ? (
               <span className="inline-flex items-center gap-1.5">
                 <span>{stockCopy.metrics.wholeSystem}</span>
@@ -891,7 +891,7 @@ export function StockClient({
             defaultOpen={false}
           >
             {underThresholdButton}
-            <div className="grid gap-2 sm:grid-cols-2">{filterControls}</div>
+            {filterControls}
             <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
           </AppSection>
           {isFirstLoadEmpty ? (

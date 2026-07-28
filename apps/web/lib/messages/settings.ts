@@ -52,7 +52,7 @@ export const settings = {
       "Quản lý máy in, mẫu phiếu và hàng đợi in theo từng điểm vận hành.",
     generalTitle: "Doanh nghiệp",
     generalDescription:
-      "Định danh doanh nghiệp (tên pháp lý, mã số thuế, địa chỉ, người đại diện theo pháp luật) — in trên hóa đơn và chứng từ.",
+      "Tên pháp lý, mã số thuế, địa chỉ và người đại diện in trên hóa đơn.",
     kdsTitle: "Trạm bếp (KDS)",
     kdsDescription: "Quản lý trạm hiển thị bếp và gán danh mục món ăn",
     paymentsTitle: "Thanh toán POS",
@@ -60,10 +60,10 @@ export const settings = {
       "Cấu hình Chuyển khoản và SePay xác nhận tự động cho POS.",
     printersTitle: "In ấn vận hành",
     printersDescription:
-      "Cấu hình máy in theo từng chi nhánh: loại phiếu và danh mục món in trên từng máy.",
+      "Loại phiếu và danh mục món in trên từng máy của chi nhánh.",
     printTemplatesTitle: "Mẫu phiếu in",
     printTemplatesDescription:
-      "Chỉnh bố cục từng loại phiếu, xem trước đúng bản in và in thử xuống máy chi nhánh.",
+      "Chỉnh bố cục, xem trước và in thử xuống máy chi nhánh.",
     printTemplatesEntry: "Mẫu phiếu",
     printJobsTitle: "Giám sát in",
     printJobsDescription: "Trạng thái hàng đợi in và máy in đang kết nối",
@@ -101,7 +101,7 @@ export const settings = {
     saveButton: "Lưu mẫu",
     saveTitle: (kindLabel: string) => `Lưu mẫu ${kindLabel}`,
     saveDescription:
-      "Tạo phiên bản mới và áp dụng ngay cho các phiếu in tiếp theo. Phiếu đã in giữ nguyên bản cũ.",
+      "Áp dụng ngay cho phiếu in tiếp theo; phiếu đã in giữ bản cũ.",
     saveNameLabel: "Tên bản mẫu",
     saveNamePlaceholder: (kindLabel: string) => `Mẫu ${kindLabel} mới`,
     paperWidthLabel: "Khổ giấy",
@@ -113,7 +113,7 @@ export const settings = {
     restoreButton: "Khôi phục mặc định",
     restoreTitle: "Khôi phục mẫu mặc định?",
     restoreDescription: (kindLabel: string) =>
-      `Phiếu ${kindLabel} sẽ quay về bố cục mặc định hệ thống. Các phiên bản tùy chỉnh cũ được giữ trong lịch sử.`,
+      `Phiếu ${kindLabel} về bố cục mặc định; bản tùy chỉnh vẫn giữ trong lịch sử.`,
     restoreCancel: "Hủy",
     restoreConfirm: "Khôi phục",
     restoredToast: (kindLabel: string) =>
@@ -171,7 +171,7 @@ export const settings = {
     qrCopyFailed: "Không copy được link QR",
     rotateQrTitle: "Đổi mã QR?",
     rotateQrDescription:
-      "Mã QR cũ sẽ không mở được trang gọi món nữa. Chỉ đổi khi cần thay mã đã in hoặc đã lộ.",
+      "Mã QR cũ sẽ không mở được trang gọi món nữa. Chỉ đổi khi mã đã lộ.",
     rotateQrConfirm: "Đổi mã",
     zonesTab: (count: number) => `Khu vực (${formatCount(count)})`,
     tablesTab: (count: number) => `Bàn (${formatCount(count)})`,
@@ -195,20 +195,21 @@ export const settings = {
   qcSettings: {
     warnBelowReview: "Ngưỡng cảnh báo phải nhỏ hơn ngưỡng kiểm tra.",
     saveFailed: "Không thể lưu cài đặt.",
-    saved: "Đã lưu cài đặt QC.",
+    saved: "Đã lưu cài đặt kiểm soát chất lượng.",
     eyebrow: "Kho hàng",
-    title: "Cài đặt QC nhập kho",
+    title: "Cài đặt kiểm soát chất lượng nhập kho",
     description:
-      "Cấu hình ngưỡng kiểm soát chất lượng cho phiếu nhập (GRN). Các ngưỡng này áp dụng toàn tenant; cảnh báo xử lý trong app.",
-    toleranceTitle: "Tolerance số lượng & giá",
+      "Ngưỡng kiểm soát chất lượng phiếu nhập, áp dụng cho toàn hệ thống.",
+    toleranceTitle: "Dung sai số lượng & giá",
     shortToleranceLabel: "Thiếu hàng ≤ (%)",
     shortToleranceHelp:
       "Dưới ngưỡng → tự chấp nhận, không bắt chọn cách xử lý.",
     warningThresholdLabel: "Giá lệch cảnh báo ≥ (%)",
     warningThresholdHelp: "Vượt ngưỡng → bắt nhập lý do.",
     reviewThresholdLabel: "Giá lệch kiểm tra ≥ (%)",
-    reviewThresholdHelp: "Vượt ngưỡng → bắt thêm ảnh hóa đơn + flag review.",
-    rejectPhotoLabel: "Bắt buộc ảnh khi reject hàng",
+    reviewThresholdHelp:
+      "Vượt ngưỡng → bắt thêm ảnh hóa đơn + đánh dấu cần kiểm tra.",
+    rejectPhotoLabel: "Bắt buộc ảnh khi từ chối hàng",
     rejectPhotoHelp: "Khi có hàng từ chối, phải đính kèm ảnh trước khi chốt.",
     saveButton: "Lưu cài đặt",
   },
@@ -218,26 +219,26 @@ export const settings = {
     checklistLabel: (roleLabel: string) =>
       `Mỗi dòng là một việc cho ${roleLabel}`,
     checklistDescription:
-      "Checklist được chụp lại khi nhân viên chấm công vào; để trống nếu vai trò này không cần checklist.",
+      "Checklist được chụp lại khi nhân viên vào ca. Để trống nếu không cần.",
     saveChecklist: "Lưu checklist",
     checklistSaved: (roleLabel: string) => `Đã lưu checklist cho ${roleLabel}`,
   },
   network: {
     title: (branchName: string) => `Cổng mạng POS/KDS — ${branchName}`,
     description:
-      "POS và KDS chỉ mở từ thiết bị có cùng IP công cộng (cùng wifi) với máy in agent của chi nhánh. Print-agent tự đăng ký IP mỗi 5 phút. Nút bên dưới cho phép tin cậy IP hiện tại của bạn để bootstrap khi agent chưa chạy.",
+      "POS và KDS chỉ mở từ thiết bị dùng chung wifi với máy in agent của chi nhánh.",
     trustedIp: (ip?: string) =>
       ip ? `Đã tin cậy IP ${ip}` : "Đã tin cậy IP hiện tại",
     revokedIp: "Đã thu hồi IP",
     noTrustedTitle: "Chưa có IP nào được tin cậy",
     noTrustedDescription:
-      'Đứng trên wifi cửa hàng và bấm "Tin cậy IP hiện tại" để mở POS/KDS, hoặc cài print-agent — agent sẽ tự đăng ký IP.',
+      'Đứng trên wifi cửa hàng, bấm "Tin cậy IP hiện tại" để mở POS/KDS.',
     staleTitle: "Tất cả IP đã quá 30 phút",
     staleDescription:
-      "Cashier đang bị chặn POS. Kiểm tra agent có chạy không, hoặc bấm tin cậy lại IP hiện tại.",
+      "Thu ngân đang bị chặn POS. Kiểm tra agent hoặc tin cậy lại IP.",
     trustCurrentTitle: "Tin cậy IP hiện tại",
     trustCurrentDescription:
-      "Ghi nhận IP công cộng của thiết bị bạn đang dùng. Phải đứng trên wifi cửa hàng khi bấm.",
+      "Ghi nhận IP thiết bị bạn đang dùng. Phải đứng trên wifi cửa hàng.",
     trustCurrentButton: "Tin cậy IP hiện tại",
     activeTitle: (count: number) => `Đang hoạt động (${formatCount(count)})`,
     emptyTrusted: "Chưa có IP tin cậy",
@@ -269,7 +270,7 @@ export const settings = {
     identitySaved: "Đã lưu định danh doanh nghiệp",
     invoiceProfileTitle: "Phát hành HĐĐT Viettel",
     invoiceProfileDescription:
-      "Mẫu số và ký hiệu được lưu cùng hồ sơ phát hành; mã số thuế lấy từ định danh doanh nghiệp.",
+      "Mã số thuế lấy từ định danh doanh nghiệp.",
     templateCodeLabel: "Mẫu số",
     invoiceSeriesLabel: "Ký hiệu",
     profileStatusLabel: "Trạng thái",
@@ -294,26 +295,26 @@ export const settings = {
     editTab: "Chỉnh sửa",
     vietqrLabel: "VietQR (chuyển khoản QR)",
     vietqrDescription:
-      "Nhập tài khoản nhận tiền tại đây; POS sẽ dùng cấu hình này để tạo QR chuyển khoản.",
+      "Tài khoản nhận tiền POS dùng để tạo QR chuyển khoản.",
     bankCode: "Mã ngân hàng",
     accountNo: "Số tài khoản",
     accountName: "Chủ tài khoản",
     codePrefix: "Nội dung QR POS / MB Soundbox",
     codePrefixIntro:
-      "POS ghép phần này với mã đối soát cho từng đơn rồi đưa vào QR và bill thanh toán.",
+      "POS ghép phần này với mã đối soát của từng đơn rồi đưa vào QR.",
     codePrefixHelp:
-      "Hệ thống tự thêm một khoảng trắng và 12 ký tự đối soát cho từng đơn. Chỉ chữ, số và khoảng trắng.",
+      "Hệ thống tự thêm 12 ký tự đối soát. Chỉ chữ, số và khoảng trắng.",
     codeModelOwnerLabel: "Owner lưu",
     codeModelSuffixLabel: "Hệ thống tự thêm",
     codeModelFinalLabel: "Nội dung QR POS",
     codePreviewEmpty: "Nhập nội dung cố định để xem ví dụ.",
     codePreviewHelp:
-      "Đây là nội dung khách chuyển khoản cho POS. SePay tự xác nhận bằng mã này; HĐĐT chỉ phát hành sau khi payment POS hoàn tất.",
+      "Nội dung khách chuyển khoản; SePay tự xác nhận bằng mã này.",
     bankHelp:
-      "Mã NH: TCB, VCB, BIDV, MB, ACB, TPB, VPB, STB... (Napas BIN cũng chấp nhận, vd 970407 = Techcombank).",
+      "Mã NH: TCB, VCB, BIDV, MB, ACB… hoặc Napas BIN (vd 970407).",
     sepayLabel: "SePay tự động xác nhận",
     sepayDescription:
-      "Dùng cho Chuyển khoản; SePay chỉ xác nhận tiền vào, không phải phương thức thanh toán riêng.",
+      "SePay chỉ xác nhận tiền vào, không phải phương thức thanh toán riêng.",
     sepayEndpoint: "Webhook: /api/webhooks/sepay",
     envStatus: "Trạng thái env:",
     envConfigured: "✓ Đã cấu hình",
@@ -323,16 +324,16 @@ export const settings = {
     contentExpenseToken: "Mã khớp phiếu chi",
     contentCashDepositToken: "Mã nộp tiền mặt",
     contentHelp:
-      "Hai mã này chỉ dùng cho giao dịch vận hành. Thu đơn POS dùng trực tiếp nội dung QR POS, không cần lệnh SePay riêng.",
+      "Hai mã chỉ dùng cho giao dịch vận hành. Thu đơn POS dùng trực tiếp nội dung QR POS.",
     contentCategoryRuleLabel: "Danh mục chi nằm ở phiếu chi",
     contentCategoryRule:
-      "Tạo phiếu chi Chuyển khoản tại Tài chính → Chi phí, chọn danh mục như Lương hoặc Điện/Nước, rồi dùng mã phiếu chi trong lệnh. SePay không suy ra danh mục từ nội dung chuyển khoản.",
+      "Dùng mã phiếu chi trong lệnh; SePay không suy ra danh mục từ nội dung chuyển khoản.",
     contentExpensePreview: "1. Khớp phiếu chi",
     contentCashDepositPreview: "2. Nộp tiền mặt",
     contentExpenseHelp:
-      "Dùng cho tiền ra: 123 là mã phiếu chi đã có danh mục. Không dùng tên danh mục như LUONG hoặc DIEN thay cho mã phiếu chi.",
+      "123 là mã phiếu chi, không dùng LUONG hoặc DIEN thay cho mã phiếu chi.",
     contentCashDepositHelp:
-      "Dùng khi nộp tiền mặt vào ngân hàng. Hệ thống ghi nhận khoản nộp tiền, không tính là chi vận hành.",
+      "Nộp tiền mặt vào ngân hàng; không tính là chi vận hành.",
     saveSettings: "Lưu cài đặt",
   },
   pos: {
@@ -353,7 +354,7 @@ export const settings = {
     stockControlTitle: "Kiểm soát bán theo tồn kho",
     stockOutcomePostingLabel: "Trừ tồn khi bán",
     stockOutcomePostingHelp:
-      "Bật: mỗi đơn bán trừ kho theo định mức và món bị khóa khi hết tồn — nhập kho là mở lại. Món chưa có định mức không bị ảnh hưởng. Tắt: bán tự do, không đụng kho.",
+      "Bật: trừ kho theo định mức và khóa món khi hết tồn. Tắt: bán tự do.",
     stockOutcomePostingOwnerOnly: "Chỉ Chủ quán bật/tắt được.",
     stockOutcomePostingSaved: "Đã cập nhật cấu hình trừ kho",
     stockOutcomePostingFailed: "Không thể lưu cấu hình. Vui lòng thử lại.",
@@ -363,7 +364,7 @@ export const settings = {
     statPending: "Đang chờ",
     statFailed24h: "Lỗi 24h",
     statPrintedToday: "Đã in hôm nay",
-    statAgentOnline: "Agent online",
+    statAgentOnline: "Agent đang kết nối",
     statusPlaceholder: "Trạng thái",
     allStatuses: "Tất cả trạng thái",
     attentionStatus: "Cần xử lý",
@@ -399,7 +400,7 @@ export const settings = {
     openAction: "Mở",
     commandOverviewTitle: "Luồng chính",
     commandOverviewDescription:
-      "Mở đúng bề mặt để vận hành chi nhánh, kiểm tra thiết bị và xử lý công việc trong ngày.",
+      "Mở đúng màn để vận hành, kiểm tra thiết bị và xử lý việc trong ngày.",
     liveOperationsTitle: "Vận hành trực tiếp",
     liveOperationsDescription:
       "Các màn thao tác trong ca: bán hàng, bếp, gọi món và giới hạn bán hôm nay.",
@@ -449,12 +450,12 @@ export const settings = {
     readinessFloorReady: (tables: number, terminals: number) =>
       `${formatCount(tables)} bàn và ${formatCount(terminals)} máy POS active.`,
     readinessFloorMissing: (tables: number, terminals: number) =>
-      `${formatCount(tables)} bàn, ${formatCount(terminals)} máy POS active. Cần đủ cả hai để bán tại quán.`,
+      `${formatCount(tables)} bàn, ${formatCount(terminals)} máy POS active. Cần cả hai để bán tại quán.`,
     readinessKdsSetupTitle: "Trạm KDS",
     readinessKdsSetupReady: (count: number) =>
       `${formatCount(count)} trạm bếp active.`,
     readinessKdsSetupMissing:
-      "Chưa có trạm bếp hoạt động; có thể bán thủ công nếu quản lý chấp nhận phương án dự phòng.",
+      "Chưa có trạm bếp hoạt động; có thể bán thủ công nếu quản lý đồng ý.",
     readinessPaymentTitle: "Thanh toán & HĐĐT",
     readinessPaymentReady: (hddtReady: boolean) =>
       hddtReady
@@ -478,14 +479,14 @@ export const settings = {
     readinessKdsCta: "Mở KDS",
     readinessPrinterTitle: "Máy in",
     readinessPrinterOnline: "Agent in đang hoạt động.",
-    readinessPrinterOffline: "Agent in offline — kiểm tra máy trạm in.",
+    readinessPrinterOffline: "Agent in mất kết nối — kiểm tra máy trạm in.",
     readinessPrinterNoConfig:
-      "Chưa có máy in hoạt động; được phép bán thủ công nếu quản lý chấp nhận phương án dự phòng.",
+      "Chưa có máy in hoạt động; có thể bán thủ công nếu quản lý đồng ý.",
     readinessPrinterNoAgent: "Chưa ghi nhận agent in cho chi nhánh.",
     readinessPrinterFailed: (count: number) =>
       `${formatCount(count)} lệnh in lỗi trong 24 giờ qua.`,
-    readinessPrinterOnlineBadge: "Online",
-    readinessPrinterOfflineBadge: "Offline",
+    readinessPrinterOnlineBadge: "Đang kết nối",
+    readinessPrinterOfflineBadge: "Mất kết nối",
     readinessPrinterNoConfigBadge: "Dự phòng",
     readinessPrinterCta: "Mở máy in",
     posSessionsLoadFailed: "Không thể tải ca POS",
@@ -500,7 +501,7 @@ export const settings = {
     readinessStaffReady: (count: number) =>
       `${formatCount(count)} nhân sự active được gán chi nhánh.`,
     readinessStaffMissing:
-      "Chưa thấy nhân sự đang hoạt động được gán chi nhánh; kiểm tra trước khi mở ca thật.",
+      "Chưa có nhân sự được gán chi nhánh; kiểm tra trước khi mở ca.",
     readinessStaffCta: "Mở nhân sự",
     readinessCheckoutTitle: "Duyệt kết ca",
     readinessCheckoutPending: (count: number) =>
@@ -539,13 +540,13 @@ export const settings = {
       `${branchName} · Bàn, POS, bếp và in`,
     landingEmptyTitle: "Không có mục thiết lập khả dụng",
     landingEmptyDescription:
-      "Tài khoản của bạn chưa được cấp quyền cho các mục thiết lập của chi nhánh này. Liên hệ chủ/quản lý nếu cần truy cập.",
+      "Tài khoản chưa có quyền vào thiết lập chi nhánh này. Liên hệ quản lý.",
     infoTitle: "Thông tin",
     tablesSetupTitle: "Bàn & khu vực",
     tablesSetupDescription:
       "Khu vực ăn uống, danh sách bàn và trạng thái vận hành tại chi nhánh.",
     tablesDescription: (branchName: string) =>
-      `Sơ đồ khu vực và bàn của ${branchName}: thêm khu vực, quản lý bàn và trạng thái phục vụ.`,
+      `Khu vực, bàn và trạng thái phục vụ của ${branchName}.`,
     posSetupTitle: "Máy POS & tồn kho",
     posSetupDescription:
       "Máy POS đăng ký tại chi nhánh và chính sách trừ tồn khi bán.",
@@ -558,13 +559,12 @@ export const settings = {
     menuLimitsTitle: "Giới hạn bán",
     menuLimitsGuideTitle: "Quy tắc mở bán hôm nay",
     menuLimitsGuideDescription:
-      "Số được bán thêm do server quyết định từ trần thủ công, tồn quy đổi, đơn đang xử lý và giữ chỗ.",
-    menuLimitsIntroBefore:
-      "Đặt trần bán thủ công hoặc tắt món. Số được bán thêm vẫn do tồn kho và đơn đang xử lý quyết định. Bật",
+      "Số được bán thêm tính từ trần thủ công, tồn kho và đơn đang xử lý.",
+    menuLimitsIntroBefore: "Đặt trần bán thủ công hoặc tắt món. Bật",
     menuLimitsDisabledAction: "Tắt món",
     menuLimitsIntroAfter: "để ẩn món khỏi POS bất kể số lượng.",
     menuLimitsResetNote:
-      "Giới hạn áp dụng theo ngày vận hành; khi hủy món trước khi bếp làm, số còn được trả lại.",
+      "Giới hạn theo ngày vận hành; hủy món trước khi bếp làm thì trả lại số.",
     menuLimitsLoadFailed: "Không tải được dữ liệu giới hạn bán.",
     printersDescription: (branchName: string) =>
       `Cấu hình 3 máy in của ${branchName}: hóa đơn, bếp 1, bếp 2`,
@@ -660,7 +660,7 @@ export const settings = {
     expectedCash: "Tiền mặt dự thu",
     countedCash: "Tiền mặt đếm lúc chốt",
     cashFormula:
-      "Dự thu = đầu ca + tiền mặt của các thanh toán hoàn tất trong ca. Lệch = tiền đếm − dự thu; âm là thiếu, dương là thừa. Tiền đếm lúc chốt không cộng doanh thu lần hai.",
+      "Dự thu = đầu ca + tiền mặt thu trong ca. Lệch = tiền đếm − dự thu.",
     noValue: "Chưa có",
     cashCollected: "Tiền mặt thu được",
     bankTransfer: "Chuyển khoản",
@@ -676,7 +676,7 @@ export const settings = {
     mainItem: "Món chính",
     sideCombo: "Món ăn kèm",
     side: "Kèm",
-    modifier: "Topping",
+    modifier: "Món thêm",
     itemNote: "Ghi chú món",
     reportTitle: "Tổng kết ca",
     reportDescription: "Tổng hợp bán hàng và các khoản cần kiểm tra trong ca.",
@@ -715,7 +715,7 @@ export const settings = {
       latePayments: number,
       lateAmount: string,
     ) =>
-      `${formatCount(stateMismatch)} đơn có trạng thái hoặc số tiền chưa khớp · ${formatCount(latePayments)} khoản thanh toán ngoài thời gian ca (${lateAmount}).`,
+      `${formatCount(stateMismatch)} đơn chưa khớp trạng thái hoặc số tiền · ${formatCount(latePayments)} thanh toán ngoài ca (${lateAmount}).`,
     orderSheetEyebrow: "Chi tiết đơn",
     orderSheetTitle: (orderNumber: string) => `Đơn ${orderNumber}`,
     orderNumber: "Mã đơn",
@@ -726,7 +726,7 @@ export const settings = {
     unpaid: "Chưa thanh toán",
     orderInvestigationPrompt: "Cần đối chiếu món hoặc bếp?",
     orderInvestigationDescription:
-      "Hồ sơ đơn tập hợp số món gọi, bếp làm xong, phục vụ, lượt in, thanh toán và lịch sử thao tác.",
+      "Xem món gọi, bếp, phục vụ, lượt in, thanh toán và lịch sử thao tác.",
     orderInvestigationAction: "Xem toàn bộ diễn biến đơn",
     billBreakdown: (count: number) =>
       `Chi tiết tính tiền (${formatCount(count)} dòng món)`,

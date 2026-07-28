@@ -1,4 +1,4 @@
-import { IssuesPageContent } from "../issues/page";
+import { IssuesPageContent } from "../issues/issues-page-content";
 
 export default async function ConsumptionPage({
   searchParams,
@@ -14,7 +14,7 @@ export default async function ConsumptionPage({
       searchParams={searchParams}
       scope="all"
       listBasePath="/inventory/consumption"
-      detailBasePath="/inventory/issues"
+      detailBasePath="/inventory/consumption"
     />
   );
 }

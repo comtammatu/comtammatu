@@ -66,6 +66,6 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
 test("recorded consumption copy no longer claims every source is POS", () => {
   const copy = read("packages/shared/src/messages/inventory.ts");
   assert.match(copy, /recordedConsumptionTitle: "Tiêu hao đã ghi nhận"/);
-  assert.match(copy, /POS, phiếu thủ công và nguồn vận hành khác/);
+  assert.match(copy, /POS, phiếu thủ công và nguồn khác/);
   assert.doesNotMatch(copy, /recordedConsumptionTitle: "Tiêu hao POS/);
 });

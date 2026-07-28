@@ -365,6 +365,7 @@ export function AttendanceTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
         <AppToolbar
+          sticky
           className="items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block"
           filters={
             <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">

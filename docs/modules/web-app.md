@@ -70,36 +70,52 @@ Server action có rate limiting (`loginRateLimit` từ `@comtammatu/security`). 
 
 ## Inventory Owner surface hiện tại
 
+### Dual-plane IA (ADR 0012 / 0018)
+
+- **Owner** `/inventory/*` — AppShell + short sidebar; site filter mọi
+  `branch_kind` ngang hàng (`branch`, `central_supply`, `central_kitchen`).
+- **Branch Stock** `/br/[branchId]/stock/*` — plane ca riêng; không mirror
+  Owner shell/tile/primary CTA.
+- Record Depth có thể khớp theo loại chứng từ; IA/nav/chrome **không** gộp.
+
 ### IA theo workflow
 
-`inventory-shell.tsx` gom điều hướng Owner theo các nhóm ổn định:
+`inventory-shell.tsx` gom điều hướng Owner theo các nhóm ổn định (UI sidebar
+vẫn flatMap một list ngắn):
 
 - `0 · Nay`
-- `1 · Kiểm soát tồn`: chỉ còn `Tồn kho`
-- `2 · Nhập/Nhận/Đối soát`: `Nhập kho`, `Tiêu hao`, `Điều chuyển`
+- `1 · Kiểm soát tồn`: `Tồn kho`
+- `2 · Nhập/Nhận/Đối soát`: `Nhập kho`, **Đơn mua hàng**, `Tiêu hao`, `Điều chuyển`
 - `3 · Sản xuất`
 - `4 · Danh mục & thiết lập`
 
 Các nguyên tắc đang được code phản ánh:
 
-- `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers` là ba route giao dịch kho canonical; `/inventory/operations` chỉ còn redirect tương thích cho deep-link cũ.
-- Sidebar không quảng bá `Kiểm kê đối chiếu`, `Đếm tồn`, `Báo cáo` hoặc `Hóa đơn NCC`; các route nghiệp vụ còn tồn tại vẫn giữ ACL/deep-link riêng. Hóa đơn NCC có cửa vào canonical tại Finance.
-- Purchase orders và supplier returns không còn surface hằng ngày; GRN bắt đầu từ NCC, còn DB/RPC/history cũ vẫn được giữ theo D073
-- `Production` chạy tại chính chi nhánh; owner và `branch_manager` đi qua
-  permission + branch scope hiện hành.
-- `Tiêu hao` gom tiêu hao vận hành, hao hụt và xuất khác; actual food cost vẫn đọc từ ledger đã ghi nhận và không tái mở same-branch Kho↔Bếp transfer.
-- `Ingredients / Suppliers / Định mức món bán` chỉ còn một cửa vào chính trong `Danh mục`
+- Canonical giao dịch Owner: `/inventory/grn`, `/inventory/purchase-orders`,
+  `/inventory/consumption`, `/inventory/transfers`. `/inventory/operations` đã
+  rút (không còn shim).
+- Sidebar không quảng bá `Kiểm kê đối chiếu`, `Đếm tồn`, `Báo cáo` hoặc
+  `Hóa đơn NCC`; route non-nav vẫn ACL/deep-link. Hóa đơn NCC canonical tại
+  Finance; `/inventory/supplier-invoices` chỉ `REDIRECT-SHIM`.
+- Supplier returns ngoài daily UI. Owner PO LIST theo ADR 0018 **C1** restore.
+- Owner Production/GRN/stock theo site đang chọn trên filter (mọi kind);
+  `branch_manager` vẫn Branch Stock + permission/scope riêng.
+- `Tiêu hao` gom tiêu hao vận hành, hao hụt và xuất khác; không tái mở
+  same-branch Kho↔Bếp transfer.
+- `Ingredients / Suppliers / Định mức món bán` một cửa trong `Danh mục`.
+- Prune: xóa helper chết (`receiving`/`expiry`); chuyển AP actions về Finance;
+  rút shim tạm sau khi CTA đã canonical.
 
 ### Workflow đã wire thật ở UI
 
 Các detail pages của Inventory không còn chỉ là read-only shells:
 
-- `purchase-orders`: frozen non-nav route (ADR 0018 **C1** / D073). Route and
-  RPC history may remain for integrity; no Inventory nav entry, no new DETAIL,
-  no further daily-UI investment.
-- `supplier-invoices`: Finance home at `/finance/supplier-invoices`;
-  `/inventory/supplier-invoices` is a `REDIRECT-SHIM` (ADR 0018). Invoice create /
-  match and AP payment handoff live on the Finance surface.
+- `purchase-orders`: Inventory sidebar LIST **Đơn mua hàng** (ADR 0018 **C1**
+  Owner restore). Route/RPC remain; no new DETAIL; Wave 4 row-open ratchet stays
+  out of the PO client.
+- `supplier-invoices`: Finance home at `/finance/supplier-invoices` with client
+  under `finance/supplier-invoices/` (ADR 0018 Wave 2).
+  `/inventory/supplier-invoices` is a `REDIRECT-SHIM` only.
 - `grn/[id]`: có action chốt nhập kho (`confirmGrn`)
 - `transfers/[id]`: đã wire đủ state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`
 - `supplier-returns`: không thuộc daily Inventory UI; stock-return/credit-note/AP đi qua quyết định riêng trước khi có CTA

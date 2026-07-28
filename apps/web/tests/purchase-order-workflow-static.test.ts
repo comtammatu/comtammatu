@@ -24,8 +24,9 @@ test("purchase orders use the atomic create, approve, and receive RPC flow", () 
     ),
     true,
   );
-  // ADR 0018 / D073 — PO withdrawn from daily IA; route/RPC history may remain.
-  assert.doesNotMatch(nav, /\/inventory\/purchase-orders/);
+  // Owner restore 2026-07-28 — PO stays in Inventory sidebar daily IA.
+  assert.match(nav, /\/inventory\/purchase-orders/);
+  assert.match(nav, /Đơn mua hàng/);
   assert.match(actions, /PROCUREMENT_PO_CREATE/);
   assert.match(actions, /PROCUREMENT_PO_APPROVE/);
   assert.match(actions, /PROCUREMENT_GRN_CREATE/);
@@ -87,6 +88,63 @@ test("PO receiving remains owner-control only and supports partial receipts", ()
 });
 
 
+
+test("PO approve awaits confirm outside startTransition so the dialog can open", () => {
+  const client = read(
+    "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+  );
+  const approveStart = client.indexOf("async function approve");
+  const createGrnStart = client.indexOf("function createGrn");
+  assert.ok(approveStart >= 0, "approve function must exist");
+  assert.ok(createGrnStart > approveStart, "createGrn must follow approve");
+  const approveBlock = client.slice(approveStart, createGrnStart);
+
+  assert.match(approveBlock, /await confirm\(/);
+  assert.match(approveBlock, /if \(!accepted\) return;/);
+  assert.match(approveBlock, /startTransition\(async \(\) => \{/);
+  assert.doesNotMatch(
+    approveBlock,
+    /startTransition\(async \(\) => \{[\s\S]*await confirm\(/,
+  );
+  assert.match(approveBlock, /approvePurchaseOrder\(\{ poId: row\.id \}\)/);
+  assert.match(approveBlock, /finally \{\s*setPendingId\(null\);\s*\}/);
+
+  const iConfirm = approveBlock.indexOf("await confirm(");
+  const iGuard = approveBlock.indexOf("if (!accepted) return;");
+  const iPending = approveBlock.indexOf("setPendingId(row.id)");
+  const iTransition = approveBlock.indexOf("startTransition(");
+  assert.ok(
+    iConfirm < iGuard && iGuard < iPending && iPending < iTransition,
+    "confirm → cancel guard → pendingId → startTransition order required",
+  );
+});
+
+test("supplier-item remove awaits confirm outside startTransition", () => {
+  const client = read(
+    "apps/web/app/(protected)/inventory/suppliers/[id]/items/supplier-items-client.tsx",
+  );
+  const removeStart = client.indexOf("async function remove");
+  assert.ok(removeStart >= 0, "remove function must exist");
+  const removeBlock = client.slice(removeStart, removeStart + 800);
+
+  assert.match(removeBlock, /await confirm\(/);
+  assert.match(removeBlock, /if \(!accepted\) return;/);
+  assert.match(removeBlock, /startTransition\(async \(\) => \{/);
+  assert.doesNotMatch(
+    removeBlock,
+    /startTransition\(async \(\) => \{[\s\S]*await confirm\(/,
+  );
+  assert.match(removeBlock, /deleteSupplierItem\(/);
+
+  const iConfirm = removeBlock.indexOf("await confirm(");
+  const iGuard = removeBlock.indexOf("if (!accepted) return;");
+  const iTransition = removeBlock.indexOf("startTransition(");
+  assert.ok(
+    iConfirm < iGuard && iGuard < iTransition,
+    "confirm → cancel guard → startTransition order required",
+  );
+});
+
 test("PO list opens read-only detail and never shows an empty-action dash", () => {
   const client = read(
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
@@ -98,6 +156,12 @@ test("PO list opens read-only detail and never shows an empty-action dash", () =
   assert.match(client, /onRowClick=\{openDetail\}/);
   assert.match(client, /key:\s*"view"/);
   assert.match(client, /poCopy\.viewDetail/);
+  // Code cell uses the same primary affordance as GRN list (not plain mono text).
+  assert.match(
+    client,
+    /key:\s*"code"[\s\S]*?variant="link"[\s\S]*?openDetail\(row\)/,
+    "PO code column is a primary open control like GRN list links",
+  );
   assert.match(client, /AppDialog/);
   assert.match(client, /poCopy\.detail\.overviewLinesTitle/);
   assert.match(client, /poCopy\.detail\.linkedGrnsTitle/);

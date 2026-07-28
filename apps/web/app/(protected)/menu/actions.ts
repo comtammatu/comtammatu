@@ -823,8 +823,8 @@ const importVariantRowSchema = z.object({
 
 const importModifierRowSchema = z.object({
   item_name: z.string().trim().min(1, { error: "Thiếu tên món" }),
-  name: z.string().trim().min(1, { error: "Thiếu tên topping" }),
-  price: z.number().min(0, { error: "Giá topping phải ≥ 0" }),
+  name: z.string().trim().min(1, { error: "Thiếu tên món thêm" }),
+  price: z.number().min(0, { error: "Giá món thêm phải ≥ 0" }),
   sort_order: z.number().int().min(0).default(0),
 });
 
@@ -922,7 +922,7 @@ export async function importMenu(
     return {
       success: false,
       error:
-        "Không tìm thấy sheet nào phù hợp. Vui lòng tải template để xem định dạng.",
+        "Không tìm thấy sheet nào phù hợp. Vui lòng tải mẫu để xem định dạng.",
     };
   }
 
@@ -1324,7 +1324,7 @@ export async function importMenu(
       }
       const parsedRow = importModifierRowSchema.safeParse({
         item_name: raw["Tên món"] ?? raw["item_name"],
-        name: raw["Tên tùy chọn"] ?? raw["Tên topping"] ?? raw["name"],
+        name: raw["Tên tùy chọn"] ?? raw["Tên món thêm"] ?? raw["name"],
         price,
         sort_order: sortOrder,
       });
@@ -1364,7 +1364,7 @@ export async function importMenu(
     if (issues.length > 0) {
       return {
         success: false,
-        error: `Có ${issues.length} dòng lỗi trong "Topping". Vui lòng sửa và thử lại.`,
+        error: `Có ${issues.length} dòng lỗi trong "Món thêm". Vui lòng sửa và thử lại.`,
         issues,
       };
     }
@@ -1383,7 +1383,7 @@ export async function importMenu(
       if (error) {
         return {
           success: false,
-          error: `Không thể ghi topping cho "${group.itemName}": ${mapDbError(error.code)}`,
+          error: `Không thể ghi món thêm cho "${group.itemName}": ${mapDbError(error.code)}`,
         };
       }
       summary.modifiersItemsReplaced += 1;
