@@ -490,6 +490,19 @@ test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () =>
 
 test("resolveModuleFromPath → branch operation controls and finance workspace map to modules", () => {
   assert.equal(resolveModuleFromPath("/finance/revenue"), "finance");
+  assert.equal(resolveModuleFromPath("/inventory/grn/123"), "inventory");
+  assert.equal(
+    resolveModuleFromPath("/inventory/purchase-orders"),
+    "inventory",
+  );
+  assert.equal(
+    resolveModuleFromPath("/inventory/stock"),
+    "inventory_operations",
+  );
+  assert.equal(
+    resolveModuleFromPath("/inventory/ingredients"),
+    "inventory_operations",
+  );
   assert.equal(resolveModuleFromPath("/hr"), "hr");
   assert.equal(resolveModuleFromPath("/hr/payroll"), "hr_payroll");
   assert.equal(resolveModuleFromPath("/br/3/dashboard"), "branch_dashboard");
@@ -506,6 +519,14 @@ test("resolveModuleFromPath → branch operation controls and finance workspace 
   assert.equal(resolveModuleFromPath("/br/3/runner"), "runner");
   assert.equal(resolveModuleFromPath("/employee/checkout-approvals"), null);
   assert.equal(resolveModuleFromPath("/employee/clock"), null);
+});
+
+test("accountant reaches GRN and PO routes but not inventory operations", () => {
+  assert.equal(canAccess("accountant", "inventory"), true);
+  assert.equal(canAccess("accountant", "inventory_operations"), false);
+  assert.equal(canAccess("owner", "inventory_operations"), true);
+  assert.equal(canAccess("central_supply_ops", "inventory_operations"), true);
+  assert.equal(canAccess("central_kitchen_lead", "inventory_operations"), true);
 });
 
 test("resolvePostLoginRedirect → branch POS sessions follows branch scope", () => {

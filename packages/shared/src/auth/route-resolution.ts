@@ -15,13 +15,8 @@ export const PUBLIC_APP_PATHS = [
 ] as const;
 
 export const INVENTORY_PROCUREMENT_PREFIXES = [
-  "/inventory/ingredients",
-  "/inventory/settings",
-  "/inventory/suppliers",
   "/inventory/purchase-orders",
   "/inventory/grn",
-  "/inventory/supplier-invoices",
-  "/inventory/recipes",
 ] as const;
 
 // Entries already matched by INVENTORY_PROCUREMENT_PREFIXES (checked first in
@@ -30,11 +25,16 @@ export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/consumption",
   "/inventory/count-assignments",
   "/inventory/count-slips",
+  "/inventory/ingredients",
   "/inventory/issues",
   "/inventory/production",
+  "/inventory/recipes",
   "/inventory/reports",
+  "/inventory/settings",
   "/inventory/stock",
   "/inventory/stocktake",
+  "/inventory/supplier-invoices",
+  "/inventory/suppliers",
   "/inventory/transfers",
   "/inventory/waste",
 ] as const;
@@ -99,7 +99,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
 
   if (pathname === "/inventory") return "inventory";
   for (const prefix of INVENTORY_ROUTE_PREFIXES) {
-    if (matchesPathPrefix(pathname, prefix)) return "inventory";
+    if (matchesPathPrefix(pathname, prefix)) return "inventory_operations";
   }
   if (matchesPathPrefix(pathname, "/finance")) return "finance";
   if (matchesPathPrefix(pathname, "/branches")) return "branches";

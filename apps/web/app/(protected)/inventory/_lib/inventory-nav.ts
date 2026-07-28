@@ -52,6 +52,28 @@ export function resolveInventoryNav({
   showCatalogManagement: boolean;
   showSettings: boolean;
 }): ShellNavGroup[] {
+  if (userRole === "accountant") {
+    return showProcurement
+      ? [
+          {
+            title: "Nhập hàng",
+            items: [
+              {
+                href: "/inventory/grn",
+                label: "Nhập kho",
+                icon: IconPackagePlus,
+              },
+              {
+                href: "/inventory/purchase-orders",
+                label: "Đơn mua hàng",
+                icon: IconShoppingCart,
+              },
+            ],
+          },
+        ]
+      : [];
+  }
+
   const groups: ShellNavGroup[] = [
     {
       title: "0 · Nay",

@@ -122,7 +122,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     // /inventory/* sub-route already; the INVENTORY_ROUTE_PREFIXES spread
     // here was fully redundant (D058 W3).
     matchPrefixes: [MODULE_ACL.inventory.path],
-    moduleKeys: ["inventory"],
+    moduleKeys: ["inventory", "inventory_operations"],
     primaryNav: "owner-sidebar",
     backBehavior: "role-home",
     breadcrumbRoot: APP_COPY_VI.ownerTitle,

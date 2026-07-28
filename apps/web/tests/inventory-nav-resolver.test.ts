@@ -38,6 +38,31 @@ const ownerBottomNavSource = readFileSync(
   "app/components/owner-bottom-nav.tsx",
   "utf8",
 );
+const inventoryPageSource = readFileSync(
+  "app/(protected)/inventory/page.tsx",
+  "utf8",
+);
+
+test("accountant inventory nav contains only the GRN to PO workflow", () => {
+  const visible = hrefs(
+    resolveInventoryNav({
+      userRole: "accountant",
+      showProcurement: true,
+      showProduction: false,
+      showCatalogManagement: false,
+      showSettings: false,
+    }),
+  );
+
+  assert.deepEqual([...visible].sort(), [
+    "/inventory/grn",
+    "/inventory/purchase-orders",
+  ]);
+  assert.match(
+    inventoryPageSource,
+    /claims\.user_role === "accountant"\) redirect\("\/inventory\/grn"\)/,
+  );
+});
 
 test("owner inventory nav keeps primary flow entry routes visible", () => {
   const visible = hrefs(

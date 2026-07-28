@@ -19,6 +19,9 @@ test("inventory monetary reads fail closed for operational roles", () => {
   const postSmoke = read(
     "supabase/migrations/20260728152000_inventory_monetary_post_smoke_fixes.sql",
   );
+  const accountantScope = read(
+    "supabase/migrations/20260728173058_restrict_accountant_to_grn_po.sql",
+  );
   const boundary = read("apps/web/lib/inventory/monetary-access.ts");
   const createModel = read("apps/web/lib/inventory/grn-create-model.ts");
   const notifications = read(
@@ -41,6 +44,20 @@ test("inventory monetary reads fail closed for operational roles", () => {
   }
   assert.match(hardening, /array_remove\(permission_keys/);
   assert.match(capability, /position_code IN \('owner', 'accountant'\)/);
+  assert.match(
+    accountantScope,
+    /array_remove\(permission_keys, 'inventory:valuation_read'\)/,
+  );
+  assert.match(
+    accountantScope,
+    /WHEN 'inventory:valuation_read' THEN public\.auth_is_owner\(auth\.uid\(\)\)/,
+  );
+  assert.doesNotMatch(
+    accountantScope.match(
+      /WHEN 'inventory:valuation_read'[\s\S]*?ELSE false/,
+    )?.[0] ?? "",
+    /has_position\('accountant'\)/,
+  );
   assert.match(boundary, /role !== "owner" && role !== "accountant"/);
   assert.match(boundary, /client: null/);
 
@@ -87,7 +104,10 @@ test("inventory monetary reads fail closed for operational roles", () => {
     /has_permission\(p_branch_id, 'inventory:read'\)/,
   );
   assert.match(hardening, /stock_issue_items_set_writeoff_cost/);
-  assert.match(hardening, /REVOKE ALL ON FUNCTION public\.update_purchase_order_prices/);
+  assert.match(
+    hardening,
+    /REVOKE ALL ON FUNCTION public\.update_purchase_order_prices/,
+  );
   assert.match(hardening, /'requires_review', true/);
   assert.doesNotMatch(
     hardening.match(

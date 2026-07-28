@@ -10151,6 +10151,7 @@ export type Database = {
       }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
+      can_read_inventory_monetary: { Args: { p_key: string }; Returns: boolean }
       cancel_expense: { Args: { p_expense_id: number }; Returns: Json }
       cancel_leave_request: {
         Args: { p_request_id: number }
@@ -12269,6 +12270,10 @@ export type Database = {
         Returns: Json
       }
       update_purchase_order_prices: {
+        Args: { p_lines: Json; p_po_id: number }
+        Returns: Json
+      }
+      update_purchase_order_prices_protected: {
         Args: { p_lines: Json; p_po_id: number }
         Returns: Json
       }

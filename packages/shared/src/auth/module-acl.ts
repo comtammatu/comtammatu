@@ -10,6 +10,7 @@ export type ModuleKey =
   | "owner"
   | "menu"
   | "inventory"
+  | "inventory_operations"
   | "orders"
   | "staff"
   | "hr"
@@ -53,13 +54,18 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   inventory: {
     path: "/inventory",
-    // D088 temporary until ADR 0015: accountant PO slice + central site GRN/ops.
+    // D088: accountant is limited to the GRN/PO route slice.
     allowedRoles: [
       "owner",
       "accountant",
       "central_supply_ops",
       "central_kitchen_lead",
     ],
+    label: getModuleLabelVi("inventory"),
+  },
+  inventory_operations: {
+    path: "/inventory/stock",
+    allowedRoles: ["owner", "central_supply_ops", "central_kitchen_lead"],
     label: getModuleLabelVi("inventory"),
   },
   orders: {

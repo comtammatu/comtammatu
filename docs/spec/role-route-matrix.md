@@ -134,6 +134,7 @@ by direct URL or as a redirect target.
 | `owner` | `/` | Chủ sở hữu | Owner nav |
 | `menu` | `/menu` | Chủ sở hữu | Owner nav |
 | `inventory` | `/inventory` | Chủ sở hữu, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT | Owner nav |
+| `inventory_operations` | `/inventory/stock` | Chủ sở hữu, Quản lý kho Tổng, Bếp trưởng Bếp TT | (not advertised in nav — direct URL / redirect target only) |
 | `orders` | `/orders` | Chủ sở hữu | Owner nav |
 | `feedback` | `/feedback` | Chủ sở hữu | Owner nav |
 | `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
@@ -174,7 +175,7 @@ declared before their broader siblings.
 | `menu` | owner | `/menu` | `/menu` | `menu` | no |
 | `orders` | owner | `/orders` | `/orders` | `orders` | no |
 | `feedback` | owner | `/feedback` | `/feedback` | `feedback` | no |
-| `inventory` | owner | `/inventory` | `/inventory` | `inventory` | no |
+| `inventory` | owner | `/inventory` | `/inventory` | `inventory`, `inventory_operations` | no |
 | `finance` | owner | `/finance` | `/finance` | `finance` | no |
 | `branches` | owner | `/branches` | `/branches` | `branches` | no |
 | `hr` | owner | `/hr` | `/hr` | `hr`, `hr_payroll`, `staff` | no |
