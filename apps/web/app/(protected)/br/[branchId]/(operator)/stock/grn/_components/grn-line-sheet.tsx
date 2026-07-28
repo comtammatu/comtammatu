@@ -468,9 +468,6 @@ export function BranchGrnReviewLineSheet({
                       <p className="text-sm font-semibold tabular-nums">
                         {formatVND(line.cost)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {GRN_CREATE_COPY.priceOnPoShort}
-                      </p>
                     </Field>
                   ) : (
                     <p className="text-xs text-muted-foreground">

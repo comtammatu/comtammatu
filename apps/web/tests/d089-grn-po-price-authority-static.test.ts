@@ -106,8 +106,10 @@ test("D089 draft DETAIL and create footers hide money before PO sync", () => {
 
   assert.match(
     copy,
-    /footerLineSummary:\s*\(lineCount: number\) =>[\s\S]*Giá mua trên PO/,
+    /footerLineSummary:\s*\(lineCount: number\) =>[\s\S]*mặt hàng/,
   );
+  assert.doesNotMatch(copy, /priceOnPoShort/);
+  assert.doesNotMatch(copy, /Giá mua trên PO|Giá trên PO/);
   assert.doesNotMatch(copy, /priceRequired:\s*"Nhập giá"/);
   assert.doesNotMatch(copy, /linePriceRequired:|toastMissingPrices:/);
 
@@ -119,12 +121,17 @@ test("D089 draft DETAIL and create footers hide money before PO sync", () => {
 
   assert.match(detailClient, /footerLineSummary\(\s*lines\.length\s*\)/);
   assert.doesNotMatch(detailClient, /priceRequired/);
-  assert.match(detailClient, /cost > 0[\s\S]*priceOnPoShort/);
+  assert.match(detailClient, /cost > 0[\s\S]*inventoryCommon\.noValue/);
+  assert.doesNotMatch(detailClient, /priceOnPoShort/);
 
   assert.doesNotMatch(draftCard, /priceRequired/);
-  assert.match(draftCard, /priceOnPoShort/);
+  assert.doesNotMatch(draftCard, /priceOnPoShort/);
+  assert.match(draftCard, /lineTotal != null[\s\S]*null/);
 
-  assert.match(branchCreate, /headerHint=\{GRN_CREATE_COPY\.priceOnPoShort\}/);
+  assert.doesNotMatch(
+    branchCreate,
+    /headerHint=\{GRN_CREATE_COPY\.priceOnPoShort\}/,
+  );
   assert.doesNotMatch(
     branchCreate,
     /moneyVnd\(controller\.total\)/,

@@ -97,7 +97,7 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   assert.match(
     client,
     /footerLineSummary/,
-    "footer leading is SSOT for line count + PO price hint (D089)",
+    "footer leading is SSOT for line count (D089 — no money / PO price clause)",
   );
   assert.doesNotMatch(
     client,
@@ -169,8 +169,8 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   );
   assert.match(
     client,
-    /lineHeaderName[\s\S]*quantityShort[\s\S]*priceOnPoShort/,
-    "draft columns: name, qty+unit, price-on-PO hint (D089)",
+    /lineHeaderName[\s\S]*quantityShort[\s\S]*unitCostTitle/,
+    "draft columns: name, qty+unit, unit-cost column (— until PO sync)",
   );
   assert.match(
     client,
@@ -211,12 +211,17 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   assert.match(
     copy,
     /footerLineSummary:\s*\(lineCount: number\) =>/,
-    "footer is qty/count + Giá mua trên PO — no money arg before sync",
+    "footer is qty/count only — no money arg before sync",
   );
   assert.match(
     copy,
-    /Giá mua trên PO/,
-    "footer copy points commercial price to PO",
+    /footerLineSummary:[\s\S]*mặt hàng`/,
+    "footer copy is count-only (no Giá … PO clause)",
+  );
+  assert.doesNotMatch(
+    copy,
+    /Giá mua trên PO|Giá trên PO|priceOnPoShort/,
+    "warehouse draft surfaces must not show mixed-language Giá … PO",
   );
   assert.doesNotMatch(
     copy,

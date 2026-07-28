@@ -10,7 +10,6 @@ export const GRN_CREATE_COPY = {
   unitCostTitle: "Đơn giá nhập",
   priceSetOnPoHint:
     "Đơn giá do Kế toán / Owner đặt trên đơn đặt hàng (PO).",
-  priceOnPoShort: "Giá trên PO",
   editItem: "Sửa mặt hàng",
   addItem: "Thêm mặt hàng",
   addLineToReceipt: "Thêm vào phiếu",
@@ -35,7 +34,7 @@ export const GRN_CREATE_COPY = {
     `Đã thêm ${formatCount(lineCount)} mặt hàng`,
   /** Draft footer before PO price sync — count only, no warehouse money total. */
   footerLineSummary: (lineCount: number) =>
-    `${formatCount(lineCount)} mặt hàng · Giá mua trên PO`,
+    `${formatCount(lineCount)} mặt hàng`,
   reviewBeforeConfirm: (lineCount: number) =>
     `Kiểm nhận · ${formatCount(lineCount)} mặt hàng`,
   lineUnitCost: (quantity: number, unit: string, unitCost: number) =>

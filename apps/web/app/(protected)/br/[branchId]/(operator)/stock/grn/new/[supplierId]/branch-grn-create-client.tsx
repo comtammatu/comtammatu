@@ -169,7 +169,6 @@ export function BranchGrnCreateClient({
               <BranchOperatorPanel
                 size="sm"
                 title={GRN_CREATE_COPY.addedSummary(controller.lineCount)}
-                headerHint={GRN_CREATE_COPY.priceOnPoShort}
                 contentClassName="gap-2"
               >
                 <ItemGroup className="gap-2" role="list">

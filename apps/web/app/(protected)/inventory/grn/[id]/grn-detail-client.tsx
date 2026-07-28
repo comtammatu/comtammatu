@@ -204,7 +204,7 @@ export function GRNDetailClient({
             </span>
           ) : (
             <span className="text-muted-foreground">
-              {GRN_CREATE_COPY.priceOnPoShort}
+              {inventoryCommon.noValue}
             </span>
           ),
       },

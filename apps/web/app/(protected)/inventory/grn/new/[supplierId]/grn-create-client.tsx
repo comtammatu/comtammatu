@@ -117,9 +117,6 @@ function DraftLineMobileCard({
         <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
           {GRN_CREATE_COPY.lineQtyOnly(line.quantity, line.unit)}
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {GRN_CREATE_COPY.priceOnPoShort}
-        </p>
         </span>
       </Button>
       <div className="flex shrink-0 items-center gap-1">
@@ -199,12 +196,10 @@ export function GrnCreateClient({
     },
     {
       key: "price",
-      header: GRN_CREATE_COPY.priceOnPoShort,
+      header: GRN_CREATE_COPY.unitCostTitle,
       className: "w-36 text-right",
       render: () => (
-        <span className="text-muted-foreground">
-          {GRN_CREATE_COPY.priceOnPoShort}
-        </span>
+        <span className="text-muted-foreground">{inventoryCommon.noValue}</span>
       ),
     },
     {

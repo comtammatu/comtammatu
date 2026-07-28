@@ -13,8 +13,6 @@ import {
   INVENTORY_COMMON_COPY as inventoryCommon,
   type EditableGrnLine as EditableLine,
 } from "@lib/inventory/grn-detail-model";
-import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
-
 export function DraftGrnLineCard({
   line,
   onEdit,
@@ -71,11 +69,7 @@ export function DraftGrnLineCard({
           <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
             {inventoryCommon.currency(formatVND(lineTotal))}
           </p>
-        ) : (
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {GRN_CREATE_COPY.priceOnPoShort}
-          </p>
-        )}
+        ) : null}
         </span>
       </Button>
       <div className="flex shrink-0 items-center gap-1">

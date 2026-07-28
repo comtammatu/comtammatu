@@ -27,7 +27,6 @@ import {
   type EditableGrnLine as EditableLine,
   type GrnDetail as GRNDetail,
 } from "@lib/inventory/grn-detail-model";
-import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import {
   GRN_BASELINE_REVIEW_PCT,
   deriveGrnQualityStatus,
@@ -307,9 +306,6 @@ export function LineRow({
           <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
             <p className="text-sm font-semibold tabular-nums">
               {formatVND(line.cost)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {GRN_CREATE_COPY.priceOnPoShort}
             </p>
           </Field>
         ) : null}
