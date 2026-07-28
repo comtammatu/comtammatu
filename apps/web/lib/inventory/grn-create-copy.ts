@@ -8,8 +8,6 @@ export const GRN_CREATE_COPY = {
   discardDraft: "Hủy nháp",
   addItemToContinue: "Thêm mặt hàng để tiếp tục",
   unitCostTitle: "Đơn giá nhập",
-  priceSetOnPoHint:
-    "Đơn giá do Kế toán / Owner đặt trên đơn đặt hàng (PO).",
   editItem: "Sửa mặt hàng",
   addItem: "Thêm mặt hàng",
   addLineToReceipt: "Thêm vào phiếu",

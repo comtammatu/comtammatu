@@ -260,10 +260,10 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   );
   assert.doesNotMatch(copy, /newReceiptDescription|catalogDescription/);
   assert.doesNotMatch(copy, /panelEmptyTitle/);
-  assert.match(
+  assert.doesNotMatch(
     copy,
-    /priceSetOnPoHint:/,
-    "warehouse create copy points commercial price to PO (D089)",
+    /priceSetOnPoHint|\(PO\)|Giá mua trên PO|Giá trên PO/,
+    "warehouse create copy has no mixed-language PO price hint (D089)",
   );
   assert.match(
     copy,
@@ -275,10 +275,10 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
     /MoneyVndInput|grn-line-unit-cost/,
     "shared line fields do not collect warehouse unit cost (D089)",
   );
-  assert.match(
+  assert.doesNotMatch(
     editor,
     /priceSetOnPoHint/,
-    "shared line fields explain price is set on PO",
+    "shared line fields omit redundant PO price hint",
   );
 
 });

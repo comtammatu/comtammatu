@@ -111,10 +111,6 @@ export function GrnLineEditFields({
         <p className="text-xs text-muted-foreground">{baseConversionPreview}</p>
       ) : null}
 
-      <p className="text-xs text-muted-foreground">
-        {GRN_CREATE_COPY.priceSetOnPoHint}
-      </p>
-
       <FormField controlId="grn-line-note" label={GRN_CREATE_COPY.optionalNote}>
         <Textarea
           id="grn-line-note"

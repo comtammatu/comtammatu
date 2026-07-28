@@ -261,7 +261,7 @@ test("GRN create editor no longer seeds commercial price from reference cost (D0
 
   assert.doesNotMatch(source, /getReferenceCostForUnit/);
   assert.doesNotMatch(source, /MoneyVndInput/);
-  assert.match(source, /priceSetOnPoHint/);
+  assert.doesNotMatch(source, /priceSetOnPoHint/);
 });
 
 test("GRN warehouse draft does not require unit price (D089)", () => {
@@ -281,7 +281,7 @@ test("GRN warehouse draft does not require unit price (D089)", () => {
   assert.doesNotMatch(controller, /toastMissingPrices/);
   assert.doesNotMatch(editor, /edit\.unitCost != null/);
   assert.doesNotMatch(editor, /MoneyVndInput/);
-  assert.match(editor, /priceSetOnPoHint/);
+  assert.doesNotMatch(editor, /priceSetOnPoHint/);
   assert.match(client, /GRN_CREATE_COPY\.lineQtyOnly/);
   assert.doesNotMatch(client, /GRN_CREATE_COPY\.linePriceRequired/);
   assert.match(controller, /lines: existingDraft\?\.lines \?\? recentLines/);
@@ -300,13 +300,13 @@ test("GRN warehouse draft does not require unit price (D089)", () => {
   );
 });
 
-test("GRN add-line dialog is qty/UOM only with PO price hint (D089)", () => {
+test("GRN add-line dialog is qty/UOM only without PO price hint (D089)", () => {
   const source = readRepo(
     "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
   );
   assert.doesNotMatch(source, /getReferenceCostForUnit/);
   assert.doesNotMatch(source, /const \[unitCost/);
-  assert.match(source, /priceSetOnPoHint/);
+  assert.doesNotMatch(source, /priceSetOnPoHint/);
 });
 
 test("quickCreateIngredient refuses units outside the catalog instead of creating a new unit", () => {

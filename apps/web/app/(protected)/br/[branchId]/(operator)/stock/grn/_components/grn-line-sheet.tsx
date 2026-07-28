@@ -217,10 +217,6 @@ export function BranchGrnCreateLineSheet({
                     </p>
                   ) : null}
 
-                  <p className="text-xs text-muted-foreground">
-                    {GRN_CREATE_COPY.priceSetOnPoHint}
-                  </p>
-
                   <Field>
                     <FieldLabel htmlFor="branch-grn-create-note">
                       {GRN_CREATE_COPY.optionalNote}
@@ -469,11 +465,7 @@ export function BranchGrnReviewLineSheet({
                         {formatVND(line.cost)}
                       </p>
                     </Field>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {GRN_CREATE_COPY.priceSetOnPoHint}
-                    </p>
-                  )}
+                  ) : null}
 
                   {needsRejectionDetails ? (
                     <>
@@ -856,18 +848,13 @@ export function BranchGrnAddLineSheet({
                   </SelectContent>
                 </Select>
               </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <NumberPadValueField
-                  id="branch-grn-add-quantity"
-                  label={GRN_DETAIL_COPY.addDialog.quantityLabel}
-                  value={quantity === "" ? null : formatQty(Number(quantity))}
-                  emptyLabel="Nhập số"
-                  onClick={() => setNumericField("quantity")}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {GRN_CREATE_COPY.priceSetOnPoHint}
-                </p>
-              </div>
+              <NumberPadValueField
+                id="branch-grn-add-quantity"
+                label={GRN_DETAIL_COPY.addDialog.quantityLabel}
+                value={quantity === "" ? null : formatQty(Number(quantity))}
+                emptyLabel="Nhập số"
+                onClick={() => setNumericField("quantity")}
+              />
             </FieldGroup>
           </div>
           <SheetFooter>

@@ -22,7 +22,6 @@ import {
 } from "@lib/inventory/purchase-units";
 import type { IngredientRow } from "@lib/inventory/types";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import {
   createEditableGrnLine,
   GRN_DETAIL_COPY as grnCopy,
@@ -210,7 +209,7 @@ export function AddGrnLineDialog({
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="grn-line-qty">
               {grnCopy.addDialog.quantityLabel}
@@ -250,11 +249,6 @@ export function AddGrnLineDialog({
                 placeholder="kg"
               />
             )}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <p className="text-xs text-muted-foreground">
-              {GRN_CREATE_COPY.priceSetOnPoHint}
-            </p>
           </div>
         </div>
       </form>

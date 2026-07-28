@@ -37,7 +37,7 @@ test("D089 warehouse GRN create editor has no unit-cost input", () => {
   );
   assert.doesNotMatch(editor, /MoneyVndInput/);
   assert.doesNotMatch(editor, /grn-line-unit-cost/);
-  assert.match(editor, /priceSetOnPoHint/);
+  assert.doesNotMatch(editor, /priceSetOnPoHint/);
   assert.match(editor, /edit\.quantity > 0/);
   assert.doesNotMatch(editor, /edit\.unitCost != null/);
 });
@@ -47,7 +47,7 @@ test("D089 branch GRN create sheet has no cost number pad", () => {
     "app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
   );
   assert.doesNotMatch(sheet, /branch-grn-create-cost/);
-  assert.match(sheet, /BranchGrnCreateLineSheet[\s\S]*priceSetOnPoHint/);
+  assert.doesNotMatch(sheet, /priceSetOnPoHint/);
 });
 
 test("D089 upsertGrnLine ignores warehouse unitCost for draft authority", () => {
@@ -109,7 +109,8 @@ test("D089 draft DETAIL and create footers hide money before PO sync", () => {
     /footerLineSummary:\s*\(lineCount: number\) =>[\s\S]*mặt hàng/,
   );
   assert.doesNotMatch(copy, /priceOnPoShort/);
-  assert.doesNotMatch(copy, /Giá mua trên PO|Giá trên PO/);
+  assert.doesNotMatch(copy, /priceSetOnPoHint/);
+  assert.doesNotMatch(copy, /Giá mua trên PO|Giá trên PO|\(PO\)/);
   assert.doesNotMatch(copy, /priceRequired:\s*"Nhập giá"/);
   assert.doesNotMatch(copy, /linePriceRequired:|toastMissingPrices:/);
 
@@ -148,10 +149,10 @@ test("D089 add-line dialogs have no dead warehouse unitCost state", () => {
 
   assert.doesNotMatch(addDialog, /const \[unitCost/);
   assert.doesNotMatch(addDialog, /getReferenceCostForUnit/);
-  assert.match(addDialog, /priceSetOnPoHint/);
+  assert.doesNotMatch(addDialog, /priceSetOnPoHint/);
 
   assert.ok(addSheetStart, "BranchGrnAddLineSheet export exists");
   assert.doesNotMatch(addSheetStart, /const \[unitCost/);
   assert.doesNotMatch(addSheetStart, /getReferenceCostForUnit/);
-  assert.match(addSheetStart, /priceSetOnPoHint/);
+  assert.doesNotMatch(addSheetStart, /priceSetOnPoHint/);
 });
