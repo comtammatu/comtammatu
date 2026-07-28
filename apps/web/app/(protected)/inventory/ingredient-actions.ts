@@ -11,7 +11,7 @@ import { getVNDateString } from "@comtammatu/shared/time";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   INVENTORY_CATALOG_ROLES,
-  INVENTORY_OPS_ROLES,
+  PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import { getAuthContext, getAuthContextWithAnyPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -228,7 +228,7 @@ export async function fetchIngredients(
   limit = 2000,
   updatedSince?: string,
 ): Promise<ActionResult> {
-  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
+  const ctx = await getAuthContext(PROCUREMENT_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

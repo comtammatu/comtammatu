@@ -114,15 +114,15 @@ export async function loadStockOnHandPageData({
   const branchId = scope.selectedBranchId;
   if (!branchId) redirect("/inventory");
 
-  const stockBearingLocationIds = await fetchStockBearingLocationIds({
-    supabase,
-    tenantId: claims.tenant_id,
-    branchId,
-  });
   const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
   const stockReadClient = monetaryAccess.valuation
     ? (monetaryAccess.client ?? supabase)
     : supabase;
+  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+    supabase: stockReadClient,
+    tenantId: claims.tenant_id,
+    branchId,
+  });
   const stockLevelQuery = monetaryAccess.valuation
     ? stockReadClient
         .from("stock_levels")
@@ -302,7 +302,7 @@ export async function loadStockOnHandPageData({
   let totalValue: number | null = null;
   if (includeValuation && canViewTotal) {
     const tenantStockBearingLocationIds = await fetchStockBearingLocationIds({
-      supabase,
+      supabase: monetaryAccess.client ?? supabase,
       tenantId: claims.tenant_id,
     });
     const { data: tenantRows } =

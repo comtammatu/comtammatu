@@ -21,6 +21,13 @@ test("inventory monetary reads fail closed for operational roles", () => {
   const notifications = read(
     "apps/web/app/(protected)/inventory/notifications-actions.ts",
   );
+  const ingredientActions = read(
+    "apps/web/app/(protected)/inventory/ingredient-actions.ts",
+  );
+  const stockData = read("apps/web/lib/inventory/stock-on-hand-data.ts");
+  const stockDetailData = read(
+    "apps/web/lib/inventory/stock-on-hand-detail-data.ts",
+  );
 
   for (const role of [
     "central_supply_ops",
@@ -58,6 +65,15 @@ test("inventory monetary reads fail closed for operational roles", () => {
   );
   assert.match(createModel, /monetary: \{ unitCost: number \| null \} \| null/);
   assert.match(notifications, /MONETARY_PAYLOAD_KEYS/);
+  assert.match(ingredientActions, /getAuthContext\(PROCUREMENT_ROLES\)/);
+  assert.match(
+    stockData,
+    /fetchStockBearingLocationIds\(\{\s*supabase: stockReadClient,/,
+  );
+  assert.match(
+    stockDetailData,
+    /fetchStockBearingLocationIds\(\{\s*supabase: readClient,/,
+  );
   assert.match(capability, /update_purchase_order_prices_protected/);
   assert.match(hardening, /stock_issue_items_set_writeoff_cost/);
   assert.match(hardening, /REVOKE ALL ON FUNCTION public\.update_purchase_order_prices/);

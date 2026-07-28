@@ -165,7 +165,7 @@ export async function loadStockIngredientDetailData({
     canWriteoff,
   ] = await Promise.all([
     fetchStockBearingLocationIds({
-      supabase,
+      supabase: readClient,
       tenantId: claims.tenant_id,
       branchId,
     }),
