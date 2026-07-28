@@ -150,10 +150,7 @@ export function AddGrnLineDialog({
       notify.error(grnCopy.validation.unitRequired);
       return;
     }
-    if (!Number.isFinite(parsedUnitCost) || parsedUnitCost < 0) {
-      notify.error(grnCopy.validation.invalidUnitCost);
-      return;
-    }
+    
 
     startTransition(async () => {
       const res = await upsertGrnLine({
@@ -161,7 +158,7 @@ export function AddGrnLineDialog({
         ingredientId: parsedIngredientId,
         receivedQuantity: parsedQuantity,
         entryUnitId,
-        unitCost: parsedUnitCost,
+        unitCost: 0,
         qualityStatus: "accepted",
         rejectedQuantity: 0,
         rejectionReason: null,
@@ -187,7 +184,7 @@ export function AddGrnLineDialog({
           quantity: parsedQuantity,
           entryUnitId,
           unit: unit.trim(),
-          unitCost: parsedUnitCost,
+          unitCost: 0,
           baselineVariancePct:
             row.baseline_variance_pct == null
               ? null
@@ -294,16 +291,9 @@ export function AddGrnLineDialog({
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="grn-line-cost">
-              {grnCopy.addDialog.unitCostLabel}
-            </Label>
-            <FormattedNumberInput
-              id="grn-line-cost"
-              value={unitCost}
-              onValueChange={setUnitCost}
-              maxFractionDigits={0}
-              placeholder="0"
-            />
+            <p className="text-xs text-muted-foreground">
+              Đơn giá mua do Kế toán/Owner nhập trên PO.
+            </p>
           </div>
         </div>
       </form>

@@ -10251,6 +10251,10 @@ export type Database = {
         }
         Returns: Json
       }
+      create_purchase_order_from_grn: {
+        Args: { p_grn_id: number }
+        Returns: Json
+      }
       create_purchase_order_with_lines: {
         Args: {
           p_branch_id: number

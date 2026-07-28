@@ -27,6 +27,7 @@ import {
   type EditableGrnLine as EditableLine,
   type GrnDetail as GRNDetail,
 } from "@lib/inventory/grn-detail-model";
+import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import {
   GRN_BASELINE_REVIEW_PCT,
   deriveGrnQualityStatus,
@@ -282,14 +283,16 @@ export function LineRow({
             }}
           />
         </Field>
-        <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
-          <FormattedNumberInput
-            id={`cost-${idx}`}
-            maxFractionDigits={0}
-            value={String(line.cost)}
-            onValueChange={(value) => onChange({ cost: Number(value || 0) })}
-          />
-        </Field>
+        {line.cost > 0 ? (
+          <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
+            <p className="text-sm font-semibold tabular-nums">
+              {formatVND(line.cost)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {GRN_CREATE_COPY.priceOnPoShort}
+            </p>
+          </Field>
+        ) : null}
       </div>
 
       {line.qualityStatus !== "accepted" ? (

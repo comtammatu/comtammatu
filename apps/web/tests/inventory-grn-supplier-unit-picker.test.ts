@@ -254,22 +254,17 @@ test("ingredients list does not render raw base-unit reference cost", () => {
   assert.doesNotMatch(source, /formatVND\(item\.unit_cost\)/);
 });
 
-test("GRN create reference cost follows the selected entry unit", () => {
+test("GRN create editor no longer seeds commercial price from reference cost (D089)", () => {
   const source = readRepo(
     "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
 
-  assert.match(
-    source,
-    /getReferenceCostForUnit\(\s*edit\.ingredient,\s*edit\.entryUnitId/,
-  );
-  assert.doesNotMatch(
-    source,
-    /const referenceCost = edit\.ingredient\.unit_cost/,
-  );
+  assert.doesNotMatch(source, /getReferenceCostForUnit/);
+  assert.doesNotMatch(source, /MoneyVndInput/);
+  assert.match(source, /priceSetOnPoHint/);
 });
 
-test("GRN supplier lines require an entered current unit price", () => {
+test("GRN warehouse draft does not require unit price (D089)", () => {
   const controller = readRepo(
     "apps/web/lib/inventory/use-grn-create-controller.ts",
   );
@@ -281,25 +276,15 @@ test("GRN supplier lines require an entered current unit price", () => {
     "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
 
-  assert.match(controller, /const unitCost = existing\?\.unitCost \?\? null/);
-  assert.doesNotMatch(
-    controller,
-    /referenceCost\?\.value\s*\?\?|ingredient\.unit_cost/,
-  );
-  assert.match(editor, /edit\.unitCost != null/);
-  assert.match(editor, /edit\.unitCost > 0/);
-  assert.match(editor, /GRN_CREATE_COPY\.varianceReference\(variance\)/);
-  assert.match(editor, /GRN_CREATE_COPY\.lastCostReference/);
-  assert.match(
-    readRepo(
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
-    ),
-    /GRN_CREATE_COPY\.varianceReference\(variance\)/,
-  );
+  assert.match(controller, /const unitCost = 0/);
+  assert.doesNotMatch(controller, /hasMissingPrice/);
+  assert.doesNotMatch(controller, /toastMissingPrices/);
+  assert.doesNotMatch(editor, /edit\.unitCost != null/);
+  assert.doesNotMatch(editor, /MoneyVndInput/);
+  assert.match(editor, /priceSetOnPoHint/);
+  assert.match(client, /GRN_CREATE_COPY\.lineQtyOnly/);
+  assert.doesNotMatch(client, /GRN_CREATE_COPY\.linePriceRequired/);
   assert.match(controller, /lines: existingDraft\?\.lines \?\? recentLines/);
-  assert.match(controller, /const hasMissingPrice = draft\.lines\.some/);
-  assert.match(controller, /!hasMissingPrice/);
-  assert.match(client, /GRN_CREATE_COPY\.linePriceRequired/);
   assert.match(data, /\.from\("goods_received_notes"\)/);
   assert.match(data, /\.eq\("supplier_id", supplierId\)/);
   assert.match(data, /\.eq\("branch_id", defaultBranchId\)/);

@@ -234,7 +234,7 @@ export function GrnCreateClient({
           <div className="flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-muted-foreground">
             <span>{GRN_CREATE_COPY.addedSummary(controller.lineCount)}</span>
             <span className="text-foreground">
-              {GRN_CREATE_COPY.moneyVnd(controller.total)}
+              {GRN_CREATE_COPY.priceOnPoShort}
             </span>
           </div>
           <div className="flex flex-col gap-2">
@@ -248,27 +248,7 @@ export function GrnCreateClient({
                     {line.ingredientName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {line.unitCost != null && line.unitCost > 0 ? (
-                      <>
-                        {GRN_CREATE_COPY.lineUnitCost(
-                          line.quantity,
-                          line.unit,
-                          line.unitCost,
-                        )}{" "}
-                        <span className="font-medium text-foreground">
-                          {GRN_CREATE_COPY.moneyVnd(
-                            line.quantity * line.unitCost,
-                          )}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="font-medium text-warning">
-                        {GRN_CREATE_COPY.linePriceRequired(
-                          line.quantity,
-                          line.unit,
-                        )}
-                      </span>
-                    )}
+                    {GRN_CREATE_COPY.lineQtyOnly(line.quantity, line.unit)}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
@@ -467,10 +447,7 @@ export function GrnCreateClient({
             ) : controller.lineCount === 0 ? (
               GRN_CREATE_COPY.addItemToContinue
             ) : (
-              GRN_CREATE_COPY.reviewBeforeConfirm(
-                controller.lineCount,
-                controller.total,
-              )
+              GRN_CREATE_COPY.reviewBeforeConfirm(controller.lineCount)
             )}
           </Button>
         </div>
@@ -502,11 +479,7 @@ function LineEditPanel({
   onPatch,
   onUnitChange,
 }: LineEditPanelProps) {
-  const valid =
-    edit != null &&
-    edit.quantity > 0 &&
-    edit.unitCost != null &&
-    edit.unitCost > 0;
+  const valid = edit != null && edit.quantity > 0;
 
   if (!edit) {
     return (

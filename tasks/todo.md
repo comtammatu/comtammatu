@@ -5,6 +5,20 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+
+## Ship D089 purchase-price authority (PO → GRN unit_cost)
+
+State: doing
+Kind: feature
+Tier: T3 (RPC/ACL); docs T2
+Lane: inventory/procurement
+Exit: Warehouse GRN draft has no price UI; approve_purchase_order syncs PO `unit_price_est` into linked `grn_items.unit_cost`; confirm remains fail-closed without approved PO; static tests encode D089.
+Evidence: D089 in `docs/plan/decisions.md`, migration `20260728143000_d089_po_price_sync_to_grn.sql`, focused web tests.
+
+- [ ] Apply D089 migration to verified Preview/Greenfield after Environment Registry check (not production without owner delegation).
+- [ ] Land/merge after D088 role track if ACL roles still missing on target schema.
+- [ ] Owner smoke: GRN draft (no price) → PO price → approve sync → confirm.
+
 ## Defer central production workspace cutover
 
 State: blocked

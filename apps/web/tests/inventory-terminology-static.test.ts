@@ -49,6 +49,7 @@ test("GRN entry labels purchase price and conversion without calling it cost bas
   const source = readWorkspaceFile("lib/inventory/grn-create-copy.ts");
 
   assert.match(source, /unitCostTitle: "Đơn giá nhập"/);
+  assert.match(source, /priceSetOnPoHint:/);
   assert.match(source, /unitPriceUnit: \(unit: string, unitCost: number\) =>/);
   assert.match(source, /Đơn giá \$\{formatVND\(unitCost\)\} \/ \$\{unit\}/);
   assert.match(source, /baseConversionPreview/);

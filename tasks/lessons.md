@@ -31,3 +31,9 @@
    - Rule: "Unpushed" is not a safety boundary in a repo where other sessions share the working tree and push `main`. Migration-dependent code stays on a feature branch until the migration is applied to production; apply first, then fast-forward `main`.
    - Rule: Never put additive and destructive DDL in one migration file. `CREATE FUNCTION new_thing` plus `DROP FUNCTION old_thing` need opposite deploy orders (additive: apply before deploy; destructive: deploy before apply), so one file cannot be applied safely in either order. Split them and apply the drop only after the deploy is verified.
    - Prevention: Before any `git merge --ff-only` onto `main`, ask whether the branch calls an RPC/column production lacks; if so, apply the additive migration first. When assessing blast radius, read the destructuring: a Server Action that ignores `error` from `.rpc()` turns a missing function into silently wrong numbers rather than a visible failure.
+
+36. **GRN draft must not be the commercial price authority (D089)**
+   - Pattern: Warehouse create/draft UIs historically required `unit_cost` before review; PO then copied from GRN, inverting Owner intent (price at PO time).
+   - Rule: Warehouse GRN draft = qty/UOM/QC only. Commercial price lives on `purchase_order_items.unit_price_est`. On PO approve, sync into `grn_items.unit_cost` / `po_unit_price`. Confirm/WAC keep reading GRN `unit_cost`. Server Actions must ignore warehouse-supplied draft `unitCost`.
+   - Prevention: Static tests assert no warehouse unit-cost input on create/sheet editors; migration comment documents approve-time sync; SOP §2 matches D088/D089.
+

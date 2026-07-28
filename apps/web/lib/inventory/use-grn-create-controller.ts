@@ -183,16 +183,12 @@ export function useGrnCreateController({
   }
 
   async function saveLine() {
-    if (
-      !edit ||
-      edit.quantity <= 0 ||
-      edit.unitCost == null ||
-      edit.unitCost <= 0
-    ) {
+    if (!edit || edit.quantity <= 0) {
       return;
     }
 
-    const unitCost = edit.unitCost;
+    // D089: warehouse draft lines never carry commercial price (placeholder 0).
+    const unitCost = 0;
     setSubmitError(null);
     try {
       const grnId = await ensureServerDraft();
@@ -216,7 +212,7 @@ export function useGrnCreateController({
         unit: edit.unit,
         entryUnitId: edit.entryUnitId,
         quantity: edit.quantity,
-        unitCost,
+        unitCost: null,
         note: edit.note.trim() ? edit.note.trim() : undefined,
       };
       if (lineId) (nextLine as GrnCreateServerDraftLine).lineId = lineId;
@@ -277,12 +273,6 @@ export function useGrnCreateController({
       setSubmitError(GRN_CREATE_COPY.toastNoLines);
       return;
     }
-    if (
-      draft.lines.some((line) => line.unitCost == null || line.unitCost <= 0)
-    ) {
-      setSubmitError(GRN_CREATE_COPY.toastMissingPrices);
-      return;
-    }
     if (!branchId) {
       setSubmitError(GRN_CREATE_COPY.toastChooseBranch);
       return;
@@ -307,11 +297,8 @@ export function useGrnCreateController({
 
   const total = draftTotal(draft);
   const lineCount = draft.lines.length;
-  const hasMissingPrice = draft.lines.some(
-    (line) => line.unitCost == null || line.unitCost <= 0,
-  );
   const canSubmit =
-    lineCount > 0 && !hasMissingPrice && !submitting && !receivingSiteSaving;
+    lineCount > 0 && !submitting && !receivingSiteSaving;
   const branchLocations = locationOptions.filter(
     (location) => location.branchId === branchId,
   );

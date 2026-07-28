@@ -1,7 +1,7 @@
 # Kho Hàng — Inventory Management
 
 > Áp dụng: doanh nghiệp Cơm Tấm Má Tư — quản lý kho nguyên liệu và thành phẩm F&B
-> Phạm vi: **PO mua hàng tại Owner control (destination chi nhánh / Kho Tổng / Bếp Trung Tâm) + nhập NCC supplier-first tại chi nhánh + sản xuất + tiêu hao + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, payment evidence (file HĐ GTGT) và AP aging là Finance handoff; không phải gate đóng ngày Inventory.
+> Phạm vi: **GRN draft → PO (Owner/Kế toán) → confirm GRN tại CN / Kho Tổng / Bếp TT (D088/D089) + sản xuất + tiêu hao + stocktake + báo cáo vận hành**. `supplier_invoice`, payment evidence (file HĐ GTGT) và AP aging là Finance handoff; không phải gate đóng ngày Inventory.
 
 ---
 
@@ -21,7 +21,7 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                             | Không chuyển sang FIFO engine                          |
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                                          | Không mở lot-first ledger / batch accounting           |
 | Mô hình site                    | `branches` là site table Greenfield; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site **một** location stock-bearing `warehouse`. `location_kind='kitchen'` (Bếp CN) chỉ còn lịch sử. D073/D078 là lịch sử `matu-prod`; authority hiện tại: D082. | V1 chưa đổi sang bảng `operational_site` (Phase 2) |
-| PO / GRN / NCC                  | Owner lập PO (destination CN / Kho Tổng / Bếp TT), duyệt một cấp (`draft → sent`) và tạo GRN từ PO; Branch runtime không có PO; GRN supplier-first vẫn hợp lệ tại CN (D083)                                                                                                                     | Không mở PR hoặc duyệt nhiều cấp                   |
+| PO / GRN / NCC                  | Happy path D088/D089: Kho tạo GRN draft → Kế toán/Owner tạo+duyệt PO từ GRN → Kho confirm khi PO đã duyệt (fail closed). Branch runtime không UI PO. Đơn giá thương mại tại PO; sync `grn_items.unit_cost` khi duyệt (D089).                                                                      | Không mở PR hoặc duyệt nhiều cấp                   |
 | Luân chuyển nội bộ              | Operator không mở same-branch Kho↔Bếp giả; `stock_transfers` lịch sử giữ read-only. Transfer matrix trung tâm↔CN giữ cho lịch sử và lát chuyển tồn có chủ đích.                                                                                                                                 | Không dùng `stock_transfer` cho tiêu hao/xuất hủy  |
 | HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                  | Không mở payment proposal engine trong Inventory   |
 | `recipes` + xuất kho theo order | `recipes` + RPC tiêu hao theo order                                                                                                                                                                                          | Không mở multi-level BOM                               |
@@ -46,8 +46,8 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
 
 **Nguyên tắc vận hành:**
 
-- **Chi nhánh (`branch_kind = 'branch'`):** tồn vận hành tại **Kho CN** (`location_kind = 'warehouse'`). `location_kind = 'kitchen'` chỉ còn lịch sử. Chi nhánh nhập NCC qua GRN supplier-first; PO không xuất hiện trên Branch runtime (D083).
-- **Kho Tổng (`central_supply`) và Bếp Trung Tâm (`central_kitchen`):** site trung tâm active trên Greenfield (D082). Owner lập PO/GRN với destination các site này; mỗi site một `warehouse`. Production thuộc `central_kitchen` theo lộ trình D082 (chưa bắt buộc cắt hết production tại CN trong lát procurement đầu).
+- **Chi nhánh (`branch_kind = 'branch'`):** tồn vận hành tại **Kho CN** (`location_kind = 'warehouse'`). `location_kind = 'kitchen'` chỉ còn lịch sử. Chi nhánh tạo GRN draft trên Branch runtime; PO không xuất hiện trên Branch UI, nhưng confirm GRN vẫn bắt buộc PO đã duyệt (D083 net D088/D089).
+- **Kho Tổng (`central_supply`) và Bếp Trung Tâm (`central_kitchen`):** site trung tâm active trên Greenfield (D082). Cùng happy path GRN draft → PO → confirm; mỗi site một `warehouse`. Production thuộc `central_kitchen` theo lộ trình D082 (chưa bắt buộc cắt hết production tại CN trong lát procurement đầu).
 - **D073/D078:** lịch sử đóng site trung tâm trên `matu-prod` (đã freeze). Không dùng làm authority Greenfield.
 - **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu được ghi tại Kho CN bằng `stock_movements.type = 'consumption'`, `movement_subtype = 'sale_consumption'`.
 
@@ -237,16 +237,22 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 
 1. Thiết lập **NCC**, điều khoản thanh toán và gán nguyên liệu NCC được phép
    cung cấp trong `supplier_items`.
-2. Với đơn mua có kế hoạch: Owner lập PO nháp → người có quyền duyệt chuyển
-   sang `sent`; mua trực tiếp có thể bỏ qua PO.
-3. NCC giao hàng → tạo GRN từ PO đã duyệt hoặc lập **GRN supplier-first**;
-   kiểm đếm, QC theo số thực nhận + đơn giá theo **đơn vị nhập**.
-4. **Xác nhận GRN** (RPC) → quy đổi về đơn vị tồn chuẩn, cập nhật tồn Kho CN
-   và giá vốn BQ atomically.
+2. Kho tạo **GRN draft** tại site nhận (`branch` | `central_supply` |
+   `central_kitchen`): số lượng / đơn vị nhập / QC — **không** nhập đơn giá mua
+   (D089).
+3. Kế toán hoặc Owner tạo PO từ GRN draft, đặt `unit_price_est`, duyệt
+   (`draft → sent`). Duyệt PO **sync** giá sang `grn_items.unit_cost` /
+   `po_unit_price`.
+4. **Xác nhận GRN** (RPC) chỉ khi PO liên kết đã duyệt (D088 fail closed) → quy
+   đổi về đơn vị tồn chuẩn, cập nhật tồn và giá vốn BQ từ `grn_items.unit_cost`.
 5. Finance nhập **supplier_invoice** (HĐ GTGT đầu vào), đối soát GRN và ghi
    nhận thanh toán NCC theo số dư còn phải trả.
 
-**Nguyên tắc:** Giá nhập theo **GRN** (thực nhận), không theo số đặt PO. `grn_items.unit_cost` là **Đơn giá nhập** (`₫ / đơn vị nhập`), không phải giá vốn BQ. GRN chỉ được tạo tại site stock-bearing (`branch`).
+**Nguyên tắc (D089 Option B):** Đơn giá thương mại theo **PO**
+(`purchase_order_items.unit_price_est`). `grn_items.unit_cost` là **Đơn giá nhập
+trên chứng từ nhận** (`₫ / đơn vị nhập`) sau sync khi duyệt PO — không phải giá
+vốn BQ, và không do kho nhập trên nháp. Confirm / WAC / `stock_movements` đọc
+`grn_items.unit_cost`. GRN tạo tại site stock-bearing.
 
 PO và GRN mới chỉ nhận nguyên liệu có mapping `supplier_items.is_active = true`
 với NCC của chứng từ. UI lọc ngay sau khi chọn NCC; Server Action và database

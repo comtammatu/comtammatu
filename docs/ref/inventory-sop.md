@@ -11,31 +11,36 @@
   `matu-prod`.
 - Mỗi site có đúng một location stock-bearing `warehouse`. Location `kitchen`
   (Bếp CN) chỉ còn dữ liệu lịch sử.
-- Owner lập PO một cấp (`draft → sent`) với destination bất kỳ site active; không
-  mở PR. Branch runtime không có PO — nhập NCC supplier-first tại CN (D083).
+- Luồng mua canonical (D088/D089): **GRN draft → PO từ GRN → duyệt PO → confirm
+  GRN**. Branch runtime không có UI PO; confirm vẫn bắt buộc PO đã duyệt
+  (fail closed). Không mở PR.
+- Kho trên nháp chỉ ghi **số lượng / đơn vị nhập / QC** — không nhập đơn giá mua
+  (D089). Đơn giá thương mại do Kế toán/Owner trên PO; sync vào
+  `grn_items.unit_cost` khi duyệt PO.
 - Supplier return và same-branch Kho↔Bếp transfer giả không phải workflow hằng ngày.
 - Không dùng tài liệu này để suy ra quyền. `module-acl.ts`,
   `inventory-roles.ts`, permission keys và RLS/RPC là authority.
 
 ## 2. Nhập hàng từ nhà cung cấp
 
-### 2a. Owner PO → GRN (CN / Kho Tổng / Bếp TT)
+### 2a. Happy path — mọi site stock-bearing (CN / Kho Tổng / Bếp TT)
 
-1. Owner chọn destination site và nhà cung cấp, lập PO nháp.
-2. Duyệt mua một cấp (`draft → sent`); không PR.
-3. Tạo GRN từ PO đã duyệt; nhập số lượng thực nhận, đơn vị, đơn giá, QC.
-4. Xác nhận GRN; tồn `warehouse` của site đích tăng đúng một lần.
+1. Kho chọn site nhận + nhà cung cấp, tạo **GRN draft**; nhập số lượng thực nhận,
+   đơn vị nhập, QC. **Không** nhập đơn giá.
+2. Kế toán hoặc Owner tạo **PO từ GRN draft**, điền/chỉnh đơn giá thương mại
+   (`unit_price_est`), duyệt một cấp (`draft → sent`). Cùng một người được tạo
+   và duyệt.
+3. Khi duyệt PO, hệ thống sync giá sang `grn_items.unit_cost` / `po_unit_price`.
+4. Kho **confirm GRN** chỉ khi PO liên kết đã duyệt; thiếu PO duyệt → chặn.
+5. Kiểm tra GRN confirmed, stock movement và tồn `warehouse` tăng đúng một lần.
+6. Chứng từ/HĐ NCC + file HĐ GTGT chuyển Finance/AP; Inventory không tự thanh toán.
 
-### 2b. Branch supplier-first (chỉ chi nhánh)
+### 2b. Chi nhánh (Branch runtime)
 
-1. Chọn đúng chi nhánh và nhà cung cấp.
-2. Tạo GRN supplier-first; không yêu cầu PO.
-3. Nhập số lượng thực nhận, đơn vị, đơn giá và bằng chứng/QC cần thiết.
-4. Xác nhận GRN bằng action/RPC hiện hành.
-5. Kiểm tra GRN đã chuyển trạng thái đúng, stock movement được ghi và tồn của
-   Kho CN tăng đúng một lần.
-6. Chứng từ/hoá đơn NCC + file HĐ GTGT chuyển sang luồng Finance/AP; Inventory
-   không tự ghi nhận thanh toán. Thanh toán AP bắt buộc có file HĐ GTGT.
+1. QL CN / kho CN tạo GRN draft như §2a bước 1 trên `/br/.../stock` (không UI PO,
+   không xem giá mua chuỗi — D088).
+2. Kế toán/Owner xử lý PO trên Owner plane (`/inventory`) như §2a bước 2–3.
+3. QL CN confirm GRN sau khi PO duyệt (cùng gate RPC như site trung tâm).
 
 Không tiếp tục nếu chi nhánh, đơn vị hoặc số lượng thực nhận không xác định rõ.
 Không sửa tồn trực tiếp để bù một GRN lỗi.
