@@ -16,6 +16,9 @@ test("inventory monetary reads fail closed for operational roles", () => {
   const hardening = read(
     "supabase/migrations/20260728151000_inventory_monetary_column_hardening.sql",
   );
+  const postSmoke = read(
+    "supabase/migrations/20260728152000_inventory_monetary_post_smoke_fixes.sql",
+  );
   const boundary = read("apps/web/lib/inventory/monetary-access.ts");
   const createModel = read("apps/web/lib/inventory/grn-create-model.ts");
   const notifications = read(
@@ -75,6 +78,14 @@ test("inventory monetary reads fail closed for operational roles", () => {
     /fetchStockBearingLocationIds\(\{\s*supabase: readClient,/,
   );
   assert.match(capability, /update_purchase_order_prices_protected/);
+  assert.match(
+    postSmoke,
+    /REVOKE ALL ON FUNCTION public\.can_read_inventory_monetary\(text\)\s+FROM PUBLIC, anon;/,
+  );
+  assert.doesNotMatch(
+    postSmoke,
+    /has_permission\(p_branch_id, 'inventory:read'\)/,
+  );
   assert.match(hardening, /stock_issue_items_set_writeoff_cost/);
   assert.match(hardening, /REVOKE ALL ON FUNCTION public\.update_purchase_order_prices/);
   assert.match(hardening, /'requires_review', true/);
