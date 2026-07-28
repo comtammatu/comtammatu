@@ -93,34 +93,17 @@ test("Wave A production/new page delegates chrome to DocumentFormFrame client", 
   );
 });
 
-test("Wave A GRN source picker already on DocumentFormFrame (no Wave visual delta)", () => {
+test("Wave A GRN create opens DocumentFormFrame without supplier picker", () => {
   const page = read("app/(protected)/inventory/grn/new/page.tsx");
-  const picker = read("app/(protected)/inventory/grn/new/supplier-picker.tsx");
+  const client = read(
+    "app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+  );
 
-  assert.match(
-    page,
-    /<DocumentFormFrame[\s\S]*AppPageHeader[\s\S]*SupplierPicker/,
-    "grn/new source step: DocumentFormFrame + AppPageHeader + SupplierPicker",
-  );
-  assert.match(page, /width="wide"/, "grn/new source step: wide width");
-  assert.match(
-    page,
-    /density="compact"/,
-    "grn/new source step: compact density",
-  );
-  assert.match(
-    page,
-    /receiveBySupplierTitle/,
-    "grn/new source step: supplier AppSection title",
-  );
-  assert.match(
-    page,
-    /chooseSourceTitle/,
-    "grn/new source step: choose-source title copy",
-  );
-  assert.doesNotMatch(
-    picker,
-    /DocumentFormFrame|AppPageHeader|AppPage/,
-    "supplier-picker: chrome owned by page, not picker body",
-  );
+  assert.match(page, /loadGrnCreatePageData/);
+  assert.match(page, /GrnCreateClient/);
+  assert.doesNotMatch(page, /SupplierPicker/);
+  assert.match(client, /DocumentFormFrame/);
+  assert.match(client, /width="wide"/);
+  assert.match(client, /density="compact"/);
+  assert.match(client, /GRN_CREATE_COPY\.newReceiptTitle/);
 });

@@ -211,31 +211,17 @@ test("operator stock landing is a branch-native landing, not the Owner surface s
   assert.match(source, /BranchOperatorPage/);
   assert.match(source, /BranchOperatorActionSection/);
   assert.match(source, /resolveOperatorTiles/);
-  assert.match(source, /STOCK_PRIMARY_SUFFIXES/);
-  assert.match(source, /STOCK_SECONDARY_SUFFIXES/);
-  assert.match(
-    source,
-    /const STOCK_PRIMARY_SUFFIXES = \[\s*"\/stock\/on-hand",\s*"\/stock\/grn",\s*"\/stock\/production"/,
-  );
-  assert.match(
-    source,
-    /const STOCK_SECONDARY_SUFFIXES = \[\s*"\/stock\/stocktake",\s*"\/stock\/waste"/,
-  );
-  assert.match(source, /operatorStockPrimaryTitle/);
-  assert.match(source, /operatorStockSecondaryTitle/);
+  assert.match(source, /STOCK_TAB_SUFFIXES/);
+  assert.match(source, /AppPageTabs/);
+  assert.match(source, /paramKey="group"/);
   assert.match(
     source,
     /tile\.href === stockRoot\s*\?\s*`\$\{stockRoot\}\/on-hand`/,
   );
-  assert.equal(
-    (source.match(/mobileColumns=\{2\}/g) ?? []).length,
-    2,
-    "stock landing must use two compact two-column action groups",
-  );
-  assert.equal(
-    (source.match(/<BranchOperatorActionSection/g) ?? []).length,
-    2,
-    "stock landing must not restore the old three-panel launcher",
+  assert.match(source, /mobileColumns=\{2\}/);
+  assert.match(
+    source,
+    /stockTabOnhand[\s\S]*stockTabCount[\s\S]*stockTabWaste[\s\S]*stockTabCatalog/,
   );
   assert.doesNotMatch(source, /operatorStockPrimaryDescription/);
   assert.doesNotMatch(source, /StockPageContent/);
@@ -287,12 +273,13 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /border-b border-border/);
   assert.doesNotMatch(branchClientSource, /<ItemGroup/);
   assert.match(branchClientSource, /size="touch"/);
-  assert.match(branchClientSource, /const showReceiveAction =/);
+  assert.match(routeSource, /canCreateStockRequest=\{data\.permissions\.canCreateStockRequest\}/);
+  assert.match(branchClientSource, /canCreateStockRequest: boolean/);
   assert.match(branchClientSource, /stockCopy\.attention\.title/);
   assert.doesNotMatch(branchClientSource, /md:grid md:grid-cols-3/);
   assert.match(
     branchClientSource,
-    /href=\{`\/br\/\$\{branchId\}\/stock\/grn\/new`\}/,
+    /href=\{`\/br\/\$\{branchId\}\/stock\/requests\/new`\}/,
   );
   assert.doesNotMatch(
     branchClientSource,
@@ -362,7 +349,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(branchDetailSource, /BranchOperatorActionSection/);
   assert.match(branchDetailSource, /ItemGroup/);
   assert.match(branchDetailSource, /AppDetailFooter/);
-  assert.match(branchDetailSource, /\$\{stockBasePath\}\/grn\/new/);
+  assert.match(branchDetailSource, /\$\{stockBasePath\}\/requests\/new/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/transfer/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/count/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/issues/);
@@ -436,7 +423,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(stockDataSource, /PERMISSION_KEYS\.INVENTORY_TRANSFER_RECEIVE/);
   assert.match(
     branchClientSource,
-    /href=\{`\/br\/\$\{branchId\}\/stock\/grn\/new`\}/,
+    /href=\{`\/br\/\$\{branchId\}\/stock\/requests\/new`\}/,
   );
 });
 
@@ -490,7 +477,38 @@ test("Owner surface stock workbench keeps manager action affordances after the p
   );
 });
 
-test("operator stock branch-native extensions keep GRN, issue, and report actions in the branch shell", () => {
+test("D093 branch GRN routes redirect to stock requests", () => {
+  const grnRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
+  );
+  const grnDetailRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx",
+  );
+  const grnNewRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx",
+  );
+  const grnCreateRoute = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx",
+  );
+
+  assert.match(grnRoute, /redirect\(`\/br\/\$\{branchId\}\/stock\/requests`\)/);
+  assert.doesNotMatch(grnRoute, /BranchGrnListClient|loadGrnListPageData/);
+  assert.match(
+    grnDetailRoute,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/requests`\)/,
+  );
+  assert.doesNotMatch(grnDetailRoute, /GrnReviewOperatorClient|loadGrnDetail/);
+  assert.match(
+    grnNewRoute,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
+  );
+  assert.match(
+    grnCreateRoute,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
+  );
+});
+
+test("operator stock branch-native extensions keep issue and report actions in the branch shell", () => {
   const issueRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/page.tsx",
   );
@@ -507,22 +525,6 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
     "apps/web/lib/inventory/branch-stock-issue-data.ts",
   );
   const stockIssueModel = read("apps/web/lib/inventory/stock-issue-model.ts");
-  const grnRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
-  );
-  const branchGrnListClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
-  );
-  const grnDetailRoute = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx",
-  );
-  const branchGrnReviewClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx",
-  );
-  const branchGrnReceiptClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/branch-grn-receipt-client.tsx",
-  );
-  const grnDetailData = read("apps/web/lib/inventory/grn-detail-data.ts");
   const reportsRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/reports/page.tsx",
   );
@@ -601,47 +603,6 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   assert.match(branchStockIssueData, /issueTypes: \["writeoff", "other"\]/);
   assert.match(branchStockIssueData, /INVENTORY_WRITEOFF/);
   assert.match(stockIssueModel, /canConfirmBranchStockIssue/);
-  assert.match(
-    grnRoute,
-    /loadGrnListPageData\(\{ routeBranchId: branchId \}\)/,
-  );
-  assert.match(grnRoute, /<BranchGrnListClient/);
-  assert.doesNotMatch(grnRoute, /GRNListPageContent|embedded|DataTable/);
-  // GRN detail keeps a shared loader/model/action boundary while both draft
-  // review and the confirmed receipt own their Branch touch presentation.
-  assert.match(grnDetailRoute, /isGrnLookupParam\(rawId\)/);
-  assert.match(grnDetailRoute, /loadGrnDetail\(rawId, branchId\)/);
-  assert.match(grnDetailRoute, /GrnReviewOperatorClient/);
-  assert.match(grnDetailRoute, /BranchGrnReceiptClient/);
-  assert.match(grnDetailRoute, /@lib\/inventory\/grn-detail-data/);
-  assert.doesNotMatch(grnDetailRoute, /GRNDetailClient|embedded/);
-  assert.doesNotMatch(
-    grnDetailRoute,
-    /@\/\(protected\)\/inventory\/grn\/\[id\]\//,
-  );
-  assert.doesNotMatch(grnDetailRoute, /purchaseOrdersBasePath|purchase-orders/);
-  assert.doesNotMatch(grnDetailRoute, /TransferDetailPageContent/);
-  assert.match(branchGrnReviewClient, /BranchGrnReviewLineSheet/);
-  assert.match(branchGrnReviewClient, /BranchGrnAddLineSheet/);
-  assert.match(branchGrnReviewClient, /useGrnDetailActions/);
-  assert.match(branchGrnReviewClient, /useGrnDetailLines/);
-  assert.match(branchGrnReviewClient, /canEditDraft/);
-  assert.match(branchGrnReviewClient, /canConfirm/);
-  assert.doesNotMatch(
-    branchGrnReviewClient,
-    /@\/\(protected\)\/inventory\/grn\/\[id\]\//,
-  );
-  assert.match(branchGrnReceiptClient, /BranchOperatorPage/);
-  assert.doesNotMatch(
-    branchGrnReceiptClient,
-    /GRNDetailClient|AuditHistoryList/,
-  );
-  assert.match(
-    grnDetailData,
-    /routeBranchId != null && data\.grn\.branch_id !== routeBranchId/,
-  );
-  assert.match(grnDetailData, /PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE/);
-  assert.match(grnDetailData, /PERMISSION_KEYS\.PROCUREMENT_GRN_CONFIRM/);
   assert.match(reportsRoute, /loadBranchStockReportData\(branchId\)/);
   assert.match(reportsRoute, /<BranchStockReportsClient/);
   assert.doesNotMatch(reportsRoute, /ReportsPageContent|embedded|DataTable/);
@@ -724,41 +685,6 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   );
   assert.match(grnListData, /import "server-only"/);
   assert.match(grnListData, /listMyGrnDrafts\(routeBranchId\)/);
-  assert.match(branchGrnListClient, /BranchOperatorPage/);
-  assert.match(branchGrnListClient, /BranchOperatorPanel/);
-  assert.match(branchGrnListClient, /ItemGroup/);
-  assert.match(branchGrnListClient, /size="touch"/);
-  assert.match(branchGrnListClient, /discardGrnDraft/);
-  assert.match(
-    branchGrnListClient,
-    /aria-label=\{INVENTORY_VI\.grnSearchPlaceholder\}/,
-  );
-  assert.match(branchGrnListClient, /aria-label=\{FORM_VI\.status\}/);
-  assert.match(
-    branchGrnListClient,
-    /className="min-h-20 items-center gap-2 p-0 touch-manipulation"/,
-  );
-  assert.match(
-    branchGrnListClient,
-    /self-stretch items-center gap-3 px-3 py-2/,
-  );
-  assert.match(
-    branchGrnListClient,
-    /aria-disabled=\{disabled \|\| undefined\}/,
-  );
-  assert.equal(
-    (branchGrnListClient.match(/role="listitem"/g) ?? []).length,
-    2,
-    "Branch GRN list rows must retain listitem semantics",
-  );
-  assert.match(
-    branchGrnListClient,
-    /const href = `\$\{basePath\}\/\$\{draft\.grnId\}`;/,
-  );
-  assert.doesNotMatch(
-    branchGrnListClient,
-    /\bDataTable\b|\bGrnListClient\b|\bembedded\b|\buseLongPress\b|\bformatVND\b|overflow-x-auto/,
-  );
   assert.match(grnListClient, /href=\{grnDetailHref\(basePath, grn\.id\)\}/);
   assert.match(grnListClient, /touch-manipulation cursor-pointer/);
   assert.doesNotMatch(grnListClient, /useLongPress/);
@@ -782,24 +708,16 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   assert.doesNotMatch(reportsClient, /supplierInvoicesHref|embedded/);
 });
 
-test("operator stock GRN source and receipt form keep Branch-native presentation", () => {
+test("D093 branch GRN create routes redirect; Owner surface keeps GRN create", () => {
   const grnNewRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx",
-  );
-  const branchGrnSourceClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/branch-grn-source-picker-client.tsx",
   );
   const grnCreateRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx",
   );
-  const branchGrnCreateClient = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/branch-grn-create-client.tsx",
-  );
   const grnNewPage = read(
     "apps/web/app/(protected)/inventory/grn/new/page.tsx",
   );
-  const grnSourceData = read("apps/web/lib/inventory/grn-source-data.ts");
-  const grnSourceModel = read("apps/web/lib/inventory/grn-source-model.ts");
   const grnCreatePage = read(
     "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
   );
@@ -813,107 +731,26 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
   const grnLineEditor = read(
     "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
-  const branchGrnLineSheet = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
-  );
 
-  assert.match(grnNewRoute, /params: Promise<\{ branchId: string \}>/);
-  assert.match(grnNewRoute, /BranchGrnSourcePickerClient/);
-  assert.match(grnNewRoute, /loadGrnSourcePageData/);
-  assert.match(grnNewRoute, /routeBranchId: branchId/);
   assert.match(
     grnNewRoute,
-    /redirect\(grnSourceSupplierHref\(sourceBasePath, selectedSupplierId\)\)/,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
   assert.doesNotMatch(
     grnNewRoute,
-    /GrnNewPageContent|DocumentFormFrame|DataTable|embedded/,
+    /BranchGrnCreateClient|loadGrnCreatePageData|GrnNewPageContent/,
   );
-  assert.match(branchGrnSourceClient, /BranchOperatorPage/);
-  assert.match(branchGrnSourceClient, /BranchOperatorControlBar/);
-  assert.match(branchGrnSourceClient, /BranchOperatorPanel/);
-  assert.match(branchGrnSourceClient, /AppDetailFooter/);
-  assert.match(
-    branchGrnSourceClient,
-    /href=\{`\/br\/\$\{branchId\}\/stock\/grn`\}/,
-  );
-  assert.match(branchGrnSourceClient, /ItemGroup/);
-  assert.match(branchGrnSourceClient, /createSupplier/);
-  assert.doesNotMatch(
-    branchGrnSourceClient,
-    /createGrnFromPo|openPurchaseOrders/,
-  );
-  assert.match(branchGrnSourceClient, /grnSourceSupplierHref/);
-  assert.match(branchGrnSourceClient, /min-h-20 touch-manipulation/);
-  assert.doesNotMatch(
-    branchGrnSourceClient,
-    /GrnNewPageContent|DocumentFormFrame|DataTable|embedded|formatVND|overflow-x-auto/,
-  );
-  assert.match(grnSourceData, /import "server-only"/);
-  assert.match(grnSourceData, /resolveInventoryListScope/);
-  assert.match(
-    grnSourceData,
-    /probePermission\(auth, PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE, branchId\)/,
-  );
-  assert.doesNotMatch(
-    grnSourceData,
-    /fetchOpenPurchaseOrdersForReceiving|openPurchaseOrders/,
-  );
-  assert.match(grnSourceModel, /export function grnSourceSupplierHref/);
-  assert.match(grnSourceModel, /export function parseGrnSupplierIdParam/);
 
   assert.match(
     grnCreateRoute,
-    /params: Promise<\{ branchId: string; supplierId: string \}>/,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
-  assert.match(grnCreateRoute, /BranchGrnCreateClient/);
-  assert.match(grnCreateRoute, /loadGrnCreatePageData/);
-  assert.match(grnCreateRoute, /supplierId,/);
-  assert.match(grnCreateRoute, /routeBranchId: branchId/);
-  assert.match(
-    grnCreateRoute,
-    /sourceBasePath = `\/br\/\$\{branchId\}\/stock\/grn\/new`/,
-  );
-  assert.match(
-    grnCreateRoute,
-    /const grnBasePath = `\/br\/\$\{branchId\}\/stock\/grn`;/,
-  );
-  assert.match(grnCreateRoute, /grnBasePath=\{grnBasePath\}/);
-  assert.doesNotMatch(
-    grnCreateRoute,
-    /GrnCreatePageContent|DocumentFormFrame|embedded/,
-  );
-  assert.match(branchGrnCreateClient, /BranchOperatorPage/);
-  assert.match(branchGrnCreateClient, /BranchOperatorControlBar/);
-  assert.match(branchGrnCreateClient, /BranchOperatorPanel/);
-  assert.match(branchGrnCreateClient, /AppDetailFooter/);
-  assert.match(branchGrnCreateClient, /BranchGrnCreateLineSheet/);
-  assert.match(branchGrnCreateClient, /useGrnCreateController/);
-  assert.match(branchGrnCreateClient, /size="touch"/);
-  assert.match(
-    branchGrnCreateClient,
-    /lg:grid-cols-\[minmax\(0,0\.85fr\)_minmax\(0,1\.15fr\)\]/,
-  );
-  assert.doesNotMatch(
-    branchGrnCreateClient,
-    /DocumentFormFrame|DataTable|AppPageHeader|AppSection|\bGrnCreateClient\b|embedded|overflow-x-auto/,
-  );
-  assert.doesNotMatch(branchGrnCreateClient, /handleBranchChange/);
+  assert.doesNotMatch(grnCreateRoute, /loadGrnCreatePageData|BranchGrnCreateClient/);
 
-  assert.match(grnNewPage, /supplierId\?: string \| string\[\]/);
-  assert.match(grnNewPage, /loadGrnSourcePageData/);
-  assert.match(grnNewPage, /selectedSupplierId != null/);
-  assert.match(grnNewPage, /supplierId=\{selectedSupplierId\}/);
-  assert.doesNotMatch(
-    grnNewPage,
-    /routeBranchId\?: number|embedded\?: boolean/,
-  );
-  assert.match(grnCreatePage, /supplierId: number/);
-  assert.match(grnCreatePage, /routeBranchId\?: number/);
-  assert.match(grnCreatePage, /basePath\?: string/);
-  assert.match(grnCreatePage, /grnBasePath\?: string/);
-  assert.match(grnCreatePage, /loadGrnCreatePageData/);
-  assert.doesNotMatch(grnCreatePage, /embedded|resolveInventoryListScope/);
+  assert.match(grnNewPage, /loadGrnCreatePageData/);
+  assert.match(grnNewPage, /GrnCreateClient/);
+  assert.doesNotMatch(grnNewPage, /SupplierPicker|parseGrnSupplierIdParam/);
+  assert.match(grnCreatePage, /redirect\("\/inventory\/grn\/new"\)/);
   assert.match(grnCreateData, /import "server-only"/);
   assert.match(grnCreateData, /resolveInventoryListScope/);
   assert.match(
@@ -932,10 +769,11 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
   assert.match(grnCreateController, /serverDraftPromiseRef/);
   assert.match(grnCreateController, /createGrnDraft/);
   assert.match(grnCreateController, /upsertGrnLine/);
+  assert.match(grnCreateController, /supplierSummary/);
   assert.doesNotMatch(grnCreateController, /confirmGrn|confirmNow/);
   assert.match(
     grnCreateController,
-    /router\.push\(`\$\{grnBasePath\}\/\$\{grnId\}\?review=1`\)/,
+    /router\.push\(`\$\{grnBasePath\}\/\$\{grnId\}`\)/,
   );
   assert.match(grnLineEditor, /<SheetContent[\s\S]*side="bottom"/);
   assert.match(grnLineEditor, /<SelectTrigger[\s\S]{0,80}size=\{controlSize\}/);
@@ -944,19 +782,6 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
     exists("apps/web/app/components/inventory/grn-line-editor.tsx"),
     false,
   );
-  assert.equal(
-    exists(
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/branch-grn-review-line-sheet.tsx",
-    ),
-    false,
-  );
-  assert.match(branchGrnLineSheet, /NumberPadSheet/);
-  assert.match(branchGrnLineSheet, /BranchGrnCreateLineSheet/);
-  assert.match(branchGrnLineSheet, /BranchGrnReviewLineSheet/);
-  assert.match(branchGrnLineSheet, /BranchGrnAddLineSheet/);
-  assert.doesNotMatch(branchGrnLineSheet, /QuantityInput|MoneyVndInput/);
-  assert.doesNotMatch(branchGrnLineSheet, /setUnitCost\(referenceCost/);
-  assert.doesNotMatch(branchGrnCreateClient, /controlSize="field"/);
 });
 
 test("transfer receive full receipt stays one-click on the existing atomic action", () => {
@@ -1430,7 +1255,7 @@ test("operator count assignments render branch-native inside the branch operator
   );
 });
 
-test("operator production renders branch-native inside the production operator shell (D059 §4 production)", () => {
+test("D093 branch production routes redirect to stock landing; Owner surface keeps production", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx",
   );
@@ -1446,52 +1271,26 @@ test("operator production renders branch-native inside the production operator s
   const dataSource = read(
     "apps/web/app/(protected)/inventory/production-data.ts",
   );
-  const operatorClientSource = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/production-operator-client.tsx",
-  );
-  const newClientSource = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/branch-production-new-client.tsx",
-  );
-  const detailClientSource = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/branch-production-detail-client.tsx",
-  );
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
-  const operatorCapabilities = read(
-    "packages/shared/src/auth/operator-capabilities.ts",
-  );
 
   assert.match(route, /params: Promise<\{ branchId: string \}>/);
-  // D067 §1: the operator route forks presentation to a mobile-native client
-  // over the SAME data loader — no Owner surface ProductionPageContent embed, no
-  // redirect to the Owner surface.
-  assert.match(route, /ProductionOperatorClient/);
-  assert.match(
-    route,
-    /loadProductionSurfaceData\(\{ routeBranchId: branchId \}\)/,
+  assert.match(route, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
+  assert.doesNotMatch(route, /ProductionOperatorClient|ProductionPageContent/);
+
+  assert.match(newRoute, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
+  assert.doesNotMatch(newRoute, /BranchProductionNewClient|ProductionNewClient/);
+
+  assert.match(detailRoute, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
+  assert.doesNotMatch(
+    detailRoute,
+    /BranchProductionDetailClient|fetchProductionRunById/,
   );
-  assert.doesNotMatch(route, /ProductionPageContent/);
-  assert.doesNotMatch(route, /redirect\(`\/inventory\/production/);
 
   assert.match(ownerPage, /export async function ProductionPageContent/);
   assert.match(ownerPage, /routeBranchId\?: number/);
   assert.match(ownerPage, /embedded\?: boolean/);
   assert.match(ownerPage, /embedded=\{embedded\}/);
-  assert.match(
-    newRoute,
-    /<BranchProductionNewClient[\s\S]*basePath=\{`\/br\/\$\{branchId\}\/stock\/production`\}/,
-  );
-  assert.doesNotMatch(newRoute, /\bProductionNewClient\b|embedded/);
-  assert.match(detailRoute, /fetchProductionRunById\(runId\)/);
-  assert.match(detailRoute, /<BranchProductionDetailClient/);
-  assert.doesNotMatch(detailRoute, /\bProductionDetailClient\b|embedded/);
-  assert.match(
-    detailRoute,
-    /run\.branch_id !== branchId && run\.target_branch_id !== branchId/,
-  );
 
-  // hasCurrentProductionBranchAccess must prefer routeBranchId over
-  // claims.branch_id — production_manager claims stay tenant-level
-  // (D055 §1), so claims.branch_id is always null for that role.
   assert.match(
     dataSource,
     /hasCurrentProductionBranchAccess[\s\S]*routeBranchId\?: number,/,
@@ -1505,60 +1304,6 @@ test("operator production renders branch-native inside the production operator s
     /hasCurrentProductionBranchAccess\(supabase, claims, routeBranchId\)/,
   );
 
-  assert.match(operatorClientSource, /<BranchOperatorPage/);
-  assert.match(operatorClientSource, /<BranchOperatorStatusStrip/);
-  assert.match(operatorClientSource, /<BranchOperatorPanel/);
-  assert.match(operatorClientSource, /<ItemGroup/);
-  assert.match(operatorClientSource, /size="touch"/);
-  assert.doesNotMatch(
-    operatorClientSource,
-    /useSearchParams|AppLinkCard|LinkCardGrid|DataTable|embedded/,
-  );
-
-  assert.match(newClientSource, /<BranchOperatorPage/);
-  assert.match(newClientSource, /<BranchOperatorPanel/);
-  assert.doesNotMatch(newClientSource, /<BranchOperatorStatusStrip/);
-  assert.match(newClientSource, /<ItemGroup/);
-  assert.match(newClientSource, /<AppDetailFooter[\s\S]*sticky/);
-  assert.match(newClientSource, /lg:grid-cols-/);
-  assert.match(newClientSource, /location\.branchId === routeBranchId/);
-  assert.match(newClientSource, /location\.kind !== "production_storage"/);
-  assert.match(newClientSource, /location\.kind === "production_storage"/);
-  assert.doesNotMatch(newClientSource, /targetBranches|targetBranchIds/);
-  assert.doesNotMatch(
-    newClientSource,
-    /\bProductionNewClient\b|DataTable|DocumentFormFrame|embedded/,
-  );
-
-  assert.match(detailClientSource, /<BranchOperatorPage/);
-  assert.match(detailClientSource, /<BranchOperatorPanel/);
-  assert.match(detailClientSource, /<BranchOperatorDetailList/);
-  assert.match(detailClientSource, /<ItemGroup/);
-  assert.match(detailClientSource, /<AppDetailFooter[\s\S]*sticky/);
-  assert.doesNotMatch(
-    detailClientSource,
-    /\bProductionDetailClient\b|DataTable|DocumentFormFrame|embedded/,
-  );
-
-  // Native production tile is gated to production-capable branch kinds.
-  // Curation is declarative: nav-config `kinds` + the operator-capabilities kind filter.
-  assert.match(
-    navConfig,
-    /hrefTemplate: "\/br\/\{branchId\}\/stock\/production",\s*label: "Sản xuất",\s*kinds: \["branch"\]/,
-  );
-  assert.match(
-    operatorCapabilities,
-    /tile\.kinds === undefined \|\| tile\.kinds\.includes\(branchKind\)/,
-  );
-  assert.match(
-    operatorClientSource,
-    /const workQueue = \[\.\.\.inProgress, \.\.\.drafts\]/,
-  );
-  assert.match(operatorClientSource, /title="Việc cần làm"/);
-
-  // The "Sản xuất" tile is native to branch stock, so the
-  // surface has landed (D059 §2 shrink-to-zero).
+  assert.doesNotMatch(navConfig, /hrefTemplate: "\/br\/\{branchId\}\/stock\/production"/);
   assert.doesNotMatch(navConfig, /hrefTemplate: "\/inventory\/production"/);
-
-  assert.doesNotMatch(navConfig, /stock\/purchase-orders|Đơn đặt hàng/);
 });

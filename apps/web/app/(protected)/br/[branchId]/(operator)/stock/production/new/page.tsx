@@ -1,32 +1,13 @@
-import { notFound } from "next/navigation";
-import { loadProductionSurfaceData } from "@/(protected)/inventory/production-data";
-import { BranchProductionNewClient } from "./branch-production-new-client";
+import { redirect } from "next/navigation";
+import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
 
-interface PageProps {
+export default async function BranchProductionNewRetiredPage({
+  params,
+}: {
   params: Promise<{ branchId: string }>;
-}
-
-export default async function OperatorProductionNewPage({ params }: PageProps) {
-  const { branchId: rawBranchId } = await params;
-  const branchId = Number(rawBranchId);
-  if (!Number.isInteger(branchId) || branchId <= 0) notFound();
-
-  const { productionBranches, locations, finishedGoods, recipes } =
-    await loadProductionSurfaceData({ routeBranchId: branchId });
-  const recipeFinishedGoodIds = new Set(
-    recipes.map((recipe) => recipe.finished_good_id),
-  );
-  const finishedGoodsWithRecipes = finishedGoods.filter((good) =>
-    recipeFinishedGoodIds.has(good.id),
-  );
-
-  return (
-    <BranchProductionNewClient
-      branchId={branchId}
-      branches={productionBranches.filter((branch) => branch.id === branchId)}
-      locations={locations}
-      finishedGoods={finishedGoodsWithRecipes}
-      basePath={`/br/${branchId}/stock/production`}
-    />
-  );
+}) {
+  const { branchId: raw } = await params;
+  const branchId = parseOperatorBranchId(raw);
+  if (branchId == null) redirect("/");
+  redirect(`/br/${branchId}/stock`);
 }

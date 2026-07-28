@@ -82,6 +82,39 @@ export function BranchStockIngredientDetail({
   stockBasePath: string;
 }) {
   const { ingredient } = data;
+
+  if (data.coreDataLoadFailed) {
+    return (
+      <BranchOperatorPage
+        title={ingredient.name}
+        description={[ingredient.sku, ingredient.category, ingredient.unit]
+          .filter(Boolean)
+          .join(" · ")}
+        action={
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={
+              <Link
+                href={`${stockBasePath}/on-hand`}
+                aria-label={detailCopy.backToStock}
+              />
+            }
+          >
+            <IconArrowLeft />
+          </Button>
+        }
+      >
+        <AppEmptyState
+          compact
+          mode="error"
+          title={stockCopy.loadFailed}
+          description={stockCopy.loadFailedDescription}
+        />
+      </BranchOperatorPage>
+    );
+  }
+
   const statusBadge = getStatusBadgeMeta("inventory", data.status);
   const atRisk = data.status === "low" || data.status === "out";
   const secondaryActions = [
@@ -167,10 +200,10 @@ export function BranchStockIngredientDetail({
                 variant: statusBadge.variant,
               }}
               action={
-                data.permissions.canReceiveGrn ? (
+                data.permissions.canCreateStockRequest ? (
                   <Button
                     size="touch"
-                    render={<Link href={`${stockBasePath}/grn/new`} />}
+                    render={<Link href={`${stockBasePath}/requests/new`} />}
                   >
                     <IconReceipt data-icon="inline-start" />
                     {stockCopy.actions.receiveGoods}

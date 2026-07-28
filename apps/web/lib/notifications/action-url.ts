@@ -11,6 +11,13 @@ interface NotificationActionTarget {
   targetBranchId: number | null;
 }
 
+/** D093: branch GRN routes retired — send operators to stock requests. */
+function rewriteRetiredBranchGrnPath(url: string): string {
+  const match = /^\/br\/(\d+)\/stock\/grn(?:\/\d+)?$/.exec(url);
+  if (!match) return url;
+  return `/br/${match[1]}/stock/requests`;
+}
+
 /** Keep notification links inside the authenticated user's product plane. */
 export function resolveNotificationActionUrl(
   claims: JwtClaims,
@@ -19,6 +26,8 @@ export function resolveNotificationActionUrl(
   const safeActionUrl = getSafeInternalReturnTo(target.actionUrl);
   if (!safeActionUrl) return null;
 
+  const actionUrl = rewriteRetiredBranchGrnPath(safeActionUrl);
+
   if (
     claims.user_role !== "owner" &&
     target.targetBranchId !== claims.branch_id
@@ -26,7 +35,7 @@ export function resolveNotificationActionUrl(
     return null;
   }
 
-  return resolvePostLoginRedirect(claims, safeActionUrl) === safeActionUrl
-    ? safeActionUrl
+  return resolvePostLoginRedirect(claims, actionUrl) === actionUrl
+    ? actionUrl
     : null;
 }

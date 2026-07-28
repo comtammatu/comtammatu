@@ -75,7 +75,7 @@ type RunnerBranchRow = {
 
 /**
  * Branch identity (name/kind/active flag) rarely changes but this kiosk
- * screen polls via `RunnerRealtimeRefresh` (15s `router.refresh()`), so an
+ * screen polls via `RunnerRealtimeRefresh` (3s `router.refresh()`), so an
  * uncached lookup re-queries `branches` every poll for hours per shift.
  * Tag `"branches-list"` busts via the same tag `branches/actions.ts`
  * mutations already call. 5-minute TTL is a safety net for any mutation

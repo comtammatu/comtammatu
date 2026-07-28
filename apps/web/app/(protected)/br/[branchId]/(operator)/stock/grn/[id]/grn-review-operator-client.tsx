@@ -7,10 +7,12 @@ import {
   ChevronRight as IconChevronRight,
   CircleCheck as IconCircleCheck,
   ClipboardCheck as IconClipboardCheck,
+  Info as IconInfoCircle,
   Plus as IconPlus,
   Save as IconDeviceFloppy,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -81,6 +83,10 @@ export function GrnReviewOperatorClient({
     lines.find((line) => line.lineId === editingLineId) ?? null;
   const operatorFlow = messages.inventory.operatorFlow;
   const reviewStep = dirtyLines.length > 0 ? 2 : 3;
+  const waitingReason =
+    grn.poId == null
+      ? grnCopy.nextStepWaitingAccountant
+      : grnCopy.nextStepAwaitingPoBranchBody;
 
   function patchEditingLine(patchValue: Parameters<typeof patch>[1]) {
     const index = lines.findIndex((line) => line.lineId === editingLineId);
@@ -218,7 +224,7 @@ export function GrnReviewOperatorClient({
                 },
                 {
                   label: grnCopy.linkedPo,
-                  value: grn.poCode || "—",
+                  value: grn.poCode || messages.inventory.common.noValue,
                   muted: !grn.poCode,
                 },
                 {
@@ -263,6 +269,12 @@ export function GrnReviewOperatorClient({
           }
           trailing={
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-80">
+              {!canConfirm ? (
+                <Alert>
+                  <IconInfoCircle className="size-4" />
+                  <AlertDescription>{waitingReason}</AlertDescription>
+                </Alert>
+              ) : null}
               {canEditDraft && dirtyLines.length > 0 ? (
                 <Button
                   type="button"
@@ -279,23 +291,24 @@ export function GrnReviewOperatorClient({
                   {grnCopy.saveChanges(dirtyLines.length)}
                 </Button>
               ) : null}
-              {canConfirm ? (
-                <Button
-                  type="button"
-                  size="touch-lg"
-                  disabled={
-                    isConfirming || dirtyLines.length > 0 || lines.length === 0
-                  }
-                  onClick={() => void handleConfirmGrn()}
-                >
-                  {isConfirming ? (
-                    <Spinner className="size-5" />
-                  ) : (
-                    <IconCircleCheck />
-                  )}
-                  {grnCopy.confirmGrnAction}
-                </Button>
-              ) : null}
+              <Button
+                type="button"
+                size="touch-lg"
+                disabled={
+                  !canConfirm ||
+                  isConfirming ||
+                  dirtyLines.length > 0 ||
+                  lines.length === 0
+                }
+                onClick={() => void handleConfirmGrn()}
+              >
+                {isConfirming ? (
+                  <Spinner className="size-5" />
+                ) : (
+                  <IconCircleCheck />
+                )}
+                {grnCopy.confirmGrnAction}
+              </Button>
             </div>
           }
         />

@@ -63,7 +63,10 @@ import {
   filterGrnListRows,
   grnDetailHref,
   grnDraftHref,
+  grnProcurementStepChip,
+  grnProcurementStepChipLabel,
   hasGrnListFilters,
+  supplierInvoiceHrefForGrn,
   type GrnDraftRow,
   type GrnListStatusFilter,
   type GrnRow,
@@ -76,16 +79,14 @@ import {
 
 export type { GrnDraftRow, GrnRow } from "@lib/inventory/grn-list-model";
 
-const statusConfirmed = "Đã xác nhận";
-const toastDiscardDraftFailed = "Không thể hủy phiếu nháp.";
-const dialogDiscardTitlePrefix = "Xóa nháp của ";
-const dialogDiscardTitleSuffix = "?";
+const grnCopy = messages.inventory.grn;
+const noValue = messages.inventory.common.noValue;
 
 const statusFilterOptions: { value: GrnListStatusFilter; label: string }[] = [
   { value: "all", label: KDS_VI.filterAll },
-  { value: "review", label: messages.inventory.grn.qcQueue },
+  { value: "review", label: grnCopy.qcQueue },
   { value: "draft", label: INVENTORY_VI.draft },
-  { value: "confirmed", label: statusConfirmed },
+  { value: "confirmed", label: grnCopy.statusConfirmedLong },
   { value: "cancelled", label: STATES_VI.cancelled },
 ];
 
@@ -94,6 +95,7 @@ export function GrnListClient({
   basePath = "/inventory/grn",
   drafts,
   canCreate,
+  canManageSupplierInvoice = false,
   draftsLoadFailed = false,
   grnsLoadFailed = false,
   withinOwnerTabs = false,
@@ -102,6 +104,7 @@ export function GrnListClient({
   basePath?: string;
   drafts?: GrnDraftRow[];
   canCreate: boolean;
+  canManageSupplierInvoice?: boolean;
   draftsLoadFailed?: boolean;
   grnsLoadFailed?: boolean;
   withinOwnerTabs?: boolean;
@@ -112,14 +115,28 @@ export function GrnListClient({
   const controlSize = useFormControlSize();
   const router = useRouter();
 
-  const getGrnRowActions = (grn: GrnRow): RowActionItem[] => [
-    {
-      key: "view",
-      label: ACTIONS_VI.viewDetails,
-      icon: <IconArrowBarRight />,
-      href: grnDetailHref(basePath, grn.id),
-    },
-  ];
+  const getGrnRowActions = (grn: GrnRow): RowActionItem[] => {
+    const actions: RowActionItem[] = [
+      {
+        key: "view",
+        label: ACTIONS_VI.viewDetails,
+        icon: <IconArrowBarRight />,
+        href: grnDetailHref(basePath, grn.id),
+      },
+    ];
+    if (canManageSupplierInvoice && grn.status === "confirmed") {
+      actions.push({
+        key: "supplier-invoice",
+        label: grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice,
+        icon: <IconReceipt />,
+        href: supplierInvoiceHrefForGrn({
+          grnId: grn.id,
+          invoiceId: grn.invoiceId,
+        }),
+      });
+    }
+    return actions;
+  };
 
   const openGrnDetail = (grn: GrnRow) => {
     router.push(grnDetailHref(basePath, grn.id));
@@ -152,10 +169,10 @@ export function GrnListClient({
       key: "po",
       header: INVENTORY_VI.linkedPo,
       render: (grn) =>
-        grn.poId != null && grn.poCode ? (
+        grn.poCount > 0 && grn.poCode ? (
           <span className="font-mono">{grn.poCode}</span>
         ) : (
-          "—"
+          noValue
         ),
     },
     {
@@ -167,22 +184,30 @@ export function GrnListClient({
             {grn.date}
           </span>
         ) : (
-          "—"
+          noValue
         ),
     },
     {
       key: "status",
       header: FORM_VI.status,
-      render: (grn) => (
+      render: (grn) => {
+        const step = grnProcurementStepChip(grn);
+        return (
         <div className="flex flex-wrap items-center gap-1">
           <StatusBadge domain="inventory" value={grn.status} size="sm" />
+          {step ? (
+            <Badge variant="outline">
+              {grnProcurementStepChipLabel(step, grnCopy)}
+            </Badge>
+          ) : null}
           {grn.qcIssueCount > 0 ? (
             <Badge variant="warning">
               {messages.inventory.grn.qcIssueCount(grn.qcIssueCount)}
             </Badge>
           ) : null}
         </div>
-      ),
+        );
+      },
     },
     {
       key: "actions",
@@ -421,7 +446,7 @@ function GrnDraftsTab({
 
   async function handleDiscard(draft: GrnDraftRow) {
     const ok = await confirm({
-      title: `${dialogDiscardTitlePrefix}${draft.supplierName}${dialogDiscardTitleSuffix}`,
+      title: grnCopy.discardDraftTitle(draft.supplierName),
       variant: "destructive",
     });
     if (!ok) return;
@@ -430,7 +455,7 @@ function GrnDraftsTab({
     try {
       const result = await discardGrnDraft({ grnId: draft.grnId });
       if (!result.success) {
-        toast.error(result.error ?? toastDiscardDraftFailed);
+        toast.error(result.error ?? grnCopy.discardDraftFailed);
         return;
       }
       router.refresh();
@@ -449,7 +474,7 @@ function GrnDraftsTab({
         disabled: pending,
       },
     ];
-    if (draft.poId == null) {
+    if (draft.poId == null && draft.poCount === 0) {
       actions.push({
         key: "discard",
         label: ACTIONS_VI.delete,
@@ -493,9 +518,12 @@ function GrnDraftsTab({
       header: INVENTORY_VI.linkedPo,
       render: (draft) =>
         draft.poId != null && draft.poCode ? (
-          <span className="font-mono">{draft.poCode}</span>
+          <span className="font-mono">
+            {draft.poCode}
+            {draft.poCount > 1 ? ` · ${draft.poCount} PO` : ""}
+          </span>
         ) : (
-          "—"
+          noValue
         ),
     },
     {
@@ -520,16 +548,28 @@ function GrnDraftsTab({
     {
       key: "status",
       header: FORM_VI.status,
-      render: (draft) => (
+      render: (draft) => {
+        const step = grnProcurementStepChip({
+          status: "draft",
+          poId: draft.poId,
+          poStatus: draft.poStatus,
+        });
+        return (
         <div className="flex flex-wrap items-center gap-1">
           <StatusBadge domain="inventory" value="draft" size="sm" />
+          {step ? (
+            <Badge variant="outline">
+              {grnProcurementStepChipLabel(step, grnCopy)}
+            </Badge>
+          ) : null}
           {draft.qcIssueCount > 0 ? (
             <Badge variant="warning">
               {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
             </Badge>
           ) : null}
         </div>
-      ),
+        );
+      },
     },
     {
       key: "actions",
@@ -658,6 +698,18 @@ function GrnDraftMobileCard({
             {draft.grnNumber}
           </span>
           <StatusBadge domain="inventory" value="draft" size="sm" />
+          {(() => {
+            const step = grnProcurementStepChip({
+              status: "draft",
+              poId: draft.poId,
+              poStatus: draft.poStatus,
+            });
+            return step ? (
+              <Badge variant="outline">
+                {grnProcurementStepChipLabel(step, grnCopy)}
+              </Badge>
+            ) : null;
+          })()}
           {draft.qcIssueCount > 0 ? (
             <Badge variant="warning">
               {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
@@ -667,7 +719,7 @@ function GrnDraftMobileCard({
         <p className="truncate text-xs text-muted-foreground">
           {draft.supplierName}
           {` • ${draft.branchName}`}
-          {draft.poId != null && draft.poCode ? ` • Đơn ${draft.poCode}` : ""}
+          {draft.poCount > 0 && draft.poCode ? ` • Đơn ${draft.poCode}` : ""}
         </p>
         <p className="text-xs text-muted-foreground">
           {INVENTORY_VI.grnDraftUpdatedAt(formatVNDateTime(draft.updatedAt))}
@@ -717,6 +769,14 @@ function GrnMobileCard({
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm font-semibold">{grn.code}</span>
           <StatusBadge domain="inventory" value={grn.status} size="sm" />
+          {(() => {
+            const step = grnProcurementStepChip(grn);
+            return step ? (
+              <Badge variant="outline">
+                {grnProcurementStepChipLabel(step, grnCopy)}
+              </Badge>
+            ) : null;
+          })()}
           {grn.qcIssueCount > 0 ? (
             <Badge variant="warning">
               {messages.inventory.grn.qcIssueCount(grn.qcIssueCount)}
@@ -726,13 +786,13 @@ function GrnMobileCard({
         <p className="truncate text-xs text-muted-foreground">
           {grn.supplierName}
           {` • ${grn.branchName}`}
-          {grn.poId != null && grn.poCode ? ` • Đơn ${grn.poCode}` : ""}
+          {grn.poCount > 0 && grn.poCode ? ` • Đơn ${grn.poCode}` : ""}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <div className="flex flex-col items-end gap-1">
           <span className="text-xs text-muted-foreground">
-            {grn.date || "—"}
+            {grn.date || noValue}
           </span>
         </div>
         <div

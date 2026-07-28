@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRight as IconChevronRight,
   ClipboardList as IconClipboard,
@@ -43,7 +43,7 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormField } from "@/components/form";
@@ -116,7 +116,21 @@ export function BranchConsumptionListClient({
 }) {
   const router = useRouter();
   const basePath = `/br/${branchId}/stock/consumption`;
-  const [view, setView] = useState<ConsumptionView>("recorded");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requestedView = searchParams.get("view");
+  const view: ConsumptionView =
+    requestedView === "manual" ? "manual" : "recorded";
+  const setView = useCallback(
+    (next: ConsumptionView) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "recorded") params.delete("view");
+      else params.set("view", next);
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<BranchStockIssueStatusFilter>("all");
   const [createOpen, setCreateOpen] = useState(false);
@@ -186,8 +200,7 @@ export function BranchConsumptionListClient({
             {INVENTORY_VI.manualConsumptionSlipsTitle}
           </TabsTrigger>
         </TabsList>
-      </Tabs>
-
+        <TabsContent value={view}>
       {canManage ? (
         <Button
           type="button"
@@ -393,6 +406,8 @@ export function BranchConsumptionListClient({
           </ItemGroup>
         )}
       </BranchOperatorPanel>
+        </TabsContent>
+      </Tabs>
 
       <Sheet open={createOpen} onOpenChange={setCreateOpen}>
         <SheetContent

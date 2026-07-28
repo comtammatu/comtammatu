@@ -274,12 +274,12 @@ test("GRN warehouse draft does not require unit price (D091)", () => {
   assert.match(controller, /lines: recentLines/);
   assert.doesNotMatch(controller, /existingDraft/);
   assert.match(data, /\.from\("goods_received_notes"\)/);
-  assert.match(data, /\.eq\("supplier_id", supplierId\)/);
+  assert.doesNotMatch(data, /\.eq\("supplier_id", supplierId\)/);
   assert.match(data, /\.eq\("branch_id", defaultBranchId\)/);
   assert.match(data, /\.eq\("status", "confirmed"\)/);
   assert.match(
     data,
-    /\.select\("ingredient_id, received_quantity, entry_unit_id"\)/,
+    /ingredient_id, received_quantity, entry_unit_id, supplier_id/,
   );
   assert.doesNotMatch(data, /supplier_price_list/);
   assert.doesNotMatch(
@@ -329,6 +329,11 @@ test("GRN create-from-supplier saveLine threads the picked entryUnitId to upsert
     /entryUnitId:\s*edit\.entryUnitId/,
     "saveLine must forward the selected entryUnitId, not force the base unit",
   );
+  assert.match(
+    saveCall,
+    /supplierId:\s*edit\.supplierId/,
+    "saveLine must forward the selected line supplierId",
+  );
   assert.doesNotMatch(
     saveCall,
     /\bunit\s*:/,
@@ -344,7 +349,7 @@ test("GRN submit persists preloaded recent lines before review navigation", asyn
     "const persisted = await persistPendingGrnDraftLines(",
   );
   const reviewNavigationIndex = controller.indexOf(
-    "router.push(`${grnBasePath}/${grnId}?review=1`)",
+    "router.push(`${grnBasePath}/${grnId}`)",
   );
   assert.ok(persistIndex >= 0, "submit must persist pending draft lines");
   assert.ok(
@@ -355,6 +360,7 @@ test("GRN submit persists preloaded recent lines before review navigation", asyn
   const calls: Array<{
     grnId: number;
     ingredientId: number;
+    supplierId: number;
     receivedQuantity: number;
     entryUnitId: number | null;
   }> = [];
@@ -364,6 +370,8 @@ test("GRN submit persists preloaded recent lines before review navigation", asyn
       {
         ingredientId: 10,
         ingredientName: "Gạo",
+        supplierId: 7,
+        supplierName: "NCC A",
         unit: "bao",
         entryUnitId: 3,
         quantity: 2,
@@ -372,6 +380,8 @@ test("GRN submit persists preloaded recent lines before review navigation", asyn
         lineId: 44,
         ingredientId: 11,
         ingredientName: "Muối",
+        supplierId: 8,
+        supplierName: "NCC B",
         unit: "kg",
         entryUnitId: null,
         quantity: 1,
@@ -387,6 +397,7 @@ test("GRN submit persists preloaded recent lines before review navigation", asyn
     {
       grnId: 91,
       ingredientId: 10,
+      supplierId: 7,
       receivedQuantity: 2,
       entryUnitId: 3,
     },
@@ -398,6 +409,8 @@ test("GRN submit persists preloaded recent lines before review navigation", asyn
         lineId: 45,
         ingredientId: 10,
         ingredientName: "Gạo",
+        supplierId: 7,
+        supplierName: "NCC A",
         unit: "bao",
         entryUnitId: 3,
         quantity: 2,
@@ -406,6 +419,8 @@ test("GRN submit persists preloaded recent lines before review navigation", asyn
         lineId: 44,
         ingredientId: 11,
         ingredientName: "Muối",
+        supplierId: 8,
+        supplierName: "NCC B",
         unit: "kg",
         entryUnitId: null,
         quantity: 1,
@@ -422,12 +437,16 @@ test("GRN submit stops when a preloaded line cannot be persisted", async () => {
       {
         ingredientId: 20,
         ingredientName: "Dầu",
+        supplierId: 7,
+        supplierName: "NCC A",
         unit: "can",
         quantity: 1,
       },
       {
         ingredientId: 21,
         ingredientName: "Đường",
+        supplierId: 8,
+        supplierName: "NCC B",
         unit: "kg",
         quantity: 1,
       },

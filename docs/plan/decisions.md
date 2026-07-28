@@ -612,16 +612,73 @@ prose mới cho Operations chrome (POS/KDS/Runner). Role `owner` và
    được suy ra; dòng có số lượng từ chối bắt buộc lý do + ảnh. Không lưu
    `quality_status`, lot/HSD/nhiệt độ, tolerance, price variance, baseline,
    hard-block, express hoặc auto-approval.
-3. Luồng mua duy nhất trên UI là **GRN draft → tạo PO từ GRN → duyệt PO →
-   confirm GRN**. Giá thương mại thuộc PO; duyệt PO sync snapshot
-   `grn_items.unit_cost` để WAC/ledger sử dụng. Không có CTA tạo PO trực tiếp
-   hoặc tạo GRN từ PO; RPC phục hồi PO→GRN chỉ dành cho `service_role`.
+3. Luồng mua duy nhất trên UI là **GRN draft (đa NCC theo dòng) → tách PO theo
+   NCC → duyệt từng PO → confirm GRN khi mọi PO nguồn đã duyệt** (D092). Giá
+   thương mại thuộc PO; duyệt PO sync snapshot `grn_items.unit_cost` theo NCC
+   dòng. Không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO; RPC phục hồi PO→GRN
+   chỉ dành cho `service_role`.
 4. PO một cấp; trạng thái nhận được suy ra từ số lượng, không có quyết định
    thủ công `accept_and_close`. Đối soát giá HĐ NCC thuộc Finance.
 
 **Supersedes:** D000, D060, D066, D068, D073, D078, phần Inventory của D082 và
 D088, cùng toàn bộ D089. D076 tiếp tục sở hữu roster role; D083 tiếp tục sở hữu
-VAT món và PO một cấp.
+VAT món và PO một cấp. D092 mở rộng hợp đồng đa NCC trên GRN.
 
 **Canonical:** `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`,
 `docs/spec/role-route-matrix.md`.
+
+## D092: Multi-supplier GRN + split PO by supplier (2026-07-29)
+
+**Decision (owner):**
+
+1. Kho tạo GRN draft **không chọn NCC trước** — vào thẳng form nguyên liệu.
+2. `grn_items.supplier_id` bắt buộc; một GRN có thể chứa dòng thuộc nhiều NCC.
+   Header `goods_received_notes.supplier_id` nullable. Gán NCC: auto khi
+   `supplier_items` đúng 1 mapping active hoặc có mapping `is_preferred`; picker
+   trên sheet dòng khi >1 và chưa có ưu tiên.
+3. Kế toán/Owner tạo PO từ GRN → RPC `create_purchase_orders_from_grn` tách
+   **một draft PO mỗi NCC**, gắn `purchase_orders.source_grn_id`.
+4. Confirm GRN fail-closed trừ khi **mọi** PO `source_grn_id` (hoặc legacy
+   `po_id`) ở `sent` \| `partially_received`. Duyệt PO chỉ sync giá các dòng
+   GRN cùng `supplier_id`.
+5. `supplier_invoice` vẫn 1 HĐ ↔ 1 GRN/PO theo từng NCC (không gộp đa NCC
+   trong lát này).
+
+**Canonical:** `docs/ref/inventory.md` §5, `docs/ref/inventory-sop.md` §2,
+`supabase/migrations/20260729010000_multi_supplier_grn_split_po.sql`,
+`supabase/migrations/20260729140200_fix_supplier_invoice_multi_supplier_matching.sql`,
+`supabase/migrations/20260729140400_supplier_item_preferred.sql`.
+
+## D094: Preferred supplier mapping (2026-07-29)
+
+**Decision (owner):** Khi nguyên liệu có nhiều `supplier_items` active, tối đa
+một mapping `is_preferred`. GRN draft auto-chọn NCC ưu tiên; picker vẫn cho
+đổi. Mapping duy nhất được backfill/ghi `is_preferred` để catalog thống nhất.
+
+**Canonical:** `docs/ref/inventory.md` §5,
+`supabase/migrations/20260729140400_supplier_item_preferred.sql`.
+
+## D093: Central-only GRN + branch stock request (2026-07-29)
+
+**Decision (owner):**
+
+1. **GRN** chỉ tại site `central_supply` và `central_kitchen`. Chi nhánh không
+   tạo/confirm GRN và không có UI GRN.
+2. Chi nhánh bổ sung hàng bằng **Yêu cầu hàng** (`stock_requests`): một phiếu
+   mỗi lần xin; mỗi dòng copy `ingredients.default_fulfill_site_kind`
+   (`central_supply` | `central_kitchen`); CN không đổi nguồn; thiếu mapping →
+   fail closed.
+3. Kho Tổng / Bếp TT chỉ thấy dòng thuộc nguồn mình; fulfill tạo
+   `stock_transfers` (DC) từ kho nguồn → CN; CN nhận DC.
+4. Chi nhánh **không production**. Giữ tồn, tiêu hao, kiểm kê, hao hụt, giao đếm.
+5. Nav/tile fail-closed theo role. `central_supply_ops` /
+   `central_kitchen_lead` được `inventory:transfer_create` +
+   `inventory:request_fulfill`. `branch_manager` mất `procurement:grn_*` và
+   `inventory:production_*`; nhận `inventory:request_*` (create/submit/cancel).
+6. Supersede D091 trong phạm vi: branch GRN, “không mở PR”, và branch
+   production. Topology one-warehouse/site và GRN→PO tại trung tâm giữ nguyên.
+   D092 (multi-supplier GRN) vẫn áp dụng trên GRN trung tâm.
+
+**Canonical:** `docs/ref/inventory-role-ops.md`, `docs/ref/inventory.md` §11,
+`docs/ref/inventory-sop.md`, `docs/spec/role-route-matrix.md`,
+`supabase/migrations/20260729140000_d093_central_grn_branch_stock_request.sql`.

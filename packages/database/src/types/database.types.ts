@@ -1783,7 +1783,7 @@ export type Database = {
           received_by: string | null
           received_date: string
           status: string
-          supplier_id: number
+          supplier_id: number | null
           tenant_id: number
           updated_at: string
         }
@@ -1799,7 +1799,7 @@ export type Database = {
           received_by?: string | null
           received_date?: string
           status?: string
-          supplier_id: number
+          supplier_id?: number | null
           tenant_id: number
           updated_at?: string
         }
@@ -1815,7 +1815,7 @@ export type Database = {
           received_by?: string | null
           received_date?: string
           status?: string
-          supplier_id?: number
+          supplier_id?: number | null
           tenant_id?: number
           updated_at?: string
         }
@@ -1888,6 +1888,7 @@ export type Database = {
           rejected_photo_url: string | null
           rejected_quantity: number
           rejection_reason: string | null
+          supplier_id: number
           tenant_id: number
           total_cost: number
           unit_cost: number
@@ -1901,6 +1902,7 @@ export type Database = {
           rejected_photo_url?: string | null
           rejected_quantity?: number
           rejection_reason?: string | null
+          supplier_id: number
           tenant_id: number
           total_cost?: number
           unit_cost?: number
@@ -1914,6 +1916,7 @@ export type Database = {
           rejected_photo_url?: string | null
           rejected_quantity?: number
           rejection_reason?: string | null
+          supplier_id?: number
           tenant_id?: number
           total_cost?: number
           unit_cost?: number
@@ -1938,6 +1941,13 @@ export type Database = {
             columns: ["ingredient_id"]
             isOneToOne: false
             referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
           {
@@ -2142,6 +2152,7 @@ export type Database = {
           category: string | null
           category_id: number | null
           created_at: string
+          default_fulfill_site_kind: string | null
           id: number
           is_active: boolean
           item_kind: string
@@ -2160,6 +2171,7 @@ export type Database = {
           category?: string | null
           category_id?: number | null
           created_at?: string
+          default_fulfill_site_kind?: string | null
           id?: never
           is_active?: boolean
           item_kind?: string
@@ -2178,6 +2190,7 @@ export type Database = {
           category?: string | null
           category_id?: number | null
           created_at?: string
+          default_fulfill_site_kind?: string | null
           id?: never
           is_active?: boolean
           item_kind?: string
@@ -5502,6 +5515,7 @@ export type Database = {
           notes: string | null
           ordered_at: string
           po_number: string
+          source_grn_id: number | null
           status: string
           supplier_id: number
           tenant_id: number
@@ -5516,6 +5530,7 @@ export type Database = {
           notes?: string | null
           ordered_at?: string
           po_number: string
+          source_grn_id?: number | null
           status?: string
           supplier_id: number
           tenant_id: number
@@ -5530,6 +5545,7 @@ export type Database = {
           notes?: string | null
           ordered_at?: string
           po_number?: string
+          source_grn_id?: number | null
           status?: string
           supplier_id?: number
           tenant_id?: number
@@ -5555,6 +5571,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_source_grn_id_fkey"
+            columns: ["source_grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_received_notes"
             referencedColumns: ["id"]
           },
           {
@@ -6884,6 +6907,151 @@ export type Database = {
           },
         ]
       }
+      stock_request_items: {
+        Row: {
+          created_at: string
+          entry_unit_id: number
+          fulfill_site_kind: string
+          id: number
+          ingredient_id: number
+          notes: string | null
+          quantity: number
+          request_id: number
+          status: string
+          tenant_id: number
+          transfer_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entry_unit_id: number
+          fulfill_site_kind: string
+          id?: number
+          ingredient_id: number
+          notes?: string | null
+          quantity: number
+          request_id: number
+          status?: string
+          tenant_id: number
+          transfer_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entry_unit_id?: number
+          fulfill_site_kind?: string
+          id?: number
+          ingredient_id?: number
+          notes?: string | null
+          quantity?: number
+          request_id?: number
+          status?: string
+          tenant_id?: number
+          transfer_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_request_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_request_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "stock_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_request_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_request_items_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "stock_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_requests: {
+        Row: {
+          branch_id: number
+          cancelled_at: string | null
+          created_at: string
+          created_by: string | null
+          id: number
+          notes: string | null
+          request_number: string
+          status: string
+          submitted_at: string | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          notes?: string | null
+          request_number: string
+          status?: string
+          submitted_at?: string | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          notes?: string | null
+          request_number?: string
+          status?: string
+          submitted_at?: string | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "stock_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_transfer_items: {
         Row: {
           entry_unit_id: number
@@ -7727,6 +7895,7 @@ export type Database = {
           id: number
           ingredient_id: number
           is_active: boolean
+          is_preferred: boolean
           notes: string | null
           pack_size: number | null
           pack_uom: string | null
@@ -7741,6 +7910,7 @@ export type Database = {
           id?: never
           ingredient_id: number
           is_active?: boolean
+          is_preferred?: boolean
           notes?: string | null
           pack_size?: number | null
           pack_uom?: string | null
@@ -7755,6 +7925,7 @@ export type Database = {
           id?: never
           ingredient_id?: number
           is_active?: boolean
+          is_preferred?: boolean
           notes?: string | null
           pack_size?: number | null
           pack_uom?: string | null
@@ -9314,6 +9485,15 @@ export type Database = {
         }
         Returns: Json
       }
+      add_stock_request_line: {
+        Args: {
+          p_entry_unit_id: number
+          p_ingredient_id: number
+          p_quantity: number
+          p_request_id: number
+        }
+        Returns: Json
+      }
       adjust_stock_exception: {
         Args: {
           p_branch_id: number
@@ -9502,6 +9682,7 @@ export type Database = {
         Returns: undefined
       }
       cancel_production_run: { Args: { p_run_id: number }; Returns: Json }
+      cancel_stock_request: { Args: { p_request_id: number }; Returns: Json }
       check_cron_jobs_health: { Args: never; Returns: undefined }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
       claim_print_job: {
@@ -9764,6 +9945,10 @@ export type Database = {
         Args: { p_grn_id: number }
         Returns: Json
       }
+      create_purchase_orders_from_grn: {
+        Args: { p_grn_id: number }
+        Returns: Json
+      }
       create_refund: {
         Args: { p_amount: number; p_payment_id: number; p_reason: string }
         Returns: Json
@@ -9788,6 +9973,10 @@ export type Database = {
           p_provider_ref: string
           p_tenant_id: number
         }
+        Returns: Json
+      }
+      create_stock_request_draft: {
+        Args: { p_branch_id: number; p_notes?: string }
         Returns: Json
       }
       create_stock_transfer_draft: {
@@ -10038,6 +10227,16 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: string
+      }
+      fulfill_stock_request_lines: {
+        Args: {
+          p_from_branch_id: number
+          p_from_location_id: number
+          p_fulfill_site_kind: string
+          p_item_ids: number[]
+          p_request_id: number
+        }
+        Returns: Json
       }
       generate_order_payment_code: { Args: never; Returns: string }
       get_ap_aging: {
@@ -10965,6 +11164,15 @@ export type Database = {
         }
         Returns: Json
       }
+      recreate_grn_at_receiving_site: {
+        Args: {
+          p_grn_id: number
+          p_reason: string
+          p_target_branch_id: number
+          p_target_location_id: number
+        }
+        Returns: Json
+      }
       reduce_order_item_quantity: {
         Args: {
           p_new_quantity: number
@@ -11314,6 +11522,10 @@ export type Database = {
         Args: { p_is_priority: boolean; p_note?: string; p_order_id: number }
         Returns: Json
       }
+      set_supplier_item_preferred: {
+        Args: { p_is_preferred: boolean; p_item_id: number }
+        Returns: Json
+      }
       snapshot_payroll_calculation: {
         Args: {
           p_entries: Json
@@ -11355,6 +11567,10 @@ export type Database = {
           location_id: number
           stock_levels_qty: number
         }[]
+      }
+      stock_request_actor_can_read: {
+        Args: { p_branch_id: number }
+        Returns: boolean
       }
       stock_transfer_confirm_receive: {
         Args: { p_transfer_id: number }
@@ -11418,6 +11634,7 @@ export type Database = {
         }
         Returns: number
       }
+      submit_stock_request: { Args: { p_request_id: number }; Returns: Json }
       sync_insurance_base: {
         Args: { p_employee_id: number }
         Returns: undefined

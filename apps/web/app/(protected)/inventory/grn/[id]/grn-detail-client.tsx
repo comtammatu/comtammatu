@@ -1,12 +1,18 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import {
   Sheet,
   SheetContent,
@@ -53,6 +59,7 @@ import {
   GRN_DETAIL_COPY as grnCopy,
   INVENTORY_COMMON_COPY as inventoryCommon,
 } from "@lib/inventory/grn-detail-model";
+import { supplierInvoiceHrefForGrn } from "@lib/inventory/grn-list-model";
 import { deriveGrnQualityStatus } from "@lib/inventory/grn-quality";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import { createPurchaseOrderFromGrn } from "@/(protected)/inventory/procurement-actions";
@@ -61,6 +68,7 @@ import { AddGrnLineDialog } from "./views/add-grn-line-dialog";
 import { AmendOwnerDialog } from "./views/amend-owner-dialog";
 import { DraftGrnLineCard } from "./views/draft-grn-line-card";
 import { LineRow } from "./views/grn-line-row";
+import { AppDialog } from "@/components/form/form-dialog";
 import { DraftReceivingSiteDialog } from "./views/draft-receiving-site-dialog";
 
 export type { GrnDetail as GRNDetail } from "@lib/inventory/grn-detail-model";
@@ -105,12 +113,10 @@ export function GRNDetailClient({
   embedded?: boolean;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   // Device-derived, not param-derived: the old `?m=1` flag had no setter
   // anywhere in the codebase, so the mobile post-confirm navigation and
   // back-link paths below never activated for phone receivers.
   const isMobile = embedded;
-  const isReview = searchParams.get("review") === "1";
   const isDesktopLineEdit = !useIsMobile(DESK_LINE_EDIT_BREAKPOINT);
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
@@ -119,10 +125,12 @@ export function GRNDetailClient({
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [amendingLine, setAmendingLine] = useState<EditableLine | null>(null);
   const [editingLineId, setEditingLineId] = useState<number | null>(null);
+  const [createPoPreviewOpen, setCreatePoPreviewOpen] = useState(false);
 
   const isDraft = grn.status === "draft";
   const isConfirmed = grn.status === "confirmed";
-  const canMutateDraft = canEditDraft && isDraft && grn.poId == null;
+  const canMutateDraft =
+    canEditDraft && isDraft && grn.poId == null && grn.linkedPos.length === 0;
   const statusBadge = getStatusBadgeMeta("inventory", grn.status);
   const showAmendAffordance = canAmendConfirmed && isConfirmed;
 
@@ -162,16 +170,133 @@ export function GRNDetailClient({
       notify.error(grnCopy.confirmBlockedByDirty);
       return;
     }
+    setCreatePoPreviewOpen(true);
+  }
+
+  function confirmCreatePoFromGrn() {
+    setCreatePoPreviewOpen(false);
     startCreatePo(async () => {
       const result = await createPurchaseOrderFromGrn({ grnId: grn.id });
       if (!result.success) {
         notify.error(result.error ?? grnCopy.createPoFromGrnFailed);
         return;
       }
-      notify.success(grnCopy.createPoFromGrnDone);
+      const payload = result.data as
+        | { id?: number; poIds?: number[]; poCount?: number }
+        | undefined;
+      const poCount = payload?.poCount ?? payload?.poIds?.length ?? 1;
+      notify.success(
+        poCount > 1
+          ? grnCopy.createPoFromGrnDoneMulti(poCount)
+          : grnCopy.createPoFromGrnDone,
+      );
+      const poId = payload?.id ?? payload?.poIds?.[0];
+      if (poId != null) {
+        router.push(`/inventory/purchase-orders?poId=${poId}`);
+        return;
+      }
       router.refresh();
     });
   }
+
+  const poPreviewGroups = useMemo(() => {
+    const groups = new Map<
+      number,
+      { supplierName: string; lines: EditableLine[] }
+    >();
+    for (const line of lines) {
+      const existing = groups.get(line.supplierId);
+      if (existing) {
+        existing.lines.push(line);
+      } else {
+        groups.set(line.supplierId, {
+          supplierName: line.supplierName,
+          lines: [line],
+        });
+      }
+    }
+    return [...groups.entries()].map(([supplierId, group]) => ({
+      supplierId,
+      ...group,
+    }));
+  }, [lines]);
+
+  const nextStepBanner = (() => {
+    if (!isDraft) return null;
+    if (dirtyLines.length > 0) {
+      return {
+        title: grnCopy.nextStepSaveFirstTitle,
+        body: grnCopy.nextStepSaveFirstBody,
+        action: null as ReactNode,
+      };
+    }
+    if (canCreatePoFromGrn) {
+      return {
+        title: grnCopy.nextStepNeedPoTitle,
+        body: grnCopy.nextStepNeedPoBody,
+        action: (
+          <Button
+            type="button"
+            size="sm"
+            disabled={isCreatingPo || isSaving || lines.length === 0}
+            onClick={handleCreatePoFromGrn}
+          >
+            {grnCopy.createPoFromGrnActionBySupplier}
+          </Button>
+        ),
+      };
+    }
+    if ((grn.poId != null || grn.linkedPos.length > 0) && !canConfirm) {
+      return {
+        title: grnCopy.nextStepAwaitingPoTitle,
+        body: grnCopy.nextStepAwaitingPoBody,
+        action:
+          grn.linkedPos.length > 1 ? (
+            <div className="flex flex-wrap gap-2">
+              {grn.linkedPos.map((po) => (
+                <Button
+                  key={po.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  render={
+                    <Link href={`/inventory/purchase-orders?poId=${po.id}`} />
+                  }
+                >
+                  {po.poNumber}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              render={
+                <Link href={`/inventory/purchase-orders?poId=${grn.poId}`} />
+              }
+            >
+              {grnCopy.openLinkedPo}
+            </Button>
+          ),
+      };
+    }
+    if (canConfirm) {
+      return {
+        title: grnCopy.nextStepReadyTitle,
+        body: grnCopy.nextStepReadyBody,
+        action: null,
+      };
+    }
+    if (grn.poId == null) {
+      return {
+        title: grnCopy.nextStepNeedPoTitle,
+        body: grnCopy.nextStepWaitingAccountant,
+        action: null,
+      };
+    }
+    return null;
+  })();
 
   const draftColumns = useMemo<DataTableColumn<EditableLine>[]>(
     () => [
@@ -181,6 +306,9 @@ export function GRNDetailClient({
         render: (line) => (
           <div className="min-w-0">
             <p className="min-w-0 truncate font-medium">{line.name}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {line.supplierName}
+            </p>
             {line.dirty ? (
               <Badge variant="outline" className="mt-1 text-2xs">
                 {grnCopy.line.unsaved}
@@ -276,6 +404,7 @@ export function GRNDetailClient({
         render: (line) => (
           <div className="min-w-0">
             <p className="font-medium">{line.name}</p>
+            <p className="text-xs text-muted-foreground">{line.supplierName}</p>
           </div>
         ),
       },
@@ -412,11 +541,11 @@ export function GRNDetailClient({
               size={isMobile ? "touch" : "default"}
               render={
                 <Link
-                  href={
-                    grn.invoiceId
-                      ? `${supplierInvoicesBasePath}?invoiceId=${grn.invoiceId}`
-                      : `${supplierInvoicesBasePath}?grnId=${grn.id}`
-                  }
+                  href={supplierInvoiceHrefForGrn({
+                    basePath: supplierInvoicesBasePath,
+                    grnId: grn.id,
+                    invoiceId: grn.invoiceId,
+                  })}
                 />
               }
             >
@@ -454,7 +583,7 @@ export function GRNDetailClient({
                 }
                 onClick={handleCreatePoFromGrn}
               >
-                {grnCopy.createPoFromGrnAction}
+                {grnCopy.createPoFromGrnActionBySupplier}
               </Button>
             ) : null}
             <Button
@@ -467,8 +596,11 @@ export function GRNDetailClient({
                 dirtyLines.length > 0 ||
                 lines.length === 0
               }
-              title={
-                !canConfirm ? grnCopy.confirmBlockedNeedsApprovedPo : undefined
+              aria-disabled={
+                !canConfirm ||
+                isConfirming ||
+                dirtyLines.length > 0 ||
+                lines.length === 0
               }
               onClick={handleConfirmGrn}
             >
@@ -495,14 +627,45 @@ export function GRNDetailClient({
             term: grnCopy.receivingWarehouse,
             description: `${grn.branchName}${receivingLocationName ? ` · ${receivingLocationName}` : ""}`,
           },
-          ...(grn.poCode
+          ...(grn.linkedPos.length > 0
             ? [
                 {
                   term: grnCopy.linkedPo,
-                  description: <span className="font-mono">{grn.poCode}</span>,
+                  description: (
+                    <span className="flex flex-wrap gap-x-2 gap-y-1">
+                      {grn.linkedPos.map((po) => (
+                        <Link
+                          key={po.id}
+                          href={`/inventory/purchase-orders?poId=${po.id}`}
+                          className="font-mono text-primary hover:underline"
+                        >
+                          {po.poNumber}
+                          {grn.linkedPos.length > 1
+                            ? ` · ${po.supplierName}`
+                            : ""}
+                        </Link>
+                      ))}
+                    </span>
+                  ),
                 },
               ]
-            : []),
+            : grn.poCode
+              ? [
+                  {
+                    term: grnCopy.linkedPo,
+                    description: grn.poId != null ? (
+                      <Link
+                        href={`/inventory/purchase-orders?poId=${grn.poId}`}
+                        className="font-mono text-primary hover:underline"
+                      >
+                        {grn.poCode}
+                      </Link>
+                    ) : (
+                      <span className="font-mono">{grn.poCode}</span>
+                    ),
+                  },
+                ]
+              : []),
         ]}
       />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
@@ -605,10 +768,16 @@ export function GRNDetailClient({
 
   const documentBody = (
     <div className="flex flex-col gap-3">
-      {isReview && isDraft ? (
+      {nextStepBanner ? (
         <Alert>
           <IconInfoCircle className="size-4" />
-          <AlertDescription>{grnCopy.draftSavedReviewHint}</AlertDescription>
+          <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              <span className="font-medium">{nextStepBanner.title}. </span>
+              {nextStepBanner.body}
+            </span>
+            {nextStepBanner.action}
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -790,6 +959,62 @@ export function GRNDetailClient({
         startTransition={startAmend}
       />
       {draftLineSheet}
+      <AppDialog
+        open={createPoPreviewOpen}
+        onOpenChange={setCreatePoPreviewOpen}
+        title={grnCopy.createPoPreviewTitle}
+        description={grnCopy.createPoPreviewDescription(
+          poPreviewGroups.length,
+        )}
+        contentClassName="sm:max-w-lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreatePoPreviewOpen(false)}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+            <Button
+              type="button"
+              disabled={isCreatingPo || poPreviewGroups.length === 0}
+              onClick={confirmCreatePoFromGrn}
+            >
+              {grnCopy.createPoFromGrnActionBySupplier}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          {poPreviewGroups.map((group) => (
+            <Item
+              key={group.supplierId}
+              variant="outline"
+              className="flex-col items-stretch gap-1.5"
+            >
+              <ItemContent className="min-w-0 gap-1">
+                <ItemTitle className="text-sm font-semibold">
+                  {group.supplierName}
+                </ItemTitle>
+                <ItemDescription className="text-xs">
+                  {grnCopy.createPoPreviewLineCount(group.lines.length)}
+                </ItemDescription>
+              </ItemContent>
+              <ul className="mt-1 flex flex-col gap-1 text-sm">
+                {group.lines.map((line) => (
+                  <li key={line.lineId} className="flex justify-between gap-2">
+                    <span className="min-w-0 truncate">{line.name}</span>
+                    <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
+                      {formatQty(line.actual)} {line.unit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Item>
+          ))}
+        </div>
+      </AppDialog>
     </>
   );
 

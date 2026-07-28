@@ -42,6 +42,8 @@ export type StockWorkSummary = {
 };
 
 export type StockActionPermissions = {
+  canCreateStockRequest: boolean;
+  /** L0 / central GRN receive CTA (D093 — not branch). */
   canReceiveGrn: boolean;
   canReceiveTransfer: boolean;
   canCreateIssue: boolean;

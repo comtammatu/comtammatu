@@ -104,6 +104,7 @@ export interface BranchOperatorPanelProps {
   className?: string;
   contentClassName?: string;
   size?: "default" | "sm";
+  headingLevel?: "h2" | "h3" | "h4";
 }
 
 export function BranchOperatorPanel({
@@ -118,10 +119,12 @@ export function BranchOperatorPanel({
   className,
   contentClassName,
   size,
+  headingLevel,
 }: BranchOperatorPanelProps) {
   return (
     <AppSection
       title={title}
+      headingLevel={headingLevel}
       description={description}
       headerHint={headerHint}
       icon={Icon ? <Icon aria-hidden="true" /> : undefined}
@@ -523,6 +526,7 @@ interface BranchOperatorActionItemProps {
   description?: string;
   size?: "default" | "sm";
   disabled?: boolean;
+  disabledReason?: string;
   presentation?: "panel" | "plain" | "stations";
 }
 
@@ -533,6 +537,7 @@ function BranchOperatorActionItem({
   description,
   size,
   disabled,
+  disabledReason,
   presentation = "panel",
 }: BranchOperatorActionItemProps) {
   if (disabled) {
@@ -544,7 +549,7 @@ function BranchOperatorActionItem({
         className={cn(
           "items-start bg-card opacity-50",
           presentation === "stations"
-            ? "min-h-16 items-center sm:min-h-24 sm:items-start"
+            ? "min-h-20 items-center sm:min-h-24 sm:items-start"
             : "min-h-14 lg:items-center",
           presentation !== "stations" && size === "sm" && "min-h-12",
         )}
@@ -576,6 +581,11 @@ function BranchOperatorActionItem({
               {description}
             </ItemDescription>
           ) : null}
+          {disabledReason ? (
+            <ItemDescription className="line-clamp-none text-xs font-medium text-warning">
+              {disabledReason}
+            </ItemDescription>
+          ) : null}
         </ItemContent>
       </Item>
     );
@@ -588,7 +598,7 @@ function BranchOperatorActionItem({
       className={cn(
         "group/branch-operator-action chrome-tap items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-effect-card-hover active:scale-[0.97]",
         presentation === "stations"
-          ? "min-h-16 items-center sm:min-h-24 sm:items-start"
+          ? "min-h-20 items-center sm:min-h-24 sm:items-start"
           : "min-h-14 lg:items-center",
         presentation !== "stations" && size === "sm" && "min-h-12",
       )}
@@ -637,6 +647,7 @@ export interface BranchOperatorActionSectionProps {
     title: string;
     description?: string;
     disabled?: boolean;
+    disabledReason?: string;
   }>;
   columns?: 1 | 2;
   mobileColumns?: 1 | 2;
@@ -678,6 +689,7 @@ export function BranchOperatorActionSection({
           description={link.description}
           size={size}
           disabled={link.disabled}
+          disabledReason={link.disabledReason}
           presentation={presentation}
         />
       ))}

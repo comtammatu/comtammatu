@@ -45,7 +45,7 @@ import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { FORM_VI } from "@comtammatu/shared/messages";
-import { createSupplierItem, deleteSupplierItem } from "./actions";
+import { createSupplierItem, deleteSupplierItem, setSupplierItemPreferred } from "./actions";
 
 export type SupplierIngredientOption = {
   id: number;
@@ -59,6 +59,7 @@ export type SupplierItemRow = {
   ingredientName: string;
   ingredientSku: string | null;
   supplierSkuCode: string;
+  isPreferred: boolean;
 };
 
 const itemSchema = z.object({
@@ -133,7 +134,46 @@ export function SupplierItemsClient({
     });
   }
 
+  function setPreferred(row: SupplierItemRow, isPreferred: boolean) {
+    startTransition(async () => {
+      const result = await setSupplierItemPreferred({
+        supplierId: supplier.id,
+        itemId: row.id,
+        isPreferred,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        isPreferred ? copy.setPreferredSuccess : copy.clearPreferredSuccess,
+      );
+      router.refresh();
+    });
+  }
+
   const getSupplierItemRowActions = (row: SupplierItemRow): RowActionItem[] => [
+    ...(row.isPreferred
+      ? [
+          {
+            key: "clear-preferred",
+            label: copy.clearPreferredAction,
+            disabled: isPending,
+            onSelect: () => {
+              setPreferred(row, false);
+            },
+          } satisfies RowActionItem,
+        ]
+      : [
+          {
+            key: "set-preferred",
+            label: copy.setPreferredAction,
+            disabled: isPending,
+            onSelect: () => {
+              setPreferred(row, true);
+            },
+          } satisfies RowActionItem,
+        ]),
     {
       key: "remove",
       label: copy.removeAria(row.ingredientName),
@@ -151,7 +191,12 @@ export function SupplierItemsClient({
       key: "ingredient",
       header: copy.ingredient,
       render: (row) => (
-        <span className="font-medium">{row.ingredientName}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">{row.ingredientName}</span>
+          {row.isPreferred ? (
+            <Badge variant="secondary">{copy.preferredBadge}</Badge>
+          ) : null}
+        </div>
       ),
     },
     {
@@ -272,7 +317,14 @@ export function SupplierItemsClient({
             mobileCardRender={(row) => (
               <Item variant="outline">
                 <ItemContent>
-                  <ItemTitle>{row.ingredientName}</ItemTitle>
+                  <ItemTitle>
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      {row.ingredientName}
+                      {row.isPreferred ? (
+                        <Badge variant="secondary">{copy.preferredBadge}</Badge>
+                      ) : null}
+                    </span>
+                  </ItemTitle>
                   <ItemDescription>
                     {copy.supplierSku}: {row.supplierSkuCode}
                   </ItemDescription>

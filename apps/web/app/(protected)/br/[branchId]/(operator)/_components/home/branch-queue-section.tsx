@@ -173,14 +173,22 @@ export async function BranchQueueSection({ branchId }: { branchId: number }) {
   if (queueRows.length === 0) return null;
 
   return (
-    <BranchOperatorPanel
-      title={branchCopy.queueTitle}
-      icon={ClipboardCheck}
-      tone="warning"
-      size="sm"
-      badge={{ children: String(queuePendingTotal), variant: "warning" }}
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label={branchCopy.queueAriaLabel(queuePendingTotal)}
     >
-      <CompactQueueSection rows={queueRows} />
-    </BranchOperatorPanel>
+      <BranchOperatorPanel
+        title={branchCopy.queueTitle}
+        icon={ClipboardCheck}
+        tone="warning"
+        size="sm"
+        headingLevel="h2"
+        badge={{ children: String(queuePendingTotal), variant: "warning" }}
+      >
+        <CompactQueueSection rows={queueRows} />
+      </BranchOperatorPanel>
+    </div>
   );
 }

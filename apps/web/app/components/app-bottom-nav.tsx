@@ -13,7 +13,7 @@ import { Button } from "@comtammatu/ui/components/button";
  * trailing actions.
  */
 export const BOTTOM_NAV_ITEM_CLASS =
-  "flex-1 flex-col gap-1 px-1 text-2xs transition-[background-color,color,transform] duration-150 relative active:scale-95";
+  "flex-1 flex-col gap-1 px-1 text-xs transition-[background-color,color,transform] duration-150 relative active:scale-95";
 
 export type AppBottomNavItem = {
   href: string;

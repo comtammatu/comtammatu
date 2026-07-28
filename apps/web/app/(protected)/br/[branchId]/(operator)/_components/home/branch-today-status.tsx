@@ -45,7 +45,11 @@ export async function BranchTodayStatus({
     : formatDateVN(state.today);
 
   return (
-    <BranchOperatorControlBar>
+    <BranchOperatorControlBar
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">{title}</p>
         <p className="truncate text-xs text-muted-foreground">{todayMeta}</p>

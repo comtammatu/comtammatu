@@ -24,7 +24,7 @@ export const createSupplierItem = withAction(
     permission: PERMISSION_KEYS.PROCUREMENT_PRICE_LIST_WRITE,
   },
   async (data, { supabase, claims, user }) => {
-    const [{ data: supplier }, { data: ingredient }, { data: existing }] =
+    const [{ data: supplier }, { data: ingredient }, { data: existing }, { count: activeCount }] =
       await Promise.all([
         supabase
           .from("suppliers")
@@ -49,6 +49,12 @@ export const createSupplierItem = withAction(
           .eq("is_active", true)
           .limit(1)
           .maybeSingle(),
+        supabase
+          .from("supplier_items")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("ingredient_id", data.ingredientId)
+          .eq("is_active", true),
       ]);
 
     if (!supplier || !ingredient) {
@@ -69,6 +75,7 @@ export const createSupplierItem = withAction(
       supplier_id: data.supplierId,
       ingredient_id: data.ingredientId,
       supplier_sku_code: data.supplierSkuCode,
+      is_preferred: (activeCount ?? 0) === 0,
       created_by: user.id,
     });
 
@@ -81,6 +88,48 @@ export const createSupplierItem = withAction(
 
     revalidatePath(`/inventory/suppliers/${data.supplierId}/items`);
     revalidatePath("/inventory/purchase-orders");
+    return { success: true };
+  },
+);
+
+const setPreferredSchema = z.object({
+  supplierId: z.coerce.number().int().positive(),
+  itemId: z.coerce.number().int().positive(),
+  isPreferred: z.boolean(),
+});
+
+export const setSupplierItemPreferred = withAction(
+  {
+    roles: PROCUREMENT_ROLES,
+    schema: setPreferredSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PRICE_LIST_WRITE,
+  },
+  async (data, { supabase, claims }) => {
+    const { data: item, error: itemError } = await supabase
+      .from("supplier_items")
+      .select("id, supplier_id")
+      .eq("id", data.itemId)
+      .eq("supplier_id", data.supplierId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (itemError || !item) {
+      return { success: false, error: "Không tìm thấy nguyên liệu đã gán." };
+    }
+
+    const { error } = await supabase.rpc("set_supplier_item_preferred", {
+      p_item_id: data.itemId,
+      p_is_preferred: data.isPreferred,
+    });
+    if (error) {
+      if (error.code === "42501") {
+        return { success: false, error: "Không có quyền cập nhật NCC ưu tiên." };
+      }
+      return { success: false, error: "Không thể cập nhật NCC ưu tiên." };
+    }
+
+    revalidatePath(`/inventory/suppliers/${data.supplierId}/items`);
+    revalidatePath("/inventory/grn/new");
     return { success: true };
   },
 );

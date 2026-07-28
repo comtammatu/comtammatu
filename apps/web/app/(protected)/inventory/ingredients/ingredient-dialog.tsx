@@ -40,6 +40,8 @@ const copy = messages.inventoryMaster.ingredientForm;
 const dialogCopy = messages.inventory.ingredients.dialog;
 const NO_CATEGORY = "none";
 
+const FULFILL_SITE_NONE = "none";
+
 const ingredientSchema = z
   .object({
     name: z.string().trim().min(1, { error: dialogCopy.nameRequired }),
@@ -47,6 +49,9 @@ const ingredientSchema = z
     category_id: z.string().trim().optional(),
     item_kind: z.enum(["raw_material", "finished_good"]),
     min_stock_level: z.string().optional(),
+    default_fulfill_site_kind: z
+      .enum(["none", "central_supply", "central_kitchen"])
+      .optional(),
     input_unit_id: z.string().trim().min(1, { error: copy.units.selectUnit }),
     output_unit_id: z.string().trim().min(1, { error: copy.units.selectUnit }),
     input_to_output_factor: z
@@ -101,6 +106,8 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
       ingredient?.min_stock_level != null
         ? String(ingredient.min_stock_level)
         : "",
+    default_fulfill_site_kind:
+      ingredient?.default_fulfill_site_kind ?? FULFILL_SITE_NONE,
     input_unit_id: String(inputUnit?.unit_id ?? ""),
     output_unit_id: String(outputUnit?.unit_id ?? ""),
     input_to_output_factor: String(inputUnit?.to_base_factor ?? 1),
@@ -310,6 +317,11 @@ export function IngredientDialog({
       item_kind: values.item_kind,
       storage_type: storageType,
       min_stock_level: parseOptionalNumber(values.min_stock_level) ?? 0,
+      default_fulfill_site_kind:
+        values.default_fulfill_site_kind &&
+        values.default_fulfill_site_kind !== FULFILL_SITE_NONE
+          ? values.default_fulfill_site_kind
+          : null,
       units,
     };
 
@@ -436,6 +448,22 @@ function IngredientDialogFields({
           name="item_kind"
           label={dialogCopy.itemKindLabel}
           options={ITEM_KIND_OPTIONS}
+        />
+        <SelectField
+          control={form.control}
+          name="default_fulfill_site_kind"
+          label={dialogCopy.defaultFulfillSiteKindLabel}
+          options={[
+            { value: FULFILL_SITE_NONE, label: dialogCopy.defaultFulfillSiteKindNone },
+            {
+              value: "central_supply",
+              label: dialogCopy.defaultFulfillSiteKindCentralSupply,
+            },
+            {
+              value: "central_kitchen",
+              label: dialogCopy.defaultFulfillSiteKindCentralKitchen,
+            },
+          ]}
         />
         <SelectField
           control={form.control}

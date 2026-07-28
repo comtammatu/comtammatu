@@ -136,10 +136,13 @@ type SupplierOption = {
 };
 
 type GrnOption = {
+  optionKey: string;
   id: number;
   code: string;
   supplierId: number;
   supplierName: string;
+  poId: number | null;
+  netAcceptedAmount: number | null;
 };
 
 type SupplierInvoiceGroup = SupplierInvoiceAggregateGroup & {
@@ -190,7 +193,6 @@ const supplierInvoiceSchema = z
     vat8Amount: optionalMoneySchema,
     vat10Taxable: optionalMoneySchema,
     vat10Amount: optionalMoneySchema,
-    matchingNotes: z.string().trim().optional(),
   })
   .superRefine((data, ctx) => {
     const hasTaxableBucket = VAT_BUCKET_FIELDS.some(
@@ -209,6 +211,67 @@ const supplierInvoiceSchema = z
   });
 
 type SupplierInvoiceFormValues = z.infer<typeof supplierInvoiceSchema>;
+
+type VatRate = (typeof VAT_BUCKET_FIELDS)[number]["rate"];
+
+const DEFAULT_VISIBLE_VAT_RATE: VatRate = 8;
+
+function getVatBucket(rate: VatRate) {
+  const bucket = VAT_BUCKET_FIELDS.find((entry) => entry.rate === rate);
+  if (!bucket) {
+    throw new Error(`Unsupported VAT rate: ${rate}`);
+  }
+  return bucket;
+}
+
+function clearVatBucketFields(
+  form: UseFormReturn<
+    SupplierInvoiceFormValues,
+    unknown,
+    SupplierInvoiceFormValues
+  >,
+  rate: VatRate,
+) {
+  const bucket = getVatBucket(rate);
+  form.setValue(bucket.taxableField, "", {
+    shouldDirty: true,
+    shouldValidate: true,
+  });
+  if (bucket.vatField != null) {
+    form.setValue(bucket.vatField, "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }
+}
+
+function moveVatBucketFields(
+  form: UseFormReturn<
+    SupplierInvoiceFormValues,
+    unknown,
+    SupplierInvoiceFormValues
+  >,
+  fromRate: VatRate,
+  toRate: VatRate,
+) {
+  if (fromRate === toRate) return;
+  const from = getVatBucket(fromRate);
+  const to = getVatBucket(toRate);
+  const taxable = form.getValues(from.taxableField);
+  const vatAmount =
+    from.vatField != null ? form.getValues(from.vatField) : "";
+  form.setValue(to.taxableField, taxable, {
+    shouldDirty: true,
+    shouldValidate: true,
+  });
+  if (to.vatField != null) {
+    form.setValue(to.vatField, typeof vatAmount === "string" ? vatAmount : "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }
+  clearVatBucketFields(form, fromRate);
+}
 
 function buildSupplierInvoiceVatBreakdown(values: SupplierInvoiceFormValues) {
   return VAT_BUCKET_FIELDS.flatMap((bucket) => {
@@ -239,10 +302,10 @@ const supplierPaymentSchema = z.object({
 type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>;
 
 function createSupplierInvoiceDefaultValues(
-  preselectGrnId?: number | null,
+  preselectGrnOptionKey?: string | null,
 ): SupplierInvoiceFormValues {
   return {
-    grnId: preselectGrnId != null ? String(preselectGrnId) : "none",
+    grnId: preselectGrnOptionKey ?? "none",
     supplierId: "",
     invoiceNumber: "",
     invoiceDate: getVNDateString(),
@@ -253,7 +316,6 @@ function createSupplierInvoiceDefaultValues(
     vat8Amount: "",
     vat10Taxable: "",
     vat10Amount: "",
-    matchingNotes: "",
   };
 }
 
@@ -359,8 +421,11 @@ function SupplierInvoiceCreateFields({
   const formValues = form.watch();
   const selectedGrn =
     grnId !== "none"
-      ? (grns.find((option) => option.id === Number(grnId)) ?? null)
+      ? (grns.find((option) => option.optionKey === grnId) ?? null)
       : null;
+  const [visibleRates, setVisibleRates] = useState<VatRate[]>([
+    DEFAULT_VISIBLE_VAT_RATE,
+  ]);
   const vatBreakdown = buildSupplierInvoiceVatBreakdown(formValues);
   const subtotal = vatBreakdown.reduce(
     (sum, line) => sum + line.taxableAmount,
@@ -368,6 +433,9 @@ function SupplierInvoiceCreateFields({
   );
   const vatAmount = vatBreakdown.reduce((sum, line) => sum + line.vatAmount, 0);
   const totalAmount = subtotal + vatAmount;
+  const unusedRates = VAT_BUCKET_FIELDS.map((bucket) => bucket.rate).filter(
+    (rate) => !visibleRates.includes(rate),
+  );
 
   useEffect(() => {
     if (!selectedGrn) {
@@ -375,23 +443,55 @@ function SupplierInvoiceCreateFields({
     }
 
     const nextSupplierId = String(selectedGrn.supplierId);
-    if (form.getValues("supplierId") === nextSupplierId) {
-      return;
+    if (form.getValues("supplierId") !== nextSupplierId) {
+      form.setValue("supplierId", nextSupplierId, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
     }
 
-    form.setValue("supplierId", nextSupplierId, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  }, [form, selectedGrn]);
+    setVisibleRates([DEFAULT_VISIBLE_VAT_RATE]);
+    for (const bucket of VAT_BUCKET_FIELDS) {
+      if (bucket.rate === DEFAULT_VISIBLE_VAT_RATE) continue;
+      clearVatBucketFields(form, bucket.rate);
+    }
+
+    const bucket = getVatBucket(DEFAULT_VISIBLE_VAT_RATE);
+    if (selectedGrn.netAcceptedAmount != null) {
+      form.setValue(
+        bucket.taxableField,
+        String(selectedGrn.netAcceptedAmount),
+        {
+          shouldDirty: true,
+          shouldValidate: true,
+        },
+      );
+    } else {
+      form.setValue(bucket.taxableField, "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (bucket.vatField != null) {
+      form.setValue(bucket.vatField, "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [
+    form,
+    selectedGrn?.optionKey,
+    selectedGrn?.netAcceptedAmount,
+    selectedGrn?.supplierId,
+  ]);
 
   const grnOptions = useMemo(
     () => [
-      { value: "none", label: copy.noLinkedGrn },
       ...grns.map((option) => ({
-        value: String(option.id),
+        value: option.optionKey,
         label: `${option.code} · ${option.supplierName}`,
       })),
+      { value: "none", label: copy.noLinkedGrn },
     ],
     [copy.noLinkedGrn, grns],
   );
@@ -404,6 +504,35 @@ function SupplierInvoiceCreateFields({
     [suppliers],
   );
 
+  function handleRateChange(index: number, nextRate: VatRate) {
+    const currentRate = visibleRates[index];
+    if (currentRate == null || currentRate === nextRate) return;
+    if (visibleRates.includes(nextRate)) return;
+
+    moveVatBucketFields(form, currentRate, nextRate);
+    setVisibleRates((current) =>
+      current.map((rate, rateIndex) =>
+        rateIndex === index ? nextRate : rate,
+      ),
+    );
+  }
+
+  function handleAddVatRate() {
+    const nextRate = unusedRates[0];
+    if (nextRate == null) return;
+    setVisibleRates((current) => [...current, nextRate]);
+  }
+
+  function handleRemoveVatRate(index: number) {
+    if (visibleRates.length <= 1) return;
+    const rate = visibleRates[index];
+    if (rate == null) return;
+    clearVatBucketFields(form, rate);
+    setVisibleRates((current) =>
+      current.filter((_, rateIndex) => rateIndex !== index),
+    );
+  }
+
   return (
     <>
       <div className="flex flex-col gap-3">
@@ -413,17 +542,40 @@ function SupplierInvoiceCreateFields({
           name="grnId"
           label={copy.linkedGrn}
           options={grnOptions}
-          placeholder={copy.chooseGrnOptional}
+          placeholder={copy.chooseGrnPrimary}
         />
-        <SelectField
-          control={form.control}
-          name="supplierId"
-          label={copy.supplier}
-          options={supplierOptions}
-          placeholder={copy.chooseSupplier}
-          disabled={selectedGrn != null}
-          required
-        />
+        {selectedGrn ? (
+          <NoteCallout tone="muted">
+            <div className="flex flex-col gap-1 text-sm">
+              <span>
+                {selectedGrn.code} · {selectedGrn.supplierName}
+              </span>
+              {selectedGrn.netAcceptedAmount != null ? (
+                <span className="text-muted-foreground">
+                  {copy.grnNetAcceptedLabel}:{" "}
+                  <span className="font-mono tabular-nums text-foreground">
+                    {messages.inventory.common.currencyCompact(
+                      formatVND(selectedGrn.netAcceptedAmount),
+                    )}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  {copy.grnNetAcceptedUnavailable}
+                </span>
+              )}
+            </div>
+          </NoteCallout>
+        ) : (
+          <SelectField
+            control={form.control}
+            name="supplierId"
+            label={copy.supplier}
+            options={supplierOptions}
+            placeholder={copy.chooseSupplier}
+            required
+          />
+        )}
         <TextField
           control={form.control}
           name="invoiceNumber"
@@ -443,35 +595,100 @@ function SupplierInvoiceCreateFields({
         <p className="text-sm font-medium">{copy.vatSection}</p>
         <p className="text-xs text-muted-foreground">{copy.vatSectionHint}</p>
         <div className="flex flex-col gap-3">
-          {VAT_BUCKET_FIELDS.map((bucket) => {
-            const rate = formatPercent(bucket.rate, 0);
+          {visibleRates.map((rate, index) => {
+            const bucket = getVatBucket(rate);
+            const rateOptions = VAT_BUCKET_FIELDS.filter(
+              (entry) =>
+                entry.rate === rate || !visibleRates.includes(entry.rate),
+            ).map((entry) => ({
+              value: String(entry.rate),
+              label: formatPercent(entry.rate, 0),
+            }));
             return (
               <div
-                key={bucket.rate}
-                className={
-                  bucket.vatField != null
-                    ? "grid gap-3 sm:grid-cols-2"
-                    : "grid gap-3"
-                }
+                key={`${rate}-${index}`}
+                className="flex flex-col gap-3"
               >
-                <MoneyVndField
-                  control={form.control}
-                  name={bucket.taxableField}
-                  label={copy.taxableAtRate(rate)}
-                  placeholder={copy.subtotalPlaceholder}
-                />
-                {bucket.vatField != null ? (
+                <div className="flex items-end gap-2">
+                  <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    <p className="text-sm font-medium">{copy.vatRateLabel}</p>
+                    <Select
+                      value={String(rate)}
+                      onValueChange={(value) => {
+                        const nextRate = Number(value) as VatRate;
+                        if (![0, 5, 8, 10].includes(nextRate)) return;
+                        handleRateChange(index, nextRate);
+                      }}
+                    >
+                      <SelectTrigger
+                        size="touch"
+                        aria-label={copy.vatRateLabel}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {rateOptions.map((option) => (
+                          <SelectItem
+                            key={option.value}
+                            value={option.value}
+                            size="touch"
+                          >
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {visibleRates.length > 1 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-destructive"
+                      onClick={() => handleRemoveVatRate(index)}
+                      aria-label={copy.removeVatRate}
+                    >
+                      <IconTrash className="size-4" />
+                    </Button>
+                  ) : null}
+                </div>
+                <div
+                  className={
+                    bucket.vatField != null
+                      ? "grid gap-3 sm:grid-cols-2"
+                      : "grid gap-3"
+                  }
+                >
                   <MoneyVndField
                     control={form.control}
-                    name={bucket.vatField}
-                    label={copy.vatAtRate(rate)}
-                    placeholder={copy.vatAutoPlaceholder}
+                    name={bucket.taxableField}
+                    label={copy.taxableAmountLabel}
+                    placeholder={copy.subtotalPlaceholder}
                   />
-                ) : null}
+                  {bucket.vatField != null ? (
+                    <MoneyVndField
+                      control={form.control}
+                      name={bucket.vatField}
+                      label={copy.vatAmountLabel}
+                      placeholder={copy.vatAutoPlaceholder}
+                    />
+                  ) : null}
+                </div>
               </div>
             );
           })}
         </div>
+        {unusedRates.length > 0 ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full sm:w-auto"
+            onClick={handleAddVatRate}
+          >
+            {copy.addVatRate}
+          </Button>
+        ) : null}
         <NoteCallout tone="muted">
           {vatBreakdown.map((line) => (
             <div
@@ -507,14 +724,6 @@ function SupplierInvoiceCreateFields({
           </div>
         </NoteCallout>
       </div>
-
-      <TextareaField
-        control={form.control}
-        name="matchingNotes"
-        label={copy.matchingNotes}
-        rows={3}
-        placeholder={copy.matchingNotesPlaceholder}
-      />
 
       {canAttachVatEvidence ? (
         <div className="flex flex-col gap-2">
@@ -701,9 +910,13 @@ export function SupplierInvoicesClient({
   const [isPending, startTransition] = useTransition();
   const controlSize = useFormControlSize();
   const copy = messages.inventory.supplierInvoices;
+  const preselectGrnOptionKey =
+    preselectGrnId != null
+      ? (grns.find((option) => option.id === preselectGrnId)?.optionKey ?? null)
+      : null;
   const createDefaultValues = useMemo(
-    () => createSupplierInvoiceDefaultValues(preselectGrnId),
-    [createOpen, preselectGrnId],
+    () => createSupplierInvoiceDefaultValues(preselectGrnOptionKey),
+    [createOpen, preselectGrnOptionKey],
   );
   const listKey = supplierInvoiceFiltersKey(filters);
   const actionFilters = useMemo(
@@ -1005,7 +1218,7 @@ export function SupplierInvoicesClient({
   async function handleCreateInvoice(values: SupplierInvoiceFormValues) {
     const selectedGrn =
       values.grnId !== "none"
-        ? (grns.find((option) => option.id === Number(values.grnId)) ?? null)
+        ? (grns.find((option) => option.optionKey === values.grnId) ?? null)
         : null;
     const resolvedSupplierId =
       selectedGrn?.supplierId ?? Number(values.supplierId || 0);
@@ -1013,10 +1226,10 @@ export function SupplierInvoicesClient({
     const res = await createSupplierInvoice({
       supplierId: resolvedSupplierId,
       grnId: selectedGrn?.id ?? null,
+      poId: selectedGrn?.poId ?? null,
       invoiceNumber: values.invoiceNumber.trim(),
       invoiceDate: values.invoiceDate,
       vatBreakdown: buildSupplierInvoiceVatBreakdown(values),
-      matchingNotes: values.matchingNotes?.trim() || undefined,
     });
 
     if (res.success && res.data) {
@@ -2052,6 +2265,7 @@ export function SupplierInvoicesClient({
       >
         {(form) => (
           <SupplierInvoiceCreateFields
+            key={`create-fields-${preselectGrnId ?? "none"}`}
             form={form}
             suppliers={suppliers}
             grns={grns}

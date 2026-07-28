@@ -171,12 +171,14 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - **Nên hiển thị:** Danh sách nguyên liệu kèm tồn khả dụng, đơn vị tính; Trạng thái các phiếu kho (Nháp / Đang giao / Hoàn thành); Cảnh báo tồn dưới mức an toàn.
   - **KHÔNG hiển thị:** Doanh thu bán hàng chi tiết, thông tin thẻ tín dụng của khách, bảng lương nhân sự.
 - **Quy chuẩn UX/UI:**
-  - Branch `/br/[branchId]/stock` giữ đúng hai nhóm tile chạm 2 cột: ưu tiên `Tồn kho` -> `Nhập hàng` -> `Sản xuất` để Quản lý quyết định và hành động trong một viewport; kiểm kê, hao hụt, đếm, tiêu hao và danh mục ở nhóm sau. Điều chuyển chỉ có một điểm vào vì màn đích đã sở hữu `Cần nhận`, `Cần giao` và `Lịch sử`; bottom nav gọi toàn workspace là `Kho`, còn tra cứu số lượng gọi là `Tồn kho`.
-  - `/br/[branchId]/stock/production` là LANDING/LIST Branch-native: ưu tiên lệnh đang sản xuất, sau đó lệnh nháp, CTA tạo lệnh và lịch sử hoàn tất. Không dùng `AppLinkCard` mosaic, `DataTable`, query-view trung gian hoặc presenter control_surface.
-  - `/br/[branchId]/stock/production/new` là `DOC-WORKFLOW` Branch-native: URL khóa chi nhánh sản xuất; người dùng chọn thành phẩm/sản lượng, nơi xuất nguyên liệu và nơi nhận thành phẩm trong chính chi nhánh, kiểm tra định mức và tạo lệnh. Điện thoại giữ một cột; tablet ngang có panel thông tin và panel nguyên liệu. Không import `ProductionNewClient`, `DocumentFormFrame` hoặc `DataTable` control_surface.
-  - `/br/[branchId]/stock/production/[id]` là `DETAIL` Branch-native: ưu tiên trạng thái, sản lượng dự kiến/thực tế, nguyên liệu thực dùng, thiếu hụt và đúng một hành động tiếp theo theo state machine. Lệnh nháp bắt đầu sản xuất; lệnh đang làm mới hoàn thành; hủy luôn xác nhận. Không import `ProductionDetailClient` hoặc presenter control_surface.
-  - control_surface `/inventory/stock` dùng management list responsive: compact card khi hẹp và `DataTable` khi desktop cần đối chiếu WAC/giá trị tồn.
-  - Branch `/br/[branchId]/stock/on-hand` là danh sách quyết định touch-first ở mọi viewport điện thoại/tablet, kể cả `1024px` landscape: nếu có hàng chạm ngưỡng, một khối `Cần bổ sung` đứng trước danh sách với đúng một CTA `Nhận phiếu nhập`; các hàng rủi ro luôn xếp đầu và nêu rõ `Hết hàng`/`Thấp`/`Chạm reorder`. Mỗi hàng chỉ giữ tên/SKU, loại hàng, tồn + đơn vị và chạm để xem chi tiết; tìm kiếm và bộ lọc cùng một trạng thái thu gọn trên phone/tablet. One-warehouse topology không hiển thị bộ lọc vị trí. Không đưa WAC, giá trị tồn hoặc KPI control_surface vào màn tra cứu trong ca.
+  - Branch `/br/[branchId]/stock` (D093): ưu tiên `Tồn kho` → `Yêu cầu hàng` →
+    `Tiêu hao`; kiểm kê, hao hụt, giao đếm, danh mục ở nhóm sau. **Không** tile
+    Nhập hàng (GRN) hay Sản xuất. Nhận hàng nội bộ qua DC gắn yêu cầu.
+  - Branch `/br/[branchId]/stock/requests` — phiếu yêu cầu hàng (LIST/DOC).
+  - On-hand “Cần bổ sung” CTA → Yêu cầu hàng (không mở GRN).
+  - GRN + production Branch routes retired; GRN/SX sống trên `/inventory` tại
+    site trung tâm. Chi tiết phân vai: `docs/ref/inventory-role-ops.md`.
+  - Branch `/br/[branchId]/stock/on-hand` là danh sách quyết định touch-first ở mọi viewport điện thoại/tablet, kể cả `1024px` landscape: nếu có hàng chạm ngưỡng, một khối `Cần bổ sung` đứng trước danh sách với đúng một CTA yêu cầu hàng; các hàng rủi ro luôn xếp đầu và nêu rõ `Hết hàng`/`Thấp`/`Chạm reorder`. Mỗi hàng chỉ giữ tên/SKU, loại hàng, tồn + đơn vị và chạm để xem chi tiết; tìm kiếm và bộ lọc cùng một trạng thái thu gọn trên phone/tablet. One-warehouse topology không hiển thị bộ lọc vị trí. Không đưa WAC, giá trị tồn hoặc KPI control_surface vào màn tra cứu trong ca.
   - Branch `/br/[branchId]/stock/on-hand/[ingredientId]` là `DETAIL` touch-native: ưu tiên trạng thái/tồn hiện tại, vị trí tồn, chuyển động gần đây, sau đó là ngưỡng và action được cấp quyền. Nhận từ NCC mở GRN, còn `/stock/receive` chỉ dành cho phiếu chuyển nội bộ; route không tải hoặc hiển thị WAC, giá trị tồn, audit/correction, hoặc control_surface detail chrome.
   - Branch `/br/[branchId]/stock/grn` ưu tiên nháp của người đang nhận hàng, sau đó là hàng đợi GRN có tìm kiếm/lọc trạng thái. Mỗi row chỉ hiển thị mã, NCC, ngày và trạng thái; chạm để tiếp tục/xem phiếu, bỏ nháp là action riêng có xác nhận. Không đưa tổng tiền, tên chi nhánh, `DataTable` hay long-press từ control_surface sang route này.
   - Branch `/br/[branchId]/stock/grn/new` dùng source list touch-native supplier-first: chọn NCC, giữ context chi nhánh từ route, và chuyển sang URL supplier Branch canonical. Không lặp branch picker, PO hoặc khung form control_surface tại bước chọn nguồn.
@@ -236,9 +238,9 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - Đối soát phiếu thực nhập (GRN) với hóa đơn NCC gửi đến. Đảm bảo doanh nghiệp chỉ thanh toán đúng lượng thực nhận và đơn giá trên chứng từ mua hàng, tránh thất thoát tài chính.
 - **Mục tiêu Người dùng (Goal):** Phát hiện nhanh các dòng hóa đơn bị lệch giá hoặc lệch lượng để yêu cầu NCC điều chỉnh trước khi bấm duyệt thanh toán.
 - **Luồng thao tác (Workflow):**
-  1. **Nhập hóa đơn:** Ghi số hóa đơn, ngày và VAT đầu vào theo bucket 0/5/8/10 (tiền trước VAT + tiền VAT từng mức); có thể đính kèm HĐ GTGT ngay khi lưu (tùy chọn).
-  2. **Liên kết:** Chọn một GRN đã xác nhận; hệ thống lấy NCC và PO liên quan từ GRN.
-  3. **Đối soát:** So giá trị trước VAT với giá trị hàng thực nhận sau từ chối trên GRN và, khi PO đủ giá, với tổng PO. VAT không tham gia so giá trị hàng.
+  1. **Chọn phiếu nhập:** Chọn GRN đã xác nhận và chưa gắn HĐ; hệ thống lấy NCC/PO và gợi ý tiền trước VAT từ giá trị nhận. Escape “Không liên kết phiếu nhập” chỉ dùng khi thiếu GRN. Từ phiếu nhập đã chốt, Owner/Kế toán mở CTA “Ghi nhận hóa đơn NCC” (`?grnId=`).
+  2. **Nhập hóa đơn:** Ghi số hóa đơn và ngày; chọn một mức VAT (0/5/8/10) + tiền trước VAT (tiền VAT tự tính nếu để trống). Thêm mức thuế chỉ khi hóa đơn có nhiều suất. Có thể đính kèm HĐ GTGT ngay khi lưu (tùy chọn).
+  3. **Đối soát:** Sau khi lưu, so giá trị trước VAT với giá trị hàng thực nhận sau từ chối trên GRN và, khi PO đủ giá, với tổng PO. VAT không tham gia so giá trị hàng.
   4. **Xử lý chênh lệch:** Kế toán kiểm tra chứng từ khi số lượng hoặc giá trị
      không khớp; không dùng ngưỡng price-QC của GRN.
   5. **Đính kèm HĐ GTGT:** Nếu chưa tải lúc tạo, tải lên ít nhất một file PDF/ảnh vào `vat_invoice_attachment_path` (bucket private) trước khi thanh toán. Owner có `procurement:invoice_create` hoặc `finance:ap_pay` được đính kèm.
@@ -248,7 +250,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - **KHÔNG hiển thị:** Doanh thu bán cơm tấm, sơ đồ bàn ăn, ca làm việc của nhân viên phục vụ.
 - **Quy chuẩn UX/UI:**
   - Bố cục màn hình rộng (width `xwide`); danh sách full-width. Chọn nhóm/hóa đơn mở `Sheet` phải (`sm:max-w-xl`) chứa chi tiết công nợ, HĐ GTGT, thanh toán và đối soát — không chiếm cột cố định cạnh bảng.
-  - Popup ghi nhận chia section chứng từ / VAT / ghi chú / đính kèm; mỗi suất thuế một hàng `tiền trước VAT | tiền VAT`.
+  - Popup ghi nhận: phiếu nhập trước, rồi số/ngày HĐ, VAT progressive (một mức mặc định + thêm mức khi cần), đính kèm tùy chọn; không bắt nhập ghi chú đối soát lúc tạo.
   - Sheet detail: tiêu đề là số HĐ; khối `Item` “còn phải trả” + đính kèm HĐ GTGT; meta ngày/hạn/VAT/tuổi nợ/GRN/PO trong `ItemGroup` lưới 2 cột (`DetailFact`); chỉ `Alert` khi thiếu đối soát hoặc lệch; không dùng raw `Card` / `DescriptionList` / KPI card / công thức / badge “đã khớp”. Footer: Thanh toán (nếu còn nợ) + Tính lại đối soát. Deep-link `?invoiceId=` mở sẵn Sheet.
 
 ---

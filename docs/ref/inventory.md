@@ -24,7 +24,7 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                             | Không chuyển sang FIFO engine                          |
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                                          | Không mở lot-first ledger / batch accounting           |
 | Mô hình site                    | `branches` là site table Greenfield; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                                           | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
-| PO / GRN / NCC                  | Happy path D091: Kho tạo GRN draft → Kế toán/Owner tạo+duyệt PO từ GRN → Kho confirm khi PO đã duyệt. Branch runtime không UI PO. Đơn giá thương mại tại PO; duyệt PO sync snapshot `grn_items.unit_cost` cho WAC/ledger.                                                                             | Không mở PR, duyệt nhiều cấp, PO-first CTA hoặc price-QC tại GRN |
+| PO / GRN / NCC                  | Happy path D091/D092: Kho tạo GRN draft đa NCC (không chọn NCC trước; NCC theo dòng) → Kế toán/Owner tách+duyệt PO theo NCC → Kho confirm khi **mọi** PO nguồn đã duyệt. Branch runtime không UI PO. Đơn giá thương mại tại PO; duyệt sync `grn_items.unit_cost` theo NCC dòng. | Không mở PR, duyệt nhiều cấp, PO-first CTA hoặc price-QC tại GRN |
 | QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                                       | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval |
 | Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                                          | Không có target Kho↔Bếp trong cùng branch          |
 | HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                  | Không mở payment proposal engine trong Inventory   |
@@ -269,35 +269,47 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 
 1. Thiết lập **NCC**, điều khoản thanh toán và gán nguyên liệu NCC được phép
    cung cấp trong `supplier_items`.
-2. Kho tạo **GRN draft** tại site nhận (`branch` | `central_supply` |
-   `central_kitchen`): số lượng / đơn vị nhập / kiểm nhận vật lý — **không**
-   nhập đơn giá mua.
-3. Kế toán hoặc Owner tạo PO từ GRN draft, đặt `unit_price_est`, duyệt
-   (`draft → sent`). Duyệt PO sync giá sang `grn_items.unit_cost` làm snapshot
-   nhận hàng.
-4. **Xác nhận GRN** (RPC) chỉ khi PO liên kết đã duyệt (D091 fail closed) → quy
-   đổi về đơn vị tồn chuẩn, cập nhật tồn và giá vốn BQ từ `grn_items.unit_cost`.
-5. Finance nhập **supplier_invoice** (HĐ GTGT đầu vào), đối soát GRN và ghi
-   nhận thanh toán NCC theo số dư còn phải trả.
+2. Kho tạo **GRN draft** tại site nhận trung tâm (`central_supply` |
+   `central_kitchen`) — **D093:** chi nhánh không GRN; xin hàng qua phiếu yêu
+   cầu rồi nhận DC. Form nhập nguyên liệu (không chọn NCC trước). Mỗi dòng gắn
+   NCC qua `grn_items.supplier_id` (auto nếu map đúng 1 NCC hoặc có
+   `supplier_items.is_preferred`; chọn trên sheet nếu map nhiều mà chưa ưu tiên).
+   nếu map nhiều). Ghi số lượng / đơn vị nhập / từ chối — **không** nhập đơn
+   giá mua. Một phiếu có thể chứa nhiều NCC.
+3. Kế toán hoặc Owner **tạo PO từ GRN draft** — hệ thống tách **một draft PO
+   mỗi NCC** (`purchase_orders.source_grn_id`), đặt `unit_price_est`, duyệt từng
+   PO (`draft → sent`). Duyệt sync giá sang các `grn_items` cùng NCC.
+4. **Xác nhận GRN** (RPC) chỉ khi **mọi** PO nguồn đã duyệt (D091/D092 fail
+   closed; D093 site ∈ trung tâm) → quy đổi về đơn vị tồn chuẩn, cập nhật tồn
+   và giá vốn BQ từ `grn_items.unit_cost`.
+5. Finance nhập **supplier_invoice** (HĐ GTGT đầu vào) theo từng NCC/PO, đối
+   soát và ghi nhận thanh toán NCC theo số dư còn phải trả.
 
-**Nguyên tắc D091:** Đơn giá thương mại theo **PO**
+**Nguyên tắc D091/D093:** Đơn giá thương mại theo **PO**
 (`purchase_order_items.unit_price_est`). `grn_items.unit_cost` là **Đơn giá nhập
 trên chứng từ nhận** (`₫ / đơn vị nhập`) sau sync khi duyệt PO — không phải giá
 vốn BQ, và không do kho nhập trên nháp. Confirm / WAC / `stock_movements` đọc
-`grn_items.unit_cost`. GRN tạo tại site stock-bearing.
+`grn_items.unit_cost`. GRN chỉ tạo tại Kho Tổng / Bếp TT.
 
 PO và GRN mới chỉ nhận nguyên liệu có mapping `supplier_items.is_active = true`
-với NCC của chứng từ. UI lọc ngay sau khi chọn NCC; Server Action và database
-trigger cùng từ chối dòng không khớp. Bỏ mapping không sửa chứng từ lịch sử,
-nhưng ngăn chọn mới và ngăn tạo PO từ GRN draft còn chứa dòng đó. Khi PO đã
-được duyệt, việc mapping bị tắt sau đó không được chặn xác nhận GRN lịch sử.
+với NCC của **dòng** (`grn_items.supplier_id`). UI catalog gồm mọi nguyên liệu
+đã map ≥1 NCC; Server Action và database trigger từ chối dòng không khớp.
+Header `goods_received_notes.supplier_id` có thể null (đa NCC); UI suy danh
+sách NCC từ dòng. Bỏ mapping không sửa chứng từ lịch sử, nhưng ngăn chọn mới
+và ngăn tạo PO từ GRN draft còn chứa dòng đó. Khi PO đã được duyệt, việc
+mapping bị tắt sau đó không được chặn xác nhận GRN lịch sử.
 
 Đối soát tiền dùng cùng một cơ sở trước VAT: `supplier_invoices.subtotal` so
-với tổng `(received_quantity - rejected_quantity) × unit_cost` của GRN và tổng
-PO khi mọi dòng PO đã có giá. `vat_amount` chỉ cộng vào công nợ phải trả; không
-làm tăng giá trị hàng nhận trong bước đối soát này.
-`supplier_invoices.vat_breakdown` giữ từng nhóm 0%/5%/8%/10% của chứng từ;
-header `subtotal`, `vat_amount` và `total_amount` được suy ra từ tổng các nhóm.
+với tổng `(received_quantity - rejected_quantity) × unit_cost` của **các dòng
+GRN thuộc đúng NCC của hóa đơn** (`grn_items.supplier_id`, hoặc toàn phiếu khi
+header `goods_received_notes.supplier_id` khớp) và tổng PO liên kết khi mọi
+dòng PO đã có giá. Với GRN đa NCC, mỗi HĐ gắn một PO nguồn
+(`purchase_orders.source_grn_id` + cùng `supplier_id`) hoặc legacy `grn.po_id`
+nếu NCC khớp; không gộp nhiều NCC vào một HĐ trong lát D092.
+`vat_amount` chỉ cộng vào công nợ phải trả; không làm tăng giá trị hàng nhận
+trong bước đối soát này. `supplier_invoices.vat_breakdown` giữ từng nhóm
+0%/5%/8%/10% của chứng từ; header `subtotal`, `vat_amount` và `total_amount`
+được suy ra từ tổng các nhóm.
 
 ### 5.2 Schema tham chiếu — `goods_received_notes` / `grn_items`
 
@@ -449,27 +461,24 @@ Inventory v1 không vận hành sổ lô, FIFO/FEFO, cảnh báo hạn dùng, ho
 
 ## 11. Quyền truy cập (ACL) — hướng dẫn
 
-Module/route access sống ở `packages/shared/src/auth/module-acl.ts`; coarse action
-roles sống ở `packages/shared/src/auth/inventory-roles.ts`. Permission keys,
-branch scope và RLS/RPC là authority cho mutation.
+SSOT phân vai / nav: [inventory-role-ops.md](inventory-role-ops.md) (**D093**).
+Module/route: `packages/shared/src/auth/module-acl.ts`; coarse roles:
+`inventory-roles.ts`. Mutation: permission keys + RLS/RPC.
 
-Tóm tắt quyền hiện tại:
+Tóm tắt (D093):
 
-- `owner`: route access tenant-wide; mutation vẫn qua permission/RLS/RPC.
-- `accountant`: đọc GRN để tạo/xử lý PO, nhập/duyệt giá mua và Finance handoff;
-  không thực hiện QC nhận hàng hoặc mở stock/production/catalog/valuation.
-- `central_supply_ops`, `central_kitchen_lead`: GRN/QC vật lý trong site được
-  cấp; được xác nhận xuất/nhận điều chuyển tại site đã ghim nhưng không tạo
-  phiếu điều chuyển; không tạo/duyệt PO hoặc xem giá ngoài quyền đã cấp.
-- `branch_manager`: own-branch GRN/QC vật lý theo permission + branch scope;
-  không xem giá mua/PO chuỗi.
-- `cashier`, `chef`, `branch_staff`: không có Inventory route theo ACL hiện tại.
-
-Chi tiết enforcement: RLS + `packages/shared/src/auth/module-acl.ts`.
+- `owner`: tenant-wide; catalog + `default_fulfill_site_kind`; WAC; oversight.
+- `accountant`: GRN đọc (trung tâm) + PO/giá + Finance; không QC/tồn/SX/yêu cầu CN.
+- `central_supply_ops` / `central_kitchen_lead`: GRN tại site ghim; inbox yêu cầu
+  theo nguồn; fulfill→DC (`transfer_create`); Bếp TT thêm production. Không PO.
+- `branch_manager`: yêu cầu hàng + tồn/tiêu hao/kiểm kê/hao hụt/nhận DC; **không**
+  GRN, PO, production, giá mua chuỗi.
+- `cashier` / `chef` / `branch_staff`: chỉ đếm khi được gán.
 
 ---
 
 ## Tài liệu liên quan
 
+- [inventory-role-ops.md](inventory-role-ops.md) — phân vai, routing, luồng D093
 - [einvoice-tax.md](einvoice-tax.md) — VAT đầu vào, HĐ NCC
-- [inventory-sop.md](inventory-sop.md) — SOP vận hành cho topology `tenant / chi nhánh / Kho CN / tiêu hao`
+- [inventory-sop.md](inventory-sop.md) — SOP vận hành

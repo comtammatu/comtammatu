@@ -21,6 +21,7 @@ export default async function FinanceSupplierInvoicesPage({
     branch?: string | string[];
     branchId?: string | string[];
     invoiceId?: string | string[];
+    grnId?: string | string[];
     q?: string | string[];
     supplierId?: string | string[];
     matchStatus?: string | string[];
@@ -100,6 +101,18 @@ export default async function FinanceSupplierInvoicesPage({
     return renderMissingInvoice();
   }
 
+  const rawGrnId = Array.isArray(params.grnId) ? params.grnId[0] : params.grnId;
+  const parsedGrnId =
+    typeof rawGrnId === "string" && /^\d+$/.test(rawGrnId)
+      ? Number(rawGrnId)
+      : null;
+  const includeGrnId =
+    parsedGrnId != null &&
+    Number.isSafeInteger(parsedGrnId) &&
+    parsedGrnId > 0
+      ? parsedGrnId
+      : undefined;
+
   const [res, suppliersRes, grnsRes, requestedInvoiceRes] = await Promise.all([
     fetchSupplierInvoicesPage({
       branchId: branchFilter,
@@ -112,7 +125,7 @@ export default async function FinanceSupplierInvoicesPage({
       viewMode: filters.viewMode,
     }),
     fetchSuppliers(),
-    fetchGrnIdsForDropdown(branchFilter),
+    fetchGrnIdsForDropdown(branchFilter, includeGrnId),
     requestedInvoiceId != null
       ? fetchSupplierInvoicesPage({
           branchId: branchFilter,
@@ -176,15 +189,38 @@ export default async function FinanceSupplierInvoicesPage({
     name: String(row.name ?? "—"),
   }));
   const grns = ((grnsRes.data ?? []) as Array<Record<string, unknown>>).map(
-    (row) => ({
-      id: Number(row.id ?? 0),
-      code: String(row.grn_number ?? "—"),
-      supplierId: Number(row.supplier_id ?? 0),
-      supplierName: String(
-        ((row.suppliers as Record<string, unknown> | null)?.name as string) ??
-          "—",
-      ),
-    }),
+    (row) => {
+      const rawNet = row.net_accepted_amount;
+      const netAcceptedAmount =
+        typeof rawNet === "number" && Number.isFinite(rawNet)
+          ? rawNet
+          : rawNet != null &&
+              Number.isFinite(Number(rawNet)) &&
+              String(rawNet).trim() !== ""
+            ? Number(rawNet)
+            : null;
+      const id = Number(row.id ?? 0);
+      const supplierId = Number(row.supplier_id ?? 0);
+      const rawPoId = row.po_id;
+      const poId =
+        rawPoId != null &&
+        Number.isSafeInteger(Number(rawPoId)) &&
+        Number(rawPoId) > 0
+          ? Number(rawPoId)
+          : null;
+      return {
+        optionKey: `${id}:${supplierId}`,
+        id,
+        code: String(row.grn_number ?? "—"),
+        supplierId,
+        supplierName: String(
+          ((row.suppliers as Record<string, unknown> | null)?.name as string) ??
+            "—",
+        ),
+        poId,
+        netAcceptedAmount,
+      };
+    },
   );
 
   return (

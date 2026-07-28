@@ -53,12 +53,16 @@ import {
 import {
   filterGrnListRows,
   grnDetailHref,
+  grnProcurementStepChip,
+  grnProcurementStepChipLabel,
   hasGrnListFilters,
   type GrnDraftRow,
   type GrnListStatusFilter,
   type GrnRow,
 } from "@lib/inventory/grn-list-model";
 import { messages } from "@lib/messages";
+
+const grnCopy = messages.inventory.grn;
 
 type BranchGrnRow = Pick<
   GrnRow,
@@ -67,6 +71,8 @@ type BranchGrnRow = Pick<
   | "supplierName"
   | "poId"
   | "poCode"
+  | "poCount"
+  | "poStatus"
   | "date"
   | "status"
   | "qcIssueCount"
@@ -78,6 +84,8 @@ type BranchGrnDraftRow = Pick<
   | "supplierId"
   | "poId"
   | "poCode"
+  | "poCount"
+  | "poStatus"
   | "supplierName"
   | "grnNumber"
   | "updatedAt"
@@ -142,7 +150,12 @@ function BranchGrnDraftItem({
           </ItemTitle>
           <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-mono">{draft.grnNumber}</span>
-            {draft.poCode ? <span>PO {draft.poCode}</span> : null}
+            {draft.poCount > 0 && draft.poCode ? (
+              <span className="font-mono">
+                {draft.poCode}
+                {draft.poCount > 1 ? ` · ${draft.poCount} PO` : ""}
+              </span>
+            ) : null}
             <span>
               {INVENTORY_VI.grnDraftUpdatedAt(
                 formatVNDateTime(draft.updatedAt),
@@ -154,6 +167,19 @@ function BranchGrnDraftItem({
           <Badge variant="warning">
             {INVENTORY_VI.grnDraftLineCount(draft.lineCount)}
           </Badge>
+          {(() => {
+            const step = grnProcurementStepChip({
+              status: "draft",
+              poId: draft.poId,
+              poCount: draft.poCount,
+              poStatus: draft.poStatus,
+            });
+            return step ? (
+              <Badge variant="outline">
+                {grnProcurementStepChipLabel(step, grnCopy)}
+              </Badge>
+            ) : null;
+          })()}
           {draft.qcIssueCount > 0 ? (
             <Badge variant="destructive">
               {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
@@ -162,7 +188,7 @@ function BranchGrnDraftItem({
           <IconChevronRight className="size-4 text-muted-foreground" />
         </ItemActions>
       </Link>
-      {draft.poId == null ? (
+      {draft.poId == null && draft.poCount === 0 ? (
         <Button
           type="button"
           variant="outline"
@@ -207,13 +233,24 @@ function BranchGrnListItem({
           <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
             <span>{grn.supplierName}</span>
             <span className="font-mono tabular-nums">{grn.date}</span>
-            {grn.poId != null && grn.poCode !== "—" ? (
-              <span className="font-mono">PO {grn.poCode}</span>
+            {grn.poCount > 0 && grn.poCode && grn.poCode !== "—" ? (
+              <span className="font-mono">
+                {grn.poCode}
+                {grn.poCount > 1 ? ` · ${grn.poCount} PO` : ""}
+              </span>
             ) : null}
           </ItemDescription>
         </ItemContent>
         <ItemActions className="shrink-0">
           <StatusBadge domain="inventory" value={grn.status} size="sm" />
+          {(() => {
+            const step = grnProcurementStepChip(grn);
+            return step ? (
+              <Badge variant="outline">
+                {grnProcurementStepChipLabel(step, grnCopy)}
+              </Badge>
+            ) : null;
+          })()}
           {grn.qcIssueCount > 0 ? (
             <Badge variant="warning">
               {messages.inventory.grn.qcIssueCount(grn.qcIssueCount)}

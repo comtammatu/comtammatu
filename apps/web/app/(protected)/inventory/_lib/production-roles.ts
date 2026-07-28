@@ -3,7 +3,6 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 export const PRODUCTION_OPERATOR_ROLES = [
   "owner",
   "central_kitchen_lead",
-  "branch_manager",
 ] as const satisfies readonly StaffRole[];
 
 export const PRODUCTION_RECIPE_MANAGER_ROLES = [
@@ -13,19 +12,14 @@ export const PRODUCTION_RECIPE_MANAGER_ROLES = [
 
 const PRODUCTION_BRANCH_SCOPED_ROLES = [
   "central_kitchen_lead",
-  "branch_manager",
 ] as const satisfies readonly StaffRole[];
 
 /**
- * Site kinds that may run production (D091): the central kitchen plus any
- * branch (`branch_manager` produces at its own branch warehouse). Single source for the
- * production branch-kind gate used by both the surface loader
- * (`hasCurrentProductionBranchAccess`) and the order guard
- * (`requireProductionBranch`) — no drift between the two.
+ * Site kinds that may run production (D093): central kitchen only.
+ * Branch production removed.
  */
 export const PRODUCTION_BRANCH_KINDS = [
   "central_kitchen",
-  "branch",
 ] as const satisfies readonly string[];
 
 export function isProductionBranchKind(

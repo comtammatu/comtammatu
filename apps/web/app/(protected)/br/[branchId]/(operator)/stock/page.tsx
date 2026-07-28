@@ -5,6 +5,7 @@ import {
   type ResolvedOperatorTile,
 } from "@comtammatu/shared/auth";
 import { AppEmptyState } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   BranchOperatorActionSection,
   BranchOperatorPage,
@@ -22,19 +23,16 @@ interface OperatorStockLink {
   title: string;
 }
 
-const STOCK_PRIMARY_SUFFIXES = [
-  "/stock/on-hand",
-  "/stock/grn",
-  "/stock/production",
-] as const;
+const stockTab = messages.inventory.dashboard;
 
-const STOCK_SECONDARY_SUFFIXES = [
-  "/stock/stocktake",
-  "/stock/waste",
-  "/stock/count-assignments",
-  "/stock/consumption",
-  "/stock/catalog",
-] as const;
+type StockGroupId = "onhand" | "count" | "waste" | "catalog";
+
+const STOCK_TAB_SUFFIXES: Record<StockGroupId, readonly string[]> = {
+  onhand: ["/stock/on-hand", "/stock/grn", "/stock/production"],
+  count: ["/stock/stocktake", "/stock/count-assignments", "/stock/count-slips"],
+  waste: ["/stock/waste", "/stock/consumption"],
+  catalog: ["/stock/catalog"],
+};
 
 function toOperatorStockLink(
   tile: ResolvedOperatorTile,
@@ -55,13 +53,10 @@ function toOperatorStockLink(
 function pickStockLinks(
   links: OperatorStockLink[],
   suffixes: readonly string[],
-  used: Set<string>,
 ): OperatorStockLink[] {
-  const picked = suffixes.flatMap((suffix) =>
-    links.filter((link) => !used.has(link.key) && link.href.endsWith(suffix)),
+  return suffixes.flatMap((suffix) =>
+    links.filter((link) => link.href.endsWith(suffix)),
   );
-  for (const link of picked) used.add(link.key);
-  return picked;
 }
 
 export default async function OperatorStockPage({
@@ -87,15 +82,32 @@ export default async function OperatorStockPage({
   ).find((group) => group.id === "stock");
   const links =
     stockGroup?.tiles.map((tile) => toOperatorStockLink(tile, stockRoot)) ?? [];
-  const usedLinks = new Set<string>();
-  const primaryLinks = pickStockLinks(links, STOCK_PRIMARY_SUFFIXES, usedLinks);
-  const secondaryLinks = pickStockLinks(
-    links,
-    STOCK_SECONDARY_SUFFIXES,
-    usedLinks,
+
+  const groupedLinks: Record<StockGroupId, OperatorStockLink[]> = {
+    onhand: pickStockLinks(links, STOCK_TAB_SUFFIXES.onhand),
+    count: pickStockLinks(links, STOCK_TAB_SUFFIXES.count),
+    waste: pickStockLinks(links, STOCK_TAB_SUFFIXES.waste),
+    catalog: pickStockLinks(links, STOCK_TAB_SUFFIXES.catalog),
+  };
+  const usedKeys = new Set(
+    Object.values(groupedLinks)
+      .flat()
+      .map((link) => link.key),
   );
-  const fallbackLinks = links.filter((link) => !usedLinks.has(link.key));
+  const fallbackLinks = links.filter((link) => !usedKeys.has(link.key));
+  if (fallbackLinks.length > 0) {
+    groupedLinks.onhand = [...groupedLinks.onhand, ...fallbackLinks];
+  }
   const hasLinks = links.length > 0;
+
+  const tabs = (
+    [
+      { id: "onhand", label: stockTab.stockTabOnhand },
+      { id: "count", label: stockTab.stockTabCount },
+      { id: "waste", label: stockTab.stockTabWaste },
+      { id: "catalog", label: stockTab.stockTabCatalog },
+    ] as const
+  ).filter((tab) => groupedLinks[tab.id].length > 0);
 
   return (
     <BranchOperatorPage
@@ -103,25 +115,24 @@ export default async function OperatorStockPage({
       description={messages.inventory.dashboard.mainFlowsOperatorDescription}
       hideHeaderOnMobile
     >
-      {hasLinks ? (
-        <>
-          <BranchOperatorActionSection
-            title={messages.inventory.dashboard.operatorStockPrimaryTitle}
-            links={primaryLinks}
-            columns={2}
-            mobileColumns={2}
-            wideColumns
-          />
-
-          <BranchOperatorActionSection
-            title={messages.inventory.dashboard.operatorStockSecondaryTitle}
-            links={[...secondaryLinks, ...fallbackLinks]}
-            columns={2}
-            mobileColumns={2}
-            wideColumns
-            tone="info"
-          />
-        </>
+      {hasLinks && tabs.length > 0 ? (
+        <AppPageTabs
+          paramKey="group"
+          defaultValue={tabs[0]?.id}
+          ariaLabel={stockTab.stockTabsAriaLabel}
+          items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
+        >
+          {tabs.map((tab) => (
+            <TabsContent key={tab.id} value={tab.id}>
+              <BranchOperatorActionSection
+                links={groupedLinks[tab.id]}
+                columns={2}
+                mobileColumns={2}
+                wideColumns
+              />
+            </TabsContent>
+          ))}
+        </AppPageTabs>
       ) : (
         <AppEmptyState
           compact

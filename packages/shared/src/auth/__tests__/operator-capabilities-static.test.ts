@@ -135,33 +135,42 @@ test("resolveOperatorTiles -> branch home does not duplicate Owner surface links
   assert.equal(hrefs.includes("/inventory/production"), false);
 });
 
-test("resolveOperatorTiles -> production tile is native under branch stock", () => {
+test("resolveOperatorTiles -> stock request tile replaces GRN/production (D093)", () => {
   for (const role of ["owner", "branch_manager"] as const) {
     const groups = resolveOperatorTiles(role, 3, "branch");
     const stock = groups.find((group) => group.id === "stock");
 
-    const productionTile = stock?.tiles.find(
-      (tile) => tile.href === "/br/3/stock/production",
+    assert.equal(
+      stock?.tiles.some((tile) => tile.href === "/br/3/stock/production"),
+      false,
+      `${role} must not see production tile`,
     );
-    assert.ok(productionTile, `${role} must see native production tile`);
-    assert.equal(productionTile?.label, "Sản xuất");
+    assert.equal(
+      stock?.tiles.some((tile) => tile.href === "/br/3/stock/grn"),
+      false,
+      `${role} must not see GRN tile`,
+    );
+    const requestTile = stock?.tiles.find(
+      (tile) => tile.href === "/br/3/stock/requests",
+    );
+    assert.ok(requestTile, `${role} must see stock request tile`);
+    assert.equal(requestTile?.label, "Yêu cầu hàng");
   }
 });
 
-test("resolveOperatorTiles -> branch stock group renders the branch tile set", () => {
+test("resolveOperatorTiles -> branch stock group renders the D093 tile set", () => {
   const branchStock = resolveOperatorTiles("owner", 3, "branch").find(
     (group) => group.id === "stock",
   );
   assert.deepEqual(
     branchStock?.tiles.map((tile) => tile.label),
     [
-      "Sản xuất",
       "Tồn kho",
-            "Kiểm kê",
+      "Yêu cầu hàng",
+      "Kiểm kê",
       "Giao đếm",
       "Hao hụt",
       "Tiêu hao",
-      "Nhập hàng",
       "Danh mục",
     ],
   );

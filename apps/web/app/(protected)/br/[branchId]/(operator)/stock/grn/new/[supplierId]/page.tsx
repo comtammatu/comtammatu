@@ -1,44 +1,13 @@
-import { notFound } from "next/navigation";
-import { BranchGrnCreateClient } from "./branch-grn-create-client";
-import { loadGrnCreatePageData } from "@lib/inventory/grn-create-data";
+import { redirect } from "next/navigation";
+import { parseOperatorBranchId } from "../../../../../_lib/parse-branch-id";
 
-interface PageProps {
-  params: Promise<{ branchId: string; supplierId: string }>;
-  searchParams: Promise<{ branchId?: string | string[] }>;
-}
-
-export default async function OperatorStockGrnCreatePage({
+export default async function BranchGrnSupplierRetiredPage({
   params,
-  searchParams,
-}: PageProps) {
-  const { branchId: rawBranchId, supplierId: rawSupplierId } = await params;
-  const branchId = Number(rawBranchId);
-  const supplierId = Number(rawSupplierId);
-  if (
-    !Number.isInteger(branchId) ||
-    branchId <= 0 ||
-    !Number.isInteger(supplierId) ||
-    supplierId <= 0
-  ) {
-    notFound();
-  }
-
-  const queryParams = await searchParams;
-  const sourceBasePath = `/br/${branchId}/stock/grn/new`;
-  const grnBasePath = `/br/${branchId}/stock/grn`;
-  const data = await loadGrnCreatePageData({
-    supplierId,
-    queryBranchId: queryParams.branchId,
-    routeBranchId: branchId,
-    fallbackPath: sourceBasePath,
-    grnBasePath,
-  });
-
-  return (
-    <BranchGrnCreateClient
-      {...data}
-      sourceBasePath={sourceBasePath}
-      grnBasePath={grnBasePath}
-    />
-  );
+}: {
+  params: Promise<{ branchId: string; supplierId: string }>;
+}) {
+  const { branchId: raw } = await params;
+  const branchId = parseOperatorBranchId(raw);
+  if (branchId == null) redirect("/");
+  redirect(`/br/${branchId}/stock/requests/new`);
 }

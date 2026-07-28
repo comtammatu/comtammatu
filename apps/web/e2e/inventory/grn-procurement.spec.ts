@@ -228,6 +228,7 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
         tenant_id: fx.tenantId,
         grn_id: grn.id,
         ingredient_id: fx.ingredientId,
+        supplier_id: fx.supplierId,
         received_quantity: 5,
         rejected_quantity: 7, // > received → must be rejected
         rejection_reason: "Số từ chối vượt số đã giao",

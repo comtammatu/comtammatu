@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { FormEvent, TransitionStartFunction } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -25,9 +25,11 @@ import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   createEditableGrnLine,
   GRN_DETAIL_COPY as grnCopy,
+  uniqueGrnSuppliers,
   type EditableGrnLine as EditableLine,
   type GrnDetail as GRNDetail,
 } from "@lib/inventory/grn-detail-model";
+import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 
 const ADD_GRN_LINE_FORM_ID = "add-grn-line-form";
 
@@ -48,10 +50,27 @@ export function AddGrnLineDialog({
   onSaved: (line: EditableLine) => void;
   startTransition: TransitionStartFunction;
 }) {
+  const supplierOptions = useMemo(() => {
+    const options = uniqueGrnSuppliers(grn.items);
+    if (
+      grn.supplierId != null &&
+      !options.some((item) => item.id === grn.supplierId)
+    ) {
+      options.push({
+        id: grn.supplierId,
+        name: grn.supplier,
+      });
+    }
+    return options;
+  }, [grn.items, grn.supplier, grn.supplierId]);
+
   const [ingredientId, setIngredientId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
   const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
+  const [supplierId, setSupplierId] = useState(() =>
+    supplierOptions.length === 1 ? String(supplierOptions[0]!.id) : "",
+  );
 
   const selectedIngredient = ingredients.find(
     (item) => item.id === Number(ingredientId),
@@ -63,6 +82,9 @@ export function AddGrnLineDialog({
     setQuantity("");
     setUnit("");
     setEntryUnitId(null);
+    setSupplierId(
+      supplierOptions.length === 1 ? String(supplierOptions[0]!.id) : "",
+    );
   }
 
   function handleDialogOpenChange(open: boolean) {
@@ -111,11 +133,20 @@ export function AddGrnLineDialog({
       notify.error(grnCopy.validation.unitRequired);
       return;
     }
+    const parsedSupplierId = Number(supplierId);
+    const supplier = supplierOptions.find(
+      (item) => item.id === parsedSupplierId,
+    );
+    if (!parsedSupplierId || !supplier) {
+      notify.error(GRN_CREATE_COPY.toastChooseSupplier);
+      return;
+    }
 
     startTransition(async () => {
       const res = await upsertGrnLine({
         grnId: grn.id,
         ingredientId: parsedIngredientId,
+        supplierId: parsedSupplierId,
         receivedQuantity: parsedQuantity,
         entryUnitId,
         rejectedQuantity: 0,
@@ -135,6 +166,8 @@ export function AddGrnLineDialog({
           quantity: parsedQuantity,
           entryUnitId,
           unit: unit.trim(),
+          supplierId: supplier.id,
+          supplierName: supplier.name,
         }),
       );
       notify.success(grnCopy.addDialog.success);
@@ -191,6 +224,35 @@ export function AddGrnLineDialog({
           />
         </div>
 
+        {supplierOptions.length > 1 ? (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="grn-line-supplier">
+              {GRN_CREATE_COPY.supplierLabel}
+            </Label>
+            <Select value={supplierId} onValueChange={setSupplierId}>
+              <SelectTrigger id="grn-line-supplier">
+                <SelectValue
+                  placeholder={GRN_CREATE_COPY.supplierSelectPlaceholder}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {supplierOptions.map((supplier) => (
+                  <SelectItem key={supplier.id} value={String(supplier.id)}>
+                    {supplier.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : supplierOptions.length === 1 ? (
+          <p className="text-sm">
+            <span className="text-muted-foreground">
+              {GRN_CREATE_COPY.supplierLabel}{" "}
+            </span>
+            <span className="font-semibold">{supplierOptions[0]!.name}</span>
+          </p>
+        ) : null}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="grn-line-qty">
@@ -226,9 +288,8 @@ export function AddGrnLineDialog({
               <Input
                 id="grn-line-unit"
                 value={unit}
-                readOnly
-                aria-readonly="true"
-                placeholder="kg"
+                onChange={(event) => setUnit(event.target.value)}
+                placeholder={grnCopy.addDialog.selectUnit}
               />
             )}
           </div>

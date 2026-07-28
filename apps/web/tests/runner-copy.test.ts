@@ -378,7 +378,11 @@ test("Runner page follows the KDS order-list vocabulary", () => {
 test("Runner public board uses polling, not raw Realtime changes", () => {
   assert.match(runnerPageSource, /<RunnerRealtimeRefresh \/>/);
   assert.match(runnerRealtimeRefreshSource, /"use client";/);
-  assert.match(runnerRealtimeRefreshSource, /const POLL_INTERVAL_MS = 3_000;/);
+  // Polling keeps deterministic max staleness on an always-visible kiosk even if
+  // the realtime socket drops silently; the board is a derived "now serving" view
+  // that needs a full queue rebuild per change. 6s halves the per-shift refresh
+  // count vs 3s while staying inside customer-readable staleness.
+  assert.match(runnerRealtimeRefreshSource, /const POLL_INTERVAL_MS = 6_000;/);
   assert.match(runnerRealtimeRefreshSource, /router\.refresh\(\)/);
   assert.match(runnerRealtimeRefreshSource, /window\.setInterval/);
   assert.match(runnerRealtimeRefreshSource, /visibilitychange/);

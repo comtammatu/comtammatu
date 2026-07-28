@@ -58,6 +58,7 @@ export default async function BranchSettingsPage({
         <BranchOperatorActionSection
           title={copy.setupEssentialsTitle}
           description={copy.setupLaneDescription}
+          mobileColumns={2}
           links={visibleLinks.map((link) => ({
             key: `${link.moduleKey}-${link.href}`,
             href: link.href,

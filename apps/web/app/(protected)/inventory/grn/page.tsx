@@ -25,6 +25,7 @@ export async function GRNListPageContent({
       grns={data.grns}
       basePath={basePath}
       canCreate={data.canCreate}
+      canManageSupplierInvoice={data.canManageSupplierInvoice}
       drafts={showDrafts && data.canCreate ? data.drafts : undefined}
       draftsLoadFailed={showDrafts && data.canCreate && data.draftsLoadFailed}
       grnsLoadFailed={data.grnsLoadFailed}

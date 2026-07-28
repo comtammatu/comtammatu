@@ -74,6 +74,10 @@ export default async function OperatorLayout({
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
   const compactBranchName = context.branch.name.replace(/^Chi nhánh\s+/, "");
+  const notificationsAria =
+    unread > 0
+      ? `${messages.operator.header.notificationsAria}, ${unread} chưa đọc`
+      : messages.operator.header.notificationsAria;
 
   return (
     <PwaRuntimeProvider>
@@ -148,7 +152,7 @@ export default async function OperatorLayout({
               <Button
                 variant="outline"
                 size="icon-touch"
-                aria-label={messages.operator.header.notificationsAria}
+                aria-label={notificationsAria}
                 className="relative"
                 render={<Link href={notificationsHref} />}
               >

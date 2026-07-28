@@ -81,7 +81,7 @@ export function BranchGrnCreateClient({
             render={
               <Link
                 href={sourceBasePath}
-                aria-label={GRN_CREATE_COPY.changeSupplier}
+                aria-label={GRN_CREATE_COPY.backToList}
               />
             }
           >
@@ -89,10 +89,10 @@ export function BranchGrnCreateClient({
           </Button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">
-              {GRN_CREATE_COPY.newReceiptEyebrow}
+              {GRN_CREATE_COPY.newReceiptTitle}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {controller.supplier.name}
+              {controller.supplierSummary}
             </p>
           </div>
         </BranchOperatorControlBar>
@@ -101,7 +101,7 @@ export function BranchGrnCreateClient({
           <div className="flex min-w-0 flex-col gap-3">
             <BranchOperatorPanel
               size="sm"
-              title={controller.supplier.name}
+              title={GRN_CREATE_COPY.newReceiptTitle}
               icon={IconReceipt}
               contentClassName="gap-3"
             >
@@ -111,7 +111,7 @@ export function BranchGrnCreateClient({
                 items={[
                   {
                     term: messages.inventory.grn.supplier,
-                    description: controller.supplier.name,
+                    description: controller.supplierSummary,
                   },
                   {
                     term: messages.inventory.grn.receivingWarehouse,
@@ -192,6 +192,7 @@ export function BranchGrnCreateClient({
                             {line.ingredientName}
                           </ItemTitle>
                           <ItemDescription className="line-clamp-none text-xs">
+                            {line.supplierName} ·{" "}
                             {GRN_CREATE_COPY.lineQtyOnly(line.quantity, line.unit)}
                           </ItemDescription>
                         </ItemContent>
@@ -310,7 +311,7 @@ export function BranchGrnCreateClient({
               render={<Link href={sourceBasePath} />}
             >
               <IconArrowLeft data-icon="inline-start" />
-              {GRN_CREATE_COPY.changeSupplier}
+              {GRN_CREATE_COPY.backToList}
             </Button>
           }
           trailing={

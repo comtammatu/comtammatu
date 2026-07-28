@@ -40,7 +40,7 @@ export default async function SupplierItemsPage({
       .limit(500),
     supabase
       .from("supplier_items")
-      .select("id, ingredient_id, supplier_sku_code")
+      .select("id, ingredient_id, supplier_sku_code, is_preferred")
       .eq("tenant_id", claims.tenant_id)
       .eq("supplier_id", supplierId)
       .eq("is_active", true)
@@ -64,6 +64,7 @@ export default async function SupplierItemsPage({
             ingredientName: ingredient.name,
             ingredientSku: ingredient.sku,
             supplierSkuCode: item.supplier_sku_code,
+            isPreferred: item.is_preferred === true,
           },
         ]
       : [];

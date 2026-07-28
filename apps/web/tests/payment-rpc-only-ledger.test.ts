@@ -227,6 +227,29 @@ test("Owner bank review is atomic and cannot overwrite provider evidence", () =>
   assert.doesNotMatch(reviewActions, /logAudit/);
 });
 
+test("HĐĐT payment trigger skips non-invoice provider_data updates", () => {
+  const skipMigration = read(
+    "supabase/migrations/20260728170010_skip_tax_invoice_sync_on_non_invoice_provider_data.sql",
+  );
+  assert.match(
+    skipMigration,
+    /FUNCTION private\.sync_tax_invoice_issue_job_after_payment_trigger/,
+  );
+  assert.match(
+    skipMigration,
+    /OLD\.provider_data -> 'invoiceSnapshot'[\s\S]*NEW\.provider_data -> 'invoiceSnapshot'/,
+  );
+  assert.match(
+    skipMigration,
+    /OLD\.provider_data -> 'invoicePayload'[\s\S]*NEW\.provider_data -> 'invoicePayload'/,
+  );
+  assert.match(skipMigration, /'status', 'already_issued'/);
+  assert.doesNotMatch(
+    skipMigration,
+    /RAISE EXCEPTION 'tax_invoice_issue_active_invoice_not_draft'/,
+  );
+});
+
 test("MoMo provider runtime is retired", () => {
   assert.equal(
     existsSync(join(repoRoot, "apps/web/app/api/webhooks/momo/route.ts")),

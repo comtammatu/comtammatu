@@ -49,6 +49,7 @@ export type StockIngredientDetailMovement = {
 
 export type StockIngredientDetailPermissions = Pick<
   StockActionPermissions,
+  | "canCreateStockRequest"
   | "canReceiveGrn"
   | "canCreateTransfer"
   | "canCreateStocktake"
@@ -63,6 +64,7 @@ export type StockIngredientDetailValuation = {
 
 export type StockIngredientDetailData = {
   branchId: number;
+  coreDataLoadFailed: boolean;
   ingredient: StockIngredientDetailIngredient;
   locations: StockIngredientDetailLocation[];
   movements: StockIngredientDetailMovement[];

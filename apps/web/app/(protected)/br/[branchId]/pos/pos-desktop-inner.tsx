@@ -446,6 +446,47 @@ export function PosDesktopInner({
     };
   }, [refreshSelfOrderPosState]);
 
+  // Instant self-order alert: a realtime channel fires the same loader the poll
+  // uses, so the cashier's tone and approval sheet surface a guest QR request as
+  // soon as the row lands. The 5s poll stays as a safety net for a silently
+  // dropped socket (the loader is idempotent — tone only plays on genuinely new
+  // request ids).
+  const refreshSelfOrderPosStateRef = useRef(refreshSelfOrderPosState);
+  useEffect(() => {
+    refreshSelfOrderPosStateRef.current = refreshSelfOrderPosState;
+  }, [refreshSelfOrderPosState]);
+  useRealtimeChannel(
+    (supabase) => {
+      const filter = `branch_id=eq.${String(branchId)}`;
+      return supabase
+        .channel(`pos-self-order-branch-${String(branchId)}`, {
+          config: { private: true },
+        })
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "self_order_requests",
+            filter,
+          },
+          () => refreshSelfOrderPosStateRef.current(),
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "self_order_payment_requests",
+            filter,
+          },
+          () => refreshSelfOrderPosStateRef.current(),
+        )
+        .subscribe();
+    },
+    [branchId],
+  );
+
   const refreshSelfOrderWorkflow = useCallback(async () => {
     await Promise.all([refreshSelfOrderPosState(), refreshOperational()]);
   }, [refreshOperational, refreshSelfOrderPosState]);

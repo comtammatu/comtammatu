@@ -490,3 +490,74 @@ test("supplier invoice matching requires linked GRN evidence", () => {
   assert.match(client, /missingGrnTitle/);
   assert.match(client, /getDisplayMatchStatus/);
 });
+
+test("supplier invoice create dialog is GRN-first with progressive VAT", () => {
+  const client = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  );
+  const page = readWeb(
+    "app/(protected)/finance/supplier-invoices/page.tsx",
+  );
+  const grnActions = readWeb(
+    "app/(protected)/inventory/grn-actions.ts",
+  );
+  const messages = readWeb("lib/messages/inventory.ts");
+
+  assert.match(client, /DEFAULT_VISIBLE_VAT_RATE/);
+  assert.match(client, /visibleRates/);
+  assert.match(client, /addVatRate/);
+  assert.match(client, /chooseGrnPrimary/);
+  assert.match(client, /grnNetAcceptedLabel/);
+  assert.match(client, /netAcceptedAmount/);
+  assert.doesNotMatch(
+    client,
+    /name="matchingNotes"/,
+  );
+  assert.match(page, /netAcceptedAmount/);
+  assert.match(page, /fetchGrnIdsForDropdown\(branchFilter, includeGrnId\)/);
+  assert.match(page, /optionKey/);
+  assert.match(grnActions, /net_accepted_amount/);
+  assert.match(grnActions, /from\("supplier_invoices"\)/);
+  assert.match(grnActions, /select\("grn_id, supplier_id"\)/);
+  assert.match(grnActions, /expandGrnDropdownOptions/);
+  assert.match(
+    grnActions,
+    /grn_items \( received_quantity, rejected_quantity, unit_cost, supplier_id/,
+  );
+  assert.match(client, /option\.optionKey/);
+  assert.match(client, /poId: selectedGrn\?\.poId/);
+  assert.match(
+    messages,
+    /1\) Chọn phiếu nhập · 2\) Nhập số và ngày hóa đơn · 3\) Chọn mức VAT/,
+  );
+  assert.match(messages, /chooseGrnPrimary:/);
+  assert.match(messages, /addVatRate:/);
+});
+
+test("confirmed GRN surfaces link into supplier invoice create or view", () => {
+  const listClient = readWeb(
+    "app/(protected)/inventory/grn/grn-list-client.tsx",
+  );
+  const listData = readWeb("lib/inventory/grn-list-data.ts");
+  const listModel = readWeb("lib/inventory/grn-list-model.ts");
+  const detailClient = readWeb(
+    "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
+  );
+  const grnActions = readWeb(
+    "app/(protected)/inventory/grn-actions.ts",
+  );
+
+  assert.match(listModel, /supplierInvoiceHrefForGrn/);
+  assert.match(listModel, /invoiceId: number \| null/);
+  assert.match(listData, /canManageSupplierInvoice/);
+  assert.match(listData, /supplier_invoices/);
+  assert.match(listClient, /canManageSupplierInvoice/);
+  assert.match(listClient, /supplierInvoiceHrefForGrn/);
+  assert.match(listClient, /grn\.status === "confirmed"/);
+  assert.match(detailClient, /supplierInvoiceHrefForGrn/);
+  assert.match(grnActions, /supplier_invoices \( id \)/);
+  assert.match(
+    readWeb("lib/messages/inventory.ts"),
+    /createInvoice: "Ghi nhận hóa đơn NCC"/,
+  );
+});

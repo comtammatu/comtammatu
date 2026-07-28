@@ -1,6 +1,7 @@
 import {
   ArrowRightLeft as IconArrowRightLeft,
   CircleMinus as IconCircleMinus,
+  ClipboardList as IconClipboardList,
   FileText as IconFileText,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
@@ -35,22 +36,38 @@ export function withInventoryBranchNavScope(
   }));
 }
 
-// Inventory sidebar nav as data (D019 § D / ADR 0018). Role/scope-computed, so
-// it is a resolver rather than a static record; it stays in the inventory _lib
-// because it reads the inventory dictionary. The shell projects it instead of
-// holding a ShellNavGroup[] literal.
+/** D093: PO nav only for owner | accountant. */
+function canShowPurchaseOrders(role: StaffRole): boolean {
+  return role === "owner" || role === "accountant";
+}
+
+/** D093: recipes menu BOM / production recipes — not central_supply. */
+function canShowRecipes(
+  role: StaffRole,
+  showProduction: boolean,
+  showCatalogManagement: boolean,
+): boolean {
+  if (role === "central_supply_ops") return false;
+  if (showCatalogManagement) return true;
+  if (showProduction && role === "central_kitchen_lead") return true;
+  if (role === "owner" && (showProduction || showCatalogManagement)) return true;
+  return false;
+}
+
 export function resolveInventoryNav({
   userRole,
   showProcurement,
   showProduction,
   showCatalogManagement,
   showSettings,
+  showStockRequestInbox = false,
 }: {
   userRole: StaffRole;
   showProcurement: boolean;
   showProduction: boolean;
   showCatalogManagement: boolean;
   showSettings: boolean;
+  showStockRequestInbox?: boolean;
 }): ShellNavGroup[] {
   if (userRole === "accountant") {
     return showProcurement
@@ -91,8 +108,6 @@ export function resolveInventoryNav({
   groups.push({
     title: "1 · Kiểm soát tồn",
     items: [
-      // Cross-branch oversight entries (D061), additive to the branch
-      // operator plane at /br/[id]/stock/* — owner=oversight, branch=floor.
       {
         href: "/inventory/stock",
         label: tNav("stock", "navigation"),
@@ -101,35 +116,45 @@ export function resolveInventoryNav({
     ],
   });
 
+  const inboundItems: ShellNavGroup["items"] = [];
+  if (showProcurement) {
+    inboundItems.push({
+      href: "/inventory/grn",
+      label: "Nhập kho",
+      icon: IconPackagePlus,
+    });
+  }
+  if (showProcurement && canShowPurchaseOrders(userRole)) {
+    inboundItems.push({
+      href: "/inventory/purchase-orders",
+      label: "Đơn mua hàng",
+      icon: IconShoppingCart,
+    });
+  }
+  if (showStockRequestInbox) {
+    inboundItems.push({
+      href: "/inventory/stock-requests",
+      label: "Yêu cầu hàng",
+      icon: IconClipboardList,
+    });
+  }
+  inboundItems.push(
+    {
+      href: "/inventory/consumption",
+      label: "Tiêu hao",
+      icon: IconCircleMinus,
+      matchPrefixes: ["/inventory/consumption/", "/inventory/issues"],
+    },
+    {
+      href: "/inventory/transfers",
+      label: "Điều chuyển",
+      icon: IconArrowRightLeft,
+    },
+  );
+
   groups.push({
     title: "2 · Nhập hàng",
-    items: [
-      ...(showProcurement
-        ? [
-            {
-              href: "/inventory/grn",
-              label: "Nhập kho",
-              icon: IconPackagePlus,
-            },
-            {
-              href: "/inventory/purchase-orders",
-              label: "Đơn mua hàng",
-              icon: IconShoppingCart,
-            },
-          ]
-        : []),
-      {
-        href: "/inventory/consumption",
-        label: "Tiêu hao",
-        icon: IconCircleMinus,
-        matchPrefixes: ["/inventory/consumption/", "/inventory/issues"],
-      },
-      {
-        href: "/inventory/transfers",
-        label: "Điều chuyển",
-        icon: IconArrowRightLeft,
-      },
-    ],
+    items: inboundItems,
   });
 
   if (showProduction) {
@@ -150,35 +175,32 @@ export function resolveInventoryNav({
     });
   }
 
-  const isBranchManager = userRole === "branch_manager";
   const catalogItems: ShellNavGroup["items"] = [];
 
-  if (!isBranchManager) {
-    if (showSettings) {
-      catalogItems.push({
-        href: "/inventory/settings",
-        label: tNav("settings", "navigation"),
-        icon: IconSettings,
-        matchPrefixes: ["/inventory/settings/"],
-      });
-    }
-    if (showProcurement) {
-      catalogItems.push({
-        href: "/inventory/suppliers",
-        label: tNav("suppliers", "navigation"),
-        icon: IconUsers,
-      });
-    }
-    if (showCatalogManagement) {
-      catalogItems.push({
-        href: "/inventory/ingredients",
-        label: tNav("ingredients", "navigation"),
-        icon: IconFileText,
-      });
-    }
+  if (showSettings) {
+    catalogItems.push({
+      href: "/inventory/settings",
+      label: tNav("settings", "navigation"),
+      icon: IconSettings,
+      matchPrefixes: ["/inventory/settings/"],
+    });
+  }
+  if (showProcurement) {
+    catalogItems.push({
+      href: "/inventory/suppliers",
+      label: tNav("suppliers", "navigation"),
+      icon: IconUsers,
+    });
+  }
+  if (showCatalogManagement) {
+    catalogItems.push({
+      href: "/inventory/ingredients",
+      label: tNav("ingredients", "navigation"),
+      icon: IconFileText,
+    });
   }
 
-  if (showProduction || showProcurement || showCatalogManagement) {
+  if (canShowRecipes(userRole, showProduction, showCatalogManagement)) {
     catalogItems.push({
       href: "/inventory/recipes",
       label: tNav("recipes", "navigation"),

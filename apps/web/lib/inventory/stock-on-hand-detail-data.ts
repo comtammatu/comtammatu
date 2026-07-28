@@ -156,8 +156,9 @@ export async function loadStockIngredientDetailData({
     : supabase;
 
   const [
-    stockBearingLocationIds,
+    stockBearingLocations,
     ingredientResult,
+    canCreateStockRequest,
     canReceiveGrn,
     canCreateTransfer,
     canCreateStocktake,
@@ -175,6 +176,7 @@ export async function loadStockIngredientDetailData({
       .eq("tenant_id", claims.tenant_id)
       .eq("id", ingredientId)
       .maybeSingle(),
+    currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_REQUEST_CREATE),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     currentUserHasPermission(
       branchId,
@@ -191,9 +193,12 @@ export async function loadStockIngredientDetailData({
   if (ingredientResult.error || !ingredientResult.data) notFound();
   const ingredientRow = ingredientResult.data as unknown as IngredientRow;
   const movementCount = Math.min(Math.max(Math.trunc(movementLimit), 1), 30);
+  const stockBearingLocationIds = stockBearingLocations.ok
+    ? stockBearingLocations.locationIds
+    : [];
 
   const [stockResult, movementResult] = await Promise.all([
-    stockBearingLocationIds.length > 0
+    stockBearingLocations.ok && stockBearingLocationIds.length > 0
       ? readClient
           .from("stock_levels")
           .select(stockLevelSelect(canReadValuation))
@@ -297,6 +302,10 @@ export async function loadStockIngredientDetailData({
 
   return {
     branchId,
+    coreDataLoadFailed:
+      !stockBearingLocations.ok ||
+      stockResult.error != null ||
+      movementResult.error != null,
     ingredient: {
       id: ingredientRow.id,
       name: ingredientRow.name,
@@ -317,6 +326,7 @@ export async function loadStockIngredientDetailData({
     storageTemperature: stockStorageTemperature(ingredientRow.storage_type),
     valuation,
     permissions: {
+      canCreateStockRequest,
       canReceiveGrn,
       canCreateTransfer,
       canCreateStocktake,

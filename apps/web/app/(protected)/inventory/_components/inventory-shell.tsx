@@ -68,6 +68,10 @@ export function InventoryShell({
         showProduction,
         showCatalogManagement,
         showSettings,
+        showStockRequestInbox:
+          userRole === "owner" ||
+          userRole === "central_supply_ops" ||
+          userRole === "central_kitchen_lead",
       }),
     [
       showCatalogManagement,

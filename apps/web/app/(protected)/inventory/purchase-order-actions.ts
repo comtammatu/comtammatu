@@ -90,7 +90,7 @@ export const createPurchaseOrderFromGrn = withAction(
     }
 
     const { data: result, error } = await supabase.rpc(
-      "create_purchase_order_from_grn",
+      "create_purchase_orders_from_grn",
       { p_grn_id: grnId },
     );
 
@@ -99,6 +99,8 @@ export const createPurchaseOrderFromGrn = withAction(
         grn_not_draft: "Chỉ tạo đơn mua từ phiếu nhập nháp.",
         grn_already_linked_to_po: "Phiếu nhập đã gắn đơn mua.",
         grn_has_no_receivable_lines: "Phiếu nhập chưa có dòng nhận hợp lệ.",
+        grn_line_supplier_required:
+          "Mỗi dòng phiếu nhập phải có nhà cung cấp trước khi tạo đơn mua.",
         "28000": "Phiên đăng nhập đã hết hạn.",
         "42501": "Bạn không có quyền tạo đơn đặt hàng.",
         P0002: "Không tìm thấy phiếu nhập hoặc địa điểm không hợp lệ.",
@@ -114,6 +116,8 @@ export const createPurchaseOrderFromGrn = withAction(
     const parsed = z
       .object({
         po_id: z.coerce.number().int().positive(),
+        po_ids: z.array(z.coerce.number().int().positive()).optional(),
+        po_count: z.coerce.number().int().positive().optional(),
         display_id: z.string().optional(),
       })
       .safeParse(result);
@@ -126,7 +130,12 @@ export const createPurchaseOrderFromGrn = withAction(
     revalidateSurfacePath(`/inventory/grn/${grnId}`);
     return {
       success: true,
-      data: { id: parsed.data.po_id, displayId: parsed.data.display_id },
+      data: {
+        id: parsed.data.po_id,
+        poIds: parsed.data.po_ids ?? [parsed.data.po_id],
+        poCount: parsed.data.po_count ?? parsed.data.po_ids?.length ?? 1,
+        displayId: parsed.data.display_id,
+      },
     };
   },
 );

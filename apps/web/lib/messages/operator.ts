@@ -28,6 +28,13 @@ export const operator = {
     runnerDescription: "Gọi số và giao món",
     shiftControlTitle: "Theo dõi trong ca",
     shiftControlDescription: "Đơn hàng và giới hạn bán hôm nay.",
+    lockedBeforeClockIn: "Cần chấm công để mở",
+    phaseOpenTitle: "Đầu ca — mở bán",
+    phaseOpenDescription: "Mở trạm và giới hạn bán cho ca hôm nay.",
+    phaseRunTitle: "Giữa ca — vận hành",
+    phaseRunDescription: "Theo dõi đơn, đội và tồn trong ca.",
+    phaseCloseTitle: "Cuối ca — chốt",
+    phaseCloseDescription: "Đối soát ca, duyệt kết ca và tiêu hao.",
   },
   shift: {
     title: "Ca hôm nay",

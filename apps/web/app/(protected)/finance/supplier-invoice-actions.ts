@@ -164,6 +164,18 @@ export const createSupplierInvoice = withAction(
           error: "Nhà cung cấp không khớp với phiếu nhập.",
         };
       }
+      if (error.message?.includes("po_grn_mismatch")) {
+        return {
+          success: false,
+          error: "Đơn mua không khớp với phiếu nhập đã chọn.",
+        };
+      }
+      if (error.message?.includes("po_supplier_mismatch")) {
+        return {
+          success: false,
+          error: "Đơn mua không khớp với nhà cung cấp.",
+        };
+      }
       if (error.message?.includes("supplier_invoice_vat_breakdown")) {
         return {
           success: false,

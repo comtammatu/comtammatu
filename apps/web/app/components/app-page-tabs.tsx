@@ -21,6 +21,8 @@ export type AppPageTabsProps = {
   paramKey?: string;
   children?: ReactNode;
   className?: string;
+  /** Accessible name for the tablist (WAI-ARIA tabs pattern). */
+  ariaLabel?: string;
   /** Stick the tab list at the top of the Owner shell scrollport. */
   stickyList?: boolean;
 };
@@ -31,6 +33,7 @@ export function AppPageTabs({
   paramKey,
   children,
   className,
+  ariaLabel,
   stickyList = false,
 }: AppPageTabsProps) {
   const initial = items.some((item) => item.value === defaultValue)
@@ -38,7 +41,7 @@ export function AppPageTabs({
     : items[0]?.value;
   if (!initial) return null;
   const list = (
-    <TabsList variant="toolbar" size="touch">
+    <TabsList variant="toolbar" size="touch" aria-label={ariaLabel}>
       {items.map((item) => (
         <TabsTrigger
           key={item.value}

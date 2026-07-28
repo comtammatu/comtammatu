@@ -30,7 +30,10 @@ import {
 import type { IngredientRow } from "@lib/inventory/types";
 import { upsertGrnLine } from "@/(protected)/inventory/grn-actions";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
-import type { GrnLineEditState } from "@lib/inventory/grn-create-model";
+import {
+  resolveDefaultGrnSupplier,
+  type GrnLineEditState,
+} from "@lib/inventory/grn-create-model";
 import {
   createEditableGrnLine,
   GRN_DETAIL_COPY,
@@ -120,8 +123,14 @@ export function BranchGrnCreateLineSheet({
 }: BranchGrnCreateLineSheetProps) {
   const [numericField, setNumericField] = useState<"quantity" | null>(null);
   const open = edit != null;
-  const valid = edit != null && edit.quantity > 0;
+  const valid =
+    edit != null && edit.quantity > 0 && edit.supplierId != null;
   const baseConversionPreview = edit ? buildBaseConversionPreview(edit) : null;
+  const suppliers = edit?.ingredient.suppliers ?? [];
+  const defaultSupplier = resolveDefaultGrnSupplier(suppliers);
+  const showSupplierPicker = suppliers.length > 1;
+  const lockedSupplier =
+    !showSupplierPicker && defaultSupplier != null ? defaultSupplier : null;
 
   return (
     <>
@@ -150,6 +159,58 @@ export function BranchGrnCreateLineSheet({
 
               <div className="p-4">
                 <FieldGroup>
+                  {showSupplierPicker ? (
+                    <Field>
+                      <FieldLabel htmlFor="branch-grn-create-supplier">
+                        {GRN_CREATE_COPY.supplierLabel}
+                      </FieldLabel>
+                      <Select
+                        value={
+                          edit.supplierId != null
+                            ? String(edit.supplierId)
+                            : ""
+                        }
+                        onValueChange={(value) =>
+                          onPatch({ supplierId: Number(value) || null })
+                        }
+                      >
+                        <SelectTrigger
+                          id="branch-grn-create-supplier"
+                          size="touch"
+                          className="w-full"
+                        >
+                          <SelectValue
+                            placeholder={
+                              GRN_CREATE_COPY.supplierSelectPlaceholder
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {suppliers.map((supplier) => (
+                            <SelectItem
+                              key={supplier.id}
+                              value={String(supplier.id)}
+                              size="touch"
+                            >
+                              {supplier.isPreferred
+                                ? `${supplier.name} · ${GRN_CREATE_COPY.preferredSupplierSuffix}`
+                                : supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  ) : lockedSupplier ? (
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">
+                        {GRN_CREATE_COPY.supplierLabel}{" "}
+                      </span>
+                      <span className="font-semibold">
+                        {lockedSupplier.name}
+                      </span>
+                    </p>
+                  ) : null}
+
                   <Field>
                     <FieldLabel htmlFor="branch-grn-create-unit">
                       {messages.inventory.grn.addDialog.unitLabel}
@@ -196,7 +257,7 @@ export function BranchGrnCreateLineSheet({
                     id="branch-grn-create-quantity"
                     label={`${FORM_VI.quantity} (${edit.unit})`}
                     value={edit.quantity > 0 ? formatQty(edit.quantity) : null}
-                    emptyLabel="Nhập số"
+                    emptyLabel={messages.inventory.grn.quantityEmptyLabel}
                     onClick={() => setNumericField("quantity")}
                   />
 
@@ -216,7 +277,9 @@ export function BranchGrnCreateLineSheet({
                   onClick={onSave}
                   disabled={!valid}
                 >
-                  {edit.line ? "Cập nhật" : "Thêm vào phiếu"}
+                  {edit.line
+                    ? GRN_CREATE_COPY.updateLineOnReceipt
+                    : GRN_CREATE_COPY.addLineToReceipt}
                 </Button>
                 <div className="flex items-center gap-2">
                   {edit.line ? (
@@ -338,14 +401,14 @@ export function BranchGrnReviewLineSheet({
                       id={`branch-grn-actual-${line.lineId}`}
                       label={GRN_DETAIL_COPY.line.actualLabel(line.unit)}
                       value={formatQty(line.actual)}
-                      emptyLabel="Nhập số"
+                      emptyLabel={messages.inventory.grn.quantityEmptyLabel}
                       onClick={() => setNumericField("actual")}
                     />
                     <NumberPadValueField
                       id={`branch-grn-rejected-${line.lineId}`}
                       label={GRN_DETAIL_COPY.line.rejectedLabel(line.unit)}
                       value={formatQty(line.rejected)}
-                      emptyLabel="Nhập số"
+                      emptyLabel={messages.inventory.grn.quantityEmptyLabel}
                       onClick={() => setNumericField("rejected")}
                     />
                   </div>
@@ -520,9 +583,22 @@ export function BranchGrnAddLineSheet({
       return;
     }
     startTransition(async () => {
+      const supplierId =
+        grn.supplierId ?? grn.items[0]?.supplierId ?? null;
+      const supplierName =
+        supplierId != null
+          ? (grn.items.find((item) => item.supplierId === supplierId)
+              ?.supplierName ?? grn.supplier)
+          : grn.supplier;
+      if (supplierId == null) {
+        notify.error(GRN_CREATE_COPY.toastChooseSupplier);
+        return;
+      }
+
       const result = await upsertGrnLine({
         grnId: grn.id,
         ingredientId: ingredient.id,
+        supplierId,
         receivedQuantity: parsedQuantity,
         entryUnitId,
         rejectedQuantity: 0,
@@ -541,6 +617,8 @@ export function BranchGrnAddLineSheet({
           quantity: parsedQuantity,
           entryUnitId,
           unit: unit.trim(),
+          supplierId,
+          supplierName,
         }),
       );
       notify.success(GRN_DETAIL_COPY.addDialog.success);
@@ -626,7 +704,7 @@ export function BranchGrnAddLineSheet({
                 id="branch-grn-add-quantity"
                 label={GRN_DETAIL_COPY.addDialog.quantityLabel}
                 value={quantity === "" ? null : formatQty(Number(quantity))}
-                emptyLabel="Nhập số"
+                emptyLabel={messages.inventory.grn.quantityEmptyLabel}
                 onClick={() => setNumericField("quantity")}
               />
             </FieldGroup>

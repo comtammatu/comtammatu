@@ -9,6 +9,10 @@ type LocationRow = {
     | null;
 };
 
+export type StockBearingLocationsResult =
+  | { ok: true; locationIds: number[] }
+  | { ok: false };
+
 function branchKindFromLocation(row: LocationRow): string {
   const branch = Array.isArray(row.branches) ? row.branches[0] : row.branches;
   return branch?.branch_kind ?? "branch";
@@ -35,10 +39,14 @@ export async function fetchStockBearingLocationIds({
   supabase: TenantSupabase;
   tenantId: number;
   branchId?: number;
-}): Promise<number[]> {
+}): Promise<StockBearingLocationsResult> {
+  // Dual FKs inventory_locations→branches (branch_id + branch_tenant) require
+  // an explicit constraint hint; bare branches!inner is ambiguous (PGRST201).
   let query = supabase
     .from("inventory_locations")
-    .select("id, location_kind, branches!inner ( branch_kind )")
+    .select(
+      "id, location_kind, branches!inventory_locations_branch_id_fkey!inner ( branch_kind )",
+    )
     .eq("tenant_id", tenantId)
     .eq("is_active", true);
 
@@ -47,14 +55,17 @@ export async function fetchStockBearingLocationIds({
   }
 
   const { data, error } = await query;
-  if (error) return [];
+  if (error) return { ok: false };
 
-  return ((data ?? []) as LocationRow[])
-    .filter((row) =>
-      isStockBearingLocationKind({
-        siteKind: branchKindFromLocation(row),
-        locationKind: row.location_kind,
-      }),
-    )
-    .map((row) => row.id);
+  return {
+    ok: true,
+    locationIds: ((data ?? []) as LocationRow[])
+      .filter((row) =>
+        isStockBearingLocationKind({
+          siteKind: branchKindFromLocation(row),
+          locationKind: row.location_kind,
+        }),
+      )
+      .map((row) => row.id),
+  };
 }

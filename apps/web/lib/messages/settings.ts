@@ -485,6 +485,7 @@ export const settings = {
     readinessCheckoutEmpty: "Không có yêu cầu chờ duyệt.",
     readinessCheckoutCta: "Mở duyệt kết ca",
     queueTitle: "Cần xử lý",
+    queueAriaLabel: (count: number) => `Hàng đợi cần xử lý, ${formatCount(count)} mục`,
     queueCheckoutMeta: (count: number) =>
       `${formatCount(count)} nhân viên đang chờ`,
     queueLeaveTitle: "Duyệt nghỉ phép",

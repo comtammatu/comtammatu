@@ -50,13 +50,20 @@ export async function fetchInventoryValueSystem(
     return { success: false, error: "Không có quyền" };
   }
   const supabase = monetaryAccess.client;
-  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+  const stockBearingLocations = await fetchStockBearingLocationIds({
     supabase,
     tenantId: claims.tenant_id,
     ...(branchId != null ? { branchId } : {}),
   });
 
-  if (stockBearingLocationIds.length === 0) {
+  if (!stockBearingLocations.ok) {
+    return {
+      success: false,
+      error: messages.inventory.value.stockLoadFailed,
+    };
+  }
+
+  if (stockBearingLocations.locationIds.length === 0) {
     return { success: true, data: { totalValue: 0 } };
   }
 
@@ -70,7 +77,7 @@ export async function fetchInventoryValueSystem(
     `,
     )
     .eq("tenant_id", claims.tenant_id)
-    .in("location_id", stockBearingLocationIds);
+    .in("location_id", stockBearingLocations.locationIds);
 
   if (branchId != null) {
     query = query.eq("branch_id", branchId);
@@ -207,10 +214,19 @@ export async function fetchInventoryValueByBranch(): Promise<
   if (branchIds.length === 0) {
     return { success: true, data: { rows: [] } };
   }
-  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+  const stockBearingLocations = await fetchStockBearingLocationIds({
     supabase,
     tenantId: claims.tenant_id,
   });
+
+  if (!stockBearingLocations.ok) {
+    return {
+      success: false,
+      error: messages.inventory.value.stockLoadFailed,
+    };
+  }
+
+  const stockBearingLocationIds = stockBearingLocations.locationIds;
 
   const { data: stockRows, error: stockError } =
     stockBearingLocationIds.length > 0

@@ -190,7 +190,7 @@ initialization and privileged fund adjustments remain Owner-only.
 | Actor | System access | Must review or act on |
 | --- | --- | --- |
 | Owner | Tenant-wide `/finance`; oversight plus fund initialization / privileged exceptions | Daily landing metrics; cash/bank; POS cash variances; SePay unmatched; VietQR missing bank evidence; expenses; AP; HĐĐT; inventory opening/closing; exports; staff permission grants |
-| Accountant | `/finance` view + approve + create operating expenses, supplier invoices, AP pay, bank (NH), payment-method correction (PTTT); Inventory GRN/PO view plus PO create/approve (same person may create and approve); no stock/production/catalog/valuation surface | Same operating review set as Owner for money workflows they are granted; create PO from GRN draft and approve before warehouse confirm (D083/D091) |
+| Accountant | `/finance` view + approve + create operating expenses, supplier invoices, AP pay, bank (NH), payment-method correction (PTTT); Inventory GRN/PO view plus PO create/approve (same person may create and approve); no stock/production/catalog/valuation surface | Same operating review set as Owner for money workflows they are granted; create PO(s) from multi-supplier GRN draft (split by NCC) and approve each before warehouse confirm (D083/D091/D092) |
 | Branch Manager | Branch POS-session workflow only; no tenant-wide Finance; no purchase-price / chain-PO visibility | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds |
 
 Operators must not silently map `office` or a retired position code to Finance. Period-close

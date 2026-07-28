@@ -113,6 +113,9 @@ function DraftLineMobileCard({
           <p className="truncate text-sm font-semibold leading-tight">
             {line.ingredientName}
           </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {line.supplierName}
+          </p>
           <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
             {GRN_CREATE_COPY.lineQtyOnly(line.quantity, line.unit)}
           </p>
@@ -180,7 +183,12 @@ export function GrnCreateClient({
       key: "name",
       header: grnCopy.lineHeaderName,
       render: (line) => (
-        <p className="min-w-0 truncate font-medium">{line.ingredientName}</p>
+        <div className="min-w-0">
+          <p className="min-w-0 truncate font-medium">{line.ingredientName}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {line.supplierName}
+          </p>
+        </div>
       ),
     },
     {
@@ -332,6 +340,14 @@ export function GrnCreateClient({
 
   const contextStrip = (
     <div className="flex flex-col gap-3">
+      <p className="min-w-0 text-sm">
+        <span className="text-muted-foreground">
+          {GRN_CREATE_COPY.supplierLabel}{" "}
+        </span>
+        <span className="font-semibold text-foreground">
+          {controller.supplierSummary}
+        </span>
+      </p>
       {controller.showWarehouseEditor ? (
         warehouseField
       ) : (
@@ -478,11 +494,11 @@ export function GrnCreateClient({
     <AppPageHeader
       breadcrumb={
         <AppBackLink href={basePath}>
-          {GRN_CREATE_COPY.changeSupplier}
+          {GRN_CREATE_COPY.backToList}
         </AppBackLink>
       }
       eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
-      title={controller.supplier.name}
+      title={GRN_CREATE_COPY.newReceiptTitle}
       actions={
         controller.lineCount > 0 ? (
           <Button
@@ -621,7 +637,7 @@ function LineEditPanel({
   onPatch,
   onUnitChange,
 }: LineEditPanelProps) {
-  const valid = edit.quantity > 0;
+  const valid = edit.quantity > 0 && edit.supplierId != null;
 
   return (
     <AppSection

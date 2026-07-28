@@ -11,7 +11,14 @@ import { getIngredientUnitDisplayName } from "@/(protected)/inventory/_lib/unit-
 import type { IngredientRow } from "@lib/inventory/types";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchGrnDetail } from "@/(protected)/inventory/procurement-actions";
-import type { GrnDetail, ReceivingLocationOption } from "./grn-detail-model";
+import {
+  allLinkedPosApproved,
+  grnSupplierSummaryFromItems,
+  hasLinkedPurchaseOrders,
+  type GrnDetail,
+  type GrnLinkedPo,
+  type ReceivingLocationOption,
+} from "./grn-detail-model";
 
 export type GrnDetailData = {
   grn: GrnDetail;
@@ -37,6 +44,11 @@ type InventoryLocationRow = {
 export type GrnDetailLoadResult =
   | { data: GrnDetailData; error?: never }
   | { data: null; error?: string; notFound?: boolean };
+
+function relatedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
 
 export async function loadGrnDetailResult(
   grnId: number | string,
@@ -66,7 +78,7 @@ export async function loadGrnDetailResult(
       received_date: string | null;
       branch_id: number;
       location_id: number | null;
-      supplier_id: number;
+      supplier_id: number | null;
       po_id: number | null;
       branches: { id: number; name: string } | null;
       suppliers: { id: number; name: string } | null;
@@ -75,12 +87,14 @@ export async function loadGrnDetailResult(
     lines: Array<{
       id: number;
       ingredient_id: number;
+      supplier_id: number;
       po_quantity: number | null;
       received_quantity: number;
       rejected_quantity: number | null;
       rejection_reason: string | null;
       rejected_photo_url: string | null;
       entry_unit_id: number | null;
+      suppliers: { id: number; name: string } | null;
       ingredients: {
         id: number;
         name: string;
@@ -91,6 +105,13 @@ export async function loadGrnDetailResult(
       } | null;
     }>;
     invoiceId: number | null;
+    linkedPos: Array<{
+      id: number;
+      po_number: string;
+      status: string;
+      supplier_id: number | null;
+      suppliers: { id: number; name: string } | null;
+    }>;
   };
 
   if (routeBranchId != null && data.grn.branch_id !== routeBranchId) {
@@ -117,12 +138,15 @@ export async function loadGrnDetailResult(
     const fallbackUnit =
       ingredient?.ingredient_units?.find((unit) => unit.is_base)?.units?.code ||
       "";
+    const lineSupplier = relatedOne(line.suppliers);
 
     return {
       lineId: line.id,
       ingredientId: line.ingredient_id,
       name: ingredient?.name ?? "—",
       sku: "",
+      supplierId: line.supplier_id,
+      supplierName: lineSupplier?.name ?? `#${line.supplier_id}`,
       poQuantity: line.po_quantity != null ? Number(line.po_quantity) : null,
       required: Number(line.po_quantity ?? line.received_quantity ?? 0),
       actual: received,
@@ -135,6 +159,17 @@ export async function loadGrnDetailResult(
         fallbackUnit,
       ),
       entryUnitId,
+    };
+  });
+
+  const linkedPos: GrnLinkedPo[] = (data.linkedPos ?? []).map((po) => {
+    const poSupplier = relatedOne(po.suppliers);
+    return {
+      id: po.id,
+      poNumber: po.po_number,
+      status: po.status,
+      supplierId: po.supplier_id,
+      supplierName: poSupplier?.name ?? (po.supplier_id != null ? `#${po.supplier_id}` : "—"),
     };
   });
 
@@ -177,34 +212,49 @@ export async function loadGrnDetailResult(
       PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
     ),
   ]);
+
+  const hasPoLink = hasLinkedPurchaseOrders(linkedPos, data.grn.po_id);
   const canEditUnlinkedDraft =
-    canEditDraft && data.grn.status === "draft" && data.grn.po_id == null;
+    canEditDraft && data.grn.status === "draft" && !hasPoLink;
+  const supplierSummary = grnSupplierSummaryFromItems(
+    items,
+    supplier?.name ?? null,
+  );
   const grn: GrnDetail = {
     id: data.grn.id,
     tenantId: context?.claims.tenant_id ?? 0,
     code: data.grn.grn_number ?? "",
-    poCode: purchaseOrder?.po_number ?? "",
-    poId: data.grn.po_id,
-    poStatus: purchaseOrder?.status ?? null,
+    poCode:
+      linkedPos.length === 1
+        ? linkedPos[0]!.poNumber
+        : linkedPos.length > 1
+          ? `${linkedPos[0]!.poNumber} +${linkedPos.length - 1}`
+          : (purchaseOrder?.po_number ?? ""),
+    poId: data.grn.po_id ?? linkedPos[0]?.id ?? null,
+    poStatus: linkedPos[0]?.status ?? purchaseOrder?.status ?? null,
+    linkedPos,
     invoiceId: data.invoiceId ?? null,
     branchId: data.grn.branch_id,
     locationId: data.grn.location_id ?? null,
     locationName: currentLocationName,
     branchName: branch?.name ?? `#${data.grn.branch_id}`,
     supplierId: data.grn.supplier_id,
-    supplier: supplier?.name ?? "—",
+    supplier: supplierSummary,
     date: data.grn.received_date ? formatDate(data.grn.received_date) : "—",
     status: data.grn.status ?? "draft",
     items,
   };
-  const poApproved =
-    purchaseOrder != null &&
-    (purchaseOrder.status === "sent" ||
-      purchaseOrder.status === "partially_received");
+  const poApproved = allLinkedPosApproved(
+    linkedPos,
+    purchaseOrder?.status ?? null,
+  );
   const canConfirm =
-    canConfirmPermission && data.grn.status === "draft" && poApproved;
+    canConfirmPermission &&
+    data.grn.status === "draft" &&
+    hasPoLink &&
+    poApproved;
   const canCreatePoFromGrnDraft =
-    canCreatePoFromGrn && data.grn.status === "draft" && data.grn.po_id == null;
+    canCreatePoFromGrn && data.grn.status === "draft" && !hasPoLink;
   const [receivingLocationOptions, auditLogs] = await Promise.all([
     loadReceivingLocationOptions({
       context,

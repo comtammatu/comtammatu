@@ -14,15 +14,12 @@ const productionDataSource = readFileSync(
   "utf8",
 );
 
-// D091 — branch production. `branch_manager` runs production only at its OWN
-// branch. Two guards realize this: (1) `productionBranches` is filtered to
-// `scopedBranchId` when `isProductionBranchScopedRole(role)`
-// (production-data.ts), and (2) `hasCurrentProductionBranchAccess` /
-// `requireProductionBranch` accept a production branch kind. This reconstructs
-// the own-branch selection decision using the REAL exported predicate — RED
-// before branch_manager joins PRODUCTION_BRANCH_SCOPED_ROLES (it would fall
-// through to `return true`/no-filter and a foreign branch would be selectable),
-// GREEN after.
+// D093 — central-kitchen production only. `branch_manager` no longer runs
+// production. Two guards realize own-site pinning for `central_kitchen_lead`:
+// (1) `productionBranches` is filtered to `scopedBranchId` when
+// `isProductionBranchScopedRole(role)` (production-data.ts), and (2)
+// `hasCurrentProductionBranchAccess` / `requireProductionBranch` accept a
+// production branch kind (`central_kitchen` only).
 function productionTargetAllowed(
   role: StaffRole,
   scopedBranchId: number,
@@ -32,8 +29,8 @@ function productionTargetAllowed(
   return scopedBranchId === targetBranchId;
 }
 
-test("branch_manager is a branch-scoped production role (own-branch pin applies)", () => {
-  assert.equal(isProductionBranchScopedRole("branch_manager"), true);
+test("branch_manager is not a branch-scoped production role (D093)", () => {
+  assert.equal(isProductionBranchScopedRole("branch_manager"), false);
 });
 
 test("central kitchen lead is admitted and pinned to its production site", () => {
@@ -53,12 +50,12 @@ test("central supply operator cannot open production", () => {
   assert.equal(canAccessProductionSurface("central_supply_ops"), false);
 });
 
-test("branch_manager (branch_id=X) is REJECTED creating a production order for a foreign branch Y≠X", () => {
-  assert.equal(productionTargetAllowed("branch_manager", 1, 2), false);
+test("central_kitchen_lead (branch_id=X) is REJECTED creating a production order for a foreign branch Y≠X", () => {
+  assert.equal(productionTargetAllowed("central_kitchen_lead", 1, 2), false);
 });
 
-test("branch_manager (branch_id=X) is ALLOWED creating a production order for its own branch X", () => {
-  assert.equal(productionTargetAllowed("branch_manager", 1, 1), true);
+test("central_kitchen_lead (branch_id=X) is ALLOWED creating a production order for its own branch X", () => {
+  assert.equal(productionTargetAllowed("central_kitchen_lead", 1, 1), true);
 });
 
 test("owner is tenant-wide for production — not branch-scoped", () => {
@@ -72,14 +69,14 @@ test("only owner and central kitchen lead manage production recipes", () => {
   assert.equal(canManageProductionRecipes("branch_manager"), false);
 });
 
-test("production branch kinds accept both central_kitchen and branch (D091), reject others", () => {
+test("production branch kinds accept central_kitchen only (D093), reject branch and others", () => {
   assert.equal(isProductionBranchKind("central_kitchen"), true);
-  assert.equal(isProductionBranchKind("branch"), true);
+  assert.equal(isProductionBranchKind("branch"), false);
   assert.equal(isProductionBranchKind("central_supply"), false);
   assert.equal(isProductionBranchKind("retail"), false);
   assert.equal(isProductionBranchKind(null), false);
 });
 
-test("branch_manager can open the production surface (operator role set)", () => {
-  assert.equal(canAccessProductionSurface("branch_manager"), true);
+test("branch_manager cannot open the production surface (D093)", () => {
+  assert.equal(canAccessProductionSurface("branch_manager"), false);
 });

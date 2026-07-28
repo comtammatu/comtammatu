@@ -28,7 +28,10 @@ import {
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
-import type { GrnLineEditState } from "@lib/inventory/grn-create-model";
+import {
+  resolveDefaultGrnSupplier,
+  type GrnLineEditState,
+} from "@lib/inventory/grn-create-model";
 
 type GrnLineEditorControlSize = Extract<
   ComponentProps<typeof Button>["size"],
@@ -76,9 +79,58 @@ export function GrnLineEditFields({
   controlSize = "touch",
 }: GrnLineEditFieldsProps) {
   const baseConversionPreview = buildBaseConversionPreview(edit);
+  const suppliers = edit.ingredient.suppliers;
+  const defaultSupplier = resolveDefaultGrnSupplier(suppliers);
+  const showSupplierPicker = suppliers.length > 1;
+  const lockedSupplier =
+    !showSupplierPicker && defaultSupplier != null ? defaultSupplier : null;
 
   return (
     <div className="flex flex-col gap-3">
+      {showSupplierPicker ? (
+        <FormField
+          controlId="grn-line-supplier"
+          label={GRN_CREATE_COPY.supplierLabel}
+        >
+          <Select
+            value={edit.supplierId != null ? String(edit.supplierId) : ""}
+            onValueChange={(value) =>
+              onPatch({ supplierId: Number(value) || null })
+            }
+          >
+            <SelectTrigger
+              id="grn-line-supplier"
+              size={controlSize}
+              className="w-full"
+            >
+              <SelectValue
+                placeholder={GRN_CREATE_COPY.supplierSelectPlaceholder}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {suppliers.map((supplier) => (
+                <SelectItem
+                  key={supplier.id}
+                  value={String(supplier.id)}
+                  size={controlSize === "field" ? undefined : "touch"}
+                >
+                  {supplier.isPreferred
+                    ? `${supplier.name} · ${GRN_CREATE_COPY.preferredSupplierSuffix}`
+                    : supplier.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+      ) : lockedSupplier ? (
+        <p className="text-sm">
+          <span className="text-muted-foreground">
+            {GRN_CREATE_COPY.supplierLabel}{" "}
+          </span>
+          <span className="font-semibold">{lockedSupplier.name}</span>
+        </p>
+      ) : null}
+
       <UnitField
         options={getPurchaseUnitOptions(edit.ingredient)}
         entryUnitId={edit.entryUnitId}
@@ -129,7 +181,8 @@ export function GrnLineEditSheet({
   controlSize = "touch",
 }: GrnLineEditSheetProps) {
   const open = edit != null;
-  const valid = edit != null && edit.quantity > 0;
+  const valid =
+    edit != null && edit.quantity > 0 && edit.supplierId != null;
 
   return (
     <Sheet
@@ -175,7 +228,9 @@ export function GrnLineEditSheet({
                 onClick={onSave}
                 disabled={!valid}
               >
-                {edit.line ? "Cập nhật" : "Thêm vào phiếu"}
+                {edit.line
+                  ? GRN_CREATE_COPY.updateLineOnReceipt
+                  : GRN_CREATE_COPY.addLineToReceipt}
               </Button>
               <div className="flex items-center gap-2">
                 {edit.line ? (

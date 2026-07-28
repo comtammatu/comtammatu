@@ -106,6 +106,7 @@ test("generated database types match the final D091 catalog", () => {
     "short_delivery_action",
     "create_purchase_order_with_lines",
     "quick_internal_transfer",
+    "create_grn_from_po",
   ]) {
     assert.doesNotMatch(generated, new RegExp(`\\b${retired}\\b`));
   }

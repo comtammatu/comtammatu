@@ -85,14 +85,14 @@ test("finance separates inventory, equipment acquisition, and period expense", (
 
 test("supplier invoice matching uses confirmed net GRN value before VAT", () => {
   const migration = read(
-    "supabase/migrations/20260727140000_fix_supplier_invoice_net_matching.sql",
+    "supabase/migrations/20260729140200_fix_supplier_invoice_multi_supplier_matching.sql",
   );
   const invoiceActions = read(
     "apps/web/app/(protected)/finance/supplier-invoice-actions.ts",
   );
   const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const vatMigration = read(
-    "supabase/migrations/20260727140255_add_supplier_invoice_vat_breakdown.sql",
+    "supabase/migrations/20260729140200_fix_supplier_invoice_multi_supplier_matching.sql",
   );
 
   assert.match(
@@ -105,9 +105,18 @@ test("supplier invoice matching uses confirmed net GRN value before VAT", () => 
     /v_invoice\.total_amount[\s\S]*v_grn_subtotal/,
   );
   assert.match(migration, /v_grn\.status <> 'confirmed'/);
-  assert.match(migration, /COALESCE\(v_invoice\.po_id, v_grn\.po_id\)/);
+  assert.match(migration, /po\.source_grn_id = v_grn\.id/);
+  assert.match(migration, /gi\.supplier_id = v_invoice\.supplier_id/);
   assert.match(invoiceActions, /create_supplier_invoice_with_vat_breakdown/);
   assert.match(vatMigration, /v_grn\.status <> 'confirmed'/);
-  assert.match(vatMigration, /v_effective_po_id := v_grn\.po_id/);
+  assert.match(vatMigration, /po\.source_grn_id = p_grn_id/);
+  assert.match(vatMigration, /v_effective_po_id := p_po_id/);
+  assert.doesNotMatch(
+    vatMigration,
+    /IF p_po_id IS NOT NULL AND p_po_id IS DISTINCT FROM v_grn\.po_id/,
+  );
   assert.match(grnActions, /\.eq\("status", "confirmed"\)/);
+  assert.match(grnActions, /expandGrnDropdownOptions/);
+  assert.match(grnActions, /linkedPairs/);
+  assert.match(grnActions, /purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey/);
 });

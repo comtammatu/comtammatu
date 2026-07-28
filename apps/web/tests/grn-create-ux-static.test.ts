@@ -12,26 +12,13 @@ function read(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-test("GRN source picker fills Owner DOC width with supplier section", () => {
+test("GRN new page opens multi-supplier create without source picker", () => {
   const page = read("app/(protected)/inventory/grn/new/page.tsx");
-  const shared = readFileSync(
-    join(process.cwd(), "../../packages/shared/src/messages/inventory.ts"),
-    "utf8",
-  );
 
-  assert.match(page, /DocumentFormFrame/);
-  assert.match(page, /width="wide"/);
-  assert.match(page, /density="compact"/);
-  assert.match(page, /AppSection/);
-  assert.match(page, /receiveBySupplierTitle/);
-  assert.match(page, /supplierCountBadge/);
-  assert.match(page, /SupplierPicker/);
-  assert.match(
-    shared,
-    /chooseSourceDescription:\s*\n\s*"Chọn nhà cung cấp để mở phiếu nhập/,
-    "source copy matches supplier-first flow (no false PO path)",
-  );
-  assert.match(shared, /supplierCountBadge:/);
+  assert.match(page, /loadGrnCreatePageData/);
+  assert.match(page, /GrnCreateClient/);
+  assert.doesNotMatch(page, /SupplierPicker/);
+  assert.doesNotMatch(page, /DocumentFormFrame/);
 });
 
 test("GRN create uses Wave-E-like context + progressive desk editor", () => {
@@ -107,13 +94,13 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   );
   assert.match(
     client,
-    /title=\{controller\.supplier\.name\}/,
-    "supplier identity lives in page title",
+    /title=\{GRN_CREATE_COPY\.newReceiptTitle\}/,
+    "page title is Phiếu nhập mới",
   );
-  assert.doesNotMatch(
+  assert.match(
     client,
-    /contextStrip[\s\S]*messages\.inventory\.grn\.supplier/,
-    "context strip does not restate supplier already in title",
+    /controller\.supplierSummary/,
+    "context shows supplier summary from draft lines",
   );
   assert.doesNotMatch(
     client,
@@ -141,7 +128,7 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
     "primary CTA is direct trailing Button (no inset wrapper gap)",
   );
   assert.match(client, /GrnLineEditSheet/);
-  assert.match(client, /changeSupplier|discardDraft|submit/);
+  assert.match(client, /backToList|discardDraft|submit/);
   assert.doesNotMatch(client, /panelEmptyTitle|panelEmptyDescription/);
   assert.doesNotMatch(
     client,
@@ -151,6 +138,11 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
     editor,
     /grn-line-note|optionalNote|notePlaceholder/,
     "create line editor must not keep a generic QC-note field",
+  );
+  assert.match(
+    editor,
+    /grn-line-supplier|supplierLabel/,
+    "line editor exposes NCC when ingredient has multiple suppliers",
   );
 
   assert.match(

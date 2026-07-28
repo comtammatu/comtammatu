@@ -7,6 +7,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarCheck as IconCalendarCheck,
   CalendarX as IconCalendarX,
@@ -39,7 +40,7 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { StatusBadge } from "@/components/status-badge";
@@ -103,12 +104,28 @@ export function BranchLeaveApprovalsClient({
   loadFailed: boolean;
 }) {
   const [rows, setRows] = useState(initialRows);
-  const [view, setView] = useState<QueueView>("pending");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const requestedView = searchParams.get("view");
+  const view: QueueView =
+    requestedView === "history" ? "history" : "pending";
+  const setView = useCallback(
+    (next: QueueView) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "pending") params.delete("view");
+      else params.set("view", next);
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const pendingRows = useMemo(
     () => rows.filter((request) => request.status === "pending"),
@@ -251,8 +268,7 @@ export function BranchLeaveApprovalsClient({
             {copy.historyTab(historyRows.length)}
           </TabsTrigger>
         </TabsList>
-      </Tabs>
-
+        <TabsContent value={view}>
       <BranchOperatorPanel
         title={
           view === "pending"
@@ -341,6 +357,8 @@ export function BranchLeaveApprovalsClient({
           </ItemGroup>
         )}
       </BranchOperatorPanel>
+        </TabsContent>
+      </Tabs>
 
       <Sheet
         open={selected != null}

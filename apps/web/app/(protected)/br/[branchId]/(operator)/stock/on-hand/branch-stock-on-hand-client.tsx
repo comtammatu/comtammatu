@@ -138,7 +138,7 @@ function StockTouchRow({
 
 interface BranchStockOnHandClientProps {
   branchId: number;
-  canCreateGrn: boolean;
+  canCreateStockRequest: boolean;
   coreDataLoadFailed: boolean;
   ingredients: StockIngredient[];
   underThresholdCount: number;
@@ -146,7 +146,7 @@ interface BranchStockOnHandClientProps {
 
 export function BranchStockOnHandClient({
   branchId,
-  canCreateGrn,
+  canCreateStockRequest,
   coreDataLoadFailed,
   ingredients,
   underThresholdCount,
@@ -173,7 +173,7 @@ export function BranchStockOnHandClient({
   ].filter(Boolean).length;
   const isFirstLoadEmpty = !filtersActive && isPristineStockOnHand(ingredients);
   const showReceiveAction =
-    canCreateGrn && !coreDataLoadFailed && underThresholdCount === 0;
+    canCreateStockRequest && !coreDataLoadFailed && underThresholdCount === 0;
 
   function resetFilters() {
     setQuery("");
@@ -198,10 +198,10 @@ export function BranchStockOnHandClient({
             variant: "warning",
           }}
           action={
-            canCreateGrn ? (
+            canCreateStockRequest ? (
               <Button
                 size="touch"
-                render={<Link href={`/br/${branchId}/stock/grn/new`} />}
+                render={<Link href={`/br/${branchId}/stock/requests/new`} />}
               >
                 <IconTruck />
                 {stockCopy.actions.receiveGrn}
@@ -230,7 +230,7 @@ export function BranchStockOnHandClient({
           showReceiveAction ? (
             <Button
               size="touch"
-              render={<Link href={`/br/${branchId}/stock/grn/new`} />}
+              render={<Link href={`/br/${branchId}/stock/requests/new`} />}
             >
               <IconTruck />
               {stockCopy.actions.receiveGrn}
@@ -257,10 +257,10 @@ export function BranchStockOnHandClient({
             description={stockCopy.empty.firstLoadHint}
             symbol="riceGrain"
           >
-            {canCreateGrn ? (
+            {canCreateStockRequest ? (
               <Button
                 size="touch"
-                render={<Link href={`/br/${branchId}/stock/grn/new`} />}
+                render={<Link href={`/br/${branchId}/stock/requests/new`} />}
               >
                 <IconTruck />
                 {stockCopy.actions.receiveGrn}

@@ -18,6 +18,7 @@ import { resolveBranchContext } from "@/_lib/branch-context";
 import { parseOperatorBranchId } from "../_lib/parse-branch-id";
 import {
   getBranchHomeTileLimit,
+  getBranchManagerHomePhaseGroups,
   getBranchPrimaryHomeGroup,
   getOperatorHomeTileHrefs,
 } from "./_lib/operator-home-contract";
@@ -74,17 +75,32 @@ export default async function OperatorHomePage({
     ? getBranchHomeTileLimit(branchTodayGroup.id)
     : 0;
 
+  const isManagerLike =
+    claims.user_role === "branch_manager" || claims.user_role === "owner";
+  const managerPhases = isManagerLike
+    ? getBranchManagerHomePhaseGroups(rawGroups, claims.user_role)
+    : null;
+
   const groups = canManageBranch
     ? (() => {
         const managerHomeHrefs = getOperatorHomeTileHrefs(
           rawGroups,
           claims.user_role,
         );
+        const phaseHrefs = managerPhases
+          ? new Set([
+              ...managerPhases.phases.open,
+              ...managerPhases.phases.run,
+              ...managerPhases.phases.close,
+            ])
+          : new Set<string>();
         return rawGroups
           .map((group) => ({
             ...group,
-            tiles: group.tiles.filter((tile) =>
-              managerHomeHrefs.has(tile.href),
+            tiles: group.tiles.filter(
+              (tile) =>
+                managerHomeHrefs.has(tile.href) &&
+                !phaseHrefs.has(tile.href),
             ),
           }))
           .filter((group) => group.tiles.length > 0);
@@ -97,6 +113,51 @@ export default async function OperatorHomePage({
           },
         ].filter((group) => group.tiles.length > 0)
       : [];
+
+  const phaseSections: {
+    phase: "open" | "run" | "close";
+    title: string;
+    description: string;
+    tiles: { href: string; moduleKey: string; icon: string; label: string }[];
+  }[] = [];
+  if (managerPhases) {
+    const phaseConfig: {
+      phase: "open" | "run" | "close";
+      title: string;
+      description: string;
+    }[] = [
+      {
+        phase: "open",
+        title: homeCopy.phaseOpenTitle,
+        description: homeCopy.phaseOpenDescription,
+      },
+      {
+        phase: "run",
+        title: homeCopy.phaseRunTitle,
+        description: homeCopy.phaseRunDescription,
+      },
+      {
+        phase: "close",
+        title: homeCopy.phaseCloseTitle,
+        description: homeCopy.phaseCloseDescription,
+      },
+    ];
+    for (const config of phaseConfig) {
+      const hrefs = managerPhases.phases[config.phase];
+      if (hrefs.size === 0) continue;
+      const phaseTiles = rawGroups
+        .flatMap((group) => group.tiles)
+        .filter((tile) => hrefs.has(tile.href));
+      if (phaseTiles.length > 0) {
+        phaseSections.push({
+          phase: config.phase,
+          title: config.title,
+          description: config.description,
+          tiles: phaseTiles,
+        });
+      }
+    }
+  }
 
   const branchManagementLinks = canManageBranch
     ? [
@@ -132,6 +193,50 @@ export default async function OperatorHomePage({
         <BranchQueueSection branchId={context.branchId} />
       </Suspense>
 
+      {phaseSections.map((section) => {
+        const stationTiles = section.tiles.filter(
+          (tile) => stationDescriptions[tile.moduleKey] != null,
+        );
+        const supportingTiles = section.tiles.filter(
+          (tile) => stationDescriptions[tile.moduleKey] == null,
+        );
+        const toPhaseLink = (tile: (typeof section.tiles)[number]) => ({
+          key: `phase-${section.phase}-${tile.moduleKey}-${tile.href}`,
+          href: tile.href,
+          icon: resolveOperatorTileIcon(tile.icon),
+          title: tile.label,
+          description: stationDescriptions[tile.moduleKey],
+          disabled: tilesLockedBeforeClockIn,
+          disabledReason: tilesLockedBeforeClockIn
+            ? homeCopy.lockedBeforeClockIn
+            : undefined,
+        });
+
+        return (
+          <Fragment key={`phase-${section.phase}`}>
+            {stationTiles.length > 0 ? (
+              <BranchOperatorActionSection
+                title={section.title}
+                description={section.description}
+                links={stationTiles.map(toPhaseLink)}
+                presentation="stations"
+              />
+            ) : null}
+            {supportingTiles.length > 0 ? (
+              <BranchOperatorActionSection
+                title={section.title}
+                description={section.description}
+                links={supportingTiles.map(toPhaseLink)}
+                columns={2}
+                mobileColumns={2}
+                wideColumns
+                presentation="plain"
+              />
+            ) : null}
+          </Fragment>
+        );
+      })}
+
       {groups.map((group) => {
         const stationTiles = group.tiles.filter(
           (tile) => stationDescriptions[tile.moduleKey] != null,
@@ -146,6 +251,10 @@ export default async function OperatorHomePage({
           title: tile.label,
           description: stationDescriptions[tile.moduleKey],
           disabled: tilesLockedBeforeClockIn && group.id === "sales_kitchen",
+          disabledReason:
+            tilesLockedBeforeClockIn && group.id === "sales_kitchen"
+              ? homeCopy.lockedBeforeClockIn
+              : undefined,
         });
 
         return (

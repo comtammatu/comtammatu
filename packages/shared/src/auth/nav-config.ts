@@ -231,18 +231,18 @@ export const OPERATOR_TILE_ITEMS = [
   },
   {
     moduleKey: "branch_stock",
-    icon: "ChefHat",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/production",
-    label: "Sản xuất",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "branch_stock",
     icon: "Package",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock",
     label: "Tồn kho",
+  },
+  {
+    moduleKey: "branch_stock",
+    icon: "ClipboardList",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/requests",
+    label: "Yêu cầu hàng",
+    kinds: ["branch"],
   },
   {
     moduleKey: "branch_stock",
@@ -272,13 +272,6 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/consumption",
     label: "Tiêu hao",
-  },
-  {
-    moduleKey: "branch_stock",
-    icon: "FileText",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/grn",
-    label: "Nhập hàng",
   },
   {
     moduleKey: "branch_stock",

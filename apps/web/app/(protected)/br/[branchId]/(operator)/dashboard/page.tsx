@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { canAccess } from "@comtammatu/shared/auth";
 import {
-  BranchOperatorPage,
   BranchOperatorPanel,
+  BranchOperatorPage,
+  BranchOperatorPanelSkeleton,
 } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
@@ -10,11 +12,15 @@ import { fetchBranchDayStatus } from "./data";
 import {
   buildReadinessItems,
   buildVisibleTileGroups,
+  type ReadinessHrefs,
 } from "./_lib/command-config";
 import {
   BranchCommandTileGrid,
   BranchReadinessList,
 } from "./_components/command-sections";
+
+type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
+type Claims = Awaited<ReturnType<typeof loadAuthState>>["claims"];
 
 export default async function BranchCommandPage({
   params,
@@ -37,8 +43,6 @@ export default async function BranchCommandPage({
     .maybeSingle();
 
   if (!branch || !branch.is_active || branch.branch_kind !== "branch") notFound();
-
-  const day = await fetchBranchDayStatus(supabase, claims, branchId);
 
   const copy = messages.settings.branch;
   const role = claims.user_role;
@@ -69,16 +73,11 @@ export default async function BranchCommandPage({
   const staffHref = canAccess(role, "branch_team")
     ? `/br/${branchId}/team`
     : undefined;
-  const floorHref =
-    day.tablesTotal <= 0
-      ? tablesHref
-      : day.setupActiveTerminals <= 0
-        ? posSettingsHref
-        : settingsHref;
 
-  const readinessItems = buildReadinessItems(day, copy, {
+  const tileGroups = buildVisibleTileGroups(branchId, role, copy);
+
+  const readinessHrefs: Omit<ReadinessHrefs, "floorHref"> = {
     menuHref,
-    floorHref,
     kdsSettingsHref,
     posHref,
     kdsHref,
@@ -86,9 +85,7 @@ export default async function BranchCommandPage({
     staffHref,
     settingsHref,
     checkoutApprovalsHref,
-  });
-
-  const tileGroups = buildVisibleTileGroups(branchId, role, copy);
+  };
 
   return (
     <BranchOperatorPage
@@ -99,6 +96,7 @@ export default async function BranchCommandPage({
         <BranchOperatorPanel
           title={copy.liveOperationsTitle}
           description={copy.liveOperationsDescription}
+          headingLevel="h2"
         >
           <BranchCommandTileGrid
             tiles={tileGroups.liveOperations}
@@ -107,17 +105,30 @@ export default async function BranchCommandPage({
         </BranchOperatorPanel>
       ) : null}
 
-      <BranchOperatorPanel
-        title={copy.readinessTitle}
-        description={copy.readinessDescription}
+      <Suspense
+        fallback={
+          <BranchOperatorPanelSkeleton
+            title={copy.readinessTitle}
+            tone="default"
+          />
+        }
       >
-        <BranchReadinessList items={readinessItems} />
-      </BranchOperatorPanel>
+        <BranchReadinessSection
+          supabase={supabase}
+          claims={claims}
+          branchId={branchId}
+          hrefs={readinessHrefs}
+          tablesHref={tablesHref}
+          posSettingsHref={posSettingsHref}
+          settingsHref={settingsHref}
+        />
+      </Suspense>
 
       {tileGroups.endDay.length > 0 ? (
         <BranchOperatorPanel
           title={copy.endDayTitle}
           description={copy.endDayDescription}
+          headingLevel="h2"
         >
           <BranchCommandTileGrid
             tiles={tileGroups.endDay}
@@ -130,6 +141,7 @@ export default async function BranchCommandPage({
         <BranchOperatorPanel
           title={copy.drilldownTitle}
           description={copy.drilldownDescription}
+          headingLevel="h2"
         >
           <BranchCommandTileGrid
             tiles={tileGroups.drilldown}
@@ -138,5 +150,43 @@ export default async function BranchCommandPage({
         </BranchOperatorPanel>
       ) : null}
     </BranchOperatorPage>
+  );
+}
+
+async function BranchReadinessSection({
+  supabase,
+  claims,
+  branchId,
+  hrefs,
+  tablesHref,
+  posSettingsHref,
+  settingsHref,
+}: {
+  supabase: SupabaseClient;
+  claims: Claims;
+  branchId: number;
+  hrefs: Omit<ReadinessHrefs, "floorHref">;
+  tablesHref?: string;
+  posSettingsHref?: string;
+  settingsHref?: string;
+}) {
+  const day = await fetchBranchDayStatus(supabase, claims, branchId);
+  const copy = messages.settings.branch;
+  // floorHref depends on the readiness snapshot, so resolve it here from day.
+  const floorHref =
+    day.tablesTotal <= 0
+      ? tablesHref
+      : day.setupActiveTerminals <= 0
+        ? posSettingsHref
+        : settingsHref;
+  const readinessItems = buildReadinessItems(day, copy, { ...hrefs, floorHref });
+  return (
+    <BranchOperatorPanel
+      title={copy.readinessTitle}
+      description={copy.readinessDescription}
+      headingLevel="h2"
+    >
+      <BranchReadinessList items={readinessItems} />
+    </BranchOperatorPanel>
   );
 }

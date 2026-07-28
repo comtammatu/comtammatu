@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -96,11 +96,13 @@ export function PurchaseOrdersClient({
   canCreate,
   canApprove,
   canViewPrices,
+  initialPoId = null,
 }: {
   rows: PurchaseOrderRow[];
   canCreate: boolean;
   canApprove: boolean;
   canViewPrices: boolean;
+  initialPoId?: number | null;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
@@ -110,6 +112,7 @@ export function PurchaseOrdersClient({
   const [priceDraft, setPriceDraft] = useState<Record<number, string>>({});
   const [pricesDirty, setPricesDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const openedInitialPoRef = useRef(false);
   const filteredRows = useMemo(
     () =>
       rows.filter((row) =>
@@ -150,6 +153,21 @@ export function PurchaseOrdersClient({
     setSelectedPoId(null);
   }
 
+  useEffect(() => {
+    if (openedInitialPoRef.current || initialPoId == null) return;
+    const row = rows.find((item) => item.id === initialPoId);
+    if (!row) return;
+    openedInitialPoRef.current = true;
+    openDetail(row);
+  }, [initialPoId, rows]);
+
+  function linePricesMissing(row: PurchaseOrderRow) {
+    return row.lines.some(
+      (line) =>
+        line.monetary?.unitPriceEst == null || line.monetary.unitPriceEst <= 0,
+    );
+  }
+
   function savePrices(row: PurchaseOrderRow) {
     const lines = row.lines.map((line) => ({
       lineId: line.id,
@@ -160,7 +178,7 @@ export function PurchaseOrdersClient({
         (line) => !Number.isFinite(line.unitPrice) || line.unitPrice <= 0,
       )
     ) {
-      toast.error("Nhập đơn giá lớn hơn 0 cho mọi dòng.");
+      toast.error(poCopy.pricesRequiredToast);
       return;
     }
 
@@ -173,7 +191,7 @@ export function PurchaseOrdersClient({
           return;
         }
         setPricesDirty(false);
-        toast.success("Đã lưu giá mua");
+        toast.success(poCopy.pricesSavedToast);
         router.refresh();
       } finally {
         setPendingId(null);
@@ -184,11 +202,18 @@ export function PurchaseOrdersClient({
   async function approve(row: PurchaseOrderRow) {
     // confirm() must run outside startTransition — transition-deferred
     // setState can leave the AlertDialog closed after menu/sheet interactions.
+    if (pricesDirty) {
+      toast.error(poCopy.approveBlockedDirtyPrices);
+      return;
+    }
+    if (linePricesMissing(row)) {
+      toast.error(poCopy.approveBlockedMissingPrices);
+      return;
+    }
     const accepted = await confirm({
-      title: `Duyệt ${row.code}?`,
-      description:
-        "Sau khi duyệt, giá trên đơn mua được khóa cho phiếu nhập liên kết.",
-      confirmText: "Duyệt mua",
+      title: poCopy.approveConfirmTitle(row.code),
+      description: poCopy.approveConfirmDesc,
+      confirmText: poCopy.approveAction,
     });
     if (!accepted) return;
     setPendingId(row.id);
@@ -199,7 +224,7 @@ export function PurchaseOrdersClient({
           toast.error(result.error);
           return;
         }
-        toast.success(`Đã duyệt ${row.code}`);
+        toast.success(poCopy.approvedToast(row.code));
         router.refresh();
       } finally {
         setPendingId(null);
@@ -265,7 +290,7 @@ export function PurchaseOrdersClient({
                 <FormattedNumberInput
                   inputMode="numeric"
                   maxFractionDigits={0}
-                  aria-label={`Đơn giá ${line.ingredientName}`}
+                  aria-label={poCopy.unitPriceAria(line.ingredientName)}
                   value={priceDraft[line.id] ?? ""}
                   onValueChange={(value) => {
                     setPriceDraft((current) => ({
@@ -277,7 +302,7 @@ export function PurchaseOrdersClient({
                   className="ml-auto w-32 text-right font-mono"
                 />
               ) : line.monetary?.unitPriceEst == null ? (
-                "—"
+                poCopy.noPriceYet
               ) : (
                 formatVND(line.monetary.unitPriceEst)
               ),
@@ -292,7 +317,7 @@ export function PurchaseOrdersClient({
             className: "text-right font-mono tabular-nums",
             render: (line: PurchaseOrderLineRow) =>
               line.monetary?.lineTotal == null
-                ? "—"
+                ? poCopy.noEstimateYet
                 : formatVND(line.monetary.lineTotal),
           },
         ]
@@ -302,7 +327,7 @@ export function PurchaseOrdersClient({
   const columns: DataTableColumn<PurchaseOrderRow>[] = [
     {
       key: "code",
-      header: "Số đơn đặt hàng",
+      header: poCopy.codeColumn,
       render: (row) => (
         <Button
           type="button"
@@ -319,17 +344,17 @@ export function PurchaseOrdersClient({
     },
     {
       key: "supplier",
-      header: "Nhà cung cấp",
+      header: poCopy.supplierRequired,
       render: (row) => row.supplierName,
     },
     {
       key: "branch",
-      header: "Chi nhánh",
+      header: poCopy.branchLabel,
       render: (row) => row.branchName,
     },
     {
       key: "status",
-      header: "Trạng thái",
+      header: poCopy.statusColumn,
       render: (row) => (
         <StatusBadge domain="purchase-order" value={row.status} />
       ),
@@ -338,18 +363,18 @@ export function PurchaseOrdersClient({
       ? [
           {
             key: "total",
-            header: "Tạm tính",
+            header: poCopy.estimatedTotalShort,
             className: "text-right font-mono",
             render: (row: PurchaseOrderRow) =>
               row.monetary?.estimatedTotal == null
-                ? "—"
+                ? poCopy.noEstimateYet
                 : formatVND(row.monetary.estimatedTotal),
           },
         ]
       : []),
     {
       key: "date",
-      header: "Ngày lập",
+      header: poCopy.orderedAtColumn,
       render: (row) => formatVNDate(row.orderedAt),
     },
     {
@@ -387,6 +412,17 @@ export function PurchaseOrdersClient({
   const detailFooter =
     selectedRow == null ? null : (
       <>
+        {selectedRow.status === "draft" && canApprove ? (
+          pricesDirty ? (
+            <p className="w-full text-sm text-muted-foreground sm:order-first">
+              {poCopy.approveBlockedDirtyPrices}
+            </p>
+          ) : linePricesMissing(selectedRow) ? (
+            <p className="w-full text-sm text-muted-foreground sm:order-first">
+              {poCopy.approveBlockedMissingPrices}
+            </p>
+          ) : null
+        ) : null}
         {selectedRow.status === "draft" && canCreate ? (
           <Button
             type="button"
@@ -405,11 +441,7 @@ export function PurchaseOrdersClient({
               isPending ||
               pendingId === selectedRow.id ||
               pricesDirty ||
-              selectedRow.lines.some(
-                (line) =>
-                  line.monetary?.unitPriceEst == null ||
-                  line.monetary.unitPriceEst <= 0,
-              )
+              linePricesMissing(selectedRow)
             }
             onClick={() => {
               void approve(selectedRow);
@@ -473,7 +505,7 @@ export function PurchaseOrdersClient({
                   {row.monetary
                     ? ` · ${
                         row.monetary.estimatedTotal == null
-                          ? "Chưa có tạm tính"
+                          ? poCopy.noEstimateYet
                           : formatVND(row.monetary.estimatedTotal)
                       }`
                     : ""}
@@ -531,7 +563,7 @@ export function PurchaseOrdersClient({
                         term: poCopy.estimatedTotal,
                         description:
                           selectedRow.monetary.estimatedTotal == null
-                            ? "—"
+                            ? poCopy.noEstimateYet
                             : formatVND(selectedRow.monetary.estimatedTotal),
                       },
                     ]
@@ -567,7 +599,7 @@ export function PurchaseOrdersClient({
                         <ItemActions>
                           <span className="font-mono tabular-nums">
                             {line.monetary?.lineTotal == null
-                              ? "—"
+                              ? poCopy.noEstimateYet
                               : formatVND(line.monetary.lineTotal)}
                           </span>
                         </ItemActions>
@@ -603,7 +635,15 @@ export function PurchaseOrdersClient({
                         </ItemDescription>
                       </ItemContent>
                       <ItemActions className="gap-2">
-                        <StatusBadge domain="inventory" value={grn.status} />
+                        <StatusBadge
+                          domain="inventory"
+                          value={grn.status}
+                          label={
+                            grn.status === "confirmed"
+                              ? messages.inventory.grn.statusConfirmedLong
+                              : undefined
+                          }
+                        />
                         <Button
                           type="button"
                           variant="outline"
@@ -617,7 +657,22 @@ export function PurchaseOrdersClient({
                   ))}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {poCopy.emptyLinkedGrnsHint}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="self-start"
+                  render={<Link href="/inventory/grn" />}
+                >
+                  {poCopy.goToGrnList}
+                </Button>
+              </div>
+            )}
           </>
         ) : null}
       </AppDialog>

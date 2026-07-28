@@ -29,7 +29,7 @@ test("purchase orders are created retrospectively from GRN drafts", () => {
   assert.match(actions, /createPurchaseOrderFromGrn/);
   assert.match(actions, /PROCUREMENT_PO_CREATE/);
   assert.match(actions, /PROCUREMENT_PO_APPROVE/);
-  assert.match(actions, /create_purchase_order_from_grn/);
+  assert.match(actions, /create_purchase_orders_from_grn/);
   assert.match(actions, /approve_purchase_order/);
   assert.doesNotMatch(
     actions,
@@ -132,5 +132,12 @@ test("PO list opens read-only detail and never shows an empty-action dash", () =
     page,
     /purchase_order_items\([\s\S]*ingredients\(name\)[\s\S]*units!purchase_order_items_entry_unit_id_fkey/,
   );
-  assert.match(page, /goods_received_notes\(id, grn_number, status/);
+  assert.match(
+    page,
+    /goods_received_notes!goods_received_notes_po_id_fkey\(id, grn_number, status/,
+  );
+  assert.match(
+    page,
+    /source_grn:goods_received_notes!purchase_orders_source_grn_id_fkey\(id, grn_number, status/,
+  );
 });

@@ -76,6 +76,10 @@ export const DESKTOP_TOAST_PRESET = {
   position: "top-right",
   visibleToasts: 5,
   expand: true,
+  containerAriaLabel: "Thông báo thao tác",
+  toastOptions: {
+    closeButtonAriaLabel: "Đóng thông báo",
+  },
 } satisfies ToasterPreset;
 
 /**

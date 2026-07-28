@@ -133,7 +133,7 @@ export function buildVisibleTileGroups(
   };
 }
 
-type ReadinessHrefs = {
+export type ReadinessHrefs = {
   menuHref?: string;
   floorHref?: string;
   kdsSettingsHref?: string;

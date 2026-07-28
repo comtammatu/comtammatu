@@ -85,8 +85,14 @@ test("fully rejected free drafts remain discardable", () => {
     discardDraft,
     /rejected_quantity|received_quantity|grn_items/,
   );
-  assert.match(ownerList, /if \(draft\.poId == null\) \{/);
-  assert.match(branchList, /\{draft\.poId == null \? \(/);
+  assert.match(
+    ownerList,
+    /if \(draft\.poId == null && draft\.poCount === 0\) \{/,
+  );
+  assert.match(
+    branchList,
+    /\{draft\.poId == null && draft\.poCount === 0 \? \(/,
+  );
 });
 
 test("existing GRN drafts always resume on canonical DETAIL", () => {
@@ -117,11 +123,8 @@ test("existing GRN drafts always resume on canonical DETAIL", () => {
     /if \(draftRow\?\.id\) \{\s*redirect\(`\$\{grnBasePath\}\/\$\{draftRow\.id\}`\);\s*\}/,
   );
   assert.doesNotMatch(createData, /fetchGrnDetail|existingDraft/);
-  assert.match(ownerCreateRoute, /grnBasePath,\s*\}\);/);
-  assert.match(
-    branchCreateRoute,
-    /grnBasePath: grnBasePath|grnBasePath,\s*\}\);/,
-  );
+  assert.match(ownerCreateRoute, /redirect\("\/inventory\/grn\/new"\)/);
+  assert.match(branchCreateRoute, /redirect\(`\/br\/\$\{branchId\}\/stock\/grn\/new`\)/);
 });
 
 test("GRN detail derives mutation and supplier-invoice authority", () => {
@@ -135,7 +138,7 @@ test("GRN detail derives mutation and supplier-invoice authority", () => {
   assert.match(data, /PERMISSION_KEYS\.PROCUREMENT_INVOICE_CREATE/);
   assert.match(
     data,
-    /canEditDraft &&\s*data\.grn\.status === "draft" &&\s*data\.grn\.po_id == null/,
+    /canEditDraft && data\.grn\.status === "draft" && !hasPoLink/,
   );
   assert.match(data, /\.from\("inventory_locations"\)/);
   assert.match(data, /locationName:/);
@@ -146,7 +149,7 @@ test("GRN detail derives mutation and supplier-invoice authority", () => {
   );
   assert.match(
     client,
-    /const canMutateDraft =\s*canEditDraft && isDraft && grn\.poId == null;/,
+    /const canMutateDraft =\s*canEditDraft && isDraft && grn\.poId == null && grn\.linkedPos\.length === 0;/,
   );
   assert.match(client, /!isDraft && canManageSupplierInvoice/);
   assert.match(client, /const receivingLocationName = grn\.locationName;/);

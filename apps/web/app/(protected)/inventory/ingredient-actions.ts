@@ -68,6 +68,10 @@ const ingredientBaseSchema = z.object({
   storage_type: z
     .enum(["ambient", "refrigerated", "frozen"])
     .default("ambient"),
+  default_fulfill_site_kind: z
+    .enum(["central_supply", "central_kitchen"])
+    .nullable()
+    .optional(),
   units: z.array(unitRowSchema).min(1, { error: "Cần ít nhất 1 đơn vị" }),
 });
 
@@ -110,6 +114,30 @@ const ingredientUpdateSchema = ingredientBaseSchema.superRefine((data, ctx) => {
 });
 
 type IngredientInput = z.infer<typeof ingredientBaseSchema>;
+
+async function persistDefaultFulfillSiteKind(
+  supabase: SupabaseClient,
+  tenantId: number,
+  ingredientId: number,
+  siteKind: "central_supply" | "central_kitchen" | null | undefined,
+): Promise<{ success: false; error: string } | null> {
+  if (siteKind === undefined) return null;
+
+  const { error } = await supabase
+    .from("ingredients")
+    .update({ default_fulfill_site_kind: siteKind })
+    .eq("tenant_id", tenantId)
+    .eq("id", ingredientId);
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không lưu được nguồn đáp ứng mặc định.",
+    };
+  }
+
+  return null;
+}
 
 function mapCatalogRpcError(
   code: string | undefined,
@@ -210,7 +238,7 @@ const getIngredientsCached = cache(
         : supabase
             .from("ingredients")
             .select(
-              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
             )
     )
       .eq("tenant_id", tenantId);
@@ -363,10 +391,12 @@ export const createIngredient = withAction<
     schema: ingredientCreateSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
-  async (data, { supabase }) => {
+  async (data, { supabase, claims }) => {
+    const { default_fulfill_site_kind: defaultFulfillSiteKind, ...catalogData } =
+      data;
     const { data: id, error } = await supabase.rpc(
       "upsert_ingredient_catalog",
-      rpcCatalogArgs(null, data),
+      rpcCatalogArgs(null, catalogData),
     );
 
     if (error) {
@@ -376,7 +406,16 @@ export const createIngredient = withAction<
       };
     }
 
-    return { success: true, data: { id: Number(id) } };
+    const ingredientId = Number(id);
+    const siteKindError = await persistDefaultFulfillSiteKind(
+      supabase,
+      claims.tenant_id,
+      ingredientId,
+      defaultFulfillSiteKind,
+    );
+    if (siteKindError) return siteKindError;
+
+    return { success: true, data: { id: ingredientId } };
   },
 );
 
@@ -515,9 +554,12 @@ export async function updateIngredient(
     return { success: false, error: "Nguyên liệu không tồn tại." };
   }
 
+  const { default_fulfill_site_kind: defaultFulfillSiteKind, ...catalogData } =
+    parsedInput.data;
+
   const { error } = await supabase.rpc(
     "upsert_ingredient_catalog",
-    rpcCatalogArgs(parsedId.data, parsedInput.data, existing.shelf_life_days),
+    rpcCatalogArgs(parsedId.data, catalogData, existing.shelf_life_days),
   );
 
   if (error) {
@@ -526,6 +568,14 @@ export async function updateIngredient(
       error: mapCatalogRpcError(error.code, error.message),
     };
   }
+
+  const siteKindError = await persistDefaultFulfillSiteKind(
+    supabase,
+    claims.tenant_id,
+    parsedId.data,
+    defaultFulfillSiteKind,
+  );
+  if (siteKindError) return siteKindError;
 
   return { success: true };
 }

@@ -7,7 +7,7 @@ import {
   Trash as IconTrash,
   Truck as IconTruck,
 } from "lucide-react";
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
@@ -75,6 +75,28 @@ function OwnerStockIngredientDetail({
   data: StockIngredientDetailData;
 }) {
   const { ingredient } = data;
+  const listHref = `/inventory/stock?branchId=${data.branchId}`;
+
+  if (data.coreDataLoadFailed) {
+    return (
+      <AppPage width="wide" scroll>
+        <AppPageHeader
+          eyebrow={detailCopy.eyebrow}
+          title={ingredient.name}
+          description={[ingredient.sku, ingredient.category, ingredient.unit]
+            .filter(Boolean)
+            .join(" · ")}
+          actions={<AppBackLink href={listHref}>{ACTIONS_VI.back}</AppBackLink>}
+        />
+        <AppEmptyState
+          mode="error"
+          title={stockCopy.loadFailed}
+          description={stockCopy.loadFailedDescription}
+        />
+      </AppPage>
+    );
+  }
+
   const totalStockUnits = formatStockUnits(
     data.totalQty,
     ingredient.units,
@@ -83,7 +105,6 @@ function OwnerStockIngredientDetail({
   const statusBadge = getStatusBadgeMeta("inventory", data.status);
   const totalValue = data.valuation?.totalValue ?? 0;
   const wac = data.valuation?.wac ?? 0;
-  const listHref = `/inventory/stock?branchId=${data.branchId}`;
   const actionHrefs = {
     receive: `/inventory/grn?branchId=${data.branchId}`,
     transfer: `/inventory/transfers?branchId=${data.branchId}`,

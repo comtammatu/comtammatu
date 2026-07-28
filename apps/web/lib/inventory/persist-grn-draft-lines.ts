@@ -7,6 +7,7 @@ export type PersistableGrnDraftLine = GrnDraftLine & {
 type UpsertGrnDraftLineInput = {
   grnId: number;
   ingredientId: number;
+  supplierId: number;
   receivedQuantity: number;
   entryUnitId: number | null;
 };
@@ -38,6 +39,7 @@ export async function persistPendingGrnDraftLines(
     const result = await upsertLine({
       grnId,
       ingredientId: line.ingredientId,
+      supplierId: line.supplierId,
       receivedQuantity: line.quantity,
       entryUnitId: line.entryUnitId ?? null,
     });

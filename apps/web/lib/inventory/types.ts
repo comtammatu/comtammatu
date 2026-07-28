@@ -28,6 +28,7 @@ export interface IngredientRow {
   max_stock_level: number | null;
   reorder_point: number | null;
   storage_type: string | null;
+  default_fulfill_site_kind?: "central_supply" | "central_kitchen" | null;
   is_active: boolean;
   updated_at: string | null;
   units?: IngredientUnitRow[];

@@ -106,8 +106,10 @@ test("operator header shows branch context and keeps profile and notifications",
   assert.match(layout, /aria-label=\{messages\.operator\.nav\.profileShort\}/);
   assert.match(
     layout,
-    /aria-label=\{messages\.operator\.header\.notificationsAria\}/,
+    /const notificationsAria =[\s\S]*?messages\.operator\.header\.notificationsAria/,
   );
+  assert.match(layout, /aria-label=\{notificationsAria\}/);
+  assert.match(layout, /\$\{unread\} chưa đọc/);
   assert.doesNotMatch(layout, /messages\.employee\.(?:nav|header)/);
   assert.match(layout, /notificationsHref/);
   assert.match(layout, /const unreadPromise = getUnreadCount\(\)\.catch/);

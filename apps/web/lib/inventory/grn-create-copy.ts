@@ -3,8 +3,9 @@ import { formatCount } from "@comtammatu/shared/format";
 import { formatQty } from "@lib/inventory/format";
 
 export const GRN_CREATE_COPY = {
-  changeSupplier: "Đổi nhà cung cấp",
+  backToList: "Quay lại danh sách",
   newReceiptEyebrow: "Phiếu nhập mới",
+  newReceiptTitle: "Phiếu nhập mới",
   discardDraft: "Hủy nháp",
   addItemToContinue: "Thêm mặt hàng để tiếp tục",
   editItem: "Sửa mặt hàng",
@@ -17,7 +18,7 @@ export const GRN_CREATE_COPY = {
   searchPlaceholder: "Tìm theo tên hoặc mã SKU",
   emptyTitle: "Không thấy nguyên liệu",
   emptyDescription: "Thử từ khóa khác hoặc kiểm tra lại danh mục.",
-  emptySupplierTitle: "NCC chưa được gán nguyên liệu",
+  emptySupplierTitle: "Chưa có nguyên liệu gắn NCC",
   emptySupplierDescription:
     "Cấu hình tại Danh mục → Nhà cung cấp trước khi lập phiếu nhập.",
   draftLinesTitle: "Mặt hàng trên phiếu",
@@ -25,13 +26,18 @@ export const GRN_CREATE_COPY = {
   draftEmptyDescription: "Nhấn Thêm mặt hàng để chọn nguyên liệu.",
   /** Dialog title for the progressive catalog picker (not a page section). */
   catalogTitle: "Thêm mặt hàng",
+  supplierLabel: "Nhà cung cấp",
+  supplierSelectPlaceholder: "Chọn nhà cung cấp",
+  preferredSupplierSuffix: "ưu tiên",
+  supplierSummaryFallback: "Theo dòng",
+  lineSupplierHeader: "NCC",
   addedSummary: (lineCount: number) =>
     `Đã thêm ${formatCount(lineCount)} mặt hàng`,
   /** Draft footer before PO price sync — count only, no warehouse money total. */
   footerLineSummary: (lineCount: number) =>
     `${formatCount(lineCount)} mặt hàng`,
   reviewBeforeConfirm: (lineCount: number) =>
-    `Kiểm nhận · ${formatCount(lineCount)} mặt hàng`,
+    `Lưu & kiểm nhận · ${formatCount(lineCount)} mặt hàng`,
   lineQtyOnly: (quantity: number, unit: string) =>
     `${formatQty(quantity)} ${unit}`,
   unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
@@ -56,6 +62,7 @@ export const GRN_CREATE_COPY = {
   receivingLocationSaving: STATES_VI.saving,
   toastChooseBranch: "Chưa có kho nhận hàng cho phiếu nhập.",
   toastChooseLocation: "Chưa chọn kho nhận hàng cho phiếu nhập.",
+  toastChooseSupplier: "Chọn nhà cung cấp cho mặt hàng.",
   toastCreateDraftFailed: "Không thể tạo phiếu nháp.",
   toastSaveLineFailed: "Không lưu được dòng.",
   toastDeleteLineFailed: "Không xóa được dòng.",

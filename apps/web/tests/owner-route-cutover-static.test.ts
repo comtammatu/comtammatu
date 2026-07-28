@@ -141,7 +141,7 @@ test("branch orders route owns operator UI instead of wrapping Owner surface ord
   assert.doesNotMatch(ordersPage, /BranchOpsRefresh/);
   assert.doesNotMatch(ordersPage, /fetchRefunds/);
   assert.match(ordersClient, /ItemGroup/);
-  assert.match(ordersClient, /TabsList/);
+  assert.match(ordersClient, /ToggleGroup/);
   assert.match(ordersClient, /operatorActiveTab/);
   assert.match(ordersClient, /order\.status !== "completed"/);
   assert.match(ordersClient, /order\.status !== "cancelled"/);

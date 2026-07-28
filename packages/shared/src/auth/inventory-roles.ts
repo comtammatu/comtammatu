@@ -13,46 +13,41 @@ export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
 
 /**
  * Coarse route/action gate for GRN + shared procurement reads + suppliers.
- * `branch_manager` is admitted (D091) so a branch can receive directly from a
- * supplier; the fine differentiation is the per-action permission key + grant
- * (branch_manager holds GRN/supplier/production keys, never recipe/invoice/PO).
- * D076 adapters remain temporary until ADR 0015; D091 gives the accountant a
- * GRN/PO slice and central roles their site-scoped Inventory jobs
- * (GRN draft/confirm; no PO mutate via grants). Owner remains tenant-wide via
- * `has_permission` / `auth_is_owner` and may procure for `branch`,
- * `central_supply`, and `central_kitchen` destinations (D091).
+ * D093: branch_manager is NOT a procurement writer (no branch GRN). Accountant
+ * keeps the GRN-read + PO slice; central roles draft/confirm GRN at pinned site.
  */
 export const PROCUREMENT_ROLES: readonly StaffRole[] = [
   "owner",
   "accountant",
   "central_supply_ops",
   "central_kitchen_lead",
-  "branch_manager",
 ];
+
+/**
+ * Branch stock-request actors (D093). Distinct from procurement/GRN.
+ */
+export const STOCK_REQUEST_ROLES: readonly StaffRole[] = [
+  "owner",
+  "branch_manager",
+] as const;
+
+export const STOCK_REQUEST_FULFILL_ROLES: readonly StaffRole[] = [
+  "owner",
+  "central_supply_ops",
+  "central_kitchen_lead",
+] as const;
 
 /**
  * Procurement roles whose write scope is a single pinned branch/site. Their
  * claims carry a non-null `branch_id`, so the caller compares
- * `effectiveBranchId === targetBranchId` for strict own-branch writes. Shared
- * by GRN actions (one copy — no MIRROR drift). Roles NOT listed here (e.g.
- * owner, accountant) are tenant-wide and bypass the equality check.
+ * `effectiveBranchId === targetBranchId` for strict own-branch writes.
  */
 export function isBranchScopedProcurementRole(role: string): boolean {
   return (
-    role === "branch_manager" ||
-    role === "central_supply_ops" ||
-    role === "central_kitchen_lead"
+    role === "central_supply_ops" || role === "central_kitchen_lead"
   );
 }
 
-/**
- * Pure own-branch decision for a procurement write (D091 cross-branch guard).
- * `effectiveBranchId` is the actor's own operable branch — their non-null claim
- * for a pinned role. A branch-scoped role may write only that branch; a
- * non-scoped role (owner) is tenant-wide. The real guard
- * (`canAccessProcurementBranch`) calls this so the decision body itself — not a
- * reconstruction — is unit-tested.
- */
 export function isProcurementBranchInScope(
   role: string,
   effectiveBranchId: number | null,
@@ -63,9 +58,7 @@ export function isProcurementBranchInScope(
 }
 
 /**
- * Roles allowed to create/approve purchase orders (D091).
- * Central warehouse roles and branch_manager are intentionally excluded —
- * they draft GRN only; accountant|owner own the PO slice.
+ * Roles allowed to create/approve purchase orders (D091/D093).
  */
 export const PO_MUTATE_ROLES: readonly StaffRole[] = [
   "owner",

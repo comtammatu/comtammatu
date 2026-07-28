@@ -15,8 +15,10 @@ import { type GrnDraft, type GrnDraftLine } from "@lib/inventory/grn-draft";
 import { getDefaultPurchaseUnit } from "@lib/inventory/purchase-units";
 import { GRN_CREATE_COPY } from "./grn-create-copy";
 import {
+  formatGrnSupplierSummary,
   getGrnLocationKindLabel,
   pickGrnReceivingLocation,
+  resolveDefaultGrnSupplier,
   type GrnCreatePageData,
   type GrnCreateServerDraftLine,
   type GrnLineEditState,
@@ -29,7 +31,6 @@ export type UseGrnCreateControllerOptions = GrnCreatePageData & {
 };
 
 export function useGrnCreateController({
-  supplier,
   branchId: initialBranchId,
   procurementBranches,
   locationOptions,
@@ -46,9 +47,9 @@ export function useGrnCreateController({
   );
   const initialDraftBranchId = initialLocation?.branchId ?? initialBranchId;
   const [draft, setDraft] = useState<GrnDraft>(() => ({
-    draftId: `pending-${supplier.id}`,
-    supplierId: supplier.id,
-    supplierName: supplier.name,
+    draftId: `pending-${initialDraftBranchId ?? "new"}`,
+    supplierId: null,
+    supplierName: null,
     branchId: initialDraftBranchId,
     lines: recentLines,
     updatedAt: new Date().toISOString(),
@@ -80,7 +81,6 @@ export function useGrnCreateController({
 
     const createPromise = (async () => {
       const created = await createGrnDraft({
-        supplierId: supplier.id,
         branchId,
         ...(serverResolvesLocation
           ? {}
@@ -116,6 +116,8 @@ export function useGrnCreateController({
     );
   }, [ingredients, query]);
 
+  const supplierSummary = formatGrnSupplierSummary(draft.lines);
+
   function applyLines(
     nextLines:
       GrnDraftLine[] | ((currentLines: GrnDraftLine[]) => GrnDraftLine[]),
@@ -139,12 +141,17 @@ export function useGrnCreateController({
       : (defaultUnit?.unitId ?? null);
     const unit = existing?.unit ?? defaultUnit?.label ?? ingredient.unit;
     const quantity = existing?.quantity ?? 0;
+    const defaultSupplier = resolveDefaultGrnSupplier(ingredient.suppliers);
+    const supplierId =
+      existing?.supplierId ?? defaultSupplier?.id ?? null;
     setEdit({
       ingredient,
       line: existing ?? null,
       quantity,
       unit,
       entryUnitId,
+      supplierId,
+      note: "",
     });
   }
 
@@ -172,6 +179,17 @@ export function useGrnCreateController({
     if (!edit || edit.quantity <= 0) {
       return;
     }
+    if (edit.supplierId == null) {
+      setSubmitError(GRN_CREATE_COPY.toastChooseSupplier);
+      return;
+    }
+    const supplier = edit.ingredient.suppliers.find(
+      (item) => item.id === edit.supplierId,
+    );
+    if (!supplier) {
+      setSubmitError(GRN_CREATE_COPY.toastChooseSupplier);
+      return;
+    }
 
     setSubmitError(null);
     try {
@@ -180,6 +198,7 @@ export function useGrnCreateController({
       const lineRes = await upsertGrnLine({
         grnId,
         ingredientId: edit.ingredient.id,
+        supplierId: edit.supplierId,
         receivedQuantity: edit.quantity,
         entryUnitId: edit.entryUnitId,
       });
@@ -194,6 +213,8 @@ export function useGrnCreateController({
         unit: edit.unit,
         entryUnitId: edit.entryUnitId,
         quantity: edit.quantity,
+        supplierId: supplier.id,
+        supplierName: supplier.name,
       };
       if (lineId) (nextLine as GrnCreateServerDraftLine).lineId = lineId;
       applyLines((currentLines) => {
@@ -276,7 +297,7 @@ export function useGrnCreateController({
         return;
       }
       applyLines(persisted.lines);
-      router.push(`${grnBasePath}/${grnId}?review=1`);
+      router.push(`${grnBasePath}/${grnId}`);
       router.refresh();
     } catch {
       setSubmitError("Không thể gửi phiếu. Vui lòng thử lại.");
@@ -385,7 +406,7 @@ export function useGrnCreateController({
     submitting,
     submit,
     submitError,
-    supplier,
+    supplierSummary,
     updateEditUnit,
     removeLine,
     setQuery,

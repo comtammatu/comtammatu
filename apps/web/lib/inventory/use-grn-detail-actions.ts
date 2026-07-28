@@ -61,6 +61,7 @@ export function useGrnDetailActions({
         const result = await upsertGrnLine({
           grnId: grn.id,
           ingredientId: line.ingredientId,
+          supplierId: line.supplierId,
           receivedQuantity: line.actual,
           entryUnitId: line.entryUnitId,
           rejectedQuantity: line.rejected,

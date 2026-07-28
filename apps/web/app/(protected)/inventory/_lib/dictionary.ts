@@ -77,7 +77,7 @@ const VI_DICTIONARY = {
   // ------------------------------------------------------------------
   status: {
     draft: { long: "Nháp" },
-    confirmed: { short: "Xác nhận", long: "Đã xác nhận" },
+    confirmed: { short: "Đã xác nhận", long: "Đã xác nhận" },
     sent: { long: "Đã gửi" },
     credited: { long: "Đã ghi có" },
     refunded: { long: "Đã hoàn tiền" },

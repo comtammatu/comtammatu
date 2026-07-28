@@ -417,13 +417,18 @@ async function fetchInventoryCashTiedItems({
 }): Promise<FinanceInventoryItem[]> {
   if (!supabase) return [];
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
-  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+  const stockBearingLocations = await fetchStockBearingLocationIds({
     supabase,
     tenantId,
     ...(branchId != null ? { branchId } : {}),
   });
 
-  if (stockBearingLocationIds.length === 0) {
+  if (!stockBearingLocations.ok) {
+    console.error("[finance:inventory-cash-tied] stock-bearing locations failed");
+    return [];
+  }
+
+  if (stockBearingLocations.locationIds.length === 0) {
     return [];
   }
 
@@ -438,7 +443,7 @@ async function fetchInventoryCashTiedItems({
     `,
     )
     .eq("tenant_id", tenantId)
-    .in("location_id", stockBearingLocationIds);
+    .in("location_id", stockBearingLocations.locationIds);
 
   if (branchId != null) {
     query = query.eq("branch_id", branchId);

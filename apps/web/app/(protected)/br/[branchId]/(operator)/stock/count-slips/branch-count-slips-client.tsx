@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Check as IconCheck,
   ChevronRight as IconChevronRight,
@@ -34,7 +34,7 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppEmptyState } from "@/components/surface";
@@ -87,12 +87,25 @@ export function BranchCountSlipsClient({
   focusFirstPending: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState(initialRows);
-  const [view, setView] = useState<QueueView>("pending");
   const [selectedId, setSelectedId] = useState<number | null>(() =>
     focusFirstPending
       ? (initialRows.find((row) => row.status === "submitted")?.id ?? null)
       : null,
+  );
+  const requestedView = searchParams.get("view");
+  const view: QueueView = requestedView === "history" ? "history" : "pending";
+  const setView = useCallback(
+    (next: QueueView) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "pending") params.delete("view");
+      else params.set("view", next);
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
   );
   const [recounting, setRecounting] = useState(false);
   const [recountNote, setRecountNote] = useState("");
@@ -201,8 +214,7 @@ export function BranchCountSlipsClient({
             {INVENTORY_VI.countSlipHistoryTitle}
           </TabsTrigger>
         </TabsList>
-      </Tabs>
-
+        <TabsContent value={view}>
       <section
         aria-label={
           view === "pending"
@@ -265,6 +277,8 @@ export function BranchCountSlipsClient({
           </ItemGroup>
         )}
       </section>
+        </TabsContent>
+      </Tabs>
 
       <Sheet
         open={selected != null}

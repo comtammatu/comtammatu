@@ -291,3 +291,39 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   );
   assert.doesNotMatch(settingsLayoutSource, /settings\/qc|icon: "qc"/);
 });
+
+test("D093 central_supply_ops nav hides PO and recipes; shows GRN + request inbox", () => {
+  const visible = hrefs(
+    resolveInventoryNav({
+      userRole: "central_supply_ops",
+      showProcurement: true,
+      showProduction: false,
+      showCatalogManagement: false,
+      showSettings: false,
+      showStockRequestInbox: true,
+    }),
+  );
+
+  assert.equal(visible.has("/inventory/grn"), true);
+  assert.equal(visible.has("/inventory/stock-requests"), true);
+  assert.equal(visible.has("/inventory/purchase-orders"), false);
+  assert.equal(visible.has("/inventory/recipes"), false);
+  assert.equal(visible.has("/inventory/production"), false);
+});
+
+test("D093 central_kitchen_lead can show production + recipes, not PO", () => {
+  const visible = hrefs(
+    resolveInventoryNav({
+      userRole: "central_kitchen_lead",
+      showProcurement: true,
+      showProduction: true,
+      showCatalogManagement: false,
+      showSettings: false,
+      showStockRequestInbox: true,
+    }),
+  );
+
+  assert.equal(visible.has("/inventory/production"), true);
+  assert.equal(visible.has("/inventory/recipes"), true);
+  assert.equal(visible.has("/inventory/purchase-orders"), false);
+});

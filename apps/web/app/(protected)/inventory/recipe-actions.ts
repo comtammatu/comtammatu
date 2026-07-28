@@ -117,12 +117,18 @@ export async function fetchBranchWacMap(
     return { success: false, error: "Không có quyền" };
   }
 
-  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+  const stockBearingLocations = await fetchStockBearingLocationIds({
     supabase,
     tenantId: claims.tenant_id,
     branchId: parsedBranchId.data ?? undefined,
   });
-  if (stockBearingLocationIds.length === 0) {
+  if (!stockBearingLocations.ok) {
+    return {
+      success: false,
+      error: messages.inventory.recipes.branchWacLoadFailed,
+    };
+  }
+  if (stockBearingLocations.locationIds.length === 0) {
     return { success: true, data: { monetary: {} } };
   }
 
@@ -130,7 +136,7 @@ export async function fetchBranchWacMap(
     .from("stock_levels")
     .select("ingredient_id, avg_unit_cost, branch_id")
     .eq("tenant_id", claims.tenant_id)
-    .in("location_id", stockBearingLocationIds)
+    .in("location_id", stockBearingLocations.locationIds)
     .not("avg_unit_cost", "is", null);
 
   if (parsedBranchId.data != null) {

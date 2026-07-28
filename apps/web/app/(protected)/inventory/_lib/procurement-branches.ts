@@ -1,7 +1,6 @@
 import type { TenantSupabase } from "@lib/inventory/types";
 
 export const PROCUREMENT_SITE_KINDS = [
-  "branch",
   "central_supply",
   "central_kitchen",
 ] as const;
@@ -12,7 +11,7 @@ export type ProcurementBranch = {
   branch_kind: string;
 };
 
-/** Fetch all active sites that can procure (CN + Kho Tổng + Bếp TT). */
+/** Fetch active central sites that can procure (D093 — no branch GRN). */
 export async function fetchProcurementBranches(
   supabase: TenantSupabase,
   tenantId: number,

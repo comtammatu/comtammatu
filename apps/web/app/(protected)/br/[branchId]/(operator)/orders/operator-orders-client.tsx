@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { BRANCH_VI, STAFF_VI } from "@comtammatu/shared/messages";
@@ -15,12 +16,18 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { OrderDetailSheet } from "@/(protected)/orders/order-detail-sheet";
 import type { OrderRow } from "@/(protected)/orders/actions";
 import { ORDERS_COPY } from "@/(protected)/orders/orders-copy";
+
+type OrderView = "active" | "recent";
+const VALID_VIEWS: readonly OrderView[] = ["active", "recent"] as const;
 
 export function OperatorOrdersClient({
   orders,
@@ -36,7 +43,31 @@ export function OperatorOrdersClient({
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(
     initialSelectedOrder,
   );
-  const [view, setView] = useState<"active" | "recent">("active");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const requested = searchParams.get("view");
+  const view: OrderView =
+    requested && (VALID_VIEWS as readonly string[]).includes(requested)
+      ? (requested as OrderView)
+      : "active";
+
+  const onValueChange = useCallback(
+    (next: string) => {
+      if (!next) return;
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "active") params.delete("view");
+      else params.set("view", next);
+      const q = params.toString();
+      startTransition(() => {
+        router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+      });
+    },
+    [pathname, router, searchParams],
+  );
+
   const activeOrders = orders.filter(
     (order) => order.status !== "completed" && order.status !== "cancelled",
   );
@@ -55,23 +86,22 @@ export function OperatorOrdersClient({
 
   return (
     <>
-      <Tabs
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="touch"
+        className="grid w-full grid-cols-2"
         value={view}
-        onValueChange={(value) => setView(value as typeof view)}
+        onValueChange={onValueChange}
+        aria-label={ORDERS_COPY.operatorTabsAriaLabel}
       >
-        <TabsList
-          size="touch"
-          className="grid w-full grid-cols-2"
-          aria-label={ORDERS_COPY.operatorTabsAriaLabel}
-        >
-          <TabsTrigger value="active">
-            {ORDERS_COPY.operatorActiveTab(inProgressCount)}
-          </TabsTrigger>
-          <TabsTrigger value="recent">
-            {ORDERS_COPY.operatorRecentTab}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+        <ToggleGroupItem value="active" aria-label={ORDERS_COPY.operatorActiveAria(inProgressCount)}>
+          {ORDERS_COPY.operatorActiveTab(inProgressCount)}
+        </ToggleGroupItem>
+        <ToggleGroupItem value="recent" aria-label={ORDERS_COPY.operatorRecentAria}>
+          {ORDERS_COPY.operatorRecentTab}
+        </ToggleGroupItem>
+      </ToggleGroup>
       {visibleOrders.length === 0 ? (
         <AppEmptyState
           title={ORDERS_COPY.operatorActiveEmptyTitle}

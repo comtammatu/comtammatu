@@ -12,6 +12,7 @@ import { getIngredientUnitDisplayName } from "@/(protected)/inventory/_lib/unit-
 import type {
   GrnCreateIngredient,
   GrnCreatePageData,
+  GrnCreateSupplierOption,
 } from "./grn-create-model";
 
 type IngredientUnitJoinRow = {
@@ -24,7 +25,11 @@ type IngredientUnitJoinRow = {
   units: { code: string; name: string | null } | null;
 };
 
-type IngredientJoinRow = Omit<GrnCreateIngredient, "units"> & {
+type IngredientJoinRow = {
+  id: number;
+  name: string;
+  sku: string | null;
+  category: string | null;
   ingredient_units: IngredientUnitJoinRow[] | null;
 };
 
@@ -38,23 +43,27 @@ type InventoryLocationRow = {
   is_active: boolean | null;
 };
 
+type SupplierItemJoinRow = {
+  ingredient_id: number;
+  is_preferred: boolean | null;
+  suppliers: { id: number; name: string } | { id: number; name: string }[] | null;
+};
+
+function relatedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
 export async function loadGrnCreatePageData({
-  supplierId,
   queryBranchId,
   routeBranchId,
-  fallbackPath,
   grnBasePath,
 }: {
-  supplierId: number;
   queryBranchId?: string | string[];
   routeBranchId?: number;
   fallbackPath: string;
   grnBasePath: string;
 }): Promise<GrnCreatePageData> {
-  if (!Number.isFinite(supplierId) || supplierId <= 0) {
-    redirect(fallbackPath);
-  }
-
   const auth = await loadAuthState();
   const { supabase, claims } = auth;
   if (!PROCUREMENT_ROLES.includes(claims.user_role)) {
@@ -73,45 +82,34 @@ export async function loadGrnCreatePageData({
     scope.selectedBranchId,
   );
   if (!canCreate) redirect("/access-denied?reason=insufficient-permission");
-  const ingredientQuery = supabase
-    .from("ingredients")
-    .select(
-      "id, name, sku, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-    );
 
-  const [supplierRes, ingredientsRes, locationsRes, supplierItemsRes] =
-    await Promise.all([
-      supabase
-        .from("suppliers")
-        .select("id, name")
-        .eq("id", supplierId)
-        .eq("tenant_id", claims.tenant_id)
-        .eq("is_active", true)
-        .maybeSingle(),
-      ingredientQuery
-        .eq("tenant_id", claims.tenant_id)
-        .eq("is_active", true)
-        .order("name")
-        .limit(500),
-      supabase
-        .from("inventory_locations")
-        .select(
-          "id, name, branch_id, location_kind, is_default_receive, is_default_consumption, is_active",
-        )
-        .eq("tenant_id", claims.tenant_id)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true })
-        .order("id", { ascending: true }),
-      supabase
-        .from("supplier_items")
-        .select("ingredient_id")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("supplier_id", supplierId)
-        .eq("is_active", true)
-        .limit(1000),
-    ]);
+  const [ingredientsRes, locationsRes, supplierItemsRes] = await Promise.all([
+    supabase
+      .from("ingredients")
+      .select(
+        "id, name, sku, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .order("name")
+      .limit(500),
+    supabase
+      .from("inventory_locations")
+      .select(
+        "id, name, branch_id, location_kind, is_default_receive, is_default_consumption, is_active",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true }),
+    supabase
+      .from("supplier_items")
+      .select("ingredient_id, is_preferred, suppliers ( id, name )")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .limit(5000),
+  ]);
 
-  if (!supplierRes.data) redirect(fallbackPath);
   if (ingredientsRes.error || supplierItemsRes.error) {
     throw new Error("inventory.supplier_items.load_failed");
   }
@@ -148,11 +146,28 @@ export async function loadGrnCreatePageData({
       };
     });
 
-  const allowedIngredientIds = new Set(
-    (supplierItemsRes.data ?? []).map((item) => item.ingredient_id),
-  );
-  const ingredients = ((ingredientsRes.data ?? []) as IngredientJoinRow[])
-    .filter((ingredient) => allowedIngredientIds.has(ingredient.id))
+  const suppliersByIngredient = new Map<number, GrnCreateSupplierOption[]>();
+  for (const item of (supplierItemsRes.data ?? []) as SupplierItemJoinRow[]) {
+    const supplier = relatedOne(item.suppliers);
+    if (!supplier) continue;
+    const existing = suppliersByIngredient.get(item.ingredient_id) ?? [];
+    if (!existing.some((row) => row.id === supplier.id)) {
+      existing.push({
+        id: supplier.id,
+        name: supplier.name,
+        isPreferred: item.is_preferred === true,
+      });
+      suppliersByIngredient.set(item.ingredient_id, existing);
+    } else if (item.is_preferred === true) {
+      const row = existing.find((entry) => entry.id === supplier.id);
+      if (row) row.isPreferred = true;
+    }
+  }
+
+  const ingredients: GrnCreateIngredient[] = (
+    (ingredientsRes.data ?? []) as IngredientJoinRow[]
+  )
+    .filter((ingredient) => (suppliersByIngredient.get(ingredient.id)?.length ?? 0) > 0)
     .map(({ ingredient_units, ...ingredient }) => {
       const units: IngredientUnitRow[] = (ingredient_units ?? [])
         .filter((unit) => unit.is_active)
@@ -167,10 +182,19 @@ export async function loadGrnCreatePageData({
           sort_order: unit.sort_order,
         }))
         .sort((left, right) => left.sort_order - right.sort_order);
+      const suppliers = (suppliersByIngredient.get(ingredient.id) ?? []).toSorted(
+        (left, right) => {
+          if (left.isPreferred !== right.isPreferred) {
+            return left.isPreferred ? -1 : 1;
+          }
+          return left.name.localeCompare(right.name, "vi");
+        },
+      );
       return {
         ...ingredient,
         unit: units.find((unit) => unit.is_base)?.unit_code ?? "",
         units,
+        suppliers,
       };
     });
 
@@ -180,7 +204,6 @@ export async function loadGrnCreatePageData({
       .from("goods_received_notes")
       .select("id")
       .eq("tenant_id", claims.tenant_id)
-      .eq("supplier_id", supplierId)
       .eq("branch_id", defaultBranchId)
       .eq("status", "confirmed")
       .order("received_date", { ascending: false })
@@ -190,7 +213,9 @@ export async function loadGrnCreatePageData({
     if (recentGrnRes.data?.id) {
       const recentItemsRes = await supabase
         .from("grn_items")
-        .select("ingredient_id, received_quantity, entry_unit_id")
+        .select(
+          "ingredient_id, received_quantity, entry_unit_id, supplier_id, suppliers ( id, name )",
+        )
         .eq("tenant_id", claims.tenant_id)
         .eq("grn_id", recentGrnRes.data.id)
         .gt("received_quantity", 0)
@@ -200,6 +225,8 @@ export async function loadGrnCreatePageData({
           (item) => item.id === line.ingredient_id,
         );
         if (!ingredient) return [];
+        const supplier = relatedOne(line.suppliers);
+        if (!supplier) return [];
         return [
           {
             ingredientId: ingredient.id,
@@ -211,25 +238,27 @@ export async function loadGrnCreatePageData({
             ),
             entryUnitId: line.entry_unit_id,
             quantity: Number(line.received_quantity),
+            supplierId: supplier.id,
+            supplierName: supplier.name,
           },
         ];
       });
     }
   }
 
-  const draftRes = await loadActiveGrnDraft({
-    supplierId,
-    branchId: defaultBranchId ?? undefined,
-  });
-  const draftRow = (draftRes.success ? draftRes.data : null) as {
-    id: number;
-  } | null;
-  if (draftRow?.id) {
-    redirect(`${grnBasePath}/${draftRow.id}`);
+  if (defaultBranchId != null) {
+    const draftRes = await loadActiveGrnDraft({
+      branchId: defaultBranchId,
+    });
+    const draftRow = (draftRes.success ? draftRes.data : null) as {
+      id: number;
+    } | null;
+    if (draftRow?.id) {
+      redirect(`${grnBasePath}/${draftRow.id}`);
+    }
   }
 
   return {
-    supplier: { id: supplierRes.data.id, name: supplierRes.data.name },
     branchId: defaultBranchId,
     procurementBranches: branches.map((branch) => ({
       id: branch.id,
@@ -239,5 +268,6 @@ export async function loadGrnCreatePageData({
     canSwitchBranch: routeBranchId == null,
     ingredients,
     recentLines,
+    activeDraft: null,
   };
 }

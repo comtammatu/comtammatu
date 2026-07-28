@@ -117,11 +117,14 @@ export async function loadStockOnHandPageData({
   const stockReadClient = monetaryAccess.valuation
     ? (monetaryAccess.client ?? supabase)
     : supabase;
-  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+  const stockBearingLocations = await fetchStockBearingLocationIds({
     supabase: stockReadClient,
     tenantId: claims.tenant_id,
     branchId,
   });
+  const stockBearingLocationIds = stockBearingLocations.ok
+    ? stockBearingLocations.locationIds
+    : [];
   const stockLevelQuery = monetaryAccess.valuation
     ? stockReadClient
         .from("stock_levels")
@@ -137,6 +140,7 @@ export async function loadStockOnHandPageData({
   const [
     ingredientsResult,
     stockResult,
+    canCreateStockRequest,
     canReceiveGrn,
     canReceiveTransfer,
     canCreateTransfer,
@@ -145,13 +149,14 @@ export async function loadStockOnHandPageData({
     canAdjustException,
   ] = await Promise.all([
     fetchIngredients(),
-    stockBearingLocationIds.length > 0
+    stockBearingLocations.ok && stockBearingLocationIds.length > 0
       ? stockLevelQuery
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", branchId)
         .in("location_id", stockBearingLocationIds)
         .order("ingredient_id")
       : Promise.resolve({ data: [], error: null }),
+    currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_REQUEST_CREATE),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     currentUserHasPermission(
       branchId,
@@ -299,36 +304,44 @@ export async function loadStockOnHandPageData({
       : null;
 
   let totalValue: number | null = null;
+  let tenantStockBearingLoadFailed = false;
   if (includeValuation && canViewTotal) {
-    const tenantStockBearingLocationIds = await fetchStockBearingLocationIds({
+    const tenantStockBearingLocations = await fetchStockBearingLocationIds({
       supabase: monetaryAccess.client ?? supabase,
       tenantId: claims.tenant_id,
     });
-    const { data: tenantRows } =
-      tenantStockBearingLocationIds.length > 0
-        ? await (monetaryAccess.client ?? supabase)
-          .from("stock_levels")
-          .select(
-            "current_quantity, avg_unit_cost, ingredients ( unit_cost )",
-          )
-          .eq("tenant_id", claims.tenant_id)
-          .in("location_id", tenantStockBearingLocationIds)
-        : { data: [] };
-    totalValue = ((tenantRows ?? []) as TenantStockLevelRow[]).reduce(
-      (sum, row) =>
-        sum +
-        inventoryLineValue(
-          row.current_quantity,
-          row.avg_unit_cost,
-          relatedOne(row.ingredients)?.unit_cost ?? null,
-        ),
-      0,
-    );
+    if (!tenantStockBearingLocations.ok) {
+      tenantStockBearingLoadFailed = true;
+    } else {
+      const tenantStockBearingLocationIds =
+        tenantStockBearingLocations.locationIds;
+      const { data: tenantRows } =
+        tenantStockBearingLocationIds.length > 0
+          ? await (monetaryAccess.client ?? supabase)
+              .from("stock_levels")
+              .select(
+                "current_quantity, avg_unit_cost, ingredients ( unit_cost )",
+              )
+              .eq("tenant_id", claims.tenant_id)
+              .in("location_id", tenantStockBearingLocationIds)
+          : { data: [] };
+      totalValue = ((tenantRows ?? []) as TenantStockLevelRow[]).reduce(
+        (sum, row) =>
+          sum +
+          inventoryLineValue(
+            row.current_quantity,
+            row.avg_unit_cost,
+            relatedOne(row.ingredients)?.unit_cost ?? null,
+          ),
+        0,
+      );
+    }
   }
 
   const underThresholdCount = ingredients.filter(isStockReorderRisk).length;
   const summary: StockWorkSummary = { underThresholdCount };
   const permissions: StockActionPermissions = {
+    canCreateStockRequest,
     canReceiveGrn,
     canReceiveTransfer,
     canCreateIssue: canAdjustException,
@@ -341,7 +354,11 @@ export async function loadStockOnHandPageData({
   return {
     branchId,
     branchValue,
-    coreDataLoadFailed: !ingredientsResult.success || stockResult.error != null,
+    coreDataLoadFailed:
+      !stockBearingLocations.ok ||
+      tenantStockBearingLoadFailed ||
+      !ingredientsResult.success ||
+      stockResult.error != null,
     ingredients,
     permissions,
     summary,

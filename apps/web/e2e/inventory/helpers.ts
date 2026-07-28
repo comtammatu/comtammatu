@@ -577,6 +577,7 @@ export async function createTestGrnWithApprovedPo(
       tenant_id: opts.tenantId,
       grn_id: grn.id,
       ingredient_id: opts.ingredientId,
+      supplier_id: opts.supplierId,
       received_quantity: qty,
       rejected_quantity: rejectedQuantity,
       rejection_reason: opts.rejectionReason ?? null,

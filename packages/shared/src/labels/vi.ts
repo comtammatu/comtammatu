@@ -170,7 +170,7 @@ export const CONSUMPTION_REPORT_STATUS_LABELS_VI = {
 
 export const INVENTORY_STATUS_LABELS_VI = {
   draft: "Nháp",
-  confirmed: "Xác nhận",
+  confirmed: "Đã xác nhận",
   sent: "Đã gửi",
   credited: "Đã ghi có",
   refunded: "Đã hoàn tiền",

@@ -105,7 +105,7 @@ export function TeamWorkspaceTabs({
             key={tabValue}
             value={tabValue}
             className={cn(
-              "relative z-10 min-w-0 items-center justify-center gap-1 px-1 py-0 text-xs leading-none text-muted-foreground sm:gap-2 sm:px-2 sm:text-sm data-active:bg-transparent dark:data-active:border-transparent dark:data-active:bg-transparent",
+              "relative z-10 min-h-12 min-w-0 items-center justify-center gap-1 px-1 py-0 text-xs leading-none text-muted-foreground sm:gap-2 sm:px-2 sm:text-sm data-active:bg-transparent dark:data-active:border-transparent dark:data-active:bg-transparent",
               value === tabValue && "text-foreground",
             )}
           >

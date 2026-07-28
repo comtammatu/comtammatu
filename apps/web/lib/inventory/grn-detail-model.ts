@@ -1,5 +1,9 @@
 import type { IngredientRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
+import {
+  formatGrnSupplierSummary,
+  type GrnCreateSupplierOption,
+} from "./grn-create-model";
 
 export const GRN_DETAIL_COPY = messages.inventory.grn;
 export const INVENTORY_COMMON_COPY = messages.inventory.common;
@@ -9,6 +13,8 @@ export type GrnDetailItem = {
   ingredientId: number;
   name: string;
   sku: string;
+  supplierId: number;
+  supplierName: string;
   poQuantity: number | null;
   required: number;
   actual: number;
@@ -19,6 +25,14 @@ export type GrnDetailItem = {
   entryUnitId: number | null;
 };
 
+export type GrnLinkedPo = {
+  id: number;
+  poNumber: string;
+  status: string;
+  supplierId: number | null;
+  supplierName: string;
+};
+
 export type GrnDetail = {
   id: number;
   tenantId: number;
@@ -26,12 +40,13 @@ export type GrnDetail = {
   poCode: string;
   poId: number | null;
   poStatus?: string | null;
+  linkedPos: GrnLinkedPo[];
   invoiceId: number | null;
   branchId: number;
   locationId: number | null;
   locationName: string | null;
   branchName: string;
-  supplierId: number;
+  supplierId: number | null;
   supplier: string;
   date: string;
   status: string;
@@ -64,18 +79,24 @@ export function createEditableGrnLine({
   quantity,
   entryUnitId,
   unit,
+  supplierId,
+  supplierName,
 }: {
   lineId: number;
   ingredient: IngredientRow;
   quantity: number;
   entryUnitId: number | null;
   unit: string;
+  supplierId: number;
+  supplierName: string;
 }): EditableGrnLine {
   return {
     lineId,
     ingredientId: ingredient.id,
     name: ingredient.name,
     sku: ingredient.sku ?? "",
+    supplierId,
+    supplierName,
     poQuantity: null,
     required: quantity,
     actual: quantity,
@@ -86,4 +107,46 @@ export function createEditableGrnLine({
     entryUnitId,
     dirty: false,
   };
+}
+
+export function grnSupplierSummaryFromItems(
+  items: readonly Pick<GrnDetailItem, "supplierId" | "supplierName">[],
+  fallback?: string | null,
+): string {
+  const summary = formatGrnSupplierSummary(items);
+  if (summary !== "Theo dòng") return summary;
+  return fallback?.trim() || "Theo dòng";
+}
+
+export function uniqueGrnSuppliers(
+  items: readonly Pick<GrnDetailItem, "supplierId" | "supplierName">[],
+): GrnCreateSupplierOption[] {
+  const seen = new Map<number, string>();
+  for (const item of items) {
+    if (!seen.has(item.supplierId)) {
+      seen.set(item.supplierId, item.supplierName);
+    }
+  }
+  return [...seen.entries()].map(([id, name]) => ({ id, name }));
+}
+
+export function isLinkedPoApproved(status: string | null | undefined): boolean {
+  return status === "sent" || status === "partially_received";
+}
+
+export function allLinkedPosApproved(
+  linkedPos: readonly Pick<GrnLinkedPo, "status">[],
+  legacyPoStatus?: string | null,
+): boolean {
+  if (linkedPos.length > 0) {
+    return linkedPos.every((po) => isLinkedPoApproved(po.status));
+  }
+  return isLinkedPoApproved(legacyPoStatus);
+}
+
+export function hasLinkedPurchaseOrders(
+  linkedPos: readonly unknown[],
+  poId: number | null,
+): boolean {
+  return linkedPos.length > 0 || poId != null;
 }

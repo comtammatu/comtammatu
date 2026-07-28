@@ -37,6 +37,8 @@ export const ORDERS_COPY = {
   operatorTabsAriaLabel: "Phạm vi đơn hàng",
   operatorActiveTab: (count: number) => `Đang xử lý (${String(count)})`,
   operatorRecentTab: "Gần đây",
+  operatorActiveAria: (count: number) => `Đang xử lý, ${String(count)} đơn`,
+  operatorRecentAria: "Gần đây",
   operatorActiveCountNote: (shown: number, total: number) =>
     total > shown
       ? `Hiển thị ${String(shown)} / ${String(total)} đơn đang xử lý`
