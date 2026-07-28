@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, type TransitionStartFunction } from "react";
-import { TriangleAlert as IconAlertTriangle } from "lucide-react";
-import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
-import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
 import {
@@ -36,15 +33,12 @@ import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import type { GrnLineEditState } from "@lib/inventory/grn-create-model";
 import {
   createEditableGrnLine,
-  deriveGrnVariance,
   GRN_DETAIL_COPY,
   type EditableGrnLine,
   type GrnDetail,
 } from "@lib/inventory/grn-detail-model";
 import {
-  GRN_BASELINE_REVIEW_PCT,
   deriveGrnQualityStatus,
-  isGrnBaselineReviewRequired,
 } from "@lib/inventory/grn-quality";
 import { messages } from "@lib/messages";
 
@@ -308,16 +302,6 @@ export function BranchGrnReviewLineSheet({
   const [numericField, setNumericField] = useState<
     "actual" | "rejected" | null
   >(null);
-  const baselineVariance = line?.baselineVariancePct ?? null;
-  const variance = line
-    ? (baselineVariance ?? deriveGrnVariance(line.cost, line.poUnitPrice))
-    : null;
-  const varianceLabel =
-    baselineVariance != null
-      ? GRN_DETAIL_COPY.line.baselineVariance(line?.baselineSampleN ?? 0)
-      : GRN_DETAIL_COPY.line.priceVariance;
-  const formattedVariance =
-    variance != null ? formatPercent(variance, 2) : formatPercent(0, 2);
   const needsShortDeliveryAction =
     line != null &&
     line.poQuantity != null &&
@@ -326,17 +310,6 @@ export function BranchGrnReviewLineSheet({
       line.poQuantity * (1 - grn.qcSettings.qtyShortTolerancePct / 100);
   const needsRejectionDetails =
     line != null && line.qualityStatus !== "accepted";
-  const needsPriceOverride =
-    variance != null &&
-    Math.abs(variance) >
-      (baselineVariance != null
-        ? GRN_BASELINE_REVIEW_PCT
-        : grn.qcSettings.priceVarianceWarnPct);
-  const needsPriceEvidence =
-    baselineVariance != null
-      ? isGrnBaselineReviewRequired(baselineVariance)
-      : variance != null &&
-        Math.abs(variance) > grn.qcSettings.priceVarianceReviewPct;
 
   function patchActual(actual: number) {
     if (!line) return;
@@ -454,17 +427,6 @@ export function BranchGrnReviewLineSheet({
                       onClick={() => setNumericField("rejected")}
                     />
                   </div>
-                  {line.cost > 0 ? (
-                    <Field>
-                      <FieldLabel>
-                        {GRN_DETAIL_COPY.line.unitCostCurrency}
-                      </FieldLabel>
-                      <p className="text-sm font-semibold tabular-nums">
-                        {formatVND(line.cost)}
-                      </p>
-                    </Field>
-                  ) : null}
-
                   {needsRejectionDetails ? (
                     <>
                       <Field>
@@ -498,67 +460,6 @@ export function BranchGrnReviewLineSheet({
                           }
                         />
                       </Field>
-                    </>
-                  ) : null}
-
-                  {needsPriceOverride ? (
-                    <>
-                      <Alert variant="destructive">
-                        <IconAlertTriangle className="size-4" />
-                        <AlertDescription>
-                          {varianceLabel}: {formattedVariance}
-                        </AlertDescription>
-                      </Alert>
-                      <Field>
-                        <FieldLabel
-                          htmlFor={`branch-grn-override-${line.lineId}`}
-                        >
-                          {GRN_DETAIL_COPY.line.priceOverrideRequired}
-                        </FieldLabel>
-                        <Textarea
-                          id={`branch-grn-override-${line.lineId}`}
-                          rows={2}
-                          value={line.priceOverrideNote}
-                          placeholder={
-                            baselineVariance != null
-                              ? GRN_DETAIL_COPY.line.baselineVariancePlaceholder(
-                                  formattedVariance,
-                                  line.baselineSampleN ?? 0,
-                                )
-                              : needsPriceEvidence
-                                ? GRN_DETAIL_COPY.line.reviewVariancePlaceholder(
-                                    formattedVariance,
-                                    formatPercent(
-                                      grn.qcSettings.priceVarianceReviewPct,
-                                    ),
-                                  )
-                                : GRN_DETAIL_COPY.line.warnVariancePlaceholder(
-                                    formattedVariance,
-                                    formatPercent(
-                                      grn.qcSettings.priceVarianceWarnPct,
-                                    ),
-                                  )
-                          }
-                          onChange={(event) =>
-                            onPatch({ priceOverrideNote: event.target.value })
-                          }
-                        />
-                      </Field>
-                      {needsPriceEvidence ? (
-                        <Field>
-                          <FieldLabel>
-                            {GRN_DETAIL_COPY.line.supplierInvoicePhoto}
-                          </FieldLabel>
-                          <PhotoUploadInput
-                            tenantId={grn.tenantId}
-                            folder={`grn/${grn.id}/price-override/${line.lineId}`}
-                            value={line.priceOverridePhotoUrl || null}
-                            onChange={(url) =>
-                              onPatch({ priceOverridePhotoUrl: url ?? "" })
-                            }
-                          />
-                        </Field>
-                      ) : null}
                     </>
                   ) : null}
 
@@ -737,13 +638,10 @@ export function BranchGrnAddLineSheet({
         ingredientId: ingredient.id,
         receivedQuantity: parsedQuantity,
         entryUnitId,
-        unitCost: 0,
         qualityStatus: "accepted",
         rejectedQuantity: 0,
         rejectionReason: null,
         rejectedPhotoUrl: null,
-        priceOverrideNote: null,
-        priceOverridePhotoUrl: null,
         shortDeliveryAction: null,
       });
       if (!result.success || !result.data) {
@@ -758,13 +656,7 @@ export function BranchGrnAddLineSheet({
           quantity: parsedQuantity,
           entryUnitId,
           unit: unit.trim(),
-          unitCost: 0,
-          baselineVariancePct:
-            (result.data as { baseline_variance_pct?: number | null })
-              .baseline_variance_pct ?? null,
-          baselineSampleN:
-            (result.data as { baseline_sample_n?: number | null })
-              .baseline_sample_n ?? null,
+          monetary: null,
         }),
       );
       notify.success(GRN_DETAIL_COPY.addDialog.success);

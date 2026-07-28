@@ -118,13 +118,10 @@ export function AddGrnLineDialog({
         ingredientId: parsedIngredientId,
         receivedQuantity: parsedQuantity,
         entryUnitId,
-        unitCost: 0,
         qualityStatus: "accepted",
         rejectedQuantity: 0,
         rejectionReason: null,
         rejectedPhotoUrl: null,
-        priceOverrideNote: null,
-        priceOverridePhotoUrl: null,
         shortDeliveryAction: null,
       });
       if (!res.success || !res.data) {
@@ -132,11 +129,7 @@ export function AddGrnLineDialog({
         return;
       }
 
-      const row = res.data as {
-        id: number;
-        baseline_variance_pct?: number | null;
-        baseline_sample_n?: number | null;
-      };
+      const row = res.data as { id: number };
       onSaved(
         createEditableGrnLine({
           lineId: row.id,
@@ -144,15 +137,7 @@ export function AddGrnLineDialog({
           quantity: parsedQuantity,
           entryUnitId,
           unit: unit.trim(),
-          unitCost: 0,
-          baselineVariancePct:
-            row.baseline_variance_pct == null
-              ? null
-              : Number(row.baseline_variance_pct),
-          baselineSampleN:
-            row.baseline_sample_n == null
-              ? null
-              : Number(row.baseline_sample_n),
+          monetary: null,
         }),
       );
       notify.success(grnCopy.addDialog.success);

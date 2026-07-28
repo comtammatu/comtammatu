@@ -6,7 +6,6 @@ import { loadAuthState, probePermission } from "@/_lib/auth";
 import { fetchGrns } from "@/(protected)/inventory/procurement-actions";
 import { listMyGrnDrafts } from "@/(protected)/inventory/grn-actions";
 import { formatDate } from "@lib/inventory/format";
-import { isGrnBaselineReviewRequired } from "./grn-quality";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import type { GrnDraftRow, GrnRow } from "./grn-list-model";
 
@@ -18,12 +17,8 @@ type NamedRelation = {
 
 type GrnLineRow = {
   id?: number;
-  received_quantity?: number | null;
-  rejected_quantity?: number | null;
-  unit_cost?: number | null;
   quality_status?: string | null;
   requires_review?: boolean | null;
-  baseline_variance_pct?: number | null;
 };
 
 type GrnDbRow = {
@@ -39,6 +34,7 @@ type GrnDbRow = {
   suppliers: NamedRelation | NamedRelation[] | null;
   purchase_orders: NamedRelation | NamedRelation[] | null;
   grn_items: GrnLineRow[] | null;
+  monetary?: { total: number } | null;
 };
 
 export type GrnListPageData = {
@@ -60,12 +56,7 @@ function countQcIssues(items: GrnLineRow[] | null): number {
   return (items ?? []).filter(
     (item) =>
       item.quality_status !== "accepted" ||
-      item.requires_review === true ||
-      isGrnBaselineReviewRequired(
-        item.baseline_variance_pct == null
-          ? null
-          : Number(item.baseline_variance_pct),
-      ),
+      item.requires_review === true,
   ).length;
 }
 
@@ -79,15 +70,6 @@ function mapGrnRows(rows: GrnDbRow[]): GrnRow[] {
     const supplier = relatedOne(row.suppliers);
     const branch = relatedOne(row.branches);
     const purchaseOrder = relatedOne(row.purchase_orders);
-    const total = (row.grn_items ?? []).reduce(
-      (sum, item) =>
-        sum +
-        (Number(item.received_quantity ?? 0) -
-          Number(item.rejected_quantity ?? 0)) *
-          Number(item.unit_cost ?? 0),
-      0,
-    );
-
     return {
       id: row.id,
       code: row.grn_number ?? "",
@@ -96,7 +78,7 @@ function mapGrnRows(rows: GrnDbRow[]): GrnRow[] {
       poId: row.po_id != null ? Number(row.po_id) : null,
       poCode: purchaseOrder?.po_number ?? "—",
       date: row.received_date ? formatDate(row.received_date) : "—",
-      total,
+      monetary: row.monetary ?? null,
       status: row.status ?? "pending",
       qcIssueCount: countQcIssues(row.grn_items),
     };

@@ -14,6 +14,7 @@ import {
   type StockIngredientDetailLocation,
   type StockIngredientDetailMovement,
 } from "./stock-on-hand-detail-model";
+import { loadInventoryMonetaryAccess } from "./monetary-access";
 
 type UnitRef = { code: string };
 
@@ -148,6 +149,11 @@ export async function loadStockIngredientDetailData({
 
   const branchId = scope.selectedBranchId;
   if (!branchId) redirect("/inventory");
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const canReadValuation = includeValuation && monetary.valuation;
+  const readClient = canReadValuation
+    ? (monetary.client ?? supabase)
+    : supabase;
 
   const [
     stockBearingLocationIds,
@@ -163,9 +169,9 @@ export async function loadStockIngredientDetailData({
       tenantId: claims.tenant_id,
       branchId,
     }),
-    supabase
+    readClient
       .from("ingredients")
-      .select(ingredientSelect(includeValuation))
+      .select(ingredientSelect(canReadValuation))
       .eq("tenant_id", claims.tenant_id)
       .eq("id", ingredientId)
       .maybeSingle(),
@@ -188,18 +194,18 @@ export async function loadStockIngredientDetailData({
 
   const [stockResult, movementResult] = await Promise.all([
     stockBearingLocationIds.length > 0
-      ? supabase
+      ? readClient
           .from("stock_levels")
-          .select(stockLevelSelect(includeValuation))
+          .select(stockLevelSelect(canReadValuation))
           .eq("tenant_id", claims.tenant_id)
           .eq("branch_id", branchId)
           .eq("ingredient_id", ingredientId)
           .in("location_id", stockBearingLocationIds)
           .order("location_id")
       : Promise.resolve({ data: [], error: null }),
-    supabase
+    readClient
       .from("stock_movements")
-      .select(movementSelect(includeValuation))
+      .select(movementSelect(canReadValuation))
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
       .eq("ingredient_id", ingredientId)
@@ -230,7 +236,9 @@ export async function loadStockIngredientDetailData({
       code: location?.code ?? "",
       locationKind: location?.location_kind ?? "unknown",
       qty: Number(row.current_quantity ?? 0),
-      avgUnitCost: includeValuation ? (row.avg_unit_cost ?? null) : null,
+      monetary: canReadValuation
+        ? { avgUnitCost: row.avg_unit_cost ?? null }
+        : null,
       lastCountedAt: row.last_counted_at,
     };
   });
@@ -241,7 +249,9 @@ export async function loadStockIngredientDetailData({
       type: row.type,
       movementSubtype: row.movement_subtype,
       quantityChange: Number(row.quantity_change ?? 0),
-      unitCost: includeValuation ? (row.unit_cost ?? null) : null,
+      monetary: canReadValuation
+        ? { unitCost: row.unit_cost ?? null }
+        : null,
       reason: row.reason,
       createdAt: row.created_at,
       grnId: row.grn_id,
@@ -262,13 +272,15 @@ export async function loadStockIngredientDetailData({
     },
     null,
   );
-  const referenceUnitCost = includeValuation
+  const referenceUnitCost = canReadValuation
     ? Number(ingredientRow.unit_cost ?? 0)
     : 0;
-  const totalValue = includeValuation
+  const totalValue = canReadValuation
     ? locations.reduce(
         (sum, location) =>
-          sum + location.qty * (location.avgUnitCost ?? referenceUnitCost),
+          sum +
+          location.qty *
+            (location.monetary?.avgUnitCost ?? referenceUnitCost),
         0,
       )
     : null;

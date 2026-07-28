@@ -14,7 +14,7 @@ export type StockLocationBreakdown = {
   code: string;
   locationKind: string;
   qty: number;
-  avgUnitCost: number | null;
+  monetary: { avgUnitCost: number | null } | null;
   lastCountedAt: string | null;
 };
 
@@ -27,8 +27,7 @@ export type StockIngredient = {
   category: string;
   itemKind: string;
   qty: number;
-  cost: number;
-  referenceCost: number;
+  monetary: { cost: number; referenceCost: number } | null;
   min: number;
   max: number;
   reorder: number;

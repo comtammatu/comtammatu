@@ -18,6 +18,7 @@ import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compa
 import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { getEmbeddedUnitDisplayName } from "./_lib/unit-display";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 /** Placeholder for RPC param; create_stock_transfer_draft allocates DC-YYYY-####. */
 const TRANSFER_NUMBER_SERVER_ALLOCATED = "";
@@ -199,9 +200,20 @@ export async function fetchStockTransferDetail(
   ) {
     return { success: false, error: "Không tìm thấy phiếu chuyển." };
   }
-  const { data: lines, error: e2 } = await supabase
-    .from("stock_transfer_items")
-    .select("*, ingredients ( id, name )")
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const lineReadClient = monetary.valuation
+    ? (monetary.client ?? supabase)
+    : supabase;
+  const lineQuery = monetary.valuation
+    ? lineReadClient
+        .from("stock_transfer_items")
+        .select("*, ingredients ( id, name )")
+    : lineReadClient
+        .from("stock_transfer_items")
+        .select(
+          "id, tenant_id, transfer_id, ingredient_id, quantity, quantity_received, receive_note, entry_unit_id, ingredients ( id, name )",
+        );
+  const { data: lines, error: e2 } = await lineQuery
     .eq("transfer_id", id.data)
     .eq("tenant_id", claims.tenant_id);
   if (e2) return { success: false, error: "Không tải được dòng chuyển." };
@@ -250,18 +262,29 @@ export async function fetchStockTransferDetail(
       }
     }
   }
-  const linesWithFactor = (lines ?? []).map((l) => ({
-    ...l,
-    to_base_factor:
-      l.entry_unit_id == null
-        ? null
-        : (toBaseFactorByKey.get(`${l.ingredient_id}:${l.entry_unit_id}`) ??
-          null),
-    unit_label:
-      l.entry_unit_id == null
-        ? (baseUnitLabelByIngredient.get(Number(l.ingredient_id)) ?? null)
-        : (unitLabelByKey.get(`${l.ingredient_id}:${l.entry_unit_id}`) ?? null),
-  }));
+  const linesWithFactor = (lines ?? []).map((line) => {
+    const unitCost =
+      monetary.valuation && "unit_cost_at_ship" in line
+        ? Number(line.unit_cost_at_ship ?? 0)
+        : null;
+    return {
+      ...line,
+      unit_cost_at_ship: undefined,
+      monetary: unitCost == null ? null : { unitCostAtShip: unitCost },
+      to_base_factor:
+        line.entry_unit_id == null
+          ? null
+          : (toBaseFactorByKey.get(
+              `${line.ingredient_id}:${line.entry_unit_id}`,
+            ) ?? null),
+      unit_label:
+        line.entry_unit_id == null
+          ? (baseUnitLabelByIngredient.get(Number(line.ingredient_id)) ?? null)
+          : (unitLabelByKey.get(
+              `${line.ingredient_id}:${line.entry_unit_id}`,
+            ) ?? null),
+    };
+  });
 
   return {
     success: true,

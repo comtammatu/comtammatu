@@ -160,8 +160,8 @@ function branchHref(branchId: number, path: string): string {
   return `${path}?branchId=${branchId}`;
 }
 
-function stockValue(item: StockIngredient): number {
-  return item.qty * item.cost;
+function stockValue(item: StockIngredient): number | null {
+  return item.monetary == null ? null : item.qty * item.monetary.cost;
 }
 
 function StockAlertBadges({
@@ -233,6 +233,7 @@ export function StockClient({
   permissions: StockActionPermissions;
 }) {
   const router = useRouter();
+  const canViewMonetary = branchValue != null;
   const isCompactLayout = useStockCompactLayout();
   const controlSize = useFormControlSize();
   const [activeCategory, setActiveCategory] = useState(
@@ -437,30 +438,37 @@ export function StockClient({
         </div>
       ),
     },
-    {
-      key: "wac",
-      header: stockCopy.table.wac,
-      className: "min-w-28 text-right",
-      render: (item) => (
-        <span className="font-mono tabular-nums">
-          {item.cost > 0
-            ? `${inventoryCommon.currencyCompact(formatVND(item.cost))}/${item.unit}`
-            : inventoryCommon.noValue}
-        </span>
-      ),
-    },
-    {
-      key: "value",
-      header: stockCopy.table.stockValue,
-      className: "min-w-28 text-right",
-      render: (item) => (
-        <span className="font-mono tabular-nums">
-          {stockValue(item) > 0
-            ? formatVND(stockValue(item))
-            : inventoryCommon.noValue}
-        </span>
-      ),
-    },
+    ...(canViewMonetary
+      ? [
+          {
+            key: "wac",
+            header: stockCopy.table.wac,
+            className: "min-w-28 text-right",
+            render: (item: StockIngredient) => (
+              <span className="font-mono tabular-nums">
+                {item.monetary && item.monetary.cost > 0
+                  ? `${inventoryCommon.currencyCompact(formatVND(item.monetary.cost))}/${item.unit}`
+                  : inventoryCommon.noValue}
+              </span>
+            ),
+          },
+          {
+            key: "value",
+            header: stockCopy.table.stockValue,
+            className: "min-w-28 text-right",
+            render: (item: StockIngredient) => {
+              const value = stockValue(item);
+              return (
+                <span className="font-mono tabular-nums">
+                  {value != null && value > 0
+                    ? formatVND(value)
+                    : inventoryCommon.noValue}
+                </span>
+              );
+            },
+          },
+        ]
+      : []),
     {
       key: "actions",
       header: <span className="sr-only">{FORM_VI.action}</span>,
@@ -725,26 +733,34 @@ export function StockClient({
             className="mt-1"
           />
         </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">
-            {stockCopy.table.stockValue}
-          </p>
-          <p className="font-semibold tabular-nums">
-            {stockValue(item) > 0
-              ? inventoryCommon.currencyCompact(formatVND(stockValue(item)))
-              : inventoryCommon.noValue}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {stockCopy.table.wacPerUnit(item.unit)}
-          </p>
-          <p className="font-mono tabular-nums">
-            {item.cost > 0
-              ? inventoryCommon.currencyCompact(formatVND(item.cost))
-              : inventoryCommon.noValue}
-          </p>
-        </div>
+        {item.monetary ? (
+          <>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">
+                {stockCopy.table.stockValue}
+              </p>
+              <p className="font-semibold tabular-nums">
+                {(stockValue(item) ?? 0) > 0
+                  ? inventoryCommon.currencyCompact(
+                      formatVND(stockValue(item) ?? 0),
+                    )
+                  : inventoryCommon.noValue}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">
+                {stockCopy.table.wacPerUnit(item.unit)}
+              </p>
+              <p className="font-mono tabular-nums">
+                {item.monetary.cost > 0
+                  ? inventoryCommon.currencyCompact(
+                      formatVND(item.monetary.cost),
+                    )
+                  : inventoryCommon.noValue}
+              </p>
+            </div>
+          </>
+        ) : null}
         <div className="text-right">
           <p className="text-xs text-muted-foreground">
             {stockCopy.table.lastCount}

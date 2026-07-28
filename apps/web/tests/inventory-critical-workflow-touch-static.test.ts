@@ -20,24 +20,17 @@ test("Owner transfer create route returns to read-only history", () => {
 
 test("Owner waste create propagates touch density through route-local controls", () => {
   const form = read(
-    "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",
+    "apps/web/app/(protected)/inventory/waste/waste-operational-form.tsx",
   );
   const reasons = read(
     "apps/web/app/(protected)/inventory/_components/waste-reason-dropdown.tsx",
   );
 
-  assert.match(form, /useIsMobile\(1024\)/);
-  assert.match(form, /const controlSize = isTouchLayout \? "touch" : "field"/);
-  assert.match(form, /<SelectTrigger id="waste-loc" size=\{controlSize\}/);
-  assert.match(form, /<Combobox[\s\S]*?size=\{controlSize\}/);
-  assert.match(form, /<InputGroup size=\{controlSize\}>/);
-  assert.match(
-    form,
-    /<InputGroupAddon align="inline-end" className="py-0">/,
-  );
-  assert.match(form, /size=\{removeActionSize\}/);
-  assert.match(form, /grid grid-cols-1 gap-3 sm:grid-cols-2/);
-  assert.equal(form.match(/size=\{actionSize\}/g)?.length, 3);
+  assert.match(form, /<SelectTrigger size="touch">/);
+  assert.match(form, /<Combobox[\s\S]*?size="touch"/);
+  assert.match(form, /<FormattedNumberInput[\s\S]*?className="h-12"/);
+  assert.match(form, /previewSize="touch"/);
+  assert.match(form, /size="touch-lg"/);
   assert.match(reasons, /size=\{size === "touch" \? "touch" : "default"\}/);
 });
 

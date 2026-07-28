@@ -43,6 +43,10 @@ const AUTHOR_DOC = [
 test("Wave A Author DOC clients use DocumentFormFrame", () => {
   for (const surface of AUTHOR_DOC) {
     const client = read(surface.client);
+    const footerSource =
+      surface.name === "waste/new"
+        ? `${client}\n${read("app/(protected)/inventory/waste/waste-operational-form.tsx")}`
+        : client;
     assert.match(
       client,
       /DocumentFormFrame/,
@@ -53,7 +57,11 @@ test("Wave A Author DOC clients use DocumentFormFrame", () => {
       /<DocumentFormFrame[\s>]/,
       `${surface.name}: <DocumentFormFrame`,
     );
-    assert.match(client, /AppDetailFooter/, `${surface.name}: AppDetailFooter`);
+    assert.match(
+      footerSource,
+      /AppDetailFooter/,
+      `${surface.name}: AppDetailFooter`,
+    );
   }
 });
 

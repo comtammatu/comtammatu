@@ -32,7 +32,7 @@ type MenuItemRow = {
       id: number;
       name: string;
       ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
-      unit_cost: number | string | null;
+      monetary: { unitCost: number | null };
     } | null;
   }> | null;
 };
@@ -61,7 +61,9 @@ export default async function RecipesPage({
 
   const dbRows = recipesRes.success ? (recipesRes.data as MenuItemRow[]) : [];
 
-  const wacMap = (wacRes.success ? wacRes.data : {}) as Record<string, number>;
+  const wacMap = (
+    wacRes.success ? (wacRes.data?.monetary ?? {}) : {}
+  ) as Record<string, number>;
   const stockCapacityByMenuItemId = (
     stockCapacityRes.success ? stockCapacityRes.data : {}
   ) as Record<string, number>;
@@ -98,7 +100,9 @@ export default async function RecipesPage({
         // WAC (average received branch cost) takes precedence over unit_cost.
         const wac = wacMap[String(ingredientId)];
         const unitCost =
-          wac != null ? wac : Number(line.ingredients?.unit_cost ?? 0);
+          wac != null
+            ? wac
+            : Number(line.ingredients?.monetary.unitCost ?? 0);
         const entryUnitId =
           line.entry_unit_id == null ? null : Number(line.entry_unit_id);
         const catalogIngredient = ingredientById.get(ingredientId);

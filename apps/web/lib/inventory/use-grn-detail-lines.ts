@@ -17,14 +17,14 @@ interface UseGrnDetailLinesReturn {
     acceptedLines: number;
     rejectedLines: number;
     reviewLines: number;
-    total: number;
+    total: number | null;
   };
   dirtyLines: EditableGrnLine[];
 }
 
 export function useGrnDetailLines(
   initialItems: GrnDetailItem[],
-  reviewPct: number,
+  reviewPct: number | null,
 ): UseGrnDetailLinesReturn {
   const [lines, setLines] = useState<EditableGrnLine[]>(() =>
     initialItems.map((item) => ({ ...item, dirty: false })),
@@ -39,17 +39,31 @@ export function useGrnDetailLines(
       (line) => line.qualityStatus === "rejected" || line.rejected > 0,
     ).length;
     const reviewLines = lines.filter((line) => {
-      const variance = deriveGrnVariance(line.cost, line.poUnitPrice);
+      const variance = line.monetary
+        ? deriveGrnVariance(
+            line.monetary.unitCost,
+            line.monetary.poUnitPrice,
+          )
+        : null;
       return (
         line.requiresReview ||
-        isGrnBaselineReviewRequired(line.baselineVariancePct) ||
-        (variance != null && Math.abs(variance) > reviewPct)
+        isGrnBaselineReviewRequired(
+          line.monetary?.baselineVariancePct ?? null,
+        ) ||
+        (reviewPct != null &&
+          variance != null &&
+          Math.abs(variance) > reviewPct)
       );
     }).length;
-    const total = lines.reduce(
-      (sum, line) => sum + line.cost * (line.actual - line.rejected),
-      0,
-    );
+    const total = lines.some((line) => line.monetary == null)
+      ? null
+      : lines.reduce(
+          (sum, line) =>
+            sum +
+            (line.monetary?.unitCost ?? 0) *
+              (line.actual - line.rejected),
+          0,
+        );
     return { acceptedLines, rejectedLines, reviewLines, total };
   }, [lines, reviewPct]);
 

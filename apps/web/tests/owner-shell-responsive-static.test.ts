@@ -250,7 +250,7 @@ test("Inventory ingredient editor keeps two operational unit roles", () => {
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   );
   assert.match(issueDetail, /useIsMobile\(1024\)/);
-  assert.match(issueDetail, /const content = isTouchLayout \? \(/);
+  assert.match(issueDetail, /isTouchLayout \? <div className="min-w-0">\{pageLayout\}<\/div> : pageLayout/);
   assert.doesNotMatch(issueDetail, /lg:hidden">\{mobileLayout\}/);
   assert.doesNotMatch(issueDetail, /hidden lg:block">\{pageLayout\}/);
 });

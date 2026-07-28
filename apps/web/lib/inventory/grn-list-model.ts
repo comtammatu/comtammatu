@@ -8,7 +8,7 @@ export type GrnRow = {
   poId: number | null;
   poCode: string;
   date: string;
-  total: number;
+  monetary: { total: number } | null;
   status: string;
   qcIssueCount: number;
 };

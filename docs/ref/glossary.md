@@ -126,7 +126,7 @@ Không dùng label lai trong UI hoặc copy vận hành:
 
 Chỉ giữ English trong một trong các nhóm sau:
 
-- Acronym hoặc thuật ngữ chuyên ngành đã chốt: `POS`, `KDS`, `Owner surface`, `tenant`, `ERP`,
+- Acronym hoặc thuật ngữ chuyên ngành đã chốt: `POS`, `KDS`, `control_surface`, `tenant`, `ERP`,
   `PO`, `GRN`, `WAC`, `PIT`, `AOV`, `COGS`. Trên UI vận hành thường, ưu tiên
   `label_vi`/`short` tiếng Việt; acronym chỉ ở pill/badge/icon label.
 - Tên công nghệ, framework, hoặc vendor: `Supabase`, `Next.js`, `React`,
@@ -146,7 +146,9 @@ và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán h
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
 | `Employee Portal`                                | `Trang nhân viên`                                                                                |
 | `Owner Shell`                                    | `Khung quản trị` hoặc `nền tảng quản trị` tùy ngữ cảnh                                           |
-| `Dashboard` đứng riêng                           | `Tổng quan` hoặc `buồng lái` tùy ngữ cảnh; `Owner surface` là tên product surface đã chốt        |
+| `Owner surface` / `Ops surface` (nhãn UI)        | `Quản trị` (`control_surface`); không dùng `Vận hành` làm nhãn plane L0                          |
+| `Operations chrome` (prose mới)                  | `station_chrome` (POS / KDS / Runner); xem entry glossary                                        |
+| `Dashboard` đứng riêng                           | `Tổng quan` hoặc `buồng lái` tùy ngữ cảnh; plane L0 là `control_surface` / `Quản trị`            |
 | `Stock`                                          | `Kho hàng` hoặc `tồn kho` tùy ngữ cảnh                                                           |
 | `Finance`                                        | `Tài chính` hoặc `Kế toán` tùy ngữ cảnh                                                          |
 | `Shipped`                                        | `Hoàn thành`                                                                                     |
@@ -167,18 +169,65 @@ và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán h
 | `blind` / `peer cross` trong UI                  | `đếm mù` / `đếm chéo`                                                                            |
 | `GRN` / `PO` nhúng trong câu UI                  | `phiếu nhập` / `đơn đặt hàng` (acronym chỉ pill/badge)                                           |
 
-### Owner surface
+### `control_surface` (mặt phẳng L0 / Quản trị)
 
-| Trường           | Giá trị                                                                 |
-| ---------------- | ----------------------------------------------------------------------- |
-| `canonical_term` | `owner`                                                                 |
-| `label_vi`       | `Owner surface`                                                         |
-| `definition`     | Mặt điều hành và thiết lập toàn hệ thống, chỉ Chủ sở hữu được truy cập. |
+| Trường               | Giá trị |
+| -------------------- | ------- |
+| `canonical_term`     | `control_surface` |
+| `label_vi`           | `Quản trị` |
+| `definition`         | Chrome quản trị tenant/site trung tâm qua `AppShell`: `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback`. Actor theo `role-route-matrix` / D088 (Owner đầy đủ; accountant và central roles vào slice L0 được cấp). |
+| `not_this`           | Role ACL `owner`; `station_chrome` (POS/KDS/Runner); nhãn UI `Vận hành` / `Ops surface`; `branch_surface` |
+| `scope`              | cross-module |
+| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes; `docs/modules/ui.md` § control_surface Shell Structure; code IDs lịch sử `OwnerModuleShell` / `data-owner-shell-scroll` implement plane này |
+| `allowed_variants`   | Long UI: `Quản trị`; docs EN: `control_surface`; alias nội bộ cũ trong git history: Owner surface / Owner control |
+| `forbidden_synonyms` | `Ops surface`, `Vận hành` (làm nhãn plane), `Owner` (làm tên plane), `Văn phòng` |
 
-Owner surface gồm `/`, `/menu`, `/orders`, `/inventory`, `/finance`,
-`/branches` và `/hr`. Công việc hằng ngày của Quản lý chi nhánh và Nhân viên
-thuộc Branch tại `/br/[branchId]/*`. Không dùng lại nhãn `Văn phòng` cho mặt
-sản phẩm này.
+### `branch_surface`
+
+| Trường               | Giá trị |
+| -------------------- | ------- |
+| `canonical_term`     | `branch_surface` |
+| `label_vi`           | `Chi nhánh` |
+| `definition`         | Mặt phẳng ca tại `/br/[branchId]/*` dùng Branch runtime chrome (không gồm station full-screen). |
+| `not_this`           | `control_surface`; `station_chrome` |
+| `scope`              | cross-module |
+| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes; `docs/spec/role-route-matrix.md` |
+
+### `station_chrome`
+
+| Trường               | Giá trị |
+| -------------------- | ------- |
+| `canonical_term`     | `station_chrome` |
+| `label_vi`           | *(không nhãn ô dùm)* — dùng `POS` / `KDS` / `Runner` |
+| `definition`         | Chrome full-screen một việc: POS, KDS, Runner dưới `/br/[branchId]/{pos,kds,runner}`. |
+| `not_this`           | `control_surface`; gọi chung “Vận hành” thay cho tên station |
+| `scope`              | POS |
+| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes |
+| `allowed_variants`   | Alias docs cũ: Operations chrome (chỉ khi đọc lịch sử; prose mới dùng `station_chrome`) |
+
+### `operational_role`
+
+| Trường               | Giá trị |
+| -------------------- | ------- |
+| `canonical_term`     | `operational_role` |
+| `label_vi`           | `vai trò vận hành` |
+| `definition`         | Nhóm role D088 ngoài Owner đầy đủ: `accountant`, `central_supply_ops`, `central_kitchen_lead`, … — quyền theo matrix, không đổi tên plane. |
+| `not_this`           | `control_surface`; `station_chrome`; nhãn plane `Quản trị` |
+| `scope`              | cross-module |
+| `source_of_truth`    | D088; `docs/spec/role-route-matrix.md`; `packages/shared/src/auth/types.ts` |
+
+### Role `owner`
+
+| Trường               | Giá trị |
+| -------------------- | ------- |
+| `canonical_term`     | `owner` |
+| `label_vi`           | `Chủ sở hữu` |
+| `definition`         | Role ACL L0 đầy đủ. Không phải tên mặt phẳng sản phẩm. |
+| `not_this`           | `control_surface` / `Quản trị` (plane) |
+| `scope`              | cross-module |
+| `source_of_truth`    | `packages/shared/src/auth/types.ts`; `docs/spec/role-route-matrix.md` |
+
+**Từ khóa “vận hành”** chỉ dùng cho: tên sản phẩm (`restaurant_operations_system`), metric tài chính vận hành, `operational_role`, và mô tả job — **không** là nhãn `control_surface`.
 
 ## Copy source ladder
 
@@ -455,10 +504,14 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | Canonical term                 | Nhãn chuẩn                               | Ghi chú                                                                                                                |
 | ------------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `restaurant_operations_system` | bộ phần mềm quản lý vận hành và bán hàng | Nhãn chính của `comtammatu`.                                                                                           |
-| `admin`                        | quản trị                                 | Tenant-level management surface.                                                                                       |
-| `admin_overview`               | tổng quan quản trị                       | Bề mặt theo dõi vận hành và việc cần xử lý, không phải finance cockpit.                                                |
+| `control_surface`              | Quản trị                                 | Mặt phẳng L0 `AppShell`. Alias cũ: Owner surface / Owner control. `admin` là short alias cùng nghĩa.                   |
+| `admin`                        | quản trị                                 | Short alias của `control_surface` (giữ cho nav/copy cũ).                                                               |
+| `admin_overview`               | tổng quan quản trị                       | Bề mặt theo dõi việc cần xử lý trên `control_surface`, không phải finance cockpit.                                     |
+| `branch_surface`               | Chi nhánh                                | `/br/[branchId]/*` Branch runtime (không gồm station).                                                                 |
+| `station_chrome`               | POS / KDS / Runner                       | Full-screen một việc; alias docs cũ: Operations chrome.                                                                |
+| `operational_role`             | vai trò vận hành                         | Nhóm role D088; không phải tên plane.                                                                                  |
 | `finance_basic`                | tài chính vận hành                       | Daily money, stock value, food cost, expenses, HĐĐT, accountant export; không thay sổ kế toán doanh nghiệp.             |
-| `inventory_ops`                | điều hành kho                            | Có thể rút gọn `Kho hàng` trong nav.                                                                                   |
+| `inventory_ops`                | điều hành kho                            | Module kho trên `control_surface`; có thể rút gọn `Kho hàng` trong nav. Không phải tên plane.                          |
 | `point_of_sale`                | POS                                      | Không ép dịch thành `điểm bán` trong UI.                                                                               |
 | `kitchen_display_system`       | KDS                                      | Có thể chú thích `màn hình bếp` ở docs/onboarding.                                                                     |
 | `employee_portal`              | trang nhân viên                          | Legacy code label; route hiện tại là branch staff runtime dưới `/br/[branchId]/shift/*` và `/br/[branchId]/profile/*`. |
@@ -721,15 +774,19 @@ hoặc `short`; không nhúng acronym whitelist vào câu.
 
 ### Bề mặt sản phẩm
 
-| Term                 | Long                 | Short     | Acronym |
-| -------------------- | -------------------- | --------- | ------- |
-| `admin`              | Quản trị             | —         | —       |
-| `admin_overview`     | Tổng quan quản trị   | Tổng quan | —       |
-| `finance_basic`      | Tài chính vận hành   | Tài chính | —       |
-| `inventory_ops`      | Kho hàng             | —         | —       |
-| `content_management` | Quản trị nội dung    | Nội dung  | `CMS`   |
-| `employee_portal`    | Trang nhân viên      | Nhân viên | —       |
-| `reports`            | Báo cáo              | —         | —       |
+| Term                     | Long                 | Short     | Acronym |
+| ------------------------ | -------------------- | --------- | ------- |
+| `control_surface`        | Quản trị             | —         | —       |
+| `admin`                  | Quản trị             | —         | —       |
+| `admin_overview`         | Tổng quan quản trị   | Tổng quan | —       |
+| `branch_surface`         | Chi nhánh            | —         | —       |
+| `station_chrome`         | POS / KDS / Runner   | —         | —       |
+| `operational_role`       | Vai trò vận hành     | —         | —       |
+| `finance_basic`          | Tài chính vận hành   | Tài chính | —       |
+| `inventory_ops`          | Kho hàng             | —         | —       |
+| `content_management`     | Quản trị nội dung    | Nội dung  | `CMS`   |
+| `employee_portal`        | Trang nhân viên      | Nhân viên | —       |
+| `reports`                | Báo cáo              | —         | —       |
 
 ## Decision rules cho các cặp dễ drift
 

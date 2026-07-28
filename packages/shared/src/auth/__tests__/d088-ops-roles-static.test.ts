@@ -63,15 +63,21 @@ test("D088 central site roles pass the Inventory action gate", () => {
 });
 
 test("D088 procurement surfaces are permission-driven", () => {
-  for (const file of [
+  const files = [
     "apps/web/app/(protected)/inventory/layout.tsx",
     "apps/web/app/(protected)/inventory/_lib/dashboard-data.ts",
-  ]) {
+    "apps/web/lib/inventory/grn-source-data.ts",
+    "apps/web/lib/inventory/grn-create-data.ts",
+  ];
+  for (const file of files) {
     const source = readFileSync(join(repoRoot, file), "utf8");
     assert.doesNotMatch(
       source,
       /canAccess\(claims\.user_role,\s*"branch_stock"\)/,
     );
+  }
+  for (const file of files.slice(0, 2)) {
+    const source = readFileSync(join(repoRoot, file), "utf8");
     assert.match(
       source,
       /currentUserHasPermissionAny\(PERMISSION_KEYS\.PROCUREMENT_READ\)/,
@@ -115,4 +121,99 @@ test("SQL twin mapper includes D088 roles", () => {
   assert.match(migration, /position_site_kind_mismatch/);
   assert.match(migration, /central_supply/);
   assert.match(migration, /central_kitchen/);
+});
+
+test("D088 branch-scoped procurement can read supplier item mappings", () => {
+  const migration = readFileSync(
+    join(
+      repoRoot,
+      "supabase/migrations/20260728144000_d088_supplier_items_read_scope.sql",
+    ),
+    "utf8",
+  );
+  assert.match(migration, /ALTER POLICY supplier_items_read/);
+  assert.match(
+    migration,
+    /has_permission_any\('procurement:price_list_read'\)/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /has_permission\(NULL::bigint,\s*'procurement:price_list_read'/,
+  );
+});
+
+test("D091 supplier mapping remains operational after price capability removal", () => {
+  const migration = readFileSync(
+    join(
+      repoRoot,
+      "supabase/migrations/20260728151000_inventory_monetary_column_hardening.sql",
+    ),
+    "utf8",
+  );
+  assert.match(migration, /ALTER POLICY supplier_items_read/);
+  assert.match(migration, /has_permission_any\('procurement:read'\)/);
+});
+
+test("D089 accountant can enter PO prices before approval", () => {
+  const migration = readFileSync(
+    join(
+      repoRoot,
+      "supabase/migrations/20260728144500_d089_accountant_po_price_entry.sql",
+    ),
+    "utf8",
+  );
+  const action = readFileSync(
+    join(
+      repoRoot,
+      "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
+    ),
+    "utf8",
+  );
+  const client = readFileSync(
+    join(
+      repoRoot,
+      "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+    ),
+    "utf8",
+  );
+  assert.match(migration, /FUNCTION public\.update_purchase_order_prices/);
+  assert.match(migration, /has_permission_any\('procurement:read'\)/);
+  assert.match(action, /updatePurchaseOrderPrices/);
+  assert.match(client, /poCopy\.savePricesAction/);
+});
+
+test("D089 PO approval sync joins GRN lines in the UPDATE scope", () => {
+  const migration = readFileSync(
+    join(
+      repoRoot,
+      "supabase/migrations/20260728145000_d089_fix_po_approve_price_sync.sql",
+    ),
+    "utf8",
+  );
+  assert.match(
+    migration,
+    /FROM linked_grn lg,\s*public\.purchase_order_items poi/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /JOIN public\.purchase_order_items poi[\s\S]*?ON[\s\S]*?gi\.ingredient_id/,
+  );
+});
+
+test("D088 accountant can read the Finance funds summary", () => {
+  const migration = readFileSync(
+    join(
+      repoRoot,
+      "supabase/migrations/20260728145500_d088_accountant_finance_funds_read.sql",
+    ),
+    "utf8",
+  );
+  assert.match(migration, /FUNCTION public\.get_finance_current_funds/);
+  assert.match(migration, /FUNCTION public\.get_cash_ledger_movement_since/);
+  assert.match(migration, /FUNCTION public\.get_bank_ledger_movement_since/);
+  assert.equal(
+    migration.match(/has_permission_any\('finance:view'\)/g)?.length,
+    3,
+  );
+  assert.doesNotMatch(migration, /auth_is_owner/);
 });

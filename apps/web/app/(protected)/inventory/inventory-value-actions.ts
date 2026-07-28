@@ -4,13 +4,14 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 
 const SYSTEM_ROLES: readonly StaffRole[] = ["owner"];
 
-const BRANCH_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
+const BRANCH_ROLES: readonly StaffRole[] = ["owner", "accountant"];
 
 const inventoryPeriodValueSchema = z.object({
   startDate: z.string().date(),
@@ -39,11 +40,16 @@ export async function fetchInventoryValueSystem(
 ): Promise<ActionResult<{ totalValue: number }>> {
   const ctx = await getAuthContextWithPermission(
     SYSTEM_ROLES,
-    PERMISSION_KEYS.INVENTORY_READ,
+    PERMISSION_KEYS.INVENTORY_VALUATION_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { claims } = ctx;
+  const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
+  if (!monetaryAccess.systemValuation || !monetaryAccess.client) {
+    return { success: false, error: "Không có quyền" };
+  }
+  const supabase = monetaryAccess.client;
   const stockBearingLocationIds = await fetchStockBearingLocationIds({
     supabase,
     tenantId: claims.tenant_id,
@@ -130,10 +136,13 @@ export async function fetchInventoryPeriodValue(input: {
 
   const ctx = await getAuthContextWithPermission(
     BRANCH_ROLES,
-    PERMISSION_KEYS.INVENTORY_READ,
+    PERMISSION_KEYS.INVENTORY_VALUATION_READ,
     parsed.data.branchId,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
+  if (ctx.claims.user_role !== "owner" && parsed.data.branchId == null) {
+    return { success: false, error: "Không có quyền" };
+  }
 
   const { data, error } = await (
     ctx.supabase as unknown as InventoryPeriodValueRpcClient
@@ -166,35 +175,24 @@ export async function fetchInventoryValueByBranch(): Promise<
   ActionResult<{ rows: BranchValueRow[] }>
 > {
   const ctx = await getAuthContextWithPermission(
-    BRANCH_ROLES,
-    PERMISSION_KEYS.INVENTORY_READ,
+    SYSTEM_ROLES,
+    PERMISSION_KEYS.INVENTORY_VALUATION_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
-
-  let allowedBranchIds: number[] | null = null;
-
-  if (claims.user_role === "branch_manager") {
-    if (claims.branch_id == null) {
-      return {
-        success: false,
-        error: "Tài khoản chưa gắn chi nhánh.",
-      };
-    }
-    allowedBranchIds = [claims.branch_id];
+  const { claims } = ctx;
+  const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
+  if (!monetaryAccess.systemValuation || !monetaryAccess.client) {
+    return { success: false, error: "Không có quyền" };
   }
+  const supabase = monetaryAccess.client;
 
-  let branchesQuery = supabase
+  const branchesQuery = supabase
     .from("branches")
     .select("id, name, branch_kind")
     .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true)
     .order("name");
-
-  if (allowedBranchIds) {
-    branchesQuery = branchesQuery.in("id", allowedBranchIds);
-  }
 
   const { data: branchList, error: brError } = await branchesQuery;
 

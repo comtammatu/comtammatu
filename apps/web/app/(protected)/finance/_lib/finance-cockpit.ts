@@ -5,6 +5,8 @@ import {
 } from "@comtammatu/shared/format";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
+import { canAccessBranch } from "@/_lib/branch-scope";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import {
   fetchInventoryPeriodValue,
   fetchInventoryValueByBranch,
@@ -407,11 +409,12 @@ async function fetchInventoryCashTiedItems({
   branchId,
   branches,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   tenantId: number;
   branchId: number | null;
   branches: BranchOption[];
 }): Promise<FinanceInventoryItem[]> {
+  if (!supabase) return [];
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
   const stockBearingLocationIds = await fetchStockBearingLocationIds({
     supabase,
@@ -479,12 +482,13 @@ async function fetchActualFoodCostSnapshot({
   startDate,
   endDate,
 }: {
-  supabase: SupabaseClient;
+  supabase: SupabaseClient | null;
   tenantId: number;
   branchId: number | null;
   startDate: string;
   endDate: string;
 }): Promise<ActualFoodCostSnapshot> {
+  if (!supabase) return { rows: [], orderCount: 0 };
   const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
   let query = supabase
     .from("stock_movements")
@@ -760,6 +764,14 @@ export async function fetchFinanceCockpit(
   resolved: ResolvedFinanceRange,
 ): Promise<FinanceCockpitData> {
   const { supabase, claims } = await loadAuthState();
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const canReadRequestedValuation =
+    monetary.valuation &&
+    monetary.client != null &&
+    (params.branch == null
+      ? monetary.systemValuation
+      : await canAccessBranch(supabase, claims, params.branch));
+  const monetaryClient = canReadRequestedValuation ? monetary.client : null;
 
   const [
     branchesRes,
@@ -797,7 +809,7 @@ export async function fetchFinanceCockpit(
       ...(params.branch != null ? { branchId: params.branch } : {}),
     }),
     fetchActualFoodCostSnapshot({
-      supabase,
+      supabase: monetaryClient,
       tenantId: claims.tenant_id,
       branchId: params.branch,
       startDate: resolved.start,
@@ -805,7 +817,7 @@ export async function fetchFinanceCockpit(
     }),
     resolved.compare
       ? fetchActualFoodCostSnapshot({
-          supabase,
+          supabase: monetaryClient,
           tenantId: claims.tenant_id,
           branchId: params.branch,
           startDate: resolved.compare.start,
@@ -968,7 +980,7 @@ export async function fetchFinanceCockpit(
       cashVarianceByBranch: branchCashVariance,
     }),
     inventoryItems: await fetchInventoryCashTiedItems({
-      supabase,
+      supabase: monetaryClient,
       tenantId: claims.tenant_id,
       branchId: params.branch,
       branches,

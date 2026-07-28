@@ -97,7 +97,9 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
     category_id:
       ingredient?.category_id != null ? String(ingredient.category_id) : "",
     unit_cost:
-      ingredient?.unit_cost != null ? String(ingredient.unit_cost) : "",
+      ingredient?.monetary?.unitCost != null
+        ? String(ingredient.monetary.unitCost)
+        : "",
     item_kind:
       (ingredient?.item_kind as "raw_material" | "finished_good" | undefined) ??
       "raw_material",

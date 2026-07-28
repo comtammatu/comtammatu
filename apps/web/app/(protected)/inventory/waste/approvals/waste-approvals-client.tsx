@@ -163,9 +163,11 @@ function WasteApprovalCard({
       }
       action={
         <div className="text-right">
-          <div className="text-lg font-semibold tabular-nums">
-            {formatVND(row.totalValue)}
-          </div>
+          {row.monetary ? (
+            <div className="text-lg font-semibold tabular-nums">
+              {formatVND(row.monetary.totalValue)}
+            </div>
+          ) : null}
           <div className="text-xs text-muted-foreground">
             {copy.lineCount(row.items.length)}
           </div>
@@ -185,26 +187,33 @@ function WasteApprovalCard({
                   {it.ingredientName}{" "}
                   <span className="text-muted-foreground">
                     — {formatQuantity(it.quantity)} {it.unit}
-                    {it.unitCost !== null
-                      ? ` × ${formatVND(it.unitCost)}`
+                    {it.monetary?.unitCost != null
+                      ? ` × ${formatVND(it.monetary.unitCost)}`
                       : ""}
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {copy.reason(getWasteReasonLabelVi(it.reasonCode))}
-                  {typeof it.qtyRatio === "number" && it.qtyRatio > 0
-                    ? copy.qtyRatio(formatPercent(it.qtyRatio * 100, 0))
+                  {typeof it.monetary?.qtyRatio === "number" &&
+                  it.monetary.qtyRatio > 0
+                    ? copy.qtyRatio(
+                        formatPercent(it.monetary.qtyRatio * 100, 0),
+                      )
                     : ""}
-                  {typeof it.rolling15MinSum === "number" &&
-                  it.rolling15MinSum > 0
-                    ? copy.rolling15m(formatVND(it.rolling15MinSum))
+                  {typeof it.monetary?.rolling15MinSum === "number" &&
+                  it.monetary.rolling15MinSum > 0
+                    ? copy.rolling15m(
+                        formatVND(it.monetary.rolling15MinSum),
+                      )
                     : ""}
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <div className="font-medium tabular-nums">
-                  {formatVND(it.totalCost)}
-                </div>
+                {it.monetary ? (
+                  <div className="font-medium tabular-nums">
+                    {formatVND(it.monetary.totalCost)}
+                  </div>
+                ) : null}
                 <WasteTierBadge tier={it.wasteTier} compact />
               </div>
             </div>

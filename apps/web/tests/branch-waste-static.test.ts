@@ -14,7 +14,10 @@ test("Branch waste is a native touch document workflow with an isolated Owner su
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/branch-waste-create-client.tsx",
   );
   const data = read("apps/web/lib/inventory/branch-waste-create-data.ts");
-  const model = read("apps/web/lib/inventory/waste-tier-model.ts");
+  const form = read(
+    "apps/web/app/(protected)/inventory/waste/waste-operational-form.tsx",
+  );
+  const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
   const photoUpload = read(
     "apps/web/app/components/form/photo-upload-input.tsx",
   );
@@ -36,24 +39,21 @@ test("Branch waste is a native touch document workflow with an isolated Owner su
   assert.doesNotMatch(data, /WasteNewPageContent|WasteCreateClient/);
 
   assert.match(client, /BranchOperatorPage/);
-  assert.match(client, /BranchOperatorControlBar/);
   assert.match(client, /BranchOperatorPanel/);
-  assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
-  assert.match(client, /<AppDetailFooter[\s\S]*sticky/);
-  assert.match(client, /createWasteEntry/);
-  assert.match(client, /AntiSplitRollingMeter/);
-  assert.match(client, /WastePhotoUpload/);
-  assert.match(client, /beforeunload/);
-  assert.match(client, /requestRemoveEditorLine/);
-  assert.match(client, /overscroll-contain/);
-  assert.match(client, /id="branch-waste-photo"/);
+  assert.match(client, /WasteOperationalForm/);
   assert.doesNotMatch(
     client,
     /\bWasteCreateClient\b|DocumentFormFrame|DataTable|embedded/,
   );
 
-  assert.match(model, /previewWasteTier/);
-  assert.match(model, /WASTE_ALWAYS_TIER_2_REASONS/);
+  assert.match(form, /createWasteEntry/);
+  assert.match(form, /WastePhotoUpload/);
+  assert.match(form, /copy\.priceReviewHint/);
+  assert.match(inventoryMessages, /Cần Kế toán kiểm tra giá/);
+  assert.doesNotMatch(
+    form,
+    /unitCost|totalValue|formatVND|priceVariance|branchCap|shiftCap/,
+  );
   assert.match(photoUpload, /id\?: string/);
   assert.match(photoUpload, /<input[\s\S]*id=\{id\}/);
   assert.match(officePage, /export async function WasteNewPageContent/);
@@ -62,5 +62,6 @@ test("Branch waste is a native touch document workflow with an isolated Owner su
     officePage,
     /routeBranchId|embedded|successHref|cancelHref/,
   );
-  assert.doesNotMatch(officeClient, /embedded|successHref|cancelHref/);
+  assert.doesNotMatch(officeClient, /embedded|successHref/);
+  assert.match(officeClient, /cancelHref="\/inventory\/waste"/);
 });

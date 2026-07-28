@@ -5,6 +5,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { getAuthContextWithPermission } from "./auth";
 import {
   buildFoodCostRows,
@@ -38,7 +39,12 @@ export async function fetchFoodCost(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  if (!monetary.valuation || !monetary.client) {
+    return { success: false, error: "Không có quyền" };
+  }
+  const monetaryClient = monetary.client;
   const tenantId = ctx.claims.tenant_id;
   const branchId = parsed.data.branchId;
   const startIso = parsed.data.startDate
@@ -77,7 +83,7 @@ export async function fetchFoodCost(
   const menuItemIds = [...new Set(saleLines.map((row) => row.menuItemId))];
   if (menuItemIds.length === 0) return { success: true, data: [] };
 
-  const { data: recipeData, error: recipeError } = await supabase
+  const { data: recipeData, error: recipeError } = await monetaryClient
     .from("recipes")
     .select(
       `
@@ -189,7 +195,7 @@ export async function fetchFoodCost(
       };
     }
 
-    const { data: stockData, error: stockError } = await supabase
+    const { data: stockData, error: stockError } = await monetaryClient
       .from("stock_levels")
       .select("branch_id, ingredient_id, avg_unit_cost")
       .eq("tenant_id", tenantId)

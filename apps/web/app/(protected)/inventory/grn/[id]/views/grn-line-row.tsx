@@ -59,21 +59,24 @@ export function LineRow({
   /** `plain` drops Item chrome for sheet / desk editors. */
   chrome?: "card" | "plain";
 }) {
-  const baselineVariance = line.baselineVariancePct;
-  const variance =
-    baselineVariance ?? deriveVariance(line.cost, line.poUnitPrice);
+  const monetary = line.monetary;
+  const baselineVariance = monetary?.baselineVariancePct ?? null;
+  const variance = monetary
+    ? (baselineVariance ??
+      deriveVariance(monetary.unitCost, monetary.poUnitPrice))
+    : null;
   const varianceLabel =
     baselineVariance != null
-      ? grnCopy.line.baselineVariance(line.baselineSampleN ?? 0)
+      ? grnCopy.line.baselineVariance(monetary?.baselineSampleN ?? 0)
       : grnCopy.line.priceVariance;
   const warnPct =
     baselineVariance != null
       ? GRN_BASELINE_REVIEW_PCT
-      : qc.priceVarianceWarnPct;
+      : (qc.monetary?.priceVarianceWarnPct ?? Number.POSITIVE_INFINITY);
   const reviewPct =
     baselineVariance != null
       ? GRN_BASELINE_REVIEW_PCT
-      : qc.priceVarianceReviewPct;
+      : (qc.monetary?.priceVarianceReviewPct ?? Number.POSITIVE_INFINITY);
   const needsPriceOverride = variance != null && Math.abs(variance) > warnPct;
   const needsPriceEvidence =
     baselineVariance != null
@@ -132,19 +135,21 @@ export function LineRow({
             )}
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-3">
-          <Stat label={grnCopy.line.importPrice}>
-            {inventoryCommon.currency(formatVND(line.cost))}
-          </Stat>
-          <Stat label={grnCopy.line.poPrice}>
-            {line.poUnitPrice != null
-              ? inventoryCommon.currency(formatVND(line.poUnitPrice))
-              : inventoryCommon.noValue}
-          </Stat>
-          <Stat label={varianceLabel}>
-            <span className={varianceTone}>{variancesLabel}</span>
-          </Stat>
-        </div>
+        {monetary ? (
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-3">
+            <Stat label={grnCopy.line.importPrice}>
+              {inventoryCommon.currency(formatVND(monetary.unitCost))}
+            </Stat>
+            <Stat label={grnCopy.line.poPrice}>
+              {monetary.poUnitPrice != null
+                ? inventoryCommon.currency(formatVND(monetary.poUnitPrice))
+                : inventoryCommon.noValue}
+            </Stat>
+            <Stat label={varianceLabel}>
+              <span className={varianceTone}>{variancesLabel}</span>
+            </Stat>
+          </div>
+        ) : null}
         {line.rejectionReason ? (
           <p className="mt-2 text-xs text-muted-foreground">
             <span className="font-semibold">
@@ -153,12 +158,12 @@ export function LineRow({
             {line.rejectionReason}
           </p>
         ) : null}
-        {line.priceOverrideNote ? (
+        {monetary?.priceOverrideNote ? (
           <p className="mt-1 text-xs text-muted-foreground">
             <span className="font-semibold">
               {grnCopy.line.priceOverrideReason}
             </span>{" "}
-            {line.priceOverrideNote}
+            {monetary.priceOverrideNote}
           </p>
         ) : null}
         {line.requiresReview ? (
@@ -181,15 +186,19 @@ export function LineRow({
               line.poQuantity ?? inventoryCommon.noValue,
               line.unit,
             )}{" "}
-            {line.poUnitPrice != null
-              ? inventoryCommon.currency(formatVND(line.poUnitPrice))
-              : inventoryCommon.noValue}
+            {monetary
+              ? monetary.poUnitPrice != null
+                ? inventoryCommon.currency(formatVND(monetary.poUnitPrice))
+                : inventoryCommon.noValue
+              : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-sm ${varianceTone}`}>
-            {varianceLabel}: {variancesLabel}
-          </span>
+          {monetary ? (
+            <span className={`text-sm ${varianceTone}`}>
+              {varianceLabel}: {variancesLabel}
+            </span>
+          ) : null}
           {line.dirty ? (
             <Badge variant="outline" className="text-xs">
               {grnCopy.line.unsaved}
@@ -219,7 +228,7 @@ export function LineRow({
         </Badge>
       ) : null}
 
-      {chrome === "plain" ? (
+      {chrome === "plain" && monetary ? (
         <p className={`text-sm ${varianceTone}`}>
           {varianceLabel}: {variancesLabel}
         </p>
@@ -302,10 +311,10 @@ export function LineRow({
             }}
           />
         </Field>
-        {line.cost > 0 ? (
+        {monetary && monetary.unitCost > 0 ? (
           <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
             <p className="text-sm font-semibold tabular-nums">
-              {formatVND(line.cost)}
+              {formatVND(monetary.unitCost)}
             </p>
           </Field>
         ) : null}
@@ -336,7 +345,7 @@ export function LineRow({
         </div>
       ) : null}
 
-      {needsPriceOverride ? (
+      {monetary && needsPriceOverride ? (
         <div className="grid gap-3 md:grid-cols-2">
           <Field
             id={`override-${idx}`}
@@ -345,12 +354,12 @@ export function LineRow({
             <Textarea
               id={`override-${idx}`}
               rows={2}
-              value={line.priceOverrideNote}
+              value={monetary.priceOverrideNote}
               placeholder={
                 baselineVariance != null
                   ? grnCopy.line.baselineVariancePlaceholder(
                       formatPercent(variance, 2),
-                      line.baselineSampleN ?? 0,
+                      monetary.baselineSampleN ?? 0,
                     )
                   : needsPriceEvidence
                     ? grnCopy.line.reviewVariancePlaceholder(
@@ -362,7 +371,14 @@ export function LineRow({
                         formatPercent(warnPct),
                       )
               }
-              onChange={(e) => onChange({ priceOverrideNote: e.target.value })}
+              onChange={(e) =>
+                onChange({
+                  monetary: {
+                    ...monetary,
+                    priceOverrideNote: e.target.value,
+                  },
+                })
+              }
             />
           </Field>
           {needsPriceEvidence ? (
@@ -373,9 +389,14 @@ export function LineRow({
               <PhotoUploadInput
                 tenantId={tenantId}
                 folder={`grn/${grnId}/price-override/${line.lineId}`}
-                value={line.priceOverridePhotoUrl || null}
+                value={monetary.priceOverridePhotoUrl || null}
                 onChange={(url) =>
-                  onChange({ priceOverridePhotoUrl: url ?? "" })
+                  onChange({
+                    monetary: {
+                      ...monetary,
+                      priceOverridePhotoUrl: url ?? "",
+                    },
+                  })
                 }
               />
             </Field>

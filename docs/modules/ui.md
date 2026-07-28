@@ -274,20 +274,20 @@ Cấu hình Google Stitch MCP Server được khai báo tại `.mcp.json` / `.co
 ## Branch Operator Landing
 
 Branch home là surface mobile-first cho nhân viên và quản lý chi nhánh ở
-`/br/[branchId]`. Nó dùng Branch operator adapter, không wrapper Owner surface và
+`/br/[branchId]`. Nó dùng Branch operator adapter, không wrapper control_surface và
 không gọi trực tiếp vocabulary Employee ở các route Branch:
 
-- Branch và Owner surface là hai mặt phẳng presentation khác nhau. Branch giữ
-  mobile/tablet touch-first tại `/br/[branchId]/*`; Owner surface giữ desktop
+- Branch và control_surface là hai mặt phẳng presentation khác nhau. Branch giữ
+  mobile/tablet touch-first tại `/br/[branchId]/*`; control_surface giữ desktop
   management workspace responsive tại `/`, `/inventory`, `/finance`,
   `/hr`, `/menu`, `/orders`, và `/branches`. Mã dùng chung dưới
   `branch-settings/_shared` chỉ là source directory, không phải route.
 - data loader, Server Action, RPC và permission check có thể dùng chung giữa
-  hai plane; presentation không được dùng chung nếu Owner surface component tạo cảm
+  hai plane; presentation không được dùng chung nếu control_surface component tạo cảm
   giác desktop thu nhỏ trong Branch. Khi cần tách, Branch route dùng native
-  `BranchOperator*` component và giữ Owner surface route cho oversight/dense table.
+  `BranchOperator*` component và giữ control_surface route cho oversight/dense table.
 - POS, KDS, Runner là station apps riêng dưới `/br/[branchId]/*`; không bọc vào
-  Branch home bottom-nav và không dùng Owner surface shell.
+  Branch home bottom-nav và không dùng control_surface shell.
 
 - landing và màn chi tiết dùng `BranchOperatorPage`, `BranchOperatorPanel`,
   `BranchOperatorActionSection`, và các Branch operator adapter tương ứng
@@ -299,25 +299,25 @@ không gọi trực tiếp vocabulary Employee ở các route Branch:
 - màn quản lý chi nhánh (`/dashboard`, `/settings`) dùng cùng Branch runtime
   chrome nhưng thuộc route family `branch_management`, mở qua bottom nav theo
   quyền quản lý.
-- operator/operations/staff-runtime không import hoặc render Owner surface
+- operator/operations/staff-runtime không import hoặc render control_surface
   chrome; guard `operator-owner-shell-boundary` bắt mọi đường tắt qua
   `AppShell`, `OwnerModuleShell`, `FinanceShell`, hoặc `InventoryShell`.
 - màn chi tiết giữ một primary action trong panel chính, không đặt CTA vận hành
   vào page header.
 - staff-runtime wrapper chỉ đổi href/scope sang `/br/[branchId]/*`; workflow
   quản lý Branch phải sở hữu presenter touch-native và chỉ chia sẻ
-  loader/model/action với Owner surface. Staff runtime chỉ dùng route mang `branchId`.
+  loader/model/action với control_surface. Staff runtime chỉ dùng route mang `branchId`.
   routes.
 - copy hiển thị sống trong `messages.employee.*`, `APP_COPY_VI`, hoặc registry
   domain tương ứng; route/component không hardcode copy vận hành mới.
 - `/br/[branchId]/shift/leave-approvals` là Branch-native touch `LIST`: tab
   trạng thái + full-row items để quét nhanh, chi tiết và approve/reject nằm
-  trong bottom `Sheet` có action sticky. Owner surface giữ `LeaveRequestsTable`;
-  Branch không import bảng hoặc page presenter HR Owner surface.
+  trong bottom `Sheet` có action sticky. control_surface giữ `LeaveRequestsTable`;
+  Branch không import bảng hoặc page presenter HR control_surface.
 
 Branch stock workflow áp dụng cùng ranh giới này:
 
-- `/br/[branchId]/stock` là landing việc kho trong ca, không wrapper Owner surface
+- `/br/[branchId]/stock` là landing việc kho trong ca, không wrapper control_surface
   `StockPageContent`.
 - list workflow native như `/br/[branchId]/stock/transfer` dùng archetype `LIST`
   với `BranchOperatorPage`/`BranchOperatorPanel`, action rows full-width trên
@@ -335,44 +335,44 @@ Branch stock workflow áp dụng cùng ranh giới này:
   nhưng tải `includeValuation: false` cho Branch. Thứ tự là tồn hiện tại/trạng
   thái, cân bằng theo vị trí, chuyển động gần đây, ngưỡng và action theo quyền;
   nhận NCC phải mở `/stock/grn/new`, không được trỏ vào `/stock/receive` là
-  hàng chuyển nội bộ. Không đưa WAC, giá trị tồn, audit/correction, Owner surface
-  `AppPageHeader`, `DataTable`, hoặc Owner surface detail presenter vào route này.
+  hàng chuyển nội bộ. Không đưa WAC, giá trị tồn, audit/correction, control_surface
+  `AppPageHeader`, `DataTable`, hoặc control_surface detail presenter vào route này.
 - `/br/[branchId]/stock/grn` là Branch-native touch `LIST`: dùng shared
   `loadGrnListPageData` + pure filter model, hiển thị nháp của người đang thao
   tác trước hàng đợi GRN, và giữ bỏ nháp là action có xác nhận. Danh sách Branch
   chỉ giữ mã phiếu, NCC, ngày và trạng thái; không hiển thị tổng
   tiền/tên chi nhánh, không dùng `DataTable` hoặc long-press, và không đổi sang
-  Owner surface presentation tại tablet landscape.
+  control_surface presentation tại tablet landscape.
 - `/br/[branchId]/stock/grn/new` là Branch-native touch `LIST` cho bước chọn
   nguồn: dùng shared `loadGrnSourcePageData` + pure source model, có tìm NCC,
   tạo NCC khi được cấp quyền, và không còn cửa PO. Supplier entry canonical tại
   `/br/[branchId]/stock/grn/new/[supplierId]`; màn
-  source không render `DocumentFormFrame`, `DataTable`, hoặc Owner surface picker.
+  source không render `DocumentFormFrame`, `DataTable`, hoặc control_surface picker.
 - `/br/[branchId]/stock/grn/new/[supplierId]` là Branch-native touch
   `DOC-WORKFLOW`: dùng shared `loadGrnCreatePageData`,
   `useGrnCreateController`, và `GrnLineEditSheet`, nhưng route tự sở hữu bố cục
   `BranchOperatorPage`/`BranchOperatorPanel`, list dòng chạm để sửa, và
   `AppDetailFooter` sticky. Context NCC/kho nhận đứng trước danh sách dòng và
   tìm nguyên liệu; branch bị khóa bởi URL, tablet landscape chỉ mở grid panel
-  chứ không đổi thành bảng hay desktop side editor. Route không import Owner surface
+  chứ không đổi thành bảng hay desktop side editor. Route không import control_surface
   page/client, `DocumentFormFrame`, `DataTable`, `AppPageHeader`, hoặc
   `AppSection` trực tiếp.
 - `/br/[branchId]/stock/grn/[id]` là Branch-native touch `DETAIL`: nháp dùng
   shared detail loader/model/action hooks nhưng tự sở hữu danh sách kiểm nhận
   chạm, bottom sheet sửa/thêm dòng, và `AppDetailFooter` sticky để lưu/chốt;
-  phiếu không còn nháp là biên nhận chỉ đọc. Route không import Owner surface
+  phiếu không còn nháp là biên nhận chỉ đọc. Route không import control_surface
   `GRNDetailClient`, `embedded`, audit history, post-confirm correction, stock
-  correction, hoặc liên kết hóa đơn NCC. Các tác vụ quản trị đó vẫn thuộc Owner surface
+  correction, hoặc liên kết hóa đơn NCC. Các tác vụ quản trị đó vẫn thuộc control_surface
   `/inventory/grn/[id]`.
 - `/br/[branchId]/stock/stocktake` là Branch-native touch `LIST`: session
   stocktake của quản lý khác với `/stock/count` là count slip được giao cho
   nhân viên. Route dùng shared `loadBranchStocktakeListData`/model, full-row
   `ItemGroup` ở phone/tablet, và không dùng `DataTable`, long-press drawer,
-  Owner surface toolbar, branch picker, audit, hay report CTA.
+  control_surface toolbar, branch picker, audit, hay report CTA.
 - `/br/[branchId]/stock/stocktake/new` là Branch-native `DOC-WORKFLOW`: URL
   khóa branch, chỉ chọn mode và location, sau đó mở phiên qua action hiện có và
   chuyển vào count. Route dùng `BranchOperatorPage`/`BranchOperatorPanel` và
-  `AppDetailFooter` sticky; không import `DocumentFormFrame` hoặc Owner surface start
+  `AppDetailFooter` sticky; không import `DocumentFormFrame` hoặc control_surface start
   presenter.
 - `/br/[branchId]/stock/stocktake/[id]/count` là Branch-native touch
   `DOC-WORKFLOW`: number pad là entry point, cho phép chọn đơn vị ghi nhận ngay
@@ -382,29 +382,29 @@ Branch stock workflow áp dụng cùng ranh giới này:
 - `/br/[branchId]/stock/stocktake/[id]` là Branch-native touch `DETAIL`: active
   review chỉ nhận blind counts, count/recount status, continue, cancel, và
   complete theo permission; completed result dùng `ItemGroup` system/count/
-  variance. Không đưa audit history, Owner surface detail client, report CTA, WAC, hay
+  variance. Không đưa audit history, control_surface detail client, report CTA, WAC, hay
   giá trị tồn vào route này.
 - `/br/[branchId]/stock/issues` là Branch-native touch `LIST` chỉ cho `writeoff`
   và `other`: branch bị khóa bởi URL, danh sách chỉ giữ mã phiếu, loại, ngày và
   trạng thái; tạo nháp mở trong bottom `Sheet`, không có branch picker,
-  `DataTable`, export, audit hoặc tổng giá trị Owner surface.
+  `DataTable`, export, audit hoặc tổng giá trị control_surface.
 - `/br/[branchId]/stock/issues/[id]` là Branch-native touch `DETAIL`: nháp cho
   thêm/sửa/xóa từng dòng bằng bottom `Sheet` với đơn vị nhập, số lượng không vượt
   tồn và lý do bắt buộc; xác nhận/hủy dùng `AppDetailFooter` sticky và authority
   Server Action/RPC hiện có. Phiếu đã xác nhận/hủy chỉ đọc. Không đưa WAC, tổng
-  giá trị, audit history, `DocumentStockCorrectionDialog`, Owner surface detail client,
+  giá trị, audit history, `DocumentStockCorrectionDialog`, control_surface detail client,
   hay branch/source picker vào Branch.
 - `/br/[branchId]/stock/consumption` là Branch-native touch `LIST`: segmented
   view tách ledger tiêu hao đã ghi khỏi chứng từ thủ công, row giữ nguồn,
   trạng thái và thời điểm. `/stock/consumption/[id]` là typed `DETAIL` chỉ nhận
-  record tiêu hao; cả hai route dùng Branch presenter và không import Owner surface
+  record tiêu hao; cả hai route dùng Branch presenter và không import control_surface
   `DataTable`/page content.
 - `/br/[branchId]/stock/count-assignments` và `/stock/count-slips` là hai
   Branch-native touch `LIST`: assignment nhóm theo nhân viên; review slip mở
   chênh lệch và approve/request-recount trong bottom `Sheet` với footer sticky.
   Không có CTA mở nhầm phiếu đếm cá nhân của quản lý, không nhận
-  `routeBranchId`/`embedded` từ Owner surface clients.
-- Owner surface `/inventory/count-assignments` và `/inventory/count-slips` là hai
+  `routeBranchId`/`embedded` từ control_surface clients.
+- control_surface `/inventory/count-assignments` và `/inventory/count-slips` là hai
   management `LIST` responsive độc lập: desktop dùng `DataTable`, thao tác hiển
   thị bằng nút và mở `AppDialog` (D1, cùng depth với Branch bottom `Sheet`);
   mobile fallback chỉ là card responsive của cùng table adapter. Owner không
@@ -419,14 +419,14 @@ Branch stock workflow áp dụng cùng ranh giới này:
   panel cùng IA. Tier, ảnh bằng chứng, rolling meter, số lượng không vượt tồn
   và Server Action/RPC hiện có phải giữ nguyên. Không import
   `WasteNewPageContent`, `WasteCreateClient`, `DocumentFormFrame`, `DataTable`,
-  hoặc chrome Owner surface.
+  hoặc chrome control_surface.
 - `/br/[branchId]/stock/waste-approvals` là Branch-native touch `LIST`: queue
   khóa theo URL branch, mỗi row chạm mở bottom `Sheet` chứa line, reason, tier,
   evidence và review note. Duyệt/từ chối chỉ gọi `approveWaste`, giữ nguyên
   four-eye rule và xác nhận mutation; phiếu tự tạo chỉ đọc. Không import
   `WasteApprovalsPageContent`, `WasteApprovalsClient`, `DocumentFormFrame`,
-  `DataTable`, hoặc chrome Owner surface.
-- Purchase orders trở lại Inventory sidebar Owner surface theo ADR 0018 **C1**
+  `DataTable`, hoặc chrome control_surface.
+- Purchase orders trở lại Inventory sidebar control_surface theo ADR 0018 **C1**
   (Owner restore 2026-07-28): `/inventory/purchase-orders` là LIST **Đơn mua hàng**
   (keep route/RPC; no new DETAIL; Wave 4 row-open ratchet không mở rộng vào PO).
   Supplier returns vẫn ngoài daily UI. GRN supplier-first; hàng NCC bị từ chối
@@ -436,15 +436,15 @@ Branch stock workflow áp dụng cùng ranh giới này:
   rồi biến động của từng nguyên liệu có drill-in vào tồn thực. Mỗi số lượng luôn
   đi cùng đơn vị của nguyên liệu; không cộng chéo kg/lít/cái. Không dùng
   `ReportsPageContent`, `ReportsClient`, `DataTable`, biểu đồ, KPI tổng, công
-  nợ NCC, giá vốn, export, audit hay branch/date picker. Owner surface
+  nợ NCC, giá vốn, export, audit hay branch/date picker. control_surface
   `/inventory/reports` giữ dashboard quản trị riêng, không còn `embedded` mode.
-- Owner surface `/inventory/stock` dùng cùng loader/model nhưng giữ management
+- control_surface `/inventory/stock` dùng cùng loader/model nhưng giữ management
   `StockClient`: compact cards khi viewport hẹp và dense `DataTable` trên
-  desktop. Owner surface client không có `embedded` mode hoặc Branch route branching.
-- Owner surface `/inventory/grn` dùng cùng GRN loader/model nhưng giữ
+  desktop. control_surface client không có `embedded` mode hoặc Branch route branching.
+- control_surface `/inventory/grn` dùng cùng GRN loader/model nhưng giữ
   `GrnListClient` management presentation: branch, tổng giá trị và desktop
-  `DataTable` vẫn thuộc Owner surface; client này không nhận diện `/br/` để đổi layout.
-- Owner surface `/inventory/grn/new/[supplierId]` giữ `DocumentFormFrame` và desktop
+  `DataTable` vẫn thuộc control_surface; client này không nhận diện `/br/` để đổi layout.
+- control_surface `/inventory/grn/new/[supplierId]` giữ `DocumentFormFrame` và desktop
   line editor trong `GrnCreateClient`. Owner GRN create DOC composition:
   dense context (`Kho nhận` / receiving pickers) → single lines `AppSection`
   (`Mặt hàng trên phiếu` DataTable + **Thêm mặt hàng** action) → catalog search
@@ -452,7 +452,7 @@ Branch stock workflow áp dụng cùng ranh giới này:
   → sticky `AppDetailFooter` (count + running total SSOT, confirm CTA). Do not
   stack a second always-on catalog `AppSection` under the lines table. Draft
   DETAIL (`/inventory/grn/[id]` draft) uses the same single-lines + add-dialog
-  structure (`AddGrnLineDialog`). Owner surface và Branch chỉ chia sẻ loader,
+  structure (`AddGrnLineDialog`). control_surface và Branch chỉ chia sẻ loader,
   typed controller, line-editor primitive, và server action, không chia sẻ
   presentation mode hoặc route branching.
 - Branch `/br/[branchId]/stock/transfer` chỉ giữ hàng chờ nhận, lịch sử và detail
@@ -463,25 +463,26 @@ Branch stock workflow áp dụng cùng ranh giới này:
 - EMBED-WRAPPER chỉ là transition cho deep workflow chưa tách presentation; khi
   route đã có native Branch presentation thì cập nhật `scripts/page-archetypes.mjs`
   khỏi `EMBED-WRAPPER` để guard không cho lùi lại.
-- Branch route không link/redirect/revalidate vào Owner surface roots cho cùng job của
-  branch role; cầu nối Owner surface chỉ là explicit owner context, không là tile vận
+- Branch route không link/redirect/revalidate vào control_surface roots cho cùng job của
+  branch role; cầu nối control_surface chỉ là explicit owner context, không là tile vận
   hành mặc định.
 
-## Owner surface Shell Structure
+## control_surface Shell Structure
 
-Owner surface chrome (`apps/web/app/components/app-shell.tsx`) render một sidebar
-trong một `SidebarProvider`:
+`control_surface` chrome (`apps/web/app/components/app-shell.tsx`; code IDs lịch
+sử `OwnerModuleShell` / `data-owner-shell-scroll`) render một sidebar trong một
+`SidebarProvider`:
 
-- Tab chính = mô-đun Owner, single-sourced bởi `resolveOwnerPrimaryTabs`.
+- Tab chính = mô-đun L0, single-sourced bởi `resolveOwnerPrimaryTabs`.
 - Sub-tab = deep nav của mô-đun đang mở (`tier2`), render lồng dưới tab chính
   đang active.
 
 `AppShell` nhận `tier1` + `tier2` thay cho `navGroups[]`. `tier1` không được
-trải phẳng mọi page con thành tab chính: Owner gom về một tab "Quản trị", branch
-management gom về một tab "Quản lý chi nhánh", còn deep nav nằm trong sub-tab
-của tab đang active. Trên mobile `<md`, bottom-nav ưu tiên `tier2` và chỉ có một
-tab "Mô-đun" mở drawer sidebar đầy đủ. Từ tablet `md` trở lên, bottom-nav ẩn và
-Owner surface dùng một sidebar cố định.
+trải phẳng mọi page con thành tab chính: plane gom về tab "Quản trị", branch
+management gom về tab "Quản lý chi nhánh", còn deep nav nằm trong sub-tab
+của tab đang active. Trên mobile/tablet portrait `<lg` (`useIsMobile(1024)`),
+bottom-nav ưu tiên `tier2` và chỉ có một tab "Mô-đun" mở drawer sidebar đầy đủ.
+Từ desktop `≥lg`, bottom-nav ẩn và `control_surface` dùng một sidebar cố định.
 
 Scroll model (inset panel): `SidebarProvider` khóa viewport (`h-svh overflow-hidden`);
 `SidebarInset` giữ khung card cố định (`overflow-hidden`, desktop `max-h` bù
@@ -495,11 +496,11 @@ trống / cuộn thừa trên dashboard). Filter LIST freeze ở đỉnh shell s
 nằm trên KPI/dashboard cards (ví dụ Finance `FilterBar`) — sẽ đè section kế
 tiếp khi cuộn. `AppPage scroll` bên trong `AppShellPaddingBoundary` không tạo
 scrollport thứ hai (giữ `overflow-visible`) để sticky filter neo đúng vào shell
-scrollport. Không đổi chrome Branch/Operations.
+scrollport. Không đổi chrome Branch / `station_chrome`.
 
 Shell mới cần chứng minh job chrome riêng, giữ đúng plane authority, và dùng
 navigation resolver hiện hành. Guard chỉ giữ outcome đo được: navigation không
-trở thành inline data và Branch/Operations không rò Owner surface chrome.
+trở thành inline data và Branch/`station_chrome` không rò `control_surface` chrome.
 
 ## Component Governance
 

@@ -576,6 +576,7 @@ export const inventory = {
     viewDetailAria: (code: string) => `Xem đơn mua ${code}`,
     openLinkedGrn: "Mở phiếu nhập",
     approveAction: "Duyệt mua",
+    savePricesAction: "Lưu giá mua",
     createGrnAction: "Tạo phiếu nhập",
     emptyLinesTitle: "Đơn mua chưa có dòng hàng",
     emptyLinesDescription: "Đơn này chưa ghi nhận nguyên liệu đặt mua.",
@@ -1582,6 +1583,34 @@ export const inventory = {
   },
   waste: {
     title: "Phiếu hao hụt / hủy hàng",
+    operational: {
+      eyebrow: "Kho",
+      title: "Ghi nhận hao hụt",
+      unavailable: "Bạn không có quyền ghi nhận hao hụt.",
+      panelTitle: "Phiếu hao hụt",
+      panelDescription:
+        "Ghi số lượng thực tế; hệ thống tự tính giá trị nội bộ.",
+      priceReviewHint:
+        "Cần Kế toán kiểm tra giá. Nhân viên vận hành chỉ cần hoàn tất số lượng, lý do và ảnh bằng chứng khi hệ thống yêu cầu.",
+      locationLabel: "Vị trí xuất kho",
+      locationPlaceholder: "Chọn vị trí kho",
+      linesTitle: "Nguyên liệu hao hụt",
+      addLine: "Thêm dòng",
+      ingredientLabel: (index: number) => `Nguyên liệu ${index}`,
+      unitLabel: "Đơn vị",
+      unitPlaceholder: "Chọn đơn vị",
+      quantityLabel: "Số lượng",
+      stockHint: (quantity: string, unit: string) =>
+        ` · Tồn ${quantity} ${unit}`,
+      reasonLabel: "Lý do",
+      lineNotesLabel: "Ghi chú",
+      evidenceLabel: (required: boolean) =>
+        `Ảnh bằng chứng${required ? " (bắt buộc)" : ""}`,
+      removeLine: "Xóa dòng",
+      slipNotesLabel: "Ghi chú phiếu",
+      submit: "Ghi nhận hao hụt",
+      submitting: "Đang lưu…",
+    },
     loadFailedTitle: "Không thể tải dữ liệu phiếu hao hụt",
     loadFailedDescription:
       "Chưa xác nhận được vị trí kho, tồn và ngưỡng kiểm soát. Tải lại.",

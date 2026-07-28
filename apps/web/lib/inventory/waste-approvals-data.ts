@@ -6,6 +6,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
+import { loadInventoryMonetaryAccess } from "./monetary-access";
 import type { PendingWasteRow } from "./waste-approval-model";
 
 type LoadWasteApprovalsOptions = {
@@ -41,6 +42,10 @@ export async function loadWasteApprovalsData({
       routeBranchId ?? null,
       PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
     ));
+  const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
+  const itemReadClient = monetaryAccess.valuation
+    ? (monetaryAccess.client ?? supabase)
+    : supabase;
 
   if (!canApproveWaste) {
     return {
@@ -96,28 +101,35 @@ export async function loadWasteApprovalsData({
         .filter(Boolean) as string[],
     ),
   );
+  const itemsQuery = monetaryAccess.valuation
+    ? itemReadClient.from("stock_issue_items").select(`
+        id,
+        issue_id,
+        ingredient_id,
+        quantity,
+        unit_cost,
+        total_cost,
+        reason_code,
+        photo_urls,
+        waste_tier,
+        qty_ratio,
+        rolling_15min_sum,
+        ingredient:ingredients(id, name),
+        unit_obj:units!stock_issue_items_entry_unit_id_fkey(code)
+      `)
+    : itemReadClient.from("stock_issue_items").select(`
+        id,
+        issue_id,
+        ingredient_id,
+        quantity,
+        reason_code,
+        photo_urls,
+        ingredient:ingredients(id, name),
+        unit_obj:units!stock_issue_items_entry_unit_id_fkey(code)
+      `);
   const [itemsRes, branchesRes, creatorsRes] = await Promise.all([
     issueIds.length > 0
-      ? supabase
-          .from("stock_issue_items")
-          .select(
-            `
-            id,
-            issue_id,
-            ingredient_id,
-            quantity,
-            unit_cost,
-            total_cost,
-            reason_code,
-            photo_urls,
-            waste_tier,
-            qty_ratio,
-            rolling_15min_sum,
-            ingredient:ingredients(id, name),
-            unit_obj:units!stock_issue_items_entry_unit_id_fkey(code)
-          `,
-          )
-          .in("issue_id", issueIds)
+      ? itemsQuery.in("issue_id", issueIds)
       : Promise.resolve({ data: [] as never[], error: null }),
     branchIds.length > 0
       ? supabase.from("branches").select("id, name").in("id", branchIds)
@@ -161,7 +173,8 @@ export async function loadWasteApprovalsData({
   const rows: PendingWasteRow[] = (issues ?? []).map((issue) => {
     const items = itemsByIssue.get(issue.id) ?? [];
     const totalValue = items.reduce(
-      (sum, item) => sum + Number(item.total_cost ?? 0),
+      (sum, item) =>
+        sum + Number("total_cost" in item ? item.total_cost ?? 0 : 0),
       0,
     );
     const creatorId = issue.created_by ?? "";
@@ -177,7 +190,7 @@ export async function loadWasteApprovalsData({
       createdBy: creatorId,
       createdByName: creatorMap.get(creatorId) ?? creatorId,
       isSelfCreated: creatorId === session.user.id,
-      totalValue,
+      monetary: monetaryAccess.valuation ? { totalValue } : null,
       notes: issue.notes ?? null,
       items: items.map((item) => {
         const ingredient = Array.isArray(item.ingredient)
@@ -193,16 +206,32 @@ export async function loadWasteApprovalsData({
           ingredientName: ingredient?.name ?? `#${item.ingredient_id}`,
           quantity: Number(item.quantity),
           unit: unitObj?.code ?? "",
-          unitCost: item.unit_cost === null ? null : Number(item.unit_cost),
-          totalCost: item.total_cost === null ? 0 : Number(item.total_cost),
+          monetary:
+            monetaryAccess.valuation &&
+            "unit_cost" in item &&
+            "total_cost" in item
+              ? {
+                  unitCost:
+                    item.unit_cost === null ? null : Number(item.unit_cost),
+                  totalCost:
+                    item.total_cost === null ? 0 : Number(item.total_cost),
+                  qtyRatio:
+                    "qty_ratio" in item && item.qty_ratio !== null
+                      ? Number(item.qty_ratio)
+                      : null,
+                  rolling15MinSum:
+                    "rolling_15min_sum" in item &&
+                    item.rolling_15min_sum !== null
+                      ? Number(item.rolling_15min_sum)
+                      : null,
+                }
+              : null,
           reasonCode: item.reason_code ?? "",
           photoUrls: (item.photo_urls ?? []) as string[],
-          wasteTier: item.waste_tier,
-          qtyRatio: item.qty_ratio === null ? null : Number(item.qty_ratio),
-          rolling15MinSum:
-            item.rolling_15min_sum === null
-              ? null
-              : Number(item.rolling_15min_sum),
+          wasteTier:
+            monetaryAccess.valuation && "waste_tier" in item
+              ? item.waste_tier
+              : null,
         };
       }),
     };

@@ -6,7 +6,6 @@ export type WasteFormContext = {
     id: number;
     name: string;
     unit: string;
-    unitCost: number | null;
     issueUnits: Array<{
       unitId: number;
       code: string;
@@ -17,15 +16,11 @@ export type WasteFormContext = {
     stockLevels: Array<{
       locationId: number;
       quantity: number;
-      unitCost: number | null;
     }>;
   }>;
   capStatus: {
     shiftKey: string;
-    shiftSum: number;
-    shiftCap: number;
-    branchToday: number;
-    branchCap: number;
+    requiresReview: boolean;
   };
 };
 
@@ -34,7 +29,6 @@ export type WasteLineState = {
   ingredientId: number | null;
   unit: string;
   entryUnitId: string;
-  unitCost: string;
   quantity: string;
   reasonCode: string;
   note: string;
@@ -53,7 +47,6 @@ export function newWasteLine(uid: string): WasteLineState {
     ingredientId: null,
     unit: "kg",
     entryUnitId: "",
-    unitCost: "",
     quantity: "",
     reasonCode: "",
     note: "",

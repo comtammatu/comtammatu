@@ -2,7 +2,6 @@ import "server-only";
 
 import { notFound, redirect } from "next/navigation";
 import {
-  canViewPurchasePrice,
   getInventoryValueVisibility,
   PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
@@ -23,6 +22,7 @@ import {
   type StockOnHandPageData,
   type StockWorkSummary,
 } from "./stock-on-hand-model";
+import { loadInventoryMonetaryAccess } from "./monetary-access";
 
 type StockLevelLocationRow = {
   id: number;
@@ -44,7 +44,7 @@ type TenantStockLevelRow = {
   current_quantity: number | null;
   avg_unit_cost: number | null;
   ingredients:
-    { unit_cost: number | null } | { unit_cost: number | null }[] | null;
+  { unit_cost: number | null } | { unit_cost: number | null }[] | null;
 };
 
 type StockIngredientRow = {
@@ -119,6 +119,21 @@ export async function loadStockOnHandPageData({
     tenantId: claims.tenant_id,
     branchId,
   });
+  const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
+  const stockReadClient = monetaryAccess.valuation
+    ? (monetaryAccess.client ?? supabase)
+    : supabase;
+  const stockLevelQuery = monetaryAccess.valuation
+    ? stockReadClient
+        .from("stock_levels")
+        .select(
+          "ingredient_id, location_id, current_quantity, avg_unit_cost, last_counted_at, inventory_locations ( id, name, code, location_kind )",
+        )
+    : stockReadClient
+        .from("stock_levels")
+        .select(
+          "ingredient_id, location_id, current_quantity, last_counted_at, inventory_locations ( id, name, code, location_kind )",
+        );
 
   const [
     ingredientsResult,
@@ -132,15 +147,11 @@ export async function loadStockOnHandPageData({
   ] = await Promise.all([
     fetchIngredients(),
     stockBearingLocationIds.length > 0
-      ? supabase
-          .from("stock_levels")
-          .select(
-            "ingredient_id, location_id, current_quantity, avg_unit_cost, last_counted_at, inventory_locations ( id, name, code, location_kind )",
-          )
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", branchId)
-          .in("location_id", stockBearingLocationIds)
-          .order("ingredient_id")
+      ? stockLevelQuery
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", branchId)
+        .in("location_id", stockBearingLocationIds)
+        .order("ingredient_id")
       : Promise.resolve({ data: [], error: null }),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     currentUserHasPermission(
@@ -186,7 +197,9 @@ export async function loadStockOnHandPageData({
       code: location?.code ?? "",
       locationKind: location?.location_kind ?? "unknown",
       qty: row.current_quantity,
-      avgUnitCost: row.avg_unit_cost,
+      monetary: monetaryAccess.valuation
+        ? { avgUnitCost: row.avg_unit_cost }
+        : null,
       lastCountedAt: row.last_counted_at,
     });
     locationMap.set(row.ingredient_id, locations);
@@ -206,8 +219,8 @@ export async function loadStockOnHandPageData({
     const weightedCost =
       totalQuantity > 0
         ? (previous.currentQuantity * (previous.avgUnitCost ?? 0) +
-            row.current_quantity * (row.avg_unit_cost ?? 0)) /
-          totalQuantity
+          row.current_quantity * (row.avg_unit_cost ?? 0)) /
+        totalQuantity
         : (row.avg_unit_cost ?? previous.avgUnitCost);
     const latestCount =
       previous.lastCountedAt && row.last_counted_at
@@ -234,13 +247,14 @@ export async function loadStockOnHandPageData({
     });
   }
 
-  const role = claims.user_role;
-  const valueVisibility = getInventoryValueVisibility(role);
+  const valueVisibility = getInventoryValueVisibility(
+    monetaryAccess.valuation,
+    claims.user_role === "owner",
+  );
   const canViewTotal = valueVisibility.system;
   const canViewBranch = valueVisibility.branch;
   // D088: strip purchase/WAC unit costs from payloads when role or surface denies.
-  const showUnitCosts =
-    includeValuation && canViewPurchasePrice(role);
+  const showUnitCosts = includeValuation && monetaryAccess.valuation;
 
   const ingredients: StockIngredient[] = dbIngredients
     .filter((row) => {
@@ -250,19 +264,12 @@ export async function loadStockOnHandPageData({
     .map((row) => {
       const stock = stockMap.get(row.id);
       const qty = stock?.currentQuantity ?? 0;
-      const referenceCost = showUnitCosts ? (row.unit_cost ?? 0) : 0;
-      const cost = showUnitCosts
-        ? (stock?.avgUnitCost ?? referenceCost)
-        : 0;
+      const referenceCost = row.unit_cost ?? 0;
+      const cost = stock?.avgUnitCost ?? referenceCost;
       const min = row.min_stock_level ?? 0;
       const max = row.max_stock_level ?? 0;
       const reorder = row.reorder_point ?? 0;
-      const locationBreakdown = (locationMap.get(row.id) ?? []).map(
-        (location) =>
-          showUnitCosts
-            ? location
-            : { ...location, avgUnitCost: null },
-      );
+      const locationBreakdown = locationMap.get(row.id) ?? [];
 
       return {
         id: row.id,
@@ -273,8 +280,7 @@ export async function loadStockOnHandPageData({
         category: row.category ?? "",
         itemKind: row.item_kind ?? "raw_material",
         qty,
-        cost,
-        referenceCost,
+        monetary: showUnitCosts ? { cost, referenceCost } : null,
         min,
         max,
         reorder,
@@ -287,9 +293,10 @@ export async function loadStockOnHandPageData({
   const branchValue =
     includeValuation && canViewBranch
       ? ingredients.reduce(
-          (sum, ingredient) => sum + ingredient.qty * ingredient.cost,
-          0,
-        )
+        (sum, ingredient) =>
+          sum + ingredient.qty * (ingredient.monetary?.cost ?? 0),
+        0,
+      )
       : null;
 
   let totalValue: number | null = null;
@@ -300,13 +307,13 @@ export async function loadStockOnHandPageData({
     });
     const { data: tenantRows } =
       tenantStockBearingLocationIds.length > 0
-        ? await supabase
-            .from("stock_levels")
-            .select(
-              "current_quantity, avg_unit_cost, ingredients ( unit_cost )",
-            )
-            .eq("tenant_id", claims.tenant_id)
-            .in("location_id", tenantStockBearingLocationIds)
+        ? await (monetaryAccess.client ?? supabase)
+          .from("stock_levels")
+          .select(
+            "current_quantity, avg_unit_cost, ingredients ( unit_cost )",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .in("location_id", tenantStockBearingLocationIds)
         : { data: [] };
     totalValue = ((tenantRows ?? []) as TenantStockLevelRow[]).reduce(
       (sum, row) =>

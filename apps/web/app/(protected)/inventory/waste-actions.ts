@@ -3,12 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { messages } from "@lib/messages";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
+import { currentUserHasPermission } from "@/_lib/permissions";
 
 /* ─── Waste entry (S11) ─── */
 
@@ -42,7 +44,6 @@ const wasteItemSchema = z.object({
   // Issue-role unit the qty was entered in. NULL = already base;
   // the writeoff decrement converts to base via inv_to_base().
   entry_unit_id: z.coerce.number().int().positive().nullable().optional(),
-  unit_cost: z.coerce.number().positive().optional(),
   reason_code: z.enum(WASTE_REASON_CODES),
   note: z.string().max(500).optional(),
   photo_urls: z.array(z.string().url()).max(10).optional(),
@@ -90,13 +91,20 @@ export async function createWasteEntry(
   );
   if (!ctx) return { success: false, error: "Không có quyền tạo phiếu hủy" };
   const { supabase, claims } = ctx;
-
+  if (
+    !(await currentUserHasPermission(
+      parsed.data.branchId,
+      PERMISSION_KEYS.INVENTORY_WRITEOFF,
+    ))
+  ) {
+    return { success: false, error: "Không có quyền tạo phiếu hủy" };
+  }
   const ingredientIds = [
     ...new Set(parsed.data.items.map((item) => item.ingredient_id)),
   ];
   const { data: stockLevels, error: stockLevelError } = await supabase
     .from("stock_levels")
-    .select("ingredient_id, avg_unit_cost, current_quantity")
+    .select("ingredient_id, current_quantity")
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", parsed.data.branchId)
     .eq("location_id", parsed.data.locationId)
@@ -110,7 +118,6 @@ export async function createWasteEntry(
       level.ingredient_id,
       {
         currentQuantity: Number(level.current_quantity ?? 0),
-        unitCost: Number(level.avg_unit_cost ?? 0),
       },
     ]),
   );
@@ -145,13 +152,6 @@ export async function createWasteEntry(
   const items = [];
   for (const item of parsed.data.items) {
     const stock = stockByIngredient.get(item.ingredient_id);
-    const unitCost = stock?.unitCost ?? 0;
-    if (!Number.isFinite(unitCost) || unitCost <= 0) {
-      return {
-        success: false,
-        error: "Chưa có WAG cho nguyên liệu tại vị trí kho này.",
-      };
-    }
     if (item.entry_unit_id == null) {
       return { success: false, error: "Chọn đơn vị xuất kho cho từng dòng." };
     }
@@ -169,13 +169,20 @@ export async function createWasteEntry(
     if (requestedBaseQuantity > availableQuantity + 1e-9) {
       return { success: false, error: "Số lượng vượt tồn hiện tại." };
     }
-    items.push({ ...item, unit_cost: unitCost });
+    items.push({
+      ingredient_id: item.ingredient_id,
+      quantity: item.quantity,
+      entry_unit_id: item.entry_unit_id,
+      reason_code: item.reason_code,
+      note: item.note,
+      photo_urls: item.photo_urls,
+    });
   }
 
   // Each item carries entry_unit_id (the issue-role unit the qty was entered in);
   // create_waste_entry stores it on stock_issue_items so the writeoff decrement
   // and waste-tier gate convert to the ingredient base via inv_to_base(). Server
-  // always overrides unit_cost from stock_levels.avg_unit_cost.
+  // derives unit_cost inside the database before computing approval flags.
   const { data, error } = await supabase.rpc("create_waste_entry", {
     p_branch_id: parsed.data.branchId,
     p_location_id: parsed.data.locationId,
@@ -187,7 +194,11 @@ export async function createWasteEntry(
 
   if (error) {
     if (error.code === "42501") {
-      return { success: false, error: "Không có quyền hoặc thiếu ảnh mức 1" };
+      return {
+        success: false,
+        error: "Cần ảnh bằng chứng trước khi ghi nhận hao hụt.",
+        errorCode: "waste_evidence_required",
+      };
     }
     if (error.code === "22023") {
       return {
@@ -389,10 +400,7 @@ export async function approveWaste(
 
 export type WasteCapStatus = {
   shiftKey: string;
-  shiftSum: number;
-  shiftCap: number;
-  branchToday: number;
-  branchCap: number;
+  requiresReview: boolean;
 };
 
 /**
@@ -408,7 +416,16 @@ export async function getWasteCapStatus(
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, user } = ctx;
+  const { supabase, claims, user } = ctx;
+  if (
+    !(await currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.INVENTORY_WRITEOFF,
+    ))
+  ) {
+    return { success: false, error: "Không có quyền" };
+  }
+  const monetaryClient = createServiceClient();
 
   const { data: shiftKeyRaw } = await supabase.rpc("inventory_shift_key", {
     p_branch_id: branchId,
@@ -429,9 +446,10 @@ export async function getWasteCapStatus(
 
   let shiftSum = 0;
   if (shiftIssueIds.length > 0) {
-    const { data: shiftItems } = await supabase
+    const { data: shiftItems } = await monetaryClient
       .from("stock_issue_items")
       .select("total_cost")
+      .eq("tenant_id", claims.tenant_id)
       .in("issue_id", shiftIssueIds);
     shiftSum = (shiftItems ?? []).reduce(
       (sum, it) => sum + Number(it.total_cost ?? 0),
@@ -440,7 +458,7 @@ export async function getWasteCapStatus(
   }
 
   // Branch daily cap row (seeded nightly)
-  const { data: capRow } = await supabase
+  const { data: capRow } = await monetaryClient
     .from("branch_daily_waste_cap")
     .select("cap_vnd")
     .eq("branch_id", branchId)
@@ -458,9 +476,10 @@ export async function getWasteCapStatus(
   const branchIds = (branchRows ?? []).map((r) => r.id);
   let branchToday = 0;
   if (branchIds.length > 0) {
-    const { data: allItems } = await supabase
+    const { data: allItems } = await monetaryClient
       .from("stock_issue_items")
       .select("total_cost")
+      .eq("tenant_id", claims.tenant_id)
       .in("issue_id", branchIds);
     branchToday = (allItems ?? []).reduce(
       (sum, it) => sum + Number(it.total_cost ?? 0),
@@ -472,10 +491,9 @@ export async function getWasteCapStatus(
     success: true,
     data: {
       shiftKey,
-      shiftSum,
-      shiftCap: 1_500_000,
-      branchToday,
-      branchCap: Number(capRow?.cap_vnd ?? 500_000),
+      requiresReview:
+        shiftSum >= 1_500_000 ||
+        branchToday >= Number(capRow?.cap_vnd ?? 500_000),
     },
   };
 }
@@ -483,19 +501,11 @@ export async function getWasteCapStatus(
 /* ─── Rolling 15-min sum by ingredient (S11 anti-split) ─── */
 
 export type IngredientRollingStatus = {
-  /** Running total value (VND) of this user's writeoff of this SKU in last 15 min. */
-  rollingSum: number;
-  /** Count of writeoff lines in the window. */
   lineCount: number;
-  /** Threshold that triggers tier 1 photo (spec §Q1 = 150k). */
-  tierOneThreshold: number;
+  requiresReview: boolean;
 };
 
-/**
- * Look up current user's rolling 15-min waste sum for a specific SKU at a branch.
- * Used by `<AntiSplitRollingMeter>` to show live warning when user is about to
- * trigger tier 1 via cumulative splitting.
- */
+/** Return only the non-monetary rolling review state for operational clients. */
 export async function getIngredientRollingWaste(
   branchId: number,
   ingredientId: number,
@@ -505,7 +515,15 @@ export async function getIngredientRollingWaste(
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, user } = ctx;
+  const { supabase, claims, user } = ctx;
+  if (
+    !(await currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.INVENTORY_WRITEOFF,
+    ))
+  ) {
+    return { success: false, error: "Không có quyền" };
+  }
 
   const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
 
@@ -521,13 +539,14 @@ export async function getIngredientRollingWaste(
   if (issueIds.length === 0) {
     return {
       success: true,
-      data: { rollingSum: 0, lineCount: 0, tierOneThreshold: 150_000 },
+      data: { lineCount: 0, requiresReview: false },
     };
   }
 
-  const { data: itemRows } = await supabase
+  const { data: itemRows } = await createServiceClient()
     .from("stock_issue_items")
     .select("total_cost")
+    .eq("tenant_id", claims.tenant_id)
     .eq("ingredient_id", ingredientId)
     .in("issue_id", issueIds);
 
@@ -539,6 +558,6 @@ export async function getIngredientRollingWaste(
 
   return {
     success: true,
-    data: { rollingSum, lineCount, tierOneThreshold: 150_000 },
+    data: { lineCount, requiresReview: rollingSum >= 150_000 },
   };
 }

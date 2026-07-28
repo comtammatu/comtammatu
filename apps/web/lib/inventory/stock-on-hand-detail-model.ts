@@ -26,7 +26,7 @@ export type StockIngredientDetailLocation = {
   code: string;
   locationKind: string;
   qty: number;
-  avgUnitCost: number | null;
+  monetary: { avgUnitCost: number | null } | null;
   lastCountedAt: string | null;
 };
 
@@ -35,7 +35,7 @@ export type StockIngredientDetailMovement = {
   type: string;
   movementSubtype: string | null;
   quantityChange: number;
-  unitCost: number | null;
+  monetary: { unitCost: number | null } | null;
   reason: string | null;
   createdAt: string;
   grnId: number | null;

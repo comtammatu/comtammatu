@@ -12,7 +12,6 @@ import {
   upsertGrnLine,
 } from "@/(protected)/inventory/grn-actions";
 import {
-  draftTotal,
   type GrnDraft,
   type GrnDraftLine,
 } from "@lib/inventory/grn-draft";
@@ -149,14 +148,12 @@ export function useGrnCreateController({
       : (defaultUnit?.unitId ?? null);
     const unit = existing?.unit ?? defaultUnit?.label ?? ingredient.unit;
     const quantity = existing?.quantity ?? 0;
-    const unitCost = existing?.unitCost ?? null;
     setEdit({
       ingredient,
       line: existing ?? null,
       quantity,
       unit,
       entryUnitId,
-      unitCost,
       note: existing?.note ?? "",
     });
   }
@@ -177,7 +174,6 @@ export function useGrnCreateController({
         ...current,
         entryUnitId: unitId,
         unit: label,
-        unitCost: null,
       };
     });
   }
@@ -187,8 +183,6 @@ export function useGrnCreateController({
       return;
     }
 
-    // D089: warehouse draft lines never carry commercial price (placeholder 0).
-    const unitCost = 0;
     setSubmitError(null);
     try {
       const grnId = await ensureServerDraft();
@@ -198,7 +192,6 @@ export function useGrnCreateController({
         ingredientId: edit.ingredient.id,
         receivedQuantity: edit.quantity,
         entryUnitId: edit.entryUnitId,
-        unitCost,
         qualityStatus: "accepted",
       });
       if (!lineRes.success) {
@@ -212,7 +205,6 @@ export function useGrnCreateController({
         unit: edit.unit,
         entryUnitId: edit.entryUnitId,
         quantity: edit.quantity,
-        unitCost: null,
         note: edit.note.trim() ? edit.note.trim() : undefined,
       };
       if (lineId) (nextLine as GrnCreateServerDraftLine).lineId = lineId;
@@ -295,7 +287,6 @@ export function useGrnCreateController({
     }
   }
 
-  const total = draftTotal(draft);
   const lineCount = draft.lines.length;
   const canSubmit =
     lineCount > 0 && !submitting && !receivingSiteSaving;
@@ -398,7 +389,6 @@ export function useGrnCreateController({
     submit,
     submitError,
     supplier,
-    total,
     updateEditUnit,
     removeLine,
     setQuery,

@@ -18,11 +18,7 @@ import {
   X as IconX,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import {
-  formatPercent,
-  formatQuantity,
-  formatVND,
-} from "@comtammatu/shared/format";
+import { formatQuantity } from "@comtammatu/shared/format";
 import { getWasteReasonLabelVi } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -157,7 +153,7 @@ export function BranchWasteApprovalsClient({
         decision === "approved"
           ? "Duyệt phiếu hao hụt?"
           : "Từ chối phiếu hao hụt?",
-      description: `${row.issueNumber} · ${formatVND(row.totalValue)}`,
+      description: row.issueNumber,
       confirmText: decision === "approved" ? copy.approve : copy.reject,
       cancelText: ACTIONS_VI.cancel,
       ...(decision === "rejected" ? { variant: "destructive" as const } : {}),
@@ -326,9 +322,6 @@ export function BranchWasteApprovalsClient({
                         ) : null}
                       </ItemContent>
                       <ItemActions className="shrink-0">
-                        <div className="text-right font-mono text-sm font-semibold tabular-nums">
-                          {formatVND(row.totalValue)}
-                        </div>
                         <WasteTierBadge tier={highestTier} compact />
                         <IconChevronRight
                           aria-hidden="true"
@@ -380,9 +373,6 @@ export function BranchWasteApprovalsClient({
                           {copy.lineCount(selectedRow.items.length)}
                         </p>
                       </div>
-                      <p className="font-mono text-lg font-semibold tabular-nums">
-                        {formatVND(selectedRow.totalValue)}
-                      </p>
                     </div>
 
                     <ItemGroup className="gap-2" role="list">
@@ -394,26 +384,11 @@ export function BranchWasteApprovalsClient({
                             </ItemTitle>
                             <ItemDescription className="line-clamp-none break-words text-xs">
                               {formatQuantity(item.quantity)} {item.unit}
-                              {item.unitCost !== null
-                                ? ` × ${formatVND(item.unitCost)}`
-                                : ""}
                             </ItemDescription>
                             <ItemDescription className="line-clamp-none break-words text-xs">
                               {copy.reason(
                                 getWasteReasonLabelVi(item.reasonCode),
                               )}
-                              {typeof item.qtyRatio === "number" &&
-                              item.qtyRatio > 0
-                                ? copy.qtyRatio(
-                                    formatPercent(item.qtyRatio * 100, 0),
-                                  )
-                                : ""}
-                              {typeof item.rolling15MinSum === "number" &&
-                              item.rolling15MinSum > 0
-                                ? copy.rolling15m(
-                                    formatVND(item.rolling15MinSum),
-                                  )
-                                : ""}
                             </ItemDescription>
                             {item.photoUrls.length > 0 ? (
                               <div className="flex flex-wrap gap-2 pt-1">
@@ -433,9 +408,6 @@ export function BranchWasteApprovalsClient({
                             ) : null}
                           </ItemContent>
                           <ItemActions className="shrink-0 flex-col items-end gap-1">
-                            <p className="font-mono text-sm font-semibold tabular-nums">
-                              {formatVND(item.totalCost)}
-                            </p>
                             <WasteTierBadge tier={item.wasteTier} compact />
                           </ItemActions>
                         </Item>

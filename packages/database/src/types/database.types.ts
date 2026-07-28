@@ -12268,6 +12268,10 @@ export type Database = {
         Args: { p_new_status: string; p_order_id: number }
         Returns: Json
       }
+      update_purchase_order_prices: {
+        Args: { p_lines: Json; p_po_id: number }
+        Returns: Json
+      }
       update_staff_profile: {
         Args: {
           p_branch_id?: number

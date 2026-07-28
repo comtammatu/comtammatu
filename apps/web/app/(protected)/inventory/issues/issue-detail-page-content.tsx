@@ -7,6 +7,7 @@ import { fetchStockIssueDetail } from "../issue-actions";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { IssueDetailClient } from "./[id]/issue-detail-client";
 import type { IngredientRow } from "../page";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 interface IssueDetailPageContentProps {
   issueId: number;
@@ -52,8 +53,7 @@ export async function IssueDetailPageContent({
       quantity: number;
       unit: string;
       entry_unit_id: number | null;
-      unit_cost: number;
-      total_cost: number;
+      monetary: { unitCost: number; totalCost: number } | null;
       reason: string | null;
       photo_urls: string[];
       ingredients: { id: number; name: string; unit: string } | null;
@@ -64,21 +64,37 @@ export async function IssueDetailPageContent({
     : [];
   const stockLevelByIngredient = new Map<
     number,
-    { current_quantity: number; avg_unit_cost: number | null }
+    {
+      current_quantity: number;
+      monetary: { avgUnitCost: number | null } | null;
+    }
   >();
   if (d.issue.source_location_id && baseIngredients.length > 0) {
     const { supabase, claims } = await loadAuthState();
-    const { data: stockLevels } = await supabase
-      .from("stock_levels")
-      .select("ingredient_id, current_quantity, avg_unit_cost")
+    const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+    const readClient = monetary.valuation
+      ? (monetary.client ?? supabase)
+      : supabase;
+    const stockQuery = monetary.valuation
+      ? readClient
+          .from("stock_levels")
+          .select("ingredient_id, current_quantity, avg_unit_cost")
+      : readClient
+          .from("stock_levels")
+          .select("ingredient_id, current_quantity");
+    const { data: stockLevels } = await stockQuery
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", d.issue.branch_id)
       .eq("location_id", d.issue.source_location_id);
     for (const row of stockLevels ?? []) {
       stockLevelByIngredient.set(row.ingredient_id, {
         current_quantity: Number(row.current_quantity ?? 0),
-        avg_unit_cost:
-          row.avg_unit_cost == null ? null : Number(row.avg_unit_cost),
+        monetary:
+          monetary.valuation &&
+          "avg_unit_cost" in row &&
+          row.avg_unit_cost != null
+            ? { avgUnitCost: Number(row.avg_unit_cost) }
+            : null,
       });
     }
   }
@@ -87,7 +103,7 @@ export async function IssueDetailPageContent({
     return {
       ...ingredient,
       current_quantity: stockLevel?.current_quantity ?? 0,
-      avg_unit_cost: stockLevel?.avg_unit_cost ?? null,
+      stockMonetary: stockLevel?.monetary ?? null,
     };
   });
   const canAdjustStock = await currentUserHasPermission(
@@ -102,6 +118,7 @@ export async function IssueDetailPageContent({
       initialIssue={d.issue}
       initialLines={d.lines}
       ingredients={ingredients}
+      canViewMonetary={d.lines.some((line) => line.monetary != null)}
       canAdjustStock={canAdjustStock}
       auditLogs={auditLogs}
       listBasePath={listBasePath}

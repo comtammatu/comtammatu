@@ -92,9 +92,9 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp); D082 mở lại Kho T�
 
 **Decision:** Không có tenant-admin phụ cạnh `owner`; Owner route family chỉ nhận `owner`. `STAFF_ROLES` canonical theo `packages/shared/src/auth/types.ts` (bảng generated trong `docs/spec/role-route-matrix.md`).
 
-## D019: W5 — Cấu trúc hoá UI (shell · route home · nav · padding) (2026-06-13)
+## D019: W5 — Cấu trúc hoá UI (shell · route home · nav · padding) (2026-06-13, sửa bởi D090)
 
-**Decision (net, sau D050/ADR 0012):** (1) 2 họ chrome, không có họ thứ 3 — **Owner control** = `AppShell` cho Owner tại `/` và các domain route family, **Branch** = Operator plane `/br/[branchId]/*` + station chrome (POS/KDS/Runner); (2) một capability = một route home theo `role-route-matrix.md`; (3) padding một chủ = `AppPage`; (4) nav là data — mọi sidebar/bottom-nav project từ `nav-config.ts`, cấm `ShellNavGroup[]` literal trong shell. Canonical + gates: `docs/spec/design-system.md` § Structural Governance. Đảo điểm nào phải sửa quyết định này trước.
+**Decision (net, sau D050/ADR 0012, naming D090):** (1) 2 họ chrome product + station — **`control_surface`** = `AppShell` cho L0 tại `/` và các domain route family (code IDs lịch sử `Owner*`), **`branch_surface`** = Operator plane `/br/[branchId]/*` + **`station_chrome`** (POS/KDS/Runner); (2) một capability = một route home theo `role-route-matrix.md`; (3) padding một chủ = `AppPage`; (4) nav là data — mọi sidebar/bottom-nav project từ `nav-config.ts`, cấm `ShellNavGroup[]` literal trong shell. Canonical + gates: `docs/spec/design-system.md` § Structural Governance; glossary `control_surface`. Đảo điểm nào phải sửa quyết định này trước.
 
 ## D020: Enterprise Accounting / TT 200 / VAS is outside the product (2026-06-13)
 
@@ -229,9 +229,9 @@ cùng một slice.
 
 **Decision:** Authority = `docs/spec/design-system.md`; runtime tokens `packages/ui/src/styles/globals.css`; primitives `packages/ui/src/components/*`; app adapters `apps/web/app/components/surface.tsx`. Tooling/skill ngoài phải map về các file trên — không tạo authority song song.
 
-## D045: Shell điều hướng một sidebar (tier1 tab + tier2 sub-tab) (2026-06-22)
+## D045: Shell điều hướng một sidebar (tier1 tab + tier2 sub-tab) (2026-06-22, sửa bởi D090)
 
-**Decision (net, collapse-mode theo D063):** Owner surface dùng MỘT sidebar trong một `SidebarProvider`/`SidebarInset`; `AppShell` nhận `tier1` (tab chính cross-module theo ACL) + `tier2` (deep nav mô-đun đang mở). Tab chính không trải phẳng page con; `/` là tổng quan Owner và `/settings` sở hữu các trang thiết lập. Mobile `<md`: bottom-nav = tier-2 + một tab "Mô-đun" mở drawer. Nav-as-data + MODULE_ACL single-source giữ nguyên. Canonical: `docs/modules/ui.md` § Management Shell Structure. Đảo phải sửa bản ghi này trước.
+**Decision (net, collapse-mode theo D063, cutover D090):** `control_surface` dùng MỘT sidebar trong một `SidebarProvider`/`SidebarInset`; `AppShell` nhận `tier1` (tab chính cross-module theo ACL) + `tier2` (deep nav mô-đun đang mở). Tab chính không trải phẳng page con; `/` là tổng quan quản trị và `/settings` sở hữu các trang thiết lập. Mobile/tablet portrait `<lg` (`useIsMobile(1024)`): bottom-nav = tier-2 + một tab "Mô-đun" mở drawer. Desktop `≥lg`: sidebar cố định, không bottom-nav. Nav-as-data + MODULE_ACL single-source giữ nguyên. Canonical: `docs/modules/ui.md` § control_surface Shell Structure; `docs/spec/design-system.md`. Đảo phải sửa bản ghi này trước.
 
 ## D046: Gỡ Web Push server-side, thay bằng popup foreground `Notification` API (2026-06-22)
 
@@ -691,3 +691,16 @@ deny (D088).
 
 **Canonical:** `docs/ref/inventory.md` §5.1, `docs/ref/inventory-sop.md` §2,
 `docs/modules/finance.md` § Owner and Accountant Visibility, D083/D088.
+
+## D090: control_surface naming + L0 bottom-nav cutover `<lg` (2026-07-28)
+
+**Decision:** Plane L0 AppShell canonical = `control_surface` / UI `Quản trị`.
+Không dùng `Ops surface` hoặc `Vận hành` làm nhãn plane. `station_chrome` thay
+prose mới cho Operations chrome (POS/KDS/Runner). Role `owner` và
+`operational_role` (D088) tách khỏi tên plane. Code IDs `OwnerModuleShell` /
+`data-owner-shell-scroll` / `OWNER_NAV_*` giữ nguyên, map docs sang
+`control_surface`. Bottom-nav `control_surface` cắt tại `<lg` / `useIsMobile(1024)`
+(đồng bộ code + design-system; sửa D045 từ `<md`).
+
+**Canonical:** `docs/ref/glossary.md` § control_surface; `docs/spec/design-system.md`
+§ Chrome Archetypes; D019/D045 (đã fold).

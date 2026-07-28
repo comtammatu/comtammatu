@@ -127,7 +127,7 @@ corepack pnpm audit:ui-components --component <component-or-block>
 Com Tam Ma Tu is an operational restaurant system. The UI should feel calm, fast, touch-safe, and business-specific.
 
 - POS and KDS are frontline tools. The first viewport must expose the next safe action or live queue.
-- Owner surfaces are dense management workspaces. They should prioritize tables, filters, forms, and review states over decorative summary chrome.
+- control_surface routes are dense management workspaces. They should prioritize tables, filters, forms, and review states over decorative summary chrome.
 - Inventory surfaces are workflow-first. The user should see pending tasks, required documents, and exception states before secondary analytics.
 - Employee surfaces are lightweight task portals. Keep them narrow, direct, and consistent with the shared shell.
 
@@ -605,7 +605,7 @@ wrapper that recreates the same responsibilities.
 | Document lines           | `DataTable` with `render(row, index)`, `mobileCardRender`, and `desktopFooterRows` / `mobileFooter`                                                                    | Document controller owns line mutation by index; finite document lines do not need list pagination         |
 | Report breakdown         | `DataTable`, optionally with read-only footer totals                                                                                                                   | Report query owns period/branch and ordering; totals never replace row-level values                        |
 | Local inline table       | `DataTable` may use its inline search/filter/action slots only when the state is local to that one table and there is no page-level `AppToolbar` for the same controls | Do not duplicate a page toolbar inside the table                                                           |
-| Branch-native touch list | `Item` / `ItemGroup`, not `DataTable`, where a named Branch exception requires one phone/tablet information architecture                                               | Shares loader, model, status vocabulary, and mutation authority with the Owner surface counterpart         |
+| Branch-native touch list | `Item` / `ItemGroup`, not `DataTable`, where a named Branch exception requires one phone/tablet information architecture                                               | Shares loader, model, status vocabulary, and mutation authority with the control_surface counterpart         |
 
 Each `DataTableColumn` is an operational field, not layout filler: it has a
 stable non-empty header (an action column uses visually hidden `Thao tác`), a
@@ -624,10 +624,10 @@ presentations rather than a hidden-column desktop table.
 
 Branch runtime has one explicit presentation-plane exception: a declared
 Branch-native touch `LIST` under `/br/[branchId]/*` may use `Item`/`ItemGroup`
-at every supported phone/tablet width when the corresponding Owner surface route owns
+at every supported phone/tablet width when the corresponding control_surface route owns
 the dense `DataTable`. The two planes MUST share the server loader, pure model,
 status vocabulary, and mutation authority; Branch MUST NOT maintain separate
-mobile/tablet JSX trees or switch to the Owner surface table at tablet landscape.
+mobile/tablet JSX trees or switch to the control_surface table at tablet landscape.
 Each exception is named in `docs/spec/page-archetypes.md` § Named Exceptions.
 
 Inline-edit document sheets (PO/transfer/issue lines) use the same adapter:
@@ -850,25 +850,26 @@ second source of truth.
 Every route mounts exactly one approved chrome family. A new chrome family is a
 contract change; route-local chrome outside this list is drift.
 
-1. Owner surface chrome — the shared `AppShell`
-   (`apps/web/app/components/app-shell.tsx`) with an Owner-only multi-group
-   sidebar and one top header. Covers `/`, `/inventory`, `/orders`, `/hr`,
-   `/finance`, `/menu`, and `/branches`. One shell, one sidebar, one header.
-   The single Owner surface sidebar renders primary module tabs
+1. control_surface chrome — the shared `AppShell`
+   (`apps/web/app/components/app-shell.tsx`) with a multi-group
+   sidebar and one top header for L0 routes. Covers `/`, `/inventory`, `/orders`, `/hr`,
+   `/finance`, `/menu`, `/branches`, `/settings`, and `/feedback`. One shell, one sidebar, one header.
+   Access follows `role-route-matrix` / D088 (not Owner-role-exclusive).
+   The single control_surface sidebar renders primary module tabs
    first and nests the active module's deep nav as sub-tabs under that active
-   primary tab. Owner surface bottom nav shows on phone and tablet portrait (`<lg`); only
+   primary tab. control_surface bottom nav shows on phone and tablet portrait (`<lg`); only
    desktop (`≥lg`) uses the fixed sidebar. Tablet portrait therefore gets the
    bottom nav + `Mô-đun` drawer instead of a desktop sidebar crammed onto a
    narrow width. The
    sidebar's drawer-vs-fixed cutover is driven by `useIsMobile(1024)` in
-   `app-shell.tsx`; responsive Owner `DataTable` adapters use the same 1024px
+   `app-shell.tsx`; responsive control_surface `DataTable` adapters use the same 1024px
    default. The phone breakpoint (`useIsMobile()` = 768) still governs
    toaster/POS unless a route supplies an explicit override.
    Scroll: the inset `SidebarInset` card is viewport-bounded; the sidebar
    background and rounded panel frame stay fixed while only the inset content
    region scrolls (`data-owner-shell-scroll`). `AppPageHeader` scrolls with page
    content (do not sticky/freeze it outside the scrollport — that reserves empty
-   body chrome and crushes dashboard aesthetics). Owner LIST filters stick at
+   body chrome and crushes dashboard aesthetics). control_surface LIST filters stick at
    the top of the shell scrollport via `AppListFrame`/`InventoryListFrame`
    toolbar (automatic), `AppToolbar sticky`, or `AppPageStickyChrome` /
    `APP_PAGE_STICKY_FILTER_CLASSNAME`. Do not sticky a page-level filter that
@@ -881,17 +882,18 @@ contract change; route-local chrome outside this list is drift.
    (`/br/[branchId]/dashboard`, `/br/[branchId]/settings/*`) when reached from
    the branch runtime. It uses the shared brand components, compact `AppPage`,
    and `AppBottomNav`; `branch_management` is a route family inside this chrome,
-   not a reason to enter Owner surface chrome or add another shell.
-3. Operations chrome — purpose-built, full-screen, single-job surfaces that
+   not a reason to enter control_surface chrome or add another shell.
+3. station_chrome — purpose-built, full-screen, single-job surfaces that
    legitimately cannot wear the management sidebar: POS (`/br/[branchId]/pos`),
    KDS and Runner (`/br/[branchId]/{kds,runner}`). These keep bespoke layout,
    but consume the same tokens,
    typography, status vocabulary, header lockup, and bottom-nav components as
-   Owner surface — a different layout, never a second visual language.
+   control_surface — a different layout, never a second visual language.
+   (Historical docs alias: Operations chrome.)
 4. Standalone chrome-less surfaces — a named, closed exception, not a fourth
    general-purpose shell: `/notifications` and `/br` (the branch picker). Both
-   are reachable from more than one plane (`/notifications` from Owner surface,
-   Branch runtime, and Operations via `?returnTo=`; `/br` is reached before any
+   are reachable from more than one plane (`/notifications` from control_surface,
+   Branch runtime, and station_chrome via `?returnTo=`; `/br` is reached before any
    branch context — and therefore any Branch runtime chrome — exists) so they
    deliberately mount no sidebar, header lockup, or bottom nav; they render
    `AppPage`/`AppPageHeader` only and rely on an explicit in-page back link
@@ -906,14 +908,14 @@ plane's authority or turn navigation into route-local data.
 ### B. Shell Composition
 
 "Shell" means a component that owns chrome (sidebar, header, full-screen frame,
-or outer padding). Existing `AppShell`, Branch runtime, Operations, and public
+or outer padding). Existing `AppShell`, Branch runtime, station_chrome, and public
 frames are the reference implementations, not a frozen filename registry.
 
 - Prefer `AppHeader` and `AppBottomNav` for repeated non-sidebar chrome. Create
   another shared chrome composition only when its job cannot be expressed by an
   existing frame and its navigation owner is explicit.
 - Branch runtime, Operations, and employee-lib surfaces MUST NOT import or render
-  Owner surface chrome (`AppShell`, `OwnerModuleShell`,
+  control_surface chrome (`AppShell`, `OwnerModuleShell`,
   `resolveOwner*`, `owner-nav`, `finance-shell`,
   `inventory-shell`). They must
   use the approved operator/operations chrome, shared `AppHeader` /
@@ -1001,7 +1003,7 @@ drift.
 
 ### D. Navigation Single-Source
 
-- Navigation is data, not per-shell code. Every Owner surface route renders
+- Navigation is data, not per-shell code. Every control_surface route renders
   the same Owner-filtered primary tabs from `resolveOwnerPrimaryTabs`
   (`apps/web/app/lib/owner-nav.ts`, projected from
   `packages/shared/src/auth/nav-config.ts` via `resolveOwnerNavGroups`). Deep nav
@@ -1025,7 +1027,7 @@ drift.
 - Outer page padding is applied once and should not compound. `AppPage`
   (`apps/web/app/components/surface.tsx`) supplies the default scale and is
   nesting-aware.
-- The Owner surface frame padding is applied once by `AppShell` `<main>`;
+- The control_surface frame padding is applied once by `AppShell` `<main>`;
   `AppPage` defers to it through `AppShellPaddingBoundary`. An `AppPage` mounted
   inside `AppShell` main drops its own padding while keeping its centered
   max-width; an `AppPage` mounted inside another `AppPage` drops both padding and

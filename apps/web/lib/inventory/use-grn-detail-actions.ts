@@ -15,10 +15,7 @@ import {
   type EditableGrnLine,
   type GrnDetail,
 } from "./grn-detail-model";
-import {
-  deriveGrnQualityStatus,
-  isGrnBaselineReviewRequired,
-} from "./grn-quality";
+import { deriveGrnQualityStatus } from "./grn-quality";
 
 interface UseGrnDetailActionsArgs {
   grn: GrnDetail;
@@ -60,23 +57,26 @@ export function useGrnDetailActions({
 
     startSave(async () => {
       let okCount = 0;
-      const savedLines = new Map<
-        number,
-        { baselineVariancePct: number | null; baselineSampleN: number | null }
-      >();
+      const savedLines = new Map<number, true>();
       for (const line of dirtyLines) {
         const result = await upsertGrnLine({
           grnId: grn.id,
           ingredientId: line.ingredientId,
           receivedQuantity: line.actual,
           entryUnitId: line.entryUnitId,
-          unitCost: line.cost,
           qualityStatus: line.qualityStatus,
           rejectedQuantity: line.rejected,
           rejectionReason: line.rejectionReason || null,
           rejectedPhotoUrl: line.rejectedPhotoUrl || null,
-          priceOverrideNote: line.priceOverrideNote || null,
-          priceOverridePhotoUrl: line.priceOverridePhotoUrl || null,
+          ...(line.monetary
+            ? {
+                unitCost: line.monetary.unitCost,
+                priceOverrideNote:
+                  line.monetary.priceOverrideNote || null,
+                priceOverridePhotoUrl:
+                  line.monetary.priceOverridePhotoUrl || null,
+              }
+            : {}),
           shortDeliveryAction: line.shortDeliveryAction,
         });
         if (!result.success) {
@@ -89,20 +89,7 @@ export function useGrnDetailActions({
           continue;
         }
         okCount += 1;
-        const saved = result.data as {
-          baseline_variance_pct?: number | null;
-          baseline_sample_n?: number | null;
-        };
-        savedLines.set(line.lineId, {
-          baselineVariancePct:
-            saved.baseline_variance_pct == null
-              ? null
-              : Number(saved.baseline_variance_pct),
-          baselineSampleN:
-            saved.baseline_sample_n == null
-              ? null
-              : Number(saved.baseline_sample_n),
-        });
+        savedLines.set(line.lineId, true);
       }
       if (okCount > 0) {
         notify.success(
@@ -114,7 +101,7 @@ export function useGrnDetailActions({
         setLines((previous) =>
           previous.map((line) =>
             savedLines.has(line.lineId)
-              ? { ...line, ...savedLines.get(line.lineId), dirty: false }
+              ? { ...line, dirty: false }
               : line,
           ),
         );
@@ -178,20 +165,6 @@ export function useGrnDetailActions({
       }
       if (line.qualityStatus !== "accepted" && !line.rejectedPhotoUrl.trim()) {
         return GRN_DETAIL_COPY.validation.rejectPhotoRequired(line.name);
-      }
-      if (
-        (line.requiresReview ||
-          isGrnBaselineReviewRequired(line.baselineVariancePct)) &&
-        !line.priceOverrideNote.trim()
-      ) {
-        return GRN_DETAIL_COPY.validation.priceReviewReasonRequired(line.name);
-      }
-      if (
-        (line.requiresReview ||
-          isGrnBaselineReviewRequired(line.baselineVariancePct)) &&
-        !line.priceOverridePhotoUrl.trim()
-      ) {
-        return GRN_DETAIL_COPY.validation.pricePhotoRequired(line.name);
       }
     }
     return null;

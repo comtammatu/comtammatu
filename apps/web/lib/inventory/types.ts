@@ -23,7 +23,7 @@ export interface IngredientRow {
   category_id: number | null;
   category_name?: string | null;
   item_kind: string;
-  unit_cost: number | null;
+  monetary: { unitCost: number | null } | null;
   min_stock_level: number | null;
   max_stock_level: number | null;
   reorder_point: number | null;

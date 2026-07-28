@@ -17,6 +17,7 @@ import {
   getEmbeddedIngredientBaseUnitDisplayName,
   getEmbeddedUnitDisplayName,
 } from "./_lib/unit-display";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 const ROLES = INVENTORY_OPS_ROLES;
 
@@ -113,7 +114,6 @@ export async function fetchStockIssues(opts?: {
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-
   let query = supabase
     .from("stock_issues")
     .select(
@@ -216,6 +216,10 @@ export async function fetchStockIssueDetail(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const lineReadClient = monetary.valuation
+    ? (monetary.client ?? supabase)
+    : supabase;
 
   let issueQuery = supabase
     .from("stock_issues")
@@ -229,14 +233,21 @@ export async function fetchStockIssueDetail(
   if (claims.branch_id) {
     issueQuery = issueQuery.eq("branch_id", claims.branch_id);
   }
+  const linesQuery = monetary.valuation
+    ? lineReadClient
+        .from("stock_issue_items")
+        .select(
+          "id, ingredient_id, quantity, entry_unit_id, unit_cost, total_cost, reason, photo_urls, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+        )
+    : lineReadClient
+        .from("stock_issue_items")
+        .select(
+          "id, ingredient_id, quantity, entry_unit_id, reason, photo_urls, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+        );
 
   const [issueRes, linesRes] = await Promise.all([
     issueQuery.single(),
-    supabase
-      .from("stock_issue_items")
-      .select(
-        "id, ingredient_id, quantity, entry_unit_id, unit_cost, total_cost, reason, photo_urls, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
-      )
+    linesQuery
       .eq("issue_id", id.data)
       .eq("tenant_id", claims.tenant_id)
       .order("id"),
@@ -268,6 +279,15 @@ export async function fetchStockIssueDetail(
       "";
     return {
       ...line,
+      monetary:
+        monetary.valuation && "unit_cost" in line && "total_cost" in line
+          ? {
+              unitCost: Number(line.unit_cost ?? 0),
+              totalCost: Number(line.total_cost ?? 0),
+            }
+          : null,
+      unit_cost: undefined,
+      total_cost: undefined,
       unit,
       ingredients: ingredient
         ? {
@@ -311,14 +331,11 @@ export const upsertStockIssueLine = withAction(
     if (!resolvedUnit.success) {
       return { success: false, error: resolvedUnit.error };
     }
-    let stockLevel: {
-      avg_unit_cost: number | null;
-      current_quantity: number | null;
-    } | null = null;
+    let stockLevel: { current_quantity: number | null } | null = null;
     if (issue.source_location_id) {
       const stockLevelRes = await supabase
         .from("stock_levels")
-        .select("avg_unit_cost, current_quantity")
+        .select("current_quantity")
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", issue.branch_id)
         .eq("location_id", issue.source_location_id)
@@ -332,7 +349,6 @@ export const upsertStockIssueLine = withAction(
       }
       stockLevel = stockLevelRes.data;
     }
-    const unitCost = Number(stockLevel?.avg_unit_cost ?? 0);
     const requestedBaseQuantity = getIssueBaseQuantity(
       d.quantity,
       resolvedUnit,
@@ -353,7 +369,7 @@ export const upsertStockIssueLine = withAction(
         ingredient_id: d.ingredientId,
         quantity: d.quantity,
         entry_unit_id: resolvedUnit.unitId,
-        unit_cost: Number.isFinite(unitCost) ? unitCost : 0,
+        unit_cost: 0,
         reason: d.reason ?? null,
         ...(d.photoUrls === undefined ? {} : { photo_urls: d.photoUrls }),
       },

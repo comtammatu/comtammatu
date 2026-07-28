@@ -113,7 +113,7 @@ test("Wave B transfers DETAIL renders pageLayout once for Owner", () => {
   );
   assert.match(
     transfers,
-    /<AppPageHeader[\s\S]*\{pageLayout\}/,
+    /<AppPageHeader[\s\S]*\{tabs\}/,
     "transfers: Owner AppPageHeader + single pageLayout",
   );
 });

@@ -11,10 +11,7 @@ import type { WasteFormContext } from "./waste-create-model";
 
 const FALLBACK_CAP_STATUS: WasteFormContext["capStatus"] = {
   shiftKey: "",
-  shiftSum: 0,
-  shiftCap: 1_500_000,
-  branchToday: 0,
-  branchCap: 500_000,
+  requiresReview: false,
 };
 
 export async function loadBranchWasteCreateData(routeBranchId: number) {
@@ -56,7 +53,7 @@ export async function loadBranchWasteCreateData(routeBranchId: number) {
     supabase
       .from("ingredients")
       .select(
-        "id, name, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -65,7 +62,7 @@ export async function loadBranchWasteCreateData(routeBranchId: number) {
   ]);
   const { data: stockLevels, error: stockLevelsError } = await supabase
     .from("stock_levels")
-    .select("ingredient_id, location_id, current_quantity, avg_unit_cost")
+    .select("ingredient_id, location_id, current_quantity")
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", routeBranchId);
 
@@ -110,8 +107,6 @@ export async function loadBranchWasteCreateData(routeBranchId: number) {
         .map((level) => ({
           locationId: level.location_id,
           quantity: Number(level.current_quantity ?? 0),
-          unitCost:
-            level.avg_unit_cost === null ? null : Number(level.avg_unit_cost),
         }));
 
       return {
@@ -121,8 +116,6 @@ export async function loadBranchWasteCreateData(routeBranchId: number) {
           issueUnits.find((unit) => unit.isBase)?.label ??
           issueUnits[0]?.label ??
           "kg",
-        unitCost:
-          ingredient.unit_cost === null ? null : Number(ingredient.unit_cost),
         issueUnits,
         stockLevels: ingredientStockLevels,
       };

@@ -2,7 +2,6 @@ import "server-only";
 
 import { notFound, redirect } from "next/navigation";
 import {
-  canAccess,
   PERMISSION_KEYS,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
@@ -123,10 +122,7 @@ export async function loadGrnSourcePageData({
 } = {}): Promise<GrnSourcePageData> {
   const auth = await loadAuthState();
   const { supabase, claims } = auth;
-  if (
-    !PROCUREMENT_ROLES.includes(claims.user_role) ||
-    !canAccess(claims.user_role, "branch_stock")
-  ) {
+  if (!PROCUREMENT_ROLES.includes(claims.user_role)) {
     redirect("/access-denied?reason=insufficient-permission");
   }
 

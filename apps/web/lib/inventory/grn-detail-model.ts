@@ -4,29 +4,33 @@ import { messages } from "@lib/messages";
 export const GRN_DETAIL_COPY = messages.inventory.grn;
 export const INVENTORY_COMMON_COPY = messages.inventory.common;
 
+export type GrnLineMonetary = {
+  poUnitPrice: number | null;
+  unitCost: number;
+  priceOverrideNote: string;
+  priceOverridePhotoUrl: string;
+  priceVariancePct: number | null;
+  baselineVariancePct: number | null;
+  baselineSampleN: number | null;
+};
+
 export type GrnDetailItem = {
   lineId: number;
   ingredientId: number;
   name: string;
   sku: string;
   poQuantity: number | null;
-  poUnitPrice: number | null;
   required: number;
   actual: number;
   accepted: number;
   rejected: number;
   rejectionReason: string;
   rejectedPhotoUrl: string;
-  priceOverrideNote: string;
-  priceOverridePhotoUrl: string;
-  priceVariancePct: number | null;
-  baselineVariancePct: number | null;
-  baselineSampleN: number | null;
+  monetary: GrnLineMonetary | null;
   requiresReview: boolean;
   shortDeliveryAction: "accept_and_close" | "wait_backorder" | null;
   unit: string;
   entryUnitId: number | null;
-  cost: number;
   temp: string | null;
   qualityStatus: "accepted" | "rejected" | "partial";
   status: string;
@@ -46,15 +50,16 @@ export type GrnDetail = {
   supplierId: number;
   supplier: string;
   date: string;
-  total: number;
-  tax: number;
+  monetary: { total: number; tax: number } | null;
   status: string;
   items: GrnDetailItem[];
   qcSettings: {
     qtyShortTolerancePct: number;
-    priceVarianceWarnPct: number;
-    priceVarianceReviewPct: number;
     rejectRequiresPhoto: boolean;
+    monetary: {
+      priceVarianceWarnPct: number;
+      priceVarianceReviewPct: number;
+    } | null;
   };
 };
 
@@ -92,18 +97,14 @@ export function createEditableGrnLine({
   quantity,
   entryUnitId,
   unit,
-  unitCost,
-  baselineVariancePct = null,
-  baselineSampleN = null,
+  monetary = null,
 }: {
   lineId: number;
   ingredient: IngredientRow;
   quantity: number;
   entryUnitId: number | null;
   unit: string;
-  unitCost: number;
-  baselineVariancePct?: number | null;
-  baselineSampleN?: number | null;
+  monetary?: GrnLineMonetary | null;
 }): EditableGrnLine {
   return {
     lineId,
@@ -111,23 +112,17 @@ export function createEditableGrnLine({
     name: ingredient.name,
     sku: ingredient.sku ?? "",
     poQuantity: null,
-    poUnitPrice: null,
     required: quantity,
     actual: quantity,
     accepted: quantity,
     rejected: 0,
     rejectionReason: "",
     rejectedPhotoUrl: "",
-    priceOverrideNote: "",
-    priceOverridePhotoUrl: "",
-    priceVariancePct: null,
-    baselineVariancePct,
-    baselineSampleN,
+    monetary,
     requiresReview: false,
     shortDeliveryAction: null,
     unit,
     entryUnitId,
-    cost: unitCost,
     temp: null,
     qualityStatus: "accepted",
     status: "pass",

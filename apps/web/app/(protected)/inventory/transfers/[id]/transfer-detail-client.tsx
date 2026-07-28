@@ -30,6 +30,7 @@ import {
   AppSection,
   DescriptionList,
 } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 
 import { AuditHistoryList } from "../../_components/audit-history-list";
@@ -61,6 +62,8 @@ const DocumentStockCorrectionDialog = dynamic(
 );
 
 const transferDetailTitle = "Chi tiết điều chuyển";
+const documentTabLabel = "Phiếu điều chuyển";
+const historyTabLabel = "Lịch sử";
 const historySectionTitle = "Lịch sử chỉnh sửa";
 type TransferLineItem = TransferDetail["items"][number];
 
@@ -223,18 +226,24 @@ export function TransferDetailClient({
       header: copy.unit,
       render: (item) => <Badge variant="secondary">{item.unit}</Badge>,
     },
-    {
-      key: "cost",
-      header: copy.wacCost,
-      className: "text-right font-mono tabular-nums",
-      render: (item) => formatVND(item.cost),
-    },
-    {
-      key: "amount",
-      header: copy.lineAmount,
-      className: "text-right font-mono tabular-nums",
-      render: (item) => formatVND(item.total),
-    },
+    ...(transfer.monetary
+      ? [
+          {
+            key: "cost",
+            header: copy.wacCost,
+            className: "text-right font-mono tabular-nums",
+            render: (item: TransferLineItem) =>
+              formatVND(item.monetary?.cost ?? 0),
+          },
+          {
+            key: "amount",
+            header: copy.lineAmount,
+            className: "text-right font-mono tabular-nums",
+            render: (item: TransferLineItem) =>
+              formatVND(item.monetary?.total ?? 0),
+          },
+        ]
+      : []),
     {
       key: "received",
       header: copy.receivedQty,
@@ -297,7 +306,7 @@ export function TransferDetailClient({
                   }
                 />
               )}
-              mobileFooter={
+              mobileFooter={transfer.monetary ? (
                 <Item
                   variant="outline"
                   className="flex-col items-stretch gap-2 p-3 text-sm"
@@ -308,13 +317,13 @@ export function TransferDetailClient({
                     </span>
                     <span className="font-mono font-semibold tabular-nums text-primary">
                       {messages.inventory.common.currencyCompact(
-                        formatVND(transfer.total),
+                        formatVND(transfer.monetary.total),
                       )}
                     </span>
                   </div>
                 </Item>
-              }
-              desktopFooterRows={[
+              ) : null}
+              desktopFooterRows={transfer.monetary ? [
                 {
                   key: "ingredient-value",
                   className: "border-border",
@@ -329,7 +338,7 @@ export function TransferDetailClient({
                       key: "value",
                       className: "text-right font-mono tabular-nums",
                       content: messages.inventory.common.currencyCompact(
-                        formatVND(transfer.subtotal),
+                        formatVND(transfer.monetary.subtotal),
                       ),
                     },
                     { key: "actions", content: null },
@@ -349,7 +358,7 @@ export function TransferDetailClient({
                       key: "value",
                       className: "text-right font-mono tabular-nums",
                       content: messages.inventory.common.currencyCompact(
-                        formatVND(transfer.shipping),
+                        formatVND(transfer.monetary.shipping),
                       ),
                     },
                     { key: "actions", content: null },
@@ -370,13 +379,13 @@ export function TransferDetailClient({
                       className:
                         "text-right font-mono font-bold tabular-nums text-primary",
                       content: messages.inventory.common.currencyCompact(
-                        formatVND(transfer.total),
+                        formatVND(transfer.monetary.total),
                       ),
                     },
                     { key: "actions", content: null },
                   ],
                 },
-              ]}
+              ] : undefined}
             />
           </AppSection>
 
@@ -403,15 +412,6 @@ export function TransferDetailClient({
               ) : null}
             </AppSection>
           ) : null}
-
-          {/* Audit History (Collapsible) */}
-          <AppSection
-            title={historySectionTitle}
-            collapsible={true}
-            defaultOpen={false}
-          >
-            <AuditHistoryList logs={auditLogs} />
-          </AppSection>
         </div>
 
         {/* Right Column: Metadata Overview + Timeline Stepper + Transport Note */}
@@ -421,16 +421,16 @@ export function TransferDetailClient({
               className="grid gap-3"
               descriptionClassName="flex items-center gap-1 font-semibold"
               items={[
-                {
+                ...(transfer.monetary ? [{
                   term: copy.totalValue,
                   description: (
                     <span className="text-primary font-bold">
                       {messages.inventory.common.currencyCompact(
-                        formatVND(transfer.total),
+                        formatVND(transfer.monetary.total),
                       )}
                     </span>
                   ),
-                },
+                }] : []),
                 {
                   term: copy.totalItems,
                   description: String(transfer.items.length).padStart(2, "0"),
@@ -526,6 +526,30 @@ export function TransferDetailClient({
     </div>
   );
 
+  const tabs = (
+    <AppPageTabs
+      items={[
+        { value: "document", label: documentTabLabel },
+        {
+          value: "history",
+          label: historyTabLabel,
+          count: auditLogs.length,
+        },
+      ]}
+      defaultValue="document"
+      stickyList={!embedded}
+    >
+      <TabsContent value="document" className="mt-4">
+        {pageLayout}
+      </TabsContent>
+      <TabsContent value="history" className="mt-4">
+        <AppSection title={historySectionTitle}>
+          <AuditHistoryList logs={auditLogs} />
+        </AppSection>
+      </TabsContent>
+    </AppPageTabs>
+  );
+
   if (embedded) {
     return (
       <div className="flex w-full flex-col gap-3">
@@ -559,7 +583,7 @@ export function TransferDetailClient({
             {statusBadge.label}
           </Badge>
         </div>
-        {pageLayout}
+        {tabs}
       </div>
     );
   }
@@ -584,7 +608,7 @@ export function TransferDetailClient({
           </AppBackLink>
         }
       />
-      {pageLayout}
+      {tabs}
     </AppPage>
   );
 }
@@ -638,14 +662,14 @@ function TransferLineMobileCard({
             </p>
           )}
         </div>
-        <div>
+        {item.monetary ? <div>
           <p className="text-muted-foreground">{copy.wacCost}</p>
-          <p className="font-semibold">{formatVND(item.cost)}</p>
-        </div>
-        <div>
+          <p className="font-semibold">{formatVND(item.monetary.cost)}</p>
+        </div> : null}
+        {item.monetary ? <div>
           <p className="text-muted-foreground">{FORM_VI.amount}</p>
-          <p className="font-semibold text-primary">{formatVND(item.total)}</p>
-        </div>
+          <p className="font-semibold text-primary">{formatVND(item.monetary.total)}</p>
+        </div> : null}
       </div>
     </Item>
   );

@@ -84,7 +84,7 @@ export async function WasteNewPageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, unit_cost, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -93,7 +93,7 @@ export async function WasteNewPageContent({
   ]);
   const { data: stockLevels, error: stockLevelsError } = await supabase
     .from("stock_levels")
-    .select("ingredient_id, location_id, current_quantity, avg_unit_cost")
+    .select("ingredient_id, location_id, current_quantity")
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", branchId);
 
@@ -147,8 +147,6 @@ export async function WasteNewPageContent({
         .map((level) => ({
           locationId: level.location_id,
           quantity: Number(level.current_quantity ?? 0),
-          unitCost:
-            level.avg_unit_cost == null ? null : Number(level.avg_unit_cost),
         }));
       return {
         id: i.id,
@@ -157,7 +155,6 @@ export async function WasteNewPageContent({
           issueUnits.find((unit) => unit.isBase)?.label ??
           issueUnits[0]?.label ??
           "kg",
-        unitCost: i.unit_cost === null ? null : Number(i.unit_cost),
         issueUnits,
         stockLevels: ingredientStockLevels,
       };

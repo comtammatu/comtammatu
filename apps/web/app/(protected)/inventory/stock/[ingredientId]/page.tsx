@@ -172,9 +172,12 @@ function OwnerStockIngredientDetail({
                     ingredient.units,
                     formatQty,
                   );
-                  const stockValue =
-                    location.qty *
-                    (location.avgUnitCost ?? data.valuation?.wac ?? 0);
+                  const stockValue = location.monetary
+                    ? location.qty *
+                      (location.monetary.avgUnitCost ??
+                        data.valuation?.wac ??
+                        0)
+                    : null;
 
                   return (
                     <Item
@@ -205,14 +208,16 @@ function OwnerStockIngredientDetail({
                             </p>
                           ) : null}
                         </div>
-                        <div className="text-right">
+                        {stockValue != null ? (
+                          <div className="text-right">
                           <p className="text-xs text-muted-foreground">
                             {stockCopy.table.stockValue}
                           </p>
                           <p className="font-mono font-semibold tabular-nums">
                             {formatVND(stockValue)}
                           </p>
-                        </div>
+                          </div>
+                        ) : null}
                       </div>
                     </Item>
                   );
@@ -275,7 +280,7 @@ function OwnerStockIngredientDetail({
                       </div>
                       {referenceLabel ||
                       movement.reason ||
-                      movement.unitCost != null ? (
+                      movement.monetary?.unitCost != null ? (
                         <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                           {referenceLabel ? (
                             <p>
@@ -295,10 +300,10 @@ function OwnerStockIngredientDetail({
                           {movement.reason ? (
                             <p className="break-words">{movement.reason}</p>
                           ) : null}
-                          {movement.unitCost != null ? (
+                          {movement.monetary?.unitCost != null ? (
                             <p>
                               {stockCopy.table.movementUnitCost}:{" "}
-                              {formatVND(movement.unitCost)} /{" "}
+                              {formatVND(movement.monetary.unitCost)} /{" "}
                               {ingredient.unit || inventoryCommon.noValue}
                             </p>
                           ) : null}

@@ -4,13 +4,14 @@ import { z } from "zod";
 import {
   MODULE_ACL,
   PERMISSION_KEYS,
-  PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "@/_lib/auth";
+import { canAccessBranch } from "@/_lib/branch-scope";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { PG_ERR } from "@/(protected)/inventory/_lib/constants";
 import {
   filterSupplierInvoices,
@@ -24,7 +25,7 @@ import {
 } from "./supplier-invoices/supplier-invoice-list-model";
 import { mapSupplierInvoiceRow } from "./supplier-invoices/supplier-invoice-row";
 
-const ROLES = PROCUREMENT_ROLES;
+const ROLES = MODULE_ACL.finance.allowedRoles;
 
 /* ─── Supplier Invoices (3-way match: PO ↔ GRN ↔ Invoice) ─── */
 
@@ -406,6 +407,16 @@ export async function fetchSupplierInvoicesPage(
     before,
     pageSize,
   } = parsed.data;
+  if (
+    branchId != null &&
+    !(await canAccessBranch(supabase, claims, branchId))
+  ) {
+    return { success: false, error: "Không có quyền" };
+  }
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  if (!monetary.purchasePrice || !monetary.client) {
+    return { success: false, error: "Không có quyền" };
+  }
   const fetched: Array<{
     id: number;
     invoice_date: string;
@@ -414,7 +425,7 @@ export async function fetchSupplierInvoicesPage(
   let scanBefore: SupplierInvoiceCursor | null = null;
 
   while (true) {
-    let query = supabase
+    let query = monetary.client
       .from("supplier_invoices")
       .select(supplierInvoiceSelect(branchId))
       .eq("tenant_id", claims.tenant_id);

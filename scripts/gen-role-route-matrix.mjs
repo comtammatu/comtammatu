@@ -496,7 +496,7 @@ function buildGeneratedBody({
     "",
     "## Permission Boundary (generated)",
     "",
-    "Route family -> required route bucket (Owner surface ACL intersected with the module capability union) -> the action-gate",
+    "Route family -> required route bucket (control_surface ACL intersected with the module capability union) -> the action-gate",
     "permission keys in that family's namespace(s), read from",
     "`PERMISSION_KEYS` in `permissions.ts`. This is the full set in-namespace,",
     "not a hand-picked sample — route access and action authorization stay",

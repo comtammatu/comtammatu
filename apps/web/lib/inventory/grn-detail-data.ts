@@ -1,7 +1,7 @@
 import "server-only";
 
 import { notFound } from "next/navigation";
-import { PERMISSION_KEYS, PROCUREMENT_ROLES, canViewPurchasePrice } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
@@ -19,6 +19,7 @@ import type {
   GrnDetail,
   RecreateReceivingLocationOption,
 } from "./grn-detail-model";
+import { loadInventoryMonetaryAccess } from "./monetary-access";
 
 export type GrnDetailData = {
   grn: GrnDetail;
@@ -64,8 +65,18 @@ export async function loadGrnDetailResult(
     PROCUREMENT_ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
+  const monetaryAccess = await loadInventoryMonetaryAccess(
+    context?.claims.user_role ?? "branch_staff",
+  );
+  const showPurchasePrice = monetaryAccess.purchasePrice;
   const qcSettings: QcSettings = context
-    ? await fetchQcSettings(context.supabase, context.claims.tenant_id)
+    ? await fetchQcSettings(
+        showPurchasePrice && monetaryAccess.client
+          ? monetaryAccess.client
+          : context.supabase,
+        context.claims.tenant_id,
+        showPurchasePrice,
+      )
     : {
         qty_short_tolerance_pct: 5,
         price_variance_warn_pct: 5,
@@ -90,22 +101,24 @@ export async function loadGrnDetailResult(
       id: number;
       ingredient_id: number;
       po_quantity: number | null;
-      po_unit_price: number | null;
       received_quantity: number;
       rejected_quantity: number | null;
       rejection_reason: string | null;
       rejected_photo_url: string | null;
-      price_override_note: string | null;
-      price_override_photo_url: string | null;
-      price_variance_pct: number | null;
-      baseline_variance_pct: number | null;
-      baseline_sample_n: number | null;
+      monetary: {
+        poUnitPrice: number | null;
+        unitCost: number;
+        totalCost: number;
+        priceOverrideNote: string | null;
+        priceOverridePhotoUrl: string | null;
+        priceVariancePct: number | null;
+        baselineVariancePct: number | null;
+        baselineSampleN: number | null;
+      } | null;
       requires_review: boolean | null;
       short_delivery_action: string | null;
       unit: string;
       entry_unit_id: number | null;
-      unit_cost: number;
-      total_cost: number;
       quality_status: string;
       receiving_temperature: number | null;
       ingredients: {
@@ -133,10 +146,6 @@ export async function loadGrnDetailResult(
   const ingredientById = new Map(
     ingredients.map((ingredient) => [ingredient.id, ingredient]),
   );
-  const showPurchasePrice = canViewPurchasePrice(
-    context?.claims.user_role ?? "branch_staff",
-  );
-
   const items: GrnDetail["items"] = (data.lines ?? []).map((line) => {
     const ingredient = line.ingredients;
     const qualityStatusMap: Record<string, string> = {
@@ -161,35 +170,33 @@ export async function loadGrnDetailResult(
       name: ingredient?.name ?? "—",
       sku: "",
       poQuantity: line.po_quantity != null ? Number(line.po_quantity) : null,
-      poUnitPrice: showPurchasePrice
-        ? line.po_unit_price != null
-          ? Number(line.po_unit_price)
-          : null
-        : null,
       required: Number(line.po_quantity ?? line.received_quantity ?? 0),
       actual: received,
       accepted: received - rejected,
       rejected,
       rejectionReason: line.rejection_reason ?? "",
       rejectedPhotoUrl: line.rejected_photo_url ?? "",
-      priceOverrideNote: showPurchasePrice
-        ? (line.price_override_note ?? "")
-        : "",
-      priceOverridePhotoUrl: showPurchasePrice
-        ? (line.price_override_photo_url ?? "")
-        : "",
-      priceVariancePct: showPurchasePrice
-        ? line.price_variance_pct != null
-          ? Number(line.price_variance_pct)
-          : null
+      monetary: showPurchasePrice
+        ? {
+            poUnitPrice: line.monetary?.poUnitPrice ?? null,
+            unitCost: Number(line.monetary?.unitCost ?? 0),
+            priceOverrideNote: line.monetary?.priceOverrideNote ?? "",
+            priceOverridePhotoUrl:
+              line.monetary?.priceOverridePhotoUrl ?? "",
+            priceVariancePct:
+              line.monetary?.priceVariancePct == null
+                ? null
+                : Number(line.monetary.priceVariancePct),
+            baselineVariancePct:
+              line.monetary?.baselineVariancePct == null
+                ? null
+                : Number(line.monetary.baselineVariancePct),
+            baselineSampleN:
+              line.monetary?.baselineSampleN == null
+                ? null
+                : Number(line.monetary.baselineSampleN),
+          }
         : null,
-      baselineVariancePct: showPurchasePrice
-        ? line.baseline_variance_pct != null
-          ? Number(line.baseline_variance_pct)
-          : null
-        : null,
-      baselineSampleN:
-        line.baseline_sample_n != null ? Number(line.baseline_sample_n) : null,
       requiresReview: Boolean(line.requires_review),
       shortDeliveryAction:
         line.short_delivery_action === "accept_and_close" ||
@@ -202,7 +209,6 @@ export async function loadGrnDetailResult(
         fallbackUnit,
       ),
       entryUnitId,
-      cost: showPurchasePrice ? Number(line.unit_cost ?? 0) : 0,
       temp:
         line.receiving_temperature != null
           ? `${line.receiving_temperature}°C`
@@ -228,17 +234,27 @@ export async function loadGrnDetailResult(
     supplierId: data.grn.supplier_id,
     supplier: supplier?.name ?? "—",
     date: data.grn.received_date ? formatDate(data.grn.received_date) : "—",
-    total: showPurchasePrice
-      ? items.reduce((sum, item) => sum + item.cost * item.accepted, 0)
-      : 0,
-    tax: 0,
+    monetary: showPurchasePrice
+      ? {
+          total: items.reduce(
+            (sum, item) =>
+              sum + (item.monetary?.unitCost ?? 0) * item.accepted,
+            0,
+          ),
+          tax: 0,
+        }
+      : null,
     status: data.grn.status ?? "draft",
     items,
     qcSettings: {
       qtyShortTolerancePct: qcSettings.qty_short_tolerance_pct,
-      priceVarianceWarnPct: qcSettings.price_variance_warn_pct,
-      priceVarianceReviewPct: qcSettings.price_variance_review_pct,
       rejectRequiresPhoto: qcSettings.reject_requires_photo,
+      monetary: showPurchasePrice
+        ? {
+            priceVarianceWarnPct: qcSettings.price_variance_warn_pct,
+            priceVarianceReviewPct: qcSettings.price_variance_review_pct,
+          }
+        : null,
     },
   };
 

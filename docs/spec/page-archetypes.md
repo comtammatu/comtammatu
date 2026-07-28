@@ -29,7 +29,7 @@ may skip it with the skip reason.
 
 ```text
 UI Advisor Gate
-- Surface: <route>; route family: <id>; plane: <Branch | Owner surface | station | public>; change: <visual | flow | copy | behavior>
+- Surface: <route>; route family: <id>; plane: <branch_surface | control_surface | station_chrome | public>; change: <visual | flow | copy | behavior>
 - Context: <screen-context-map entry or nearest parent workflow>; actor: <role>; job: <outcome>
 - Journey: <entry state> -> <decision> -> <primary action> -> <success>; recovery: <safe retry/undo/exit>
 - Information order: 1) <first viewport> 2) <decision context> 3) <secondary detail>; exclude: <out-of-scope data>
@@ -119,7 +119,7 @@ export default async function XPage({ searchParams }: { searchParams?: ... }) {
   extra logic lives in the default export.
 - `routeBranchId` / `basePath` / `embedded` are optional only where a Branch
   route deliberately re-mounts a shared staff-runtime `PageContent`. They do
-  not authorize a Branch management workflow to reuse an Owner surface presenter;
+  not authorize a Branch management workflow to reuse an control_surface presenter;
   those routes share loaders/models/actions and own a touch-native composition.
 - Exemplars: `apps/web/app/(protected)/inventory/grn/page.tsx`,
   `apps/web/app/(protected)/inventory/grn/[id]/page.tsx`,
@@ -160,17 +160,17 @@ rather than staying a near-empty category.
 | #   | Archetype       | Job                                                                              |
 | --- | --------------- | -------------------------------------------------------------------------------- |
 | 1   | LIST            | Browse/filter/search a collection, row actions, quick CRUD                       |
-| 2   | EMBED-WRAPPER   | Branch-runtime re-mount of a canonical Owner surface/staff-runtime `PageContent` |
+| 2   | EMBED-WRAPPER   | Branch-runtime re-mount of a canonical control_surface/staff-runtime `PageContent` |
 | 3   | DETAIL          | Single entity: metadata + lines/history + stage actions                          |
 | 4   | SETTINGS-PANEL  | Single-entity or list-shaped configuration form                                  |
 | 5   | DOC-WORKFLOW    | Create/edit a line-array business document                                       |
 | 6   | REDIRECT-SHIM   | No-JSX route selector to a canonical destination                                 |
 | 7   | LANDING         | Link-card menu into a group of capabilities                                      |
-| 8   | REPORT          | Owner surface analytics or a fixed-scope Branch operational signal               |
+| 8   | REPORT          | control_surface analytics or a fixed-scope Branch operational signal               |
 | 9   | DASHBOARD       | Home-surface KPI summary with drill-downs                                        |
 | 10  | GATE/AUTH       | Pre-context or terminal decision screen                                          |
-| 11  | BOARD           | Realtime operational queue (full-screen Operations chrome)                       |
-| 12  | PUBLIC-WORKFLOW | Token-scoped customer transaction without Owner surface chrome                   |
+| 11  | BOARD           | Realtime operational queue (full-screen station_chrome)                       |
+| 12  | PUBLIC-WORKFLOW | Token-scoped customer transaction without control_surface chrome                   |
 
 ## 3. Shared Composition Recipes
 
@@ -224,7 +224,7 @@ delegation:
   Branch plane entry such as `/br/[branchId]`, `/br/[branchId]/stock`, or
   `/br/[branchId]/orders` owns a native operator presentation first, then links
   into deeper workflow screens. Sharing data loaders is fine; wrapping the
-  Owner surface screen as the Branch entry UI is drift.
+  control_surface screen as the Branch entry UI is drift.
 - Keep the wrapper delegation-only; its size is a review signal, not a line-count
   gate.
 - Parse and validate `branchId` from `params`; `notFound()` on a bad id.
@@ -241,17 +241,17 @@ delegation:
 
 #### Operator Embedded Presentation Contract
 
-EMBED-WRAPPER re-mounts an Owner surface/staff-runtime `PageContent` inside Branch
+EMBED-WRAPPER re-mounts an control_surface/staff-runtime `PageContent` inside Branch
 runtime chrome (`design-system.md` § Structural Governance § A.2). The
 wrapper itself is delegation-only (above); this contract is what the
 re-mounted `PageContent`'s own `embedded` branch must do so the operator
-plane reads as one coherent V2 operator surface instead of Owner surface chrome
+plane reads as one coherent V2 operator surface instead of control_surface chrome
 leaking through a branch-scoped shell. It is subordinate to
 `design-system.md` — it does not add tokens, rhythm, or primitives, it only
 clarifies which existing contract choices apply inside an `embedded` branch.
 The fix for every rule below lives **inside the shared `PageContent`/client
 component via the `embedded` branch**, never as a forked operator-only
-component — the same branch benefits both planes, and the Owner surface plane
+component — the same branch benefits both planes, and the control_surface plane
 (`embedded=false`) must stay byte-identical.
 
 - **R1 — No nested page header.** An embedded branch MUST NOT render
@@ -286,11 +286,11 @@ density="compact"` already owns width/padding. Return a bare flex
   a second, operator-only toolbar implementation.
 - **R6 — Back-link and breadcrumb target the operator section root.** Any
   back link, breadcrumb, or "list" href an embedded branch renders MUST use
-  the branch-scoped `basePath` the wrapper passed down, not an Owner surface module
+  the branch-scoped `basePath` the wrapper passed down, not an control_surface module
   path. This is the EMBED-WRAPPER navigation rule above, restated for the
   presentation layer: the `basePath` prop IS the navigation contract inside
   `embedded`, so any hand-rolled back/list link must build off `basePath`,
-  never off `ROUTE_FAMILY_CONTRACTS`' Owner surface plane `breadcrumbRoot`.
+  never off `ROUTE_FAMILY_CONTRACTS`' control_surface plane `breadcrumbRoot`.
 
 ### DETAIL
 
@@ -328,10 +328,10 @@ density="compact"` already owns width/padding. Return a bare flex
   `BranchOperatorPanel` sections and a sticky `AppDetailFooter`. The Branch
   variant uses progressive disclosure on phone, may expand to a two-column
   touch layout on tablet, keeps controls at least 44px high, and does not
-  import `DocumentFormFrame`, `DataTable`, or an Owner surface form presentation.
+  import `DocumentFormFrame`, `DataTable`, or an control_surface form presentation.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
-- **Composition note:** Owner surface uses the `DocumentFormFrame` recipe;
+- **Composition note:** control_surface uses the `DocumentFormFrame` recipe;
   Branch uses the touch recipe above in the route page and its direct client
   owner. A distinct workflow may compose directly when it preserves its plane,
   touch behavior, accessibility, and visual hierarchy.
@@ -368,7 +368,7 @@ badge}`).
   (`buildSettingsLinks`) uses the Branch plane recipe:
   `BranchOperatorPage` → `BranchOperatorActionSection` from
   `@lib/branch-operator/components/branch-operator-page`. It does not render
-  `AppPageHeader`, `AppSection`, `AppLinkCard`, or an Owner surface `*PageContent`
+  `AppPageHeader`, `AppSection`, `AppLinkCard`, or an control_surface `*PageContent`
   wrapper at the Branch landing/root level.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
@@ -376,13 +376,13 @@ badge}`).
 
 **Exemplar:** `apps/web/app/(protected)/finance/revenue/page.tsx`.
 
-- Owner surface skeleton: `AppPage` → `AppPageHeader` → `AppToolbar` (period/branch filters)
+- control_surface skeleton: `AppPage` → `AppPageHeader` → `AppToolbar` (period/branch filters)
   → `KpiRow` summary → chart (`chart-1`..`chart-5` tokens only) → `DataTable`
   breakdown → export action.
 - Branch operator variant: `BranchOperatorPage` → mobile
   `BranchOperatorControlBar` → `BranchOperatorPanel` + full-row `ItemGroup`
   drill-ins. It is a fixed branch/current-period operational signal, not a
-  compact Owner surface dashboard: no branch or date picker, KPI aggregation, chart,
+  compact control_surface dashboard: no branch or date picker, KPI aggregation, chart,
   `DataTable`, export, financial values, or audit history. Every quantity stays
   paired with the unit of its ingredient; quantities from different ingredients
   must never be aggregated.
@@ -420,7 +420,7 @@ badge}`).
 
 **Exemplar:** `apps/web/app/(protected)/br/[branchId]/kds/page.tsx`.
 
-- Operations chrome (no `AppShell`); a realtime channel drives the board.
+- station_chrome (no `AppShell`); a realtime channel drives the board.
 - Data display: `OperationalBoardCard` / `OperationalTile`; touch sizes
   (`size="touch"` / `"touch-lg"`) on every actionable control.
 - Loading: `PageSpinner` only — fake tickets on an operational screen are
@@ -434,15 +434,15 @@ badge}`).
 
 **Exemplar:** `apps/web/app/q/[token]/page.tsx` + `self-order-client.tsx`.
 
-- Standalone, mobile-first customer workflow with no Owner surface or Operations
+- Standalone, mobile-first customer workflow with no control_surface or Operations
   chrome. The route token establishes the workflow context; invalid or expired
   tokens fail closed through `notFound()` or one shared unavailable state.
 - Skeleton: `AppPage mobile` or an equivalent full-height standalone frame;
   touch-sized controls; one visible primary action per decision step.
-- Data display follows the transaction journey rather than a Owner surface list:
+- Data display follows the transaction journey rather than a control_surface list:
   browse/select → review cart → submit → success or recoverable failure. Reuse
   `Item`, shared form controls, money/date helpers, and status vocabulary; do
-  not copy Owner surface `DataTable`, page header, or shell composition into it.
+  not copy control_surface `DataTable`, page header, or shell composition into it.
 - Loading/error/offline behavior must preserve the in-progress transaction and
   expose an explicit retry or safe exit. Route-local status, formatter, and
   empty/loading implementations remain forbidden by the shared guards.
@@ -492,22 +492,22 @@ allowlist, not a precedent for stretching another archetype's definition:
    — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
    `BranchOperatorPanel`, and full-row `Item` links because the supported
    phone/tablet runtime must keep one touch information architecture in both
-   orientations. Classified **LIST** (Branch touch variant); the Owner surface
+   orientations. Classified **LIST** (Branch touch variant); the control_surface
    transfer route remains the canonical desktop `DataTable` LIST.
 10. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx`
     — Branch-runtime on-hand lookup. It shares the stock loader and pure filter
-    model with Owner surface but owns a full-row touch list that never changes into a
+    model with control_surface but owns a full-row touch list that never changes into a
     desktop table at tablet landscape widths. Classified **LIST** (Branch touch
-    variant); the Owner surface stock route retains its responsive management LIST.
+    variant); the control_surface stock route retains its responsive management LIST.
 11. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx`
     — Branch-runtime GRN queue. It shares the GRN list loader and pure filter
-    model with Owner surface but orders the operator's drafts before the touch queue,
+    model with control_surface but orders the operator's drafts before the touch queue,
     keeps delete as an explicit confirmed action, and never changes into the
-    Owner surface table at tablet landscape widths. Classified **LIST** (Branch touch
-    variant); Owner surface retains the management `DataTable` LIST.
+    control_surface table at tablet landscape widths. Classified **LIST** (Branch touch
+    variant); control_surface retains the management `DataTable` LIST.
 12. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx`
     — Branch-runtime GRN source selection. It shares the source loader and
-    pure supplier model with Owner surface, but presents suppliers as full-row touch
+    pure supplier model with control_surface, but presents suppliers as full-row touch
     actions and canonicalizes supplier selection into the Branch route.
     Branch receiving stays supplier-first; the optional PO flow belongs to
     Owner control.
@@ -515,43 +515,43 @@ allowlist, not a precedent for stretching another archetype's definition:
     document-line form remains a separate workflow stage.
 13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`
     — Branch-runtime GRN receipt entry. It shares the create loader, draft
-    controller, line-editor primitive, and mutation authority with Owner surface, but
+    controller, line-editor primitive, and mutation authority with control_surface, but
     owns a fixed-branch touch workflow with progressive line editing and a
     sticky action footer. Classified **DOC-WORKFLOW** (Branch touch variant);
-    it never imports the Owner surface page/client, `DocumentFormFrame`, desktop edit
+    it never imports the control_surface page/client, `DocumentFormFrame`, desktop edit
     panel, or cross-branch picker.
 14. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx`
     — Branch-runtime GRN review and receipt. It shares the detail loader,
-    model, action hooks, and mutations with Owner surface, but owns draft line review
+    model, action hooks, and mutations with control_surface, but owns draft line review
     through touch sheets and renders confirmed documents as a read-only receipt.
     Audit history, post-confirm correction, stock correction, invoice linkage,
-    and the Owner surface `GRNDetailClient` remain outside the Branch route. Classified
+    and the control_surface `GRNDetailClient` remain outside the Branch route. Classified
     **DETAIL** (Branch touch variant).
 15. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx`
     — Branch-runtime ingredient lookup. It shares the scoped detail loader and
-    pure stock movement/status model with Owner surface, but loads no valuation and
+    pure stock movement/status model with control_surface, but loads no valuation and
     owns a touch detail composition for current stock, locations, recent
-    movements, thresholds, and route-scoped actions. The Owner surface management
+    movements, thresholds, and route-scoped actions. The control_surface management
     detail retains WAC/value, dense desktop controls, and its own presentation.
     Classified **DETAIL** (Branch touch variant).
 16. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
     — Branch production work queue. It uses the Branch operator shell,
     status strip, full-row run links, and one create action. It never switches
-    to an Owner surface table/card mosaic at tablet widths.
+    to an control_surface table/card mosaic at tablet widths.
     Classified **LANDING** (Branch touch variant).
 17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
     and `/stock/production/[id]/page.tsx` — Branch-native production create and
     detail workflows. They share loaders, unit models, recipe-context reads, and
-    Server Actions with Owner surface while owning their `BranchOperator*` presentation,
+    Server Actions with control_surface while owning their `BranchOperator*` presentation,
     touch ingredient rows, tablet-landscape two-panel layout, and sticky actions.
     Production output remains at the branch's own inventory location.
     Classified **DOC-WORKFLOW** and **DETAIL** respectively; neither imports the
-    Owner surface `ProductionNewClient`, `ProductionDetailClient`, or `DataTable`.
+    control_surface `ProductionNewClient`, `ProductionDetailClient`, or `DataTable`.
 18. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx`
     — Branch-runtime waste entry. It preserves the scoped location, tier,
     evidence, rolling-meter, and submit authority but owns a compact touch
     document workflow: line summaries in `ItemGroup`, one line editor at a time
-    in a bottom sheet, and a sticky action footer. Owner surface retains its desktop
+    in a bottom sheet, and a sticky action footer. control_surface retains its desktop
     `WasteCreateClient`; neither plane imports the other's presenter. Classified
     **DOC-WORKFLOW** (Branch touch variant).
 19. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx`
@@ -559,13 +559,13 @@ allowlist, not a precedent for stretching another archetype's definition:
     presents one touch row per pending issue, and opens evidence, lines, review
     note, and approve/reject actions in a bottom sheet. Self-created rows remain
     readable but cannot mutate; the existing approval action remains the
-    authority. Owner surface retains its desktop `WasteApprovalsClient`; neither plane
+    authority. control_surface retains its desktop `WasteApprovalsClient`; neither plane
     imports the other's presenter. Classified **LIST** (Branch review variant).
 20. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx`
     and `/stock/consumption/[id]` — Branch-native recorded-consumption list and
     typed detail. The list separates posted ledger consumption from manual
     documents, keeps source/status language explicit, and uses full-row touch
-    navigation. Neither route imports the Owner surface list/detail presenter.
+    navigation. Neither route imports the control_surface list/detail presenter.
     Classified **LIST** and **DETAIL** respectively.
 21. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx`
     and `/stock/count-slips` — Branch-native manager assignment and review
@@ -574,7 +574,7 @@ allowlist, not a precedent for stretching another archetype's definition:
     decision footer. Classified **LIST** (assignment/review variants).
 22. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx`
     — fixed-branch leave review queue with status tabs, full-row touch items,
-    and approve/reject in a bottom sheet. Owner surface retains its desktop HR table.
+    and approve/reject in a bottom sheet. control_surface retains its desktop HR table.
     Classified **LIST** (Branch review variant).
 
 ## 5. Agent Lookup Flow

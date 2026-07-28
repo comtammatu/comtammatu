@@ -575,19 +575,23 @@ export function IngredientsClient({
         </div>
       ),
     },
-    {
-      key: "unit_cost",
-      header: ingredientListCopy.colReferenceCost,
-      className: "min-w-36 text-right",
-      render: (item) => {
-        const referenceCost = getDisplayReferenceCost(item);
-        return (
-          <span className="font-mono tabular-nums">
-            {referenceCost ? formatReferenceCost(referenceCost) : "—"}
-          </span>
-        );
-      },
-    },
+    ...(rows.some((item) => item.monetary != null)
+      ? [
+          {
+            key: "unit_cost",
+            header: ingredientListCopy.colReferenceCost,
+            className: "min-w-36 text-right",
+            render: (item: IngredientRow) => {
+              const referenceCost = getDisplayReferenceCost(item);
+              return (
+                <span className="font-mono tabular-nums">
+                  {referenceCost ? formatReferenceCost(referenceCost) : "—"}
+                </span>
+              );
+            },
+          },
+        ]
+      : []),
     {
       key: "actions",
       header: <span className="sr-only">{FORM_VI.action}</span>,

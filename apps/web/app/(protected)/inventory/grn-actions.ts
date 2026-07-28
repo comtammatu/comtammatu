@@ -10,6 +10,7 @@ import {
   isProcurementBranchInScope,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { messages } from "@lib/messages";
 import { resolveSoleGrnWarehouseLocation } from "@lib/inventory/grn-create-model";
 import { withAction } from "@/_lib/with-action";
@@ -18,6 +19,7 @@ import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { allocateInventoryDocNumber } from "./_lib/inventory-doc-number";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { dispatchNotificationOutbox } from "./notifications-actions";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 const ROLES = PROCUREMENT_ROLES;
 const grnLoadFailedError = messages.inventory.grn.loadFailed;
@@ -77,7 +79,7 @@ export type RecentActivityItem = {
   supplier: string;
   date: string; // ISO datetime
   status: string;
-  total: number | null;
+  monetary: { total: number } | null;
 };
 
 export async function fetchRecentActivity(
@@ -89,28 +91,55 @@ export async function fetchRecentActivity(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-
-  let poQuery = supabase
-    .from("purchase_orders")
-    .select(
-      "id, po_number, status, ordered_at, suppliers ( name ), purchase_order_items ( line_total )",
-    )
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const readClient = monetary.purchasePrice
+    ? (monetary.client ?? supabase)
+    : supabase;
+  let poQuery = (
+    monetary.purchasePrice
+      ? readClient
+          .from("purchase_orders")
+          .select(
+            "id, po_number, status, ordered_at, suppliers ( name ), purchase_order_items ( line_total )",
+          )
+      : readClient
+          .from("purchase_orders")
+          .select(
+            "id, po_number, status, ordered_at, suppliers ( name ), purchase_order_items ( id )",
+          )
+  )
     .eq("tenant_id", claims.tenant_id)
     .order("ordered_at", { ascending: false })
     .limit(5);
-  let grnQuery = supabase
-    .from("goods_received_notes")
-    .select(
-      "id, grn_number, status, received_date, suppliers ( name ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
-    )
+  let grnQuery = (
+    monetary.purchasePrice
+      ? readClient
+          .from("goods_received_notes")
+          .select(
+            "id, grn_number, status, received_date, suppliers ( name ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
+          )
+      : readClient
+          .from("goods_received_notes")
+          .select(
+            "id, grn_number, status, received_date, suppliers ( name ), grn_items ( id )",
+          )
+  )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false })
     .limit(5);
-  const invQuery = supabase
-    .from("supplier_invoices")
-    .select(
-      "id, invoice_number, matching_status, invoice_date, total_amount, suppliers ( name )",
-    )
+  const invQuery = (
+    monetary.purchasePrice
+      ? readClient
+          .from("supplier_invoices")
+          .select(
+            "id, invoice_number, matching_status, invoice_date, total_amount, suppliers ( name )",
+          )
+      : readClient
+          .from("supplier_invoices")
+          .select(
+            "id, invoice_number, matching_status, invoice_date, suppliers ( name )",
+          )
+  )
     .eq("tenant_id", claims.tenant_id)
     .order("invoice_date", { ascending: false })
     .limit(5);
@@ -142,7 +171,7 @@ export async function fetchRecentActivity(
         }> | null) ?? [];
       const hasAllPrices =
         lines.length > 0 && lines.every((l) => l.line_total != null);
-      const total = hasAllPrices
+      const total = monetary.purchasePrice && hasAllPrices
         ? lines.reduce((s, l) => s + Number(l.line_total), 0)
         : null;
       return {
@@ -153,7 +182,7 @@ export async function fetchRecentActivity(
           (po.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
         date: po.ordered_at ?? "",
         status: po.status,
-        total,
+        monetary: total == null ? null : { total },
       };
     }),
     ...(grnRes.data ?? []).map((grn) => {
@@ -165,15 +194,15 @@ export async function fetchRecentActivity(
         }> | null) ?? [];
       // Total received value = (received − rejected) × unit_cost (net into stock)
       const total =
-        lines.length > 0
+        monetary.purchasePrice && lines.length > 0
           ? lines.reduce(
-              (s, l) =>
-                s +
-                (Number(l.received_quantity ?? 0) -
-                  Number(l.rejected_quantity ?? 0)) *
-                  Number(l.unit_cost ?? 0),
-              0,
-            )
+            (s, l) =>
+              s +
+              (Number(l.received_quantity ?? 0) -
+                Number(l.rejected_quantity ?? 0)) *
+              Number(l.unit_cost ?? 0),
+            0,
+          )
           : null;
       return {
         id: grn.id,
@@ -183,7 +212,7 @@ export async function fetchRecentActivity(
           (grn.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
         date: grn.received_date ?? "",
         status: grn.status,
-        total,
+        monetary: total == null ? null : { total },
       };
     }),
     ...(invRes.data ?? []).map((inv) => ({
@@ -194,7 +223,10 @@ export async function fetchRecentActivity(
         (inv.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
       date: inv.invoice_date ?? "",
       status: inv.matching_status,
-      total: inv.total_amount ? Number(inv.total_amount) : null,
+      monetary:
+        monetary.purchasePrice && "total_amount" in inv && inv.total_amount
+          ? { total: Number(inv.total_amount) }
+          : null,
     })),
   ];
 
@@ -212,10 +244,16 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  let query = supabase
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const readClient = monetary.purchasePrice
+    ? (monetary.client ?? supabase)
+    : supabase;
+  let query = readClient
     .from("goods_received_notes")
     .select(
-      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost, quality_status, requires_review, baseline_variance_pct )",
+      monetary.purchasePrice
+        ? "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost, quality_status, requires_review, baseline_variance_pct )"
+        : "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( quality_status, requires_review )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false })
@@ -223,7 +261,37 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
   if (branchId != null) query = query.eq("branch_id", branchId);
   const { data, error } = await query;
   if (error) return { success: false, error: grnLoadFailedError };
-  return { success: true, data: data ?? [] };
+  const rows = (data ?? []).map((row) => {
+    const items = row.grn_items ?? [];
+    const total = monetary.purchasePrice
+      ? items.reduce(
+          (sum, item) =>
+            sum +
+            (Number(
+              "received_quantity" in item
+                ? item.received_quantity ?? 0
+                : 0,
+            ) -
+              Number(
+                "rejected_quantity" in item
+                  ? item.rejected_quantity ?? 0
+                  : 0,
+              )) *
+              Number("unit_cost" in item ? item.unit_cost ?? 0 : 0),
+          0,
+        )
+      : null;
+    return {
+      ...row,
+      monetary: total == null ? null : { total },
+      grn_items: items.map((item) => ({
+        id: "id" in item ? item.id : undefined,
+        quality_status: item.quality_status,
+        requires_review: item.requires_review,
+      })),
+    };
+  });
+  return { success: true, data: rows };
 }
 
 /* ─── fetchGrnIdsForDropdown ─── */
@@ -263,10 +331,14 @@ export async function fetchGrnDetail(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const grnQuery = supabase
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const readClient = monetary.purchasePrice
+    ? (monetary.client ?? supabase)
+    : supabase;
+  const grnQuery = readClient
     .from("goods_received_notes")
     .select(
-      "*, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders ( id, po_number, status )",
+      "id, tenant_id, branch_id, location_id, supplier_id, po_id, grn_number, status, received_date, notes, created_by, created_at, updated_at, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders ( id, po_number, status )",
     )
     .eq("tenant_id", claims.tenant_id);
   const { data: grn, error: e1 } = await (
@@ -288,11 +360,18 @@ export async function fetchGrnDetail(
       errorCode: "not_found",
     };
   }
-  const { data: lines, error: e2 } = await supabase
-    .from("grn_items")
-    .select(
-      "*, ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) )",
-    )
+  const linesQuery = monetary.purchasePrice
+    ? readClient
+        .from("grn_items")
+        .select(
+          "*, ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) )",
+        )
+    : readClient
+        .from("grn_items")
+        .select(
+          "id, grn_id, tenant_id, ingredient_id, po_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, requires_review, short_delivery_action, unit, entry_unit_id, quality_status, receiving_temperature, ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) )",
+        );
+  const { data: lines, error: e2 } = await linesQuery
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id);
   if (e2)
@@ -306,9 +385,56 @@ export async function fetchGrnDetail(
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
+  const projectedLines = (
+    (lines ?? []) as unknown as Array<Record<string, unknown>>
+  ).map((line) => ({
+    ...line,
+    monetary: monetary.purchasePrice
+      ? {
+          poUnitPrice:
+            "po_unit_price" in line && line.po_unit_price != null
+              ? Number(line.po_unit_price)
+              : null,
+          unitCost:
+            "unit_cost" in line ? Number(line.unit_cost ?? 0) : 0,
+          totalCost:
+            "total_cost" in line ? Number(line.total_cost ?? 0) : 0,
+          priceOverrideNote:
+            "price_override_note" in line
+              ? (line.price_override_note ?? null)
+              : null,
+          priceOverridePhotoUrl:
+            "price_override_photo_url" in line
+              ? (line.price_override_photo_url ?? null)
+              : null,
+          priceVariancePct:
+            "price_variance_pct" in line &&
+            line.price_variance_pct != null
+              ? Number(line.price_variance_pct)
+              : null,
+          baselineVariancePct:
+            "baseline_variance_pct" in line &&
+            line.baseline_variance_pct != null
+              ? Number(line.baseline_variance_pct)
+              : null,
+          baselineSampleN:
+            "baseline_sample_n" in line && line.baseline_sample_n != null
+              ? Number(line.baseline_sample_n)
+              : null,
+        }
+      : null,
+    po_unit_price: undefined,
+    unit_cost: undefined,
+    total_cost: undefined,
+    price_override_note: undefined,
+    price_override_photo_url: undefined,
+    price_variance_pct: undefined,
+    baseline_variance_pct: undefined,
+    baseline_sample_n: undefined,
+  }));
   return {
     success: true,
-    data: { grn, lines: lines ?? [], invoiceId: invoice?.id ?? null },
+    data: { grn, lines: projectedLines, invoiceId: invoice?.id ?? null },
   };
 }
 
@@ -498,7 +624,7 @@ export async function listMyGrnDrafts(
   let query = supabase
     .from("goods_received_notes")
     .select(
-      "id, supplier_id, branch_id, po_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), purchase_orders ( id, po_number ), grn_items ( id, quality_status, requires_review, baseline_variance_pct )",
+      "id, supplier_id, branch_id, po_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), purchase_orders ( id, po_number ), grn_items ( id, quality_status, requires_review )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("created_by", user.id)
@@ -750,9 +876,10 @@ export const upsertGrnLine = withAction(
       return { success: false, error: resolvedUnit.error };
     }
 
-    // D089: warehouse cannot set commercial price on draft. Preserve a
-    // previously synced unit_cost (> 0 from PO approve); otherwise placeholder 0.
-    const { data: existingLine } = await supabase
+    // Preserve the PO-synced cost internally; never expose it to operational roles.
+    const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+    const internalClient = monetary.client ?? createServiceClient();
+    const { data: existingLine } = await internalClient
       .from("grn_items")
       .select("unit_cost")
       .eq("tenant_id", claims.tenant_id)
@@ -780,13 +907,18 @@ export const upsertGrnLine = withAction(
           rejected_quantity: rejected,
           rejection_reason: data.rejectionReason ?? null,
           rejected_photo_url: data.rejectedPhotoUrl ?? null,
-          price_override_note: data.priceOverrideNote ?? null,
-          price_override_photo_url: data.priceOverridePhotoUrl ?? null,
+          ...(monetary.purchasePrice
+            ? {
+                price_override_note: data.priceOverrideNote ?? null,
+                price_override_photo_url:
+                  data.priceOverridePhotoUrl ?? null,
+              }
+            : {}),
           short_delivery_action: data.shortDeliveryAction ?? null,
         },
         { onConflict: "grn_id,ingredient_id,tenant_id" },
       )
-      .select("id, baseline_variance_pct, baseline_sample_n")
+      .select("id, requires_review")
       .single();
     if (error?.message.includes("supplier_item_mapping_required")) {
       return {

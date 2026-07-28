@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js App Router phục vụ Owner surface, Branch home, POS/KDS và
+Ứng dụng Next.js App Router phục vụ control_surface, Branch home, POS/KDS và
 public/auth. Package manifest sở hữu phiên bản framework;
 route runtime và generated matrix sở hữu danh sách route hiện hành.
 
@@ -32,7 +32,7 @@ owner; Branch Manager dùng L1 Branch Command dưới
 | ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | Root entry        | `/`                                                                                                          | Single-branch resolver                                 | `getDefaultRedirect(claims)`: branch-pinned staff → `/br/{branchId}`; Owner → `/`, rồi tự mở khi có đúng một active `branch` kind. Central kinds không phải operator scope. | Nhiều operating branch mới hiện picker; route scope sai fail closed.                         |
 | Public / auth     | `/login`, `/access-denied`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login` hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                                                                                              | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.     |
-| Owner surface   | Owner-only `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`            | `/`                                               | `OwnerModuleShell`, `FinanceShell`, và `InventoryShell` cùng dùng Owner nav. `/` là LANDING; Settings và module con dùng deep-nav tương ứng.                      | Breadcrumb root là `Owner surface`; filter/tab state giữ trong URL, không lưu local state. |
+| control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `OwnerModuleShell`, `FinanceShell`, và `InventoryShell` cùng dùng nav L0. `/` là LANDING; Settings và module con dùng deep-nav tương ứng. Actor theo D088/role-route-matrix. | Breadcrumb root là `Quản trị` (`control_surface`); filter/tab state giữ trong URL, không lưu local state. |
 | Utility           | `/notifications/*`                                                                                           | Link kèm `returnTo`                                    | Không là product plane; dùng trang độc lập và quay lại context gọi.                                                                                                         | Không có sidebar riêng.                                                                      |
 | Branch operations | `/br/[branchId]/*`, gồm landing, dashboard, shift, profile, stock, pos, kds, runner, settings                    | `/br/[branchId]`                                       | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Owner. Staff discovery vẫn có thể link sang Runner display public.         | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.       |
 | Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                         | `/br/[branchId]/shift`                                 | Dùng Branch runtime bottom nav và shared Employee components; URL luôn mang `branchId`.                                                                                      | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.      |
@@ -48,7 +48,7 @@ route contract thay đổi.
 
 ## Thành phần chính
 
-### Khung Owner surface (`apps/web/app/components/owner-module-shell.tsx`)
+### Khung control_surface (`apps/web/app/components/owner-module-shell.tsx`)
 
 Shell dùng chung cho admin/menu/hr/orders; với route `/*` thành phần này render:
 
@@ -68,14 +68,14 @@ Component "use client". Dùng React Hook Form + Zod validation. Gọi server act
 
 Server action có rate limiting (`loginRateLimit` từ `@comtammatu/security`). Validate bằng Zod, gọi `signInWithPassword()`, trích xuất claims, redirect qua `resolvePostLoginRedirect()`.
 
-## Inventory Owner surface hiện tại
+## Inventory control_surface hiện tại
 
 ### Dual-plane IA (ADR 0012 / 0018)
 
-- **Owner** `/inventory/*` — AppShell + short sidebar; site filter mọi
+- **control_surface** `/inventory/*` — AppShell + short sidebar; site filter mọi
   `branch_kind` ngang hàng (`branch`, `central_supply`, `central_kitchen`).
 - **Branch Stock** `/br/[branchId]/stock/*` — plane ca riêng; không mirror
-  Owner shell/tile/primary CTA.
+  control_surface shell/tile/primary CTA.
 - Record Depth có thể khớp theo loại chứng từ; IA/nav/chrome **không** gộp.
 
 ### IA theo workflow
@@ -167,10 +167,10 @@ Browser request
 - **Proxy là cổng auth duy nhất:** Mọi enforcement auth xảy ra trong `proxy.ts`
   trước khi route code chạy; layout/page đọc invariant, không dựng gate thứ hai.
 - **Mặc định RSC:** Các page là React Server Components. Chỉ phần tử tương tác (form, dropdown) dùng "use client".
-- **Owner surface là Owner-only:** giữ các control L0 cho Owner; Branch Manager dùng `/br/[branchId]/*` và workflow Branch-native.
+- **control_surface là Owner-only:** giữ các control L0 cho Owner; Branch Manager dùng `/br/[branchId]/*` và workflow Branch-native.
 - **Inventory là surface độc lập:** `/inventory` là domain vận hành Inventory canonical.
 - **Staff runtime đã live:** profile, clock, attendance, schedule, leave request,
-  và payslip nằm trong Branch. HR Owner surface và `/hr/payroll/*` chỉ dành
+  và payslip nằm trong Branch. HR control_surface và `/hr/payroll/*` chỉ dành
   cho Owner.
 - **Finance mặc định là tài chính vận hành:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Sổ kế toán doanh nghiệp, BCTC và đóng/mở lại kỳ chưa nằm trong app surface hiện tại.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ config danh mục nguyên liệu, đơn vị, một ngưỡng tồn `Min`, và QC; `page.tsx` redirect theo permission về categories/units/qc. Catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`.

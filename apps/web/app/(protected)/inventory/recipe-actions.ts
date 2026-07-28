@@ -3,8 +3,8 @@
 import { z } from "zod";
 import {
   PERMISSION_KEYS,
-  INVENTORY_OPS_ROLES,
   INVENTORY_CATALOG_ROLES,
+  INVENTORY_OPS_ROLES,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
@@ -12,6 +12,7 @@ import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 /* ─── Recipes (branch WAC + menu-item recipes) ─── */
 
@@ -42,8 +43,12 @@ export async function fetchRecipes(): Promise<ActionResult> {
     PERMISSION_KEYS.INVENTORY_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const { data, error } = await supabase
+  const { claims } = ctx;
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  if (!monetary.purchasePrice || !monetary.client) {
+    return { success: false, error: "Không có quyền" };
+  }
+  const { data, error } = await monetary.client
     .from("menu_items")
     .select(
       `
@@ -72,24 +77,45 @@ export async function fetchRecipes(): Promise<ActionResult> {
     });
     return { success: false, error: messages.inventory.recipes.loadFailed };
   }
-  return { success: true, data: data ?? [] };
+  const rows = (data ?? []).map((menuItem) => ({
+    ...menuItem,
+    recipes: (menuItem.recipes ?? []).map((recipe) => {
+      const ingredient = recipe.ingredients;
+      if (!ingredient) return recipe;
+      const { unit_cost, ...safeIngredient } = ingredient;
+      return {
+        ...recipe,
+        ingredients: {
+          ...safeIngredient,
+          monetary: {
+            unitCost: unit_cost == null ? null : Number(unit_cost),
+          },
+        },
+      };
+    }),
+  }));
+  return { success: true, data: rows };
 }
 
 // WAC = the actual average cost (avg_unit_cost) in branch stock levels.
 export async function fetchBranchWacMap(
   branchId?: number | null,
-): Promise<ActionResult<Record<string, number>>> {
+): Promise<ActionResult<{ monetary: Record<string, number> }>> {
   const parsedBranchId = optionalBranchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Chi nhánh không hợp lệ." };
   }
 
   const ctx = await getAuthContextWithPermission(
-    INVENTORY_OPS_ROLES,
-    PERMISSION_KEYS.INVENTORY_READ,
+    INVENTORY_CATALOG_ROLES,
+    PERMISSION_KEYS.INVENTORY_VALUATION_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  if (!monetary.valuation || !monetary.client) {
+    return { success: false, error: "Không có quyền" };
+  }
 
   const stockBearingLocationIds = await fetchStockBearingLocationIds({
     supabase,
@@ -97,10 +123,10 @@ export async function fetchBranchWacMap(
     branchId: parsedBranchId.data ?? undefined,
   });
   if (stockBearingLocationIds.length === 0) {
-    return { success: true, data: {} };
+    return { success: true, data: { monetary: {} } };
   }
 
-  let query = supabase
+  let query = monetary.client
     .from("stock_levels")
     .select("ingredient_id, avg_unit_cost, branch_id")
     .eq("tenant_id", claims.tenant_id)
@@ -141,7 +167,7 @@ export async function fetchBranchWacMap(
   for (const [id, e] of accum) {
     map[String(id)] = e.sum / e.count;
   }
-  return { success: true, data: map };
+  return { success: true, data: { monetary: map } };
 }
 
 // Live recipe × warehouse-stock sellable portions per dish for one branch.

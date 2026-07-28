@@ -20,6 +20,7 @@ export const PERMISSION_KEYS = {
 
   // inventory
   INVENTORY_READ: "inventory:read",
+  INVENTORY_VALUATION_READ: "inventory:valuation_read",
   INVENTORY_WRITE: "inventory:write",
   INVENTORY_STOCKTAKE_CREATE: "inventory:stocktake_create",
   INVENTORY_STOCKTAKE_COMPLETE: "inventory:stocktake_complete",
@@ -144,7 +145,7 @@ export type PermissionKey =
  * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
  * by a string-match test; bump when a migration adds/removes a catalog key.
  */
-export const PERMISSION_KEY_COUNT = 92;
+export const PERMISSION_KEY_COUNT = 93;
 
 /**
  * Pure function: check if a permission set contains a given key.

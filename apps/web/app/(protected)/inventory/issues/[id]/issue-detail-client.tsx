@@ -56,6 +56,7 @@ import {
   AppSection,
   DescriptionList,
 } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { PhotoUploadInput } from "@/components/form";
 import { AuditHistoryList } from "../../_components/audit-history-list";
@@ -87,10 +88,12 @@ const ISSUES_VI = messages.inventory.issues;
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
 const historySectionTitle = "Lịch sử chỉnh sửa";
+const documentTabLabel = "Phiếu xuất";
+const historyTabLabel = "Lịch sử";
 
 type IssueIngredientRow = IngredientRow & {
   current_quantity?: number;
-  avg_unit_cost?: number | null;
+  stockMonetary?: { avgUnitCost: number | null } | null;
 };
 
 type IssueRecord = {
@@ -112,8 +115,7 @@ type IssueLine = {
   quantity: number;
   unit: string;
   entry_unit_id: number | null;
-  unit_cost: number;
-  total_cost: number;
+  monetary: { unitCost: number; totalCost: number } | null;
   reason: string | null;
   photo_urls: string[];
   ingredients: { id: number; name: string; unit: string } | null;
@@ -124,6 +126,7 @@ type AddIssueLineDialogProps = {
   isOpen: boolean;
   issueId: number;
   tenantId: number;
+  canViewMonetary: boolean;
   showConsumptionPhoto: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void>;
@@ -193,6 +196,7 @@ export function IssueDetailClient({
   initialIssue,
   initialLines,
   ingredients,
+  canViewMonetary,
   canAdjustStock,
   auditLogs = [],
   listBasePath = "/inventory/consumption",
@@ -202,6 +206,7 @@ export function IssueDetailClient({
   initialIssue: IssueRecord;
   initialLines: IssueLine[];
   ingredients: IssueIngredientRow[];
+  canViewMonetary: boolean;
   canAdjustStock: boolean;
   auditLogs?: AuditLogRow[];
   listBasePath?: string;
@@ -220,22 +225,9 @@ export function IssueDetailClient({
   const statusBadge = getStatusBadgeMeta("inventory", issue.status);
   const issueBranchName =
     issue.branches?.name ?? ISSUES_VI.branchRef(issue.branch_id);
-  const ingredientById = useMemo(
-    () => new Map(ingredients.map((ingredient) => [ingredient.id, ingredient])),
-    [ingredients],
-  );
-  const lineBaseQuantity = useCallback(
-    (line: IssueLine) => {
-      const issueUnit = getIssueUnitOptions(
-        ingredientById.get(line.ingredient_id),
-      ).find((option) => option.unitId === line.entry_unit_id);
-      return Number(line.quantity ?? 0) * (issueUnit?.toBaseFactor ?? 1);
-    },
-    [ingredientById],
-  );
   const lineAmount = useCallback(
-    (line: IssueLine) => lineBaseQuantity(line) * Number(line.unit_cost ?? 0),
-    [lineBaseQuantity],
+    (line: IssueLine) => Number(line.monetary?.totalCost ?? 0),
+    [],
   );
 
   const totalAmount = useMemo(
@@ -361,18 +353,23 @@ export function IssueDetailClient({
         </span>
       ),
     },
-    {
-      key: "unitCost",
-      header: ISSUES_VI.unitCostWac,
-      className: "text-right font-medium",
-      render: (line) => formatVND(Number(line.unit_cost ?? 0)),
-    },
-    {
-      key: "total",
-      header: FORM_VI.amount,
-      className: "text-right",
-      render: (line) => formatVND(lineAmount(line)),
-    },
+    ...(canViewMonetary
+      ? [
+          {
+            key: "unitCost",
+            header: ISSUES_VI.unitCostWac,
+            className: "text-right font-medium",
+            render: (line: IssueLine) =>
+              formatVND(Number(line.monetary?.unitCost ?? 0)),
+          },
+          {
+            key: "total",
+            header: FORM_VI.amount,
+            className: "text-right",
+            render: (line: IssueLine) => formatVND(lineAmount(line)),
+          },
+        ]
+      : []),
     {
       key: "reason",
       header: tTerm("issueReason"),
@@ -476,6 +473,7 @@ export function IssueDetailClient({
                     isDraft={isDraft}
                     isPending={isPending}
                     amount={lineAmount(item)}
+                    canViewMonetary={canViewMonetary}
                     onDelete={handleDeleteLine}
                   />
                 )}
@@ -495,35 +493,30 @@ export function IssueDetailClient({
                     {String(lines.length).padStart(2, "0")}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {ISSUES_VI.goodsSubtotalColon}
-                  </span>
-                  <span className="font-bold">{formatVND(totalAmount)}</span>
-                </div>
-                <div className="flex items-end justify-between border-t border-border pt-3">
-                  <span className="text-sm font-bold">
-                    {ISSUES_VI.grandTotalCaps}
-                  </span>
-                  <div className="text-right">
-                    <span className="block font-mono text-xl font-semibold leading-none tabular-nums text-primary">
-                      {messages.inventory.common.currency(
-                        formatVND(totalAmount),
-                      )}
-                    </span>
-                  </div>
-                </div>
+                {canViewMonetary ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {ISSUES_VI.goodsSubtotalColon}
+                      </span>
+                      <span className="font-bold">{formatVND(totalAmount)}</span>
+                    </div>
+                    <div className="flex items-end justify-between border-t border-border pt-3">
+                      <span className="text-sm font-bold">
+                        {ISSUES_VI.grandTotalCaps}
+                      </span>
+                      <div className="text-right">
+                        <span className="block font-mono text-xl font-semibold leading-none tabular-nums text-primary">
+                          {messages.inventory.common.currency(
+                            formatVND(totalAmount),
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </Item>
-          </AppSection>
-
-          {/* Audit History (Collapsible) */}
-          <AppSection
-            title={historySectionTitle}
-            collapsible={true}
-            defaultOpen={false}
-          >
-            <AuditHistoryList logs={auditLogs} />
           </AppSection>
         </div>
 
@@ -550,7 +543,7 @@ export function IssueDetailClient({
                   term: ISSUES_VI.sourceLabel,
                   description: getIssueSourceLabel(issue),
                 },
-                {
+                ...(canViewMonetary ? [{
                   term: ISSUES_VI.totalValue,
                   description: (
                     <span className="text-primary font-bold">
@@ -559,7 +552,7 @@ export function IssueDetailClient({
                       )}
                     </span>
                   ),
-                },
+                }] : []),
               ]}
             />
           </AppSection>
@@ -609,10 +602,28 @@ export function IssueDetailClient({
     </div>
   );
 
-  const content = isTouchLayout ? (
-    <div className="min-w-0">{pageLayout}</div>
-  ) : (
-    pageLayout
+  const tabs = (
+    <AppPageTabs
+      items={[
+        { value: "document", label: documentTabLabel },
+        {
+          value: "history",
+          label: historyTabLabel,
+          count: auditLogs.length,
+        },
+      ]}
+      defaultValue="document"
+      stickyList
+    >
+      <TabsContent value="document" className="mt-4">
+        {isTouchLayout ? <div className="min-w-0">{pageLayout}</div> : pageLayout}
+      </TabsContent>
+      <TabsContent value="history" className="mt-4">
+        <AppSection title={historySectionTitle}>
+          <AuditHistoryList logs={auditLogs} />
+        </AppSection>
+      </TabsContent>
+    </AppPageTabs>
   );
 
   return (
@@ -635,11 +646,12 @@ export function IssueDetailClient({
           </AppBackLink>
         }
       />
-      {content}
+      {tabs}
       <AddIssueLineDialog
         ingredients={ingredients}
         isOpen={addDialogOpen}
         issueId={issueId}
+        canViewMonetary={canViewMonetary}
         tenantId={tenantId}
         showConsumptionPhoto={issue.issue_type === "consumption"}
         onOpenChange={setAddDialogOpen}
@@ -653,6 +665,7 @@ function AddIssueLineDialog({
   ingredients,
   isOpen,
   issueId,
+  canViewMonetary,
   tenantId,
   showConsumptionPhoto,
   onOpenChange,
@@ -717,11 +730,13 @@ function AddIssueLineDialog({
         const quantity = Number(quantityValue || 0);
         const quantityError = form.formState.errors.quantity;
         const baseQuantity = getIssueBaseQuantity(quantity, selectedIssueUnit);
-        const wac = Number(
-          selectedIngredient?.avg_unit_cost ??
-            selectedIngredient?.unit_cost ??
-            0,
-        );
+        const wac = canViewMonetary
+          ? Number(
+              selectedIngredient?.stockMonetary?.avgUnitCost ??
+                selectedIngredient?.monetary?.unitCost ??
+                0,
+            )
+          : 0;
         const availableQuantity = Number(
           selectedIngredient?.current_quantity ?? 0,
         );
@@ -884,14 +899,16 @@ function AddIssueLineDialog({
 
             <Frame className="border-border/60 bg-muted/30 p-3">
               <div className="grid gap-2 text-sm sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    {ISSUES_VI.unitCostWac}
-                  </p>
-                  <p className="font-mono font-semibold tabular-nums">
-                    {wac > 0 ? formatVND(wac) : inventoryCommon.noValue}
-                  </p>
-                </div>
+                {canViewMonetary ? (
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {ISSUES_VI.unitCostWac}
+                    </p>
+                    <p className="font-mono font-semibold tabular-nums">
+                      {wac > 0 ? formatVND(wac) : inventoryCommon.noValue}
+                    </p>
+                  </div>
+                ) : null}
                 <div>
                   <p className="text-xs text-muted-foreground">
                     {stockCopy.table.availableStock}
@@ -902,20 +919,22 @@ function AddIssueLineDialog({
                       : inventoryCommon.noValue}
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    {FORM_VI.value}
-                  </p>
-                  <p className="font-mono font-semibold tabular-nums text-primary">
-                    {previewValue > 0
-                      ? formatVND(previewValue)
-                      : inventoryCommon.noValue}
-                  </p>
-                </div>
+                {canViewMonetary ? (
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {FORM_VI.value}
+                    </p>
+                    <p className="font-mono font-semibold tabular-nums text-primary">
+                      {previewValue > 0
+                        ? formatVND(previewValue)
+                        : inventoryCommon.noValue}
+                    </p>
+                  </div>
+                ) : null}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
+              {canViewMonetary ? <p className="mt-2 text-xs text-muted-foreground">
                 {ISSUES_VI.wacAutoHint}
-              </p>
+              </p> : null}
             </Frame>
 
             <TextareaField
@@ -954,12 +973,14 @@ function IssueLineMobileCard({
   isDraft,
   isPending,
   amount,
+  canViewMonetary,
   onDelete,
 }: {
   item: IssueLine;
   isDraft: boolean;
   isPending: boolean;
   amount: number;
+  canViewMonetary: boolean;
   onDelete: (lineId: number) => void;
 }) {
   return (
@@ -1001,16 +1022,16 @@ function IssueLineMobileCard({
               {item.unit ?? item.ingredients?.unit ?? "—"}
             </p>
           </div>
-          <div>
+          {canViewMonetary ? <div>
             <p className="text-muted-foreground">{ISSUES_VI.unitCostWac}</p>
             <p className="font-semibold">
-              {formatVND(Number(item.unit_cost ?? 0))}
+              {formatVND(Number(item.monetary?.unitCost ?? 0))}
             </p>
-          </div>
-          <div>
+          </div> : null}
+          {canViewMonetary ? <div>
             <p className="text-muted-foreground">{FORM_VI.amount}</p>
             <p className="font-semibold text-primary">{formatVND(amount)}</p>
-          </div>
+          </div> : null}
         </div>
       </ItemContent>
       <ItemFooter className="basis-full">

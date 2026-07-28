@@ -29,6 +29,7 @@ import {
   DescriptionList,
   AppDetailFooter,
 } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import {
   DataTable,
@@ -56,6 +57,8 @@ const inventoryCommon = messages.inventory.common;
 
 const eyebrowLabel = "Kho hàng";
 const historySectionTitle = "Lịch sử chỉnh sửa";
+const documentTabLabel = "Phiếu kiểm kê";
+const historyTabLabel = "Lịch sử";
 const summarySectionTitle = "Tổng quan phiên";
 const labelCreator = "Người tạo";
 const labelCompletedAt = "Hoàn tất lúc";
@@ -372,15 +375,48 @@ export function StocktakeDetailClient({
     </div>
   );
 
-  const historySection = (
-    <AppSection
-      title={historySectionTitle}
-      size="sm"
-      collapsible
-      defaultOpen={false}
-    >
+  const historyPane = (
+    <AppSection title={historySectionTitle} size="sm">
       <AuditHistoryList logs={auditLogs} />
     </AppSection>
+  );
+
+  const documentPane = (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
+      <div className="flex flex-col gap-4">{mainContent}</div>
+      <div className="flex flex-col gap-4 lg:sticky lg:top-4">
+        {summarySection}
+      </div>
+    </div>
+  );
+
+  const tabs = (
+    <AppPageTabs
+      items={[
+        { value: "document", label: documentTabLabel },
+        {
+          value: "history",
+          label: historyTabLabel,
+          count: auditLogs.length,
+        },
+      ]}
+      defaultValue="document"
+      stickyList={!embedded}
+    >
+      <TabsContent value="document" className="mt-4">
+        {embedded ? (
+          <>
+            {summarySection}
+            {mainContent}
+          </>
+        ) : (
+          documentPane
+        )}
+      </TabsContent>
+      <TabsContent value="history" className="mt-4">
+        {historyPane}
+      </TabsContent>
+    </AppPageTabs>
   );
 
   if (embedded) {
@@ -412,9 +448,7 @@ export function StocktakeDetailClient({
             {statusLabel}
           </Badge>
         </div>
-        {summarySection}
-        {mainContent}
-        {historySection}
+        {tabs}
         {stocktakeActions ? (
           <AppDetailFooter
             sticky
@@ -442,15 +476,7 @@ export function StocktakeDetailClient({
         }
         actions={stocktakeActions}
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
-        <div className="flex flex-col gap-4">
-          {mainContent}
-          {historySection}
-        </div>
-        <div className="flex flex-col gap-4 lg:sticky lg:top-4">
-          {summarySection}
-        </div>
-      </div>
+      {tabs}
     </AppPage>
   );
 }

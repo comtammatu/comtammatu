@@ -17,9 +17,13 @@ function read(path: string): string {
 }
 
 test("Wave D waste create line cards use AppSection, not Frame", () => {
-  const client = read(
+  const wrapper = read(
     "app/(protected)/inventory/waste/new/waste-create-client.tsx",
   );
+  const form = read(
+    "app/(protected)/inventory/waste/waste-operational-form.tsx",
+  );
+  const client = `${wrapper}\n${form}`;
 
   assert.match(client, /DocumentFormFrame/, "waste create: DocumentFormFrame");
   assert.match(client, /AppSection/, "waste create: AppSection line cards");

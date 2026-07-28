@@ -16,6 +16,7 @@ import type {
   IssueRow,
   RecordedConsumptionRow,
 } from "./issues-client";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 function toNumber(value: unknown): number {
   const parsed = Number(value ?? 0);
@@ -143,16 +144,28 @@ export async function IssuesPageContent({
   });
   if (scope.outOfScope) notFound();
   const branchFilter = scope.selectedBranchId ?? undefined;
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const movementReadClient = monetary.valuation
+    ? (monetary.client ?? supabase)
+    : supabase;
 
   // Internal-issue scope hides the sale_consumption ledger entirely; skip the
   // query so the client renders no recordedConsumptions section. Other scopes
   // fetch it in parallel with the stock-issue list.
   let recordedConsumptionQuery = scopeConfig.showRecordedConsumptions
-    ? supabase
-        .from("stock_movements")
-        .select(
-          "id, branch_id, location_id, ingredient_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
-        )
+    ? (
+        monetary.valuation
+          ? movementReadClient
+              .from("stock_movements")
+              .select(
+                "id, branch_id, location_id, ingredient_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+              )
+          : movementReadClient
+              .from("stock_movements")
+              .select(
+                "id, branch_id, location_id, ingredient_id, quantity_change, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+              )
+      )
         .eq("tenant_id", claims.tenant_id)
         .eq("type", "consumption")
         .eq("movement_subtype", "sale_consumption")
@@ -231,7 +244,10 @@ export async function IssuesPageContent({
       > | null;
       const ingredient = row.ingredients as Record<string, unknown> | null;
       const quantity = Math.abs(toNumber(row.quantity_change));
-      const unitCost = toNumber(row.unit_cost);
+      const unitCost =
+        monetary.valuation && "unit_cost" in row
+          ? toNumber(row.unit_cost)
+          : 0;
       const unit = getEmbeddedIngredientBaseUnitDisplayName(ingredient) ?? "";
 
       return {
@@ -248,9 +264,13 @@ export async function IssuesPageContent({
         ingredientName: (ingredient?.name as string) ?? "—",
         quantity: unit ? `${formatQty(quantity)} ${unit}` : formatQty(quantity),
         sourceLabel: movementSourceLabel(row.reason),
-        unitCost: formatUnitCost(unitCost, unit),
-        totalCost: formatVND(quantity * unitCost),
-        totalCostValue: quantity * unitCost,
+        monetary: monetary.valuation
+          ? {
+              unitCost: formatUnitCost(unitCost, unit),
+              totalCost: formatVND(quantity * unitCost),
+              totalCostValue: quantity * unitCost,
+            }
+          : null,
       };
     });
 
@@ -263,6 +283,7 @@ export async function IssuesPageContent({
     <IssuesClient
       issues={issues}
       recordedConsumptions={recordedConsumptions}
+      canViewMonetary={monetary.valuation}
       branches={branches}
       defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
       recordedBranchId={branchFilter ?? claims.branch_id ?? null}

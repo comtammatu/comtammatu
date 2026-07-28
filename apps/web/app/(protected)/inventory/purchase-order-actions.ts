@@ -9,9 +9,21 @@ import {
 } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, type ActionContext } from "@/_lib/with-action";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 const poIdSchema = z.object({
   poId: z.coerce.number().int().positive(),
+});
+
+const poPricesSchema = poIdSchema.extend({
+  lines: z
+    .array(
+      z.object({
+        lineId: z.coerce.number().int().positive(),
+        unitPrice: z.coerce.number().positive(),
+      }),
+    )
+    .min(1),
 });
 
 const poSchema = z
@@ -71,6 +83,10 @@ export const createPurchaseOrderWithLines = withAction(
     permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
   },
   async (data, { supabase, claims }) => {
+    const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+    if (!monetary.purchasePrice) {
+      return { success: false, error: "Không có quyền nhập giá mua." };
+    }
     if (
       !isProcurementBranchInScope(
         claims.user_role,
@@ -221,6 +237,60 @@ export const createPurchaseOrderFromGrn = withAction(
       success: true,
       data: { id: parsed.data.po_id, displayId: parsed.data.display_id },
     };
+  },
+);
+
+export const updatePurchaseOrderPrices = withAction(
+  {
+    roles: PO_MUTATE_ROLES,
+    schema: poPricesSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  },
+  async ({ poId, lines }, { supabase, claims }) => {
+    const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+    if (!monetary.purchasePrice) {
+      return { success: false, error: "Không có quyền nhập giá mua." };
+    }
+    const { data: po, error: loadError } = await supabase
+      .from("purchase_orders")
+      .select("branch_id, status")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("id", poId)
+      .maybeSingle();
+
+    if (loadError || !po) {
+      return { success: false, error: "Không tìm thấy đơn đặt hàng." };
+    }
+    if (
+      !isProcurementBranchInScope(
+        claims.user_role,
+        claims.branch_id,
+        po.branch_id,
+      )
+    ) {
+      return { success: false, error: "Đơn đặt hàng nằm ngoài phạm vi chi nhánh." };
+    }
+    if (po.status !== "draft") {
+      return { success: false, error: "Chỉ cập nhật giá cho đơn mua đang nháp." };
+    }
+
+    const { error } = await supabase.rpc(
+      "update_purchase_order_prices_protected" as never,
+      {
+        p_po_id: poId,
+        p_lines: lines.map((line) => ({
+          line_id: line.lineId,
+          unit_price: line.unitPrice,
+        })),
+      } as never,
+    );
+    if (error) {
+      return { success: false, error: "Không thể lưu giá mua." };
+    }
+
+    revalidateSurfacePath("/inventory/purchase-orders");
+    revalidateSurfacePath("/inventory/grn");
+    return { success: true };
   },
 );
 

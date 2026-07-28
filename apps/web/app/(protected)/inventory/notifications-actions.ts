@@ -4,7 +4,7 @@ import {
   PERMISSION_KEYS,
   SUPPLIER_RETURN_ROLES,
 } from "@comtammatu/shared/auth";
-import { formatPercent } from "@comtammatu/shared/format";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
 
@@ -24,7 +24,7 @@ export async function dispatchNotificationOutbox(): Promise<ActionResult> {
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
-  const { data: settings } = await supabase
+  const { data: settings } = await createServiceClient()
     .from("inventory_qc_settings")
     .select("alert_webhook_url")
     .eq("tenant_id", claims.tenant_id)
@@ -116,23 +116,18 @@ export async function dispatchNotificationOutbox(): Promise<ActionResult> {
 type OutboxPayload = Record<string, unknown>;
 
 function formatPayload(topic: string, payload: OutboxPayload): unknown {
-  const text = formatTopicText(topic, payload);
-  return { topic, text, payload };
+  const safePayload = sanitizePayload(payload);
+  const text = formatTopicText(topic, safePayload);
+  return { topic, text, payload: safePayload };
 }
 
 function formatTopicText(topic: string, payload: OutboxPayload): string {
   if (topic === "grn.requires_review") {
-    const variance = Number(payload.price_variance_pct);
-    const varianceLabel = Number.isFinite(variance)
-      ? formatPercent(variance, 2)
-      : "?";
     return [
-      `🚨 Phiếu nhập cần kiểm tra giá lệch ${varianceLabel}`,
+      "🚨 Phiếu nhập cần Kế toán kiểm tra giá",
       `Phiếu: ${payload.grn_number ?? "?"} (${payload.branch_name ?? "?"})`,
       `NCC: ${payload.supplier_name ?? "?"}`,
       `Nguyên liệu: ${payload.ingredient_name ?? "?"}`,
-      `Giá đơn đặt hàng: ${payload.po_unit_price ?? "?"} → giá nhập: ${payload.unit_cost ?? "?"}`,
-      payload.override_note ? `Lý do: ${payload.override_note}` : null,
     ]
       .filter(Boolean)
       .join("\n");
@@ -142,8 +137,26 @@ function formatTopicText(topic: string, payload: OutboxPayload): string {
       `📦 Phiếu trả NCC mới: ${payload.return_number ?? "?"}`,
       `NCC: ${payload.supplier_name ?? "?"} • Kho: ${payload.branch_name ?? "?"}`,
       `Lý do: ${payload.reason ?? "?"} • Cách xử lý: ${payload.resolution ?? "?"}`,
-      `Giá trị: ${payload.total_value ?? 0}đ`,
     ].join("\n");
   }
   return `Inventory event: ${topic}`;
+}
+
+const MONETARY_PAYLOAD_KEYS = new Set([
+  "po_unit_price",
+  "unit_cost",
+  "total_cost",
+  "total_value",
+  "price_variance_pct",
+  "baseline_variance_pct",
+  "override_note",
+  "override_photo_url",
+]);
+
+function sanitizePayload(payload: OutboxPayload): OutboxPayload {
+  return Object.fromEntries(
+    Object.entries(payload).filter(
+      ([key]) => !MONETARY_PAYLOAD_KEYS.has(key),
+    ),
+  );
 }

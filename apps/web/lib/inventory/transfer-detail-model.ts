@@ -13,17 +13,18 @@ export interface TransferDetail {
   createdBy: string;
   date: string;
   note: string | null;
-  subtotal: number;
-  shipping: number;
-  total: number;
+  monetary: {
+    subtotal: number;
+    shipping: number;
+    total: number;
+  } | null;
   items: Array<{
     ingredientId: number;
     name: string;
     sku: string;
     qty: number;
     unit: string;
-    cost: number;
-    total: number;
+    monetary: { cost: number; total: number } | null;
     received: number | null;
   }>;
 }

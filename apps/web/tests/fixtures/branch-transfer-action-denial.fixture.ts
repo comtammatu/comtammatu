@@ -6,6 +6,10 @@ const authModule = new URL(
   "../../app/(protected)/inventory/_lib/auth.ts",
   import.meta.url,
 );
+const monetaryAccessModule = new URL(
+  "../../lib/inventory/monetary-access.ts",
+  import.meta.url,
+);
 
 mock.module(authModule.href, {
   namedExports: {
@@ -24,6 +28,17 @@ mock.module(authModule.href, {
       user: {},
     }),
     getAuthContextWithPermission: async () => null,
+  },
+});
+
+mock.module(monetaryAccessModule.href, {
+  namedExports: {
+    loadInventoryMonetaryAccess: async () => ({
+      purchasePrice: false,
+      valuation: false,
+      systemValuation: false,
+      client: null,
+    }),
   },
 });
 

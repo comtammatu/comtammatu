@@ -4,10 +4,6 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 import { normalizePgDumpSql } from "./sql-test-utils";
 import {
-  lineTotalFromUnitCost,
-  unitCostFromLineTotal,
-} from "../lib/inventory/grn-draft";
-import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "../lib/inventory/purchase-units";
@@ -69,13 +65,6 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
   const nonBase = options.find((o) => o.code === "Thùng");
   assert.equal(nonBase?.unitId, 200);
   assert.equal(nonBase?.isBase, false);
-});
-
-test("GRN line amount entry derives unit cost from the entered line total", () => {
-  const unitCost = unitCostFromLineTotal(0.3, 30000);
-
-  assert.equal(unitCost, 100000);
-  assert.equal(lineTotalFromUnitCost(0.3, unitCost), 30000);
 });
 
 test("getPurchaseUnitOptions excludes an is_active=false unit (inv_to_base would reject it)", () => {
@@ -169,7 +158,7 @@ test("getPurchaseUnitOptions includes every active ingredient unit", () => {
 
 test("reference cost uses display and selected units instead of raw base-unit cost", () => {
   const ingredient = {
-    unit_cost: 50,
+    monetary: { unitCost: 50 },
     units: [
       {
         id: 1,
@@ -276,7 +265,7 @@ test("GRN warehouse draft does not require unit price (D089)", () => {
     "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
 
-  assert.match(controller, /const unitCost = 0/);
+  assert.doesNotMatch(controller, /unitCost/);
   assert.doesNotMatch(controller, /hasMissingPrice/);
   assert.doesNotMatch(controller, /toastMissingPrices/);
   assert.doesNotMatch(editor, /edit\.unitCost != null/);

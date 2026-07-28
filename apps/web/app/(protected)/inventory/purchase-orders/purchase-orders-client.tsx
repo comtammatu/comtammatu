@@ -8,6 +8,7 @@ import {
   Eye as IconEye,
   PackagePlus as IconPackagePlus,
   Plus as IconPlus,
+  Save as IconSave,
   Search as IconSearch,
   ShoppingCart as IconShoppingCart,
   Trash2 as IconTrash,
@@ -38,6 +39,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import {
   AppDialog,
+  FormattedNumberInput,
   FormDialog,
   MoneyVndField,
   NumberField,
@@ -70,6 +72,7 @@ import {
   approvePurchaseOrder,
   createGrnFromPurchaseOrder,
   createPurchaseOrderWithLines,
+  updatePurchaseOrderPrices,
 } from "../purchase-order-actions";
 
 const poCopy = messages.inventory.po;
@@ -79,8 +82,10 @@ export type PurchaseOrderLineRow = {
   ingredientName: string;
   quantity: number;
   unitLabel: string;
-  unitPriceEst: number | null;
-  lineTotal: number | null;
+  monetary: {
+    unitPriceEst: number | null;
+    lineTotal: number | null;
+  } | null;
 };
 
 export type PurchaseOrderLinkedGrn = {
@@ -99,7 +104,7 @@ export type PurchaseOrderRow = {
   supplierName: string;
   branchName: string;
   lineCount: number;
-  estimatedTotal: number | null;
+  monetary: { estimatedTotal: number | null } | null;
   lines: PurchaseOrderLineRow[];
   linkedGrns: PurchaseOrderLinkedGrn[];
 };
@@ -366,6 +371,7 @@ export function PurchaseOrdersClient({
   canCreate,
   canApprove,
   canCreateGrn,
+  canViewPrices,
 }: {
   rows: PurchaseOrderRow[];
   suppliers: PurchaseOrderOption[];
@@ -375,6 +381,7 @@ export function PurchaseOrdersClient({
   canCreate: boolean;
   canApprove: boolean;
   canCreateGrn: boolean;
+  canViewPrices: boolean;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
@@ -382,6 +389,8 @@ export function PurchaseOrdersClient({
   const [selectedPoId, setSelectedPoId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [pendingId, setPendingId] = useState<number | null>(null);
+  const [priceDraft, setPriceDraft] = useState<Record<number, string>>({});
+  const [pricesDirty, setPricesDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
   const defaultValues = useMemo<PurchaseOrderFormValues>(
     () => ({
@@ -414,11 +423,49 @@ export function PurchaseOrdersClient({
       : (rows.find((row) => row.id === selectedPoId) ?? null);
 
   function openDetail(row: PurchaseOrderRow) {
+    setPriceDraft(
+      Object.fromEntries(
+        row.lines.map((line) => [
+          line.id,
+          line.monetary?.unitPriceEst == null
+            ? ""
+            : String(line.monetary.unitPriceEst),
+        ]),
+      ),
+    );
+    setPricesDirty(false);
     setSelectedPoId(row.id);
   }
 
   function closeDetail() {
     setSelectedPoId(null);
+  }
+
+  function savePrices(row: PurchaseOrderRow) {
+    const lines = row.lines.map((line) => ({
+      lineId: line.id,
+      unitPrice: Number(priceDraft[line.id]),
+    }));
+    if (lines.some((line) => !Number.isFinite(line.unitPrice) || line.unitPrice <= 0)) {
+      toast.error("Nhập đơn giá lớn hơn 0 cho mọi dòng.");
+      return;
+    }
+
+    setPendingId(row.id);
+    startTransition(async () => {
+      try {
+        const result = await updatePurchaseOrderPrices({ poId: row.id, lines });
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
+        setPricesDirty(false);
+        toast.success("Đã lưu giá mua");
+        router.refresh();
+      } finally {
+        setPendingId(null);
+      }
+    });
   }
 
   async function approve(row: PurchaseOrderRow) {
@@ -520,20 +567,49 @@ export function PurchaseOrdersClient({
       className: "text-right font-mono tabular-nums",
       render: (line) => `${line.quantity} ${line.unitLabel}`,
     },
-    {
-      key: "price",
-      header: poCopy.unitPrice,
-      className: "text-right font-mono tabular-nums",
-      render: (line) =>
-        line.unitPriceEst == null ? "—" : formatVND(line.unitPriceEst),
-    },
-    {
-      key: "total",
-      header: poCopy.estimatedTotal,
-      className: "text-right font-mono tabular-nums",
-      render: (line) =>
-        line.lineTotal == null ? "—" : formatVND(line.lineTotal),
-    },
+    ...(canViewPrices
+      ? [
+          {
+            key: "price",
+            header: poCopy.unitPrice,
+            className: "text-right font-mono tabular-nums",
+            render: (line: PurchaseOrderLineRow) =>
+              selectedRow?.status === "draft" && canCreate ? (
+                <FormattedNumberInput
+                  inputMode="numeric"
+                  maxFractionDigits={0}
+                  aria-label={`Đơn giá ${line.ingredientName}`}
+                  value={priceDraft[line.id] ?? ""}
+                  onValueChange={(value) => {
+                    setPriceDraft((current) => ({
+                      ...current,
+                      [line.id]: value,
+                    }));
+                    setPricesDirty(true);
+                  }}
+                  className="ml-auto w-32 text-right font-mono"
+                />
+              ) : line.monetary?.unitPriceEst == null ? (
+                "—"
+              ) : (
+                formatVND(line.monetary.unitPriceEst)
+              ),
+          },
+        ]
+      : []),
+    ...(canViewPrices
+      ? [
+          {
+            key: "total",
+            header: poCopy.estimatedTotal,
+            className: "text-right font-mono tabular-nums",
+            render: (line: PurchaseOrderLineRow) =>
+              line.monetary?.lineTotal == null
+                ? "—"
+                : formatVND(line.monetary.lineTotal),
+          },
+        ]
+      : []),
   ];
 
   const columns: DataTableColumn<PurchaseOrderRow>[] = [
@@ -571,13 +647,19 @@ export function PurchaseOrdersClient({
         <StatusBadge domain="purchase-order" value={row.status} />
       ),
     },
-    {
-      key: "total",
-      header: "Tạm tính",
-      className: "text-right font-mono",
-      render: (row) =>
-        row.estimatedTotal == null ? "—" : formatVND(row.estimatedTotal),
-    },
+    ...(canViewPrices
+      ? [
+          {
+            key: "total",
+            header: "Tạm tính",
+            className: "text-right font-mono",
+            render: (row: PurchaseOrderRow) =>
+              row.monetary?.estimatedTotal == null
+                ? "—"
+                : formatVND(row.monetary.estimatedTotal),
+          },
+        ]
+      : []),
     {
       key: "date",
       header: "Ngày lập",
@@ -618,10 +700,30 @@ export function PurchaseOrdersClient({
   const detailFooter =
     selectedRow == null ? null : (
       <>
+        {selectedRow.status === "draft" && canCreate ? (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isPending || !pricesDirty}
+            onClick={() => savePrices(selectedRow)}
+          >
+            <IconSave data-icon="inline-start" />
+            {poCopy.savePricesAction}
+          </Button>
+        ) : null}
         {selectedRow.status === "draft" && canApprove ? (
           <Button
             type="button"
-            disabled={isPending || pendingId === selectedRow.id}
+            disabled={
+              isPending ||
+              pendingId === selectedRow.id ||
+              pricesDirty ||
+              selectedRow.lines.some(
+                (line) =>
+                  line.monetary?.unitPriceEst == null ||
+                  line.monetary.unitPriceEst <= 0,
+              )
+            }
             onClick={() => {
               void approve(selectedRow);
             }}
@@ -631,7 +733,7 @@ export function PurchaseOrdersClient({
           </Button>
         ) : null}
         {["sent", "partially_received"].includes(selectedRow.status) &&
-        canCreateGrn ? (
+          canCreateGrn ? (
           <Button
             type="button"
             disabled={isPending || pendingId === selectedRow.id}
@@ -707,10 +809,14 @@ export function PurchaseOrdersClient({
                   {row.supplierName} · {row.branchName}
                 </ItemDescription>
                 <ItemDescription>
-                  {poCopy.lineCount(row.lineCount)} ·{" "}
-                  {row.estimatedTotal == null
-                    ? "Chưa có tạm tính"
-                    : formatVND(row.estimatedTotal)}
+                  {poCopy.lineCount(row.lineCount)}
+                  {row.monetary
+                    ? ` · ${
+                        row.monetary.estimatedTotal == null
+                          ? "Chưa có tạm tính"
+                          : formatVND(row.monetary.estimatedTotal)
+                      }`
+                    : ""}
                 </ItemDescription>
               </ItemContent>
               <ItemFooter>
@@ -762,13 +868,17 @@ export function PurchaseOrdersClient({
                   term: poCopy.branchLabel,
                   description: selectedRow.branchName,
                 },
-                {
-                  term: poCopy.estimatedTotal,
-                  description:
-                    selectedRow.estimatedTotal == null
-                      ? "—"
-                      : formatVND(selectedRow.estimatedTotal),
-                },
+                ...(selectedRow.monetary
+                  ? [
+                      {
+                        term: poCopy.estimatedTotal,
+                        description:
+                          selectedRow.monetary.estimatedTotal == null
+                            ? "—"
+                            : formatVND(selectedRow.monetary.estimatedTotal),
+                      },
+                    ]
+                  : []),
               ]}
             />
 
@@ -792,16 +902,16 @@ export function PurchaseOrdersClient({
                           </ItemTitle>
                           <ItemDescription>
                             {line.quantity} {line.unitLabel}
-                            {line.unitPriceEst == null
+                            {line.monetary?.unitPriceEst == null
                               ? ""
-                              : ` · ${formatVND(line.unitPriceEst)}`}
+                              : ` · ${formatVND(line.monetary.unitPriceEst)}`}
                           </ItemDescription>
                         </ItemContent>
                         <ItemActions>
                           <span className="font-mono tabular-nums">
-                            {line.lineTotal == null
+                            {line.monetary?.lineTotal == null
                               ? "—"
-                              : formatVND(line.lineTotal)}
+                              : formatVND(line.monetary.lineTotal)}
                           </span>
                         </ItemActions>
                       </Item>

@@ -19,8 +19,6 @@ export type BranchRecordedConsumption = {
   ingredientName: string;
   quantity: number;
   unit: string;
-  unitCost: number;
-  totalCost: number;
 };
 
 export function resolveBranchConsumptionSourceKind({

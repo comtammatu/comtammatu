@@ -1,6 +1,6 @@
 # Role, Scope, And Route Matrix
 
-This spec is the source of truth for the Owner control plane, Branch runtime,
+This spec is the source of truth for the control_surface plane, Branch runtime,
 role inheritance, and route authorization.
 
 ## Product Frame
@@ -21,12 +21,12 @@ reference framing.
   Mutations and row access still go through permission keys, RLS, and RPC guards.
 - Tenant scope is L0. Branch scope is L1. Scope must come from JWT claims and
   URL params, not localStorage or React Context.
-- Owner control is the L0 tenant surface. Its direct entry is `/`.
+- control_surface is the L0 tenant surface. Its direct entry is `/`.
 - Branch Manager is a branch role, not a reduced Owner role. Branch Manager
   enters `/br/[branchId]` and never inherits an L0 route merely because the
   underlying capability is shared.
 - Top-level modules (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, and
-  `/branches`) belong to Owner surface even though their URLs remain stable.
+  `/branches`) belong to control_surface even though their URLs remain stable.
   Branch Manager and Staff use Branch-native workflows under `/br/[branchId]`.
 - The only valid authenticated entries are `/` for Owner and
   `/br/[branchId]` for branch-pinned roles. There is no route alias, picker
@@ -44,7 +44,7 @@ reference framing.
 
 | Surface             | Route family                                                                                                                                       | Scope   | Default audience                                             | Contract                                                                                                                                     |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Owner control       | `/`, `/settings/*`, `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`, `/branches/*`                                                   | L0      | `owner`                                                      | Launch and operate tenant-wide modules. `/` is the only Owner entry.                                                                         |
+| control_surface     | `/`, `/settings/*`, `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`, `/branches/*`                                                   | L0      | `owner`                                                      | Launch and operate tenant-wide modules. `/` is the only Owner entry.                                                                         |
 | Branch Command      | `/br/[branchId]/dashboard`                                                                                                                         | L1      | `branch_manager`, owner oversight                            | Deep branch management surface for one branch: today status, POS/KDS health, staff day flow, pending local tasks, and links to branch setup. |
 | Branch Setup        | `/br/[branchId]/settings/*`                                                                                                                        | L1      | `branch_manager`, owner oversight                            | Configure tables, POS terminals, KDS stations, printers, POS sessions, and branch-local operating settings.                                  |
 | Branch Operations   | `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]/orders`, `/br/[branchId]/stock`, `/br/[branchId]/menu-limits`, `/br/[branchId]/runner` | L1      | Store operators and Branch Manager; explicit Owner oversight | Run service within one URL-scoped branch. Owner may enter a branch explicitly; branch roles cannot cross branch scope.                       |
@@ -214,7 +214,7 @@ no-`returnTo` case — i.e. where a fresh login actually lands.
 
 ## Permission Boundary (generated)
 
-Route family -> required route bucket (Owner surface ACL intersected with the module capability union) -> the action-gate
+Route family -> required route bucket (control_surface ACL intersected with the module capability union) -> the action-gate
 permission keys in that family's namespace(s), read from
 `PERMISSION_KEYS` in `permissions.ts`. This is the full set in-namespace,
 not a hand-picked sample — route access and action authorization stay
@@ -227,7 +227,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | menu | `/menu` | owner | `menu:manage_category`, `menu:publish`, `menu:read`, `menu:write` |
 | orders | `/orders` | owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
 | feedback | `/feedback` | owner | `feedback:manage_qr`, `feedback:view` |
-| inventory | `/inventory` | owner | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
+| inventory | `/inventory` | owner | `inventory:adjust_approve`, `inventory:catalog_review_policy_set`, `inventory:count_approve`, `inventory:count_assign`, `inventory:grn_express_configure`, `inventory:grn_express_extend`, `inventory:grn_hardblock_override`, `inventory:item_review_override_set`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:valuation_read`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff` |
 | finance | `/finance` | owner | `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`, `finance:payroll_approve`, `finance:payroll_calculate`, `finance:view` |
 | branches | `/branches` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | hr | `/hr` | owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |

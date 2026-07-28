@@ -11,7 +11,6 @@ import {
   RotateCcw as IconReset,
   Search as IconSearch,
 } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
 import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -486,14 +485,6 @@ export function BranchConsumptionListClient({
                     {
                       label: INVENTORY_VI.sourceLabel,
                       value: selectedMovement.sourceLabel,
-                    },
-                    {
-                      label: INVENTORY_VI.unitCostLabel,
-                      value: formatVND(selectedMovement.unitCost),
-                    },
-                    {
-                      label: INVENTORY_VI.totalAmountLabel,
-                      value: formatVND(selectedMovement.totalCost),
                     },
                   ]}
                 />

@@ -58,14 +58,15 @@ export function AmendOwnerDialog({
   }
 
   // Sync form fields when a new line is selected.
-  if (line && quantity === "" && unitCost === "") {
+  if (line?.monetary && quantity === "" && unitCost === "") {
     setQuantity(String(line.actual));
-    setUnitCost(String(line.cost));
+    setUnitCost(String(line.monetary.unitCost));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!line) return;
+    if (!line?.monetary) return;
+    const monetary = line.monetary;
 
     const parsedQty = Number(quantity);
     const parsedCost = Number(unitCost);
@@ -101,7 +102,7 @@ export function AmendOwnerDialog({
         ...line,
         actual: parsedQty,
         accepted: parsedQty - line.rejected,
-        cost: parsedCost,
+        monetary: { ...monetary, unitCost: parsedCost },
         dirty: false,
       });
       resetForm();
@@ -114,7 +115,7 @@ export function AmendOwnerDialog({
       onOpenChange={handleOpenChange}
       title={grnCopy.amend.title}
       footer={
-        line ? (
+        line?.monetary ? (
           <>
             <Button
               type="button"
@@ -136,7 +137,7 @@ export function AmendOwnerDialog({
         ) : null
       }
     >
-      {line ? (
+      {line?.monetary ? (
         <form
           id={AMEND_OWNER_FORM_ID}
           onSubmit={handleSubmit}
@@ -153,7 +154,7 @@ export function AmendOwnerDialog({
               {grnCopy.amend.current(
                 line.actual,
                 line.unit,
-                formatVND(line.cost).replace(/đ$/, ""),
+                formatVND(line.monetary.unitCost).replace(/đ$/, ""),
               )}
             </p>
           </Item>

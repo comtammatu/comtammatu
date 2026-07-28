@@ -4,13 +4,15 @@ export type PendingWasteItem = {
   ingredientName: string;
   quantity: number;
   unit: string;
-  unitCost: number | null;
-  totalCost: number;
+  monetary: {
+    unitCost: number | null;
+    totalCost: number;
+    qtyRatio: number | null;
+    rolling15MinSum: number | null;
+  } | null;
   reasonCode: string;
   photoUrls: string[];
   wasteTier: number | null;
-  qtyRatio: number | null;
-  rolling15MinSum: number | null;
 };
 
 export type PendingWasteRow = {
@@ -24,7 +26,7 @@ export type PendingWasteRow = {
   createdBy: string;
   createdByName: string;
   isSelfCreated: boolean;
-  totalValue: number;
+  monetary: { totalValue: number } | null;
   notes: string | null;
   items: PendingWasteItem[];
 };

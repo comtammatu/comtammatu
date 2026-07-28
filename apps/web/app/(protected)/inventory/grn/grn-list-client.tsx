@@ -177,7 +177,7 @@ export function GrnListClient({
       className: "text-right",
       render: (grn) => (
         <span className="font-mono font-medium tabular-nums">
-          {formatVND(grn.total)}
+          {grn.monetary ? formatVND(grn.monetary.total) : "—"}
         </span>
       ),
     },
@@ -741,7 +741,7 @@ function GrnMobileCard({
         <div className="flex flex-col items-end gap-1">
           <span className="text-xs text-muted-foreground">{grn.date || "—"}</span>
           <span className="font-mono text-sm font-semibold">
-            {formatVND(grn.total)}
+            {grn.monetary ? formatVND(grn.monetary.total) : "—"}
           </span>
         </div>
         <div

@@ -7,14 +7,13 @@ export type GrnCreateIngredient = {
   name: string;
   sku: string | null;
   unit: string;
-  unit_cost: number | null;
+  monetary: { unitCost: number | null } | null;
   category: string | null;
   units?: IngredientUnitRow[];
 };
 
-export type GrnCreateServerDraftLine = Omit<GrnDraftLine, "unitCost"> & {
+export type GrnCreateServerDraftLine = GrnDraftLine & {
   lineId: number;
-  unitCost: number;
 };
 
 export type GrnCreateProcurementBranchOption = {
@@ -46,8 +45,6 @@ export type GrnCreatePageData = {
     id: number;
     lines: GrnCreateServerDraftLine[];
   } | null;
-  /** D088: false for branch_manager — prices stripped from payload. */
-  showPurchasePrice: boolean;
 };
 
 export type GrnLineEditState = {
@@ -56,7 +53,6 @@ export type GrnLineEditState = {
   quantity: number;
   unit: string;
   entryUnitId: number | null;
-  unitCost: number | null;
   note: string;
 };
 

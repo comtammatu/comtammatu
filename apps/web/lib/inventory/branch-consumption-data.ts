@@ -41,7 +41,6 @@ type RecordedConsumptionRow = {
   order_id: number | null;
   issue_id: number | null;
   quantity_change: number;
-  unit_cost: number | null;
   created_at: string;
   reason: string | null;
   inventory_locations:
@@ -113,7 +112,6 @@ function mapRecordedConsumption(
   const location = relatedOne(row.inventory_locations);
   const ingredient = relatedOne(row.ingredients);
   const quantity = Math.abs(toNumber(row.quantity_change));
-  const unitCost = toNumber(row.unit_cost);
   const kind = resolveBranchConsumptionSourceKind({
     orderId: row.order_id,
     issueId: row.issue_id,
@@ -132,8 +130,6 @@ function mapRecordedConsumption(
     ingredientName: String(ingredient?.name ?? "—"),
     quantity,
     unit: getEmbeddedIngredientBaseUnitDisplayName(ingredient) ?? "",
-    unitCost,
-    totalCost: quantity * unitCost,
   };
 }
 
@@ -157,7 +153,7 @@ export async function loadBranchConsumptionListData(
     supabase
       .from("stock_movements")
       .select(
-        "id, order_id, issue_id, quantity_change, unit_cost, created_at, reason, inventory_locations ( name, code ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), stock_issues!stock_movements_issue_id_fkey ( issue_number, source_type, source_ref )",
+        "id, order_id, issue_id, quantity_change, created_at, reason, inventory_locations ( name, code ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), stock_issues!stock_movements_issue_id_fkey ( issue_number, source_type, source_ref )",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", routeBranchId)

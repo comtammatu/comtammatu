@@ -1,7 +1,7 @@
 import type { IngredientUnitRow } from "./types";
 
 type IngredientWithReferenceCost = {
-  unit_cost?: number | string | null;
+  monetary?: { unitCost?: number | string | null } | null;
   units?: IngredientUnitRow[];
 };
 
@@ -45,7 +45,7 @@ export function getReferenceCostForUnit(
   fallbackUnit?: string,
 ): ReferenceCost | null {
   if (!ingredient) return null;
-  const baseCost = toNumber(ingredient.unit_cost);
+  const baseCost = toNumber(ingredient.monetary?.unitCost);
   if (baseCost == null) return null;
 
   const units = activeUnits(ingredient);
@@ -70,7 +70,7 @@ export function getReferenceCostForUnit(
 export function getDisplayReferenceCost(
   ingredient: IngredientWithReferenceCost,
 ): ReferenceCost | null {
-  const baseCost = toNumber(ingredient.unit_cost);
+  const baseCost = toNumber(ingredient.monetary?.unitCost);
   if (baseCost == null) return null;
 
   const units = activeUnits(ingredient);

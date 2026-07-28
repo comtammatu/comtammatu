@@ -29,7 +29,7 @@ export {
   getSafeInternalReturnTo,
   resolvePostLoginRedirect,
 } from "./scope";
-export { getInventoryValueVisibility, canViewPurchasePrice } from "./inventory-value";
+export { getInventoryValueVisibility } from "./inventory-value";
 export type { InventoryValueVisibility } from "./inventory-value";
 export {
   INVENTORY_CATALOG_ROLES,

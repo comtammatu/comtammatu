@@ -71,7 +71,7 @@ export async function loadTransferDetailPageData({
       ingredient_id: number;
       quantity: number;
       quantity_received: number | null;
-      unit_cost_at_ship: number | null;
+      monetary: { unitCostAtShip: number } | null;
       entry_unit_id: number | null;
       to_base_factor: number | null;
       unit_label: string | null;
@@ -96,14 +96,17 @@ export async function loadTransferDetailPageData({
 
   const items: TransferDetail["items"] = (detail.lines ?? []).map((line) => {
     const ingredient = line.ingredients;
-    const cost = Number(line.unit_cost_at_ship ?? 0);
+    const cost = line.monetary?.unitCostAtShip ?? null;
     const quantity = Number(line.quantity ?? 0);
-    const { total } = computeTransferLineTotal({
-      entryQuantity: quantity,
-      baseUnitCost: cost,
-      entryUnitId: line.entry_unit_id ?? null,
-      toBaseFactor: line.to_base_factor ?? null,
-    });
+    const total =
+      cost == null
+        ? null
+        : computeTransferLineTotal({
+            entryQuantity: quantity,
+            baseUnitCost: cost,
+            entryUnitId: line.entry_unit_id ?? null,
+            toBaseFactor: line.to_base_factor ?? null,
+          }).total;
 
     return {
       ingredientId: line.ingredient_id ?? ingredient?.id ?? 0,
@@ -111,13 +114,16 @@ export async function loadTransferDetailPageData({
       sku: "",
       qty: quantity,
       unit: line.unit_label ?? "",
-      cost,
-      total,
+      monetary: cost == null || total == null ? null : { cost, total },
       received:
         line.quantity_received != null ? Number(line.quantity_received) : null,
     };
   });
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+  const canReadMonetary = items.some((item) => item.monetary != null);
+  const subtotal = items.reduce(
+    (sum, item) => sum + (item.monetary?.total ?? 0),
+    0,
+  );
   const transfer: TransferDetail = {
     id: detail.transfer.id ?? transferId,
     code: detail.transfer.transfer_number ?? "",
@@ -145,9 +151,9 @@ export async function loadTransferDetailPageData({
         ? formatDateTime(detail.transfer.created_at)
         : "—",
     note: detail.transfer.notes ?? null,
-    subtotal,
-    shipping: 0,
-    total: subtotal,
+    monetary: canReadMonetary
+      ? { subtotal, shipping: 0, total: subtotal }
+      : null,
     items,
   };
 

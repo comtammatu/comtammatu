@@ -118,13 +118,15 @@ export function GRNDetailClient({
 
   const isDraft = grn.status === "draft";
   const isConfirmed = grn.status === "confirmed";
+  const canViewMonetary = grn.monetary != null;
   const statusBadge = getStatusBadgeMeta("inventory", grn.status);
-  const showAmendAffordance = canAmendConfirmed && isConfirmed;
+  const showAmendAffordance =
+    canAmendConfirmed && isConfirmed && canViewMonetary;
   const qc = grn.qcSettings;
 
   const { lines, setLines, patch, stats, dirtyLines } = useGrnLines(
     grn.items,
-    qc.priceVarianceReviewPct,
+    qc.monetary?.priceVarianceReviewPct ?? null,
   );
 
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
@@ -193,36 +195,47 @@ export function GRNDetailClient({
           </span>
         ),
       },
-      {
-        key: "cost",
-        header: grnCopy.lineHeaderCost,
-        className: "w-32 text-right",
-        render: (line) =>
-          line.cost > 0 ? (
-            <span className="font-mono tabular-nums">
-              {inventoryCommon.currency(formatVND(line.cost))}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">
-              {inventoryCommon.noValue}
-            </span>
-          ),
-      },
-      {
-        key: "total",
-        header: grnCopy.lineHeaderTotal,
-        className: "w-32 text-right",
-        render: (line) =>
-          line.cost > 0 ? (
-            <span className="font-mono font-semibold tabular-nums">
-              {inventoryCommon.currency(
-                formatVND(line.cost * (line.actual - line.rejected)),
-              )}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">{inventoryCommon.noValue}</span>
-          ),
-      },
+      ...(canViewMonetary
+        ? [
+            {
+              key: "cost",
+              header: grnCopy.lineHeaderCost,
+              className: "w-32 text-right",
+              render: (line: EditableLine) =>
+                line.monetary && line.monetary.unitCost > 0 ? (
+                  <span className="font-mono tabular-nums">
+                    {inventoryCommon.currency(
+                      formatVND(line.monetary.unitCost),
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {inventoryCommon.noValue}
+                  </span>
+                ),
+            },
+            {
+              key: "total",
+              header: grnCopy.lineHeaderTotal,
+              className: "w-32 text-right",
+              render: (line: EditableLine) =>
+                line.monetary && line.monetary.unitCost > 0 ? (
+                  <span className="font-mono font-semibold tabular-nums">
+                    {inventoryCommon.currency(
+                      formatVND(
+                        line.monetary.unitCost *
+                          (line.actual - line.rejected),
+                      ),
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {inventoryCommon.noValue}
+                  </span>
+                ),
+            },
+          ]
+        : []),
       {
         key: "status",
         header: grnCopy.lineHeaderStatus,
@@ -284,7 +297,7 @@ export function GRNDetailClient({
         ),
       },
     ],
-    [handleDeleteLine],
+    [canViewMonetary, handleDeleteLine],
   );
 
   const confirmedColumns = useMemo<DataTableColumn<EditableLine>[]>(
@@ -333,28 +346,39 @@ export function GRNDetailClient({
           </span>
         ),
       },
-      {
-        key: "cost",
-        header: grnCopy.lineHeaderCost,
-        className: "w-28 text-right",
-        render: (line) => (
-          <span className="font-mono tabular-nums">
-            {inventoryCommon.currency(formatVND(line.cost))}
-          </span>
-        ),
-      },
-      {
-        key: "total",
-        header: grnCopy.lineHeaderTotal,
-        className: "w-32 text-right",
-        render: (line) => (
-          <span className="font-mono font-semibold tabular-nums">
-            {inventoryCommon.currency(
-              formatVND(line.cost * (line.actual - line.rejected)),
-            )}
-          </span>
-        ),
-      },
+      ...(canViewMonetary
+        ? [
+            {
+              key: "cost",
+              header: grnCopy.lineHeaderCost,
+              className: "w-28 text-right",
+              render: (line: EditableLine) =>
+                line.monetary ? (
+                  <span className="font-mono tabular-nums">
+                    {inventoryCommon.currency(
+                      formatVND(line.monetary.unitCost),
+                    )}
+                  </span>
+                ) : null,
+            },
+            {
+              key: "total",
+              header: grnCopy.lineHeaderTotal,
+              className: "w-32 text-right",
+              render: (line: EditableLine) =>
+                line.monetary ? (
+                  <span className="font-mono font-semibold tabular-nums">
+                    {inventoryCommon.currency(
+                      formatVND(
+                        line.monetary.unitCost *
+                          (line.actual - line.rejected),
+                      ),
+                    )}
+                  </span>
+                ) : null,
+            },
+          ]
+        : []),
       {
         key: "status",
         header: grnCopy.lineHeaderStatus,
@@ -398,7 +422,7 @@ export function GRNDetailClient({
           ) : null,
       },
     ],
-    [showAmendAffordance],
+    [canViewMonetary, showAmendAffordance],
   );
 
   const footer = (
@@ -568,7 +592,7 @@ export function GRNDetailClient({
             </Badge>
           ) : null}
         </div>
-        {!isDraft ? (
+        {!isDraft && stats.total != null ? (
           <p className="ml-auto font-mono text-base font-semibold tabular-nums text-primary">
             {inventoryCommon.currency(formatVND(stats.total))}
           </p>
@@ -640,6 +664,7 @@ export function GRNDetailClient({
           />
         )}
         mobileFooter={
+          stats.total != null ? (
           <Item
             variant="outline"
             className="flex-col items-stretch gap-2 p-3 text-sm"
@@ -653,9 +678,11 @@ export function GRNDetailClient({
               </span>
             </div>
           </Item>
+          ) : undefined
         }
-        desktopFooterRows={[
-          {
+        desktopFooterRows={
+          stats.total != null
+            ? [{
             key: "grn-total",
             className: "border-border",
             cells: [
@@ -674,8 +701,9 @@ export function GRNDetailClient({
               { key: "status", content: null },
               { key: "actions", content: null },
             ],
-          },
-        ]}
+          }]
+            : undefined
+        }
       />
     </AppSection>
   );

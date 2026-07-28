@@ -23,7 +23,10 @@ export function DraftGrnLineCard({
   onEdit: () => void;
   onRemove: () => void;
 }) {
-  const lineTotal = line.cost > 0 ? line.actual * line.cost : null;
+  const lineTotal =
+    line.monetary && line.monetary.unitCost > 0
+      ? line.actual * line.monetary.unitCost
+      : null;
   const qualityLabel =
     line.qualityStatus === "accepted"
       ? grnCopy.line.qualityAccepted
@@ -62,8 +65,8 @@ export function DraftGrnLineCard({
         </div>
         <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
           {formatQty(line.actual)} {line.unit}
-          {line.cost > 0
-            ? ` · ${inventoryCommon.currency(formatVND(line.cost))}/${line.unit}`
+          {line.monetary && line.monetary.unitCost > 0
+            ? ` · ${inventoryCommon.currency(formatVND(line.monetary.unitCost))}/${line.unit}`
             : ""}
         </p>
         {lineTotal != null ? (

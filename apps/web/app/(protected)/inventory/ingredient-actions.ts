@@ -40,6 +40,7 @@ import {
   stringToBase64,
   type SheetDef,
 } from "@/_lib/spreadsheet";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 /* ─── Ingredient catalog (CRUD via upsert_ingredient_catalog RPC) ─── */
 
@@ -198,12 +199,21 @@ const getIngredientsCached = cache(
     tenantId: number,
     limit: number,
     updatedSince?: string,
+    includeMonetary = false,
   ) => {
-    let query = supabase
-      .from("ingredients")
-      .select(
-        "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-      )
+    let query = (
+      includeMonetary
+        ? supabase
+            .from("ingredients")
+            .select(
+              "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+            )
+        : supabase
+            .from("ingredients")
+            .select(
+              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+            )
+    )
       .eq("tenant_id", tenantId);
 
     if (updatedSince) {
@@ -223,12 +233,17 @@ export async function fetchIngredients(
 
   const { supabase, claims } = ctx;
   const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 5000);
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const readClient = monetary.purchasePrice
+    ? (monetary.client ?? supabase)
+    : supabase;
 
   const { data, error } = await getIngredientsCached(
-    supabase,
+    readClient,
     claims.tenant_id,
     safeLimit,
     updatedSince,
+    monetary.purchasePrice,
   );
 
   if (error) {
@@ -240,6 +255,14 @@ export async function fetchIngredients(
 
   const rows = (data ?? []).map((row) => {
     const { ingredient_categories, ingredient_units, ...rest } = row;
+    const safeRest = { ...rest } as typeof rest & {
+      unit_cost?: number | null;
+    };
+    const unitCost =
+      monetary.purchasePrice && safeRest.unit_cost != null
+        ? Number(safeRest.unit_cost)
+        : null;
+    delete safeRest.unit_cost;
     const units: IngredientUnitRow[] = (ingredient_units ?? [])
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((u: any) => ({
@@ -260,7 +283,8 @@ export async function fetchIngredients(
     const baseUnit = units.find((u) => u.is_base);
 
     return {
-      ...rest,
+      ...safeRest,
+      monetary: monetary.purchasePrice ? { unitCost } : null,
       category_name: ingredient_categories?.name ?? null,
       units,
       unit: baseUnit?.unit_name ?? "",
@@ -598,9 +622,9 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
 
 type ExportIngredientsResult =
   | {
-      success: true;
-      data: { filename: string; base64: string; format: "xlsx" | "csv" };
-    }
+    success: true;
+    data: { filename: string; base64: string; format: "xlsx" | "csv" };
+  }
   | { success: false; error: string };
 
 export async function exportIngredients(
@@ -612,9 +636,13 @@ export async function exportIngredients(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { claims } = ctx;
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  if (!monetary.purchasePrice || !monetary.client) {
+    return { success: false, error: "Không có quyền" };
+  }
 
-  const { data, error } = await supabase
+  const { data, error } = await monetary.client
     .from("ingredients")
     .select(
       "name, sku, category, item_kind, unit_cost, min_stock_level, storage_type, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
@@ -730,9 +758,9 @@ export interface ImportIngredientSummary {
 
 type ImportIngredientsResult =
   | {
-      success: true;
-      data: { summary: ImportIngredientSummary };
-    }
+    success: true;
+    data: { summary: ImportIngredientSummary };
+  }
   | { success: false; error: string; issues?: ImportIngredientIssue[] };
 
 type BulkImportIngredientsRpcClient = {

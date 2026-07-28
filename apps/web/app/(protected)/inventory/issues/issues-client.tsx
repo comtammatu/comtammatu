@@ -90,9 +90,11 @@ export type RecordedConsumptionRow = {
   ingredientName: string;
   quantity: string;
   sourceLabel: string;
-  unitCost: string;
-  totalCost: string;
-  totalCostValue: number;
+  monetary: {
+    unitCost: string;
+    totalCost: string;
+    totalCostValue: number;
+  } | null;
 };
 
 const ISSUE_TYPES = [
@@ -158,6 +160,7 @@ function buildListHref(listBasePath: string, params: URLSearchParams): string {
 export function IssuesClient({
   issues,
   recordedConsumptions,
+  canViewMonetary,
   branches,
   defaultBranchId,
   recordedBranchId: initialRecordedBranchId,
@@ -173,6 +176,7 @@ export function IssuesClient({
 }: {
   issues: IssueRow[];
   recordedConsumptions: RecordedConsumptionRow[];
+  canViewMonetary: boolean;
   branches: IssueBranchOption[];
   defaultBranchId: number | null;
   recordedBranchId: number | null;
@@ -340,7 +344,7 @@ export function IssuesClient({
     );
   }, [recordedConsumptions, recordedSearch]);
   const visibleRecordedConsumptionTotal = visibleRecordedConsumptions.reduce(
-    (sum, row) => sum + row.totalCostValue,
+    (sum, row) => sum + (row.monetary?.totalCostValue ?? 0),
     0,
   );
   const visibleRecordedConsumptionRatio = recordedIsLimited
@@ -355,12 +359,12 @@ export function IssuesClient({
   const visibleRecordedConsumptionHint = (
     <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
       <span>{visibleRecordedConsumptionRatio}</span>
-      <span>
+      {canViewMonetary ? <span>
         {INVENTORY_VI.totalAmountLabel}:{" "}
         <span className="font-mono font-semibold text-foreground">
           {formatVND(visibleRecordedConsumptionTotal)}
         </span>
-      </span>
+      </span> : null}
     </span>
   );
 
@@ -416,8 +420,9 @@ export function IssuesClient({
       BRANCH_VI.long,
       INVENTORY_VI.deductLocationLabel,
       FORM_VI.quantity,
-      INVENTORY_VI.unitCostLabel,
-      FORM_VI.amount,
+      ...(canViewMonetary
+        ? [INVENTORY_VI.unitCostLabel, FORM_VI.amount]
+        : []),
       INVENTORY_VI.sourceLabel,
     ];
     const rows = visibleRecordedConsumptions.map((row) => [
@@ -426,8 +431,9 @@ export function IssuesClient({
       row.branchName,
       row.locationName,
       row.quantity,
-      row.unitCost,
-      row.totalCost,
+      ...(row.monetary
+        ? [row.monetary.unitCost, row.monetary.totalCost]
+        : []),
       row.sourceLabel,
     ]);
     const body = [header, ...rows]
@@ -806,23 +812,29 @@ export function IssuesClient({
           <span className="font-mono tabular-nums">{item.quantity}</span>
         ),
       },
-      {
-        key: "unitCost",
-        header: INVENTORY_VI.unitCostLabel,
-        render: (item) => (
-          <span className="font-mono tabular-nums">{item.unitCost}</span>
-        ),
-      },
-      {
-        key: "totalCost",
-        header: FORM_VI.amount,
-        className: "text-right",
-        render: (item) => (
-          <span className="font-mono font-medium tabular-nums">
-            {item.totalCost}
-          </span>
-        ),
-      },
+      ...(canViewMonetary
+        ? [
+            {
+              key: "unitCost",
+              header: INVENTORY_VI.unitCostLabel,
+              render: (item: RecordedConsumptionRow) => (
+                <span className="font-mono tabular-nums">
+                  {item.monetary?.unitCost ?? "—"}
+                </span>
+              ),
+            },
+            {
+              key: "totalCost",
+              header: FORM_VI.amount,
+              className: "text-right",
+              render: (item: RecordedConsumptionRow) => (
+                <span className="font-mono font-medium tabular-nums">
+                  {item.monetary?.totalCost ?? "—"}
+                </span>
+              ),
+            },
+          ]
+        : []),
       {
         key: "sourceLabel",
         header: INVENTORY_VI.sourceLabel,
@@ -881,9 +893,11 @@ export function IssuesClient({
           <span className="truncate text-sm font-medium">
             {item.ingredientName}
           </span>
-          <span className="shrink-0 font-mono text-sm font-semibold">
-            {item.totalCost}
-          </span>
+          {canViewMonetary ? (
+            <span className="shrink-0 font-mono text-sm font-semibold">
+              {item.monetary?.totalCost ?? "—"}
+            </span>
+          ) : null}
         </div>
         <p className="text-xs text-muted-foreground">
           {item.branchName} · {item.locationName}

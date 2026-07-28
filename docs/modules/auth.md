@@ -36,12 +36,12 @@ an application role from it.
 | File                                                  | Purpose                                                                                        | Lines                     |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
 | `packages/shared/src/auth/types.ts`                   | Role enum, canonical JWT claims shape (`tenant_id`, `branch_id`, `user_role`, `position_code`) | Core types                |
-| `packages/shared/src/auth/module-acl.ts`              | Owner surface + module capability → allowed application roles, `canAccess()`                   | Route-level ACL           |
+| `packages/shared/src/auth/module-acl.ts`              | control_surface + module capability → allowed application roles, `canAccess()`                   | Route-level ACL           |
 | `packages/shared/src/auth/permissions.ts`             | `PERMISSION_KEYS`, derived permission count, `hasPermission()`, `hasAny/All` pure fns          | Permission catalog mirror |
 | `packages/shared/src/auth/scope.ts`                   | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
-| `packages/shared/src/auth/route-resolution.ts`        | Public helpers + Owner surface path classifier + URL → `ModuleKey` mapping                     | Proxy route mapping       |
+| `packages/shared/src/auth/route-resolution.ts`        | Public helpers + control_surface path classifier + URL → `ModuleKey` mapping                     | Proxy route mapping       |
 | `packages/shared/src/auth/route-map.ts`               | Route family contract: surface, entry point, chrome, back behavior, breadcrumb root            | Navigation contract       |
-| `packages/shared/src/auth/nav-config.ts`              | Owner Owner surface navigation and Branch navigation groups                                    | UI navigation             |
+| `packages/shared/src/auth/nav-config.ts`              | control_surface navigation and Branch navigation groups                                    | UI navigation             |
 | `packages/shared/src/auth/app-discovery.ts`           | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
 | `packages/shared/src/auth/blocked-state.ts`           | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract     |
 | `apps/web/app/(public)/access-denied/page.tsx`        | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
@@ -57,7 +57,7 @@ an application role from it.
 
 Discovery invariant: tenant-level navigation comes only from owner-filtered
 `OWNER_NAV_GROUPS`. `MODULE_ACL.hr_payroll` still gates `/hr/payroll/*` for
-Owner but remains a deep HR entry, not a primary Owner surface card. Branch
+Owner but remains a deep HR entry, not a primary control_surface card. Branch
 Manager/Staff discovery contains Branch groups only.
 
 ## Role Hierarchy
@@ -123,7 +123,7 @@ Two DB-side gates exist; pick the right one:
 | **Grant**            | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window.                                                                                                                                                 |
 | **Template**         | `role_templates(permission_keys[])`                                              | Preset bundle applied when assigning a position (snapshot; edits don't propagate).                                                                                                                                             |
 
-**Authz path (every request):** `proxy.ts` first classifies Owner surface
+**Authz path (every request):** `proxy.ts` first classifies control_surface
 routes and gates them through `canAccess(user_role, "owner")`, then
 applies the resolved module capability ACL and Branch scope. Row-level authz
 delegates to `has_permission(branch_id, key)` in RLS — owner bypass built-in,
@@ -166,13 +166,13 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 | Grant permission        | `grant_permission(target, branch, key, ...)`                              | Adds one legacy permission grant. Branch-scoped keys require `branch_id`; tenant-scoped keys require `branch_id IS NULL`.               |
 | Apply template          | `apply_template_to_user(target, branch, template, ...)`                   | Copies a template snapshot into `staff_permissions`; later template edits do not auto-propagate.                                        |
 | Revoke permission       | `revoke_permission(target, branch, key)`                                  | Ends a legacy permission grant and writes audit.                                                                                        |
-| Enter Owner surface     | `proxy.ts` -> `isOwnerRoutePath()` -> `canAccess(user_role, "owner")`     | Owner-only surface admission before reusable module capabilities.                                                                       |
+| Enter control_surface     | `proxy.ts` -> `isOwnerRoutePath()` -> `canAccess(user_role, "owner")`     | Owner-only surface admission before reusable module capabilities.                                                                       |
 | Enter route/module      | `proxy.ts` -> `resolveModuleFromPath()` -> `canAccess(user_role, module)` | Fast module capability admission only.                                                                                                  |
 | Execute action/read row | `withAction` / RPC body / RLS policy -> `has_permission*()`               | Authoritative action and data gate.                                                                                                     |
 
 ## HR Permission Contract
 
-`/hr` is an Owner-only Owner surface module. Daily staff runtime and Branch
+`/hr` is an Owner-only control_surface module. Daily staff runtime and Branch
 Manager people oversight remain under `/br/[branchId]/*`, including
 `/br/[branchId]/team` and shift/profile routes. Checkout and leave approval
 routes are available to Owner and the assigned Branch Manager for that branch.
@@ -181,8 +181,8 @@ routes are available to Owner and the assigned Branch Manager for that branch.
 | ------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | Staff access create/update/deactivate | `staff` -> owner-only `/hr/staff/*`                                                  | `hr:manage_employee` plus `staff:assign_position`                                                       | `createStaff`, `updateStaff`, `toggleStaffActive`; `update_staff_profile`, `toggle_profile_active`                                          | `profiles`, `positions`, `staff_permissions`; assignment changes atomically replace legacy grants |
 | Permission grant/revoke/template      | `staff` -> owner-only `/hr/staff/[id]/permissions`                                   | `staff:assign_permission`                                                                               | `grantPermissionAction`, `revokePermissionAction`, `applyTemplateAction`; `grant_permission`, `revoke_permission`, `apply_template_to_user` | `staff_permissions`, `permission_audit_log`; scope must match key definition                      |
-| Employee record, salary, HĐLĐ         | `hr` -> Owner-only Owner surface                                                     | Owner writes tenant employee and contract data                                                          | `createEmployeeAccount`, `updateEmployee`, `fetchEmployees`; active contract write via `employment_contracts`                               | `employees`, `employment_contracts`, `profiles`                                                   |
-| Global shift and position-task setup  | `hr` -> Owner-only Owner surface                                                     | Owner-only action roles                                                                                 | `createShift`, `updateShift`, `deactivateShift`, `setShiftBoundaries`, `savePositionTasks`                                                  | `shifts` and `position_shift_tasks` are tenant/global setup, not Branch staff runtime             |
+| Employee record, salary, HĐLĐ         | `hr` -> Owner-only control_surface                                                     | Owner writes tenant employee and contract data                                                          | `createEmployeeAccount`, `updateEmployee`, `fetchEmployees`; active contract write via `employment_contracts`                               | `employees`, `employment_contracts`, `profiles`                                                   |
+| Global shift and position-task setup  | `hr` -> Owner-only control_surface                                                     | Owner-only action roles                                                                                 | `createShift`, `updateShift`, `deactivateShift`, `setShiftBoundaries`, `savePositionTasks`                                                  | `shifts` and `position_shift_tasks` are tenant/global setup, not Branch staff runtime             |
 | Attendance and leave administration   | Owner: `/hr`; Owner + Branch Manager: `/br/[branchId]/shift/*-approvals`             | `hr:approve_leave_request`, `hr:approve_checkout`; Branch Manager grants must equal the assigned branch | `fetchAttendance`, `fetchAttendanceSummary`, `forceCloseStaleAttendance`, leave and checkout approval actions                               | RLS/RPC deny self-review, peer-manager review, and cross-branch review                            |
 | Branch people visibility              | Branch Manager: `/br/[branchId]/team`; staff self-service under shift/profile routes | Branch-scoped `staff:view`                                                                              | Branch-safe employee, attendance, and leave projections                                                                                     | Read-only projection; no employee, contract, payroll, HĐLĐ, BHXH, or permission write             |
 
@@ -229,8 +229,8 @@ The `proxy(request)` function evaluates in order:
 2. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo)`; unauthenticated users see the form.
 3. **Unauthenticated → `/login`**.
 4. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
-5. **Owner surface ACL:** `isOwnerRoutePath(pathname)` classifies the tenant management family; `canAccess(role, "owner")` gates it. Failure redirects to the role's Branch-first default route.
-6. **Module capability ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except Owner surface routes redirect to the role's default route.
+5. **control_surface ACL:** `isOwnerRoutePath(pathname)` classifies the tenant management family; `canAccess(role, "owner")` gates it. Failure redirects to the role's Branch-first default route.
+6. **Module capability ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except control_surface routes redirect to the role's default route.
 7. **Branch-scope for POS/KDS/branch settings/menu limits:** if a protected branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS and future protected Runner child routes reject missing, inactive, or non-operational branches in proxy. The exact public Runner display rejects invalid/non-operational branches inside the page because it has no staff claims.
 
 The resolver `resolvePostLoginRedirect(claims, returnTo)` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. The underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).

@@ -9,6 +9,7 @@ import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchProcurementBranches } from "../_lib/procurement-branches";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import {
   PurchaseOrdersClient,
   type PurchaseOrderIngredient,
@@ -36,10 +37,16 @@ export default async function PurchaseOrdersPage({
   });
   if (scope.outOfScope) notFound();
 
-  let poQuery = supabase
+  const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
+  const poReadClient = monetaryAccess.purchasePrice
+    ? (monetaryAccess.client ?? supabase)
+    : supabase;
+  let poQuery = poReadClient
     .from("purchase_orders")
     .select(
-      "id, po_number, display_id, status, ordered_at, notes, supplier_id, branch_id, purchase_order_items(id, quantity, unit_price_est, line_total, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)), goods_received_notes(id, grn_number, status, received_date)",
+      monetaryAccess.purchasePrice
+        ? "id, po_number, display_id, status, ordered_at, notes, supplier_id, branch_id, purchase_order_items(id, quantity, unit_price_est, line_total, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)), goods_received_notes(id, grn_number, status, received_date)"
+        : "id, po_number, display_id, status, ordered_at, notes, supplier_id, branch_id, purchase_order_items(id, quantity, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)), goods_received_notes(id, grn_number, status, received_date)",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("ordered_at", { ascending: false })
@@ -155,13 +162,23 @@ export default async function PurchaseOrdersPage({
         ingredientName: ingredient?.name ?? "Nguyên liệu",
         quantity: Number(line.quantity),
         unitLabel: unit?.name ?? unit?.code ?? "Đơn vị",
-        unitPriceEst:
-          line.unit_price_est == null ? null : Number(line.unit_price_est),
-        lineTotal: line.line_total == null ? null : Number(line.line_total),
+        monetary:
+          monetaryAccess.purchasePrice &&
+          "unit_price_est" in line &&
+          "line_total" in line
+            ? {
+                unitPriceEst:
+                  line.unit_price_est == null
+                    ? null
+                    : Number(line.unit_price_est),
+                lineTotal:
+                  line.line_total == null ? null : Number(line.line_total),
+              }
+            : null,
       };
     });
     const totals = lines.flatMap((line) =>
-      line.lineTotal == null ? [] : [line.lineTotal],
+      line.monetary?.lineTotal == null ? [] : [line.monetary.lineTotal],
     );
     const linkedGrns = (po.goods_received_notes ?? []).map((grn) => ({
       id: grn.id,
@@ -178,10 +195,14 @@ export default async function PurchaseOrdersPage({
       supplierName: supplierNames.get(po.supplier_id) ?? "NCC",
       branchName: branchNames.get(po.branch_id) ?? "Chi nhánh",
       lineCount: lines.length,
-      estimatedTotal:
-        totals.length > 0
-          ? totals.reduce((sum, amount) => sum + amount, 0)
-          : null,
+      monetary: monetaryAccess.purchasePrice
+        ? {
+            estimatedTotal:
+              totals.length > 0
+                ? totals.reduce((sum, amount) => sum + amount, 0)
+                : null,
+          }
+        : null,
       lines,
       linkedGrns,
     };
@@ -196,9 +217,10 @@ export default async function PurchaseOrdersPage({
       defaultBranchId={
         scope.selectedBranchId ?? claims.branch_id ?? branches[0]?.id ?? null
       }
-      canCreate={canCreate}
-      canApprove={canApprove}
+      canCreate={canCreate && monetaryAccess.purchasePrice}
+      canApprove={canApprove && monetaryAccess.purchasePrice}
       canCreateGrn={canCreateGrn}
+      canViewPrices={monetaryAccess.purchasePrice}
     />
   );
 }

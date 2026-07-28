@@ -87,8 +87,8 @@ test("Branch waste opts into a named touch preview link without changing Owner c
   const wastePhoto = read(
     "app/(protected)/inventory/_components/waste-photo-upload.tsx",
   );
-  const branchWaste = read(
-    "app/(protected)/br/[branchId]/(operator)/stock/waste/branch-waste-create-client.tsx",
+  const wasteForm = read(
+    "app/(protected)/inventory/waste/waste-operational-form.tsx",
   );
   const ownerWaste = read(
     "app/(protected)/inventory/waste/new/waste-create-client.tsx",
@@ -100,6 +100,6 @@ test("Branch waste opts into a named touch preview link without changing Owner c
     /previewSize === "touch"[\s\S]*?variant="link"\s+size="touch"[\s\S]*?render=\{<a href=\{value\}/,
   );
   assert.match(wastePhoto, /previewSize=\{previewSize\}/);
-  assert.match(branchWaste, /<WastePhotoUpload[\s\S]*?previewSize="touch"/);
+  assert.match(wasteForm, /<WastePhotoUpload[\s\S]*?previewSize="touch"/);
   assert.doesNotMatch(ownerWaste, /previewSize=/);
 });

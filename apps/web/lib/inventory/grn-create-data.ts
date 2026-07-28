@@ -2,8 +2,6 @@ import "server-only";
 
 import { notFound, redirect } from "next/navigation";
 import {
-  canAccess,
-  canViewPurchasePrice,
   PERMISSION_KEYS,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
@@ -23,6 +21,7 @@ import type {
   GrnCreatePageData,
   GrnCreateServerDraftLine,
 } from "./grn-create-model";
+import { loadInventoryMonetaryAccess } from "./monetary-access";
 
 type IngredientUnitJoinRow = {
   id: number;
@@ -34,7 +33,8 @@ type IngredientUnitJoinRow = {
   units: { code: string; name: string | null } | null;
 };
 
-type IngredientJoinRow = Omit<GrnCreateIngredient, "units"> & {
+type IngredientJoinRow = Omit<GrnCreateIngredient, "units" | "monetary"> & {
+  unit_cost?: number | null;
   ingredient_units: IngredientUnitJoinRow[] | null;
 };
 
@@ -65,10 +65,7 @@ export async function loadGrnCreatePageData({
 
   const auth = await loadAuthState();
   const { supabase, claims } = auth;
-  if (
-    !PROCUREMENT_ROLES.includes(claims.user_role) ||
-    !canAccess(claims.user_role, "branch_stock")
-  ) {
+  if (!PROCUREMENT_ROLES.includes(claims.user_role)) {
     redirect("/access-denied?reason=insufficient-permission");
   }
 
@@ -84,6 +81,21 @@ export async function loadGrnCreatePageData({
     scope.selectedBranchId,
   );
   if (!canCreate) redirect("/access-denied?reason=insufficient-permission");
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const ingredientReadClient = monetary.purchasePrice
+    ? (monetary.client ?? supabase)
+    : supabase;
+  const ingredientQuery = monetary.purchasePrice
+    ? ingredientReadClient
+        .from("ingredients")
+        .select(
+          "id, name, sku, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        )
+    : ingredientReadClient
+        .from("ingredients")
+        .select(
+          "id, name, sku, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        );
 
   const [supplierRes, ingredientsRes, locationsRes, supplierItemsRes] =
     await Promise.all([
@@ -94,11 +106,7 @@ export async function loadGrnCreatePageData({
         .eq("tenant_id", claims.tenant_id)
         .eq("is_active", true)
         .maybeSingle(),
-      supabase
-        .from("ingredients")
-        .select(
-          "id, name, sku, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-        )
+      ingredientQuery
         .eq("tenant_id", claims.tenant_id)
         .eq("is_active", true)
         .order("name")
@@ -129,10 +137,10 @@ export async function loadGrnCreatePageData({
   const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
   const defaultBranchId =
     scope.selectedBranchId != null &&
-    branches.some((branch) => branch.id === scope.selectedBranchId)
+      branches.some((branch) => branch.id === scope.selectedBranchId)
       ? scope.selectedBranchId
       : claims.branch_id &&
-          branches.some((branch) => branch.id === claims.branch_id)
+        branches.some((branch) => branch.id === claims.branch_id)
         ? claims.branch_id
         : (branches[0]?.id ?? null);
   const branchById = new Map(branches.map((branch) => [branch.id, branch]));
@@ -167,7 +175,7 @@ export async function loadGrnCreatePageData({
   );
   const ingredients = ((ingredientsRes.data ?? []) as IngredientJoinRow[])
     .filter((ingredient) => allowedIngredientIds.has(ingredient.id))
-    .map(({ ingredient_units, ...ingredient }) => {
+    .map(({ ingredient_units, unit_cost, ...ingredient }) => {
       const units: IngredientUnitRow[] = (ingredient_units ?? [])
         .filter((unit) => unit.is_active)
         .map((unit) => ({
@@ -183,6 +191,9 @@ export async function loadGrnCreatePageData({
         .sort((left, right) => left.sort_order - right.sort_order);
       return {
         ...ingredient,
+        monetary: monetary.purchasePrice
+          ? { unitCost: unit_cost ?? null }
+          : null,
         unit: units.find((unit) => unit.is_base)?.unit_code ?? "",
         units,
       };
@@ -225,7 +236,6 @@ export async function loadGrnCreatePageData({
             ),
             entryUnitId: line.entry_unit_id,
             quantity: Number(line.received_quantity),
-            unitCost: null,
           },
         ];
       });
@@ -256,7 +266,7 @@ export async function loadGrnCreatePageData({
           received_quantity: number | string;
           unit: string;
           entry_unit_id: number | null;
-          unit_cost: number | string;
+          monetary: { unitCost: number } | null;
           ingredients: { name: string } | null;
         }>;
       };
@@ -275,31 +285,10 @@ export async function loadGrnCreatePageData({
           ),
           entryUnitId: line.entry_unit_id,
           quantity: Number(line.received_quantity ?? 0),
-          unitCost: Number(line.unit_cost ?? 0),
         })),
       };
     }
   }
-
-  const showPurchasePrice = canViewPurchasePrice(claims.user_role);
-  const projectedIngredients = showPurchasePrice
-    ? ingredients
-    : ingredients.map((ingredient) => ({ ...ingredient, unit_cost: null }));
-  const projectedRecentLines = showPurchasePrice
-    ? recentLines
-    : recentLines.map((line) => ({ ...line, unitCost: null }));
-  const projectedDraft =
-    existingDraft == null
-      ? null
-      : showPurchasePrice
-        ? existingDraft
-        : {
-            ...existingDraft,
-            lines: existingDraft.lines.map((line) => ({
-              ...line,
-              unitCost: 0,
-            })),
-          };
 
   const initialBranchId = draftRow?.branch_id ?? defaultBranchId;
   const initialLocationId = draftRow?.location_id ?? null;
@@ -314,9 +303,8 @@ export async function loadGrnCreatePageData({
     locationOptions,
     initialLocationId,
     canSwitchBranch: routeBranchId == null,
-    ingredients: projectedIngredients,
-    recentLines: projectedRecentLines,
-    existingDraft: projectedDraft,
-    showPurchasePrice,
+    ingredients,
+    recentLines,
+    existingDraft,
   };
 }

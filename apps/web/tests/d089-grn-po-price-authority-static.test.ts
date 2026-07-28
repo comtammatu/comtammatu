@@ -52,7 +52,10 @@ test("D089 branch GRN create sheet has no cost number pad", () => {
 
 test("D089 upsertGrnLine ignores warehouse unitCost for draft authority", () => {
   const actions = read("app/(protected)/inventory/grn-actions.ts");
-  assert.match(actions, /D089: warehouse cannot set commercial price on draft/);
+  assert.match(
+    actions,
+    /Preserve the PO-synced cost internally; never expose it to operational roles/,
+  );
   assert.match(actions, /existingCost/);
   assert.match(
     actions,
@@ -82,7 +85,7 @@ test("D088 confirm gate still fail-closed without approved PO", () => {
 test("D089 controller does not block submit on missing draft prices", () => {
   const controller = read("lib/inventory/use-grn-create-controller.ts");
   assert.doesNotMatch(controller, /toastMissingPrices/);
-  assert.match(controller, /const unitCost = 0/);
+  assert.doesNotMatch(controller, /unitCost/);
   assert.match(
     controller,
     /lineCount > 0 && !submitting && !receivingSiteSaving/,
@@ -122,7 +125,7 @@ test("D089 draft DETAIL and create footers hide money before PO sync", () => {
 
   assert.match(detailClient, /footerLineSummary\(\s*lines\.length\s*\)/);
   assert.doesNotMatch(detailClient, /priceRequired/);
-  assert.match(detailClient, /cost > 0[\s\S]*inventoryCommon\.noValue/);
+  assert.match(detailClient, /canViewMonetary[\s\S]*line\.monetary/);
   assert.doesNotMatch(detailClient, /priceOnPoShort/);
 
   assert.doesNotMatch(draftCard, /priceRequired/);

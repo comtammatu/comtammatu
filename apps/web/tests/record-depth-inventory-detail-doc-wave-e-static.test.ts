@@ -156,7 +156,7 @@ test("Wave E GRN DETAIL draft aligns with create DOC density", () => {
   );
   assert.match(
     client,
-    /cost > 0[\s\S]*inventoryCommon\.noValue/,
+    /line\.monetary && line\.monetary\.unitCost > 0[\s\S]*inventoryCommon\.noValue/,
     "draft DETAIL shows — until unit_cost synced",
   );
   assert.doesNotMatch(

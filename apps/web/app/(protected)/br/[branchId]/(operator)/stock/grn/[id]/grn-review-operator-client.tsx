@@ -11,7 +11,6 @@ import {
   Save as IconDeviceFloppy,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -39,7 +38,6 @@ import {
 } from "@lib/inventory/grn-detail-model";
 import { useGrnDetailActions } from "@lib/inventory/use-grn-detail-actions";
 import { useGrnDetailLines } from "@lib/inventory/use-grn-detail-lines";
-import { isGrnBaselineReviewRequired } from "@lib/inventory/grn-quality";
 import { messages } from "@lib/messages";
 import {
   BranchGrnAddLineSheet,
@@ -66,9 +64,9 @@ export function GrnReviewOperatorClient({
   const [addLineOpen, setAddLineOpen] = useState(false);
   const [editingLineId, setEditingLineId] = useState<number | null>(null);
   const statusBadge = getStatusBadgeMeta("inventory", grn.status);
-  const { lines, setLines, patch, stats, dirtyLines } = useGrnDetailLines(
+  const { lines, setLines, patch, dirtyLines } = useGrnDetailLines(
     grn.items,
-    grn.qcSettings.priceVarianceReviewPct,
+    null,
   );
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
     useGrnDetailActions({
@@ -194,10 +192,7 @@ export function GrnReviewOperatorClient({
                       <ItemActions className="shrink-0">
                         {line.rejected > 0 ||
                         line.qualityStatus === "rejected" ||
-                        line.requiresReview ||
-                        isGrnBaselineReviewRequired(
-                          line.baselineVariancePct,
-                        ) ? (
+                        line.requiresReview ? (
                           <IconAlertTriangle className="size-5 text-warning" />
                         ) : (
                           <IconCircleCheck className="size-5 text-success" />
@@ -300,7 +295,7 @@ export function GrnReviewOperatorClient({
                   ) : (
                     <IconCircleCheck />
                   )}
-                  {grnCopy.confirmGrnAction} · {formatVND(stats.total)}
+                  {grnCopy.confirmGrnAction}
                 </Button>
               ) : null}
             </div>

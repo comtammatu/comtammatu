@@ -16,6 +16,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
+import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import type { SepayRefundMatchOption } from "./_lib/sepay-bank-transaction-model";
 import {
   fetchExpenseBankTransactionMatchMap,
@@ -484,12 +485,26 @@ export async function fetchActualFoodCostSummary(params: {
   if (!ctx) return { success: false, error: "Không có quyền xem giá vốn." };
 
   const { supabase, claims } = ctx;
+  if (
+    params.branchId != null &&
+    !(await canAccessBranch(supabase, claims, params.branchId))
+  ) {
+    return { success: false, error: "Không có quyền xem giá vốn." };
+  }
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  if (
+    !monetary.valuation ||
+    !monetary.client ||
+    (claims.user_role !== "owner" && params.branchId == null)
+  ) {
+    return { success: false, error: "Không có quyền xem giá vốn." };
+  }
   const { startIso, endIso } = getVNDateRangeUtc(
     params.startDate,
     params.endDate,
   );
 
-  let query = supabase
+  let query = monetary.client
     .from("stock_movements")
     .select("order_id, quantity_change, unit_cost")
     .eq("tenant_id", claims.tenant_id)

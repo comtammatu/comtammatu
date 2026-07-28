@@ -5,17 +5,6 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
-## Ship B-full operational roles (D088)
-
-State: verify
-Kind: feature
-Tier: T3
-Lane: auth/ops-roles
-Exit: `accountant`, `central_supply_ops`, and `central_kitchen_lead` can log in and act per D088; GRN confirm requires an approved linked PO; branch managers cannot see purchase prices; `typecheck && lint && build` plus targeted auth/procurement/finance tests pass.
-Evidence: D088; `.omc/plans/b-full-ops-roles-workplan.md`; folded D017/D076/D083; finance + inventory contract updates. Migrations `20260728140000_d088_b_full_ops_roles.sql`, `20260728141000_d088_grn_po_confirm_gate.sql`, `20260728142000_d088_accountant_finance_po_grants.sql` applied 2026-07-28 to Greenfield `enloyfnuerqgaqderbwb` (`matu-greenfield-company`) via `scripts/supabase-greenfield-push.mjs --apply` (ledger repaired MCP wall-clock orphans first; dropped invalid `positions.updated_at` / `permission_keys.updated_at` in SQL). `SUPABASE_PROJECT_ID=enloyfnuerqgaqderbwb corepack pnpm db:types` OK. Spot-check: positions + role_templates for 3 roles; finance/PO keys delegable; `confirm_goods_receipt_note` / `create_purchase_order_from_grn` present. State stays `verify` until Wave 5 lint/smoke.
-
-- [ ] Wave 5 — auth.md + role-route-matrix, seeds/fixtures, full gates, owner smoke.
-
 ## Prove one money day on Greenfield
 
 State: blocked
@@ -33,16 +22,29 @@ Blocker: Owner-only prerequisites — seed the Branch 3 (`Nguyễn Hữu Thọ`)
 
 ## Ship D089 purchase-price authority (PO → GRN unit_cost)
 
-State: doing
+State: verify
 Kind: feature
 Tier: T3
 Lane: inventory/procurement
 Exit: Warehouse GRN draft has no price UI; approve_purchase_order syncs PO `unit_price_est` into linked `grn_items.unit_cost`; confirm remains fail-closed without approved PO; static tests encode D089.
-Evidence: D089 in `docs/plan/decisions.md`, migration `20260728143000_d089_po_price_sync_to_grn.sql`, focused web tests.
+Evidence: D089 in `docs/plan/decisions.md`; migrations `20260728143000_d089_po_price_sync_to_grn.sql`, `20260728144500_d089_accountant_po_price_entry.sql`, and `20260728145000_d089_fix_po_approve_price_sync.sql` applied to Greenfield; focused web tests and owner smoke passed.
 
-- [ ] Apply D089 migration to verified Preview/Greenfield after Environment Registry check (not production without owner delegation).
 - [ ] Land/merge after D088 role track if ACL roles still missing on target schema.
-- [ ] Owner smoke: GRN draft (no price) → PO price → approve sync → confirm.
+
+## Eliminate Inventory decision drift and branch-kitchen legacy
+
+State: ready
+Kind: defect
+Tier: T3
+Lane: inventory/topology
+Exit: D082/D088/D089 are the only active Inventory authority; every active site has exactly one active warehouse enforced by DB; branch-kitchen routing, redundant GRN QC, price-QC, and promoted PO-first paths are absent from active runtime/docs/tests; fresh replay, Greenfield catalog checks, repository gates, and authenticated Inventory smoke pass.
+Evidence: Read-only audit found 87 legacy decision/location references across 31 active files, a Greenfield branch with no inventory location, active function bodies still selecting branch kitchens, and GRN tests protecting the old price-QC contract. Root cause: D078 deactivated data and retired one RPC without enforcing the warehouse invariant; later migrations copied stale function bodies.
+
+- [ ] Land Slice A: fold decision authority, add the warehouse invariant migration, replace every active branch-kitchen function body, and prove the final catalog on fresh replay plus Greenfield.
+- [ ] Apply Slice A only after Environment Registry verification and explicit owner delegation for the current Greenfield target, then regenerate database types.
+- [ ] Land Slice B: remove branch-kitchen app contracts, simplify GRN QC, move price review to PO/Finance, and remove promoted PO-first UI.
+- [ ] Replace migration-archive/string legacy tests with behavior and final-catalog guards; run targeted tests plus `typecheck`, `lint`, `build`, and `verify`.
+- [ ] Run authenticated Owner/Branch Inventory smoke at `390`, `768`, and `1280`, then remove this outcome when every Exit item is evidenced.
 
 ## Defer central production workspace cutover
 
@@ -111,7 +113,7 @@ Exit: The P0-P7 program has one verified foundation, every page is classified ke
 Evidence: `docs/plan/design-system-rollout.md`, C0/C1/C2 external review reconciliation, UI debt and archetype audits, focused and full repository gates, authenticated viewport matrix, axe, assistive-technology, and production-like PWA proof.
 
 - [ ] Complete authenticated Branch/Owner viewport and axe runs, VoiceOver/TalkBack critical-path proof, and real install/update/standalone PWA proof on a registered target.
-- [ ] Run the P0-3 authenticated sweep for `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]`, `/inventory/issues`, and `/inventory/stock` at `390`, `768`, and `1280`, then record each disposition in `PAGE_DISPOSITION_OVERRIDES` (`scripts/page-archetypes.mjs`).
+- [ ] Run the P0-3 authenticated sweep for `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]`, `/inventory/consumption`, and `/inventory/stock` at `390`, `768`, and `1280`, then record each disposition in `PAGE_DISPOSITION_OVERRIDES` (`scripts/page-archetypes.mjs`).
 
 ## Densify the Branch on-hand list
 
@@ -162,19 +164,6 @@ Blocker: Greenfield baseline still exposes legacy `create_supplier_payment` to `
 - [ ] Apply the cleanup only through the trusted registration/owner-operated Preview path; regenerate types from the explicit Production source and run repository gates plus database advisors.
 - [ ] Keep every `matu-prod` apply deferred while the retired target stack is suspended; run it only under an explicit owner decision for that stack.
 
-## Restore inventory Owner responsive control contracts
-
-State: doing
-Kind: defect
-Tier: T2
-Lane: ui/responsive-controls
-Exit: Owner inventory surfaces keep the named responsive control contracts: ingredients use `useIsMobile(1024)`, stock filters share one control group source, and issue detail branches layout on `isTouchLayout`.
-Evidence: Unit UX Exit already met (`inventory-stock-unit-format`, `inventory-count-units`, SOP §2c). Remaining failures are responsive-contract drift in `ingredients-client.tsx`, `stock-client.tsx`, and `issues/[id]/issue-detail-client.tsx`.
-
-- [ ] Restore the `useIsMobile(1024)` control contract in `ingredients-client.tsx`.
-- [ ] Restore the single stock status/category filter control source in `stock-client.tsx`.
-- [ ] Restore the `isTouchLayout` layout branch in the issue detail client.
-
 ## Align KDS history authorization with route access
 
 State: verify
@@ -192,8 +181,8 @@ State: verify
 Kind: feature
 Tier: T2
 Lane: inventory/ui
-Exit: `/inventory/grn/[id]` shows document/history tabs, confirmed lines via `DataTable` + footers, sticky `AppDetailFooter`; `/inventory/grn/new/[supplierId]` sticky DOC CTA; Wave E static ratchet green.
-Evidence: `record-depth-inventory-detail-doc-wave-{a,b,c,d,e}-static` 15/15; web `tsc --noEmit`; authenticated viewport smoke for a confirmed GRN at 390/1280.
+Exit: `/inventory/grn/[id]` shows document/history tabs, confirmed lines via `DataTable` + footers, sticky `AppDetailFooter`; `/inventory/grn/new/[supplierId]` sticky DOC CTA; Wave E static ratchet green; DETAIL clones (transfer/consumption/stocktake) use AppPageTabs history; authenticated GRN smoke at 390/1280 when E2E_OWNER session is live.
+Evidence: `record-depth-inventory-detail-doc-wave-{a,b,c,d,e,f}-static`; e2e harness `e2e/inventory/grn-detail-archetype.spec.ts` (skips when owner auth stale). Auth setup against local `.env.test.local` timed out 2026-07-28 — recheck after owner/E2E credential refresh.
 
-- [ ] Open a confirmed GRN detail and GRN create after supplier pick; confirm tabs, table lines, sticky footer are visible vs pre-change dual-rail cards.
-- [ ] Clone the same DETAIL skeleton to issues/transfers/production/stocktake after owner accepts the GRN exemplar.
+- [ ] Refresh Playwright owner storage (`authenticate as test owner`) and run `grn-detail-archetype.spec.ts` at 390/1280.
+- [ ] Open a confirmed GRN detail and GRN create after supplier pick; confirm tabs, table lines, sticky footer vs pre-change dual-rail cards.
