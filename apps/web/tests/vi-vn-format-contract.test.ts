@@ -60,7 +60,7 @@ test("inventory threshold copy formats fractional quantities", () => {
 });
 
 test("operational copy formats fractional quantities and workday balances", () => {
-  assert.match(inventoryMessageSource, /formatQuantity\(required\)/);
+  assert.match(inventoryMessageSource, /formatQuantity\(ordered\)/);
   assert.match(inventoryMessageSource, /formatQuantity\(delivered\)/);
   assert.match(employeeMessageSource, /formatDecimal\(payable, 1\)/);
   assert.match(hrMessageSource, /formatDecimal\(remaining, 1\)/);

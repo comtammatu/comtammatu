@@ -49,6 +49,7 @@ export async function loadBranchWasteCreateData(routeBranchId: number) {
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", routeBranchId)
       .eq("is_active", true)
+      .eq("location_kind", "warehouse")
       .order("sort_order", { ascending: true }),
     supabase
       .from("ingredients")

@@ -34,7 +34,5 @@ export {
 export type { RecentActivityItem } from "./grn-actions";
 export {
   approvePurchaseOrder,
-  createGrnFromPurchaseOrder,
   createPurchaseOrderFromGrn,
-  createPurchaseOrderWithLines,
 } from "./purchase-order-actions";

@@ -6,8 +6,6 @@ import { test } from "node:test";
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const lockMigration =
   "supabase/migration-archive/20260709074049_lock_inventory_adjustment_workflow.sql";
-const menuKitchenReplenishmentMigration =
-  "supabase/migration-archive/20260709162000_menu_limits_kitchen_replenishment.sql";
 
 function read(path: string): string {
   return readFileSync(`${root}${path}`, "utf8");
@@ -64,34 +62,6 @@ test("stock_movements browser direct insert is closed while RPC writers remain c
     migration,
     /GRANT EXECUTE ON FUNCTION public\.adjust_stock_exception\(bigint, bigint, numeric, text\) TO authenticated/,
   );
-});
-
-test("menu-limit kitchen replenishment writes recipe adjustments through one RPC", () => {
-  const migration = read(menuKitchenReplenishmentMigration);
-  const actions = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/actions.ts",
-  );
-
-  assert.match(
-    migration,
-    /CREATE OR REPLACE FUNCTION public\.add_menu_item_kitchen_stock_exception/,
-  );
-  assert.match(
-    migration,
-    /p_extra_portions IS NULL OR p_extra_portions NOT IN \(1, 2\)/,
-  );
-  assert.match(
-    migration,
-    /public\.has_permission\(p_branch_id, 'inventory:write'\)/,
-  );
-  assert.match(migration, /loc\.location_kind = 'kitchen'/);
-  assert.match(migration, /public\.inv_to_base_for_tenant/);
-  assert.match(migration, /INSERT INTO public\.stock_movements/);
-  assert.match(migration, /'adjustment'/);
-  assert.doesNotMatch(migration, /UPDATE public\.stock_levels/);
-
-  assert.match(actions, /\.rpc\(\s*"add_menu_item_kitchen_stock_exception"/);
-  assert.doesNotMatch(actions, /\.from\("stock_movements"\)\s*\.insert/s);
 });
 
 test("stocktake remains the only UI path to count_adjustment completion", () => {

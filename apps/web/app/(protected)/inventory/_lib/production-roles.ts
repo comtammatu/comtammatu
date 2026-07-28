@@ -6,13 +6,18 @@ export const PRODUCTION_OPERATOR_ROLES = [
   "branch_manager",
 ] as const satisfies readonly StaffRole[];
 
+export const PRODUCTION_RECIPE_MANAGER_ROLES = [
+  "owner",
+  "central_kitchen_lead",
+] as const satisfies readonly StaffRole[];
+
 const PRODUCTION_BRANCH_SCOPED_ROLES = [
   "central_kitchen_lead",
   "branch_manager",
 ] as const satisfies readonly StaffRole[];
 
 /**
- * Branch kinds that may run production (D068): the central kitchen plus any
+ * Site kinds that may run production (D091): the central kitchen plus any
  * branch (`branch_manager` produces at its own branch warehouse). Single source for the
  * production branch-kind gate used by both the surface loader
  * (`hasCurrentProductionBranchAccess`) and the order guard
@@ -33,6 +38,8 @@ export function isProductionBranchKind(
 }
 
 export type ProductionOperatorRole = (typeof PRODUCTION_OPERATOR_ROLES)[number];
+export type ProductionRecipeManagerRole =
+  (typeof PRODUCTION_RECIPE_MANAGER_ROLES)[number];
 export type ProductionBranchScopedRole =
   (typeof PRODUCTION_BRANCH_SCOPED_ROLES)[number];
 
@@ -42,6 +49,17 @@ export function canAccessProductionSurface(
   return (
     role != null &&
     PRODUCTION_OPERATOR_ROLES.includes(role as ProductionOperatorRole)
+  );
+}
+
+export function canManageProductionRecipes(
+  role: StaffRole | null | undefined,
+): role is ProductionRecipeManagerRole {
+  return (
+    role != null &&
+    PRODUCTION_RECIPE_MANAGER_ROLES.includes(
+      role as ProductionRecipeManagerRole,
+    )
   );
 }
 

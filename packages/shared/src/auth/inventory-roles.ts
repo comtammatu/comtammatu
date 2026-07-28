@@ -13,13 +13,14 @@ export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
 
 /**
  * Coarse route/action gate for GRN + shared procurement reads + suppliers.
- * `branch_manager` is admitted (D068) so a branch can receive directly from a
+ * `branch_manager` is admitted (D091) so a branch can receive directly from a
  * supplier; the fine differentiation is the per-action permission key + grant
  * (branch_manager holds GRN/supplier/production keys, never recipe/invoice/PO).
- * D088 temporary until ADR 0015: accountant (PO slice) and central site roles
+ * D076 adapters remain temporary until ADR 0015; D091 gives the accountant a
+ * GRN/PO slice and central roles their site-scoped Inventory jobs
  * (GRN draft/confirm; no PO mutate via grants). Owner remains tenant-wide via
  * `has_permission` / `auth_is_owner` and may procure for `branch`,
- * `central_supply`, and `central_kitchen` destinations (D082).
+ * `central_supply`, and `central_kitchen` destinations (D091).
  */
 export const PROCUREMENT_ROLES: readonly StaffRole[] = [
   "owner",
@@ -45,7 +46,7 @@ export function isBranchScopedProcurementRole(role: string): boolean {
 }
 
 /**
- * Pure own-branch decision for a procurement write (D068 cross-branch guard).
+ * Pure own-branch decision for a procurement write (D091 cross-branch guard).
  * `effectiveBranchId` is the actor's own operable branch — their non-null claim
  * for a pinned role. A branch-scoped role may write only that branch; a
  * non-scoped role (owner) is tenant-wide. The real guard
@@ -62,7 +63,7 @@ export function isProcurementBranchInScope(
 }
 
 /**
- * Roles allowed to create/approve purchase orders (D088).
+ * Roles allowed to create/approve purchase orders (D091).
  * Central warehouse roles and branch_manager are intentionally excluded —
  * they draft GRN only; accountant|owner own the PO slice.
  */

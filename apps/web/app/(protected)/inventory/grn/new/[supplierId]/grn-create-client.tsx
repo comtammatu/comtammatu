@@ -48,7 +48,6 @@ import {
 } from "@/components/data-table/data-table";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty } from "@lib/inventory/format";
-import { getDisplayReferenceCost } from "@lib/inventory/reference-cost";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import type {
   GrnCreatePageData,
@@ -111,12 +110,12 @@ function DraftLineMobileCard({
         className="h-auto min-w-0 flex-1 justify-start px-0 py-0 text-left"
       >
         <span className="flex min-w-0 flex-col">
-        <p className="truncate text-sm font-semibold leading-tight">
-          {line.ingredientName}
-        </p>
-        <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
-          {GRN_CREATE_COPY.lineQtyOnly(line.quantity, line.unit)}
-        </p>
+          <p className="truncate text-sm font-semibold leading-tight">
+            {line.ingredientName}
+          </p>
+          <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+            {GRN_CREATE_COPY.lineQtyOnly(line.quantity, line.unit)}
+          </p>
         </span>
       </Button>
       <div className="flex shrink-0 items-center gap-1">
@@ -195,14 +194,6 @@ export function GrnCreateClient({
       ),
     },
     {
-      key: "price",
-      header: GRN_CREATE_COPY.unitCostTitle,
-      className: "w-36 text-right",
-      render: () => (
-        <span className="text-muted-foreground">{inventoryCommon.noValue}</span>
-      ),
-    },
-    {
       key: "actions",
       header: (
         <span className="sr-only">{GRN_CREATE_COPY.lineActionsAria}</span>
@@ -265,9 +256,7 @@ export function GrnCreateClient({
                 controller.branchId != null ? String(controller.branchId) : ""
               }
               onValueChange={controller.handleBranchChange}
-              disabled={
-                controller.submitting || controller.receivingSiteSaving
-              }
+              disabled={controller.submitting || controller.receivingSiteSaving}
             >
               <SelectTrigger
                 id="grn-receiving-branch"
@@ -285,7 +274,9 @@ export function GrnCreateClient({
               </SelectContent>
             </Select>
           ) : (
-            <p className="text-sm font-medium">{controller.selectedBranchName}</p>
+            <p className="text-sm font-medium">
+              {controller.selectedBranchName}
+            </p>
           )}
         </FormField>
       ) : null}
@@ -313,9 +304,7 @@ export function GrnCreateClient({
               size="field"
               className="w-full"
             >
-              <SelectValue
-                placeholder={GRN_CREATE_COPY.locationUnselected}
-              />
+              <SelectValue placeholder={GRN_CREATE_COPY.locationUnselected} />
             </SelectTrigger>
             <SelectContent>
               {controller.branchLocations.map((location) => (
@@ -446,7 +435,6 @@ export function GrnCreateClient({
         ) : (
           controller.filtered.map((ingredient) => {
             const added = controller.addedMap.has(ingredient.id);
-            const referenceCost = getDisplayReferenceCost(ingredient);
             return (
               <InteractiveCard
                 key={ingredient.id}
@@ -470,13 +458,7 @@ export function GrnCreateClient({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {ingredient.sku ? `${ingredient.sku} · ` : ""}
-                    {referenceCost?.unit || ingredient.unit}
-                    {referenceCost
-                      ? ` · ~${GRN_CREATE_COPY.lastCost(
-                          referenceCost.value,
-                          referenceCost.unit,
-                        )}`
-                      : ""}
+                    {ingredient.unit}
                   </p>
                 </div>
                 {added ? (

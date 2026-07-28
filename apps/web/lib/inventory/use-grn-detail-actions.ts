@@ -15,7 +15,6 @@ import {
   type EditableGrnLine,
   type GrnDetail,
 } from "./grn-detail-model";
-import { deriveGrnQualityStatus } from "./grn-quality";
 
 interface UseGrnDetailActionsArgs {
   grn: GrnDetail;
@@ -64,20 +63,9 @@ export function useGrnDetailActions({
           ingredientId: line.ingredientId,
           receivedQuantity: line.actual,
           entryUnitId: line.entryUnitId,
-          qualityStatus: line.qualityStatus,
           rejectedQuantity: line.rejected,
           rejectionReason: line.rejectionReason || null,
           rejectedPhotoUrl: line.rejectedPhotoUrl || null,
-          ...(line.monetary
-            ? {
-                unitCost: line.monetary.unitCost,
-                priceOverrideNote:
-                  line.monetary.priceOverrideNote || null,
-                priceOverridePhotoUrl:
-                  line.monetary.priceOverridePhotoUrl || null,
-              }
-            : {}),
-          shortDeliveryAction: line.shortDeliveryAction,
         });
         if (!result.success) {
           notify.error(
@@ -100,9 +88,7 @@ export function useGrnDetailActions({
         );
         setLines((previous) =>
           previous.map((line) =>
-            savedLines.has(line.lineId)
-              ? { ...line, dirty: false }
-              : line,
+            savedLines.has(line.lineId) ? { ...line, dirty: false } : line,
           ),
         );
         router.refresh();
@@ -154,16 +140,10 @@ export function useGrnDetailActions({
       if (line.rejected > line.actual) {
         return GRN_DETAIL_COPY.validation.rejectedExceedsDelivered(line.name);
       }
-      if (
-        deriveGrnQualityStatus(line.actual, line.rejected) !==
-        line.qualityStatus
-      ) {
-        return GRN_DETAIL_COPY.validation.qualityStatusMismatch(line.name);
-      }
-      if (line.qualityStatus !== "accepted" && !line.rejectionReason.trim()) {
+      if (line.rejected > 0 && !line.rejectionReason.trim()) {
         return GRN_DETAIL_COPY.validation.rejectReasonRequired(line.name);
       }
-      if (line.qualityStatus !== "accepted" && !line.rejectedPhotoUrl.trim()) {
+      if (line.rejected > 0 && !line.rejectedPhotoUrl.trim()) {
         return GRN_DETAIL_COPY.validation.rejectPhotoRequired(line.name);
       }
     }
@@ -194,19 +174,7 @@ export function useGrnDetailActions({
         notify.error(result.error ?? messages.inventory.grn.confirmFailed);
         return;
       }
-      const reviewCount =
-        (result.data &&
-        typeof result.data === "object" &&
-        !Array.isArray(result.data)
-          ? (result.data as { review_count?: number }).review_count
-          : 0) ?? 0;
-      notify.success(
-        reviewCount > 0
-          ? m(messages.inventory.grn.confirmedWithReview, {
-              count: reviewCount,
-            })
-          : messages.inventory.grn.confirmed,
-      );
+      notify.success(messages.inventory.grn.confirmed);
       if (isMobile) {
         router.push(grnMobileBackPath);
       } else {

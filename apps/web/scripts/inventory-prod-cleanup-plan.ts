@@ -31,9 +31,6 @@ const DELETE_TABLES = [
   "supplier_return_items",
   "supplier_returns",
   "supplier_invoices",
-  "grn_hardblock_overrides",
-  "grn_express_extend_audit",
-  "grn_baseline_pause",
   "grn_items",
   "goods_received_notes",
   "purchase_order_items",
@@ -112,7 +109,11 @@ function resolveOutDir(input: string): string {
   const root = repoRoot();
   const resolved = path.resolve(root, input);
   const relative = path.relative(root, resolved);
-  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+  if (
+    relative === "" ||
+    relative.startsWith("..") ||
+    path.isAbsolute(relative)
+  ) {
     throw new Error("Output must stay inside the repository");
   }
   if (!relative.startsWith(".tmp/")) {
@@ -124,7 +125,7 @@ function resolveOutDir(input: string): string {
 function projectRefFromUrl(url: string): string | null {
   try {
     const host = new URL(url).host;
-    return host.endsWith(".supabase.co") ? host.split(".")[0] ?? null : null;
+    return host.endsWith(".supabase.co") ? (host.split(".")[0] ?? null) : null;
   } catch {
     return null;
   }
@@ -132,16 +133,22 @@ function projectRefFromUrl(url: string): string | null {
 
 function requireEnv() {
   const url =
-    process.env["NEXT_PUBLIC_SUPABASE_URL"] ?? process.env["SUPABASE_URL"] ?? "";
+    process.env["NEXT_PUBLIC_SUPABASE_URL"] ??
+    process.env["SUPABASE_URL"] ??
+    "";
   const key = process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "";
   const projectId = process.env["SUPABASE_PROJECT_ID"] ?? "";
   const ref = projectRefFromUrl(url);
 
   if (!url || !key) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+    );
   }
   if (ref !== PROD_REF || projectId !== PROD_REF) {
-    throw new Error(`Ref mismatch. Expected ${PROD_REF}, got url=${ref ?? "unknown"} env=${projectId || "empty"}`);
+    throw new Error(
+      `Ref mismatch. Expected ${PROD_REF}, got url=${ref ?? "unknown"} env=${projectId || "empty"}`,
+    );
   }
 
   return { key, ref, url };
@@ -169,7 +176,9 @@ WHERE tenant_id IN (SELECT id FROM target_tenants);`;
 }
 
 function buildCleanupSql(counts: Record<string, number>): string {
-  const deletedTables = DELETE_TABLES.filter((table) => (counts[table] ?? 0) > 0);
+  const deletedTables = DELETE_TABLES.filter(
+    (table) => (counts[table] ?? 0) > 0,
+  );
 
   return [
     "-- Inventory operational data reset plan.",
@@ -202,22 +211,44 @@ async function run(args: Args) {
     generated_at: new Date().toISOString(),
     project_ref: ref,
     mode: "dry_run",
-    delete_tables: Object.fromEntries(DELETE_TABLES.map((table) => [table, counts[table]])),
-    preserve_tables: Object.fromEntries(PRESERVE_TABLES.map((table) => [table, counts[table]])),
-    total_delete_rows: DELETE_TABLES.reduce((sum, table) => sum + (counts[table] ?? 0), 0),
+    delete_tables: Object.fromEntries(
+      DELETE_TABLES.map((table) => [table, counts[table]]),
+    ),
+    preserve_tables: Object.fromEntries(
+      PRESERVE_TABLES.map((table) => [table, counts[table]]),
+    ),
+    total_delete_rows: DELETE_TABLES.reduce(
+      (sum, table) => sum + (counts[table] ?? 0),
+      0,
+    ),
   };
 
   await mkdir(outDir, { recursive: true });
-  await writeFile(path.join(outDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-  await writeFile(path.join(outDir, "inventory-cleanup.sql"), buildCleanupSql(counts));
+  await writeFile(
+    path.join(outDir, "manifest.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+  await writeFile(
+    path.join(outDir, "inventory-cleanup.sql"),
+    buildCleanupSql(counts),
+  );
 
   console.log(JSON.stringify({ outDir, manifest }, null, 2));
 }
 
 function selfTest() {
-  assert.equal(projectRefFromUrl("https://iexwsuaqqenyjiskawoj.supabase.co"), PROD_REF);
-  assert.match(buildCleanupSql({ stock_levels: 1 }), /DELETE FROM public\.stock_levels/);
-  assert.doesNotMatch(buildCleanupSql({ stock_levels: 0 }), /DELETE FROM public\.stock_levels/);
+  assert.equal(
+    projectRefFromUrl("https://iexwsuaqqenyjiskawoj.supabase.co"),
+    PROD_REF,
+  );
+  assert.match(
+    buildCleanupSql({ stock_levels: 1 }),
+    /DELETE FROM public\.stock_levels/,
+  );
+  assert.doesNotMatch(
+    buildCleanupSql({ stock_levels: 0 }),
+    /DELETE FROM public\.stock_levels/,
+  );
   assert.match(
     deleteSql("branch_daily_waste_cap"),
     /branch_id IN \(SELECT id FROM public\.branches/,

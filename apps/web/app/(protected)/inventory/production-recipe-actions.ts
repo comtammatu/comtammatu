@@ -25,6 +25,7 @@ import {
   requireProductionAccess,
   type RpcClient,
 } from "./_lib/production-shared";
+import { PRODUCTION_RECIPE_MANAGER_ROLES } from "./_lib/production-roles";
 
 const PRODUCTION_RECIPE_READ_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
@@ -457,7 +458,7 @@ export async function downloadProductionRecipeTemplate(): Promise<
   ActionResult<{ filename: string; base64: string; format: "xlsx" }>
 > {
   const ctx = await getAuthContextWithAnyPermission(
-    PRODUCTION_ROLES,
+    PRODUCTION_RECIPE_MANAGER_ROLES,
     PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -534,7 +535,7 @@ export async function importProductionRecipes(
   formData: FormData,
 ): Promise<ImportProductionRecipesResult> {
   const ctx = await getAuthContextWithAnyPermission(
-    PRODUCTION_ROLES,
+    PRODUCTION_RECIPE_MANAGER_ROLES,
     PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -847,7 +848,7 @@ export async function importProductionRecipes(
 
 export const upsertProductionRecipeLines = withAction(
   {
-    roles: PRODUCTION_ROLES,
+    roles: PRODUCTION_RECIPE_MANAGER_ROLES,
     schema: productionRecipeLinesSchema,
     anyPermission: PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   },
@@ -916,7 +917,7 @@ export async function deleteProductionRecipe(
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
   const ctx = await getAuthContextWithAnyPermission(
-    PRODUCTION_ROLES,
+    PRODUCTION_RECIPE_MANAGER_ROLES,
     PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -949,7 +950,7 @@ export async function deleteProductionRecipeGroup(
     return { success: false, error: "ID thành phẩm không hợp lệ" };
 
   const ctx = await getAuthContextWithAnyPermission(
-    PRODUCTION_ROLES,
+    PRODUCTION_RECIPE_MANAGER_ROLES,
     PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };

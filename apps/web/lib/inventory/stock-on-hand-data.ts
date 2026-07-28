@@ -71,9 +71,8 @@ interface LoadStockOnHandPageDataOptions {
 
 const LOCATION_KIND_ORDER: Record<string, number> = {
   warehouse: 0,
-  kitchen: 1,
-  receiving: 2,
-  production_storage: 3,
+  receiving: 1,
+  production_storage: 2,
 };
 
 function relatedOne<T>(value: T | T[] | null | undefined): T | null {
@@ -253,7 +252,7 @@ export async function loadStockOnHandPageData({
   );
   const canViewTotal = valueVisibility.system;
   const canViewBranch = valueVisibility.branch;
-  // D088: strip purchase/WAC unit costs from payloads when role or surface denies.
+  // Strip purchase/WAC unit costs when the role or surface denies valuation.
   const showUnitCosts = includeValuation && monetaryAccess.valuation;
 
   const ingredients: StockIngredient[] = dbIngredients

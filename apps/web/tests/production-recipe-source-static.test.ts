@@ -18,10 +18,6 @@ const newPageSource = readFileSync(
   "app/(protected)/inventory/production/new/page.tsx",
   "utf8",
 );
-const recipeUnitMigrationSource = readFileSync(
-  "../../supabase/migration-archive/20260707182000_patch_production_recipe_unit_and_permissions.sql",
-  "utf8",
-);
 
 test("production run creation is backed by production recipes, not menu recipes", () => {
   assert.match(
@@ -61,19 +57,4 @@ test("production recipe permissions are production-scoped instead of menu-only",
     productionDataSource,
     /currentUserHasAnyPermissionAny\(PRODUCTION_RECIPE_MANAGE_PERMISSIONS\)/,
   );
-});
-
-test("production recipe migration patches RLS and RPCs off dropped unit writes", () => {
-  assert.match(recipeUnitMigrationSource, /DROP POLICY IF EXISTS production_recipes_select/);
-  assert.match(
-    recipeUnitMigrationSource,
-    /public\.has_permission_any\('inventory:production_create'\)/,
-  );
-  assert.match(
-    recipeUnitMigrationSource,
-    /public\.has_permission_any\('inventory:production_confirm'\)/,
-  );
-  assert.doesNotMatch(recipeUnitMigrationSource, /inventory_entry_unit_code/);
-  assert.doesNotMatch(recipeUnitMigrationSource, /quantity,\s*unit,\s*entry_unit_id/);
-  assert.doesNotMatch(recipeUnitMigrationSource, /unit\s*=\s*EXCLUDED\.unit/);
 });

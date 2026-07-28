@@ -72,9 +72,7 @@ test("finance deep-nav landing is wired exact, mirroring inventory", () => {
 
 test("mobile Owner surface bottom nav reuses the shell nav model", () => {
   const appShell = read("apps/web/app/components/app-shell.tsx");
-  const bottomNav = read(
-    "apps/web/app/components/owner-bottom-nav.tsx",
-  );
+  const bottomNav = read("apps/web/app/components/owner-bottom-nav.tsx");
 
   assert.match(
     appShell,
@@ -86,12 +84,12 @@ test("mobile Owner surface bottom nav reuses the shell nav model", () => {
   assert.match(
     bottomNav,
     /className="lg:hidden"/,
-    "management bottom nav spans phone + tablet portrait; only desktop (lg) shows the fixed sidebar (D068 §3)",
+    "management bottom nav spans phone + tablet portrait; only desktop (lg) shows the fixed sidebar (D090)",
   );
   assert.match(
     appShell,
     /showBottomNav \? "pb-24 lg:pb-0"/,
-    "AppShell bottom padding must reserve bottom-nav space through tablet portrait, matching the lg bottom-nav breakpoint (D068 §3)",
+    "AppShell bottom padding must reserve bottom-nav space through tablet portrait, matching the lg bottom-nav breakpoint (D090)",
   );
   assert.match(
     appShell,

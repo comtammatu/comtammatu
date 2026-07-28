@@ -10,7 +10,6 @@ import {
   isProcurementBranchInScope,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { messages } from "@lib/messages";
 import { resolveSoleGrnWarehouseLocation } from "@lib/inventory/grn-create-model";
 import { withAction } from "@/_lib/with-action";
@@ -18,7 +17,6 @@ import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { allocateInventoryDocNumber } from "./_lib/inventory-doc-number";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
-import { dispatchNotificationOutbox } from "./notifications-actions";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 const ROLES = PROCUREMENT_ROLES;
@@ -53,7 +51,7 @@ function parseGrnLookup(input: number | string): GrnLookup | null {
 }
 
 /**
- * Cross-branch guard (D068 §Conflicts-resolved 3). `branch_manager` is a
+ * Cross-branch guard (D091). `branch_manager` is a
  * branch-scoped procurement role (its claims carry a non-null `branch_id`), so
  * `canAccessProcurementBranch` enforces strict `claims.branch_id === branchId`
  * — branch A cannot write a GRN for branch B.
@@ -111,19 +109,11 @@ export async function fetchRecentActivity(
     .eq("tenant_id", claims.tenant_id)
     .order("ordered_at", { ascending: false })
     .limit(5);
-  let grnQuery = (
-    monetary.purchasePrice
-      ? readClient
-          .from("goods_received_notes")
-          .select(
-            "id, grn_number, status, received_date, suppliers ( name ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
-          )
-      : readClient
-          .from("goods_received_notes")
-          .select(
-            "id, grn_number, status, received_date, suppliers ( name ), grn_items ( id )",
-          )
-  )
+  let grnQuery = supabase
+    .from("goods_received_notes")
+    .select(
+      "id, grn_number, status, received_date, suppliers ( name ), grn_items ( id )",
+    )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false })
     .limit(5);
@@ -171,9 +161,10 @@ export async function fetchRecentActivity(
         }> | null) ?? [];
       const hasAllPrices =
         lines.length > 0 && lines.every((l) => l.line_total != null);
-      const total = monetary.purchasePrice && hasAllPrices
-        ? lines.reduce((s, l) => s + Number(l.line_total), 0)
-        : null;
+      const total =
+        monetary.purchasePrice && hasAllPrices
+          ? lines.reduce((s, l) => s + Number(l.line_total), 0)
+          : null;
       return {
         id: po.id,
         type: "po" as const,
@@ -185,36 +176,16 @@ export async function fetchRecentActivity(
         monetary: total == null ? null : { total },
       };
     }),
-    ...(grnRes.data ?? []).map((grn) => {
-      const lines =
-        (grn.grn_items as Array<{
-          received_quantity: number | null;
-          rejected_quantity: number | null;
-          unit_cost: number | null;
-        }> | null) ?? [];
-      // Total received value = (received − rejected) × unit_cost (net into stock)
-      const total =
-        monetary.purchasePrice && lines.length > 0
-          ? lines.reduce(
-            (s, l) =>
-              s +
-              (Number(l.received_quantity ?? 0) -
-                Number(l.rejected_quantity ?? 0)) *
-              Number(l.unit_cost ?? 0),
-            0,
-          )
-          : null;
-      return {
-        id: grn.id,
-        type: "grn" as const,
-        code: grn.grn_number,
-        supplier:
-          (grn.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
-        date: grn.received_date ?? "",
-        status: grn.status,
-        monetary: total == null ? null : { total },
-      };
-    }),
+    ...(grnRes.data ?? []).map((grn) => ({
+      id: grn.id,
+      type: "grn" as const,
+      code: grn.grn_number,
+      supplier:
+        (grn.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
+      date: grn.received_date ?? "",
+      status: grn.status,
+      monetary: null,
+    })),
     ...(invRes.data ?? []).map((inv) => ({
       id: inv.id,
       type: "invoice" as const,
@@ -244,16 +215,10 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-  const readClient = monetary.purchasePrice
-    ? (monetary.client ?? supabase)
-    : supabase;
-  let query = readClient
+  let query = supabase
     .from("goods_received_notes")
     .select(
-      monetary.purchasePrice
-        ? "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost, quality_status, requires_review, baseline_variance_pct )"
-        : "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( quality_status, requires_review )",
+      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( id, rejected_quantity )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false })
@@ -261,37 +226,7 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
   if (branchId != null) query = query.eq("branch_id", branchId);
   const { data, error } = await query;
   if (error) return { success: false, error: grnLoadFailedError };
-  const rows = (data ?? []).map((row) => {
-    const items = row.grn_items ?? [];
-    const total = monetary.purchasePrice
-      ? items.reduce(
-          (sum, item) =>
-            sum +
-            (Number(
-              "received_quantity" in item
-                ? item.received_quantity ?? 0
-                : 0,
-            ) -
-              Number(
-                "rejected_quantity" in item
-                  ? item.rejected_quantity ?? 0
-                  : 0,
-              )) *
-              Number("unit_cost" in item ? item.unit_cost ?? 0 : 0),
-          0,
-        )
-      : null;
-    return {
-      ...row,
-      monetary: total == null ? null : { total },
-      grn_items: items.map((item) => ({
-        id: "id" in item ? item.id : undefined,
-        quality_status: item.quality_status,
-        requires_review: item.requires_review,
-      })),
-    };
-  });
-  return { success: true, data: rows };
+  return { success: true, data: data ?? [] };
 }
 
 /* ─── fetchGrnIdsForDropdown ─── */
@@ -331,11 +266,7 @@ export async function fetchGrnDetail(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-  const readClient = monetary.purchasePrice
-    ? (monetary.client ?? supabase)
-    : supabase;
-  const grnQuery = readClient
+  const grnQuery = supabase
     .from("goods_received_notes")
     .select(
       "id, tenant_id, branch_id, location_id, supplier_id, po_id, grn_number, status, received_date, notes, created_by, created_at, updated_at, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders ( id, po_number, status )",
@@ -360,18 +291,11 @@ export async function fetchGrnDetail(
       errorCode: "not_found",
     };
   }
-  const linesQuery = monetary.purchasePrice
-    ? readClient
-        .from("grn_items")
-        .select(
-          "*, ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) )",
-        )
-    : readClient
-        .from("grn_items")
-        .select(
-          "id, grn_id, tenant_id, ingredient_id, po_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, requires_review, short_delivery_action, unit, entry_unit_id, quality_status, receiving_temperature, ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) )",
-        );
-  const { data: lines, error: e2 } = await linesQuery
+  const { data: lines, error: e2 } = await supabase
+    .from("grn_items")
+    .select(
+      "id, grn_id, tenant_id, ingredient_id, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) )",
+    )
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id);
   if (e2)
@@ -385,52 +309,23 @@ export async function fetchGrnDetail(
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
-  const projectedLines = (
-    (lines ?? []) as unknown as Array<Record<string, unknown>>
-  ).map((line) => ({
+  const { data: poLines } =
+    grn.po_id == null
+      ? { data: [] }
+      : await supabase
+          .from("purchase_order_items")
+          .select("ingredient_id, quantity")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("po_id", grn.po_id);
+  const orderedByIngredient = new Map(
+    (poLines ?? []).map((line) => [
+      line.ingredient_id,
+      Number(line.quantity ?? 0),
+    ]),
+  );
+  const projectedLines = (lines ?? []).map((line) => ({
     ...line,
-    monetary: monetary.purchasePrice
-      ? {
-          poUnitPrice:
-            "po_unit_price" in line && line.po_unit_price != null
-              ? Number(line.po_unit_price)
-              : null,
-          unitCost:
-            "unit_cost" in line ? Number(line.unit_cost ?? 0) : 0,
-          totalCost:
-            "total_cost" in line ? Number(line.total_cost ?? 0) : 0,
-          priceOverrideNote:
-            "price_override_note" in line
-              ? (line.price_override_note ?? null)
-              : null,
-          priceOverridePhotoUrl:
-            "price_override_photo_url" in line
-              ? (line.price_override_photo_url ?? null)
-              : null,
-          priceVariancePct:
-            "price_variance_pct" in line &&
-            line.price_variance_pct != null
-              ? Number(line.price_variance_pct)
-              : null,
-          baselineVariancePct:
-            "baseline_variance_pct" in line &&
-            line.baseline_variance_pct != null
-              ? Number(line.baseline_variance_pct)
-              : null,
-          baselineSampleN:
-            "baseline_sample_n" in line && line.baseline_sample_n != null
-              ? Number(line.baseline_sample_n)
-              : null,
-        }
-      : null,
-    po_unit_price: undefined,
-    unit_cost: undefined,
-    total_cost: undefined,
-    price_override_note: undefined,
-    price_override_photo_url: undefined,
-    price_variance_pct: undefined,
-    baseline_variance_pct: undefined,
-    baseline_sample_n: undefined,
+    po_quantity: orderedByIngredient.get(line.ingredient_id) ?? null,
   }));
   return {
     success: true,
@@ -515,6 +410,7 @@ export const createGrnDraft = withAction(
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", targetBranchId)
         .eq("is_active", true)
+        .eq("location_kind", "warehouse")
         .maybeSingle();
       if (locationError || !location) {
         return { success: false, error: "Nơi nhập hàng không hợp lệ." };
@@ -624,11 +520,12 @@ export async function listMyGrnDrafts(
   let query = supabase
     .from("goods_received_notes")
     .select(
-      "id, supplier_id, branch_id, po_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), purchase_orders ( id, po_number ), grn_items ( id, quality_status, requires_review )",
+      "id, supplier_id, branch_id, po_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), purchase_orders ( id, po_number ), grn_items ( id, rejected_quantity )",
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("created_by", user.id)
-    .eq("status", "draft");
+    .eq("status", "draft")
+    .is("po_id", null);
   // Branch-scope drafts on the operator plane so a multi-branch user does not
   // see (and Continue into) another branch's draft; Owner surface (branchId omitted)
   // keeps the cross-branch view.
@@ -666,6 +563,7 @@ export const discardGrnDraft = withAction(
       .eq("tenant_id", claims.tenant_id)
       .eq("created_by", user.id)
       .eq("status", "draft")
+      .is("po_id", null)
       .select("id")
       .maybeSingle();
     if (error) {
@@ -717,11 +615,10 @@ export const updateDraftGrnReceivingSite = withAction(
         error: "Bạn chỉ được chỉnh sửa phiếu nhập của nơi mình phụ trách.",
       };
     }
-    if (grn.po_id != null && data.targetBranchId !== grn.branch_id) {
+    if (grn.po_id != null) {
       return {
         success: false,
-        error:
-          "Phiếu nháp đang gắn đơn mua; chỉ được đổi nơi nhập trong cùng chi nhánh.",
+        error: "Phiếu nháp đã gắn đơn mua nên không thể đổi kho nhận.",
       };
     }
     if (!canAccessProcurementBranch(claims, data.targetBranchId)) {
@@ -743,6 +640,7 @@ export const updateDraftGrnReceivingSite = withAction(
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", data.targetBranchId)
       .eq("is_active", true)
+      .eq("location_kind", "warehouse")
       .maybeSingle();
     if (locationError || !location) {
       return { success: false, error: "Nơi nhập mới không hợp lệ." };
@@ -757,6 +655,7 @@ export const updateDraftGrnReceivingSite = withAction(
       .eq("id", data.grnId)
       .eq("tenant_id", claims.tenant_id)
       .eq("status", "draft")
+      .is("po_id", null)
       .select("id")
       .single();
     if (error || !row) {
@@ -771,36 +670,47 @@ export const updateDraftGrnReceivingSite = withAction(
 
 /* ─── upsertGrnLine ─── */
 
+const GRN_NUMERIC_15_3_MAX = 999_999_999_999.999;
+
 const grnLineSchema = z
   .object({
     grnId: z.coerce.number().int().positive(),
     ingredientId: z.coerce.number().int().positive(),
     // "Số đã giao" (gross delivered). Stock impact = receivedQuantity − rejectedQuantity.
-    receivedQuantity: z.coerce.number().min(0),
+    receivedQuantity: z.coerce.number().min(0).max(GRN_NUMERIC_15_3_MAX),
     // Purchase-role unit the qty was entered in. NULL = already base.
     entryUnitId: z.coerce.number().int().positive().nullable().optional(),
-    // D089: ignored for draft warehouse upserts — commercial price comes from PO approve sync.
-    unitCost: z.coerce.number().min(0).optional(),
-    qualityStatus: z
-      .enum(["accepted", "rejected", "partial"])
-      .default("accepted"),
-    receivingTemperature: z.coerce.number().optional().nullable(),
-    // QC fields — rejectedQuantity is a subset of receivedQuantity
-    rejectedQuantity: z.coerce.number().min(0).optional(),
+    rejectedQuantity: z.coerce
+      .number()
+      .min(0)
+      .max(GRN_NUMERIC_15_3_MAX)
+      .optional(),
     rejectionReason: z.string().trim().max(500).optional().nullable(),
     rejectedPhotoUrl: z.string().trim().url().optional().nullable(),
-    // Price-variance audit
-    priceOverrideNote: z.string().trim().max(500).optional().nullable(),
-    priceOverridePhotoUrl: z.string().trim().url().optional().nullable(),
-    // Short-delivery handling (set by user when delivered < ordered beyond tolerance)
-    shortDeliveryAction: z
-      .enum(["accept_and_close", "wait_backorder"])
-      .optional()
-      .nullable(),
   })
-  .refine((d) => (d.rejectedQuantity ?? 0) <= d.receivedQuantity, {
-    error: "Số lượng từ chối không được vượt số đã giao.",
-    path: ["rejectedQuantity"],
+  .superRefine((data, context) => {
+    const rejected = data.rejectedQuantity ?? 0;
+    if (rejected > data.receivedQuantity) {
+      context.addIssue({
+        code: "custom",
+        message: "Số lượng từ chối không được vượt số đã giao.",
+        path: ["rejectedQuantity"],
+      });
+    }
+    if (rejected > 0 && !data.rejectionReason) {
+      context.addIssue({
+        code: "custom",
+        message: "Phải nhập lý do khi có hàng từ chối nhập.",
+        path: ["rejectionReason"],
+      });
+    }
+    if (rejected > 0 && !data.rejectedPhotoUrl) {
+      context.addIssue({
+        code: "custom",
+        message: "Phải có ảnh khi có hàng từ chối nhập.",
+        path: ["rejectedPhotoUrl"],
+      });
+    }
   });
 
 export const upsertGrnLine = withAction(
@@ -812,7 +722,7 @@ export const upsertGrnLine = withAction(
   async (data, { supabase, claims }) => {
     const { data: grn, error: grnError } = await supabase
       .from("goods_received_notes")
-      .select("id, status, branch_id, supplier_id")
+      .select("id, status, branch_id, supplier_id, po_id")
       .eq("id", data.grnId)
       .eq("tenant_id", claims.tenant_id)
       .single();
@@ -824,6 +734,12 @@ export const upsertGrnLine = withAction(
       return {
         success: false,
         error: "Chỉ chỉnh sửa dòng khi phiếu nhập đang ở trạng thái nháp.",
+      };
+    }
+    if (grn.po_id != null) {
+      return {
+        success: false,
+        error: "Phiếu nhập đã gắn đơn mua nên không thể chỉnh sửa dòng.",
       };
     }
     if (!canAccessProcurementBranch(claims, grn.branch_id)) {
@@ -855,17 +771,7 @@ export const upsertGrnLine = withAction(
       };
     }
 
-    let rejected = data.rejectedQuantity ?? 0;
-    // When the user marks the whole line "rejected", auto-set rejected = received.
-    if (data.qualityStatus === "rejected") {
-      rejected = data.receivedQuantity;
-    }
-    if (rejected > 0 && !data.rejectionReason) {
-      return {
-        success: false,
-        error: "Phải nhập lý do khi có hàng từ chối nhập.",
-      };
-    }
+    const rejected = data.rejectedQuantity ?? 0;
 
     const resolvedUnit = await resolveEntryUnitCode(supabase, {
       tenantId: claims.tenant_id,
@@ -876,21 +782,6 @@ export const upsertGrnLine = withAction(
       return { success: false, error: resolvedUnit.error };
     }
 
-    // Preserve the PO-synced cost internally; never expose it to operational roles.
-    const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-    const internalClient = monetary.client ?? createServiceClient();
-    const { data: existingLine } = await internalClient
-      .from("grn_items")
-      .select("unit_cost")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("grn_id", data.grnId)
-      .eq("ingredient_id", data.ingredientId)
-      .maybeSingle();
-    const existingCost =
-      existingLine?.unit_cost == null ? 0 : Number(existingLine.unit_cost);
-    const unitCost =
-      Number.isFinite(existingCost) && existingCost > 0 ? existingCost : 0;
-    const totalCost = data.receivedQuantity * unitCost;
     const { data: row, error } = await supabase
       .from("grn_items")
       .upsert(
@@ -900,25 +791,13 @@ export const upsertGrnLine = withAction(
           ingredient_id: data.ingredientId,
           received_quantity: data.receivedQuantity,
           entry_unit_id: data.entryUnitId ?? null,
-          unit_cost: unitCost,
-          total_cost: totalCost,
-          quality_status: data.qualityStatus,
-          receiving_temperature: data.receivingTemperature ?? null,
           rejected_quantity: rejected,
           rejection_reason: data.rejectionReason ?? null,
           rejected_photo_url: data.rejectedPhotoUrl ?? null,
-          ...(monetary.purchasePrice
-            ? {
-                price_override_note: data.priceOverrideNote ?? null,
-                price_override_photo_url:
-                  data.priceOverridePhotoUrl ?? null,
-              }
-            : {}),
-          short_delivery_action: data.shortDeliveryAction ?? null,
-        },
+        } as never,
         { onConflict: "grn_id,ingredient_id,tenant_id" },
       )
-      .select("id, requires_review")
+      .select("id")
       .single();
     if (error?.message.includes("supplier_item_mapping_required")) {
       return {
@@ -949,7 +828,7 @@ export const deleteGrnLine = withAction(
   async (data, { supabase, claims }) => {
     const { data: grn, error: grnError } = await supabase
       .from("goods_received_notes")
-      .select("id, status, branch_id")
+      .select("id, status, branch_id, po_id")
       .eq("id", data.grnId)
       .eq("tenant_id", claims.tenant_id)
       .single();
@@ -961,6 +840,12 @@ export const deleteGrnLine = withAction(
       return {
         success: false,
         error: "Chỉ xóa dòng khi phiếu nhập đang ở trạng thái nháp.",
+      };
+    }
+    if (grn.po_id != null) {
+      return {
+        success: false,
+        error: "Phiếu nhập đã gắn đơn mua nên không thể xóa dòng.",
       };
     }
     if (!canAccessProcurementBranch(claims, grn.branch_id)) {
@@ -992,49 +877,7 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     PERMISSION_KEYS.PROCUREMENT_GRN_CONFIRM,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-
-  const { data: grn, error: grnError } = await supabase
-    .from("goods_received_notes")
-    .select("supplier_id, grn_items(ingredient_id)")
-    .eq("id", id.data)
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
-  if (grnError || !grn) {
-    return { success: false, error: "Không tìm thấy phiếu nhập." };
-  }
-  const ingredientIds = [
-    ...new Set(grn.grn_items.map((item) => item.ingredient_id)),
-  ];
-  if (ingredientIds.length === 0) {
-    return { success: false, error: "Phiếu nhập chưa có nguyên liệu." };
-  }
-  const { data: supplierItems, error: supplierItemsError } = await supabase
-    .from("supplier_items")
-    .select("ingredient_id")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("supplier_id", grn.supplier_id)
-    .eq("is_active", true)
-    .in("ingredient_id", ingredientIds);
-  if (supplierItemsError) {
-    return {
-      success: false,
-      error: "Không thể kiểm tra nguyên liệu theo nhà cung cấp.",
-    };
-  }
-  const allowedIngredientIds = new Set(
-    (supplierItems ?? []).map((item) => item.ingredient_id),
-  );
-  if (
-    ingredientIds.some(
-      (ingredientId) => !allowedIngredientIds.has(ingredientId),
-    )
-  ) {
-    return {
-      success: false,
-      error: "Phiếu có nguyên liệu chưa được gán cho nhà cung cấp.",
-    };
-  }
+  const { supabase } = ctx;
 
   const { data, error } = await supabase.rpc("confirm_goods_receipt_note", {
     p_grn_id: id.data,
@@ -1061,16 +904,10 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
         error: messages.inventory.grn.confirmQcPhotoRequired,
       };
     }
-    if (error.message.includes("grn_qc_price_reason_required")) {
+    if (error.message.includes("grn_rejection_evidence_required")) {
       return {
         success: false,
-        error: messages.inventory.grn.confirmQcPriceReasonRequired,
-      };
-    }
-    if (error.message.includes("grn_qc_price_photo_required")) {
-      return {
-        success: false,
-        error: messages.inventory.grn.confirmQcPricePhotoRequired,
+        error: messages.inventory.grn.confirmQcEvidenceRequired,
       };
     }
     if (error.message.includes("grn_confirm_requires_approved_po")) {
@@ -1085,39 +922,15 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
         error: messages.inventory.grn.confirmNotDraft,
       };
     }
-    if (error.message.includes("supplier_item_mapping_required")) {
-      return {
-        success: false,
-        error: "Phiếu có nguyên liệu chưa được gán cho nhà cung cấp.",
-      };
-    }
     return { success: false, error: messages.inventory.grn.confirmFailed };
   }
 
-  const reviewCount =
-    data && typeof data === "object" && !Array.isArray(data)
-      ? ((data as { review_count?: number }).review_count ?? 0)
-      : 0;
-
   revalidatePath("/inventory/grn");
-
-  // Fire-and-forget dispatch when there are review-flagged lines (real-time alert).
-  // Errors are swallowed — outbox row remains pending and will be retried on next dispatch.
-  if (reviewCount > 0) {
-    void dispatchNotificationOutbox().catch((e) => {
-      console.error("inventory.grn.notification_dispatch_failed", {
-        error: e instanceof Error ? e.message : String(e),
-      });
-    });
-  }
 
   return { success: true, data };
 }
 
 /* ─── amendGrnLine (Owner force-edit on confirmed GRN) ─── */
-
-const GRN_NUMERIC_15_3_MAX = 999_999_999_999.999;
-const GRN_NUMERIC_15_2_MAX = 9_999_999_999_999.99;
 
 const amendGrnLineSchema = z
   .object({
@@ -1139,17 +952,18 @@ const amendGrnLineSchema = z
       })
       .optional()
       .nullable(),
-    unitCost: z.coerce
-      .number()
-      .min(0, { error: "Đơn giá phải >= 0" })
-      .max(GRN_NUMERIC_15_2_MAX, {
-        error: "Đơn giá vượt giới hạn hệ thống.",
-      }),
+    rejectionReason: z
+      .string()
+      .trim()
+      .max(500, { error: "Lý do tối đa 500 ký tự" })
+      .optional()
+      .nullable(),
+    rejectedPhotoUrl: z.string().trim().url().optional().nullable(),
     reason: z
       .string()
       .trim()
-      .min(5, { error: "Lý do tối thiểu 5 ký tự" })
-      .max(500, { error: "Lý do tối đa 500 ký tự" }),
+      .min(5, { error: "Lý do sửa tối thiểu 5 ký tự." })
+      .max(500, { error: "Lý do sửa tối đa 500 ký tự." }),
   })
   .refine(
     (d) =>
@@ -1159,13 +973,19 @@ const amendGrnLineSchema = z
       path: ["rejectedQuantity"],
     },
   )
-  .superRefine((d, ctx) => {
-    if (d.receivedQuantity * d.unitCost > GRN_NUMERIC_15_2_MAX) {
-      ctx.addIssue({
+  .superRefine((data, context) => {
+    if ((data.rejectedQuantity ?? 0) > 0 && !data.rejectionReason) {
+      context.addIssue({
         code: "custom",
-        message:
-          "Thành tiền vượt giới hạn hệ thống. Kiểm tra lại số lượng và đơn giá.",
-        path: ["unitCost"],
+        message: "Phải nhập lý do khi có hàng từ chối nhập.",
+        path: ["rejectionReason"],
+      });
+    }
+    if ((data.rejectedQuantity ?? 0) > 0 && !data.rejectedPhotoUrl) {
+      context.addIssue({
+        code: "custom",
+        message: "Phải có ảnh khi có hàng từ chối nhập.",
+        path: ["rejectedPhotoUrl"],
       });
     }
   });
@@ -1177,14 +997,18 @@ export const amendGrnLine = withAction(
     permission: PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
   },
   async (data, { supabase }) => {
-    const { data: row, error } = await supabase.rpc("amend_grn_line", {
-      p_grn_id: data.grnId,
-      p_line_id: data.lineId,
-      p_received_quantity: data.receivedQuantity,
-      p_unit_cost: data.unitCost,
-      p_reason: data.reason,
-      p_rejected_quantity: data.rejectedQuantity ?? undefined,
-    });
+    const { data: row, error } = await supabase.rpc(
+      "amend_grn_line" as never,
+      {
+        p_grn_id: data.grnId,
+        p_line_id: data.lineId,
+        p_received_quantity: data.receivedQuantity,
+        p_rejected_quantity: data.rejectedQuantity ?? undefined,
+        p_rejection_reason: data.rejectionReason ?? undefined,
+        p_rejected_photo_url: data.rejectedPhotoUrl ?? undefined,
+        p_reason: data.reason,
+      } as never,
+    );
 
     if (error) {
       console.error("inventory.grn.amend_line_failed", {
@@ -1199,12 +1023,6 @@ export const amendGrnLine = withAction(
         return {
           success: false,
           error: "Chỉ áp dụng cho phiếu nhập đã chốt.",
-        };
-      }
-      if (msg.includes("has_active_supplier_return")) {
-        return {
-          success: false,
-          error: "Dòng đã có phiếu trả NCC liên kết — không thể sửa trực tiếp.",
         };
       }
       if (msg.includes("has_paid_invoice")) {
@@ -1236,8 +1054,7 @@ export const amendGrnLine = withAction(
       if (error.code === "22003" || msg.includes("numeric field overflow")) {
         return {
           success: false,
-          error:
-            "Số lượng hoặc đơn giá vượt giới hạn hệ thống. Kiểm tra lại đơn vị và giá nhập.",
+          error: "Số lượng vượt giới hạn hệ thống. Kiểm tra lại đơn vị nhập.",
         };
       }
       if (msg.includes("rejected_exceeds_received")) {
@@ -1246,11 +1063,20 @@ export const amendGrnLine = withAction(
           error: "Số lượng từ chối không được vượt số đã giao.",
         };
       }
-      if (msg.includes("reason_required_min_5_chars")) {
-        return { success: false, error: "Lý do tối thiểu 5 ký tự." };
+      if (msg.includes("grn_qc_reason_required")) {
+        return { success: false, error: "Phải nhập lý do cho hàng từ chối." };
       }
-      if (msg.includes("invalid_amount")) {
-        return { success: false, error: "Số lượng/đơn giá không hợp lệ." };
+      if (msg.includes("grn_qc_photo_required")) {
+        return { success: false, error: "Phải có ảnh cho hàng từ chối." };
+      }
+      if (msg.includes("grn_rejection_evidence_required")) {
+        return {
+          success: false,
+          error: "Hàng từ chối phải có đủ lý do và ảnh.",
+        };
+      }
+      if (msg.includes("invalid_quantity")) {
+        return { success: false, error: "Số lượng không hợp lệ." };
       }
       if (msg.includes("grn_line_not_found")) {
         return { success: false, error: "Không tìm thấy dòng phiếu nhập." };
@@ -1261,129 +1087,5 @@ export const amendGrnLine = withAction(
     revalidatePath("/inventory/grn");
     revalidatePath(`/inventory/grn/${data.grnId}`);
     return { success: true, data: row };
-  },
-);
-
-const recreateGrnReceivingSiteSchema = z.object({
-  grnId: z.coerce.number().int().positive(),
-  targetBranchId: z.coerce.number().int().positive(),
-  targetLocationId: z.coerce.number().int().positive(),
-  reason: z
-    .string()
-    .trim()
-    .min(10, { error: "Lý do tối thiểu 10 ký tự." })
-    .max(500, { error: "Lý do tối đa 500 ký tự." }),
-});
-
-const recreateGrnReceivingSiteResultSchema = z
-  .object({
-    old_grn_id: z.coerce.number().int().positive(),
-    old_grn_number: z.string(),
-    new_grn_id: z.coerce.number().int().positive(),
-    new_grn_number: z.string(),
-    new_po_id: z.coerce.number().int().positive().nullable().optional(),
-    old_auto_po_cancelled: z.boolean().optional(),
-  })
-  .passthrough();
-
-function mapRecreateGrnReceivingSiteError(message: string, code?: string) {
-  if (message.includes("same_branch_use_location_amend")) {
-    return "Kho nhận mới vẫn cùng chi nhánh. Dùng điều chỉnh nơi nhập trong cùng kho/chi nhánh.";
-  }
-  if (message.includes("source_po_attached")) {
-    return "Phiếu đang gắn đơn mua thật; chưa thể hủy và tạo lại tự động.";
-  }
-  if (message.includes("source_po_shared")) {
-    return "Đơn mua nguồn đang dùng bởi phiếu nhập khác; chưa thể hủy và tạo lại.";
-  }
-  if (message.includes("has_active_supplier_return")) {
-    return "Phiếu đã có phiếu trả NCC liên kết — không thể hủy và tạo lại.";
-  }
-  if (message.includes("has_paid_invoice")) {
-    return "Phiếu đã có hóa đơn NCC đang/đã thanh toán — không thể hủy và tạo lại.";
-  }
-  if (message.includes("insufficient_source_stock")) {
-    return "Kho cũ không còn đủ tồn để hủy phiếu nhập và tạo lại ở kho mới.";
-  }
-  if (message.includes("source_location_missing")) {
-    return "Phiếu cũ chưa có nơi nhập hợp lệ để đảo tồn kho.";
-  }
-  if (message.includes("target_location_invalid")) {
-    return "Kho nhận mới không hợp lệ hoặc không thuộc chi nhánh đã chọn.";
-  }
-  if (message.includes("grn_not_confirmed")) {
-    return "Chỉ áp dụng cho phiếu nhập đã chốt.";
-  }
-  if (message.includes("grn_not_found")) {
-    return "Không tìm thấy phiếu nhập.";
-  }
-  if (message.includes("reason_required_min_10_chars")) {
-    return "Lý do tối thiểu 10 ký tự.";
-  }
-  if (message.includes("invalid_amount") || code === "22003") {
-    return "Số lượng hoặc đơn giá vượt giới hạn hệ thống.";
-  }
-  if (
-    message.includes("forbidden_source_branch") ||
-    message.includes("forbidden_target_branch") ||
-    code === "42501"
-  ) {
-    return "Bạn chưa có quyền hủy và tạo lại phiếu nhập cho kho nguồn hoặc kho nhận mới.";
-  }
-  return "Không thể hủy và tạo lại phiếu nhập ở kho nhận mới.";
-}
-
-export const recreateGrnAtReceivingSite = withAction(
-  {
-    roles: ROLES,
-    schema: recreateGrnReceivingSiteSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
-  },
-  async (data, { supabase }) => {
-    const { data: row, error } = await supabase.rpc(
-      "recreate_grn_at_receiving_site",
-      {
-        p_grn_id: data.grnId,
-        p_target_branch_id: data.targetBranchId,
-        p_target_location_id: data.targetLocationId,
-        p_reason: data.reason,
-      },
-    );
-
-    if (error) {
-      console.error("inventory.grn.recreate_receiving_site_failed", {
-        code: error.code,
-        error: error.message,
-      });
-      return {
-        success: false,
-        error: mapRecreateGrnReceivingSiteError(
-          error.message || "",
-          error.code,
-        ),
-      };
-    }
-
-    const parsed = recreateGrnReceivingSiteResultSchema.safeParse(row);
-    if (!parsed.success) {
-      return { success: false, error: "Phản hồi không hợp lệ từ máy chủ." };
-    }
-
-    revalidatePath("/inventory/grn");
-    revalidatePath(`/inventory/grn/${data.grnId}`);
-    revalidatePath(`/inventory/grn/${parsed.data.new_grn_id}`);
-    revalidatePath("/inventory/stock");
-
-    return {
-      success: true,
-      data: {
-        oldId: parsed.data.old_grn_id,
-        oldGrnNumber: parsed.data.old_grn_number,
-        newId: parsed.data.new_grn_id,
-        newGrnNumber: parsed.data.new_grn_number,
-        newPoId: parsed.data.new_po_id ?? null,
-        oldAutoPoCancelled: parsed.data.old_auto_po_cancelled ?? false,
-      },
-    };
   },
 );

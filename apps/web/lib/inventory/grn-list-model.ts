@@ -8,7 +8,6 @@ export type GrnRow = {
   poId: number | null;
   poCode: string;
   date: string;
-  monetary: { total: number } | null;
   status: string;
   qcIssueCount: number;
 };
@@ -81,14 +80,12 @@ export function newGrnSupplierHref(
   return `${basePath}/new?${params.toString()}`;
 }
 
-/** PO-linked drafts resume on DETAIL; free drafts resume on create with supplier+branch. */
+/** Existing drafts always resume on their canonical DETAIL route. */
 export function grnDraftHref(
   basePath: string,
-  draft: Pick<GrnDraftRow, "grnId" | "poId" | "supplierId" | "branchId">,
+  draft: Pick<GrnDraftRow, "grnId">,
 ): string {
-  return draft.poId != null
-    ? `${basePath}/${draft.grnId}`
-    : newGrnSupplierHref(basePath, draft.supplierId, draft.branchId);
+  return `${basePath}/${draft.grnId}`;
 }
 
 type GrnDraftSearchRow = Pick<

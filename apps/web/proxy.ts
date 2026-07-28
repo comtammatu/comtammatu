@@ -183,9 +183,8 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  // Owner-plane routes default to owner-only. D088 temporary roles may access
-  // specific ModuleKeys (finance / inventory) via MODULE_ACL — admit those
-  // before bouncing non-owners to their landing page.
+  // Owner-plane routes default to owner-only. D076 operational roles may access
+  // specific ModuleKeys (finance / inventory); D091 narrows the Inventory jobs.
   if (isOwnerRoutePath(pathname) && claims.user_role !== "owner") {
     const ownerModuleKey: ModuleKey | null = resolveModuleFromPath(pathname);
     if (!ownerModuleKey || !canAccess(claims.user_role, ownerModuleKey)) {

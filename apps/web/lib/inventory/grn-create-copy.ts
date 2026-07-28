@@ -1,13 +1,12 @@
 import { STATES_VI } from "@comtammatu/shared/messages";
-import { formatCount, formatPercent } from "@comtammatu/shared/format";
-import { formatQty, formatVND } from "@lib/inventory/format";
+import { formatCount } from "@comtammatu/shared/format";
+import { formatQty } from "@lib/inventory/format";
 
 export const GRN_CREATE_COPY = {
   changeSupplier: "Đổi nhà cung cấp",
   newReceiptEyebrow: "Phiếu nhập mới",
   discardDraft: "Hủy nháp",
   addItemToContinue: "Thêm mặt hàng để tiếp tục",
-  unitCostTitle: "Đơn giá nhập",
   editItem: "Sửa mặt hàng",
   addItem: "Thêm mặt hàng",
   addLineToReceipt: "Thêm vào phiếu",
@@ -26,8 +25,6 @@ export const GRN_CREATE_COPY = {
   draftEmptyDescription: "Nhấn Thêm mặt hàng để chọn nguyên liệu.",
   /** Dialog title for the progressive catalog picker (not a page section). */
   catalogTitle: "Thêm mặt hàng",
-  optionalNote: "Ghi chú (tùy chọn)",
-  notePlaceholder: "Tình trạng, nhiệt độ...",
   addedSummary: (lineCount: number) =>
     `Đã thêm ${formatCount(lineCount)} mặt hàng`,
   /** Draft footer before PO price sync — count only, no warehouse money total. */
@@ -35,15 +32,9 @@ export const GRN_CREATE_COPY = {
     `${formatCount(lineCount)} mặt hàng`,
   reviewBeforeConfirm: (lineCount: number) =>
     `Kiểm nhận · ${formatCount(lineCount)} mặt hàng`,
-  lineUnitCost: (quantity: number, unit: string, unitCost: number) =>
-    `${formatQty(quantity)} ${unit} · ${formatVND(unitCost)}/${unit}`,
   lineQtyOnly: (quantity: number, unit: string) =>
     `${formatQty(quantity)} ${unit}`,
   unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
-  unitPriceUnit: (unit: string, unitCost: number) =>
-    unitCost > 0
-      ? `Đơn giá ${formatVND(unitCost)} / ${unit}`
-      : `Đơn giá / ${unit}`,
   baseConversionPreview: (
     quantity: string,
     entryUnit: string,
@@ -52,25 +43,6 @@ export const GRN_CREATE_COPY = {
   ) =>
     `Quy đổi về tồn chuẩn: ${quantity} ${entryUnit} = ${baseQuantity} ${baseUnit}`,
   conversionMissing: "Chưa cấu hình quy đổi",
-  moneyVnd: (value: number) => formatVND(value),
-  lastCost: (value: number, unit: string) => `${formatVND(value)}/${unit}`,
-  lastCostReference: (value: number, unit: string) =>
-    `Lần trước ${formatVND(value)}/${unit}`,
-  /** Compact prior-price + variance under unit-price (create line editor). */
-  priorPriceLine: (
-    value: number,
-    unit: string,
-    variance: number | null,
-  ) => {
-    const prior = `Lần trước ${formatVND(value)}/${unit}`;
-    if (variance == null) return prior;
-    const pct = formatPercent(Math.abs(variance) * 100, 0);
-    const signed =
-      variance > 0 ? `+${pct}` : variance < 0 ? `-${pct}` : pct;
-    return `${prior} · chênh ${signed}`;
-  },
-  varianceWarning: (variance: number) =>
-    `Giá chênh ${formatPercent(variance * 100, 0)} so với lần trước — kiểm tra lại trước khi lưu.`,
   branchUnselected: "Chưa chọn kho nhận",
   locationUnselected: "Chưa chọn kho nhận",
   /** Site (branch) when both branch + stock location are choosable. */

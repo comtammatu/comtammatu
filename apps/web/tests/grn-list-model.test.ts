@@ -76,7 +76,7 @@ test("GRN list filter state and supplier draft href keep route scope explicit", 
       supplierId: 44,
       branchId: 12,
     }),
-    "/inventory/grn/new?supplierId=44&branchId=12",
+    "/inventory/grn/9",
   );
 });
 

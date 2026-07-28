@@ -355,7 +355,6 @@ const transferCreateSchema = z.object({
   toBranchId: z.coerce.number().int().positive(),
   fromLocationId: z.coerce.number().int().positive().optional(),
   toLocationId: z.coerce.number().int().positive().optional(),
-  toLocationKind: z.enum(["default_receive", "branch_kitchen"]).optional(),
   notes: z.string().max(500, { error: "Ghi chú tối đa 500 ký tự" }).optional(),
   vehicleInfo: z.string().optional(),
   lines: z
@@ -407,10 +406,10 @@ export async function createStockTransfer(
   if (!fromKind || !toKind) {
     return { success: false, error: "Điểm vận hành không hợp lệ." };
   }
-  if (isIntraBranch || parsed.data.toLocationKind === "branch_kitchen") {
+  if (isIntraBranch) {
     return {
       success: false,
-      error: "Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.",
+      error: "Điểm nhận phải khác điểm xuất.",
     };
   }
   if (!isAllowedInterSiteDirection(fromKind, toKind)) {
@@ -453,6 +452,31 @@ export async function createStockTransfer(
     return {
       success: false,
       error: "Chưa cấu hình vị trí kho gửi hoặc kho nhận mặc định.",
+    };
+  }
+  const { data: transferLocations, error: transferLocationsError } =
+    await supabase
+      .from("inventory_locations")
+      .select("id, branch_id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .eq("location_kind", "warehouse")
+      .in("id", [fromLocationId, toLocationId]);
+  if (
+    transferLocationsError ||
+    transferLocations?.length !== 2 ||
+    !transferLocations.some(
+      (location) =>
+        location.id === fromLocationId && location.branch_id === fromBranchId,
+    ) ||
+    !transferLocations.some(
+      (location) =>
+        location.id === toLocationId && location.branch_id === toBranchId,
+    )
+  ) {
+    return {
+      success: false,
+      error: "Thông tin kho luân chuyển không hợp lệ.",
     };
   }
 
@@ -760,17 +784,4 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
     };
   }
   return { success: true, data: branches };
-}
-
-export async function quickInternalTransfer(_input: {
-  branchId: number;
-  ingredientId: number;
-  quantity: number;
-  entryUnitId?: number | null;
-  reason?: string;
-}): Promise<ActionResult> {
-  return {
-    success: false,
-    error: "Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.",
-  };
 }

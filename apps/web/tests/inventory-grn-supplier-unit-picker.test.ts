@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { normalizePgDumpSql } from "./sql-test-utils";
 import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "../lib/inventory/purchase-units";
+import { persistPendingGrnDraftLines } from "../lib/inventory/persist-grn-draft-lines";
 import {
   getDisplayReferenceCost,
   getReferenceCostForUnit,
@@ -218,9 +218,7 @@ test("inventory unit display uses the catalog name, not the unit code", () => {
 });
 
 test("inventory unit option helpers are not role-gated by allow flags", () => {
-  const sharedSource = readRepo(
-    "apps/web/lib/inventory/unit-options.ts",
-  );
+  const sharedSource = readRepo("apps/web/lib/inventory/unit-options.ts");
   assert.match(sharedSource, /unit\.is_active && unit\.unit_code !== ""/);
 
   for (const path of [
@@ -243,7 +241,7 @@ test("ingredients list does not render raw base-unit reference cost", () => {
   assert.doesNotMatch(source, /formatVND\(item\.unit_cost\)/);
 });
 
-test("GRN create editor no longer seeds commercial price from reference cost (D089)", () => {
+test("GRN create editor no longer seeds commercial price from reference cost (D091)", () => {
   const source = readRepo(
     "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
@@ -253,7 +251,7 @@ test("GRN create editor no longer seeds commercial price from reference cost (D0
   assert.doesNotMatch(source, /priceSetOnPoHint/);
 });
 
-test("GRN warehouse draft does not require unit price (D089)", () => {
+test("GRN warehouse draft does not require unit price (D091)", () => {
   const controller = readRepo(
     "apps/web/lib/inventory/use-grn-create-controller.ts",
   );
@@ -273,7 +271,8 @@ test("GRN warehouse draft does not require unit price (D089)", () => {
   assert.doesNotMatch(editor, /priceSetOnPoHint/);
   assert.match(client, /GRN_CREATE_COPY\.lineQtyOnly/);
   assert.doesNotMatch(client, /GRN_CREATE_COPY\.linePriceRequired/);
-  assert.match(controller, /lines: existingDraft\?\.lines \?\? recentLines/);
+  assert.match(controller, /lines: recentLines/);
+  assert.doesNotMatch(controller, /existingDraft/);
   assert.match(data, /\.from\("goods_received_notes"\)/);
   assert.match(data, /\.eq\("supplier_id", supplierId\)/);
   assert.match(data, /\.eq\("branch_id", defaultBranchId\)/);
@@ -289,7 +288,7 @@ test("GRN warehouse draft does not require unit price (D089)", () => {
   );
 });
 
-test("GRN add-line dialog is qty/UOM only without PO price hint (D089)", () => {
+test("GRN add-line dialog is qty/UOM only without PO price hint (D091)", () => {
   const source = readRepo(
     "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
   );
@@ -337,24 +336,111 @@ test("GRN create-from-supplier saveLine threads the picked entryUnitId to upsert
   );
 });
 
-test("confirm_goods_receipt_note converts every grn_items row via inv_to_base regardless of source (PO or supplier)", () => {
-  const sql = normalizePgDumpSql(
-    readRepo("supabase/migrations/20260727120000_baseline.sql"),
+test("GRN submit persists preloaded recent lines before review navigation", async () => {
+  const controller = readRepo(
+    "apps/web/lib/inventory/use-grn-create-controller.ts",
   );
-  const fnStart = sql.indexOf(
-    "CREATE FUNCTION public.confirm_goods_receipt_note",
+  const persistIndex = controller.indexOf(
+    "const persisted = await persistPendingGrnDraftLines(",
   );
-  assert.ok(fnStart >= 0, "confirm_goods_receipt_note not found in baseline");
-  const fnBody = sql.slice(fnStart, fnStart + 6000);
+  const reviewNavigationIndex = controller.indexOf(
+    "router.push(`${grnBasePath}/${grnId}?review=1`)",
+  );
+  assert.ok(persistIndex >= 0, "submit must persist pending draft lines");
+  assert.ok(
+    reviewNavigationIndex > persistIndex,
+    "review navigation must happen after pending lines are persisted",
+  );
 
-  // The loop over grn_items has no PO-vs-supplier branch: every line's
-  // entry_unit_id is converted the same way (D053 §10).
-  assert.match(
-    fnBody,
-    /v_recv_base := public\.inv_to_base\(v_item\.ingredient_id, v_item\.entry_unit_id, v_recv\)/,
+  const calls: Array<{
+    grnId: number;
+    ingredientId: number;
+    receivedQuantity: number;
+    entryUnitId: number | null;
+  }> = [];
+  const result = await persistPendingGrnDraftLines(
+    91,
+    [
+      {
+        ingredientId: 10,
+        ingredientName: "Gạo",
+        unit: "bao",
+        entryUnitId: 3,
+        quantity: 2,
+      },
+      {
+        lineId: 44,
+        ingredientId: 11,
+        ingredientName: "Muối",
+        unit: "kg",
+        entryUnitId: null,
+        quantity: 1,
+      },
+    ],
+    async (input) => {
+      calls.push(input);
+      return { success: true, data: { id: 45 } };
+    },
   );
-  assert.doesNotMatch(
-    fnBody,
-    /IF\s+v_grn\.po_id\s+IS\s+NOT\s+NULL\s+THEN[\s\S]{0,50}inv_to_base/,
+
+  assert.deepEqual(calls, [
+    {
+      grnId: 91,
+      ingredientId: 10,
+      receivedQuantity: 2,
+      entryUnitId: 3,
+    },
+  ]);
+  assert.deepEqual(result, {
+    success: true,
+    lines: [
+      {
+        lineId: 45,
+        ingredientId: 10,
+        ingredientName: "Gạo",
+        unit: "bao",
+        entryUnitId: 3,
+        quantity: 2,
+      },
+      {
+        lineId: 44,
+        ingredientId: 11,
+        ingredientName: "Muối",
+        unit: "kg",
+        entryUnitId: null,
+        quantity: 1,
+      },
+    ],
+  });
+});
+
+test("GRN submit stops when a preloaded line cannot be persisted", async () => {
+  let attempts = 0;
+  const result = await persistPendingGrnDraftLines(
+    92,
+    [
+      {
+        ingredientId: 20,
+        ingredientName: "Dầu",
+        unit: "can",
+        quantity: 1,
+      },
+      {
+        ingredientId: 21,
+        ingredientName: "Đường",
+        unit: "kg",
+        quantity: 1,
+      },
+    ],
+    async () => {
+      attempts += 1;
+      return { success: false, error: "Không thể lưu dòng phiếu nhập." };
+    },
   );
+
+  assert.equal(attempts, 1);
+  assert.deepEqual(result, {
+    success: false,
+    error: "Không thể lưu dòng phiếu nhập.",
+  });
 });

@@ -7,7 +7,6 @@ export type GrnCreateIngredient = {
   name: string;
   sku: string | null;
   unit: string;
-  monetary: { unitCost: number | null } | null;
   category: string | null;
   units?: IngredientUnitRow[];
 };
@@ -37,14 +36,9 @@ export type GrnCreatePageData = {
   branchId: number | null;
   procurementBranches: GrnCreateProcurementBranchOption[];
   locationOptions: GrnCreateProcurementLocationOption[];
-  initialLocationId: number | null;
   canSwitchBranch: boolean;
   ingredients: GrnCreateIngredient[];
   recentLines: GrnDraftLine[];
-  existingDraft: {
-    id: number;
-    lines: GrnCreateServerDraftLine[];
-  } | null;
 };
 
 export type GrnLineEditState = {
@@ -53,7 +47,6 @@ export type GrnLineEditState = {
   quantity: number;
   unit: string;
   entryUnitId: number | null;
-  note: string;
 };
 
 export function getGrnLocationKindLabel(
@@ -70,27 +63,13 @@ export function getGrnLocationKindLabel(
 export function pickGrnReceivingLocation(
   locations: GrnCreateProcurementLocationOption[],
   branchId: number | null,
-  preferredLocationId: number | null = null,
 ): GrnCreateProcurementLocationOption | null {
-  const candidates = branchId
-    ? locations.filter((location) => location.branchId === branchId)
-    : locations;
-
-  return (
-    candidates.find((location) => location.id === preferredLocationId) ??
-    candidates.find(
-      (location) =>
-        location.branchKind === "branch" && location.kind === "warehouse",
-    ) ??
-    candidates.find(
-      (location) =>
-        location.branchKind === "central_kitchen" &&
-        location.kind === "production_storage",
-    ) ??
-    candidates.find((location) => location.isDefaultReceive) ??
-    candidates[0] ??
-    null
+  if (branchId == null) return null;
+  const warehouses = locations.filter(
+    (location) =>
+      location.branchId === branchId && location.kind === "warehouse",
   );
+  return warehouses.length === 1 ? warehouses[0]! : null;
 }
 
 export function resolveSoleGrnWarehouseLocation(
@@ -99,13 +78,4 @@ export function resolveSoleGrnWarehouseLocation(
   if (locations.length === 0) return { status: "missing" } as const;
   if (locations.length > 1) return { status: "ambiguous" } as const;
   return { status: "resolved", locationId: locations[0]!.id } as const;
-}
-
-export function isSameGrnReferenceCost(
-  currentCost: number,
-  referenceCost: { value: number } | null,
-): boolean {
-  return (
-    referenceCost != null && Math.abs(currentCost - referenceCost.value) < 0.01
-  );
 }

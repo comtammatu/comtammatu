@@ -1,16 +1,17 @@
 /**
- * Inventory E2E helpers — service-role Supabase utilities for seeding and
- * verifying branch inventory data in tests.
+ * Inventory E2E helpers — Supabase utilities for seeding and verifying branch
+ * inventory data in tests.
  *
- * Uses the same pattern as e2e/helpers/supabase.ts (service-role client,
- * cleanup closures returned alongside data).
+ * Uses the same service-role client pattern as e2e/helpers/supabase.ts.
  *
  * Required env vars (same .env.test.local as other E2E suites):
  *   NEXT_PUBLIC_SUPABASE_URL
+ *   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY
  *   SUPABASE_SERVICE_ROLE_KEY
  *   E2E_CASHIER_EMAIL / E2E_CASHIER_PASSWORD   — used for auth.setup.ts
  *   E2E_INVENTORY_MANAGER_EMAIL (optional)     — branch_manager at a branch
  *   E2E_INVENTORY_MANAGER_PASSWORD (optional)  — defaults to E2E_CASHIER_PASSWORD
+ *   E2E_OWNER_EMAIL / E2E_OWNER_PASSWORD        — retrospective PO approval
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -32,6 +33,37 @@ export function createServiceClient() {
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+async function createOwnerClient(
+  serviceClient: ServiceClient,
+  tenantId: number,
+): Promise<ServiceClient> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const email = process.env.E2E_OWNER_EMAIL ?? "keeper@comtammatu.vn";
+  const password = process.env.E2E_OWNER_PASSWORD ?? "Test1234!";
+  if (!url || !key) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL and a public Supabase key must be set for authenticated E2E fixtures",
+    );
+  }
+
+  const owner = await resolveUserByEmail(serviceClient, email);
+  if (owner.tenantId !== tenantId) {
+    throw new Error("E2E owner and Inventory fixture must share one tenant.");
+  }
+
+  const client = createClient<Database>(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  if (error) {
+    throw new Error(`Failed to authenticate E2E owner: ${error.message}`);
+  }
+  return client;
 }
 
 // ─── Tenant resolution ────────────────────────────────────────────────────────
@@ -85,7 +117,10 @@ export async function ensureBranch(
   }
 
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const code = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const code = Array.from(
+    { length: 4 },
+    () => chars[Math.floor(Math.random() * chars.length)],
+  ).join("");
 
   const { data: inserted, error } = await supabase
     .from("branches")
@@ -250,7 +285,9 @@ export async function resolveIngredientBaseUnitId(
     .maybeSingle();
 
   if (error || data?.unit_id == null) {
-    throw new Error(`Failed to resolve ingredient base unit: ${error?.message}`);
+    throw new Error(
+      `Failed to resolve ingredient base unit: ${error?.message}`,
+    );
   }
 
   return data.unit_id;
@@ -286,61 +323,101 @@ export async function ensureSupplier(
   return inserted.id;
 }
 
+export async function ensureSupplierItemMapping(
+  supabase: ServiceClient,
+  tenantId: number,
+  supplierId: number,
+  ingredientId: number,
+): Promise<void> {
+  const { data: existing, error: existingError } = await supabase
+    .from("supplier_items")
+    .select("id, is_active")
+    .eq("tenant_id", tenantId)
+    .eq("supplier_id", supplierId)
+    .eq("ingredient_id", ingredientId)
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(
+      `Failed to resolve E2E supplier item: ${existingError.message}`,
+    );
+  }
+  if (existing) {
+    if (!existing.is_active) {
+      const { error } = await supabase
+        .from("supplier_items")
+        .update({ is_active: true })
+        .eq("id", existing.id)
+        .eq("tenant_id", tenantId);
+      if (error) {
+        throw new Error(
+          `Failed to reactivate E2E supplier item: ${error.message}`,
+        );
+      }
+    }
+    return;
+  }
+
+  const { error } = await supabase.from("supplier_items").upsert(
+    {
+      tenant_id: tenantId,
+      supplier_id: supplierId,
+      ingredient_id: ingredientId,
+      supplier_sku_code: `E2E-${ingredientId}`,
+      is_active: true,
+    },
+    { onConflict: "supplier_id,supplier_sku_code" },
+  );
+  if (error) {
+    throw new Error(`Failed to create E2E supplier item: ${error.message}`);
+  }
+}
+
 // ─── Inventory location helpers ───────────────────────────────────────────────
 
 export async function ensureInventoryLocation(
   supabase: ServiceClient,
   tenantId: number,
   branchId: number,
-  locationKind:
-    | "receive"
-    | "issue"
-    | "storage"
-    | "warehouse"
-    | "kitchen" = "storage",
+  locationKind: "receive" | "issue" | "storage" | "warehouse" = "storage",
 ): Promise<number> {
   const name = `E2E Loc ${branchId} ${locationKind}`;
 
-  const { data: branch, error: branchErr } = await supabase
-    .from("branches")
-    .select("branch_kind")
-    .eq("tenant_id", tenantId)
-    .eq("id", branchId)
-    .single();
-
-  if (branchErr || !branch) {
-    throw new Error(
-      `Failed to resolve branch for E2E location: ${branchErr?.message}`,
-    );
-  }
-
-  const desiredLocationKind =
-    locationKind === "kitchen" ? "kitchen" : "warehouse";
-
-  let existingQuery = supabase
+  const { data: existing, error: existingError } = await supabase
     .from("inventory_locations")
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("branch_id", branchId)
-    .eq("is_active", true);
-
-  if (locationKind === "receive") {
-    existingQuery = existingQuery.eq("is_default_receive", true);
-  } else if (locationKind === "issue") {
-    existingQuery = existingQuery.eq("is_default_issue", true);
-  } else {
-    existingQuery = existingQuery.eq("location_kind", desiredLocationKind);
-  }
-
-  const { data: existing } = await existingQuery
+    .eq("is_active", true)
+    .eq("location_kind", "warehouse")
     .order("sort_order", { ascending: true })
     .limit(1)
     .maybeSingle();
 
-  if (existing) return existing.id;
-
-  const isDefaultReceive = locationKind === "receive";
-  const isDefaultIssue = locationKind === "issue";
+  if (existingError) {
+    throw new Error(
+      `Failed to resolve E2E warehouse for ${locationKind}: ${existingError.message}`,
+    );
+  }
+  if (existing) {
+    const { error } = await supabase
+      .from("inventory_locations")
+      .update({
+        is_default_receive: true,
+        is_default_issue: true,
+        is_default_consumption: true,
+      })
+      .eq("id", existing.id)
+      .eq("tenant_id", tenantId);
+    if (error) {
+      throw new Error(
+        `Failed to normalize E2E warehouse for ${locationKind}: ${error.message}`,
+      );
+    }
+    return existing.id;
+  }
 
   const { data: inserted, error } = await supabase
     .from("inventory_locations")
@@ -349,11 +426,11 @@ export async function ensureInventoryLocation(
       branch_id: branchId,
       name,
       code: `E2E-${branchId}-${locationKind}`,
-      location_kind: desiredLocationKind,
+      location_kind: "warehouse",
       is_active: true,
-      is_default_receive: isDefaultReceive,
-      is_default_issue: isDefaultIssue,
-      is_default_consumption: false,
+      is_default_receive: true,
+      is_default_issue: true,
+      is_default_consumption: true,
       sort_order: 999,
     })
     .select("id")
@@ -426,19 +503,22 @@ export async function getStockLevel(
 
 export interface TestGrn {
   id: number;
+  poId: number;
   grnNumber: string;
   tenantId: number;
   branchId: number;
   ingredientId: number;
   supplierId: number;
-  cleanup: () => Promise<void>;
 }
 
 /**
- * Creates a draft GRN + one line item via the service-role client.
- * Bypasses Server Action auth — for seeding only.
+ * Seeds the physical GRN through service-role, then creates, prices, and
+ * approves its retrospective PO through an authenticated owner session.
+ *
+ * The approved/confirmed documents are intentionally retained for audit in the
+ * dedicated E2E database. Reset that database between suites.
  */
-export async function createTestGrnDraft(
+export async function createTestGrnWithApprovedPo(
   supabase: ServiceClient,
   opts: {
     tenantId: number;
@@ -447,12 +527,26 @@ export async function createTestGrnDraft(
     ingredientId: number;
     quantity?: number;
     unitCost?: number;
+    locationId: number;
+    rejectedQuantity?: number;
+    rejectionReason?: string;
     createdByUserId: string;
   },
 ): Promise<TestGrn> {
   const grnNumber = `GRN-E2E-${Date.now()}`;
   const qty = opts.quantity ?? 10;
   const cost = opts.unitCost ?? 10000;
+  const rejectedQuantity = opts.rejectedQuantity ?? 0;
+  const acceptedQuantity = qty - rejectedQuantity;
+  if (acceptedQuantity <= 0) {
+    throw new Error("Test GRN must include a positive accepted quantity.");
+  }
+  await ensureSupplierItemMapping(
+    supabase,
+    opts.tenantId,
+    opts.supplierId,
+    opts.ingredientId,
+  );
   const entryUnitId = await resolveIngredientBaseUnitId(
     supabase,
     opts.tenantId,
@@ -465,6 +559,7 @@ export async function createTestGrnDraft(
       tenant_id: opts.tenantId,
       branch_id: opts.branchId,
       supplier_id: opts.supplierId,
+      location_id: opts.locationId,
       grn_number: grnNumber,
       status: "draft",
       created_by: opts.createdByUserId,
@@ -476,48 +571,125 @@ export async function createTestGrnDraft(
     throw new Error(`Failed to create test GRN: ${grnErr?.message}`);
   }
 
-  const { error: lineErr } = await supabase.from("grn_items").insert({
-    tenant_id: opts.tenantId,
-    grn_id: grn.id,
-    ingredient_id: opts.ingredientId,
-    received_quantity: qty,
-    unit_cost: cost,
-    total_cost: qty * cost,
-    quality_status: "accepted",
-    entry_unit_id: entryUnitId,
-  });
+  const { data: line, error: lineErr } = await supabase
+    .from("grn_items")
+    .insert({
+      tenant_id: opts.tenantId,
+      grn_id: grn.id,
+      ingredient_id: opts.ingredientId,
+      received_quantity: qty,
+      rejected_quantity: rejectedQuantity,
+      rejection_reason: opts.rejectionReason ?? null,
+      rejected_photo_url: null,
+      unit_cost: 0,
+      total_cost: 0,
+      entry_unit_id: entryUnitId,
+    })
+    .select("id")
+    .single();
 
-  if (lineErr) {
-    throw new Error(`Failed to create test GRN line: ${lineErr.message}`);
+  if (lineErr || !line) {
+    throw new Error(`Failed to create test GRN line: ${lineErr?.message}`);
   }
 
-  const cleanup = async () => {
-    const sb = createServiceClient();
-    await sb
-      .from("stock_movements")
-      .delete()
-      .eq("grn_id", grn.id)
-      .eq("tenant_id", opts.tenantId);
-    await sb
+  const ownerClient = await createOwnerClient(supabase, opts.tenantId);
+  if (rejectedQuantity > 0) {
+    const objectPath =
+      `${opts.tenantId}/grn/${grn.id}/rejected/${line.id}/` +
+      `e2e-${Date.now()}.png`;
+    const onePixelPng = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "base64",
+    );
+    const { error: uploadError } = await ownerClient.storage
+      .from("inventory-attachments")
+      .upload(objectPath, onePixelPng, {
+        contentType: "image/png",
+        upsert: false,
+      });
+    if (uploadError) {
+      throw new Error(
+        `Failed to upload E2E rejection evidence: ${uploadError.message}`,
+      );
+    }
+    const { data: publicUrl } = ownerClient.storage
+      .from("inventory-attachments")
+      .getPublicUrl(objectPath);
+    const { error: evidenceError } = await ownerClient
       .from("grn_items")
-      .delete()
+      .update({ rejected_photo_url: publicUrl.publicUrl })
+      .eq("tenant_id", opts.tenantId)
       .eq("grn_id", grn.id)
-      .eq("tenant_id", opts.tenantId);
-    await sb
-      .from("goods_received_notes")
-      .delete()
-      .eq("id", grn.id)
-      .eq("tenant_id", opts.tenantId);
-  };
+      .eq("id", line.id);
+    if (evidenceError) {
+      throw new Error(
+        `Failed to attach E2E rejection evidence: ${evidenceError.message}`,
+      );
+    }
+  }
+
+  const { data: createResult, error: createError } = await ownerClient.rpc(
+    "create_purchase_order_from_grn",
+    { p_grn_id: grn.id },
+  );
+  if (createError) {
+    throw new Error(
+      `Failed to create retrospective E2E PO: ${createError.message}`,
+    );
+  }
+  const poId =
+    createResult &&
+    typeof createResult === "object" &&
+    !Array.isArray(createResult) &&
+    typeof createResult.po_id === "number"
+      ? createResult.po_id
+      : null;
+  if (poId == null) {
+    throw new Error("Retrospective E2E PO did not return a numeric po_id.");
+  }
+
+  const { data: poLines, error: poLinesError } = await supabase
+    .from("purchase_order_items")
+    .select("id")
+    .eq("tenant_id", opts.tenantId)
+    .eq("po_id", poId);
+  if (poLinesError || !poLines?.length) {
+    throw new Error(
+      `Failed to resolve retrospective E2E PO lines: ${poLinesError?.message}`,
+    );
+  }
+
+  const { error: priceError } = await ownerClient.rpc(
+    "update_purchase_order_prices_protected",
+    {
+      p_po_id: poId,
+      p_lines: poLines.map((poLine) => ({
+        line_id: poLine.id,
+        unit_price: cost,
+      })),
+    },
+  );
+  if (priceError) {
+    throw new Error(`Failed to price E2E PO: ${priceError.message}`);
+  }
+
+  const { error: approveError } = await ownerClient.rpc(
+    "approve_purchase_order",
+    { p_po_id: poId },
+  );
+  if (approveError) {
+    throw new Error(`Failed to approve E2E PO: ${approveError.message}`);
+  }
+  await ownerClient.auth.signOut();
 
   return {
     id: grn.id,
+    poId,
     grnNumber,
     tenantId: opts.tenantId,
     branchId: opts.branchId,
     ingredientId: opts.ingredientId,
     supplierId: opts.supplierId,
-    cleanup,
   };
 }
 

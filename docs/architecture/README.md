@@ -14,7 +14,7 @@ phẩm song song.
 - [../ref/glossary.md](../ref/glossary.md) — current-state vocabulary của hệ thống đang chạy
 - [../spec/architecture.md](../spec/architecture.md) — tổng quan kiến trúc hệ thống hiện tại
 - [target-modules-tech-stack-project-structure.md](target-modules-tech-stack-project-structure.md) — Modules, Tech Specs, Infra và Project Structure mục tiêu
-- [../plan/decisions.md](../plan/decisions.md) — net-effect decisions, gồm D015/D082
+- [../plan/decisions.md](../plan/decisions.md) — net-effect decisions, gồm D015/D091
 - [../spec/database-schema.md](../spec/database-schema.md) — schema chuẩn và ranh giới dữ liệu
 - [../modules/auth.md](../modules/auth.md) — Auth, JWT claims và ACL của hệ thống hiện tại
 - [../ref/business-context.md](../ref/business-context.md) — business boundary và phạm vi sản phẩm

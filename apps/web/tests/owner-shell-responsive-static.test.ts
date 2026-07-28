@@ -68,11 +68,14 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
   assert.doesNotMatch(surface, /createPortal|OwnerPageChromeHostContext|ownsOwnerScroll/);
   assert.doesNotMatch(surface, /APP_PAGE_HEADER_OFFSET_VAR|data-owner-page-chrome/);
   assert.match(surface, /APP_PAGE_STICKY_FILTER_CLASSNAME/);
+  assert.match(surface, /APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME/);
+  assert.match(surface, /function AppStickyFilterChrome\(/);
   assert.match(surface, /function AppPageStickyChrome\(/);
   assert.match(
     surface,
-    /function AppListFrame\([\s\S]*?APP_PAGE_STICKY_FILTER_CLASSNAME[\s\S]*?bg-card/,
+    /function AppListFrame\([\s\S]*?AppStickyFilterChrome/,
   );
+  assert.match(surface, /data-stuck/);
   assert.match(surface, /sticky\?: boolean/);
   assert.match(
     surface,

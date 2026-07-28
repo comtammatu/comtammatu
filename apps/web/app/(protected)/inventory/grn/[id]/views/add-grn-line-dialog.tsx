@@ -118,11 +118,9 @@ export function AddGrnLineDialog({
         ingredientId: parsedIngredientId,
         receivedQuantity: parsedQuantity,
         entryUnitId,
-        qualityStatus: "accepted",
         rejectedQuantity: 0,
         rejectionReason: null,
         rejectedPhotoUrl: null,
-        shortDeliveryAction: null,
       });
       if (!res.success || !res.data) {
         notify.error(res.error ?? grnCopy.saveLineFailed);
@@ -137,7 +135,6 @@ export function AddGrnLineDialog({
           quantity: parsedQuantity,
           entryUnitId,
           unit: unit.trim(),
-          monetary: null,
         }),
       );
       notify.success(grnCopy.addDialog.success);

@@ -22,6 +22,7 @@ export async function GrnCreatePageContent({
     queryBranchId: queryParams.branchId,
     routeBranchId,
     fallbackPath: basePath,
+    grnBasePath,
   });
 
   return (

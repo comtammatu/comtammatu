@@ -137,7 +137,7 @@ theo contract.
 
 Định nghĩa chứng từ và costing mua hàng (`purchase_order`, `goods_received_note`,
 `supplier_invoice`, `supplier_payment`, `three_way_matching`, `landed_cost`,
-`supplier_price_variance`...) nằm ở `glossary.md`.
+`purchase_variance`...) nằm ở `glossary.md`.
 
 Không dùng một từ `hóa đơn` cho cả HĐĐT bán ra và hóa đơn NCC. Luôn nói rõ loại.
 
@@ -148,7 +148,8 @@ Không dùng một từ `hóa đơn` cho cả HĐĐT bán ra và hóa đơn NCC.
 `cooking_loss`, `consumption`, `stock_transfer`, `stock_issue`...) nằm ở
 `glossary.md`.
 
-Runtime hiện chỉ có một Kho CN stock-bearing cho mỗi branch. Kho↔Bếp đã nghỉ;
+Runtime có đúng một active warehouse cho mỗi site active. `production_storage`
+chỉ dùng tường minh cho production trung tâm; Kho↔Bếp trong Branch đã nghỉ.
 
 `consumption`, sale-consumption và write-off hợp lệ mới làm giảm tồn vận hành.
 

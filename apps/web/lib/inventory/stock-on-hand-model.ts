@@ -87,9 +87,6 @@ export function stockLocationLabel(row: StockLocationBreakdown): string {
   if (row.locationKind === "warehouse") {
     return messages.inventory.stock.filters.locationWarehouse;
   }
-  if (row.locationKind === "kitchen") {
-    return messages.inventory.stock.filters.locationKitchen;
-  }
   return row.name;
 }
 
@@ -103,10 +100,7 @@ export function shouldShowStockLocationBreakdown(
   rows: StockLocationBreakdown[] = [],
 ): boolean {
   const visibleRows = visibleStockLocationRows(rows);
-  return (
-    visibleRows.length > 1 ||
-    visibleRows.some((row) => row.locationKind === "kitchen")
-  );
+  return visibleRows.length > 1;
 }
 
 export function getStockOnHandCategories(ingredients: StockIngredient[]) {

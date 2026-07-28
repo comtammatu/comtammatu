@@ -48,9 +48,9 @@ test("Employee leave migration uses branch-scoped RLS and RPC workflow", () => {
       migration.includes(
         `REVOKE ALL ON FUNCTION public.${fn} FROM PUBLIC, anon`,
       ) &&
-      migration.includes(
-        `GRANT EXECUTE ON FUNCTION public.${fn} TO authenticated, service_role`,
-      ),
+        migration.includes(
+          `GRANT EXECUTE ON FUNCTION public.${fn} TO authenticated, service_role`,
+        ),
       `expected explicit function ACL for ${fn}`,
     );
   }
@@ -105,7 +105,7 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   for (const expected of [
     'HR_REQUEST_LEAVE: "hr:request_leave"',
     'HR_APPROVE_LEAVE_REQUEST: "hr:approve_leave_request"',
-    "PERMISSION_KEY_COUNT = 93",
+    "PERMISSION_KEY_COUNT = 87",
   ]) {
     assert.ok(permissions.includes(expected), `expected ${expected}`);
   }
@@ -118,8 +118,8 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   const seededKeys = [...catalogValues.matchAll(/\('([^']+)' *,/g)].map(
     (match) => match[1],
   );
-  assert.equal(seededKeys.length, 93);
-  assert.equal(new Set(seededKeys).size, 93);
+  assert.equal(seededKeys.length, 87);
+  assert.equal(new Set(seededKeys).size, 87);
 
   for (const expected of [
     "leave_requests: {",

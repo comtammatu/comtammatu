@@ -7,7 +7,7 @@ import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
-/** Fund bootstrap / privileged ledger writes stay Owner-only (D088). */
+/** Fund bootstrap / privileged ledger writes stay Owner-only. */
 const OWNER_FUND_ROLES = ["owner"] as const;
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_FUND_AMOUNT = 100_000_000_000;

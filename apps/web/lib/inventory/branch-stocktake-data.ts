@@ -138,11 +138,15 @@ export async function loadBranchStocktakeListData(routeBranchId: number) {
       PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
     ),
   ]);
-  const branch = scope.allowedBranches.find((item) => item.id === routeBranchId);
+  const branch = scope.allowedBranches.find(
+    (item) => item.id === routeBranchId,
+  );
 
   return {
     branchId: routeBranchId,
-    branchName: branch ? getBranchSiteDisplayName(branch) : `CN #${routeBranchId}`,
+    branchName: branch
+      ? getBranchSiteDisplayName(branch)
+      : `CN #${routeBranchId}`,
     canManage,
     sessions: sessionsResult.success
       ? ((sessionsResult.data ?? []) as SessionListRow[]).map(
@@ -175,9 +179,12 @@ export async function loadBranchStocktakeStartData(routeBranchId: number) {
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", routeBranchId)
       .eq("is_active", true)
+      .eq("location_kind", "warehouse")
       .order("name"),
   ]);
-  const branch = scope.allowedBranches.find((item) => item.id === routeBranchId);
+  const branch = scope.allowedBranches.find(
+    (item) => item.id === routeBranchId,
+  );
   const locations: BranchStocktakeLocation[] = (locationsResult.data ?? []).map(
     (location) => ({
       id: location.id,
@@ -188,7 +195,9 @@ export async function loadBranchStocktakeStartData(routeBranchId: number) {
 
   return {
     branchId: routeBranchId,
-    branchName: branch ? getBranchSiteDisplayName(branch) : `CN #${routeBranchId}`,
+    branchName: branch
+      ? getBranchSiteDisplayName(branch)
+      : `CN #${routeBranchId}`,
     canManage,
     featureEnabled: flagEnabled,
     locations,
@@ -200,7 +209,11 @@ export async function loadBranchStocktakeDetailData(
   routeBranchId: number,
 ): Promise<BranchStocktakeDetail> {
   const { supabase, claims } = await loadAuthState();
-  const scope = await resolveInventoryBranchScope(supabase, claims, routeBranchId);
+  const scope = await resolveInventoryBranchScope(
+    supabase,
+    claims,
+    routeBranchId,
+  );
   if (scope.selectedBranchId !== routeBranchId) notFound();
 
   const { data: sessionRow } = await supabase
@@ -285,7 +298,11 @@ export async function loadBranchStocktakeCountData(
   routeBranchId: number,
 ): Promise<BranchStocktakeCountData> {
   const { supabase, claims } = await loadAuthState();
-  const scope = await resolveInventoryBranchScope(supabase, claims, routeBranchId);
+  const scope = await resolveInventoryBranchScope(
+    supabase,
+    claims,
+    routeBranchId,
+  );
   if (scope.selectedBranchId !== routeBranchId) notFound();
 
   const { data: sessionRow } = await supabase
@@ -308,7 +325,8 @@ export async function loadBranchStocktakeCountData(
   const currentRound =
     lines.reduce((max, line) => Math.max(max, line.roundNo), 1) || 1;
   const ingredientIds = [...new Set(lines.map((line) => line.ingredientId))];
-  const unitOptionsByIngredient: Record<number, BranchStocktakeCountUnit[]> = {};
+  const unitOptionsByIngredient: Record<number, BranchStocktakeCountUnit[]> =
+    {};
 
   if (ingredientIds.length > 0) {
     const { data: unitRows } = await supabase

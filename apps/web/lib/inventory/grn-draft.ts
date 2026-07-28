@@ -5,7 +5,6 @@ export type GrnDraftLine = {
   // Purchase-role unit the qty was entered in. NULL = free-text/base unit.
   entryUnitId?: number | null;
   quantity: number;
-  note?: string;
 };
 
 export type GrnDraft = {

@@ -6,7 +6,7 @@ import {
   isProcurementBranchInScope,
 } from "../inventory-roles";
 
-// D068 cross-branch guard. The real guard `canAccessProcurementBranch`
+// D091 cross-branch guard. The real guard `canAccessProcurementBranch`
 // (grn-actions.ts) uses the actor's own claims.branch_id as
 // `effectiveBranchId`, then returns
 // `isProcurementBranchInScope(role, effectiveBranchId, targetBranchId)`. These

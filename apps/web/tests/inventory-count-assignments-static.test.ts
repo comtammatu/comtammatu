@@ -19,12 +19,6 @@ const countAssignmentsActionsSource = readWeb(
 const countAssignmentShiftMigrationSource = readWeb(
   "../../supabase/migration-archive/20260708064356_inventory_count_assignment_shift_scope.sql",
 );
-const countAssignmentKitchenMigrationSource = readWeb(
-  "../../supabase/migration-archive/20260708191713_count_slips_branch_kitchen.sql",
-);
-const countAssignmentWarehouseRepairMigrationSource = readWeb(
-  "../../supabase/migration-archive/20260711125604_repair_count_assignment_warehouse_rpcs.sql",
-);
 
 test("count assignment checklist uses one labeled hit target", () => {
   assert.match(
@@ -168,7 +162,7 @@ test("count assignment scope defaults to the current shift unless all-shifts is 
   );
 });
 
-test("count assignment location picker is warehouse-only (D078)", () => {
+test("count assignment location picker is warehouse-only (D091)", () => {
   assert.match(
     countAssignmentsPageSource,
     /\.in\("location_kind", \["warehouse"\]\)/,
@@ -232,67 +226,6 @@ test("Branch stays touch-native while Owner surface uses a management table and 
     countAssignmentsClientSource,
     /useSwipeReveal|useLongPress|<Drawer/,
     "Owner surface count assignment must not carry hidden touch gestures or a mobile drawer",
-  );
-});
-
-test("count assignment RPCs normalize branch count slips to kitchen", () => {
-  assert.match(
-    countAssignmentKitchenMigrationSource,
-    /CREATE OR REPLACE FUNCTION public\.set_inventory_count_assignments/,
-    "manager assignment writer should be redefined in the kitchen-location migration",
-  );
-  assert.match(
-    countAssignmentKitchenMigrationSource,
-    /CREATE OR REPLACE FUNCTION public\.submit_inventory_count_slip/,
-    "employee count-slip submitter should be redefined in the kitchen-location migration",
-  );
-  assert.match(
-    countAssignmentKitchenMigrationSource,
-    /v_branch_kind = 'branch' AND v_location_kind <> 'kitchen'[\s\S]*l\.location_kind = 'kitchen'/,
-    "branch count writers should remap non-kitchen location inputs to Bếp CN",
-  );
-  assert.match(
-    countAssignmentKitchenMigrationSource,
-    /INSERT INTO public\.inventory_count_assignments[\s\S]*bk\.kitchen_location_id[\s\S]*UPDATE public\.inventory_count_assignments a[\s\S]*old_loc\.location_kind = 'warehouse'/,
-    "active branch count assignments should be moved off Kho CN and old warehouse rows deactivated",
-  );
-  assert.match(
-    countAssignmentKitchenMigrationSource,
-    /UPDATE public\.inventory_count_slips s[\s\S]*s\.status IN \('submitted', 'needs_changes'\)[\s\S]*SET system_quantity = COALESCE/,
-    "open branch count slips should move to Bếp CN and resnapshot system quantity there",
-  );
-});
-
-test("count assignment RPC repair targets both writers and fails closed", () => {
-  for (const signature of [
-    "public.set_inventory_count_assignments(bigint,bigint,bigint,bigint[],bigint)",
-    "public.submit_inventory_count_slip(bigint,bigint,jsonb,bigint)",
-  ]) {
-    assert.ok(
-      countAssignmentWarehouseRepairMigrationSource.includes(signature),
-      `warehouse repair must target ${signature}`,
-    );
-  }
-
-  assert.match(
-    countAssignmentWarehouseRepairMigrationSource,
-    /unexpected_count_rpc_definition/,
-    "warehouse repair must stop when a source RPC has drifted",
-  );
-  assert.match(
-    countAssignmentWarehouseRepairMigrationSource,
-    /location_kind <> ''warehouse''/,
-    "branch count writers should normalize to Kho CN",
-  );
-  assert.match(
-    countAssignmentWarehouseRepairMigrationSource,
-    /location_kind = ''warehouse''/,
-    "branch count writers should select the branch warehouse",
-  );
-  assert.match(
-    countAssignmentWarehouseRepairMigrationSource,
-    /branch_warehouse_location_missing/,
-    "warehouse-missing errors should describe the active model",
   );
 });
 

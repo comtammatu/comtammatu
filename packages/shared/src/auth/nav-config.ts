@@ -28,16 +28,13 @@ export interface BranchScopedNavItemConfig extends NavItemConfig {
 export type BranchManagementNavItemConfig = BranchScopedNavItemConfig;
 export type BranchOperationNavItemConfig = BranchScopedNavItemConfig;
 export type OperatorTileGroupId =
-  | "my_shift"
-  | "approvals"
-  | "sales_kitchen"
-  | "stock";
+  "my_shift" | "approvals" | "sales_kitchen" | "stock";
 
 export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   group: OperatorTileGroupId;
   /**
    * Site kinds the tile renders for (D058 §7 kind × role). Omitted = every
-   * kind. Central-site tile sets are curated whitelists (D066) — a tile
+   * kind. Central-site tile sets are curated whitelists (D076/D091) — a tile
    * missing a kind here is intentional, not an oversight.
    */
   kinds?: readonly BranchKind[];

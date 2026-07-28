@@ -19,6 +19,7 @@ export async function resolveDefaultInventoryLocation(
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("branch_id", branchId)
+    .eq("location_kind", "warehouse")
     .eq(defaultFlag, true)
     .eq("is_active", true)
     .maybeSingle();

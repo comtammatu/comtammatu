@@ -212,7 +212,7 @@ const STATUS_DOMAINS = {
       storage_loss: "warning",
       sale_consumption: "success",
       normal: "success",
-      low: "destructive",
+      low: "warning",
       out: "destructive",
       over: "warning",
       active: "success",

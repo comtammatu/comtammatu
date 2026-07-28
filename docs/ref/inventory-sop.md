@@ -1,4 +1,4 @@
-# SOP Inventory — Một kho mỗi chi nhánh
+# SOP Inventory — Một warehouse mỗi site
 
 > Áp dụng cho vận hành Inventory hiện hành của Cơm Tấm Má Tư. Business contract
 > chi tiết sống ở [inventory.md](inventory.md); route/action authority sống trong
@@ -7,17 +7,18 @@
 ## 1. Boundary
 
 - Site Greenfield active: `branch` (chi nhánh), `central_supply` (Kho Tổng),
-  `central_kitchen` (Bếp Trung Tâm). Authority: D082; D073/D078 chỉ là lịch sử
-  `matu-prod`.
-- Mỗi site có đúng một location stock-bearing `warehouse`. Location `kitchen`
-  (Bếp CN) chỉ còn dữ liệu lịch sử.
-- Luồng mua canonical (D088/D089): **GRN draft → PO từ GRN → duyệt PO → confirm
+  `central_kitchen` (Bếp Trung Tâm).
+- Mỗi site active có đúng một active `warehouse`, đồng thời là default
+  receive/issue/consumption. Không có stock location Bếp; `production_storage`
+  chỉ dùng tường minh cho production trung tâm.
+- Luồng mua canonical (D091): **GRN draft → PO từ GRN → duyệt PO → confirm
   GRN**. Branch runtime không có UI PO; confirm vẫn bắt buộc PO đã duyệt
   (fail closed). Không mở PR.
-- Kho trên nháp chỉ ghi **số lượng / đơn vị nhập / QC** — không nhập đơn giá mua
-  (D089). Đơn giá thương mại do Kế toán/Owner trên PO; sync vào
+- Kho trên nháp chỉ ghi **số lượng / đơn vị nhập / số lượng từ chối** — không
+  nhập đơn giá mua. Khi có hàng từ chối, lý do + ảnh là bắt buộc. Đơn giá
+  thương mại do Kế toán/Owner trên PO; sync vào
   `grn_items.unit_cost` khi duyệt PO.
-- Supplier return và same-branch Kho↔Bếp transfer giả không phải workflow hằng ngày.
+- Không có CTA tạo PO trực tiếp, tạo GRN từ PO hoặc same-branch Kho↔Bếp.
 - Không dùng tài liệu này để suy ra quyền. `module-acl.ts`,
   `inventory-roles.ts`, permission keys và RLS/RPC là authority.
 
@@ -26,19 +27,23 @@
 ### 2a. Happy path — mọi site stock-bearing (CN / Kho Tổng / Bếp TT)
 
 1. Kho chọn site nhận + nhà cung cấp, tạo **GRN draft**; nhập số lượng thực nhận,
-   đơn vị nhập, QC. **Không** nhập đơn giá.
+   đơn vị nhập và số lượng từ chối. Nếu từ chối bất kỳ lượng nào, nhập lý do
+   và ảnh. **Không** nhập đơn giá hoặc trạng thái QC thủ công.
 2. Kế toán hoặc Owner tạo **PO từ GRN draft**, điền/chỉnh đơn giá thương mại
    (`unit_price_est`), duyệt một cấp (`draft → sent`). Cùng một người được tạo
    và duyệt.
-3. Khi duyệt PO, hệ thống sync giá sang `grn_items.unit_cost` / `po_unit_price`.
+3. Khi duyệt PO, hệ thống sync giá sang `grn_items.unit_cost`.
 4. Kho **confirm GRN** chỉ khi PO liên kết đã duyệt; thiếu PO duyệt → chặn.
 5. Kiểm tra GRN confirmed, stock movement và tồn `warehouse` tăng đúng một lần.
 6. Chứng từ/HĐ NCC + file HĐ GTGT chuyển Finance/AP; Inventory không tự thanh toán.
 
+Nếu toàn bộ số lượng bị từ chối, hủy GRN draft khi chưa liên kết PO; không tạo
+PO giá trị bằng không và không ghi nhập tồn.
+
 ### 2b. Chi nhánh (Branch runtime)
 
 1. QL CN / kho CN tạo GRN draft như §2a bước 1 trên `/br/.../stock` (không UI PO,
-   không xem giá mua chuỗi — D088).
+   không xem giá mua chuỗi).
 2. Kế toán/Owner xử lý PO trên Owner plane (`/inventory`) như §2a bước 2–3.
 3. QL CN confirm GRN sau khi PO duyệt (cùng gate RPC như site trung tâm).
 
@@ -69,8 +74,9 @@ Không soi từng ml mỗi ngày trừ khi đang cân kiểm soát.
 
 ## 3. Sản xuất và tiêu hao
 
-- Sản xuất diễn ra tại chi nhánh và phải dùng workflow/RPC đang có; không tái lập
-  `production_orders` đã nghỉ.
+- Sản xuất dùng workflow/RPC hiện hành tại site được cấp quyền. Branch dùng
+  warehouse duy nhất; `production_storage` chỉ hợp lệ tại site trung tâm khi
+  được chọn tường minh. D091 không thực hiện central-production cutover.
 - Tiêu hao thực tế chỉ post khi nguồn nghiệp vụ hợp lệ được duyệt hoặc khi POS
   sale-consumption đủ điều kiện theo contract hiện hành.
 - Hao hụt/write-off phải có lý do và actor; không dùng transfer giả để giảm tồn.
@@ -95,6 +101,8 @@ Không có nhiều location stock-bearing để operator tự chọn trong cùng
 Trước khi coi Inventory trong ngày là ổn:
 
 - GRN đã xác nhận không còn movement thiếu hoặc trùng.
+- Dòng GRN có số lượng từ chối đều có lý do và ảnh; không có price-QC đang chờ
+  Kho xử lý.
 - Consumption, sale-consumption và write-off có nguồn, actor và branch đúng.
 - Phiên kiểm kê mở có owner và bước tiếp theo rõ.
 - Không còn chứng từ fail nhưng UI hiển thị thành công.

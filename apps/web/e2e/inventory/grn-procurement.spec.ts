@@ -4,15 +4,14 @@ import { E2E_AUTH_STORAGE_MANAGER } from "../../playwright.config";
 test.use({ storageState: E2E_AUTH_STORAGE_MANAGER });
 import {
   createServiceClient,
-  resolveTenantId,
   ensureBranch,
   ensureIngredient,
   ensureSupplier,
   ensureInventoryLocation,
-  createTestGrnDraft,
+  ensureSupplierItemMapping,
+  createTestGrnWithApprovedPo,
   getGrnStatus,
   getStockLevel,
-  resolveIngredientBaseUnitId,
   resolveInventoryManagerUser,
 } from "./helpers";
 
@@ -20,7 +19,7 @@ import {
  * E2E: GRN procurement branch workflow
  *
  * Covers:
- *   Scenario 1 — GRN at branch: draft → confirm → stock_levels updated, WAC computed
+ *   Scenario 1 — GRN at branch: draft → approved PO → confirm → stock/WAC updated
  *   Scenario 7 — RBAC: branch_manager scoped to one branch tries another branch → rejected
  *                       with "Bạn chỉ được tạo phiếu nhập cho kho của mình."
  *
@@ -30,9 +29,11 @@ import {
  *
  * Pre-conditions (.env.test.local):
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ *   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY
  *   E2E_CASHIER_EMAIL, E2E_CASHIER_PASSWORD
  *   E2E_INVENTORY_MANAGER_EMAIL  (optional — branch_manager at a branch)
  *   E2E_INVENTORY_MANAGER_PASSWORD (optional)
+ *   E2E_OWNER_EMAIL, E2E_OWNER_PASSWORD
  *   E2E_BASE_URL (default http://localhost:3000)
  */
 
@@ -44,6 +45,7 @@ interface GrnFixtures {
   otherBranchId: number;
   supplierId: number;
   ingredientId: number;
+  receiveLocationId: number;
   adminUserId: string;
 }
 
@@ -63,22 +65,49 @@ async function isAccessDenied(page: Page) {
 
 async function buildGrnFixtures(): Promise<GrnFixtures> {
   const supabase = createServiceClient();
-  const tenantId = await resolveTenantId(supabase);
   const manager = await resolveInventoryManagerUser(supabase);
+  const tenantId = manager.tenantId;
 
-  const [receiveBranch, otherBranch, ingredient, supplierId] =
-    await Promise.all([
-      ensureBranch(supabase, tenantId, "branch", "grn-receive"),
-      ensureBranch(supabase, tenantId, "branch", "grn-other"),
-      ensureIngredient(supabase, tenantId, "grn"),
-      ensureSupplier(supabase, tenantId),
-    ]);
+  let receiveBranch: { id: number; name: string };
+  if (manager.branchId != null) {
+    const { data, error } = await supabase
+      .from("branches")
+      .select("id, name, branch_kind")
+      .eq("tenant_id", tenantId)
+      .eq("id", manager.branchId)
+      .eq("is_active", true)
+      .single();
+    if (error || !data || data.branch_kind !== "branch") {
+      throw new Error(
+        `Inventory manager branch is unavailable: ${error?.message}`,
+      );
+    }
+    receiveBranch = data;
+  } else {
+    receiveBranch = await ensureBranch(
+      supabase,
+      tenantId,
+      "branch",
+      "grn-receive",
+    );
+  }
 
-  // Ensure receive locations exist so confirm_goods_receipt_note can find them
-  await Promise.all([
+  const [otherBranch, ingredient, supplierId] = await Promise.all([
+    ensureBranch(supabase, tenantId, "branch", `grn-other-${receiveBranch.id}`),
+    ensureIngredient(supabase, tenantId, "grn"),
+    ensureSupplier(supabase, tenantId),
+  ]);
+
+  const [receiveLocationId] = await Promise.all([
     ensureInventoryLocation(supabase, tenantId, receiveBranch.id, "receive"),
     ensureInventoryLocation(supabase, tenantId, otherBranch.id, "receive"),
   ]);
+  await ensureSupplierItemMapping(
+    supabase,
+    tenantId,
+    supplierId,
+    ingredient.id,
+  );
 
   return {
     tenantId,
@@ -86,6 +115,7 @@ async function buildGrnFixtures(): Promise<GrnFixtures> {
     otherBranchId: otherBranch.id,
     supplierId,
     ingredientId: ingredient.id,
+    receiveLocationId,
     adminUserId: manager.userId,
   };
 }
@@ -107,71 +137,63 @@ test.describe("GRN at branch — happy path", () => {
         fx.ingredientId,
       )) ?? 0;
 
-    const grn = await createTestGrnDraft(supabase, {
+    const grn = await createTestGrnWithApprovedPo(supabase, {
       tenantId: fx.tenantId,
       branchId: fx.receiveBranchId,
       supplierId: fx.supplierId,
       ingredientId: fx.ingredientId,
       quantity: 20,
       unitCost: 15000,
+      locationId: fx.receiveLocationId,
       createdByUserId: fx.adminUserId,
     });
 
-    try {
-      // Navigate to GRN detail page and confirm
-      await page.goto(`/inventory/grn/${grn.id}`);
-      await page.waitForLoadState("networkidle");
-      if (await isAccessDenied(page)) {
-        test.skip(
-          true,
-          "E2E auth user cannot access Inventory GRN UI. Use owner or branch_manager for UI happy-path coverage.",
-        );
-        return;
-      }
-
-      const confirmBtn = page.getByRole("button", {
-        name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i,
-      });
-      await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
-      await confirmBtn.click();
-      const confirmDialog = page.getByRole("alertdialog");
-      await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
-      await confirmDialog
-        .getByRole("button", { name: /ch.t nh.p kho/i })
-        .click();
-
-      // Wait for status update
-      await expect
-        .poll(() => getGrnStatus(supabase, fx.tenantId, grn.id), {
-          timeout: 20_000,
-          message: "GRN should be confirmed",
-        })
-        .toBe("confirmed");
-
-      // Assert stock_levels updated at the receiving branch.
-      const stockAfter = await getStockLevel(
-        supabase,
-        fx.tenantId,
-        fx.receiveBranchId,
-        fx.ingredientId,
+    // Navigate to GRN detail page and confirm
+    await page.goto(`/br/${fx.receiveBranchId}/stock/grn/${grn.id}`);
+    await page.waitForLoadState("networkidle");
+    if (await isAccessDenied(page)) {
+      test.skip(
+        true,
+        "E2E auth user cannot access Inventory GRN UI. Use owner or branch_manager for UI happy-path coverage.",
       );
-      expect(stockAfter).not.toBeNull();
-      expect(stockAfter).toBeCloseTo(stockBefore + 20, 2);
-
-      // Assert WAC was computed (avg_unit_cost row exists)
-      const { data: sl } = await supabase
-        .from("stock_levels")
-        .select("avg_unit_cost")
-        .eq("tenant_id", fx.tenantId)
-        .eq("branch_id", fx.receiveBranchId)
-        .eq("ingredient_id", fx.ingredientId)
-        .maybeSingle();
-
-      expect(sl?.avg_unit_cost).not.toBeNull();
-      expect(Number(sl?.avg_unit_cost)).toBeGreaterThan(0);
-    } finally {
-      await grn.cleanup();
+      return;
     }
+
+    const confirmBtn = page.getByRole("button", {
+      name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i,
+    });
+    await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
+    await confirmBtn.click();
+    const confirmDialog = page.getByRole("alertdialog");
+    await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
+    await confirmDialog.getByRole("button", { name: /ch.t nh.p kho/i }).click();
+
+    await expect
+      .poll(() => getGrnStatus(supabase, fx.tenantId, grn.id), {
+        timeout: 20_000,
+        message: "GRN should be confirmed",
+      })
+      .toBe("confirmed");
+
+    const stockAfter = await getStockLevel(
+      supabase,
+      fx.tenantId,
+      fx.receiveBranchId,
+      fx.ingredientId,
+    );
+    expect(stockAfter).not.toBeNull();
+    expect(stockAfter).toBeCloseTo(stockBefore + 20, 2);
+
+    const { data: sl } = await supabase
+      .from("stock_levels")
+      .select("avg_unit_cost")
+      .eq("tenant_id", fx.tenantId)
+      .eq("branch_id", fx.receiveBranchId)
+      .eq("ingredient_id", fx.ingredientId)
+      .maybeSingle();
+
+    expect(sl?.avg_unit_cost).not.toBeNull();
+    expect(Number(sl?.avg_unit_cost)).toBeGreaterThan(0);
   });
 });
 
@@ -190,6 +212,7 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
         tenant_id: fx.tenantId,
         branch_id: fx.receiveBranchId,
         supplier_id: fx.supplierId,
+        location_id: fx.receiveLocationId,
         grn_number: `GRN-E2E-NET-${Date.now()}`,
         status: "draft",
         created_by: fx.adminUserId,
@@ -207,9 +230,10 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
         ingredient_id: fx.ingredientId,
         received_quantity: 5,
         rejected_quantity: 7, // > received → must be rejected
-        unit_cost: 10000,
-        total_cost: 50000,
-        quality_status: "partial",
+        rejection_reason: "Số từ chối vượt số đã giao",
+        rejected_photo_url: null,
+        unit_cost: 0,
+        total_cost: 0,
       });
 
       expect(error).not.toBeNull();
@@ -235,95 +259,59 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
         fx.ingredientId,
       )) ?? 0;
 
-    // Seed: delivered=10, rejected=3, expect stock += 7
-    const grnNumber = `GRN-E2E-NET-${Date.now()}`;
-    const { data: grn } = await supabase
-      .from("goods_received_notes")
-      .insert({
-        tenant_id: fx.tenantId,
-        branch_id: fx.receiveBranchId,
-        supplier_id: fx.supplierId,
-        grn_number: grnNumber,
-        status: "draft",
-        created_by: fx.adminUserId,
-      })
-      .select("id")
-      .single();
-    if (!grn) throw new Error("seed grn failed");
-
-    const entryUnitId = await resolveIngredientBaseUnitId(
-      supabase,
-      fx.tenantId,
-      fx.ingredientId,
-    );
-
-    await supabase.from("grn_items").insert({
-      tenant_id: fx.tenantId,
-      grn_id: grn.id,
-      ingredient_id: fx.ingredientId,
-      received_quantity: 10,
-      rejected_quantity: 3,
-      rejection_reason: "Hàng ẩm mốc 3 đơn vị",
-      rejected_photo_url: "http://example.com/rejected.jpg",
-      unit_cost: 15000,
-      total_cost: 150000,
-      quality_status: "partial",
-      entry_unit_id: entryUnitId,
+    const grn = await createTestGrnWithApprovedPo(supabase, {
+      tenantId: fx.tenantId,
+      branchId: fx.receiveBranchId,
+      supplierId: fx.supplierId,
+      ingredientId: fx.ingredientId,
+      quantity: 10,
+      unitCost: 15000,
+      locationId: fx.receiveLocationId,
+      rejectedQuantity: 3,
+      rejectionReason: "Hàng ẩm mốc 3 đơn vị",
+      createdByUserId: fx.adminUserId,
     });
 
-    try {
-      await page.goto(`/inventory/grn/${grn.id}`);
-      await page.waitForLoadState("networkidle");
-      if (await isAccessDenied(page)) {
-        test.skip(true, "E2E auth user cannot access Inventory GRN UI.");
-        return;
-      }
-
-      const confirmBtn = page.getByRole("button", {
-        name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i,
-      });
-      await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
-      await confirmBtn.click();
-      const confirmDialog = page.getByRole("alertdialog");
-      await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
-      await confirmDialog
-        .getByRole("button", { name: /ch.t nh.p kho/i })
-        .click();
-
-      await expect
-        .poll(() => getGrnStatus(supabase, fx.tenantId, grn.id), {
-          timeout: 20_000,
-          message: "GRN should be confirmed",
-        })
-        .toBe("confirmed");
-
-      // Stock += 7 (= 10 delivered − 3 rejected)
-      const stockAfter = await getStockLevel(
-        supabase,
-        fx.tenantId,
-        fx.receiveBranchId,
-        fx.ingredientId,
-      );
-      expect(stockAfter).toBeCloseTo(stockBefore + 7, 2);
-
-      // stock_movements row recorded with quantity_change = 7
-      const { data: movement } = await supabase
-        .from("stock_movements")
-        .select("quantity_change, type")
-        .eq("grn_id", grn.id)
-        .eq("tenant_id", fx.tenantId)
-        .single();
-      expect(movement?.type).toBe("grn_receipt");
-      expect(Number(movement?.quantity_change)).toBeCloseTo(7, 2);
-    } finally {
-      await supabase
-        .from("stock_movements")
-        .delete()
-        .eq("grn_id", grn.id)
-        .eq("tenant_id", fx.tenantId);
-      await supabase.from("grn_items").delete().eq("grn_id", grn.id);
-      await supabase.from("goods_received_notes").delete().eq("id", grn.id);
+    await page.goto(`/br/${fx.receiveBranchId}/stock/grn/${grn.id}`);
+    await page.waitForLoadState("networkidle");
+    if (await isAccessDenied(page)) {
+      test.skip(true, "E2E auth user cannot access Inventory GRN UI.");
+      return;
     }
+
+    const confirmBtn = page.getByRole("button", {
+      name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i,
+    });
+    await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
+    await confirmBtn.click();
+    const confirmDialog = page.getByRole("alertdialog");
+    await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
+    await confirmDialog.getByRole("button", { name: /ch.t nh.p kho/i }).click();
+
+    await expect
+      .poll(() => getGrnStatus(supabase, fx.tenantId, grn.id), {
+        timeout: 20_000,
+        message: "GRN should be confirmed",
+      })
+      .toBe("confirmed");
+
+    // Stock += 7 (= 10 delivered − 3 rejected)
+    const stockAfter = await getStockLevel(
+      supabase,
+      fx.tenantId,
+      fx.receiveBranchId,
+      fx.ingredientId,
+    );
+    expect(stockAfter).toBeCloseTo(stockBefore + 7, 2);
+
+    const { data: movement } = await supabase
+      .from("stock_movements")
+      .select("quantity_change, type")
+      .eq("grn_id", grn.id)
+      .eq("tenant_id", fx.tenantId)
+      .single();
+    expect(movement?.type).toBe("grn_receipt");
+    expect(Number(movement?.quantity_change)).toBeCloseTo(7, 2);
   });
 });
 

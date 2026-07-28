@@ -117,8 +117,8 @@ test("inventory production shortage uses Alert callout", () => {
   );
 });
 
-test("inventory stock kitchen transfer copy is dictionary-backed", () => {
-  assert.match(inventoryMessagesSource, /transferKitchen:/);
+test("inventory stock omits the retired kitchen transfer", () => {
+  assert.doesNotMatch(inventoryMessagesSource, /transferKitchen:/);
   assert.doesNotMatch(stockClientSource, /label: "Chuyển Bếp"/);
   assert.doesNotMatch(stockClientSource, />\s*Chuyển Bếp\s*</);
   assert.doesNotMatch(stockClientSource, /stockCopy\.actions\.transferKitchen/);

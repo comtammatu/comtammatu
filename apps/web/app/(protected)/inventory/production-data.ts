@@ -13,6 +13,7 @@ import { fetchIngredients, fetchUnitOptions } from "./ingredient-actions";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   canAccessProductionSurface,
+  canManageProductionRecipes,
   isProductionBranchKind,
   isProductionBranchScopedRole,
   type ProductionOperatorRole,
@@ -127,7 +128,7 @@ export async function hasCurrentProductionBranchAccess(
     .eq("id", branchId)
     .maybeSingle();
 
-  // Production runs at the central kitchen OR at a branch (D068).
+  // Production runs at the central kitchen or at an operating branch.
   return !error && isProductionBranchKind(data?.branch_kind);
 }
 
@@ -153,7 +154,7 @@ export async function loadProductionSurfaceData({
   const [
     canOpenProduction,
     canManageCatalog,
-    canManageRecipes,
+    hasRecipeManagePermission,
     canCreateProduction,
     canConfirmProduction,
     canAdjustStock,
@@ -218,7 +219,7 @@ export async function loadProductionSurfaceData({
 
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
   const branchById = new Map(branches.map((branch) => [branch.id, branch]));
-  // Production site choices must remain production-compatible locations only (D068).
+  // Production site choices must remain production-compatible locations only.
   const productionBranchesList: BranchOption[] = branches
     .filter((branch) => isProductionBranchKind(branch.branch_kind))
     .map((branch) => ({
@@ -233,8 +234,12 @@ export async function loadProductionSurfaceData({
   }));
   const scopedBranchId = claims.branch_id ?? routeBranchId;
   let productionBranches: BranchOption[] = productionBranchesList;
+  let targetBranches: BranchOption[] = allTargetBranches;
   if (isProductionBranchScopedRole(role) && scopedBranchId != null) {
     productionBranches = productionBranches.filter(
+      (branch) => branch.id === scopedBranchId,
+    );
+    targetBranches = targetBranches.filter(
       (branch) => branch.id === scopedBranchId,
     );
   }
@@ -265,7 +270,14 @@ export async function loadProductionSurfaceData({
   const locations: InventoryLocationOption[] = (
     (locationsRes.data ?? []) as InventoryLocationPreviewRow[]
   )
-    .filter((location) => location.is_active !== false)
+    .filter((location) => {
+      if (location.is_active === false) return false;
+      const branchKind = branchById.get(location.branch_id)?.branch_kind;
+      return branchKind === "central_kitchen"
+        ? location.location_kind === "warehouse" ||
+            location.location_kind === "production_storage"
+        : location.location_kind === "warehouse";
+    })
     .map((location) => {
       const branch = branchById.get(location.branch_id);
       return {
@@ -283,12 +295,13 @@ export async function loadProductionSurfaceData({
   return {
     role,
     canManageCatalog,
-    canManageRecipes,
+    canManageRecipes:
+      canManageProductionRecipes(role) && hasRecipeManagePermission,
     canCreateProduction,
     canConfirmProduction,
     canAdjustStock,
     productionBranches,
-    targetBranches: allTargetBranches,
+    targetBranches,
     locations,
     unitOptions: unitOptionsRes.success ? (unitOptionsRes.data ?? []) : [],
     ingredients,

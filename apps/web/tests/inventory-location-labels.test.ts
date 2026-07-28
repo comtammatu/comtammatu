@@ -7,20 +7,13 @@ import {
 } from "@comtammatu/shared/labels";
 import { formatBranchSiteLabel } from "../app/(protected)/inventory/_lib/branch-site-labels";
 
-test("inventory location labels separate site from warehouse and kitchen", () => {
+test("inventory location labels separate the site from its warehouse", () => {
   assert.equal(
     getInventoryLocationKindLabelVi({
       siteKind: "branch",
       locationKind: "warehouse",
     }),
     "Kho chi nhánh",
-  );
-  assert.equal(
-    getInventoryLocationKindLabelVi({
-      siteKind: "branch",
-      locationKind: "kitchen",
-    }),
-    "Bếp chi nhánh",
   );
   assert.equal(
     formatInventoryLocationLabelVi({
@@ -30,17 +23,9 @@ test("inventory location labels separate site from warehouse and kitchen", () =>
     }),
     "Phước Hải · Kho",
   );
-  assert.equal(
-    formatInventoryLocationLabelVi({
-      branchName: "Phước Hải",
-      siteKind: "branch",
-      locationKind: "kitchen",
-    }),
-    "Phước Hải · Bếp",
-  );
 });
 
-test("central sites retain their canonical labels and legacy aliases normalize", () => {
+test("central sites retain canonical warehouse and production labels", () => {
   assert.equal(
     formatInventoryLocationLabelVi({
       branchName: "Bếp Trung Tâm",
@@ -56,8 +41,14 @@ test("central sites retain their canonical labels and legacy aliases normalize",
     }),
     "Kho Tổng",
   );
+  assert.equal(
+    getInventoryLocationKindLabelVi({
+      siteKind: "central_kitchen",
+      locationKind: "production_storage",
+    }),
+    "Kho sản xuất",
+  );
   assert.equal(normalizeInventoryLocationNameVi("Kho CN"), "Kho chi nhánh");
-  assert.equal(normalizeInventoryLocationNameVi("Bếp CN"), "Bếp chi nhánh");
   assert.equal(
     formatBranchSiteLabel({ name: "Phước Hải", branch_kind: "branch" }),
     "Chi nhánh: Phước Hải",

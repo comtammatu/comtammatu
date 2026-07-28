@@ -34,10 +34,6 @@ test("ingredient gate removal: trigger, functions, and flag row are dropped", ()
   );
   assert.match(
     ingredientGateRemovalMigration,
-    /DROP FUNCTION public\.branch_kitchen_ingredient_availability\(bigint, bigint\);/,
-  );
-  assert.match(
-    ingredientGateRemovalMigration,
     /DELETE FROM public\.branch_feature_flags WHERE flag_key = 'pos_ingredient_stock_block';/,
   );
 });

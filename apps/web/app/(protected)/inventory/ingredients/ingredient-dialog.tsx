@@ -17,7 +17,6 @@ import {
 import {
   FormDialog,
   FormattedNumberInput,
-  MoneyVndField,
   QuantityField,
   SelectField,
   TextField,
@@ -46,7 +45,6 @@ const ingredientSchema = z
     name: z.string().trim().min(1, { error: dialogCopy.nameRequired }),
     sku: z.string().trim().optional(),
     category_id: z.string().trim().optional(),
-    unit_cost: z.string().optional(),
     item_kind: z.enum(["raw_material", "finished_good"]),
     min_stock_level: z.string().optional(),
     input_unit_id: z.string().trim().min(1, { error: copy.units.selectUnit }),
@@ -96,10 +94,6 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
     sku: ingredient?.sku ?? "",
     category_id:
       ingredient?.category_id != null ? String(ingredient.category_id) : "",
-    unit_cost:
-      ingredient?.monetary?.unitCost != null
-        ? String(ingredient.monetary.unitCost)
-        : "",
     item_kind:
       (ingredient?.item_kind as "raw_material" | "finished_good" | undefined) ??
       "raw_material",
@@ -313,7 +307,6 @@ export function IngredientDialog({
       name: values.name,
       sku: values.sku || undefined,
       category_id: categoryId,
-      unit_cost: parseOptionalNumber(values.unit_cost),
       item_kind: values.item_kind,
       storage_type: storageType,
       min_stock_level: parseOptionalNumber(values.min_stock_level) ?? 0,
@@ -475,12 +468,6 @@ function IngredientDialogFields({
           outputUnitName={outputUnitName}
           sameUnit={sameUnit}
           disabled={unitsLocked}
-        />
-        <MoneyVndField
-          control={form.control}
-          name="unit_cost"
-          label={dialogCopy.referenceCostLabel}
-          placeholder="0"
         />
         <QuantityField
           control={form.control}

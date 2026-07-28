@@ -1,27 +1,18 @@
 import "server-only";
 
 import { notFound, redirect } from "next/navigation";
-import {
-  PERMISSION_KEYS,
-  PROCUREMENT_ROLES,
-} from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { fetchProcurementBranches } from "@/(protected)/inventory/_lib/procurement-branches";
-import { isStockBearingLocationKind } from "@/(protected)/inventory/_lib/stock-bearing-locations";
-import {
-  fetchGrnDetail,
-  loadActiveGrnDraft,
-} from "@/(protected)/inventory/grn-actions";
+import { loadActiveGrnDraft } from "@/(protected)/inventory/grn-actions";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import { getIngredientUnitDisplayName } from "@/(protected)/inventory/_lib/unit-display";
 import type {
   GrnCreateIngredient,
   GrnCreatePageData,
-  GrnCreateServerDraftLine,
 } from "./grn-create-model";
-import { loadInventoryMonetaryAccess } from "./monetary-access";
 
 type IngredientUnitJoinRow = {
   id: number;
@@ -33,8 +24,7 @@ type IngredientUnitJoinRow = {
   units: { code: string; name: string | null } | null;
 };
 
-type IngredientJoinRow = Omit<GrnCreateIngredient, "units" | "monetary"> & {
-  unit_cost?: number | null;
+type IngredientJoinRow = Omit<GrnCreateIngredient, "units"> & {
   ingredient_units: IngredientUnitJoinRow[] | null;
 };
 
@@ -53,11 +43,13 @@ export async function loadGrnCreatePageData({
   queryBranchId,
   routeBranchId,
   fallbackPath,
+  grnBasePath,
 }: {
   supplierId: number;
   queryBranchId?: string | string[];
   routeBranchId?: number;
   fallbackPath: string;
+  grnBasePath: string;
 }): Promise<GrnCreatePageData> {
   if (!Number.isFinite(supplierId) || supplierId <= 0) {
     redirect(fallbackPath);
@@ -81,21 +73,11 @@ export async function loadGrnCreatePageData({
     scope.selectedBranchId,
   );
   if (!canCreate) redirect("/access-denied?reason=insufficient-permission");
-  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-  const ingredientReadClient = monetary.purchasePrice
-    ? (monetary.client ?? supabase)
-    : supabase;
-  const ingredientQuery = monetary.purchasePrice
-    ? ingredientReadClient
-        .from("ingredients")
-        .select(
-          "id, name, sku, unit_cost, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-        )
-    : ingredientReadClient
-        .from("ingredients")
-        .select(
-          "id, name, sku, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-        );
+  const ingredientQuery = supabase
+    .from("ingredients")
+    .select(
+      "id, name, sku, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+    );
 
   const [supplierRes, ingredientsRes, locationsRes, supplierItemsRes] =
     await Promise.all([
@@ -137,23 +119,19 @@ export async function loadGrnCreatePageData({
   const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
   const defaultBranchId =
     scope.selectedBranchId != null &&
-      branches.some((branch) => branch.id === scope.selectedBranchId)
+    branches.some((branch) => branch.id === scope.selectedBranchId)
       ? scope.selectedBranchId
       : claims.branch_id &&
-        branches.some((branch) => branch.id === claims.branch_id)
+          branches.some((branch) => branch.id === claims.branch_id)
         ? claims.branch_id
         : (branches[0]?.id ?? null);
   const branchById = new Map(branches.map((branch) => [branch.id, branch]));
   const procurementBranchIds = new Set(branches.map((branch) => branch.id));
   const locationOptions = ((locationsRes.data ?? []) as InventoryLocationRow[])
     .filter((location) => {
-      const branch = branchById.get(location.branch_id);
       return (
         procurementBranchIds.has(location.branch_id) &&
-        isStockBearingLocationKind({
-          siteKind: branch?.branch_kind,
-          locationKind: location.location_kind,
-        })
+        location.location_kind === "warehouse"
       );
     })
     .map((location) => {
@@ -175,7 +153,7 @@ export async function loadGrnCreatePageData({
   );
   const ingredients = ((ingredientsRes.data ?? []) as IngredientJoinRow[])
     .filter((ingredient) => allowedIngredientIds.has(ingredient.id))
-    .map(({ ingredient_units, unit_cost, ...ingredient }) => {
+    .map(({ ingredient_units, ...ingredient }) => {
       const units: IngredientUnitRow[] = (ingredient_units ?? [])
         .filter((unit) => unit.is_active)
         .map((unit) => ({
@@ -191,9 +169,6 @@ export async function loadGrnCreatePageData({
         .sort((left, right) => left.sort_order - right.sort_order);
       return {
         ...ingredient,
-        monetary: monetary.purchasePrice
-          ? { unitCost: unit_cost ?? null }
-          : null,
         unit: units.find((unit) => unit.is_base)?.unit_code ?? "",
         units,
       };
@@ -242,69 +217,27 @@ export async function loadGrnCreatePageData({
     }
   }
 
-  let existingDraft: {
-    id: number;
-    lines: GrnCreateServerDraftLine[];
-  } | null = null;
   const draftRes = await loadActiveGrnDraft({
     supplierId,
     branchId: defaultBranchId ?? undefined,
   });
   const draftRow = (draftRes.success ? draftRes.data : null) as {
     id: number;
-    branch_id: number;
-    location_id: number | null;
   } | null;
   if (draftRow?.id) {
-    const detailRes = await fetchGrnDetail(draftRow.id);
-    if (detailRes.success && detailRes.data) {
-      const detail = detailRes.data as {
-        grn: { id: number };
-        lines: Array<{
-          id: number;
-          ingredient_id: number;
-          received_quantity: number | string;
-          unit: string;
-          entry_unit_id: number | null;
-          monetary: { unitCost: number } | null;
-          ingredients: { name: string } | null;
-        }>;
-      };
-      existingDraft = {
-        id: detail.grn.id,
-        lines: detail.lines.map((line) => ({
-          lineId: line.id,
-          ingredientId: line.ingredient_id,
-          ingredientName: line.ingredients?.name ?? "",
-          unit: getIngredientUnitDisplayName(
-            ingredients.find(
-              (ingredient) => ingredient.id === line.ingredient_id,
-            )?.units,
-            line.entry_unit_id,
-            line.unit,
-          ),
-          entryUnitId: line.entry_unit_id,
-          quantity: Number(line.received_quantity ?? 0),
-        })),
-      };
-    }
+    redirect(`${grnBasePath}/${draftRow.id}`);
   }
-
-  const initialBranchId = draftRow?.branch_id ?? defaultBranchId;
-  const initialLocationId = draftRow?.location_id ?? null;
 
   return {
     supplier: { id: supplierRes.data.id, name: supplierRes.data.name },
-    branchId: initialBranchId,
+    branchId: defaultBranchId,
     procurementBranches: branches.map((branch) => ({
       id: branch.id,
       name: branch.name,
     })),
     locationOptions,
-    initialLocationId,
     canSwitchBranch: routeBranchId == null,
     ingredients,
     recentLines,
-    existingDraft,
   };
 }

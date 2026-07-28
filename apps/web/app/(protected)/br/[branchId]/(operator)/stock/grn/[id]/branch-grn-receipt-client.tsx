@@ -112,8 +112,7 @@ export function BranchGrnReceiptClient({
                         ) : null}
                       </ItemContent>
                       <ItemActions className="shrink-0">
-                        {line.rejected > 0 ||
-                        line.qualityStatus === "rejected" ? (
+                        {line.rejected > 0 ? (
                           <IconAlertTriangle className="size-5 text-warning" />
                         ) : (
                           <IconCircleCheck className="size-5 text-success" />
@@ -135,7 +134,10 @@ export function BranchGrnReceiptClient({
             <BranchOperatorDetailList
               rows={[
                 { label: grnCopy.supplier, value: grn.supplier },
-                { label: grnCopy.receivingWarehouse, value: grn.branchName },
+                {
+                  label: grnCopy.receivingWarehouse,
+                  value: `${grn.branchName}${grn.locationName ? ` · ${grn.locationName}` : ""}`,
+                },
                 {
                   label: grnCopy.linkedPo,
                   value: grn.poCode || "—",

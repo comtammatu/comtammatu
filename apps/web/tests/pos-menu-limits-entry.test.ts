@@ -91,10 +91,10 @@ test("branch menu-limit management remains on the manager day-control surface", 
   assert.match(managerActionsSource, /list_branch_menu_daily_limits/);
   assert.match(managerActionsSource, /set_branch_menu_daily_limit/);
   assert.match(managerActionsSource, /clear_branch_menu_daily_limit/);
-  assert.match(managerActionsSource, /add_menu_item_kitchen_stock_exception/);
-  assert.match(managerTableSource, /replenishKitchenTitle/);
-  assert.match(managerTableSource, /handleReplenishKitchen\(1\)/);
-  assert.match(managerTableSource, /handleReplenishKitchen\(2\)/);
+  assert.match(managerActionsSource, /add_menu_item_stock_exception/);
+  assert.match(managerTableSource, /replenishStockTitle/);
+  assert.match(managerTableSource, /handleReplenishStock\(1\)/);
+  assert.match(managerTableSource, /handleReplenishStock\(2\)/);
   assert.match(managerPageSource, /MenuLimitsClient/);
 });
 

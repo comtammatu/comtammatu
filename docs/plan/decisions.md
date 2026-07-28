@@ -17,11 +17,8 @@
 
 ## D000: Inventory branch and central site operating model (2026-06-19)
 
-**Decision (net, sau D082 trên Greenfield):** Inventory dùng `branches` làm site table; `branches.branch_kind` gồm `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Site active trên `matu-greenfield-company`: cả ba kind. Mỗi site giữ **một** location stock-bearing `warehouse`. `location_kind='kitchen'` (Bếp CN) chỉ còn lịch sử. PO/GRN/stock levels/production/stock transfers ref `branch_id` trực tiếp. `(D073/D078 trên matu-prod đã freeze — không còn authority Greenfield; sửa bởi D082.)`
-
-**Transfer matrix** (trigger `enforce_stock_transfer_direction`): giữ cho lịch sử và chuyển tồn có chủ đích; không dùng transfer giả để tiêu hao/write-off.
-
-Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp); D082 mở lại Kho Tổng + Bếp TT trên Greenfield. Canonical: `docs/ref/inventory.md`, ADR 0017.
+**Decision:** Net-effect Inventory được hợp nhất tại D091. Canonical:
+`docs/ref/inventory.md`.
 
 ## D002: Tenant-Branch 2-level thay vì Company-Brand-Branch 3-level (2026-04-01)
 
@@ -82,11 +79,11 @@ Mở rộng bởi D068 (Kho CN nhận NCC trực tiếp); D082 mở lại Kho T�
 
 Đảo policy mặc định phải sửa quyết định này trước.
 
-## D017: Owner là L0 Tenant Control; Branch Manager dùng L1 Branch Runtime (2026-06-13, sửa 2026-07-18, sửa bởi D088)
+## D017: Owner là L0 Tenant Control; Branch Manager dùng L1 Branch Runtime (2026-06-13, sửa 2026-07-28)
 
-**Decision (net sau D088):** Product framing = `bộ phần mềm quản lý vận hành và bán hàng`. Owner vào trực tiếp `/` với full L0. Module L0 ổn định: `/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, `/branches`, `/settings`. **Kế toán** (`accountant`) được vào `/finance` và slice PO trên `/inventory` theo D088 — không mở HR tenant / gán quyền. **Kho Tổng / Bếp TT** dùng surface gắn site trung tâm (không giả QL CN). `branch_manager` vào `/br/{branchId}` và chỉ dùng workflow branch-native; **không** xem giá mua/PO chuỗi. Role/route là cổng bề mặt; action + row access tiếp tục qua permission keys, RPC/RLS và branch/site scope.
+**Decision (net sau D091):** Product framing = `bộ phần mềm quản lý vận hành và bán hàng`. Owner vào trực tiếp `/` với full L0. Module L0 ổn định: `/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, `/branches`, `/settings`. **Kế toán** (`accountant`) được vào `/finance` và slice GRN/PO trên `/inventory` theo D091 — không mở stock/production/catalog/valuation, HR tenant hoặc gán quyền. **Kho Tổng / Bếp TT** dùng surface gắn site trung tâm (không giả QL CN). `branch_manager` vào `/br/{branchId}` và chỉ dùng workflow branch-native; **không** xem giá mua/PO chuỗi. Role/route là cổng bề mặt; action + row access tiếp tục qua permission keys, RPC/RLS và branch/site scope.
 
-**Canonical:** `docs/spec/role-route-matrix.md`, D088. Không đặt workflow branch-scoped vào route L0.
+**Canonical:** `docs/spec/role-route-matrix.md`, D091. Không đặt workflow branch-scoped vào route L0.
 
 ## D018: Bỏ tenant-admin phụ — gộp vào `owner` (2026-06-13)
 
@@ -345,15 +342,13 @@ sống trong machine registry. Mọi surface đổi phải QA phone, tablet và 
 
 ## D060: Inventory workflow — WAC, không lot/FIFO/requisition (2026-07-03)
 
-**Decision (net sau D073/D078):** Inventory dùng WAC theo stock-bearing
-warehouse của branch. Không mở FIFO/FEFO, lot/expiry ledger, multi-bin WMS,
-requisition/PO workflow hoặc formal multi-level approval. GRN là supplier-first;
-stocktake và ledger/RPC hiện hành là correctness boundary. Canonical:
+**Decision:** Net-effect được hợp nhất tại D091. Canonical:
 `docs/ref/inventory.md`.
 
 ## D061: Management Inventory oversight (2026-07-03)
 
-**Decision:** Net-effect gộp vào D058 (Management = oversight dense; Branch = thao tác tại chỗ). Không tái mở Kho↔Bếp / cross-branch transfer qua oversight (D078).
+**Decision:** Net-effect gộp vào D058 (Management = oversight dense; Branch =
+thao tác tại chỗ). Topology Inventory theo D091.
 
 ## D062: Native-quality PWA là hướng giao (mở rộng D012, KHÔNG rewrite native) (2026-07-03)
 
@@ -365,11 +360,11 @@ stocktake và ledger/RPC hiện hành là correctness boundary. Canonical:
 
 ## D064: POS capacity and manual quota (2026-07-04)
 
-**Decision (net sau D065/D078):** Missing recipe hoặc unit conversion không tạo
+**Decision (net sau D065/D091):** Missing recipe hoặc unit conversion không tạo
 stock capacity giả; món đó nằm ngoài stock gate và fail-loud ở màn quản lý. Manual
 daily limit là owner/manager input riêng, không seed từ tồn. Refund/void chỉ trả
 quota khi line chưa first-ready. Stock availability/posting dùng một flag D065
-và một Kho CN; kitchen-stock trigger đã nghỉ.
+và warehouse duy nhất của site.
 
 ## D065: "Trừ tồn khi bán" = một công tắc trọn gói — bật là rào cứng, kho không âm (2026-07-04)
 
@@ -384,15 +379,18 @@ Trigger inert khi flag OFF. Đảo phải sửa bản ghi này trước.
 
 ## D066: Central-site context — superseded (2026-07-04)
 
-**Decision:** Superseded. Net hiện hành: D073/D078 (branch-only ops trên matu-prod freeze) và D082 (mở lại central kinds trên Greenfield). Không còn operator context/tiles/roles central riêng.
+**Decision:** Net-effect Inventory được hợp nhất tại D091. Role/route hiện hành
+sống ở `docs/spec/role-route-matrix.md`.
 
 ## D067: Branch Inventory native presentation (2026-07-04)
 
-**Decision:** Net-effect gộp vào D058 (Branch stock touch-native; chia sẻ loader/model/action, không Owner chrome). GRN supplier-first: D056/D060.
+**Decision:** Net-effect gộp vào D058 (Branch stock touch-native; chia sẻ
+loader/model/action, không Owner chrome). GRN hiện hành theo D091.
 
 ## D068: Kho CN tự nhận NCC (GRN) + sản xuất tại chi nhánh — branch_manager, own-branch (2026-07-05)
 
-**Decision (owner):** (1) Kho CN (`branch`) tự nhận hàng NCC trực tiếp — không bắt buộc qua Kho Tổng; (2) chi nhánh chạy được workflow sản xuất hiện hành; (3) actor = `branch_manager`, quyền tạo/xác nhận chỉ own-branch qua permission + RLS; (4) `branch_manager` được tạo NCC nhanh qua `procurement:supplier_manage`; (5) **(net cuối theo D073 §4) PO và Trả hàng NCC nghỉ cả hai plane**. Hàng lỗi xử qua Báo hao hụt. Canonical: `docs/ref/inventory.md`; runtime authority: `module-acl.ts`, `inventory-roles.ts`, permission keys và RLS/RPC.
+**Decision:** Net-effect Inventory được hợp nhất tại D091. Quyền hiện hành sống
+ở `docs/spec/role-route-matrix.md` và runtime ACL/RLS/RPC.
 
 ## D069: Be Vietnam Pro heading + Shift-aware night mode (2026-07-07)
 
@@ -412,18 +410,8 @@ Trigger inert khi flag OFF. Đảo phải sửa bản ghi này trước.
 
 ## D073: Ngừng site Bếp Trung Tâm — một kind vận hành duy nhất `branch`, stock cutover dồn về Branch home (2026-07-10)
 
-**Context:** Kho Tổng (site 15) đã đổi kind về `branch` và tắt trước đó; Bếp TT (site 16) là site trung tâm cuối cùng (1 location, 29 dòng tồn, 3 lệnh nấu 2026-07-10). D068 đã cho chi nhánh tự nhận NCC + chạy lệnh sản xuất.
-
-**Decision (owner 2026-07-10):**
-
-1. **Site 16 tắt hẳn:** chuyển toàn bộ tồn về Phước Hải (site 3) qua luồng transfer sẵn có (`central_kitchen → branch` hợp lệ theo transfer matrix D000) rồi `is_active = false`. Nhân sự bucket `production_manager` — **sửa bởi D076:** không sắp xếp lại role, tài khoản bị xoá cùng lượt retire bucket (không auto-remap). DB enum `branch_kind` GIỮ nguyên (lịch sử data); chỉ vận hành và UI hết fork.
-2. **Một kind vận hành duy nhất `branch`.** Mọi nâng cấp stock đã chuẩn bị cho đợt Bếp (mockup GRN 3 bước · Ghi mẻ một màn · Tồn 44px, đã owner-duyệt) áp cho `/br/[branchId]/(operator)/stock/*` kind `branch`. Contract sống ở `docs/ref/inventory.md`; các outcome chưa đạt Exit được theo dõi bằng những H2 lane `inventory` hiện hành trong `tasks/todo.md`.
-3. **Công thức = Owner control-only:** operator dùng công thức để prefill định mức khi ghi mẻ, không sửa; tile `production/recipes` rời operator, quản trị công thức về Owner control `/inventory` (Owner).
-4. **Chỉ "Danh mục" mở cho chi nhánh; PO và Trả hàng NCC NGHỈ HẲN cả hai plane** (owner siết lại cùng ngày): GRN đã NCC-first (`po_id` nullable) nên không cần PO; hàng lỗi xử qua Báo hao hụt (ảnh + lý do) thay Trả NCC. Bảng + lịch sử DB giữ nguyên; gỡ tile/route/action khỏi Branch lẫn Owner control. Catalog mở cho `branch` KHÔNG cần grant mới — categories/units/ingredients gate bằng RLS/module, suppliers dùng `supplier_manage` đã cấp ở D068 §4.
-5. **Mô hình tồn kho tối giản — (sửa bởi D078) 1 chi nhánh · 1 location (Kho):** bỏ lô/HSD (cột + plumbing RPC, slice riêng trong tracker). Kho↔Bếp và `commit_intra_branch_transfer` nghỉ hẳn; vòng Yêu cầu → Gửi → Nhận / transfer cross-branch operator cũng nghỉ sau khi chuyển tồn site 16 → 3 xong.
-6. **Sau khi site 16 tắt, gỡ fork central khỏi operator UI** — `CENTRAL_HOME_TILE_SUFFIXES`, CTA home central, các nhánh `isCentralKitchen`/`isCentralSupply` trong loader landing, entries `kinds` central trong nav-config, archetype exceptions #19–#23, mục central trong `docs/ref/screen-context-map.md` §2.5 — xóa sạch, không tombstone.
-
-**Consequences:** D066 §3/§4/§7a hết hiệu lực; D067 §2 hết "đợt Bếp"; D068 §5 net cuối = PO nghỉ hẳn (không mở cho branch). D000 transfer matrix giữ cho lịch sử. §5 net cuối = D078. Đảo mục 1–6 phải sửa bản ghi này trước.
+**Decision:** Net-effect Inventory được hợp nhất tại D091. Không dùng entry này
+làm authority cho topology, procurement hoặc QC hiện hành.
 
 ## D074: Voice alert KDS chạy bằng TTS trình duyệt, không clip thu sẵn (2026-07-10)
 
@@ -457,14 +445,14 @@ Trigger inert khi flag OFF. Đảo phải sửa bản ghi này trước.
 
 **Consequences:** Bàn kẹt và `revoked ⇒ in lại QR` biến mất vì không còn session để kẹt và không còn `revoked`; `trg_order_release_table` có sẵn lo phần trả bàn. `self_order_batches` chết vì lịch sử lượt đã nằm sẵn ở `kitchen_send_batches`. Còn 6 RPC. Chưa có màn admin bật/tắt `self_order_enabled` hay in QR bàn — lỗ hổng đã biết, ngoài scope đợt này. Canonical: `docs/spec/self-order-guest-ui.md`. `docs/spec/self-order-motion-design.md` phải rà lại vì nó tham chiếu Tabs + cart cũ.
 
-## D076: Application roles đang hoạt động (2026-07-10, sửa 2026-07-18, sửa bởi D088)
+## D076: Application roles đang hoạt động (2026-07-10, sửa 2026-07-28)
 
-**Decision (net sau D088):** `STAFF_ROLES` canonical gồm
+**Decision (net):** `STAFF_ROLES` canonical gồm
 `owner | accountant | central_supply_ops | central_kitchen_lead | branch_manager | cashier | chef | branch_staff`.
 Position HR không tự tạo application role; chỉ mapping canonical trong TypeScript
 và SQL mới phát sinh quyền route. Giá trị ngoài tập này fail closed, không
 auto-remap. Ba role L0/site mới là **adapter tạm** trên JWT-role hôm nay; đích
-Authority là ADR 0015 (D088). Canonical: `packages/shared/src/auth/types.ts` và
+Authority là ADR 0015. Canonical: `packages/shared/src/auth/types.ts` và
 bảng generated trong `docs/spec/role-route-matrix.md`.
 
 ## D077: Owner `/`, Branch `/br/[branchId]` (2026-07-10, thay thế 2026-07-18)
@@ -473,31 +461,8 @@ bảng generated trong `docs/spec/role-route-matrix.md`.
 
 ## D078: Tắt Bếp chi nhánh — một kho duy nhất mỗi chi nhánh (2026-07-10)
 
-**Context:** D073 §5 còn khóa mô hình `1 chi nhánh · 2 location (Kho, Bếp)` và
-slice S11 (`commit_intra_branch_transfer` Kho↔Bếp). Owner 2026-07-10 chốt tắt
-hẳn Bếp CN: kho hàng chỉ còn một kho.
-
-**Decision (owner):**
-
-1. **Một location stock-bearing / chi nhánh:** `location_kind = 'warehouse'`
-   (Kho chi nhánh). `location_kind = 'kitchen'` (Bếp CN) nghỉ vận hành —
-   deactivate, không seed mới, không cộng vào tồn vận hành.
-2. **Mọi luồng tồn dùng kho duy nhất:** GRN nhận, kiểm kê/giao đếm, xuất/
-   tiêu hao, sản xuất, POS stock gate/posting, menu-limits capacity — đều
-   trỏ warehouse / `is_default_*` trên warehouse.
-3. **Điều chuyển Kho↔Bếp nghỉ hẳn:** gỡ UI `Chuyển Bếp` /
-   `quickInternalTransfer` / same-branch kitchen target; RPC
-   `commit_intra_branch_transfer` retire (raise). Tile operator "Điều chuyển"
-   và vòng cross-branch nhận/gửi cũng nghỉ theo D073 S11 (một kho + một
-   chi nhánh vận hành không còn cặp nguồn-đích).
-4. **KDS/POS "bếp" giữ nguyên** — `kitchen_send_batches`, `/kds`,
-   `pos:send_kitchen` là workflow nấu món, không phải stock location.
-5. **Enum/history giữ:** `location_kind` và `branch_kind` enum không DROP;
-   row kitchen inactive + ledger lịch sử giữ để audit.
-
-**Consequences:** D073 §5 và D000 phần Kho+Bếp sửa tại chỗ. S11 trong
-`tasks/todo.md` đảo thành retire (không mở rộng Kho↔Bếp). Canonical:
-`docs/ref/inventory.md`, migration single-warehouse, app defaults warehouse-only.
+**Decision:** Net-effect Inventory được hợp nhất tại D091. Không dùng entry này
+làm authority cho topology hiện hành.
 
 ## D079: Mở TTS cho bốn cảnh báo POS quan trọng, không đọc mọi ping (2026-07-11)
 
@@ -553,30 +518,19 @@ thực tế tối đa vẫn phụ thuộc media volume và loa của thiết b�
 
 ## D082: Mở lại lộ trình AP và vận hành trung tâm (2026-07-27)
 
-**Decision (owner):** Bổ sung hai track Greenfield: Thanh toán NCC trong
-Finance/AP; và Kho Tổng cùng Bếp Trung Tâm. Hai track được triển khai tiếp trong
-repo `comtammatu` trên target `matu-greenfield-company`. Kho Bếp TT và workflow
-`production` thuộc site `central_kitchen`; không khôi phục Production tại chi
-nhánh.
+**Decision:** Net-effect Inventory được hợp nhất tại D091. Lộ trình AP và vận
+hành trung tâm nằm tại `docs/plan/adr/0017-ap-central-operations.md`.
 
-**Consequences:** `matu-prod` giữ freeze như suspended mô hình pháp nhân cũ stack.
-`matu-greenfield-company` là target delivery hiện tại của cùng repo, không dùng
-writer/domain cũ. Phạm vi AP/vận hành trung tâm nằm tại
-`docs/plan/adr/0017-ap-central-operations.md`.
+## D083: PO một cấp + VAT món + Finance HĐ GTGT/NCC (2026-07-27, sửa bởi D091)
 
-## D083: PO một cấp + VAT món + Finance HĐ GTGT/NCC (2026-07-27, sửa bởi D088)
-
-**Decision (owner, net sau D088):** Trên Greenfield target: (1) Menu lưu `vat_rate` theo từng món với tập giá trị
+**Decision (owner, net sau D091):** Trên Greenfield target: (1) Menu lưu `vat_rate` theo từng món với tập giá trị
 `0 | 5 | 8 | 10`; `base_price` là giá bán đã gồm VAT nên POS không cộng VAT
 thêm khi thanh toán. HĐĐT snapshot thuế suất từng dòng; template và phương pháp
 tính thuế phải khớp cấu hình doanh nghiệp/provider đã đăng ký. (2) PO một cấp
 `draft → sent → partially_received | received`; không entity PR riêng, không duyệt
 nhiều cấp. Actor tạo/duyệt PO = Owner hoặc **Kế toán**; **một người được vừa tạo
-vừa duyệt**. (3) Nhu cầu mua từ kho = **GRN draft**; Kho Tổng / Bếp TT (và kho CN
-theo cùng gate) **không** tạo/duyệt PO. (4) **Confirm GRN / nhập tồn chỉ khi** có
-PO liên kết đã duyệt (`sent` trở lên theo status machine hiện hành). PO không
-xuất hiện trên Branch runtime UI. (5) Finance gom hóa đơn đầu vào, đối soát GRN
-và thanh toán NCC — Kế toán thao tác theo D088.
+vừa duyệt**. (3) Finance gom hóa đơn đầu vào, đối soát GRN và thanh toán NCC.
+Topology, QC và trình tự GRN/PO hiện hành theo D091.
 
 ## D084: Mô hình pháp lý công ty cổ phần sau cutoff (2026-07-27)
 
@@ -624,83 +578,50 @@ mã lịch sử; tiêu hao HRM giữ `THB-{report_id}`.
 
 ## D088: Phân vai vận hành B đầy đủ — Kế toán · Kho Tổng · Bếp TT + luồng GRN draft→PO (2026-07-28)
 
-**Decision (owner):** Triển khai **phương án B đầy đủ** trên JWT-role hiện tại
-(trước ADR 0015), chấp nhận nợ migrate sang Authority C sau:
-
-1. **Roles/Positions tạm:** `accountant` (Kế toán), `central_supply_ops` (Quản lý
-   kho Tổng), `central_kitchen_lead` (Bếp trưởng Bếp TT) — bổ sung vào
-   `STAFF_ROLES` + Position map + templates + `MODULE_ACL` (sửa D076/D017).
-2. **Kế toán:** login; `/finance` xem/duyệt/tạo chi phí · HĐ NCC · thanh toán AP ·
-   NH · PTTT; slice PO trên `/inventory` (xem/tạo/duyệt). Không HR/gán quyền.
-3. **SoD PO:** không bắt buộc tách tạo≠duyệt — Owner hoặc Kế toán được một người
-   vừa tạo vừa duyệt.
-4. **Kho Tổng / Bếp TT:** nhân sự riêng; tạo/sửa **GRN draft**; không tạo/duyệt PO;
-   confirm nhập kho sau khi PO duyệt. Bếp TT thêm production tại
-   `central_kitchen`.
-5. **Luồng mua:** `GRN draft → Kế toán tạo PO từ GRN → duyệt PO → confirm GRN`.
-   Không entity “Yêu cầu mua hàng”. Confirm GRN **fail closed** nếu thiếu PO đã
-   duyệt (sửa D083).
-6. **QL CN:** giữ L1; **không** xem giá mua / PO chuỗi.
-7. Ba role mới đánh dấu temporary until ADR 0015; Position không trở thành
-   authority vĩnh viễn trong docs product.
-
-**Canonical:** `.omc/plans/role-split-operational-personas.md`,
-`.omc/plans/b-full-ops-roles-workplan.md`, `docs/modules/finance.md` § Owner and
-Accountant Visibility, `docs/ref/inventory.md` § PO/GRN, `docs/spec/role-route-matrix.md`.
-**Canonical:** `docs/modules/finance.md` § Owner and Accountant Visibility,
-`docs/ref/inventory.md` § PO/GRN, `docs/spec/role-route-matrix.md`.
-**Note:** Full role/ACL migrations may land on a separate D088 track; this branch
-ships the D088 confirm-gate + `create_purchase_order_from_grn` SQL prerequisite
-needed by D089.
+**Decision:** Role net-effect sống ở D076 và
+`docs/spec/role-route-matrix.md`; Inventory net-effect được hợp nhất tại D091.
 
 ## D089: Purchase-price authority at PO + GRN confirm gate reaffirmation (2026-07-28)
 
-**Decision (owner):** Reaffirm D083/D088 procurement flow for **all** stock-bearing
-sites (`branch` | `central_supply` | `central_kitchen`):
-
-1. **Flow (unchanged):** Kho tạo **GRN draft** → Kế toán hoặc Owner **tạo PO từ
-   GRN** → duyệt PO một cấp (`draft → sent`; cùng một người được tạo+duyệt) →
-   Kho **confirm GRN / nhập tồn chỉ khi** PO liên kết đã duyệt. Thiếu đơn đặt
-   hàng đã duyệt → fail closed. Không entity PR. Branch runtime **không** UI PO.
-2. **Purchase price:** Thương mại / đơn giá mua thuộc **Kế toán hoặc Owner tại
-   bước PO**, không do kho nhập lại trên GRN draft. Kho chỉ ghi số lượng / đơn vị
-   nhập / QC trên nháp. **Không** có field giá trên UI kho.
-3. **Costing reconciliation (Option B):** `purchase_order_items.unit_price_est`
-   là authority thương mại. **Khi duyệt PO**, đồng bộ sang `grn_items.unit_cost`
-   (và `po_unit_price`). Confirm GRN / WAC / `stock_movements` tiếp tục đọc
-   `grn_items.unit_cost` (receipt field sau sync). Đối soát HĐ NCC / lệch giá
-   thuộc Finance (ADR 0017) — không mở ledger giá kho thứ hai.
-4. **Docs cleanup:** `docs/ref/inventory-sop.md` §2a/2b và bullet “supplier-first
-   không cần PO” trong `docs/ref/inventory.md` §1 phải khớp gate D088/D089. SOP
-   canonical = GRN draft → PO → confirm.
-5. **Legacy PO-first:** Keep `create_grn_from_approved_po` RPC for recovery;
-   primary happy path = GRN→PO only. Do not promote PO-first as the warehouse
-   default CTA.
-6. **Legacy inventory data:** May wipe/reset on empty or resettable Greenfield /
-   local / staging schemas for cleanup. **Do not** wipe production without
-   Environment Registry check + explicit owner session delegation. One-shot
-   cleanup scripts are optional and local/staging-only.
-
-**Amends:** costing principle in `docs/ref/inventory.md` §5.1 (“Giá nhập theo GRN”
-→ “Đơn giá thương mại theo PO; `grn_items.unit_cost` mang giá đã sync khi confirm”);
-stale branch SOP language; glossary `purchase_unit_cost` as receipt field after sync.
-
-**Does not change:** SoD (create+approve same person); `MODULE_ACL` module list;
-fail-closed confirm without approved PO; branch_manager purchase-price visibility
-deny (D088).
-
-**Canonical:** `docs/ref/inventory.md` §5.1, `docs/ref/inventory-sop.md` §2,
-`docs/modules/finance.md` § Owner and Accountant Visibility, D083/D088.
+**Decision:** Net-effect Inventory được hợp nhất tại D091.
 
 ## D090: control_surface naming + L0 bottom-nav cutover `<lg` (2026-07-28)
 
 **Decision:** Plane L0 AppShell canonical = `control_surface` / UI `Quản trị`.
 Không dùng `Ops surface` hoặc `Vận hành` làm nhãn plane. `station_chrome` thay
 prose mới cho Operations chrome (POS/KDS/Runner). Role `owner` và
-`operational_role` (D088) tách khỏi tên plane. Code IDs `OwnerModuleShell` /
+`operational_role` (D076) tách khỏi tên plane. Code IDs `OwnerModuleShell` /
 `data-owner-shell-scroll` / `OWNER_NAV_*` giữ nguyên, map docs sang
 `control_surface`. Bottom-nav `control_surface` cắt tại `<lg` / `useIsMobile(1024)`
 (đồng bộ code + design-system; sửa D045 từ `<md`).
 
 **Canonical:** `docs/ref/glossary.md` § control_surface; `docs/spec/design-system.md`
 § Chrome Archetypes; D019/D045 (đã fold).
+
+## D091: Inventory one-warehouse, physical QC, retrospective procurement (2026-07-28)
+
+**Decision (owner):**
+
+1. Mỗi site active (`branch`, `central_supply`, `central_kitchen`) có đúng một
+   active `warehouse`. GRN và mọi luồng Branch mặc định — POS, consumption,
+   stocktake, transfer và production tại Branch — dùng warehouse này. Current
+   schema/runtime không có stock location `kitchen`; `production_storage` chỉ
+   dùng tường minh cho production trung tâm. Warehouse là default receive,
+   issue và consumption của site.
+2. QC nhận hàng chỉ lưu số lượng thực nhận và số lượng từ chối. Số lượng đạt
+   được suy ra; dòng có số lượng từ chối bắt buộc lý do + ảnh. Không lưu
+   `quality_status`, lot/HSD/nhiệt độ, tolerance, price variance, baseline,
+   hard-block, express hoặc auto-approval.
+3. Luồng mua duy nhất trên UI là **GRN draft → tạo PO từ GRN → duyệt PO →
+   confirm GRN**. Giá thương mại thuộc PO; duyệt PO sync snapshot
+   `grn_items.unit_cost` để WAC/ledger sử dụng. Không có CTA tạo PO trực tiếp
+   hoặc tạo GRN từ PO; RPC phục hồi PO→GRN chỉ dành cho `service_role`.
+4. PO một cấp; trạng thái nhận được suy ra từ số lượng, không có quyết định
+   thủ công `accept_and_close`. Đối soát giá HĐ NCC thuộc Finance.
+
+**Supersedes:** D000, D060, D066, D068, D073, D078, phần Inventory của D082 và
+D088, cùng toàn bộ D089. D076 tiếp tục sở hữu roster role; D083 tiếp tục sở hữu
+VAT món và PO một cấp.
+
+**Canonical:** `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`,
+`docs/spec/role-route-matrix.md`.

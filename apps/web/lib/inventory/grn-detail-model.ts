@@ -4,16 +4,6 @@ import { messages } from "@lib/messages";
 export const GRN_DETAIL_COPY = messages.inventory.grn;
 export const INVENTORY_COMMON_COPY = messages.inventory.common;
 
-export type GrnLineMonetary = {
-  poUnitPrice: number | null;
-  unitCost: number;
-  priceOverrideNote: string;
-  priceOverridePhotoUrl: string;
-  priceVariancePct: number | null;
-  baselineVariancePct: number | null;
-  baselineSampleN: number | null;
-};
-
 export type GrnDetailItem = {
   lineId: number;
   ingredientId: number;
@@ -22,18 +12,11 @@ export type GrnDetailItem = {
   poQuantity: number | null;
   required: number;
   actual: number;
-  accepted: number;
   rejected: number;
   rejectionReason: string;
   rejectedPhotoUrl: string;
-  monetary: GrnLineMonetary | null;
-  requiresReview: boolean;
-  shortDeliveryAction: "accept_and_close" | "wait_backorder" | null;
   unit: string;
   entryUnitId: number | null;
-  temp: string | null;
-  qualityStatus: "accepted" | "rejected" | "partial";
-  status: string;
 };
 
 export type GrnDetail = {
@@ -41,29 +24,21 @@ export type GrnDetail = {
   tenantId: number;
   code: string;
   poCode: string;
-  poId?: number;
+  poId: number | null;
   poStatus?: string | null;
   invoiceId: number | null;
   branchId: number;
   locationId: number | null;
+  locationName: string | null;
   branchName: string;
   supplierId: number;
   supplier: string;
   date: string;
-  monetary: { total: number; tax: number } | null;
   status: string;
   items: GrnDetailItem[];
-  qcSettings: {
-    qtyShortTolerancePct: number;
-    rejectRequiresPhoto: boolean;
-    monetary: {
-      priceVarianceWarnPct: number;
-      priceVarianceReviewPct: number;
-    } | null;
-  };
 };
 
-export type RecreateReceivingLocationOption = {
+export type ReceivingLocationOption = {
   id: number;
   name: string;
   branchId: number;
@@ -74,14 +49,6 @@ export type RecreateReceivingLocationOption = {
 };
 
 export type EditableGrnLine = GrnDetailItem & { dirty: boolean };
-
-export function deriveGrnVariance(
-  unitCost: number,
-  poUnitPrice: number | null,
-): number | null {
-  if (poUnitPrice == null || poUnitPrice === 0) return null;
-  return Number((((unitCost - poUnitPrice) / poUnitPrice) * 100).toFixed(2));
-}
 
 export function isGrnLookupParam(value: string): boolean {
   if (/^\d+$/.test(value)) {
@@ -97,14 +64,12 @@ export function createEditableGrnLine({
   quantity,
   entryUnitId,
   unit,
-  monetary = null,
 }: {
   lineId: number;
   ingredient: IngredientRow;
   quantity: number;
   entryUnitId: number | null;
   unit: string;
-  monetary?: GrnLineMonetary | null;
 }): EditableGrnLine {
   return {
     lineId,
@@ -114,18 +79,11 @@ export function createEditableGrnLine({
     poQuantity: null,
     required: quantity,
     actual: quantity,
-    accepted: quantity,
     rejected: 0,
     rejectionReason: "",
     rejectedPhotoUrl: "",
-    monetary,
-    requiresReview: false,
-    shortDeliveryAction: null,
     unit,
     entryUnitId,
-    temp: null,
-    qualityStatus: "accepted",
-    status: "pass",
     dirty: false,
   };
 }

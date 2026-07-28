@@ -53,14 +53,6 @@ const CLASSIFIED_FILES = new Map([
     "Asserts the exact SQL comment string shipped in the checklist-template migration; the marker word lives in asserted migration content, not dead code.",
   ],
   [
-    "scripts/inventory-legacy-kitchen-backfill.mjs",
-    "Active read-only audit for the historical Kho CN -> Bep CN transfer data; 'legacy' names that transfer domain, not retired code.",
-  ],
-  [
-    "apps/web/tests/inventory-rebuild-static.test.ts",
-    "Test vocabulary for the Kho CN -> Bep CN transfer domain (intra-branch RPC guard, branch-kitchen stock inclusion, backfill audit); references the live audit script, not dead code.",
-  ],
-  [
     "apps/web/tests/inventory-entry-unit-atomic-rpcs.test.ts",
     "Historical GRN movement regression test; the classified marker is part of an archived migration filename.",
   ],

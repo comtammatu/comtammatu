@@ -29,11 +29,7 @@ export interface TransferDetail {
   }>;
 }
 
-export type TransferActionKind =
-  | "confirm_kitchen"
-  | "confirm_ship"
-  | "mark_in_transit"
-  | "receive";
+export type TransferActionKind = "confirm_ship" | "mark_in_transit" | "receive";
 
 export interface TransferActionConfig {
   kind: TransferActionKind;
@@ -56,12 +52,10 @@ export function getTransferActionConfig({
   const isIntraBranch = transfer.fromBranchId === transfer.toBranchId;
 
   if (transfer.status === "draft") {
+    if (isIntraBranch) return null;
     return {
-      kind: isIntraBranch ? "confirm_kitchen" : "confirm_ship",
-      enabled:
-        userRole === "branch_manager"
-          ? isIntraBranch && userBranchId === transfer.fromBranchId
-          : true,
+      kind: "confirm_ship",
+      enabled: userRole === "branch_manager" ? false : true,
     };
   }
 

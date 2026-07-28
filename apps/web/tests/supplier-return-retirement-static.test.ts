@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { normalizePgDumpSql } from "./sql-test-utils";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
@@ -71,30 +70,16 @@ test("supplier-return UI copy is retired while GRN rejection copy stays neutral"
   assert.doesNotMatch(appMessages, /rejectedLabel:.*Trả NCC/);
 });
 
-test("supplier-return history, RPCs, and GRN integrity gates remain", () => {
-  const baseline = normalizePgDumpSql(
-    read("supabase/migrations/20260727120000_baseline.sql"),
-  );
-  const integrityMigration = read(
-    "supabase/migration-archive/20260708130500_inventory_supplier_integrity_gates.sql",
-  );
+test("retired supplier-return RPCs have no current app references", () => {
   const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
+  const procurementActions = read(
+    "apps/web/app/(protected)/inventory/procurement-actions.ts",
+  );
 
-  assert.match(baseline, /CREATE TABLE public\.supplier_returns/);
-  assert.match(baseline, /CREATE TABLE public\.supplier_return_items/);
-  assert.match(
-    baseline,
-    /CREATE FUNCTION public\.create_supplier_return_from_grn/,
-  );
-  assert.match(baseline, /CREATE FUNCTION public\.confirm_supplier_return/);
-  assert.match(baseline, /CREATE FUNCTION public\.transition_supplier_return/);
-  assert.match(
-    integrityMigration,
-    /CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_returns_active_grn/,
-  );
-  assert.match(
-    integrityMigration,
-    /CREATE OR REPLACE FUNCTION public\.create_supplier_return_from_grn/,
-  );
-  assert.equal(grnActions.match(/has_active_supplier_return/g)?.length, 2);
+  for (const source of [grnActions, procurementActions]) {
+    assert.doesNotMatch(
+      source,
+      /create_supplier_return_from_grn|recreate_grn_at_receiving_site|has_active_supplier_return/,
+    );
+  }
 });

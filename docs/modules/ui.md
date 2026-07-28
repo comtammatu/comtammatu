@@ -428,9 +428,10 @@ Branch stock workflow áp dụng cùng ranh giới này:
   `DataTable`, hoặc chrome control_surface.
 - Purchase orders trở lại Inventory sidebar control_surface theo ADR 0018 **C1**
   (Owner restore 2026-07-28): `/inventory/purchase-orders` là LIST **Đơn mua hàng**
-  (keep route/RPC; no new DETAIL; Wave 4 row-open ratchet không mở rộng vào PO).
-  Supplier returns vẫn ngoài daily UI. GRN supplier-first; hàng NCC bị từ chối
-  đi qua Báo hao hụt.
+  cho PO được tạo từ GRN. Mỗi hàng mở read-only detail; action chỉ sửa giá và
+  duyệt theo quyền. Không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO. Supplier
+  returns vẫn ngoài daily UI; hàng NCC bị từ chối được ghi ngay trên dòng GRN
+  bằng số lượng, lý do và ảnh.
 - `/br/[branchId]/stock/reports` là Branch-native touch `REPORT`: cố định đúng
   chi nhánh URL và tháng hiện tại, ưu tiên chênh lệch tiêu hao warning/critical
   rồi biến động của từng nguyên liệu có drill-in vào tồn thực. Mỗi số lượng luôn
@@ -442,14 +443,16 @@ Branch stock workflow áp dụng cùng ranh giới này:
   `StockClient`: compact cards khi viewport hẹp và dense `DataTable` trên
   desktop. control_surface client không có `embedded` mode hoặc Branch route branching.
 - control_surface `/inventory/grn` dùng cùng GRN loader/model nhưng giữ
-  `GrnListClient` management presentation: branch, tổng giá trị và desktop
-  `DataTable` vẫn thuộc control_surface; client này không nhận diện `/br/` để đổi layout.
+  `GrnListClient` management presentation: branch, supplier, ngày, trạng thái và
+  desktop `DataTable`; không có cột giá mua cho Kho. Client này không nhận diện
+  `/br/` để đổi layout.
 - control_surface `/inventory/grn/new/[supplierId]` giữ `DocumentFormFrame` và desktop
   line editor trong `GrnCreateClient`. Owner GRN create DOC composition:
   dense context (`Kho nhận` / receiving pickers) → single lines `AppSection`
   (`Mặt hàng trên phiếu` DataTable + **Thêm mặt hàng** action) → catalog search
   lives in progressive `AppDialog` (pick ingredient → desk panel / sheet editor)
-  → sticky `AppDetailFooter` (count + running total SSOT, confirm CTA). Do not
+  → sticky `AppDetailFooter` (count-only SSOT trước khi PO sync giá, confirm
+  CTA). Do not
   stack a second always-on catalog `AppSection` under the lines table. Draft
   DETAIL (`/inventory/grn/[id]` draft) uses the same single-lines + add-dialog
   structure (`AddGrnLineDialog`). control_surface và Branch chỉ chia sẻ loader,
@@ -490,9 +493,11 @@ margin inset); chỉ vùng nội dung trong panel cuộn (`overflow-y-auto
 overscroll-contain`, `data-owner-shell-scroll`). `AppPageHeader` cuộn cùng nội dung
 — không sticky/freeze ngoài scrollport (sẽ chiếm chiều cao cố định và tạo khoảng
 trống / cuộn thừa trên dashboard). Filter LIST freeze ở đỉnh shell scrollport qua:
-(1) `AppListFrame`/`InventoryListFrame` toolbar slot (tự sticky), hoặc (2)
-`AppToolbar sticky`, hoặc (3) `AppPageStickyChrome` /
-`APP_PAGE_STICKY_FILTER_CLASSNAME` cho filter bar tùy biến. Không sticky filter
+(1) `AppListFrame`/`InventoryListFrame` toolbar slot (tự sticky + stuck-state
+shell bleed), hoặc (2) `AppToolbar sticky`, hoặc (3) `AppPageStickyChrome` /
+`AppStickyFilterChrome` / `APP_PAGE_STICKY_FILTER_CLASSNAME` cho filter bar tùy
+biến. Khi stuck, filter hủy pad ngang shell (`px-3 md:px-4`) để flush mép panel;
+khi cuộn về đỉnh, trở lại bề mặt Card. Không sticky filter
 nằm trên KPI/dashboard cards (ví dụ Finance `FilterBar`) — sẽ đè section kế
 tiếp khi cuộn. `AppPage scroll` bên trong `AppShellPaddingBoundary` không tạo
 scrollport thứ hai (giữ `overflow-visible`) để sticky filter neo đúng vào shell
@@ -592,15 +597,16 @@ Schema: luôn dùng Zod 4 với `{ error: "..." }` (không dùng `{ message }`).
 
 Inventory IA bám ba luồng hiện hành:
 
-1. `Nhập hàng` — NCC trực tiếp → GRN → stock movement; hóa đơn NCC handoff sang
-   Finance/AP.
-2. `Kiểm soát tồn` — một Kho CN mỗi branch, kiểm kê, hao hụt/điều chỉnh và báo
-   cáo.
+1. `Nhập hàng` — GRN draft → tạo PO từ GRN → Owner/Kế toán nhập giá và duyệt →
+   Kho kiểm tra số lượng, ghi hàng từ chối kèm lý do + ảnh rồi confirm; hóa đơn
+   NCC handoff sang Finance/AP.
+2. `Kiểm soát tồn` — đúng một warehouse cho mỗi site active, kiểm kê, hao
+   hụt/điều chỉnh và báo cáo.
 3. `Sản xuất/tiêu hao` — workflow/RPC đang có tại branch, sale-consumption và
    write-off có nguồn rõ.
 
-Không tái đưa PO, supplier return, lot/expiry, production order hoặc same-branch
-Kho↔Bếp transfer vào daily IA.
+Không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO; không đưa supplier return,
+lot/expiry, production order hoặc same-branch Kho↔Bếp transfer vào daily IA.
 
 Sidebar labels phải ngắn và scan được trong sidebar cố định. Tên đầy đủ của luồng đặt trong page title, breadcrumb, tab, hoặc empty state thay vì ép vào group label dài.
 

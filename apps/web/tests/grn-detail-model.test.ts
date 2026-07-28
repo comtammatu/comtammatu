@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   createEditableGrnLine,
-  deriveGrnVariance,
   isGrnLookupParam,
 } from "../lib/inventory/grn-detail-model";
 
@@ -15,14 +14,7 @@ test("GRN detail lookup accepts safe numeric IDs and GRN document numbers", () =
   assert.equal(isGrnLookupParam("../../42"), false);
 });
 
-test("GRN variance is null without a PO price and rounded when present", () => {
-  assert.equal(deriveGrnVariance(120, null), null);
-  assert.equal(deriveGrnVariance(120, 0), null);
-  assert.equal(deriveGrnVariance(125, 100), 25);
-  assert.equal(deriveGrnVariance(100.01, 100), 0.01);
-});
-
-test("new locally-added GRN detail line starts persisted and accepted", () => {
+test("new locally-added GRN detail line starts persisted without manual QC state", () => {
   const line = createEditableGrnLine({
     lineId: 9,
     ingredient: {
@@ -43,25 +35,22 @@ test("new locally-added GRN detail line starts persisted and accepted", () => {
     quantity: 10,
     entryUnitId: 2,
     unit: "kg",
-    unitCost: 18_000,
   });
 
   assert.deepEqual(
     {
       id: line.lineId,
       ingredientId: line.ingredientId,
-      accepted: line.accepted,
+      actual: line.actual,
       rejected: line.rejected,
       dirty: line.dirty,
-      quality: line.qualityStatus,
     },
     {
       id: 9,
       ingredientId: 4,
-      accepted: 10,
+      actual: 10,
       rejected: 0,
       dirty: false,
-      quality: "accepted",
     },
   );
 });

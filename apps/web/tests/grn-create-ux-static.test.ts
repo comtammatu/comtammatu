@@ -74,11 +74,7 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
     /pickCatalogIngredient/,
     "picker selects ingredient then opens progressive line editor",
   );
-  assert.match(
-    client,
-    /pb-24/,
-    "workspace reserves sticky footer clearance",
-  );
+  assert.match(client, /pb-24/, "workspace reserves sticky footer clearance");
   assert.match(
     client,
     /lg:sticky lg:top-3[\s\S]*lg:max-h-\[calc\(100dvh-8\.5rem\)\][\s\S]*lg:overflow-hidden/,
@@ -97,7 +93,7 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   assert.match(
     client,
     /footerLineSummary/,
-    "footer leading is SSOT for line count (D089 — no money / PO price clause)",
+    "footer leading is SSOT for line count (D091 — no money / PO price clause)",
   );
   assert.doesNotMatch(
     client,
@@ -151,10 +147,10 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
     client,
     /lg:grid lg:grid-cols-\[minmax\(0,1fr\)_22rem\][\s\S]*panelEmpty/,
   );
-  assert.match(
+  assert.doesNotMatch(
     editor,
     /grn-line-note|optionalNote|notePlaceholder/,
-    "create line editor keeps optional QC note (D089 qty/UOM/QC)",
+    "create line editor must not keep a generic QC-note field",
   );
 
   assert.match(
@@ -167,10 +163,10 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
     /draftLineColumns/,
     "draft line columns are declared for the DataTable",
   );
-  assert.match(
+  assert.doesNotMatch(
     client,
-    /lineHeaderName[\s\S]*quantityShort[\s\S]*unitCostTitle/,
-    "draft columns: name, qty+unit, unit-cost column (— until PO sync)",
+    /unitCostTitle/,
+    "GRN draft must not render a dead purchase-price column",
   );
   assert.match(
     client,
@@ -263,22 +259,21 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   assert.doesNotMatch(
     copy,
     /priceSetOnPoHint|\(PO\)|Giá mua trên PO|Giá trên PO/,
-    "warehouse create copy has no mixed-language PO price hint (D089)",
+    "warehouse create copy has no mixed-language PO price hint (D091)",
   );
-  assert.match(
+  assert.doesNotMatch(
     copy,
-    /unitPriceUnit:/,
-    "unitPriceUnit remains for PO/finance surfaces that still show unit price",
+    /unitCostTitle|priorPriceLine|unitPriceUnit/,
+    "GRN create copy must not carry purchase-price display helpers",
   );
   assert.doesNotMatch(
     editor,
     /MoneyVndInput|grn-line-unit-cost/,
-    "shared line fields do not collect warehouse unit cost (D089)",
+    "shared line fields do not collect warehouse unit cost (D091)",
   );
   assert.doesNotMatch(
     editor,
     /priceSetOnPoHint/,
     "shared line fields omit redundant PO price hint",
   );
-
 });

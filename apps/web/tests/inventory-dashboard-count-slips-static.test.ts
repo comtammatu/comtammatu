@@ -76,8 +76,8 @@ test("inventory dashboard keeps masked and degraded data truthful", () => {
     /dashboardRes\.data\.summary\.totalValueVnd \?\? 0/,
   );
   assert.match(dataSrc, /dashboardWarnings\.push\("stockValue"\)/);
-  assert.match(dataSrc, /dashboardWarnings\.push\("priceReview"\)/);
   assert.match(dataSrc, /dashboardWarnings\.push\("countSlips"\)/);
+  assert.doesNotMatch(dataSrc, /priceReview/);
 
   assert.match(clientSrc, /stockValueMasked/);
   assert.match(clientSrc, /stockValueUnavailable/);
@@ -95,7 +95,7 @@ test("inventory dashboard uses one open-transfer predicate for KPI and tasks", (
   assert.match(dataSrc, /"confirmed"/);
   assert.match(
     dataSrc,
-    /rawTransfers\.filter\(\s*\(t\) => OPEN_TRANSFER_STATUSES\.has\(t\.status\),\s*\)\.length/,
+    /rawTransfers\.filter\(\s*\(t\) =>\s*OPEN_TRANSFER_STATUSES\.has\(t\.status\),\s*\)\.length/,
   );
   assert.match(clientSrc, /function isTransferOpen\(status: string\)/);
   assert.match(

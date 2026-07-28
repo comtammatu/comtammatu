@@ -28,8 +28,7 @@ type Props = {
   /** Show plain URL input as fallback. Default true. */
   allowPaste?: boolean;
   disabled?: boolean;
-  /** Storage bucket override. Defaults to "inventory-attachments".
-   *  Use "grn-evidence" for S10 hardblock override PDFs. */
+  /** Storage bucket override. Defaults to "inventory-attachments". */
   bucket?: string;
   /** Restrict MIME — camera-only for waste tier 1 (S11). */
   acceptTypes?: "image" | "image+pdf";

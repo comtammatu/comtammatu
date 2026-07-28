@@ -7,7 +7,6 @@ import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Item } from "@comtammatu/ui/components/item";
 import {
   Sheet,
   SheetContent,
@@ -45,7 +44,7 @@ import { getStatusBadgeMeta } from "@/components/status-badge";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
-import { formatQty, formatVND } from "@lib/inventory/format";
+import { formatQty } from "@lib/inventory/format";
 import { tRoute } from "../../_lib/dictionary";
 import type { IngredientRow } from "@lib/inventory/types";
 import { useGrnDetailActions as useGrnLineActions } from "@lib/inventory/use-grn-detail-actions";
@@ -54,6 +53,7 @@ import {
   GRN_DETAIL_COPY as grnCopy,
   INVENTORY_COMMON_COPY as inventoryCommon,
 } from "@lib/inventory/grn-detail-model";
+import { deriveGrnQualityStatus } from "@lib/inventory/grn-quality";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import { createPurchaseOrderFromGrn } from "@/(protected)/inventory/procurement-actions";
 import { notify } from "@comtammatu/ui/lib/notify";
@@ -61,14 +61,14 @@ import { AddGrnLineDialog } from "./views/add-grn-line-dialog";
 import { AmendOwnerDialog } from "./views/amend-owner-dialog";
 import { DraftGrnLineCard } from "./views/draft-grn-line-card";
 import { LineRow } from "./views/grn-line-row";
-import { RecreateReceivingSiteDialog } from "./views/recreate-receiving-site-dialog";
+import { DraftReceivingSiteDialog } from "./views/draft-receiving-site-dialog";
 
 export type { GrnDetail as GRNDetail } from "@lib/inventory/grn-detail-model";
 
 import type {
   EditableGrnLine as EditableLine,
   GrnDetail as GRNDetail,
-  RecreateReceivingLocationOption,
+  ReceivingLocationOption,
 } from "@lib/inventory/grn-detail-model";
 
 const DESK_LINE_EDIT_BREAKPOINT = 1024;
@@ -78,9 +78,11 @@ export function GRNDetailClient({
   ingredients,
   canAdjustStock,
   canAmendConfirmed = false,
+  canEditDraft = false,
   canConfirm = true,
   canCreatePoFromGrn = false,
-  recreateLocationOptions = [],
+  canManageSupplierInvoice = false,
+  receivingLocationOptions = [],
   auditLogs = [],
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
@@ -91,9 +93,11 @@ export function GRNDetailClient({
   ingredients: IngredientRow[];
   canAdjustStock: boolean;
   canAmendConfirmed?: boolean;
+  canEditDraft?: boolean;
   canConfirm?: boolean;
   canCreatePoFromGrn?: boolean;
-  recreateLocationOptions?: RecreateReceivingLocationOption[];
+  canManageSupplierInvoice?: boolean;
+  receivingLocationOptions?: ReceivingLocationOption[];
   auditLogs?: AuditLogRow[];
   grnListBasePath?: string;
   grnMobileBackPath?: string;
@@ -118,16 +122,11 @@ export function GRNDetailClient({
 
   const isDraft = grn.status === "draft";
   const isConfirmed = grn.status === "confirmed";
-  const canViewMonetary = grn.monetary != null;
+  const canMutateDraft = canEditDraft && isDraft && grn.poId == null;
   const statusBadge = getStatusBadgeMeta("inventory", grn.status);
-  const showAmendAffordance =
-    canAmendConfirmed && isConfirmed && canViewMonetary;
-  const qc = grn.qcSettings;
+  const showAmendAffordance = canAmendConfirmed && isConfirmed;
 
-  const { lines, setLines, patch, stats, dirtyLines } = useGrnLines(
-    grn.items,
-    qc.monetary?.priceVarianceReviewPct ?? null,
-  );
+  const { lines, setLines, patch, stats, dirtyLines } = useGrnLines(grn.items);
 
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
     useGrnLineActions({
@@ -149,15 +148,20 @@ export function GRNDetailClient({
       : lines.findIndex((line) => line.lineId === editingLineId);
   const editingLine = editingIdx >= 0 ? lines[editingIdx] : null;
   const showDeskEditor =
-    isDraft && isDesktopLineEdit && editingLine != null && editingIdx >= 0;
+    canMutateDraft &&
+    isDesktopLineEdit &&
+    editingLine != null &&
+    editingIdx >= 0;
 
-  const receivingLocationName =
-    recreateLocationOptions.find((option) => option.id === grn.locationId)
-      ?.name ?? null;
+  const receivingLocationName = grn.locationName;
 
   const closeLineEdit = () => setEditingLineId(null);
 
   function handleCreatePoFromGrn() {
+    if (isSaving || dirtyLines.length > 0) {
+      notify.error(grnCopy.confirmBlockedByDirty);
+      return;
+    }
     startCreatePo(async () => {
       const result = await createPurchaseOrderFromGrn({ grnId: grn.id });
       if (!result.success) {
@@ -195,64 +199,27 @@ export function GRNDetailClient({
           </span>
         ),
       },
-      ...(canViewMonetary
-        ? [
-            {
-              key: "cost",
-              header: grnCopy.lineHeaderCost,
-              className: "w-32 text-right",
-              render: (line: EditableLine) =>
-                line.monetary && line.monetary.unitCost > 0 ? (
-                  <span className="font-mono tabular-nums">
-                    {inventoryCommon.currency(
-                      formatVND(line.monetary.unitCost),
-                    )}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">
-                    {inventoryCommon.noValue}
-                  </span>
-                ),
-            },
-            {
-              key: "total",
-              header: grnCopy.lineHeaderTotal,
-              className: "w-32 text-right",
-              render: (line: EditableLine) =>
-                line.monetary && line.monetary.unitCost > 0 ? (
-                  <span className="font-mono font-semibold tabular-nums">
-                    {inventoryCommon.currency(
-                      formatVND(
-                        line.monetary.unitCost *
-                          (line.actual - line.rejected),
-                      ),
-                    )}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">
-                    {inventoryCommon.noValue}
-                  </span>
-                ),
-            },
-          ]
-        : []),
       {
         key: "status",
         header: grnCopy.lineHeaderStatus,
         className: "w-28",
         render: (line) => {
+          const qualityStatus = deriveGrnQualityStatus(
+            line.actual,
+            line.rejected,
+          );
           const label =
-            line.qualityStatus === "accepted"
+            qualityStatus === "accepted"
               ? grnCopy.line.qualityAccepted
-              : line.qualityStatus === "partial"
+              : qualityStatus === "partial"
                 ? grnCopy.line.qualityPartial
                 : grnCopy.line.qualityRejected;
           return (
             <Badge
               variant={
-                line.qualityStatus === "accepted"
+                qualityStatus === "accepted"
                   ? "success"
-                  : line.qualityStatus === "partial"
+                  : qualityStatus === "partial"
                     ? "warning"
                     : "destructive"
               }
@@ -268,36 +235,37 @@ export function GRNDetailClient({
           <span className="sr-only">{GRN_CREATE_COPY.lineActionsAria}</span>
         ),
         className: "w-24 text-right",
-        render: (line) => (
-          <div
-            className="flex items-center justify-end gap-1"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setEditingLineId(line.lineId)}
-              aria-label={GRN_CREATE_COPY.editLineAria}
+        render: (line) =>
+          canMutateDraft ? (
+            <div
+              className="flex items-center justify-end gap-1"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
             >
-              <IconPencil className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => void handleDeleteLine(line)}
-              aria-label={grnCopy.line.deleteLineAria}
-            >
-              <IconTrash className="size-4" />
-            </Button>
-          </div>
-        ),
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setEditingLineId(line.lineId)}
+                aria-label={GRN_CREATE_COPY.editLineAria}
+              >
+                <IconPencil className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => void handleDeleteLine(line)}
+                aria-label={grnCopy.line.deleteLineAria}
+              >
+                <IconTrash className="size-4" />
+              </Button>
+            </div>
+          ) : null,
       },
     ],
-    [canViewMonetary, handleDeleteLine],
+    [canMutateDraft, handleDeleteLine],
   );
 
   const confirmedColumns = useMemo<DataTableColumn<EditableLine>[]>(
@@ -308,11 +276,6 @@ export function GRNDetailClient({
         render: (line) => (
           <div className="min-w-0">
             <p className="font-medium">{line.name}</p>
-            {line.requiresReview ? (
-              <Badge variant="destructive" className="mt-1">
-                {grnCopy.line.reviewNeeded}
-              </Badge>
-            ) : null}
           </div>
         ),
       },
@@ -346,56 +309,27 @@ export function GRNDetailClient({
           </span>
         ),
       },
-      ...(canViewMonetary
-        ? [
-            {
-              key: "cost",
-              header: grnCopy.lineHeaderCost,
-              className: "w-28 text-right",
-              render: (line: EditableLine) =>
-                line.monetary ? (
-                  <span className="font-mono tabular-nums">
-                    {inventoryCommon.currency(
-                      formatVND(line.monetary.unitCost),
-                    )}
-                  </span>
-                ) : null,
-            },
-            {
-              key: "total",
-              header: grnCopy.lineHeaderTotal,
-              className: "w-32 text-right",
-              render: (line: EditableLine) =>
-                line.monetary ? (
-                  <span className="font-mono font-semibold tabular-nums">
-                    {inventoryCommon.currency(
-                      formatVND(
-                        line.monetary.unitCost *
-                          (line.actual - line.rejected),
-                      ),
-                    )}
-                  </span>
-                ) : null,
-            },
-          ]
-        : []),
       {
         key: "status",
         header: grnCopy.lineHeaderStatus,
         className: "w-28",
         render: (line) => {
+          const qualityStatus = deriveGrnQualityStatus(
+            line.actual,
+            line.rejected,
+          );
           const label =
-            line.qualityStatus === "accepted"
+            qualityStatus === "accepted"
               ? grnCopy.line.qualityAccepted
-              : line.qualityStatus === "partial"
+              : qualityStatus === "partial"
                 ? grnCopy.line.qualityPartial
                 : grnCopy.line.qualityRejected;
           return (
             <Badge
               variant={
-                line.qualityStatus === "accepted"
+                qualityStatus === "accepted"
                   ? "success"
-                  : line.qualityStatus === "partial"
+                  : qualityStatus === "partial"
                     ? "warning"
                     : "destructive"
               }
@@ -422,7 +356,7 @@ export function GRNDetailClient({
           ) : null,
       },
     ],
-    [canViewMonetary, showAmendAffordance],
+    [showAmendAffordance],
   );
 
   const footer = (
@@ -438,20 +372,20 @@ export function GRNDetailClient({
                   {GRN_CREATE_COPY.footerLineSummary(lines.length)}
                 </p>
               ) : null}
-              <RecreateReceivingSiteDialog
-                mode="draft"
-                grnId={grn.id}
-                grnCode={grn.code}
-                currentLocationId={grn.locationId}
-                locationOptions={recreateLocationOptions}
-                grnListBasePath={grnListBasePath}
-                buttonSize={isMobile ? "touch" : "default"}
-                disabledReason={
-                  dirtyLines.length > 0
-                    ? grnCopy.draftReceiving.saveBeforeSwitch
-                    : undefined
-                }
-              />
+              {canMutateDraft ? (
+                <DraftReceivingSiteDialog
+                  grnId={grn.id}
+                  grnCode={grn.code}
+                  currentLocationId={grn.locationId}
+                  locationOptions={receivingLocationOptions}
+                  buttonSize={isMobile ? "touch" : "default"}
+                  disabledReason={
+                    dirtyLines.length > 0
+                      ? grnCopy.draftReceiving.saveBeforeSwitch
+                      : undefined
+                  }
+                />
+              ) : null}
             </>
           ) : null}
           {!isDraft && canAdjustStock && lines.length > 0 ? (
@@ -472,17 +406,7 @@ export function GRNDetailClient({
               }))}
             />
           ) : null}
-          {showAmendAffordance ? (
-            <RecreateReceivingSiteDialog
-              grnId={grn.id}
-              grnCode={grn.code}
-              currentLocationId={grn.locationId}
-              locationOptions={recreateLocationOptions}
-              grnListBasePath={grnListBasePath}
-              buttonSize={isMobile ? "touch" : "default"}
-            />
-          ) : null}
-          {!isDraft ? (
+          {!isDraft && canManageSupplierInvoice ? (
             <Button
               variant="outline"
               size={isMobile ? "touch" : "default"}
@@ -505,22 +429,29 @@ export function GRNDetailClient({
       trailing={
         isDraft ? (
           <>
-            <Button
-              type="button"
-              variant="outline"
-              size={isMobile ? "touch" : "default"}
-              onClick={handleSave}
-              disabled={isSaving || dirtyLines.length === 0}
-            >
-              <IconDeviceFloppy className="size-5" />
-              {grnCopy.saveChanges(dirtyLines.length)}
-            </Button>
+            {canMutateDraft ? (
+              <Button
+                type="button"
+                variant="outline"
+                size={isMobile ? "touch" : "default"}
+                onClick={handleSave}
+                disabled={isSaving || dirtyLines.length === 0}
+              >
+                <IconDeviceFloppy className="size-5" />
+                {grnCopy.saveChanges(dirtyLines.length)}
+              </Button>
+            ) : null}
             {canCreatePoFromGrn ? (
               <Button
                 type="button"
                 variant="outline"
                 size={isMobile ? "touch" : "default"}
-                disabled={isCreatingPo || lines.length === 0}
+                disabled={
+                  isCreatingPo ||
+                  isSaving ||
+                  dirtyLines.length > 0 ||
+                  lines.length === 0
+                }
                 onClick={handleCreatePoFromGrn}
               >
                 {grnCopy.createPoFromGrnAction}
@@ -568,9 +499,7 @@ export function GRNDetailClient({
             ? [
                 {
                   term: grnCopy.linkedPo,
-                  description: (
-                    <span className="font-mono">{grn.poCode}</span>
-                  ),
+                  description: <span className="font-mono">{grn.poCode}</span>,
                 },
               ]
             : []),
@@ -586,17 +515,7 @@ export function GRNDetailClient({
               {grnCopy.rejectedLines} {stats.rejectedLines}
             </Badge>
           ) : null}
-          {stats.reviewLines > 0 ? (
-            <Badge variant="destructive">
-              {grnCopy.priceReviewNeeded} {stats.reviewLines}
-            </Badge>
-          ) : null}
         </div>
-        {!isDraft && stats.total != null ? (
-          <p className="ml-auto font-mono text-base font-semibold tabular-nums text-primary">
-            {inventoryCommon.currency(formatVND(stats.total))}
-          </p>
-        ) : null}
       </div>
     </div>
   );
@@ -607,15 +526,17 @@ export function GRNDetailClient({
       title={grnCopy.inspectionItemsTitle}
       contentFlush
       action={
-        <Button
-          type="button"
-          variant="outline"
-          size={isMobile ? "touch" : "default"}
-          onClick={() => setAddDialogOpen(true)}
-        >
-          <IconPlus className="size-4" />
-          {grnCopy.addLine}
-        </Button>
+        canMutateDraft ? (
+          <Button
+            type="button"
+            variant="outline"
+            size={isMobile ? "touch" : "default"}
+            onClick={() => setAddDialogOpen(true)}
+          >
+            <IconPlus className="size-4" />
+            {grnCopy.addLine}
+          </Button>
+        ) : null
       }
     >
       <DataTable
@@ -623,15 +544,31 @@ export function GRNDetailClient({
         columns={draftColumns}
         data={lines}
         getRowKey={(line) => line.lineId}
-        onRowClick={(line) => setEditingLineId(line.lineId)}
+        onRowClick={
+          canMutateDraft ? (line) => setEditingLineId(line.lineId) : undefined
+        }
         emptyTitle={grnCopy.overviewLinesEmpty}
-        mobileCardRender={(line) => (
-          <DraftGrnLineCard
-            line={line}
-            onEdit={() => setEditingLineId(line.lineId)}
-            onRemove={() => void handleDeleteLine(line)}
-          />
-        )}
+        mobileCardRender={(line, idx) =>
+          canMutateDraft ? (
+            <DraftGrnLineCard
+              line={line}
+              onEdit={() => setEditingLineId(line.lineId)}
+              onRemove={() => void handleDeleteLine(line)}
+            />
+          ) : (
+            <LineRow
+              tenantId={grn.tenantId}
+              grnId={grn.id}
+              line={line}
+              idx={idx}
+              isDraft={false}
+              showAmendAffordance={false}
+              onChange={() => undefined}
+              onDelete={() => undefined}
+              onAmend={() => undefined}
+            />
+          )
+        }
       />
     </AppSection>
   );
@@ -656,54 +593,12 @@ export function GRNDetailClient({
             line={line}
             idx={idx}
             isDraft={false}
-            qc={qc}
             showAmendAffordance={showAmendAffordance}
             onChange={(p) => patch(idx, p)}
             onDelete={() => void handleDeleteLine(line)}
             onAmend={() => setAmendingLine(line)}
           />
         )}
-        mobileFooter={
-          stats.total != null ? (
-          <Item
-            variant="outline"
-            className="flex-col items-stretch gap-2 p-3 text-sm"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">
-                {grnCopy.totalStockValue}
-              </span>
-              <span className="font-mono font-semibold tabular-nums text-primary">
-                {inventoryCommon.currency(formatVND(stats.total))}
-              </span>
-            </div>
-          </Item>
-          ) : undefined
-        }
-        desktopFooterRows={
-          stats.total != null
-            ? [{
-            key: "grn-total",
-            className: "border-border",
-            cells: [
-              {
-                key: "label",
-                colSpan: 5,
-                className: "text-right text-sm font-bold",
-                content: grnCopy.totalStockValue,
-              },
-              {
-                key: "value",
-                className:
-                  "text-right font-mono font-semibold tabular-nums text-primary",
-                content: inventoryCommon.currency(formatVND(stats.total)),
-              },
-              { key: "status", content: null },
-              { key: "actions", content: null },
-            ],
-          }]
-            : undefined
-        }
       />
     </AppSection>
   );
@@ -772,7 +667,6 @@ export function GRNDetailClient({
                   line={editingLine}
                   idx={editingIdx}
                   isDraft
-                  qc={qc}
                   showAmendAffordance={false}
                   chrome="plain"
                   onChange={(p) => patch(editingIdx, p)}
@@ -793,7 +687,7 @@ export function GRNDetailClient({
   );
 
   const draftLineSheet =
-    isDraft && !isDesktopLineEdit ? (
+    canMutateDraft && !isDesktopLineEdit ? (
       <Sheet
         open={editingLine != null}
         onOpenChange={(open) => {
@@ -826,7 +720,6 @@ export function GRNDetailClient({
                   line={editingLine}
                   idx={editingIdx}
                   isDraft
-                  qc={qc}
                   showAmendAffordance={false}
                   chrome="plain"
                   onChange={(p) => patch(editingIdx, p)}
@@ -868,16 +761,19 @@ export function GRNDetailClient({
 
   const dialogs = (
     <>
-      <AddGrnLineDialog
-        grn={grn}
-        ingredients={ingredients}
-        isOpen={addDialogOpen}
-        isPending={isSaving}
-        onOpenChange={setAddDialogOpen}
-        onSaved={upsertLocalLine}
-        startTransition={startSave}
-      />
+      {canMutateDraft ? (
+        <AddGrnLineDialog
+          grn={grn}
+          ingredients={ingredients}
+          isOpen={addDialogOpen}
+          isPending={isSaving}
+          onOpenChange={setAddDialogOpen}
+          onSaved={upsertLocalLine}
+          startTransition={startSave}
+        />
+      ) : null}
       <AmendOwnerDialog
+        tenantId={grn.tenantId}
         grnId={grn.id}
         line={amendingLine}
         isPending={isAmending}

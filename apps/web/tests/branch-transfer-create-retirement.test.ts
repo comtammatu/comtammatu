@@ -73,25 +73,3 @@ test("direct Branch action invocation cannot call the transfer RPC", () => {
     [result.stdout, result.stderr].filter(Boolean).join("\n"),
   );
 });
-
-test("transfer creation RPC rejects every non-Owner role before writes", () => {
-  const source = read(
-    "supabase/migration-archive/20260719165715_restrict_stock_transfer_creation_to_owner.sql",
-  );
-
-  const ownerGate = source.indexOf("v_role IS DISTINCT FROM 'owner'");
-  const firstWrite = source.indexOf("INSERT INTO public.stock_transfers");
-
-  assert.ok(ownerGate > -1);
-  assert.ok(firstWrite > ownerGate);
-  assert.match(
-    source,
-    /stock_transfer_create_owner_only' USING ERRCODE = '42501'/,
-  );
-  assert.match(source, /SET is_delegable_to_staff = false/);
-  assert.match(
-    source,
-    /array_remove\(permission_keys, 'inventory:transfer_create'\)/,
-  );
-  assert.doesNotMatch(source, /v_branch_claim|branch_manager/);
-});

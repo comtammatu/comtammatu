@@ -555,6 +555,85 @@ BEGIN
     RAISE EXCEPTION 'TEST 7 FAILED: expected side stock after ready-cancel=9, got %', v_qty;
   END IF;
 
+  UPDATE public.branch_feature_flags
+  SET enabled = false,
+      disabled_at = now(),
+      updated_at = now()
+  WHERE branch_id = v_branch
+    AND flag_key = 'pos_stock_outcome_posting';
+
+  INSERT INTO public.orders (
+    tenant_id, branch_id, order_number, status, payment_status,
+    subtotal, total_amount, created_by
+  )
+  VALUES (
+    v_tenant, v_branch, '__g5_disabled_then_short_' || gen_random_uuid()::text,
+    'completed', 'paid', 14985000, 14985000, v_profile
+  )
+  RETURNING id INTO v_order;
+
+  INSERT INTO public.order_items (
+    tenant_id, order_id, menu_item_id, item_name,
+    quantity, unit_price, subtotal, vat_rate, sent_to_kitchen_at
+  )
+  VALUES (
+    v_tenant,
+    v_order,
+    v_drink_menu,
+    'G5 disabled then insufficient item',
+    999,
+    15000,
+    14985000,
+    8,
+    now()
+  );
+
+  v_result := public.post_pos_sale_consumption_if_ready(v_order, v_profile);
+  IF v_result ->> 'reason' <> 'feature_disabled' THEN
+    RAISE EXCEPTION
+      'TEST 8 FAILED: disabled switch did not bypass posting: %',
+      v_result;
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM public.stock_movements
+  WHERE tenant_id = v_tenant
+    AND order_id = v_order
+    AND movement_subtype = 'sale_consumption';
+
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION
+      'TEST 8 FAILED: disabled switch posted % movement(s)',
+      v_count;
+  END IF;
+
+  UPDATE public.branch_feature_flags
+  SET enabled = true,
+      enabled_at = now(),
+      disabled_at = NULL,
+      updated_at = now()
+  WHERE branch_id = v_branch
+    AND flag_key = 'pos_stock_outcome_posting';
+
+  v_result := public.post_pos_sale_consumption_if_ready(v_order, v_profile);
+  IF v_result ->> 'reason' <> 'insufficient_stock_at_posting' THEN
+    RAISE EXCEPTION
+      'TEST 9 FAILED: insufficient stock did not fail closed: %',
+      v_result;
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM public.stock_movements
+  WHERE tenant_id = v_tenant
+    AND order_id = v_order
+    AND movement_subtype = 'sale_consumption';
+
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION
+      'TEST 9 FAILED: insufficient posting wrote % partial movement(s)',
+      v_count;
+  END IF;
+
   RAISE NOTICE 'G5 POS/KDS stock outcome multi-unit acceptance passed';
 END;
 $$;

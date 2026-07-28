@@ -33,9 +33,6 @@ const grnSupplierPicker = readRepo(
 const grnCreateController = readRepo(
   "apps/web/lib/inventory/use-grn-create-controller.ts",
 );
-const migration = readRepo(
-  "supabase/migration-archive/20260708111916_fix_grn_draft_branch_scope.sql",
-);
 const poDraftMigration = readRepo(
   "supabase/migration-archive/20260708130514_separate_free_and_po_grn_drafts.sql",
 );
@@ -62,24 +59,6 @@ test("GRN supplier drafts are looked up in the selected receiving branch", () =>
 });
 
 test("GRN supplier draft uniqueness includes the receiving branch", () => {
-  assert.match(
-    migration,
-    /DROP INDEX IF EXISTS public\.uq_grn_active_draft_per_user_supplier;/,
-  );
-  assert.match(
-    migration,
-    /DROP INDEX IF EXISTS public\.uq_grn_active_draft_per_user_supplier_branch;/,
-  );
-  assert.match(
-    migration,
-    /CREATE UNIQUE INDEX uq_grn_active_draft_per_user_supplier_branch/,
-  );
-  assert.match(
-    migration,
-    /ON public\.goods_received_notes \(tenant_id, created_by, supplier_id, branch_id\)/,
-  );
-  assert.match(migration, /WHERE status = 'draft' AND created_by IS NOT NULL;/);
-
   const createStart = grnActions.indexOf("export const createGrnDraft");
   assert.ok(createStart >= 0, "createGrnDraft not found");
   const createBody = grnActions.slice(
@@ -110,35 +89,17 @@ test("GRN free drafts and PO-linked drafts do not share the same unique slot", (
     poDraftMigration,
     /WHERE status = 'draft' AND created_by IS NOT NULL AND po_id IS NULL;/,
   );
-  assert.match(
-    poDraftMigration,
-    /CREATE UNIQUE INDEX uq_grn_active_po_draft_per_user_po/,
-  );
-  assert.match(
-    poDraftMigration,
-    /ON public\.goods_received_notes \(tenant_id, created_by, po_id\)/,
-  );
-  assert.match(
-    poDraftMigration,
-    /WHERE status = 'draft' AND created_by IS NOT NULL AND po_id IS NOT NULL;/,
-  );
   assert.match(grnListClient, /grnDraftHref\(basePath,\s*draft\)/);
-  assert.match(
-    grnListModel,
-    /draft\.poId != null\s*\?\s*`\$\{basePath\}\/\$\{draft\.grnId\}`/,
-  );
-  assert.match(
-    grnListModel,
-    /newGrnSupplierHref\(basePath,\s*draft\.supplierId,\s*draft\.branchId\)/,
-  );
+  assert.match(grnListModel, /return `\$\{basePath\}\/\$\{draft\.grnId\}`;/);
   assert.match(grnListModel, /export function grnDraftHref/);
   assert.match(grnListModel, /export function newGrnSupplierHref/);
   assert.match(grnListModel, /branchId: number/);
   assert.match(grnListModel, /branchId: String\(branchId\)/);
   assert.match(
     branchGrnListClient,
-    /grnSourceSupplierHref\(`\$\{basePath\}\/new`, draft\.supplierId\)/,
+    /const href = `\$\{basePath\}\/\$\{draft\.grnId\}`;/,
   );
+  assert.doesNotMatch(branchGrnListClient, /grnSourceSupplierHref/);
   assert.match(grnListClient, /draft\.poId != null && draft\.poCode/);
   assert.match(grnListClient, /grn\.poId != null && grn\.poCode/);
 });

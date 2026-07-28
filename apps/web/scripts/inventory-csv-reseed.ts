@@ -73,9 +73,6 @@ const OPERATIONAL_DELETE_TABLES = [
   "supplier_return_items",
   "supplier_returns",
   "supplier_invoices",
-  "grn_hardblock_overrides",
-  "grn_express_extend_audit",
-  "grn_baseline_pause",
   "grn_items",
   "goods_received_notes",
   "purchase_order_items",
@@ -97,7 +94,6 @@ const MASTER_DELETE_TABLES = [
   "suppliers",
   "ingredient_units",
   "ingredients",
-  "ingredient_category_review_policy",
   "ingredient_categories",
   "units",
 ] as const;
@@ -138,7 +134,8 @@ function parseArgs(argv: string[]): Args {
     if (arg === "--help" || arg === "-h") args.help = true;
     else if (arg === "--self-test") args.selfTest = true;
     else if (arg === "--catalog-only") args.catalogOnly = true;
-    else if (arg === "--ingredients") args.ingredients = readArg(argv, ++index, arg);
+    else if (arg === "--ingredients")
+      args.ingredients = readArg(argv, ++index, arg);
     else if (arg === "--production-recipes")
       args.productionRecipes = readArg(argv, ++index, arg);
     else if (arg === "--out") args.out = readArg(argv, ++index, arg);
@@ -176,7 +173,11 @@ function resolveInsideRepo(input: string): string {
   const root = repoRoot();
   const resolved = path.resolve(root, input);
   const relative = path.relative(root, resolved);
-  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+  if (
+    relative === "" ||
+    relative.startsWith("..") ||
+    path.isAbsolute(relative)
+  ) {
     throw new Error("Output must stay inside the repository");
   }
   if (!relative.startsWith(".tmp/")) {
@@ -234,7 +235,9 @@ function parseCsv(text: string): CsvRow[] {
   return rows
     .filter((values) => values.some((value) => value.trim() !== ""))
     .map((values) =>
-      Object.fromEntries(header.map((key, index) => [key, values[index]?.trim() ?? ""])),
+      Object.fromEntries(
+        header.map((key, index) => [key, values[index]?.trim() ?? ""]),
+      ),
     );
 }
 
@@ -271,7 +274,8 @@ function parseUnits(raw: string, file: string, row: number): UnitRow[] {
     .filter(Boolean)
     .map((part) => {
       const match = part.match(/^(.+?)(?:\(base\))?=f([0-9.]+)$/);
-      if (!match) throw new Error(`${file}:${row}: unit shape invalid: ${part}`);
+      if (!match)
+        throw new Error(`${file}:${row}: unit shape invalid: ${part}`);
       const label = cleanText(match[1] ?? "");
       const factor = Number(match[2]);
       if (!label || !Number.isFinite(factor) || factor <= 0) {
@@ -391,7 +395,8 @@ function readIngredients(rows: CsvRow[]): IngredientRow[] {
           ? "finished_good"
           : "raw_material",
       storageType:
-        row["storage_type"] === "refrigerated" || row["storage_type"] === "frozen"
+        row["storage_type"] === "refrigerated" ||
+        row["storage_type"] === "frozen"
           ? row["storage_type"]
           : "ambient",
       unitCost,
@@ -446,7 +451,11 @@ function validate(
 
   ingredients.forEach((row, index) => {
     if (byId.has(row.id)) {
-      issues.push({ file: "nguyen_lieu.csv", row: index + 2, message: "Duplicate id" });
+      issues.push({
+        file: "nguyen_lieu.csv",
+        row: index + 2,
+        message: "Duplicate id",
+      });
     }
     byId.set(row.id, row);
     const nameKey = row.name.toLocaleLowerCase("vi-VN");
@@ -468,7 +477,8 @@ function validate(
   });
 
   for (const [name, count] of names) {
-    if (count > 1) warnings.push(`duplicate ingredient display name after cleanup: ${name}`);
+    if (count > 1)
+      warnings.push(`duplicate ingredient display name after cleanup: ${name}`);
   }
 
   const recipePairs = new Set<string>();
@@ -577,14 +587,16 @@ function buildSql(
   recipes: RecipeRow[],
   options: { catalogOnly?: boolean } = {},
 ): string {
-  const categories = [...new Set(ingredients.map((row) => row.category))].sort((a, b) =>
-    a.localeCompare(b, "vi"),
+  const categories = [...new Set(ingredients.map((row) => row.category))].sort(
+    (a, b) => a.localeCompare(b, "vi"),
   );
   const unitMap = new Map<string, UnitRow>();
   for (const ingredient of ingredients) {
     for (const unit of ingredient.units) unitMap.set(unit.code, unit);
   }
-  const allUnits = [...unitMap.values()].sort((a, b) => a.code.localeCompare(b.code, "vi"));
+  const allUnits = [...unitMap.values()].sort((a, b) =>
+    a.code.localeCompare(b.code, "vi"),
+  );
   const ingredientValues = ingredients
     .slice()
     .sort((a, b) => a.id - b.id)
@@ -616,8 +628,8 @@ function buildSql(
     .map(
       (row) =>
         `(${row.finishedGoodId}, ${row.ingredientId}, ${row.quantity}, ${sqlString(row.unitCode)}, ${row.yieldFactor}, ${sqlString(row.note)})`,
-	    )
-	    .join(",\n    ");
+    )
+    .join(",\n    ");
   const productionRecipeSql = options.catalogOnly
     ? "-- production_recipes intentionally not re-imported in catalog-only mode."
     : `WITH recipe_rows(finished_good_id, ingredient_id, quantity, unit_code, yield_factor, note) AS (
@@ -689,13 +701,13 @@ WITH ingredient_rows(id, name, sku, category, item_kind, storage_type, unit_cost
 INSERT INTO public.ingredients (
   id, tenant_id, name, sku, unit_cost, category, min_stock_level,
   max_stock_level, reorder_point, storage_type,
-  is_active, item_kind, review_override, category_id
+  is_active, item_kind, category_id
 )
 OVERRIDING SYSTEM VALUE
 SELECT
   i.id, t.id, i.name, i.sku, i.unit_cost::numeric, i.category, i.min_stock_level::numeric,
   i.max_stock_level::numeric, i.reorder_point::numeric, i.storage_type,
-  i.is_active, i.item_kind, NULL, c.id
+  i.is_active, i.item_kind, c.id
 FROM target_tenants t
 CROSS JOIN ingredient_rows i
 LEFT JOIN public.ingredient_categories c
@@ -758,7 +770,9 @@ async function run(args: Args) {
   const { issues, warnings } = validate(ingredients, recipes);
 
   if (issues.length > 0) {
-    throw new Error(`CSV validation failed:\n${issues.map((i) => `${i.file}:${i.row} ${i.message}`).join("\n")}`);
+    throw new Error(
+      `CSV validation failed:\n${issues.map((i) => `${i.file}:${i.row} ${i.message}`).join("\n")}`,
+    );
   }
 
   if (args.catalogOnly) {
@@ -767,38 +781,42 @@ async function run(args: Args) {
 
   const categories = [...new Set(ingredients.map((row) => row.category))];
   const unitCodes = new Set(
-    ingredients.flatMap((ingredient) => ingredient.units.map((unit) => unit.code)),
+    ingredients.flatMap((ingredient) =>
+      ingredient.units.map((unit) => unit.code),
+    ),
   );
   const manifest = {
-	    generated_at: new Date().toISOString(),
-	    mode: args.catalogOnly ? "catalog_only_dry_run" : "dry_run",
-	    source_files: {
-	      ingredients: ingredientsPath,
-	      production_recipes: args.catalogOnly ? null : recipesPath,
-	    },
-	    warnings: [
-	      ...overrideWarnings,
-	      ...warnings,
-	      args.catalogOnly
-	        ? "catalog-only mode renumbers ingredient ids from 1 and resets inventory table identity sequences."
-	        : "ingredient ids are preserved from source CSV to keep production recipe references stable.",
-	      args.catalogOnly
-	        ? "public.recipes and public.production_recipes are reset and intentionally not re-imported."
-	        : "public.recipes is reset but not re-imported because no menu recipe CSV was provided.",
-	      "stock quantities are reset; ton_kho_theo_chi_nhanh is intentionally not imported.",
-	    ],
+    generated_at: new Date().toISOString(),
+    mode: args.catalogOnly ? "catalog_only_dry_run" : "dry_run",
+    source_files: {
+      ingredients: ingredientsPath,
+      production_recipes: args.catalogOnly ? null : recipesPath,
+    },
+    warnings: [
+      ...overrideWarnings,
+      ...warnings,
+      args.catalogOnly
+        ? "catalog-only mode renumbers ingredient ids from 1 and resets inventory table identity sequences."
+        : "ingredient ids are preserved from source CSV to keep production recipe references stable.",
+      args.catalogOnly
+        ? "public.recipes and public.production_recipes are reset and intentionally not re-imported."
+        : "public.recipes is reset but not re-imported because no menu recipe CSV was provided.",
+      "stock quantities are reset; ton_kho_theo_chi_nhanh is intentionally not imported.",
+    ],
     counts: {
       source_ingredient_rows: ingredientRows.length,
-	      output_ingredients: ingredients.length,
-	      categories: categories.length,
-	      units: unitCodes.size,
-	      source_production_recipe_rows: recipeRows.length,
-	      production_recipe_lines: recipes.length,
-	      production_recipe_groups: new Set(recipes.map((row) => row.finishedGoodId)).size,
+      output_ingredients: ingredients.length,
+      categories: categories.length,
+      units: unitCodes.size,
+      source_production_recipe_rows: recipeRows.length,
+      production_recipe_lines: recipes.length,
+      production_recipe_groups: new Set(
+        recipes.map((row) => row.finishedGoodId),
+      ).size,
     },
-	    added_ingredients: ingredients
-	      .filter((row) => addedIngredientNames.has(row.name))
-	      .map((row) => ({ id: row.id, name: row.name })),
+    added_ingredients: ingredients
+      .filter((row) => addedIngredientNames.has(row.name))
+      .map((row) => ({ id: row.id, name: row.name })),
     delete_tables: [
       ...OPERATIONAL_DELETE_TABLES,
       ...NON_TENANT_DELETE_TABLES,
@@ -806,12 +824,15 @@ async function run(args: Args) {
     ],
   };
 
-	  await mkdir(outDir, { recursive: true });
-	  await writeFile(path.join(outDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-	  await writeFile(
-	    path.join(outDir, "inventory-reseed.sql"),
-	    buildSql(ingredients, recipes, { catalogOnly: args.catalogOnly }),
-	  );
+  await mkdir(outDir, { recursive: true });
+  await writeFile(
+    path.join(outDir, "manifest.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+  await writeFile(
+    path.join(outDir, "inventory-reseed.sql"),
+    buildSql(ingredients, recipes, { catalogOnly: args.catalogOnly }),
+  );
   console.log(JSON.stringify({ outDir, manifest }, null, 2));
 }
 
@@ -819,7 +840,10 @@ function selfTest() {
   assert.deepEqual(parseCsv("a,b\n1,2\n")[0], { a: "1", b: "2" });
   assert.deepEqual(parseCsv('a,b\n"1,1","x""y"\n')[0], { a: "1,1", b: 'x"y' });
   assert.equal(parseNumber("1,234.50"), 1234.5);
-  assert.equal(parseUnits("kg(base)=f1.000 | phần=f0.1", "x", 2)[1]?.code, "phần");
+  assert.equal(
+    parseUnits("kg(base)=f1.000 | phần=f0.1", "x", 2)[1]?.code,
+    "phần",
+  );
   const sampleIngredients = readIngredients([
     {
       id: "1",
@@ -836,7 +860,10 @@ function selfTest() {
     },
   ]);
   assert.equal(sampleIngredients[0]?.units.length, 2);
-  assert.match(buildSql(sampleIngredients, []), /DELETE FROM public\.ingredients/);
+  assert.match(
+    buildSql(sampleIngredients, []),
+    /DELETE FROM public\.ingredients/,
+  );
   assert.doesNotMatch(
     buildSql(sampleIngredients, [], { catalogOnly: true }),
     /INSERT INTO public\.production_recipes/,

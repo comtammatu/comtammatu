@@ -9,36 +9,32 @@ function readRepo(path: string): string {
   return readFileSync(resolve(repoRoot, path), "utf8");
 }
 
-const migration = readRepo(
-  "supabase/migration-archive/20260726174857_qualify_inventory_attachment_policy_path.sql",
+const ownerGrnLine = readRepo(
+  "apps/web/app/(protected)/inventory/grn/[id]/views/grn-line-row.tsx",
+);
+const branchGrnLine = readRepo(
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
 );
 const wastePhotoUpload = readRepo(
   "apps/web/app/(protected)/inventory/_components/waste-photo-upload.tsx",
 );
 
-test("inventory attachment inserts resolve branch-scoped document permissions", () => {
+test("GRN rejection evidence uses document-line paths and image inputs", () => {
   assert.match(
-    migration,
-    /FROM public\.goods_received_notes AS grn[\s\S]*public\.has_permission\(\s*grn\.branch_id,\s*'procurement:grn_create'\s*\)/,
+    ownerGrnLine,
+    /folder=\{`grn\/\$\{grnId\}\/rejected\/\$\{line\.lineId\}`\}/,
   );
   assert.match(
-    migration,
-    /FROM public\.stock_issues AS issue[\s\S]*public\.has_permission\(issue\.branch_id, 'inventory:write'\)/,
+    branchGrnLine,
+    /folder=\{`grn\/\$\{grn\.id\}\/rejected\/\$\{line\.lineId\}`\}/,
   );
-  assert.doesNotMatch(
-    migration,
-    /public\.has_permission\(NULL::bigint, '(?:procurement:grn_create|supplier_return:create|inventory:writeoff)'\)/,
-  );
-  assert.doesNotMatch(migration, /storage\.foldername\(name\)/);
+  assert.match(ownerGrnLine, /acceptTypes="image"/);
+  assert.match(branchGrnLine, /acceptTypes="image"/);
 });
 
 test("pre-persist waste evidence carries an authorized branch in its path", () => {
   assert.match(
     wastePhotoUpload,
     /folder=\{`branches\/\$\{branchId\}\/waste\/\$\{issueId\}`\}/,
-  );
-  assert.match(
-    migration,
-    /FROM public\.branches AS branch[\s\S]*public\.has_permission\(branch\.id, 'inventory:writeoff'\)/,
   );
 });

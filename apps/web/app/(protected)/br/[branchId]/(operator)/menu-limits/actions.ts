@@ -91,7 +91,7 @@ const setLimitSchema = z.object({
   isDisabled: z.boolean(),
 });
 
-const replenishKitchenSchema = z.object({
+const replenishStockSchema = z.object({
   branchId: branchIdSchema,
   menuItemId: menuItemIdSchema,
   extraPortions: z.union([z.literal(1), z.literal(2)]),
@@ -226,8 +226,8 @@ export async function clearBranchMenuDailyLimit(
   return { success: true, data: row };
 }
 
-export async function replenishMenuItemKitchenStock(
-  input: z.input<typeof replenishKitchenSchema>,
+export async function replenishMenuItemStock(
+  input: z.input<typeof replenishStockSchema>,
 ): Promise<
   ActionResult<{
     portions_added: number;
@@ -235,7 +235,7 @@ export async function replenishMenuItemKitchenStock(
     stock_capacity: number | null;
   }>
 > {
-  const parsed = replenishKitchenSchema.safeParse(input);
+  const parsed = replenishStockSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -252,13 +252,13 @@ export async function replenishMenuItemKitchenStock(
   }
 
   const { data, error } = await ctx.supabase.rpc(
-    "add_menu_item_kitchen_stock_exception",
+    "add_menu_item_stock_exception" as never,
     {
       p_branch_id: parsed.data.branchId,
       p_menu_item_id: parsed.data.menuItemId,
       p_extra_portions: parsed.data.extraPortions,
       p_reason: parsed.data.reason,
-    },
+    } as never,
   );
 
   if (error) {
@@ -286,9 +286,7 @@ export async function replenishMenuItemKitchenStock(
     }
     if (
       msg.includes("branch_warehouse_required") ||
-      msg.includes("default_warehouse_location_required") ||
-      msg.includes("branch_kitchen_required") ||
-      msg.includes("default_kitchen_location_required")
+      msg.includes("default_warehouse_location_required")
     ) {
       return {
         success: false,
@@ -309,7 +307,7 @@ export async function replenishMenuItemKitchenStock(
     }
 
     console.error(
-      "[menu-limits:replenishMenuItemKitchenStock] [unmapped] rpc error:",
+      "[menu-limits:replenishMenuItemStock] [unmapped] rpc error:",
       error,
     );
     return {

@@ -49,7 +49,6 @@ interface BranchTransferDetailClientProps {
 
 function getActionLabel(kind: TransferActionKind): string {
   const actions = messages.inventory.transfer.actions;
-  if (kind === "confirm_kitchen") return actions.confirmKitchen;
   if (kind === "confirm_ship") return actions.confirmShip;
   if (kind === "mark_in_transit") return actions.markInTransit;
   return actions.receive;

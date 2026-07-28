@@ -229,7 +229,6 @@ test("inventory copy uses Vietnamese operational labels on active surfaces", () 
 
   assert.match(copy, /Phiếu nhập liên kết/);
   assert.match(copy, /Đơn mua liên kết/);
-  assert.match(copy, /Tiêu hao\/ngày/);
   assert.match(copy, /Thực tế so với định mức món/);
   assert.match(copy, /Phiếu hao hụt \/ hủy hàng/);
 });

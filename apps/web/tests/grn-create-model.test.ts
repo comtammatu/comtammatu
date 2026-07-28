@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getGrnLocationKindLabel,
-  isSameGrnReferenceCost,
   pickGrnReceivingLocation,
   resolveSoleGrnWarehouseLocation,
   type GrnCreateProcurementLocationOption,
@@ -20,16 +19,6 @@ const locations: GrnCreateProcurementLocationOption[] = [
     isDefaultConsumption: false,
   },
   {
-    id: 11,
-    name: "Bếp nóng",
-    branchId: 1,
-    branchName: "Phước Hải",
-    branchKind: "branch",
-    kind: "kitchen",
-    isDefaultReceive: false,
-    isDefaultConsumption: true,
-  },
-  {
     id: 20,
     name: "Kho SX",
     branchId: 2,
@@ -39,13 +28,35 @@ const locations: GrnCreateProcurementLocationOption[] = [
     isDefaultReceive: true,
     isDefaultConsumption: false,
   },
+  {
+    id: 21,
+    name: "Kho",
+    branchId: 2,
+    branchName: "Bếp trung tâm",
+    branchKind: "central_kitchen",
+    kind: "warehouse",
+    isDefaultReceive: true,
+    isDefaultConsumption: true,
+  },
 ];
 
-test("GRN create model keeps a branch receipt on its warehouse and honors draft location", () => {
+test("GRN create model resolves only the site's sole warehouse", () => {
   assert.equal(pickGrnReceivingLocation(locations, 1)?.id, 10);
-  assert.equal(pickGrnReceivingLocation(locations, 1, 11)?.id, 11);
-  assert.equal(pickGrnReceivingLocation(locations, 2)?.id, 20);
+  assert.equal(pickGrnReceivingLocation(locations, 2)?.id, 21);
   assert.equal(pickGrnReceivingLocation([], 1), null);
+  assert.equal(
+    pickGrnReceivingLocation(
+      [
+        ...locations,
+        {
+          ...locations[0]!,
+          id: 11,
+        },
+      ],
+      1,
+    ),
+    null,
+  );
 });
 
 test("GRN warehouse resolution accepts exactly one active warehouse", () => {
@@ -62,16 +73,12 @@ test("GRN warehouse resolution rejects a branch without an active warehouse", ()
 });
 
 test("GRN warehouse resolution rejects ambiguous active warehouses", () => {
-  assert.deepEqual(
-    resolveSoleGrnWarehouseLocation([{ id: 10 }, { id: 11 }]),
-    { status: "ambiguous" },
-  );
+  assert.deepEqual(resolveSoleGrnWarehouseLocation([{ id: 10 }, { id: 11 }]), {
+    status: "ambiguous",
+  });
 });
 
-test("GRN create model exposes contextual receiving labels and stable cost comparison", () => {
+test("GRN create model exposes contextual receiving labels", () => {
   assert.equal(getGrnLocationKindLabel(locations[0]!), "Kho");
-  assert.equal(getGrnLocationKindLabel(locations[1]!), "Bếp");
-  assert.equal(isSameGrnReferenceCost(10000, { value: 10000.005 }), true);
-  assert.equal(isSameGrnReferenceCost(10000, { value: 10000.02 }), false);
-  assert.equal(isSameGrnReferenceCost(10000, null), false);
+  assert.equal(getGrnLocationKindLabel(locations[1]!), "Kho sản xuất");
 });

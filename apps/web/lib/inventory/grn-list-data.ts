@@ -17,8 +17,7 @@ type NamedRelation = {
 
 type GrnLineRow = {
   id?: number;
-  quality_status?: string | null;
-  requires_review?: boolean | null;
+  rejected_quantity?: number | string | null;
 };
 
 type GrnDbRow = {
@@ -34,7 +33,6 @@ type GrnDbRow = {
   suppliers: NamedRelation | NamedRelation[] | null;
   purchase_orders: NamedRelation | NamedRelation[] | null;
   grn_items: GrnLineRow[] | null;
-  monetary?: { total: number } | null;
 };
 
 export type GrnListPageData = {
@@ -53,11 +51,8 @@ type LoadGrnListPageDataOptions = {
 };
 
 function countQcIssues(items: GrnLineRow[] | null): number {
-  return (items ?? []).filter(
-    (item) =>
-      item.quality_status !== "accepted" ||
-      item.requires_review === true,
-  ).length;
+  return (items ?? []).filter((item) => Number(item.rejected_quantity ?? 0) > 0)
+    .length;
 }
 
 function relatedOne<T>(value: T | T[] | null | undefined): T | null {
@@ -78,7 +73,6 @@ function mapGrnRows(rows: GrnDbRow[]): GrnRow[] {
       poId: row.po_id != null ? Number(row.po_id) : null,
       poCode: purchaseOrder?.po_number ?? "—",
       date: row.received_date ? formatDate(row.received_date) : "—",
-      monetary: row.monetary ?? null,
       status: row.status ?? "pending",
       qcIssueCount: countQcIssues(row.grn_items),
     };

@@ -120,7 +120,6 @@ const INVENTORY_SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
 
 const LEGACY_INVENTORY_LOCATION_NAMES_VI: Record<string, string> = {
   "Kho CN": "Kho chi nhánh",
-  "Bếp CN": "Bếp chi nhánh",
 };
 
 export const ACTIVE_STATE_LABELS_VI = {
@@ -196,8 +195,8 @@ export const INVENTORY_STATUS_LABELS_VI = {
   consumption: "Tiêu hao",
   storage_loss: "Hao hụt kho",
   sale_consumption: "Tiêu hao bán",
-  normal: "Bình thường",
-  low: "Thấp",
+  normal: "Đủ hàng",
+  low: "Chạm ngưỡng",
   out: "Hết hàng",
   over: "Dư tồn",
   active: "Hoạt động",
@@ -263,9 +262,6 @@ export function getInventoryLocationKindLabelVi({
     if (locationKind === "warehouse") {
       return length === "short" ? "Kho" : "Kho chi nhánh";
     }
-    if (locationKind === "kitchen") {
-      return length === "short" ? "Bếp" : "Bếp chi nhánh";
-    }
   }
 
   if (siteKind === "central_supply" && locationKind === "warehouse") {
@@ -274,7 +270,7 @@ export function getInventoryLocationKindLabelVi({
 
   if (siteKind === "central_kitchen") {
     if (locationKind === "production_storage") return "Kho sản xuất";
-    if (locationKind === "warehouse" || locationKind === "kitchen") {
+    if (locationKind === "warehouse") {
       return "Bếp Trung Tâm";
     }
   }
@@ -305,26 +301,6 @@ export function formatInventoryLocationLabelVi({
   if (!siteLabel || siteLabel === locationLabel) return locationLabel;
   return `${siteLabel} · ${locationLabel}`;
 }
-
-// =============================================================
-// Inventory redesign vocabulary (S10-S15 UI wiring)
-// =============================================================
-
-/** Variance tier short copy (inline hint) */
-export const VARIANCE_TIER_HINT_VI = {
-  0: "Trong ngưỡng",
-  1: "Lệch ±15–30%",
-  2: "Lệch ±30–100% — cần ghi chú",
-  3: "Lệch ≥100% — cần quản lý vùng cho phép",
-} as const;
-
-/** Baseline source names for GRN variance */
-export const BASELINE_SOURCE_LABELS_VI = {
-  same_supplier: "NCC cùng",
-  any_supplier: "Nhà cung cấp khác (dự phòng)",
-  none: "Chưa đủ lịch sử",
-  paused: "Tạm dừng (sau khi cho phép)",
-} as const;
 
 /** Waste tier names (Q1 spec) */
 export const WASTE_TIER_LABELS_VI = {
@@ -364,40 +340,6 @@ export const ABC_CLASS_LABELS_VI = {
   A: "Nhóm A · 80% giá trị",
   B: "Nhóm B · 15% giá trị",
   C: "Nhóm C · 5% giá trị",
-} as const;
-
-/** Hardblock override reason codes (Q3 §B5) */
-export const HARDBLOCK_REASON_LABELS_VI = {
-  market_spike: "Giá thị trường biến động",
-  contract_new: "Hợp đồng mới",
-  quality_upgrade: "Nâng cấp chất lượng",
-  fx_jump: "Biến động tỷ giá",
-  emergency_supply: "Cung ứng khẩn cấp",
-  other: "Khác",
-} as const;
-
-/** GRN auto-approve 8 conditions (Q4a spec) */
-export const AUTO_APPROVE_CONDITION_LABELS_VI = {
-  c1_has_po: "Có đơn đặt hàng",
-  c2_variance_ok: "Lệch giá ≤ 30%",
-  c3_line_totals_diff: "Tổng và dòng khớp (±3% / 10% số lượng / 15% giá)",
-  c4_no_quality_issue: "Không lỗi chất lượng",
-  c5_value_cap: "Tổng ≤ 10 triệu",
-  c6_supplier_history: "NCC đã có ≥ 3 phiếu nhập / 90 ngày",
-  c7_no_manual_review: "Không thuộc chuỗi lạnh",
-  c8_trust_score_ok: "Điểm tin cậy ≥ 70",
-} as const;
-
-/** Failed reason codes from grn_is_auto_approvable */
-export const AUTO_APPROVE_FAIL_REASON_VI = {
-  no_po: "Thiếu đơn đặt hàng",
-  variance_tier_gt1: "Lệch giá vượt ngưỡng",
-  line_totals_diff: "Tổng/dòng lệch quá",
-  quality_issue: "Có dòng lỗi chất lượng",
-  value_cap: "Vượt hạn mức giá trị",
-  supplier_history_lt3: "NCC chưa đủ lịch sử",
-  ingredient_manual_review: "Có mặt hàng chuỗi lạnh",
-  trust_score_lt70: "Điểm tin cậy chưa đủ",
 } as const;
 
 /** Waste reason code label helper */

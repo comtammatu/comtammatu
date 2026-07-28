@@ -1,6 +1,5 @@
 "use client";
 
-
 import type { ComponentProps, ReactNode } from "react";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
@@ -19,7 +18,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { FormField } from "@/components/form/form-field";
 import { formatQty } from "@lib/inventory/format";
@@ -110,17 +108,6 @@ export function GrnLineEditFields({
       {baseConversionPreview ? (
         <p className="text-xs text-muted-foreground">{baseConversionPreview}</p>
       ) : null}
-
-      <FormField controlId="grn-line-note" label={GRN_CREATE_COPY.optionalNote}>
-        <Textarea
-          id="grn-line-note"
-          value={edit.note}
-          onChange={(event) => onPatch({ note: event.target.value })}
-          rows={2}
-          maxLength={200}
-          placeholder={GRN_CREATE_COPY.notePlaceholder}
-        />
-      </FormField>
     </div>
   );
 }

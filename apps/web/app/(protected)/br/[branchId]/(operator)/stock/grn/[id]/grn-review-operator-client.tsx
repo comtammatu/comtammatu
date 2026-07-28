@@ -64,10 +64,7 @@ export function GrnReviewOperatorClient({
   const [addLineOpen, setAddLineOpen] = useState(false);
   const [editingLineId, setEditingLineId] = useState<number | null>(null);
   const statusBadge = getStatusBadgeMeta("inventory", grn.status);
-  const { lines, setLines, patch, dirtyLines } = useGrnDetailLines(
-    grn.items,
-    null,
-  );
+  const { lines, setLines, patch, dirtyLines } = useGrnDetailLines(grn.items);
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
     useGrnDetailActions({
       grn,
@@ -190,9 +187,7 @@ export function GrnReviewOperatorClient({
                         ) : null}
                       </ItemContent>
                       <ItemActions className="shrink-0">
-                        {line.rejected > 0 ||
-                        line.qualityStatus === "rejected" ||
-                        line.requiresReview ? (
+                        {line.rejected > 0 ? (
                           <IconAlertTriangle className="size-5 text-warning" />
                         ) : (
                           <IconCircleCheck className="size-5 text-success" />
@@ -217,7 +212,10 @@ export function GrnReviewOperatorClient({
             <BranchOperatorDetailList
               rows={[
                 { label: grnCopy.supplier, value: grn.supplier },
-                { label: grnCopy.receivingWarehouse, value: grn.branchName },
+                {
+                  label: grnCopy.receivingWarehouse,
+                  value: `${grn.branchName}${grn.locationName ? ` · ${grn.locationName}` : ""}`,
+                },
                 {
                   label: grnCopy.linkedPo,
                   value: grn.poCode || "—",

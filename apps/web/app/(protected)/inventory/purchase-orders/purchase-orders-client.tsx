@@ -1,20 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check as IconCheck,
   Eye as IconEye,
-  PackagePlus as IconPackagePlus,
-  Plus as IconPlus,
   Save as IconSave,
   Search as IconSearch,
   ShoppingCart as IconShoppingCart,
-  Trash2 as IconTrash,
 } from "lucide-react";
-import { useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
-import { z } from "zod";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -37,15 +32,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import {
-  AppDialog,
-  FormattedNumberInput,
-  FormDialog,
-  MoneyVndField,
-  NumberField,
-  SelectField,
-  TextField,
-} from "@/components/form";
+import { AppDialog, FormattedNumberInput } from "@/components/form";
 import {
   DataTable,
   type DataTableColumn,
@@ -60,18 +47,13 @@ import {
   AppToolbar,
   DescriptionList,
 } from "@/components/surface";
-import {
-  getStatusBadgeMeta,
-  StatusBadge,
-} from "@/components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
-import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { InventoryListFrame } from "../_components/inventory-list-frame";
 import {
   approvePurchaseOrder,
-  createGrnFromPurchaseOrder,
-  createPurchaseOrderWithLines,
   updatePurchaseOrderPrices,
 } from "../purchase-order-actions";
 
@@ -109,298 +91,25 @@ export type PurchaseOrderRow = {
   linkedGrns: PurchaseOrderLinkedGrn[];
 };
 
-export type PurchaseOrderOption = {
-  id: number;
-  name: string;
-};
-
-export type PurchaseOrderIngredient = PurchaseOrderOption & {
-  units: PurchaseOrderOption[];
-  supplierIds: number[];
-};
-
-const lineSchema = z.object({
-  ingredientId: z.string().min(1, { error: "Chọn nguyên liệu." }),
-  quantity: z.string().refine((value) => Number(value) > 0, {
-    error: "Số lượng phải lớn hơn 0.",
-  }),
-  entryUnitId: z.string().min(1, { error: "Chọn đơn vị mua." }),
-  unitPriceEst: z
-    .string()
-    .refine((value) => value === "" || Number(value) >= 0, {
-      error: "Đơn giá không hợp lệ.",
-    }),
-});
-
-const poFormSchema = z
-  .object({
-    supplierId: z.string().min(1, { error: "Chọn nhà cung cấp." }),
-    branchId: z.string().min(1, { error: "Chọn chi nhánh nhận hàng." }),
-    notes: z.string().trim().max(500).optional(),
-    lines: z
-      .array(lineSchema)
-      .min(1, { error: "Thêm ít nhất một nguyên liệu." }),
-  })
-  .superRefine((data, ctx) => {
-    const ingredientIds = data.lines.map((line) => line.ingredientId);
-    if (new Set(ingredientIds).size !== ingredientIds.length) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["lines"],
-        message: "Mỗi nguyên liệu chỉ được xuất hiện một lần.",
-      });
-    }
-  });
-
-type PurchaseOrderFormValues = z.infer<typeof poFormSchema>;
-
-function emptyLine(): PurchaseOrderFormValues["lines"][number] {
-  return {
-    ingredientId: "",
-    quantity: "",
-    entryUnitId: "",
-    unitPriceEst: "",
-  };
-}
-
-function PurchaseOrderLineFields({
-  form,
-  index,
-  ingredients,
-  canRemove,
-  onRemove,
-}: {
-  form: UseFormReturn<
-    PurchaseOrderFormValues,
-    unknown,
-    PurchaseOrderFormValues
-  >;
-  index: number;
-  ingredients: PurchaseOrderIngredient[];
-  canRemove: boolean;
-  onRemove: () => void;
-}) {
-  const ingredientPath = `lines.${index}.ingredientId` as const;
-  const unitPath = `lines.${index}.entryUnitId` as const;
-  const ingredientId = useWatch({
-    control: form.control,
-    name: ingredientPath,
-  });
-  const ingredient =
-    ingredients.find((item) => item.id === Number(ingredientId)) ?? null;
-  const unitOptions = ingredient?.units ?? [];
-
-  useEffect(() => {
-    if (!ingredientId || ingredient) return;
-    form.setValue(ingredientPath, "", {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-    form.setValue(unitPath, "", {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  }, [form, ingredient, ingredientId, ingredientPath, unitPath]);
-
-  useEffect(() => {
-    const current = form.getValues(unitPath);
-    if (!unitOptions.some((unit) => String(unit.id) === current)) {
-      const next = unitOptions[0] ? String(unitOptions[0].id) : "";
-      if (current === next) return;
-      form.setValue(unitPath, next, {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-    }
-  }, [form, unitOptions, unitPath]);
-
-  return (
-    <Item variant="outline" className="flex-col items-stretch gap-3">
-      <div className="flex items-end gap-2">
-        <div className="min-w-0 flex-1">
-          <SelectField
-            control={form.control}
-            name={ingredientPath}
-            label="Nguyên liệu"
-            options={ingredients.map((item) => ({
-              value: String(item.id),
-              label: item.name,
-            }))}
-            required
-          />
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="shrink-0"
-          disabled={!canRemove}
-          onClick={onRemove}
-        >
-          <IconTrash />
-          <span className="sr-only">{poCopy.removeLineAria}</span>
-        </Button>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <NumberField
-          control={form.control}
-          name={`lines.${index}.quantity`}
-          label="Số lượng"
-          maxFractionDigits={3}
-          required
-        />
-        <SelectField
-          control={form.control}
-          name={unitPath}
-          label="Đơn vị"
-          options={unitOptions.map((unit) => ({
-            value: String(unit.id),
-            label: unit.name,
-          }))}
-          disabled={!ingredient}
-          required
-        />
-        <MoneyVndField
-          control={form.control}
-          name={`lines.${index}.unitPriceEst`}
-          label="Đơn giá dự kiến"
-        />
-      </div>
-    </Item>
-  );
-}
-
-function PurchaseOrderFields({
-  form,
-  suppliers,
-  branches,
-  ingredients,
-}: {
-  form: UseFormReturn<
-    PurchaseOrderFormValues,
-    unknown,
-    PurchaseOrderFormValues
-  >;
-  suppliers: PurchaseOrderOption[];
-  branches: PurchaseOrderOption[];
-  ingredients: PurchaseOrderIngredient[];
-}) {
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "lines",
-  });
-  const supplierId = useWatch({
-    control: form.control,
-    name: "supplierId",
-  });
-  const supplierIngredients = useMemo(
-    () =>
-      ingredients.filter((item) =>
-        item.supplierIds.includes(Number(supplierId)),
-      ),
-    [ingredients, supplierId],
-  );
-
-  return (
-    <>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SelectField
-          control={form.control}
-          name="supplierId"
-          label="Nhà cung cấp"
-          options={suppliers.map((item) => ({
-            value: String(item.id),
-            label: item.name,
-          }))}
-          required
-        />
-        <SelectField
-          control={form.control}
-          name="branchId"
-          label="Nơi nhận hàng"
-          options={branches.map((item) => ({
-            value: String(item.id),
-            label: item.name,
-          }))}
-          required
-        />
-      </div>
-      <div className="flex flex-col gap-3">
-        <p className="text-sm font-medium">{poCopy.linesTitle}</p>
-        {supplierId && supplierIngredients.length === 0 ? (
-          <p className="text-sm text-warning">{poCopy.noSupplierItems}</p>
-        ) : null}
-        {fields.map((field, index) => (
-          <PurchaseOrderLineFields
-            key={field.id}
-            form={form}
-            index={index}
-            ingredients={supplierIngredients}
-            canRemove={fields.length > 1}
-            onRemove={() => remove(index)}
-          />
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="self-start"
-          disabled={supplierIngredients.length === 0}
-          onClick={() => append(emptyLine())}
-        >
-          <IconPlus />
-          {poCopy.addLine}
-        </Button>
-      </div>
-      <TextField
-        control={form.control}
-        name="notes"
-        label={FORM_VI.notes}
-        placeholder={poCopy.notesPlaceholder}
-      />
-    </>
-  );
-}
-
 export function PurchaseOrdersClient({
   rows,
-  suppliers,
-  branches,
-  ingredients,
-  defaultBranchId,
   canCreate,
   canApprove,
-  canCreateGrn,
   canViewPrices,
 }: {
   rows: PurchaseOrderRow[];
-  suppliers: PurchaseOrderOption[];
-  branches: PurchaseOrderOption[];
-  ingredients: PurchaseOrderIngredient[];
-  defaultBranchId: number | null;
   canCreate: boolean;
   canApprove: boolean;
-  canCreateGrn: boolean;
   canViewPrices: boolean;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
-  const [createOpen, setCreateOpen] = useState(false);
   const [selectedPoId, setSelectedPoId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [priceDraft, setPriceDraft] = useState<Record<number, string>>({});
   const [pricesDirty, setPricesDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const defaultValues = useMemo<PurchaseOrderFormValues>(
-    () => ({
-      supplierId: "",
-      branchId: defaultBranchId ? String(defaultBranchId) : "",
-      notes: "",
-      lines: [emptyLine()],
-    }),
-    [defaultBranchId],
-  );
   const filteredRows = useMemo(
     () =>
       rows.filter((row) =>
@@ -446,7 +155,11 @@ export function PurchaseOrdersClient({
       lineId: line.id,
       unitPrice: Number(priceDraft[line.id]),
     }));
-    if (lines.some((line) => !Number.isFinite(line.unitPrice) || line.unitPrice <= 0)) {
+    if (
+      lines.some(
+        (line) => !Number.isFinite(line.unitPrice) || line.unitPrice <= 0,
+      )
+    ) {
       toast.error("Nhập đơn giá lớn hơn 0 cho mọi dòng.");
       return;
     }
@@ -474,7 +187,7 @@ export function PurchaseOrdersClient({
     const accepted = await confirm({
       title: `Duyệt ${row.code}?`,
       description:
-        "Sau khi duyệt, đơn đặt hàng có thể được dùng để tạo phiếu nhập kho.",
+        "Sau khi duyệt, giá trên đơn mua được khóa cho phiếu nhập liên kết.",
       confirmText: "Duyệt mua",
     });
     if (!accepted) return;
@@ -488,23 +201,6 @@ export function PurchaseOrdersClient({
         }
         toast.success(`Đã duyệt ${row.code}`);
         router.refresh();
-      } finally {
-        setPendingId(null);
-      }
-    });
-  }
-
-  function createGrn(row: PurchaseOrderRow) {
-    setPendingId(row.id);
-    startTransition(async () => {
-      try {
-        const result = await createGrnFromPurchaseOrder({ poId: row.id });
-        if (!result.success || !result.data) {
-          toast.error(result.error);
-          return;
-        }
-        toast.success("Đã tạo phiếu nhập từ đơn đặt hàng");
-        router.push(`/inventory/grn/${result.data.id}`);
       } finally {
         setPendingId(null);
       }
@@ -529,15 +225,6 @@ export function PurchaseOrdersClient({
         onSelect: () => {
           void approve(row);
         },
-      });
-    }
-    if (["sent", "partially_received"].includes(row.status) && canCreateGrn) {
-      items.push({
-        key: "receive",
-        label: poCopy.createGrnAction,
-        icon: <IconPackagePlus data-icon="inline-start" />,
-        disabled: isPending || pendingId === row.id,
-        onSelect: () => createGrn(row),
       });
     }
     return (
@@ -732,17 +419,6 @@ export function PurchaseOrdersClient({
             {poCopy.approveAction}
           </Button>
         ) : null}
-        {["sent", "partially_received"].includes(selectedRow.status) &&
-          canCreateGrn ? (
-          <Button
-            type="button"
-            disabled={isPending || pendingId === selectedRow.id}
-            onClick={() => createGrn(selectedRow)}
-          >
-            <IconPackagePlus data-icon="inline-start" />
-            {poCopy.createGrnAction}
-          </Button>
-        ) : null}
         <Button type="button" variant="outline" onClick={closeDetail}>
           {ACTIONS_VI.close}
         </Button>
@@ -755,22 +431,6 @@ export function PurchaseOrdersClient({
         eyebrow={messages.inventory.shell.moduleName}
         title={poCopy.pageTitle}
         description={poCopy.pageDescription}
-        actions={
-          canCreate ? (
-            <Button
-              size="lg"
-              onClick={() => setCreateOpen(true)}
-              disabled={
-                suppliers.length === 0 ||
-                branches.length === 0 ||
-                ingredients.length === 0
-              }
-            >
-              <IconPlus />
-              {poCopy.createPo}
-            </Button>
-          ) : null
-        }
       />
       <InventoryListFrame toolbar={listToolbar}>
         <DataTable
@@ -837,10 +497,7 @@ export function PurchaseOrdersClient({
           selectedRow ? (
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono">{selectedRow.code}</span>
-              <StatusBadge
-                domain="purchase-order"
-                value={selectedRow.status}
-              />
+              <StatusBadge domain="purchase-order" value={selectedRow.status} />
             </div>
           ) : (
             poCopy.detail.title
@@ -964,44 +621,6 @@ export function PurchaseOrdersClient({
           </>
         ) : null}
       </AppDialog>
-
-      <FormDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        title={poCopy.newTitle}
-        description={poCopy.draftDescription}
-        schema={poFormSchema}
-        defaultValues={defaultValues}
-        submitLabel="Lưu đơn nháp"
-        contentClassName="sm:max-w-3xl"
-        onSubmit={(values) =>
-          createPurchaseOrderWithLines({
-            supplierId: Number(values.supplierId),
-            branchId: Number(values.branchId),
-            notes: values.notes,
-            lines: values.lines.map((line) => ({
-              ingredientId: Number(line.ingredientId),
-              quantity: Number(line.quantity),
-              entryUnitId: Number(line.entryUnitId),
-              unitPriceEst:
-                line.unitPriceEst === "" ? null : Number(line.unitPriceEst),
-            })),
-          })
-        }
-        onSuccess={() => {
-          toast.success("Đã tạo đơn đặt hàng nháp");
-          router.refresh();
-        }}
-      >
-        {(form) => (
-          <PurchaseOrderFields
-            form={form}
-            suppliers={suppliers}
-            branches={branches}
-            ingredients={ingredients}
-          />
-        )}
-      </FormDialog>
     </AppPage>
   );
 }

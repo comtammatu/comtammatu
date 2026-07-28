@@ -18,9 +18,6 @@ const ingredientActionSource = readRepo(
 const recipeActionSource = readRepo(
   "apps/web/app/(protected)/inventory/recipe-actions.ts",
 );
-const recipeUpsertSql = readRepo(
-  "supabase/migration-archive/20260708112544_allow_inventory_recipe_upsert.sql",
-);
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {
   for (const constraint of [
@@ -49,15 +46,7 @@ test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows",
   );
 });
 
-test("ingredient catalog callable RPC privileges are explicit", () => {
-  assert.match(
-    hardeningSql,
-    /REVOKE ALL ON FUNCTION public\.upsert_ingredient_catalog[\s\S]*FROM PUBLIC, anon, authenticated;/,
-  );
-  assert.match(
-    hardeningSql,
-    /GRANT EXECUTE ON FUNCTION public\.upsert_ingredient_catalog[\s\S]*TO authenticated;/,
-  );
+test("inventory unit conversion RPC privileges are explicit", () => {
   assert.match(
     hardeningSql,
     /REVOKE ALL ON FUNCTION public\.inv_to_base\(bigint, bigint, numeric\) FROM PUBLIC, anon, authenticated;/,
@@ -79,7 +68,8 @@ test("ingredient catalog updates preserve shelf life required by the RPC", () =>
   );
 });
 
-test("recipe line upsert accepts inventory catalog permissions", () => {
+test("recipe line upsert stays behind the owner catalog role", () => {
+  assert.match(recipeActionSource, /roles:\s*INVENTORY_CATALOG_ROLES/);
   assert.match(
     recipeActionSource,
     /anyPermission:\s*\[[\s\S]*CATALOG_MANAGE_PERMISSIONS[\s\S]*PERMISSION_KEYS\.MENU_WRITE/,
@@ -87,13 +77,5 @@ test("recipe line upsert accepts inventory catalog permissions", () => {
   assert.doesNotMatch(
     recipeActionSource,
     /permission:\s*PERMISSION_KEYS\.INVENTORY_WRITE/,
-  );
-  assert.match(
-    recipeUpsertSql,
-    /public\.has_permission_any\('inventory:write'\)[\s\S]*OR public\.has_permission_any\('menu:write'\)/,
-  );
-  assert.match(
-    recipeUpsertSql,
-    /GRANT EXECUTE ON FUNCTION public\.upsert_recipe_lines\(bigint, jsonb, bigint\) TO authenticated, service_role;/,
   );
 });

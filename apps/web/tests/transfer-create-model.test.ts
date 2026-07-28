@@ -85,7 +85,7 @@ test("branch warehouse outbound destinations include Central Kitchen and active 
   );
 });
 
-test("branch source has no same-branch kitchen destination after D078", () => {
+test("branch source has no same-branch kitchen destination after D091", () => {
   assert.deepEqual(
     getTransferOutboundDestinationOptions({
       branches,
@@ -110,28 +110,12 @@ test("central owner source can dispatch only to active branch warehouses", () =>
   );
 });
 
-test("Central Kitchen dispatches finished goods from its preferred output location to branch kitchens only", () => {
-  assert.deepEqual(
-    getTransferSourceLocationOptions({
-      locations: [
-        { id: 301, branchId: 30, kind: "warehouse", isDefaultIssue: true },
-        {
-          id: 302,
-          branchId: 30,
-          kind: "production_storage",
-          isDefaultIssue: false,
-        },
-      ],
-      sourceBranchKind: "central_kitchen",
-    }).map((location) => location.id),
-    [302],
-  );
+test("Central Kitchen dispatches finished goods from its warehouse to branch warehouses", () => {
   assert.deepEqual(
     getTransferSourceLocationOptions({
       locations: [
         { id: 301, branchId: 30, kind: "warehouse", isDefaultIssue: true },
       ],
-      sourceBranchKind: "central_kitchen",
     }).map((location) => location.id),
     [301],
   );
@@ -141,7 +125,7 @@ test("Central Kitchen dispatches finished goods from its preferred output locati
       branches,
       sourceBranchId: 30,
       sourceBranchKind: "central_kitchen",
-      sourceLocationKind: "production_storage",
+      sourceLocationKind: "warehouse",
     }).map((option) => option.value),
     ["10:warehouse", "40:warehouse"],
   );
@@ -170,10 +154,7 @@ test("Central Kitchen dispatches finished goods from its preferred output locati
 });
 
 test("target parser rejects malformed route values", () => {
-  assert.deepEqual(parseTransferTargetValue("40:kitchen"), {
-    branchId: 40,
-    kind: "kitchen",
-  });
+  assert.equal(parseTransferTargetValue("40:kitchen"), null);
   assert.equal(parseTransferTargetValue("0:warehouse"), null);
   assert.equal(parseTransferTargetValue("40:office"), null);
   assert.equal(parseTransferTargetValue("branch:kitchen"), null);

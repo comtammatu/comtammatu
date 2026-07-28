@@ -1,8 +1,5 @@
 import { notFound } from "next/navigation";
-import {
-  PERMISSION_KEYS,
-  isProcurementBranchInScope,
-} from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
@@ -12,17 +9,8 @@ import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import {
   PurchaseOrdersClient,
-  type PurchaseOrderIngredient,
-  type PurchaseOrderOption,
   type PurchaseOrderRow,
 } from "./purchase-orders-client";
-
-type IngredientUnitJoin = {
-  unit_id: number;
-  is_active: boolean;
-  sort_order: number;
-  units: { code: string; name: string | null } | null;
-};
 
 export default async function PurchaseOrdersPage({
   searchParams,
@@ -55,50 +43,21 @@ export default async function PurchaseOrdersPage({
     poQuery = poQuery.eq("branch_id", scope.selectedBranchId);
   }
 
-  const [
-    poResult,
-    supplierResult,
-    ingredientResult,
-    supplierItemResult,
-    procurementBranches,
-    canCreate,
-    canApprove,
-    canCreateGrn,
-  ] = await Promise.all([
-    poQuery,
-    supabase
-      .from("suppliers")
-      .select("id, name")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .order("name"),
-    supabase
-      .from("ingredients")
-      .select(
-        "id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .order("name")
-      .limit(500),
-    supabase
-      .from("supplier_items")
-      .select("supplier_id, ingredient_id")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .limit(2000),
-    fetchProcurementBranches(supabase, claims.tenant_id),
-    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
-    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_APPROVE),
-    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
-  ]);
+  const [poResult, supplierResult, procurementBranches, canCreate, canApprove] =
+    await Promise.all([
+      poQuery,
+      supabase
+        .from("suppliers")
+        .select("id, name")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("is_active", true)
+        .order("name"),
+      fetchProcurementBranches(supabase, claims.tenant_id),
+      currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
+      currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_APPROVE),
+    ]);
 
-  if (
-    poResult.error ||
-    supplierResult.error ||
-    ingredientResult.error ||
-    supplierItemResult.error
-  ) {
+  if (poResult.error || supplierResult.error) {
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader eyebrow="Kho hàng" title={copy.pageTitle} />
@@ -111,48 +70,13 @@ export default async function PurchaseOrdersPage({
     );
   }
 
-  const branches: PurchaseOrderOption[] = procurementBranches
-    .filter((branch) =>
-      isProcurementBranchInScope(claims.user_role, claims.branch_id, branch.id),
-    )
-    .map((branch) => ({ id: branch.id, name: branch.name }));
   const branchNames = new Map(
     procurementBranches.map((branch) => [branch.id, branch.name]),
   );
-  const suppliers: PurchaseOrderOption[] = supplierResult.data ?? [];
+  const suppliers = supplierResult.data ?? [];
   const supplierNames = new Map(
     suppliers.map((supplier) => [supplier.id, supplier.name]),
   );
-  const supplierIdsByIngredient = new Map<number, Set<number>>();
-  for (const item of supplierItemResult.data ?? []) {
-    const supplierIds =
-      supplierIdsByIngredient.get(item.ingredient_id) ?? new Set<number>();
-    supplierIds.add(item.supplier_id);
-    supplierIdsByIngredient.set(item.ingredient_id, supplierIds);
-  }
-  const ingredients: PurchaseOrderIngredient[] = (
-    ingredientResult.data ?? []
-  ).flatMap((ingredient) => {
-    const units = (ingredient.ingredient_units as IngredientUnitJoin[] | null)
-      ?.filter((unit) => unit.is_active)
-      .sort((left, right) => left.sort_order - right.sort_order)
-      .map((unit) => ({
-        id: unit.unit_id,
-        name: unit.units?.name ?? unit.units?.code ?? "Đơn vị",
-      }));
-    return units?.length
-      ? [
-          {
-            id: ingredient.id,
-            name: ingredient.name,
-            units,
-            supplierIds: [
-              ...(supplierIdsByIngredient.get(ingredient.id) ?? []),
-            ],
-          },
-        ]
-      : [];
-  });
   const rows: PurchaseOrderRow[] = (poResult.data ?? []).map((po) => {
     const lines = (po.purchase_order_items ?? []).map((line) => {
       const ingredient = line.ingredients as { name: string } | null;
@@ -211,15 +135,8 @@ export default async function PurchaseOrdersPage({
   return (
     <PurchaseOrdersClient
       rows={rows}
-      suppliers={suppliers}
-      branches={branches}
-      ingredients={ingredients}
-      defaultBranchId={
-        scope.selectedBranchId ?? claims.branch_id ?? branches[0]?.id ?? null
-      }
       canCreate={canCreate && monetaryAccess.purchasePrice}
       canApprove={canApprove && monetaryAccess.purchasePrice}
-      canCreateGrn={canCreateGrn}
       canViewPrices={monetaryAccess.purchasePrice}
     />
   );

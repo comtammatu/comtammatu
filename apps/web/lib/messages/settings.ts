@@ -192,27 +192,6 @@ export const settings = {
     deleteZoneDescription:
       "Khu vực sẽ bị xóa vĩnh viễn. Các bàn thuộc khu vực này sẽ không còn khu vực.",
   },
-  qcSettings: {
-    warnBelowReview: "Ngưỡng cảnh báo phải nhỏ hơn ngưỡng kiểm tra.",
-    saveFailed: "Không thể lưu cài đặt.",
-    saved: "Đã lưu cài đặt kiểm soát chất lượng.",
-    eyebrow: "Kho hàng",
-    title: "Cài đặt kiểm soát chất lượng nhập kho",
-    description:
-      "Ngưỡng kiểm soát chất lượng phiếu nhập, áp dụng cho toàn hệ thống.",
-    toleranceTitle: "Dung sai số lượng & giá",
-    shortToleranceLabel: "Thiếu hàng ≤ (%)",
-    shortToleranceHelp:
-      "Dưới ngưỡng → tự chấp nhận, không bắt chọn cách xử lý.",
-    warningThresholdLabel: "Giá lệch cảnh báo ≥ (%)",
-    warningThresholdHelp: "Vượt ngưỡng → bắt nhập lý do.",
-    reviewThresholdLabel: "Giá lệch kiểm tra ≥ (%)",
-    reviewThresholdHelp:
-      "Vượt ngưỡng → bắt thêm ảnh hóa đơn + đánh dấu cần kiểm tra.",
-    rejectPhotoLabel: "Bắt buộc ảnh khi từ chối hàng",
-    rejectPhotoHelp: "Khi có hàng từ chối, phải đính kèm ảnh trước khi chốt.",
-    saveButton: "Lưu cài đặt",
-  },
   attendance: {
     title: (branchName: string) => `Cấu hình ca làm — ${branchName}`,
     checklistTitle: "Checklist ca làm",
@@ -269,8 +248,7 @@ export const settings = {
     saveIdentity: "Lưu định danh",
     identitySaved: "Đã lưu định danh doanh nghiệp",
     invoiceProfileTitle: "Phát hành HĐĐT Viettel",
-    invoiceProfileDescription:
-      "Mã số thuế lấy từ định danh doanh nghiệp.",
+    invoiceProfileDescription: "Mã số thuế lấy từ định danh doanh nghiệp.",
     templateCodeLabel: "Mẫu số",
     invoiceSeriesLabel: "Ký hiệu",
     profileStatusLabel: "Trạng thái",
@@ -294,8 +272,7 @@ export const settings = {
     connectionTab: "Kết nối",
     editTab: "Chỉnh sửa",
     vietqrLabel: "VietQR (chuyển khoản QR)",
-    vietqrDescription:
-      "Tài khoản nhận tiền POS dùng để tạo QR chuyển khoản.",
+    vietqrDescription: "Tài khoản nhận tiền POS dùng để tạo QR chuyển khoản.",
     bankCode: "Mã ngân hàng",
     accountNo: "Số tài khoản",
     accountName: "Chủ tài khoản",
@@ -310,8 +287,7 @@ export const settings = {
     codePreviewEmpty: "Nhập nội dung cố định để xem ví dụ.",
     codePreviewHelp:
       "Nội dung khách chuyển khoản; SePay tự xác nhận bằng mã này.",
-    bankHelp:
-      "Mã NH: TCB, VCB, BIDV, MB, ACB… hoặc Napas BIN (vd 970407).",
+    bankHelp: "Mã NH: TCB, VCB, BIDV, MB, ACB… hoặc Napas BIN (vd 970407).",
     sepayLabel: "SePay tự động xác nhận",
     sepayDescription:
       "SePay chỉ xác nhận tiền vào, không phải phương thức thanh toán riêng.",

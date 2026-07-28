@@ -1,7 +1,7 @@
 /**
  * Application authorization roles, ordered by privilege level.
  *
- * Owner surface routes are primarily owner-only; D088 adds temporary L0
+ * Owner surface routes are primarily owner-only; D076 includes temporary L0
  * adapters (`accountant`, `central_supply_ops`, `central_kitchen_lead`) until
  * ADR 0015 Authority. Branch-native routes use dedicated ModuleKeys
  * (`branch_stock`, `branch_orders`, …) plus the permission namespace for
@@ -97,7 +97,7 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
  * "unassigned" (fail-safe). Codes outside this map never gain an access
  * bucket implicitly.
  *
- * D088 roles (`accountant`, `central_supply_ops`, `central_kitchen_lead`) are
+ * D076 roles (`accountant`, `central_supply_ops`, `central_kitchen_lead`) are
  * temporary JWT-role adapters until ADR 0015.
  */
 const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {

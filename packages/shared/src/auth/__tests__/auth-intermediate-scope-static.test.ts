@@ -52,12 +52,7 @@ const SKIP_PATH_PARTS = [
   "packages/shared/src/auth/__tests__/auth-intermediate-scope-static.test.ts",
 ] as const;
 
-const TEXT_FILE_EXTENSIONS = new Set([
-  ".md",
-  ".sql",
-  ".ts",
-  ".tsx",
-]);
+const TEXT_FILE_EXTENSIONS = new Set([".md", ".sql", ".ts", ".tsx"]);
 
 function shouldSkip(path: string): boolean {
   const normalized = relative(repoRoot, path).replaceAll("\\", "/");
@@ -77,7 +72,9 @@ function collectFiles(path: string): string[] {
   if (stats.isFile()) return isTextFile(path) ? [path] : [];
   if (!stats.isDirectory()) return [];
 
-  return readdirSync(path).flatMap((entry) => collectFiles(resolve(path, entry)));
+  return readdirSync(path).flatMap((entry) =>
+    collectFiles(resolve(path, entry)),
+  );
 }
 
 function readRepoFile(path: string): string {
@@ -102,7 +99,9 @@ test("roles and route ACL do not include retired intermediate scope", () => {
 });
 
 test("active auth contract has no retired intermediate-scope tokens", () => {
-  const files = SCAN_ROOTS.flatMap((root) => collectFiles(resolve(repoRoot, root)));
+  const files = SCAN_ROOTS.flatMap((root) =>
+    collectFiles(resolve(repoRoot, root)),
+  );
   const violations: string[] = [];
 
   for (const file of files) {
@@ -155,7 +154,7 @@ test("proxy branch-surface cache fails closed for inactive or missing branches",
   assert.match(proxy, /\.select\("branch_kind, is_active"\)/);
   // branchSurfaceAllows is a positive predicate: a null cache entry or a
   // non-active branch always denies; the kind match is skipped only for a
-  // null required kind (owner cross-branch on non-station surfaces, D066).
+  // null required kind (owner cross-branch on non-station surfaces, D017).
   assert.match(proxy, /branchSurface !== null &&/);
   assert.match(
     proxy,
@@ -190,10 +189,14 @@ test("remove intermediate scope migration preserves branch helper before droppin
 
   const helperBody = migration.slice(
     helperIndex,
-    migration.indexOf("COMMENT ON FUNCTION public.can_access_branch", helperIndex),
+    migration.indexOf(
+      "COMMENT ON FUNCTION public.can_access_branch",
+      helperIndex,
+    ),
   );
   assert.ok(
-    !helperBody.includes("auth_area_id") && !helperBody.includes("area_branches"),
+    !helperBody.includes("auth_area_id") &&
+      !helperBody.includes("area_branches"),
     "can_access_branch must not depend on retired area helper/table",
   );
   assert.ok(

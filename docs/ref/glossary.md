@@ -175,7 +175,7 @@ và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán h
 | -------------------- | ------- |
 | `canonical_term`     | `control_surface` |
 | `label_vi`           | `Quản trị` |
-| `definition`         | Chrome quản trị tenant/site trung tâm qua `AppShell`: `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback`. Actor theo `role-route-matrix` / D088 (Owner đầy đủ; accountant và central roles vào slice L0 được cấp). |
+| `definition`         | Chrome quản trị tenant/site trung tâm qua `AppShell`: `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback`. Actor theo `role-route-matrix` (Owner đầy đủ; accountant và central roles chỉ vào slice L0 được cấp). |
 | `not_this`           | Role ACL `owner`; `station_chrome` (POS/KDS/Runner); nhãn UI `Vận hành` / `Ops surface`; `branch_surface` |
 | `scope`              | cross-module |
 | `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes; `docs/modules/ui.md` § control_surface Shell Structure; code IDs lịch sử `OwnerModuleShell` / `data-owner-shell-scroll` implement plane này |
@@ -211,10 +211,10 @@ và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán h
 | -------------------- | ------- |
 | `canonical_term`     | `operational_role` |
 | `label_vi`           | `vai trò vận hành` |
-| `definition`         | Nhóm role D088 ngoài Owner đầy đủ: `accountant`, `central_supply_ops`, `central_kitchen_lead`, … — quyền theo matrix, không đổi tên plane. |
+| `definition`         | Nhóm role ngoài Owner đầy đủ: `accountant`, `central_supply_ops`, `central_kitchen_lead`, … — quyền theo matrix, không đổi tên plane. |
 | `not_this`           | `control_surface`; `station_chrome`; nhãn plane `Quản trị` |
 | `scope`              | cross-module |
-| `source_of_truth`    | D088; `docs/spec/role-route-matrix.md`; `packages/shared/src/auth/types.ts` |
+| `source_of_truth`    | D076; `docs/spec/role-route-matrix.md`; `packages/shared/src/auth/types.ts` |
 
 ### Role `owner`
 
@@ -444,7 +444,6 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `cooking_loss`            | hao hụt nấu nướng        | Mất trọng lượng/số lượng khi nấu.                                   | trim loss                  |
 | `portion_cost`            | giá vốn khẩu phần        | Cost cho một phần/món theo recipe/yield.                            | menu price                 |
 | `landed_cost`             | giá nhập đủ chi phí      | Giá hàng gồm phí vận chuyển/handling liên quan để đưa hàng vào kho. | unit price trần            |
-| `supplier_price_variance` | chênh giá NCC            | Chênh giá mua thực tế so với giá chuẩn/lần trước/contract.          | food cost variance         |
 | `purchase_variance`       | chênh lệch mua hàng      | Chênh giữa PO, GRN, invoice về lượng/giá.                           | stocktake variance         |
 | `cycle_count`             | kiểm kê luân phiên       | Kiểm kê một phần theo lịch.                                         | stocktake toàn kho         |
 
@@ -495,8 +494,7 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `beneficial_owner`    | chủ sở hữu hưởng lợi        | Cá nhân phải được xác định/kê khai khi thuộc trường hợp luật yêu cầu.  | mọi cổ đông hoặc owner user                          |
 | `shareholder`         | cổ đông                     | Người sở hữu cổ phần theo sổ đăng ký cổ đông.                          | người đại diện theo pháp luật                        |
 | `branch`             | chi nhánh          | Site vận hành cấp L1: bán hàng, nhập kho, sản xuất, điều chuyển, kiểm kê. | cửa hàng nếu đang nói entity DB                      |
-| `branch_warehouse`   | kho chi nhánh      | Location nhận/giữ tồn tại chi nhánh.                                      | kho con                                              |
-| `branch_kitchen`     | bếp chi nhánh      | Location stock-bearing của chi nhánh sau khi kho chi nhánh cấp bếp.       | bếp cửa hàng nếu đang nói topology chuẩn             |
+| `branch_warehouse`   | kho chi nhánh      | Active warehouse duy nhất nhận/giữ tồn tại chi nhánh.                    | kho con, bếp chi nhánh                               |
 | `site`               | site vận hành      | Specs/technical docs khi cần gom branch/location.                         | dùng thay cho `branch` trong UI                      |
 
 ### Bề mặt sản phẩm
@@ -509,7 +507,7 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `admin_overview`               | tổng quan quản trị                       | Bề mặt theo dõi việc cần xử lý trên `control_surface`, không phải finance cockpit.                                     |
 | `branch_surface`               | Chi nhánh                                | `/br/[branchId]/*` Branch runtime (không gồm station).                                                                 |
 | `station_chrome`               | POS / KDS / Runner                       | Full-screen một việc; alias docs cũ: Operations chrome.                                                                |
-| `operational_role`             | vai trò vận hành                         | Nhóm role D088; không phải tên plane.                                                                                  |
+| `operational_role`             | vai trò vận hành                         | Nhóm role vận hành trong role matrix; không phải tên plane.                                                            |
 | `finance_basic`                | tài chính vận hành                       | Daily money, stock value, food cost, expenses, HĐĐT, accountant export; không thay sổ kế toán doanh nghiệp.             |
 | `inventory_ops`                | điều hành kho                            | Module kho trên `control_surface`; có thể rút gọn `Kho hàng` trong nav. Không phải tên plane.                          |
 | `point_of_sale`                | POS                                      | Không ép dịch thành `điểm bán` trong UI.                                                                               |
@@ -539,12 +537,12 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | Canonical term          | Nhãn chuẩn                          | Định nghĩa                                                                                                   | Không dùng                            |
 | ----------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
 | `purchase_order`        | đơn đặt hàng NCC                    | Đơn mua gửi nhà cung cấp.                                                                                    | đơn hàng bán                          |
-| `goods_received_note`   | phiếu nhập kho                      | Hàng thực nhận từ NCC tại kho chi nhánh. Mã chứng từ: `GRN-YYYY-####`.                                       | hóa đơn NCC, phiếu nhận chung         |
+| `goods_received_note`   | phiếu nhập kho                      | Hàng thực nhận từ NCC tại warehouse của site. Mã chứng từ: `GRN-YYYY-####`.                                  | hóa đơn NCC, phiếu nhận chung         |
 | `supplier_invoice`      | hóa đơn NCC                         | Hóa đơn đầu vào từ NCC.                                                                                      | HĐĐT bán ra, phiếu nhập kho           |
 | `supplier_payment`      | thanh toán NCC                      | Giao dịch trả tiền cho nhà cung cấp.                                                                         | food cost, PO, GRN                    |
 | `stock_level`           | tồn kho                             | Snapshot số lượng + WAC tại location.                                                                        | số lượng đặt mua                      |
 | `stock_movement`        | biến động tồn kho                   | Ledger append-only của nhập/xuất/transfer/consumption/adjustment.                                            | giao dịch chung nếu cần rõ movement   |
-| `stock_transfer`        | phiếu điều chuyển nội bộ            | Luân chuyển tồn giữa hai location/site theo Inventory contract. Mã chứng từ: `DC-YYYY-####`.                 | tiêu hao, bán hàng, food cost         |
+| `stock_transfer`        | phiếu điều chuyển nội bộ            | Luân chuyển tồn giữa hai warehouse/site hợp lệ. Mã chứng từ: `DC-YYYY-####`.                                 | tiêu hao, bán hàng, food cost         |
 | `stock_issue`           | phiếu xuất kho                      | Xuất dùng nội bộ khi runtime thật sự dùng chứng từ issue. Mã thủ công: `PXK-YYYY-####`; hao hụt: `HH-YYYY-####`. | transfer nếu có location nhận tồn  |
 | `consumption`           | tiêu hao                            | Trừ tồn vì bán hàng, sản xuất, hư hỏng, hoặc sử dụng bếp đã được duyệt.                                      | transfer, PO, hóa đơn NCC             |
 | `stocktake`             | kiểm kê                             | Đếm thực tế và điều chỉnh. Mã phiên: `KK-YYYY-####`.                                                         | kiểm kho nếu cần term chuẩn           |
@@ -552,21 +550,20 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `entry_unit_id`         | đơn vị nhập / đơn vị đếm            | Đơn vị người dùng nhập trên PO/GRN/transfer/issue/waste; trong kiểm kê là đơn vị đếm.                        | đơn vị tồn chuẩn, text unit từ client |
 | `base_unit`             | đơn vị tồn chuẩn                    | Đơn vị duy nhất `is_base = true` của nguyên liệu; ledger và tồn chuẩn lưu theo đơn vị này.                   | đơn vị nhập, đơn vị đóng gói          |
 | `to_base_factor`        | quy đổi về tồn chuẩn                | Hệ số quy đổi dạng `1 đơn vị nhập/đếm = N đơn vị tồn chuẩn`. UI hiển thị canonical như `1 thùng = 24 chai`.  | hệ số đảo chiều                       |
-| `purchase_unit_cost`    | đơn giá nhập                        | Giá trên chứng từ nhận theo đơn vị nhập (`grn_items.unit_cost`, ₫ / đơn vị nhập). Authority thương mại là PO `unit_price_est`; sync vào `unit_cost` khi duyệt PO (D089). | giá vốn BQ, đơn giá ghi sổ            |
+| `purchase_unit_cost`    | đơn giá nhập                        | Snapshot `grn_items.unit_cost` theo đơn vị nhập, được sync từ PO `unit_price_est` khi duyệt (D091).           | giá vốn BQ, giá do Kho nhập, price-QC |
 | `reference_unit_cost`   | giá nhập tham chiếu                 | Giá tham chiếu trên `ingredients.unit_cost`, dùng fallback khi chưa có giá vốn BQ.                           | giá vốn BQ chính thức                 |
 | `average_unit_cost`     | giá vốn bình quân                   | `stock_levels.avg_unit_cost`, tính theo đơn vị tồn chuẩn. UI ngắn được dùng `Giá vốn BQ`.                    | đơn giá nhập                          |
 | `movement_unit_cost`    | đơn giá ghi sổ                      | `stock_movements.unit_cost`, snapshot đơn giá dùng cho một movement; không gọi là WAC trên lịch sử movement. | giá vốn BQ hiện tại                   |
 | `raw_material`          | nguyên liệu                         | Item đầu vào.                                                                                                | vật tư nếu không phải ngữ cảnh rộng   |
-| `finished_good`         | thành phẩm                          | Hàng sản xuất tại chi nhánh hoặc giữ tồn sẵn tại chi nhánh.                                                  | món bán nếu đang nói menu             |
+| `finished_good`         | thành phẩm                          | Hàng được sản xuất hoặc giữ tồn tại warehouse của site.                                                      | món bán nếu đang nói menu             |
 | `recipe`                | định mức (món bán)                  | Định mức nguyên liệu tiêu hao cho một món bán.                                                               | công thức (production)                |
 | `production_recipe`     | công thức (sản xuất)                | Định mức nguyên liệu (BOM) để sản xuất ra thành phẩm.                                                        | định mức (POS)                        |
-| `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại chi nhánh; entity runtime là `production_runs`. Mã: `LSX-YYYY-####`.                       | work order                            |
+| `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại site; entity runtime là `production_runs`. Mã: `LSX-YYYY-####`.                            | work order                            |
 | `three_way_matching`    | đối soát 3 chứng từ                 | Đối chiếu `PO`, `GRN`, `supplier_invoice`.                                                                   | matching chung                        |
 | `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Costing chuẩn hiện tại.                                                                                      | FIFO nếu hệ thống không dùng          |
 
-`Kho chi nhánh -> Bếp chi nhánh` trong contract hiện tại là `stock_transfer` cùng chi nhánh.
-Tổng tồn chi nhánh không giảm ở bước này; tồn chỉ giảm khi có `stock_issue` /
-`consumption` / write-off được ghi nhận sau đó.
+KDS/POS “bếp” là workflow chế biến, không phải stock location. Inventory current
+contract không có target Bếp trong cùng chi nhánh.
 
 ### Thanh toán và tiền mặt
 
@@ -655,7 +652,6 @@ hoặc `short`; không nhúng acronym whitelist vào câu.
 | `joint_stock_company` | Công ty cổ phần    | Công ty     | `CTCP` |
 | `branch`             | Chi nhánh     | CN    | —       |
 | `branch_warehouse`   | Kho chi nhánh | Kho   | —       |
-| `branch_kitchen`     | Bếp chi nhánh | Bếp   | —       |
 
 ### Finance/F&B metrics
 
@@ -857,8 +853,8 @@ hoặc `short`; không nhúng acronym whitelist vào câu.
 - `stock_issue` là xuất nội bộ khi runtime có chứng từ issue và không còn tồn ở
   location nhận.
 - `consumption` là tiêu hao/giá vốn/hao hụt làm giảm tồn vì sử dụng hoặc bán.
-- `Kho chi nhánh -> Bếp chi nhánh` là transfer cùng chi nhánh; dữ liệu nhập từ nguồn khác
-  phải giữ nguyên tắc hàng còn tồn ở Bếp chi nhánh cho đến khi có phiếu xuất/tiêu hao.
+- `stock_transfer` chỉ chuyển tồn giữa hai warehouse/site hợp lệ; không tạo
+  target Bếp trong cùng chi nhánh.
 
 ### `order` vs `purchase_order`
 

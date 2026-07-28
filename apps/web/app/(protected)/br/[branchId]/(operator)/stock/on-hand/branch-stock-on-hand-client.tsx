@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { AppEmptyState } from "@/components/surface";
+import { StatusBadge } from "@/components/status-badge";
 import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
@@ -89,19 +90,8 @@ function StockQuantity({ item }: { item: StockIngredient }) {
 }
 
 function StockRiskBadge({ item }: { item: StockIngredient }) {
-  if (item.status === "out") {
-    return <Badge variant="destructive">{stockCopy.filters.out}</Badge>;
-  }
-
-  if (item.status === "low") {
-    return <Badge variant="warning">{stockCopy.filters.low}</Badge>;
-  }
-
-  if (isStockReorderRisk(item)) {
-    return <Badge variant="warning">{stockCopy.filters.reorder}</Badge>;
-  }
-
-  return null;
+  if (item.status === "normal") return null;
+  return <StatusBadge domain="inventory" value={item.status} size="sm" />;
 }
 
 function StockTouchRow({

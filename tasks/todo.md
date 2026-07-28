@@ -20,30 +20,16 @@ Blocker: Owner-only prerequisites — seed the Branch 3 (`Nguyễn Hữu Thọ`)
 - [ ] Capture `/orders`, POS session, and `/finance/revenue` for the same Vietnam `paid_at` day and confirm totals match.
 - [ ] If selling category `Khác`, map its kitchen printer before treating slip mismatch as a money bug.
 
-## Ship D089 purchase-price authority (PO → GRN unit_cost)
+## Converge Inventory to D091
 
-State: verify
-Kind: feature
-Tier: T3
-Lane: inventory/procurement
-Exit: Warehouse GRN draft has no price UI; approve_purchase_order syncs PO `unit_price_est` into linked `grn_items.unit_cost`; confirm remains fail-closed without approved PO; static tests encode D089.
-Evidence: D089 in `docs/plan/decisions.md`; migrations `20260728143000_d089_po_price_sync_to_grn.sql`, `20260728144500_d089_accountant_po_price_entry.sql`, and `20260728145000_d089_fix_po_approve_price_sync.sql` applied to Greenfield; focused web tests and owner smoke passed.
-
-- [ ] Land/merge after D088 role track if ACL roles still missing on target schema.
-
-## Eliminate Inventory decision drift and branch-kitchen legacy
-
-State: doing
+State: blocked
 Kind: defect
 Tier: T3
 Lane: inventory/topology
-Exit: D082/D088/D089 are the only active Inventory authority; every active site has exactly one active warehouse enforced by DB; branch-kitchen routing, redundant GRN QC, price-QC, and promoted PO-first paths are absent from active runtime/docs/tests; fresh replay, Greenfield catalog checks, repository gates, and authenticated Inventory smoke pass.
-Evidence: Read-only audit found 87 legacy decision/location references across 31 active files, a Greenfield branch with no inventory location, active function bodies still selecting branch kitchens, and GRN tests protecting the old price-QC contract. Root cause: D078 deactivated data and retired one RPC without enforcing the warehouse invariant; later migrations copied stale function bodies. Slice A migration `20260728180429_enforce_single_active_warehouse_per_site.sql` is applied to Greenfield: all three active sites have one canonical warehouse, both invariant triggers and the validated check/index are present, all five patched function bodies are warehouse-only, the transactional acceptance test passes, and regenerated DB types have no diff.
+Exit: D091 is the only active Inventory authority; every active site has exactly one active warehouse enforced by DB; stock-location Bếp routing, redundant GRN QC, price-QC, and promoted PO-first paths are absent from active runtime/docs/tests; fresh replay, Greenfield catalog checks, repository gates, and authenticated Inventory smoke pass.
+Evidence: D091 is applied only to verified Greenfield `enloyfnuerqgaqderbwb`; fresh replay, final-catalog/behavior SQL, advisors, regenerated types, targeted and full tests, typecheck, package lint, and build pass. Branch 3 now has one warehouse, no active kitchen or legacy Inventory catalog remains, and `web.comtammatu.com` serves the new deployment with healthy DB/public route smoke at `390`, `768`, and `1280`.
+Blocker: Authenticated live smoke needs an authorized Greenfield Owner/Branch Manager credential. The local manager/cashier/chef E2E accounts target local Supabase and none exists among the eight Greenfield Auth users. Do not create users or impersonate a live identity without owner delegation. Aggregate `lint` also stops only on the three pre-existing UI-contract hits in the owner's retained `surface.tsx` and `stock-client.tsx` edits; every subsequent lint gate and all package ESLint tasks pass. Recheck when the owner delegates a Greenfield test credential and resolves or intentionally accepts those retained UI-contract edits.
 
-- [ ] Land Slice A: fold decision authority, add the warehouse invariant migration, replace every active branch-kitchen function body, and prove the final catalog on fresh replay plus Greenfield.
-- [ ] Apply Slice A only after Environment Registry verification and explicit owner delegation for the current Greenfield target, then regenerate database types.
-- [ ] Land Slice B: remove branch-kitchen app contracts, simplify GRN QC, move price review to PO/Finance, and remove promoted PO-first UI.
-- [ ] Replace migration-archive/string legacy tests with behavior and final-catalog guards; run targeted tests plus `typecheck`, `lint`, `build`, and `verify`.
 - [ ] Run authenticated Owner/Branch Inventory smoke at `390`, `768`, and `1280`, then remove this outcome when every Exit item is evidenced.
 
 ## Defer central production workspace cutover
@@ -53,7 +39,7 @@ Kind: feature
 Tier: T3
 Lane: inventory/central-ops
 Exit: Production runs only on `central_kitchen`; `/warehouse` and `/kitchen` workspaces exist after Phase 2 `operational_site` authority.
-Evidence: D082, ADR 0015/0017, architecture Phase 2/4 exit criteria.
+Evidence: D091, ADR 0015/0017, architecture Phase 2/4 exit criteria.
 Blocker: Central procurement smoke proven on Greenfield; still depends on Greenfield authority cutover (Phase 2 / CTCP H2). Recheck when Phase 2 authority cutover lands on Greenfield.
 
 - [ ] After Phase 2 authority lands, implement Phase 4 workspaces and move production off branch sites.
@@ -65,9 +51,9 @@ Kind: feature
 Tier: T3
 Lane: platform/security-finance
 Exit: The existing `comtammatu` deployment uses the current Greenfield project as its only target, legal identity and Viettel profile come from live Tenant data, VAT is explicit per sold line, and database authority no longer depends on HR positions or forged JWT scope.
-Evidence: Greenfield is live target for `web.comtammatu.com`. Invoice-profile/VAT snapshot applied and types regenerated. Runtime still uses position-derived JWT `user_role` / `MODULE_ACL`. Catalog/Viettel smoke and ADR 0015 negative matrix still open; authority cutover must follow D082 `branches.branch_kind`.
+Evidence: Greenfield is live target for `web.comtammatu.com`. Invoice-profile/VAT snapshot applied and types regenerated. Runtime still uses position-derived JWT `user_role` / `MODULE_ACL`. Catalog/Viettel smoke and ADR 0015 negative matrix still open; authority cutover must preserve the D091 site model.
 
-- [ ] Re-plan and implement scoped authority caller/RLS cutover on Greenfield under D082 site model; preserve Tenant, Branch, profile, and Auth bootstrap rows.
+- [ ] Re-plan and implement scoped authority caller/RLS cutover on Greenfield under D091 site model; preserve Tenant, Branch, profile, and Auth bootstrap rows.
 - [ ] Complete catalog/RLS inspection, full repository gates, activate invoice profile after tenant legal/MST is complete, and the separately authorized Viettel smoke. Do not reset, rebaseline, create another project, or delete current identities.
 
 ## Restore fresh-install database ACL parity

@@ -96,7 +96,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | Finance       | `tax_invoices`, `expenses`, `accounting_periods`                                                                                                                       |
 | HR            | `employees`, `employment_contracts`, `shifts`, `attendance_records`, `payroll_periods`, `payroll_entries`                                                              |
 | Print agent   | `print_jobs` (claim/complete/expire RPCs), `printer_configs`                                                                                                           |
-| Trust / QC    | `branch_trusted_egress_ips`, `branch_override_codes`, `branch_override_attempts`, `inventory_qc_settings`                                                              |
+| Branch network | `branch_trusted_egress_ips` — trusted egress for POS/KDS/print network gates; unrelated to Inventory QC                                                               |
 | Notifications | `notifications`, `notification_reads`, `notification_outbox`, `branch_feature_flags`                                                                                   |
 
 For the per-column / per-policy reference of a specific table, prefer reading the originating migration and generated types. Do not recreate hand-written schema dumps; they drift from generated types and applied database state.

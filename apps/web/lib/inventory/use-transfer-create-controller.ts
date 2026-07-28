@@ -72,7 +72,6 @@ export function useTransferCreateController({
       ? []
       : getTransferSourceLocationOptions({
           locations: sourceLocationsByBranch[selectedSourceBranchId] ?? [],
-          sourceBranchKind: selectedSourceBranch?.branch_kind ?? null,
         });
   const selectedSourceLocation =
     sourceLocationOptions.find(
@@ -281,8 +280,8 @@ export function useTransferCreateController({
       toast.error(messages.inventory.transfer.chooseTargetError);
       return;
     }
-    if (target.kind === "kitchen" || target.branchId === fromBranchId) {
-      toast.error("Bếp chi nhánh đã tắt. Chi nhánh chỉ còn một kho duy nhất.");
+    if (target.branchId === fromBranchId) {
+      toast.error(messages.inventory.transfer.chooseTargetError);
       return;
     }
     const toBranchId = target.branchId;
@@ -315,7 +314,6 @@ export function useTransferCreateController({
         fromLocationId: selectedSourceLocationId,
         notes,
         vehicleInfo,
-        toLocationKind: "default_receive",
         lines: linesResult.lines,
       });
       if (!result.success || !result.data) {

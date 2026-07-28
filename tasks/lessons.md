@@ -26,10 +26,17 @@
 4. **Owner GRN create DOC is one lines region + progressive add, not dual AppSections**
    - Pattern: Early GRN create stacked `Mặt hàng trên phiếu` (draft DataTable) and `Danh mục nguyên liệu` (always-visible search list) as sibling `AppSection`s. That duplicated vertical space and competed with the sticky footer / desk editor.
    - Rule: Owner GRN create (`/inventory/grn/new/[supplierId]`) and draft DETAIL share one composition: dense context (`Kho nhận`) → single lines table with **Thêm mặt hàng** / add affordance → catalog search in overlay (`AppDialog` / `AddGrnLineDialog`) → progressive line editor (desk panel / sheet) → sticky `AppDetailFooter` SSOT. Catalog is never a second always-on page section.
-   - Rule: The progressive line editor is an overlay for unit / qty / QC only (D089 — no warehouse unit price). Do not restate unit in the header subtitle or under qty; do not stack a tall prior-price comparison card. Commercial price lives on PO.
+   - Rule: The progressive line editor is an overlay for unit / received qty /
+     rejected qty + rejection evidence only (D091 — no warehouse unit price or
+     manual QC status). Do not restate unit in the header subtitle or under qty;
+     do not stack a prior-price comparison card. Commercial price lives on PO.
    - Prevention: Prefer `docs/modules/ui.md` Owner GRN create DOC bullet and `grn-create-ux-static` / Wave E static tests before restoring an always-on catalog list under the lines table.
-36. **GRN draft must not be the commercial price authority (D089)**
+36. **GRN draft must not be the commercial price authority (D091)**
    - Pattern: Warehouse create/draft UIs historically required `unit_cost` before review; PO then copied from GRN, inverting Owner intent (price at PO time).
-   - Rule: Warehouse GRN draft = qty/UOM/QC only. Commercial price lives on `purchase_order_items.unit_price_est`. On PO approve, sync into `grn_items.unit_cost` / `po_unit_price`. Confirm/WAC keep reading GRN `unit_cost`. Server Actions must ignore warehouse-supplied draft `unitCost`.
-   - Prevention: Static tests assert no warehouse unit-cost input on create/sheet editors; migration comment documents approve-time sync; SOP §2 matches D088/D089.
-
+   - Rule: Warehouse GRN draft = received qty/UOM/rejected qty + mandatory
+     reason/photo when rejected. Commercial price lives on
+     `purchase_order_items.unit_price_est`; PO approval syncs only the
+     `grn_items.unit_cost` snapshot used by confirm/WAC. GRN has no price-QC,
+     manual quality status, lot/HSD or temperature.
+   - Prevention: Current-contract tests assert no warehouse unit-cost/price-QC
+     input, no PO-first CTA, and SOP §2 matches D091.

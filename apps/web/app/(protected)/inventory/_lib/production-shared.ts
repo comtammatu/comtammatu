@@ -85,7 +85,7 @@ export async function requireProductionBranch(
     };
   }
 
-  // Production runs at the central kitchen OR at a branch (D068).
+  // Production runs at the central kitchen OR at a branch (D091).
   if (!isProductionBranchKind(data?.branch_kind)) {
     return {
       ok: false,
@@ -98,10 +98,9 @@ export async function requireProductionBranch(
 
 /**
  * Access gate for production surfaces from the acting claims. A site-scoped
- * role with a branch pin must sit on a central_kitchen site; a tenant-level
- * central role (D055 §1 — branch_id null) operates every active central
- * kitchen, so the gate only verifies one exists. RLS and the production RPCs
- * enforce fine-grained authz either way.
+ * role must sit on a supported production site; a tenant-level central role
+ * operates active central kitchens, so the gate only verifies one exists.
+ * RLS and the production RPCs enforce fine-grained authz either way.
  */
 export async function requireProductionAccess(
   supabase: unknown,

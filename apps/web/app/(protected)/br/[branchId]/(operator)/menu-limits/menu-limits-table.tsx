@@ -61,7 +61,7 @@ import { useRealtimeRefresh } from "@/_hooks/use-realtime-refresh";
 import {
   type MenuLimitRow,
   clearBranchMenuDailyLimit,
-  replenishMenuItemKitchenStock,
+  replenishMenuItemStock,
   setBranchMenuDailyLimit,
 } from "./actions";
 import { messages } from "@lib/messages";
@@ -469,16 +469,16 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
     });
   }
 
-  function handleReplenishKitchen(extraPortions: 1 | 2) {
+  function handleReplenishStock(extraPortions: 1 | 2) {
     if (!drawerRow) return;
     const reason = replenishReason.trim();
     if (reason.length < 5) {
-      toast.error(messages.pos.menu.replenishKitchenReasonMin);
+      toast.error(messages.pos.menu.replenishStockReasonMin);
       return;
     }
 
     startTransition(async () => {
-      const result = await replenishMenuItemKitchenStock({
+      const result = await replenishMenuItemStock({
         branchId,
         menuItemId: drawerRow.menu_item_id,
         extraPortions,
@@ -486,12 +486,12 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
       });
 
       if (!result.success) {
-        toast.error(result.error ?? messages.pos.menu.replenishKitchenFailed);
+        toast.error(result.error ?? messages.pos.menu.replenishStockFailed);
         return;
       }
 
       toast.success(
-        messages.pos.menu.replenishKitchenSuccess(
+        messages.pos.menu.replenishStockSuccess(
           drawerRow.item_name,
           extraPortions,
         ),
@@ -709,14 +709,14 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
 
                 <div className="flex flex-col gap-3 border-t pt-3">
                   <SectionLabel>
-                    {messages.pos.menu.replenishKitchenTitle}
+                    {messages.pos.menu.replenishStockTitle}
                   </SectionLabel>
                   <p className="text-xs text-muted-foreground">
-                    {messages.pos.menu.replenishKitchenHint}
+                    {messages.pos.menu.replenishStockHint}
                   </p>
                   <Field>
                     <FieldLabel htmlFor="menu-limit-replenish-reason">
-                      {messages.pos.menu.replenishKitchenReasonLabel}
+                      {messages.pos.menu.replenishStockReasonLabel}
                     </FieldLabel>
                     <Textarea
                       id="menu-limit-replenish-reason"
@@ -724,14 +724,12 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                       onChange={(event) =>
                         setReplenishReason(event.target.value)
                       }
-                      placeholder={
-                        messages.pos.menu.replenishKitchenPlaceholder
-                      }
+                      placeholder={messages.pos.menu.replenishStockPlaceholder}
                       disabled={isPending}
                       className="min-h-20 resize-none text-base"
                     />
                     <FieldDescription>
-                      {messages.pos.menu.replenishKitchenReasonHint}
+                      {messages.pos.menu.replenishStockReasonHint}
                     </FieldDescription>
                   </Field>
                   <div className="grid grid-cols-2 gap-2">
@@ -740,7 +738,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                       variant="outline"
                       size="touch"
                       disabled={isPending}
-                      onClick={() => handleReplenishKitchen(1)}
+                      onClick={() => handleReplenishStock(1)}
                     >
                       <CookingPot />
                       +1 suất
@@ -750,7 +748,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                       variant="outline"
                       size="touch"
                       disabled={isPending}
-                      onClick={() => handleReplenishKitchen(2)}
+                      onClick={() => handleReplenishStock(2)}
                     >
                       <CookingPot />
                       +2 suất

@@ -164,25 +164,41 @@ function stockValue(item: StockIngredient): number | null {
   return item.monetary == null ? null : item.qty * item.monetary.cost;
 }
 
-function StockAlertBadges({
+function StockItemStatus({
   item,
   className,
 }: {
   item: StockIngredient;
   className?: string;
 }) {
-  const showStatus = item.status !== "normal";
-  const showReorder = item.min > 0 && item.qty <= item.min;
-  if (!showStatus && !showReorder) return null;
+  return (
+    <StatusBadge
+      domain="inventory"
+      value={item.status}
+      size="sm"
+      className={className}
+    />
+  );
+}
+
+function StockCategoryKindCell({ item }: { item: StockIngredient }) {
+  const kindLabel = ITEM_KIND_LABELS[item.itemKind] ?? UNKNOWN_LABEL_VI;
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
-      {showStatus ? (
-        <StatusBadge domain="inventory" value={item.status} size="sm" />
-      ) : null}
-      {showReorder ? (
-        <Badge variant="warning">{stockCopy.filters.reorder}</Badge>
-      ) : null}
+    <div className="flex min-w-0 flex-col gap-1">
+      {item.category ? (
+        <Badge
+          className={
+            CATEGORY_TONE_CLASS[item.category] ??
+            "bg-muted text-muted-foreground"
+          }
+        >
+          {item.category}
+        </Badge>
+      ) : (
+        <span className="text-muted-foreground">{inventoryCommon.noValue}</span>
+      )}
+      <span className="truncate text-xs text-muted-foreground">{kindLabel}</span>
     </div>
   );
 }
@@ -293,7 +309,7 @@ export function StockClient({
     );
   }
 
-  // D088: never recompute a money total from row costs when branchValue is denied.
+  // Never recompute a money total from row costs when branchValue is denied.
   const visibleTotalValue = branchValue;
   const liveLabel = formatVNDate(new Date());
   const stockDetailHref = (ingredientId: number) =>
@@ -377,10 +393,7 @@ export function StockClient({
       className: "min-w-56",
       render: (item) => (
         <div className="flex flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p>{item.name}</p>
-            <StockAlertBadges item={item} />
-          </div>
+          <p>{item.name}</p>
           <span className="font-mono text-xs text-muted-foreground">
             {item.sku || inventoryCommon.noValue}
           </span>
@@ -388,34 +401,16 @@ export function StockClient({
       ),
     },
     {
-      key: "category",
-      header: stockCopy.filters.categoryPlaceholder,
-      className: "min-w-32",
-      render: (item) =>
-        item.category ? (
-          <Badge
-            className={
-              CATEGORY_TONE_CLASS[item.category] ??
-              "bg-muted text-muted-foreground"
-            }
-          >
-            {item.category}
-          </Badge>
-        ) : (
-          <span className="text-muted-foreground">
-            {inventoryCommon.noValue}
-          </span>
-        ),
+      key: "status",
+      header: stockCopy.table.status,
+      className: "min-w-28",
+      render: (item) => <StockItemStatus item={item} />,
     },
     {
-      key: "kind",
-      header: stockCopy.table.kind,
-      className: "min-w-28",
-      render: (item) => (
-        <Badge variant="secondary">
-          {ITEM_KIND_LABELS[item.itemKind] ?? UNKNOWN_LABEL_VI}
-        </Badge>
-      ),
+      key: "category",
+      header: stockCopy.table.categoryKind,
+      className: "min-w-36",
+      render: (item) => <StockCategoryKindCell item={item} />,
     },
     {
       key: "stock",
@@ -693,26 +688,14 @@ export function StockClient({
           >
             {item.name}
           </Link>
-          <div className="flex items-center gap-2">
-            {item.category ? (
-              <Badge
-                className={
-                  CATEGORY_TONE_CLASS[item.category] ??
-                  "bg-muted text-muted-foreground"
-                }
-              >
-                {item.category}
-              </Badge>
-            ) : null}
-            <Badge variant="secondary">
-              {ITEM_KIND_LABELS[item.itemKind] ?? UNKNOWN_LABEL_VI}
-            </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <StockCategoryKindCell item={item} />
             <span className="font-mono text-xs text-muted-foreground">
               {item.sku || inventoryCommon.noValue}
             </span>
           </div>
         </div>
-        <StockAlertBadges item={item} className="justify-end" />
+        <StockItemStatus item={item} className="shrink-0" />
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-sm">

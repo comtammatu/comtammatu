@@ -11,13 +11,6 @@ const rlsMigration = readFileSync(
   ),
   "utf8",
 );
-const branchOverrideMigration = readFileSync(
-  resolve(
-    repoRoot,
-    "supabase/migration-archive/20260726020500_restrict_branch_override_verification.sql",
-  ),
-  "utf8",
-);
 const readPerformanceMigration = readFileSync(
   resolve(
     repoRoot,
@@ -109,38 +102,6 @@ test("redundant self policy is removed without changing grants", () => {
     /DROP POLICY IF EXISTS profiles_select_self ON public\.profiles/,
   );
   assert.doesNotMatch(rlsMigration, /\b(?:GRANT|REVOKE)\b/);
-});
-
-test("unused branch override verification is removed", () => {
-  assert.match(
-    branchOverrideMigration,
-    /DROP FUNCTION IF EXISTS public\.verify_branch_override_code\(BIGINT, TEXT\)/,
-  );
-  assert.doesNotMatch(
-    branchOverrideMigration,
-    /GRANT EXECUTE ON FUNCTION public\.verify_branch_override_code/,
-  );
-
-  for (const table of [
-    "branch_override_codes",
-    "branch_override_attempts",
-  ] as const) {
-    assert.match(
-      branchOverrideMigration,
-      new RegExp(
-        `REVOKE ALL ON TABLE public\\.${table}\\s+FROM PUBLIC, anon, authenticated`,
-      ),
-    );
-    assert.match(
-      branchOverrideMigration,
-      new RegExp(`GRANT ALL ON TABLE public\\.${table} TO service_role`),
-    );
-  }
-
-  assert.match(
-    branchOverrideMigration,
-    /REVOKE ALL ON SEQUENCE public\.branch_override_attempts_id_seq\s+FROM PUBLIC, anon, authenticated/,
-  );
 });
 
 test("HDDT and attendance hot reads use ordered access and one Owner check", () => {

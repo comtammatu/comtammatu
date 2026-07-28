@@ -17,34 +17,6 @@ function sourceBetween(source: string, start: string, end: string): string {
   return source.slice(startIndex, endIndex);
 }
 
-test("WF-09 migration defines atomic bulk import RPC contracts", () => {
-  const sql = read(
-    "supabase/migration-archive/20260702105307_wf09_bulk_import_atomic.sql",
-  );
-
-  for (const fn of [
-    "bulk_import_ingredients",
-    "bulk_import_production_recipes",
-  ]) {
-    assert.match(
-      sql,
-      new RegExp(`CREATE OR REPLACE FUNCTION public\\.${fn}\\(`),
-    );
-    assert.match(sql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}`));
-    assert.match(sql, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${fn}`));
-  }
-
-  assert.match(sql, /SECURITY INVOKER/);
-  assert.match(sql, /SET search_path = ''/);
-  assert.match(sql, /INSERT INTO public\.ingredients/);
-  assert.match(sql, /INSERT INTO public\.ingredient_units/);
-  assert.match(sql, /INSERT INTO public\.production_recipes/);
-  assert.match(
-    sql,
-    /ON CONFLICT \(finished_good_id, ingredient_id, tenant_id\)/,
-  );
-});
-
 test("ingredient import action uses one bulk RPC and sanitized error handling", () => {
   const source = read(
     "apps/web/app/(protected)/inventory/ingredient-actions.ts",

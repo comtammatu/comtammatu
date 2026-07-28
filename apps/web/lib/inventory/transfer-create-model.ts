@@ -34,8 +34,8 @@ export interface TransferDraftLine {
   entryUnitId: string;
 }
 
-export type TransferTargetKind = "warehouse" | "kitchen";
-export type TransferSourceKind = TransferTargetKind | "production_storage";
+export type TransferTargetKind = "warehouse";
+export type TransferSourceKind = TransferTargetKind;
 
 export interface TransferSourceLocation {
   id: number;
@@ -116,7 +116,7 @@ export function parseTransferTargetValue(value: string): {
   const [branchIdRaw, kindRaw] = value.split(":");
   const branchId = Number(branchIdRaw);
   if (!Number.isInteger(branchId) || branchId <= 0) return null;
-  if (kindRaw !== "warehouse" && kindRaw !== "kitchen") return null;
+  if (kindRaw !== "warehouse") return null;
   return { branchId, kind: kindRaw };
 }
 
@@ -138,20 +138,10 @@ export function getDefaultTransferSourceLocation(
 
 export function getTransferSourceLocationOptions({
   locations,
-  sourceBranchKind,
 }: {
   locations: TransferSourceLocation[];
-  sourceBranchKind: string | null;
 }): TransferSourceLocation[] {
-  if (sourceBranchKind === "central_kitchen") {
-    const productionLocations = locations.filter(
-      (location) => location.kind === "production_storage",
-    );
-    return productionLocations.length > 0
-      ? productionLocations
-      : locations.filter((location) => location.kind === "warehouse");
-  }
-  return locations;
+  return locations.filter((location) => location.kind === "warehouse");
 }
 
 export function getTransferSelectableIngredients({

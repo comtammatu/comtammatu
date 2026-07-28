@@ -1,13 +1,20 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   canAccessProductionSurface,
+  canManageProductionRecipes,
   isProductionBranchKind,
   isProductionBranchScopedRole,
 } from "../app/(protected)/inventory/_lib/production-roles";
 
-// D068 — branch production. `branch_manager` runs production only at its OWN
+const productionDataSource = readFileSync(
+  new URL("../app/(protected)/inventory/production-data.ts", import.meta.url),
+  "utf8",
+);
+
+// D091 — branch production. `branch_manager` runs production only at its OWN
 // branch. Two guards realize this: (1) `productionBranches` is filtered to
 // `scopedBranchId` when `isProductionBranchScopedRole(role)`
 // (production-data.ts), and (2) `hasCurrentProductionBranchAccess` /
@@ -32,9 +39,13 @@ test("branch_manager is a branch-scoped production role (own-branch pin applies)
 test("central kitchen lead is admitted and pinned to its production site", () => {
   assert.equal(canAccessProductionSurface("central_kitchen_lead"), true);
   assert.equal(isProductionBranchScopedRole("central_kitchen_lead"), true);
-  assert.equal(
-    productionTargetAllowed("central_kitchen_lead", 16, 15),
-    false,
+  assert.equal(productionTargetAllowed("central_kitchen_lead", 16, 15), false);
+});
+
+test("branch-scoped production targets are wired to the actor site", () => {
+  assert.match(
+    productionDataSource,
+    /targetBranches = targetBranches\.filter\(\s*\(branch\) => branch\.id === scopedBranchId,/,
   );
 });
 
@@ -55,7 +66,13 @@ test("owner is tenant-wide for production — not branch-scoped", () => {
   assert.equal(productionTargetAllowed("owner", 1, 999), true);
 });
 
-test("production branch kinds accept both central_kitchen and branch (D068), reject others", () => {
+test("only owner and central kitchen lead manage production recipes", () => {
+  assert.equal(canManageProductionRecipes("owner"), true);
+  assert.equal(canManageProductionRecipes("central_kitchen_lead"), true);
+  assert.equal(canManageProductionRecipes("branch_manager"), false);
+});
+
+test("production branch kinds accept both central_kitchen and branch (D091), reject others", () => {
   assert.equal(isProductionBranchKind("central_kitchen"), true);
   assert.equal(isProductionBranchKind("branch"), true);
   assert.equal(isProductionBranchKind("central_supply"), false);

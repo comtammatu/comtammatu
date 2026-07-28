@@ -61,7 +61,6 @@ const ingredientBaseSchema = z.object({
     .min(1, { error: VALIDATION_VI.required("Tên nguyên liệu") }),
   sku: z.string().trim().optional(),
   category_id: z.coerce.number().int().positive().nullable().optional(),
-  unit_cost: z.coerce.number().min(0).optional(),
   item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
   min_stock_level: z.coerce.number().min(0).default(0),
   max_stock_level: z.coerce.number().min(0).optional(),
@@ -180,7 +179,7 @@ function rpcCatalogArgs(
     p_name: data.name,
     p_sku: (data.sku?.trim() ? data.sku.trim() : null) as never,
     p_category_id: (data.category_id ?? null) as never,
-    p_unit_cost: (data.unit_cost ?? null) as never,
+    p_unit_cost: null as never,
     p_item_kind: data.item_kind,
     p_storage_type: data.storage_type,
     p_min_stock_level: data.min_stock_level,
@@ -564,7 +563,7 @@ interface ExportIngredientRow {
   sku: string | null;
   category: string | null;
   item_kind: string;
-  unit_cost: number | null;
+  unit_cost?: number | null;
   min_stock_level: number;
   storage_type: string;
   is_active: boolean;
@@ -575,7 +574,10 @@ interface ExportIngredientRow {
   }[];
 }
 
-function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
+function buildIngredientSheets(
+  rows: ExportIngredientRow[],
+  includeUnitCost = true,
+): SheetDef[] {
   return [
     {
       name: "Nguyên liệu",
@@ -584,7 +586,9 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
         { header: "SKU", key: "sku", width: 14 },
         { header: "Danh mục", key: "category", width: 18 },
         { header: "Loại hàng", key: "item_kind_label", width: 16 },
-        { header: "Giá nhập (VND)", key: "unit_cost", width: 16 },
+        ...(includeUnitCost
+          ? [{ header: "Giá nhập (VND)", key: "unit_cost", width: 16 }]
+          : []),
         { header: "Tồn tối thiểu", key: "min_stock_level", width: 18 },
         { header: "Bảo quản", key: "storage_label", width: 14 },
         { header: "Hoạt động", key: "is_active", width: 12 },
@@ -594,7 +598,7 @@ function buildIngredientSheets(rows: ExportIngredientRow[]): SheetDef[] {
         sku: r.sku ?? "",
         category: r.category ?? "",
         item_kind_label: ITEM_KIND_LABELS[r.item_kind] ?? UNKNOWN_LABEL_VI,
-        unit_cost: r.unit_cost ?? "",
+        ...(includeUnitCost ? { unit_cost: r.unit_cost ?? "" } : {}),
         min_stock_level: r.min_stock_level,
         storage_label: STORAGE_LABELS[r.storage_type] ?? UNKNOWN_LABEL_VI,
         is_active: r.is_active ? "Có" : "Không",
@@ -710,7 +714,6 @@ const importIngredientRowSchema = z.object({
   unit: z.string().trim().min(1, { error: "Thiếu đơn vị" }),
   category: z.string().trim().optional(),
   item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
-  unit_cost: z.coerce.number().min(0).optional(),
   min_stock_level: z.coerce.number().min(0).default(0),
   storage_type: z
     .enum(["ambient", "refrigerated", "frozen"])
@@ -873,23 +876,15 @@ export async function importIngredients(
       return;
     }
 
-    const unitCost = parseOptionalNumber(
-      raw["Giá nhập (VND)"] ?? raw["unit_cost"],
-      0,
-    );
     const minStock = parseOptionalNumber(
       raw["Tồn tối thiểu"] ?? raw["Ngưỡng tồn (Min)"] ?? raw["min_stock_level"],
       3,
     );
-    const invalidNumber = [
-      { field: "Giá nhập (VND)", result: unitCost },
-      { field: "Tồn tối thiểu", result: minStock },
-    ].find(({ result }) => result.error != null);
-    if (invalidNumber) {
+    if (minStock.error) {
       issues.push({
         row: rowNumber,
-        field: invalidNumber.field,
-        message: invalidNumber.result.error ?? "Số không hợp lệ.",
+        field: "Tồn tối thiểu",
+        message: minStock.error,
       });
       return;
     }
@@ -899,7 +894,6 @@ export async function importIngredients(
       unit: raw["Đơn vị"] ?? raw["unit"],
       category: (raw["Danh mục"] ?? raw["category"] ?? "").trim() || undefined,
       item_kind: kindKey,
-      unit_cost: unitCost.value,
       min_stock_level: minStock.value ?? 0,
       storage_type: storageKey,
       is_active: parseBool(raw["Hoạt động"] ?? raw["is_active"]),
@@ -938,7 +932,6 @@ export async function importIngredients(
       unit: row.unit,
       category: row.category ?? null,
       item_kind: row.item_kind,
-      unit_cost: row.unit_cost ?? null,
       min_stock_level: row.min_stock_level,
       max_stock_level: null,
       reorder_point: null,
@@ -975,26 +968,27 @@ export async function downloadIngredientTemplate(): Promise<ActionResult> {
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const sheets = buildIngredientSheets([
-    {
-      name: "Nước mắm chai (ví dụ)",
-      sku: "NM-001",
-
-      category: "Gia vị",
-      item_kind: "raw_material",
-      unit_cost: 18000,
-      min_stock_level: 1000,
-      storage_type: "ambient",
-      is_active: true,
-      units: [
-        {
-          unit_code: "chai",
-          to_base_factor: 1,
-          is_base: true,
-        },
-      ],
-    },
-  ]);
+  const sheets = buildIngredientSheets(
+    [
+      {
+        name: "Nước mắm chai (ví dụ)",
+        sku: "NM-001",
+        category: "Gia vị",
+        item_kind: "raw_material",
+        min_stock_level: 1000,
+        storage_type: "ambient",
+        is_active: true,
+        units: [
+          {
+            unit_code: "chai",
+            to_base_factor: 1,
+            is_base: true,
+          },
+        ],
+      },
+    ],
+    false,
+  );
 
   const buf = await buildXlsx(sheets);
   return {

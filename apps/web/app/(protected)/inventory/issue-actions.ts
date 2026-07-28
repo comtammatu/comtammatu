@@ -9,7 +9,6 @@ import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
-import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import type { TenantSupabase } from "@lib/inventory/types";
 import { allocateInventoryDocNumber } from "./_lib/inventory-doc-number";
@@ -91,13 +90,10 @@ async function resolveIssueSourceLocation(
     .order("is_default_consumption", { ascending: false })
     .order("sort_order", { ascending: true })
     .order("id", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(2);
 
   if (error) throw error;
-  if (data?.id) return data.id;
-
-  return resolveDefaultInventoryLocation(supabase, tenantId, branchId, "issue");
+  return data?.length === 1 ? (data[0]?.id ?? null) : null;
 }
 
 export async function fetchStockIssues(opts?: {

@@ -141,7 +141,6 @@ export const INVENTORY_VI = {
   linkedPo: "Đơn đặt hàng liên kết",
   receiveDate: "Ngày kiểm nhận",
   draft: "Nháp",
-  choosePoToCreateGrn: "Chọn đơn đặt hàng để tạo phiếu nhập",
   newGrn: "Phiếu nhập hàng mới",
   grnSearchPlaceholder: "Tìm mã phiếu nhập, nhà cung cấp, đơn đặt hàng...",
   grnListCount: (count: number) => `${formatCount(count)} phiếu`,
@@ -407,8 +406,7 @@ export const INVENTORY_VI = {
   countAssignAddAction: "Thêm phân công mới",
   countAssignEyebrow: "Kiểm kê",
   countAssignTitle: "Phân công đếm tồn",
-  countAssignDescription:
-    "Giao danh sách hàng cần kiểm kê cho từng nhân viên.",
+  countAssignDescription: "Giao danh sách hàng cần kiểm kê cho từng nhân viên.",
   countAssignShiftLabel: "Ca đếm tồn",
   countAssignAllShifts: "Áp dụng mọi ca",
   countAssignAssignedSummary: (assigned: number, total: number) =>
@@ -501,15 +499,9 @@ export const INVENTORY_VI = {
   importIngredientsSummary: (inserted: number, updated: number) =>
     `Tạo mới ${inserted} · Cập nhật ${updated}`,
   importIssueLine: (row: number, message: string) => `[dòng ${row}] ${message}`,
-  dashboardSourceProcurementDescription:
-    "Phiếu nhập, hóa đơn NCC và lệch giá trước khi hàng vào tồn.",
   dashboardDraftGrnLabel: "Phiếu nhập nháp",
   dashboardPrepareReceivingHint: "Mở phiếu nhập và chọn NCC.",
-  dashboardGrnPriceReviewLabel: "Phiếu nhập cần kiểm tra giá",
-  dashboardGrnPriceReviewTask: (count: number) =>
-    `${formatCount(count)} dòng phiếu nhập cần kiểm tra giá`,
-  dashboardGrnPriceVarianceHint: "Giá nhập cần rà soát trong 30 ngày qua.",
-  // Production surface guards — generalized copy (D068): production runs at the
+  // Production surface guards — generalized copy (D091): production runs at the
   // central kitchen or at a branch, not central-kitchen-only.
   productionSiteRequired:
     "Chỉ Bếp Trung Tâm hoặc chi nhánh mới được phép tạo lệnh sản xuất.",

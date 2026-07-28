@@ -198,13 +198,14 @@ test("completed payment method is the enforced order mirror source", () => {
   );
 });
 
-test("Finance admits accountant per D088 (temporary until ADR 0015)", () => {
+test("Finance admits accountant per D076 (temporary until ADR 0015)", () => {
   assert.match(
     moduleAcl,
     /finance:\s*\{[\s\S]*?allowedRoles:\s*\[["']owner["'],\s*["']accountant["']\]/,
   );
-  const staffRoles =
-    /export const STAFF_ROLES = \[([\s\S]*?)\] as const/.exec(roleTypes)?.[1];
+  const staffRoles = /export const STAFF_ROLES = \[([\s\S]*?)\] as const/.exec(
+    roleTypes,
+  )?.[1];
   assert.ok(staffRoles);
   assert.match(staffRoles, /accountant/);
   assert.match(staffRoles, /central_supply_ops/);

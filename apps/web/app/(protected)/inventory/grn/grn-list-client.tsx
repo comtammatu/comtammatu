@@ -57,7 +57,6 @@ import {
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
 import { discardGrnDraft } from "../grn-actions";
-import { formatVND } from "@lib/inventory/format";
 import { tNav } from "../_lib/dictionary";
 import {
   filterGrnDraftRows,
@@ -112,7 +111,6 @@ export function GrnListClient({
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const controlSize = useFormControlSize();
   const router = useRouter();
-  const showMonetary = grns.some((grn) => grn.monetary != null);
 
   const getGrnRowActions = (grn: GrnRow): RowActionItem[] => [
     {
@@ -172,20 +170,6 @@ export function GrnListClient({
           "—"
         ),
     },
-    ...(showMonetary
-      ? [
-          {
-            key: "total",
-            header: FORM_VI.totalAmount,
-            className: "text-right",
-            render: (grn: GrnRow) => (
-              <span className="font-mono font-medium tabular-nums">
-                {grn.monetary ? formatVND(grn.monetary.total) : "—"}
-              </span>
-            ),
-          },
-        ]
-      : []),
     {
       key: "status",
       header: FORM_VI.status,
@@ -216,9 +200,7 @@ export function GrnListClient({
               label={`${ACTIONS_VI.viewDetails} ${grn.code}`}
               triggerSize="icon-sm"
               open={openActionRowId === grn.id}
-              onOpenChange={(open) =>
-                setOpenActionRowId(open ? grn.id : null)
-              }
+              onOpenChange={(open) => setOpenActionRowId(open ? grn.id : null)}
             />
           </div>
         );
@@ -457,26 +439,31 @@ function GrnDraftsTab({
     }
   }
 
-  const getDraftRowActions = (draft: GrnDraftRow): RowActionItem[] => [
-    {
-      key: "continue",
-      label: INVENTORY_VI.grnDraftContinue,
-      icon: <IconPencil />,
-      href: grnDraftHref(basePath, draft),
-      disabled: pending,
-    },
-    {
-      key: "discard",
-      label: ACTIONS_VI.delete,
-      icon: <IconTrash />,
-      destructive: true,
-      disabled: pending,
-      separatorBefore: true,
-      onSelect: () => {
-        void handleDiscard(draft);
+  const getDraftRowActions = (draft: GrnDraftRow): RowActionItem[] => {
+    const actions: RowActionItem[] = [
+      {
+        key: "continue",
+        label: INVENTORY_VI.grnDraftContinue,
+        icon: <IconPencil />,
+        href: grnDraftHref(basePath, draft),
+        disabled: pending,
       },
-    },
-  ];
+    ];
+    if (draft.poId == null) {
+      actions.push({
+        key: "discard",
+        label: ACTIONS_VI.delete,
+        icon: <IconTrash />,
+        destructive: true,
+        disabled: pending,
+        separatorBefore: true,
+        onSelect: () => {
+          void handleDiscard(draft);
+        },
+      });
+    }
+    return actions;
+  };
 
   const draftColumns: DataTableColumn<GrnDraftRow>[] = [
     {
@@ -744,12 +731,9 @@ function GrnMobileCard({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <div className="flex flex-col items-end gap-1">
-          <span className="text-xs text-muted-foreground">{grn.date || "—"}</span>
-          {grn.monetary ? (
-            <span className="font-mono text-sm font-semibold">
-              {formatVND(grn.monetary.total)}
-            </span>
-          ) : null}
+          <span className="text-xs text-muted-foreground">
+            {grn.date || "—"}
+          </span>
         </div>
         <div
           onClick={(event) => event.stopPropagation()}

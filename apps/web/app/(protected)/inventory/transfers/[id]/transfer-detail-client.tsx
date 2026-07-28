@@ -69,7 +69,6 @@ type TransferLineItem = TransferDetail["items"][number];
 
 function getTransferActionLabel(kind: TransferActionKind): string {
   const actions = messages.inventory.transfer.actions;
-  if (kind === "confirm_kitchen") return actions.confirmKitchen;
   if (kind === "confirm_ship") return actions.confirmShip;
   if (kind === "mark_in_transit") return actions.markInTransit;
   return actions.receive;
@@ -159,10 +158,7 @@ export function TransferDetailClient({
     startTransition(async () => {
       let res: { success: boolean; error?: string | null } | undefined;
 
-      if (
-        actionConfig.kind === "confirm_ship" ||
-        actionConfig.kind === "confirm_kitchen"
-      ) {
+      if (actionConfig.kind === "confirm_ship") {
         res = await transferConfirmShip(transfer.id);
       } else if (actionConfig.kind === "mark_in_transit") {
         res = await transferMarkInTransit(transfer.id);
@@ -306,86 +302,94 @@ export function TransferDetailClient({
                   }
                 />
               )}
-              mobileFooter={transfer.monetary ? (
-                <Item
-                  variant="outline"
-                  className="flex-col items-stretch gap-2 p-3 text-sm"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">
-                      {copy.totalValue}
-                    </span>
-                    <span className="font-mono font-semibold tabular-nums text-primary">
-                      {messages.inventory.common.currencyCompact(
-                        formatVND(transfer.monetary.total),
-                      )}
-                    </span>
-                  </div>
-                </Item>
-              ) : null}
-              desktopFooterRows={transfer.monetary ? [
-                {
-                  key: "ingredient-value",
-                  className: "border-border",
-                  cells: [
-                    {
-                      key: "label",
-                      colSpan: 4,
-                      className: "text-right text-sm text-muted-foreground",
-                      content: copy.ingredientValue,
-                    },
-                    {
-                      key: "value",
-                      className: "text-right font-mono tabular-nums",
-                      content: messages.inventory.common.currencyCompact(
-                        formatVND(transfer.monetary.subtotal),
-                      ),
-                    },
-                    { key: "actions", content: null },
-                  ],
-                },
-                {
-                  key: "shipping-fee",
-                  className: "border-border",
-                  cells: [
-                    {
-                      key: "label",
-                      colSpan: 4,
-                      className: "text-right text-sm text-muted-foreground",
-                      content: copy.shippingFee,
-                    },
-                    {
-                      key: "value",
-                      className: "text-right font-mono tabular-nums",
-                      content: messages.inventory.common.currencyCompact(
-                        formatVND(transfer.monetary.shipping),
-                      ),
-                    },
-                    { key: "actions", content: null },
-                  ],
-                },
-                {
-                  key: "total-value",
-                  className: "border-border",
-                  cells: [
-                    {
-                      key: "label",
-                      colSpan: 4,
-                      className: "text-right text-sm font-bold",
-                      content: copy.totalValue,
-                    },
-                    {
-                      key: "value",
-                      className:
-                        "text-right font-mono font-bold tabular-nums text-primary",
-                      content: messages.inventory.common.currencyCompact(
-                        formatVND(transfer.monetary.total),
-                      ),
-                    },
-                    { key: "actions", content: null },
-                  ],
-                },
-              ] : undefined}
+              mobileFooter={
+                transfer.monetary ? (
+                  <Item
+                    variant="outline"
+                    className="flex-col items-stretch gap-2 p-3 text-sm"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        {copy.totalValue}
+                      </span>
+                      <span className="font-mono font-semibold tabular-nums text-primary">
+                        {messages.inventory.common.currencyCompact(
+                          formatVND(transfer.monetary.total),
+                        )}
+                      </span>
+                    </div>
+                  </Item>
+                ) : null
+              }
+              desktopFooterRows={
+                transfer.monetary
+                  ? [
+                      {
+                        key: "ingredient-value",
+                        className: "border-border",
+                        cells: [
+                          {
+                            key: "label",
+                            colSpan: 4,
+                            className:
+                              "text-right text-sm text-muted-foreground",
+                            content: copy.ingredientValue,
+                          },
+                          {
+                            key: "value",
+                            className: "text-right font-mono tabular-nums",
+                            content: messages.inventory.common.currencyCompact(
+                              formatVND(transfer.monetary.subtotal),
+                            ),
+                          },
+                          { key: "actions", content: null },
+                        ],
+                      },
+                      {
+                        key: "shipping-fee",
+                        className: "border-border",
+                        cells: [
+                          {
+                            key: "label",
+                            colSpan: 4,
+                            className:
+                              "text-right text-sm text-muted-foreground",
+                            content: copy.shippingFee,
+                          },
+                          {
+                            key: "value",
+                            className: "text-right font-mono tabular-nums",
+                            content: messages.inventory.common.currencyCompact(
+                              formatVND(transfer.monetary.shipping),
+                            ),
+                          },
+                          { key: "actions", content: null },
+                        ],
+                      },
+                      {
+                        key: "total-value",
+                        className: "border-border",
+                        cells: [
+                          {
+                            key: "label",
+                            colSpan: 4,
+                            className: "text-right text-sm font-bold",
+                            content: copy.totalValue,
+                          },
+                          {
+                            key: "value",
+                            className:
+                              "text-right font-mono font-bold tabular-nums text-primary",
+                            content: messages.inventory.common.currencyCompact(
+                              formatVND(transfer.monetary.total),
+                            ),
+                          },
+                          { key: "actions", content: null },
+                        ],
+                      },
+                    ]
+                  : undefined
+              }
             />
           </AppSection>
 
@@ -421,16 +425,20 @@ export function TransferDetailClient({
               className="grid gap-3"
               descriptionClassName="flex items-center gap-1 font-semibold"
               items={[
-                ...(transfer.monetary ? [{
-                  term: copy.totalValue,
-                  description: (
-                    <span className="text-primary font-bold">
-                      {messages.inventory.common.currencyCompact(
-                        formatVND(transfer.monetary.total),
-                      )}
-                    </span>
-                  ),
-                }] : []),
+                ...(transfer.monetary
+                  ? [
+                      {
+                        term: copy.totalValue,
+                        description: (
+                          <span className="text-primary font-bold">
+                            {messages.inventory.common.currencyCompact(
+                              formatVND(transfer.monetary.total),
+                            )}
+                          </span>
+                        ),
+                      },
+                    ]
+                  : []),
                 {
                   term: copy.totalItems,
                   description: String(transfer.items.length).padStart(2, "0"),
@@ -662,14 +670,20 @@ function TransferLineMobileCard({
             </p>
           )}
         </div>
-        {item.monetary ? <div>
-          <p className="text-muted-foreground">{copy.wacCost}</p>
-          <p className="font-semibold">{formatVND(item.monetary.cost)}</p>
-        </div> : null}
-        {item.monetary ? <div>
-          <p className="text-muted-foreground">{FORM_VI.amount}</p>
-          <p className="font-semibold text-primary">{formatVND(item.monetary.total)}</p>
-        </div> : null}
+        {item.monetary ? (
+          <div>
+            <p className="text-muted-foreground">{copy.wacCost}</p>
+            <p className="font-semibold">{formatVND(item.monetary.cost)}</p>
+          </div>
+        ) : null}
+        {item.monetary ? (
+          <div>
+            <p className="text-muted-foreground">{FORM_VI.amount}</p>
+            <p className="font-semibold text-primary">
+              {formatVND(item.monetary.total)}
+            </p>
+          </div>
+        ) : null}
       </div>
     </Item>
   );

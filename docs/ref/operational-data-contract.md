@@ -173,20 +173,20 @@ trạng thái tồn thật. Analytics phụ trợ không được che mất côn
 
 | `contract_key`                       | Nhãn UI                 | Nghĩa chuẩn                                                        | Source/rule                                                                                  |
 | ------------------------------------ | ----------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `inventory.stock_value.current`      | Giá trị tồn kho         | Snapshot tiền đang nằm trong tồn kho vận hành.                     | `stock_levels` ở stock-bearing location: Kho chi nhánh (`warehouse`). Bếp CN retired (D078). |
-| `inventory.stock_quantity.current`   | Tồn hiện tại            | Số lượng hiện có theo đơn vị tồn chuẩn tại stock-bearing location. | `stock_levels.current_quantity` tại warehouse active của chi nhánh.                          |
+| `inventory.stock_value.current`      | Giá trị tồn kho         | Snapshot tiền đang nằm trong tồn kho vận hành.                     | `stock_levels` ở active `warehouse` duy nhất của site (D091).                                |
+| `inventory.stock_quantity.current`   | Tồn hiện tại            | Số lượng hiện có theo đơn vị tồn chuẩn tại stock-bearing location. | `stock_levels.current_quantity` tại active warehouse duy nhất của site.                      |
 | `inventory.alert.low_stock`          | Sắp hết hàng            | Nguyên liệu dưới reorder/min threshold.                            | Stock level so với điểm đặt hàng.                                                            |
 | `inventory.alert.negative_stock`     | Âm kho                  | Tồn nhỏ hơn 0, cần xử lý dữ liệu.                                  | Stock level hiện tại.                                                                        |
 | `inventory.grn.pending`              | Phiếu nhập chờ xác nhận | GRN chưa confirm/cập nhật WAC.                                     | GRN state.                                                                                   |
 | `inventory.stocktake.active`         | Kiểm kê đang chạy       | Phiên kiểm kê chưa finalize.                                       | Stocktake session state.                                                                     |
 | `inventory.consumption.review_queue` | Tiêu hao chờ duyệt      | Báo cáo tiêu hao bếp chưa được quản lý duyệt/apply.                | Consumption report workflow, không phải employee checklist tick.                             |
 
-`Kho CN -> Bếp CN` chỉ còn là lịch sử audit. Tồn vận hành và POS consumption
-đều ghi tại Kho CN; khi import hoặc diễn giải dữ liệu lịch sử từ hệ thống khác,
-chỉ phân loại thành `stock_movements.consumption/sale_consumption` nếu đó là
-nguyên liệu đã thực sự xuất dùng trong ngày để tạo doanh thu.
-`stock_transfers` chỉ còn là bằng chứng lịch sử/read-only và không sở hữu một
-KPI hay hàng đợi vận hành hiện tại.
+Transfer Kho→Bếp trong cùng chi nhánh chỉ còn là lịch sử audit. Tồn vận hành và
+POS consumption đều ghi tại warehouse của site; khi import hoặc diễn giải dữ
+liệu lịch sử từ hệ thống khác, chỉ phân loại thành
+`stock_movements.consumption/sale_consumption` nếu đó là nguyên liệu đã thực sự
+xuất dùng trong ngày để tạo doanh thu. `stock_transfers` chỉ phục vụ luân chuyển
+có chủ đích giữa warehouse của hai site; không sở hữu workflow xuất-dùng riêng.
 
 `supplier_invoice`, AP aging, và thanh toán NCC là Finance handoff. Inventory
 không được gọi các số đó là gate đóng ngày kho nếu GRN/WAC/stock ledger đã

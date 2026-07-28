@@ -894,48 +894,6 @@ export type Database = {
           },
         ]
       }
-      branch_express_window: {
-        Row: {
-          branch_id: number
-          enabled: boolean
-          end_time: string
-          start_time: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          branch_id: number
-          enabled?: boolean
-          end_time?: string
-          start_time?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          branch_id?: number
-          enabled?: boolean
-          end_time?: string
-          start_time?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_express_window_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_express_window_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
       branch_feature_flags: {
         Row: {
           branch_id: number
@@ -1145,81 +1103,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      branch_override_attempts: {
-        Row: {
-          attempted_at: string
-          branch_id: number
-          id: number
-          success: boolean
-          user_id: string
-        }
-        Insert: {
-          attempted_at?: string
-          branch_id: number
-          id?: never
-          success: boolean
-          user_id: string
-        }
-        Update: {
-          attempted_at?: string
-          branch_id?: number
-          id?: never
-          success?: boolean
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_override_attempts_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_override_attempts_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
-      branch_override_codes: {
-        Row: {
-          branch_id: number
-          code_hash: string
-          rotated_at: string
-          rotated_by: string | null
-        }
-        Insert: {
-          branch_id: number
-          code_hash: string
-          rotated_at?: string
-          rotated_by?: string | null
-        }
-        Update: {
-          branch_id?: number
-          code_hash?: string
-          rotated_at?: string
-          rotated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_override_codes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_override_codes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
           },
         ]
       }
@@ -1892,7 +1775,6 @@ export type Database = {
           branch_id: number
           created_at: string
           created_by: string
-          express_approved: boolean | null
           grn_number: string
           id: number
           location_id: number | null
@@ -1909,7 +1791,6 @@ export type Database = {
           branch_id: number
           created_at?: string
           created_by: string
-          express_approved?: boolean | null
           grn_number: string
           id?: never
           location_id?: number | null
@@ -1926,7 +1807,6 @@ export type Database = {
           branch_id?: number
           created_at?: string
           created_by?: string
-          express_approved?: boolean | null
           grn_number?: string
           id?: never
           location_id?: number | null
@@ -1998,306 +1878,45 @@ export type Database = {
           },
         ]
       }
-      grn_baseline_pause: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: number
-          ingredient_id: number
-          paused_until: string
-          reason: string
-          source_ref: Json | null
-          supplier_id: number
-          tenant_id: number
-          uom: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          ingredient_id: number
-          paused_until: string
-          reason?: string
-          source_ref?: Json | null
-          supplier_id: number
-          tenant_id: number
-          uom: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          ingredient_id?: number
-          paused_until?: string
-          reason?: string
-          source_ref?: Json | null
-          supplier_id?: number
-          tenant_id?: number
-          uom?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "grn_baseline_pause_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_baseline_pause_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_baseline_pause_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      grn_express_extend_audit: {
-        Row: {
-          branch_id: number
-          created_at: string
-          extend_minutes: number
-          extended_until: string
-          id: number
-          note: string
-          tenant_id: number
-          user_id: string
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          extend_minutes: number
-          extended_until: string
-          id?: never
-          note: string
-          tenant_id: number
-          user_id: string
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          extend_minutes?: number
-          extended_until?: string
-          id?: never
-          note?: string
-          tenant_id?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "grn_express_extend_audit_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_express_extend_audit_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "grn_express_extend_audit_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      grn_hardblock_overrides: {
-        Row: {
-          baseline_avg_30d: number | null
-          branch_id: number
-          evidence_url: string
-          grn_item_id: number
-          id: number
-          ingredient_id: number
-          note: string
-          overridden_at: string
-          overridden_by: string
-          reason_code: string
-          submitted_price: number
-          supplier_id: number
-          tenant_id: number
-          uom: string
-          variance_pct: number
-        }
-        Insert: {
-          baseline_avg_30d?: number | null
-          branch_id: number
-          evidence_url: string
-          grn_item_id: number
-          id?: never
-          ingredient_id: number
-          note: string
-          overridden_at?: string
-          overridden_by: string
-          reason_code: string
-          submitted_price: number
-          supplier_id: number
-          tenant_id: number
-          uom: string
-          variance_pct: number
-        }
-        Update: {
-          baseline_avg_30d?: number | null
-          branch_id?: number
-          evidence_url?: string
-          grn_item_id?: number
-          id?: never
-          ingredient_id?: number
-          note?: string
-          overridden_at?: string
-          overridden_by?: string
-          reason_code?: string
-          submitted_price?: number
-          supplier_id?: number
-          tenant_id?: number
-          uom?: string
-          variance_pct?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "grn_hardblock_overrides_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_grn_item_id_fkey"
-            columns: ["grn_item_id"]
-            isOneToOne: false
-            referencedRelation: "grn_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       grn_items: {
         Row: {
-          baseline_sample_n: number | null
-          baseline_source: string | null
-          baseline_variance_pct: number | null
-          batch_number: string | null
           entry_unit_id: number | null
-          expiry_date: string | null
           grn_id: number
           id: number
           ingredient_id: number
-          is_hard_blocked: boolean
-          po_quantity: number | null
-          po_unit_price: number | null
-          price_override_note: string | null
-          price_override_photo_url: string | null
-          price_variance_pct: number | null
-          quality_status: string
           received_quantity: number
-          receiving_temperature: number | null
           rejected_photo_url: string | null
           rejected_quantity: number
           rejection_reason: string | null
-          requires_review: boolean
-          short_delivery_action: string | null
           tenant_id: number
           total_cost: number
           unit_cost: number
-          variance_tier: number | null
         }
         Insert: {
-          baseline_sample_n?: number | null
-          baseline_source?: string | null
-          baseline_variance_pct?: number | null
-          batch_number?: string | null
           entry_unit_id?: number | null
-          expiry_date?: string | null
           grn_id: number
           id?: never
           ingredient_id: number
-          is_hard_blocked?: boolean
-          po_quantity?: number | null
-          po_unit_price?: number | null
-          price_override_note?: string | null
-          price_override_photo_url?: string | null
-          price_variance_pct?: number | null
-          quality_status?: string
           received_quantity: number
-          receiving_temperature?: number | null
           rejected_photo_url?: string | null
           rejected_quantity?: number
           rejection_reason?: string | null
-          requires_review?: boolean
-          short_delivery_action?: string | null
           tenant_id: number
-          total_cost: number
-          unit_cost: number
-          variance_tier?: number | null
+          total_cost?: number
+          unit_cost?: number
         }
         Update: {
-          baseline_sample_n?: number | null
-          baseline_source?: string | null
-          baseline_variance_pct?: number | null
-          batch_number?: string | null
           entry_unit_id?: number | null
-          expiry_date?: string | null
           grn_id?: number
           id?: never
           ingredient_id?: number
-          is_hard_blocked?: boolean
-          po_quantity?: number | null
-          po_unit_price?: number | null
-          price_override_note?: string | null
-          price_override_photo_url?: string | null
-          price_variance_pct?: number | null
-          quality_status?: string
           received_quantity?: number
-          receiving_temperature?: number | null
           rejected_photo_url?: string | null
           rejected_quantity?: number
           rejection_reason?: string | null
-          requires_review?: boolean
-          short_delivery_action?: string | null
           tenant_id?: number
           total_cost?: number
           unit_cost?: number
-          variance_tier?: number | null
         }
         Relationships: [
           {
@@ -2430,38 +2049,6 @@ export type Database = {
           },
         ]
       }
-      ingredient_category_review_policy: {
-        Row: {
-          category: string
-          requires_manual_review: boolean
-          tenant_id: number
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          category: string
-          requires_manual_review?: boolean
-          tenant_id: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          category?: string
-          requires_manual_review?: boolean
-          tenant_id?: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ingredient_category_review_policy_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ingredient_units: {
         Row: {
           anchor_factor: number | null
@@ -2562,7 +2149,6 @@ export type Database = {
           min_stock_level: number
           name: string
           reorder_point: number | null
-          review_override: boolean | null
           shelf_life_days: number | null
           sku: string | null
           storage_type: string
@@ -2581,7 +2167,6 @@ export type Database = {
           min_stock_level?: number
           name: string
           reorder_point?: number | null
-          review_override?: boolean | null
           shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
@@ -2600,7 +2185,6 @@ export type Database = {
           min_stock_level?: number
           name?: string
           reorder_point?: number | null
-          review_override?: boolean | null
           shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
@@ -2954,61 +2538,24 @@ export type Database = {
             referencedColumns: ["branch_id"]
           },
           {
+            foreignKeyName: "inventory_locations_branch_tenant_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_locations_branch_tenant_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id", "tenant_id"]
+          },
+          {
             foreignKeyName: "inventory_locations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_qc_settings: {
-        Row: {
-          alert_channel: string | null
-          alert_webhook_url: string | null
-          price_variance_review_pct: number
-          price_variance_warn_pct: number
-          qty_short_tolerance_pct: number
-          reject_requires_photo: boolean
-          tenant_id: number
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          alert_channel?: string | null
-          alert_webhook_url?: string | null
-          price_variance_review_pct?: number
-          price_variance_warn_pct?: number
-          qty_short_tolerance_pct?: number
-          reject_requires_photo?: boolean
-          tenant_id: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          alert_channel?: string | null
-          alert_webhook_url?: string | null
-          price_variance_review_pct?: number
-          price_variance_warn_pct?: number
-          qty_short_tolerance_pct?: number
-          reject_requires_photo?: boolean
-          tenant_id?: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_qc_settings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_qc_settings_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -5600,139 +5147,6 @@ export type Database = {
           },
         ]
       }
-      production_order_items: {
-        Row: {
-          actual_quantity: number | null
-          created_at: string
-          entry_unit_id: number | null
-          finished_good_id: number
-          id: number
-          production_order_id: number
-          quantity: number
-          tenant_id: number
-          unit_cost_at_production: number | null
-        }
-        Insert: {
-          actual_quantity?: number | null
-          created_at?: string
-          entry_unit_id?: number | null
-          finished_good_id: number
-          id?: never
-          production_order_id: number
-          quantity: number
-          tenant_id: number
-          unit_cost_at_production?: number | null
-        }
-        Update: {
-          actual_quantity?: number | null
-          created_at?: string
-          entry_unit_id?: number | null
-          finished_good_id?: number
-          id?: never
-          production_order_id?: number
-          quantity?: number
-          tenant_id?: number
-          unit_cost_at_production?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "production_order_items_entry_unit_id_fkey"
-            columns: ["entry_unit_id"]
-            isOneToOne: false
-            referencedRelation: "units"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_order_items_finished_good_id_fkey"
-            columns: ["finished_good_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_order_items_production_order_id_fkey"
-            columns: ["production_order_id"]
-            isOneToOne: false
-            referencedRelation: "production_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_order_items_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      production_orders: {
-        Row: {
-          branch_id: number
-          completed_at: string | null
-          created_at: string
-          created_by: string | null
-          id: number
-          notes: string | null
-          production_number: string
-          status: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          branch_id: number
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          notes?: string | null
-          production_number: string
-          status?: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          branch_id?: number
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          notes?: string | null
-          production_number?: string
-          status?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "production_orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "production_orders_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       production_recipes: {
         Row: {
           created_at: string
@@ -7333,7 +6747,6 @@ export type Database = {
           location_id: number
           movement_subtype: string | null
           order_id: number | null
-          production_order_id: number | null
           production_run_id: number | null
           quantity_change: number
           reason: string | null
@@ -7355,7 +6768,6 @@ export type Database = {
           location_id: number
           movement_subtype?: string | null
           order_id?: number | null
-          production_order_id?: number | null
           production_run_id?: number | null
           quantity_change: number
           reason?: string | null
@@ -7377,7 +6789,6 @@ export type Database = {
           location_id?: number
           movement_subtype?: string | null
           order_id?: number | null
-          production_order_id?: number | null
           production_run_id?: number | null
           quantity_change?: number
           reason?: string | null
@@ -7448,13 +6859,6 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_production_order_id_fkey"
-            columns: ["production_order_id"]
-            isOneToOne: false
-            referencedRelation: "production_orders"
             referencedColumns: ["id"]
           },
           {
@@ -9543,61 +8947,6 @@ export type Database = {
           },
         ]
       }
-      user_trust_score: {
-        Row: {
-          branch_id: number
-          grn_count_30d: number
-          last_incident_at: string | null
-          score: number
-          tenant_id: number
-          updated_at: string
-          user_id: string
-          variance_incidents_30d: number
-        }
-        Insert: {
-          branch_id: number
-          grn_count_30d?: number
-          last_incident_at?: string | null
-          score?: number
-          tenant_id: number
-          updated_at?: string
-          user_id: string
-          variance_incidents_30d?: number
-        }
-        Update: {
-          branch_id?: number
-          grn_count_30d?: number
-          last_incident_at?: string | null
-          score?: number
-          tenant_id?: number
-          updated_at?: string
-          user_id?: string
-          variance_incidents_30d?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_trust_score_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_trust_score_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "user_trust_score_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       webhook_events: {
         Row: {
           created_at: string
@@ -9934,20 +9283,6 @@ export type Database = {
       }
     }
     Functions: {
-      _compute_grn_price_baseline: {
-        Args: {
-          p_ingredient_id: number
-          p_supplier_id: number
-          p_tenant_id: number
-          p_uom?: string
-        }
-        Returns: {
-          avg_30d: number
-          baseline_source: string
-          last_seen_at: string
-          sample_n: number
-        }[]
-      }
       _compute_vat_breakdown: {
         Args: { p_order_ids: number[] }
         Returns: {
@@ -9970,7 +9305,7 @@ export type Database = {
         Returns: Json
       }
       activate_invoice_profile: { Args: never; Returns: number }
-      add_menu_item_kitchen_stock_exception: {
+      add_menu_item_stock_exception: {
         Args: {
           p_branch_id: number
           p_extra_portions: number
@@ -9998,8 +9333,9 @@ export type Database = {
           p_line_id: number
           p_reason: string
           p_received_quantity: number
-          p_rejected_quantity?: number
-          p_unit_cost: number
+          p_rejected_photo_url: string
+          p_rejected_quantity: number
+          p_rejection_reason: string
         }
         Returns: Json
       }
@@ -10165,7 +9501,6 @@ export type Database = {
         Args: { p_branch_id: number; p_payment_id: number; p_tenant_id: number }
         Returns: undefined
       }
-      cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
       cancel_production_run: { Args: { p_run_id: number }; Returns: Json }
       check_cron_jobs_health: { Args: never; Returns: undefined }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
@@ -10237,17 +9572,6 @@ export type Database = {
         Args: { p_round_no: number; p_session_id: number }
         Returns: Json
       }
-      commit_intra_branch_transfer: {
-        Args: {
-          p_branch_id: number
-          p_from_location_id: number
-          p_lines?: Json
-          p_notes?: string
-          p_to_location_id: number
-          p_transfer_number: string
-        }
-        Returns: Json
-      }
       complete_kds_tickets: {
         Args: { p_branch_id: number; p_ticket_ids: number[] }
         Returns: Json
@@ -10285,19 +9609,6 @@ export type Database = {
         }
         Returns: number
       }
-      compute_user_trust_score: {
-        Args: { p_branch_id: number; p_user_id: string }
-        Returns: number
-      }
-      configure_express_window: {
-        Args: {
-          p_branch_id: number
-          p_enabled: boolean
-          p_end_time?: string
-          p_start_time?: string
-        }
-        Returns: undefined
-      }
       confirm_cash_payment: {
         Args: { p_cash_received: number; p_order_id: number }
         Returns: Json
@@ -10325,7 +9636,6 @@ export type Database = {
         }
         Returns: Json
       }
-      confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
       confirm_production_run: {
         Args: {
           p_actual_ingredients?: Json
@@ -10395,7 +9705,6 @@ export type Database = {
         Returns: Json
       }
       create_grn_from_approved_po: { Args: { p_po_id: number }; Returns: Json }
-      create_grn_from_po: { Args: { p_po_id: number }; Returns: Json }
       create_order: {
         Args: {
           p_branch_id: number
@@ -10422,15 +9731,6 @@ export type Database = {
           p_pos_session_id?: number
           p_table_id?: number
           p_tenant_id: number
-        }
-        Returns: Json
-      }
-      create_production_order: {
-        Args: {
-          p_branch_id: number
-          p_items?: Json
-          p_notes?: string
-          p_production_number: string
         }
         Returns: Json
       }
@@ -10462,15 +9762,6 @@ export type Database = {
       }
       create_purchase_order_from_grn: {
         Args: { p_grn_id: number }
-        Returns: Json
-      }
-      create_purchase_order_with_lines: {
-        Args: {
-          p_branch_id: number
-          p_lines: Json
-          p_notes: string
-          p_supplier_id: number
-        }
         Returns: Json
       }
       create_refund: {
@@ -10536,15 +9827,6 @@ export type Database = {
           p_reference_note?: string
           p_supplier_invoice_id: number
           p_tenant_id: number
-        }
-        Returns: Json
-      }
-      create_supplier_return_from_grn: {
-        Args: {
-          p_grn_id: number
-          p_notes?: string
-          p_reason?: string
-          p_resolution?: string
         }
         Returns: Json
       }
@@ -10703,10 +9985,6 @@ export type Database = {
       expire_stuck_print_jobs: {
         Args: { p_stale_after_seconds?: number }
         Returns: number
-      }
-      extend_express_window: {
-        Args: { p_branch_id: number; p_minutes: number; p_note: string }
-        Returns: string
       }
       feedback_take_rate_bucket: {
         Args: {
@@ -10878,15 +10156,6 @@ export type Database = {
           quantity_sold: number
           revenue: number
           tenant_id: number
-        }[]
-      }
-      get_grn_price_baseline: {
-        Args: { p_ingredient_id: number; p_supplier_id: number; p_uom?: string }
-        Returns: {
-          avg_30d: number
-          baseline_source: string
-          last_seen_at: string
-          sample_n: number
         }[]
       }
       get_ingredient_abc_class: {
@@ -11275,7 +10544,6 @@ export type Database = {
         }
         Returns: number
       }
-      grn_is_auto_approvable: { Args: { p_grn_id: number }; Returns: Json }
       has_permission: {
         Args: { p_branch_id: number; p_key: string }
         Returns: boolean
@@ -11336,10 +10604,6 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: string
-      }
-      inventory_requires_manual_review: {
-        Args: { p_ingredient_id: number }
-        Returns: boolean
       }
       inventory_shift_key: {
         Args: { p_at?: string; p_branch_id: number }
@@ -11462,15 +10726,6 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: boolean
-      }
-      override_grn_hardblock: {
-        Args: {
-          p_evidence_url: string
-          p_grn_item_id: number
-          p_note: string
-          p_reason_code: string
-        }
-        Returns: number
       }
       period_status_at: {
         Args: { p_at: string; p_tenant_id: number }
@@ -11710,15 +10965,6 @@ export type Database = {
         }
         Returns: Json
       }
-      recreate_grn_at_receiving_site: {
-        Args: {
-          p_grn_id: number
-          p_reason: string
-          p_target_branch_id: number
-          p_target_location_id: number
-        }
-        Returns: Json
-      }
       reduce_order_item_quantity: {
         Args: {
           p_new_quantity: number
@@ -11883,10 +11129,6 @@ export type Database = {
           p_target_user: string
         }
         Returns: number
-      }
-      rotate_branch_override_code: {
-        Args: { p_branch_id: number; p_new_code: string }
-        Returns: undefined
       }
       rotate_table_self_order_qr: {
         Args: { p_table_id: number }
@@ -12247,7 +11489,6 @@ export type Database = {
         }
         Returns: Json
       }
-      try_auto_approve_grn: { Args: { p_grn_id: number }; Returns: Json }
       update_ingredient_thresholds_bulk: {
         Args: { p_payload: Json }
         Returns: Json
@@ -12391,7 +11632,6 @@ export type Database = {
         Args: { p_order_item_id: number; p_reason: string }
         Returns: Json
       }
-      weekly_grn_override_report: { Args: never; Returns: number }
       weekly_waste_report: { Args: never; Returns: number }
     }
     Enums: {

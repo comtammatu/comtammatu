@@ -33,7 +33,7 @@ test("GRN detail route accepts numeric IDs and GRN document numbers", () => {
   assert.match(actionsSource, /\.eq\("grn_number", lookup\.value\)/);
   assert.match(
     dataSource,
-    /fetchEntityAuditLogs\(\s*"goods_received_note",\s*data\.grn\.id,\s*50,\s*\)/,
+    /fetchEntityAuditLogs\(\s*"goods_received_note",\s*data\.grn\.id,\s*50,?\s*\)/,
   );
   assert.match(modelSource, /function isGrnLookupParam\(value: string\)/);
   assert.match(actionsSource, /\^GRN-\[A-Za-z0-9_-\]\{1,60\}\$/);

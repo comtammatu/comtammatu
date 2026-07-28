@@ -75,7 +75,7 @@ export const confirmCashPaymentRpcMappings: readonly RpcErrorMapping[] = [
     ),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage:
-      "Chi nhánh chưa cấu hình Bếp chi nhánh cho POS. Thiết lập vị trí bếp trước khi thanh toán.",
+      "Chi nhánh chưa cấu hình Kho chi nhánh cho POS. Thiết lập kho trước khi thanh toán.",
   },
   {
     match: includesAny(
@@ -171,7 +171,7 @@ export const createPaymentRpcMappings: readonly RpcErrorMapping[] = [
     ),
     errorCode: POS_ERROR_CODES.RPC_GENERIC,
     userMessage:
-      "Chi nhánh chưa cấu hình Bếp chi nhánh cho POS. Thiết lập vị trí bếp trước khi thanh toán.",
+      "Chi nhánh chưa cấu hình Kho chi nhánh cho POS. Thiết lập kho trước khi thanh toán.",
   },
   {
     match: includesAny("tenant_mismatch"),

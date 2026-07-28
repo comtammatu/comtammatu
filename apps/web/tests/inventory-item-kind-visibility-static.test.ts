@@ -59,6 +59,7 @@ test("ingredient form exposes only input and output unit roles", () => {
 
 test("inventory stock responsive cards label item kind separately from category", () => {
   assert.match(stockClientSource, /ITEM_KIND_LABELS/);
+  assert.match(stockClientSource, /StockCategoryKindCell/);
   assert.match(
     stockClientSource,
     /ITEM_KIND_LABELS\[item\.itemKind\] \?\? UNKNOWN_LABEL_VI/,

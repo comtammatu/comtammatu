@@ -21,13 +21,13 @@ test("Wave E GRN DETAIL uses AppPageTabs document/history", () => {
   );
 
   assert.match(client, /AppPageTabs/, "grn detail: AppPageTabs");
+  assert.match(client, /value:\s*"document"/, "grn detail: document tab");
+  assert.match(client, /value:\s*"history"/, "grn detail: history tab");
   assert.match(
     client,
-    /value:\s*"document"/,
-    "grn detail: document tab",
+    /TabsContent value="history"/,
+    "grn detail: history pane",
   );
-  assert.match(client, /value:\s*"history"/, "grn detail: history tab");
-  assert.match(client, /TabsContent value="history"/, "grn detail: history pane");
   assert.match(client, /AuditHistoryList/, "grn detail: audit list in history");
   assert.doesNotMatch(
     client,
@@ -36,19 +36,19 @@ test("Wave E GRN DETAIL uses AppPageTabs document/history", () => {
   );
 });
 
-test("Wave E GRN DETAIL confirmed lines use DataTable + sticky footer", () => {
+test("Wave E GRN DETAIL confirmed lines use DataTable + physical-QC footer", () => {
   const client = read(
     "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
   const surface = read("app/components/surface.tsx");
 
   assert.match(client, /DataTable/, "grn detail: DataTable");
-  assert.match(
+  assert.match(client, /footerLineSummary/, "grn detail: line-count footer");
+  assert.doesNotMatch(
     client,
-    /desktopFooterRows/,
-    "grn detail: desktopFooterRows totals",
+    /desktopFooterRows|mobileFooter|unitCost|line\.monetary/,
+    "grn detail: no GRN monetary footer",
   );
-  assert.match(client, /mobileFooter/, "grn detail: mobileFooter totals");
   assert.match(
     client,
     /<AppDetailFooter[\s\S]*sticky/,
@@ -71,7 +71,10 @@ test("Wave E GRN DETAIL confirmed lines use DataTable + sticky footer", () => {
   );
   const linesIdx = client.indexOf("inspectionItemsTitle");
   const stripIdx = client.indexOf("contextStrip");
-  assert.ok(stripIdx >= 0 && linesIdx > stripIdx, "context strip precedes lines section");
+  assert.ok(
+    stripIdx >= 0 && linesIdx > stripIdx,
+    "context strip precedes lines section",
+  );
   assert.match(
     surface,
     /footer\?: ReactNode/,
@@ -142,7 +145,7 @@ test("Wave E GRN DETAIL draft aligns with create DOC density", () => {
   assert.match(
     client,
     /footerLineSummary/,
-    "draft footer leading is SSOT for count only (D089)",
+    "draft footer leading is SSOT for count only (D091)",
   );
   assert.doesNotMatch(
     client,
@@ -154,10 +157,10 @@ test("Wave E GRN DETAIL draft aligns with create DOC density", () => {
     /priceRequired/,
     "draft DETAIL cost column must not warn Nhập giá when cost is 0",
   );
-  assert.match(
+  assert.doesNotMatch(
     client,
-    /line\.monetary && line\.monetary\.unitCost > 0[\s\S]*inventoryCommon\.noValue/,
-    "draft DETAIL shows — until unit_cost synced",
+    /line\.monetary|unitCost/,
+    "draft DETAIL does not expose the PO price snapshot",
   );
   assert.doesNotMatch(
     client,
@@ -209,11 +212,7 @@ test("Wave E GRN DETAIL draft aligns with create DOC density", () => {
     /chrome="plain"/,
     "draft line editor uses plain chrome in sheet/desk",
   );
-  assert.match(
-    client,
-    /!isDraft \?[\s\S]*stats\.total[\s\S]*: null/,
-    "draft strip does not restate footer running total",
-  );
+  assert.doesNotMatch(client, /stats\.total/, "GRN detail has no money total");
   assert.doesNotMatch(
     client,
     /lines\.map\(\(line, idx\) =>[\s\S]*<LineRow/,

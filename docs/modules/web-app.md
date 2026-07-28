@@ -32,7 +32,7 @@ owner; Branch Manager dùng L1 Branch Command dưới
 | ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | Root entry        | `/`                                                                                                          | Single-branch resolver                                 | `getDefaultRedirect(claims)`: branch-pinned staff → `/br/{branchId}`; Owner → `/`, rồi tự mở khi có đúng một active `branch` kind. Central kinds không phải operator scope. | Nhiều operating branch mới hiện picker; route scope sai fail closed.                         |
 | Public / auth     | `/login`, `/access-denied`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login` hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                                                                                              | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.     |
-| control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `OwnerModuleShell`, `FinanceShell`, và `InventoryShell` cùng dùng nav L0. `/` là LANDING; Settings và module con dùng deep-nav tương ứng. Actor theo D088/role-route-matrix. | Breadcrumb root là `Quản trị` (`control_surface`); filter/tab state giữ trong URL, không lưu local state. |
+| control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `OwnerModuleShell`, `FinanceShell`, và `InventoryShell` cùng dùng nav L0. `/` là LANDING; Settings và module con dùng deep-nav tương ứng. Actor theo `role-route-matrix`. | Breadcrumb root là `Quản trị` (`control_surface`); filter/tab state giữ trong URL, không lưu local state. |
 | Utility           | `/notifications/*`                                                                                           | Link kèm `returnTo`                                    | Không là product plane; dùng trang độc lập và quay lại context gọi.                                                                                                         | Không có sidebar riêng.                                                                      |
 | Branch operations | `/br/[branchId]/*`, gồm landing, dashboard, shift, profile, stock, pos, kds, runner, settings                    | `/br/[branchId]`                                       | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Owner. Staff discovery vẫn có thể link sang Runner display public.         | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.       |
 | Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                         | `/br/[branchId]/shift`                                 | Dùng Branch runtime bottom nav và shared Employee components; URL luôn mang `branchId`.                                                                                      | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.      |
@@ -97,11 +97,12 @@ Các nguyên tắc đang được code phản ánh:
 - Sidebar không quảng bá `Kiểm kê đối chiếu`, `Đếm tồn`, `Báo cáo` hoặc
   `Hóa đơn NCC`; route non-nav vẫn ACL/deep-link. Hóa đơn NCC canonical tại
   Finance; `/inventory/supplier-invoices` chỉ `REDIRECT-SHIM`.
-- Supplier returns ngoài daily UI. Owner PO LIST theo ADR 0018 **C1** restore.
+- Supplier returns ngoài daily UI. Owner PO LIST theo ADR 0018 **C1** restore
+  để xử lý PO tạo từ GRN; không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO.
 - Owner Production/GRN/stock theo site đang chọn trên filter (mọi kind);
   `branch_manager` vẫn Branch Stock + permission/scope riêng.
-- `Tiêu hao` gom tiêu hao vận hành, hao hụt và xuất khác; không tái mở
-  same-branch Kho↔Bếp transfer.
+- `Tiêu hao` gom tiêu hao vận hành, hao hụt và xuất khác. Transfer có chủ đích
+  chỉ đi giữa warehouse hợp lệ; không có same-branch Kho↔Bếp.
 - `Ingredients / Suppliers / Định mức món bán` một cửa trong `Danh mục`.
 - Prune: xóa helper chết (`receiving`/`expiry`); chuyển AP actions về Finance;
   rút shim tạm sau khi CTA đã canonical.
@@ -111,8 +112,8 @@ Các nguyên tắc đang được code phản ánh:
 Các detail pages của Inventory không còn chỉ là read-only shells:
 
 - `purchase-orders`: Inventory sidebar LIST **Đơn mua hàng** (ADR 0018 **C1**
-  Owner restore). Route/RPC remain; no new DETAIL; Wave 4 row-open ratchet stays
-  out of the PO client.
+  Owner restore) cho PO tạo từ GRN. Mỗi hàng mở read-only detail; action chỉ sửa
+  giá và duyệt theo quyền, không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO.
 - `supplier-invoices`: Finance home at `/finance/supplier-invoices` with client
   under `finance/supplier-invoices/` (ADR 0018 Wave 2).
   `/inventory/supplier-invoices` is a `REDIRECT-SHIM` only.

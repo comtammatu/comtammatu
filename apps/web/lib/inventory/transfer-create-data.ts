@@ -75,18 +75,14 @@ export async function loadTransferCreatePageData({
         .eq("tenant_id", claims.tenant_id)
         .eq("is_active", true)
         .in("branch_id", sourceBranchIds)
-        .in("location_kind", ["warehouse", "kitchen", "production_storage"])
+        .eq("location_kind", "warehouse")
         .order("is_default_issue", { ascending: false })
         .order("sort_order", { ascending: true })
         .order("id", { ascending: true });
     if (sourceLocationsError) loadFailed = true;
 
     for (const location of sourceLocations ?? []) {
-      if (
-        location.location_kind !== "warehouse" &&
-        location.location_kind !== "kitchen" &&
-        location.location_kind !== "production_storage"
-      ) {
+      if (location.location_kind !== "warehouse") {
         continue;
       }
       const branchLocations = sourceLocationsByBranch[location.branch_id] ?? [];

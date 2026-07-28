@@ -788,16 +788,18 @@ allowlist.
 - Keep procurement and inventory terms aligned with `docs/ref/glossary.md`.
 - Dense tables are expected, but row actions and destructive actions must stay visually separated.
 - Route IA must stay anchored to three operator flows:
-  1. Nhập hàng: Branch supplier-first GRN, receiving/QC, Owner **Đơn mua hàng**
-     sidebar LIST, Finance/AP handoff at `/finance/supplier-invoices` (ADR 0018).
+  1. Nhập hàng: GRN draft, physical rejection QC, Owner/Kế toán tạo + duyệt
+     **Đơn mua hàng** từ GRN, rồi Kho confirm; Finance/AP handoff tại
+     `/finance/supplier-invoices` (ADR 0018).
   2. Kiểm soát tồn: one-warehouse stock on hand, stocktake, count
      assignment/slip review, waste/adjustment and reporting.
   3. Sản xuất/tiêu hao: current branch production run, sale-consumption and
      write-off workflows.
-- Branch receiving remains supplier-first. Do not introduce supplier return,
-  lot/expiry, production order DETAIL, or same-branch warehouse-to-kitchen
-  transfer into daily UI. Inventory sidebar stays the short daily set (stock,
-  GRN, PO, consumption, transfers, production, catalog).
+- Branch receiving remains supplier-first. Do not introduce direct PO creation,
+  PO-first receiving, supplier return, price-QC, lot/expiry, production order
+  DETAIL, or same-branch warehouse-to-kitchen transfer into daily UI. Inventory
+  sidebar stays the short daily set (stock, GRN, PO, consumption, transfers,
+  production, catalog).
 - Sidebar group labels must be compact enough for the fixed sidebar. Use detail page headings and breadcrumbs for full workflow wording.
 - Complex Inventory forms use RHF + Zod + app form helpers when they have line arrays, more than four fields, inline pre-submit validation, or pending submit UX. Plain `<form action>` is only for auth, sign out, or single-reason confirmations.
 - Use Sonner for success/action-level feedback, inline field errors for validation, and `/access-denied?reason=` only for permission, auth, or scope failures.
@@ -854,7 +856,7 @@ contract change; route-local chrome outside this list is drift.
    (`apps/web/app/components/app-shell.tsx`) with a multi-group
    sidebar and one top header for L0 routes. Covers `/`, `/inventory`, `/orders`, `/hr`,
    `/finance`, `/menu`, `/branches`, `/settings`, and `/feedback`. One shell, one sidebar, one header.
-   Access follows `role-route-matrix` / D088 (not Owner-role-exclusive).
+   Access follows `role-route-matrix` (not Owner-role-exclusive).
    The single control_surface sidebar renders primary module tabs
    first and nests the active module's deep nav as sub-tabs under that active
    primary tab. control_surface bottom nav shows on phone and tablet portrait (`<lg`); only
@@ -871,8 +873,11 @@ contract change; route-local chrome outside this list is drift.
    content (do not sticky/freeze it outside the scrollport — that reserves empty
    body chrome and crushes dashboard aesthetics). control_surface LIST filters stick at
    the top of the shell scrollport via `AppListFrame`/`InventoryListFrame`
-   toolbar (automatic), `AppToolbar sticky`, or `AppPageStickyChrome` /
-   `APP_PAGE_STICKY_FILTER_CLASSNAME`. Do not sticky a page-level filter that
+   toolbar (automatic stuck-state shell bleed), `AppToolbar sticky`, or
+   `AppPageStickyChrome` / `AppStickyFilterChrome` /
+   `APP_PAGE_STICKY_FILTER_CLASSNAME`. While stuck, the filter cancels Owner shell
+   horizontal pad so it flushes to the inset panel edges; scrolling back to the
+   top restores the LIST card inset. Do not sticky a page-level filter that
    sits above KPI/dashboard cards (e.g. Finance `FilterBar`) — stuck chrome
    will crush the next section while scrolling.
 2. Branch runtime chrome — the branch-scoped operator layout

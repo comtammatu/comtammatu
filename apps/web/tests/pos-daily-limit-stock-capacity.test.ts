@@ -59,14 +59,6 @@ const warehouseStockGateMigration = readFileSync(
   "utf8",
 );
 
-const singleWarehouseMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260710220000_single_warehouse_retire_branch_kitchen.sql",
-  ),
-  "utf8",
-);
-
 test("remaining is unbounded when available_to_sell is null", () => {
   assert.equal(remainingDailyQuotaAfterDemand(limit({}), 3), null);
 });
@@ -204,10 +196,7 @@ test("stock-outcome availability SQL separates stock outcome and fallback counte
 });
 
 test("stock availability reserves shared recipe ingredients across menu items", () => {
-  assert.match(
-    ingredientPoolAvailabilityMigration,
-    /pending_ingredient AS \(/,
-  );
+  assert.match(ingredientPoolAvailabilityMigration, /pending_ingredient AS \(/);
   assert.match(ingredientPoolAvailabilityMigration, /holds_ingredient AS \(/);
   assert.match(
     ingredientPoolAvailabilityMigration,
@@ -257,12 +246,5 @@ test("menu-limit operations keep scan facts compact and show availability inputs
   assert.doesNotMatch(menuLimitsTable, /getSoldProgress/);
   assert.doesNotMatch(menuLimitsActions, /default to stock capacity/);
   assert.doesNotMatch(menuLimitsActions, /Tồn Bếp chi nhánh/);
-  assert.match(
-    singleWarehouseMigration,
-    /'public\.enforce_branch_stock_availability\(\)'/,
-  );
-  assert.match(
-    warehouseStockGateMigration,
-    /pos_stock_outcome_posting/,
-  );
+  assert.match(warehouseStockGateMigration, /pos_stock_outcome_posting/);
 });

@@ -54,7 +54,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   inventory: {
     path: "/inventory",
-    // D088: accountant is limited to the GRN/PO route slice.
+    // D076 adapters remain temporary until ADR 0015; D091 owns Inventory jobs.
     allowedRoles: [
       "owner",
       "accountant",
@@ -95,7 +95,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   finance: {
     path: "/finance",
-    // D088 temporary until ADR 0015: authenticated accountant.
+    // D076 temporary adapter until ADR 0015.
     allowedRoles: ["owner", "accountant"],
     label: getModuleLabelVi("finance"),
   },

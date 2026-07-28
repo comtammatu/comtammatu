@@ -71,9 +71,6 @@ interface ProductionNewClientProps {
 }
 
 function locationKindLabel(location: InventoryLocationOption) {
-  if (location.branchKind === "branch" && location.kind === "kitchen") {
-    return tTerm("branchKitchen", "button");
-  }
   if (location.branchKind === "branch" && location.kind === "warehouse") {
     return tTerm("branchWarehouse", "button");
   }

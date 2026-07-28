@@ -10,7 +10,7 @@ function readWorkspaceFile(path: string): string {
 test("inventory messages use the standardized cost and value terms", () => {
   const source = readWorkspaceFile("lib/messages/inventory.ts");
 
-  assert.match(source, /lineHeaderCost: "Đơn giá nhập"/);
+  assert.doesNotMatch(source, /lineHeaderCost/);
   assert.match(source, /stockValue: "Giá trị tồn kho"/);
   assert.match(source, /wac: "Giá vốn BQ"/);
   assert.match(source, /movementUnitCost: "Đơn giá ghi sổ"/);
@@ -45,15 +45,13 @@ test("ingredient unit dialog names only input and output roles", () => {
   assert.doesNotMatch(messages, /1 đơn vị nhập = bao nhiêu đơn vị xuất/);
 });
 
-test("GRN entry labels purchase price and conversion without calling it cost basis", () => {
+test("GRN entry copy keeps unit conversion and omits purchase-price helpers", () => {
   const source = readWorkspaceFile("lib/inventory/grn-create-copy.ts");
 
-  assert.match(source, /unitCostTitle: "Đơn giá nhập"/);
-  assert.match(source, /priorPriceLine:/);
-  assert.match(source, /Lần trước \$\{formatVND\(value\)\}\/\$\{unit\}/);
-  assert.doesNotMatch(source, /priceSetOnPoHint:|\(PO\)/);
-  assert.match(source, /unitPriceUnit: \(unit: string, unitCost: number\) =>/);
-  assert.match(source, /Đơn giá \$\{formatVND\(unitCost\)\} \/ \$\{unit\}/);
+  assert.doesNotMatch(
+    source,
+    /unitCostTitle|priorPriceLine|unitPriceUnit|priceSetOnPoHint/,
+  );
   assert.match(source, /baseConversionPreview/);
   assert.match(source, /Quy đổi về tồn chuẩn/);
   assert.doesNotMatch(source, /label=\{FORM_VI\.unitPrice\}/);
@@ -92,14 +90,5 @@ test("operator-facing inventory copy does not reintroduce branch abbreviations",
     dictionary,
     /branchWarehouse: \{ short: "Kho", long: "Kho chi nhánh" \}/,
   );
-  assert.match(
-    dictionary,
-    /branchKitchen: \{ short: "Bếp", long: "Bếp chi nhánh" \}/,
-  );
-
-  const migration = readWorkspaceFile(
-    "../../supabase/migration-archive/20260710101500_normalize_inventory_location_display_names.sql",
-  );
-  assert.match(migration, /SET name = 'Kho chi nhánh'/);
-  assert.match(migration, /SET name = 'Bếp chi nhánh'/);
+  assert.doesNotMatch(dictionary, /branchKitchen|Bếp chi nhánh/);
 });

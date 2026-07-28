@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, TransitionStartFunction } from "react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
@@ -8,13 +8,16 @@ import { Item } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
-  TriangleAlert as IconAlertTriangle,
   Save as IconDeviceFloppy,
+  TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { AppDialog, FormattedNumberInput } from "@/components/form";
+import {
+  AppDialog,
+  FormattedNumberInput,
+  PhotoUploadInput,
+} from "@/components/form";
 import { amendGrnLine } from "../../../grn-actions";
-import { formatVND } from "@lib/inventory/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   GRN_DETAIL_COPY as grnCopy,
@@ -24,6 +27,7 @@ import {
 const AMEND_OWNER_FORM_ID = "amend-owner-form";
 
 export function AmendOwnerDialog({
+  tenantId,
   grnId,
   line,
   isPending,
@@ -31,6 +35,7 @@ export function AmendOwnerDialog({
   onSaved,
   startTransition,
 }: {
+  tenantId: number;
   grnId: number;
   line: EditableLine | null;
   isPending: boolean;
@@ -39,83 +44,87 @@ export function AmendOwnerDialog({
   startTransition: TransitionStartFunction;
 }) {
   const [quantity, setQuantity] = useState("");
-  const [unitCost, setUnitCost] = useState("");
-  const [reason, setReason] = useState("");
+  const [rejectedQuantity, setRejectedQuantity] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectedPhotoUrl, setRejectedPhotoUrl] = useState("");
+  const [amendmentReason, setAmendmentReason] = useState("");
 
-  const isOpen = line !== null;
-
-  function resetForm() {
-    setQuantity("");
-    setUnitCost("");
-    setReason("");
-  }
+  useEffect(() => {
+    setQuantity(line ? String(line.actual) : "");
+    setRejectedQuantity(line ? String(line.rejected) : "");
+    setRejectionReason(line?.rejectionReason ?? "");
+    setRejectedPhotoUrl(line?.rejectedPhotoUrl ?? "");
+    setAmendmentReason("");
+  }, [line]);
 
   function handleOpenChange(open: boolean) {
-    if (!open) {
-      resetForm();
-      onClose();
-    }
-  }
-
-  // Sync form fields when a new line is selected.
-  if (line?.monetary && quantity === "" && unitCost === "") {
-    setQuantity(String(line.actual));
-    setUnitCost(String(line.monetary.unitCost));
+    if (!open) onClose();
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!line?.monetary) return;
-    const monetary = line.monetary;
+    if (!line) return;
 
-    const parsedQty = Number(quantity);
-    const parsedCost = Number(unitCost);
-    const trimmedReason = reason.trim();
-
-    if (!Number.isFinite(parsedQty) || parsedQty < 0) {
+    const parsedQuantity = Number(quantity);
+    const parsedRejected = Number(rejectedQuantity);
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity < 0) {
       notify.error(grnCopy.validation.invalidQuantity);
       return;
     }
-    if (!Number.isFinite(parsedCost) || parsedCost < 0) {
-      notify.error(grnCopy.validation.invalidUnitCost);
+    if (
+      !Number.isFinite(parsedRejected) ||
+      parsedRejected < 0 ||
+      parsedRejected > parsedQuantity
+    ) {
+      notify.error(grnCopy.validation.rejectedExceedsDelivered(line.name));
       return;
     }
-    if (trimmedReason.length < 5) {
+    if (parsedRejected > 0 && !rejectionReason.trim()) {
+      notify.error(grnCopy.validation.rejectReasonRequired(line.name));
+      return;
+    }
+    if (parsedRejected > 0 && !rejectedPhotoUrl) {
+      notify.error(grnCopy.validation.rejectPhotoRequired(line.name));
+      return;
+    }
+    if (amendmentReason.trim().length < 5) {
       notify.error(grnCopy.validation.reasonMinLength);
       return;
     }
 
     startTransition(async () => {
-      const res = await amendGrnLine({
+      const result = await amendGrnLine({
         grnId,
         lineId: line.lineId,
-        receivedQuantity: parsedQty,
-        unitCost: parsedCost,
-        reason: trimmedReason,
+        receivedQuantity: parsedQuantity,
+        rejectedQuantity: parsedRejected,
+        rejectionReason: parsedRejected > 0 ? rejectionReason.trim() : null,
+        rejectedPhotoUrl: parsedRejected > 0 ? rejectedPhotoUrl : null,
+        reason: amendmentReason.trim(),
       });
-      if (!res.success) {
-        notify.error(res.error ?? grnCopy.amend.failed);
+      if (!result.success) {
+        notify.error(result.error ?? grnCopy.amend.failed);
         return;
       }
       notify.success(grnCopy.amend.success);
       onSaved({
         ...line,
-        actual: parsedQty,
-        accepted: parsedQty - line.rejected,
-        monetary: { ...monetary, unitCost: parsedCost },
+        actual: parsedQuantity,
+        rejected: parsedRejected,
+        rejectionReason: parsedRejected > 0 ? rejectionReason.trim() : "",
+        rejectedPhotoUrl: parsedRejected > 0 ? rejectedPhotoUrl : "",
         dirty: false,
       });
-      resetForm();
     });
   }
 
   return (
     <AppDialog
-      open={isOpen}
+      open={line !== null}
       onOpenChange={handleOpenChange}
       title={grnCopy.amend.title}
       footer={
-        line?.monetary ? (
+        line ? (
           <>
             <Button
               type="button"
@@ -137,7 +146,7 @@ export function AmendOwnerDialog({
         ) : null
       }
     >
-      {line?.monetary ? (
+      {line ? (
         <form
           id={AMEND_OWNER_FORM_ID}
           onSubmit={handleSubmit}
@@ -151,17 +160,21 @@ export function AmendOwnerDialog({
           <Item variant="outline" className="flex-col items-stretch gap-1 p-3">
             <p className="font-bold">{line.name}</p>
             <p className="text-xs text-muted-foreground">
-              {grnCopy.amend.current(
+              {grnCopy.line.orderedDeliveredAccepted(
+                line.required,
                 line.actual,
+                line.actual - line.rejected,
+                line.rejected,
                 line.unit,
-                formatVND(line.monetary.unitCost).replace(/đ$/, ""),
               )}
             </p>
           </Item>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="amend-qty">{grnCopy.amend.quantityLabel}</Label>
+              <Label htmlFor="amend-qty">
+                {grnCopy.line.actualLabel(line.unit)}
+              </Label>
               <FormattedNumberInput
                 id="amend-qty"
                 value={quantity}
@@ -171,25 +184,55 @@ export function AmendOwnerDialog({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="amend-cost">{grnCopy.amend.unitCostLabel}</Label>
+              <Label htmlFor="amend-rejected">
+                {grnCopy.line.rejectedLabel(line.unit)}
+              </Label>
               <FormattedNumberInput
-                id="amend-cost"
-                value={unitCost}
-                onValueChange={setUnitCost}
-                maxFractionDigits={0}
+                id="amend-rejected"
+                value={rejectedQuantity}
+                onValueChange={setRejectedQuantity}
+                maxFractionDigits={3}
                 placeholder="0"
               />
             </div>
           </div>
+
+          {Number(rejectedQuantity) > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="amend-rejection-reason">
+                  {grnCopy.line.rejectReasonRequired}
+                </Label>
+                <Textarea
+                  id="amend-rejection-reason"
+                  rows={3}
+                  value={rejectionReason}
+                  placeholder={grnCopy.line.rejectReasonPlaceholder}
+                  onChange={(event) => setRejectionReason(event.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>{grnCopy.line.proofPhotoLabel(true)}</Label>
+                <PhotoUploadInput
+                  tenantId={tenantId}
+                  folder={`grn/${grnId}/rejected/${line.lineId}`}
+                  value={rejectedPhotoUrl || null}
+                  onChange={(url) => setRejectedPhotoUrl(url ?? "")}
+                  acceptTypes="image"
+                  allowPaste={false}
+                />
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="amend-reason">{grnCopy.amend.reasonLabel}</Label>
             <Textarea
               id="amend-reason"
               rows={3}
-              value={reason}
+              value={amendmentReason}
               placeholder={grnCopy.amend.reasonPlaceholder}
-              onChange={(event) => setReason(event.target.value)}
+              onChange={(event) => setAmendmentReason(event.target.value)}
             />
           </div>
         </form>

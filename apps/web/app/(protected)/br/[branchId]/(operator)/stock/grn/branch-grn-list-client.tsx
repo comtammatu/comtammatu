@@ -58,7 +58,6 @@ import {
   type GrnListStatusFilter,
   type GrnRow,
 } from "@lib/inventory/grn-list-model";
-import { grnSourceSupplierHref } from "@lib/inventory/grn-source-model";
 import { messages } from "@lib/messages";
 
 type BranchGrnRow = Pick<
@@ -118,10 +117,7 @@ function BranchGrnDraftItem({
   onDiscard: (draft: BranchGrnDraftRow) => void;
 }) {
   const basePath = `/br/${branchId}/stock/grn`;
-  const href =
-    draft.poId != null
-      ? `${basePath}/${draft.grnId}`
-      : grnSourceSupplierHref(`${basePath}/new`, draft.supplierId);
+  const href = `${basePath}/${draft.grnId}`;
 
   return (
     <Item
@@ -166,18 +162,20 @@ function BranchGrnDraftItem({
           <IconChevronRight className="size-4 text-muted-foreground" />
         </ItemActions>
       </Link>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-touch"
-        className="mr-2 shrink-0 border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-        aria-label={`${ACTIONS_VI.delete} ${draft.grnNumber}`}
-        title={ACTIONS_VI.delete}
-        disabled={disabled}
-        onClick={() => onDiscard(draft)}
-      >
-        <IconTrash className="size-4" />
-      </Button>
+      {draft.poId == null ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-touch"
+          className="mr-2 shrink-0 border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          aria-label={`${ACTIONS_VI.delete} ${draft.grnNumber}`}
+          title={ACTIONS_VI.delete}
+          disabled={disabled}
+          onClick={() => onDiscard(draft)}
+        >
+          <IconTrash className="size-4" />
+        </Button>
+      ) : null}
     </Item>
   );
 }

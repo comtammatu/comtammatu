@@ -152,16 +152,20 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - Kiểm soát chính xác số lượng nguyên liệu tồn kho thực tế, tính toán giá vốn hàng bán (WAC), giảm thiểu hao hụt/thất thoát nguyên liệu và tối ưu hóa chi phí mua hàng.
 - **Mục tiêu Người dùng (Goal):** Nhìn tồn để quyết định đúng việc cần làm, nhập kho nhanh và tạo lệnh sản xuất không sai lệch.
 - **Luồng thao tác (Workflow):**
-  - **Nhập kho (GRN):** Tạo phiếu nhập kho từ nhà cung cấp -> Kiểm đếm thực tế -> Xác nhận nhập kho (cập nhật tồn kho và tính lại giá vốn).
+  - **Nhập kho (GRN):** Tạo GRN draft từ nhà cung cấp -> kiểm nhận vật lý ->
+    Owner/Kế toán tạo và duyệt PO từ GRN -> Kho xác nhận nhập (cập nhật tồn và
+    WAC).
   - **Đơn mua hàng (PO):** entry sidebar Inventory control_surface (**Đơn mua hàng**,
-    ADR 0018 **C1** restore). Nhận hàng Branch vẫn bắt đầu từ NCC (GRN
-    supplier-first), không bắt buộc PO.
+    ADR 0018 **C1** restore) để xem và duyệt PO đã tạo từ GRN; không tạo PO
+    trực tiếp hoặc tạo GRN từ PO.
   - **Sản xuất:** Chọn thành phẩm và sản lượng -> Kiểm tra định mức/nguyên liệu khả dụng -> Tạo lệnh -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành lệnh.
   - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
-  - **Điều chuyển (Transfer):** Operator không mở điều chuyển Kho↔Bếp hay cross-branch mới (D078 — một kho/chi nhánh). Lịch sử transfer còn ở control_surface khi cần audit.
+  - **Điều chuyển (Transfer):** Chỉ chọn warehouse của site nguồn và đích;
+    không có same-branch Kho↔Bếp. Quyền tạo/giao/nhận tiếp tục theo role matrix.
   - **Xuất nội bộ (Issue):** Mở phiếu hủy hỏng hoặc xuất khác tại chi nhánh -> thêm từng nguyên liệu với đơn vị, số lượng và lý do -> rà soát phiếu nháp -> xác nhận để ghi giảm tồn hoặc hủy trước khi chốt.
   - **Hao hụt thủ công (Waste):** Chọn đúng vị trí kho của chi nhánh -> thêm từng nguyên liệu trong một dòng chạm riêng -> nhập số lượng không vượt tồn, lý do và ảnh khi được yêu cầu -> xem cảnh báo cap theo ca/ngày -> tạo phiếu để ghi giảm hoặc chờ quản lý duyệt theo tier. WAC, đơn vị và bằng chứng được server kiểm tra lại khi submit.
-  - **Hàng NCC bị từ chối:** Ghi nhận qua luồng Báo hao hụt; giao diện tạo phiếu trả NCC vẫn nghỉ, PO chỉ mở tại Owner control.
+  - **Hàng NCC bị từ chối:** Ghi trực tiếp trên dòng GRN bằng số lượng từ chối,
+    lý do và ảnh; giao diện tạo phiếu trả NCC vẫn nghỉ.
   - **Báo cáo kho (Branch Report):** Xem chênh lệch tiêu hao warning/critical và biến động tháng hiện tại theo từng nguyên liệu -> chạm để mở tồn thực của nguyên liệu cần xử lý. Không tổng hợp số lượng giữa các đơn vị.
 - **Thông tin hiển thị:**
   - **Nên hiển thị:** Danh sách nguyên liệu kèm tồn khả dụng, đơn vị tính; Trạng thái các phiếu kho (Nháp / Đang giao / Hoàn thành); Cảnh báo tồn dưới mức an toàn.
@@ -172,7 +176,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - `/br/[branchId]/stock/production/new` là `DOC-WORKFLOW` Branch-native: URL khóa chi nhánh sản xuất; người dùng chọn thành phẩm/sản lượng, nơi xuất nguyên liệu và nơi nhận thành phẩm trong chính chi nhánh, kiểm tra định mức và tạo lệnh. Điện thoại giữ một cột; tablet ngang có panel thông tin và panel nguyên liệu. Không import `ProductionNewClient`, `DocumentFormFrame` hoặc `DataTable` control_surface.
   - `/br/[branchId]/stock/production/[id]` là `DETAIL` Branch-native: ưu tiên trạng thái, sản lượng dự kiến/thực tế, nguyên liệu thực dùng, thiếu hụt và đúng một hành động tiếp theo theo state machine. Lệnh nháp bắt đầu sản xuất; lệnh đang làm mới hoàn thành; hủy luôn xác nhận. Không import `ProductionDetailClient` hoặc presenter control_surface.
   - control_surface `/inventory/stock` dùng management list responsive: compact card khi hẹp và `DataTable` khi desktop cần đối chiếu WAC/giá trị tồn.
-  - Branch `/br/[branchId]/stock/on-hand` là danh sách quyết định touch-first ở mọi viewport điện thoại/tablet, kể cả `1024px` landscape: nếu có hàng chạm ngưỡng, một khối `Cần bổ sung` đứng trước danh sách với đúng một CTA `Nhận phiếu nhập`; các hàng rủi ro luôn xếp đầu và nêu rõ `Hết hàng`/`Thấp`/`Chạm reorder`. Mỗi hàng chỉ giữ tên/SKU, loại hàng, tồn + đơn vị và chạm để xem chi tiết; tìm kiếm và bộ lọc cùng một trạng thái thu gọn trên phone/tablet, chỉ hiện bộ lọc vị trí khi chi nhánh thật sự có nhiều vị trí tồn. Không đưa WAC, giá trị tồn hoặc KPI control_surface vào màn tra cứu trong ca.
+  - Branch `/br/[branchId]/stock/on-hand` là danh sách quyết định touch-first ở mọi viewport điện thoại/tablet, kể cả `1024px` landscape: nếu có hàng chạm ngưỡng, một khối `Cần bổ sung` đứng trước danh sách với đúng một CTA `Nhận phiếu nhập`; các hàng rủi ro luôn xếp đầu và nêu rõ `Hết hàng`/`Thấp`/`Chạm reorder`. Mỗi hàng chỉ giữ tên/SKU, loại hàng, tồn + đơn vị và chạm để xem chi tiết; tìm kiếm và bộ lọc cùng một trạng thái thu gọn trên phone/tablet. One-warehouse topology không hiển thị bộ lọc vị trí. Không đưa WAC, giá trị tồn hoặc KPI control_surface vào màn tra cứu trong ca.
   - Branch `/br/[branchId]/stock/on-hand/[ingredientId]` là `DETAIL` touch-native: ưu tiên trạng thái/tồn hiện tại, vị trí tồn, chuyển động gần đây, sau đó là ngưỡng và action được cấp quyền. Nhận từ NCC mở GRN, còn `/stock/receive` chỉ dành cho phiếu chuyển nội bộ; route không tải hoặc hiển thị WAC, giá trị tồn, audit/correction, hoặc control_surface detail chrome.
   - Branch `/br/[branchId]/stock/grn` ưu tiên nháp của người đang nhận hàng, sau đó là hàng đợi GRN có tìm kiếm/lọc trạng thái. Mỗi row chỉ hiển thị mã, NCC, ngày và trạng thái; chạm để tiếp tục/xem phiếu, bỏ nháp là action riêng có xác nhận. Không đưa tổng tiền, tên chi nhánh, `DataTable` hay long-press từ control_surface sang route này.
   - Branch `/br/[branchId]/stock/grn/new` dùng source list touch-native supplier-first: chọn NCC, giữ context chi nhánh từ route, và chuyển sang URL supplier Branch canonical. Không lặp branch picker, PO hoặc khung form control_surface tại bước chọn nguồn.
@@ -202,14 +206,24 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Mục tiêu Người dùng (Goal):** Chọn NCC, ghi nhận đúng hàng thực giao và hoàn thành phiếu nhập kho nhanh nhất để giải phóng xe giao hàng.
 - **Luồng thao tác (Workflow):**
   1. **Chọn nguồn:** Chọn nhà cung cấp; phạm vi chi nhánh lấy từ route.
-  2. **Kiểm đếm:** Nhập số lượng thực nhận cho từng dòng nguyên liệu.
-  3. **Xác lập giá:** Nhập đơn giá thực mua trên hóa đơn đi kèm.
-  4. **Hoàn tất:** Bấm "Xác nhận nhập kho" -> Ghi tăng tồn kho tức thời, cập nhật giá vốn trung bình gia quyền (WAC) của nguyên liệu.
+  2. **Kiểm nhận vật lý:** Nhập số lượng thực nhận và số lượng từ chối. Nếu có
+     hàng từ chối, bắt buộc lý do + ảnh; trạng thái được suy ra, không nhập tay.
+  3. **Duyệt giá:** Owner/Kế toán tạo PO từ GRN draft, nhập giá và duyệt; Kho
+     không nhập/xem giá mua.
+  4. **Hoàn tất:** Khi PO đã duyệt, bấm "Xác nhận nhập kho" -> ghi tăng tồn kho
+     và cập nhật WAC từ snapshot `grn_items.unit_cost`.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** control_surface dùng khung form dòng (`DocumentFormFrame`); Branch hiển thị NCC/kho nhận, danh sách dòng chạm để sửa, tìm nguyên liệu, đơn vị quy đổi chuẩn và action sticky. Review Branch dùng sheet cho dữ kiện nhận hàng; biên nhận Branch sau chốt chỉ đọc.
-  - **KHÔNG hiển thị:** Các biểu đồ phân tích xu hướng giá của năm, thông tin quỹ tiền mặt của chi nhánh.
+  - **Nên hiển thị:** control_surface dùng khung form dòng (`DocumentFormFrame`);
+    Branch hiển thị NCC/kho nhận, số thực nhận, số từ chối, lý do/ảnh khi cần,
+    đơn vị quy đổi chuẩn và action sticky. Biên nhận Branch sau chốt chỉ đọc.
+  - **KHÔNG hiển thị:** Giá mua, price variance, biểu đồ xu hướng giá hoặc thông
+    tin quỹ tiền mặt tại bề mặt Kho.
 - **Quy chuẩn UX/UI:**
-  - control_surface bắt buộc dùng `DocumentFormFrame` (header `AppPageHeader` cuộn cùng nội dung + thân danh sách dòng + footer sticky chứa tổng tiền và CTA xác nhận — không sticky header ngoài scrollport). Branch bắt buộc dùng `BranchOperatorPage` + `BranchOperatorPanel` + `AppDetailFooter` sticky; không render khung control_surface, bảng desktop, hoặc picker đổi chi nhánh.
+  - control_surface bắt buộc dùng `DocumentFormFrame` (header `AppPageHeader`
+    cuộn cùng nội dung + thân danh sách dòng + footer sticky chứa số dòng và CTA
+    xác nhận — không sticky header ngoài scrollport). Branch bắt buộc dùng
+    `BranchOperatorPage` + `BranchOperatorPanel` + `AppDetailFooter` sticky;
+    không render khung control_surface, bảng desktop, hoặc picker đổi chi nhánh.
   - Nút "Xác nhận nhập kho" phải nằm ở vị trí cố định dưới cùng bên phải và yêu cầu xác nhận lại qua Dialog để tránh bấm nhầm khi chưa kiểm đếm xong.
 
 ---
@@ -225,7 +239,8 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   1. **Nhập hóa đơn:** Ghi số hóa đơn, ngày và VAT đầu vào theo bucket 0/5/8/10 (tiền trước VAT + tiền VAT từng mức); có thể đính kèm HĐ GTGT ngay khi lưu (tùy chọn).
   2. **Liên kết:** Chọn một GRN đã xác nhận; hệ thống lấy NCC và PO liên quan từ GRN.
   3. **Đối soát:** So giá trị trước VAT với giá trị hàng thực nhận sau từ chối trên GRN và, khi PO đủ giá, với tổng PO. VAT không tham gia so giá trị hàng.
-  4. **Xử lý chênh lệch:** Giữ trạng thái cần xử lý nếu vượt ngưỡng 2%; kế toán kiểm tra chứng từ trước khi trả.
+  4. **Xử lý chênh lệch:** Kế toán kiểm tra chứng từ khi số lượng hoặc giá trị
+     không khớp; không dùng ngưỡng price-QC của GRN.
   5. **Đính kèm HĐ GTGT:** Nếu chưa tải lúc tạo, tải lên ít nhất một file PDF/ảnh vào `vat_invoice_attachment_path` (bucket private) trước khi thanh toán. Owner có `procurement:invoice_create` hoặc `finance:ap_pay` được đính kèm.
   6. **Thanh toán:** Chỉ ghi nhận khi đã có file HĐ GTGT; trả theo tổng gồm VAT; giảm tiền và công nợ, không tạo thêm chi phí.
 - **Thông tin hiển thị:**

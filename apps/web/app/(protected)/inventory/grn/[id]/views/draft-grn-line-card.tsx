@@ -3,17 +3,14 @@
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
-import {
-  Pencil as IconPencil,
-  Trash as IconTrash,
-} from "lucide-react";
-import { formatQty, formatVND } from "@lib/inventory/format";
+import { Pencil as IconPencil, Trash as IconTrash } from "lucide-react";
+import { formatQty } from "@lib/inventory/format";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import {
   GRN_DETAIL_COPY as grnCopy,
-  INVENTORY_COMMON_COPY as inventoryCommon,
   type EditableGrnLine as EditableLine,
 } from "@lib/inventory/grn-detail-model";
+import { deriveGrnQualityStatus } from "@lib/inventory/grn-quality";
 export function DraftGrnLineCard({
   line,
   onEdit,
@@ -23,14 +20,11 @@ export function DraftGrnLineCard({
   onEdit: () => void;
   onRemove: () => void;
 }) {
-  const lineTotal =
-    line.monetary && line.monetary.unitCost > 0
-      ? line.actual * line.monetary.unitCost
-      : null;
+  const qualityStatus = deriveGrnQualityStatus(line.actual, line.rejected);
   const qualityLabel =
-    line.qualityStatus === "accepted"
+    qualityStatus === "accepted"
       ? grnCopy.line.qualityAccepted
-      : line.qualityStatus === "partial"
+      : qualityStatus === "partial"
         ? grnCopy.line.qualityPartial
         : grnCopy.line.qualityRejected;
 
@@ -43,37 +37,29 @@ export function DraftGrnLineCard({
         className="h-auto min-w-0 flex-1 justify-start px-0 py-0 text-left"
       >
         <span className="flex min-w-0 flex-col">
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <p className="truncate text-sm font-semibold leading-tight">
-            {line.name}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <p className="truncate text-sm font-semibold leading-tight">
+              {line.name}
+            </p>
+            {line.dirty ? (
+              <Badge variant="outline" className="text-2xs">
+                {grnCopy.line.unsaved}
+              </Badge>
+            ) : null}
+            {qualityStatus !== "accepted" ? (
+              <Badge
+                variant={
+                  qualityStatus === "partial" ? "warning" : "destructive"
+                }
+                className="text-2xs"
+              >
+                {qualityLabel}
+              </Badge>
+            ) : null}
+          </div>
+          <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+            {formatQty(line.actual)} {line.unit}
           </p>
-          {line.dirty ? (
-            <Badge variant="outline" className="text-2xs">
-              {grnCopy.line.unsaved}
-            </Badge>
-          ) : null}
-          {line.qualityStatus !== "accepted" ? (
-            <Badge
-              variant={
-                line.qualityStatus === "partial" ? "warning" : "destructive"
-              }
-              className="text-2xs"
-            >
-              {qualityLabel}
-            </Badge>
-          ) : null}
-        </div>
-        <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
-          {formatQty(line.actual)} {line.unit}
-          {line.monetary && line.monetary.unitCost > 0
-            ? ` · ${inventoryCommon.currency(formatVND(line.monetary.unitCost))}/${line.unit}`
-            : ""}
-        </p>
-        {lineTotal != null ? (
-          <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-            {inventoryCommon.currency(formatVND(lineTotal))}
-          </p>
-        ) : null}
         </span>
       </Button>
       <div className="flex shrink-0 items-center gap-1">

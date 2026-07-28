@@ -37,9 +37,6 @@ import {
   type EditableGrnLine,
   type GrnDetail,
 } from "@lib/inventory/grn-detail-model";
-import {
-  deriveGrnQualityStatus,
-} from "@lib/inventory/grn-quality";
 import { messages } from "@lib/messages";
 
 function NumberPadValueField({
@@ -208,22 +205,6 @@ export function BranchGrnCreateLineSheet({
                       {baseConversionPreview}
                     </p>
                   ) : null}
-
-                  <Field>
-                    <FieldLabel htmlFor="branch-grn-create-note">
-                      {GRN_CREATE_COPY.optionalNote}
-                    </FieldLabel>
-                    <Textarea
-                      id="branch-grn-create-note"
-                      value={edit.note}
-                      onChange={(event) =>
-                        onPatch({ note: event.target.value })
-                      }
-                      rows={2}
-                      maxLength={200}
-                      placeholder={GRN_CREATE_COPY.notePlaceholder}
-                    />
-                  </Field>
                 </FieldGroup>
               </div>
 
@@ -302,30 +283,20 @@ export function BranchGrnReviewLineSheet({
   const [numericField, setNumericField] = useState<
     "actual" | "rejected" | null
   >(null);
-  const needsShortDeliveryAction =
-    line != null &&
-    line.poQuantity != null &&
-    line.poQuantity > 0 &&
-    line.actual <
-      line.poQuantity * (1 - grn.qcSettings.qtyShortTolerancePct / 100);
-  const needsRejectionDetails =
-    line != null && line.qualityStatus !== "accepted";
+  const needsRejectionDetails = line != null && line.rejected > 0;
 
   function patchActual(actual: number) {
     if (!line) return;
-    const rejected = line.qualityStatus === "rejected" ? actual : line.rejected;
     onPatch({
       actual,
-      rejected,
-      qualityStatus: deriveGrnQualityStatus(actual, rejected),
+      rejected: Math.min(line.rejected, actual),
     });
   }
 
   function patchRejected(rejected: number) {
     if (!line) return;
     onPatch({
-      rejected,
-      qualityStatus: deriveGrnQualityStatus(line.actual, rejected),
+      rejected: Math.min(line.actual, Math.max(0, rejected)),
     });
   }
 
@@ -362,55 +333,6 @@ export function BranchGrnReviewLineSheet({
 
               <div className="p-4">
                 <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor={`branch-grn-quality-${line.lineId}`}>
-                      {GRN_DETAIL_COPY.line.qualityStatusLabel}
-                    </FieldLabel>
-                    <Select
-                      value={line.qualityStatus}
-                      onValueChange={(value) => {
-                        const qualityStatus =
-                          value as EditableGrnLine["qualityStatus"];
-                        if (qualityStatus === "accepted") {
-                          onPatch({
-                            qualityStatus,
-                            rejected: 0,
-                            rejectionReason: "",
-                            rejectedPhotoUrl: "",
-                          });
-                          return;
-                        }
-                        onPatch({
-                          qualityStatus,
-                          rejected:
-                            qualityStatus === "rejected"
-                              ? line.actual
-                              : line.rejected > 0 && line.rejected < line.actual
-                                ? line.rejected
-                                : 0,
-                        });
-                      }}
-                    >
-                      <SelectTrigger
-                        id={`branch-grn-quality-${line.lineId}`}
-                        size="touch"
-                        className="w-full"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="accepted" size="touch">
-                          {GRN_DETAIL_COPY.line.qualityAccepted}
-                        </SelectItem>
-                        <SelectItem value="partial" size="touch">
-                          {GRN_DETAIL_COPY.line.qualityPartial}
-                        </SelectItem>
-                        <SelectItem value="rejected" size="touch">
-                          {GRN_DETAIL_COPY.line.qualityRejected}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Field>
                   <div className="grid grid-cols-2 gap-3">
                     <NumberPadValueField
                       id={`branch-grn-actual-${line.lineId}`}
@@ -458,46 +380,11 @@ export function BranchGrnReviewLineSheet({
                           onChange={(url) =>
                             onPatch({ rejectedPhotoUrl: url ?? "" })
                           }
+                          acceptTypes="image"
+                          allowPaste={false}
                         />
                       </Field>
                     </>
-                  ) : null}
-
-                  {needsShortDeliveryAction ? (
-                    <Field>
-                      <FieldLabel htmlFor={`branch-grn-short-${line.lineId}`}>
-                        {GRN_DETAIL_COPY.line.shortageAction}
-                      </FieldLabel>
-                      <Select
-                        value={line.shortDeliveryAction ?? ""}
-                        onValueChange={(value) =>
-                          onPatch({
-                            shortDeliveryAction:
-                              value as EditableGrnLine["shortDeliveryAction"],
-                          })
-                        }
-                      >
-                        <SelectTrigger
-                          id={`branch-grn-short-${line.lineId}`}
-                          size="touch"
-                          className="w-full"
-                        >
-                          <SelectValue
-                            placeholder={
-                              GRN_DETAIL_COPY.line.shortagePlaceholder
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="accept_and_close" size="touch">
-                            {GRN_DETAIL_COPY.line.acceptAndClose}
-                          </SelectItem>
-                          <SelectItem value="wait_backorder" size="touch">
-                            {GRN_DETAIL_COPY.line.waitBackorder}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
                   ) : null}
                 </FieldGroup>
               </div>
@@ -638,11 +525,9 @@ export function BranchGrnAddLineSheet({
         ingredientId: ingredient.id,
         receivedQuantity: parsedQuantity,
         entryUnitId,
-        qualityStatus: "accepted",
         rejectedQuantity: 0,
         rejectionReason: null,
         rejectedPhotoUrl: null,
-        shortDeliveryAction: null,
       });
       if (!result.success || !result.data) {
         notify.error(result.error ?? GRN_DETAIL_COPY.saveLineFailed);
@@ -656,7 +541,6 @@ export function BranchGrnAddLineSheet({
           quantity: parsedQuantity,
           entryUnitId,
           unit: unit.trim(),
-          monetary: null,
         }),
       );
       notify.success(GRN_DETAIL_COPY.addDialog.success);

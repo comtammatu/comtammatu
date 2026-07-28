@@ -54,6 +54,7 @@ export async function NewStocktakeSessionPageContent({
   const locationsRes = await supabase
     .from("inventory_locations")
     .select("id, name, branch_id, location_kind, is_active")
+    .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true)
     .order("name");
 
@@ -65,7 +66,11 @@ export async function NewStocktakeSessionPageContent({
 
   const locations =
     (locationsRes.data ?? [])
-      .filter((l) => allowedBranchIds.has(l.branch_id as number))
+      .filter(
+        (location) =>
+          allowedBranchIds.has(location.branch_id as number) &&
+          location.location_kind === "warehouse",
+      )
       .map((l) => ({
         id: l.id as number,
         name: l.name as string,

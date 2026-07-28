@@ -509,8 +509,8 @@ allowlist, not a precedent for stretching another archetype's definition:
     — Branch-runtime GRN source selection. It shares the source loader and
     pure supplier model with control_surface, but presents suppliers as full-row touch
     actions and canonicalizes supplier selection into the Branch route.
-    Branch receiving stays supplier-first; the optional PO flow belongs to
-    Owner control.
+    Branch receiving starts the GRN draft; Owner/Kế toán creates and approves
+    the linked PO from that draft before confirmation.
     Classified **LIST** (Branch touch source variant); the
     document-line form remains a separate workflow stage.
 13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`

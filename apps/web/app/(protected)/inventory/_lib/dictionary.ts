@@ -103,8 +103,8 @@ const VI_DICTIONARY = {
     consumption: { long: "Tiêu hao" },
     storage_loss: { short: "Hao hụt kho", long: "Hao hụt kho" },
     sale_consumption: { short: "Tiêu hao bán", long: "Tiêu hao theo bán" },
-    normal: { long: "Bình thường" },
-    low: { short: "Thấp", long: "Tồn kho thấp" },
+    normal: { long: "Đủ hàng" },
+    low: { short: "Chạm ngưỡng", long: "Chạm ngưỡng tồn kho" },
     out: { short: "Hết hàng", long: "Đã hết hàng" },
     over: { short: "Dư tồn", long: "Tồn kho dư thừa" },
     active: { short: "Hoạt động", long: "Đang hoạt động" },
@@ -134,7 +134,6 @@ const VI_DICTIONARY = {
     fromWarehouse: { short: "Kho gửi", long: "Kho gửi" },
     toWarehouse: { short: "Kho nhận", long: "Kho nhận" },
     branchWarehouse: { short: "Kho", long: "Kho chi nhánh" },
-    branchKitchen: { short: "Bếp", long: "Bếp chi nhánh" },
     productionStorage: { short: "Kho SX", long: "Kho sản xuất" },
   },
 } satisfies InventoryDictionary;

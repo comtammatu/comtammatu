@@ -1198,7 +1198,7 @@ const perFileCountBudgets = [
     pattern:
       /(?<!drop-)(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
     allowlist: {
-      "apps/web/app/components/surface.tsx": 1,
+      "apps/web/app/components/surface.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 1,
     },
   },

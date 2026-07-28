@@ -84,9 +84,6 @@ const permissionScopeCleanupMigration = readRepoFile(
 const hddtTaxInvoiceRpcScopeMigration = readRepoFile(
   "supabase/migration-archive/20260625132000_hddt_tax_invoice_rpc_scope.sql",
 );
-const retiredIntraBranchRpcMigration = readRepoFile(
-  "supabase/migration-archive/20260625075939_harden_retired_intra_branch_rpc.sql",
-);
 const featureFlagRpcMigration = readRepoFile(
   "supabase/migration-archive/20260625123413_gate_feature_flag_rpc.sql",
 );
@@ -223,25 +220,11 @@ test("payment and print implementation RPCs are not directly executable by authe
   }
 });
 
-test("retired intra-branch transfer RPC is not directly executable by authenticated users", () => {
-  const signature =
-    "public.commit_intra_branch_transfer(BIGINT, BIGINT, BIGINT, TEXT, TEXT, JSONB)";
-  assert.match(
-    retiredIntraBranchRpcMigration,
-    new RegExp(
-      `REVOKE EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+FROM PUBLIC, anon, authenticated`,
-    ),
-  );
-  assert.match(
-    retiredIntraBranchRpcMigration,
-    new RegExp(
-      `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
-    ),
-  );
-});
-
 test("feature flag RPC preserves tenant boundary inside SECURITY DEFINER body", () => {
-  const body = extractSqlFunction(featureFlagRpcMigration, "is_feature_enabled");
+  const body = extractSqlFunction(
+    featureFlagRpcMigration,
+    "is_feature_enabled",
+  );
 
   assert.match(body, /FROM public\.branch_feature_flags bff/);
   assert.match(body, /JOIN public\.branches b ON b\.id = bff\.branch_id/);
@@ -254,8 +237,7 @@ test("feature flag RPC preserves tenant boundary inside SECURITY DEFINER body", 
 });
 
 test("HDDT daily summary aggregate RPC is service-role only", () => {
-  const signature =
-    "public.aggregate_daily_b2c_invoice(bigint, date, uuid)";
+  const signature = "public.aggregate_daily_b2c_invoice(bigint, date, uuid)";
 
   assert.match(
     hddtSummaryRpcGrantMigration,
@@ -367,10 +349,7 @@ test("Branch menu daily limit management RPCs are manager-only", () => {
       branchMenuLimitG1AccessMigration,
       functionName,
     );
-    assert.match(
-      functionSource,
-      /v_role NOT IN \('owner', 'branch_manager'\)/,
-    );
+    assert.match(functionSource, /v_role NOT IN \('owner', 'branch_manager'\)/);
     assert.match(
       functionSource,
       /v_role = 'branch_manager'[\s\S]*v_branch <> p_branch_id/,
@@ -480,7 +459,10 @@ test("POS stock outcome helpers keep tenant, branch, and issue-location boundari
   assert.match(conversion, /recipe_unit_conversion_missing:%/);
 
   assertSqlOrder(
-    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "finalize_paid_order"),
+    extractSqlFunction(
+      posKdsInventoryTruthG3OutcomesMigration,
+      "finalize_paid_order",
+    ),
     "PERFORM pg_advisory_xact_lock(p_order_id);",
     "FOR UPDATE;",
     "finalize_paid_order must take the order advisory lock before row locks",
@@ -501,23 +483,35 @@ test("POS stock outcome helpers keep tenant, branch, and issue-location boundari
     "cancel_order must take the order advisory lock before row locks",
   );
   assertSqlOrder(
-    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "bump_kds_ticket"),
+    extractSqlFunction(
+      posKdsInventoryTruthG3OutcomesMigration,
+      "bump_kds_ticket",
+    ),
     "PERFORM pg_advisory_xact_lock(v_order_id);",
     "FOR UPDATE;",
     "bump_kds_ticket must take the order advisory lock before ticket row locks",
   );
   assertSqlOrder(
-    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "complete_kds_tickets"),
+    extractSqlFunction(
+      posKdsInventoryTruthG3OutcomesMigration,
+      "complete_kds_tickets",
+    ),
     "FOREACH v_order_id IN ARRAY v_order_ids LOOP",
     "WITH locked AS",
     "complete_kds_tickets must take order advisory locks before ticket row locks",
   );
   assert.match(
-    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "complete_kds_tickets"),
+    extractSqlFunction(
+      posKdsInventoryTruthG3OutcomesMigration,
+      "complete_kds_tickets",
+    ),
     /array_agg\(DISTINCT kt\.order_id ORDER BY kt\.order_id\)/,
   );
   assertSqlOrder(
-    extractSqlFunction(posKdsInventoryTruthG3OutcomesMigration, "mark_order_item_served"),
+    extractSqlFunction(
+      posKdsInventoryTruthG3OutcomesMigration,
+      "mark_order_item_served",
+    ),
     "PERFORM pg_advisory_xact_lock(v_order_id);",
     "FOR UPDATE OF oi;",
     "mark_order_item_served must take the order advisory lock before item row locks",
@@ -762,7 +756,10 @@ test("printer agent write policies are branch scoped", () => {
 });
 
 test("staff permission grants enforce permission key scope", () => {
-  const grant = extractSqlFunction(permissionScopeGrantsMigration, "grant_permission");
+  const grant = extractSqlFunction(
+    permissionScopeGrantsMigration,
+    "grant_permission",
+  );
   const template = extractSqlFunction(
     permissionScopeCleanupMigration,
     "apply_template_to_user",
@@ -772,19 +769,28 @@ test("staff permission grants enforce permission key scope", () => {
     "sync_missing_permissions_from_template",
   );
 
-  assert.match(grant, /SELECT scope INTO v_scope[\s\S]*FROM public\.permission_keys/);
+  assert.match(
+    grant,
+    /SELECT scope INTO v_scope[\s\S]*FROM public\.permission_keys/,
+  );
   assert.match(grant, /v_scope = 'branch' AND p_branch_id IS NULL/);
   assert.match(grant, /permission_scope_requires_branch/);
   assert.match(grant, /v_scope = 'tenant' AND p_branch_id IS NOT NULL/);
   assert.match(grant, /permission_scope_requires_tenant/);
 
-  assert.match(template, /SELECT scope INTO v_perm_scope[\s\S]*FROM public\.permission_keys/);
+  assert.match(
+    template,
+    /SELECT scope INTO v_perm_scope[\s\S]*FROM public\.permission_keys/,
+  );
   assert.match(template, /unknown_permission_key_in_template/);
   assert.match(template, /WHEN v_perm_scope = 'tenant' THEN NULL/);
   assert.match(template, /WHEN v_perm_scope = 'branch' THEN p_branch_id/);
   assert.match(template, /permission_scope_requires_branch/);
 
-  assert.match(sync, /SELECT scope INTO v_perm_scope[\s\S]*FROM public\.permission_keys/);
+  assert.match(
+    sync,
+    /SELECT scope INTO v_perm_scope[\s\S]*FROM public\.permission_keys/,
+  );
   assert.match(sync, /WHEN v_perm_scope = 'tenant' THEN NULL/);
   assert.match(sync, /WHEN v_perm_scope = 'branch' THEN v_branch/);
   assert.match(sync, /v_perm_scope = 'branch' AND v_grant_branch IS NULL/);

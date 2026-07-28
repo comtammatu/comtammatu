@@ -26,8 +26,11 @@ visual contract: `docs/spec/design-system.md` và
 
 ### Nhập hàng
 
-- [ ] Tạo GRN trực tiếp từ NCC, không cần PO.
-- [ ] Xác nhận GRN tăng đúng tồn Kho CN và tạo movement đúng một lần.
+- [ ] Kho tạo GRN draft từ NCC, nhập số thực nhận/từ chối; dòng từ chối có đủ
+      lý do + ảnh.
+- [ ] Owner/Kế toán tạo PO từ GRN, nhập giá và duyệt trước khi Kho confirm.
+- [ ] Xác nhận GRN tăng đúng active warehouse duy nhất và tạo movement đúng một
+      lần, không bị chặn bởi chênh lệch giá sau khi PO đã duyệt.
 - [ ] Retry/double submit không tạo stock hoặc document trùng.
 - [ ] Supplier invoice/evidence handoff rõ; Inventory không tự ghi payment AP.
 
@@ -35,7 +38,7 @@ visual contract: `docs/spec/design-system.md` và
 
 - [ ] Workflow sản xuất hiện hành chỉ dùng branch + RPC/action còn sống.
 - [ ] Consumption/sale-consumption/write-off có source, actor, unit và branch đúng.
-- [ ] Không có daily CTA cho PO, supplier return, production order, lot/expiry
+- [ ] Không có CTA tạo PO trực tiếp, tạo GRN từ PO, supplier return, lot/expiry
       hoặc same-branch Kho↔Bếp transfer.
 - [ ] Atomic RPC fail không để document/payment hiển thị hoàn tất sai.
 
@@ -67,7 +70,7 @@ Cột "Kết quả" ghi lần smoke gần nhất trên Greenfield; ô trống = 
 | Case | Kỳ vọng | Kết quả (Greenfield 2026-07-28) |
 | --- | --- | --- |
 | Actor thiếu `procurement:po_approve` | CTA ẩn/disabled; deep call fail closed, không raw SQL | PASS — PO-2026-0005 giữ `draft`; RPC trả `42501 forbidden`; tạo PO cũng bị chặn |
-| Sai branch / cross-site PO→GRN | Reject; không tạo GRN/stock ở branch khác | PASS — PO-2026-0006 (branch 2) bị chặn với quản lý branch 1; đối chứng PO-2026-0007 → GRN-3d00e6e9 tạo được |
+| Sai branch khi tạo PO từ GRN | Reject; không tạo PO hoặc stock ở branch khác | |
 | Cashier/Chef deep-link Inventory | Bị chặn route/ACL | |
 | Ghi thẳng bảng `purchase_orders` qua PostgREST | Revoke; chỉ RPC được ghi | PASS — PATCH trả `42501`, PO-2026-0005 vẫn `draft` |
 
@@ -75,8 +78,9 @@ Cột "Kết quả" ghi lần smoke gần nhất trên Greenfield; ô trống = 
 
 | Case | Kỳ vọng | Kết quả (Greenfield 2026-07-28) |
 | --- | --- | --- |
-| GRN partial từ PO `sent` | PO → `partially_received`; có thể tạo GRN tiếp | PASS — PO-2026-0003 + GRN-53687754 |
-| GRN nhận đủ phần còn lại | PO → received/closed theo contract; stock đúng tổng | PASS — GRN-1e3a94ef đóng PO-2026-0003 |
+| GRN → PO có giá/đã duyệt → confirm | PO → `received`; stock chỉ tăng phần `received_quantity - rejected_quantity` | |
+| Hàng từ chối thiếu lý do hoặc ảnh | Confirm fail closed; bổ sung đủ bằng chứng thì confirm được | |
+| Giá PO lệch lớn | Không chặn confirm nếu PO đã duyệt và QC vật lý hợp lệ | |
 | Double confirm cùng GRN | Không post movement lần 2 | PASS — GRN-4a6add8c: 1 movement, lệnh thua `22023` |
 | Entry unit ≠ base unit | Quy đổi đúng ladder; không cộng nhầm entry/base | Chưa smoke — seed Greenfield chỉ có ladder 1 bậc (kg) |
 | Xóa GRN draft / hủy trước chốt | Không đụng `stock_levels` | |
@@ -98,7 +102,7 @@ Cột "Kết quả" ghi lần smoke gần nhất trên Greenfield; ô trống = 
 | Complete stocktake retry | Chỉ một `count_adjustment` | PASS — session 1: 1 movement `-0.3`, retry trả `session_not_in_progress` |
 | Complete stocktake trên UI (Hoàn tất kiểm kê → Chốt kết quả) | Esc huỷ sạch, giữ `in_progress`; Confirm post đúng 1 `count_adjustment` | PASS — session 6: Esc giữ gạo 10.5 và không toast, CTA vẫn bấm lại được; Confirm → `completed`, 10.5 → 10.3, đúng 1 movement |
 | Transfer inter-site thiếu quyền ship/receive | Fail closed từng bước | PASS — transfer 4: ship + receive đều `42501`; đối chứng transfer 5 nhận được đúng branch |
-| Không có daily CTA PO / same-branch Kho↔Bếp / lot-expiry | Khớp SOP rút gọn | PASS — transfer create đã rút khỏi UI (`createEnabled=false`, `/transfers/new` redirect), guard `apps/web/tests/branch-transfer-create-retirement.test.ts`; smoke transfer chạy ở tầng RPC |
+| Không có direct-PO / PO→GRN / same-branch Kho↔Bếp / lot-expiry | Khớp D091; transfer inter-site chỉ chọn warehouse | Cần chạy lại sau D091 |
 
 ### P2 — Catalog / UI device
 

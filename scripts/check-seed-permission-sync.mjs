@@ -82,6 +82,11 @@ for (const forwardText of migrationTexts.slice(1)) {
     migrationDelegable.delete(match[1]);
   }
   for (const match of forwardText.matchAll(
+    /DELETE FROM public\.permission_keys\s+WHERE key IN \(([\s\S]*?)\);/g,
+  )) {
+    for (const key of parseKeys(match[1])) migrationDelegable.delete(key);
+  }
+  for (const match of forwardText.matchAll(
     /UPDATE public\.permission_keys\s+SET is_delegable_to_staff = true[\s\S]*?WHERE key = ANY \(ARRAY\[([\s\S]*?)\]::text\[\]\)/g,
   )) {
     for (const key of parseKeys(match[1])) migrationDelegable.add(key);

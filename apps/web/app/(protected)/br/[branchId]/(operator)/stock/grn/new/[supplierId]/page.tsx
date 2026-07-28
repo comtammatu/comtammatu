@@ -25,18 +25,20 @@ export default async function OperatorStockGrnCreatePage({
 
   const queryParams = await searchParams;
   const sourceBasePath = `/br/${branchId}/stock/grn/new`;
+  const grnBasePath = `/br/${branchId}/stock/grn`;
   const data = await loadGrnCreatePageData({
     supplierId,
     queryBranchId: queryParams.branchId,
     routeBranchId: branchId,
     fallbackPath: sourceBasePath,
+    grnBasePath,
   });
 
   return (
     <BranchGrnCreateClient
       {...data}
       sourceBasePath={sourceBasePath}
-      grnBasePath={`/br/${branchId}/stock/grn`}
+      grnBasePath={grnBasePath}
     />
   );
 }

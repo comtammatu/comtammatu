@@ -64,10 +64,10 @@ Manager/Staff discovery contains Branch groups only.
 
 ```
 owner                          ← governance + tenant-wide oversight, vận hành + catalog NL, procurement
-├── accountant                 ← /finance + Inventory PO slice (D088; temporary until ADR 0015)
-├── central_supply_ops         ← Kho Tổng site ops / GRN draft (D088; temporary until ADR 0015)
-├── central_kitchen_lead       ← Bếp TT production + GRN draft (D088; temporary until ADR 0015)
-├── branch_manager             ← single branch command + operations (no purchase-price view — D088)
+├── accountant                 ← /finance + Inventory GRN/PO slice (D076/D091; temporary until ADR 0015)
+├── central_supply_ops         ← Kho Tổng site ops / GRN draft (D076/D091; temporary until ADR 0015)
+├── central_kitchen_lead       ← Bếp TT production + GRN draft (D076/D091; temporary until ADR 0015)
+├── branch_manager             ← single branch command + operations (no purchase-price view — D091)
 ├── cashier                    ← POS (/br/[branchId]/pos)
 ├── chef                       ← KDS (/br/[branchId]/kds)
 └── branch_staff               ← branch runtime without POS/KDS specialty
@@ -77,10 +77,10 @@ These application roles are emitted in JWT `user_role`. They are derived from
 `positions.code` through the mapper in shared auth and SQL. HR
 display names live in `positions.label_vi` / `positions.label_en` and must not
 gate authz. Unknown or retired position codes fail closed to `unassigned`.
-D088 expands the set beyond the former five-role baseline; the three new roles
-are JWT-role adapters and must migrate under ADR 0015 Authority. Runtime ACL,
-login destinations, and role templates follow D088 Wave 1+; treat the tree above
-as the live product contract until ADR 0015 replaces temporary JWT roles.
+D076 owns the application-role set; the three central/accounting roles are
+JWT-role adapters and must migrate under ADR 0015 Authority. Runtime ACL, login
+destinations, and role templates follow the generated role-route matrix. D091
+owns their Inventory workflow boundary.
 
 ## RLS Gate Choice — Live Permission Grants vs JWT Role
 

@@ -106,8 +106,6 @@ $$;
 
 DO $$
 DECLARE
-  v_role name;
-  v_table text;
   v_privilege text;
 BEGIN
   IF to_regprocedure(
@@ -117,40 +115,14 @@ BEGIN
       'TEST FAILED: verify_branch_override_code still exists';
   END IF;
 
-  FOREACH v_role IN ARRAY ARRAY['anon'::name, 'authenticated'::name]
-  LOOP
-    FOREACH v_table IN ARRAY ARRAY[
-      'public.branch_override_codes',
-      'public.branch_override_attempts'
-    ]
-    LOOP
-      FOREACH v_privilege IN ARRAY ARRAY[
-        'SELECT', 'INSERT', 'UPDATE', 'DELETE',
-        'TRUNCATE', 'REFERENCES', 'TRIGGER'
-      ]
-      LOOP
-        IF has_table_privilege(v_role, v_table, v_privilege) THEN
-          RAISE EXCEPTION
-            'TEST FAILED: % retains % on %',
-            v_role, v_privilege, v_table;
-        END IF;
-      END LOOP;
-    END LOOP;
-
-    FOREACH v_privilege IN ARRAY ARRAY['USAGE', 'SELECT', 'UPDATE']
-    LOOP
-      IF has_sequence_privilege(
-        v_role,
-        'public.branch_override_attempts_id_seq',
-        v_privilege
-      ) THEN
-        RAISE EXCEPTION
-          'TEST FAILED: % retains % on branch_override_attempts_id_seq',
-          v_role,
-          v_privilege;
-      END IF;
-    END LOOP;
-  END LOOP;
+  IF to_regclass('public.branch_override_codes') IS NOT NULL
+    OR to_regclass('public.branch_override_attempts') IS NOT NULL
+    OR to_regclass(
+      'public.branch_override_attempts_id_seq'
+    ) IS NOT NULL THEN
+    RAISE EXCEPTION
+      'TEST FAILED: retired branch override storage still exists';
+  END IF;
 
   IF NOT has_table_privilege(
     'authenticated',

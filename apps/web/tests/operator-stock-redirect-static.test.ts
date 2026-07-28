@@ -753,16 +753,13 @@ test("operator stock branch-native extensions keep GRN, issue, and report action
   );
   assert.match(
     branchGrnListClient,
-    /draft\.poId != null\s*\?\s*`\$\{basePath\}\/\$\{draft\.grnId\}`/,
+    /const href = `\$\{basePath\}\/\$\{draft\.grnId\}`;/,
   );
   assert.doesNotMatch(
     branchGrnListClient,
     /\bDataTable\b|\bGrnListClient\b|\bembedded\b|\buseLongPress\b|\bformatVND\b|overflow-x-auto/,
   );
-  assert.match(
-    grnListClient,
-    /href=\{grnDetailHref\(basePath, grn\.id\)\}/,
-  );
+  assert.match(grnListClient, /href=\{grnDetailHref\(basePath, grn\.id\)\}/);
   assert.match(grnListClient, /touch-manipulation cursor-pointer/);
   assert.doesNotMatch(grnListClient, /useLongPress/);
   assert.doesNotMatch(grnListClient, /touch-none/);
@@ -879,8 +876,9 @@ test("operator stock GRN source and receipt form keep Branch-native presentation
   );
   assert.match(
     grnCreateRoute,
-    /grnBasePath=\{`\/br\/\$\{branchId\}\/stock\/grn`\}/,
+    /const grnBasePath = `\/br\/\$\{branchId\}\/stock\/grn`;/,
   );
+  assert.match(grnCreateRoute, /grnBasePath=\{grnBasePath\}/);
   assert.doesNotMatch(
     grnCreateRoute,
     /GrnCreatePageContent|DocumentFormFrame|embedded/,
@@ -1255,10 +1253,11 @@ test("operator transfer routes stay Branch-scoped while Owner keeps history only
   assert.doesNotMatch(transferRoute, /DataTable/);
   assert.doesNotMatch(transferRoute, /embedded/);
 
-  assert.match(transferCreateData, /"production_storage"/);
+  assert.match(transferCreateData, /\.eq\("location_kind", "warehouse"\)/);
+  assert.doesNotMatch(transferCreateData, /"production_storage"/);
   assert.match(transferCreateData, /itemKind: ingredient\.item_kind \?\? null/);
   assert.match(transferCreateModel, /getTransferSourceLocationOptions/);
-  assert.match(transferCreateModel, /location\.kind === "production_storage"/);
+  assert.match(transferCreateModel, /location\.kind === "warehouse"/);
   assert.match(transferCreateModel, /getTransferSelectableIngredients/);
   assert.match(transferCreateModel, /ingredient\.itemKind === "finished_good"/);
   assert.match(

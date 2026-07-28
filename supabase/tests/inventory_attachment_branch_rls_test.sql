@@ -16,8 +16,12 @@ DECLARE
   v_staff_branch bigint;
   v_other_branch bigint;
   v_supplier bigint;
+  v_ingredient bigint;
+  v_unit bigint;
   v_same_branch_grn bigint;
+  v_same_branch_line bigint;
   v_other_branch_grn bigint;
+  v_other_branch_line bigint;
 BEGIN
   SELECT profile.tenant_id, profile.id, profile.branch_id
   INTO v_tenant, v_staff, v_staff_branch
@@ -132,6 +136,77 @@ BEGIN
   )
   RETURNING id INTO v_other_branch_grn;
 
+  SELECT ingredient_unit.ingredient_id, ingredient_unit.unit_id
+  INTO v_ingredient, v_unit
+  FROM public.ingredient_units AS ingredient_unit
+  JOIN public.ingredients AS ingredient
+    ON ingredient.id = ingredient_unit.ingredient_id
+   AND ingredient.tenant_id = ingredient_unit.tenant_id
+  WHERE ingredient_unit.tenant_id = v_tenant
+    AND ingredient_unit.is_base IS TRUE
+    AND ingredient_unit.is_active IS TRUE
+    AND ingredient.is_active IS TRUE
+  ORDER BY ingredient_unit.id
+  LIMIT 1;
+
+  IF v_ingredient IS NULL OR v_unit IS NULL THEN
+    RAISE EXCEPTION
+      'TEST FAILED: active ingredient base unit is required';
+  END IF;
+
+  INSERT INTO public.supplier_items (
+    tenant_id,
+    supplier_id,
+    ingredient_id,
+    supplier_sku_code,
+    is_active,
+    created_by
+  )
+  VALUES (
+    v_tenant,
+    v_supplier,
+    v_ingredient,
+    'RLS-ATTACH-' || txid_current()::text,
+    TRUE,
+    v_staff
+  );
+
+  INSERT INTO public.grn_items (
+    tenant_id,
+    grn_id,
+    ingredient_id,
+    received_quantity,
+    rejected_quantity,
+    entry_unit_id
+  )
+  VALUES (
+    v_tenant,
+    v_same_branch_grn,
+    v_ingredient,
+    1,
+    0,
+    v_unit
+  )
+  RETURNING id INTO v_same_branch_line;
+
+  INSERT INTO public.grn_items (
+    tenant_id,
+    grn_id,
+    ingredient_id,
+    received_quantity,
+    rejected_quantity,
+    entry_unit_id
+  )
+  VALUES (
+    v_tenant,
+    v_other_branch_grn,
+    v_ingredient,
+    1,
+    0,
+    v_unit
+  )
+  RETURNING id INTO v_other_branch_line;
+
   PERFORM set_config('test.inv_attach_tenant', v_tenant::text, true);
   PERFORM set_config('test.inv_attach_staff', v_staff::text, true);
   PERFORM set_config(
@@ -140,8 +215,18 @@ BEGIN
     true
   );
   PERFORM set_config(
+    'test.inv_attach_same_line',
+    v_same_branch_line::text,
+    true
+  );
+  PERFORM set_config(
     'test.inv_attach_other_grn',
     v_other_branch_grn::text,
+    true
+  );
+  PERFORM set_config(
+    'test.inv_attach_other_line',
+    v_other_branch_line::text,
     true
   );
 END;
@@ -171,31 +256,37 @@ DO $$
 DECLARE
   v_tenant text := current_setting('test.inv_attach_tenant');
   v_same_grn text := current_setting('test.inv_attach_same_grn');
+  v_same_line text := current_setting('test.inv_attach_same_line');
   v_other_grn text := current_setting('test.inv_attach_other_grn');
+  v_other_line text := current_setting('test.inv_attach_other_line');
   v_rejected boolean;
 BEGIN
-  INSERT INTO storage.objects (bucket_id, name, owner_id)
+  INSERT INTO storage.objects (bucket_id, name, owner_id, metadata)
   VALUES (
     'inventory-attachments',
     format(
-      '%s/grn/%s/price-override/1/same-branch.jpg',
+      '%s/grn/%s/rejected/%s/same-branch.webp',
       v_tenant,
-      v_same_grn
+      v_same_grn,
+      v_same_line
     ),
-    auth.uid()::text
+    auth.uid()::text,
+    '{"mimetype":"image/webp"}'::jsonb
   );
 
   v_rejected := false;
   BEGIN
-    INSERT INTO storage.objects (bucket_id, name, owner_id)
+    INSERT INTO storage.objects (bucket_id, name, owner_id, metadata)
     VALUES (
       'inventory-attachments',
       format(
-        '%s/grn/%s/price-override/1/other-branch.jpg',
+        '%s/grn/%s/rejected/%s/other-branch.webp',
         v_tenant,
-        v_other_grn
+        v_other_grn,
+        v_other_line
       ),
-      auth.uid()::text
+      auth.uid()::text,
+      '{"mimetype":"image/webp"}'::jsonb
     );
   EXCEPTION
     WHEN insufficient_privilege THEN
@@ -208,15 +299,17 @@ BEGIN
 
   v_rejected := false;
   BEGIN
-    INSERT INTO storage.objects (bucket_id, name, owner_id)
+    INSERT INTO storage.objects (bucket_id, name, owner_id, metadata)
     VALUES (
       'inventory-attachments',
       format(
-        '%s/grn/%s/price-override/1/wrong-tenant.jpg',
+        '%s/grn/%s/rejected/%s/wrong-tenant.webp',
         (v_tenant::bigint + 1000)::text,
-        v_same_grn
+        v_same_grn,
+        v_same_line
       ),
-      auth.uid()::text
+      auth.uid()::text,
+      '{"mimetype":"image/webp"}'::jsonb
     );
   EXCEPTION
     WHEN insufficient_privilege THEN

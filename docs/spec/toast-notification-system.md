@@ -117,7 +117,6 @@ Out of scope for the current contract:
 | Client validation fails                       | Yes or inline field error                 | No                                               | No                                   |
 | Payment confirmed                             | Yes                                       | Usually no                                       | Optional only if finance needs alert |
 | Auto-waste soft-fails after POS void succeeds | Warning toast                             | Optional task for admin if follow-up is required | Optional                             |
-| GRN price variance needs approval             | Yes for submitter                         | Yes for approver role                            | Optional                             |
 | Stock low recurring alert                     | No unless user triggered check            | Yes with dedup key                               | Optional                             |
 | KDS ticket received                           | Usually no toast if visible in live queue | Optional only for cross-station handoff          | No                                   |
 | Print job retry failed                        | Error toast for operator                  | Yes for settings/ if repeated               | Optional                             |
@@ -254,7 +253,6 @@ Recommended patterns:
 | Event              | Dedup key                                                 |
 | ------------------ | --------------------------------------------------------- |
 | Stock low          | `inventory.stock_low:{branch_id}:{ingredient_id}`         |
-| GRN price variance | `procurement.grn_price_variance:{grn_id}:{ingredient_id}` |
 | Stocktake conflict | `stocktake.conflict:{session_id}:{line_id}`               |
 | Integration failed | `system.integration_failed:{integration}:{date}`          |
 | SLA breach         | `workflow.sla:{entity_type}:{entity_id}:{sla_name}`       |
@@ -372,7 +370,9 @@ UI rules:
 
 ### Inventory
 
-- Durable notifications are expected for stock low, GRN variance, stocktake conflicts, period-close issues, supplier returns, and approval queues.
+- Durable notifications are expected for stock low, stocktake conflicts,
+  period-close issues, and real approval queues. D091 does not create a
+  price-review obligation from GRN.
 - Toasts confirm the local action only; durable rows carry cross-role obligations.
 
 ### Employee
@@ -423,7 +423,8 @@ INSERT INTO public.notifications (
 ) VALUES (...);
 ```
 
-Use RPC when notification creation is part of an atomic workflow. Examples: finalizing stocktake creates conflicts, confirming GRN creates approval requirement, hard block creates escalation.
+Use RPC when notification creation is part of an atomic workflow. Example:
+finalizing stocktake creates conflicts.
 
 ## External Outbox
 
@@ -476,7 +477,6 @@ Rules:
 Default dedup windows:
 
 - Stock low: one active notification per branch + ingredient until replenished.
-- Price drift: one per supplier + ingredient per week unless threshold tier changes.
 - Integration failure: one per integration per day, with retry count in `meta`.
 - SLA breach: one per entity + SLA.
 

@@ -232,7 +232,7 @@ export default async function OperatorStockTransferPage({
   return (
     <BranchOperatorPage
       title={
-        receiveOnly ? copy.receiveKitchenTitle : copy.internalTransferTitle
+        receiveOnly ? copy.receiveTransferTitle : copy.internalTransferTitle
       }
       description={
         receiveOnly

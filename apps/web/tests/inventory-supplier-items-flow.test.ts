@@ -27,7 +27,7 @@ test("supplier item management is permission-gated and tenant-scoped", () => {
   assert.match(page, /\.eq\("is_active", true\)/);
 });
 
-test("PO and supplier-first GRN load only mapped active ingredients", () => {
+test("retrospective procurement maps active ingredients through the GRN", () => {
   const poPage = readRepo(
     "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   );
@@ -36,14 +36,13 @@ test("PO and supplier-first GRN load only mapped active ingredients", () => {
   );
   const grnLoader = readRepo("apps/web/lib/inventory/grn-create-data.ts");
 
-  assert.match(poPage, /\.from\("supplier_items"\)/);
-  assert.match(poPage, /supplierIdsByIngredient/);
-  assert.match(poClient, /item\.supplierIds\.includes\(Number\(supplierId\)\)/);
+  assert.doesNotMatch(poPage, /\.from\("supplier_items"\)/);
+  assert.doesNotMatch(poClient, /supplierIds|ingredient options/);
   assert.match(grnLoader, /\.from\("supplier_items"\)/);
   assert.match(grnLoader, /allowedIngredientIds\.has\(ingredient\.id\)/);
 });
 
-test("Server Actions reject supplier-mismatched PO and GRN lines", () => {
+test("Server Actions reject supplier-mismatched PO and GRN line writes", () => {
   const poActions = readRepo(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
@@ -54,25 +53,22 @@ test("Server Actions reject supplier-mismatched PO and GRN lines", () => {
   assert.match(poActions, /validateSupplierIngredients/);
   assert.match(poActions, /Có nguyên liệu chưa được gán cho nhà cung cấp\./);
   assert.match(grnActions, /\.eq\("supplier_id", grn\.supplier_id\)/);
-  assert.match(
-    grnActions,
-    /Phiếu có nguyên liệu chưa được gán cho nhà cung cấp\./,
-  );
+  assert.match(grnActions, /Nguyên liệu chưa được gán cho nhà cung cấp\./);
 });
 
-test("database triggers enforce mappings on line writes and document approval", () => {
-  const migration = readRepo(
-    "supabase/migrations/20260727150000_enforce_supplier_item_mapping.sql",
+test("supplier mapping gates draft construction, not GRN confirmation", () => {
+  const grnActions = readRepo(
+    "apps/web/app/(protected)/inventory/grn-actions.ts",
   );
+  const confirmStart = grnActions.indexOf("export async function confirmGrn");
+  const confirmEnd = grnActions.indexOf("/* ─── amendGrnLine", confirmStart);
+  assert.ok(confirmStart >= 0 && confirmEnd > confirmStart);
+  const confirmAction = grnActions.slice(confirmStart, confirmEnd);
 
-  for (const trigger of [
-    "purchase_order_items_supplier_mapping",
-    "grn_items_supplier_mapping",
-    "purchase_orders_supplier_mapping_on_approval",
-    "goods_received_notes_supplier_mapping_on_confirm",
-  ]) {
-    assert.match(migration, new RegExp(`CREATE TRIGGER ${trigger}`));
-  }
-  assert.match(migration, /supplier_item_mapping_required/);
-  assert.match(migration, /si\.is_active/);
+  assert.match(grnActions, /Nguyên liệu chưa được gán cho nhà cung cấp\./);
+  assert.doesNotMatch(
+    confirmAction,
+    /supplier_items|supplier_item_mapping_required/,
+  );
+  assert.match(confirmAction, /\.rpc\("confirm_goods_receipt_note"/);
 });

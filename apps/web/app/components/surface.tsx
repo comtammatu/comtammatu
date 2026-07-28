@@ -4,6 +4,8 @@ import Link from "next/link";
 import {
   createContext,
   useContext,
+  useEffect,
+  useRef,
   useState,
   type ComponentProps,
   type ReactNode,
@@ -194,6 +196,76 @@ export function AppPage({
 export const APP_PAGE_STICKY_FILTER_CLASSNAME =
   "sticky top-0 z-10 bg-background";
 
+/**
+ * Cancels Owner shell horizontal pad (`px-3 md:px-4`) when LIST filter chrome
+ * is stuck, so the bar flushes to the inset panel edges. Pair with
+ * `data-stuck` from `AppStickyFilterChrome` — do not apply while resting inside
+ * the LIST card. Top pad stays (no `-mt`) to avoid stuck-state observer flicker.
+ */
+export const APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME = [
+  // Do not use w-full with -mx bleed: width:100% keeps the border box at the
+  // parent width so the background never reaches the panel edge.
+  "in-[[data-owner-shell-scroll]]:w-[calc(100%+1.5rem)] in-[[data-owner-shell-scroll]]:md:w-[calc(100%+2rem)]",
+  "in-[[data-owner-shell-scroll]]:-mx-3 in-[[data-owner-shell-scroll]]:md:-mx-4",
+].join(" ");
+
+/**
+ * Sticky LIST filter surface with stuck-state shell bleed. Resting: sits inside
+ * the LIST card. Stuck: pins to the Owner shell scrollport top, drops side
+ * inset, and elevates over scrolling rows.
+ */
+export function AppStickyFilterChrome({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const root = sentinel.closest("[data-owner-shell-scroll]");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        setStuck(!entry.isIntersecting);
+      },
+      { root, threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <>
+      <div
+        ref={sentinelRef}
+        aria-hidden
+        className="pointer-events-none h-px w-full shrink-0"
+      />
+      <div
+        data-stuck={stuck ? "true" : undefined}
+        className={cn(
+          APP_PAGE_STICKY_FILTER_CLASSNAME,
+          // Match the LIST card surface when covering scrolling rows.
+          "bg-card transition-[margin,width,border-radius,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-move)]",
+          stuck
+            ? [APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME, "rounded-none shadow-lg"]
+            : null,
+          className,
+        )}
+      >
+        {children}
+      </div>
+    </>
+  );
+}
+
 export type AppPageHeaderProps = {
   title: ReactNode;
   headingLevel?: "h1" | "h2";
@@ -307,7 +379,8 @@ export function AppPageHeader({
 
 /**
  * Sticky wrapper for Owner LIST filter chrome that is not rendered through
- * AppListFrame's toolbar slot. Sticks at the top of the Owner shell scrollport.
+ * AppListFrame's toolbar slot. Sticks at the top of the Owner shell scrollport
+ * and bleeds to panel edges while stuck.
  */
 export function AppPageStickyChrome({
   children,
@@ -317,9 +390,7 @@ export function AppPageStickyChrome({
   className?: string;
 }) {
   return (
-    <div className={cn(APP_PAGE_STICKY_FILTER_CLASSNAME, className)}>
-      {children}
-    </div>
+    <AppStickyFilterChrome className={className}>{children}</AppStickyFilterChrome>
   );
 }
 
@@ -575,17 +646,7 @@ export function AppListFrame({
       className={cn("overflow-visible", className)}
       contentFlush
     >
-      {toolbar ? (
-        <div
-          className={cn(
-            APP_PAGE_STICKY_FILTER_CLASSNAME,
-            // Match the LIST card surface when stuck over scrolling rows.
-            "bg-card",
-          )}
-        >
-          {toolbar}
-        </div>
-      ) : null}
+      {toolbar ? <AppStickyFilterChrome>{toolbar}</AppStickyFilterChrome> : null}
       {children}
     </AppSection>
   );
@@ -673,21 +734,24 @@ export function AppToolbar({
       </Toolbar>
     );
     return sticky ? (
-      <div className={APP_PAGE_STICKY_FILTER_CLASSNAME}>{inlineToolbar}</div>
+      <AppStickyFilterChrome>{inlineToolbar}</AppStickyFilterChrome>
     ) : (
       inlineToolbar
     );
   }
 
-  return (
-    <Card
-      size="sm"
-      className={sticky ? APP_PAGE_STICKY_FILTER_CLASSNAME : undefined}
-    >
+  const cardToolbar = (
+    <Card size="sm">
       <CardContent>
         <Toolbar className={cn("gap-3", className)}>{content}</Toolbar>
       </CardContent>
     </Card>
+  );
+
+  return sticky ? (
+    <AppStickyFilterChrome>{cardToolbar}</AppStickyFilterChrome>
+  ) : (
+    cardToolbar
   );
 }
 

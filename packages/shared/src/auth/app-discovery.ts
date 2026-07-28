@@ -9,9 +9,7 @@ import {
 import { NAV_GROUP_LABELS_VI } from "../labels";
 
 export type AppDiscoverySurface =
-  | "owner"
-  | "branch_management"
-  | "branch_operation";
+  "owner" | "branch_management" | "branch_operation";
 
 export type AppDiscoveryStatus = "available" | "blocked";
 
@@ -80,7 +78,7 @@ function resolveBlockedLink(
 export function resolveOwnerDiscoveryGroups(
   role: StaffRole,
 ): DiscoveredAppGroup[] {
-  // D088: filter by per-module ACL so accountant / central roles see their
+  // Filter by the role-route ACL so accountant / central roles see their
   // allowed L0 slices without requiring the owner home ModuleKey.
   return OWNER_NAV_GROUPS.map((group) => ({
     title: group.title,
@@ -88,11 +86,7 @@ export function resolveOwnerDiscoveryGroups(
     items: group.items
       .filter((item) => canAccess(role, item.moduleKey))
       .map((item) =>
-        resolveAvailableLink(
-          item,
-          "owner",
-          MODULE_ACL[item.moduleKey].path,
-        ),
+        resolveAvailableLink(item, "owner", MODULE_ACL[item.moduleKey].path),
       ),
   })).filter((group) => group.items.length > 0);
 }

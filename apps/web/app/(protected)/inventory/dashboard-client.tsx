@@ -70,7 +70,6 @@ export type DashboardProps = {
   activeTransfers: number;
   activeStocktakes: number;
   pendingCountSlips: number;
-  priceReviewCount: number;
   reorderAlerts: Array<{
     ingredientId: number;
     branchId: number;
@@ -286,13 +285,11 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       key: "source",
       title: messages.inventory.dashboard.sourceFlowTitle,
       description: props.showProcurement
-        ? INVENTORY_VI.dashboardSourceProcurementDescription
+        ? messages.inventory.dashboard.sourceProcurementDescription
         : messages.inventory.dashboard.sourceBranchDescription,
       icon: props.showProcurement ? IconReceipt : IconTruck,
       statusLabel: props.showProcurement
-        ? messages.inventory.dashboard.priceReviewLinesStatus(
-            props.priceReviewCount,
-          )
+        ? messages.inventory.dashboard.draftGrnStatus(props.draftGrns)
         : messages.inventory.dashboard.inboundNeedReceiveStatus(inbound.length),
       tone:
         (props.showProcurement && props.draftGrns > 0) || inbound.length > 0
@@ -521,15 +518,6 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       icon: <IconReceipt className="size-4" />,
       severity: "destructive",
     });
-  if (showProcurement && props.priceReviewCount > 0)
-    items.push({
-      key: "price-review",
-      title: INVENTORY_VI.dashboardGrnPriceReviewTask(props.priceReviewCount),
-      description: INVENTORY_VI.dashboardGrnPriceVarianceHint,
-      href: paths.grn,
-      icon: <IconReceipt className="size-4" />,
-      severity: "warning",
-    });
   return items.slice(0, 6);
 }
 
@@ -674,9 +662,7 @@ export function DashboardClient(props: DashboardProps) {
               size="sm"
               render={
                 <Link
-                  href={withBranch(
-                    showProcurement ? paths.grn : paths.stock,
-                  )}
+                  href={withBranch(showProcurement ? paths.grn : paths.stock)}
                 />
               }
             >
@@ -688,9 +674,7 @@ export function DashboardClient(props: DashboardProps) {
             {reorderAlerts.slice(0, 3).map((item) => (
               <AppLinkCard
                 key={`r-${item.ingredientId}-${item.branchId}`}
-                href={withBranch(
-                  showProcurement ? paths.grn : paths.stock,
-                )}
+                href={withBranch(showProcurement ? paths.grn : paths.stock)}
                 title={item.name}
                 description={messages.inventory.dashboard.reorderStatus(
                   item.current,

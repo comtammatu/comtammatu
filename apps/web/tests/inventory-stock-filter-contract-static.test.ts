@@ -18,11 +18,13 @@ const branchStockClientSource = readWeb(
 test("inventory stock status and category filters have one control source", () => {
   assert.doesNotMatch(stockClientSource, /const categoryColumnHeader =/);
   assert.doesNotMatch(stockClientSource, /const stockColumnHeader =/);
-  assert.match(
-    stockClientSource,
-    /header: stockCopy\.filters\.categoryPlaceholder/,
-  );
+  assert.match(stockClientSource, /header: stockCopy\.table\.categoryKind/);
+  assert.match(stockClientSource, /header: stockCopy\.table\.status/);
   assert.match(stockClientSource, /header: stockCopy\.table\.stock/);
+  assert.doesNotMatch(stockClientSource, /header: stockCopy\.table\.kind/);
+  assert.doesNotMatch(stockClientSource, /StockAlertBadges/);
+  assert.match(stockClientSource, /StockStatusBadge/);
+  assert.match(stockClientSource, /StockCategoryKindCell/);
   assert.match(
     stockClientSource,
     /flex min-w-0 flex-1 flex-wrap items-center gap-2/,

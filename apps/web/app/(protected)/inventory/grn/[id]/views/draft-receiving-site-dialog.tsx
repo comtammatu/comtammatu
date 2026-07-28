@@ -3,18 +3,15 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import { CopyPlus as IconCopyPlus } from "lucide-react";
+import { Pencil as IconPencil } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { FormDialog, SelectField, TextareaField } from "@/components/form";
-import {
-  recreateGrnAtReceivingSite,
-  updateDraftGrnReceivingSite,
-} from "../../../grn-actions";
+import { FormDialog, SelectField } from "@/components/form";
+import { updateDraftGrnReceivingSite } from "../../../grn-actions";
 import {
   GRN_DETAIL_COPY as grnCopy,
-  type RecreateReceivingLocationOption,
+  type ReceivingLocationOption,
 } from "@lib/inventory/grn-detail-model";
 
 const draftReceivingSiteSchema = z.object({
@@ -23,66 +20,44 @@ const draftReceivingSiteSchema = z.object({
   }),
 });
 
-const recreateReceivingSiteSchema = z.object({
-  targetLocationId: z.string().min(1, {
-    error: grnCopy.recreate.invalidLocation,
-  }),
-  reason: z
-    .string()
-    .trim()
-    .min(10, { error: grnCopy.recreate.reasonMinLength })
-    .max(500, { error: grnCopy.recreate.reasonMaxLength }),
-});
-
-type RecreateReceivingSiteValues = {
+type DraftReceivingSiteValues = {
   targetLocationId: string;
-  reason?: string;
 };
 
-type RecreateReceivingSiteResult = {
-  newId: number;
-  newGrnNumber: string;
-};
-
-type RecreateReceivingSiteDialogProps = {
+type DraftReceivingSiteDialogProps = {
   grnId: number;
   grnCode: string;
   currentLocationId?: number | null;
-  locationOptions: RecreateReceivingLocationOption[];
-  grnListBasePath: string;
+  locationOptions: ReceivingLocationOption[];
   buttonSize?: "default" | "touch";
-  mode?: "confirmed" | "draft";
   disabledReason?: string;
 };
 
-function locationOptionLabel(option: RecreateReceivingLocationOption) {
+function locationOptionLabel(option: ReceivingLocationOption) {
   return option.isDefaultReceive
     ? `${option.branchName} - ${option.name} (mặc định)`
     : `${option.branchName} - ${option.name}`;
 }
 
-export function RecreateReceivingSiteDialog({
+export function DraftReceivingSiteDialog({
   grnId,
   grnCode,
   currentLocationId = null,
   locationOptions,
-  grnListBasePath,
   buttonSize = "default",
-  mode = "confirmed",
   disabledReason,
-}: RecreateReceivingSiteDialogProps) {
+}: DraftReceivingSiteDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const copy = mode === "draft" ? grnCopy.draftReceiving : grnCopy.recreate;
+  const copy = grnCopy.draftReceiving;
   const targetLocations = useMemo(
     () =>
       locationOptions.filter((location) => location.id !== currentLocationId),
     [currentLocationId, locationOptions],
   );
-  const defaultValues = useMemo<RecreateReceivingSiteValues>(
+  const defaultValues = useMemo<DraftReceivingSiteValues>(
     () => ({
       targetLocationId: targetLocations[0] ? String(targetLocations[0].id) : "",
-      reason: "",
     }),
     [targetLocations],
   );
@@ -95,11 +70,7 @@ export function RecreateReceivingSiteDialog({
     [targetLocations],
   );
   const disabled = targetLocations.length === 0 || Boolean(disabledReason);
-  const schema = (
-    mode === "draft" ? draftReceivingSiteSchema : recreateReceivingSiteSchema
-  ) as z.ZodType<RecreateReceivingSiteValues>;
-
-  async function handleSubmit(values: RecreateReceivingSiteValues) {
+  async function handleSubmit(values: DraftReceivingSiteValues) {
     const targetLocation = targetLocations.find(
       (location) => String(location.id) === values.targetLocationId,
     );
@@ -107,19 +78,10 @@ export function RecreateReceivingSiteDialog({
       return { success: false as const, error: copy.invalidLocation };
     }
 
-    if (mode === "draft") {
-      return updateDraftGrnReceivingSite({
-        grnId,
-        targetBranchId: targetLocation.branchId,
-        targetLocationId: targetLocation.id,
-      });
-    }
-
-    return recreateGrnAtReceivingSite({
+    return updateDraftGrnReceivingSite({
       grnId,
       targetBranchId: targetLocation.branchId,
       targetLocationId: targetLocation.id,
-      reason: (values.reason ?? "").trim(),
     });
   }
 
@@ -135,7 +97,7 @@ export function RecreateReceivingSiteDialog({
         }
         onClick={() => setOpen(true)}
       >
-        <IconCopyPlus className="size-4" />
+        <IconPencil className="size-4" />
         {copy.action}
       </Button>
 
@@ -144,27 +106,15 @@ export function RecreateReceivingSiteDialog({
         onOpenChange={setOpen}
         title={`${copy.title} - ${grnCode}`}
         description={copy.description}
-        schema={schema}
+        schema={draftReceivingSiteSchema}
         defaultValues={defaultValues}
-        entityKey={`${mode}-${grnId}-${defaultValues.targetLocationId}`}
+        entityKey={`${grnId}-${defaultValues.targetLocationId}`}
         onSubmit={handleSubmit}
-        onSuccess={(result) => {
-          if (mode === "draft") {
-            notify.success(grnCopy.draftReceiving.success);
-            router.refresh();
-            return;
-          }
-          const data = result.data as RecreateReceivingSiteResult | undefined;
-          if (!data?.newId) {
-            router.refresh();
-            return;
-          }
-          notify.success(grnCopy.recreate.success(data.newGrnNumber));
-          router.push(`${grnListBasePath}/${data.newId}`);
+        onSuccess={() => {
+          notify.success(grnCopy.draftReceiving.success);
           router.refresh();
         }}
         submitLabel={copy.submit}
-        submitVariant={mode === "draft" ? "default" : "destructive"}
         cancelLabel={ACTIONS_VI.cancel}
         contentClassName="sm:max-w-lg"
       >
@@ -179,17 +129,6 @@ export function RecreateReceivingSiteDialog({
               placeholder={copy.targetLocationPlaceholder}
               required
             />
-            {mode === "confirmed" ? (
-              <TextareaField
-                control={form.control}
-                name="reason"
-                label={grnCopy.recreate.reasonLabel}
-                rows={4}
-                maxLength={500}
-                placeholder={grnCopy.recreate.reasonPlaceholder}
-                required
-              />
-            ) : null}
           </>
         )}
       </FormDialog>

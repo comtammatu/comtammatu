@@ -1,7 +1,6 @@
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { resolveSiteKind } from "@comtammatu/shared/labels";
-import { getVNDateStringDaysAgo } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import {
   currentUserHasAnyPermissionAny,
@@ -47,12 +46,7 @@ type DashboardReorder = {
 };
 
 export type DashboardWarning =
-  | "stockValue"
-  | "transfers"
-  | "stocktakes"
-  | "reorderAlerts"
-  | "priceReview"
-  | "countSlips";
+  "stockValue" | "transfers" | "stocktakes" | "reorderAlerts" | "countSlips";
 
 const OPEN_TRANSFER_STATUSES = new Set([
   "draft",
@@ -78,7 +72,6 @@ export type InventoryDashboardData = {
   activeTransfers: number;
   activeStocktakes: number;
   pendingCountSlips: number;
-  priceReviewCount: number;
   reorderAlerts: Array<{
     ingredientId: number;
     branchId: number;
@@ -165,29 +158,6 @@ export async function loadInventoryDashboardData(
   // getInventoryDashboard replaces fetchInventoryValueSystem — single RPC
   // instead of a multi-join query — and preserves cost-gated NULL for users
   // lacking reports:view_branch/tenant (rule INVENTORY-WAC-STRICT-OVERRIDE).
-  // Price-review exception count is only surfaced on the procurement view;
-  // skip the query otherwise. Counts confirmed-GRN lines flagged for price
-  // review (confirm_goods_receipt_note sets requires_review when the received
-  // unit price deviates from the PO price beyond the QC tolerance) within the
-  // last 30 days — matching the "(30d)" KPI label and the exception copy.
-  const priceReviewSince = getVNDateStringDaysAgo(30);
-  let priceReviewQuery = supabase
-    .from("grn_items")
-    .select("id, goods_received_notes!inner(branch_id, received_date, status)", {
-      count: "exact",
-      head: true,
-    })
-    .eq("tenant_id", claims.tenant_id)
-    .eq("requires_review", true)
-    .eq("goods_received_notes.status", "confirmed")
-    .gte("goods_received_notes.received_date", priceReviewSince);
-  if (branchFilter !== undefined) {
-    priceReviewQuery = priceReviewQuery.eq(
-      "goods_received_notes.branch_id",
-      branchFilter,
-    );
-  }
-
   let pendingCountSlipQuery = supabase
     .from("inventory_count_slips")
     .select("id", { count: "exact", head: true })
@@ -212,7 +182,6 @@ export async function loadInventoryDashboardData(
     transferRes,
     stocktakeRes,
     reorderRes,
-    priceReviewRes,
     pendingCountSlipRes,
   ] = await Promise.all([
     scope.selectedBranchId != null
@@ -224,9 +193,6 @@ export async function loadInventoryDashboardData(
     fetchStockTransfers(branchFilter),
     fetchStocktakeSessions(branchFilter),
     fetchReorderAlerts(branchFilter),
-    showProcurement
-      ? priceReviewQuery
-      : Promise.resolve({ count: 0, error: null }),
     canApproveCounts
       ? pendingCountSlipQuery
       : Promise.resolve({ count: 0, error: null }),
@@ -239,12 +205,8 @@ export async function loadInventoryDashboardData(
   if (!transferRes.success) dashboardWarnings.push("transfers");
   if (!stocktakeRes.success) dashboardWarnings.push("stocktakes");
   if (!reorderRes.success) dashboardWarnings.push("reorderAlerts");
-  if (priceReviewRes.error) dashboardWarnings.push("priceReview");
   if (pendingCountSlipRes.error) dashboardWarnings.push("countSlips");
 
-  const priceReviewCount = priceReviewRes.error
-    ? 0
-    : (priceReviewRes.count ?? 0);
   const pendingCountSlips = pendingCountSlipRes.error
     ? 0
     : (pendingCountSlipRes.count ?? 0);
@@ -261,8 +223,8 @@ export async function loadInventoryDashboardData(
     transferRes.success && transferRes.data
       ? (transferRes.data as DashboardTransfer[])
       : [];
-  const activeTransfers = rawTransfers.filter(
-    (t) => OPEN_TRANSFER_STATUSES.has(t.status),
+  const activeTransfers = rawTransfers.filter((t) =>
+    OPEN_TRANSFER_STATUSES.has(t.status),
   ).length;
   const transfers = rawTransfers.map((t) => ({
     id: t.id,
@@ -322,7 +284,6 @@ export async function loadInventoryDashboardData(
     activeTransfers,
     activeStocktakes,
     pendingCountSlips,
-    priceReviewCount,
     reorderAlerts,
     transfers,
     stocktakeSessions,

@@ -2,12 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 // Generates the GENERATED body of docs/spec/role-route-matrix.md from the
-// auth source-of-truth files (module-acl.ts, route-map.ts, nav-config.ts,
-// scope.ts, login-destination.ts, types.ts, permissions.ts). The doc's hand-authored
-// prose (product frame, principles, scope layers, navigation contract, change
-// checklist) lives in a preamble the generator reads verbatim from the
-// existing file and re-emits unchanged — only the block between the
-// GENERATED markers is replaced.
+// auth source-of-truth files (module-acl.ts, route-map.ts,
+// route-resolution.ts, nav-config.ts, scope.ts, login-destination.ts, types.ts,
+// permissions.ts). The doc's hand-authored prose (product frame, principles,
+// scope layers, navigation contract, change checklist) lives in a preamble the
+// generator reads verbatim from the existing file and re-emits unchanged —
+// only the block between the GENERATED markers is replaced.
 //
 // Parsing follows the text-scrape convention already used by
 // scripts/check-ui-contract.mjs (MODULE_ACL_SOURCE regex reads) rather than
@@ -20,6 +20,7 @@ const CHECK_MODE = process.argv.includes("--check");
 
 const MODULE_ACL_PATH = "packages/shared/src/auth/module-acl.ts";
 const ROUTE_MAP_PATH = "packages/shared/src/auth/route-map.ts";
+const ROUTE_RESOLUTION_PATH = "packages/shared/src/auth/route-resolution.ts";
 const NAV_CONFIG_PATH = "packages/shared/src/auth/nav-config.ts";
 const SCOPE_PATH = "packages/shared/src/auth/scope.ts";
 const LOGIN_DESTINATION_PATH = "packages/shared/src/auth/login-destination.ts";
@@ -233,6 +234,16 @@ function parseRouteFamilyContracts(source, moduleAclByKey) {
   return families;
 }
 
+function parseStringArrayConstant(source, name) {
+  const block = source.match(
+    new RegExp(`export const ${name} = \\[([\\s\\S]*?)\\] as const;`),
+  );
+  if (!block) {
+    throw new Error(`route-resolution.ts: could not find string array ${name}`);
+  }
+  return [...block[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+}
+
 // ---------------------------------------------------------------------------
 // Parse packages/shared/src/auth/nav-config.ts — advertisement source per
 // module key (which nav/tile arrays surface a module to the user).
@@ -320,13 +331,13 @@ function derivePostLoginHomes(staffRoles, ownerRoles) {
       continue;
     }
 
-    // Mirror packages/shared/src/auth/login-destination.ts (D088).
+    // Mirror packages/shared/src/auth/login-destination.ts (D076/D091).
     if (role === "accountant") {
       rows.push({
         role,
         desktop: "/finance",
         phone: "/finance",
-        note: "D088 temporary until ADR 0015: accountant lands on Finance.",
+        note: "D076 adapter until ADR 0015; D091 grants only the Inventory GRN/PO slice.",
       });
       continue;
     }
@@ -336,7 +347,7 @@ function derivePostLoginHomes(staffRoles, ownerRoles) {
         role,
         desktop: "/inventory",
         phone: "/inventory",
-        note: "D088 temporary until ADR 0015: central site roles land on Inventory L0.",
+        note: "D076 adapter until ADR 0015; D091 scopes Inventory work to the pinned central site.",
       });
       continue;
     }
@@ -395,28 +406,53 @@ function renderPostLoginHomeTable(rows, roleLabels) {
   return [header, ...body].join("\n");
 }
 
-function renderActionGateTable(moduleAcl, families, permissionsByNamespace) {
+function renderActionGateTable(
+  moduleAcl,
+  families,
+  permissionsByNamespace,
+  inventoryRoutePrefixes,
+) {
   const header =
     "| Route family | Route prefix(es) | Required route bucket | Action gate keys (from `permissions.ts`) |\n" +
     "| ------------ | ------------------ | ----------------------- | ------------------------------------------ |";
   const moduleAclByKey = Object.fromEntries(
     moduleAcl.map((entry) => [entry.key, entry]),
   );
+  const formatRoles = (moduleKeys, excludedRoles = []) => {
+    const roles = new Set();
+    for (const moduleKey of moduleKeys) {
+      for (const role of moduleAclByKey[moduleKey]?.allowedRoles ?? []) {
+        if (!excludedRoles.includes(role)) roles.add(role);
+      }
+    }
+    return [...roles].sort().join("/");
+  };
+  const formatKeys = (namespaces) => {
+    const keys = new Set();
+    for (const namespace of namespaces) {
+      for (const key of permissionsByNamespace[namespace] ?? []) keys.add(key);
+    }
+    return keys.size > 0
+      ? [...keys]
+          .sort()
+          .map((key) => `\`${key}\``)
+          .join(", ")
+      : "(module-level ACL gate only — no dedicated action-permission namespace)";
+  };
+  const formatPrefixes = (prefixes) =>
+    prefixes.map((prefix) => `\`${prefix}\``).join(", ");
+
   const rows = families
     .filter((f) => f.moduleKeys.length > 0 && f.matchPrefixes.length > 0)
-    .map((f) => {
-      const roleSet = new Set();
-      for (const moduleKey of f.moduleKeys) {
-        for (const role of moduleAclByKey[moduleKey]?.allowedRoles ?? []) {
-          roleSet.add(role);
-        }
+    .flatMap((f) => {
+      if (f.id === "inventory") {
+        return [
+          `| inventory-home | \`/inventory\` (exact) | ${formatRoles(["inventory"], ["accountant"])} | ${formatKeys(["inventory"])} |`,
+          `| inventory-procurement | ${formatPrefixes(inventoryRoutePrefixes.procurement)} | ${formatRoles(["inventory"])} | ${formatKeys(["procurement"])} |`,
+          `| inventory-operations | ${formatPrefixes(inventoryRoutePrefixes.operations)} | ${formatRoles(["inventory_operations"])} | ${formatKeys(["inventory", "procurement"])} |`,
+        ];
       }
-      if (f.surface === "owner") {
-        const surfaceRoles = new Set(moduleAclByKey.owner?.allowedRoles ?? []);
-        for (const role of roleSet) {
-          if (!surfaceRoles.has(role)) roleSet.delete(role);
-        }
-      }
+
       // Namespace candidates: the moduleKey(s) and the family id verbatim
       // only — an exact match against a PERMISSION_KEYS namespace (e.g.
       // "pos", "kds", "hr", "finance", "inventory", "menu", "orders").
@@ -428,19 +464,7 @@ function renderActionGateTable(moduleAcl, families, permissionsByNamespace) {
       // prefix and falls through to the module-level-only gate note, which is
       // the accurate statement.
       const namespaceCandidates = new Set([...f.moduleKeys, f.id]);
-      const keys = new Set();
-      for (const ns of namespaceCandidates) {
-        for (const key of permissionsByNamespace[ns] ?? []) keys.add(key);
-      }
-      const prefixes = f.matchPrefixes.map((p) => `\`${p}\``).join(", ");
-      const gateKeys =
-        keys.size > 0
-          ? [...keys]
-              .sort()
-              .map((k) => `\`${k}\``)
-              .join(", ")
-          : "(module-level ACL gate only — no dedicated action-permission namespace)";
-      return `| ${f.id} | ${prefixes} | ${[...roleSet].sort().join("/")} | ${gateKeys} |`;
+      return `| ${f.id} | ${formatPrefixes(f.matchPrefixes)} | ${formatRoles(f.moduleKeys)} | ${formatKeys(namespaceCandidates)} |`;
     });
   return [header, ...rows].join("\n");
 }
@@ -452,13 +476,15 @@ function buildGeneratedBody({
   families,
   postLoginHomes,
   permissionsByNamespace,
+  inventoryRoutePrefixes,
 }) {
   return [
     GENERATED_BEGIN,
     "",
     "<!--",
     "  This section is GENERATED by scripts/gen-role-route-matrix.mjs from:",
-    `  ${MODULE_ACL_PATH}, ${ROUTE_MAP_PATH}, ${NAV_CONFIG_PATH},`,
+    `  ${MODULE_ACL_PATH}, ${ROUTE_MAP_PATH}, ${ROUTE_RESOLUTION_PATH},`,
+    `  ${NAV_CONFIG_PATH},`,
     `  ${SCOPE_PATH}, ${LOGIN_DESTINATION_PATH}, ${TYPES_PATH}, ${PERMISSIONS_PATH}.`,
     "  Do NOT hand-edit below this line — run `corepack pnpm gen:route-matrix`",
     "  after any auth-source change, and `corepack pnpm lint:route-matrix` (or",
@@ -502,7 +528,12 @@ function buildGeneratedBody({
     "not a hand-picked sample — route access and action authorization stay",
     "separate gates (route bucket here, permission key at the mutation site).",
     "",
-    renderActionGateTable(moduleAcl, families, permissionsByNamespace),
+    renderActionGateTable(
+      moduleAcl,
+      families,
+      permissionsByNamespace,
+      inventoryRoutePrefixes,
+    ),
     "",
     GENERATED_END,
   ].join("\n");
@@ -511,6 +542,7 @@ function buildGeneratedBody({
 function collectGeneratedData() {
   const moduleAclSource = readSource(MODULE_ACL_PATH);
   const routeMapSource = readSource(ROUTE_MAP_PATH);
+  const routeResolutionSource = readSource(ROUTE_RESOLUTION_PATH);
   const navConfigSource = readSource(NAV_CONFIG_PATH);
   const typesSource = readSource(TYPES_PATH);
   const permissionsSource = readSource(PERMISSIONS_PATH);
@@ -529,6 +561,16 @@ function collectGeneratedData() {
   const families = parseRouteFamilyContracts(routeMapSource, moduleAclByKey);
   const permissionsByNamespace =
     parsePermissionKeysByNamespace(permissionsSource);
+  const inventoryRoutePrefixes = {
+    procurement: parseStringArrayConstant(
+      routeResolutionSource,
+      "INVENTORY_PROCUREMENT_PREFIXES",
+    ),
+    operations: parseStringArrayConstant(
+      routeResolutionSource,
+      "INVENTORY_ROUTE_PREFIXES",
+    ),
+  };
   const postLoginHomes = derivePostLoginHomes(
     staffRoles,
     new Set(moduleAclByKey.owner?.allowedRoles ?? []),
@@ -541,6 +583,7 @@ function collectGeneratedData() {
     families,
     postLoginHomes,
     permissionsByNamespace,
+    inventoryRoutePrefixes,
   };
 }
 
@@ -580,7 +623,7 @@ function main() {
       process.exit(0);
     }
     console.error(
-      `[gen-role-route-matrix] ${DOC_PATH} is STALE vs auth source (module-acl.ts / route-map.ts / nav-config.ts / scope.ts / login-destination.ts / types.ts / permissions.ts).`,
+      `[gen-role-route-matrix] ${DOC_PATH} is STALE vs auth source (module-acl.ts / route-map.ts / route-resolution.ts / nav-config.ts / scope.ts / login-destination.ts / types.ts / permissions.ts).`,
     );
     console.error(
       `  Fix: run \`corepack pnpm gen:route-matrix\` and commit the result.`,

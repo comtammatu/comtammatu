@@ -28,15 +28,15 @@ function makeTransfer(patch: Partial<TransferDetail> = {}): TransferDetail {
   };
 }
 
-test("branch manager only confirms an intra-branch kitchen request", () => {
+test("intra-branch transfer drafts expose no mutation", () => {
   const intraBranch = makeTransfer({ toBranchId: 10 });
-  assert.deepEqual(
+  assert.equal(
     getTransferActionConfig({
       transfer: intraBranch,
       userRole: "branch_manager",
       userBranchId: 10,
     }),
-    { kind: "confirm_kitchen", enabled: true },
+    null,
   );
 
   assert.deepEqual(

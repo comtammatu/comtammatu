@@ -52,9 +52,11 @@ export async function GRNDetailPageContent({
       ingredients={result.data.ingredients}
       canAdjustStock={result.data.canAdjustStock}
       canAmendConfirmed={result.data.canAmendConfirmed}
+      canEditDraft={result.data.canEditDraft}
       canConfirm={result.data.canConfirm}
       canCreatePoFromGrn={result.data.canCreatePoFromGrn}
-      recreateLocationOptions={result.data.recreateLocationOptions}
+      canManageSupplierInvoice={result.data.canManageSupplierInvoice}
+      receivingLocationOptions={result.data.receivingLocationOptions}
       auditLogs={result.data.auditLogs}
       grnListBasePath={grnListBasePath}
       grnMobileBackPath={grnMobileBackPath}

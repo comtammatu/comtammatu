@@ -11,10 +11,7 @@ import {
   updateDraftGrnReceivingSite,
   upsertGrnLine,
 } from "@/(protected)/inventory/grn-actions";
-import {
-  type GrnDraft,
-  type GrnDraftLine,
-} from "@lib/inventory/grn-draft";
+import { type GrnDraft, type GrnDraftLine } from "@lib/inventory/grn-draft";
 import { getDefaultPurchaseUnit } from "@lib/inventory/purchase-units";
 import { GRN_CREATE_COPY } from "./grn-create-copy";
 import {
@@ -24,6 +21,7 @@ import {
   type GrnCreateServerDraftLine,
   type GrnLineEditState,
 } from "./grn-create-model";
+import { persistPendingGrnDraftLines } from "./persist-grn-draft-lines";
 
 export type UseGrnCreateControllerOptions = GrnCreatePageData & {
   basePath: string;
@@ -35,11 +33,9 @@ export function useGrnCreateController({
   branchId: initialBranchId,
   procurementBranches,
   locationOptions,
-  initialLocationId,
   canSwitchBranch,
   ingredients,
   recentLines,
-  existingDraft,
   basePath,
   grnBasePath,
 }: UseGrnCreateControllerOptions) {
@@ -47,22 +43,17 @@ export function useGrnCreateController({
   const initialLocation = pickGrnReceivingLocation(
     locationOptions,
     initialBranchId,
-    initialLocationId,
   );
   const initialDraftBranchId = initialLocation?.branchId ?? initialBranchId;
   const [draft, setDraft] = useState<GrnDraft>(() => ({
-    draftId: existingDraft
-      ? `srv-${existingDraft.id}`
-      : `pending-${supplier.id}`,
+    draftId: `pending-${supplier.id}`,
     supplierId: supplier.id,
     supplierName: supplier.name,
     branchId: initialDraftBranchId,
-    lines: existingDraft?.lines ?? recentLines,
+    lines: recentLines,
     updatedAt: new Date().toISOString(),
   }));
-  const [serverGrnId, setServerGrnId] = useState<number | null>(
-    existingDraft?.id ?? null,
-  );
+  const [serverGrnId, setServerGrnId] = useState<number | null>(null);
   const serverDraftPromiseRef = useRef<Promise<number | null> | null>(null);
   const [branchId, setBranchId] = useState<number | null>(initialDraftBranchId);
   const [locationId, setLocationId] = useState<number | null>(
@@ -154,7 +145,6 @@ export function useGrnCreateController({
       quantity,
       unit,
       entryUnitId,
-      note: existing?.note ?? "",
     });
   }
 
@@ -192,7 +182,6 @@ export function useGrnCreateController({
         ingredientId: edit.ingredient.id,
         receivedQuantity: edit.quantity,
         entryUnitId: edit.entryUnitId,
-        qualityStatus: "accepted",
       });
       if (!lineRes.success) {
         setSubmitError(lineRes.error ?? GRN_CREATE_COPY.toastSaveLineFailed);
@@ -205,7 +194,6 @@ export function useGrnCreateController({
         unit: edit.unit,
         entryUnitId: edit.entryUnitId,
         quantity: edit.quantity,
-        note: edit.note.trim() ? edit.note.trim() : undefined,
       };
       if (lineId) (nextLine as GrnCreateServerDraftLine).lineId = lineId;
       applyLines((currentLines) => {
@@ -278,6 +266,16 @@ export function useGrnCreateController({
     try {
       const grnId = await ensureServerDraft();
       if (grnId === null) return;
+      const persisted = await persistPendingGrnDraftLines(
+        grnId,
+        draft.lines,
+        upsertGrnLine,
+      );
+      if (!persisted.success) {
+        setSubmitError(persisted.error ?? GRN_CREATE_COPY.toastSaveLineFailed);
+        return;
+      }
+      applyLines(persisted.lines);
       router.push(`${grnBasePath}/${grnId}?review=1`);
       router.refresh();
     } catch {
@@ -288,8 +286,7 @@ export function useGrnCreateController({
   }
 
   const lineCount = draft.lines.length;
-  const canSubmit =
-    lineCount > 0 && !submitting && !receivingSiteSaving;
+  const canSubmit = lineCount > 0 && !submitting && !receivingSiteSaving;
   const branchLocations = locationOptions.filter(
     (location) => location.branchId === branchId,
   );
