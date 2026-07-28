@@ -101,7 +101,7 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   );
   assert.match(
     client,
-    /GRN_CREATE_COPY\.reviewBeforeConfirm(?!\()/,
+    /GRN_CREATE_COPY\.reviewBeforeConfirm\(/,
     "CTA label is short — no duplicated count/total args",
   );
   assert.match(
@@ -146,10 +146,10 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
     client,
     /lg:grid lg:grid-cols-\[minmax\(0,1fr\)_22rem\][\s\S]*panelEmpty/,
   );
-  assert.doesNotMatch(
+  assert.match(
     editor,
     /grn-line-note|optionalNote|notePlaceholder/,
-    "create line editor does not collect notes",
+    "create line editor keeps optional QC note (D089 qty/UOM/QC)",
   );
 
   assert.match(
@@ -164,8 +164,8 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   );
   assert.match(
     client,
-    /lineHeaderName[\s\S]*quantityShort[\s\S]*lineHeaderCost[\s\S]*lineHeaderTotal/,
-    "draft columns: name, qty+unit, unit price, line total",
+    /lineHeaderName[\s\S]*quantityShort[\s\S]*priceOnPoShort/,
+    "draft columns: name, qty+unit, price-on-PO hint (D089)",
   );
   assert.match(
     client,
@@ -210,7 +210,7 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   );
   assert.match(
     copy,
-    /reviewBeforeConfirm:\s*"Kiểm nhận trước khi chốt"/,
+    /reviewBeforeConfirm:\s*\(lineCount: number\) =>/,
     "CTA copy omits count/total (footer SSOT)",
   );
   assert.match(
@@ -237,27 +237,23 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   assert.doesNotMatch(copy, /panelEmptyTitle/);
   assert.match(
     copy,
-    /priorPriceLine:/,
-    "create line editor uses one compact prior-price + variance line",
+    /priceSetOnPoHint:/,
+    "warehouse create copy points commercial price to PO (D089)",
   );
-  assert.doesNotMatch(
+  assert.match(
     copy,
-    /unitPriceUnit:|varianceReference:/,
-    "no duplicate unit-price echo or separate variance chrome copy",
+    /unitPriceUnit:/,
+    "unitPriceUnit remains for PO/finance surfaces that still show unit price",
   );
   assert.doesNotMatch(
     editor,
-    /rounded-md bg-muted\/50/,
-    "shared line fields drop the tall prior-price comparison card",
+    /MoneyVndInput|grn-line-unit-cost/,
+    "shared line fields do not collect warehouse unit cost (D089)",
   );
-  assert.doesNotMatch(
+  assert.match(
     editor,
-    /GRN_CREATE_COPY\.unitLabel\(edit\.unit\)/,
-    "sheet header is name + SKU only (unit lives in the select)",
+    /priceSetOnPoHint/,
+    "shared line fields explain price is set on PO",
   );
-  assert.doesNotMatch(
-    client,
-    /unitLabel\(edit\.unit\)/,
-    "desk editor header is name + SKU only",
-  );
+
 });

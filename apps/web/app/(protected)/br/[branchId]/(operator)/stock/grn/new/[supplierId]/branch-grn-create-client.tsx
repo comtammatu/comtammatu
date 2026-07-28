@@ -71,7 +71,6 @@ export function BranchGrnCreateClient({
   return (
     <BranchOperatorPage
       title={GRN_CREATE_COPY.newReceiptEyebrow}
-      description={controller.supplier.name}
       hideHeaderOnMobile
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
@@ -194,27 +193,7 @@ export function BranchGrnCreateClient({
                             {line.ingredientName}
                           </ItemTitle>
                           <ItemDescription className="line-clamp-none text-xs">
-                            {line.unitCost != null && line.unitCost > 0 ? (
-                              <>
-                                {GRN_CREATE_COPY.lineUnitCost(
-                                  line.quantity,
-                                  line.unit,
-                                  line.unitCost,
-                                )}{" "}
-                                <span className="font-semibold text-foreground">
-                                  {GRN_CREATE_COPY.moneyVnd(
-                                    line.quantity * line.unitCost,
-                                  )}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="font-medium text-warning">
-                                {GRN_CREATE_COPY.linePriceRequired(
-                                  line.quantity,
-                                  line.unit,
-                                )}
-                              </span>
-                            )}
+                            {GRN_CREATE_COPY.lineQtyOnly(line.quantity, line.unit)}
                           </ItemDescription>
                         </ItemContent>
                         <ItemActions className="shrink-0">
@@ -363,7 +342,7 @@ export function BranchGrnCreateClient({
                 ) : controller.lineCount === 0 ? (
                   GRN_CREATE_COPY.addItemToContinue
                 ) : (
-                  GRN_CREATE_COPY.reviewBeforeConfirm
+                  GRN_CREATE_COPY.reviewBeforeConfirm(controller.lineCount)
                 )}
               </Button>
             </div>

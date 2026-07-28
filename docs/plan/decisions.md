@@ -647,3 +647,47 @@ mã lịch sử; tiêu hao HRM giữ `THB-{report_id}`.
 **Canonical:** `.omc/plans/role-split-operational-personas.md`,
 `.omc/plans/b-full-ops-roles-workplan.md`, `docs/modules/finance.md` § Owner and
 Accountant Visibility, `docs/ref/inventory.md` § PO/GRN, `docs/spec/role-route-matrix.md`.
+**Canonical:** `docs/modules/finance.md` § Owner and Accountant Visibility,
+`docs/ref/inventory.md` § PO/GRN, `docs/spec/role-route-matrix.md`.
+**Note:** Full role/ACL migrations may land on a separate D088 track; this branch
+ships the D088 confirm-gate + `create_purchase_order_from_grn` SQL prerequisite
+needed by D089.
+
+## D089: Purchase-price authority at PO + GRN confirm gate reaffirmation (2026-07-28)
+
+**Decision (owner):** Reaffirm D083/D088 procurement flow for **all** stock-bearing
+sites (`branch` | `central_supply` | `central_kitchen`):
+
+1. **Flow (unchanged):** Kho tạo **GRN draft** → Kế toán hoặc Owner **tạo PO từ
+   GRN** → duyệt PO một cấp (`draft → sent`; cùng một người được tạo+duyệt) →
+   Kho **confirm GRN / nhập tồn chỉ khi** PO liên kết đã duyệt. Thiếu PO duyệt →
+   fail closed. Không entity PR. Branch runtime **không** UI PO.
+2. **Purchase price:** Thương mại / đơn giá mua thuộc **Kế toán hoặc Owner tại
+   bước PO**, không do kho nhập lại trên GRN draft. Kho chỉ ghi số lượng / đơn vị
+   nhập / QC trên nháp. **Không** có field giá trên UI kho.
+3. **Costing reconciliation (Option B):** `purchase_order_items.unit_price_est`
+   là authority thương mại. **Khi duyệt PO**, đồng bộ sang `grn_items.unit_cost`
+   (và `po_unit_price`). Confirm GRN / WAC / `stock_movements` tiếp tục đọc
+   `grn_items.unit_cost` (receipt field sau sync). Đối soát HĐ NCC / lệch giá
+   thuộc Finance (ADR 0017) — không mở ledger giá kho thứ hai.
+4. **Docs cleanup:** `docs/ref/inventory-sop.md` §2a/2b và bullet “supplier-first
+   không cần PO” trong `docs/ref/inventory.md` §1 phải khớp gate D088/D089. SOP
+   canonical = GRN draft → PO → confirm.
+5. **Legacy PO-first:** Keep `create_grn_from_approved_po` RPC for recovery;
+   primary happy path = GRN→PO only. Do not promote PO-first as the warehouse
+   default CTA.
+6. **Legacy inventory data:** May wipe/reset on empty or resettable Greenfield /
+   local / staging schemas for cleanup. **Do not** wipe production without
+   Environment Registry check + explicit owner session delegation. One-shot
+   cleanup scripts are optional and local/staging-only.
+
+**Amends:** costing principle in `docs/ref/inventory.md` §5.1 (“Giá nhập theo GRN”
+→ “Đơn giá thương mại theo PO; `grn_items.unit_cost` mang giá đã sync khi confirm”);
+stale branch SOP language; glossary `purchase_unit_cost` as receipt field after sync.
+
+**Does not change:** SoD (create+approve same person); `MODULE_ACL` module list;
+fail-closed confirm without approved PO; branch_manager purchase-price visibility
+deny (D088).
+
+**Canonical:** `docs/ref/inventory.md` §5.1, `docs/ref/inventory-sop.md` §2,
+`docs/modules/finance.md` § Owner and Accountant Visibility, D083/D088.

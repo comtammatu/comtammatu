@@ -120,7 +120,6 @@ type BranchGrnCreateLineSheetProps = {
   onRemove: () => void;
   onPatch: (patch: Partial<GrnLineEditState>) => void;
   onUnitChange: (unitId: number, label: string) => void;
-  showPurchasePrice?: boolean;
 };
 
 export function BranchGrnCreateLineSheet({
@@ -130,28 +129,10 @@ export function BranchGrnCreateLineSheet({
   onRemove,
   onPatch,
   onUnitChange,
-  showPurchasePrice = true,
 }: BranchGrnCreateLineSheetProps) {
-  const [numericField, setNumericField] = useState<"quantity" | "cost" | null>(
-    null,
-  );
+  const [numericField, setNumericField] = useState<"quantity" | null>(null);
   const open = edit != null;
-  const referenceCost = edit
-    ? getReferenceCostForUnit(edit.ingredient, edit.entryUnitId, edit.unit)
-    : null;
-  const variance =
-    showPurchasePrice &&
-    edit?.unitCost != null &&
-    edit.unitCost > 0 &&
-    referenceCost != null &&
-    referenceCost.value > 0
-      ? (edit.unitCost - referenceCost.value) / referenceCost.value
-      : null;
-  const valid =
-    edit != null &&
-    edit.quantity > 0 &&
-    (!showPurchasePrice ||
-      (edit.unitCost != null && edit.unitCost > 0));
+  const valid = edit != null && edit.quantity > 0;
   const baseConversionPreview = edit ? buildBaseConversionPreview(edit) : null;
 
   return (
@@ -173,11 +154,10 @@ export function BranchGrnCreateLineSheet({
                 <SheetTitle className="text-lg font-semibold">
                   {edit.ingredient.name}
                 </SheetTitle>
-                {edit.ingredient.sku ? (
-                  <p className="text-xs text-muted-foreground">
-                    {edit.ingredient.sku}
-                  </p>
-                ) : null}
+                <p className="text-xs text-muted-foreground">
+                  {edit.ingredient.sku ? `${edit.ingredient.sku} · ` : ""}
+                  {GRN_CREATE_COPY.unitLabel(edit.unit)}
+                </p>
               </SheetHeader>
 
               <div className="p-4">
@@ -224,47 +204,13 @@ export function BranchGrnCreateLineSheet({
                     </Select>
                   </Field>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <NumberPadValueField
-                      id="branch-grn-create-quantity"
-                      label={FORM_VI.quantity}
-                      value={
-                        edit.quantity > 0 ? formatQty(edit.quantity) : null
-                      }
-                      emptyLabel="Nhập số"
-                      onClick={() => setNumericField("quantity")}
-                    />
-                    {showPurchasePrice ? (
-                      <NumberPadValueField
-                        id="branch-grn-create-cost"
-                        label={GRN_CREATE_COPY.unitCostTitle}
-                        value={
-                          edit.unitCost != null && edit.unitCost > 0
-                            ? GRN_CREATE_COPY.moneyVnd(edit.unitCost)
-                            : null
-                        }
-                        emptyLabel={GRN_CREATE_COPY.priceRequired}
-                        onClick={() => setNumericField("cost")}
-                      />
-                    ) : null}
-                  </div>
-
-                  {showPurchasePrice && referenceCost ? (
-                    <p
-                      className={
-                        variance != null &&
-                        Math.abs(variance) > DEFAULT_VARIANCE_WARNING
-                          ? "text-xs font-medium text-warning"
-                          : "text-xs text-muted-foreground"
-                      }
-                    >
-                      {GRN_CREATE_COPY.priorPriceLine(
-                        referenceCost.value,
-                        referenceCost.unit || edit.unit,
-                        variance,
-                      )}
-                    </p>
-                  ) : null}
+                  <NumberPadValueField
+                    id="branch-grn-create-quantity"
+                    label={`${FORM_VI.quantity} (${edit.unit})`}
+                    value={edit.quantity > 0 ? formatQty(edit.quantity) : null}
+                    emptyLabel="Nhập số"
+                    onClick={() => setNumericField("quantity")}
+                  />
 
                   {baseConversionPreview ? (
                     <p className="text-xs text-muted-foreground">
@@ -272,16 +218,9 @@ export function BranchGrnCreateLineSheet({
                     </p>
                   ) : null}
 
-                  {showPurchasePrice &&
-                  variance != null &&
-                  Math.abs(variance) > DEFAULT_VARIANCE_WARNING ? (
-                    <Alert variant="destructive">
-                      <IconAlertTriangle className="size-4" />
-                      <AlertDescription>
-                        {GRN_CREATE_COPY.varianceWarning(variance)}
-                      </AlertDescription>
-                    </Alert>
-                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    {GRN_CREATE_COPY.priceSetOnPoHint}
+                  </p>
 
                   <Field>
                     <FieldLabel htmlFor="branch-grn-create-note">
@@ -344,25 +283,12 @@ export function BranchGrnCreateLineSheet({
         onOpenChange={(next) => {
           if (!next) setNumericField(null);
         }}
-        title={
-          numericField === "quantity"
-            ? `${FORM_VI.quantity} · ${edit?.unit ?? ""}`
-            : GRN_CREATE_COPY.unitCostTitle
-        }
-        suffix={numericField === "quantity" ? edit?.unit : "₫"}
-        initialValue={
-          numericField === "quantity"
-            ? (edit?.quantity ?? null)
-            : (edit?.unitCost ?? null)
-        }
+        title={FORM_VI.quantity}
+        suffix={edit?.unit}
+        initialValue={edit?.quantity}
         onConfirm={(value) => {
-          onPatch(
-            numericField === "quantity"
-              ? { quantity: value }
-              : { unitCost: value },
-          );
+          onPatch({ quantity: value });
         }}
-        allowDecimal={numericField === "quantity"}
         maxFractionDigits={3}
       />
     </>
@@ -387,7 +313,7 @@ export function BranchGrnReviewLineSheet({
   onDelete,
 }: BranchGrnReviewLineSheetProps) {
   const [numericField, setNumericField] = useState<
-    "actual" | "rejected" | "cost" | null
+    "actual" | "rejected" | null
   >(null);
   const baselineVariance = line?.baselineVariancePct ?? null;
   const variance = line
@@ -535,13 +461,23 @@ export function BranchGrnReviewLineSheet({
                       onClick={() => setNumericField("rejected")}
                     />
                   </div>
-                  <NumberPadValueField
-                    id={`branch-grn-cost-${line.lineId}`}
-                    label={GRN_DETAIL_COPY.line.unitCostCurrency}
-                    value={formatVND(line.cost)}
-                    emptyLabel="Nhập số"
-                    onClick={() => setNumericField("cost")}
-                  />
+                  {line.cost > 0 ? (
+                    <Field>
+                      <FieldLabel>
+                        {GRN_DETAIL_COPY.line.unitCostCurrency}
+                      </FieldLabel>
+                      <p className="text-sm font-semibold tabular-nums">
+                        {formatVND(line.cost)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {GRN_CREATE_COPY.priceOnPoShort}
+                      </p>
+                    </Field>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {GRN_CREATE_COPY.priceSetOnPoHint}
+                    </p>
+                  )}
 
                   {needsRejectionDetails ? (
                     <>
@@ -713,26 +649,18 @@ export function BranchGrnReviewLineSheet({
           if (!next) setNumericField(null);
         }}
         title={
-          numericField === "actual"
-            ? GRN_DETAIL_COPY.line.actualLabel(line?.unit ?? "")
-            : numericField === "rejected"
-              ? GRN_DETAIL_COPY.line.rejectedLabel(line?.unit ?? "")
-              : GRN_DETAIL_COPY.line.unitCostCurrency
+          numericField === "rejected"
+            ? GRN_DETAIL_COPY.line.rejectedLabel(line?.unit ?? "")
+            : GRN_DETAIL_COPY.line.actualLabel(line?.unit ?? "")
         }
-        suffix={numericField === "cost" ? "₫" : line?.unit}
+        suffix={line?.unit}
         initialValue={
-          numericField === "actual"
-            ? line?.actual
-            : numericField === "rejected"
-              ? line?.rejected
-              : line?.cost
+          numericField === "rejected" ? line?.rejected : line?.actual
         }
         onConfirm={(value) => {
           if (numericField === "actual") patchActual(value);
           if (numericField === "rejected") patchRejected(value);
-          if (numericField === "cost") onPatch({ cost: value });
         }}
-        allowDecimal={numericField !== "cost"}
         maxFractionDigits={3}
       />
     </>
@@ -763,9 +691,7 @@ export function BranchGrnAddLineSheet({
   const [unit, setUnit] = useState("");
   const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
   const [unitCost, setUnitCost] = useState("");
-  const [numericField, setNumericField] = useState<"quantity" | "cost" | null>(
-    null,
-  );
+  const [numericField, setNumericField] = useState<"quantity" | null>(null);
   const selectedIngredient = ingredients.find(
     (ingredient) => ingredient.id === Number(ingredientId),
   );
@@ -816,7 +742,6 @@ export function BranchGrnAddLineSheet({
   function handleSubmit() {
     const ingredient = selectedIngredient;
     const parsedQuantity = Number(quantity);
-    const parsedUnitCost = unitCost.trim() ? Number(unitCost) : Number.NaN;
     if (!ingredient) {
       notify.error(GRN_DETAIL_COPY.validation.chooseIngredient);
       return;
@@ -829,18 +754,13 @@ export function BranchGrnAddLineSheet({
       notify.error(GRN_DETAIL_COPY.validation.unitRequired);
       return;
     }
-    if (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0) {
-      notify.error(GRN_CREATE_COPY.priceRequired);
-      return;
-    }
-
     startTransition(async () => {
       const result = await upsertGrnLine({
         grnId: grn.id,
         ingredientId: ingredient.id,
         receivedQuantity: parsedQuantity,
         entryUnitId,
-        unitCost: parsedUnitCost,
+        unitCost: 0,
         qualityStatus: "accepted",
         rejectedQuantity: 0,
         rejectionReason: null,
@@ -861,7 +781,7 @@ export function BranchGrnAddLineSheet({
           quantity: parsedQuantity,
           entryUnitId,
           unit: unit.trim(),
-          unitCost: parsedUnitCost,
+          unitCost: 0,
           baselineVariancePct:
             (result.data as { baseline_variance_pct?: number | null })
               .baseline_variance_pct ?? null,
@@ -957,13 +877,9 @@ export function BranchGrnAddLineSheet({
                   emptyLabel="Nhập số"
                   onClick={() => setNumericField("quantity")}
                 />
-                <NumberPadValueField
-                  id="branch-grn-add-cost"
-                  label={GRN_DETAIL_COPY.addDialog.unitCostLabel}
-                  value={unitCost === "" ? null : formatVND(Number(unitCost))}
-                  emptyLabel={GRN_CREATE_COPY.priceRequired}
-                  onClick={() => setNumericField("cost")}
-                />
+                  <p className="text-xs text-muted-foreground">
+                    {GRN_CREATE_COPY.priceSetOnPoHint}
+                  </p>
               </div>
               {referenceCost ? (
                 <p className="text-xs text-muted-foreground">
@@ -1003,26 +919,12 @@ export function BranchGrnAddLineSheet({
         onOpenChange={(next) => {
           if (!next) setNumericField(null);
         }}
-        title={
-          numericField === "quantity"
-            ? GRN_DETAIL_COPY.addDialog.quantityLabel
-            : GRN_DETAIL_COPY.addDialog.unitCostLabel
-        }
-        suffix={numericField === "quantity" ? unit : "₫"}
-        initialValue={
-          numericField === "quantity"
-            ? quantity === ""
-              ? null
-              : Number(quantity)
-            : unitCost === ""
-              ? null
-              : Number(unitCost)
-        }
+        title={GRN_DETAIL_COPY.addDialog.quantityLabel}
+        suffix={unit}
+        initialValue={quantity === "" ? null : Number(quantity)}
         onConfirm={(value) => {
-          if (numericField === "quantity") setQuantity(String(value));
-          if (numericField === "cost") setUnitCost(String(value));
+          setQuantity(String(value));
         }}
-        allowDecimal={numericField === "quantity"}
         maxFractionDigits={3}
       />
     </>

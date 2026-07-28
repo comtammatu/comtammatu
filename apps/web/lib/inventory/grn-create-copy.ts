@@ -9,6 +9,9 @@ export const GRN_CREATE_COPY = {
   addItemToContinue: "Thêm mặt hàng để tiếp tục",
   unitCostTitle: "Đơn giá nhập",
   priceRequired: "Nhập giá",
+  priceSetOnPoHint:
+    "Đơn giá do Kế toán / Owner đặt trên đơn đặt hàng (PO).",
+  priceOnPoShort: "Giá trên PO",
   editItem: "Sửa mặt hàng",
   addItem: "Thêm mặt hàng",
   addLineToReceipt: "Thêm vào phiếu",
@@ -33,11 +36,19 @@ export const GRN_CREATE_COPY = {
     `Đã thêm ${formatCount(lineCount)} mặt hàng`,
   footerLineSummary: (lineCount: number, total: number) =>
     `${formatCount(lineCount)} mặt hàng · ${formatVND(total)}`,
-  reviewBeforeConfirm: "Kiểm nhận trước khi chốt",
+  reviewBeforeConfirm: (lineCount: number) =>
+    `Kiểm nhận · ${formatCount(lineCount)} mặt hàng`,
   lineUnitCost: (quantity: number, unit: string, unitCost: number) =>
     `${formatQty(quantity)} ${unit} · ${formatVND(unitCost)}/${unit}`,
+  lineQtyOnly: (quantity: number, unit: string) =>
+    `${formatQty(quantity)} ${unit}`,
   linePriceRequired: (quantity: number, unit: string) =>
     `${formatQty(quantity)} ${unit} · Nhập đơn giá`,
+  unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
+  unitPriceUnit: (unit: string, unitCost: number) =>
+    unitCost > 0
+      ? `Đơn giá ${formatVND(unitCost)} / ${unit}`
+      : `Đơn giá / ${unit}`,
   baseConversionPreview: (
     quantity: string,
     entryUnit: string,

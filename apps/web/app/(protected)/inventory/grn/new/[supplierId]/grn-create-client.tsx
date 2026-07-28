@@ -102,10 +102,6 @@ function DraftLineMobileCard({
   onEdit: () => void;
   onRemove: () => void;
 }) {
-  const hasPrice = line.unitCost != null && line.unitCost > 0;
-  const lineTotal =
-    hasPrice && line.unitCost != null ? line.quantity * line.unitCost : null;
-
   return (
     <Item variant="outline" className="items-start gap-3 px-3 py-2.5">
       <Button
@@ -119,20 +115,11 @@ function DraftLineMobileCard({
           {line.ingredientName}
         </p>
         <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
-          {formatQty(line.quantity)} {line.unit}
-          {hasPrice && line.unitCost != null
-            ? ` · ${GRN_CREATE_COPY.moneyVnd(line.unitCost)}/${line.unit}`
-            : ""}
+          {GRN_CREATE_COPY.lineQtyOnly(line.quantity, line.unit)}
         </p>
-        {lineTotal != null ? (
-          <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-            {GRN_CREATE_COPY.moneyVnd(lineTotal)}
-          </p>
-        ) : (
-          <p className="mt-0.5 text-xs font-medium text-warning">
-            {GRN_CREATE_COPY.priceRequired}
-          </p>
-        )}
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {GRN_CREATE_COPY.priceOnPoShort}
+        </p>
         </span>
       </Button>
       <div className="flex shrink-0 items-center gap-1">
@@ -211,38 +198,14 @@ export function GrnCreateClient({
       ),
     },
     {
-      key: "cost",
-      header: grnCopy.lineHeaderCost,
-      className: "w-32 text-right",
-      render: (line) =>
-        !data.showPurchasePrice ? (
-          <span className="text-muted-foreground">{inventoryCommon.noValue}</span>
-        ) : line.unitCost != null && line.unitCost > 0 ? (
-          <span className="font-mono tabular-nums">
-            {GRN_CREATE_COPY.moneyVnd(line.unitCost)}
-          </span>
-        ) : (
-          <span className="font-medium text-warning">
-            {GRN_CREATE_COPY.priceRequired}
-          </span>
-        ),
-    },
-    {
-      key: "total",
-      header: grnCopy.lineHeaderTotal,
-      className: "w-32 text-right",
-      render: (line) =>
-        data.showPurchasePrice &&
-        line.unitCost != null &&
-        line.unitCost > 0 ? (
-          <span className="font-mono font-semibold tabular-nums">
-            {GRN_CREATE_COPY.moneyVnd(line.quantity * line.unitCost)}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">
-            {inventoryCommon.noValue}
-          </span>
-        ),
+      key: "price",
+      header: GRN_CREATE_COPY.priceOnPoShort,
+      className: "w-36 text-right",
+      render: () => (
+        <span className="text-muted-foreground">
+          {GRN_CREATE_COPY.priceOnPoShort}
+        </span>
+      ),
     },
     {
       key: "actions",
@@ -648,7 +611,7 @@ export function GrnCreateClient({
           ) : controller.lineCount === 0 ? (
             GRN_CREATE_COPY.addItemToContinue
           ) : (
-            GRN_CREATE_COPY.reviewBeforeConfirm
+            GRN_CREATE_COPY.reviewBeforeConfirm(controller.lineCount)
           )}
         </Button>
       }
@@ -684,8 +647,7 @@ function LineEditPanel({
   onPatch,
   onUnitChange,
 }: LineEditPanelProps) {
-  const valid =
-    edit.quantity > 0 && edit.unitCost != null && edit.unitCost > 0;
+  const valid = edit.quantity > 0;
 
   return (
     <AppSection

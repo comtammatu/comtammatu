@@ -653,7 +653,8 @@ const grnLineSchema = z
     receivedQuantity: z.coerce.number().min(0),
     // Purchase-role unit the qty was entered in. NULL = already base.
     entryUnitId: z.coerce.number().int().positive().nullable().optional(),
-    unitCost: z.coerce.number().min(0),
+    // D089: ignored for draft warehouse upserts — commercial price comes from PO approve sync.
+    unitCost: z.coerce.number().min(0).optional(),
     qualityStatus: z
       .enum(["accepted", "rejected", "partial"])
       .default("accepted"),
@@ -749,7 +750,20 @@ export const upsertGrnLine = withAction(
       return { success: false, error: resolvedUnit.error };
     }
 
-    const totalCost = data.receivedQuantity * data.unitCost;
+    // D089: warehouse cannot set commercial price on draft. Preserve a
+    // previously synced unit_cost (> 0 from PO approve); otherwise placeholder 0.
+    const { data: existingLine } = await supabase
+      .from("grn_items")
+      .select("unit_cost")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("grn_id", data.grnId)
+      .eq("ingredient_id", data.ingredientId)
+      .maybeSingle();
+    const existingCost =
+      existingLine?.unit_cost == null ? 0 : Number(existingLine.unit_cost);
+    const unitCost =
+      Number.isFinite(existingCost) && existingCost > 0 ? existingCost : 0;
+    const totalCost = data.receivedQuantity * unitCost;
     const { data: row, error } = await supabase
       .from("grn_items")
       .upsert(
@@ -759,7 +773,7 @@ export const upsertGrnLine = withAction(
           ingredient_id: data.ingredientId,
           received_quantity: data.receivedQuantity,
           entry_unit_id: data.entryUnitId ?? null,
-          unit_cost: data.unitCost,
+          unit_cost: unitCost,
           total_cost: totalCost,
           quality_status: data.qualityStatus,
           receiving_temperature: data.receivingTemperature ?? null,

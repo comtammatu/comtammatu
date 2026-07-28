@@ -1,9 +1,8 @@
 "use client";
 
-import type { ComponentProps } from "react";
-import { TriangleAlert as IconAlertTriangle } from "lucide-react";
+
+import type { ComponentProps, ReactNode } from "react";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
-import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
@@ -20,23 +19,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
-import {
-  MoneyVndInput,
-  QuantityInput,
-} from "@/components/form/domain-number-inputs";
+import { Textarea } from "@comtammatu/ui/components/textarea";
+import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { FormField } from "@/components/form/form-field";
 import { formatQty } from "@lib/inventory/format";
 import {
   getPurchaseUnitOptions,
   type PurchaseUnitOption,
 } from "@lib/inventory/purchase-units";
-import { getReferenceCostForUnit } from "@lib/inventory/reference-cost";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import { messages } from "@lib/messages";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import type { GrnLineEditState } from "@lib/inventory/grn-create-model";
-
-const DEFAULT_VARIANCE_WARNING = 0.2;
 
 type GrnLineEditorControlSize = Extract<
   ComponentProps<typeof Button>["size"],
@@ -83,23 +77,7 @@ export function GrnLineEditFields({
   onUnitChange,
   controlSize = "touch",
 }: GrnLineEditFieldsProps) {
-  const referenceCost = getReferenceCostForUnit(
-    edit.ingredient,
-    edit.entryUnitId,
-    edit.unit,
-  );
-  const unitCost = edit.unitCost;
-  const variance =
-    unitCost != null && unitCost > 0 && referenceCost && referenceCost.value > 0
-      ? (unitCost - referenceCost.value) / referenceCost.value
-      : null;
-  const showVarianceWarning =
-    variance != null && Math.abs(variance) > DEFAULT_VARIANCE_WARNING;
   const baseConversionPreview = buildBaseConversionPreview(edit);
-  const inputClassName =
-    controlSize === "field"
-      ? "h-10"
-      : "h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0";
 
   return (
     <div className="flex flex-col gap-3">
@@ -109,68 +87,44 @@ export function GrnLineEditFields({
         onUnitChange={onUnitChange}
         controlSize={controlSize}
       />
-      <div className="grid grid-cols-2 gap-3">
-        <FormField controlId="grn-line-quantity" label={FORM_VI.quantity}>
-          <QuantityInput
-            id="grn-line-quantity"
-            value={String(edit.quantity)}
-            onValueChange={(value) => onPatch({ quantity: Number(value) || 0 })}
-            maxFractionDigits={3}
-            autoFocus
-            onFocus={(event) => event.currentTarget.select()}
-            className={inputClassName}
-          />
-        </FormField>
-        <FormField
-          controlId="grn-line-unit-cost"
-          label={GRN_CREATE_COPY.unitCostTitle}
-        >
-          <MoneyVndInput
-            id="grn-line-unit-cost"
-            value={unitCost == null ? "" : String(unitCost)}
-            onValueChange={(value) => {
-              const nextValue = Number(value);
-              onPatch({
-                unitCost:
-                  value === "" || !Number.isFinite(nextValue)
-                    ? null
-                    : nextValue,
-              });
-            }}
-            onFocus={(event) => event.currentTarget.select()}
-            className={inputClassName}
-          />
-        </FormField>
-      </div>
-
-      {referenceCost ? (
-        <p
+      <LineValueField
+        controlId="grn-line-quantity"
+        label={FORM_VI.quantity}
+        detail={edit.unit}
+      >
+        <QuantityInput
+          id="grn-line-quantity"
+          value={String(edit.quantity)}
+          onValueChange={(value) => onPatch({ quantity: Number(value) || 0 })}
+          maxFractionDigits={3}
+          autoFocus
+          onFocus={(event) => event.currentTarget.select()}
           className={
-            showVarianceWarning
-              ? "text-xs font-medium text-warning"
-              : "text-xs text-muted-foreground"
+            controlSize === "field"
+              ? "h-10"
+              : "h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0"
           }
-        >
-          {GRN_CREATE_COPY.priorPriceLine(
-            referenceCost.value,
-            referenceCost.unit || edit.unit,
-            variance,
-          )}
-        </p>
-      ) : null}
+        />
+      </LineValueField>
 
       {baseConversionPreview ? (
         <p className="text-xs text-muted-foreground">{baseConversionPreview}</p>
       ) : null}
 
-      {showVarianceWarning && variance != null ? (
-        <Alert variant="destructive">
-          <IconAlertTriangle className="size-4" />
-          <AlertDescription>
-            {GRN_CREATE_COPY.varianceWarning(variance)}
-          </AlertDescription>
-        </Alert>
-      ) : null}
+      <p className="text-xs text-muted-foreground">
+        {GRN_CREATE_COPY.priceSetOnPoHint}
+      </p>
+
+      <FormField controlId="grn-line-note" label={GRN_CREATE_COPY.optionalNote}>
+        <Textarea
+          id="grn-line-note"
+          value={edit.note}
+          onChange={(event) => onPatch({ note: event.target.value })}
+          rows={2}
+          maxLength={200}
+          placeholder={GRN_CREATE_COPY.notePlaceholder}
+        />
+      </FormField>
     </div>
   );
 }
@@ -192,11 +146,7 @@ export function GrnLineEditSheet({
   controlSize = "touch",
 }: GrnLineEditSheetProps) {
   const open = edit != null;
-  const valid =
-    edit != null &&
-    edit.quantity > 0 &&
-    edit.unitCost != null &&
-    edit.unitCost > 0;
+  const valid = edit != null && edit.quantity > 0;
 
   return (
     <Sheet
@@ -219,11 +169,10 @@ export function GrnLineEditSheet({
               <SheetTitle className="text-lg font-semibold">
                 {edit.ingredient.name}
               </SheetTitle>
-              {edit.ingredient.sku ? (
-                <p className="text-xs text-muted-foreground">
-                  {edit.ingredient.sku}
-                </p>
-              ) : null}
+              <p className="text-xs text-muted-foreground">
+                {edit.ingredient.sku ? `${edit.ingredient.sku} · ` : ""}
+                {GRN_CREATE_COPY.unitLabel(edit.unit)}
+              </p>
             </SheetHeader>
 
             <div className="p-4">
@@ -243,16 +192,14 @@ export function GrnLineEditSheet({
                 onClick={onSave}
                 disabled={!valid}
               >
-                {edit.line
-                  ? GRN_CREATE_COPY.updateLineOnReceipt
-                  : GRN_CREATE_COPY.addLineToReceipt}
+                {edit.line ? "Cập nhật" : "Thêm vào phiếu"}
               </Button>
               <div className="flex items-center gap-2">
                 {edit.line ? (
                   <Button
                     type="button"
                     variant="destructive"
-                    size="touch"
+                    size="touch-lg"
                     onClick={onRemove}
                     className="flex-1"
                   >
@@ -262,7 +209,7 @@ export function GrnLineEditSheet({
                 <Button
                   type="button"
                   variant="outline"
-                  size="touch"
+                  size="touch-lg"
                   onClick={onClose}
                   className="flex-1"
                 >
@@ -274,6 +221,24 @@ export function GrnLineEditSheet({
         ) : null}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function LineValueField({
+  controlId,
+  label,
+  detail,
+  children,
+}: {
+  controlId: string;
+  label: string;
+  detail: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <FormField controlId={controlId} label={label} description={detail}>
+      {children}
+    </FormField>
   );
 }
 
