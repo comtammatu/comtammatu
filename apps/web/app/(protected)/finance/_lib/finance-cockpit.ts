@@ -156,6 +156,7 @@ export interface FinanceException {
 
 export interface FinanceCockpitData {
   branches: BranchOption[];
+  canViewInventoryValuation: boolean;
   kpis: FinanceCockpitKpis;
   compareKpis: Pick<
     FinanceCockpitKpis,
@@ -824,12 +825,16 @@ export async function fetchFinanceCockpit(
           endDate: resolved.compare.end,
         })
       : Promise.resolve({ rows: [], orderCount: 0 }),
-    fetchInventoryValueByBranch(),
-    fetchInventoryPeriodValue({
-      startDate: resolved.start,
-      endDate: resolved.end,
-      ...(params.branch != null ? { branchId: params.branch } : {}),
-    }),
+    canReadRequestedValuation
+      ? fetchInventoryValueByBranch()
+      : Promise.resolve({ success: false as const, error: "Không có quyền" }),
+    canReadRequestedValuation
+      ? fetchInventoryPeriodValue({
+          startDate: resolved.start,
+          endDate: resolved.end,
+          ...(params.branch != null ? { branchId: params.branch } : {}),
+        })
+      : Promise.resolve({ success: false as const, error: "Không có quyền" }),
     fetchCashVarianceSummary(params.branch, resolved.start, resolved.end),
     fetchCashVarianceActionTarget({
       supabase,
@@ -958,6 +963,7 @@ export async function fetchFinanceCockpit(
 
   return {
     branches,
+    canViewInventoryValuation: canReadRequestedValuation,
     kpis,
     compareKpis: compareKpis
       ? {

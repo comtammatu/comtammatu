@@ -34,6 +34,10 @@ test("inventory monetary reads fail closed for operational roles", () => {
   const stockDetailData = read(
     "apps/web/lib/inventory/stock-on-hand-detail-data.ts",
   );
+  const financeCockpit = read(
+    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
+  const financePage = read("apps/web/app/(protected)/finance/page.tsx");
 
   for (const role of [
     "central_supply_ops",
@@ -94,6 +98,15 @@ test("inventory monetary reads fail closed for operational roles", () => {
     stockDetailData,
     /fetchStockBearingLocationIds\(\{\s*supabase: readClient,/,
   );
+  assert.match(
+    financeCockpit,
+    /canReadRequestedValuation\s+\?\s+fetchInventoryValueByBranch\(\)/,
+  );
+  assert.match(
+    financeCockpit,
+    /canViewInventoryValuation: canReadRequestedValuation/,
+  );
+  assert.match(financePage, /cockpit\.canViewInventoryValuation \?/);
   assert.match(capability, /update_purchase_order_prices_protected/);
   assert.match(
     postSmoke,

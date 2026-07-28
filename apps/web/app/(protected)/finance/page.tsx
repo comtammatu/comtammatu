@@ -256,21 +256,23 @@ export default async function FinancePage({
 
       <CurrentFundsSection cash={cash} />
 
-      <AppSection size="sm" title={financeCopy.basic.sections.inventory}>
-        <KpiRow
-          density="compact"
-          className="grid-cols-1 sm:grid-cols-1 lg:grid-cols-1 xl:grid-cols-1"
-        >
-          <KpiCard
+      {cockpit.canViewInventoryValuation ? (
+        <AppSection size="sm" title={financeCopy.basic.sections.inventory}>
+          <KpiRow
             density="compact"
-            label={financeCopy.basic.kpis.inventoryClosingValue}
-            value={formatVND(cockpit.kpis.inventoryValue)}
-            hint={financeCopy.basic.kpis.inventoryValueHint(
-              formatVND(cockpit.kpis.inventoryOpeningValue),
-            )}
-          />
-        </KpiRow>
-      </AppSection>
+            className="grid-cols-1 sm:grid-cols-1 lg:grid-cols-1 xl:grid-cols-1"
+          >
+            <KpiCard
+              density="compact"
+              label={financeCopy.basic.kpis.inventoryClosingValue}
+              value={formatVND(cockpit.kpis.inventoryValue)}
+              hint={financeCopy.basic.kpis.inventoryValueHint(
+                formatVND(cockpit.kpis.inventoryOpeningValue),
+              )}
+            />
+          </KpiRow>
+        </AppSection>
+      ) : null}
 
       <FinanceAttentionSection exceptions={cockpit.exceptions} />
     </AppPage>
