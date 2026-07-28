@@ -4,8 +4,10 @@ import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { headers } from "next/headers";
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { listFeedbackQrCodes } from "@/(protected)/feedback/actions";
+import { CreateFeedbackQrButton } from "@/(protected)/feedback/_components/create-feedback-qr-button";
 import { FeedbackSubNav } from "@/(protected)/feedback/_components/feedback-sub-nav";
 import { QrManagement } from "@/(protected)/feedback/_components/qr-management";
 import { feedbackCopy } from "@lib/messages/feedback";
@@ -26,10 +28,9 @@ export default async function BranchFeedbackQrPage({
 
   if (!canAccess(claims.user_role, "branch_feedback")) {
     return (
-      <AppPage width="wide">
-        <AppPageHeader title={feedbackCopy.qrTitle} />
+      <BranchOperatorPage title={feedbackCopy.qrTitle}>
         <AppEmptyState mode="no-access" />
-      </AppPage>
+      </BranchOperatorPage>
     );
   }
 
@@ -48,15 +49,31 @@ export default async function BranchFeedbackQrPage({
     listFeedbackQrCodes({ branchId, origin }),
     supabase
       .from("tables")
-      .select("id, number")
+      .select("id, number, branch_id")
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
       .order("number"),
   ]);
 
+  const tables = (tablesResult.data ?? []).map((table) => ({
+    id: table.id,
+    number: table.number,
+    branchId: table.branch_id,
+  }));
+
   return (
-    <AppPage width="wide">
-      <AppPageHeader title={feedbackCopy.qrTitle} />
+    <BranchOperatorPage
+      title={feedbackCopy.qrTitle}
+      action={
+        canManage ? (
+          <CreateFeedbackQrButton
+            branchId={branchId}
+            tables={tables}
+            lockBranch
+          />
+        ) : null
+      }
+    >
       <FeedbackSubNav
         inboxHref={`/br/${branchId}/feedback`}
         qrHref={`/br/${branchId}/feedback/qr`}
@@ -70,13 +87,12 @@ export default async function BranchFeedbackQrPage({
         <Suspense>
           <QrManagement
             items={qrResult.data.items}
-            branchId={branchId}
-            tables={tablesResult.data ?? []}
             canManage={canManage}
             lockBranch
+            presentation="branch"
           />
         </Suspense>
       )}
-    </AppPage>
+    </BranchOperatorPage>
   );
 }

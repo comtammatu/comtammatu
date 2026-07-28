@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@comtammatu/ui/components/button";
 import {
   Select,
   SelectContent,
@@ -9,15 +8,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppListFrame,
+  AppToolbar,
+} from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { useFormControlSize } from "@/components/form/control-size";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import type { FeedbackInboxRow } from "../actions";
 import { feedbackCopy } from "@lib/messages/feedback";
 import { FEEDBACK_PAGE_SIZE } from "@lib/feedback/contracts";
+import type { FeedbackListPresentation } from "./qr-management";
 
 export function FeedbackInbox({
   items,
@@ -27,6 +39,7 @@ export function FeedbackInbox({
   selectedBranchId,
   basePath,
   showBranchFilter,
+  presentation = "owner",
 }: {
   items: FeedbackInboxRow[];
   total: number;
@@ -35,10 +48,12 @@ export function FeedbackInbox({
   selectedBranchId: number | null;
   basePath: string;
   showBranchFilter: boolean;
+  presentation?: FeedbackListPresentation;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pageCount = Math.max(1, Math.ceil(total / FEEDBACK_PAGE_SIZE));
+  const controlSize = useFormControlSize();
+  const forceTouch = presentation === "branch";
 
   function pushParams(next: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -64,7 +79,7 @@ export function FeedbackInbox({
       ? [
           {
             key: "branch",
-            header: feedbackCopy.branch,
+            header: BRANCH_VI.long,
             render: (item: FeedbackInboxRow) => item.branchName,
           } satisfies DataTableColumn<FeedbackInboxRow>,
         ]
@@ -90,67 +105,77 @@ export function FeedbackInbox({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      {showBranchFilter ? (
-        <div className="flex max-w-xs flex-col gap-2">
-          <span className="text-sm text-muted-foreground">
-            {feedbackCopy.filterBranch}
-          </span>
-          <Select
-            value={selectedBranchId != null ? String(selectedBranchId) : "all"}
-            onValueChange={(value) => {
-              pushParams({
-                branch: value === "all" ? null : value,
-                page: "1",
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={feedbackCopy.allBranches} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{feedbackCopy.allBranches}</SelectItem>
-              {branches.map((branch) => (
-                <SelectItem key={branch.id} value={String(branch.id)}>
-                  {branch.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
-
+    <AppListFrame
+      contentScroll
+      toolbar={
+        showBranchFilter ? (
+          <AppToolbar
+            variant="inline"
+            filters={
+              <Select
+                value={
+                  selectedBranchId != null ? String(selectedBranchId) : "all"
+                }
+                onValueChange={(value) => {
+                  pushParams({
+                    branch: value === "all" ? null : value,
+                    page: "1",
+                  });
+                }}
+              >
+                <SelectTrigger
+                  size={controlSize}
+                  className="min-w-40"
+                  aria-label={BRANCH_VI.selectAll}
+                >
+                  <SelectValue placeholder={BRANCH_VI.selectAll} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={String(branch.id)}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+          />
+        ) : undefined
+      }
+    >
       {items.length === 0 ? (
         <AppEmptyState mode="no-data" description={feedbackCopy.inboxEmpty} />
       ) : (
-        <DataTable columns={columns} data={items} getRowKey={(row) => row.id} />
+        <DataTable
+          columns={columns}
+          data={items}
+          getRowKey={(row) => row.id}
+          pageSize={FEEDBACK_PAGE_SIZE}
+          currentPage={page}
+          totalCount={total}
+          onPageChange={(nextPage) => pushParams({ page: String(nextPage) })}
+          emptyTitle={feedbackCopy.inboxEmpty}
+          mobileBreakpoint={forceTouch ? Number.POSITIVE_INFINITY : undefined}
+          mobileCardRender={(item) => (
+            <Item variant="outline">
+              <ItemContent className="gap-1">
+                <ItemTitle>
+                  {feedbackCopy.rating}: {item.rating}
+                </ItemTitle>
+                <ItemDescription>
+                  {formatVNDateTime(item.createdAt)}
+                  {showBranchFilter ? ` · ${item.branchName}` : ""}
+                </ItemDescription>
+                <ItemDescription className="line-clamp-3">
+                  {item.comment ?? "—"}
+                </ItemDescription>
+                <ItemDescription>QR: {item.qrLabel}</ItemDescription>
+              </ItemContent>
+            </Item>
+          )}
+        />
       )}
-
-      {pageCount > 1 ? (
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={page <= 1}
-            onClick={() => pushParams({ page: String(page - 1) })}
-          >
-            {feedbackCopy.pagePrev}
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            {feedbackCopy.pageOf
-              .replace("{page}", String(page))
-              .replace("{pageCount}", String(pageCount))}
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={page >= pageCount}
-            onClick={() => pushParams({ page: String(page + 1) })}
-          >
-            {feedbackCopy.pageNext}
-          </Button>
-        </div>
-      ) : null}
-    </div>
+    </AppListFrame>
   );
 }

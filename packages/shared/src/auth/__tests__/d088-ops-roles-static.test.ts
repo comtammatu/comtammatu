@@ -6,6 +6,7 @@ import {
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
 } from "../types";
+import { INVENTORY_OPS_ROLES } from "../inventory-roles";
 import { canAccess } from "../module-acl";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -54,6 +55,43 @@ test("D088 MODULE_ACL surfaces", () => {
   assert.equal(canAccess("central_supply_ops", "finance"), false);
   assert.equal(canAccess("central_kitchen_lead", "inventory"), true);
   assert.equal(canAccess("central_kitchen_lead", "finance"), false);
+});
+
+test("D088 central site roles pass the Inventory action gate", () => {
+  assert.equal(INVENTORY_OPS_ROLES.includes("central_supply_ops"), true);
+  assert.equal(INVENTORY_OPS_ROLES.includes("central_kitchen_lead"), true);
+});
+
+test("D088 procurement surfaces are permission-driven", () => {
+  for (const file of [
+    "apps/web/app/(protected)/inventory/layout.tsx",
+    "apps/web/app/(protected)/inventory/_lib/dashboard-data.ts",
+  ]) {
+    const source = readFileSync(join(repoRoot, file), "utf8");
+    assert.doesNotMatch(
+      source,
+      /canAccess\(claims\.user_role,\s*"branch_stock"\)/,
+    );
+    assert.match(
+      source,
+      /currentUserHasPermissionAny\(PERMISSION_KEYS\.PROCUREMENT_READ\)/,
+    );
+  }
+});
+
+test("D088 dashboard keeps the selected central site kind", () => {
+  const dashboard = readFileSync(
+    join(
+      repoRoot,
+      "apps/web/app/(protected)/inventory/_lib/dashboard-data.ts",
+    ),
+    "utf8",
+  );
+  assert.match(dashboard, /resolveSiteKind\(\{/);
+  assert.doesNotMatch(
+    dashboard,
+    /const siteKind:\s*DashboardSiteKind\s*=\s*"branch"/,
+  );
 });
 
 test("SQL twin mapper includes D088 roles", () => {

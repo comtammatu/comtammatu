@@ -660,8 +660,8 @@ sites (`branch` | `central_supply` | `central_kitchen`):
 
 1. **Flow (unchanged):** Kho tạo **GRN draft** → Kế toán hoặc Owner **tạo PO từ
    GRN** → duyệt PO một cấp (`draft → sent`; cùng một người được tạo+duyệt) →
-   Kho **confirm GRN / nhập tồn chỉ khi** PO liên kết đã duyệt. Thiếu PO duyệt →
-   fail closed. Không entity PR. Branch runtime **không** UI PO.
+   Kho **confirm GRN / nhập tồn chỉ khi** PO liên kết đã duyệt. Thiếu đơn đặt
+   hàng đã duyệt → fail closed. Không entity PR. Branch runtime **không** UI PO.
 2. **Purchase price:** Thương mại / đơn giá mua thuộc **Kế toán hoặc Owner tại
    bước PO**, không do kho nhập lại trên GRN draft. Kho chỉ ghi số lượng / đơn vị
    nhập / QC trên nháp. **Không** có field giá trên UI kho.

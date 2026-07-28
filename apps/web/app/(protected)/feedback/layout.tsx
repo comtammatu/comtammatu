@@ -3,6 +3,8 @@ import { canAccess } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { OwnerModuleShell } from "@/components/owner-module-shell";
+import { AppPage } from "@/components/surface";
+import { FeedbackSubNav } from "./_components/feedback-sub-nav";
 
 export default async function FeedbackLayout({
   children,
@@ -26,7 +28,10 @@ export default async function FeedbackLayout({
       role={claims.user_role}
       branchId={claims.branch_id}
     >
-      {children}
+      <AppPage width="xwide">
+        <FeedbackSubNav inboxHref="/feedback" qrHref="/feedback/qr" />
+        {children}
+      </AppPage>
     </OwnerModuleShell>
   );
 }

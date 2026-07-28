@@ -6,6 +6,8 @@ export const INVENTORY_CATALOG_ROLES: readonly StaffRole[] = ["owner"];
 /** Tồn kho, luân chuyển, điều chỉnh tồn theo chi nhánh */
 export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
   "owner",
+  "central_supply_ops",
+  "central_kitchen_lead",
   "branch_manager",
 ];
 

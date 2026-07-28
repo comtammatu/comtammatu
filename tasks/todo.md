@@ -35,7 +35,7 @@ Blocker: Owner-only prerequisites — seed the Branch 3 (`Nguyễn Hữu Thọ`)
 
 State: doing
 Kind: feature
-Tier: T3 (RPC/ACL); docs T2
+Tier: T3
 Lane: inventory/procurement
 Exit: Warehouse GRN draft has no price UI; approve_purchase_order syncs PO `unit_price_est` into linked `grn_items.unit_cost`; confirm remains fail-closed without approved PO; static tests encode D089.
 Evidence: D089 in `docs/plan/decisions.md`, migration `20260728143000_d089_po_price_sync_to_grn.sql`, focused web tests.

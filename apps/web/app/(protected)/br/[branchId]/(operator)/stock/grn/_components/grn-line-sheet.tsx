@@ -48,8 +48,6 @@ import {
 } from "@lib/inventory/grn-quality";
 import { messages } from "@lib/messages";
 
-const DEFAULT_VARIANCE_WARNING = 0.2;
-
 function NumberPadValueField({
   id,
   label,

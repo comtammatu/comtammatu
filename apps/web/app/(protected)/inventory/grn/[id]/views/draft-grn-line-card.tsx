@@ -8,6 +8,7 @@ import {
   Trash as IconTrash,
 } from "lucide-react";
 import { formatQty, formatVND } from "@lib/inventory/format";
+import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import {
   GRN_DETAIL_COPY as grnCopy,
   INVENTORY_COMMON_COPY as inventoryCommon,

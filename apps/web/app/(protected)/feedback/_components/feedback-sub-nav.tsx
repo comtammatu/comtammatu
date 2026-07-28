@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@comtammatu/ui/lib/utils";
+import { Button } from "@comtammatu/ui/components/button";
+import { AppToolbar } from "@/components/surface";
 import { feedbackCopy } from "@lib/messages/feedback";
 
 export function FeedbackSubNav({
@@ -19,25 +20,21 @@ export function FeedbackSubNav({
   ];
 
   return (
-    <nav className="flex gap-2 border-b border-border pb-2" aria-label="Feedback">
+    <AppToolbar className="flex-wrap">
       {items.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
-          <Link
+          <Button
             key={item.href}
-            href={item.href}
-            className={cn(
-              "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              active
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
+            variant={active ? "secondary" : "ghost"}
+            aria-current={active ? "page" : undefined}
+            render={<Link href={item.href} />}
           >
             {item.label}
-          </Link>
+          </Button>
         );
       })}
-    </nav>
+    </AppToolbar>
   );
 }

@@ -135,3 +135,64 @@ test("ACL modules wire Owner /feedback and Branch /br/*/feedback", () => {
   );
   assert.match(bottomNav, /`\/br\/\$\{branchId\}\/feedback`/);
 });
+
+test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () => {
+  const subNav = readWeb(
+    "app/(protected)/feedback/_components/feedback-sub-nav.tsx",
+  );
+  assert.match(subNav, /<AppToolbar/);
+  assert.doesNotMatch(subNav, /border-b border-border/);
+  assert.doesNotMatch(subNav, /cn\(/);
+
+  const layout = readWeb("app/(protected)/feedback/layout.tsx");
+  assert.match(layout, /<AppPage width="xwide">/);
+  assert.match(layout, /FeedbackSubNav/);
+
+  const inbox = readWeb(
+    "app/(protected)/feedback/_components/feedback-inbox.tsx",
+  );
+  assert.match(inbox, /<AppListFrame/);
+  assert.match(inbox, /<AppToolbar[\s\S]*variant="inline"/);
+  assert.match(inbox, /BRANCH_VI/);
+  assert.doesNotMatch(inbox, /max-w-xs/);
+
+  const qr = readWeb(
+    "app/(protected)/feedback/_components/qr-management.tsx",
+  );
+  assert.match(qr, /<AppListFrame/);
+  assert.match(qr, /RowActionsMenu/);
+  assert.match(qr, /DataTable/);
+  assert.doesNotMatch(qr, /md:grid-cols-3/);
+  assert.doesNotMatch(qr, /AppListFrame[\s\S]*?\baction=\{/);
+
+  const createButton = readWeb(
+    "app/(protected)/feedback/_components/create-feedback-qr-button.tsx",
+  );
+  assert.match(createButton, /FormDialog/);
+  assert.match(createButton, /CreateFeedbackQrButton/);
+
+  const ownerInbox = readWeb("app/(protected)/feedback/page.tsx");
+  const ownerQr = readWeb("app/(protected)/feedback/qr/page.tsx");
+  assert.doesNotMatch(ownerInbox, /<AppPage\b/);
+  assert.doesNotMatch(ownerQr, /<AppPage\b/);
+  assert.doesNotMatch(ownerInbox, /FeedbackSubNav/);
+  assert.doesNotMatch(ownerQr, /FeedbackSubNav/);
+  assert.match(ownerInbox, /getModuleLabelVi\("feedback"\)/);
+  assert.match(ownerQr, /getModuleLabelVi\("feedback"\)/);
+  assert.match(ownerQr, /CreateFeedbackQrButton/);
+  assert.match(ownerQr, /actions=\{/);
+
+  const branchInbox = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/feedback/page.tsx",
+  );
+  const branchQr = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/feedback/qr/page.tsx",
+  );
+  assert.match(branchInbox, /BranchOperatorPage/);
+  assert.match(branchQr, /BranchOperatorPage/);
+  assert.doesNotMatch(branchInbox, /<AppPage\b/);
+  assert.doesNotMatch(branchQr, /<AppPage\b/);
+  assert.match(branchInbox, /presentation="branch"/);
+  assert.match(branchQr, /presentation="branch"/);
+  assert.match(branchQr, /CreateFeedbackQrButton/);
+});

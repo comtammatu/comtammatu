@@ -1,5 +1,6 @@
-import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { resolveSiteKind } from "@comtammatu/shared/labels";
 import { getVNDateStringDaysAgo } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import {
@@ -17,7 +18,7 @@ import {
   PRODUCTION_OPEN_PERMISSIONS,
 } from "../production-data";
 
-type DashboardSiteKind = "branch";
+type DashboardSiteKind = "branch" | "central_supply" | "central_kitchen";
 
 type DashboardTransfer = {
   id: number;
@@ -108,11 +109,7 @@ export async function loadInventoryDashboardData(
 ): Promise<InventoryDashboardData> {
   const { supabase, claims } = await loadAuthState();
 
-  // Sync gates first — short-circuit avoids unnecessary RPC fetches when
-  // role/permission map already disqualifies the user.
   const isOwner = claims.user_role === "owner";
-  const procurementSyncOk =
-    isOwner || canAccess(claims.user_role, "branch_stock");
   const productionSyncOk =
     isOwner || canAccessProductionSurface(claims.user_role);
 
@@ -128,11 +125,9 @@ export async function loadInventoryDashboardData(
     countApprovalAsync,
     scope,
   ] = await Promise.all([
-    procurementSyncOk
-      ? isOwner
-        ? Promise.resolve(true)
-        : currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ)
-      : Promise.resolve(false),
+    isOwner
+      ? Promise.resolve(true)
+      : currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
     productionSyncOk
       ? isOwner
         ? Promise.resolve(true)
@@ -146,7 +141,7 @@ export async function loadInventoryDashboardData(
     resolveInventoryBranchScope(supabase, claims, requestedBranchId),
   ]);
 
-  const showProcurement = isOwner || (procurementSyncOk && procurementAsync);
+  const showProcurement = procurementAsync;
   const showProduction =
     isOwner ||
     (productionSyncOk && productionPermissionAsync && productionBranchAsync);
@@ -160,7 +155,9 @@ export async function loadInventoryDashboardData(
   const siteName =
     selectedBranch?.name ??
     (claims.user_role === "owner" ? "Kho hàng" : "Điểm vận hành");
-  const siteKind: DashboardSiteKind = "branch";
+  const siteKind: DashboardSiteKind = resolveSiteKind({
+    branch_kind: selectedBranch?.branch_kind,
+  });
 
   const branchFilter = scope.selectedBranchId ?? undefined;
 

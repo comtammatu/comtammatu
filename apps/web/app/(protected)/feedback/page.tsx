@@ -1,9 +1,9 @@
 import { Suspense } from "react";
+import { getModuleLabelVi } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPageHeader } from "@/components/surface";
 import { listFeedbackInbox } from "./actions";
 import { FeedbackInbox } from "./_components/feedback-inbox";
-import { FeedbackSubNav } from "./_components/feedback-sub-nav";
 import { feedbackCopy } from "@lib/messages/feedback";
 
 function firstParam(
@@ -15,7 +15,10 @@ function firstParam(
 export default async function FeedbackInboxPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ branch?: string | string[]; page?: string | string[] }>;
+  searchParams?: Promise<{
+    branch?: string | string[];
+    page?: string | string[];
+  }>;
 }) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
@@ -38,9 +41,11 @@ export default async function FeedbackInboxPage({
   ]);
 
   return (
-    <AppPage width="wide">
-      <AppPageHeader title={feedbackCopy.pageTitle} />
-      <FeedbackSubNav inboxHref="/feedback" qrHref="/feedback/qr" />
+    <>
+      <AppPageHeader
+        eyebrow={getModuleLabelVi("feedback")}
+        title={feedbackCopy.pageTitle}
+      />
       {!inbox.success || !inbox.data ? (
         <AppEmptyState
           mode="error"
@@ -56,9 +61,10 @@ export default async function FeedbackInboxPage({
             selectedBranchId={branchId}
             basePath="/feedback"
             showBranchFilter
+            presentation="owner"
           />
         </Suspense>
       )}
-    </AppPage>
+    </>
   );
 }

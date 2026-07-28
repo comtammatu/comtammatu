@@ -1,10 +1,12 @@
+import { Suspense } from "react";
+import { headers } from "next/headers";
+import { getModuleLabelVi } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPageHeader } from "@/components/surface";
 import { listFeedbackQrCodes } from "../actions";
-import { FeedbackSubNav } from "../_components/feedback-sub-nav";
+import { CreateFeedbackQrButton } from "../_components/create-feedback-qr-button";
 import { QrManagement } from "../_components/qr-management";
 import { feedbackCopy } from "@lib/messages/feedback";
-import { headers } from "next/headers";
 
 function firstParam(
   value: string | string[] | undefined,
@@ -42,34 +44,59 @@ export default async function FeedbackQrPage({
   const manageBranchId =
     branchFilter ?? branches?.[0]?.id ?? claims.branch_id ?? null;
 
+  const branchIds = (branches ?? []).map((branch) => branch.id);
   const tablesResult =
-    manageBranchId != null
+    branchIds.length > 0
       ? await supabase
           .from("tables")
-          .select("id, number")
+          .select("id, number, branch_id")
           .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", manageBranchId)
+          .in("branch_id", branchIds)
           .order("number")
-      : { data: [] as { id: number; number: number }[] };
+      : { data: [] as { id: number; number: number; branch_id: number }[] };
+
+  const tables = (tablesResult.data ?? []).map((table) => ({
+    id: table.id,
+    number: table.number,
+    branchId: table.branch_id,
+  }));
 
   return (
-    <AppPage width="wide">
-      <AppPageHeader title={feedbackCopy.qrTitle} />
-      <FeedbackSubNav inboxHref="/feedback" qrHref="/feedback/qr" />
+    <>
+      <AppPageHeader
+        eyebrow={getModuleLabelVi("feedback")}
+        title={feedbackCopy.qrTitle}
+        actions={
+          manageBranchId != null ? (
+            <CreateFeedbackQrButton
+              branchId={manageBranchId}
+              tables={tables}
+              lockBranch={false}
+              branches={branches ?? []}
+            />
+          ) : null
+        }
+      />
       {!qrResult.success || !qrResult.data || manageBranchId == null ? (
         <AppEmptyState
           mode="error"
           description={qrResult.error ?? feedbackCopy.qrEmpty}
         />
       ) : (
-        <QrManagement
-          items={qrResult.data.items}
-          branchId={manageBranchId}
-          tables={tablesResult.data ?? []}
-          canManage
-          lockBranch={false}
-        />
+        <Suspense>
+          <QrManagement
+            key={branchFilter ?? "all"}
+            items={qrResult.data.items}
+            canManage
+            lockBranch={false}
+            branches={branches ?? []}
+            selectedBranchId={branchFilter}
+            basePath="/feedback/qr"
+            showBranchFilter
+            presentation="owner"
+          />
+        </Suspense>
       )}
-    </AppPage>
+    </>
   );
 }

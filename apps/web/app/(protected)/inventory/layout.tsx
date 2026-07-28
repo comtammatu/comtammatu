@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import {
   currentUserHasAnyPermissionAny,
@@ -42,9 +42,7 @@ export default async function InventoryLayout({
     hasCurrentProductionBranchAccess(supabase, claims),
   ]);
   const isOwner = claims.user_role === "owner";
-  const showProcurement =
-    isOwner ||
-    (canAccess(claims.user_role, "branch_stock") && hasProcurementRead);
+  const showProcurement = isOwner || hasProcurementRead;
   const showProduction =
     isOwner ||
     (canAccessProductionSurface(claims.user_role) &&

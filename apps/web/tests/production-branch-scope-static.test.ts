@@ -29,6 +29,19 @@ test("branch_manager is a branch-scoped production role (own-branch pin applies)
   assert.equal(isProductionBranchScopedRole("branch_manager"), true);
 });
 
+test("central kitchen lead is admitted and pinned to its production site", () => {
+  assert.equal(canAccessProductionSurface("central_kitchen_lead"), true);
+  assert.equal(isProductionBranchScopedRole("central_kitchen_lead"), true);
+  assert.equal(
+    productionTargetAllowed("central_kitchen_lead", 16, 15),
+    false,
+  );
+});
+
+test("central supply operator cannot open production", () => {
+  assert.equal(canAccessProductionSurface("central_supply_ops"), false);
+});
+
 test("branch_manager (branch_id=X) is REJECTED creating a production order for a foreign branch Y≠X", () => {
   assert.equal(productionTargetAllowed("branch_manager", 1, 2), false);
 });

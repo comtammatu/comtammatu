@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { canAccess } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { listFeedbackInbox } from "@/(protected)/feedback/actions";
 import { FeedbackInbox } from "@/(protected)/feedback/_components/feedback-inbox";
 import { FeedbackSubNav } from "@/(protected)/feedback/_components/feedback-sub-nav";
@@ -33,10 +34,9 @@ export default async function BranchFeedbackInboxPage({
 
   if (!canAccess(claims.user_role, "branch_feedback")) {
     return (
-      <AppPage width="wide">
-        <AppPageHeader title={feedbackCopy.pageTitle} />
+      <BranchOperatorPage title={feedbackCopy.pageTitle}>
         <AppEmptyState mode="no-access" />
-      </AppPage>
+      </BranchOperatorPage>
     );
   }
 
@@ -48,8 +48,7 @@ export default async function BranchFeedbackInboxPage({
   const inbox = await listFeedbackInbox({ branchId, page });
 
   return (
-    <AppPage width="wide">
-      <AppPageHeader title={feedbackCopy.pageTitle} />
+    <BranchOperatorPage title={feedbackCopy.pageTitle}>
       <FeedbackSubNav
         inboxHref={`/br/${branchId}/feedback`}
         qrHref={`/br/${branchId}/feedback/qr`}
@@ -69,9 +68,10 @@ export default async function BranchFeedbackInboxPage({
             selectedBranchId={branchId}
             basePath={`/br/${branchId}/feedback`}
             showBranchFilter={false}
+            presentation="branch"
           />
         </Suspense>
       )}
-    </AppPage>
+    </BranchOperatorPage>
   );
 }
