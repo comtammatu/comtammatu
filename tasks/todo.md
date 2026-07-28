@@ -33,12 +33,12 @@ Evidence: D089 in `docs/plan/decisions.md`; migrations `20260728143000_d089_po_p
 
 ## Eliminate Inventory decision drift and branch-kitchen legacy
 
-State: ready
+State: doing
 Kind: defect
 Tier: T3
 Lane: inventory/topology
 Exit: D082/D088/D089 are the only active Inventory authority; every active site has exactly one active warehouse enforced by DB; branch-kitchen routing, redundant GRN QC, price-QC, and promoted PO-first paths are absent from active runtime/docs/tests; fresh replay, Greenfield catalog checks, repository gates, and authenticated Inventory smoke pass.
-Evidence: Read-only audit found 87 legacy decision/location references across 31 active files, a Greenfield branch with no inventory location, active function bodies still selecting branch kitchens, and GRN tests protecting the old price-QC contract. Root cause: D078 deactivated data and retired one RPC without enforcing the warehouse invariant; later migrations copied stale function bodies.
+Evidence: Read-only audit found 87 legacy decision/location references across 31 active files, a Greenfield branch with no inventory location, active function bodies still selecting branch kitchens, and GRN tests protecting the old price-QC contract. Root cause: D078 deactivated data and retired one RPC without enforcing the warehouse invariant; later migrations copied stale function bodies. Slice A migration `20260728180429_enforce_single_active_warehouse_per_site.sql` is applied to Greenfield: all three active sites have one canonical warehouse, both invariant triggers and the validated check/index are present, all five patched function bodies are warehouse-only, the transactional acceptance test passes, and regenerated DB types have no diff.
 
 - [ ] Land Slice A: fold decision authority, add the warehouse invariant migration, replace every active branch-kitchen function body, and prove the final catalog on fresh replay plus Greenfield.
 - [ ] Apply Slice A only after Environment Registry verification and explicit owner delegation for the current Greenfield target, then regenerate database types.
