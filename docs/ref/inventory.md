@@ -421,7 +421,7 @@ So sánh `stock_levels.current_quantity` với `ingredients.min_stock_level` (th
 
 Theo D060, Inventory v1 không vận hành sổ lô, FIFO/FEFO, cảnh báo hạn dùng, hoặc route `/inventory/expiry`.
 
-- GRN ghi số thực nhận, đơn giá và QC; không yêu cầu lô/HSD.
+- GRN draft ghi số thực nhận / đơn vị nhập / QC; đơn giá mua sync từ PO khi duyệt (D089). Không yêu cầu lô/HSD.
 - Stock control dùng WAC + tồn theo location; cảnh báo ưu tiên hiện tại là tồn thấp/reorder và phiếu đang mở.
 - Khi cần quản lý hạn dùng thật, phải thiết kế lại thành lot ledger hoàn chỉnh, không bật cảnh báo naive từ `grn_items.expiry_date`.
 

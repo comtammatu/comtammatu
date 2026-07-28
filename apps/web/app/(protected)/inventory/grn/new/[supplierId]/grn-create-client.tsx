@@ -588,10 +588,7 @@ export function GrnCreateClient({
       leading={
         controller.lineCount > 0 ? (
           <p className="min-w-0 font-mono text-sm font-semibold tabular-nums">
-            {GRN_CREATE_COPY.footerLineSummary(
-              controller.lineCount,
-              controller.total,
-            )}
+            {GRN_CREATE_COPY.footerLineSummary(controller.lineCount)}
           </p>
         ) : undefined
       }

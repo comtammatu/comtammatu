@@ -300,11 +300,13 @@ test("GRN warehouse draft does not require unit price (D089)", () => {
   );
 });
 
-test("GRN line defaults scale ingredient cost by receiving unit", () => {
+test("GRN add-line dialog is qty/UOM only with PO price hint (D089)", () => {
   const source = readRepo(
     "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
   );
-  assert.match(source, /getReferenceCostForUnit/);
+  assert.doesNotMatch(source, /getReferenceCostForUnit/);
+  assert.doesNotMatch(source, /const \[unitCost/);
+  assert.match(source, /priceSetOnPoHint/);
 });
 
 test("quickCreateIngredient refuses units outside the catalog instead of creating a new unit", () => {

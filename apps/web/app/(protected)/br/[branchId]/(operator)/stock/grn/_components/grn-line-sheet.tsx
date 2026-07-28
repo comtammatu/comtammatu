@@ -30,7 +30,6 @@ import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "@lib/inventory/purchase-units";
-import { getReferenceCostForUnit } from "@lib/inventory/reference-cost";
 import type { IngredientRow } from "@lib/inventory/types";
 import { upsertGrnLine } from "@/(protected)/inventory/grn-actions";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
@@ -690,24 +689,17 @@ export function BranchGrnAddLineSheet({
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
   const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
-  const [unitCost, setUnitCost] = useState("");
   const [numericField, setNumericField] = useState<"quantity" | null>(null);
   const selectedIngredient = ingredients.find(
     (ingredient) => ingredient.id === Number(ingredientId),
   );
   const purchaseUnitOptions = getPurchaseUnitOptions(selectedIngredient);
-  const referenceCost = getReferenceCostForUnit(
-    selectedIngredient,
-    entryUnitId,
-    unit,
-  );
 
   function resetForm() {
     setIngredientId("");
     setQuantity("");
     setUnit("");
     setEntryUnitId(null);
-    setUnitCost("");
     setNumericField(null);
   }
 
@@ -726,7 +718,6 @@ export function BranchGrnAddLineSheet({
       "";
     setUnit(unitLabel);
     setEntryUnitId(defaultUnit?.unitId ?? null);
-    setUnitCost("");
   }
 
   function handleUnitChange(value: string) {
@@ -736,7 +727,6 @@ export function BranchGrnAddLineSheet({
     if (!option) return;
     setEntryUnitId(option.unitId);
     setUnit(option.label);
-    setUnitCost("");
   }
 
   function handleSubmit() {
@@ -877,18 +867,10 @@ export function BranchGrnAddLineSheet({
                   emptyLabel="Nhập số"
                   onClick={() => setNumericField("quantity")}
                 />
-                  <p className="text-xs text-muted-foreground">
-                    {GRN_CREATE_COPY.priceSetOnPoHint}
-                  </p>
-              </div>
-              {referenceCost ? (
                 <p className="text-xs text-muted-foreground">
-                  {GRN_CREATE_COPY.lastCostReference(
-                    referenceCost.value,
-                    referenceCost.unit || unit,
-                  )}
+                  {GRN_CREATE_COPY.priceSetOnPoHint}
                 </p>
-              ) : null}
+              </div>
             </FieldGroup>
           </div>
           <SheetFooter>

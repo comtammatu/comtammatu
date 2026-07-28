@@ -203,8 +203,8 @@ export function GRNDetailClient({
               {inventoryCommon.currency(formatVND(line.cost))}
             </span>
           ) : (
-            <span className="font-medium text-warning">
-              {GRN_CREATE_COPY.priceRequired}
+            <span className="text-muted-foreground">
+              {GRN_CREATE_COPY.priceOnPoShort}
             </span>
           ),
       },
@@ -411,7 +411,7 @@ export function GRNDetailClient({
             <>
               {lines.length > 0 ? (
                 <p className="min-w-0 font-mono text-sm font-semibold tabular-nums">
-                  {GRN_CREATE_COPY.footerLineSummary(lines.length, stats.total)}
+                  {GRN_CREATE_COPY.footerLineSummary(lines.length)}
                 </p>
               ) : null}
               <RecreateReceivingSiteDialog

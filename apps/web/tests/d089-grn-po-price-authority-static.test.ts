@@ -88,3 +88,63 @@ test("D089 controller does not block submit on missing draft prices", () => {
     /lineCount > 0 && !submitting && !receivingSiteSaving/,
   );
 });
+
+test("D089 draft DETAIL and create footers hide money before PO sync", () => {
+  const copy = read("lib/inventory/grn-create-copy.ts");
+  const createClient = read(
+    "app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+  );
+  const detailClient = read(
+    "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
+  );
+  const draftCard = read(
+    "app/(protected)/inventory/grn/[id]/views/draft-grn-line-card.tsx",
+  );
+  const branchCreate = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/branch-grn-create-client.tsx",
+  );
+
+  assert.match(
+    copy,
+    /footerLineSummary:\s*\(lineCount: number\) =>[\s\S]*Giá mua trên PO/,
+  );
+  assert.doesNotMatch(copy, /priceRequired:\s*"Nhập giá"/);
+  assert.doesNotMatch(copy, /linePriceRequired:|toastMissingPrices:/);
+
+  assert.match(createClient, /footerLineSummary\(\s*controller\.lineCount\s*\)/);
+  assert.doesNotMatch(
+    createClient,
+    /footerLineSummary\(\s*controller\.lineCount\s*,\s*controller\.total/,
+  );
+
+  assert.match(detailClient, /footerLineSummary\(\s*lines\.length\s*\)/);
+  assert.doesNotMatch(detailClient, /priceRequired/);
+  assert.match(detailClient, /cost > 0[\s\S]*priceOnPoShort/);
+
+  assert.doesNotMatch(draftCard, /priceRequired/);
+  assert.match(draftCard, /priceOnPoShort/);
+
+  assert.match(branchCreate, /headerHint=\{GRN_CREATE_COPY\.priceOnPoShort\}/);
+  assert.doesNotMatch(
+    branchCreate,
+    /moneyVnd\(controller\.total\)/,
+  );
+});
+
+test("D089 add-line dialogs have no dead warehouse unitCost state", () => {
+  const addDialog = read(
+    "app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
+  );
+  const addSheetStart = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
+  ).split("export function BranchGrnAddLineSheet")[1];
+
+  assert.doesNotMatch(addDialog, /const \[unitCost/);
+  assert.doesNotMatch(addDialog, /getReferenceCostForUnit/);
+  assert.match(addDialog, /priceSetOnPoHint/);
+
+  assert.ok(addSheetStart, "BranchGrnAddLineSheet export exists");
+  assert.doesNotMatch(addSheetStart, /const \[unitCost/);
+  assert.doesNotMatch(addSheetStart, /getReferenceCostForUnit/);
+  assert.match(addSheetStart, /priceSetOnPoHint/);
+});

@@ -142,7 +142,32 @@ test("Wave E GRN DETAIL draft aligns with create DOC density", () => {
   assert.match(
     client,
     /footerLineSummary/,
-    "draft footer leading is SSOT for count + total",
+    "draft footer leading is SSOT for count + PO price hint (D089)",
+  );
+  assert.doesNotMatch(
+    client,
+    /footerLineSummary\(\s*lines\.length\s*,\s*stats\.total/,
+    "draft footer must not show warehouse money total before PO sync",
+  );
+  assert.doesNotMatch(
+    client,
+    /priceRequired/,
+    "draft DETAIL cost column must not warn Nhập giá when cost is 0",
+  );
+  assert.match(
+    client,
+    /cost > 0[\s\S]*priceOnPoShort/,
+    "draft DETAIL shows price-on-PO hint until unit_cost synced",
+  );
+  assert.doesNotMatch(
+    card,
+    /priceRequired/,
+    "draft mobile card must not warn Nhập giá",
+  );
+  assert.match(
+    card,
+    /priceOnPoShort/,
+    "draft mobile card uses price-on-PO hint when cost is 0",
   );
   assert.match(
     client,

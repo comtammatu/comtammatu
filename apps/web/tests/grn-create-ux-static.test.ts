@@ -97,7 +97,12 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   assert.match(
     client,
     /footerLineSummary/,
-    "footer leading is SSOT for count + running total",
+    "footer leading is SSOT for line count + PO price hint (D089)",
+  );
+  assert.doesNotMatch(
+    client,
+    /footerLineSummary\(\s*controller\.lineCount\s*,\s*controller\.total/,
+    "create footer must not pass warehouse money total before PO sync",
   );
   assert.match(
     client,
@@ -203,6 +208,21 @@ test("GRN create uses Wave-E-like context + progressive desk editor", () => {
   assert.match(copy, /addItem:\s*"Thêm mặt hàng"/);
   assert.match(copy, /addLineToReceipt/);
   assert.match(copy, /footerLineSummary/);
+  assert.match(
+    copy,
+    /footerLineSummary:\s*\(lineCount: number\) =>/,
+    "footer is qty/count + Giá mua trên PO — no money arg before sync",
+  );
+  assert.match(
+    copy,
+    /Giá mua trên PO/,
+    "footer copy points commercial price to PO",
+  );
+  assert.doesNotMatch(
+    copy,
+    /priceRequired:\s*"Nhập giá"|linePriceRequired:|toastMissingPrices:/,
+    "stale warehouse price-required copy must not remain in create SSOT",
+  );
   assert.match(
     copy,
     /draftEmptyDescription:\s*"Nhấn Thêm mặt hàng/,

@@ -26,7 +26,7 @@
 4. **Owner GRN create DOC is one lines region + progressive add, not dual AppSections**
    - Pattern: Early GRN create stacked `Mặt hàng trên phiếu` (draft DataTable) and `Danh mục nguyên liệu` (always-visible search list) as sibling `AppSection`s. That duplicated vertical space and competed with the sticky footer / desk editor.
    - Rule: Owner GRN create (`/inventory/grn/new/[supplierId]`) and draft DETAIL share one composition: dense context (`Kho nhận`) → single lines table with **Thêm mặt hàng** / add affordance → catalog search in overlay (`AppDialog` / `AddGrnLineDialog`) → progressive line editor (desk panel / sheet) → sticky `AppDetailFooter` SSOT. Catalog is never a second always-on page section.
-   - Rule: The progressive line editor is an overlay for unit / qty / unit price only — keep fields dense. Do not restate unit in the header subtitle, under qty, or as a unit-price echo; do not stack a tall prior-price comparison card with a separate variance Alert that repeats the same numbers. One compact prior-price line + a single Alert when over threshold.
+   - Rule: The progressive line editor is an overlay for unit / qty / QC only (D089 — no warehouse unit price). Do not restate unit in the header subtitle or under qty; do not stack a tall prior-price comparison card. Commercial price lives on PO.
    - Prevention: Prefer `docs/modules/ui.md` Owner GRN create DOC bullet and `grn-create-ux-static` / Wave E static tests before restoring an always-on catalog list under the lines table.
 36. **GRN draft must not be the commercial price authority (D089)**
    - Pattern: Warehouse create/draft UIs historically required `unit_cost` before review; PO then copied from GRN, inverting Owner intent (price at PO time).

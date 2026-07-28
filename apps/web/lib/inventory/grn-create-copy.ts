@@ -8,7 +8,6 @@ export const GRN_CREATE_COPY = {
   discardDraft: "Hủy nháp",
   addItemToContinue: "Thêm mặt hàng để tiếp tục",
   unitCostTitle: "Đơn giá nhập",
-  priceRequired: "Nhập giá",
   priceSetOnPoHint:
     "Đơn giá do Kế toán / Owner đặt trên đơn đặt hàng (PO).",
   priceOnPoShort: "Giá trên PO",
@@ -34,16 +33,15 @@ export const GRN_CREATE_COPY = {
   notePlaceholder: "Tình trạng, nhiệt độ...",
   addedSummary: (lineCount: number) =>
     `Đã thêm ${formatCount(lineCount)} mặt hàng`,
-  footerLineSummary: (lineCount: number, total: number) =>
-    `${formatCount(lineCount)} mặt hàng · ${formatVND(total)}`,
+  /** Draft footer before PO price sync — count only, no warehouse money total. */
+  footerLineSummary: (lineCount: number) =>
+    `${formatCount(lineCount)} mặt hàng · Giá mua trên PO`,
   reviewBeforeConfirm: (lineCount: number) =>
     `Kiểm nhận · ${formatCount(lineCount)} mặt hàng`,
   lineUnitCost: (quantity: number, unit: string, unitCost: number) =>
     `${formatQty(quantity)} ${unit} · ${formatVND(unitCost)}/${unit}`,
   lineQtyOnly: (quantity: number, unit: string) =>
     `${formatQty(quantity)} ${unit}`,
-  linePriceRequired: (quantity: number, unit: string) =>
-    `${formatQty(quantity)} ${unit} · Nhập đơn giá`,
   unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
   unitPriceUnit: (unit: string, unitCost: number) =>
     unitCost > 0
@@ -96,6 +94,5 @@ export const GRN_CREATE_COPY = {
   toastDiscardDraftDesc: "Các dòng đã nhập sẽ mất.",
   toastDiscardDraftFailed: "Không thể hủy phiếu nháp.",
   toastNoLines: "Phiếu chưa có dòng nào.",
-  toastMissingPrices: "Nhập đơn giá cho tất cả mặt hàng trước khi tiếp tục.",
   flowErrorTitle: "Không thể tiếp tục phiếu nhập",
 };

@@ -72,8 +72,8 @@ export function DraftGrnLineCard({
             {inventoryCommon.currency(formatVND(lineTotal))}
           </p>
         ) : (
-          <p className="mt-0.5 text-xs font-medium text-warning">
-            {GRN_CREATE_COPY.priceRequired}
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {GRN_CREATE_COPY.priceOnPoShort}
           </p>
         )}
         </span>

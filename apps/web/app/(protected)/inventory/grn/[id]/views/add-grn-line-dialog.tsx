@@ -20,9 +20,9 @@ import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "@lib/inventory/purchase-units";
-import { getReferenceCostForUnit } from "@lib/inventory/reference-cost";
 import type { IngredientRow } from "@lib/inventory/types";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import {
   createEditableGrnLine,
   GRN_DETAIL_COPY as grnCopy,
@@ -31,17 +31,6 @@ import {
 } from "@lib/inventory/grn-detail-model";
 
 const ADD_GRN_LINE_FORM_ID = "add-grn-line-form";
-
-function isSameReferenceCost(
-  currentCost: number | null,
-  referenceCost: { value: number } | null,
-): boolean {
-  return (
-    currentCost != null &&
-    referenceCost != null &&
-    Math.abs(currentCost - referenceCost.value) < 0.01
-  );
-}
 
 export function AddGrnLineDialog({
   grn,
@@ -64,7 +53,6 @@ export function AddGrnLineDialog({
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
   const [entryUnitId, setEntryUnitId] = useState<number | null>(null);
-  const [unitCost, setUnitCost] = useState("");
 
   const selectedIngredient = ingredients.find(
     (item) => item.id === Number(ingredientId),
@@ -76,7 +64,6 @@ export function AddGrnLineDialog({
     setQuantity("");
     setUnit("");
     setEntryUnitId(null);
-    setUnitCost("");
   }
 
   function handleDialogOpenChange(open: boolean) {
@@ -92,14 +79,8 @@ export function AddGrnLineDialog({
       defaultUnit?.label ??
       ingredient?.units?.find((u) => u.is_base)?.unit_code ??
       "";
-    const referenceCost = getReferenceCostForUnit(
-      ingredient,
-      defaultUnit?.unitId,
-      unitLabel,
-    );
     setUnit(unitLabel);
     setEntryUnitId(defaultUnit?.unitId ?? null);
-    setUnitCost(referenceCost != null ? String(referenceCost.value) : "");
   }
 
   function handleUnitChange(unitIdValue: string) {
@@ -107,33 +88,14 @@ export function AddGrnLineDialog({
       (o) => String(o.unitId) === unitIdValue,
     );
     if (!opt) return;
-    const currentReferenceCost = getReferenceCostForUnit(
-      selectedIngredient,
-      entryUnitId,
-      unit,
-    );
-    const nextReferenceCost = getReferenceCostForUnit(
-      selectedIngredient,
-      opt.unitId,
-      opt.label,
-    );
     setEntryUnitId(Number(unitIdValue));
     setUnit(opt.label);
-    if (
-      unitCost.trim() === "" ||
-      isSameReferenceCost(Number(unitCost), currentReferenceCost)
-    ) {
-      setUnitCost(
-        nextReferenceCost != null ? String(nextReferenceCost.value) : "",
-      );
-    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const parsedIngredientId = Number(ingredientId);
     const parsedQuantity = Number(quantity);
-    const parsedUnitCost = unitCost.trim() ? Number(unitCost) : 0;
     const ingredient = ingredients.find(
       (item) => item.id === parsedIngredientId,
     );
@@ -150,7 +112,6 @@ export function AddGrnLineDialog({
       notify.error(grnCopy.validation.unitRequired);
       return;
     }
-    
 
     startTransition(async () => {
       const res = await upsertGrnLine({
@@ -292,7 +253,7 @@ export function AddGrnLineDialog({
           </div>
           <div className="flex flex-col gap-1.5">
             <p className="text-xs text-muted-foreground">
-              Đơn giá mua do Kế toán/Owner nhập trên PO.
+              {GRN_CREATE_COPY.priceSetOnPoHint}
             </p>
           </div>
         </div>
