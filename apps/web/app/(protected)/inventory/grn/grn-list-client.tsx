@@ -112,6 +112,7 @@ export function GrnListClient({
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const controlSize = useFormControlSize();
   const router = useRouter();
+  const showMonetary = grns.some((grn) => grn.monetary != null);
 
   const getGrnRowActions = (grn: GrnRow): RowActionItem[] => [
     {
@@ -171,16 +172,20 @@ export function GrnListClient({
           "—"
         ),
     },
-    {
-      key: "total",
-      header: FORM_VI.totalAmount,
-      className: "text-right",
-      render: (grn) => (
-        <span className="font-mono font-medium tabular-nums">
-          {grn.monetary ? formatVND(grn.monetary.total) : "—"}
-        </span>
-      ),
-    },
+    ...(showMonetary
+      ? [
+          {
+            key: "total",
+            header: FORM_VI.totalAmount,
+            className: "text-right",
+            render: (grn: GrnRow) => (
+              <span className="font-mono font-medium tabular-nums">
+                {grn.monetary ? formatVND(grn.monetary.total) : "—"}
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       key: "status",
       header: FORM_VI.status,
@@ -740,9 +745,11 @@ function GrnMobileCard({
       <div className="flex shrink-0 items-center gap-2">
         <div className="flex flex-col items-end gap-1">
           <span className="text-xs text-muted-foreground">{grn.date || "—"}</span>
-          <span className="font-mono text-sm font-semibold">
-            {grn.monetary ? formatVND(grn.monetary.total) : "—"}
-          </span>
+          {grn.monetary ? (
+            <span className="font-mono text-sm font-semibold">
+              {formatVND(grn.monetary.total)}
+            </span>
+          ) : null}
         </div>
         <div
           onClick={(event) => event.stopPropagation()}

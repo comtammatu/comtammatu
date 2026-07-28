@@ -38,6 +38,9 @@ test("inventory monetary reads fail closed for operational roles", () => {
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
   const financePage = read("apps/web/app/(protected)/finance/page.tsx");
+  const grnList = read(
+    "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
+  );
 
   for (const role of [
     "central_supply_ops",
@@ -107,6 +110,8 @@ test("inventory monetary reads fail closed for operational roles", () => {
     /canViewInventoryValuation: canReadRequestedValuation/,
   );
   assert.match(financePage, /cockpit\.canViewInventoryValuation \?/);
+  assert.match(grnList, /showMonetary = grns\.some/);
+  assert.match(grnList, /\.\.\.\(showMonetary\s+\?/);
   assert.match(capability, /update_purchase_order_prices_protected/);
   assert.match(
     postSmoke,
