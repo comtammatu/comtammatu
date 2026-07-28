@@ -27,6 +27,8 @@ Telegram, AI enrichment, or daily reports.
   via `auth_is_owner`. Branch Manager is branch-scoped.
 - Composite ownership: a table-linked QR must reference a table in the same
   tenant and branch. At most one active QR per table.
+- Staff QR list offers copy public URL and download PNG for print; both use the
+  same `/r/{token}` payload.
 
 ## Permission keys
 

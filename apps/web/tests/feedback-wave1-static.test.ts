@@ -162,8 +162,17 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
   assert.match(qr, /<AppListFrame/);
   assert.match(qr, /RowActionsMenu/);
   assert.match(qr, /DataTable/);
+  assert.match(qr, /feedbackCopy\.copyUrl/);
+  assert.match(qr, /feedbackCopy\.downloadQr/);
+  assert.match(qr, /navigator\.clipboard\.writeText\(url\)/);
+  assert.match(qr, /downloadFeedbackQrPng/);
+  assert.match(qr, /QRCode\.toDataURL/);
   assert.doesNotMatch(qr, /md:grid-cols-3/);
   assert.doesNotMatch(qr, /AppListFrame[\s\S]*?\baction=\{/);
+
+  const feedbackCopy = readWeb("lib/messages/feedback.ts");
+  assert.match(feedbackCopy, /copyUrl:\s*"Sao chép link"/);
+  assert.match(feedbackCopy, /downloadQr:\s*"Tải QR"/);
 
   const createButton = readWeb(
     "app/(protected)/feedback/_components/create-feedback-qr-button.tsx",

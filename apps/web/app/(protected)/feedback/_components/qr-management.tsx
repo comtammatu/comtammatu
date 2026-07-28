@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import QRCode from "qrcode";
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -41,6 +42,21 @@ import {
   type FeedbackQrRow,
 } from "../actions";
 import { feedbackCopy } from "@lib/messages/feedback";
+
+function downloadFeedbackQrPng(url: string, qrCodeId: number) {
+  return QRCode.toDataURL(url, {
+    errorCorrectionLevel: "M",
+    margin: 2,
+    width: 1024,
+  }).then((dataUrl) => {
+    const anchor = document.createElement("a");
+    anchor.href = dataUrl;
+    anchor.download = `ma-qr-phan-hoi-${qrCodeId}.png`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+  });
+}
 
 export type FeedbackQrTableOption = {
   id: number;
@@ -106,6 +122,19 @@ export function QrManagement({
           void navigator.clipboard.writeText(url).then(() => {
             toast.success(feedbackCopy.copied);
           });
+        },
+      },
+      {
+        key: "download",
+        label: feedbackCopy.downloadQr,
+        onSelect: () => {
+          void downloadFeedbackQrPng(url, item.id)
+            .then(() => {
+              toast.success(feedbackCopy.downloadOk);
+            })
+            .catch(() => {
+              toast.error(feedbackCopy.downloadFailed);
+            });
         },
       },
     ];
