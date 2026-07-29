@@ -65,6 +65,8 @@ export type GrnListSearchParams = {
   requestId?: string | string[];
   branchId?: string | string[];
   page?: string | string[];
+  grnId?: string | string[];
+  mode?: string | string[];
 };
 
 export type GrnListPageData = {

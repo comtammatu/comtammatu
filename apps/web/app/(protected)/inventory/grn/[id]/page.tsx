@@ -1,66 +1,5 @@
-import { notFound } from "next/navigation";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
-import { tRoute } from "../../_lib/dictionary";
-import { loadGrnDetailResult } from "@lib/inventory/grn-detail-data";
+import { notFound, redirect } from "next/navigation";
 import { isGrnLookupParam } from "@lib/inventory/grn-detail-model";
-import { GRNDetailClient } from "./grn-detail-client";
-
-interface GRNDetailPageContentProps {
-  grnId: number | string;
-  routeBranchId?: number;
-  grnListBasePath?: string;
-  grnMobileBackPath?: string;
-  supplierInvoicesBasePath?: string;
-}
-
-function GrnDetailLoadError({ error }: { error: string }) {
-  return (
-    <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={tRoute("/inventory/grn", "heading")}
-      />
-      <AppEmptyState
-        mode="error"
-        title={ERRORS_VI.loadFailed}
-        description={error}
-      />
-    </AppPage>
-  );
-}
-
-export async function GRNDetailPageContent({
-  grnId,
-  routeBranchId,
-  grnListBasePath = "/inventory/grn",
-  grnMobileBackPath = "/inventory/grn/new",
-  supplierInvoicesBasePath = "/finance/supplier-invoices",
-}: GRNDetailPageContentProps) {
-  const result = await loadGrnDetailResult(grnId, routeBranchId);
-  if (!result.data) {
-    if (result.error && !result.notFound) {
-      return <GrnDetailLoadError error={result.error} />;
-    }
-    notFound();
-  }
-
-  return (
-    <GRNDetailClient
-      grn={result.data.grn}
-      ingredients={result.data.ingredients}
-      canAdjustStock={result.data.canAdjustStock}
-      canAmendConfirmed={result.data.canAmendConfirmed}
-      canEditDraft={result.data.canEditDraft}
-      canConfirm={result.data.canConfirm}
-      canManageSupplierInvoice={result.data.canManageSupplierInvoice}
-      receivingLocationOptions={result.data.receivingLocationOptions}
-      auditLogs={result.data.auditLogs}
-      grnListBasePath={grnListBasePath}
-      grnMobileBackPath={grnMobileBackPath}
-      supplierInvoicesBasePath={supplierInvoicesBasePath}
-    />
-  );
-}
 
 export default async function GRNDetailPage({
   params,
@@ -69,5 +8,5 @@ export default async function GRNDetailPage({
 }) {
   const { id } = await params;
   if (!isGrnLookupParam(id)) notFound();
-  return <GRNDetailPageContent grnId={id} />;
+  redirect(`/inventory/grn?grnId=${encodeURIComponent(id)}&mode=view`);
 }

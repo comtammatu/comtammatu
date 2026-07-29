@@ -36,12 +36,20 @@ import {
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
+import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
+import { BranchTransferSheet } from "./branch-transfer-sheet";
 
 interface PageProps {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ queue?: string | string[] }>;
+  searchParams: Promise<
+    Record<string, string | string[] | undefined> & {
+      queue?: string | string[];
+      transferId?: string | string[];
+      mode?: string | string[];
+    }
+  >;
 }
 
 const copy = messages.inventory.transfer;
@@ -163,10 +171,12 @@ function TransferSection({
   tab,
   rows,
   branchId,
+  currentQuery,
 }: {
   tab: TransferTab;
   rows: TransferListRow[];
   branchId: number;
+  currentQuery: string;
 }) {
   const meta = sectionMeta[tab];
 
@@ -187,18 +197,24 @@ function TransferSection({
         />
       ) : (
         <ItemGroup className="gap-2">
-          {rows.map((row) => (
-            <TransferCard
-              key={row.id}
-              row={row}
-              href={
-                tab === "receive" && isTransferReceiveReady(row.status)
-                  ? `/br/${branchId}/stock/receive/${row.id}`
-                  : `/br/${branchId}/stock/transfer/${row.id}`
-              }
-              icon={meta.icon}
-            />
-          ))}
+          {rows.map((row) => {
+            const params = new URLSearchParams(currentQuery);
+            params.set("transferId", String(row.id));
+            params.set(
+              "mode",
+              tab === "receive" && isTransferReceiveReady(row.status)
+                ? "receive"
+                : "view",
+            );
+            return (
+              <TransferCard
+                key={row.id}
+                row={row}
+                href={`/br/${branchId}/stock/transfer?${params}`}
+                icon={meta.icon}
+              />
+            );
+          })}
         </ItemGroup>
       )}
     </BranchOperatorPanel>
@@ -214,7 +230,31 @@ export default async function OperatorStockTransferPage({
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
   const queueParam = Array.isArray(query.queue) ? query.queue[0] : query.queue;
+  const transferIdParam = Array.isArray(query.transferId)
+    ? query.transferId[0]
+    : query.transferId;
+  const modeParam = Array.isArray(query.mode) ? query.mode[0] : query.mode;
+  const transferId = transferIdParam ? Number(transferIdParam) : null;
+  if (
+    transferIdParam &&
+    (!Number.isInteger(transferId) || (transferId ?? 0) <= 0)
+  ) {
+    notFound();
+  }
+  const mode = modeParam === "receive" ? "receive" : "view";
   const receiveOnly = queueParam === "receive";
+  const currentParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value == null) continue;
+    if (Array.isArray(value)) {
+      value.forEach((item) => currentParams.append(key, item));
+    } else {
+      currentParams.set(key, value);
+    }
+  }
+  currentParams.delete("transferId");
+  currentParams.delete("mode");
+  const currentQuery = currentParams.toString();
 
   const { supabase, claims } = await loadAuthState();
   if (!(await resolveBranchContext(supabase, claims, branchId))) notFound();
@@ -228,6 +268,15 @@ export default async function OperatorStockTransferPage({
     branchId,
     userRole: claims.user_role,
   });
+  const selected =
+    transferId != null
+      ? await loadTransferDetailPageData({
+          transferId,
+          routeBranchId: branchId,
+          includeAudit: false,
+          includeCorrections: false,
+        })
+      : null;
 
   return (
     <BranchOperatorPage
@@ -247,6 +296,7 @@ export default async function OperatorStockTransferPage({
             tab="receive"
             rows={groups.receive}
             branchId={branchId}
+            currentQuery={currentQuery}
           />
           {!receiveOnly ? (
             <>
@@ -254,11 +304,13 @@ export default async function OperatorStockTransferPage({
                 tab="dispatch"
                 rows={groups.dispatch}
                 branchId={branchId}
+                currentQuery={currentQuery}
               />
               <TransferSection
                 tab="history"
                 rows={groups.history}
                 branchId={branchId}
+                currentQuery={currentQuery}
               />
             </>
           ) : null}
@@ -275,6 +327,15 @@ export default async function OperatorStockTransferPage({
           </Button>
         </AppEmptyState>
       )}
+      {selected ? (
+        <BranchTransferSheet
+          branchId={branchId}
+          mode={mode}
+          transfer={selected.transfer}
+          userRole={selected.userRole}
+          userBranchId={selected.userBranchId}
+        />
+      ) : null}
     </BranchOperatorPage>
   );
 }

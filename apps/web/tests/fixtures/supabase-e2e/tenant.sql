@@ -183,6 +183,7 @@ VALUES
   ('procurement:invoice_match','inventory_procurement','Đối chiếu hoá đơn mua hàng','either'),
   ('procurement:po_approve','inventory_procurement','Duyệt đơn mua hàng','either'),
   ('procurement:po_create','inventory_procurement','Tạo đơn mua hàng (PO)','either'),
+  ('procurement:request_manage','inventory_procurement','Tạo, sửa, gửi, hủy và đóng yêu cầu mua','branch'),
   ('procurement:price_list_read','procurement','Read purchase prices through the protected monetary boundary.','tenant'),
   ('procurement:price_list_write','procurement','Write supplier_price_list contract/quotation rows. grn_last is trigger-only.','tenant'),
   ('procurement:read','inventory_procurement','Xem đơn mua hàng & NCC','either'),
@@ -219,12 +220,17 @@ SET is_delegable_to_staff = key = ANY (ARRAY[
   'inventory:production_confirm',
   'inventory:production_create',
   'inventory:read',
+  'inventory:request_cancel',
+  'inventory:request_create',
+  'inventory:request_fulfill',
+  'inventory:request_submit',
   'inventory:valuation_read',
   'inventory:stocktake_complete',
   'inventory:stocktake_create',
   'inventory:stocktake_recount',
   'inventory:transfer_create',
   'inventory:transfer_receive',
+  'inventory:transfer_ship',
   'inventory:waste_approve',
   'inventory:write',
   'inventory:writeoff',
@@ -252,6 +258,7 @@ SET is_delegable_to_staff = key = ANY (ARRAY[
   'procurement:invoice_match',
   'procurement:po_approve',
   'procurement:po_create',
+  'procurement:request_manage',
   'procurement:price_list_read',
   'procurement:read',
   'procurement:supplier_manage',
@@ -293,6 +300,14 @@ WHERE t.slug = 'comtammatu'
     SELECT 1 FROM public.role_templates rt
     WHERE rt.tenant_id = t.id AND rt.position_code = v.position_code
   );
+
+UPDATE public.role_templates
+SET permission_keys = array_append(
+  permission_keys,
+  'procurement:request_manage'
+)
+WHERE position_code IN ('central_supply_ops', 'central_kitchen_lead')
+  AND NOT ('procurement:request_manage' = ANY(permission_keys));
 
 UPDATE public.role_templates template
 SET permission_keys = ARRAY(

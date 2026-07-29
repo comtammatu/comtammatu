@@ -49,6 +49,7 @@ export const PERMISSION_KEYS = {
 
   // procurement
   PROCUREMENT_READ: "procurement:read",
+  PROCUREMENT_REQUEST_MANAGE: "procurement:request_manage",
   PROCUREMENT_PO_CREATE: "procurement:po_create",
   PROCUREMENT_PO_APPROVE: "procurement:po_approve",
   PROCUREMENT_GRN_CREATE: "procurement:grn_create",
@@ -144,7 +145,7 @@ export type PermissionKey =
  * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
  * by a string-match test; bump when a migration adds/removes a catalog key.
  */
-export const PERMISSION_KEY_COUNT = 91;
+export const PERMISSION_KEY_COUNT = 92;
 
 /**
  * Pure function: check if a permission set contains a given key.

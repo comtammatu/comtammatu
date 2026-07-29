@@ -1,5 +1,4 @@
-import { notFound } from "next/navigation";
-import { TransferReceiveContent } from "./transfer-receive-content";
+import { notFound, redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ branchId: string; id: string }>;
@@ -20,7 +19,7 @@ export default async function OperatorStockReceiveDetailPage({
     notFound();
   }
 
-  return (
-    <TransferReceiveContent transferId={transferId} branchId={branchId} />
+  redirect(
+    `/br/${branchId}/stock/transfer?queue=receive&transferId=${transferId}&mode=receive`,
   );
 }

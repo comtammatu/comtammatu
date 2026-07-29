@@ -590,7 +590,8 @@ App-local form helpers sống tại `apps/web/app/components/form/`. Dùng cho m
 - `FormField` — label/help/error chung cho control ngoài RHF hoặc composition đặc thù; đây là anatomy/layout wrapper, control con vẫn phải nhận `id`, `disabled`, và ARIA state phù hợp
 - `Combobox` — control searchable độc lập; trong data-entry phải đặt trong `FormField` với `id` ổn định
 - `TextareaField` — Textarea + RHF
-- `AppDialog` — generic app Dialog shell for short non-form detail/task overlays
+- `AppDialog` — generic app Dialog shell; `variant="document"` dành cho chứng
+  từ list-first YCM, PO, GRN, YCH và Transfer
 - `FormDialog` — generic Dialog + `useForm` + `zodResolver` + `useTransition`
 - `valuesToFormData` — adapter để gọi server actions `withFormAction`-wrapped
 
@@ -615,16 +616,16 @@ Schema: luôn dùng Zod 4 với `{ error: "..." }` (không dùng `{ message }`).
 
 Inventory IA bám ba luồng hiện hành:
 
-1. `Nhập hàng` — GRN draft → tạo PO từ GRN → Owner/Kế toán nhập giá và duyệt →
-   Kho kiểm tra số lượng, ghi hàng từ chối kèm lý do + ảnh rồi confirm; hóa đơn
-   NCC handoff sang Finance/AP.
+1. `Nhập hàng` — gửi YCM → Kế toán tạo và gửi PO → Kho lưu GRN nháp rồi xác
+   nhận nhập kho; chỉ bước xác nhận GRN làm phát sinh tồn/WAC. Hóa đơn NCC
+   handoff sang Finance/AP.
 2. `Kiểm soát tồn` — đúng một warehouse cho mỗi site active, kiểm kê, hao
    hụt/điều chỉnh và báo cáo.
 3. `Sản xuất/tiêu hao` — workflow/RPC đang có tại branch, sale-consumption và
    write-off có nguồn rõ.
 
-Không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO; không đưa supplier return,
-lot/expiry, production order hoặc same-branch Kho↔Bếp transfer vào daily IA.
+Không có bước duyệt PO bắt buộc. Không đưa supplier return, lot/expiry,
+production order hoặc same-branch Kho↔Bếp transfer vào daily IA.
 
 Sidebar labels phải ngắn và scan được trong sidebar cố định. Tên đầy đủ của luồng đặt trong page title, breadcrumb, tab, hoặc empty state thay vì ép vào group label dài.
 
@@ -641,10 +642,13 @@ at the first match.
 3. **Task frame:** structured fields → `FormDialog`. Single bounded decision,
    no form → `AppDialog`. Touch plane, one-at-a-time entry → bottom `Sheet` /
    `Drawer`. Raw `Dialog` requires an approved exception.
-4. **View weight:** line array, audit/`Lịch sử` tab, stage footer, or more than
-   one primary action → **Page** (DETAIL or DOC-WORKFLOW). Otherwise →
-   **addressable overlay** bound to `?<entity>Id=` (Owner: side `Sheet` or
-   `AppDialog`; Branch: bottom `Sheet`).
+4. **View home:** phiên độc lập, kéo dài, danh sách không còn là ngữ cảnh làm
+   việc → **Page** (DETAIL hoặc DOC-WORKFLOW). List-first view → **addressable
+   overlay** bound to `?<entity>Id=`. YCM, PO, GRN, YCH và Transfer là nhóm
+   chứng từ list-first đã duyệt: Owner/Ops dùng
+   `AppDialog variant="document"`; Branch YCH/Transfer dùng fullscreen bottom
+   `Sheet`. Line array hoặc stage footer không tự động ép sang Page; mỗi state
+   vẫn chỉ có một primary action.
 
 `Popover` never renders a record view or a multi-step workflow. `Drawer` is a
 touch-plane frame, not a second Owner overlay tier.

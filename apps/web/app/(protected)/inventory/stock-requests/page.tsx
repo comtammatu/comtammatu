@@ -17,11 +17,20 @@ import {
 } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
+import { StockRequestFulfillPageContent } from "./stock-request-fulfill-content";
 
 const stockRequestCopy = messages.inventory.stockRequests;
 const copy = stockRequestCopy.inbox;
 
-export default async function InventoryStockRequestsInboxPage() {
+export default async function InventoryStockRequestsInboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    stockRequestId?: string | string[];
+    mode?: string | string[];
+  }>;
+}) {
+  const params = await searchParams;
   const { supabase, claims } = await loadAuthState();
   if (
     !STOCK_REQUEST_FULFILL_ROLES.includes(
@@ -65,6 +74,13 @@ export default async function InventoryStockRequestsInboxPage() {
   const sourceLabel = actorFulfillKind
     ? getInventorySiteKindLabelVi(actorFulfillKind)
     : null;
+  const rawRequestId = Array.isArray(params.stockRequestId)
+    ? params.stockRequestId[0]
+    : params.stockRequestId;
+  const selectedRequestId =
+    rawRequestId != null && /^\d+$/.test(rawRequestId)
+      ? Number(rawRequestId)
+      : null;
 
   return (
     <AppPage width="xwide" density="compact">
@@ -94,7 +110,10 @@ export default async function InventoryStockRequestsInboxPage() {
                     size="sm"
                     variant="outline"
                     render={
-                      <Link href={`/inventory/stock-requests/${row.id}`} />
+                      <Link
+                        href={`/inventory/stock-requests?stockRequestId=${row.id}&mode=fulfill`}
+                        scroll={false}
+                      />
                     }
                   >
                     {copy.openButton}
@@ -105,6 +124,9 @@ export default async function InventoryStockRequestsInboxPage() {
           ))}
         </ul>
       )}
+      {selectedRequestId != null ? (
+        <StockRequestFulfillPageContent requestId={selectedRequestId} />
+      ) : null}
     </AppPage>
   );
 }

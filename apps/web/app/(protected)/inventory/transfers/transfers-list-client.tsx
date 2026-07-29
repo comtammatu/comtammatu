@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight as IconArrowRight,
   CircleCheck as IconCircleCheck,
@@ -91,6 +91,8 @@ export function TransfersListClient({
   embedded?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const controlSize = useFormControlSize(embedded ? "touch" : "responsive");
   const isOwner = userRole === "owner";
   const userBranchKind =
@@ -166,12 +168,19 @@ export function TransfersListClient({
   }, [tabGroups, activeTab, search]);
 
   function detailHref(id: number): string {
-    const scopeQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
-    return `${basePath}/${id}${scopeQuery}`;
+    if (embedded) {
+      const scopeQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
+      return `${basePath}/${id}${scopeQuery}`;
+    }
+    const params = new URLSearchParams(searchParams.toString());
+    if (userBranchId != null) params.set("branchId", String(userBranchId));
+    params.set("transferId", String(id));
+    params.set("mode", "view");
+    return `${pathname}?${params}`;
   }
 
   function openTransferDetail(row: TransferListRow) {
-    router.push(detailHref(row.id));
+    router.push(detailHref(row.id), { scroll: false });
   }
 
   const emptyIcon =
@@ -362,7 +371,7 @@ function MobileTransferCard({
 
   return (
     <InteractiveCard
-      render={<Link href={href} />}
+      render={<Link href={href} scroll={false} />}
       minHeight="mobile"
       className="h-auto touch-manipulation cursor-pointer"
     >

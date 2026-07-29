@@ -54,7 +54,6 @@ import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
 import { discardGrnDraft } from "../grn-actions";
 import {
-  grnDetailHref,
   hasGrnListFilters,
   supplierInvoiceHrefForGrn,
   type GrnListFilters,
@@ -96,6 +95,7 @@ export function GrnListClient({
   canViewMonetary,
   loadFailed,
   withinOwnerTabs = false,
+  detailError,
 }: {
   rows: GrnListRow[];
   total: number;
@@ -107,6 +107,7 @@ export function GrnListClient({
   canViewMonetary: boolean;
   loadFailed: boolean;
   withinOwnerTabs?: boolean;
+  detailError?: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -152,7 +153,7 @@ export function GrnListClient({
     };
   }, [rows]);
 
-  function navigate(next: Record<string, string | null>) {
+  function listHref(next: Record<string, string | null>) {
     const params = new URLSearchParams();
     const values = {
       q: query.trim() || null,
@@ -169,7 +170,22 @@ export function GrnListClient({
     for (const [key, value] of Object.entries(values)) {
       if (value) params.set(key, value);
     }
-    startTransition(() => router.push(`${basePath}?${params.toString()}`));
+    return `${basePath}?${params.toString()}`;
+  }
+
+  function navigate(next: Record<string, string | null>) {
+    startTransition(() =>
+      router.push(listHref(next), {
+        scroll: false,
+      }),
+    );
+  }
+
+  function detailHref(row: GrnListRow) {
+    return listHref({
+      grnId: String(row.id),
+      mode: row.status === "draft" ? "receive" : "view",
+    });
   }
 
   function rowActions(row: GrnListRow): RowActionItem[] {
@@ -179,13 +195,13 @@ export function GrnListClient({
         label:
           row.status === "draft" ? "Tiếp tục nhập hàng" : ACTIONS_VI.viewDetails,
         icon: <IconExternalLink />,
-        href: grnDetailHref(basePath, row.id),
+        href: detailHref(row),
       },
       {
         key: "purchase-order",
         label: "Xem đơn đặt hàng",
         icon: <IconFileText />,
-        href: `/inventory/purchase-orders?poId=${row.poId}`,
+        href: `/inventory/purchase-orders?poId=${row.poId}&mode=view`,
       },
     ];
     if (row.purchaseRequestId != null) {
@@ -193,7 +209,7 @@ export function GrnListClient({
         key: "purchase-request",
         label: "Xem yêu cầu mua",
         icon: <IconFileText />,
-        href: `/inventory/purchase-requests?requestId=${row.purchaseRequestId}`,
+        href: `/inventory/purchase-requests?requestId=${row.purchaseRequestId}&mode=view`,
       });
     }
     if (row.status === "confirmed" && canManageSupplierInvoice) {
@@ -244,7 +260,7 @@ export function GrnListClient({
       header: "Phiếu nhập",
       render: (row) => (
         <Link
-          href={grnDetailHref(basePath, row.id)}
+          href={detailHref(row)}
           className="font-mono font-medium text-primary hover:underline"
         >
           {row.code}
@@ -520,7 +536,7 @@ export function GrnListClient({
       rowClassName={(row) =>
         row.status === "cancelled" ? "opacity-60" : undefined
       }
-      onRowClick={(row) => router.push(grnDetailHref(basePath, row.id))}
+      onRowClick={(row) => router.push(detailHref(row), { scroll: false })}
       renderRowContextMenu={(row) => (
         <RowActionsContextMenuItems items={rowActions(row)} />
       )}
@@ -528,7 +544,7 @@ export function GrnListClient({
         <GrnMobileCard
           row={row}
           actions={rowActions(row)}
-          onOpen={() => router.push(grnDetailHref(basePath, row.id))}
+          onOpen={() => router.push(detailHref(row), { scroll: false })}
         />
       )}
     />
@@ -571,6 +587,35 @@ export function GrnListClient({
   return (
     <>
       {content}
+      <AppDialog
+        variant="document"
+        open={detailError != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            router.replace(listHref({ grnId: null, mode: null }), {
+              scroll: false,
+            });
+          }
+        }}
+        title={grnCopy.detailLoadFailed}
+        footer={
+          <Button
+            onClick={() =>
+              router.replace(listHref({ grnId: null, mode: null }), {
+                scroll: false,
+              })
+            }
+          >
+            {ACTIONS_VI.close}
+          </Button>
+        }
+      >
+        <AppEmptyState
+          mode="error"
+          title={grnCopy.detailLoadFailed}
+          description={detailError ?? grnCopy.notFound}
+        />
+      </AppDialog>
       <AppDialog
         open={cancelRow != null}
         onOpenChange={(open) => {

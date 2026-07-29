@@ -565,6 +565,50 @@ export async function createStockTransfer(
   return { success: true, data: { id: result.id } };
 }
 
+const cancelTransferSchema = z.object({
+  transferId: z.coerce.number().int().positive(),
+  reason: z.string().trim().min(5).max(500),
+});
+
+export async function cancelStockTransfer(input: {
+  transferId: number;
+  reason: string;
+}): Promise<ActionResult> {
+  const parsed = cancelTransferSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ.",
+    };
+  }
+  const authz = await loadTransferForPermission(
+    parsed.data.transferId,
+    PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
+    "from",
+  );
+  if (!authz.success) return { success: false, error: authz.error };
+
+  const { error } = await authz.supabase.rpc(
+    "cancel_stock_transfer" as never,
+    {
+      p_transfer_id: parsed.data.transferId,
+      p_reason: parsed.data.reason,
+    } as never,
+  );
+  if (error) {
+    console.error("inventory.transfer.cancel_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      success: false,
+      error: "Chỉ hủy được phiếu chuyển nháp chưa xuất kho.",
+    };
+  }
+  revalidatePath("/inventory/transfers");
+  revalidatePath("/inventory/stock-requests");
+  return { success: true };
+}
+
 export async function transferConfirmShip(
   transferId: number,
 ): Promise<ActionResult> {

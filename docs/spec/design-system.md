@@ -632,7 +632,7 @@ Default component routing:
 | searchable responsive data        | `DataTable`; raw `Table` only inside an approved table adapter                 |
 | segmented view                    | `Tabs`                                                                         |
 | standard app form field           | helpers from `@/components/form`; shared controls compose inside those helpers |
-| short detail or CRUD dialog       | `AppDialog` or `FormDialog`                                                    |
+| short detail or list-first document | `AppDialog` (`variant="document"` for the latter) or `FormDialog`             |
 | simple destructive confirmation   | shared `confirm()`; `ReasonConfirmDialog` when a reason is required            |
 | contextual or long overlay        | `Drawer`, `Sheet`, or Page flow according to the workflow                      |
 | empty/no result/error             | `AppEmptyState`, `TableEmptyStateRow`, `ErrorPanel`, or `NotFoundPanel`        |
@@ -889,6 +889,11 @@ allowlist.
   (Branch counterpart: bottom `Sheet` at the same depth) only when bounded to
   one employee and one clear/save assignment set; long stocktake or line-heavy
   forms still use Page/`DocumentFormFrame`.
+- YCM, PO, GRN, YCH, and Transfer are approved list-first documents. Owner/Ops
+  opens their canonical view in a URL-addressable
+  `AppDialog variant="document"` while the LIST stays mounted; Branch YCH and
+  Transfer use a fullscreen bottom `Sheet`. A legacy DETAIL route redirects to
+  that canonical query address and never renders a parallel implementation.
 - Inventory money, quantity, tax-rate, and business-date inputs must use the shared app form wrappers instead of ad hoc parsing or `type="number"`.
 - Hide permanently unauthorized actions. Show disabled controls with explanatory copy only for temporary operational blockers such as missing shift, locked period, or incomplete prerequisite state.
 
@@ -1035,13 +1040,19 @@ addressable. Full decision table: ADR 0018.
 
 Declare each record's depth once per family:
 
-- **D2 (default for staged documents)** — DETAIL route `{basePath}/{id}`; row
-  click navigates there.
+- **D2 (independent workspace)** — DETAIL route `{basePath}/{id}`; row click
+  navigates there. Use it for long-running sessions whose list is no longer the
+  operator's working context, such as stocktake or production.
 - **D1 (addressable overlay)** — no DETAIL route; view opens in an overlay bound
-  to one list query parameter (`?<entity>Id=`), written with `router.replace`,
-  hydrated from the server on first load, and cleared on close. Owner may use
-  side `Sheet` or `AppDialog`; Branch may use bottom `Sheet` / `Drawer` at the
-  same depth.
+  to one list query parameter (`?<entity>Id=`), hydrated from the server on
+  first load, and cleared on close. Row open uses `router.push`; mode changes
+  and close use `router.replace`. Owner may use side `Sheet` or `AppDialog`;
+  Branch may use bottom `Sheet` / `Drawer` at the same depth.
+- **D1 document (addressable overlay)** — a list-first staged document may
+  render lines and a state-transition footer in
+  `AppDialog variant="document"` when each state exposes exactly one primary
+  action. This named tier applies to YCM, PO, GRN, YCH, and Transfer; it is not a
+  generic exception for long-running authoring.
 - **D1 task (non-addressable)** — `FormDialog` / short `AppDialog` for master
   CRUD or a single bounded decision that ends.
 - **D3** — line-array authoring only; never a row-open target for an existing
@@ -1051,15 +1062,16 @@ Declare each record's depth once per family:
   is `AppPage` + `AppSection` decision cards — never `InventoryListFrame` /
   `DataTable`.
 
-A record escalates from D1 view to D2 when **any** of the following is true: it
-renders a line array, an audit/`Lịch sử` tab, a stage-transition footer, or more
-than one primary action. Recipes that remain D1 task (`FormDialog`) escalate
+A record escalates from D1 view to D2 when the record itself becomes an
+independent, long-running workspace, or when a state requires more than one
+primary action. A line array or stage-transition footer alone does not escalate
+an approved D1 document. Recipes that remain D1 task (`FormDialog`) escalate
 when BOM lines **> 12** (ADR 0018 **C3**).
 
-**Forbidden:** a record with two views (DETAIL route and a separate overlay view
-of the same record); a record view reachable only from ephemeral component
-state; a row whose body click and whose context/long-press lead to different
-destinations; `Popover` as a record view.
+**Forbidden:** a record with two rendered views (a legacy DETAIL redirect is
+allowed); a record view reachable only from ephemeral component state; a row
+whose body click and whose context/long-press lead to different destinations;
+`Popover` as a record view.
 
 **Three doors** share one `RowActionItem[]`: row body, `RowActionsMenu` action
 cell, and `renderRowContextMenu`. Context menu is additive only. Zero-action

@@ -52,7 +52,7 @@ test("ingredient detail movement links stay in the selected Branch stock plane",
       branchId: 3,
       branchStockBasePath: stockBasePath,
     }),
-    "/br/3/stock/transfer/12",
+    "/br/3/stock/transfer?transferId=12&mode=view",
   );
   assert.equal(
     stockMovementReferenceHref({
@@ -70,6 +70,6 @@ test("Owner surface movement links retain the management detail route", () => {
       movement: makeMovement({ grnId: 44 }),
       branchId: 3,
     }),
-    "/inventory/grn/44",
+    "/inventory/grn?grnId=44&mode=view",
   );
 });

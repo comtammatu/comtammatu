@@ -7,7 +7,7 @@ import { notify } from "@comtammatu/ui/lib/notify";
 import { m, messages } from "@lib/messages";
 import {
   deleteGrnLine,
-  upsertGrnLine,
+  saveGoodsReceiptNote,
 } from "@/(protected)/inventory/grn-actions";
 import { confirmGrn } from "@/(protected)/inventory/procurement-actions";
 import {
@@ -28,6 +28,7 @@ interface UseGrnDetailActionsArgs {
   grnListBasePath?: string;
   grnMobileBackPath?: string;
   isMobile: boolean;
+  onConfirmed?: () => void;
 }
 
 interface UseGrnDetailActionsReturn {
@@ -47,6 +48,7 @@ export function useGrnDetailActions({
   grnListBasePath = "/inventory/grn",
   grnMobileBackPath = "/inventory/grn/new",
   isMobile,
+  onConfirmed,
 }: UseGrnDetailActionsArgs): UseGrnDetailActionsReturn {
   const router = useRouter();
 
@@ -57,46 +59,30 @@ export function useGrnDetailActions({
     }
 
     startSave(async () => {
-      let okCount = 0;
-      const savedLines = new Map<number, true>();
-      for (const line of dirtyLines) {
-        const result = await upsertGrnLine({
-          grnId: grn.id,
+      const result = await saveGoodsReceiptNote({
+        grnId: grn.id,
+        lines: lines.map((line) => ({
           lineId: line.lineId,
-          ingredientId: line.ingredientId,
-          supplierId: line.supplierId,
           receivedQuantity: line.actual,
-          entryUnitId: line.entryUnitId,
           rejectedQuantity: line.rejected,
           rejectionReason: line.rejectionReason || null,
           rejectedPhotoUrl: line.rejectedPhotoUrl || null,
-        });
-        if (!result.success) {
-          notify.error(
-            m(messages.inventory.grn.saveLinesFailed, {
-              name: line.name,
-              reason: result.error ?? GRN_DETAIL_COPY.saveLineFailed,
-            }),
-          );
-          continue;
-        }
-        okCount += 1;
-        savedLines.set(line.lineId, true);
+        })),
+      });
+      if (!result.success) {
+        notify.error(result.error ?? GRN_DETAIL_COPY.saveLineFailed);
+        return;
       }
-      if (okCount > 0) {
-        notify.success(
-          m(messages.inventory.grn.saveLinesOk, {
-            ok: okCount,
-            total: dirtyLines.length,
-          }),
-        );
-        setLines((previous) =>
-          previous.map((line) =>
-            savedLines.has(line.lineId) ? { ...line, dirty: false } : line,
-          ),
-        );
-        router.refresh();
-      }
+      notify.success(
+        m(messages.inventory.grn.saveLinesOk, {
+          ok: dirtyLines.length,
+          total: dirtyLines.length,
+        }),
+      );
+      setLines((previous) =>
+        previous.map((line) => ({ ...line, dirty: false })),
+      );
+      router.refresh();
     });
   }
 
@@ -207,6 +193,10 @@ export function useGrnDetailActions({
         return;
       }
       notify.success(messages.inventory.grn.confirmed);
+      if (onConfirmed) {
+        onConfirmed();
+        return;
+      }
       if (isMobile) {
         router.push(grnMobileBackPath);
       } else {

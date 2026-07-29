@@ -835,26 +835,27 @@ export const discardGrnDraft = withAction(
       };
     }
 
-    // Soft-cancel keeps audit trail; immutable confirmed GRNs are unaffected.
-    const { data: row, error } = await supabase
-      .from("goods_received_notes")
-      .update({ status: "cancelled", notes: data.reason })
-      .eq("id", data.grnId)
-      .eq("tenant_id", claims.tenant_id)
-      .eq("status", "draft")
-      .select("id")
-      .maybeSingle();
+    const { data: raw, error } = await supabase.rpc(
+      "cancel_goods_receipt_note" as never,
+      {
+        p_grn_id: data.grnId,
+        p_reason: data.reason,
+      } as never,
+    );
     if (error) {
       return { success: false, error: "Không thể hủy phiếu nháp." };
     }
-    if (!row) {
-      // RLS or status guard; surface clearly instead of silent success.
+    const row = z
+      .object({ id: z.coerce.number().int().positive() })
+      .safeParse(raw);
+    if (!row.success) {
       return {
         success: false,
         error: "Phiếu nháp không tồn tại hoặc đã được xử lý.",
       };
     }
-    return { success: true, data: { id: row.id } };
+    revalidatePath("/inventory/grn");
+    return { success: true, data: { id: row.data.id } };
   },
 );
 
@@ -1115,6 +1116,76 @@ export const upsertGrnLine = withAction(
 );
 
 /* ─── confirmGrn ─── */
+
+const saveGoodsReceiptNoteSchema = z.object({
+  grnId: z.coerce.number().int().positive(),
+  receivedDate: z.iso.datetime().nullable().optional(),
+  notes: z.string().trim().max(500).optional(),
+  lines: z
+    .array(
+      z
+        .object({
+          lineId: z.coerce.number().int().positive(),
+          receivedQuantity: z.coerce
+            .number()
+            .min(0)
+            .max(GRN_NUMERIC_15_3_MAX),
+          rejectedQuantity: z.coerce
+            .number()
+            .min(0)
+            .max(GRN_NUMERIC_15_3_MAX)
+            .default(0),
+          rejectionReason: z.string().trim().max(500).nullable().optional(),
+          rejectedPhotoUrl: z.string().trim().url().nullable().optional(),
+        })
+        .refine(
+          (line) => line.rejectedQuantity <= line.receivedQuantity,
+          "Số lượng từ chối không được vượt số đã giao.",
+        )
+        .refine(
+          (line) =>
+            line.rejectedQuantity === 0 ||
+            Boolean(line.rejectionReason && line.rejectedPhotoUrl),
+          "Hàng từ chối phải có đủ lý do và ảnh.",
+        ),
+    )
+    .min(1)
+    .max(200),
+});
+
+export const saveGoodsReceiptNote = withAction(
+  {
+    roles: ROLES,
+    schema: saveGoodsReceiptNoteSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc(
+      "save_goods_receipt_note" as never,
+      {
+        p_grn_id: data.grnId,
+        p_received_date: data.receivedDate ?? null,
+        p_notes: data.notes ?? null,
+        p_lines: data.lines.map((line) => ({
+          line_id: line.lineId,
+          received_quantity: line.receivedQuantity,
+          rejected_quantity: line.rejectedQuantity,
+          rejection_reason: line.rejectionReason ?? null,
+          rejected_photo_url: line.rejectedPhotoUrl ?? null,
+        })),
+      } as never,
+    );
+    if (error) {
+      console.error("inventory.grn.save_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { success: false, error: "Không thể lưu phiếu nhập." };
+    }
+    revalidatePath("/inventory/grn");
+    revalidatePath(`/inventory/grn/${data.grnId}`);
+    return { success: true };
+  },
+);
 
 const deleteGrnLineSchema = z.object({
   grnId: z.coerce.number().int().positive(),

@@ -15,7 +15,7 @@ test("purchase requests create supplier POs and POs create delivery GRNs", () =>
   );
   const nav = read("apps/web/app/(protected)/inventory/_lib/inventory-nav.ts");
   const migration = read(
-    "supabase/migrations/20260729180000_purchase_request_po_first_grn_ap.sql",
+    "supabase/migrations/20260729260000_streamline_procurement_workflows.sql",
   );
 
   assert.equal(
@@ -30,61 +30,43 @@ test("purchase requests create supplier POs and POs create delivery GRNs", () =>
   assert.match(nav, /\/inventory\/purchase-orders/);
   assert.match(nav, /\/inventory\/purchase-requests/);
   assert.match(nav, /Đơn mua hàng/);
-  assert.match(actions, /createPurchaseOrderFromRequest/);
-  assert.match(actions, /createPurchaseOrdersFromRequest/);
+  assert.match(actions, /savePurchaseRequest/);
+  assert.match(actions, /savePurchaseOrdersFromRequest/);
   assert.match(actions, /createGrnDraftFromPurchaseOrder/);
   assert.match(actions, /PROCUREMENT_PO_CREATE/);
-  assert.match(actions, /PROCUREMENT_PO_APPROVE/);
-  assert.match(actions, /create_purchase_order_from_request/);
-  assert.match(actions, /create_purchase_orders_from_request/);
+  assert.doesNotMatch(actions, /PROCUREMENT_PO_APPROVE/);
+  assert.match(actions, /save_purchase_request/);
+  assert.match(actions, /save_purchase_orders_from_request/);
   assert.match(actions, /create_grn_draft_from_po/);
-  assert.match(actions, /approve_purchase_order/);
+  assert.match(actions, /send_purchase_order/);
+  assert.doesNotMatch(actions, /approve_purchase_order/);
   assert.doesNotMatch(actions, /createPurchaseOrderFromGrn/);
-  assert.match(client, /Tạo phiếu nhập/);
-  assert.match(client, /Tiếp tục nhập hàng/);
-  assert.match(migration, /goods_received_notes_po_active_draft_uidx/);
-  assert.match(migration, /creation_idempotency_key/);
-  assert.match(
-    migration,
-    /FOR v_order IN[\s\S]*public\.create_purchase_order_from_request/,
-  );
-  assert.match(migration, /purchase_orders_duplicate_supplier/);
+  assert.match(client, /sendPurchaseOrder/);
+  assert.match(client, /variant="document"/);
+  assert.match(client, /\/inventory\/grn\?grnId=/);
+  assert.match(migration, /save_purchase_orders_from_request/);
+  assert.match(migration, /p_idempotency_key/);
+  assert.match(migration, /cancel_purchase_order/);
+  assert.match(migration, /close_purchase_order/);
 });
 
-test("PO approve awaits confirm outside startTransition so the dialog can open", () => {
+test("PO send is the only internal release transition and has no approval step", () => {
   const client = read(
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
-  const approveStart = client.indexOf("async function approve");
-  assert.ok(approveStart >= 0, "approve function must exist");
-  const renderActionsStart = client.indexOf(
-    "function renderActions",
-    approveStart,
+  const actions = read(
+    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
-  assert.ok(
-    renderActionsStart > approveStart,
-    "renderActions must follow approve",
-  );
-  const approveBlock = client.slice(approveStart, renderActionsStart);
+  const sendStart = client.indexOf("async function send");
+  const createGrnStart = client.indexOf("function createGrn", sendStart);
+  assert.ok(sendStart >= 0 && createGrnStart > sendStart);
+  const sendBlock = client.slice(sendStart, createGrnStart);
 
-  assert.match(approveBlock, /await confirm\(/);
-  assert.match(approveBlock, /if \(!accepted\) return;/);
-  assert.match(approveBlock, /startTransition\(async \(\) => \{/);
-  assert.doesNotMatch(
-    approveBlock,
-    /startTransition\(async \(\) => \{[\s\S]*await confirm\(/,
-  );
-  assert.match(approveBlock, /approvePurchaseOrder\(\{ poId: row\.id \}\)/);
-  assert.match(approveBlock, /finally \{\s*setPendingId\(null\);\s*\}/);
-
-  const iConfirm = approveBlock.indexOf("await confirm(");
-  const iGuard = approveBlock.indexOf("if (!accepted) return;");
-  const iPending = approveBlock.indexOf("setPendingId(row.id)");
-  const iTransition = approveBlock.indexOf("startTransition(");
-  assert.ok(
-    iConfirm < iGuard && iGuard < iPending && iPending < iTransition,
-    "confirm → cancel guard → pendingId → startTransition order required",
-  );
+  assert.match(sendBlock, /sendPurchaseOrder\(\{ poId: row\.id \}\)/);
+  assert.match(sendBlock, /startTransition\(async \(\) => \{/);
+  assert.match(sendBlock, /finally \{\s*setPendingId\(null\);\s*\}/);
+  assert.doesNotMatch(client, /approvePurchaseOrder|function approve/);
+  assert.doesNotMatch(actions, /approve_purchase_order|PROCUREMENT_PO_APPROVE/);
 });
 
 test("supplier-item remove awaits confirm outside startTransition", () => {
@@ -113,7 +95,7 @@ test("supplier-item remove awaits confirm outside startTransition", () => {
   );
 });
 
-test("PO list opens read-only detail and never shows an empty-action dash", () => {
+test("PO list keeps its URL-addressable document dialog and never shows an empty-action dash", () => {
   const client = read(
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
@@ -130,9 +112,11 @@ test("PO list opens read-only detail and never shows an empty-action dash", () =
     /key:\s*"code"[\s\S]*?variant="link"[\s\S]*?openDetail\(row\)/,
     "PO code column is a primary open control like GRN list links",
   );
-  assert.match(client, /DocumentFormFrame/);
-  assert.match(client, /<AppDetailFooter/);
-  assert.doesNotMatch(client, /AppDialog/);
+  assert.match(client, /params\.set\("poId", String\(row\.id\)\)/);
+  assert.match(client, /params\.set\("mode", "view"\)/);
+  assert.match(client, /<AppDialog/);
+  assert.match(client, /variant="document"/);
+  assert.doesNotMatch(client, /DocumentFormFrame/);
   assert.doesNotMatch(client, /h-72|min-h-0 overflow-hidden sm:h-80/);
   assert.doesNotMatch(client, /poCopy\.noNotes/);
   assert.match(client, /poCopy\.detail\.overviewLinesTitle/);

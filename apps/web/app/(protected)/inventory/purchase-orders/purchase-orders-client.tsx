@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  Check as IconCheck,
   Eye as IconEye,
-  ArrowLeft as IconArrowLeft,
   PackagePlus as IconPackagePlus,
   Save as IconSave,
   Search as IconSearch,
@@ -17,6 +15,7 @@ import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import {
   Item,
   ItemActions,
@@ -32,7 +31,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { FormattedNumberInput } from "@/components/form";
+import { AppDialog, FormattedNumberInput } from "@/components/form";
 import {
   DataTable,
   type DataTableColumn,
@@ -49,15 +48,16 @@ import {
   AppSection,
   AppToolbar,
   DescriptionList,
-  DocumentFormFrame,
 } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { FORM_VI } from "@comtammatu/shared/messages";
 import {
-  approvePurchaseOrder,
+  cancelPurchaseOrder,
+  closePurchaseOrder,
   createGrnDraftFromPurchaseOrder,
+  sendPurchaseOrder,
   updatePurchaseOrderPrices,
 } from "../purchase-order-actions";
 
@@ -102,27 +102,30 @@ export type PurchaseOrderRow = {
 export function PurchaseOrdersClient({
   rows,
   canCreate,
-  canApprove,
   canReceive,
   canViewPrices,
-  initialPoId = null,
 }: {
   rows: PurchaseOrderRow[];
   canCreate: boolean;
-  canApprove: boolean;
   canReceive: boolean;
   canViewPrices: boolean;
-  initialPoId?: number | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const controlSize = useFormControlSize();
-  const [selectedPoId, setSelectedPoId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [priceDraft, setPriceDraft] = useState<Record<number, string>>({});
   const [pricesDirty, setPricesDirty] = useState(false);
+  const [reason, setReason] = useState("");
+  const [reasonAction, setReasonAction] = useState<
+    { kind: "cancel" | "close"; row: PurchaseOrderRow } | undefined
+  >();
   const [isPending, startTransition] = useTransition();
-  const openedInitialPoRef = useRef(false);
+  const parsedPoId = Number(searchParams.get("poId"));
+  const selectedPoId =
+    Number.isInteger(parsedPoId) && parsedPoId > 0 ? parsedPoId : null;
   const filteredRows = useMemo(
     () =>
       rows.filter((row) =>
@@ -156,20 +159,45 @@ export function PurchaseOrdersClient({
       ),
     );
     setPricesDirty(false);
-    setSelectedPoId(row.id);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("poId", String(row.id));
+    params.set("mode", "view");
+    router.push(`${pathname}?${params}`, { scroll: false });
   }
 
-  function closeDetail() {
-    setSelectedPoId(null);
+  async function closeDetail() {
+    if (
+      pricesDirty &&
+      !(await confirm({
+        title: messages.common.unsavedChangesTitle,
+        description: messages.common.unsavedChangesDescription,
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("poId");
+    params.delete("mode");
+    router.replace(params.size > 0 ? `${pathname}?${params}` : pathname, {
+      scroll: false,
+    });
   }
 
   useEffect(() => {
-    if (openedInitialPoRef.current || initialPoId == null) return;
-    const row = rows.find((item) => item.id === initialPoId);
-    if (!row) return;
-    openedInitialPoRef.current = true;
-    openDetail(row);
-  }, [initialPoId, rows]);
+    if (!selectedRow) return;
+    setPriceDraft(
+      Object.fromEntries(
+        selectedRow.lines.map((line) => [
+          line.id,
+          line.monetary?.unitPriceEst == null
+            ? ""
+            : String(line.monetary.unitPriceEst),
+        ]),
+      ),
+    );
+    setPricesDirty(false);
+  }, [selectedRow]);
 
   function linePricesMissing(row: PurchaseOrderRow) {
     return row.lines.some(
@@ -209,32 +237,24 @@ export function PurchaseOrdersClient({
     });
   }
 
-  async function approve(row: PurchaseOrderRow) {
-    // confirm() must run outside startTransition — transition-deferred
-    // setState can leave the AlertDialog closed after menu/sheet interactions.
+  async function send(row: PurchaseOrderRow) {
     if (pricesDirty) {
-      toast.error(poCopy.approveBlockedDirtyPrices);
+      toast.error(poCopy.sendBlockedDirtyPrices);
       return;
     }
     if (linePricesMissing(row)) {
-      toast.error(poCopy.approveBlockedMissingPrices);
+      toast.error(poCopy.sendBlockedMissingPrices);
       return;
     }
-    const accepted = await confirm({
-      title: poCopy.approveConfirmTitle(row.code),
-      description: poCopy.approveConfirmDesc,
-      confirmText: poCopy.approveAction,
-    });
-    if (!accepted) return;
     setPendingId(row.id);
     startTransition(async () => {
       try {
-        const result = await approvePurchaseOrder({ poId: row.id });
+        const result = await sendPurchaseOrder({ poId: row.id });
         if (!result.success) {
           toast.error(result.error);
           return;
         }
-        toast.success(poCopy.approvedToast(row.code));
+        toast.success(poCopy.sentToast(row.code));
         router.refresh();
       } finally {
         setPendingId(null);
@@ -254,9 +274,54 @@ export function PurchaseOrdersClient({
           toast.error(result.error);
           return;
         }
-        closeDetail();
         const grnId = result.data?.id;
-        if (grnId != null) router.push(`/inventory/grn/${grnId}`);
+        if (grnId != null) {
+          router.push(`/inventory/grn?grnId=${grnId}&mode=receive`, {
+            scroll: false,
+          });
+        }
+      } finally {
+        setPendingId(null);
+      }
+    });
+  }
+
+  function runReasonAction() {
+    if (!reasonAction) return;
+    setPendingId(reasonAction.row.id);
+    startTransition(async () => {
+      try {
+        if (reasonAction.kind === "cancel") {
+          const result = await cancelPurchaseOrder({
+            poId: reasonAction.row.id,
+            reason,
+          });
+          if (!result.success) {
+            toast.error(result.error);
+            return;
+          }
+          const cancelledDraftGrns =
+            result.data?.cancelledDraftGrns ?? 0;
+          toast.success(
+            cancelledDraftGrns > 0
+              ? poCopy.cancelledWithDraftReceiptsToast(cancelledDraftGrns)
+              : poCopy.cancelledToast,
+          );
+        } else {
+          const result = await closePurchaseOrder({
+            poId: reasonAction.row.id,
+            reason,
+          });
+          if (!result.success) {
+            toast.error(result.error);
+            return;
+          }
+          toast.success(poCopy.closedToast);
+        }
+        setReasonAction(undefined);
+        setReason("");
+        await closeDetail();
+        router.refresh();
       } finally {
         setPendingId(null);
       }
@@ -272,15 +337,34 @@ export function PurchaseOrdersClient({
         onSelect: () => openDetail(row),
       },
     ];
-    if (row.status === "draft" && canApprove) {
+    if (row.status === "draft" && canCreate) {
       items.push({
-        key: "approve",
-        label: poCopy.approveAction,
-        icon: <IconCheck data-icon="inline-start" />,
+        key: "send",
+        label: poCopy.sendAction,
         disabled: isPending || pendingId === row.id,
         onSelect: () => {
-          void approve(row);
+          void send(row);
         },
+      });
+    }
+    if (
+      canCreate &&
+      (row.status === "draft" || row.status === "sent") &&
+      row.linkedGrns.every((grn) => grn.status !== "confirmed")
+    ) {
+      items.push({
+        key: "cancel",
+        label: poCopy.cancelAction,
+        disabled: isPending || pendingId === row.id,
+        onSelect: () => setReasonAction({ kind: "cancel", row }),
+      });
+    }
+    if (canCreate && row.status === "partially_received") {
+      items.push({
+        key: "close",
+        label: poCopy.closeRemainingAction,
+        disabled: isPending || pendingId === row.id,
+        onSelect: () => setReasonAction({ kind: "close", row }),
       });
     }
     if (
@@ -300,7 +384,7 @@ export function PurchaseOrdersClient({
               key: "continue-grn",
               label: "Tiếp tục nhập hàng",
               icon: <IconPackagePlus data-icon="inline-start" />,
-              href: `/inventory/grn/${row.activeDraftGrnId}`,
+              href: `/inventory/grn?grnId=${row.activeDraftGrnId}&mode=receive`,
             },
       );
     }
@@ -466,14 +550,45 @@ export function PurchaseOrdersClient({
       <AppDetailFooter
         sticky
         leading={
-          selectedRow.status === "draft" &&
-          canApprove &&
-          !pricesDirty &&
-          linePricesMissing(selectedRow) ? (
-            <p className="text-sm text-muted-foreground">
-              {poCopy.approveBlockedMissingPrices}
-            </p>
-          ) : null
+          <>
+            {canCreate &&
+            (selectedRow.status === "draft" ||
+              selectedRow.status === "sent") &&
+            selectedRow.linkedGrns.every(
+              (grn) => grn.status !== "confirmed",
+            ) ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isPending || pendingId === selectedRow.id}
+                onClick={() =>
+                  setReasonAction({ kind: "cancel", row: selectedRow })
+                }
+              >
+                {poCopy.cancelAction}
+              </Button>
+            ) : null}
+            {canCreate && selectedRow.status === "partially_received" ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending || pendingId === selectedRow.id}
+                onClick={() =>
+                  setReasonAction({ kind: "close", row: selectedRow })
+                }
+              >
+                {poCopy.closeRemainingAction}
+              </Button>
+            ) : null}
+            {selectedRow.status === "draft" &&
+            canCreate &&
+            !pricesDirty &&
+            linePricesMissing(selectedRow) ? (
+              <p className="text-sm text-muted-foreground">
+                {poCopy.sendBlockedMissingPrices}
+              </p>
+            ) : null}
+          </>
         }
         trailing={
           selectedRow.status === "draft" && canCreate && pricesDirty ? (
@@ -485,7 +600,7 @@ export function PurchaseOrdersClient({
               <IconSave data-icon="inline-start" />
               {poCopy.savePricesAction}
             </Button>
-          ) : selectedRow.status === "draft" && canApprove ? (
+          ) : selectedRow.status === "draft" && canCreate ? (
             <Button
               type="button"
               disabled={
@@ -495,11 +610,10 @@ export function PurchaseOrdersClient({
                 linePricesMissing(selectedRow)
               }
               onClick={() => {
-                void approve(selectedRow);
+                void send(selectedRow);
               }}
             >
-              <IconCheck data-icon="inline-start" />
-              {poCopy.approveAction}
+              {poCopy.sendAction}
             </Button>
           ) : canReceive &&
             (selectedRow.status === "sent" ||
@@ -518,7 +632,7 @@ export function PurchaseOrdersClient({
                 type="button"
                 render={
                   <Link
-                    href={`/inventory/grn/${selectedRow.activeDraftGrnId}`}
+                    href={`/inventory/grn?grnId=${selectedRow.activeDraftGrnId}&mode=receive`}
                   />
                 }
               >
@@ -531,35 +645,8 @@ export function PurchaseOrdersClient({
       />
     );
 
-  if (selectedRow) {
-    return (
-      <DocumentFormFrame
-        width="xwide"
-        density="compact"
-        footer={detailFooter}
-        header={
-          <AppPageHeader
-            title={selectedRow.code}
-            badge={{
-              children: getStatusBadgeMeta("purchase-order", selectedRow.status)
-                .label,
-              variant: getStatusBadgeMeta("purchase-order", selectedRow.status)
-                .variant,
-            }}
-            breadcrumb={
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={closeDetail}
-              >
-                <IconArrowLeft data-icon="inline-start" />
-                {poCopy.pageTitle}
-              </Button>
-            }
-          />
-        }
-      >
+  const detailContent = selectedRow ? (
+    <>
         <DescriptionList
           className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
           descriptionClassName="font-semibold"
@@ -673,7 +760,11 @@ export function PurchaseOrdersClient({
                       type="button"
                       variant="outline"
                       size="sm"
-                      render={<Link href={`/inventory/grn/${grn.id}`} />}
+                      render={
+                        <Link
+                          href={`/inventory/grn?grnId=${grn.id}&mode=view`}
+                        />
+                      }
                     >
                       {poCopy.openLinkedGrn}
                     </Button>
@@ -683,9 +774,8 @@ export function PurchaseOrdersClient({
             </div>
           </AppSection>
         ) : null}
-      </DocumentFormFrame>
-    );
-  }
+    </>
+  ) : null;
 
   return (
     <AppPage width="xwide" density="compact">
@@ -748,6 +838,58 @@ export function PurchaseOrdersClient({
           )}
         />
       </AppListFrame>
+
+      <AppDialog
+        open={selectedRow != null}
+        onOpenChange={(open) => {
+          if (!open) void closeDetail();
+        }}
+        variant="document"
+        title={selectedRow?.code ?? poCopy.pageTitle}
+        description={
+          selectedRow
+            ? `${getStatusBadgeMeta("purchase-order", selectedRow.status).label} · ${selectedRow.supplierName} · ${selectedRow.branchName}`
+            : poCopy.pageDescription
+        }
+        footer={detailFooter}
+      >
+        {detailContent}
+      </AppDialog>
+
+      <ReasonConfirmDialog
+        open={reasonAction != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReasonAction(undefined);
+            setReason("");
+          }
+        }}
+        title={
+          reasonAction?.kind === "close"
+            ? poCopy.closeRemainingTitle
+            : poCopy.cancelTitle
+        }
+        description={
+          reasonAction?.kind === "cancel" &&
+          reasonAction.row.activeDraftGrnId != null
+            ? poCopy.cancelDraftReceiptsDescription
+            : reasonAction?.row.code
+        }
+        reasonId="purchase-order-status-reason"
+        reason={reason}
+        onReasonChange={setReason}
+        reasonLabel={poCopy.reasonLabel}
+        reasonPlaceholder={poCopy.reasonPlaceholder}
+        cancelLabel={poCopy.backAction}
+        confirmLabel={
+          reasonAction?.kind === "close"
+            ? poCopy.closeRemainingAction
+            : poCopy.cancelAction
+        }
+        confirmVariant="destructive"
+        isPending={isPending}
+        onConfirm={runReasonAction}
+      />
     </AppPage>
   );
 }

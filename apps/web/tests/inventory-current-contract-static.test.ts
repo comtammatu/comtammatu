@@ -148,7 +148,7 @@ test("app authority uses request to PO to GRN and omits retired QC permissions",
   assert.match(inventoryMessages, /đơn giá từ 0 trở lên/);
   assert.match(
     inventoryMessages,
-    /Phiếu nhập được tạo theo từng lần giao từ đơn đặt hàng đã duyệt/,
+    /Phiếu nhập được tạo theo từng lần giao từ đơn đặt hàng đã gửi/,
   );
   assert.doesNotMatch(inventoryMessages, /tạo phiếu nhập trước/);
   assert.doesNotMatch(transferModel, /branch_kitchen|["']kitchen["']/);

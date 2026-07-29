@@ -5,6 +5,8 @@ import {
   fetchBranchesForTransfer,
 } from "../transfer-actions";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
+import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
+import { TransferDetailClient } from "./[id]/transfer-detail-client";
 import type {
   BranchForTransfer,
   TransferTab,
@@ -15,6 +17,8 @@ import { TransfersListClient } from "./transfers-list-client";
 interface TransfersPageContentProps {
   searchParams?: Promise<{
     branchId?: string | string[];
+    transferId?: string | string[];
+    mode?: string | string[];
   }>;
   routeBranchId?: number;
   basePath?: string;
@@ -45,10 +49,24 @@ export async function TransfersPageContent({
   // (URL ?branchId=).
   const userBranchId = scope.selectedBranchId;
   const branchFilter = userBranchId ?? undefined;
+  const rawTransferId = Array.isArray(params.transferId)
+    ? params.transferId[0]
+    : params.transferId;
+  const transferId = Number(rawTransferId);
+  const selectedTransferId =
+    !embedded && Number.isInteger(transferId) && transferId > 0
+      ? transferId
+      : null;
 
-  const [trRes, brRes] = await Promise.all([
+  const [trRes, brRes, detail] = await Promise.all([
     fetchStockTransfers(branchFilter),
     fetchBranchesForTransfer(),
+    selectedTransferId == null
+      ? Promise.resolve(null)
+      : loadTransferDetailPageData({
+          transferId: selectedTransferId,
+          queryBranchId: params.branchId,
+        }),
   ]);
   if (!trRes.success || !brRes.success) {
     throw new Error("inventory.transfers.load_failed");
@@ -58,17 +76,29 @@ export async function TransfersPageContent({
   const branches = (brRes.data ?? []) as BranchForTransfer[];
 
   return (
-    <TransfersListClient
-      initial={rows}
-      branches={branches}
-      userBranchId={userBranchId}
-      userRole={claims.user_role}
-      basePath={basePath}
-      createEnabled={createEnabled}
-      initialTab={initialTab}
-      pageTitle={pageTitle}
-      embedded={embedded}
-    />
+    <>
+      <TransfersListClient
+        initial={rows}
+        branches={branches}
+        userBranchId={userBranchId}
+        userRole={claims.user_role}
+        basePath={basePath}
+        createEnabled={createEnabled}
+        initialTab={initialTab}
+        pageTitle={pageTitle}
+        embedded={embedded}
+      />
+      {detail ? (
+        <TransferDetailClient
+          transfer={detail.transfer}
+          userRole={detail.userRole}
+          userBranchId={detail.userBranchId}
+          correctionBranches={detail.correctionBranches}
+          auditLogs={detail.auditLogs}
+          presentation="dialog"
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -77,6 +107,8 @@ export default async function TransfersPage({
 }: {
   searchParams: Promise<{
     branchId?: string | string[];
+    transferId?: string | string[];
+    mode?: string | string[];
   }>;
 }) {
   return <TransfersPageContent searchParams={searchParams} />;

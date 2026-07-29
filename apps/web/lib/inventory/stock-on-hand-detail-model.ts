@@ -169,7 +169,7 @@ export function stockMovementReferenceHref({
       return `${branchStockBasePath}/grn/${movement.grnId}`;
     }
     if (movement.transferId != null) {
-      return `${branchStockBasePath}/transfer/${movement.transferId}`;
+      return `${branchStockBasePath}/transfer?transferId=${movement.transferId}&mode=view`;
     }
     if (movement.issueId != null) {
       return `${branchStockBasePath}/issues/${movement.issueId}`;
@@ -177,9 +177,10 @@ export function stockMovementReferenceHref({
     return null;
   }
 
-  if (movement.grnId != null) return `/inventory/grn/${movement.grnId}`;
+  if (movement.grnId != null)
+    return `/inventory/grn?grnId=${movement.grnId}&mode=view`;
   if (movement.transferId != null) {
-    return `/inventory/transfers/${movement.transferId}`;
+    return `/inventory/transfers?transferId=${movement.transferId}&mode=view`;
   }
   if (movement.issueId != null) return `/inventory/consumption/${movement.issueId}`;
   return `/inventory/reports?branchId=${branchId}`;

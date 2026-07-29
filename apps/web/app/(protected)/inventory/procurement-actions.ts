@@ -24,6 +24,4 @@ export {
   confirmGrn,
 } from "./grn-actions";
 export type { RecentActivityItem } from "./grn-actions";
-export {
-  approvePurchaseOrder,
-} from "./purchase-order-actions";
+export { sendPurchaseOrder } from "./purchase-order-actions";

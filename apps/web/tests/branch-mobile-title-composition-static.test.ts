@@ -56,13 +56,14 @@ test("Branch stock pages with an inline mobile title opt into the responsive hea
     );
   }
 
-  const transferPage = read(
-    "app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx",
+  const transferSheet = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/transfer/branch-transfer-sheet.tsx",
   );
   const transferClient = read(
     "app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/branch-transfer-detail-client.tsx",
   );
-  assert.match(transferPage, /<BranchOperatorPage[\s\S]*?hideHeaderOnMobile/);
+  assert.match(transferSheet, /<SheetContent[\s\S]*fullscreen/);
+  assert.match(transferSheet, /<BranchTransferDetailClient/);
   assert.match(
     transferClient,
     /<BranchOperatorControlBar className="sm:hidden">/,

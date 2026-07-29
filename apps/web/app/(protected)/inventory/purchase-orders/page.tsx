@@ -19,9 +19,6 @@ export default async function PurchaseOrdersPage({
 }) {
   const params = await searchParams;
   const copy = messages.inventory.po;
-  const rawPoId = Array.isArray(params.poId) ? params.poId[0] : params.poId;
-  const initialPoId =
-    rawPoId != null && /^\d+$/.test(rawPoId) ? Number(rawPoId) : null;
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     queryBranchId: params.branchId,
@@ -50,7 +47,6 @@ export default async function PurchaseOrdersPage({
     supplierResult,
     procurementBranches,
     canCreate,
-    canApprove,
     canReceive,
   ] =
     await Promise.all([
@@ -63,7 +59,6 @@ export default async function PurchaseOrdersPage({
         .order("name"),
       fetchProcurementBranches(supabase, claims.tenant_id),
       currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
-      currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_APPROVE),
       currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     ]);
 
@@ -218,10 +213,8 @@ export default async function PurchaseOrdersPage({
     <PurchaseOrdersClient
       rows={rows}
       canCreate={canCreate && monetaryAccess.purchasePrice}
-      canApprove={canApprove && monetaryAccess.purchasePrice}
       canReceive={canReceive}
       canViewPrices={monetaryAccess.purchasePrice}
-      initialPoId={initialPoId}
     />
   );
 }

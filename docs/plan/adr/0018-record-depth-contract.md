@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 
-**Decision owner:** Owner, 2026-07-28
+**Decision owner:** Owner, amended 2026-07-29
 
 ## Context
 
@@ -25,15 +25,17 @@ Adopt the **Record Depth Contract**:
 | --- | --- | --- | --- | --- |
 | **D0 Scan** | Compare rows | LIST row | Touch `Item` row | List URL owns filters |
 | **D1 Act** | One bounded decision / short edit | `AppDialog` or side `Sheet` | Bottom `Sheet` / `Drawer` | *View* → `?<entity>Id=`; *task* → none |
-| **D2 Read** | Record is the workspace | DETAIL Page | Branch DETAIL Page | `{basePath}/{id}` |
+| **D1 Document** | List remains the workspace; one primary action per state | `AppDialog variant="document"` | Fullscreen bottom `Sheet` | `?<entity>Id=&mode=` |
+| **D2 Read** | Record is an independent workspace | DETAIL Page | Branch DETAIL Page | `{basePath}/{id}` |
 | **D3 Author** | Create/edit a line-array document | `DocumentFormFrame` | Branch doc workflow | `{basePath}/new`, `/{id}/edit` |
 
 Axes:
 
 1. **View vs task** — a view is a place (must be addressable and survive
    reload/share/back); a task ends (must not be addressable).
-2. **Weight escalates depth** — line array, audit/`Lịch sử` tab, stage footer, or
-   more than one primary action → D2/D3, not a short overlay view.
+2. **Work home decides depth** — a long-running independent session or more
+   than one primary action in the same state escalates to D2/D3. A line array
+   or stage footer alone does not escalate an approved D1 Document.
 3. **Planes share depth, not frame** — Owner and Branch declare the same depth
    for the same record and may differ in frame at that depth.
 
@@ -89,7 +91,8 @@ Other locked rulings:
 
 | Record | Depth | Notes |
 | --- | --- | --- |
-| GRN, transfer, issue/consumption, stocktake session, production, stock card | D2 | DETAIL Page |
+| YCM, PO, GRN, YCH, Transfer | D1 Document | Owner/Ops `AppDialog variant="document"`; Branch YCH/Transfer fullscreen `Sheet`; legacy DETAIL routes redirect |
+| Issue/consumption, stocktake session, production, stock card | D2 | Independent DETAIL Page |
 | Supplier invoice | D1 | Finance `Sheet` + `?invoiceId=` |
 | Count slips / assignments | D1 view | Owner `AppDialog` / Branch `Sheet`; Wave 3 `?slipId=` / `?assignmentId=` |
 | Waste approvals | D0 queue | Card decision surface (named LIST exception): Owner `AppPage` + `AppSection` decision cards — never `InventoryListFrame` / `DataTable` |
@@ -97,6 +100,24 @@ Other locked rulings:
 | Ingredients, units, categories, supplier edit | D1 task | `FormDialog` (no URL) |
 | Recipes | D1 task | `FormDialog` until BOM lines **> 12**, then escalate to D2/Sheet/Page |
 | Supplier items | D2 child LIST | `/suppliers/[id]/items` |
+
+### Owner amendment (2026-07-29)
+
+YCM → PO → GRN and YCH → Transfer are list-first operational chains. Their
+canonical record view keeps the list mounted and stores the open record plus
+mode in URL query parameters. Row open uses push so Browser Back closes the
+overlay; view/edit mode changes and explicit close use replace while retaining
+filters, site, tab, pagination, and scroll context.
+
+`AppDialog variant="document"` provides one fixed document frame: a status and
+relationship header, independently scrolling metadata/lines/evidence body, and
+a fixed footer with destructive/close actions separated from the single
+primary action. Branch YCH and Transfer remain a separate touch plane and use a
+fullscreen bottom `Sheet`.
+
+The old `{basePath}/{id}` routes for these records are bookmark shims only and
+redirect to the canonical query URL. They must never retain a parallel rendered
+view.
 
 ## Consequences
 
@@ -124,6 +145,9 @@ Other locked rulings:
   carve-outs remain: **C4** zero-action LIST, **C1** PO LIST outside Wave 4
   row-open ratchet, Owner `AppDialog` / Branch `Sheet` dual plane for count
   slips/assignments. No new policy — enforces Waves 1–3.
+- **Wave 5 (list-first documents):** YCM, PO, GRN, YCH, and Transfer use the D1
+  Document tier. The ratchet accepts their canonical query overlays and rejects
+  rendered DETAIL implementations behind compatibility routes.
 
 ## Self-T3 (four lenses)
 

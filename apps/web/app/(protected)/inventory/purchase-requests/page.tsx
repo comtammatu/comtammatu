@@ -85,7 +85,7 @@ export default async function PurchaseRequestsPage() {
       .eq("is_active", true),
     fetchProcurementBranches(supabase, claims.tenant_id),
     fetchIngredients(),
-    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
+    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
   ]);
 

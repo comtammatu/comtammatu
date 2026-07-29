@@ -12,7 +12,7 @@ import { test } from "node:test";
  *
  * Carve-outs (ADR-blessed, not allowlist debt):
  * - C4 zero-action LIST (transfers / production / thresholds) — no menu required
- * - C1 purchase-orders — frozen; out of Wave 4 scope
+ * - Wave 5 list-first documents — YCM/PO/GRN/YCH/Transfer use query overlays
  * - Dual plane: Owner AppDialog vs Branch Sheet for count slips/assignments
  */
 
@@ -46,11 +46,6 @@ function assertNoCompetingRowOpenPath(source: string, label: string) {
 
 const D2_DETAIL_LISTS = [
   {
-    name: "grn",
-    path: "app/(protected)/inventory/grn/grn-list-client.tsx",
-    onRowClick: /onRowClick=\{openGrnDetail\}/,
-  },
-  {
     name: "issues",
     path: "app/(protected)/inventory/issues/issues-client.tsx",
     onRowClick: /onRowClick=\{openIssueDetail\}/,
@@ -59,11 +54,6 @@ const D2_DETAIL_LISTS = [
     name: "stocktake",
     path: "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
     onRowClick: /onRowClick=\{openStocktakeDetail\}/,
-  },
-  {
-    name: "transfers",
-    path: "app/(protected)/inventory/transfers/transfers-list-client.tsx",
-    onRowClick: /onRowClick=\{openTransferDetail\}/,
   },
   {
     name: "production",
@@ -275,9 +265,12 @@ test("Wave 4 three-door LISTs keep one RowActionItem[] wiring (no sole ContextMe
   }
 });
 
-test("Wave 4 C1 purchase-orders stays out of row-open ratchet scope", () => {
-  // Sidebar LIST is restored; do not expand Wave 4 ratchet into the PO client.
-  const page = read("app/(protected)/inventory/purchase-orders/page.tsx");
-  assert.match(page, /purchase-orders|PurchaseOrder/i);
-  // Ratchet does not read purchase-orders-client for row-open rules (C1).
+test("Wave 5 purchase-orders uses one query-addressed document view", () => {
+  const client = read(
+    "app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+  );
+  assert.match(client, /params\.set\("poId", String\(row\.id\)\)/);
+  assert.match(client, /params\.set\("mode", "view"\)/);
+  assert.match(client, /variant="document"/);
+  assert.doesNotMatch(client, /DocumentFormFrame/);
 });

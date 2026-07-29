@@ -5,6 +5,26 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Streamline YCM → PO → GRN and YCH → Transfer
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/procurement
+Exit: YCM, PO, and YCH submit in one primary action; GRN alone keeps a final confirmation; editable/cancellable/closable states are database-enforced; Owner/Ops records open in URL-addressable document dialogs while Branch Stock keeps fullscreen sheets.
+Evidence: additive migration replay, atomic RPC behavior tests, role/static workflow contracts, repository gates, and authenticated responsive smoke after the migration is applied to an authorized target.
+
+### T3 review
+
+- **PM:** Remove redundant internal handoffs without adding a general workflow engine; keep draft only as a secondary escape hatch.
+- **BA:** `cancelled` is valid only before downstream work, while `closed` abandons the unprocessed remainder after partial work; confirmed GRNs remain immutable.
+- **Senior Dev:** Database locks and RPCs own multi-row transitions and idempotency; URL params own the open record; compatibility RPCs remain during the additive rollout.
+- **QA:** Cover invalid transitions, retries, partial PO/GRN and YCH/Transfer flows, persona payload boundaries, Back/Forward/deep links, dirty close, and responsive overlays.
+
+Synthesis: change the four existing state machines and their current list surfaces only; preserve Branch/Owner separation, monetary authority boundaries, and old RPC compatibility until deployed callers are proven migrated.
+
+- [ ] Apply the additive migration to an authorized target, regenerate database types from that schema, and run authenticated persona smoke before cleanup.
+
 ## Implement purchase request → PO → GRN → supplier AP
 
 State: verify

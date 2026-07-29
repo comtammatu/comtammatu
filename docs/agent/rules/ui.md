@@ -43,8 +43,12 @@ change type, and authority granted by the task. Complete
 - POS and KDS use one vocabulary for the same workflow state.
 - Destructive actions are separated from primary actions and require explicit
   confirmation or a safe recovery path.
-- A row has one view path. If a record already has a DETAIL route, no overlay
-  may render a second view of it (Record Depth / ADR 0018).
+- A row has one canonical view and one address. Legacy DETAIL routes may only
+  redirect to that address; they must not render a second view (Record Depth /
+  ADR 0018).
+- YCM, PO, GRN, YCH, and Transfer are list-first documents. Owner/Ops uses the
+  URL-addressable `AppDialog variant="document"`; Branch YCH and Transfer use a
+  fullscreen `Sheet`. Keep list filters, pagination, and site scope in the URL.
 - `Popover` is for pickers and compact anchored controls only — never a record
   view, never a multi-step workflow.
 - An overflow affordance (`⋯`) must open a real menu built from the shared

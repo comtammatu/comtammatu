@@ -194,9 +194,12 @@ rather than staying a near-empty category.
   `PageSkeleton` loading; `ErrorPanel` error.
 - Status/money/date: per § 1 shared vocabulary.
 - Quick create/edit: `FormDialog`. Row open follows Record Depth
-  (`design-system.md` § C.1 / ADR 0018): D2 → `{basePath}/{id}`; D1 view →
-  addressable overlay (`?<entity>Id=`); D1 task → `FormDialog` / short
-  `AppDialog` without a URL.
+  (`design-system.md` § C.1 / ADR 0018): D2 independent workspace →
+  `{basePath}/{id}`; D1 view/document → addressable overlay
+  (`?<entity>Id=`); D1 task → `FormDialog` / short `AppDialog` without a URL.
+  YCM, PO, GRN, YCH, and Transfer are the named D1 document set:
+  `AppDialog variant="document"` on Owner/Ops and fullscreen `Sheet` for the
+  Branch YCH/Transfer plane.
 - **Row actions.** Build one `RowActionItem[]` per row
   (`apps/web/app/components/row-actions-menu.tsx`). Feed it to `RowActionsMenu`
   for the visible action cell and to `RowActionsContextMenuItems` through

@@ -2,11 +2,15 @@
 
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { AppDialog } from "@/components/form";
 import {
   Sheet,
   SheetContent,
@@ -55,11 +59,13 @@ import {
 } from "@lib/inventory/grn-detail-model";
 import { supplierInvoiceHrefForGrn } from "@lib/inventory/grn-list-model";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
+import { messages } from "@lib/messages";
 import { AddGrnLineDialog } from "./views/add-grn-line-dialog";
 import { AmendOwnerDialog } from "./views/amend-owner-dialog";
 import { DraftGrnLineCard } from "./views/draft-grn-line-card";
 import { LineRow } from "./views/grn-line-row";
 import { DraftReceivingSiteDialog } from "./views/draft-receiving-site-dialog";
+import { discardGrnDraft } from "../../grn-actions";
 
 export type { GrnDetail as GRNDetail } from "@lib/inventory/grn-detail-model";
 
@@ -70,6 +76,7 @@ import type {
 } from "@lib/inventory/grn-detail-model";
 
 const DESK_LINE_EDIT_BREAKPOINT = 1024;
+const grnMessages = messages.inventory.grn;
 
 export function GRNDetailClient({
   grn,
@@ -85,6 +92,7 @@ export function GRNDetailClient({
   grnMobileBackPath = "/inventory/grn/new",
   supplierInvoicesBasePath = "/finance/supplier-invoices",
   embedded = false,
+  presentation = "page",
 }: {
   grn: GRNDetail;
   ingredients: IngredientRow[];
@@ -99,8 +107,11 @@ export function GRNDetailClient({
   grnMobileBackPath?: string;
   supplierInvoicesBasePath?: string;
   embedded?: boolean;
+  presentation?: "page" | "dialog";
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   // Device-derived, not param-derived: the old `?m=1` flag had no setter
   // anywhere in the codebase, so the mobile post-confirm navigation and
   // back-link paths below never activated for phone receivers.
@@ -109,9 +120,12 @@ export function GRNDetailClient({
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
   const [isAmending, startAmend] = useTransition();
+  const [isCancelling, startCancel] = useTransition();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [amendingLine, setAmendingLine] = useState<EditableLine | null>(null);
   const [editingLineId, setEditingLineId] = useState<number | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   const isDraft = grn.status === "draft";
   const isConfirmed = grn.status === "confirmed";
@@ -132,6 +146,15 @@ export function GRNDetailClient({
   const { lines, setLines, patch, dirtyLines } = useGrnLines(grn.items);
   const hasAcceptedQuantity = hasAcceptedGrnQuantity(lines);
 
+  function closeOwnerDialogUrl() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("grnId");
+    params.delete("mode");
+    router.replace(params.size > 0 ? `${pathname}?${params}` : pathname, {
+      scroll: false,
+    });
+  }
+
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
     useGrnLineActions({
       grn,
@@ -143,7 +166,28 @@ export function GRNDetailClient({
       startConfirm,
       grnListBasePath,
       grnMobileBackPath,
+      onConfirmed:
+        presentation === "dialog" ? closeOwnerDialogUrl : undefined,
     });
+
+  function cancelDraft() {
+    startCancel(async () => {
+      const result = await discardGrnDraft({
+        grnId: grn.id,
+        reason: cancelReason,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(grnMessages.cancelledToast);
+      setCancelOpen(false);
+      setCancelReason("");
+      if (presentation === "dialog") closeOwnerDialogUrl();
+      else router.push(grnListBasePath);
+      router.refresh();
+    });
+  }
 
   const backHref = isMobile ? grnMobileBackPath : grnListBasePath;
   const editingIdx =
@@ -184,7 +228,9 @@ export function GRNDetailClient({
                   variant="outline"
                   size="sm"
                   render={
-                    <Link href={`/inventory/purchase-orders?poId=${po.id}`} />
+                    <Link
+                      href={`/inventory/purchase-orders?poId=${po.id}&mode=view`}
+                    />
                   }
                 >
                   {po.poNumber}
@@ -197,7 +243,9 @@ export function GRNDetailClient({
               variant="outline"
               size="sm"
               render={
-                <Link href={`/inventory/purchase-orders?poId=${grn.poId}`} />
+                <Link
+                  href={`/inventory/purchase-orders?poId=${grn.poId}&mode=view`}
+                />
               }
             >
               {grnCopy.openLinkedPo}
@@ -367,6 +415,17 @@ export function GRNDetailClient({
           {/* Back lives in AppPageHeader / embedded chrome — not duplicated here. */}
           {isDraft ? (
             <>
+              {canMutateDraft ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size={isMobile ? "touch" : "default"}
+                  disabled={isCancelling}
+                  onClick={() => setCancelOpen(true)}
+                >
+                  {grnMessages.cancelAction}
+                </Button>
+              ) : null}
               {lines.length > 0 ? (
                 <p className="min-w-0 font-mono text-sm font-semibold tabular-nums">
                   {GRN_CREATE_COPY.footerLineSummary(lines.length)}
@@ -467,7 +526,7 @@ export function GRNDetailClient({
                       {grn.linkedPos.map((po) => (
                         <Link
                           key={po.id}
-                          href={`/inventory/purchase-orders?poId=${po.id}`}
+                          href={`/inventory/purchase-orders?poId=${po.id}&mode=view`}
                           className="font-mono text-primary hover:underline"
                         >
                           {po.poNumber}
@@ -487,7 +546,7 @@ export function GRNDetailClient({
                     description:
                       grn.poId != null ? (
                         <Link
-                          href={`/inventory/purchase-orders?poId=${grn.poId}`}
+                          href={`/inventory/purchase-orders?poId=${grn.poId}&mode=view`}
                           className="font-mono text-primary hover:underline"
                         >
                           {grn.poCode}
@@ -504,7 +563,7 @@ export function GRNDetailClient({
                   term: "Yêu cầu mua",
                   description: (
                     <Link
-                      href={`/inventory/purchase-requests?requestId=${grn.purchaseRequestId}`}
+                      href={`/inventory/purchase-requests?requestId=${grn.purchaseRequestId}&mode=view`}
                       className="font-mono text-primary hover:underline"
                     >
                       {grn.purchaseRequestCode}
@@ -826,6 +885,24 @@ export function GRNDetailClient({
         startTransition={startAmend}
       />
       {draftLineSheet}
+      <ReasonConfirmDialog
+        open={cancelOpen}
+        onOpenChange={(open) => {
+          setCancelOpen(open);
+          if (!open) setCancelReason("");
+        }}
+        title={grnMessages.cancelTitle}
+        description={grnMessages.cancelDraftDescription}
+        reasonId="grn-cancel-reason"
+        reason={cancelReason}
+        onReasonChange={setCancelReason}
+        reasonLabel={grnMessages.cancelReason}
+        reasonPlaceholder={grnMessages.cancelReasonPlaceholder}
+        cancelLabel={ACTIONS_VI.back}
+        confirmLabel={grnMessages.cancelAction}
+        onConfirm={cancelDraft}
+        isPending={isCancelling}
+      />
     </>
   );
 
@@ -882,6 +959,38 @@ export function GRNDetailClient({
         {footer}
         {dialogs}
       </div>
+    );
+  }
+
+  if (presentation === "dialog") {
+    const closeDialog = async () => {
+      if (
+        dirtyLines.length > 0 &&
+        !(await confirm({
+          title: messages.common.unsavedChangesTitle,
+          description: messages.common.unsavedChangesDescription,
+          variant: "destructive",
+        }))
+      ) {
+        return;
+      }
+      closeOwnerDialogUrl();
+    };
+
+    return (
+      <AppDialog
+        open
+        onOpenChange={(open) => {
+          if (!open) void closeDialog();
+        }}
+        variant="document"
+        title={grn.code}
+        description={`${statusBadge.label} · ${grn.supplier} · ${grn.branchName}`}
+        footer={footer}
+      >
+        {tabs}
+        {dialogs}
+      </AppDialog>
     );
   }
 

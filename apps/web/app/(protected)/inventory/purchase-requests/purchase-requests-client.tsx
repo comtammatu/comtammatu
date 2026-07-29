@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  Check as IconCheck,
   ClipboardList as IconClipboardList,
+  Pencil as IconPencil,
   Plus as IconPlus,
   Search as IconSearch,
   ShoppingCart as IconShoppingCart,
@@ -20,6 +20,7 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Combobox } from "@comtammatu/ui/components/combobox";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import {
   InputGroup,
   InputGroupAddon,
@@ -27,6 +28,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Item, ItemHeader, ItemTitle } from "@comtammatu/ui/components/item";
 import { Pagination } from "@comtammatu/ui/components/pagination";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import {
   Select,
   SelectContent,
@@ -59,9 +61,10 @@ import {
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import {
-  createPurchaseOrdersFromRequest,
-  createPurchaseRequest,
-  submitPurchaseRequest,
+  cancelPurchaseRequest,
+  closePurchaseRequest,
+  savePurchaseOrdersFromRequest,
+  savePurchaseRequest,
 } from "../purchase-order-actions";
 import {
   buildPurchaseOrderDrafts,
@@ -170,10 +173,9 @@ export function PurchaseRequestsClient({
   canCreatePo: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [poOpen, setPoOpen] = useState(false);
   const [branchId, setBranchId] = useState(String(branches[0]?.id ?? ""));
   const [neededBy, setNeededBy] = useState(() => getVNDateString());
   const [requestLines, setRequestLines] = useState<RequestDraftLine[]>([
@@ -184,12 +186,30 @@ export function PurchaseRequestsClient({
   );
   const [poDrafts, setPoDrafts] = useState<PurchaseOrderDraft[]>([]);
   const [poPage, setPoPage] = useState(1);
+  const [requestIdempotencyKey, setRequestIdempotencyKey] = useState(() =>
+    crypto.randomUUID(),
+  );
+  const [poIdempotencyKey, setPoIdempotencyKey] = useState(() =>
+    crypto.randomUUID(),
+  );
+  const [requestBaseline, setRequestBaseline] = useState("");
+  const [poBaseline, setPoBaseline] = useState("");
+  const [reason, setReason] = useState("");
+  const [reasonAction, setReasonAction] = useState<
+    { kind: "cancel" | "close"; row: PurchaseRequestRow } | undefined
+  >();
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+  const mode = searchParams.get("mode");
+  const requestId = Number(searchParams.get("requestId"));
+  const selectedId =
+    Number.isInteger(requestId) && requestId > 0 ? requestId : null;
   const selected =
     selectedId == null
       ? null
       : (rows.find((row) => row.id === selectedId) ?? null);
+  const createOpen = mode === "create" || mode === "edit";
+  const poOpen = mode === "create-po" && selected != null;
   const filtered = useMemo(
     () =>
       rows.filter((row) =>
@@ -210,6 +230,83 @@ export function PurchaseRequestsClient({
     setBranchId(String(branches[0]?.id ?? ""));
     setNeededBy(getVNDateString());
     setRequestLines([blankRequestLine()]);
+    setRequestBaseline("");
+  }
+
+  function requestFormSnapshot(
+    nextBranchId = branchId,
+    nextNeededBy = neededBy,
+    nextLines = requestLines,
+  ) {
+    return JSON.stringify([nextBranchId, nextNeededBy, nextLines]);
+  }
+
+  function poFormSnapshot(
+    nextDate = expectedDeliveryDate,
+    nextDrafts = poDrafts,
+  ) {
+    return JSON.stringify([nextDate, nextDrafts]);
+  }
+
+  function updateUrl(
+    nextRequestId: number | null,
+    nextMode: "view" | "edit" | "create" | "create-po" | null,
+    method: "push" | "replace" = "push",
+  ) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextRequestId == null) params.delete("requestId");
+    else params.set("requestId", String(nextRequestId));
+    if (nextMode == null) params.delete("mode");
+    else params.set("mode", nextMode);
+    const href = params.size > 0 ? `${pathname}?${params}` : pathname;
+    router[method](href, { scroll: false });
+  }
+
+  useEffect(() => {
+    if (mode !== "edit" || !selected) return;
+    const nextBranchId = String(selected.branchId);
+    const nextNeededBy = selected.neededBy ?? getVNDateString();
+    const nextLines = selected.items.map((item) => ({
+      key: String(item.id),
+      ingredientId: String(item.ingredientId),
+      quantity: String(item.quantity),
+      entryUnitId: String(item.entryUnitId),
+    }));
+    setBranchId(nextBranchId);
+    setNeededBy(nextNeededBy);
+    setRequestLines(nextLines);
+    setRequestBaseline(JSON.stringify([nextBranchId, nextNeededBy, nextLines]));
+  }, [mode, selected]);
+
+  async function closeRequestForm() {
+    if (
+      requestBaseline &&
+      requestFormSnapshot() !== requestBaseline &&
+      !(await confirm({
+        title: messages.common.unsavedChangesTitle,
+        description: messages.common.unsavedChangesDescription,
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
+    updateUrl(null, null, "replace");
+    resetCreate();
+  }
+
+  async function closePoForm() {
+    if (
+      poBaseline &&
+      poFormSnapshot() !== poBaseline &&
+      !(await confirm({
+        title: messages.common.unsavedChangesTitle,
+        description: messages.common.unsavedChangesDescription,
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
+    updateUrl(selected?.id ?? null, selected ? "view" : null, "replace");
   }
 
   function patchRequestLine(key: string, patch: Partial<RequestDraftLine>) {
@@ -226,7 +323,7 @@ export function PurchaseRequestsClient({
     });
   }
 
-  function saveRequest() {
+  function saveRequest(submit: boolean) {
     const lines = requestLines.map((line) => ({
       ingredientId: Number(line.ingredientId),
       quantity: Number(line.quantity),
@@ -246,45 +343,34 @@ export function PurchaseRequestsClient({
       return;
     }
     startTransition(async () => {
-      const result = await createPurchaseRequest({
+      const result = await savePurchaseRequest({
+        requestId: mode === "edit" ? selected?.id : null,
         branchId: Number(branchId),
         neededBy: neededBy || null,
         lines,
+        submit,
+        idempotencyKey:
+          mode === "create" ? requestIdempotencyKey : undefined,
       });
-      if (!result.success) {
+      if (!result.success || !result.data) {
         toast.error(result.error ?? copy.createFailed);
         return;
       }
-      toast.success(copy.createSuccess);
-      setCreateOpen(false);
+      toast.success(submit ? copy.submitSuccess : copy.createSuccess);
+      updateUrl(result.data.id, "view", "replace");
+      setRequestIdempotencyKey(crypto.randomUUID());
       resetCreate();
       router.refresh();
     });
   }
 
-  async function submitRequest(row: PurchaseRequestRow) {
-    setPendingId(row.id);
-    startTransition(async () => {
-      try {
-        const result = await submitPurchaseRequest({ requestId: row.id });
-        if (!result.success) {
-          toast.error(result.error ?? copy.submitFailed);
-          return;
-        }
-        toast.success(copy.submitSuccess);
-        router.refresh();
-      } finally {
-        setPendingId(null);
-      }
-    });
-  }
-
   function openPo(row: PurchaseRequestRow) {
-    setSelectedId(row.id);
     setExpectedDeliveryDate(getVNDateString());
-    setPoDrafts(buildPurchaseOrderDrafts(row.items, suppliers));
+    const drafts = buildPurchaseOrderDrafts(row.items, suppliers);
+    setPoDrafts(drafts);
     setPoPage(1);
-    setPoOpen(true);
+    setPoBaseline(poFormSnapshot(getVNDateString(), drafts));
+    updateUrl(row.id, "create-po");
   }
 
   function patchPoLine(
@@ -327,7 +413,7 @@ export function PurchaseRequestsClient({
     );
   }
 
-  function savePo() {
+  function savePo(send: boolean) {
     if (!selected) return;
     const orders = poDrafts
       .map((draft) => ({
@@ -373,17 +459,49 @@ export function PurchaseRequestsClient({
     }
 
     startTransition(async () => {
-      const result = await createPurchaseOrdersFromRequest({
+      const result = await savePurchaseOrdersFromRequest({
         requestId: selected.id,
         orders,
+        send,
+        idempotencyKey: poIdempotencyKey,
       });
       if (!result.success) {
         toast.error(result.error ?? copy.createPoFailed);
         return;
       }
       toast.success(copy.createPoSuccess(orders.length));
-      setPoOpen(false);
+      setPoIdempotencyKey(crypto.randomUUID());
+      updateUrl(selected.id, "view", "replace");
       router.refresh();
+    });
+  }
+
+  function runReasonAction() {
+    if (!reasonAction) return;
+    setPendingId(reasonAction.row.id);
+    startTransition(async () => {
+      try {
+        const result =
+          reasonAction.kind === "cancel"
+            ? await cancelPurchaseRequest({
+                requestId: reasonAction.row.id,
+                reason,
+              })
+            : await closePurchaseRequest({
+                requestId: reasonAction.row.id,
+                reason,
+              });
+        if (!result.success) {
+          toast.error(result.error ?? copy.loadFailed);
+          return;
+        }
+        setReasonAction(undefined);
+        setReason("");
+        updateUrl(null, null, "replace");
+        router.refresh();
+      } finally {
+        setPendingId(null);
+      }
     });
   }
 
@@ -392,16 +510,26 @@ export function PurchaseRequestsClient({
       {
         key: "view",
         label: ACTIONS_VI.view,
-        onSelect: () => setSelectedId(row.id),
+        onSelect: () => updateUrl(row.id, "view"),
       },
     ];
-    if (row.status === "draft" && canCreateRequest) {
+    if (
+      canCreateRequest &&
+      (row.status === "draft" || row.status === "submitted") &&
+      row.purchaseOrders.length === 0
+    ) {
       actions.push({
-        key: "submit",
-        label: copy.submitAction,
-        icon: <IconCheck data-icon="inline-start" />,
+        key: "edit",
+        label: ACTIONS_VI.edit,
+        icon: <IconPencil data-icon="inline-start" />,
+        onSelect: () => updateUrl(row.id, "edit"),
+      });
+      actions.push({
+        key: "cancel",
+        label: ACTIONS_VI.cancel,
+        icon: <IconTrash data-icon="inline-start" />,
         disabled: isPending || pendingId === row.id,
-        onSelect: () => void submitRequest(row),
+        onSelect: () => setReasonAction({ kind: "cancel", row }),
       });
     }
     if (
@@ -414,6 +542,14 @@ export function PurchaseRequestsClient({
         label: copy.createPoAction,
         icon: <IconShoppingCart data-icon="inline-start" />,
         onSelect: () => openPo(row),
+      });
+    }
+    if (row.status === "partially_ordered" && canCreateRequest) {
+      actions.push({
+        key: "close",
+        label: ACTIONS_VI.close,
+        disabled: isPending || pendingId === row.id,
+        onSelect: () => setReasonAction({ kind: "close", row }),
       });
     }
     return actions;
@@ -492,7 +628,25 @@ export function PurchaseRequestsClient({
       }
       actions={
         canCreateRequest ? (
-          <Button type="button" onClick={() => setCreateOpen(true)}>
+          <Button
+            type="button"
+            onClick={() => {
+              const nextBranchId = String(branches[0]?.id ?? "");
+              const nextNeededBy = getVNDateString();
+              const nextLines = [blankRequestLine()];
+              setBranchId(nextBranchId);
+              setNeededBy(nextNeededBy);
+              setRequestLines(nextLines);
+              setRequestBaseline(
+                requestFormSnapshot(
+                  nextBranchId,
+                  nextNeededBy,
+                  nextLines,
+                ),
+              );
+              updateUrl(null, "create");
+            }}
+          >
             <IconPlus data-icon="inline-start" />
             {copy.createAction}
           </Button>
@@ -510,7 +664,7 @@ export function PurchaseRequestsClient({
           data={filtered}
           getRowKey={(row) => row.id}
           pageSize={50}
-          onRowClick={(row) => setSelectedId(row.id)}
+          onRowClick={(row) => updateUrl(row.id, "view")}
           emptyTitle={copy.emptyTitle}
           emptyDescription={copy.emptyDescription}
           emptyIcon={
@@ -522,7 +676,7 @@ export function PurchaseRequestsClient({
               padding="default"
               className="w-full flex-col items-stretch gap-2 text-left"
               render={<button type="button" />}
-              onClick={() => setSelectedId(row.id)}
+              onClick={() => updateUrl(row.id, "view")}
             >
               <span className="flex items-center justify-between gap-2">
                 <span className="font-mono font-semibold">{row.code}</span>
@@ -543,23 +697,38 @@ export function PurchaseRequestsClient({
       <AppDialog
         open={createOpen}
         onOpenChange={(open) => {
-          setCreateOpen(open);
-          if (!open) resetCreate();
+          if (!open) void closeRequestForm();
         }}
-        title={copy.createTitle}
-        contentClassName="max-h-dvh-95 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-4xl"
-        bodyClassName="min-h-0 overflow-y-auto"
+        variant="document"
+        title={mode === "edit" && selected ? selected.code : copy.createTitle}
+        description={
+          mode === "edit" && selected
+            ? copy.statusLabel(selected.status)
+            : copy.description
+        }
         footer={
           <>
             <Button
               type="button"
               variant="outline"
-              onClick={() => setCreateOpen(false)}
+              onClick={() => void closeRequestForm()}
             >
               {ACTIONS_VI.cancel}
             </Button>
-            <Button type="button" disabled={isPending} onClick={saveRequest}>
-              {copy.createAction}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isPending}
+              onClick={() => saveRequest(false)}
+            >
+              {copy.saveDraft}
+            </Button>
+            <Button
+              type="button"
+              disabled={isPending}
+              onClick={() => saveRequest(true)}
+            >
+              {copy.submitAction}
             </Button>
           </>
         }
@@ -674,24 +843,52 @@ export function PurchaseRequestsClient({
       </AppDialog>
 
       <AppDialog
-        open={selected != null && !poOpen}
+        open={selected != null && mode === "view"}
         onOpenChange={(open) => {
-          if (!open) setSelectedId(null);
+          if (!open) updateUrl(null, null, "replace");
         }}
+        variant="document"
         title={selected?.code ?? copy.title}
         description={selected?.branchName}
-        contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-4xl"
-        bodyClassName="min-h-0 overflow-y-auto"
         footer={
           selected ? (
             <>
-              {selected.status === "draft" && canCreateRequest ? (
+              {canCreateRequest &&
+              (selected.status === "draft" ||
+                selected.status === "submitted") &&
+              selected.purchaseOrders.length === 0 ? (
                 <Button
                   type="button"
-                  disabled={isPending}
-                  onClick={() => void submitRequest(selected)}
+                  variant="destructive"
+                  onClick={() =>
+                    setReasonAction({ kind: "cancel", row: selected })
+                  }
                 >
-                  {copy.submitAction}
+                  {ACTIONS_VI.cancel}
+                </Button>
+              ) : null}
+              {canCreateRequest &&
+              selected.status === "partially_ordered" ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() =>
+                    setReasonAction({ kind: "close", row: selected })
+                  }
+                >
+                  {ACTIONS_VI.close}
+                </Button>
+              ) : null}
+              {canCreateRequest &&
+              (selected.status === "draft" ||
+                selected.status === "submitted") &&
+              selected.purchaseOrders.length === 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => updateUrl(selected.id, "edit", "replace")}
+                >
+                  {ACTIONS_VI.edit}
                 </Button>
               ) : null}
               {canCreatePo &&
@@ -705,7 +902,7 @@ export function PurchaseRequestsClient({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setSelectedId(null)}
+                onClick={() => updateUrl(null, null, "replace")}
               >
                 {ACTIONS_VI.close}
               </Button>
@@ -767,7 +964,9 @@ export function PurchaseRequestsClient({
                     variant="outline"
                     className="justify-between"
                     render={
-                      <Link href={`/inventory/purchase-orders?poId=${po.id}`} />
+                      <Link
+                        href={`/inventory/purchase-orders?poId=${po.id}&mode=view`}
+                      />
                     }
                   >
                     <span className="font-mono">{po.code}</span>
@@ -782,24 +981,33 @@ export function PurchaseRequestsClient({
 
       <AppDialog
         open={poOpen && selected != null}
-        onOpenChange={setPoOpen}
+        onOpenChange={(open) => {
+          if (!open) void closePoForm();
+        }}
+        variant="document"
         title={copy.createPoTitle}
         description={selected?.code}
-        contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-4xl"
-        bodyClassName="min-h-0 overflow-y-auto"
         footer={
           <>
             <Button
               type="button"
               variant="outline"
-              onClick={() => setPoOpen(false)}
+              onClick={() => void closePoForm()}
             >
               {ACTIONS_VI.cancel}
             </Button>
             <Button
               type="button"
+              variant="secondary"
               disabled={isPending || poDrafts.length === 0}
-              onClick={savePo}
+              onClick={() => savePo(false)}
+            >
+              {copy.saveDraft}
+            </Button>
+            <Button
+              type="button"
+              disabled={isPending || poDrafts.length === 0}
+              onClick={() => savePo(true)}
             >
               {copy.createPoAction}
             </Button>
@@ -929,6 +1137,34 @@ export function PurchaseRequestsClient({
           </>
         ) : null}
       </AppDialog>
+
+      <ReasonConfirmDialog
+        open={reasonAction != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReasonAction(undefined);
+            setReason("");
+          }
+        }}
+        title={
+          reasonAction?.kind === "close"
+            ? "Đóng phần còn lại của yêu cầu mua?"
+            : "Hủy yêu cầu mua?"
+        }
+        description={reasonAction?.row.code}
+        reasonId="purchase-request-status-reason"
+        reason={reason}
+        onReasonChange={setReason}
+        reasonLabel="Lý do"
+        reasonPlaceholder="Nhập lý do để lưu vết"
+        cancelLabel={ACTIONS_VI.cancel}
+        confirmLabel={
+          reasonAction?.kind === "close" ? ACTIONS_VI.close : ACTIONS_VI.cancel
+        }
+        confirmVariant="destructive"
+        isPending={isPending}
+        onConfirm={runReasonAction}
+      />
     </AppPage>
   );
 }

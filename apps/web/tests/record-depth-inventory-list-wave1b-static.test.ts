@@ -35,7 +35,10 @@ test("Wave 1 batch B transfers is C4 zero-action with onRowClick detail path", (
   );
 
   assert.match(source, /onRowClick=\{openTransferDetail\}/);
-  assert.match(source, /router\.push\(detailHref\(row\.id\)\)/);
+  assert.match(
+    source,
+    /router\.push\(detailHref\(row\.id\), \{ scroll: false \}\)/,
+  );
   assert.match(
     source,
     /MobileTransferCard[\s\S]*render=\{<Link href=\{href\}/,

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   getInventorySiteKindLabelVi,
   type SiteKind,
 } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Item,
@@ -23,13 +24,18 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { AppDialog } from "@/components/form";
 import {
   AppPage,
   AppPageHeader,
   AppSection,
 } from "@/components/surface";
 import { messages } from "@lib/messages";
-import { fulfillStockRequestLines } from "@/(protected)/inventory/stock-request-actions";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import {
+  closeStockRequest,
+  fulfillStockRequestLines,
+} from "@/(protected)/inventory/stock-request-actions";
 
 const stockRequestCopy = messages.inventory.stockRequests;
 const copy = stockRequestCopy.fulfill;
@@ -55,6 +61,7 @@ interface StockRequestFulfillClientProps {
   status: string;
   branchLabel: string;
   groups: StockRequestFulfillGroup[];
+  presentation?: "page" | "dialog";
 }
 
 function siteKindLabel(kind: SiteKind): string {
@@ -67,9 +74,14 @@ export function StockRequestFulfillClient({
   status,
   branchLabel,
   groups,
+  presentation = "page",
 }: StockRequestFulfillClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [closeReason, setCloseReason] = useState("");
   const [selectedByGroup, setSelectedByGroup] = useState<
     Record<string, Set<number>>
   >(() =>
@@ -132,29 +144,56 @@ export function StockRequestFulfillClient({
       }
 
       toast.success(copy.toastTransferCreated);
-      router.push(`/inventory/transfers/${result.data.transferId}`);
+      router.push(
+        `/inventory/transfers?transferId=${result.data.transferId}&mode=view`,
+        { scroll: false },
+      );
       router.refresh();
     });
   }
 
-  return (
+  function handleCloseRemaining() {
+    startTransition(async () => {
+      const result = await closeStockRequest({
+        requestId,
+        reason: closeReason,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      setCloseOpen(false);
+      setCloseReason("");
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("stockRequestId");
+      params.delete("mode");
+      router.replace(params.size > 0 ? `${pathname}?${params}` : pathname, {
+        scroll: false,
+      });
+      router.refresh();
+    });
+  }
+
+  const content = (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={requestNumber}
-        description={copy.headerDescription(
-          branchLabel,
-          stockRequestCopy.statusLabel(status),
-        )}
-        actions={
-          <Button
-            variant="ghost"
-            size="sm"
-            render={<Link href="/inventory/stock-requests" />}
-          >
-            {copy.back}
-          </Button>
-        }
-      />
+      {presentation === "page" ? (
+        <AppPageHeader
+          title={requestNumber}
+          description={copy.headerDescription(
+            branchLabel,
+            stockRequestCopy.statusLabel(status),
+          )}
+          actions={
+            <Button
+              variant="ghost"
+              size="sm"
+              render={<Link href="/inventory/stock-requests" />}
+            >
+              {copy.back}
+            </Button>
+          }
+        />
+      ) : null}
 
       {groups.length === 0 ? (
         <p className="text-sm text-muted-foreground">{copy.noLinesInScope}</p>
@@ -285,4 +324,61 @@ export function StockRequestFulfillClient({
       )}
     </AppPage>
   );
+
+  if (presentation === "dialog") {
+    return (
+      <>
+        <AppDialog
+          open
+          onOpenChange={(open) => {
+            if (open) return;
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("stockRequestId");
+            params.delete("mode");
+            router.replace(
+              params.size > 0 ? `${pathname}?${params}` : pathname,
+              { scroll: false },
+            );
+          }}
+          variant="document"
+          title={requestNumber}
+          description={copy.headerDescription(
+            branchLabel,
+            stockRequestCopy.statusLabel(status),
+          )}
+          footer={
+            status === "partially_fulfilled" ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setCloseOpen(true)}
+              >
+                {copy.closeRemainingAction}
+              </Button>
+            ) : null
+          }
+        >
+          {content}
+        </AppDialog>
+        <ReasonConfirmDialog
+          open={closeOpen}
+          onOpenChange={setCloseOpen}
+          title={copy.closeRemainingTitle}
+          description={copy.closeRemainingDescription}
+          reasonId="stock-request-close-reason"
+          reason={closeReason}
+          onReasonChange={setCloseReason}
+          reasonLabel={copy.reasonLabel}
+          reasonPlaceholder={copy.reasonPlaceholder}
+          cancelLabel={ACTIONS_VI.cancel}
+          confirmLabel={copy.closeRemainingAction}
+          confirmVariant="destructive"
+          isPending={isPending}
+          onConfirm={handleCloseRemaining}
+        />
+      </>
+    );
+  }
+
+  return content;
 }

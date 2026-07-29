@@ -36,6 +36,74 @@ type RpcJson = {
   id?: number;
 };
 
+const stockRequestLineSchema = z.object({
+  ingredientId: z.coerce.number().int().positive(),
+  entryUnitId: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive(),
+  notes: z.string().trim().max(500).optional(),
+});
+
+export const saveStockRequest = withAction(
+  {
+    roles: STOCK_REQUEST_ROLES,
+    schema: z.object({
+      branchId: z.coerce.number().int().positive(),
+      requestId: z.coerce.number().int().positive().nullable().optional(),
+      notes: z.string().trim().max(500).optional(),
+      lines: z.array(stockRequestLineSchema).min(1).max(200),
+      submit: z.boolean().default(true),
+      idempotencyKey: z.string().uuid().optional(),
+    }),
+    permission: PERMISSION_KEYS.INVENTORY_REQUEST_CREATE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase }) => {
+    const { data: raw, error } = await supabase.rpc(
+      "save_stock_request" as never,
+      {
+        p_request_id: data.requestId ?? null,
+        p_branch_id: data.branchId,
+        p_notes: data.notes ?? "",
+        p_lines: data.lines.map((line) => ({
+          ingredient_id: line.ingredientId,
+          entry_unit_id: line.entryUnitId,
+          quantity: line.quantity,
+          notes: line.notes ?? "",
+        })),
+        p_submit: data.submit,
+        p_idempotency_key: data.idempotencyKey ?? null,
+      } as never,
+    );
+    if (error) {
+      return {
+        success: false as const,
+        error: mapStockRequestRpcError(error.code, error.message),
+      };
+    }
+    const parsed = z
+      .object({
+        request_id: z.coerce.number().int().positive(),
+        request_number: z.string(),
+        status: z.enum(["draft", "submitted"]),
+      })
+      .safeParse(raw);
+    if (!parsed.success) {
+      return { success: false as const, error: "Không lưu được phiếu yêu cầu." };
+    }
+    revalidatePath(`/br/${data.branchId}/stock/requests`);
+    revalidatePath("/inventory/stock-requests");
+    return {
+      success: true as const,
+      data: {
+        requestId: parsed.data.request_id,
+        requestNumber: parsed.data.request_number,
+        status: parsed.data.status,
+      },
+    };
+  },
+);
+
 export const createStockRequestDraft = withAction(
   {
     roles: STOCK_REQUEST_ROLES,
@@ -149,15 +217,17 @@ export const cancelStockRequest = withAction(
     schema: z.object({
       branchId: z.coerce.number().int().positive(),
       requestId: z.coerce.number().int().positive(),
+      reason: z.string().trim().min(5).max(500),
     }),
     permission: PERMISSION_KEYS.INVENTORY_REQUEST_CANCEL,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
   async (data, { supabase }) => {
-    const { error } = await supabase.rpc("cancel_stock_request", {
+    const { error } = await supabase.rpc("cancel_stock_request" as never, {
       p_request_id: data.requestId,
-    });
+      p_reason: data.reason,
+    } as never);
     if (error) {
       return {
         success: false as const,
@@ -165,6 +235,31 @@ export const cancelStockRequest = withAction(
       };
     }
     revalidatePath(`/br/${data.branchId}/stock/requests`);
+    return { success: true as const };
+  },
+);
+
+export const closeStockRequest = withAction(
+  {
+    roles: STOCK_REQUEST_FULFILL_ROLES,
+    schema: z.object({
+      requestId: z.coerce.number().int().positive(),
+      reason: z.string().trim().min(5).max(500),
+    }),
+    permission: PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc("close_stock_request" as never, {
+      p_request_id: data.requestId,
+      p_reason: data.reason,
+    } as never);
+    if (error) {
+      return {
+        success: false as const,
+        error: mapStockRequestRpcError(error.code, error.message),
+      };
+    }
+    revalidatePath("/inventory/stock-requests");
     return { success: true as const };
   },
 );
