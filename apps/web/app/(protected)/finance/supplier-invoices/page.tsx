@@ -50,11 +50,13 @@ export default async function FinanceSupplierInvoicesPage({
     canReadProcurement,
     hasPayPermission,
     hasInvoiceCreatePermission,
+    hasInvoiceMatchPermission,
   ] = await Promise.all([
     loadAuthState(),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
     currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE),
+    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH),
   ]);
   const isOwner = authState.claims.user_role === "owner";
   const canPaySupplier = isOwner && hasPayPermission;
@@ -234,6 +236,7 @@ export default async function FinanceSupplierInvoicesPage({
       tenantId={authState.claims.tenant_id}
       canPaySupplier={canPaySupplier}
       canAttachVatEvidence={canAttachVatEvidence}
+      canAcceptDiscrepancy={hasInvoiceMatchPermission}
       description={copy.description}
     />
   );

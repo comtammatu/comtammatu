@@ -25,29 +25,16 @@ const retiredPermissionKeys = [
   "procurement:override_code_rotate",
 ];
 
-test("D091 is the single current Inventory authority", () => {
+test("D096 is the current external purchasing authority", () => {
   const decisions = read("docs/plan/decisions.md");
-  const current = decision(decisions, "D091");
+  const current = decision(decisions, "D096");
 
-  assert.match(current, /đúng một[\s\S]*active `warehouse`/);
-  assert.match(current, /received_quantity|số lượng thực nhận/);
-  assert.match(current, /rejected_quantity|số lượng từ chối/);
-  assert.match(current, /GRN draft → tạo PO từ GRN → duyệt PO →\s+confirm GRN/);
-  assert.match(current, /service_role/);
-
-  for (const id of [
-    "D000",
-    "D060",
-    "D066",
-    "D068",
-    "D073",
-    "D078",
-    "D082",
-    "D088",
-    "D089",
-  ]) {
-    assert.match(decision(decisions, id), /D091/);
-  }
+  assert.match(current, /Yêu cầu mua/);
+  assert.match(current, /mỗi PO thuộc đúng một yêu cầu mua và một NCC/);
+  assert.match(current, /tối đa một\s+GRN nháp/);
+  assert.match(current, /đơn giá `0`/);
+  assert.match(current, /Trả hàng không tự giảm công nợ/);
+  assert.match(current, /Supersedes:[\s\S]*D091[\s\S]*D092/);
 });
 
 test("Inventory references expose one warehouse and physical rejection QC only", () => {
@@ -59,7 +46,9 @@ test("Inventory references expose one warehouse and physical rejection QC only",
   assert.match(inventory, /Mỗi site active có đúng một active `warehouse`/);
   assert.match(inventory, /received_quantity - rejected_quantity/);
   assert.match(sop, /lý do \+ ảnh là bắt buộc/);
-  assert.match(sop, /GRN draft → PO từ GRN → duyệt PO → confirm/);
+  assert.match(sop, /Yêu cầu mua → PO theo NCC → GRN theo\s+ lần giao/);
+  assert.match(inventory, /Chờ nhập hàng/);
+  assert.match(inventory, /phần dư ngoài đơn dùng giá `0`/);
 
   for (const source of [inventory, sop, glossary]) {
     assert.doesNotMatch(source, /branch_kitchen|po_unit_price/);
@@ -113,7 +102,7 @@ test("generated database types match the final D091 catalog", () => {
   assert.match(generated, /\bcreate_grn_from_approved_po\b/);
 });
 
-test("app and E2E authority omit retired QC permissions and PO-first entry points", () => {
+test("app authority uses request to PO to GRN and omits retired QC permissions", () => {
   const permissions = read("packages/shared/src/auth/permissions.ts");
   const fixture = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
   const roleMatrix = read("docs/spec/role-route-matrix.md");
@@ -128,6 +117,12 @@ test("app and E2E authority omit retired QC permissions and PO-first entry point
   const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
   const quality = read("apps/web/lib/inventory/grn-quality.ts");
+  const grnDetailClient = read(
+    "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
+  );
+  const grnLineRow = read(
+    "apps/web/app/(protected)/inventory/grn/[id]/views/grn-line-row.tsx",
+  );
   const rejectionPhotoInputs = [
     read("apps/web/app/(protected)/inventory/grn/[id]/views/grn-line-row.tsx"),
     read(
@@ -145,14 +140,17 @@ test("app and E2E authority omit retired QC permissions and PO-first entry point
     assert.doesNotMatch(roleMatrix, pattern);
   }
 
-  assert.doesNotMatch(
-    purchaseOrderActions,
-    /createPurchaseOrderWithLines|createGrnFromPurchaseOrder/,
+  assert.match(purchaseOrderActions, /createPurchaseOrderFromRequest/);
+  assert.match(purchaseOrderActions, /createGrnDraftFromPurchaseOrder/);
+  assert.doesNotMatch(purchaseOrderActions, /createPurchaseOrderFromGrn/);
+  assert.match(purchaseOrderClient, /Tạo phiếu nhập/);
+  assert.match(purchaseOrderClient, /Tiếp tục nhập hàng/);
+  assert.match(inventoryMessages, /đơn giá từ 0 trở lên/);
+  assert.match(
+    inventoryMessages,
+    /Phiếu nhập được tạo theo từng lần giao từ đơn đặt hàng đã duyệt/,
   );
-  assert.doesNotMatch(
-    purchaseOrderClient,
-    /createPurchaseOrderWithLines|createGrnFromPurchaseOrder/,
-  );
+  assert.doesNotMatch(inventoryMessages, /tạo phiếu nhập trước/);
   assert.doesNotMatch(transferModel, /branch_kitchen|["']kitchen["']/);
   assert.doesNotMatch(stockData, /\bkitchen\b/);
   assert.doesNotMatch(inventoryMessages, /^\s*kitchen:\s*"Tiêu hao"/m);
@@ -166,6 +164,8 @@ test("app and E2E authority omit retired QC permissions and PO-first entry point
   }
   assert.match(quality, /deriveGrnQualityStatus/);
   assert.doesNotMatch(quality, /Baseline|Variance|REVIEW_PCT/);
+  assert.match(grnDetailClient, /\?\s*"Đã nhập kho"/);
+  assert.match(grnLineRow, /Dư ngoài đơn \$\{formatQty\(excessQuantity\)\}/);
 });
 
 test("catalog writes cannot bypass PO price authority", () => {
@@ -176,7 +176,7 @@ test("catalog writes cannot bypass PO price authority", () => {
     "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
 
-  assert.match(actions, /p_unit_cost: null as never/);
+  assert.doesNotMatch(actions, /\bp_unit_cost\b/);
   assert.doesNotMatch(actions, /unit_cost: row\.unit_cost/);
   assert.doesNotMatch(dialog, /name="unit_cost"|values\.unit_cost/);
   assert.match(

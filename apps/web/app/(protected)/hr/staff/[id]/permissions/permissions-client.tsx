@@ -12,15 +12,6 @@ import {
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import {
   Item,
   ItemActions,
@@ -36,6 +27,7 @@ import { AppSection } from "@/components/surface";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { messages } from "@lib/messages";
+import { getStaffPermissionLabelVi } from "@lib/messages/owner";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   applyTemplateAction,
@@ -58,7 +50,6 @@ interface PermKey {
 
 interface Template {
   id: number;
-  name: string;
   positionCode: string | null;
   permissionKeys: string[];
 }
@@ -75,6 +66,9 @@ interface Grant {
 interface Props {
   targetUserId: string;
   targetFullName: string;
+  targetPositionCode: string | null;
+  targetPositionLabel: string;
+  targetBranchId: number | null;
   currentGrants: Grant[];
   branches: BranchOpt[];
   branchNames: { id: number; name: string }[];
@@ -107,15 +101,15 @@ function toIsoZ(local: string): string {
 export function PermissionsClient({
   targetUserId,
   targetFullName,
+  targetPositionCode,
+  targetPositionLabel,
+  targetBranchId,
   currentGrants,
   branches,
   branchNames,
   permissionKeys,
   templates,
 }: Props) {
-  const [templateBranch, setTemplateBranch] = useState<string>("");
-  const [templateId, setTemplateId] = useState<string>("");
-  const [templateValidUntil, setTemplateValidUntil] = useState<string>("");
   const [grantDialogOpen, setGrantDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const copy = messages.owner.staffPermissions;
@@ -129,22 +123,61 @@ export function PermissionsClient({
       new Map(permissionKeys.map((permission) => [permission.key, permission])),
     [permissionKeys],
   );
-  const templateNameById = useMemo(
-    () => new Map(templates.map((template) => [template.id, template.name])),
-    [templates],
+  const permissionLabelByKey = useMemo(
+    () =>
+      new Map(
+        permissionKeys.map((permission) => [
+          permission.key,
+          getStaffPermissionLabelVi(permission.key, permission.description),
+        ]),
+      ),
+    [permissionKeys],
+  );
+  const recommendedTemplate = templates.find(
+    (template) => template.positionCode === targetPositionCode,
   );
   const permissionGroups = useMemo(() => {
     const groups = new Map<string, { value: string; label: string }[]>();
     for (const permission of permissionKeys) {
-      const options = groups.get(permission.module) ?? [];
+      const moduleLabel =
+        copy.permissionModuleLabels[permission.module] ?? copy.otherWorkArea;
+      const options = groups.get(moduleLabel) ?? [];
       options.push({
         value: permission.key,
-        label: permission.description || UNKNOWN_LABEL_VI,
+        label:
+          permissionLabelByKey.get(permission.key) ?? UNKNOWN_LABEL_VI,
       });
-      groups.set(permission.module, options);
+      groups.set(moduleLabel, options);
     }
     return Array.from(groups, ([label, options]) => ({ label, options }));
-  }, [permissionKeys]);
+  }, [
+    copy.otherWorkArea,
+    copy.permissionModuleLabels,
+    permissionKeys,
+    permissionLabelByKey,
+  ]);
+  const templateGroups = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    for (const key of recommendedTemplate?.permissionKeys ?? []) {
+      const permission = permissionByKey.get(key);
+      if (!permission) continue;
+      const moduleLabel =
+        copy.permissionModuleLabels[permission.module] ?? copy.otherWorkArea;
+      const labels = groups.get(moduleLabel) ?? [];
+      labels.push(permissionLabelByKey.get(key) ?? UNKNOWN_LABEL_VI);
+      groups.set(moduleLabel, labels);
+    }
+    return Array.from(groups, ([label, permissions]) => ({
+      label,
+      permissions,
+    }));
+  }, [
+    copy.otherWorkArea,
+    copy.permissionModuleLabels,
+    permissionByKey,
+    permissionLabelByKey,
+    recommendedTemplate,
+  ]);
   const scopeOptions = useMemo(
     () => [
       { value: TENANT_SCOPE_VALUE, label: copy.tenantWide },
@@ -165,16 +198,11 @@ export function PermissionsClient({
 
   function grantSource(grant: Grant) {
     if (grant.sourceTemplate === null) return copy.sourceException;
-    const templateName = templateNameById.get(grant.sourceTemplate);
-    return templateName
-      ? `${copy.sourceTemplate} · ${templateName}`
-      : copy.sourceTemplate;
+    return copy.sourceTemplate;
   }
 
   function permissionLabel(grant: Grant): string {
-    return (
-      permissionByKey.get(grant.permissionKey)?.description ?? UNKNOWN_LABEL_VI
-    );
+    return permissionLabelByKey.get(grant.permissionKey) ?? UNKNOWN_LABEL_VI;
   }
 
   function grantExpiry(grant: Grant) {
@@ -210,27 +238,23 @@ export function PermissionsClient({
   }
 
   function handleApplyTemplate() {
-    if (!templateBranch || !templateId) {
-      toast.error("Chọn phạm vi và mẫu quyền.");
+    if (!recommendedTemplate) {
+      toast.error(copy.templateMissing(targetPositionLabel));
       return;
     }
 
     startTransition(async () => {
       const result = await applyTemplateAction({
         target_user_id: targetUserId,
-        branch_id: branchIdFromValue(templateBranch),
-        template_id: Number(templateId),
-        valid_until: templateValidUntil ? toIsoZ(templateValidUntil) : null,
+        branch_id: targetBranchId,
+        template_id: recommendedTemplate.id,
+        valid_until: null,
       });
       if (!result.success) {
         toast.error(result.error ?? "Thất bại");
         return;
       }
-      toast.success(
-        `Đã áp dụng mẫu quyền (${result.data?.rows_inserted ?? 0} quyền mới)`,
-      );
-      setTemplateId("");
-      setTemplateValidUntil("");
+      toast.success(copy.templateApplied(result.data?.rows_inserted ?? 0));
     });
   }
 
@@ -316,8 +340,14 @@ export function PermissionsClient({
         ),
       },
     ],
-    [copy, isPending, permissionByKey, templateNameById, branchNameById],
+    [copy, isPending, permissionLabelByKey, branchNameById],
   );
+
+  const targetScopeLabel =
+    targetBranchId === null
+      ? copy.tenantWide
+      : (branchNameById.get(targetBranchId) ??
+        copy.branchFallback(targetBranchId));
 
   return (
     <div className="flex flex-col gap-4">
@@ -326,67 +356,53 @@ export function PermissionsClient({
         description={copy.templateDescription}
         icon={<IconStack />}
       >
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Select
-            value={templateBranch}
-            onValueChange={setTemplateBranch}
-            disabled={isPending}
-          >
-            <SelectTrigger aria-label="Phạm vi áp dụng mẫu quyền">
-              <SelectValue placeholder={copy.scopePlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TENANT_SCOPE_VALUE}>
-                {copy.tenantWide}
-              </SelectItem>
-              {branches.map((branch) => (
-                <SelectItem key={branch.id} value={String(branch.id)}>
-                  {branch.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={templateId}
-            onValueChange={setTemplateId}
-            disabled={isPending}
-          >
-            <SelectTrigger aria-label="Mẫu quyền" className="sm:col-span-2">
-              <SelectValue placeholder={copy.templateTitle} />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map((template) => (
-                <SelectItem key={template.id} value={String(template.id)}>
-                  {template.name} ({template.permissionKeys.length} quyền)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label
-            htmlFor="template-valid-until"
-            className="text-xs font-normal text-muted-foreground"
-          >
-            {copy.validUntil}
-          </Label>
-          <Input
-            id="template-valid-until"
-            type="datetime-local"
-            value={templateValidUntil}
-            onChange={(event) => setTemplateValidUntil(event.target.value)}
-            className="w-full max-w-xs"
-          />
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={handleApplyTemplate}
-          disabled={isPending || !templateBranch || !templateId}
-        >
-          <IconStack data-icon="inline-start" />
-          Áp dụng mẫu quyền
-        </Button>
+        {recommendedTemplate ? (
+          <>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-medium">{targetPositionLabel}</p>
+                <p className="text-sm text-muted-foreground">
+                  {copy.templateScope(targetScopeLabel)}
+                </p>
+              </div>
+              <Badge variant="secondary">
+                {recommendedTemplate.permissionKeys.length} quyền
+              </Badge>
+            </div>
+            <details>
+              <summary className="cursor-pointer text-sm font-medium text-primary">
+                {copy.templatePreview(
+                  recommendedTemplate.permissionKeys.length,
+                  templateGroups.length,
+                )}
+              </summary>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                {templateGroups.map((group) => (
+                  <div key={group.label}>
+                    <p className="text-sm font-medium">{group.label}</p>
+                    <ul className="mt-1 grid list-inside list-disc gap-1 text-sm text-muted-foreground">
+                      {group.permissions.map((permission) => (
+                        <li key={permission}>{permission}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </details>
+            <Button
+              type="button"
+              onClick={handleApplyTemplate}
+              disabled={isPending}
+            >
+              <IconStack data-icon="inline-start" />
+              {copy.templateApply(targetPositionLabel)}
+            </Button>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {copy.templateMissing(targetPositionLabel)}
+          </p>
+        )}
       </AppSection>
 
       <AppSection

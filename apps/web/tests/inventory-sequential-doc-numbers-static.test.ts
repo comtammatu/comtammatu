@@ -4,6 +4,13 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 const root = join(import.meta.dirname, "../../..");
+const datedDocNumberMigration = readFileSync(
+  join(
+    root,
+    "supabase/migrations/20260729160000_inventory_doc_numbers_with_date.sql",
+  ),
+  "utf8",
+);
 
 test("app create paths no longer mint opaque UUID document codes", () => {
   const grn = readFileSync(
@@ -51,4 +58,23 @@ test("stocktake UI uses persisted session_number; dashboard drops ST- prefix", (
   assert.match(dashboard, /session_number/);
   assert.match(list, /session_number/);
   assert.doesNotMatch(list, /KK-\$\{r\.id\}/);
+});
+
+test("new inventory and PO document codes include the VN business date", () => {
+  assert.equal(
+    datedDocNumberMigration.match(/'DDMMYYYY'/g)?.length,
+    2,
+  );
+  assert.match(
+    datedDocNumberMigration,
+    /ON CONFLICT \(tenant_id, doc_kind, year\) DO UPDATE/,
+  );
+  assert.match(
+    datedDocNumberMigration,
+    /ON CONFLICT \(tenant_id, year\) DO UPDATE/,
+  );
+  assert.match(
+    datedDocNumberMigration,
+    /WHEN 'stock_request' THEN 'YC'/,
+  );
 });

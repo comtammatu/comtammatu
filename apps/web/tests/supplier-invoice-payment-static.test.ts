@@ -155,7 +155,9 @@ test("supplier invoice payment action uses Owner-only idempotent AP RPC", () => 
   assert.match(source, /roles: MODULE_ACL\.finance\.allowedRoles/);
   assert.match(source, /PERMISSION_KEYS\.FINANCE_AP_PAY/);
   assert.match(source, /idempotencyKey: z\.string\(\)\.uuid\(\)/);
-  assert.match(source, /\.rpc\(\s*"record_supplier_payment"/);
+  assert.match(source, /"record_supplier_payment_allocated" as never/);
+  assert.match(source, /p_supplier_id: data\.supplierId/);
+  assert.match(source, /p_allocations: allocations\.map/);
   assert.match(source, /p_idempotency_key: data\.idempotencyKey/);
 });
 
@@ -202,6 +204,10 @@ test("supplier invoice client exposes payment only behind server permission", ()
 
   assert.match(source, /canPaySupplier/);
   assert.match(source, /canAttachVatEvidence/);
+  assert.match(
+    source,
+    /canShowPayAction\s*=[\s\S]*selectedInvoice\.matchStatus === "matched"[\s\S]*selectedOutstandingAmount > 0/,
+  );
   assert.match(source, /recordSupplierPayment/);
   assert.match(source, /paymentIntentKeyRef/);
   assert.match(source, /resolveSupplierPaymentIntentKey/);
@@ -491,7 +497,7 @@ test("supplier invoice matching requires linked GRN evidence", () => {
   assert.match(client, /getDisplayMatchStatus/);
 });
 
-test("supplier invoice create dialog is GRN-first with progressive VAT", () => {
+test("supplier invoice create dialog supports multiple GRNs and progressive VAT", () => {
   const client = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
@@ -506,7 +512,10 @@ test("supplier invoice create dialog is GRN-first with progressive VAT", () => {
   assert.match(client, /DEFAULT_VISIBLE_VAT_RATE/);
   assert.match(client, /visibleRates/);
   assert.match(client, /addVatRate/);
-  assert.match(client, /chooseGrnPrimary/);
+  assert.match(client, /selectedGrnKeys/);
+  assert.match(client, /selectedGrns/);
+  assert.match(client, /receiptAllocations/);
+  assert.match(client, /documentDiscount/);
   assert.match(client, /grnNetAcceptedLabel/);
   assert.match(client, /netAcceptedAmount/);
   assert.doesNotMatch(
@@ -518,7 +527,6 @@ test("supplier invoice create dialog is GRN-first with progressive VAT", () => {
   assert.match(page, /optionKey/);
   assert.match(grnActions, /net_accepted_amount/);
   assert.match(grnActions, /from\("supplier_invoices"\)/);
-  assert.match(grnActions, /select\("grn_id, supplier_id"\)/);
   assert.match(grnActions, /expandGrnDropdownOptions/);
   assert.match(
     grnActions,
@@ -526,6 +534,10 @@ test("supplier invoice create dialog is GRN-first with progressive VAT", () => {
   );
   assert.match(client, /option\.optionKey/);
   assert.match(client, /poId: selectedGrn\?\.poId/);
+  assert.match(
+    readWeb("app/(protected)/finance/supplier-invoice-actions.ts"),
+    /create_supplier_invoice_with_allocations/,
+  );
   assert.match(
     messages,
     /1\) Chọn phiếu nhập · 2\) Nhập số và ngày hóa đơn · 3\) Chọn mức VAT/,
@@ -550,12 +562,18 @@ test("confirmed GRN surfaces link into supplier invoice create or view", () => {
   assert.match(listModel, /supplierInvoiceHrefForGrn/);
   assert.match(listModel, /invoiceId: number \| null/);
   assert.match(listData, /canManageSupplierInvoice/);
-  assert.match(listData, /supplier_invoices/);
+  assert.match(listData, /list_goods_receipt_notes/);
   assert.match(listClient, /canManageSupplierInvoice/);
   assert.match(listClient, /supplierInvoiceHrefForGrn/);
-  assert.match(listClient, /grn\.status === "confirmed"/);
+  assert.match(listClient, /row\.status === "confirmed"/);
   assert.match(detailClient, /supplierInvoiceHrefForGrn/);
-  assert.match(grnActions, /supplier_invoices \( id \)/);
+  assert.match(grnActions, /from\("supplier_invoices"\)/);
+  assert.match(
+    readRoot(
+      "supabase/migrations/20260729180000_purchase_request_po_first_grn_ap.sql",
+    ),
+    /supplier_invoice_receipt_allocations/,
+  );
   assert.match(
     readWeb("lib/messages/inventory.ts"),
     /createInvoice: "Ghi nhận hóa đơn NCC"/,

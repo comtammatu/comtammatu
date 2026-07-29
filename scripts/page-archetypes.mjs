@@ -149,8 +149,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/count-slips/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx":
-    "DOC-WORKFLOW",
-  "apps/web/app/(protected)/inventory/grn/new/page.tsx": "DOC-WORKFLOW",
+    "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/grn/new/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/grn/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/ingredients/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "REDIRECT-SHIM",
@@ -160,7 +160,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/recipes/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/purchase-requests/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/menu-recipes/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/recipes/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/reports/page.tsx": "REPORT",
   "apps/web/app/(protected)/inventory/settings/categories/page.tsx":
     "SETTINGS-PANEL",
@@ -178,7 +180,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/stocktake/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/stocktake/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/stocktake/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx":
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/suppliers/[id]/items/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/suppliers/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": "DETAIL",
@@ -333,7 +336,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     evidence: "implemented-static",
     final: false,
   },
-  "apps/web/app/(protected)/inventory/recipes/page.tsx": {
+  "apps/web/app/(protected)/inventory/menu-recipes/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,
@@ -425,12 +428,11 @@ const PAGE_DISPOSITION_OVERRIDES = {
       evidence: "implemented-static",
       final: false,
     },
-  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/page.tsx":
-    {
-      status: "tune",
-      evidence: "implemented-static",
-      final: false,
-    },
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
   "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
@@ -453,6 +455,11 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/inventory/purchase-requests/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,

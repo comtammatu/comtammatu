@@ -6,13 +6,12 @@ type RecipeLineBaseQuantityInput = {
   units?: readonly IngredientUnitRow[] | null;
 };
 
-export function getRecipeLineBaseQuantity({
+export function getMenuRecipeLineBaseQuantity({
   quantity,
   entryUnitId,
   units,
 }: RecipeLineBaseQuantityInput): number {
-  const safeQuantity =
-    Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
+  const safeQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
 
   if (entryUnitId == null) {
     return safeQuantity;

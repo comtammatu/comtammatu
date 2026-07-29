@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { getStaffPermissionLabelVi } from "../lib/messages/owner";
 
 function source(relativePath: string): string {
   return readFileSync(relativePath, "utf8");
@@ -18,6 +19,7 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   const permissionsPage = source(
     "app/(protected)/hr/staff/[id]/permissions/page.tsx",
   );
+  const ownerMessages = source("lib/messages/owner.ts");
 
   assert.match(page, /q\?: string/);
   assert.match(page, /matchesSearch/);
@@ -48,9 +50,18 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   );
   assert.match(permissions, /<DataTable/);
   assert.match(permissions, /<FormDialog<GrantExceptionValues>/);
-  assert.match(permissions, /\$\{copy\.sourceTemplate\} · \$\{templateName\}/);
+  assert.match(permissions, /template\.positionCode === targetPositionCode/);
+  assert.match(permissions, /branch_id: targetBranchId/);
+  assert.match(permissions, /copy\.permissionModuleLabels\[permission\.module\]/);
+  assert.match(permissions, /getStaffPermissionLabelVi/);
+  assert.doesNotMatch(permissions, /template\.name/);
   assert.match(permissions, /branchNames: \{ id: number; name: string \}\[\]/);
   assert.match(permissionsPage, /branchNames=\{\(branchRows \?\? \[\]\)\.map/);
+  assert.match(permissionsPage, /targetPositionCode=\{position\?\.code \?\? null\}/);
+  assert.match(permissionsPage, /targetBranchId=\{profile\.branch_id\}/);
+  assert.match(ownerMessages, /"inventory:request_create": "Tạo yêu cầu hàng"/);
+  assert.match(ownerMessages, /inventory_procurement: "Mua hàng & nhập kho"/);
+  assert.match(ownerMessages, /\/\[À-ỹĐđ\]\/u\.test\(description\)/);
   assert.match(permissionsPage, /defaultValue="permissions"/);
   assert.match(
     permissionsPage,
@@ -58,4 +69,22 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   );
   assert.doesNotMatch(permissionsPage, /OverviewTab/);
   assert.doesNotMatch(permissionsPage, /value: "overview"/);
+});
+
+test("HR permission labels never fall back to technical English copy", () => {
+  assert.equal(
+    getStaffPermissionLabelVi(
+      "inventory:request_create",
+      "Create branch stock request drafts",
+    ),
+    "Tạo yêu cầu hàng",
+  );
+  assert.equal(
+    getStaffPermissionLabelVi("future:unknown", "Internal permission code"),
+    "Không xác định",
+  );
+  assert.equal(
+    getStaffPermissionLabelVi("future:vietnamese", "Xem dữ liệu vận hành"),
+    "Xem dữ liệu vận hành",
+  );
 });

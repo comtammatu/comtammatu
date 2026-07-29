@@ -52,7 +52,6 @@ export async function GRNDetailPageContent({
       canAmendConfirmed={result.data.canAmendConfirmed}
       canEditDraft={result.data.canEditDraft}
       canConfirm={result.data.canConfirm}
-      canCreatePoFromGrn={result.data.canCreatePoFromGrn}
       canManageSupplierInvoice={result.data.canManageSupplierInvoice}
       receivingLocationOptions={result.data.receivingLocationOptions}
       auditLogs={result.data.auditLogs}

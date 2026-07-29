@@ -92,7 +92,7 @@ const adjustmentSchema = z.object({
     .refine((value) => Number(value) > 0, {
       error: copy.adjustmentFields.amountPositive,
     }),
-  note: z.string().trim().max(500).optional(),
+  note: z.string().trim().min(5, copy.adjustmentFields.noteRequired).max(500),
 });
 
 type AdjustmentFormValues = z.infer<typeof adjustmentSchema>;
@@ -118,11 +118,7 @@ function adjustmentLabel(adjustment: PayrollAdjustment): string {
 
 function workSummary(entry: PayrollPreviewEntry): string {
   const workdays = entry.finalized?.workingDays ?? entry.workingDays;
-  return copy.mobile.work(
-    workdays,
-    entry.workHours,
-    totalLeaveDays(entry),
-  );
+  return copy.mobile.work(workdays, entry.workHours, totalLeaveDays(entry));
 }
 
 function workingDaysValue(entry: PayrollPreviewEntry): number {
@@ -401,7 +397,7 @@ export function PayrollListClient({
       year: preview.year,
       kind: values.kind,
       amount: Number(values.amount),
-      note: values.note || undefined,
+      note: values.note,
     });
     if (result.success) router.refresh();
     return result;
@@ -543,8 +539,7 @@ export function PayrollListClient({
     {
       key: "net",
       header: netHeader,
-      className:
-        "min-w-32 text-right font-mono text-sm tabular-nums",
+      className: "min-w-32 text-right font-mono text-sm tabular-nums",
       render: (entry) => moneyCell(entry, netValue(entry)),
     },
     {
@@ -809,7 +804,7 @@ export function PayrollListClient({
                 <ItemTitle>{entry.employeeName}</ItemTitle>
                 <ItemDescription>{workSummary(entry)}</ItemDescription>
                 <ItemDescription>
-                  {copy.table.bonus}: {" "}
+                  {copy.table.bonus}:{" "}
                   {moneyCell(entry, entry.finalized?.bonus ?? entry.bonus)}
                 </ItemDescription>
                 <ItemDescription>
@@ -940,10 +935,7 @@ export function PayrollListClient({
             {calendarDayEntries.length > 0 ? (
               <div className="flex flex-col gap-2">
                 {calendarDayEntries.map((dayEntry) => (
-                  <Item
-                    key={dayEntry.employeeId}
-                    variant="outline"
-                  >
+                  <Item key={dayEntry.employeeId} variant="outline">
                     <ItemContent>
                       <ItemTitle>
                         {dayEntry.employee?.employeeName ?? "—"}
@@ -1044,6 +1036,7 @@ export function PayrollListClient({
                 name="note"
                 label={copy.adjustmentFields.note}
                 placeholder={copy.adjustmentFields.notePlaceholder}
+                required
               />
               {selectedEntry.adjustments.length > 0 ? (
                 <div className="flex flex-col gap-2 border-t pt-4">

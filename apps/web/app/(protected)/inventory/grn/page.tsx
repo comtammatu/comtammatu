@@ -1,34 +1,34 @@
-import { loadGrnListPageData } from "@lib/inventory/grn-list-data";
+import {
+  loadGrnListPageData,
+  type GrnListSearchParams,
+} from "@lib/inventory/grn-list-data";
 import { GrnListClient } from "./grn-list-client";
 
 interface GRNListPageContentProps {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<GrnListSearchParams>;
   basePath?: string;
-  showDrafts?: boolean;
   embedded?: boolean;
 }
 
 export async function GRNListPageContent({
   searchParams,
   basePath = "/inventory/grn",
-  showDrafts = true,
   embedded = false,
 }: GRNListPageContentProps) {
   const params = await searchParams;
-  const data = await loadGrnListPageData({
-    includeDrafts: showDrafts,
-    queryBranchId: params.branchId,
-  });
+  const data = await loadGrnListPageData(params);
 
   return (
     <GrnListClient
-      grns={data.grns}
+      rows={data.rows}
+      total={data.total}
+      page={data.page}
+      pageSize={data.pageSize}
+      filters={data.filters}
       basePath={basePath}
-      canCreate={data.canCreate}
       canManageSupplierInvoice={data.canManageSupplierInvoice}
-      drafts={showDrafts && data.canCreate ? data.drafts : undefined}
-      draftsLoadFailed={showDrafts && data.canCreate && data.draftsLoadFailed}
-      grnsLoadFailed={data.grnsLoadFailed}
+      canViewMonetary={data.canViewMonetary}
+      loadFailed={data.loadFailed}
       withinOwnerTabs={embedded}
     />
   );
@@ -37,7 +37,7 @@ export async function GRNListPageContent({
 export default async function GRNListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<GrnListSearchParams>;
 }) {
   return <GRNListPageContent searchParams={searchParams} />;
 }

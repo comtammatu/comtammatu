@@ -41,9 +41,8 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { FormField } from "@/components/form/form-field";
 import { AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorControlBar,
@@ -85,6 +84,7 @@ export function BranchWasteApprovalsClient({
   const [reviewNotes, setReviewNotes] = useState<Record<number, string>>({});
   const [pendingDecision, setPendingDecision] =
     useState<PendingDecision | null>(null);
+  const [rejectingIssueId, setRejectingIssueId] = useState<number | null>(null);
   const [isTransitionPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -121,9 +121,9 @@ export function BranchWasteApprovalsClient({
     if (isSubmitting) return;
     if (hasUnsavedNotes) {
       const confirmed = await confirm({
-        title: "Bỏ ghi chú duyệt?",
-        description: "Ghi chú xử lý chưa gửi sẽ bị mất.",
-        confirmText: "Bỏ ghi chú",
+        title: "Bỏ lý do từ chối?",
+        description: "Lý do từ chối chưa gửi sẽ bị mất.",
+        confirmText: "Bỏ lý do",
         cancelText: "Tiếp tục duyệt",
         variant: "destructive",
       });
@@ -148,17 +148,15 @@ export function BranchWasteApprovalsClient({
     }
     if (isSubmitting) return;
 
-    const confirmed = await confirm({
-      title:
-        decision === "approved"
-          ? "Duyệt phiếu hao hụt?"
-          : "Từ chối phiếu hao hụt?",
-      description: row.issueNumber,
-      confirmText: decision === "approved" ? copy.approve : copy.reject,
-      cancelText: ACTIONS_VI.cancel,
-      ...(decision === "rejected" ? { variant: "destructive" as const } : {}),
-    });
-    if (!confirmed) return;
+    if (decision === "approved") {
+      const confirmed = await confirm({
+        title: "Duyệt phiếu hao hụt?",
+        description: row.issueNumber,
+        confirmText: copy.approve,
+        cancelText: ACTIONS_VI.cancel,
+      });
+      if (!confirmed) return;
+    }
 
     setPendingDecision({ issueId: row.issueId, decision });
     startTransition(async () => {
@@ -166,7 +164,10 @@ export function BranchWasteApprovalsClient({
         const result = await approveWaste({
           issueId: row.issueId,
           decision,
-          note: reviewNotes[row.issueId]?.trim() || undefined,
+          note:
+            decision === "rejected"
+              ? reviewNotes[row.issueId]?.trim()
+              : undefined,
         });
         if (!result.success) {
           toast.error(result.error ?? "Không duyệt được");
@@ -187,6 +188,7 @@ export function BranchWasteApprovalsClient({
           return next;
         });
         setSelectedIssueId(null);
+        setRejectingIssueId(null);
         router.refresh();
       } catch (error) {
         console.error("branch.waste_approval.failed", error);
@@ -419,27 +421,6 @@ export function BranchWasteApprovalsClient({
                         {copy.notes(selectedRow.notes)}
                       </p>
                     ) : null}
-
-                    <FormField
-                      controlId="branch-waste-approval-note"
-                      label="Ghi chú xử lý"
-                    >
-                      <Textarea
-                        id="branch-waste-approval-note"
-                        name="branch-waste-approval-note"
-                        autoComplete="off"
-                        value={reviewNotes[selectedRow.issueId] ?? ""}
-                        onChange={(event) =>
-                          setReviewNotes((current) => ({
-                            ...current,
-                            [selectedRow.issueId]: event.target.value,
-                          }))
-                        }
-                        disabled={isSubmitting || selectedRow.isSelfCreated}
-                        rows={3}
-                        placeholder={copy.reviewNotePlaceholder}
-                      />
-                    </FormField>
                   </div>
                 </div>
 
@@ -461,9 +442,7 @@ export function BranchWasteApprovalsClient({
                         variant="destructive"
                         size="touch-lg"
                         className="flex-1"
-                        onClick={() =>
-                          void requestDecision(selectedRow, "rejected")
-                        }
+                        onClick={() => setRejectingIssueId(selectedRow.issueId)}
                         disabled={isSubmitting}
                       >
                         {pendingDecision?.issueId === selectedRow.issueId &&
@@ -501,6 +480,55 @@ export function BranchWasteApprovalsClient({
             ) : null}
           </SheetContent>
         </Sheet>
+        <ReasonConfirmDialog
+          open={rejectingIssueId !== null}
+          onOpenChange={(open) => {
+            if (!open && !isSubmitting) {
+              setRejectingIssueId(null);
+              if (rejectingIssueId !== null) {
+                setReviewNotes((current) => {
+                  const next = { ...current };
+                  delete next[rejectingIssueId];
+                  return next;
+                });
+              }
+            }
+          }}
+          title={copy.rejectTitle}
+          description={selectedRow?.issueNumber}
+          reasonId="branch-waste-reject-reason"
+          reason={
+            rejectingIssueId === null
+              ? ""
+              : (reviewNotes[rejectingIssueId] ?? "")
+          }
+          onReasonChange={(reason) => {
+            if (rejectingIssueId === null) return;
+            setReviewNotes((current) => ({
+              ...current,
+              [rejectingIssueId]: reason,
+            }));
+          }}
+          reasonLabel={copy.rejectReason}
+          reasonPlaceholder={copy.reviewNotePlaceholder}
+          reasonMinLength={5}
+          reasonTextareaProps={{ maxLength: 500, autoFocus: true }}
+          cancelLabel={copy.rejectCancel}
+          cancelDisabled={isSubmitting}
+          confirmLabel={copy.reject}
+          confirmVariant="destructive"
+          actionSize="touch"
+          isPending={
+            pendingDecision?.issueId === rejectingIssueId &&
+            pendingDecision.decision === "rejected"
+          }
+          onConfirm={() => {
+            const row = rows.find(
+              (candidate) => candidate.issueId === rejectingIssueId,
+            );
+            if (row) void requestDecision(row, "rejected");
+          }}
+        />
       </div>
     </BranchOperatorPage>
   );

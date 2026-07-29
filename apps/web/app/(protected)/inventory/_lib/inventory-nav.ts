@@ -41,17 +41,12 @@ function canShowPurchaseOrders(role: StaffRole): boolean {
   return role === "owner" || role === "accountant";
 }
 
-/** D093: recipes menu BOM / production recipes — not central_supply. */
-function canShowRecipes(
+/** Menu-item consumption recipes are owner-managed catalog data. */
+function canShowMenuRecipes(
   role: StaffRole,
-  showProduction: boolean,
   showCatalogManagement: boolean,
 ): boolean {
-  if (role === "central_supply_ops") return false;
-  if (showCatalogManagement) return true;
-  if (showProduction && role === "central_kitchen_lead") return true;
-  if (role === "owner" && (showProduction || showCatalogManagement)) return true;
-  return false;
+  return role === "owner" && showCatalogManagement;
 }
 
 export type InventoryNavFlags = {
@@ -81,6 +76,11 @@ export function resolveInventoryNav({
           {
             title: "Nhập hàng",
             items: [
+              {
+                href: "/inventory/purchase-requests",
+                label: "Yêu cầu mua",
+                icon: IconClipboardList,
+              },
               {
                 href: "/inventory/grn",
                 label: "Nhập kho",
@@ -124,6 +124,11 @@ export function resolveInventoryNav({
 
   const inboundItems: ShellNavGroup["items"] = [];
   if (showProcurement) {
+    inboundItems.push({
+      href: "/inventory/purchase-requests",
+      label: "Yêu cầu mua",
+      icon: IconClipboardList,
+    });
     inboundItems.push({
       href: "/inventory/grn",
       label: "Nhập kho",
@@ -206,10 +211,10 @@ export function resolveInventoryNav({
     });
   }
 
-  if (canShowRecipes(userRole, showProduction, showCatalogManagement)) {
+  if (canShowMenuRecipes(userRole, showCatalogManagement)) {
     catalogItems.push({
-      href: "/inventory/recipes",
-      label: tNav("recipes", "navigation"),
+      href: "/inventory/menu-recipes",
+      label: tNav("menuRecipes", "navigation"),
       icon: IconToolsKitchen,
     });
   }

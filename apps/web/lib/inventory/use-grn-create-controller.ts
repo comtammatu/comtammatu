@@ -260,7 +260,10 @@ export function useGrnCreateController({
     });
     if (!ok) return;
     if (serverGrnId !== null) {
-      const result = await discardGrnDraft({ grnId: serverGrnId });
+      const result = await discardGrnDraft({
+        grnId: serverGrnId,
+        reason: "Người dùng hủy phiếu nháp.",
+      });
       if (!result.success) {
         setSubmitError(result.error ?? GRN_CREATE_COPY.toastDiscardDraftFailed);
         return;

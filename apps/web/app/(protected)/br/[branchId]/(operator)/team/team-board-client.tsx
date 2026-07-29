@@ -16,7 +16,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Item,
@@ -597,6 +597,9 @@ export function TeamBoardClient({
     initialTeamBoardFilter(displayRows, capabilities),
   );
   const [drawerRow, setDrawerRow] = useState<TeamBoardDisplayRow | null>(null);
+  const [forceCloseRow, setForceCloseRow] =
+    useState<TeamBoardDisplayRow | null>(null);
+  const [forceCloseReason, setForceCloseReason] = useState("");
   const [isForceClosing, startForceCloseTransition] = useTransition();
   const router = useRouter();
   const filteredRows = displayRows.filter((row) =>
@@ -614,27 +617,23 @@ export function TeamBoardClient({
     );
   }
 
-  async function forceClose(row: TeamBoardDisplayRow) {
+  function requestForceClose(row: TeamBoardDisplayRow) {
     const shift = row.shift;
     if (!shift || !isPastShiftEnd(shift)) return;
+    setForceCloseReason("");
+    setForceCloseRow(row);
+  }
 
-    const confirmed = await confirm({
-      title: copy.forceCloseTitle,
-      description: copy.forceCloseDescription,
-      details: [
-        { label: copy.columnEmployee, value: row.fullName },
-        { label: copy.columnShift, value: shift.shiftName ?? copy.shiftNone },
-        { label: copy.forceCloseWorkday, value: copy.forceCloseNoWorkday },
-      ],
-      confirmText: copy.drawerActionForceClose,
-      variant: "destructive",
-    });
-    if (!confirmed) return;
+  function confirmForceClose() {
+    const row = forceCloseRow;
+    const shift = row?.shift;
+    if (!row || !shift || !isPastShiftEnd(shift)) return;
 
     startForceCloseTransition(async () => {
       const result = await forceCloseStaleAttendance({
         attendanceId: shift.attendanceId,
         branchId,
+        note: forceCloseReason.trim(),
       });
       if (!result.success) {
         toast.error(result.error ?? copy.forceCloseFailed);
@@ -642,6 +641,8 @@ export function TeamBoardClient({
       }
 
       toast.success(copy.forceCloseSuccess(row.fullName));
+      setForceCloseRow(null);
+      setForceCloseReason("");
       setDrawerRow(null);
       router.refresh();
     });
@@ -752,7 +753,7 @@ export function TeamBoardClient({
                         size="touch"
                         className="w-full"
                         disabled={isForceClosing}
-                        onClick={() => void forceClose(drawerRow)}
+                        onClick={() => requestForceClose(drawerRow)}
                       >
                         {copy.drawerActionForceClose}
                       </Button>
@@ -799,6 +800,31 @@ export function TeamBoardClient({
           )}
         </DrawerContent>
       </Drawer>
+      <ReasonConfirmDialog
+        open={forceCloseRow !== null}
+        onOpenChange={(open) => {
+          if (!open && !isForceClosing) {
+            setForceCloseRow(null);
+            setForceCloseReason("");
+          }
+        }}
+        title={copy.forceCloseTitle}
+        description={copy.forceCloseDescription}
+        reasonId="team-force-close-reason"
+        reason={forceCloseReason}
+        onReasonChange={setForceCloseReason}
+        reasonLabel={copy.forceCloseReason}
+        reasonPlaceholder={copy.forceCloseReasonPlaceholder}
+        reasonMinLength={5}
+        reasonTextareaProps={{ maxLength: 500, autoFocus: true }}
+        cancelLabel={copy.forceCloseCancel}
+        cancelDisabled={isForceClosing}
+        confirmLabel={copy.drawerActionForceClose}
+        confirmVariant="destructive"
+        actionSize="touch"
+        isPending={isForceClosing}
+        onConfirm={confirmForceClose}
+      />
     </>
   );
 }

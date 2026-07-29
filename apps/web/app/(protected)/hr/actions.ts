@@ -1172,7 +1172,11 @@ export const getAttendancePhotoUrl = withAction(
 const forceCloseStaleAttendanceSchema = z.object({
   attendanceId: z.coerce.number().int().positive(),
   branchId: z.coerce.number().int().positive(),
-  note: z.string().trim().optional(),
+  note: z
+    .string()
+    .trim()
+    .min(5, "Lý do đóng ca phải có ít nhất 5 ký tự")
+    .max(500),
 });
 
 function mapForceCloseAttendanceError(message: string | undefined): string {
@@ -1211,11 +1215,6 @@ export const forceCloseStaleAttendance = withAction(
       };
     }
 
-    const note =
-      typeof data.note === "string" && data.note.trim().length > 0
-        ? data.note
-        : "Force closed: Quên kết ca trong ngày (không tính công)";
-
     const { data: checkOutTime, error } = await supabase.rpc(
       "force_close_stale_attendance",
       {
@@ -1223,7 +1222,7 @@ export const forceCloseStaleAttendance = withAction(
         p_branch_id: data.branchId,
         p_attendance_id: data.attendanceId,
         p_approved_by: user.id,
-        p_note: note,
+        p_note: data.note,
       },
     );
 

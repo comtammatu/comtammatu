@@ -567,12 +567,14 @@ runtime authority.
 **Canonical:** `docs/spec/design-system.md` § Artifact Ladder, `docs/modules/ui.md`
 § UI Block Selection, `scripts/ui-component-registry.mjs`.
 
-## D087: Mã chứng từ Inventory tuần tự PREFIX-YYYY-#### (2026-07-28)
+## D087: Mã chứng từ Inventory tuần tự PREFIX-DDMMYYYY-#### (2026-07-29)
 
 **Decision:** Phiếu kho mới (GRN, điều chuyển, xuất kho, hao hụt, lệnh SX, kiểm
-kê, phiếu đếm) nhận mã tuần tự `{PREFIX}-{YYYY}-{####}` qua
-`next_inventory_doc_number` (năm VN). PO giữ `next_po_display_id`. Không rewrite
-mã lịch sử; tiêu hao HRM giữ `THB-{report_id}`.
+kê, phiếu đếm, yêu cầu hàng) nhận mã tuần tự
+`{PREFIX}-{DDMMYYYY}-{####}` qua `next_inventory_doc_number` (ngày VN). PO dùng
+`next_po_display_id` và cùng format. Sequence vẫn theo tenant, loại phiếu và năm;
+không reset theo ngày. Không rewrite mã lịch sử; tiêu hao HRM giữ
+`THB-{report_id}`.
 
 **Canonical:** `docs/ref/inventory.md` § Mã chứng từ kho.
 
@@ -700,3 +702,30 @@ import `ControlSurfaceShell` trực tiếp — không còn alias
 **Canonical:** `docs/ref/inventory-role-ops.md`, `docs/ref/inventory.md` §11,
 `docs/ref/inventory-sop.md`, `docs/spec/role-route-matrix.md`,
 `supabase/migrations/20260729140000_d093_central_grn_branch_stock_request.sql`.
+
+## D096: Yêu cầu mua → PO theo NCC → GRN theo lần giao → công nợ (2026-07-29)
+
+**Decision (owner):**
+
+1. Má Tư là bên mua; NCC là bên bán. `Yêu cầu hàng` tiếp tục là luồng cấp hàng
+   nội bộ. `Yêu cầu mua` là nhu cầu mua ngoài do kho trung tâm lập.
+2. Một yêu cầu mua tạo nhiều PO; mỗi PO thuộc đúng một yêu cầu mua và một NCC.
+   PO `sent | partially_received` tạo thủ công một GRN nháp cho lần giao thực
+   tế. Mỗi GRN thuộc đúng một PO; một PO có nhiều GRN đã chốt nhưng tối đa một
+   GRN nháp đang hoạt động.
+3. GRN nháp dùng nhãn UI **Chờ nhập hàng**. Dòng GRN giữ định danh dòng PO.
+   `po_applied_quantity` chỉ hoàn thành phần còn lại của PO; phần nhận hợp lệ
+   vượt đơn là `excess_quantity`, nhập tồn với giá `0`. Hàng tặng biết trước là
+   dòng PO riêng có đơn giá `0`; không có entity khuyến mãi.
+4. Hóa đơn NCC là chứng từ riêng và có thể phân bổ cho nhiều GRN/PO cùng NCC.
+   Thanh toán và phiếu giảm công nợ phân bổ nhiều-nhiều với hóa đơn; phần thanh
+   toán chưa phân bổ là ứng trước. Trả hàng không tự giảm công nợ.
+5. Dữ liệu xác nhận cũ giữ nguyên. GRN nháp đa PO cũ chỉ hoàn tất hoặc hủy theo
+   chế độ tương thích; không tự tách bằng suy đoán.
+
+**Supersedes:** D091 §3-4, D092 và D094 trong phạm vi trình tự mua/nhập mới.
+D091 topology một warehouse/site, D093 central-only GRN và `stock_requests`
+nội bộ tiếp tục áp dụng.
+
+**Canonical:** `docs/ref/inventory.md`, `docs/ref/inventory-role-ops.md`,
+`docs/ref/glossary.md`, `docs/ref/screen-context-map.md`.

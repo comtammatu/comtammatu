@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  calculateGrnQuantities,
   createEditableGrnLine,
+  hasAcceptedGrnQuantity,
   isGrnLookupParam,
 } from "../lib/inventory/grn-detail-model";
 
@@ -35,6 +37,8 @@ test("new locally-added GRN detail line starts persisted without manual QC state
     quantity: 10,
     entryUnitId: 2,
     unit: "kg",
+    supplierId: 3,
+    supplierName: "NCC Gạo",
   });
 
   assert.deepEqual(
@@ -52,5 +56,37 @@ test("new locally-added GRN detail line starts persisted without manual QC state
       rejected: 0,
       dirty: false,
     },
+  );
+});
+
+test("GRN quantities cap PO fulfillment and keep accepted excess separate", () => {
+  assert.deepEqual(calculateGrnQuantities(54, 0, 48), {
+    acceptedQuantity: 54,
+    poAppliedQuantity: 48,
+    shortageQuantity: 0,
+    excessQuantity: 6,
+  });
+  assert.deepEqual(calculateGrnQuantities(40, 2, 48), {
+    acceptedQuantity: 38,
+    poAppliedQuantity: 38,
+    shortageQuantity: 10,
+    excessQuantity: 0,
+  });
+});
+
+test("GRN can only be confirmed after at least one accepted quantity", () => {
+  assert.equal(
+    hasAcceptedGrnQuantity([
+      { actual: 0, rejected: 0 },
+      { actual: 5, rejected: 5 },
+    ]),
+    false,
+  );
+  assert.equal(
+    hasAcceptedGrnQuantity([
+      { actual: 0, rejected: 0 },
+      { actual: 5, rejected: 1 },
+    ]),
+    true,
   );
 });

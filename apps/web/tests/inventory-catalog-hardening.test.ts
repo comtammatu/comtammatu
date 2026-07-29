@@ -16,7 +16,7 @@ const ingredientActionSource = readRepo(
   "apps/web/app/(protected)/inventory/ingredient-actions.ts",
 );
 const recipeActionSource = readRepo(
-  "apps/web/app/(protected)/inventory/recipe-actions.ts",
+  "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
 );
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {

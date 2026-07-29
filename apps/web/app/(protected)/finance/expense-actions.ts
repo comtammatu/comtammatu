@@ -73,9 +73,7 @@ interface RefundSearchRow {
   order_id: number;
   webhook_event_id: number | null;
   orders:
-    | { order_number: string | null }
-    | { order_number: string | null }[]
-    | null;
+    { order_number: string | null } | { order_number: string | null }[] | null;
 }
 
 const createExpenseSchema = z
@@ -86,7 +84,11 @@ const createExpenseSchema = z
     vatBreakdown: z.array(expenseVatLineSchema).min(1).max(4),
     paymentMethod: z.enum(EXPENSE_PAYMENT_METHODS),
     vendorName: z.string().trim().max(200).optional(),
-    note: z.string().trim().max(500).optional(),
+    note: z
+      .string()
+      .trim()
+      .min(5, "Nội dung chi phải có ít nhất 5 ký tự")
+      .max(500),
     invoiceAttachmentUrl: z
       .string()
       .trim()
@@ -94,9 +96,7 @@ const createExpenseSchema = z
       .optional()
       .refine(
         (value) =>
-          value == null ||
-          value.length === 0 ||
-          /^https?:\/\//i.test(value),
+          value == null || value.length === 0 || /^https?:\/\//i.test(value),
         { error: "Đường dẫn hóa đơn không hợp lệ" },
       ),
   })
@@ -429,11 +429,7 @@ export async function fetchExpenses(params: {
   const expenseIds = rows.map((row) => row.id);
   const [matchedByExpense, matchedByBankTransaction] = await Promise.all([
     fetchExpenseMatchMap(supabase, claims.tenant_id, expenseIds),
-    fetchExpenseBankTransactionMatchMap(
-      supabase,
-      claims.tenant_id,
-      expenseIds,
-    ),
+    fetchExpenseBankTransactionMatchMap(supabase, claims.tenant_id, expenseIds),
   ]);
 
   return {
@@ -441,8 +437,7 @@ export async function fetchExpenses(params: {
     data: rows.map((row) => ({
       ...row,
       matchedEventIds: matchedByExpense.get(row.id) ?? [],
-      matchedBankTransactionIds:
-        matchedByBankTransaction.get(row.id) ?? [],
+      matchedBankTransactionIds: matchedByBankTransaction.get(row.id) ?? [],
     })),
   };
 }
@@ -827,12 +822,13 @@ export async function matchSepayTransactionWithSupplierPayments(
   const legacyResult =
     canonicalResult != null || parsed.data.eventId == null
       ? null
-      : await (
-          ctx.supabase as unknown as SupplierPaymentMatchRpcClient
-        ).rpc("match_sepay_transaction_supplier_payments", {
-          p_event_id: parsed.data.eventId,
-          p_supplier_payment_ids: supplierPaymentIds,
-        });
+      : await (ctx.supabase as unknown as SupplierPaymentMatchRpcClient).rpc(
+          "match_sepay_transaction_supplier_payments",
+          {
+            p_event_id: parsed.data.eventId,
+            p_supplier_payment_ids: supplierPaymentIds,
+          },
+        );
   const error = canonicalResult?.error ?? legacyResult?.error ?? null;
 
   if (error) {

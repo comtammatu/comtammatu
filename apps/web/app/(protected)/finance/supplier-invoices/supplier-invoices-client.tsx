@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import {
   DataTable,
   type DataTableColumn,
@@ -81,11 +82,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
-import {
-  inventoryListFilterSelectClassName,
-} from "../../inventory/_components/inventory-list-frame";
+import { inventoryListFilterSelectClassName } from "../../inventory/_components/inventory-list-frame";
 import {
   attachSupplierInvoiceVatEvidence,
+  acceptSupplierInvoiceDiscrepancy,
+  createSupplierCreditAllocated,
   createSupplierInvoice,
   fetchSupplierInvoicesPage,
   recordSupplierPayment,
@@ -193,6 +194,7 @@ const supplierInvoiceSchema = z
     vat8Amount: optionalMoneySchema,
     vat10Taxable: optionalMoneySchema,
     vat10Amount: optionalMoneySchema,
+    documentDiscount: optionalMoneySchema,
   })
   .superRefine((data, ctx) => {
     const hasTaxableBucket = VAT_BUCKET_FIELDS.some(
@@ -258,8 +260,7 @@ function moveVatBucketFields(
   const from = getVatBucket(fromRate);
   const to = getVatBucket(toRate);
   const taxable = form.getValues(from.taxableField);
-  const vatAmount =
-    from.vatField != null ? form.getValues(from.vatField) : "";
+  const vatAmount = from.vatField != null ? form.getValues(from.vatField) : "";
   form.setValue(to.taxableField, taxable, {
     shouldDirty: true,
     shouldValidate: true,
@@ -301,6 +302,20 @@ const supplierPaymentSchema = z.object({
 
 type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>;
 
+const supplierCreditSchema = z.object({
+  creditNumber: z.string().trim().min(1, FORM_VI.required),
+  amount: z.string().refine((value) => Number(value) > 0, {
+    error: FORM_VI.required,
+  }),
+  notes: z
+    .string()
+    .trim()
+    .min(5, "Lý do giảm công nợ phải có ít nhất 5 ký tự")
+    .max(500),
+});
+
+type SupplierCreditFormValues = z.infer<typeof supplierCreditSchema>;
+
 function createSupplierInvoiceDefaultValues(
   preselectGrnOptionKey?: string | null,
 ): SupplierInvoiceFormValues {
@@ -316,14 +331,18 @@ function createSupplierInvoiceDefaultValues(
     vat8Amount: "",
     vat10Taxable: "",
     vat10Amount: "",
+    documentDiscount: "",
   };
 }
 
 function createSupplierPaymentDefaultValues(
   invoice?: SupplierInvoiceRow | null,
+  outstanding?: number,
 ): SupplierPaymentFormValues {
   return {
-    amount: invoice ? String(getSupplierInvoiceOutstandingAmount(invoice)) : "",
+    amount: invoice
+      ? String(outstanding ?? getSupplierInvoiceOutstandingAmount(invoice))
+      : "",
     paymentMethod: "bank_transfer",
     referenceNote: "",
   };
@@ -419,10 +438,12 @@ function SupplierInvoiceCreateFields({
 }) {
   const grnId = form.watch("grnId");
   const formValues = form.watch();
-  const selectedGrn =
-    grnId !== "none"
-      ? (grns.find((option) => option.optionKey === grnId) ?? null)
-      : null;
+  const selectedGrnKeys =
+    grnId === "none" ? [] : grnId.split(",").filter(Boolean);
+  const selectedGrns = grns.filter((option) =>
+    selectedGrnKeys.includes(option.optionKey),
+  );
+  const selectedGrn = selectedGrns[0] ?? null;
   const [visibleRates, setVisibleRates] = useState<VatRate[]>([
     DEFAULT_VISIBLE_VAT_RATE,
   ]);
@@ -438,9 +459,7 @@ function SupplierInvoiceCreateFields({
   );
 
   useEffect(() => {
-    if (!selectedGrn) {
-      return;
-    }
+    if (!selectedGrn) return;
 
     const nextSupplierId = String(selectedGrn.supplierId);
     if (form.getValues("supplierId") !== nextSupplierId) {
@@ -457,15 +476,18 @@ function SupplierInvoiceCreateFields({
     }
 
     const bucket = getVatBucket(DEFAULT_VISIBLE_VAT_RATE);
-    if (selectedGrn.netAcceptedAmount != null) {
-      form.setValue(
-        bucket.taxableField,
-        String(selectedGrn.netAcceptedAmount),
-        {
-          shouldDirty: true,
-          shouldValidate: true,
-        },
-      );
+    const selectedReceiptValue = selectedGrns.reduce(
+      (sum, receipt) => sum + (receipt.netAcceptedAmount ?? 0),
+      0,
+    );
+    if (
+      selectedGrns.length > 0 &&
+      selectedGrns.every((receipt) => receipt.netAcceptedAmount != null)
+    ) {
+      form.setValue(bucket.taxableField, String(selectedReceiptValue), {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
     } else {
       form.setValue(bucket.taxableField, "", {
         shouldDirty: true,
@@ -478,23 +500,8 @@ function SupplierInvoiceCreateFields({
         shouldValidate: true,
       });
     }
-  }, [
-    form,
-    selectedGrn?.optionKey,
-    selectedGrn?.netAcceptedAmount,
-    selectedGrn?.supplierId,
-  ]);
+  }, [form, grnId, selectedGrn?.supplierId]);
 
-  const grnOptions = useMemo(
-    () => [
-      ...grns.map((option) => ({
-        value: option.optionKey,
-        label: `${option.code} · ${option.supplierName}`,
-      })),
-      { value: "none", label: copy.noLinkedGrn },
-    ],
-    [copy.noLinkedGrn, grns],
-  );
   const supplierOptions = useMemo(
     () =>
       suppliers.map((option) => ({
@@ -504,6 +511,25 @@ function SupplierInvoiceCreateFields({
     [suppliers],
   );
 
+  function toggleGrn(option: GrnOption) {
+    const isSelected = selectedGrnKeys.includes(option.optionKey);
+    const next = isSelected
+      ? selectedGrnKeys.filter((key) => key !== option.optionKey)
+      : [
+          ...selectedGrnKeys.filter((key) => {
+            const current = grns.find(
+              (candidate) => candidate.optionKey === key,
+            );
+            return current?.supplierId === option.supplierId;
+          }),
+          option.optionKey,
+        ];
+    form.setValue("grnId", next.length > 0 ? next.join(",") : "none", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }
+
   function handleRateChange(index: number, nextRate: VatRate) {
     const currentRate = visibleRates[index];
     if (currentRate == null || currentRate === nextRate) return;
@@ -511,9 +537,7 @@ function SupplierInvoiceCreateFields({
 
     moveVatBucketFields(form, currentRate, nextRate);
     setVisibleRates((current) =>
-      current.map((rate, rateIndex) =>
-        rateIndex === index ? nextRate : rate,
-      ),
+      current.map((rate, rateIndex) => (rateIndex === index ? nextRate : rate)),
     );
   }
 
@@ -537,25 +561,70 @@ function SupplierInvoiceCreateFields({
     <>
       <div className="flex flex-col gap-3">
         <p className="text-sm font-medium">{copy.documentSection}</p>
-        <SelectField
-          control={form.control}
-          name="grnId"
-          label={copy.linkedGrn}
-          options={grnOptions}
-          placeholder={copy.chooseGrnPrimary}
-        />
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">{copy.linkedGrn}</p>
+          <div className="grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2">
+            {grns.map((option) => {
+              const isSelected = selectedGrnKeys.includes(option.optionKey);
+              const disabled =
+                selectedGrn != null &&
+                selectedGrn.supplierId !== option.supplierId;
+              return (
+                <Button
+                  key={option.optionKey}
+                  type="button"
+                  variant={isSelected ? "secondary" : "outline"}
+                  className="h-auto justify-start py-2 text-left"
+                  disabled={disabled}
+                  aria-pressed={isSelected}
+                  onClick={() => toggleGrn(option)}
+                >
+                  <span>
+                    <span className="block font-mono">{option.code}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {option.supplierName}
+                    </span>
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() =>
+              form.setValue("grnId", "none", {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+          >
+            {copy.noLinkedGrn}
+          </Button>
+        </div>
         {selectedGrn ? (
           <NoteCallout tone="muted">
             <div className="flex flex-col gap-1 text-sm">
               <span>
-                {selectedGrn.code} · {selectedGrn.supplierName}
+                {selectedGrns.map((receipt) => receipt.code).join(" · ")} ·{" "}
+                {selectedGrn.supplierName}
               </span>
-              {selectedGrn.netAcceptedAmount != null ? (
+              {selectedGrns.every(
+                (receipt) => receipt.netAcceptedAmount != null,
+              ) ? (
                 <span className="text-muted-foreground">
                   {copy.grnNetAcceptedLabel}:{" "}
                   <span className="font-mono tabular-nums text-foreground">
                     {messages.inventory.common.currencyCompact(
-                      formatVND(selectedGrn.netAcceptedAmount),
+                      formatVND(
+                        selectedGrns.reduce(
+                          (sum, receipt) =>
+                            sum + (receipt.netAcceptedAmount ?? 0),
+                          0,
+                        ),
+                      ),
                     )}
                   </span>
                 </span>
@@ -605,10 +674,7 @@ function SupplierInvoiceCreateFields({
               label: formatPercent(entry.rate, 0),
             }));
             return (
-              <div
-                key={`${rate}-${index}`}
-                className="flex flex-col gap-3"
-              >
+              <div key={`${rate}-${index}`} className="flex flex-col gap-3">
                 <div className="flex items-end gap-2">
                   <div className="flex min-w-0 flex-1 flex-col gap-2">
                     <p className="text-sm font-medium">{copy.vatRateLabel}</p>
@@ -689,6 +755,12 @@ function SupplierInvoiceCreateFields({
             {copy.addVatRate}
           </Button>
         ) : null}
+        <MoneyVndField
+          control={form.control}
+          name="documentDiscount"
+          label={copy.documentDiscount}
+          placeholder="0"
+        />
         <NoteCallout tone="muted">
           {vatBreakdown.map((line) => (
             <div
@@ -719,7 +791,9 @@ function SupplierInvoiceCreateFields({
           <div className="mt-2 flex items-center justify-between gap-3">
             <span className="text-muted-foreground">{FORM_VI.totalAmount}</span>
             <span className="font-mono font-semibold tabular-nums">
-              {messages.inventory.common.currencyCompact(formatVND(totalAmount))}
+              {messages.inventory.common.currencyCompact(
+                formatVND(totalAmount),
+              )}
             </span>
           </div>
         </NoteCallout>
@@ -852,6 +926,7 @@ export function SupplierInvoicesClient({
   description,
   canPaySupplier = false,
   canAttachVatEvidence = false,
+  canAcceptDiscrepancy = false,
 }: {
   invoices: SupplierInvoiceRow[];
   suppliers: SupplierOption[];
@@ -867,6 +942,7 @@ export function SupplierInvoicesClient({
   description?: string;
   canPaySupplier?: boolean;
   canAttachVatEvidence?: boolean;
+  canAcceptDiscrepancy?: boolean;
 }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -900,6 +976,9 @@ export function SupplierInvoicesClient({
     preselectGrnId != null && preselectInvoiceId == null,
   );
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [creditOpen, setCreditOpen] = useState(false);
+  const [acceptDiscrepancyOpen, setAcceptDiscrepancyOpen] = useState(false);
+  const [acceptDiscrepancyReason, setAcceptDiscrepancyReason] = useState("");
   const [vatUploading, setVatUploading] = useState(false);
   const [pendingCreateVatFile, setPendingCreateVatFile] = useState<File | null>(
     null,
@@ -1065,9 +1144,40 @@ export function SupplierInvoicesClient({
       (invoice) => rowById.get(invoice.id) ?? invoice,
     );
   }, [rows, selectedGroup]);
+  const payableInvoicesInSelectedGroup = useMemo(
+    () =>
+      invoicesInSelectedGroup.filter(
+        (invoice) =>
+          invoice.matchStatus === "matched" &&
+          invoice.vatInvoiceAttachmentPath != null &&
+          getSupplierInvoiceOutstandingAmount(invoice) > 0,
+      ),
+    [invoicesInSelectedGroup],
+  );
+  const paymentOutstandingAmount = payableInvoicesInSelectedGroup.reduce(
+    (sum, invoice) => sum + getSupplierInvoiceOutstandingAmount(invoice),
+    0,
+  );
   const paymentDefaultValues = useMemo(
-    () => createSupplierPaymentDefaultValues(selectedInvoice),
-    [selectedInvoice?.id, selectedOutstandingAmount],
+    () =>
+      createSupplierPaymentDefaultValues(
+        selectedInvoice,
+        paymentOutstandingAmount,
+      ),
+    [selectedInvoice?.id, paymentOutstandingAmount],
+  );
+  const creditDefaultValues = useMemo(
+    () => ({
+      creditNumber: "",
+      amount: String(
+        invoicesInSelectedGroup.reduce(
+          (sum, invoice) => sum + getSupplierInvoiceOutstandingAmount(invoice),
+          0,
+        ),
+      ),
+      notes: "",
+    }),
+    [invoicesInSelectedGroup],
   );
 
   const showEmptyResults =
@@ -1214,10 +1324,16 @@ export function SupplierInvoicesClient({
   }
 
   async function handleCreateInvoice(values: SupplierInvoiceFormValues) {
-    const selectedGrn =
-      values.grnId !== "none"
-        ? (grns.find((option) => option.optionKey === values.grnId) ?? null)
-        : null;
+    const selectedGrns =
+      values.grnId === "none"
+        ? []
+        : grns.filter((option) =>
+            values.grnId.split(",").includes(option.optionKey),
+          );
+    const selectedGrn = selectedGrns[0] ?? null;
+    if (selectedGrns.some((receipt) => receipt.poId == null)) {
+      return { success: false, error: copy.missingPoForReceipt };
+    }
     const resolvedSupplierId =
       selectedGrn?.supplierId ?? Number(values.supplierId || 0);
     const pendingFile = pendingCreateVatFile;
@@ -1225,9 +1341,14 @@ export function SupplierInvoicesClient({
       supplierId: resolvedSupplierId,
       grnId: selectedGrn?.id ?? null,
       poId: selectedGrn?.poId ?? null,
+      receiptAllocations: selectedGrns.map((receipt) => ({
+        grnId: receipt.id,
+        poId: receipt.poId!,
+      })),
       invoiceNumber: values.invoiceNumber.trim(),
       invoiceDate: values.invoiceDate,
       vatBreakdown: buildSupplierInvoiceVatBreakdown(values),
+      documentDiscountAmount: Number(values.documentDiscount || 0),
     });
 
     if (res.success && res.data) {
@@ -1266,8 +1387,18 @@ export function SupplierInvoicesClient({
     }
 
     const amount = Number(values.amount || 0);
-    if (amount > selectedOutstandingAmount) {
-      return { success: false, error: copy.paymentTooLarge };
+    let remaining = amount;
+    const allocations = payableInvoicesInSelectedGroup.flatMap((invoice) => {
+      if (remaining <= 0) return [];
+      const allocated = Math.min(
+        remaining,
+        getSupplierInvoiceOutstandingAmount(invoice),
+      );
+      remaining -= allocated;
+      return [{ invoiceId: invoice.id, amount: allocated }];
+    });
+    if (allocations.length === 0) {
+      return { success: false, error: copy.noPaymentInvoice };
     }
 
     const idempotencyKey = resolveSupplierPaymentIntentKey(
@@ -1279,6 +1410,8 @@ export function SupplierInvoicesClient({
     try {
       const res = await recordSupplierPayment({
         invoiceId: selectedInvoice.id,
+        supplierId: selectedInvoice.supplierId,
+        allocations,
         idempotencyKey,
         amount,
         paymentMethod: values.paymentMethod,
@@ -1293,6 +1426,34 @@ export function SupplierInvoicesClient({
     } catch {
       return { success: false, error: copy.paymentRetrySameIntent };
     }
+  }
+
+  async function handleCreateCredit(values: SupplierCreditFormValues) {
+    if (!selectedInvoice) {
+      return { success: false, error: "Không tìm thấy hóa đơn NCC." };
+    }
+    let remaining = Number(values.amount);
+    const allocations = invoicesInSelectedGroup.flatMap((invoice) => {
+      if (remaining <= 0) return [];
+      const amount = Math.min(
+        remaining,
+        getSupplierInvoiceOutstandingAmount(invoice),
+      );
+      remaining -= amount;
+      return amount > 0 ? [{ invoiceId: invoice.id, amount }] : [];
+    });
+    if (allocations.length === 0) {
+      return { success: false, error: "Không còn công nợ để phân bổ." };
+    }
+    const result = await createSupplierCreditAllocated({
+      supplierId: selectedInvoice.supplierId,
+      creditNumber: values.creditNumber,
+      amount: Number(values.amount),
+      notes: values.notes,
+      allocations,
+    });
+    if (result.success) await reloadInvoices(selectedInvoice.id);
+    return result;
   }
 
   async function handleVatAttachmentUpload(file: File) {
@@ -1364,6 +1525,24 @@ export function SupplierInvoicesClient({
         return;
       }
       toast.success(copy.recomputeMatchingSuccess);
+      await reloadInvoices(selectedInvoice.id);
+    });
+  }
+
+  function handleAcceptDiscrepancy() {
+    if (!selectedInvoice) return;
+    startTransition(async () => {
+      const result = await acceptSupplierInvoiceDiscrepancy({
+        invoiceId: selectedInvoice.id,
+        reason: acceptDiscrepancyReason,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? copy.acceptDiscrepancyFailed);
+        return;
+      }
+      toast.success(copy.acceptDiscrepancySuccess);
+      setAcceptDiscrepancyOpen(false);
+      setAcceptDiscrepancyReason("");
       await reloadInvoices(selectedInvoice.id);
     });
   }
@@ -1524,8 +1703,7 @@ export function SupplierInvoicesClient({
     {
       key: "invoiceCount",
       header: copy.invoiceCountHeader,
-      className:
-        viewMode === "supplier" ? "min-w-20 text-right" : "min-w-40",
+      className: viewMode === "supplier" ? "min-w-20 text-right" : "min-w-40",
       render: (group) =>
         viewMode === "supplier" ? (
           <span className="font-mono text-sm tabular-nums">
@@ -1688,7 +1866,10 @@ export function SupplierInvoicesClient({
   const missingVatAttachment =
     selectedInvoice != null && !selectedInvoice.vatInvoiceAttachmentPath;
   const canShowPayAction =
-    canPaySupplier && selectedInvoice != null && selectedOutstandingAmount > 0;
+    canPaySupplier &&
+    selectedInvoice != null &&
+    selectedInvoice.matchStatus === "matched" &&
+    selectedOutstandingAmount > 0;
   const payIsPrimary =
     canShowPayAction &&
     selectedInvoice != null &&
@@ -1748,183 +1929,177 @@ export function SupplierInvoicesClient({
       />
 
       <AppListFrame
-            title={
-              viewMode === "supplier" ? copy.viewBySupplier : copy.viewByPo
-            }
-            headerHint={copy.groupCount(allInvoiceGroups.length, totalCount)}
-            toolbar={
-              <AppToolbar
-                variant="inline"
-                className="[&>[data-slot=toolbar-group]:first-child]:min-w-64"
-                search={
-                  <InputGroup size={controlSize} className="min-w-0 flex-1">
-                    <InputGroupAddon>
-                      <IconSearch />
-                    </InputGroupAddon>
-                    <InputGroupInput
-                      type="search"
-                      value={search}
-                      onChange={(event) => setSearch(event.target.value)}
-                      placeholder={copy.searchPlaceholder}
-                      aria-label={copy.searchPlaceholder}
-                    />
-                  </InputGroup>
-                }
-                filters={
-                  <>
-                    <Combobox
-                      value={supplierFilter}
-                      onValueChange={(value) =>
-                        replaceListParam(
-                          "supplierId",
-                          value === ALL_FILTER_VALUE ? null : value,
-                        )
-                      }
-                      options={[
-                        { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
-                        ...supplierOptions,
-                      ]}
-                      placeholder={copy.supplierPlaceholder}
-                      searchPlaceholder={copy.supplierSearchPlaceholder}
-                      aria-label={copy.supplierFilterAria}
-                      size={controlSize}
-                      triggerClassName={
-                        controlSize === "touch"
-                          ? "w-full"
-                          : inventoryListFilterSelectClassName
-                      }
-                    />
-
-                    <Select
-                      value={matchStatusFilter}
-                      onValueChange={(value) =>
-                        replaceListParam(
-                          "matchStatus",
-                          value === ALL_FILTER_VALUE ? null : value,
-                        )
-                      }
-                    >
-                      <SelectTrigger
-                        size={controlSize}
-                        className={
-                          controlSize === "touch"
-                            ? "w-full"
-                            : inventoryListFilterSelectClassName
-                        }
-                      >
-                        <SelectValue placeholder={copy.matchingPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          value={ALL_FILTER_VALUE}
-                          size={controlSize === "touch" ? "touch" : "default"}
-                        >
-                          {copy.allMatching}
-                        </SelectItem>
-                        {MATCH_FILTER_OPTIONS.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                            size={controlSize === "touch" ? "touch" : "default"}
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select
-                      value={paymentStatusFilter}
-                      onValueChange={(value) =>
-                        replaceListParam(
-                          "paymentStatus",
-                          value === ALL_FILTER_VALUE ? null : value,
-                        )
-                      }
-                    >
-                      <SelectTrigger
-                        size={controlSize}
-                        className={
-                          controlSize === "touch"
-                            ? "w-full"
-                            : inventoryListFilterSelectClassName
-                        }
-                      >
-                        <SelectValue placeholder={copy.paymentPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          value={ALL_FILTER_VALUE}
-                          size={controlSize === "touch" ? "touch" : "default"}
-                        >
-                          {copy.allPayments}
-                        </SelectItem>
-                        {PAYMENT_FILTER_OPTIONS.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                            size={controlSize === "touch" ? "touch" : "default"}
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </>
-                }
-                actions={viewModeActions}
-              />
-            }
-          >
-            <DataTable
-              columns={invoiceGroupColumns}
-              data={invoiceGroups}
-              getRowKey={(group) => group.id}
-              pageSize={50}
-              emptyTitle={
-                showEmptyResults
-                  ? copy.emptyMatchedTitle
-                  : copy.emptyInitialTitle
-              }
-              emptyDescription={
-                showEmptyResults
-                  ? copy.emptyMatchedDescription
-                  : copy.emptyInitialDescription
-              }
-              emptyMode={showEmptyResults ? "no-results" : "no-data"}
-              onRowClick={(group) => {
-                const primaryInvoice = getPrimaryInvoice(group);
-                if (primaryInvoice) openInvoiceDetail(primaryInvoice.id);
-              }}
-              getRowAriaLabel={(group) =>
-                `${copy.groupDetailAction}: ${group.title}`
-              }
-              getRowDataState={(group) =>
-                group.id === activeGroupId && detailOpen
-                  ? "selected"
-                  : undefined
-              }
-              renderRowContextMenu={(group) => (
-                <RowActionsContextMenuItems
-                  items={getSupplierInvoiceGroupRowActions(group)}
+        title={viewMode === "supplier" ? copy.viewBySupplier : copy.viewByPo}
+        headerHint={copy.groupCount(allInvoiceGroups.length, totalCount)}
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            className="[&>[data-slot=toolbar-group]:first-child]:min-w-64"
+            search={
+              <InputGroup size={controlSize} className="min-w-0 flex-1">
+                <InputGroupAddon>
+                  <IconSearch />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={copy.searchPlaceholder}
+                  aria-label={copy.searchPlaceholder}
                 />
-              )}
-              mobileCardRender={renderInvoiceGroupCard}
-            />
-            {hasMore ? (
-              <div className="flex justify-center p-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
+              </InputGroup>
+            }
+            filters={
+              <>
+                <Combobox
+                  value={supplierFilter}
+                  onValueChange={(value) =>
+                    replaceListParam(
+                      "supplierId",
+                      value === ALL_FILTER_VALUE ? null : value,
+                    )
+                  }
+                  options={[
+                    { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
+                    ...supplierOptions,
+                  ]}
+                  placeholder={copy.supplierPlaceholder}
+                  searchPlaceholder={copy.supplierSearchPlaceholder}
+                  aria-label={copy.supplierFilterAria}
+                  size={controlSize}
+                  triggerClassName={
+                    controlSize === "touch"
+                      ? "w-full"
+                      : inventoryListFilterSelectClassName
+                  }
+                />
+
+                <Select
+                  value={matchStatusFilter}
+                  onValueChange={(value) =>
+                    replaceListParam(
+                      "matchStatus",
+                      value === ALL_FILTER_VALUE ? null : value,
+                    )
+                  }
                 >
-                  {copy.loadMore}
-                </Button>
-              </div>
-            ) : null}
-          </AppListFrame>
+                  <SelectTrigger
+                    size={controlSize}
+                    className={
+                      controlSize === "touch"
+                        ? "w-full"
+                        : inventoryListFilterSelectClassName
+                    }
+                  >
+                    <SelectValue placeholder={copy.matchingPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      value={ALL_FILTER_VALUE}
+                      size={controlSize === "touch" ? "touch" : "default"}
+                    >
+                      {copy.allMatching}
+                    </SelectItem>
+                    {MATCH_FILTER_OPTIONS.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        size={controlSize === "touch" ? "touch" : "default"}
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={paymentStatusFilter}
+                  onValueChange={(value) =>
+                    replaceListParam(
+                      "paymentStatus",
+                      value === ALL_FILTER_VALUE ? null : value,
+                    )
+                  }
+                >
+                  <SelectTrigger
+                    size={controlSize}
+                    className={
+                      controlSize === "touch"
+                        ? "w-full"
+                        : inventoryListFilterSelectClassName
+                    }
+                  >
+                    <SelectValue placeholder={copy.paymentPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      value={ALL_FILTER_VALUE}
+                      size={controlSize === "touch" ? "touch" : "default"}
+                    >
+                      {copy.allPayments}
+                    </SelectItem>
+                    {PAYMENT_FILTER_OPTIONS.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        size={controlSize === "touch" ? "touch" : "default"}
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            }
+            actions={viewModeActions}
+          />
+        }
+      >
+        <DataTable
+          columns={invoiceGroupColumns}
+          data={invoiceGroups}
+          getRowKey={(group) => group.id}
+          pageSize={50}
+          emptyTitle={
+            showEmptyResults ? copy.emptyMatchedTitle : copy.emptyInitialTitle
+          }
+          emptyDescription={
+            showEmptyResults
+              ? copy.emptyMatchedDescription
+              : copy.emptyInitialDescription
+          }
+          emptyMode={showEmptyResults ? "no-results" : "no-data"}
+          onRowClick={(group) => {
+            const primaryInvoice = getPrimaryInvoice(group);
+            if (primaryInvoice) openInvoiceDetail(primaryInvoice.id);
+          }}
+          getRowAriaLabel={(group) =>
+            `${copy.groupDetailAction}: ${group.title}`
+          }
+          getRowDataState={(group) =>
+            group.id === activeGroupId && detailOpen ? "selected" : undefined
+          }
+          renderRowContextMenu={(group) => (
+            <RowActionsContextMenuItems
+              items={getSupplierInvoiceGroupRowActions(group)}
+            />
+          )}
+          mobileCardRender={renderInvoiceGroupCard}
+        />
+        {hasMore ? (
+          <div className="flex justify-center p-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+            >
+              {copy.loadMore}
+            </Button>
+          </div>
+        ) : null}
+      </AppListFrame>
 
       <Sheet open={detailOpen} onOpenChange={handleDetailOpenChange}>
         <SheetContent
@@ -2221,6 +2396,29 @@ export function SupplierInvoicesClient({
                       {copy.payAction}
                     </Button>
                   ) : null}
+                  {canAcceptDiscrepancy &&
+                  selectedInvoice.matchStatus === "discrepancy" ? (
+                    <Button
+                      type="button"
+                      size="touch"
+                      variant="outline"
+                      onClick={() => setAcceptDiscrepancyOpen(true)}
+                      disabled={isPending}
+                    >
+                      {copy.acceptDiscrepancy}
+                    </Button>
+                  ) : null}
+                  {canAcceptDiscrepancy && selectedOutstandingAmount > 0 ? (
+                    <Button
+                      type="button"
+                      size="touch"
+                      variant="outline"
+                      onClick={() => setCreditOpen(true)}
+                      disabled={isPending}
+                    >
+                      {copy.creditAction}
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     size="touch"
@@ -2245,6 +2443,24 @@ export function SupplierInvoicesClient({
           )}
         </SheetContent>
       </Sheet>
+
+      <ReasonConfirmDialog
+        open={acceptDiscrepancyOpen}
+        onOpenChange={setAcceptDiscrepancyOpen}
+        title={copy.acceptDiscrepancy}
+        description={copy.acceptDiscrepancyDescription}
+        reasonId="supplier-invoice-discrepancy-reason"
+        reason={acceptDiscrepancyReason}
+        onReasonChange={setAcceptDiscrepancyReason}
+        reasonLabel={copy.discrepancyReason}
+        reasonPlaceholder={copy.discrepancyReasonPlaceholder}
+        reasonMinLength={5}
+        cancelLabel={ACTIONS_VI.cancel}
+        confirmLabel={copy.acceptDiscrepancy}
+        canConfirm={acceptDiscrepancyReason.trim().length >= 5}
+        isPending={isPending}
+        onConfirm={handleAcceptDiscrepancy}
+      />
 
       <FormDialog
         open={createOpen}
@@ -2292,8 +2508,48 @@ export function SupplierInvoicesClient({
           <SupplierPaymentFields
             form={form}
             copy={copy}
-            outstanding={selectedOutstandingAmount}
+            outstanding={paymentOutstandingAmount}
           />
+        )}
+      </FormDialog>
+
+      <FormDialog
+        open={creditOpen}
+        onOpenChange={setCreditOpen}
+        schema={supplierCreditSchema}
+        defaultValues={creditDefaultValues}
+        entityKey={selectedInvoice?.id ?? "supplier-credit"}
+        title={copy.creditTitle}
+        description={copy.creditDescription}
+        submitLabel={copy.creditSubmit}
+        cancelLabel={ACTIONS_VI.cancel}
+        successMessage={copy.creditSuccess}
+        contentClassName="sm:max-w-md"
+        onSubmit={handleCreateCredit}
+      >
+        {(form) => (
+          <>
+            <TextField
+              control={form.control}
+              name="creditNumber"
+              label="Số phiếu giảm công nợ"
+              required
+            />
+            <MoneyVndField
+              control={form.control}
+              name="amount"
+              label="Số tiền giảm"
+              required
+            />
+            <TextareaField
+              control={form.control}
+              name="notes"
+              label={copy.creditReason}
+              placeholder={copy.creditReasonPlaceholder}
+              rows={3}
+              required
+            />
+          </>
         )}
       </FormDialog>
     </AppPage>

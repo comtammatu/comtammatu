@@ -260,13 +260,15 @@ export function AppStickyFilterChrome({
           APP_PAGE_STICKY_FILTER_CLASSNAME,
           // Match the LIST card surface when covering scrolling rows.
           "bg-card transition-[margin,width,border-radius,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-move)]",
+          className,
+          // Stuck overrides caller radius / clip (flush LIST passes
+          // overflow-hidden rounded-t-lg at rest so bg follows Card corners).
           stuck
             ? [
                 APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME,
-                "rounded-none shadow-lg",
+                "overflow-visible rounded-none shadow-lg",
               ]
             : null,
-          className,
         )}
       >
         {children}
@@ -645,18 +647,58 @@ export function AppListFrame({
   children,
   className,
   toolbar,
+  contentClassName,
   ...sectionProps
 }: AppListFrameProps) {
+  // Untitled LIST: Card py would stack on AppToolbar pad and pagination.
+  // Titled LIST keeps top Card rhythm for the header, still flush bottom to the table.
+  // Wrap toolbar+body so CardContent's gap-3 has one child (borders separate chrome).
+  // Card keeps overflow-visible (sticky shell bleed). Flush corners clip on the
+  // edge surfaces themselves — same element needs overflow-hidden + radius or
+  // bg paints square past Card's rounded border.
+  const hasHeader = Boolean(
+    sectionProps.title ||
+      sectionProps.description ||
+      sectionProps.headerHint ||
+      sectionProps.icon ||
+      sectionProps.badge ||
+      sectionProps.action ||
+      sectionProps.collapsible,
+  );
+  const flushTop = !hasHeader;
+  const hasToolbar = toolbar != null;
+
   return (
     <AppSection
       {...sectionProps}
       // Override Card `overflow-hidden` so toolbar Select/Dropdown collision
       // and any non-portaled layer are not clipped by the LIST frame.
-      className={cn("overflow-visible", className)}
+      className={cn("overflow-visible", hasHeader ? "pb-0" : "py-0", className)}
       contentFlush
+      contentClassName={contentClassName}
     >
-      {toolbar ? <AppStickyFilterChrome>{toolbar}</AppStickyFilterChrome> : null}
-      {children}
+      <div className="flex min-w-0 flex-col">
+        {hasToolbar ? (
+          <AppStickyFilterChrome
+            className={
+              flushTop
+                ? "overflow-hidden rounded-t-lg"
+                : undefined
+            }
+          >
+            {toolbar}
+          </AppStickyFilterChrome>
+        ) : null}
+        <div
+          className={cn(
+            "min-w-0 overflow-hidden",
+            flushTop && !hasToolbar && "rounded-t-lg",
+            "rounded-b-lg",
+          )}
+        >
+          {children}
+        </div>
+      </div>
     </AppSection>
   );
 }
@@ -735,7 +777,7 @@ export function AppToolbar({
     const inlineToolbar = (
       <Toolbar
         className={cn(
-          "gap-3 overflow-visible border-b border-border p-3",
+          "gap-2 overflow-visible border-b border-border px-3 py-2",
           className,
         )}
       >

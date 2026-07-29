@@ -10,7 +10,7 @@ import { getAuthContextWithPermission } from "./auth";
 import {
   buildFoodCostRows,
   foodCostUnitCostKey,
-  type FoodCostRecipeLine,
+  type FoodCostMenuRecipeLine,
   type FoodCostResultRow,
   type FoodCostSaleLine,
 } from "./food-cost-calculation";
@@ -83,7 +83,7 @@ export async function fetchFoodCost(
   const menuItemIds = [...new Set(saleLines.map((row) => row.menuItemId))];
   if (menuItemIds.length === 0) return { success: true, data: [] };
 
-  const { data: recipeData, error: recipeError } = await monetaryClient
+  const { data: menuRecipeData, error: menuRecipeError } = await monetaryClient
     .from("recipes")
     .select(
       `
@@ -108,7 +108,7 @@ export async function fetchFoodCost(
     .eq("tenant_id", tenantId)
     .in("menu_item_id", menuItemIds);
 
-  if (recipeError) {
+  if (menuRecipeError) {
     return { success: false, error: foodCostCopy.loadRecipeFailed };
   }
 
@@ -126,7 +126,7 @@ export async function fetchFoodCost(
     unit_cost: number | string | null;
     ingredient_units: IngredientUnitData[] | null;
   } | null;
-  type RecipeDataRow = {
+  type MenuRecipeDataRow = {
     menu_item_id: number | null;
     ingredient_id: number | null;
     quantity: number | string | null;
@@ -135,8 +135,8 @@ export async function fetchFoodCost(
   };
 
   const ingredientIds = new Set<number>();
-  const recipeLines: FoodCostRecipeLine[] = [];
-  for (const row of (recipeData ?? []) as unknown as RecipeDataRow[]) {
+  const menuRecipeLines: FoodCostMenuRecipeLine[] = [];
+  for (const row of (menuRecipeData ?? []) as unknown as MenuRecipeDataRow[]) {
     if (row.menu_item_id == null || row.ingredient_id == null) continue;
     const ingredient = Array.isArray(row.ingredients)
       ? row.ingredients[0]
@@ -157,7 +157,7 @@ export async function fetchFoodCost(
       },
     );
     ingredientIds.add(row.ingredient_id);
-    recipeLines.push({
+    menuRecipeLines.push({
       menuItemId: row.menu_item_id,
       ingredientId: row.ingredient_id,
       quantity: Number(row.quantity ?? 0),
@@ -188,7 +188,7 @@ export async function fetchFoodCost(
         success: true,
         data: buildFoodCostRows({
           saleLines,
-          recipeLines,
+          menuRecipeLines,
           unitCosts,
           periodStart: parsed.data.startDate ?? null,
         }),
@@ -224,7 +224,7 @@ export async function fetchFoodCost(
     success: true,
     data: buildFoodCostRows({
       saleLines,
-      recipeLines,
+      menuRecipeLines,
       unitCosts,
       periodStart: parsed.data.startDate ?? null,
     }),

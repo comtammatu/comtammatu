@@ -5,6 +5,26 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Implement purchase request → PO → GRN → supplier AP
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/procurement-finance
+Exit: External purchase requests create supplier-specific POs; each delivery creates one active GRN draft from its PO; confirmation applies only remaining PO quantity, values excess at zero, and updates stock/PO atomically; supplier invoices, payments, and credits support explicit many-to-many allocations without exposing monetary data to warehouse roles.
+Evidence: additive migration replayed from the current baseline and applied to Greenfield; 38 focused PO/GRN/Finance acceptance tests; URL-filtered unified GRN list; regenerated Greenfield database types; post-apply RLS, RPC grants, and advisor checks.
+
+### T3 review
+
+- **PM:** The operational queue starts from approved POs that still have undelivered quantity. Internal `stock_requests` remain separate. No promotion engine, OCR, multi-currency, or speculative approval workflow is added.
+- **BA:** `purchase_request → purchase_order → goods_received_note` is one-to-many at each boundary, while every new PO and GRN has exactly one parent. Free goods are ordinary zero-price PO lines. Unplanned accepted excess is stored separately from PO fulfillment and has zero receipt value. Invoices, payments, and credits use allocation rows; returns do not mutate AP automatically.
+- **Senior Dev:** Multi-row writes stay in locked RPCs. Duplicate ingredient PO lines are preserved by line identity, not ingredient aggregation. Legacy confirmed GRNs and retrospective links remain readable; no heuristic split or destructive backfill is allowed. Monetary list payloads are selected only for authorized roles.
+- **QA:** Concurrency, idempotency, partial deliveries, zero-price lines, excess, rejection, stable pagination, URL filters, role-based payload absence, invoice matching, payment allocation, and legacy compatibility each require executable coverage.
+
+Synthesis: replace only the active procurement path and keep compatibility columns/functions read-only where existing records still depend on them. Database constraints and RPC locks own invariants; UI reflects the resulting state and does not recreate business rules.
+
+- [ ] Run authenticated `390×844`, `768×1024`, and `1440×900` smoke after the migration is applied to the authorized target.
+
 ## Prove one money day on Greenfield
 
 State: blocked

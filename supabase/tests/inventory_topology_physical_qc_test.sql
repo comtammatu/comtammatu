@@ -1346,6 +1346,9 @@ BEGIN
        'public.upsert_ingredient_catalog(bigint,text,text,bigint,numeric,text,text,numeric,numeric,numeric,integer,jsonb)'
      ) IS NULL
      OR to_regprocedure(
+       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)'
+     ) IS NULL
+     OR to_regprocedure(
        'private.execute_upsert_ingredient_catalog(bigint,text,text,bigint,numeric,text,text,numeric,numeric,numeric,integer,jsonb)'
      ) IS NULL
      OR to_regprocedure(
@@ -1373,6 +1376,38 @@ BEGIN
        'service_role',
        'private.execute_bulk_import_ingredients(jsonb)',
        'EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'authenticated',
+       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)',
+       'EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'service_role',
+       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'anon',
+       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)',
+       'EXECUTE'
+     )
+     OR NOT EXISTS (
+       SELECT 1
+       FROM pg_catalog.pg_proc AS procedure
+       WHERE procedure.oid = to_regprocedure(
+         'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)'
+       )
+         AND procedure.prosecdef IS TRUE
+         AND procedure.proconfig @>
+           ARRAY['search_path=""']::text[]
+         AND procedure.prosrc ILIKE
+           '%v_preserved_unit_cost%'
+         AND procedure.prosrc ILIKE
+           '%execute_upsert_ingredient_catalog%'
+         AND procedure.prosrc ILIKE
+           '%default_fulfill_site_kind%'
+         AND procedure.prosrc ILIKE '%auth_role() <> ''owner''%'
      )
      OR NOT EXISTS (
        SELECT 1
@@ -2209,6 +2244,9 @@ DECLARE
   v_units_payload jsonb;
   v_unit_code text;
   v_cost_snapshot numeric;
+  v_atomic_ingredient bigint;
+  v_atomic_name text;
+  v_atomic_invalid_name text;
   v_rejection_object_path text;
   v_rejection_photo_url text;
   v_quantity numeric;
@@ -3049,7 +3087,6 @@ BEGIN
     tenant_id,
     supplier_id,
     ingredient_id,
-    supplier_sku_code,
     is_active,
     created_by
   )
@@ -3057,7 +3094,6 @@ BEGIN
     v_tenant,
     v_supplier,
     v_ingredient,
-    '__PHYSICAL-QC-SUPPLIER-' || gen_random_uuid()::text,
     TRUE,
     v_actor
   );
@@ -3701,6 +3737,145 @@ BEGIN
   ) IS DISTINCT FROM v_cost_snapshot THEN
     RAISE EXCEPTION
       'PRICE AUTHORITY: catalog edit with null price changed WAC';
+  END IF;
+
+  PERFORM public.save_ingredient_catalog(
+    v_ingredient,
+    v_ingredient_record.name,
+    v_ingredient_record.sku,
+    v_ingredient_record.category_id,
+    v_ingredient_record.item_kind,
+    v_ingredient_record.storage_type,
+    v_ingredient_record.min_stock_level,
+    v_ingredient_record.max_stock_level,
+    v_ingredient_record.reorder_point,
+    v_ingredient_record.shelf_life_days,
+    v_units_payload,
+    v_ingredient_record.default_fulfill_site_kind
+  );
+
+  IF (
+    SELECT ingredient.unit_cost
+    FROM public.ingredients AS ingredient
+    WHERE ingredient.id = v_ingredient
+      AND ingredient.tenant_id = v_tenant
+  ) IS DISTINCT FROM v_cost_snapshot THEN
+    RAISE EXCEPTION
+      'PRICE AUTHORITY: atomic catalog save changed WAC';
+  END IF;
+
+  v_atomic_invalid_name :=
+    '__atomic_invalid_' || gen_random_uuid()::text;
+  v_error := FALSE;
+  BEGIN
+    PERFORM public.save_ingredient_catalog(
+      NULL,
+      v_atomic_invalid_name,
+      NULL,
+      NULL,
+      'raw_material',
+      'ambient',
+      0,
+      NULL,
+      NULL,
+      NULL,
+      v_units_payload,
+      'invalid_site_kind'
+    );
+  EXCEPTION
+    WHEN check_violation THEN
+      v_error := TRUE;
+  END;
+  IF NOT v_error OR EXISTS (
+    SELECT 1
+    FROM public.ingredients AS ingredient
+    WHERE ingredient.tenant_id = v_tenant
+      AND ingredient.name = v_atomic_invalid_name
+  ) THEN
+    RAISE EXCEPTION
+      'CATALOG ATOMICITY: invalid fulfill kind left a partial ingredient';
+  END IF;
+
+  v_atomic_name := '__atomic_catalog_' || gen_random_uuid()::text;
+  v_atomic_ingredient := public.save_ingredient_catalog(
+    NULL,
+    v_atomic_name,
+    NULL,
+    NULL,
+    'raw_material',
+    'ambient',
+    0,
+    NULL,
+    NULL,
+    NULL,
+    v_units_payload,
+    'central_supply'
+  );
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.ingredients AS ingredient
+    WHERE ingredient.id = v_atomic_ingredient
+      AND ingredient.tenant_id = v_tenant
+      AND ingredient.unit_cost = 0
+      AND ingredient.default_fulfill_site_kind = 'central_supply'
+  ) THEN
+    RAISE EXCEPTION
+      'CATALOG ATOMICITY: create did not persist catalog and fulfill kind';
+  END IF;
+
+  PERFORM public.save_ingredient_catalog(
+    v_atomic_ingredient,
+    v_atomic_name,
+    NULL,
+    NULL,
+    'raw_material',
+    'ambient',
+    0,
+    NULL,
+    NULL,
+    NULL,
+    v_units_payload,
+    'central_kitchen'
+  );
+
+  IF (
+    SELECT ingredient.default_fulfill_site_kind
+    FROM public.ingredients AS ingredient
+    WHERE ingredient.id = v_atomic_ingredient
+      AND ingredient.tenant_id = v_tenant
+  ) IS DISTINCT FROM 'central_kitchen' THEN
+    RAISE EXCEPTION
+      'CATALOG ATOMICITY: update did not persist fulfill kind';
+  END IF;
+
+  PERFORM public.save_ingredient_catalog(
+    v_atomic_ingredient,
+    v_atomic_name,
+    NULL,
+    NULL,
+    'raw_material',
+    'ambient',
+    0,
+    NULL,
+    NULL,
+    NULL,
+    v_units_payload,
+    NULL
+  );
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.ingredients AS ingredient
+    WHERE ingredient.id = v_atomic_ingredient
+      AND ingredient.tenant_id = v_tenant
+      AND (
+        ingredient.unit_cost IS DISTINCT FROM 0
+        OR ingredient.default_fulfill_site_kind IS NOT NULL
+      )
+  ) THEN
+    RAISE EXCEPTION
+      'CATALOG ATOMICITY: clear changed unit cost or kept fulfill kind';
   END IF;
 
   SELECT unit.code
@@ -6089,6 +6264,34 @@ BEGIN
   IF NOT v_rejected OR v_message <> 'forbidden' THEN
     RAISE EXCEPTION
       'CATALOG AUTHORITY: branch manager reached catalog upsert: %',
+      v_message;
+  END IF;
+
+  v_rejected := FALSE;
+  v_message := NULL;
+  BEGIN
+    PERFORM public.save_ingredient_catalog(
+      v_ingredient,
+      v_ingredient_name,
+      NULL,
+      NULL,
+      'raw_material',
+      'ambient',
+      0,
+      NULL,
+      NULL,
+      NULL,
+      v_units_payload,
+      NULL
+    );
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      v_rejected := TRUE;
+      v_message := SQLERRM;
+  END;
+  IF NOT v_rejected OR v_message <> 'forbidden' THEN
+    RAISE EXCEPTION
+      'CATALOG AUTHORITY: branch manager reached atomic catalog save: %',
       v_message;
   END IF;
 

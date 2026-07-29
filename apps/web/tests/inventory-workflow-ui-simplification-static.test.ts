@@ -276,7 +276,7 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
   const ingredients = read(
     "app/(protected)/inventory/ingredients/ingredients-client.tsx",
   );
-  const recipes = read("app/(protected)/inventory/recipes/recipes-client.tsx");
+  const recipes = read("app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx");
   const purchaseOrders = read(
     "app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
@@ -354,7 +354,7 @@ test("AppToolbar inline shares card surface without muted fill", () => {
   const surface = read("app/components/surface.tsx");
   assert.match(
     surface,
-    /if \(variant === "inline"\) \{[\s\S]{0,200}<Toolbar[\s\S]{0,80}className=\{cn\(\s*"gap-3 overflow-visible border-b border-border p-3"/,
+    /if \(variant === "inline"\) \{[\s\S]{0,200}<Toolbar[\s\S]{0,80}className=\{cn\(\s*"gap-2 overflow-visible border-b border-border px-3 py-2"/,
   );
   assert.doesNotMatch(
     surface,
@@ -426,7 +426,10 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
     select,
     /data-\[position=popper\]:h-\(--anchor-height\)/,
   );
-  assert.match(surface, /className=\{cn\("overflow-visible", className\)\}/);
+  assert.match(
+    surface,
+    /className=\{cn\("overflow-visible", hasHeader \? "pb-0" : "py-0", className\)\}/,
+  );
   assert.match(
     surface,
     /ToolbarGroup className="relative z-0 min-w-0 flex-1 gap-2"/,

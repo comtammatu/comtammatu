@@ -125,6 +125,9 @@ function SupplierMobileCard({
         </div>
       </div>
       <div className="flex min-w-0 flex-col gap-1 border-t pt-2 text-xs text-muted-foreground">
+        <span>
+          {suppliersCopy.items.ingredientCount(supplier.ingredient_count ?? 0)}
+        </span>
         {supplier.tax_code && (
           <span className="font-mono">MST: {supplier.tax_code}</span>
         )}
@@ -236,6 +239,13 @@ export function SuppliersClient({
           <SupplierAvatar name={s.name} colorIndex={i} />
           <p className="text-sm">{s.name}</p>
         </div>
+      ),
+    },
+    {
+      key: "ingredients",
+      header: "Nguyên liệu",
+      render: (s) => (
+        <span className="tabular-nums">{s.ingredient_count ?? 0}</span>
       ),
     },
     {

@@ -252,6 +252,29 @@ export const finance = {
     branch: "Chi nhánh",
     target: "Chỉ tiêu (VND)",
     priorMonth: "Tháng trước (thuần)",
+    rewardTiers: {
+      column: "Mốc thưởng",
+      configure: "Thiết lập",
+      edit: "Chỉnh mốc thưởng",
+      count: (count: number) => `${count} mốc`,
+      highest: (threshold: string) => `cao nhất ${threshold} KPI`,
+      title: (branch: string) => `Mốc thưởng · ${branch}`,
+      description:
+        "Mốc cao nhất đạt được là mức áp dụng, không cộng dồn. Lưu chỉ tiêu để ghi nhận thay đổi.",
+      empty: "Chưa có mốc thưởng.",
+      add: "Thêm mốc",
+      remove: "Xóa",
+      done: "Xong",
+      threshold: "Mốc KPI (%)",
+      rewardType: "Hình thức",
+      rewardValue: "Mức thưởng",
+      fixedAmount: "Số tiền",
+      revenuePercent: "% Doanh thu thuần",
+      fixedAmountHint: "Số tiền thưởng cố định (VND).",
+      revenuePercentHint:
+        "Tỷ lệ trên Doanh thu thuần của chi nhánh trong tháng.",
+      maxReached: "Tối đa 10 mốc thưởng.",
+    },
     empty: "Chưa có chi nhánh hoạt động.",
     errors: {
       invalidMonth: "Tháng không hợp lệ.",
@@ -274,7 +297,8 @@ export const finance = {
       gapLabel: "Còn thiếu",
       rank: "Hạng",
       paceChartTitle: "Nhịp chỉ tiêu trong tháng",
-      paceChartDescription: "Doanh thu thuần lũy kế so với nhịp chỉ tiêu tuyến tính.",
+      paceChartDescription:
+        "Doanh thu thuần lũy kế so với nhịp chỉ tiêu tuyến tính.",
       paceActual: "Thực tế lũy kế",
       paceTarget: "Nhịp chỉ tiêu",
       netRevenueProgressHint: (pctLabel: string) =>
@@ -292,7 +316,8 @@ export const finance = {
     totalLabel: "Tổng chi phí vận hành trong kỳ",
     totalHint: (count: string) => `${count} khoản chi phí vận hành`,
     needsActionLabel: "Cần xử lý",
-    needsActionHint: (count: string) => `${count} khoản chưa trả hoặc chờ khớp NH`,
+    needsActionHint: (count: string) =>
+      `${count} khoản chưa trả hoặc chờ khớp NH`,
     needsActionFilter: "Cần xử lý",
     loadErrorTitle: "Không thể tải sổ Chi phí vận hành",
     loadErrorDescription: "Không tải được số liệu kỳ này. Thử tải lại.",
@@ -320,8 +345,8 @@ export const finance = {
       },
       vendor: "Nơi chi",
       vendorPlaceholder: "Tùy chọn",
-      note: "Ghi chú",
-      notePlaceholder: "Tùy chọn",
+      note: "Nội dung chi",
+      notePlaceholder: "Nhập mục đích hoặc nội dung khoản chi",
       vatSection: "Thuế GTGT đầu vào đã ghi nhận",
       vatSectionHint: "Theo hóa đơn · chưa kết luận khấu trừ.",
       taxableAtRate: (rate: string) => `Trước thuế ${rate}`,
@@ -469,7 +494,8 @@ export const finance = {
     ) =>
       `Ngân hàng: ${opening} + vào ${bankIn} − ra ${bankOut} + điều chỉnh ${adjustments}`,
     openingTitle: "Nhập số dư đầu",
-    openingDescription: "Chỉ ghi một lần. Sau này chỉ điều chỉnh, không sửa số này.",
+    openingDescription:
+      "Chỉ ghi một lần. Sau này chỉ điều chỉnh, không sửa số này.",
     openingBalanceLabel: "Tiền mặt",
     openingBankLabel: "Tiền ngân hàng",
     openingAmountRequired: "Cần nhập số tiền",
@@ -577,7 +603,8 @@ export const finance = {
     unmatchedMoneyInListDescription:
       "Tiền vào chưa phân loại — kiểm mã trước khi gắn VietQR hoặc nộp tiền mặt.",
     unmatchedMoneyOutListTitle: "Tiền ra cần kiểm tra",
-    unmatchedMoneyOutListDescription: "Tiền ra chưa gắn khoản chi hoặc trả NCC.",
+    unmatchedMoneyOutListDescription:
+      "Tiền ra chưa gắn khoản chi hoặc trả NCC.",
     unmatchedMoneyInTable: {
       time: "Thời gian",
       amount: "Số tiền",

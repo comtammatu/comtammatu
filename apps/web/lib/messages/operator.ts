@@ -46,8 +46,7 @@ export const operator = {
     statusNotStarted: "Chưa chấm công",
     statusNoProfile: "Thiếu hồ sơ nhân viên",
     statusNoBranch: "Thiếu chi nhánh",
-    descriptionCheckoutPending:
-      "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
+    descriptionCheckoutPending: "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     checkInShort: "Vào",
     checkOutShort: "Ra",
@@ -210,6 +209,9 @@ export const operator = {
     forceCloseTitle: "Đóng ca treo?",
     forceCloseDescription:
       "Ca sẽ được đóng tại giờ vào và không tính công. Không thể hoàn tác.",
+    forceCloseReason: "Lý do đóng ca",
+    forceCloseReasonPlaceholder: "Nhập lý do đóng ca",
+    forceCloseCancel: "Giữ ca mở",
     forceCloseWorkday: "Ngày công",
     forceCloseNoWorkday: "0 giờ công",
     forceCloseSuccess: (employeeName: string) =>

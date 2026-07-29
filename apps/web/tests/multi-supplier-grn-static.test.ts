@@ -4,158 +4,92 @@ import { join } from "node:path";
 import test from "node:test";
 
 const root = join(process.cwd(), "../..");
-const schemaMigration = readFileSync(
-  join(
-    root,
-    "supabase/migrations/20260729010000_multi_supplier_grn_split_po.sql",
-  ),
-  "utf8",
+const read = (path: string) => readFileSync(join(root, path), "utf8");
+const migration = read(
+  "supabase/migrations/20260729180000_purchase_request_po_first_grn_ap.sql",
 );
-const fixMigration = readFileSync(
-  join(
-    root,
-    "supabase/migrations/20260729120000_fix_multi_supplier_grn_post_qc_schema.sql",
-  ),
-  "utf8",
+const duplicateIngredientMigration = read(
+  "supabase/migrations/20260729190000_allow_duplicate_ingredient_grn_lines.sql",
 );
-const grnActions = readFileSync(
-  join(process.cwd(), "app/(protected)/inventory/grn-actions.ts"),
-  "utf8",
+const secureLinkedLineTriggerMigration = read(
+  "supabase/migrations/20260729200000_secure_linked_grn_line_trigger.sql",
 );
-const grnNewPage = readFileSync(
-  join(process.cwd(), "app/(protected)/inventory/grn/new/page.tsx"),
-  "utf8",
+const secureSupplierInvoiceMigration = read(
+  "supabase/migrations/20260729210000_secure_supplier_invoice_allocation_rpc.sql",
 );
-const poActions = readFileSync(
-  join(process.cwd(), "app/(protected)/inventory/purchase-order-actions.ts"),
-  "utf8",
+const supplierAllocationLockMigration = read(
+  "supabase/migrations/20260729220000_fix_supplier_allocation_locks.sql",
+);
+const linkedGrnPricingMigration = read(
+  "supabase/migrations/20260729230000_price_linked_grn_applied_quantity.sql",
+);
+const grnDraftMetricsMigration = read(
+  "supabase/migrations/20260729240000_fix_grn_draft_exception_metrics.sql",
 );
 
-test("migration adds line supplier_id and source_grn_id", () => {
-  assert.match(schemaMigration, /grn_items[\s\S]*supplier_id/);
+test("new GRNs belong to one supplier PO while legacy multi-supplier rows remain", () => {
+  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.create_grn_draft_from_po/);
+  assert.match(migration, /v_po\.supplier_id/);
+  assert.match(migration, /goods_received_notes_po_active_draft_uidx/);
+  assert.match(migration, /creation_idempotency_key IS NULL/);
+  assert.match(migration, /confirm_goods_receipt_note_legacy/);
   assert.match(
-    schemaMigration,
-    /ALTER TABLE public\.goods_received_notes[\s\S]*DROP NOT NULL/,
-  );
-  assert.match(schemaMigration, /purchase_orders[\s\S]*source_grn_id/);
-  assert.match(
-    schemaMigration,
-    /uq_grn_active_free_draft_per_user_branch/,
+    migration,
+    /REVOKE ALL ON FUNCTION[\s\S]*create_purchase_orders_from_grn[\s\S]*FROM PUBLIC, anon, authenticated/,
   );
 });
 
-test("post-QC fix migration splits POs and gates confirm on all source POs", () => {
-  assert.match(fixMigration, /create_purchase_orders_from_grn/);
-  assert.match(fixMigration, /private\.grn_physical_qc_is_valid/);
-  assert.match(fixMigration, /grn_confirm_requires_approved_po/);
-  assert.match(fixMigration, /source_grn_id = p_grn_id/);
-  assert.match(fixMigration, /gi\.supplier_id = v_po\.supplier_id|grn_item\.supplier_id = v_po\.supplier_id|item\.supplier_id = po\.supplier_id/);
+test("request items can become separate paid and zero-price PO lines", () => {
+  assert.match(migration, /DROP CONSTRAINT IF EXISTS[\s\S]*purchase_order_items_po_id_ingredient_id_tenant_id_key/);
+  assert.match(migration, /unit_price_est IS NULL[\s\S]*unit_price_est < 0/);
+  assert.doesNotMatch(migration, /unit_price_est <= 0/);
+  assert.match(migration, /purchase_request_item_id/);
   assert.match(
-    fixMigration,
-    /received_quantity - (?:item\.|grn_item\.|gi\.)?rejected_quantity > 0/,
-  );
-  assert.doesNotMatch(fixMigration, /quality_status/);
-  assert.doesNotMatch(fixMigration, /po_quantity\s*=/);
-  assert.doesNotMatch(fixMigration, /po_unit_price/);
-});
-
-test("create GRN draft does not require header supplierId", () => {
-  assert.match(grnActions, /supplier_id:\s*null/);
-  const createSchema = grnActions.match(
-    /const grnCreateSchema = z\.object\(\{[\s\S]*?\}\);/,
-  )?.[0];
-  assert.ok(createSchema, "grnCreateSchema missing");
-  assert.doesNotMatch(createSchema, /supplierId/);
-  assert.match(grnActions, /grnLineSchema[\s\S]*supplierId:/);
-});
-
-test("GRN new route skips supplier picker", () => {
-  assert.match(grnNewPage, /loadGrnCreatePageData/);
-  assert.match(grnNewPage, /GrnCreateClient/);
-  assert.doesNotMatch(grnNewPage, /SupplierPicker/);
-});
-
-test("PO create from GRN calls multi-supplier RPC", () => {
-  assert.match(poActions, /create_purchase_orders_from_grn/);
-});
-
-test("GRN list embeds alias dual purchase_orders joins and select supplier_id", () => {
-  assert.match(
-    grnActions,
-    /purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey/,
+    duplicateIngredientMigration,
+    /DROP CONSTRAINT IF EXISTS grn_items_grn_id_ingredient_id_tenant_id_key/,
   );
   assert.match(
-    grnActions,
-    /grn_items \( id, rejected_quantity, supplier_id, suppliers \( id, name \) \)/,
+    secureLinkedLineTriggerMigration,
+    /ALTER FUNCTION private\.enforce_linked_grn_line_immutability\(\)\s+SECURITY DEFINER/,
   );
 });
 
-test("GRN detail embeds legacy PO via explicit FK after source_grn_id", () => {
+test("receipt confirmation splits applied quantity and zero-value excess", () => {
+  assert.match(migration, /v_applied := least\(v_accepted, v_remaining\)/);
+  assert.match(migration, /v_excess := greatest\(v_accepted - v_remaining, 0\)/);
+  assert.match(migration, /po_applied_quantity = v_applied/);
   assert.match(
-    grnActions,
-    /purchase_orders!goods_received_notes_po_id_fkey \( id, po_number, status \)/,
+    migration,
+    /v_excess_base,[\s\S]*'GRN ' \|\| v_grn\.grn_number \|\| ' excess'[\s\S]*p_grn_id,[\s\S]*0,/,
+  );
+  assert.match(
+    linkedGrnPricingMigration,
+    /NEW\.po_applied_quantity[\s\S]*NEW\.unit_cost/,
+  );
+  assert.match(
+    grnDraftMetricsMigration,
+    /WHEN grn\.status = 'confirmed'[\s\S]*ELSE item\.received_quantity - item\.rejected_quantity[\s\S]*> remaining\.quantity/,
+  );
+});
+
+test("supplier invoices, payments, and credits use explicit allocations", () => {
+  assert.match(migration, /CREATE TABLE public\.supplier_invoice_receipt_allocations/);
+  assert.match(migration, /CREATE TABLE public\.supplier_payment_allocations/);
+  assert.match(migration, /CREATE TABLE public\.supplier_credit_allocations/);
+  assert.match(migration, /create_supplier_invoice_with_allocations/);
+  assert.match(migration, /record_supplier_payment_allocated/);
+  assert.match(migration, /create_supplier_credit_allocated/);
+  assert.match(migration, /unallocated_amount/);
+  assert.match(
+    secureSupplierInvoiceMigration,
+    /SECURITY DEFINER[\s\S]*has_permission_any\('procurement:invoice_create'\)/,
   );
   assert.doesNotMatch(
-    grnActions,
-    /\.select\(\s*"id, tenant_id[\s\S]*purchase_orders \( id, po_number, status \)/,
-  );
-});
-
-test("grant migration exposes grn_items.supplier_id to authenticated", () => {
-  const grantMigration = readFileSync(
-    join(
-      root,
-      "supabase/migrations/20260729120500_grant_grn_items_supplier_id.sql",
-    ),
-    "utf8",
+    supplierAllocationLockMigration,
+    /JOIN \(\s*SELECT DISTINCT[\s\S]*FOR UPDATE/,
   );
   assert.match(
-    grantMigration,
-    /GRANT SELECT \(supplier_id\) ON public\.grn_items TO authenticated/,
-  );
-  assert.match(
-    grantMigration,
-    /GRANT INSERT \(supplier_id\) ON public\.grn_items TO authenticated/,
-  );
-  assert.match(
-    grantMigration,
-    /GRANT UPDATE \(supplier_id\) ON public\.grn_items TO authenticated/,
-  );
-});
-
-test("supplier invoice matching scopes GRN net and PO by line supplier", () => {
-  const matchingMigration = readFileSync(
-    join(
-      root,
-      "supabase/migrations/20260729140200_fix_supplier_invoice_multi_supplier_matching.sql",
-    ),
-    "utf8",
-  );
-  assert.match(matchingMigration, /gi\.supplier_id = v_invoice\.supplier_id/);
-  assert.match(matchingMigration, /po\.source_grn_id = v_grn\.id/);
-  assert.match(matchingMigration, /po\.source_grn_id = p_grn_id/);
-  assert.doesNotMatch(
-    matchingMigration,
-    /IF p_po_id IS NOT NULL AND p_po_id IS DISTINCT FROM v_grn\.po_id/,
-  );
-  assert.match(grnActions, /expandGrnDropdownOptions/);
-  assert.match(grnActions, /select\("grn_id, supplier_id"\)/);
-});
-
-test("legacy authenticated create_grn_from_po is dropped", () => {
-  const dropMigration = readFileSync(
-    join(
-      root,
-      "supabase/migrations/20260729140300_drop_legacy_create_grn_from_po.sql",
-    ),
-    "utf8",
-  );
-  assert.match(
-    dropMigration,
-    /DROP FUNCTION IF EXISTS public\.create_grn_from_po\(bigint\)/,
-  );
-  assert.doesNotMatch(
-    dropMigration,
-    /DROP FUNCTION[\s\S]*create_grn_from_approved_po/,
+    supplierAllocationLockMigration,
+    /JOIN jsonb_array_elements\(p_allocations\) allocation[\s\S]*FOR UPDATE OF invoice/,
   );
 });

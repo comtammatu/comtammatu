@@ -4,9 +4,9 @@ import { useMemo } from "react";
 import { z } from "zod";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormDialog, SelectField } from "@/components/form";
-import { RecipeLinesEditor } from "../_components/recipe-lines-editor";
+import { IngredientLinesEditor } from "../_components/ingredient-lines-editor";
 import type { IngredientUnitRow } from "@lib/inventory/types";
-import { upsertRecipeLines } from "../procurement-actions";
+import { upsertMenuRecipeLines } from "../menu-recipe-actions";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 
 export interface MenuItemOption {
@@ -21,7 +21,7 @@ export interface IngredientOption {
   units?: IngredientUnitRow[];
 }
 
-export interface RecipeLineDraft {
+export interface MenuRecipeLineDraft {
   ingredientId: number;
   quantity: number;
   unitLabel: string;
@@ -31,7 +31,7 @@ export interface RecipeLineDraft {
 
 /* ─── Schema ─── */
 
-const recipeLineRowSchema = z.object({
+const menuRecipeLineRowSchema = z.object({
   ingredient_id: z.string().min(1, { error: INVENTORY_VI.selectIngredient }),
   quantity: z
     .string()
@@ -42,26 +42,26 @@ const recipeLineRowSchema = z.object({
   note: z.string().max(200, { error: INVENTORY_VI.noteMax200 }).optional(),
 });
 
-const recipeSchema = z.object({
+const menuRecipeSchema = z.object({
   menu_item_id: z
     .string()
     .min(1, { error: INVENTORY_VI.selectMenuItemRequired }),
   lines: z
-    .array(recipeLineRowSchema)
-    .min(1, { error: INVENTORY_VI.recipeMinIngredients })
+    .array(menuRecipeLineRowSchema)
+    .min(1, { error: INVENTORY_VI.menuRecipeMinIngredients })
     .refine(
       (arr) => {
         const ids = arr.map((row) => row.ingredient_id).filter(Boolean);
         return new Set(ids).size === ids.length;
       },
-      { error: INVENTORY_VI.recipeDuplicateIngredient },
+      { error: INVENTORY_VI.menuRecipeDuplicateIngredient },
     ),
 });
 
-type RecipeFormValues = z.infer<typeof recipeSchema>;
-type RecipeLineRow = z.infer<typeof recipeLineRowSchema>;
+type MenuRecipeFormValues = z.infer<typeof menuRecipeSchema>;
+type MenuRecipeLineRow = z.infer<typeof menuRecipeLineRowSchema>;
 
-const EMPTY_ROW: RecipeLineRow = {
+const EMPTY_ROW: MenuRecipeLineRow = {
   ingredient_id: "",
   quantity: "",
   unitLabel: "",
@@ -71,18 +71,18 @@ const EMPTY_ROW: RecipeLineRow = {
 
 /* ─── Dialog ─── */
 
-interface RecipeDialogProps {
+interface MenuRecipeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   menuItems: MenuItemOption[];
   ingredients: IngredientOption[];
   editingMenuItemId?: number;
-  editingLines?: RecipeLineDraft[];
+  editingLines?: MenuRecipeLineDraft[];
   existingMenuItemIds?: number[];
   onSaved: () => void;
 }
 
-export function RecipeLineDialog({
+export function MenuRecipeLineDialog({
   open,
   onOpenChange,
   menuItems,
@@ -91,10 +91,10 @@ export function RecipeLineDialog({
   editingLines,
   existingMenuItemIds = [],
   onSaved,
-}: RecipeDialogProps) {
+}: MenuRecipeDialogProps) {
   const isEdit = editingMenuItemId != null;
 
-  const initialValues = useMemo<RecipeFormValues>(
+  const initialValues = useMemo<MenuRecipeFormValues>(
     () => ({
       menu_item_id: editingMenuItemId ? String(editingMenuItemId) : "",
       lines:
@@ -119,7 +119,7 @@ export function RecipeLineDialog({
     return menuItems.filter((mi) => !blocked.has(mi.id));
   }, [menuItems, existingMenuItemIds, editingMenuItemId]);
 
-  async function handleSubmit(values: RecipeFormValues) {
+  async function handleSubmit(values: MenuRecipeFormValues) {
     const menuItemId = Number(values.menu_item_id);
     const parsedLines = values.lines.map((row) => ({
       ingredientId: Number(row.ingredient_id),
@@ -128,7 +128,7 @@ export function RecipeLineDialog({
       note: row.note?.trim() ? row.note.trim() : null,
     }));
 
-    return upsertRecipeLines({
+    return upsertMenuRecipeLines({
       menuItemId,
       oldMenuItemId: editingMenuItemId ? Number(editingMenuItemId) : undefined,
       lines: parsedLines,
@@ -140,10 +140,12 @@ export function RecipeLineDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={
-        isEdit ? INVENTORY_VI.editRecipeTitle : INVENTORY_VI.createRecipeTitle
+        isEdit
+          ? INVENTORY_VI.editMenuRecipeTitle
+          : INVENTORY_VI.createMenuRecipeTitle
       }
-      description={INVENTORY_VI.recipeDescription}
-      schema={recipeSchema}
+      description={INVENTORY_VI.menuRecipeDescription}
+      schema={menuRecipeSchema}
       defaultValues={initialValues}
       entityKey={editingMenuItemId ?? "new"}
       onSubmit={handleSubmit}
@@ -156,7 +158,9 @@ export function RecipeLineDialog({
         onSaved();
       }}
       submitLabel={
-        isEdit ? INVENTORY_VI.updateRecipeBtn : INVENTORY_VI.saveRecipeBtn
+        isEdit
+          ? INVENTORY_VI.updateMenuRecipeBtn
+          : INVENTORY_VI.saveMenuRecipeBtn
       }
       cancelLabel={ACTIONS_VI.cancel}
       contentClassName="sm:max-w-3xl"
@@ -171,8 +175,8 @@ export function RecipeLineDialog({
             <SelectField
               control={form.control}
               name="menu_item_id"
-              id="recipe-menu-item"
-              label={INVENTORY_VI.recipeMenuItemLabel}
+              id="menu-recipe-menu-item"
+              label={INVENTORY_VI.menuRecipeMenuItemLabel}
               options={availableMenuItems.map((item) => ({
                 value: String(item.id),
                 label: item.name,
@@ -180,7 +184,7 @@ export function RecipeLineDialog({
               placeholder={INVENTORY_VI.selectMenuItemPlaceholder}
               description={
                 availableMenuItems.length === 0
-                  ? INVENTORY_VI.allMenuItemsHaveRecipe
+                  ? INVENTORY_VI.allMenuItemsHaveMenuRecipe
                   : undefined
               }
               required
@@ -191,7 +195,7 @@ export function RecipeLineDialog({
                 {INVENTORY_VI.ingredientListLabel}
               </h3>
 
-              <RecipeLinesEditor
+              <IngredientLinesEditor
                 control={form.control}
                 setValue={form.setValue}
                 getValues={form.getValues}

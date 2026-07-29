@@ -36,6 +36,7 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   GRN_DETAIL_COPY as grnCopy,
+  hasAcceptedGrnQuantity,
   type GrnDetail,
 } from "@lib/inventory/grn-detail-model";
 import { useGrnDetailActions } from "@lib/inventory/use-grn-detail-actions";
@@ -67,6 +68,7 @@ export function GrnReviewOperatorClient({
   const [editingLineId, setEditingLineId] = useState<number | null>(null);
   const statusBadge = getStatusBadgeMeta("inventory", grn.status);
   const { lines, setLines, patch, dirtyLines } = useGrnDetailLines(grn.items);
+  const hasAcceptedQuantity = hasAcceptedGrnQuantity(lines);
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
     useGrnDetailActions({
       grn,
@@ -193,7 +195,9 @@ export function GrnReviewOperatorClient({
                         ) : null}
                       </ItemContent>
                       <ItemActions className="shrink-0">
-                        {line.rejected > 0 ? (
+                        {line.actual <= 0 ? (
+                          <IconInfoCircle className="size-5 text-muted-foreground" />
+                        ) : line.rejected > 0 ? (
                           <IconAlertTriangle className="size-5 text-warning" />
                         ) : (
                           <IconCircleCheck className="size-5 text-success" />
@@ -298,7 +302,7 @@ export function GrnReviewOperatorClient({
                   !canConfirm ||
                   isConfirming ||
                   dirtyLines.length > 0 ||
-                  lines.length === 0
+                  !hasAcceptedQuantity
                 }
                 onClick={() => void handleConfirmGrn()}
               >

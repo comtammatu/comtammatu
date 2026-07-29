@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("purchase orders are created retrospectively from GRN drafts", () => {
+test("purchase requests create supplier POs and POs create delivery GRNs", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
@@ -14,6 +14,9 @@ test("purchase orders are created retrospectively from GRN drafts", () => {
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
   const nav = read("apps/web/app/(protected)/inventory/_lib/inventory-nav.ts");
+  const migration = read(
+    "supabase/migrations/20260729180000_purchase_request_po_first_grn_ap.sql",
+  );
 
   assert.equal(
     existsSync(
@@ -25,21 +28,27 @@ test("purchase orders are created retrospectively from GRN drafts", () => {
     true,
   );
   assert.match(nav, /\/inventory\/purchase-orders/);
+  assert.match(nav, /\/inventory\/purchase-requests/);
   assert.match(nav, /Đơn mua hàng/);
-  assert.match(actions, /createPurchaseOrderFromGrn/);
+  assert.match(actions, /createPurchaseOrderFromRequest/);
+  assert.match(actions, /createPurchaseOrdersFromRequest/);
+  assert.match(actions, /createGrnDraftFromPurchaseOrder/);
   assert.match(actions, /PROCUREMENT_PO_CREATE/);
   assert.match(actions, /PROCUREMENT_PO_APPROVE/);
-  assert.match(actions, /create_purchase_orders_from_grn/);
+  assert.match(actions, /create_purchase_order_from_request/);
+  assert.match(actions, /create_purchase_orders_from_request/);
+  assert.match(actions, /create_grn_draft_from_po/);
   assert.match(actions, /approve_purchase_order/);
-  assert.doesNotMatch(
-    actions,
-    /createPurchaseOrderWithLines|create_purchase_order_with_lines/,
+  assert.doesNotMatch(actions, /createPurchaseOrderFromGrn/);
+  assert.match(client, /Tạo phiếu nhập/);
+  assert.match(client, /Tiếp tục nhập hàng/);
+  assert.match(migration, /goods_received_notes_po_active_draft_uidx/);
+  assert.match(migration, /creation_idempotency_key/);
+  assert.match(
+    migration,
+    /FOR v_order IN[\s\S]*public\.create_purchase_order_from_request/,
   );
-  assert.doesNotMatch(
-    actions,
-    /createGrnFromPurchaseOrder|create_grn_from_approved_po/,
-  );
-  assert.doesNotMatch(client, /PurchaseOrderFields|createGrnAction/);
+  assert.match(migration, /purchase_orders_duplicate_supplier/);
 });
 
 test("PO approve awaits confirm outside startTransition so the dialog can open", () => {
@@ -121,7 +130,11 @@ test("PO list opens read-only detail and never shows an empty-action dash", () =
     /key:\s*"code"[\s\S]*?variant="link"[\s\S]*?openDetail\(row\)/,
     "PO code column is a primary open control like GRN list links",
   );
-  assert.match(client, /AppDialog/);
+  assert.match(client, /DocumentFormFrame/);
+  assert.match(client, /<AppDetailFooter/);
+  assert.doesNotMatch(client, /AppDialog/);
+  assert.doesNotMatch(client, /h-72|min-h-0 overflow-hidden sm:h-80/);
+  assert.doesNotMatch(client, /poCopy\.noNotes/);
   assert.match(client, /poCopy\.detail\.overviewLinesTitle/);
   assert.match(client, /poCopy\.detail\.linkedGrnsTitle/);
   assert.doesNotMatch(
@@ -136,8 +149,5 @@ test("PO list opens read-only detail and never shows an empty-action dash", () =
     page,
     /goods_received_notes!goods_received_notes_po_id_fkey\(id, grn_number, status/,
   );
-  assert.match(
-    page,
-    /source_grn:goods_received_notes!purchase_orders_source_grn_id_fkey\(id, grn_number, status/,
-  );
+  assert.match(page, /purchase_request_id/);
 });

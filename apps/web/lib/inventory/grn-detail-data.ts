@@ -14,6 +14,7 @@ import { fetchGrnDetail } from "@/(protected)/inventory/procurement-actions";
 import { messages } from "@lib/messages";
 import {
   allLinkedPosApproved,
+  calculateGrnQuantities,
   grnSupplierSummaryFromItems,
   hasLinkedPurchaseOrders,
   type GrnDetail,
@@ -27,7 +28,6 @@ export type GrnDetailData = {
   auditLogs: AuditLogRow[];
   canEditDraft: boolean;
   canConfirm: boolean;
-  canCreatePoFromGrn: boolean;
   canManageSupplierInvoice: boolean;
   canAdjustStock: boolean;
   canAmendConfirmed: boolean;
@@ -85,19 +85,31 @@ export async function loadGrnDetailResult(
       grn_number: string;
       status: string;
       received_date: string | null;
+      expected_receive_date: string | null;
       branch_id: number;
       location_id: number | null;
       supplier_id: number | null;
       po_id: number | null;
       branches: { id: number; name: string } | null;
       suppliers: { id: number; name: string } | null;
-      purchase_orders: { id: number; po_number: string; status: string } | null;
+      purchase_orders: {
+        id: number;
+        po_number: string;
+        status: string;
+        purchase_request_id: number | null;
+        purchase_requests:
+          | { id: number; request_number: string }
+          | Array<{ id: number; request_number: string }>
+          | null;
+      } | null;
     };
     lines: Array<{
       id: number;
       ingredient_id: number;
       supplier_id: number;
       po_quantity: number | null;
+      previously_applied_quantity: number;
+      po_applied_quantity: number;
       received_quantity: number;
       rejected_quantity: number | null;
       rejection_reason: string | null;
@@ -111,6 +123,10 @@ export async function loadGrnDetailResult(
           is_base: boolean;
           units: { code: string } | null;
         }[];
+      } | null;
+      monetary: {
+        unit_price: number | null;
+        total_cost: number;
       } | null;
     }>;
     invoiceId: number | null;
@@ -130,6 +146,7 @@ export async function loadGrnDetailResult(
   const supplier = data.grn.suppliers;
   const branch = data.grn.branches;
   const purchaseOrder = data.grn.purchase_orders;
+  const purchaseRequest = relatedOne(purchaseOrder?.purchase_requests);
   const ingredients = (ingredientsResult.data ?? []) as IngredientRow[];
   const ingredientById = new Map(
     ingredients.map((ingredient) => [ingredient.id, ingredient]),
@@ -138,6 +155,13 @@ export async function loadGrnDetailResult(
     const ingredient = line.ingredients;
     const received = Number(line.received_quantity ?? 0);
     const rejected = Number(line.rejected_quantity ?? 0);
+    const ordered = Number(line.po_quantity ?? 0);
+    const previouslyReceived = Number(line.previously_applied_quantity ?? 0);
+    const remaining = Math.max(ordered - previouslyReceived, 0);
+    const calculated = calculateGrnQuantities(received, rejected, remaining);
+    const applied = data.grn.status === "confirmed"
+      ? Number(line.po_applied_quantity ?? 0)
+      : calculated.poAppliedQuantity;
     const entryUnitId = line.entry_unit_id ?? null;
     const catalogIngredient = ingredientById.get(
       line.ingredient_id ?? ingredient?.id ?? 0,
@@ -155,9 +179,15 @@ export async function loadGrnDetailResult(
       supplierId: line.supplier_id,
       supplierName: lineSupplier?.name ?? `#${line.supplier_id}`,
       poQuantity: line.po_quantity != null ? Number(line.po_quantity) : null,
-      required: Number(line.po_quantity ?? line.received_quantity ?? 0),
+      previouslyReceived,
+      remainingQuantity: remaining,
+      required: remaining,
       actual: received,
       rejected,
+      acceptedQuantity: calculated.acceptedQuantity,
+      poAppliedQuantity: applied,
+      shortageQuantity: Math.max(remaining - applied, 0),
+      excessQuantity: Math.max(calculated.acceptedQuantity - applied, 0),
       rejectionReason: line.rejection_reason ?? "",
       rejectedPhotoUrl: line.rejected_photo_url ?? "",
       unit: getIngredientUnitDisplayName(
@@ -166,6 +196,13 @@ export async function loadGrnDetailResult(
         fallbackUnit,
       ),
       entryUnitId,
+      monetary:
+        line.monetary == null
+          ? null
+          : {
+              unitPrice: line.monetary.unit_price,
+              lineTotal: line.monetary.total_cost,
+            },
     };
   });
 
@@ -186,7 +223,6 @@ export async function loadGrnDetailResult(
     canEditDraft,
     canConfirmPermission,
     canAmendConfirmed,
-    canCreatePoFromGrn,
     canManageSupplierInvoice,
   ] = await Promise.all([
     loadCurrentReceivingLocationName({
@@ -212,17 +248,13 @@ export async function loadGrnDetailResult(
     ),
     currentUserHasPermission(
       data.grn.branch_id,
-      PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
-    ),
-    currentUserHasPermission(
-      data.grn.branch_id,
       PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
     ),
   ]);
 
   const hasPoLink = hasLinkedPurchaseOrders(linkedPos, data.grn.po_id);
-  const canEditUnlinkedDraft =
-    canEditDraft && data.grn.status === "draft" && !hasPoLink;
+  const canEditDraftLines = canEditDraft && data.grn.status === "draft";
+  const canEditUnlinkedDraft = canEditDraftLines && !hasPoLink;
   const supplierSummary = grnSupplierSummaryFromItems(
     items,
     supplier?.name ?? null,
@@ -239,6 +271,11 @@ export async function loadGrnDetailResult(
           : (purchaseOrder?.po_number ?? ""),
     poId: data.grn.po_id ?? linkedPos[0]?.id ?? null,
     poStatus: linkedPos[0]?.status ?? purchaseOrder?.status ?? null,
+    purchaseRequestId: purchaseOrder?.purchase_request_id ?? null,
+    purchaseRequestCode: purchaseRequest?.request_number ?? null,
+    expectedReceiveDate: data.grn.expected_receive_date
+      ? formatDate(data.grn.expected_receive_date)
+      : null,
     linkedPos,
     invoiceId: data.invoiceId ?? null,
     branchId: data.grn.branch_id,
@@ -260,8 +297,6 @@ export async function loadGrnDetailResult(
     data.grn.status === "draft" &&
     hasPoLink &&
     poApproved;
-  const canCreatePoFromGrnDraft =
-    canCreatePoFromGrn && data.grn.status === "draft" && !hasPoLink;
   const [receivingLocationOptions, auditLogs] = await Promise.all([
     loadReceivingLocationOptions({
       context,
@@ -275,9 +310,8 @@ export async function loadGrnDetailResult(
       grn,
       ingredients,
       auditLogs,
-      canEditDraft: canEditUnlinkedDraft,
+      canEditDraft: canEditDraftLines,
       canConfirm,
-      canCreatePoFromGrn: canCreatePoFromGrnDraft,
       canManageSupplierInvoice,
       canAdjustStock,
       canAmendConfirmed,

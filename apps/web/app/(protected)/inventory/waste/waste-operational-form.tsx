@@ -48,7 +48,6 @@ export function WasteOperationalForm({
   const [locationId, setLocationId] = useState<number | null>(
     context.locations[0]?.id ?? null,
   );
-  const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<WasteLineState[]>([
     newWasteLine("line-0"),
   ]);
@@ -143,7 +142,6 @@ export function WasteOperationalForm({
           note: line.note || undefined,
           photo_urls: line.photoUrls,
         })),
-        notes: notes || undefined,
         sourceType: "manual",
       });
       if (!result.success) {
@@ -165,9 +163,7 @@ export function WasteOperationalForm({
   return (
     <div className="flex flex-col gap-4">
       {context.capStatus.requiresReview || evidenceRequired ? (
-        <NoteCallout tone="warning">
-          {copy.priceReviewHint}
-        </NoteCallout>
+        <NoteCallout tone="warning">{copy.priceReviewHint}</NoteCallout>
       ) : null}
 
       <Field>
@@ -227,13 +223,9 @@ export function WasteOperationalForm({
                   <FieldLabel>{copy.ingredientLabel(index + 1)}</FieldLabel>
                   <Combobox
                     value={
-                      line.ingredientId == null
-                        ? ""
-                        : String(line.ingredientId)
+                      line.ingredientId == null ? "" : String(line.ingredientId)
                     }
-                    onValueChange={(value) =>
-                      selectIngredient(line.uid, value)
-                    }
+                    onValueChange={(value) => selectIngredient(line.uid, value)}
                     options={context.ingredients.map((item) => ({
                       value: String(item.id),
                       label: item.name,
@@ -275,10 +267,7 @@ export function WasteOperationalForm({
                   <FieldLabel>
                     {copy.quantityLabel}
                     {ingredient && unit
-                      ? copy.stockHint(
-                          formatQty(maxEntryQuantity),
-                          unit.label,
-                        )
+                      ? copy.stockHint(formatQty(maxEntryQuantity), unit.label)
                       : ""}
                   </FieldLabel>
                   <FormattedNumberInput
@@ -340,10 +329,6 @@ export function WasteOperationalForm({
         </div>
       </AppSection>
 
-      <Field>
-        <FieldLabel>{copy.slipNotesLabel}</FieldLabel>
-        <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
-      </Field>
       <AppDetailFooter
         leading={
           <Button

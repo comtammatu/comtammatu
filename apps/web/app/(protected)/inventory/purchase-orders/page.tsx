@@ -32,13 +32,12 @@ export default async function PurchaseOrdersPage({
   const poReadClient = monetaryAccess.purchasePrice
     ? (monetaryAccess.client ?? supabase)
     : supabase;
+  const poSelect = monetaryAccess.purchasePrice
+    ? "id, po_number, display_id, status, ordered_at, expected_delivery_date, notes, supplier_id, branch_id, source_grn_id, purchase_request_id, purchase_requests(request_number), purchase_order_items(id, quantity, unit_price_est, line_total, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)), goods_received_notes!goods_received_notes_po_id_fkey(id, grn_number, status, received_date), source_grn:goods_received_notes!purchase_orders_source_grn_id_fkey(id, grn_number, status, received_date)"
+    : "id, po_number, display_id, status, ordered_at, expected_delivery_date, notes, supplier_id, branch_id, source_grn_id, purchase_request_id, purchase_requests(request_number), purchase_order_items(id, quantity, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)), goods_received_notes!goods_received_notes_po_id_fkey(id, grn_number, status, received_date), source_grn:goods_received_notes!purchase_orders_source_grn_id_fkey(id, grn_number, status, received_date)";
   let poQuery = poReadClient
     .from("purchase_orders")
-    .select(
-      monetaryAccess.purchasePrice
-        ? "id, po_number, display_id, status, ordered_at, notes, supplier_id, branch_id, source_grn_id, purchase_order_items(id, quantity, unit_price_est, line_total, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)), goods_received_notes!goods_received_notes_po_id_fkey(id, grn_number, status, received_date), source_grn:goods_received_notes!purchase_orders_source_grn_id_fkey(id, grn_number, status, received_date)"
-        : "id, po_number, display_id, status, ordered_at, notes, supplier_id, branch_id, source_grn_id, purchase_order_items(id, quantity, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)), goods_received_notes!goods_received_notes_po_id_fkey(id, grn_number, status, received_date), source_grn:goods_received_notes!purchase_orders_source_grn_id_fkey(id, grn_number, status, received_date)",
-    )
+    .select(poSelect as never)
     .eq("tenant_id", claims.tenant_id)
     .order("ordered_at", { ascending: false })
     .limit(100);
@@ -46,7 +45,14 @@ export default async function PurchaseOrdersPage({
     poQuery = poQuery.eq("branch_id", scope.selectedBranchId);
   }
 
-  const [poResult, supplierResult, procurementBranches, canCreate, canApprove] =
+  const [
+    poResult,
+    supplierResult,
+    procurementBranches,
+    canCreate,
+    canApprove,
+    canReceive,
+  ] =
     await Promise.all([
       poQuery,
       supabase
@@ -58,6 +64,7 @@ export default async function PurchaseOrdersPage({
       fetchProcurementBranches(supabase, claims.tenant_id),
       currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
       currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_PO_APPROVE),
+      currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     ]);
 
   if (poResult.error || supplierResult.error) {
@@ -82,7 +89,52 @@ export default async function PurchaseOrdersPage({
   const supplierNames = new Map(
     suppliers.map((supplier) => [supplier.id, supplier.name]),
   );
-  const rows: PurchaseOrderRow[] = (poResult.data ?? []).map((po) => {
+  const rawPurchaseOrders = (poResult.data ?? []) as unknown as Array<{
+    id: number;
+    po_number: string;
+    display_id: string | null;
+    status: string;
+    ordered_at: string;
+    expected_delivery_date: string | null;
+    notes: string | null;
+    supplier_id: number;
+    branch_id: number;
+    source_grn_id: number | null;
+    purchase_request_id: number | null;
+    purchase_requests:
+      | { request_number: string }
+      | { request_number: string }[]
+      | null;
+    purchase_order_items: Array<{
+      id: number;
+      quantity: number | string;
+      unit_price_est?: number | string | null;
+      line_total?: number | string | null;
+      ingredients: { name: string } | null;
+      units: { code: string; name: string | null } | null;
+    }>;
+    goods_received_notes: Array<{
+      id: number;
+      grn_number: string;
+      status: string;
+      received_date: string | null;
+    }>;
+    source_grn:
+      | {
+          id: number;
+          grn_number: string;
+          status: string;
+          received_date: string | null;
+        }
+      | Array<{
+          id: number;
+          grn_number: string;
+          status: string;
+          received_date: string | null;
+        }>
+      | null;
+  }>;
+  const rows: PurchaseOrderRow[] = rawPurchaseOrders.map((po) => {
     const lines = (po.purchase_order_items ?? []).map((line) => {
       const ingredient = line.ingredients as { name: string } | null;
       const unit = line.units as { code: string; name: string | null } | null;
@@ -115,17 +167,7 @@ export default async function PurchaseOrdersPage({
       status: grn.status,
       receivedAt: grn.received_date,
     }));
-    const sourceGrnRaw = (po as { source_grn?: {
-      id: number;
-      grn_number: string;
-      status: string;
-      received_date: string | null;
-    } | {
-      id: number;
-      grn_number: string;
-      status: string;
-      received_date: string | null;
-    }[] | null }).source_grn;
+    const sourceGrnRaw = po.source_grn;
     const sourceGrn = Array.isArray(sourceGrnRaw)
       ? sourceGrnRaw[0]
       : sourceGrnRaw;
@@ -141,12 +183,18 @@ export default async function PurchaseOrdersPage({
             ...linkedByPoId.filter((grn) => grn.id !== sourceGrn.id),
           ]
         : linkedByPoId;
+    const request = Array.isArray(po.purchase_requests)
+      ? po.purchase_requests[0]
+      : po.purchase_requests;
     return {
       id: po.id,
       code: po.display_id ?? po.po_number,
       status: po.status,
       orderedAt: po.ordered_at,
+      expectedDeliveryDate: po.expected_delivery_date,
       notes: po.notes,
+      purchaseRequestId: po.purchase_request_id,
+      purchaseRequestCode: request?.request_number ?? null,
       supplierName:
         supplierNames.get(po.supplier_id) ?? copy.supplierRequired,
       branchName: branchNames.get(po.branch_id) ?? copy.branchLabel,
@@ -161,6 +209,8 @@ export default async function PurchaseOrdersPage({
         : null,
       lines,
       linkedGrns,
+      activeDraftGrnId:
+        linkedGrns.find((grn) => grn.status === "draft")?.id ?? null,
     };
   });
 
@@ -169,6 +219,7 @@ export default async function PurchaseOrdersPage({
       rows={rows}
       canCreate={canCreate && monetaryAccess.purchasePrice}
       canApprove={canApprove && monetaryAccess.purchasePrice}
+      canReceive={canReceive}
       canViewPrices={monetaryAccess.purchasePrice}
       initialPoId={initialPoId}
     />

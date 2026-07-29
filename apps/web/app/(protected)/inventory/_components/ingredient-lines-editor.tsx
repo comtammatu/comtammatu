@@ -42,14 +42,14 @@ import {
   STATES_VI,
 } from "@comtammatu/shared/messages";
 
-export interface RecipeLineIngredient {
+export interface IngredientLineOption {
   id: number;
   name: string;
   unitLabel: string;
   units?: IngredientUnitRow[];
 }
 
-export interface RecipeLineRowValue {
+export interface IngredientLineRowValue {
   ingredient_id: string;
   quantity: string;
   unitLabel: string;
@@ -60,7 +60,7 @@ export interface RecipeLineRowValue {
 
 const GRID_TEMPLATE = "grid-cols-1 md:grid-cols-12";
 
-const EMPTY_ROW: RecipeLineRowValue = {
+const EMPTY_ROW: IngredientLineRowValue = {
   ingredient_id: "",
   quantity: "",
   unitLabel: "",
@@ -69,12 +69,12 @@ const EMPTY_ROW: RecipeLineRowValue = {
   note: "",
 };
 
-interface RecipeLinesEditorProps<T extends FieldValues> {
+interface IngredientLinesEditorProps<T extends FieldValues> {
   control: Control<T>;
   setValue: UseFormSetValue<T>;
   getValues: UseFormGetValues<T>;
   errors: FieldErrors<T>;
-  ingredients: RecipeLineIngredient[];
+  ingredients: IngredientLineOption[];
   name?: Path<T> & ArrayPath<T>;
   /** false → use the ingredient output unit; true → allow any configured unit. */
   unitEditable?: boolean;
@@ -83,7 +83,7 @@ interface RecipeLinesEditorProps<T extends FieldValues> {
   showYield?: boolean;
 }
 
-export function RecipeLinesEditor<T extends FieldValues>({
+export function IngredientLinesEditor<T extends FieldValues>({
   control,
   setValue,
   getValues,
@@ -93,22 +93,24 @@ export function RecipeLinesEditor<T extends FieldValues>({
   unitEditable = false,
   bulkAdd = false,
   showYield = true,
-}: RecipeLinesEditorProps<T>) {
+}: IngredientLinesEditorProps<T>) {
   const { fields, append, remove, replace } = useFieldArray<T, ArrayPath<T>>({
     control,
     name,
   });
 
   const ingredientMap = useMemo(() => {
-    const m = new Map<number, RecipeLineIngredient>();
+    const m = new Map<number, IngredientLineOption>();
     for (const ing of ingredients) m.set(ing.id, ing);
     return m;
   }, [ingredients]);
 
   const lineErrors = (errors as Record<string, unknown>)[name] as
-    Array<FieldErrors<RecipeLineRowValue> | undefined> | undefined;
+    Array<FieldErrors<IngredientLineRowValue> | undefined> | undefined;
 
-  const rows = fields as unknown as Array<RecipeLineRowValue & { id: string }>;
+  const rows = fields as unknown as Array<
+    IngredientLineRowValue & { id: string }
+  >;
 
   const alreadySelectedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -119,7 +121,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
   }, [rows]);
 
   function handleBulkAdd(ingredientIds: string[]) {
-    const newRows: RecipeLineRowValue[] = ingredientIds.map((id) => {
+    const newRows: IngredientLineRowValue[] = ingredientIds.map((id) => {
       const ing = ingredientMap.get(Number(id));
       const defaultUnit = getDefaultProductionUnit(ing);
       return {
@@ -132,7 +134,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
       };
     });
     const currentRows =
-      (getValues(name) as unknown as RecipeLineRowValue[]) ?? [];
+      (getValues(name) as unknown as IngredientLineRowValue[]) ?? [];
     const kept = currentRows
       .filter((row) => row.ingredient_id !== "")
       .map((row) => ({
@@ -214,7 +216,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
 
         <div className="divide-y">
           {rows.map((row, index) => (
-            <RecipeLineRow<T>
+            <IngredientLineRow<T>
               key={row.id}
               control={control}
               setValue={setValue}
@@ -238,7 +240,7 @@ export function RecipeLinesEditor<T extends FieldValues>({
   );
 }
 
-function RecipeLineRow<T extends FieldValues>({
+function IngredientLineRow<T extends FieldValues>({
   control,
   setValue,
   name,
@@ -256,9 +258,9 @@ function RecipeLineRow<T extends FieldValues>({
   setValue: UseFormSetValue<T>;
   name: Path<T>;
   index: number;
-  ingredients: RecipeLineIngredient[];
-  ingredientMap: Map<number, RecipeLineIngredient>;
-  rowError: FieldErrors<RecipeLineRowValue> | undefined;
+  ingredients: IngredientLineOption[];
+  ingredientMap: Map<number, IngredientLineOption>;
+  rowError: FieldErrors<IngredientLineRowValue> | undefined;
   canRemove: boolean;
   unitEditable: boolean;
   showYield: boolean;

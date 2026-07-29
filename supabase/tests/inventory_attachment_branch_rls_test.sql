@@ -158,7 +158,6 @@ BEGIN
     tenant_id,
     supplier_id,
     ingredient_id,
-    supplier_sku_code,
     is_active,
     created_by
   )
@@ -166,7 +165,6 @@ BEGIN
     v_tenant,
     v_supplier,
     v_ingredient,
-    'RLS-ATTACH-' || txid_current()::text,
     TRUE,
     v_staff
   );

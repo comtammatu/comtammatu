@@ -115,30 +115,6 @@ const ingredientUpdateSchema = ingredientBaseSchema.superRefine((data, ctx) => {
 
 type IngredientInput = z.infer<typeof ingredientBaseSchema>;
 
-async function persistDefaultFulfillSiteKind(
-  supabase: SupabaseClient,
-  tenantId: number,
-  ingredientId: number,
-  siteKind: "central_supply" | "central_kitchen" | null | undefined,
-): Promise<{ success: false; error: string } | null> {
-  if (siteKind === undefined) return null;
-
-  const { error } = await supabase
-    .from("ingredients")
-    .update({ default_fulfill_site_kind: siteKind })
-    .eq("tenant_id", tenantId)
-    .eq("id", ingredientId);
-
-  if (error) {
-    return {
-      success: false,
-      error: "Không lưu được nguồn đáp ứng mặc định.",
-    };
-  }
-
-  return null;
-}
-
 function mapCatalogRpcError(
   code: string | undefined,
   message: string | undefined,
@@ -191,8 +167,8 @@ function buildRpcUnits(units: IngredientInput["units"]) {
   }));
 }
 
-type UpsertCatalogArgs =
-  Database["public"]["Functions"]["upsert_ingredient_catalog"]["Args"];
+type SaveCatalogArgs =
+  Database["public"]["Functions"]["save_ingredient_catalog"]["Args"];
 
 // The RPC accepts NULL for the nullable params (p_ingredient_id, p_category_id,
 // thresholds, …) but the generated Args type marks them non-nullable. Cast the
@@ -201,13 +177,16 @@ function rpcCatalogArgs(
   ingredientId: number | null,
   data: IngredientInput,
   shelfLifeDays: number | null = null,
-): UpsertCatalogArgs {
+  defaultFulfillSiteKind:
+    | "central_supply"
+    | "central_kitchen"
+    | null = null,
+): SaveCatalogArgs {
   return {
     p_ingredient_id: ingredientId as never,
     p_name: data.name,
     p_sku: (data.sku?.trim() ? data.sku.trim() : null) as never,
     p_category_id: (data.category_id ?? null) as never,
-    p_unit_cost: null as never,
     p_item_kind: data.item_kind,
     p_storage_type: data.storage_type,
     p_min_stock_level: data.min_stock_level,
@@ -215,6 +194,7 @@ function rpcCatalogArgs(
     p_reorder_point: (data.reorder_point ?? null) as never,
     p_shelf_life_days: shelfLifeDays as never,
     p_units: buildRpcUnits(data.units) as never,
+    p_default_fulfill_site_kind: defaultFulfillSiteKind as never,
   };
 }
 
@@ -391,12 +371,12 @@ export const createIngredient = withAction<
     schema: ingredientCreateSchema,
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
-  async (data, { supabase, claims }) => {
+  async (data, { supabase }) => {
     const { default_fulfill_site_kind: defaultFulfillSiteKind, ...catalogData } =
       data;
     const { data: id, error } = await supabase.rpc(
-      "upsert_ingredient_catalog",
-      rpcCatalogArgs(null, catalogData),
+      "save_ingredient_catalog",
+      rpcCatalogArgs(null, catalogData, null, defaultFulfillSiteKind ?? null),
     );
 
     if (error) {
@@ -407,14 +387,6 @@ export const createIngredient = withAction<
     }
 
     const ingredientId = Number(id);
-    const siteKindError = await persistDefaultFulfillSiteKind(
-      supabase,
-      claims.tenant_id,
-      ingredientId,
-      defaultFulfillSiteKind,
-    );
-    if (siteKindError) return siteKindError;
-
     return { success: true, data: { id: ingredientId } };
   },
 );
@@ -481,7 +453,7 @@ export const quickCreateIngredient = withAction<
     }
 
     const { data: id, error } = await supabase.rpc(
-      "upsert_ingredient_catalog",
+      "save_ingredient_catalog",
       rpcCatalogArgs(null, {
         name: data.name,
         category_id: categoryId,
@@ -539,7 +511,7 @@ export async function updateIngredient(
 
   const { data: existing, error: existingError } = await supabase
     .from("ingredients")
-    .select("shelf_life_days")
+    .select("shelf_life_days, default_fulfill_site_kind")
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
@@ -558,8 +530,18 @@ export async function updateIngredient(
     parsedInput.data;
 
   const { error } = await supabase.rpc(
-    "upsert_ingredient_catalog",
-    rpcCatalogArgs(parsedId.data, catalogData, existing.shelf_life_days),
+    "save_ingredient_catalog",
+    rpcCatalogArgs(
+      parsedId.data,
+      catalogData,
+      existing.shelf_life_days,
+      defaultFulfillSiteKind === undefined
+        ? (existing.default_fulfill_site_kind as
+            | "central_supply"
+            | "central_kitchen"
+            | null)
+        : defaultFulfillSiteKind,
+    ),
   );
 
   if (error) {
@@ -568,14 +550,6 @@ export async function updateIngredient(
       error: mapCatalogRpcError(error.code, error.message),
     };
   }
-
-  const siteKindError = await persistDefaultFulfillSiteKind(
-    supabase,
-    claims.tenant_id,
-    parsedId.data,
-    defaultFulfillSiteKind,
-  );
-  if (siteKindError) return siteKindError;
 
   return { success: true };
 }

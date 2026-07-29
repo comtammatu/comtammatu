@@ -562,21 +562,27 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 
 | Canonical term          | Nhãn chuẩn                          | Định nghĩa                                                                                                   | Không dùng                            |
 | ----------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| `purchase_order`        | đơn đặt hàng NCC                    | Đơn mua gửi nhà cung cấp.                                                                                    | đơn hàng bán                          |
-| `goods_received_note`   | phiếu nhập kho                      | Hàng thực nhận từ NCC tại warehouse của site. Mã chứng từ: `GRN-YYYY-####`.                                  | hóa đơn NCC, phiếu nhận chung         |
+| `stock_request`         | yêu cầu hàng                        | Xin cấp hàng nội bộ từ Kho Tổng/Bếp Trung Tâm về chi nhánh.                                                  | yêu cầu mua NCC                       |
+| `purchase_request`      | yêu cầu mua                         | Nhu cầu mua ngoài do kho trung tâm lập; có thể tạo nhiều PO theo NCC. Mã: `YCM-DDMMYYYY-####`.                | yêu cầu hàng nội bộ                   |
+| `purchase_order`        | đơn đặt hàng NCC                    | Cam kết mua với đúng một NCC, thuộc đúng một Yêu cầu mua. Mã: `PO-DDMMYYYY-####`.                             | đơn hàng bán                          |
+| `goods_received_note`   | phiếu nhập kho                      | Một lần nhận hàng thực tế của đúng một PO. Nháp hiển thị **Chờ nhập hàng**. Mã: `GRN-DDMMYYYY-####`.          | hóa đơn NCC, phiếu nhận nhiều PO      |
 | `supplier_invoice`      | hóa đơn NCC                         | Hóa đơn đầu vào từ NCC.                                                                                      | HĐĐT bán ra, phiếu nhập kho           |
+| `accounts_payable`      | công nợ NCC                         | Số tiền còn phải trả NCC sau thanh toán và phiếu giảm công nợ đã phân bổ.                                    | giá trị tồn, chi phí đã trả           |
+| `po_applied_quantity`   | số lượng tính vào đơn               | Phần nhận hợp lệ dùng hoàn thành số lượng còn lại của dòng PO.                                               | toàn bộ số lượng nhận                 |
+| `excess_quantity`       | dư ngoài đơn                        | Phần nhận hợp lệ vượt số còn lại của PO; nhập tồn với giá `0`.                                               | khuyến mãi                            |
+| `shortage_quantity`     | còn thiếu                           | Phần số lượng PO chưa được hoàn thành sau lần nhận hiện tại.                                                 | số lượng từ chối                      |
 | `supplier_payment`      | thanh toán NCC                      | Giao dịch trả tiền cho nhà cung cấp.                                                                         | food cost, PO, GRN                    |
 | `stock_level`           | tồn kho                             | Snapshot số lượng + WAC tại location.                                                                        | số lượng đặt mua                      |
 | `stock_movement`        | biến động tồn kho                   | Ledger append-only của nhập/xuất/transfer/consumption/adjustment.                                            | giao dịch chung nếu cần rõ movement   |
-| `stock_transfer`        | phiếu điều chuyển nội bộ            | Luân chuyển tồn giữa hai warehouse/site hợp lệ. Mã chứng từ: `DC-YYYY-####`.                                 | tiêu hao, bán hàng, food cost         |
-| `stock_issue`           | phiếu xuất kho                      | Xuất dùng nội bộ khi runtime thật sự dùng chứng từ issue. Mã thủ công: `PXK-YYYY-####`; hao hụt: `HH-YYYY-####`. | transfer nếu có location nhận tồn  |
+| `stock_transfer`        | phiếu điều chuyển nội bộ            | Luân chuyển tồn giữa hai warehouse/site hợp lệ. Mã chứng từ: `DC-DDMMYYYY-####`.                             | tiêu hao, bán hàng, food cost         |
+| `stock_issue`           | phiếu xuất kho                      | Xuất dùng nội bộ khi runtime thật sự dùng chứng từ issue. Mã thủ công: `PXK-DDMMYYYY-####`; hao hụt: `HH-DDMMYYYY-####`. | transfer nếu có location nhận tồn  |
 | `consumption`           | tiêu hao                            | Trừ tồn vì bán hàng, sản xuất, hư hỏng, hoặc sử dụng bếp đã được duyệt.                                      | transfer, PO, hóa đơn NCC             |
-| `stocktake`             | kiểm kê                             | Đếm thực tế và điều chỉnh. Mã phiên: `KK-YYYY-####`.                                                         | kiểm kho nếu cần term chuẩn           |
-| `inventory_count_slip`  | phiếu đếm                           | Phiếu đếm nguyên liệu theo phân công. Mã: `PD-YYYY-####`.                                                    | phiên kiểm kê                         |
+| `stocktake`             | kiểm kê                             | Đếm thực tế và điều chỉnh. Mã phiên: `KK-DDMMYYYY-####`.                                                     | kiểm kho nếu cần term chuẩn           |
+| `inventory_count_slip`  | phiếu đếm                           | Phiếu đếm nguyên liệu theo phân công. Mã: `PD-DDMMYYYY-####`.                                                | phiên kiểm kê                         |
 | `entry_unit_id`         | đơn vị nhập / đơn vị đếm            | Đơn vị người dùng nhập trên PO/GRN/transfer/issue/waste; trong kiểm kê là đơn vị đếm.                        | đơn vị tồn chuẩn, text unit từ client |
 | `base_unit`             | đơn vị tồn chuẩn                    | Đơn vị duy nhất `is_base = true` của nguyên liệu; ledger và tồn chuẩn lưu theo đơn vị này.                   | đơn vị nhập, đơn vị đóng gói          |
 | `to_base_factor`        | quy đổi về tồn chuẩn                | Hệ số quy đổi dạng `1 đơn vị nhập/đếm = N đơn vị tồn chuẩn`. UI hiển thị canonical như `1 thùng = 24 chai`.  | hệ số đảo chiều                       |
-| `purchase_unit_cost`    | đơn giá nhập                        | Snapshot `grn_items.unit_cost` theo đơn vị nhập, được sync từ PO `unit_price_est` khi duyệt (D091).           | giá vốn BQ, giá do Kho nhập, price-QC |
+| `purchase_unit_cost`    | đơn giá nhập                        | Snapshot giá PO theo đơn vị nhập cho phần `po_applied_quantity`; phần dư ngoài đơn có giá `0` (D096).         | giá vốn BQ, giá do Kho nhập, price-QC |
 | `reference_unit_cost`   | giá nhập tham chiếu                 | Giá tham chiếu trên `ingredients.unit_cost`, dùng fallback khi chưa có giá vốn BQ.                           | giá vốn BQ chính thức                 |
 | `average_unit_cost`     | giá vốn bình quân                   | `stock_levels.avg_unit_cost`, tính theo đơn vị tồn chuẩn. UI ngắn được dùng `Giá vốn BQ`.                    | đơn giá nhập                          |
 | `movement_unit_cost`    | đơn giá ghi sổ                      | `stock_movements.unit_cost`, snapshot đơn giá dùng cho một movement; không gọi là WAC trên lịch sử movement. | giá vốn BQ hiện tại                   |
@@ -584,7 +590,7 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `finished_good`         | thành phẩm                          | Hàng được sản xuất hoặc giữ tồn tại warehouse của site.                                                      | món bán nếu đang nói menu             |
 | `recipe`                | định mức (món bán)                  | Định mức nguyên liệu tiêu hao cho một món bán.                                                               | công thức (production)                |
 | `production_recipe`     | công thức (sản xuất)                | Định mức nguyên liệu (BOM) để sản xuất ra thành phẩm.                                                        | định mức (POS)                        |
-| `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại site; entity runtime là `production_runs`. Mã: `LSX-YYYY-####`.                            | work order                            |
+| `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại site; entity runtime là `production_runs`. Mã: `LSX-DDMMYYYY-####`.                        | work order                            |
 | `three_way_matching`    | đối soát 3 chứng từ                 | Đối chiếu `PO`, `GRN`, `supplier_invoice`.                                                                   | matching chung                        |
 | `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Costing chuẩn hiện tại.                                                                                      | FIFO nếu hệ thống không dùng          |
 
@@ -740,6 +746,8 @@ hoặc `short`; không nhúng acronym whitelist vào câu.
 
 | Term                    | Long                        | Short            | Acronym              |
 | ----------------------- | --------------------------- | ---------------- | -------------------- |
+| `stock_request`         | Yêu cầu hàng               | Yêu cầu hàng     | —                    |
+| `purchase_request`      | Yêu cầu mua                | Yêu cầu mua      | `YCM`                |
 | `purchase_order`        | Đơn đặt hàng NCC            | Đơn NCC          | `PO`                 |
 | `goods_received_note`   | Phiếu nhập kho              | Phiếu nhập       | `GRN`                |
 | `supplier_invoice`      | Hóa đơn NCC                 | HĐ NCC           | —                    |

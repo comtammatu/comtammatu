@@ -7,10 +7,12 @@ import {
   Search as IconSearch,
   Trash2 as IconTrash,
 } from "lucide-react";
+import { useFieldArray, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   InputGroup,
   InputGroupAddon,
@@ -24,7 +26,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormDialog, SelectField, TextField } from "@/components/form";
+import { FormDialog, MultiSelectCombobox } from "@/components/form";
 import {
   DataTable,
   type DataTableColumn,
@@ -45,7 +47,11 @@ import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { FORM_VI } from "@comtammatu/shared/messages";
-import { createSupplierItem, deleteSupplierItem, setSupplierItemPreferred } from "./actions";
+import {
+  createSupplierItems,
+  deleteSupplierItem,
+  setSupplierItemPreferred,
+} from "./actions";
 
 export type SupplierIngredientOption = {
   id: number;
@@ -58,18 +64,101 @@ export type SupplierItemRow = {
   ingredientId: number;
   ingredientName: string;
   ingredientSku: string | null;
-  supplierSkuCode: string;
   isPreferred: boolean;
 };
 
 const itemSchema = z.object({
-  ingredientId: z.string().min(1, { error: "Chọn nguyên liệu." }),
-  supplierSkuCode: z.string().trim().min(1, { error: "Nhập mã hàng NCC." }),
+  items: z
+    .array(
+      z.object({
+        ingredientId: z.string().min(1, { error: "Chọn nguyên liệu." }),
+      }),
+    )
+    .min(1, { error: "Chọn ít nhất một nguyên liệu." }),
 });
 
 type ItemFormValues = z.infer<typeof itemSchema>;
 
 const copy = messages.inventory.suppliers.items;
+
+function SupplierItemsFormFields({
+  form,
+  ingredients,
+}: {
+  form: UseFormReturn<ItemFormValues>;
+  ingredients: SupplierIngredientOption[];
+}) {
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+  const ingredientById = useMemo(
+    () => new Map(ingredients.map((ingredient) => [ingredient.id, ingredient])),
+    [ingredients],
+  );
+  const selectedIds = new Set(fields.map((field) => field.ingredientId));
+
+  return (
+    <div className="flex flex-col gap-3">
+      <MultiSelectCombobox
+        options={ingredients.map((ingredient) => ({
+          value: String(ingredient.id),
+          label: ingredient.name,
+          hint: ingredient.sku ?? undefined,
+          alreadySelected: selectedIds.has(String(ingredient.id)),
+        }))}
+        onConfirm={(ingredientIds) =>
+          append(
+            ingredientIds.map((ingredientId) => ({
+              ingredientId,
+            })),
+          )
+        }
+        triggerLabel={copy.selectMultiple}
+        confirmLabel={copy.selectCount}
+        searchPlaceholder={copy.selectSearchPlaceholder}
+        triggerClassName="w-full"
+      />
+      {form.formState.errors.items?.message ? (
+        <p className="text-sm text-destructive" role="alert">
+          {form.formState.errors.items.message}
+        </p>
+      ) : null}
+      {fields.length > 0 ? (
+        <Frame className="max-h-[50vh] overflow-y-auto">
+          <div className="divide-y">
+            {fields.map((field, index) => {
+              const ingredient = ingredientById.get(Number(field.ingredientId));
+              return (
+                <div key={field.id} className="flex items-center gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">
+                      {ingredient?.name ?? copy.ingredient}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {copy.internalSku}: {ingredient?.sku ?? "—"}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-touch"
+                    aria-label={copy.removeSelectedAria(
+                      ingredient?.name ?? copy.ingredient,
+                    )}
+                    onClick={() => remove(index)}
+                  >
+                    <IconTrash />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </Frame>
+      ) : null}
+    </div>
+  );
+}
 
 export function SupplierItemsClient({
   supplier,
@@ -87,10 +176,7 @@ export function SupplierItemsClient({
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const defaultValues = useMemo<ItemFormValues>(
-    () => ({ ingredientId: "", supplierSkuCode: "" }),
-    [],
-  );
+  const defaultValues = useMemo<ItemFormValues>(() => ({ items: [] }), []);
   const mappedIngredientIds = useMemo(
     () => new Set(rows.map((row) => row.ingredientId)),
     [rows],
@@ -102,10 +188,7 @@ export function SupplierItemsClient({
   const filtered = useMemo(
     () =>
       rows.filter((row) =>
-        matchesSearch(
-          [row.ingredientName, row.ingredientSku, row.supplierSkuCode],
-          search,
-        ),
+        matchesSearch([row.ingredientName, row.ingredientSku], search),
       ),
     [rows, search],
   );
@@ -206,13 +289,6 @@ export function SupplierItemsClient({
         <span className="font-mono text-sm text-muted-foreground">
           {row.ingredientSku ?? "—"}
         </span>
-      ),
-    },
-    {
-      key: "supplierSku",
-      header: copy.supplierSku,
-      render: (row) => (
-        <span className="font-mono text-sm">{row.supplierSkuCode}</span>
       ),
     },
     ...(canManage
@@ -324,9 +400,6 @@ export function SupplierItemsClient({
                       ) : null}
                     </span>
                   </ItemTitle>
-                  <ItemDescription>
-                    {copy.supplierSku}: {row.supplierSkuCode}
-                  </ItemDescription>
                   {row.ingredientSku ? (
                     <ItemDescription>
                       {copy.internalSku}: {row.ingredientSku}
@@ -359,35 +432,22 @@ export function SupplierItemsClient({
         entityKey="new-supplier-item"
         submitLabel={copy.addSubmit}
         successMessage={copy.addSuccess}
+        contentClassName="sm:max-w-2xl"
         onSubmit={(values) =>
-          createSupplierItem({
+          createSupplierItems({
             supplierId: supplier.id,
-            ingredientId: Number(values.ingredientId),
-            supplierSkuCode: values.supplierSkuCode,
+            items: values.items.map((item) => ({
+              ingredientId: Number(item.ingredientId),
+            })),
           })
         }
         onSuccess={() => router.refresh()}
       >
         {(form) => (
-          <>
-            <SelectField
-              control={form.control}
-              name="ingredientId"
-              label={copy.ingredient}
-              options={availableIngredients.map((item) => ({
-                value: String(item.id),
-                label: item.sku ? `${item.name} · ${item.sku}` : item.name,
-              }))}
-              required
-            />
-            <TextField
-              control={form.control}
-              name="supplierSkuCode"
-              label={copy.supplierSku}
-              placeholder={copy.supplierSkuPlaceholder}
-              required
-            />
-          </>
+          <SupplierItemsFormFields
+            form={form}
+            ingredients={availableIngredients}
+          />
         )}
       </FormDialog>
     </>

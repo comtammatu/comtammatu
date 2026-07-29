@@ -129,7 +129,7 @@ test("growth lists opted in", () => {
     ["../app/(protected)/hr/staff/staff-table.tsx", 25],
     ["../app/(protected)/inventory/count-slips/count-slips-client.tsx", 50],
     ["../app/(protected)/inventory/production/production-runs-client.tsx", 50],
-    ["../app/(protected)/inventory/recipes/recipes-client.tsx", 25],
+    ["../app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx", 25],
     ["../app/(protected)/inventory/stock/stock-client.tsx", 25],
     ["../app/(protected)/inventory/stocktake/stocktake-list-client.tsx", 50],
     ["../app/(protected)/inventory/suppliers/suppliers-client.tsx", 25],

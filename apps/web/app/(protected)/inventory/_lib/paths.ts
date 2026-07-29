@@ -4,6 +4,8 @@ export type InventoryPaths = {
   home: InventoryRouteBase;
   stock: string;
   grn: string;
+  stockRequests: string;
+  purchaseRequests: string;
   purchaseOrders: string;
   /** Canonical Finance AP home (supplier invoices live under Finance). */
   supplierInvoices: string;
@@ -20,7 +22,7 @@ export type InventoryPaths = {
   issues: string;
   suppliers: string;
   ingredients: string;
-  recipes: string;
+  menuRecipes: string;
   settings: string;
   units: string;
 };
@@ -34,6 +36,8 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
     home: base,
     stock: joinInventoryPath(base, "/stock"),
     grn: joinInventoryPath(base, "/grn"),
+    stockRequests: joinInventoryPath(base, "/stock-requests"),
+    purchaseRequests: joinInventoryPath(base, "/purchase-requests"),
     purchaseOrders: joinInventoryPath(base, "/purchase-orders"),
     supplierInvoices: "/finance/supplier-invoices",
     transfers: joinInventoryPath(base, "/transfers"),
@@ -49,7 +53,7 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
     issues: joinInventoryPath(base, "/issues"),
     suppliers: joinInventoryPath(base, "/suppliers"),
     ingredients: joinInventoryPath(base, "/ingredients"),
-    recipes: joinInventoryPath(base, "/recipes"),
+    menuRecipes: joinInventoryPath(base, "/menu-recipes"),
     settings: joinInventoryPath(base, "/settings"),
     units: joinInventoryPath(base, "/settings/units"),
   };

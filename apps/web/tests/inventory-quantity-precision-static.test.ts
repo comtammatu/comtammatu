@@ -56,7 +56,7 @@ test("inventory quantity inputs allow three fraction digits", () => {
 
 test("inventory factor inputs are not capped at two fraction digits", () => {
   const recipeLinesEditor = read(
-    "app/(protected)/inventory/_components/recipe-lines-editor.tsx",
+    "app/(protected)/inventory/_components/ingredient-lines-editor.tsx",
   );
   assert.match(
     recipeLinesEditor,

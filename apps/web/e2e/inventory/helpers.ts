@@ -365,10 +365,9 @@ export async function ensureSupplierItemMapping(
       tenant_id: tenantId,
       supplier_id: supplierId,
       ingredient_id: ingredientId,
-      supplier_sku_code: `E2E-${ingredientId}`,
       is_active: true,
     },
-    { onConflict: "supplier_id,supplier_sku_code" },
+    { onConflict: "tenant_id,supplier_id,ingredient_id" },
   );
   if (error) {
     throw new Error(`Failed to create E2E supplier item: ${error.message}`);

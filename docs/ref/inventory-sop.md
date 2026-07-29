@@ -8,7 +8,8 @@
 
 - Site active: `branch`, `central_supply`, `central_kitchen`. Mỗi site một
   warehouse active (default receive/issue/consumption).
-- **Mua NCC:** chỉ Kho Tổng / Bếp TT — GRN draft → PO → confirm. Không mở PR mua.
+- **Mua NCC:** chỉ Kho Tổng / Bếp TT — Yêu cầu mua → PO theo NCC → GRN theo
+  lần giao.
 - **Bổ sung CN:** phiếu **Yêu cầu hàng** → fulfill trung tâm → DC → CN nhận.
   Nguồn dòng = `ingredients.default_fulfill_site_kind` (Owner gán trên catalog).
 - Kho trên GRN nháp chỉ SL / đơn vị / từ chối (+ lý do/ảnh). Đơn giá trên PO.
@@ -19,13 +20,15 @@
 
 ### 2a. Happy path — Kho Tổng / Bếp TT
 
-1. Tạo **GRN draft** tại site nhận trung tâm; nhập SL thực nhận, đơn vị, từ chối.
-2. Kế toán hoặc Owner tạo **PO từ GRN**, giá thương mại, duyệt (`draft → sent`).
-3. Duyệt PO sync `grn_items.unit_cost`.
-4. Kho **confirm GRN** khi PO đã duyệt.
-5. HĐ NCC → Finance/AP.
+1. Kho tạo **Yêu cầu mua** tại site nhận trung tâm.
+2. Kế toán hoặc Owner tạo PO theo từng NCC, nhập giá và duyệt (`draft → sent`).
+3. Khi NCC giao, mở PO và chọn **Tạo phiếu nhập**. Một PO chỉ có một GRN nháp
+   **Chờ nhập hàng** tại một thời điểm.
+4. Kho nhập thực nhận và từ chối; lý do + ảnh là bắt buộc khi có từ chối.
+5. Kho xác nhận GRN. Phần áp dụng PO dùng giá PO; phần dư ngoài đơn nhập giá `0`.
+6. PO còn thiếu tiếp tục tạo GRN cho lần giao sau. HĐ NCC → Finance/AP.
 
-Toàn bộ từ chối → hủy draft chưa gắn PO; không tạo PO giá trị 0.
+Hàng tặng biết trước là dòng PO giá `0`; không tạo phân hệ khuyến mãi.
 
 ### 2b. Chi nhánh — không GRN
 

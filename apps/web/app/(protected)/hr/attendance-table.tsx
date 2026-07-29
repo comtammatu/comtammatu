@@ -1084,9 +1084,16 @@ function DetailView({
 
           <div className="flex flex-col gap-2">
             <label htmlFor="note" className="text-sm font-medium">
-              Ghi chú (tuỳ chọn)
+              Lý do đóng ca
             </label>
-            <Textarea id="note" name="note" placeholder="Lý do đóng ca..." />
+            <Textarea
+              id="note"
+              name="note"
+              placeholder="Nhập lý do đóng ca"
+              minLength={5}
+              maxLength={500}
+              required
+            />
           </div>
         </form>
       </AppDialog>
