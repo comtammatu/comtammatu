@@ -153,21 +153,55 @@ Change ownership:
 | proxy.ts             | `@comtammatu/database/supabase/middleware` | Session refresh boundary      |
 | "use client"         | `@comtammatu/database/supabase/client`     | No server deps (next/headers) |
 
+## Product Dual Thesis
+
+Cơm Tấm Má Tư is **two product halves**, not one mixed dashboard. Structure,
+naming, chrome, and adapters must make both halves obvious.
+
+| Product half (VI) | Job | Plane ID | Route root | Shell | Adapter prefix |
+| ----------------- | --- | -------- | ---------- | ----- | -------------- |
+| **Quản lý hệ thống** | Tenant/branch oversight, menu, central inventory, finance, HR, settings | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback` | `AppShell` (nav-as-data) | `App*` |
+| **Vận hành bán hàng (ca)** | Shift work, branch stock, team, branch settings | `branch_surface` | `/br/[branchId]/*` (excl. stations) | Branch operator chrome | `BranchOperator*` |
+| **Vận hành bán hàng (station)** | Sell / kitchen / runner queue | `station_chrome` | `/br/[branchId]/{pos,kds,runner}` | Station chrome | station adapters |
+| **Public / khách** | Auth, guest order, runner display | `public` | `/login`, `/q`, `/r`, … | none | — |
+
+- UI copy for the L0 half: **Quản trị** / **Hệ thống**. Role ACL `owner` is not a plane name.
+- Runtime plane id `RouteSurface: "owner"` and DOM `data-owner-shell-scroll` remain
+  technical aliases of **`control_surface`**. Chrome component is
+  `ControlSurfaceShell`. New docs/UI copy use `control_surface` / Quản trị.
+- Dual-plane inventory keeps **two jobs** (`/inventory/*` oversight vs `/br/.../stock/*` shift work). Share implementation; do not merge URLs.
+- Vocabulary detail: `docs/ref/glossary.md`. Chrome: `docs/spec/design-system.md`. Routes: `docs/modules/web-app.md`, `docs/spec/role-route-matrix.md`.
+
+### Folder placement (Dual Thesis)
+
+| Concern | Lives under | Notes |
+| ------- | ----------- | ----- |
+| Quản trị L0 routes | `apps/web/app/(protected)/{menu,orders,inventory,finance,hr,…}` | `App*` adapters; shells converge to one `AppShell` + **nav-as-data** (module shells are transitional) |
+| Vận hành branch + stations | `apps/web/app/(protected)/br/[branchId]/…` | `BranchOperator*` / station chrome |
+| Branch settings UI (POS/KDS/tables/printers) | `apps/web/app/(protected)/br/_shared/settings/` | Must not sit as a fake L0 `branch-settings/` tree |
+| Dual-plane shared domain logic | `apps/web/lib/inventory/*` (e.g. `grn-list-model`) | Same core; different route presenters / density |
+
+**Nav-as-data:** one `AppShell` is the only L0 chrome. Layouts import
+`ControlSurfaceShell` directly. Deep nav dispatches through
+`resolveControlSurfaceDeepNav` (`apps/web/app/lib/control-surface-nav.ts`).
+Do not rewrite POS/KDS.
+
 ## Routing (path-based, single domain)
 
 > Decision: D009 — path-based, không sub-domain. Sub-domain không nằm trong backlog hiện tại.
 
-Route families are grouped into stable surfaces; exact role/module mappings are
-generated in `docs/spec/role-route-matrix.md` and must not be copied here:
+Route families are grouped into product halves / planes; exact role/module
+mappings are generated in `docs/spec/role-route-matrix.md` and must not be
+copied here:
 
-| Surface | Route families                                                                                   | Boundary                                                          |
-| ------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| Owner   | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, `/hr`, `/settings`                 | Owner-only control plane before reusable module capabilities      |
-| Branch  | `/br/[branchId]/*`                                                                               | Module ACL + URL/JWT branch scope; PBAC/RLS owns actions and data |
-| Utility | `/notifications`, `/access-denied`                                                               | Explicit utility/public contracts, not a product plane            |
+| Surface (product) | Plane ID | Route families | Boundary |
+| ----------------- | -------- | -------------- | -------- |
+| Quản lý hệ thống | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, `/hr`, `/settings`, `/feedback` | L0 Tenant Command; runtime `RouteSurface: "owner"` is the code alias |
+| Vận hành bán hàng | `branch_surface` + `station_chrome` | `/br/[branchId]/*` | Module ACL + URL/JWT branch scope; PBAC/RLS owns actions and data |
+| Utility | — | `/notifications`, `/access-denied` | Explicit utility/public contracts, not a product plane |
 
-Branch Manager and Staff daily work stays under `/br/[branchId]/*`; the Owner
-surface families remain Owner-only per ADR 0012.
+Branch Manager and Staff daily work stays under `/br/[branchId]/*`; the
+`control_surface` families remain L0-gated per ADR 0012 / D090.
 
 ## Infrastructure Strategy
 

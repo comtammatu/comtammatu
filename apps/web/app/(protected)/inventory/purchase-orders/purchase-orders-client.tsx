@@ -42,6 +42,7 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import {
+  AppListFrame,
   AppPage,
   AppPageHeader,
   AppToolbar,
@@ -51,7 +52,6 @@ import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
 import {
   approvePurchaseOrder,
   updatePurchaseOrderPrices,
@@ -460,11 +460,10 @@ export function PurchaseOrdersClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={poCopy.pageTitle}
         description={poCopy.pageDescription}
       />
-      <InventoryListFrame toolbar={listToolbar}>
+      <AppListFrame toolbar={listToolbar}>
         <DataTable
           columns={columns}
           data={filteredRows}
@@ -518,7 +517,7 @@ export function PurchaseOrdersClient({
             </Item>
           )}
         />
-      </InventoryListFrame>
+      </AppListFrame>
 
       <AppDialog
         open={selectedRow != null}

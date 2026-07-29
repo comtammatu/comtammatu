@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { ERRORS_VI } from "@comtammatu/shared/messages";
-import { messages } from "@lib/messages";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { tRoute } from "../../_lib/dictionary";
 import { loadGrnDetailResult } from "@lib/inventory/grn-detail-data";
@@ -19,7 +18,6 @@ function GrnDetailLoadError({ error }: { error: string }) {
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={tRoute("/inventory/grn", "heading")}
       />
       <AppEmptyState

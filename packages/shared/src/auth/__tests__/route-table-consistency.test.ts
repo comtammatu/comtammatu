@@ -6,12 +6,12 @@ import { STAFF_ROLES } from "../types";
 import { ROUTE_FAMILY_CONTRACTS } from "../route-map";
 import { resolveModuleFromPath } from "../route-resolution";
 import {
-  OWNER_NAV_GROUPS,
+  CONTROL_SURFACE_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
   OPERATOR_TILE_ITEMS,
 } from "../nav-config";
 import {
-  resolveOwnerNavGroups,
+  resolveControlSurfaceNavGroups,
   resolveBranchManagementItems,
 } from "../nav-resolution";
 
@@ -112,20 +112,20 @@ function assertHrefResolvesForAudience(
   }
 }
 
-test("resolveOwnerNavGroups hrefs resolve to a module reachable by an owner audience", () => {
+test("resolveControlSurfaceNavGroups hrefs resolve to a module reachable by an owner audience", () => {
   const failures: string[] = [];
 
-  for (const group of OWNER_NAV_GROUPS) {
+  for (const group of CONTROL_SURFACE_NAV_GROUPS) {
     for (const item of group.items) {
       const audienceRoles = STAFF_ROLES.filter((role) =>
-        resolveOwnerNavGroups(role).some((resolvedGroup) =>
+        resolveControlSurfaceNavGroups(role).some((resolvedGroup) =>
           resolvedGroup.items.some((link) => link.moduleKey === item.moduleKey),
         ),
       );
       if (audienceRoles.length === 0) continue;
 
       const sampleRole = audienceRoles[0]!;
-      const link = resolveOwnerNavGroups(sampleRole)
+      const link = resolveControlSurfaceNavGroups(sampleRole)
         .flatMap((resolvedGroup) => resolvedGroup.items)
         .find((navLink) => navLink.moduleKey === item.moduleKey);
       assert.ok(link, `expected a resolved link for ${item.moduleKey}`);

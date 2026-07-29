@@ -3,6 +3,16 @@ import type { StaffRole } from "./types";
 /** CRUD danh mục nguyên liệu + allowlist chi nhánh */
 export const INVENTORY_CATALOG_ROLES: readonly StaffRole[] = ["owner"];
 
+/**
+ * Read-only ingredient catalog on `/inventory/ingredients`.
+ * Central ops may browse; mutations stay on INVENTORY_CATALOG_ROLES.
+ */
+export const INVENTORY_CATALOG_VIEW_ROLES: readonly StaffRole[] = [
+  "owner",
+  "central_supply_ops",
+  "central_kitchen_lead",
+];
+
 /** Tồn kho, luân chuyển, điều chỉnh tồn theo chi nhánh */
 export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
   "owner",

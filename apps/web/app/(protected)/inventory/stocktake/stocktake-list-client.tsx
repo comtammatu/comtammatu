@@ -32,7 +32,12 @@ import {
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { useFormControlSize } from "@/components/form/control-size";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  AppListFrame,
+  AppPage,
+  AppPageHeader,
+  AppToolbar,
+} from "@/components/surface";
 import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import {
   DataTable,
@@ -48,7 +53,6 @@ import {
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import {
-  InventoryListFrame,
   inventoryListFilterSelectClassName,
 } from "../_components/inventory-list-frame";
 
@@ -316,12 +320,11 @@ export function StocktakeListClient({
         stocktakeAction
       ) : (
         <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
           title={messages.inventory.stocktake.title}
           actions={stocktakeAction}
         />
       )}
-      <InventoryListFrame
+      <AppListFrame
         toolbar={
           <AppToolbar
             variant="inline"
@@ -418,7 +421,7 @@ export function StocktakeListClient({
             />
           )}
         />
-      </InventoryListFrame>
+      </AppListFrame>
     </>
   );
 

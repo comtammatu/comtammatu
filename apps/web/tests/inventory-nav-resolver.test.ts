@@ -14,7 +14,7 @@ function hrefs(groups: ReturnType<typeof resolveInventoryNav>): Set<string> {
 }
 
 const shellSource = readFileSync(
-  "app/(protected)/inventory/_components/inventory-shell.tsx",
+  "app/(protected)/inventory/layout.tsx",
   "utf8",
 );
 const appShellSource = readFileSync("app/components/app-shell.tsx", "utf8");
@@ -35,7 +35,7 @@ const settingsUnitsSource = readFileSync(
   "utf8",
 );
 const ownerBottomNavSource = readFileSync(
-  "app/components/owner-bottom-nav.tsx",
+  "app/components/control-surface-bottom-nav.tsx",
   "utf8",
 );
 const inventoryPageSource = readFileSync(
@@ -299,6 +299,7 @@ test("D093 central_supply_ops nav hides PO and recipes; shows GRN + request inbo
       showProcurement: true,
       showProduction: false,
       showCatalogManagement: false,
+      showCatalogRead: true,
       showSettings: false,
       showStockRequestInbox: true,
     }),
@@ -306,6 +307,7 @@ test("D093 central_supply_ops nav hides PO and recipes; shows GRN + request inbo
 
   assert.equal(visible.has("/inventory/grn"), true);
   assert.equal(visible.has("/inventory/stock-requests"), true);
+  assert.equal(visible.has("/inventory/ingredients"), true);
   assert.equal(visible.has("/inventory/purchase-orders"), false);
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/production"), false);
@@ -318,6 +320,7 @@ test("D093 central_kitchen_lead can show production + recipes, not PO", () => {
       showProcurement: true,
       showProduction: true,
       showCatalogManagement: false,
+      showCatalogRead: true,
       showSettings: false,
       showStockRequestInbox: true,
     }),
@@ -325,5 +328,6 @@ test("D093 central_kitchen_lead can show production + recipes, not PO", () => {
 
   assert.equal(visible.has("/inventory/production"), true);
   assert.equal(visible.has("/inventory/recipes"), true);
+  assert.equal(visible.has("/inventory/ingredients"), true);
   assert.equal(visible.has("/inventory/purchase-orders"), false);
 });

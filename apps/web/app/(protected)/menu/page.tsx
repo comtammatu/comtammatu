@@ -35,7 +35,7 @@ export default async function MenuPage() {
   if (categoriesRes.error) {
     return (
       <AppPage width="wide">
-        <AppPageHeader eyebrow={MENU_VI.eyebrow} title={MENU_VI.title} />
+        <AppPageHeader title={MENU_VI.title} />
         <AppEmptyState mode="error" description={ERRORS_VI.loadFailed} />
       </AppPage>
     );
@@ -43,7 +43,7 @@ export default async function MenuPage() {
   if (itemsRes.error) {
     return (
       <AppPage width="wide">
-        <AppPageHeader eyebrow={MENU_VI.eyebrow} title={MENU_VI.title} />
+        <AppPageHeader title={MENU_VI.title} />
         <AppEmptyState mode="error" description={MENU_VI.loadItemsFailed} />
       </AppPage>
     );
@@ -67,7 +67,6 @@ export default async function MenuPage() {
   return (
     <AppPage width="wide">
       <AppPageHeader
-        eyebrow={MENU_VI.eyebrow}
         title={MENU_VI.title}
         actions={<MenuImportExportMenu />}
       />

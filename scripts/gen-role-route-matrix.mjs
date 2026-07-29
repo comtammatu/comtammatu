@@ -258,7 +258,7 @@ function parseNavAdvertisementSources(source) {
   }
 
   const namedArrays = [
-    { name: "OWNER_NAV_GROUPS", label: "Owner nav" },
+    { name: "CONTROL_SURFACE_NAV_GROUPS", label: "Control surface nav" },
     { name: "BRANCH_MANAGEMENT_ITEMS", label: "Branch management nav" },
     { name: "BRANCH_OPERATION_ITEMS", label: "Branch operation nav" },
   ];

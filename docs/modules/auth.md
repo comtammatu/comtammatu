@@ -56,7 +56,7 @@ an application role from it.
 | `apps/web/app/_lib/permissions.ts`                    | Server helper `currentUserHasPermission()`                                                     | App-side permission reads |
 
 Discovery invariant: tenant-level navigation comes only from owner-filtered
-`OWNER_NAV_GROUPS`. `MODULE_ACL.hr_payroll` still gates `/hr/payroll/*` for
+`CONTROL_SURFACE_NAV_GROUPS`. `MODULE_ACL.hr_payroll` still gates `/hr/payroll/*` for
 Owner but remains a deep HR entry, not a primary control_surface card. Branch
 Manager/Staff discovery contains Branch groups only.
 

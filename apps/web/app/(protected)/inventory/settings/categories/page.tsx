@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
-import { AppEmptyState, AppPageHeader } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppListFrame,
+  AppPageHeader,
+} from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { messages } from "@lib/messages";
 import { fetchCategories, type CategoryRow } from "./categories-actions";
 import { CategoriesClient } from "./categories-client";
-import { InventoryListFrame } from "../../_components/inventory-list-frame";
 
 const copy = messages.inventoryMaster.categories;
 
@@ -28,16 +31,15 @@ export default async function InventoryCategoriesPage() {
       ) : (
         <>
           <AppPageHeader
-            eyebrow={messages.inventory.shell.moduleName}
             title={copy.page.title}
             description={copy.page.description}
           />
-          <InventoryListFrame>
+          <AppListFrame>
             <AppEmptyState
               mode="error"
               title={messages.inventory.settings.categories.loadFailed}
             />
-          </InventoryListFrame>
+          </AppListFrame>
         </>
       )}
     </>

@@ -13,7 +13,6 @@ import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const copy = messages.settings.pos;
 const terminalSchema = z.object({
   name: z.string().trim().min(1, { error: copy.terminalNameRequired }),
-  device_id: z.string().trim().optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -22,7 +21,6 @@ type TerminalFormValues = z.infer<typeof terminalSchema>;
 function toFormValues(terminal: TerminalRow | null): TerminalFormValues {
   return {
     name: terminal?.name ?? "",
-    device_id: terminal?.device_id ?? "",
     is_active: terminal?.is_active ?? true,
   };
 }
@@ -55,7 +53,6 @@ export function TerminalFormDialog({
       onSubmit={async (values) => {
         const payload: Record<string, unknown> = {
           name: values.name,
-          device_id: values.device_id,
         };
         if (isEdit) {
           payload.is_active = values.is_active ?? true;
@@ -77,12 +74,6 @@ export function TerminalFormDialog({
             label={copy.terminalName}
             placeholder={copy.terminalNamePlaceholder}
             required
-          />
-          <TextField
-            control={form.control}
-            name="device_id"
-            label={copy.deviceIdOptional}
-            placeholder={copy.deviceIdPlaceholder}
           />
           {isEdit && (
             <Controller

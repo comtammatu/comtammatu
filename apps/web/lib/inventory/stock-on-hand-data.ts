@@ -174,9 +174,12 @@ export async function loadStockOnHandPageData({
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITE),
   ]);
 
-  const dbIngredients = ingredientsResult.success
-    ? (ingredientsResult.data as StockIngredientRow[])
-    : [];
+  const dbIngredients = (() => {
+    if (!ingredientsResult.success) {
+      throw new Error("inventory.stock.ingredients_load_failed");
+    }
+    return (ingredientsResult.data ?? []) as StockIngredientRow[];
+  })();
   const stockRows = (stockResult.data ?? []) as StockLevelRow[];
   const stockMap = new Map<
     number,

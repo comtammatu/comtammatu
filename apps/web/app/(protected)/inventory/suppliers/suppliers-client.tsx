@@ -20,9 +20,9 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
 import { matchesSearch } from "@lib/search";
 import {
+  AppListFrame,
   AppPage,
   AppPageHeader,
   AppToolbar,
@@ -300,7 +300,6 @@ export function SuppliersClient({
     <>
       <AppPage width="xwide" density="compact">
         <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
           title={suppliersCopy.title}
           actions={
             <Button type="button" size="lg" onClick={openCreate}>
@@ -309,7 +308,7 @@ export function SuppliersClient({
             </Button>
           }
         />
-        <InventoryListFrame
+        <AppListFrame
           toolbar={
             <AppToolbar
               variant="inline"
@@ -367,7 +366,7 @@ export function SuppliersClient({
               />
             )}
           />
-        </InventoryListFrame>
+        </AppListFrame>
       </AppPage>
 
       <SupplierDialog

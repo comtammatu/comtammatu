@@ -35,7 +35,6 @@ export default async function HrSetupPage() {
   return (
     <AppPage width="xwide">
       <AppPageHeader
-        eyebrow={messages.hr.workspace.eyebrow}
         title={copy.tabs.setup}
         description={copy.setupDescription}
         actions={

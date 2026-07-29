@@ -126,7 +126,6 @@ export function OwnerOverview() {
   return (
     <AppPage density="compact" width="wide">
       <AppPageHeader
-        eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
       />

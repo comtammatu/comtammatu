@@ -37,9 +37,10 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import {
+  AppEmptyState,
+  AppListFrame,
   AppPage,
   AppPageHeader,
-  AppEmptyState,
   AppToolbar,
 } from "@/components/surface";
 import { formatVND } from "@lib/inventory/format";
@@ -50,7 +51,6 @@ import type {
   RecipeLineDraft,
 } from "./recipe-line-dialog";
 import { messages } from "@lib/messages";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
 
 export type RecipeItem = {
   ingredientId: number;
@@ -230,7 +230,6 @@ export function RecipesClient({
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
           title={INVENTORY_VI.recipesPageTitle}
         />
         <AppEmptyState
@@ -270,7 +269,6 @@ export function RecipesClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={INVENTORY_VI.recipesPageTitle}
         actions={
           <Button type="button" size="lg" onClick={openCreate}>
@@ -279,7 +277,7 @@ export function RecipesClient({
           </Button>
         }
       />
-      <InventoryListFrame toolbar={listToolbar}>
+      <AppListFrame toolbar={listToolbar}>
         <DataTable
           columns={columns}
           data={filteredRecipes}
@@ -309,7 +307,7 @@ export function RecipesClient({
             />
           )}
         />
-      </InventoryListFrame>
+      </AppListFrame>
 
       <RecipeLineDialog
         open={dialogOpen}

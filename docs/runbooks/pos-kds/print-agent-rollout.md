@@ -6,9 +6,11 @@ fallback procedure when a printer or agent fails mid-service.
 ## Scope
 
 - **System**: `@comtammatu/print-agent` (Node 24 + Supabase Realtime, LAN-only)
-- **Topology**: 1 agent process per branch, 3 printers per branch
-  (`receipt`, `kitchen_1`, `kitchen_2`)
-- **Target**: each active branch has one monitored print-agent and three LAN printers
+- **Topology**: 1 agent process per branch, **N LAN printers** per branch
+  (each printer has `printer_print_types` and kitchen printers have
+  `printer_menu_categories`)
+- **Target**: each active branch has one monitored print-agent and one or more
+  configured LAN printers (receipt and kitchen routes as needed)
 
 ## 0. Pre-flight — once per branch
 
@@ -17,13 +19,12 @@ Complete all items before opening the branch for the day.
 ### Database (tenant admin)
 
 - [ ] Branch exists and is active
-- [ ] `/settings/printers` — 3 printer rows (`receipt` / `kitchen_1` / `kitchen_2`),
-      all `is_active = true`
+- [ ] `/br/{branchId}/settings/printers` — active printer rows with LAN
+      host/port; each has the correct print types; kitchen printers have menu
+      categories assigned. Categories not assigned to a branch kitchen printer
+      are not included in kitchen tickets (unless a catch-all route exists).
 - [ ] `lan_host` + `lan_port` (default 9100) filled for every printer; reachable
       from the POS PC subnet (`nc <host> 9100` to verify)
-- [ ] `/settings/printers` — each branch kitchen printer has the right
-      print types (`kitchen_ticket`, `cancel_ticket`) and menu categories assigned.
-      Categories not assigned to a branch printer are not included in kitchen tickets.
 - [ ] Cashier accounts have `pos:send_kitchen` for POS order dispatch; chef
       accounts have `kds:mark_ready` for completion-triggered kitchen paper;
       receipt operators have `pos:print` (auto-provisioned via role template)

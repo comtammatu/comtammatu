@@ -21,7 +21,10 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
-import { AppPageHeader } from "@/components/surface";
+import {
+  AppListFrame,
+  AppPageHeader,
+} from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -34,7 +37,6 @@ import {
 import { FormDialog, NumberField, TextField } from "@/components/form";
 import { messages } from "@lib/messages";
 import { FORM_VI } from "@comtammatu/shared/messages";
-import { InventoryListFrame } from "../../_components/inventory-list-frame";
 import {
   createCategory,
   deleteCategory,
@@ -179,7 +181,6 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
   return (
     <>
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={copy.page.title}
         description={copy.page.description}
         actions={
@@ -190,7 +191,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
         }
       />
 
-      <InventoryListFrame>
+      <AppListFrame>
         <DataTable
           columns={columns}
           data={rows}
@@ -226,7 +227,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
             </Item>
           )}
         />
-      </InventoryListFrame>
+      </AppListFrame>
 
       <FormDialog
         open={dialogOpen}

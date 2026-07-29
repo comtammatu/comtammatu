@@ -33,25 +33,14 @@ function mapTerminalDbError(code: string | undefined): string {
 
 /* ─── Schemas ─── */
 
-const optionalDeviceId = z
-  .string()
-  .optional()
-  .transform((s) => {
-    if (s === undefined || s === "") return null;
-    const t = s.trim();
-    return t === "" ? null : t;
-  });
-
 const createTerminalSchema = z.object({
-  name: z.string().min(1, { error: "Tên máy không được để trống" }),
+  name: z.string().min(1, { error: "Tên đăng ký không được để trống" }),
   branch_id: z.coerce.number().int().positive({ error: "Chọn chi nhánh" }),
-  device_id: optionalDeviceId,
 });
 
 const updateTerminalSchema = z.object({
   id: z.coerce.number().int().positive(),
-  name: z.string().min(1, { error: "Tên máy không được để trống" }),
-  device_id: optionalDeviceId,
+  name: z.string().min(1, { error: "Tên đăng ký không được để trống" }),
   is_active: z
     .enum(["true", "false"])
     .transform((v) => v === "true")
@@ -70,7 +59,6 @@ export const createTerminal = withFormAction(
     extract: (fd) => ({
       name: fd.get("name"),
       branch_id: fd.get("branch_id"),
-      device_id: fd.get("device_id") ?? undefined,
     }),
   },
   async (data, { supabase, claims }) => {
@@ -90,7 +78,6 @@ export const createTerminal = withFormAction(
         tenant_id: claims.tenant_id,
         branch_id: data.branch_id,
         name: data.name,
-        device_id: data.device_id,
       })
       .select("id");
 
@@ -122,7 +109,6 @@ export const updateTerminal = withFormAction(
       return {
         id: fd.get("id"),
         name: fd.get("name"),
-        device_id: fd.get("device_id") ?? undefined,
         is_active: rawIsActive ? rawIsActive : undefined,
       };
     },
@@ -130,11 +116,9 @@ export const updateTerminal = withFormAction(
   async (data, { supabase, claims }) => {
     const updatePayload: {
       name: string;
-      device_id: string | null;
       is_active?: boolean;
     } = {
       name: data.name,
-      device_id: data.device_id,
     };
 
     if (data.is_active !== undefined) {

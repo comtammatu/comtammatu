@@ -35,6 +35,15 @@ export type GrnDraftRow = {
 export type GrnListStatusFilter =
   "all" | "review" | "draft" | "confirmed" | "cancelled";
 
+/** Shared status filter values for control_surface + branch_surface GRN lists. */
+export const GRN_LIST_STATUS_FILTER_VALUES = [
+  "all",
+  "review",
+  "draft",
+  "confirmed",
+  "cancelled",
+] as const satisfies readonly GrnListStatusFilter[];
+
 export type GrnListFilters = {
   query: string;
   status: GrnListStatusFilter;

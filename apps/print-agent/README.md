@@ -4,7 +4,9 @@ Thermal print agent for Cơm Tấm Má Tư. Subscribes to Supabase Realtime for 
 rasterizes print documents to ESC/POS (bitmap mode), dispatches to LAN (TCP:9100)
 thermal printers.
 
-**1 agent per branch** serves all 3 printers at that branch (receipt / kitchen_1 / kitchen_2).
+**1 agent per branch** serves all active LAN printers at that branch
+(routing via `printer_print_types` / `printer_menu_categories`, not a fixed
+3-slot topology).
 
 LAN-only. No native deps. Runs on Windows, Termux (Android), Raspberry Pi, any ARM/x64
 Linux with Node 24.

@@ -11,7 +11,7 @@ import {
   type Agent,
   type Category,
   type Printer,
-} from "@/(protected)/branch-settings/_shared/printers/printers-client";
+} from "@/(protected)/br/_shared/settings/printers/printers-client";
 import { attachPrinterRouting } from "./_lib/printer-routing";
 
 export default async function BranchPrintersPage({
@@ -49,10 +49,11 @@ export default async function BranchPrintersPage({
     supabase
       .from("printers")
       .select(
-        "id, branch_id, role, name, lan_host, lan_port, paper_width_mm, code_page, is_active",
+        "id, branch_id, role, name, sort_order, lan_host, lan_port, paper_width_mm, code_page, is_active",
       )
       .eq("branch_id", branchId)
-      .order("role"),
+      .order("sort_order")
+      .order("name"),
     supabase
       .from("printer_agent_status")
       .select("branch_id, agent_id, version, last_seen_at, is_online")

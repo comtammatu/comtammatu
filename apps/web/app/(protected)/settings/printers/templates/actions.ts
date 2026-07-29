@@ -214,16 +214,31 @@ export async function testPrintTemplate(
   if (!ctx) return { success: false, error: "Không có quyền in thử" };
 
   const { kind, branch_id: branchId, content } = parsed.data;
-  const preferredRole =
-    kind === "kitchen_ticket" || kind === "cancel_ticket"
-      ? "kitchen_1"
-      : "receipt";
+
+  const { data: printTypeRoutes, error: routesError } = await ctx.supabase
+    .from("printer_print_types")
+    .select("printer_id")
+    .eq("branch_id", branchId)
+    .eq("print_type", kind);
+
+  if (routesError) {
+    return {
+      success: false,
+      error: messages.settings.printers.loadPrintTypesFailed,
+    };
+  }
+
+  const routedPrinterIds = [
+    ...new Set((printTypeRoutes ?? []).map((row) => row.printer_id)),
+  ];
 
   const { data: printers, error: printersError } = await ctx.supabase
     .from("printers")
-    .select("id, role")
+    .select("id")
     .eq("branch_id", branchId)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .in("id", routedPrinterIds.length > 0 ? routedPrinterIds : [-1])
+    .order("id");
 
   if (printersError) {
     return {
@@ -231,8 +246,7 @@ export async function testPrintTemplate(
       error: messages.settings.printers.loadPrintersFailed,
     };
   }
-  const printer =
-    (printers ?? []).find((p) => p.role === preferredRole) ?? printers?.[0];
+  const printer = printers?.[0];
   if (!printer) {
     return {
       success: false,

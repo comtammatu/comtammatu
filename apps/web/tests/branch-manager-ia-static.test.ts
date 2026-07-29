@@ -217,7 +217,7 @@ test("POS, KDS, and Runner stay standalone station apps", () => {
     assert.match(layout, /touch-manipulation/);
     assert.doesNotMatch(
       layout,
-      /<AppPage|OperatorBottomNav|OwnerModuleShell/,
+      /<AppPage|OperatorBottomNav|OwnerModuleShell|ControlSurfaceShell/,
     );
   }
 });
@@ -230,7 +230,7 @@ test("Branch operator routes do not link, redirect, or revalidate Owner surface 
     "apps/web/app/(protected)/br/[branchId]/(operator)/team",
     "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions",
     "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits",
-    "apps/web/app/(protected)/branch-settings/_shared",
+    "apps/web/app/(protected)/br/_shared/settings",
   ]) {
     if (!existsSync(resolve(repoRoot, dir))) continue;
     for (const file of listSourceFiles(dir)) {
@@ -265,6 +265,7 @@ test("Branch operator routes do not import management shell chrome", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /\bBranchManagementShell\b/],
     ["OwnerModuleShell", /\bOwnerModuleShell\b/],
+    ["ControlSurfaceShell", /\bControlSurfaceShell\b/],
     ["InventoryShell", /\bInventoryShell\b/],
     ["FinanceShell", /\bFinanceShell\b/],
     ["ManagementShell", /\bManagementShell\b/],
@@ -307,6 +308,7 @@ test("Branch command dashboard is a branch-native command surface", () => {
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
   assert.match(dashboard, /<BranchOperatorPage/);
+  assert.match(dashboard, /hideHeaderOnMobile/);
   assert.match(dashboard, /branch\.branch_kind !== "branch"/);
   assert.doesNotMatch(dashboard, /<AppPage|<AppLinkCard|<LinkCardGrid|<KpiRow/);
 
@@ -314,10 +316,24 @@ test("Branch command dashboard is a branch-native command surface", () => {
     "liveOperationsTitle",
     "readinessTitle",
     "endDayTitle",
-    "drilldownTitle",
+    "filterReadinessExceptions",
   ]) {
-    assert.ok(dashboard.includes(expected), `expected ${expected}`);
+    assert.ok(
+      dashboard.includes(expected) || commandConfig.includes(expected),
+      `expected ${expected}`,
+    );
   }
+
+  assert.match(
+    dashboard,
+    /filterReadinessExceptions/,
+    "Command readiness should show exception rows only",
+  );
+  assert.doesNotMatch(
+    dashboard,
+    /drilldownTitle/,
+    "Command should not duplicate Kho drilldown (bottom nav owns Kho)",
+  );
 
   for (const expected of [
     "/br/${branchId}/pos",
@@ -388,8 +404,18 @@ test("Branch command dashboard is a branch-native command surface", () => {
     /readinessMenuTitle: "Giới hạn bán"/,
     "Branch Command readiness row links to menu-limits, not the menu catalog",
   );
-  assert.match(settingsMessages, /drilldownTitle: "Kho chi nhánh"/);
-  assert.match(settingsMessages, /readinessMenuCta: "Mở giới hạn bán"/);
+  assert.doesNotMatch(
+    settingsMessages,
+    /drilldownTitle/,
+    "Command stock drilldown copy retired; Kho lives on bottom nav",
+  );
+  assert.match(settingsMessages, /readinessMenuCta: "Vào giới hạn bán"/);
+  assert.match(settingsMessages, /readinessPosCta: "Vào POS"/);
+  assert.match(settingsMessages, /readinessKdsCta: "Vào KDS"/);
+  assert.match(settingsMessages, /readinessKdsTitle: "Bếp \(KDS\)"/);
+  assert.match(settingsMessages, /readinessKdsSetupTitle: "Trạm bếp"/);
+  assert.match(settingsMessages, /readinessPosClosed: "Chưa mở ca\."/);
+  assert.doesNotMatch(settingsMessages, /Mở POS|Mở KDS|Bếp\/KDS|Trạm KDS|3 máy in|Agent in| POS active|trạm bếp active|nhân sự active/);
   assert.doesNotMatch(settingsMessages, /Thực đơn bán|Mở thực đơn/);
   assert.doesNotMatch(settingsMessages, /Chưa có món active/);
 });
@@ -406,7 +432,9 @@ test("Branch settings landing exposes setup controls only", () => {
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
   assert.match(settingsLanding, /<BranchOperatorPage/);
+  assert.match(settingsLanding, /hideHeaderOnMobile/);
   assert.match(settingsLanding, /<BranchOperatorActionSection/);
+  assert.doesNotMatch(settingsLanding, /setupEssentialsTitle/);
   assert.doesNotMatch(settingsLanding, /<AppLinkCard/);
   assert.doesNotMatch(settingsLanding, /<LinkCardGrid/);
   // Per-tile ACL gating keeps each tile to surfaces the role can open.
@@ -428,12 +456,12 @@ test("Branch settings landing exposes setup controls only", () => {
   assert.doesNotMatch(settingsLanding, /className="md:p-6"/);
   assert.match(
     settingsMessages,
-    /landingDescription: \(branchName: string\) =>\s*`\$\{branchName\} · Bàn, POS, bếp và in`/,
-    "Settings landing description should state the concrete setup scope",
+    /landingDescription: \(_branchName: string\) => ""/,
+    "Settings landing description should be omitted for density",
   );
   assert.match(
     settingsMessages,
-    /posSetupTitle: "Máy POS & tồn kho"/,
+    /posSetupTitle: "Đăng ký POS"/,
     "Settings POS tile must name the stock-control policy it contains",
   );
   assert.doesNotMatch(
@@ -445,25 +473,25 @@ test("Branch settings landing exposes setup controls only", () => {
 
 test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => {
   const terminalsClient = read(
-    "apps/web/app/(protected)/branch-settings/_shared/pos/terminals-client.tsx",
+    "apps/web/app/(protected)/br/_shared/settings/pos/terminals-client.tsx",
   );
   const stationsClient = read(
-    "apps/web/app/(protected)/branch-settings/_shared/kds/stations-client.tsx",
+    "apps/web/app/(protected)/br/_shared/settings/kds/stations-client.tsx",
   );
   const tablesClient = read(
-    "apps/web/app/(protected)/branch-settings/_shared/tables/tables-client.tsx",
+    "apps/web/app/(protected)/br/_shared/settings/tables/tables-client.tsx",
   );
   const printersClient = read(
-    "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx",
+    "apps/web/app/(protected)/br/_shared/settings/printers/printers-client.tsx",
   );
   const tableTable = read(
-    "apps/web/app/(protected)/branch-settings/_shared/tables/table-table.tsx",
+    "apps/web/app/(protected)/br/_shared/settings/tables/table-table.tsx",
   );
   const posSessionsClient = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx",
   );
   const stockControlCard = read(
-    "apps/web/app/(protected)/branch-settings/_shared/pos/stock-control-card.tsx",
+    "apps/web/app/(protected)/br/_shared/settings/pos/stock-control-card.tsx",
   );
   const dataTable = read("apps/web/app/components/data-table/data-table.tsx");
   const sheet = read("packages/ui/src/components/sheet.tsx");
@@ -556,7 +584,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
   for (const dir of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock",
-    "apps/web/app/(protected)/branch-settings/_shared",
+    "apps/web/app/(protected)/br/_shared/settings",
   ]) {
     for (const file of listSourceFiles(dir)) {
       const source = read(file);
@@ -604,6 +632,7 @@ test("Branch-scoped operational routes do not use management shell", () => {
   const forbiddenShells = [
     ["BranchManagementShell", /BranchManagementShell/],
     ["OwnerModuleShell", /OwnerModuleShell/],
+    ["ControlSurfaceShell", /ControlSurfaceShell/],
     ["InventoryShell", /InventoryShell/],
     ["FinanceShell", /FinanceShell/],
     ["ManagementShell", /ManagementShell/],

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -18,7 +19,8 @@ import {
 import { AddStockRequestLineForm } from "./add-stock-request-line-form";
 import { messages } from "@lib/messages";
 
-const copy = messages.inventory.stockRequests.branch;
+const stockRequestCopy = messages.inventory.stockRequests;
+const copy = stockRequestCopy.branch;
 
 export default async function BranchStockRequestDetailPage({
   params,
@@ -91,7 +93,9 @@ export default async function BranchStockRequestDetailPage({
   return (
     <BranchOperatorPage
       title={req.request_number}
-      description={copy.statusDescription(req.status)}
+      description={copy.statusDescription(
+        stockRequestCopy.statusLabel(req.status),
+      )}
     >
       <div className="mb-4">
         <Button
@@ -123,8 +127,8 @@ export default async function BranchStockRequestDetailPage({
                 <ItemDescription>
                   {copy.lineDescription(
                     line.quantity,
-                    line.fulfill_site_kind,
-                    line.status,
+                    getInventorySiteKindLabelVi(line.fulfill_site_kind),
+                    stockRequestCopy.statusLabel(line.status),
                   )}
                 </ItemDescription>
               </ItemContent>

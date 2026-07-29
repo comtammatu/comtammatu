@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { canAccess } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
-import { OwnerModuleShell } from "@/components/owner-module-shell";
+import { ControlSurfaceShell } from "@/components/control-surface-shell";
 
 export default async function BranchesLayout({
   children,
@@ -16,7 +16,7 @@ export default async function BranchesLayout({
   }
 
   return (
-    <OwnerModuleShell
+    <ControlSurfaceShell
       module="branches"
       user={{
         name:
@@ -25,9 +25,9 @@ export default async function BranchesLayout({
           "",
       }}
       role={claims.user_role}
-      branchId={claims.branch_id}
+      homeBranchId={claims.branch_id}
     >
       {children}
-    </OwnerModuleShell>
+    </ControlSurfaceShell>
   );
 }

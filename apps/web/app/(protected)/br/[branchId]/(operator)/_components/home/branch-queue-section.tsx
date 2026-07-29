@@ -1,10 +1,8 @@
 import {
   CalendarCheck,
-  ChefHat,
   CheckCircle,
   ChevronRight,
   ClipboardCheck,
-  FileText,
   Truck,
 } from "lucide-react";
 import Link from "next/link";
@@ -40,26 +38,6 @@ function buildQueueRows(
   counts: Awaited<ReturnType<typeof fetchBranchQueueCounts>>,
 ): QueueRow[] {
   const rows: QueueRow[] = [];
-  if (counts.draftGrns != null) {
-    rows.push({
-      key: "draft-grns",
-      href: `${basePath}/stock/grn`,
-      icon: FileText,
-      title: branchCopy.queueDraftGrnsTitle,
-      meta: branchCopy.queueDraftGrnsMeta(counts.draftGrns),
-      count: counts.draftGrns,
-    });
-  }
-  if (counts.draftProductionOrders != null) {
-    rows.push({
-      key: "draft-production",
-      href: `${basePath}/stock/production`,
-      icon: ChefHat,
-      title: branchCopy.queueDraftProductionTitle,
-      meta: branchCopy.queueDraftProductionMeta(counts.draftProductionOrders),
-      count: counts.draftProductionOrders,
-    });
-  }
   if (counts.inboundTransfers != null) {
     rows.push({
       key: "inbound-transfers",
@@ -118,7 +96,7 @@ function QueueRowItem({ row }: { row: QueueRow }) {
     <Item
       variant="outline"
       size="sm"
-      className="chrome-tap min-h-12 select-none bg-card transition-transform active:scale-[0.97]"
+      className="chrome-tap min-h-12 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
       render={<Link href={row.href} />}
     >
       <ItemMedia
@@ -137,7 +115,7 @@ function QueueRowItem({ row }: { row: QueueRow }) {
       </ItemContent>
       <ItemActions className="shrink-0 text-muted-foreground">
         <Badge variant="warning">{formatCount(row.count)}</Badge>
-        <ChevronRight />
+        <ChevronRight aria-hidden />
       </ItemActions>
     </Item>
   );

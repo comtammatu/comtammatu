@@ -1,12 +1,12 @@
 import { loadAuthState } from "@/_lib/auth";
-import { OwnerModuleShell } from "@/components/owner-module-shell";
+import { ControlSurfaceShell } from "@/components/control-surface-shell";
 import { OwnerOverview } from "./_components/owner-overview";
 
 export default async function RootPage() {
   const { session, claims } = await loadAuthState();
 
   return (
-    <OwnerModuleShell
+    <ControlSurfaceShell
       module="owner"
       user={{
         name:
@@ -15,9 +15,9 @@ export default async function RootPage() {
           "",
       }}
       role={claims.user_role}
-      branchId={claims.branch_id}
+      homeBranchId={claims.branch_id}
     >
       <OwnerOverview />
-    </OwnerModuleShell>
+    </ControlSurfaceShell>
   );
 }

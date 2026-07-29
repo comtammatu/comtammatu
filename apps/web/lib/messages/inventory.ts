@@ -89,7 +89,7 @@ export const inventory = {
     operatorStockPrimaryTitle: "Thao tác kho",
     operatorStockSecondaryTitle: "Theo dõi & thiết lập",
     stockTabsAriaLabel: "Nhóm thao tác kho",
-    stockTabOnhand: "Tồn & Nhập",
+    stockTabOnhand: "Tồn kho",
     stockTabCount: "Kiểm kê",
     stockTabWaste: "Hao hụt & Tiêu hao",
     stockTabCatalog: "Danh mục",
@@ -293,11 +293,20 @@ export const inventory = {
     },
   },
   stockRequests: {
+    statusLabel: (status: string) => {
+      const labels: Record<string, string> = {
+        draft: "Nháp",
+        submitted: "Chờ đáp ứng",
+        partially_fulfilled: "Đáp ứng một phần",
+        fulfilled: "Đã đáp ứng",
+        cancelled: "Đã hủy",
+        pending: "Chờ xử lý",
+      };
+      return labels[status] ?? "Không rõ";
+    },
     inbox: {
       title: "Yêu cầu hàng — inbox",
-      description: "Phiếu đã gửi từ chi nhánh.",
-      descriptionWithFilter: (kind: string) =>
-        `Phiếu đã gửi từ chi nhánh · lọc nguồn ${kind} khi fulfill.`,
+      description: "Phiếu yêu cầu hàng đã gửi từ chi nhánh.",
       emptyTitle: "Không có phiếu chờ",
       emptyDescription:
         "Khi chi nhánh gửi yêu cầu, phiếu sẽ hiện tại đây để đáp ứng bằng điều chuyển.",
@@ -314,11 +323,11 @@ export const inventory = {
       noStockLocation: "Không có vị trí tồn kho cho nguồn này.",
       fulfillButton: (label: string) => `Đáp ứng (${label})`,
       processing: "Đang xử lý…",
-      headerDescription: (branchLabel: string, status: string) =>
-        `Chi nhánh yêu cầu: ${branchLabel} · Trạng thái: ${status}`,
+      headerDescription: (branchLabel: string, statusLabel: string) =>
+        `Chi nhánh yêu cầu: ${branchLabel} · Trạng thái: ${statusLabel}`,
       selectLineAria: (name: string) => `Chọn ${name}`,
-      lineDescription: (quantity: number, status: string) =>
-        `SL ${quantity} · ${status}`,
+      lineDescription: (quantity: number, statusLabel: string) =>
+        `SL ${quantity} · ${statusLabel}`,
       toastSelectLine: "Chọn ít nhất một dòng chờ xử lý.",
       toastSelectLocation: "Chọn vị trí xuất hàng.",
       toastFulfillFailed: "Không đáp ứng được yêu cầu.",
@@ -335,14 +344,15 @@ export const inventory = {
       backToList: "Quay lại danh sách",
       submit: "Gửi yêu cầu",
       cancel: "Hủy phiếu",
-      statusDescription: (status: string) => `Trạng thái: ${status}`,
+      statusDescription: (statusLabel: string) =>
+        `Trạng thái: ${statusLabel}`,
       emptyLines:
         "Chưa có dòng. Thêm nguyên liệu đã gán nguồn trên danh mục (Owner).",
       lineDescription: (
         quantity: number,
-        fulfillSiteKind: string,
-        status: string,
-      ) => `SL ${quantity} · ${fulfillSiteKind} · ${status}`,
+        sourceLabel: string,
+        statusLabel: string,
+      ) => `SL ${quantity} · ${sourceLabel} · ${statusLabel}`,
       addLine: {
         title: "Thêm dòng",
         ingredientId: "Mã nguyên liệu",

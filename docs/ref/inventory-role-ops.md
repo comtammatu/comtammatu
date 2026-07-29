@@ -27,7 +27,7 @@ GRN·SX; inventory-nav lộ PO/recipes cho Kho Tổng; notification URL `/br/...
 
 | Nghiệp vụ | Owner | Kế toán | Kho Tổng | Bếp TT | QL CN | NV đếm |
 | --- | --- | --- | --- | --- | --- | --- |
-| Catalog + `default_fulfill_site_kind` | A/R | — | — | — | C (đọc) | — |
+| Catalog + `default_fulfill_site_kind` | A/R | — | C (đọc) | C (đọc) | C (đọc CN) | — |
 | GRN draft/confirm | A | C (đọc→PO) | R (Kho Tổng) | R (Bếp TT) | — | — |
 | PO + giá | A | R | — | — | — | — |
 | HĐ NCC / AP | A | R | — | — | — | — |
@@ -58,14 +58,15 @@ GRN·SX; inventory-nav lộ PO/recipes cho Kho Tổng; notification URL `/br/...
 - **Làm:** GRN Kho Tổng; tồn/kiểm kê/hao hụt site; inbox dòng yêu cầu
   `central_supply`; fulfill → DC; ship/receive tại site
 - **Nav hiện:** Nay, Tồn, GRN, Yêu cầu (inbox), Điều chuyển, tiêu hao/hao hụt,
-  NCC — **không** PO, Production, Recipes menu BOM
-- **Không:** PO/giá; SX; branch stock UI
+  NCC, Nguyên liệu (chỉ xem) — **không** PO, Production, Recipes menu BOM
+- **Không:** PO/giá; SX; CRUD danh mục nguyên liệu; branch stock UI
 
 ### 4.4 Bếp trưởng Bếp TT (`central_kitchen_lead`)
 
 - Như Kho Tổng tại `central_kitchen` **+ Production** (+ production recipes)
 - Inbox dòng `central_kitchen`; fulfill → DC
-- **Không:** PO; tạo DC ad-hoc ngoài fulfill (trừ khi có grant); recipes menu BOM Owner
+- Nguyên liệu: chỉ xem (Owner CRUD + `default_fulfill_site_kind`)
+- **Không:** PO; tạo DC ad-hoc ngoài fulfill (trừ khi có grant); recipes menu BOM Owner; CRUD danh mục
 
 ### 4.5 Quản lý chi nhánh (`branch_manager`)
 

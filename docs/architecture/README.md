@@ -11,9 +11,9 @@ phẩm song song.
 
 ## Nên đọc trước
 
+- [../spec/architecture.md](../spec/architecture.md) — **current** architecture + Product Dual Thesis (Hệ thống + Vận hành bán hàng)
 - [../ref/glossary.md](../ref/glossary.md) — current-state vocabulary của hệ thống đang chạy
-- [../spec/architecture.md](../spec/architecture.md) — tổng quan kiến trúc hệ thống hiện tại
-- [target-modules-tech-stack-project-structure.md](target-modules-tech-stack-project-structure.md) — Modules, Tech Specs, Infra và Project Structure mục tiêu
+- [target-modules-tech-stack-project-structure.md](target-modules-tech-stack-project-structure.md) — **TARGET ONLY** (future); not the running route tree
 - [../plan/decisions.md](../plan/decisions.md) — net-effect decisions, gồm D015/D091
 - [../spec/database-schema.md](../spec/database-schema.md) — schema chuẩn và ranh giới dữ liệu
 - [../modules/auth.md](../modules/auth.md) — Auth, JWT claims và ACL của hệ thống hiện tại

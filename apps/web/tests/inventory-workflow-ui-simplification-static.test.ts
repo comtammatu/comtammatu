@@ -191,7 +191,7 @@ test("operations tabs use the same sectioned list chrome", () => {
   );
 
   for (const source of [grn, issues, transfers]) {
-    assert.match(source, /<InventoryListFrame/);
+    assert.match(source, /<AppListFrame/);
     assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
     assert.match(source, /<AppToolbar[\s\S]{0,500}search=\{/);
     assert.match(source, /<AppToolbar[\s\S]{0,1200}filters=\{/);
@@ -328,7 +328,7 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     units,
     thresholds,
   ]) {
-    assert.match(source, /<InventoryListFrame/);
+    assert.match(source, /<AppListFrame/);
   }
 
   for (const source of [suppliers, ingredients]) {
@@ -362,7 +362,7 @@ test("AppToolbar inline shares card surface without muted fill", () => {
   );
 });
 
-test("migrated inventory lists use InventoryListFrame toolbar slot", () => {
+test("migrated inventory lists use AppListFrame toolbar slot", () => {
   const invoices = read(
     "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
@@ -381,16 +381,16 @@ test("migrated inventory lists use InventoryListFrame toolbar slot", () => {
   );
 
   for (const source of [invoices, supplierItems, thresholdsClient]) {
-    assert.match(source, /<InventoryListFrame[\s\S]{0,800}toolbar=\{/);
+    assert.match(source, /<AppListFrame[\s\S]{0,800}toolbar=\{/);
     assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
   }
 
   assert.match(
     grn,
-    /<InventoryListFrame toolbar=\{grnsLoadFailed \? undefined : listToolbar\}>/,
+    /<AppListFrame toolbar=\{grnsLoadFailed \? undefined : listToolbar\}>/,
   );
-  assert.match(countSlips, /<InventoryListFrame title=/);
-  assert.match(countAssignments, /<InventoryListFrame>/);
+  assert.match(countSlips, /<AppListFrame title=/);
+  assert.match(countAssignments, /<AppListFrame>/);
 });
 
 test("SelectContent defaults to popper and Inventory LIST filters share field width", () => {
@@ -508,10 +508,11 @@ test("stock never presents an all-location choice", () => {
 });
 
 test("Inventory sidebar keeps workflow labels out of the visible sub-navigation", () => {
-  const shell = read(
-    "app/(protected)/inventory/_components/inventory-shell.tsx",
-  );
+  const nav = read("app/lib/control-surface-nav.ts");
+  const shell = read("app/components/control-surface-shell.tsx");
 
-  assert.match(shell, /title:\s*""/);
-  assert.match(shell, /\.flatMap\(\(group\) => group\.items\)/);
+  assert.match(nav, /title:\s*""/);
+  assert.match(nav, /\.flatMap\(\(group\) => group\.items\)/);
+  assert.match(shell, /flattenInventoryDeepNav/);
+  assert.match(shell, /module="inventory"|module === "inventory"/);
 });

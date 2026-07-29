@@ -24,11 +24,12 @@ const ROUTE_FAMILIES = [
       file.includes("/(protected)/hr/") ||
       file.includes("/(protected)/inventory/") ||
       file.includes("/(protected)/menu/") ||
-      file.includes("/(protected)/orders/"),
+      file.includes("/(protected)/orders/") ||
+      file.includes("/(protected)/feedback/"),
   ],
   [
     "branch-settings-shared",
-    (file) => file.includes("/(protected)/branch-settings/"),
+    (file) => file.includes("/(protected)/br/_shared/settings/"),
   ],
   ["branches", (file) => file.includes("/(protected)/branches/")],
   ["notifications", (file) => file.includes("/(protected)/notifications/")],
@@ -36,7 +37,8 @@ const ROUTE_FAMILIES = [
     "branch-entry",
     (file) =>
       file.includes("/(protected)/br/") &&
-      !file.includes("/(protected)/br/[branchId]/"),
+      !file.includes("/(protected)/br/[branchId]/") &&
+      !file.includes("/(protected)/br/_shared/"),
   ],
   [
     "branch",
@@ -58,6 +60,7 @@ const ROUTE_FAMILIES = [
   ["orders", (file) => file.includes("/(protected)/orders/")],
   ["public", (file) => file.includes("/(public)/")],
   ["self-order", (file) => file.includes("/app/q/")],
+  ["runner-display", (file) => file.includes("/app/r/")],
   [
     "public-system",
     (file) =>

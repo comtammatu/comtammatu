@@ -10,12 +10,15 @@ test("root route renders the Owner overview", () => {
   const rootPage = read("apps/web/app/page.tsx");
   const overview = read("apps/web/app/_components/owner-overview.tsx");
   const appShell = read("apps/web/app/components/app-shell.tsx");
-  const inventoryShell = read(
-    "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx",
+  const controlSurfaceShell = read(
+    "apps/web/app/components/control-surface-shell.tsx",
+  );
+  const inventoryLayout = read(
+    "apps/web/app/(protected)/inventory/layout.tsx",
   );
 
   assert.match(rootPage, /loadAuthState/);
-  assert.match(rootPage, /<OwnerModuleShell[\s\S]*module="owner"/);
+  assert.match(rootPage, /<ControlSurfaceShell[\s\S]*module="owner"/);
   assert.match(rootPage, /<OwnerOverview/);
   assert.match(overview, /<AppPageHeader/);
   assert.match(overview, /<AppSection/);
@@ -27,6 +30,12 @@ test("root route renders the Owner overview", () => {
   );
   assert.match(overview, /chrome-tap/);
   assert.doesNotMatch(appShell, /<header/);
-  assert.match(inventoryShell, /sidebarHeaderAccessory=\{branchFilter\}/);
+  assert.match(inventoryLayout, /ControlSurfaceShell/);
+  assert.match(inventoryLayout, /module="inventory"/);
+  assert.match(
+    controlSurfaceShell,
+    /sidebarHeaderAccessory=\{sidebarHeaderAccessory\}/,
+  );
+  assert.match(controlSurfaceShell, /InventoryBranchFilter/);
   assert.doesNotMatch(rootPage, /redirect\(/);
 });

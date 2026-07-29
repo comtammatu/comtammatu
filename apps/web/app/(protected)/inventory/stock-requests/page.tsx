@@ -17,7 +17,8 @@ import {
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 
-const copy = messages.inventory.stockRequests.inbox;
+const stockRequestCopy = messages.inventory.stockRequests;
+const copy = stockRequestCopy.inbox;
 
 export default async function InventoryStockRequestsInboxPage() {
   const { supabase, claims } = await loadAuthState();
@@ -28,13 +29,6 @@ export default async function InventoryStockRequestsInboxPage() {
   ) {
     redirect("/inventory");
   }
-
-  const fulfillKind =
-    claims.user_role === "central_kitchen_lead"
-      ? "central_kitchen"
-      : claims.user_role === "central_supply_ops"
-        ? "central_supply"
-        : null;
 
   const { data } = await supabase
     .from("stock_requests")
@@ -53,15 +47,7 @@ export default async function InventoryStockRequestsInboxPage() {
 
   return (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
-        title={copy.title}
-        description={
-          fulfillKind
-            ? copy.descriptionWithFilter(fulfillKind)
-            : copy.description
-        }
-      />
+      <AppPageHeader title={copy.title} description={copy.description} />
 
       {rows.length === 0 ? (
         <AppEmptyState
@@ -75,7 +61,9 @@ export default async function InventoryStockRequestsInboxPage() {
               <Item variant="outline">
                 <ItemContent>
                   <ItemTitle>{row.request_number}</ItemTitle>
-                  <ItemDescription>{row.status}</ItemDescription>
+                  <ItemDescription>
+                    {stockRequestCopy.statusLabel(row.status)}
+                  </ItemDescription>
                 </ItemContent>
                 <ItemActions>
                   <Button

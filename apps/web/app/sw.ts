@@ -37,7 +37,6 @@ const AUTHED_NAV_PREFIXES = [
   "/menu",
   "/orders",
   "/notifications",
-  "/branch-settings",
   "/payment",
 ];
 const isAuthedPath = (pathname: string) =>

@@ -26,6 +26,10 @@ const migration = readFileSync(
   "../../supabase/migrations/20260729140000_d093_central_grn_branch_stock_request.sql",
   "utf8",
 );
+const fulfillKindGrantMigration = readFileSync(
+  "../../supabase/migrations/20260729140500_grant_ingredients_default_fulfill_site_kind.sql",
+  "utf8",
+);
 const permissions = readFileSync(
   "../../packages/shared/src/auth/permissions.ts",
   "utf8",
@@ -63,6 +67,13 @@ test("D093 migration and permission keys register stock request surface", () => 
   assert.match(migration, /grn_central_site_only/);
   assert.match(permissions, /INVENTORY_REQUEST_CREATE/);
   assert.match(permissions, /PERMISSION_KEY_COUNT = 91/);
+});
+
+test("D093 default_fulfill_site_kind is granted to authenticated after column lockdown", () => {
+  assert.match(
+    fulfillKindGrantMigration,
+    /GRANT SELECT \(default_fulfill_site_kind\) ON public\.ingredients TO authenticated/,
+  );
 });
 
 test("D093 nav-config exposes branch stock requests tile", () => {

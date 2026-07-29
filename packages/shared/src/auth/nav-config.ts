@@ -6,7 +6,7 @@ import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
  * Sidebar navigation configuration — derived from MODULE_ACL.
  * Icon names reference Lucide React (resolved in the UI layer).
  * This is the SINGLE source of nav structure — the Owner shell projects
- * from here via `resolveOwnerPrimaryTabs` plus deep-nav resolvers.
+ * from here via `resolveControlSurfacePrimaryTabs` plus deep-nav resolvers.
  */
 
 export interface NavItemConfig {
@@ -40,8 +40,8 @@ export interface OperatorTileConfig extends BranchScopedNavItemConfig {
   kinds?: readonly BranchKind[];
 }
 
-/** Owner-only tenant control plane. Branch work stays under `/br/[branchId]`. */
-export const OWNER_NAV_GROUPS: NavGroupConfig[] = [
+/** L0 control_surface tenant plane. Branch work stays under `/br/[branchId]`. */
+export const CONTROL_SURFACE_NAV_GROUPS: NavGroupConfig[] = [
   {
     title: NAV_GROUP_LABELS_VI.ownerOperations,
     items: [
@@ -242,6 +242,22 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/requests",
     label: "Yêu cầu hàng",
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "branch_stock",
+    icon: "Package",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/receive",
+    label: "Nhận hàng",
+    kinds: ["branch"],
+  },
+  {
+    moduleKey: "branch_stock",
+    icon: "Package",
+    group: "stock",
+    hrefTemplate: "/br/{branchId}/stock/transfer",
+    label: "Điều chuyển",
     kinds: ["branch"],
   },
   {

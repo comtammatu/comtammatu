@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
-import { AppPageHeader, AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppListFrame,
+  AppPageHeader,
+} from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { fetchIngredients } from "../../ingredient-actions";
 import { messages } from "@lib/messages";
 import { ThresholdsClient, type ThresholdRow } from "./thresholds-client";
-import { InventoryListFrame } from "../../_components/inventory-list-frame";
 
 const copy = messages.inventory.settings.thresholds;
 
@@ -43,15 +46,14 @@ export default async function InventoryThresholdsPage() {
   return (
     <div className="flex flex-col gap-4">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={copy.title}
         description={copy.description}
       />
 
       {!res.success ? (
-        <InventoryListFrame>
+        <AppListFrame>
           <AppEmptyState mode="error" title={copy.loadFailed} />
-        </InventoryListFrame>
+        </AppListFrame>
       ) : (
         <ThresholdsClient rows={rows} />
       )}

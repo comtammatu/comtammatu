@@ -60,6 +60,10 @@ const CLASSIFIED_FILES = new Map([
     "apps/web/tests/inventory-location-labels.test.ts",
     "'legacy' names the live alias inputs the location-label formatter still normalizes (Kho CN / Bep CN spellings), not retired code.",
   ],
+  [
+    "apps/web/tests/multi-supplier-grn-static.test.ts",
+    "GRN multi-supplier static test asserts dropped legacy function migration and FK embedding names.",
+  ],
 ]);
 
 function walkFiles(rootDir) {

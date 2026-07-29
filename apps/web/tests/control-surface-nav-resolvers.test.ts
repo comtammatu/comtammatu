@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
-  OWNER_NAV_GROUPS,
+  CONTROL_SURFACE_NAV_GROUPS,
   canAccess,
   MODULE_ACL,
   type ModuleKey,
@@ -10,23 +10,23 @@ import {
 } from "@comtammatu/shared/auth";
 
 import {
-  resolveOwnerPrimaryTabs,
-  resolveOwnerDeepNav,
-} from "../app/lib/owner-nav";
+  resolveControlSurfacePrimaryTabs,
+  resolveControlSurfaceCoreDeepNav,
+} from "../app/lib/control-surface-nav";
 import {
   findActivePrimaryNavItem,
   type ShellNavGroup,
   type ShellNavItem,
 } from "../app/lib/shell-primitives";
 import {
-  OWNER_MODULE_IDS,
-  FLAT_OWNER_MODULE_IDS,
-} from "../app/lib/owner-module-contract";
+  CONTROL_SURFACE_CORE_MODULE_IDS,
+  FLAT_CONTROL_SURFACE_MODULE_IDS,
+} from "../app/lib/control-surface-module";
 
-// Regression floor for the Owner surface navigation resolvers. Expectations
-// are driven from MODULE_ACL membership so the Owner sidebar stays single-sourced.
+// Regression floor for control_surface navigation resolvers. Expectations are
+// driven from MODULE_ACL membership so the Quản trị sidebar stays single-sourced.
 
-const OWNER_TAB_MODULES: ModuleKey[] = OWNER_NAV_GROUPS.flatMap(
+const CONTROL_SURFACE_TAB_MODULES: ModuleKey[] = CONTROL_SURFACE_NAV_GROUPS.flatMap(
   (group) => group.items.map((item) => item.moduleKey),
 );
 
@@ -67,16 +67,16 @@ function assertUniqueTabs(items: ShellNavItem[], label: string): void {
 
 function expectedOwnerHrefs(role: StaffRole): string[] {
   if (!canAccess(role, "owner")) return [];
-  return OWNER_TAB_MODULES.filter((key) => canAccess(role, key)).map(
+  return CONTROL_SURFACE_TAB_MODULES.filter((key) => canAccess(role, key)).map(
     (key) => MODULE_ACL[key].path,
   );
 }
 
 test("owner sidebar tabs include the Owner surface and all tenant modules", () => {
-  const items = resolveOwnerPrimaryTabs("owner", BRANCH_ID);
+  const items = resolveControlSurfacePrimaryTabs("owner", BRANCH_ID);
   const hrefs = hrefSet(items);
 
-  for (const key of OWNER_TAB_MODULES) {
+  for (const key of CONTROL_SURFACE_TAB_MODULES) {
     assert.equal(
       hrefs.has(MODULE_ACL[key].path),
       true,
@@ -117,7 +117,7 @@ test("owner sidebar tabs include the Owner surface and all tenant modules", () =
 });
 
 test("owner sidebar tabs omit branch-scoped entries without a branchId", () => {
-  const items = resolveOwnerPrimaryTabs("owner");
+  const items = resolveControlSurfacePrimaryTabs("owner");
   const branchHrefs = items.filter((item) => item.href.startsWith("/br/"));
   assert.deepEqual(branchHrefs, []);
 
@@ -130,43 +130,43 @@ test("owner sidebar tabs omit branch-scoped entries without a branchId", () => {
 
 for (const role of RESTRICTED_ROLES) {
   test(`${role} has no Owner surface sidebar tabs`, () => {
-    assert.deepEqual(resolveOwnerPrimaryTabs(role), []);
+    assert.deepEqual(resolveControlSurfacePrimaryTabs(role), []);
   });
 }
 
 test("primary tab hrefs and labels are deduplicated", () => {
   for (const role of ["owner", ...RESTRICTED_ROLES] as StaffRole[]) {
-    const items = resolveOwnerPrimaryTabs(role, BRANCH_ID);
+    const items = resolveControlSurfacePrimaryTabs(role, BRANCH_ID);
     assertUniqueTabs(items, `${role} primary tabs`);
   }
 });
 
 test("deep-nav hrefs and labels are deduplicated", () => {
-  for (const adminModule of OWNER_MODULE_IDS) {
+  for (const adminModule of CONTROL_SURFACE_CORE_MODULE_IDS) {
     assertUniqueTabs(
-      flattenGroups(resolveOwnerDeepNav("owner", adminModule)),
+      flattenGroups(resolveControlSurfaceCoreDeepNav("owner", adminModule)),
       `${adminModule} sub-tabs`,
     );
   }
 });
 
 test("findActivePrimaryNavItem matches the primary tab for the current path", () => {
-  const items = resolveOwnerPrimaryTabs("owner", BRANCH_ID);
+  const items = resolveControlSurfacePrimaryTabs("owner", BRANCH_ID);
   const active = findActivePrimaryNavItem(items, "/settings/payments");
   assert.ok(active, "an active sidebar tab must be found for settings");
   assert.equal(active?.href, MODULE_ACL.settings.path);
 });
 
 test("findActivePrimaryNavItem returns undefined for an unmatched path", () => {
-  const items = resolveOwnerPrimaryTabs("owner", BRANCH_ID);
+  const items = resolveControlSurfacePrimaryTabs("owner", BRANCH_ID);
   assert.equal(
     findActivePrimaryNavItem(items, "/totally/unknown/path"),
     undefined,
   );
 });
 
-test("resolveOwnerDeepNav returns settings sub-pages", () => {
-  const groups = resolveOwnerDeepNav("owner", "settings");
+test("resolveControlSurfaceCoreDeepNav returns settings sub-pages", () => {
+  const groups = resolveControlSurfaceCoreDeepNav("owner", "settings");
   assert.ok(Array.isArray(groups));
   const hrefs = hrefList(flattenGroups(groups));
   assert.deepEqual(hrefs, [
@@ -176,12 +176,12 @@ test("resolveOwnerDeepNav returns settings sub-pages", () => {
   ]);
 });
 
-for (const surface of FLAT_OWNER_MODULE_IDS) {
-  test(`resolveOwnerDeepNav returns no deep-nav group for the flat ${surface} module`, () => {
+for (const surface of FLAT_CONTROL_SURFACE_MODULE_IDS) {
+  test(`resolveControlSurfaceCoreDeepNav returns no deep-nav group for the flat ${surface} module`, () => {
     // menu/orders/branches are flat single-page modules: their own primary
     // tab already links to the module, so no group duplicating that same
     // leaf under itself is emitted (W2, D063).
-    const groups = resolveOwnerDeepNav("owner", surface);
+    const groups = resolveControlSurfaceCoreDeepNav("owner", surface);
     assert.deepEqual(
       groups,
       [],
@@ -190,10 +190,10 @@ for (const surface of FLAT_OWNER_MODULE_IDS) {
   });
 }
 
-test("resolveOwnerDeepNav surfaces People + account groups for Owner HR", () => {
+test("resolveControlSurfaceCoreDeepNav surfaces People + account groups for Owner HR", () => {
   // Owner sees both the People landing group and the owner-only account
   // administration group (staff roster + audit) folded under /hr (D048).
-  const ownerGroups = resolveOwnerDeepNav("owner", "hr");
+  const ownerGroups = resolveControlSurfaceCoreDeepNav("owner", "hr");
   const ownerHrefs = hrefList(flattenGroups(ownerGroups));
   assert.ok(
     ownerHrefs.includes(MODULE_ACL.hr.path),
@@ -209,7 +209,7 @@ test("resolveOwnerDeepNav surfaces People + account groups for Owner HR", () => 
   );
 
   assert.deepEqual(
-    resolveOwnerDeepNav("branch_manager", "hr"),
+    resolveControlSurfaceCoreDeepNav("branch_manager", "hr"),
     [],
     "branch_manager must not receive Owner surface deep navigation",
   );

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ArrowRight as IconArrowRight } from "lucide-react";
 import {
   formatCount,
@@ -35,6 +36,18 @@ import {
 import { fetchCashSummary } from "./_lib/cash-cockpit";
 import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
 import { CurrentFundsSection } from "./components/current-funds-section";
+import { Progress } from "@comtammatu/ui/components/progress";
+import {
+  clampProgressValue,
+  isSingleCalendarMonth,
+  monthStartFromIsoDate,
+  targetProgressTone,
+} from "./_lib/revenue-target";
+import {
+  fetchBranchRevenueTargetProgress,
+  listBranchRevenueTargetProgress,
+} from "./targets/actions";
+import { loadAuthState } from "@/_lib/auth";
 
 const financeCopy = messages.finance;
 const powerLiteCopy = financeCopy.powerLite;
@@ -106,10 +119,94 @@ export default async function FinancePage({
   const rawParams = searchParams ? await searchParams : {};
   const params = parseFinanceParams(rawParams);
   const resolved = resolveFinanceRange(params);
-  const [cockpit, cash] = await Promise.all([
+  const [cockpit, cash, auth] = await Promise.all([
     fetchFinanceCockpit(params, resolved),
     fetchCashSummary(),
+    loadAuthState(),
   ]);
+  const showTargetProgress = isSingleCalendarMonth(resolved.start, resolved.end);
+  const yearMonth = monthStartFromIsoDate(resolved.start);
+  const targetProgressRes = showTargetProgress
+    ? params.branch != null
+      ? await fetchBranchRevenueTargetProgress(params.branch, yearMonth)
+      : await listBranchRevenueTargetProgress(yearMonth)
+    : null;
+
+  let targetHint: ReactNode = financeCopy.basic.kpis.netRevenueHint;
+  let netRevenueHref = "/finance/revenue";
+  if (showTargetProgress && targetProgressRes?.success) {
+    if (
+      params.branch != null &&
+      targetProgressRes.data &&
+      !Array.isArray(targetProgressRes.data)
+    ) {
+      const progress = targetProgressRes.data;
+      if (progress.targetAmount != null && progress.progressPct != null) {
+        const tone = targetProgressTone(progress.progressPct);
+        targetHint = (
+          <div className="flex w-full flex-col gap-1.5">
+            <span>
+              {messages.finance.revenueTargets.progress.netRevenueProgressHint(
+                formatPercent(progress.progressPct),
+              )}
+            </span>
+            <Progress
+              value={clampProgressValue(progress.progressPct)}
+              tone={
+                tone === "neutral"
+                  ? "default"
+                  : (tone as "success" | "warning" | "destructive")
+              }
+              className="h-1.5 rounded-full"
+            />
+          </div>
+        );
+      } else if (auth.claims.user_role === "owner") {
+        targetHint = (
+          <Link
+            href="/finance/targets"
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            {messages.finance.revenueTargets.progress.noTarget}
+          </Link>
+        );
+      }
+      netRevenueHref = `/finance/revenue?branch=${params.branch}&range=mtd`;
+    } else if (Array.isArray(targetProgressRes.data)) {
+      const withTarget = targetProgressRes.data.filter(
+        (row) => row.targetAmount != null && row.targetAmount > 0,
+      );
+      const totalNet = withTarget.reduce((sum, row) => sum + row.netRevenue, 0);
+      const totalTarget = withTarget.reduce(
+        (sum, row) => sum + (row.targetAmount ?? 0),
+        0,
+      );
+      if (totalTarget > 0) {
+        const pct = (totalNet / totalTarget) * 100;
+        const tone = targetProgressTone(pct);
+        targetHint = (
+          <div className="flex w-full flex-col gap-1.5">
+            <span>
+              {messages.finance.revenueTargets.progress.netRevenueProgressHint(
+                formatPercent(pct),
+              )}
+            </span>
+            <Progress
+              value={clampProgressValue(pct)}
+              tone={
+                tone === "neutral"
+                  ? "default"
+                  : (tone as "success" | "warning" | "destructive")
+              }
+              className="h-1.5 rounded-full"
+            />
+          </div>
+        );
+      }
+      netRevenueHref = "/finance/revenue?range=mtd";
+    }
+  }
+
   const grossProfit = cockpit.kpis.grossProfit;
   const operatingResult = cockpit.kpis.operatingResult;
 
@@ -140,9 +237,9 @@ export default async function FinancePage({
               density="compact"
               label={financeCopy.basic.kpis.netRevenue}
               value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
-              hint={financeCopy.basic.kpis.netRevenueHint}
+              hint={targetHint}
               tone="primary"
-              href="/finance/revenue"
+              href={netRevenueHref}
             />
           </div>
 

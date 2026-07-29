@@ -13,7 +13,9 @@ runtime adapters, local tool state, and `tasks/todo.md` are not parallel SSOTs.
 - Auth and ACL: `docs/modules/auth.md`
 - Database: `docs/modules/database.md`, `docs/spec/database-schema.md`
 - UI: `docs/spec/design-system.md`, `docs/spec/page-archetypes.md`,
-  `docs/modules/ui.md`, `docs/ref/screen-context-map.md`
+  `docs/modules/ui.md`, `docs/ref/screen-context-map.md`; Product Dual Thesis
+  in `docs/spec/architecture.md`; optional Stitch mirror `.stitch/DESIGN.md`
+  (non-SSOT). Target-only docs under `docs/architecture/target-*` are future.
 - Routes/scopes: `docs/spec/role-route-matrix.md`
 - Notifications: `docs/spec/toast-notification-system.md`
 - Finance: `docs/modules/finance.md`

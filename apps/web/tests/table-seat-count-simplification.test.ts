@@ -13,9 +13,9 @@ function readRepoSource(path: string): string {
 }
 
 const tableWorkflowSources = [
-  "app/(protected)/branch-settings/_shared/tables/actions.ts",
-  "app/(protected)/branch-settings/_shared/tables/table-form-dialog.tsx",
-  "app/(protected)/branch-settings/_shared/tables/table-table.tsx",
+  "app/(protected)/br/_shared/settings/tables/actions.ts",
+  "app/(protected)/br/_shared/settings/tables/table-form-dialog.tsx",
+  "app/(protected)/br/_shared/settings/tables/table-table.tsx",
   "app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
   "app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx",
   "app/(protected)/br/[branchId]/pos/page.tsx",
@@ -34,7 +34,7 @@ test("table settings and POS table selection do not expose seat count", () => {
 
 test("table creation still relies on the database default capacity", () => {
   const actionSource = readWebSource(
-    "app/(protected)/branch-settings/_shared/tables/actions.ts",
+    "app/(protected)/br/_shared/settings/tables/actions.ts",
   );
   const baselineSource = normalizePgDumpSql(
     readRepoSource("supabase/migrations/20260727120000_baseline.sql"),

@@ -5,9 +5,12 @@ import {
   currentUserHasAnyPermissionAny,
   currentUserHasPermissionAny,
 } from "@/_lib/permissions";
-import { InventoryShell } from "./_components/inventory-shell";
+import { ControlSurfaceShell } from "@/components/control-surface-shell";
 import { BranchOpsRefresh } from "@/(protected)/br/[branchId]/(operator)/branch-ops-refresh";
-import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
+import {
+  CATALOG_MANAGE_PERMISSIONS,
+  CATALOG_READ_PERMISSIONS,
+} from "./_lib/catalog-permissions";
 import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 import {
   canAccessProductionSurface,
@@ -31,46 +34,60 @@ export default async function InventoryLayout({
   const [
     hasProcurementRead,
     canManageCatalog,
+    canReadCatalog,
     canOpenSettings,
     hasProductionPermission,
     hasProductionBranchAccess,
   ] = await Promise.all([
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
     currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
+    currentUserHasAnyPermissionAny(CATALOG_READ_PERMISSIONS),
     currentUserHasAnyPermissionAny(INVENTORY_SETTINGS_PERMISSIONS),
     currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
     hasCurrentProductionBranchAccess(supabase, claims),
   ]);
   const isOwner = claims.user_role === "owner";
+  const isCentralCatalogViewer =
+    claims.user_role === "central_supply_ops" ||
+    claims.user_role === "central_kitchen_lead";
   const showProcurement = isOwner || hasProcurementRead;
   const showProduction =
     isOwner ||
     (canAccessProductionSurface(claims.user_role) &&
       hasProductionPermission &&
       hasProductionBranchAccess);
+  // Catalog CRUD stays owner. Central ops browse ingredients via showCatalogRead.
+  const showCatalogManagement = isOwner && canManageCatalog;
+  const showCatalogRead =
+    !showCatalogManagement && isCentralCatalogViewer && canReadCatalog;
 
   return (
     <>
       {scope.selectedBranchId && (
         <BranchOpsRefresh branchId={scope.selectedBranchId} />
       )}
-      <InventoryShell
+      <ControlSurfaceShell
+        module="inventory"
         user={{
           name:
             session.user.user_metadata?.["display_name"] ??
             session.user.email ??
             "",
         }}
-        userRole={claims.user_role}
-        showProcurement={showProcurement}
-        showProduction={showProduction}
-        showCatalogManagement={isOwner || canManageCatalog}
-        showSettings={isOwner || canOpenSettings}
-        allowedBranches={scope.allowedBranches}
-        defaultBranchId={scope.selectedBranchId}
+        role={claims.user_role}
+        homeBranchId={scope.selectedBranchId}
+        inventory={{
+          showProcurement,
+          showProduction,
+          showCatalogManagement,
+          showCatalogRead,
+          showSettings: isOwner || canOpenSettings,
+          allowedBranches: scope.allowedBranches,
+          defaultBranchId: scope.selectedBranchId,
+        }}
       >
         {children}
-      </InventoryShell>
+      </ControlSurfaceShell>
     </>
   );
 }

@@ -733,7 +733,7 @@ const checks = [
       { dir: "apps/web/lib/staff-runtime", extensions: [".ts", ".tsx"] },
     ],
     pattern:
-      /\b(?:OwnerModuleShell|OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveOwner(?:PrimaryTabs|DeepNav)|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:owner-module-shell|office-module-shell|management-chrome|app-shell|owner-nav|office-nav|finance-shell|inventory-shell)["']|from\s+["']@\/\(protected\)\/inventory\/(?!(?:[^"']*\/)?[^/"']*actions(?:\.ts)?["'])[^"']+["']/g,
+      /\b(?:OwnerModuleShell|ControlSurfaceShell|OfficeModuleShell|ManagementShell|AppShell|FinanceShell|InventoryShell|resolveOwner(?:PrimaryTabs|DeepNav)|resolveControlSurface(?:PrimaryTabs|CoreDeepNav|DeepNav)|resolveOffice(?:PrimaryTabs|DeepNav))\b|["'][^"']*(?:owner-module-shell|control-surface-shell|office-module-shell|management-chrome|app-shell|owner-nav|control-surface-nav|office-nav|finance-shell|inventory-shell)["']|from\s+["']@\/\(protected\)\/inventory\/(?!(?:[^"']*\/)?[^/"']*actions(?:\.ts)?["'])[^"']+["']/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/catalog-ingredients-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/suppliers/catalog-suppliers-client.tsx": 1,
@@ -772,6 +772,25 @@ const checks = [
     ],
     pattern:
       /["'`]\/(?:finance|inventory|menu|orders|branches|hr|settings)(?:\/|["'`?#])/g,
+    allowlist: {},
+  },
+  {
+    id: "owner-page-header-no-module-eyebrow",
+    description:
+      "Owner control_surface AppPageHeader must not repeat sidebar module labels or marketing synonyms as eyebrow; keep contextual eyebrows only (site-kind, workflow surface).",
+    roots: [
+      { dir: "apps/web/app/(protected)/inventory", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/orders", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/menu", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/hr", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/finance", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/branches", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/settings", extensions: [".tsx"] },
+      { dir: "apps/web/app/(protected)/feedback", extensions: [".tsx"] },
+      { dir: "apps/web/app/_components", extensions: [".tsx"] },
+    ],
+    pattern:
+      /eyebrow=\{(?:messages\.inventory\.shell\.moduleName|INVENTORY_VI\.warehouse|INVENTORY_VI\.countAssignEyebrow|MENU_VI\.eyebrow|ORDERS_COPY\.eyebrow|APP_COPY_VI\.hrWorkspace|messages\.hr\.workspace\.eyebrow|workspaceCopy\.eyebrow|getModuleLabelVi\([^)]*\)|copy\.settingsHomeEyebrow|messages\.settings\.pages\.settingsEyebrow|messages\.inventory\.value\.eyebrow|messages\.inventory\.stocktake\.title|messages\.finance\.foodCost\.eyebrow|GRN_CREATE_COPY\.newReceiptEyebrow|revCopy\.page\.eyebrow|copy\.page\.eyebrow|detailCopy\.eyebrow|copy\.eyebrow|eyebrowLabel)\}|eyebrow=["']Kho hàng["']|eyebrow=["']Kho["']|eyebrow\s*=\s*["']Kho hàng["']/g,
     allowlist: {},
   },
   {
@@ -819,6 +838,8 @@ if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
   failures.push("legacy-docs: docs/archive must not exist");
 }
 
+// Root DESIGN.md is blocked. Allowed Stitch/agent mirror: `.stitch/DESIGN.md`
+// (seeded from docs/spec/design-system.md; never a second product SSOT).
 const blockedRootContextFiles = new Map([
   ["PRODUCT.md", "use docs/ref/business-context.md"],
   ["DESIGN.md", "use docs/spec/design-system.md"],
@@ -1065,6 +1086,28 @@ const textChecks = [
     file: "apps/web/app/components/surface.tsx",
     includes: [
       "text-xs font-medium uppercase tracking-wide text-muted-foreground",
+    ],
+  },
+  {
+    id: "owner-page-header-no-module-eyebrow-docs",
+    file: "docs/spec/page-archetypes.md",
+    includes: [
+      "**no** module-name eyebrow — the",
+      "control_surface sidebar + deep-nav already own module context",
+    ],
+  },
+  {
+    id: "owner-page-header-no-module-eyebrow-design-system",
+    file: "docs/spec/design-system.md",
+    includes: [
+      "AppPageHeader.eyebrow` MUST NOT repeat the primary sidebar module",
+    ],
+  },
+  {
+    id: "owner-page-header-no-module-eyebrow-module-doc",
+    file: "docs/modules/ui.md",
+    includes: [
+      "không** dùng `eyebrow` để lặp tên module",
     ],
   },
   {

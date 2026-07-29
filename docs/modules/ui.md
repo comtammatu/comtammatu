@@ -2,8 +2,8 @@
 
 ## Overview
 
-UI của repo là Com Tam Ma Tu Custom Theme (Ma Tu Concept 01) chạy trên
-Má Tư Design System shared components trong `@comtammatu/ui`. Base UI là
+UI của repo là **Má Tư Design System** (Custom Theme runtime) chạy trên
+shared components trong `@comtammatu/ui`. Base UI là
 behavioral primitive layer; lucide, Tailwind và CVA là implementation
 dependencies, không phải visual authority.
 Không còn helper layer hay theme system riêng theo route/surface.
@@ -120,7 +120,11 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 
 - `AppPage` cho content container/width/scroll rhythm.
 - `AppPageHeader` cho page heading, description, badge, action. Description
-  `line-clamp-2` trên `max-sm` (ẩn hẳn khi `compactOnMobile`).
+  `line-clamp-2` trên `max-sm` (ẩn hẳn khi `compactOnMobile`). Trên
+  control_surface (AppShell), **không** dùng `eyebrow` để lặp tên module /
+  synonym sidebar (`Quản lý kho`, `Kho hàng`, …) — sidebar + deep-nav đã mang
+  ngữ cảnh đó. Eyebrow chỉ khi thêm ngữ cảnh thật (ví dụ site-kind) mà title /
+  back link chưa nói.
 - `AppSection` cho card-backed section. `CardDescription` qua adapter dùng
   `line-clamp-2 break-words`; `headerHint` truncate. Secondary copy: page/section
   ≈ ≤80 ký tự, KPI/field hint ≈ ≤60; bỏ prop khi trùng title. `FieldDescription`
@@ -138,7 +142,10 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 - Owner LIST dùng `AppListFrame` (`AppSection` + `contentFlush` + slot
   `toolbar`):
   `AppPage` → `AppPageHeader` → `AppListFrame toolbar={<AppToolbar variant="inline" />}`
-  → `DataTable`. Inventory giữ domain alias `InventoryListFrame` (re-export cùng
+  → `DataTable`. Prefer `AppListFrame` (`AppSection` + `contentFlush` + slot
+  `toolbar`):
+  `AppPage` → `AppPageHeader` → `AppListFrame toolbar={<AppToolbar variant="inline" />}`
+  → `DataTable`. `InventoryListFrame` remains a compatibility alias (re-export cùng
   recipe + constant độ rộng filter). Tra cứu: `audit:ui-components --component AppListFrame`
   hoặc `--component InventoryListFrame` / `--component management-list`.
   Inline toolbar không tô nền riêng (`bg-muted/*`); cùng bề mặt card với bảng.
@@ -237,10 +244,10 @@ Owner LIST canonical:
 AppPage → AppPageHeader → AppListFrame toolbar={<AppToolbar variant="inline" />} → DataTable
 ```
 
-Owner Inventory LIST giữ alias cùng recipe:
+Owner Inventory LIST: prefer `AppListFrame`; `InventoryListFrame` is a compatibility alias with the same recipe:
 
 ```text
-AppPage → AppPageHeader → InventoryListFrame toolbar={<AppToolbar variant="inline" />} → DataTable
+AppPage → AppPageHeader → AppListFrame toolbar={<AppToolbar variant="inline" />} → DataTable
 ```
 
 Owner DOC-WORKFLOW canonical: `DocumentFormFrame` (+ line `DataTable` / form
@@ -250,12 +257,16 @@ fields). Branch LIST canonical: `BranchOperatorPage` + panel/controls +
 ## Stitch Adapter Workflow
 
 Stitch là sandbox thiết kế và mirror tùy chọn, không phải visual authority.
+File mirror agent/Stitch: **`.stitch/DESIGN.md`** (Má Tư Design System). Root
+`DESIGN.md` bị guard chặn. External stitch-skills (không vào `.agents/skills`
+bundle) theo allowlist trong `docs/agent/rules/skills.md`.
+
 Luồng dùng Stitch:
 
 1. Khóa actor, job, information order, archetype, plane và UI block trong UI
-   Advisor Gate.
-2. Nạp guideline từ visual contract hiện hành; không lấy theme cũ trên Stitch
-   làm nguồn ngược vào repo.
+   Advisor Gate (Product Dual Thesis: Hệ thống vs Vận hành).
+2. Nạp guideline từ visual contract hiện hành / `.stitch/DESIGN.md`; không lấy
+   theme cũ trên Stitch làm nguồn ngược vào repo.
 3. Yêu cầu prototype đúng một screen/state hoặc một bounded flow; dùng dữ liệu
    giả an toàn, không đưa secrets hay dữ liệu khách hàng/nhân sự/Production.
 4. Review hierarchy, touch target, responsive IA, loading/empty/error/blocked
@@ -281,7 +292,7 @@ không gọi trực tiếp vocabulary Employee ở các route Branch:
   mobile/tablet touch-first tại `/br/[branchId]/*`; control_surface giữ desktop
   management workspace responsive tại `/`, `/inventory`, `/finance`,
   `/hr`, `/menu`, `/orders`, và `/branches`. Mã dùng chung dưới
-  `branch-settings/_shared` chỉ là source directory, không phải route.
+  `br/_shared/settings` chỉ là source directory, không phải route.
 - data loader, Server Action, RPC và permission check có thể dùng chung giữa
   hai plane; presentation không được dùng chung nếu control_surface component tạo cảm
   giác desktop thu nhỏ trong Branch. Khi cần tách, Branch route dùng native
@@ -301,7 +312,8 @@ không gọi trực tiếp vocabulary Employee ở các route Branch:
   quyền quản lý.
 - operator/operations/staff-runtime không import hoặc render control_surface
   chrome; guard `operator-owner-shell-boundary` bắt mọi đường tắt qua
-  `AppShell`, `OwnerModuleShell`, `FinanceShell`, hoặc `InventoryShell`.
+  `AppShell`, `ControlSurfaceShell`, hoặc các tên shell L0 đã gỡ
+  (`OwnerModuleShell` / `FinanceShell` / `InventoryShell`).
 - màn chi tiết giữ một primary action trong panel chính, không đặt CTA vận hành
   vào page header.
 - staff-runtime wrapper chỉ đổi href/scope sang `/br/[branchId]/*`; workflow
@@ -473,10 +485,10 @@ Branch stock workflow áp dụng cùng ranh giới này:
 ## control_surface Shell Structure
 
 `control_surface` chrome (`apps/web/app/components/app-shell.tsx`; code IDs lịch
-sử `OwnerModuleShell` / `data-owner-shell-scroll`) render một sidebar trong một
+sử `ControlSurfaceShell` / `data-owner-shell-scroll`) render một sidebar trong một
 `SidebarProvider`:
 
-- Tab chính = mô-đun L0, single-sourced bởi `resolveOwnerPrimaryTabs`.
+- Tab chính = mô-đun L0, single-sourced bởi `resolveControlSurfacePrimaryTabs`.
 - Sub-tab = deep nav của mô-đun đang mở (`tier2`), render lồng dưới tab chính
   đang active.
 
@@ -493,13 +505,14 @@ margin inset); chỉ vùng nội dung trong panel cuộn (`overflow-y-auto
 overscroll-contain`, `data-owner-shell-scroll`). `AppPageHeader` cuộn cùng nội dung
 — không sticky/freeze ngoài scrollport (sẽ chiếm chiều cao cố định và tạo khoảng
 trống / cuộn thừa trên dashboard). Filter LIST freeze ở đỉnh shell scrollport qua:
-(1) `AppListFrame`/`InventoryListFrame` toolbar slot (tự sticky + stuck-state
-shell bleed), hoặc (2) `AppToolbar sticky`, hoặc (3) `AppPageStickyChrome` /
-`AppStickyFilterChrome` / `APP_PAGE_STICKY_FILTER_CLASSNAME` cho filter bar tùy
-biến. Khi stuck, filter hủy pad ngang shell (`px-3 md:px-4`) để flush mép panel;
-khi cuộn về đỉnh, trở lại bề mặt Card. Không sticky filter
-nằm trên KPI/dashboard cards (ví dụ Finance `FilterBar`) — sẽ đè section kế
-tiếp khi cuộn. `AppPage scroll` bên trong `AppShellPaddingBoundary` không tạo
+(1) `AppListFrame` toolbar slot (tự sticky + stuck-state
+shell bleed), hoặc (2) `AppToolbar sticky`, hoặc (3) `AppStickyFilterChrome` /
+`APP_PAGE_STICKY_FILTER_CLASSNAME` cho filter bar tùy
+biến (`AppPageStickyChrome` là compatibility alias của `AppStickyFilterChrome`). Sticky `top` âm hủy pad dọc shell (`pt-3 md:pt-4`) để filter flush mép trên
+panel (tránh hàng list lộ trong khe pad). Khi stuck, filter hủy thêm pad ngang
+shell (`px-3 md:px-4`) để flush mép trái/phải; khi cuộn về đỉnh, trở lại bề mặt
+Card. Không sticky filter nằm trên KPI/dashboard cards (ví dụ Finance
+`FilterBar`) — sẽ đè section kế tiếp khi cuộn. `AppPage scroll` bên trong `AppShellPaddingBoundary` không tạo
 scrollport thứ hai (giữ `overflow-visible`) để sticky filter neo đúng vào shell
 scrollport. Không đổi chrome Branch / `station_chrome`.
 

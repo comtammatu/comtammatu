@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
-import { FinanceShell } from "./components/finance-shell";
+import { ControlSurfaceShell } from "@/components/control-surface-shell";
 
 export default async function FinanceLayout({
   children,
@@ -16,7 +16,8 @@ export default async function FinanceLayout({
   ]);
 
   return (
-    <FinanceShell
+    <ControlSurfaceShell
+      module="finance"
       user={{
         name:
           session.user.user_metadata?.["display_name"] ??
@@ -24,11 +25,14 @@ export default async function FinanceLayout({
           "",
       }}
       role={claims.user_role}
-      branchId={claims.branch_id}
-      showInvoices={showInvoices}
-      showSupplierPayables={showSupplierPayables}
+      homeBranchId={claims.branch_id}
+      finance={{
+        showInvoices,
+        showSupplierPayables,
+        showRevenueTargets: claims.user_role === "owner",
+      }}
     >
       {children}
-    </FinanceShell>
+    </ControlSurfaceShell>
   );
 }

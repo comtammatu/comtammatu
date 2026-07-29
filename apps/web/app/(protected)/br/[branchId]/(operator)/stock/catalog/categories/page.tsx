@@ -3,8 +3,12 @@ import {
   fetchCategories,
   type CategoryRow,
 } from "@/(protected)/inventory/settings/categories/categories-actions";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
 import { CatalogCategoriesClient } from "./catalog-categories-client";
+
+const copy = messages.catalog.categories;
 
 export default async function OperatorCatalogCategoriesPage({
   params,
@@ -19,9 +23,11 @@ export default async function OperatorCatalogCategoriesPage({
   const rows: CategoryRow[] = res.success ? (res.data ?? []) : [];
 
   return (
-    <CatalogCategoriesClient
-      backHref={`/br/${branchId}/stock/catalog`}
-      rows={rows}
-    />
+    <BranchOperatorPage title={copy.title} hideHeaderOnMobile>
+      <CatalogCategoriesClient
+        backHref={`/br/${branchId}/stock/catalog`}
+        rows={rows}
+      />
+    </BranchOperatorPage>
   );
 }

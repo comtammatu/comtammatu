@@ -1,7 +1,15 @@
 import { redirect } from "next/navigation";
-import { buildAccessDeniedPath } from "@comtammatu/shared/auth";
+import {
+  buildAccessDeniedPath,
+  INVENTORY_CATALOG_ROLES,
+  INVENTORY_CATALOG_VIEW_ROLES,
+} from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
-import { CATALOG_MANAGE_PERMISSIONS } from "../_lib/catalog-permissions";
+import {
+  CATALOG_MANAGE_PERMISSIONS,
+  CATALOG_READ_PERMISSIONS,
+} from "../_lib/catalog-permissions";
 import {
   fetchCategoryOptions,
   fetchIngredients,
@@ -15,16 +23,21 @@ import type {
 } from "@lib/inventory/types";
 
 export default async function IngredientsPage() {
-  const canManageCatalog = await currentUserHasAnyPermissionAny(
-    CATALOG_MANAGE_PERMISSIONS,
-  );
-  if (!canManageCatalog) {
+  const { claims } = await loadAuthState();
+  const canViewCatalog =
+    INVENTORY_CATALOG_VIEW_ROLES.includes(claims.user_role) &&
+    (await currentUserHasAnyPermissionAny(CATALOG_READ_PERMISSIONS));
+  if (!canViewCatalog) {
     redirect(
       buildAccessDeniedPath("insufficient-permission", {
         from: "/inventory/ingredients",
       }),
     );
   }
+
+  const canManageCatalog =
+    INVENTORY_CATALOG_ROLES.includes(claims.user_role) &&
+    (await currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS));
 
   const [result, unitsResult, categoriesResult] = await Promise.all([
     fetchIngredients(),
@@ -44,6 +57,7 @@ export default async function IngredientsPage() {
       initial={initial}
       unitOptions={unitOptions}
       categoryOptions={categoryOptions}
+      canManage={canManageCatalog}
     />
   );
 }

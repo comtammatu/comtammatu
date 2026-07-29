@@ -73,7 +73,7 @@ function buildTileGroups(
       {
         moduleKey: "runner",
         href: `/br/${branchId}/runner`,
-        title: "Gọi món",
+        title: "Màn gọi số",
         description: copy.commandRunnerDescription,
         icon: <IconMonitorUp />,
       },
@@ -318,4 +318,11 @@ export function buildReadinessItems(
         : undefined,
     },
   ];
+}
+
+/** Keep only rows that need attention (not fully ready / success). */
+export function filterReadinessExceptions(
+  items: BranchReadinessItem[],
+): BranchReadinessItem[] {
+  return items.filter((item) => item.badgeVariant !== "success");
 }

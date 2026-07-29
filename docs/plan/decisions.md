@@ -166,7 +166,7 @@ Công thức metric canonical: `docs/ref/operational-data-contract.md`. Mở r�
 ## D032: Redesign UI = Hợp nhất (A) + Nâng cấp thị giác trong contract (B) (2026-06-16)
 
 **Net:** UI hợp nhất theo Custom Theme contract. Typography đi theo D038 →
-D069; palette giữ `primary` đỏ gạch + Concept 01. Các ý tưởng chưa quyết không
+D069; palette giữ `primary` đỏ gạch + Má Tư Design System. Các ý tưởng chưa quyết không
 sống trong decision log.
 
 ## D033: `main` là trunk TS/Supabase hiện hành — bỏ Go-port (2026-06-16)
@@ -590,10 +590,12 @@ mã lịch sử; tiêu hao HRM giữ `THB-{report_id}`.
 **Decision:** Plane L0 AppShell canonical = `control_surface` / UI `Quản trị`.
 Không dùng `Ops surface` hoặc `Vận hành` làm nhãn plane. `station_chrome` thay
 prose mới cho Operations chrome (POS/KDS/Runner). Role `owner` và
-`operational_role` (D076) tách khỏi tên plane. Code IDs `OwnerModuleShell` /
-`data-owner-shell-scroll` / `OWNER_NAV_*` giữ nguyên, map docs sang
-`control_surface`. Bottom-nav `control_surface` cắt tại `<lg` / `useIsMobile(1024)`
-(đồng bộ code + design-system; sửa D045 từ `<md`).
+`operational_role` (D076) tách khỏi tên plane. Chrome L0 = `ControlSurfaceShell`
+(Wave2). Nav SSOT = `CONTROL_SURFACE_NAV_*` + `apps/web/app/lib/control-surface-nav.ts`
+(renamed from `OWNER_NAV_*` / `owner-nav.ts`). DOM `data-owner-shell-scroll` /
+`RouteSurface: "owner"` giữ làm alias kỹ thuật. Bottom-nav `control_surface`
+cắt tại `<lg` / `useIsMobile(1024)` (đồng bộ code + design-system; sửa D045 từ
+`<md`).
 
 **Canonical:** `docs/ref/glossary.md` § control_surface; `docs/spec/design-system.md`
 § Chrome Archetypes; D019/D045 (đã fold).
@@ -657,6 +659,22 @@ một mapping `is_preferred`. GRN draft auto-chọn NCC ưu tiên; picker vẫn 
 
 **Canonical:** `docs/ref/inventory.md` §5,
 `supabase/migrations/20260729140400_supplier_item_preferred.sql`.
+
+## D095: Product Dual Thesis frame + Má Tư DS mirror (2026-07-29)
+
+**Decision (owner):** North star = Dual Thesis (Quản lý hệ thống + Vận hành bán
+hàng). Một Má Tư Design System (cùng token, khác density/chrome). Retire
+“Concept 01” naming. `.stitch/DESIGN.md` là mirror Stitch/agent (không SSOT
+thứ hai); root `DESIGN.md` vẫn cấm. Adapter: `App*` = Hệ thống,
+`BranchOperator*` = Vận hành. Không gộp URL `/inventory` + `/br/.../stock`.
+Break naming/placement chỉ với evidence + checkpoint đã khóa trong plan Dual
+Thesis. Stitch skills allowlist ngoài `.agents/skills`; deny
+`shadcn-ui` / `stitch-loop` / `taste-design` làm authority.
+
+**Canonical:** `docs/spec/architecture.md` § Product Dual Thesis;
+`docs/spec/design-system.md`; `.stitch/DESIGN.md`; D044, D090. Wave2: layouts
+import `ControlSurfaceShell` trực tiếp — không còn alias
+`OwnerModuleShell` / `InventoryShell` / `FinanceShell`.
 
 ## D093: Central-only GRN + branch stock request (2026-07-29)
 

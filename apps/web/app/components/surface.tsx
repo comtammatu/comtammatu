@@ -192,15 +192,21 @@ export function AppPage({
  * Use for page-level filters that are not already in AppListFrame's toolbar
  * slot. Do not use above KPI/dashboard cards — stuck chrome crushes the next
  * section while scrolling.
+ *
+ * Negative `top` cancels Owner shell `pt-3 md:pt-4`: sticky `top-0` pins to the
+ * scrollport content edge (below the pad), so rows scroll into the pad gap and
+ * read as above the filter. Negative top pins flush to the inset panel top.
+ * `top` only affects the sticky threshold — resting in-flow position is unchanged.
  */
 export const APP_PAGE_STICKY_FILTER_CLASSNAME =
-  "sticky top-0 z-10 bg-background";
+  "sticky top-[-0.75rem] z-20 bg-background md:top-[-1rem]";
 
 /**
  * Cancels Owner shell horizontal pad (`px-3 md:px-4`) when LIST filter chrome
  * is stuck, so the bar flushes to the inset panel edges. Pair with
  * `data-stuck` from `AppStickyFilterChrome` — do not apply while resting inside
- * the LIST card. Top pad stays (no `-mt`) to avoid stuck-state observer flicker.
+ * the LIST card. Top pad is cancelled via negative sticky `top` on
+ * `APP_PAGE_STICKY_FILTER_CLASSNAME` (not `-mt`, which flickers the stuck observer).
  */
 export const APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME = [
   // Do not use w-full with -mx bleed: width:100% keeps the border box at the
@@ -255,7 +261,10 @@ export function AppStickyFilterChrome({
           // Match the LIST card surface when covering scrolling rows.
           "bg-card transition-[margin,width,border-radius,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-move)]",
           stuck
-            ? [APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME, "rounded-none shadow-lg"]
+            ? [
+                APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME,
+                "rounded-none shadow-lg",
+              ]
             : null,
           className,
         )}
@@ -897,7 +906,7 @@ export type AppEmptyStateProps = AppEmptyRootProps & {
   icon?: ReactNode;
   iconClassName?: string;
   /**
-   * Decorative Concept 01 brand symbol rendered in place of `icon`. Static
+   * Decorative Má Tư brand symbol rendered in place of `icon`. Static
    * only — no mascot, no motion (design-system.md § brand rules).
    */
   symbol?: BrandSymbolVariant;

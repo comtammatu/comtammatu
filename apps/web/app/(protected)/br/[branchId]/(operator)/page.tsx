@@ -30,6 +30,8 @@ import {
   BranchTodayStatusPending,
   BranchQueuePending,
 } from "./_components/home/branch-home-skeletons";
+import { BranchRevenueTargetStrip } from "./_components/home/branch-revenue-target-strip";
+import { fetchBranchRevenueTargetProgress } from "@/(protected)/finance/targets/actions";
 
 const homeCopy = messages.operator.home;
 const stationDescriptions: Record<string, string> = {
@@ -181,12 +183,23 @@ export default async function OperatorHomePage({
       ]
     : [];
 
+  const showRevenueTargetStrip = isManagerLike;
+  const revenueTargetRes = showRevenueTargetStrip
+    ? await fetchBranchRevenueTargetProgress(context.branchId)
+    : null;
+  const revenueTarget =
+    revenueTargetRes?.success === true ? revenueTargetRes.data : null;
+
   return (
-    <BranchOperatorPage title={APP_COPY_VI.branchHome}>
+    <BranchOperatorPage title={APP_COPY_VI.branchHome} hideHeaderOnMobile>
       {claims.user_role !== "owner" ? (
         <Suspense fallback={<BranchTodayStatusPending />}>
           <BranchTodayStatus branchId={context.branchId} />
         </Suspense>
+      ) : null}
+
+      {revenueTarget ? (
+        <BranchRevenueTargetStrip progress={revenueTarget} />
       ) : null}
 
       <Suspense fallback={<BranchQueuePending />}>
@@ -205,7 +218,6 @@ export default async function OperatorHomePage({
           href: tile.href,
           icon: resolveOperatorTileIcon(tile.icon),
           title: tile.label,
-          description: stationDescriptions[tile.moduleKey],
           disabled: tilesLockedBeforeClockIn,
           disabledReason: tilesLockedBeforeClockIn
             ? homeCopy.lockedBeforeClockIn
@@ -217,7 +229,6 @@ export default async function OperatorHomePage({
             {stationTiles.length > 0 ? (
               <BranchOperatorActionSection
                 title={section.title}
-                description={section.description}
                 links={stationTiles.map(toPhaseLink)}
                 presentation="stations"
               />
@@ -225,7 +236,6 @@ export default async function OperatorHomePage({
             {supportingTiles.length > 0 ? (
               <BranchOperatorActionSection
                 title={section.title}
-                description={section.description}
                 links={supportingTiles.map(toPhaseLink)}
                 columns={2}
                 mobileColumns={2}
@@ -249,7 +259,6 @@ export default async function OperatorHomePage({
           href: tile.href,
           icon: resolveOperatorTileIcon(tile.icon),
           title: tile.label,
-          description: stationDescriptions[tile.moduleKey],
           disabled: tilesLockedBeforeClockIn && group.id === "sales_kitchen",
           disabledReason:
             tilesLockedBeforeClockIn && group.id === "sales_kitchen"
@@ -261,7 +270,6 @@ export default async function OperatorHomePage({
           <Fragment key={group.id}>
             <BranchOperatorActionSection
               title={homeCopy.stationsTitle}
-              description={homeCopy.stationsDescription}
               links={stationTiles.map(toLink)}
               presentation="stations"
             />
@@ -270,11 +278,6 @@ export default async function OperatorHomePage({
                 group.id === "sales_kitchen"
                   ? homeCopy.shiftControlTitle
                   : group.title
-              }
-              description={
-                group.id === "sales_kitchen"
-                  ? homeCopy.shiftControlDescription
-                  : undefined
               }
               links={supportingTiles.map(toLink)}
               columns={2}

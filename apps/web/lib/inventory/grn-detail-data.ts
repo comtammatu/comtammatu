@@ -11,6 +11,7 @@ import { getIngredientUnitDisplayName } from "@/(protected)/inventory/_lib/unit-
 import type { IngredientRow } from "@lib/inventory/types";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchGrnDetail } from "@/(protected)/inventory/procurement-actions";
+import { messages } from "@lib/messages";
 import {
   allLinkedPosApproved,
   grnSupplierSummaryFromItems,
@@ -63,6 +64,14 @@ export async function loadGrnDetailResult(
       data: null,
       error: result.error,
       notFound: result.errorCode === "not_found",
+    };
+  }
+  if (!ingredientsResult.success) {
+    return {
+      data: null,
+      error:
+        ingredientsResult.error ??
+        messages.inventory.ingredients.list.loadFailed,
     };
   }
 
@@ -121,9 +130,7 @@ export async function loadGrnDetailResult(
   const supplier = data.grn.suppliers;
   const branch = data.grn.branches;
   const purchaseOrder = data.grn.purchase_orders;
-  const ingredients = ingredientsResult.success
-    ? ((ingredientsResult.data ?? []) as IngredientRow[])
-    : [];
+  const ingredients = (ingredientsResult.data ?? []) as IngredientRow[];
   const ingredientById = new Map(
     ingredients.map((ingredient) => [ingredient.id, ingredient]),
   );

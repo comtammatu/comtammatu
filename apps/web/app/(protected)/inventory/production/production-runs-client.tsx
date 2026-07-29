@@ -1,5 +1,6 @@
 "use client";
 
+import { AppListFrame } from "@/components/surface";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,7 +27,6 @@ import {
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { matchesSearch } from "@lib/search";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
 import type { ProductionRunRow } from "../production-run-actions";
 
 const ALL_STATUS_VALUE = "_all";
@@ -191,11 +191,11 @@ export function ProductionRunsClient({
   );
 
   if (!embedded) {
-    return <InventoryListFrame>{table}</InventoryListFrame>;
+    return <AppListFrame>{table}</AppListFrame>;
   }
 
   return (
-    <InventoryListFrame
+    <AppListFrame
       icon={<IconListChecks />}
       title={INVENTORY_VI.productionOrdersTab}
       description={INVENTORY_VI.productionOrdersCardDescription}
@@ -218,7 +218,7 @@ export function ProductionRunsClient({
       }
     >
       {table}
-    </InventoryListFrame>
+    </AppListFrame>
   );
 }
 

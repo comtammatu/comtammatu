@@ -1,7 +1,7 @@
 import type { StaffRole } from "./types";
 import { canAccess, MODULE_ACL, type ModuleKey } from "./module-acl";
 import {
-  OWNER_NAV_GROUPS,
+  CONTROL_SURFACE_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
   BRANCH_OPERATION_ITEMS,
   type BranchScopedNavItemConfig,
@@ -75,12 +75,13 @@ function resolveBlockedLink(
   };
 }
 
-export function resolveOwnerDiscoveryGroups(
+export function resolveControlSurfaceDiscoveryGroups(
   role: StaffRole,
 ): DiscoveredAppGroup[] {
   // Filter by the role-route ACL so accountant / central roles see their
   // allowed L0 slices without requiring the owner home ModuleKey.
-  return OWNER_NAV_GROUPS.map((group) => ({
+  // AppDiscoverySurface "owner" remains the technical RouteSurface alias.
+  return CONTROL_SURFACE_NAV_GROUPS.map((group) => ({
     title: group.title,
     surface: "owner" as const,
     items: group.items
@@ -187,7 +188,7 @@ export function resolveDiscoveredAppGroups(
   );
 
   return [
-    ...resolveOwnerDiscoveryGroups(role),
+    ...resolveControlSurfaceDiscoveryGroups(role),
     branchManagementGroup,
     branchOperationGroup,
   ].filter((group): group is DiscoveredAppGroup => group != null);

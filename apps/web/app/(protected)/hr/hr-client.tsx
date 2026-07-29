@@ -31,7 +31,6 @@ export function HrClient({
   return (
     <AppPage width="xwide">
       <AppPageHeader
-        eyebrow={workspaceCopy.eyebrow}
         title={workspaceCopy.ownerTitle}
         description={workspaceCopy.ownerDescription}
         actions={

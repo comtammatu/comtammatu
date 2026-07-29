@@ -73,7 +73,6 @@ export default async function RevenueDrillPage({
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader
-          eyebrow={copy.eyebrow}
           title={copy.invalidDateTitle}
           breadcrumb={<BackToRevenue />}
         />
@@ -96,7 +95,6 @@ export default async function RevenueDrillPage({
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader
-          eyebrow={copy.eyebrow}
           title={copy.selectBranchTitle(date)}
           description={copy.selectBranchDescription}
           breadcrumb={<BackToRevenue />}
@@ -158,7 +156,6 @@ export default async function RevenueDrillPage({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={copy.eyebrow}
         title={copy.detailTitle(branchName, date)}
         description={copy.detailDescription(
           formatCount(totalOrders),

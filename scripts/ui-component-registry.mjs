@@ -310,7 +310,7 @@ export const SHARED_COMPONENT_REGISTRY = {
   ),
   "sidebar.tsx": adapterOnly(
     "management navigation chrome internals",
-    "AppShell or OwnerModuleShell",
+    "AppShell via ControlSurfaceShell",
     "AppBottomNav for operator navigation",
     "route-local SidebarProvider or third shell",
     "management shell",
@@ -507,8 +507,8 @@ export const APP_ADAPTER_REGISTRY = {
   ),
   InventoryListFrame: adapter(
     "apps/web/app/(protected)/inventory/_components/inventory-list-frame.tsx",
-    "owner inventory LIST section with inline toolbar",
-    "InventoryListFrame toolbar={<AppToolbar variant=\"inline\" />} wrapping DataTable",
+    "inventory LIST compatibility alias — prefer AppListFrame for owner LIST section with inline toolbar",
+    "AppListFrame toolbar={<AppToolbar variant=\"inline\" />} wrapping DataTable (prefer AppListFrame; InventoryListFrame is a compatibility alias)",
     "AppListFrame for a non-inventory management list",
     "route-local list card or separate mobile and desktop trees",
     "inventory GRN, transfers, issues, and stock lists",
@@ -945,7 +945,7 @@ export const UI_BLOCK_REGISTRY = {
     ["LIST"],
     ["owner"],
     "search, filter, compare, and act on a management collection",
-    "AppPage + AppPageHeader + AppListFrame(toolbar=AppToolbar inline) + DataTable; Inventory LIST uses InventoryListFrame alias",
+    "AppPage + AppPageHeader + AppListFrame(toolbar=AppToolbar inline) + DataTable; prefer AppListFrame (InventoryListFrame is a compatibility alias)",
     "ItemGroup for a short non-tabular feed",
     "raw Table, separate mobile and desktop trees, or inventing a *Block import",
     "apps/web/app/(protected)/inventory/grn/page.tsx",

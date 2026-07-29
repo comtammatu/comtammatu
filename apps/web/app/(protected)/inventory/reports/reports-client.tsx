@@ -84,7 +84,6 @@ export function ReportsClient({
   const content = (
     <>
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={messages.inventory.reports.pageTitle}
       />
 

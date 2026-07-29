@@ -37,7 +37,6 @@ import { messages } from "@lib/messages";
 
 import { BRANCH_VI } from "@comtammatu/shared/messages";
 
-const eyebrowLabel = "Kiểm kê";
 interface BranchOpt {
   id: number;
   name: string;
@@ -143,7 +142,6 @@ export function NewStocktakeSessionClient({
 
   const header = (
     <AppPageHeader
-      eyebrow={eyebrowLabel}
       title={messages.inventory.stocktake.startTitle}
       description={messages.inventory.stocktake.startDescription}
     />

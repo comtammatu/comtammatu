@@ -15,11 +15,11 @@ import {
   Item,
   ItemActions,
   ItemContent,
-  ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Label } from "@comtammatu/ui/components/label";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   ExternalLink as IconExternalLink,
   Pencil as IconPencil,
@@ -58,6 +58,7 @@ export function TerminalsClient({
   terminals,
   embedded = false,
 }: TerminalsClientProps) {
+  const copy = messages.settings.pos;
   const firstBranch = branches[0];
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
     firstBranch?.id ?? null,
@@ -69,6 +70,12 @@ export function TerminalsClient({
   const filteredTerminals = terminals.filter(
     (t) => t.branch_id === selectedBranchId,
   );
+  const hasActiveTerminal = filteredTerminals.some((t) => t.is_active);
+
+  function openCreateDialog() {
+    setEditTerminal(null);
+    setDialogOpen(true);
+  }
 
   function TerminalActions({ terminal }: { terminal: TerminalRow }) {
     return (
@@ -89,15 +96,9 @@ export function TerminalsClient({
   const columns: DataTableColumn<TerminalRow>[] = [
     {
       key: "name",
-      header: messages.settings.pos.terminalName,
+      header: copy.terminalName,
       className: "font-medium",
       render: (terminal) => terminal.name,
-    },
-    {
-      key: "device_id",
-      header: messages.settings.pos.deviceId,
-      className: "text-muted-foreground",
-      render: (terminal) => terminal.device_id ?? "—",
     },
     {
       key: "status",
@@ -130,6 +131,10 @@ export function TerminalsClient({
 
   return (
     <>
+      <NoteCallout tone="muted" className="mb-3">
+        {copy.registrationIntro}
+      </NoteCallout>
+
       <AppToolbar
         variant={embedded ? "inline" : "card"}
         filters={
@@ -158,7 +163,7 @@ export function TerminalsClient({
         }
         actions={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            {selectedBranchId !== null && (
+            {selectedBranchId !== null && hasActiveTerminal ? (
               <Button
                 variant="outline"
                 size="touch"
@@ -166,54 +171,59 @@ export function TerminalsClient({
                 render={<Link href={`/br/${selectedBranchId}/pos`} />}
               >
                 <IconExternalLink data-icon="inline-start" />
-                {messages.settings.pos.openPosUi}
+                {copy.openPosUi}
               </Button>
-            )}
+            ) : null}
             <Button
               size="touch"
               className="w-full sm:w-auto"
-              onClick={() => {
-                setEditTerminal(null);
-                setDialogOpen(true);
-              }}
+              onClick={openCreateDialog}
               disabled={selectedBranchId === null}
             >
               <IconPlus data-icon="inline-start" />
-              {messages.settings.pos.addTerminal}
+              {copy.addTerminal}
             </Button>
           </div>
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={filteredTerminals}
-        getRowKey={(terminal) => terminal.id}
-        emptyTitle={messages.settings.pos.emptyForBranch}
-        mobileBreakpoint={1024}
-        mobileCardRender={(terminal) => (
-          <Item variant="outline">
-            <ItemContent className="min-w-0">
+      {filteredTerminals.length === 0 ? (
+        <AppEmptyState
+          title={copy.emptyForBranch}
+          description={copy.emptyForBranchDescription}
+        >
+          <Button size="touch" onClick={openCreateDialog}>
+            <IconPlus data-icon="inline-start" />
+            {copy.addTerminal}
+          </Button>
+        </AppEmptyState>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filteredTerminals}
+          getRowKey={(terminal) => terminal.id}
+          mobileBreakpoint={1024}
+          mobileCardRender={(terminal) => (
+            <Item variant="outline">
+              <ItemContent className="min-w-0">
               <ItemTitle size="heading" className="line-clamp-none w-full">
                 {terminal.name}
               </ItemTitle>
-              <ItemDescription className="line-clamp-none text-sm leading-6">
-                {terminal.device_id ?? "—"}
-              </ItemDescription>
               <div>
-                <Badge variant={terminal.is_active ? "success" : "secondary"}>
-                  {terminal.is_active
-                    ? messages.settings.common.active
-                    : messages.settings.common.inactive}
-                </Badge>
-              </div>
-            </ItemContent>
-            <ItemActions className="self-center">
-              <TerminalActions terminal={terminal} />
-            </ItemActions>
-          </Item>
-        )}
-      />
+                  <Badge variant={terminal.is_active ? "success" : "secondary"}>
+                    {terminal.is_active
+                      ? messages.settings.common.active
+                      : messages.settings.common.inactive}
+                  </Badge>
+                </div>
+              </ItemContent>
+              <ItemActions className="self-center">
+                <TerminalActions terminal={terminal} />
+              </ItemActions>
+            </Item>
+          )}
+        />
+      )}
 
       {selectedBranchId !== null && (
         <TerminalFormDialog

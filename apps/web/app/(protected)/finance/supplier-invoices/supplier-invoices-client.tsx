@@ -60,6 +60,7 @@ import {
 import { useFormControlSize } from "@/components/form/control-size";
 import {
   AppEmptyState,
+  AppListFrame,
   AppPage,
   AppPageHeader,
   AppToolbar,
@@ -81,7 +82,6 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import {
-  InventoryListFrame,
   inventoryListFilterSelectClassName,
 } from "../../inventory/_components/inventory-list-frame";
 import {
@@ -849,7 +849,6 @@ export function SupplierInvoicesClient({
   branchId,
   tenantId,
   grnBasePath = "/inventory/grn",
-  eyebrow = "Kho hàng",
   description,
   canPaySupplier = false,
   canAttachVatEvidence = false,
@@ -865,7 +864,6 @@ export function SupplierInvoicesClient({
   branchId?: number;
   tenantId: number;
   grnBasePath?: string;
-  eyebrow?: string;
   description?: string;
   canPaySupplier?: boolean;
   canAttachVatEvidence?: boolean;
@@ -1736,7 +1734,6 @@ export function SupplierInvoicesClient({
   return (
     <AppPage width="xwide">
       <AppPageHeader
-        eyebrow={eyebrow}
         title={copy.title}
         description={description}
         actions={
@@ -1750,7 +1747,7 @@ export function SupplierInvoicesClient({
         }
       />
 
-      <InventoryListFrame
+      <AppListFrame
             title={
               viewMode === "supplier" ? copy.viewBySupplier : copy.viewByPo
             }
@@ -1927,7 +1924,7 @@ export function SupplierInvoicesClient({
                 </Button>
               </div>
             ) : null}
-          </InventoryListFrame>
+          </AppListFrame>
 
       <Sheet open={detailOpen} onOpenChange={handleDetailOpenChange}>
         <SheetContent

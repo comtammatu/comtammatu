@@ -59,7 +59,6 @@ export default async function FoodCostPage({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={messages.finance.foodCost.eyebrow}
         title={messages.finance.nav.items.foodCost}
       />
       {loadFailed ? (

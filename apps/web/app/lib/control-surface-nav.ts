@@ -19,20 +19,36 @@ import type { ElementType } from "react";
 import {
   canAccess,
   MODULE_ACL,
-  resolveOwnerNavGroups,
+  resolveControlSurfaceNavGroups,
   type ResolvedNavLink,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
-import type { OwnerModuleId } from "./owner-module-contract";
-import type { ShellNavGroup, ShellNavItem } from "./shell-primitives";
+import {
+  resolveInventoryNav,
+  type InventoryNavFlags,
+} from "@/(protected)/inventory/_lib/inventory-nav";
+import { resolveFinanceNav } from "@/(protected)/finance/components/finance-nav";
+import type {
+  ControlSurfaceCoreModuleId,
+  ControlSurfaceModuleId,
+} from "@/lib/control-surface-module";
+import type { ShellNavGroup, ShellNavItem } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
 
-// Unified Owner surface sidebar. Every tenant management route renders the
-// same Owner-only primary nav. Module-specific deep nav is appended by the
-// module shell. Access filtering stays single-sourced in MODULE_ACL.
+export type { InventoryNavFlags };
 
-const OWNER_ICON_MAP: Record<string, ElementType> = {
+export type FinanceNavFlags = {
+  showInvoices: boolean;
+  showSupplierPayables: boolean;
+  showRevenueTargets?: boolean;
+};
+
+// control_surface primary + deep nav. Every L0 route shares the same primary
+// tabs; module deep nav is appended by ControlSurfaceShell via
+// resolveControlSurfaceDeepNav. Access filtering stays in MODULE_ACL.
+
+const CONTROL_SURFACE_ICON_MAP: Record<string, ElementType> = {
   LayoutDashboard: IconLayoutDashboard,
   BarChart3: IconBarChart3,
   Users: IconUsers,
@@ -51,7 +67,7 @@ function mapItem(item: ResolvedNavLink): ShellNavItem {
   return {
     href: item.href,
     label: item.label,
-    icon: OWNER_ICON_MAP[item.icon] ?? IconLayoutDashboard,
+    icon: CONTROL_SURFACE_ICON_MAP[item.icon] ?? IconLayoutDashboard,
   };
 }
 
@@ -66,18 +82,18 @@ function dedupeByHref(items: ShellNavItem[]): ShellNavItem[] {
   return result;
 }
 
-export function resolveOwnerPrimaryTabs(
+export function resolveControlSurfacePrimaryTabs(
   role: StaffRole,
   _branchId?: number | null,
 ): ShellNavItem[] {
-  const ownerItems = resolveOwnerNavGroups(role)
+  const items = resolveControlSurfaceNavGroups(role)
     .flatMap((group) => group.items)
     .map(mapItem);
 
-  return dedupeByHref(ownerItems);
+  return dedupeByHref(items);
 }
 
-function resolveOwnerSettingsNav(role: StaffRole): ShellNavGroup[] {
+function resolveControlSurfaceSettingsNav(role: StaffRole): ShellNavGroup[] {
   if (!canAccess(role, "settings")) return [];
 
   const settingsCopy = messages.settings.nav;
@@ -159,15 +175,12 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
   return groups;
 }
 
-// Sub-nav for Owner modules. Settings renders foundation sub-pages; HR renders
-// the People + account-administration groups; menu/orders/branches are flat
-// single-page modules with no sub-routes — their own primary tab already
-// links to the module, so no deep-nav group is emitted (a group titled after
-// its only child duplicated the tab and rendered nothing new, since the
-// sidebar already filters out a sub-item whose href equals its parent tab).
-export function resolveOwnerDeepNav(
+// Core-module deep nav (settings/hr). Flat modules emit no sub-nav — the
+// primary tab already links to the module; a single-child group would
+// duplicate the tab (sidebar filters sub-items equal to the parent href).
+export function resolveControlSurfaceCoreDeepNav(
   role: StaffRole,
-  module: OwnerModuleId,
+  module: ControlSurfaceCoreModuleId,
   _branchId?: number | null,
 ): ShellNavGroup[] {
   if (role !== "owner") {
@@ -175,7 +188,7 @@ export function resolveOwnerDeepNav(
   }
 
   if (module === "settings") {
-    return resolveOwnerSettingsNav(role);
+    return resolveControlSurfaceSettingsNav(role);
   }
 
   if (module === "hr") {
@@ -183,4 +196,56 @@ export function resolveOwnerDeepNav(
   }
 
   return [];
+}
+
+/** Flatten inventory deep-nav groups into one untitled list (sidebar labels). */
+export function flattenInventoryDeepNav(
+  groups: ShellNavGroup[],
+): ShellNavGroup[] {
+  return [
+    {
+      title: "",
+      items: groups.flatMap((group) => group.items),
+    },
+  ];
+}
+
+/**
+ * Nav-as-data deep-nav for control_surface. Primary tabs stay in
+ * `resolveControlSurfacePrimaryTabs`; this dispatches module deep nav only.
+ */
+export function resolveControlSurfaceDeepNav(
+  role: StaffRole,
+  module: ControlSurfaceModuleId,
+  opts?: {
+    branchId?: number | null;
+    inventory?: InventoryNavFlags;
+    finance?: FinanceNavFlags;
+  },
+): ShellNavGroup[] {
+  if (module === "inventory") {
+    const flags = opts?.inventory;
+    if (!flags) return [];
+    return resolveInventoryNav({
+      userRole: role,
+      ...flags,
+      showStockRequestInbox:
+        flags.showStockRequestInbox ??
+        (role === "owner" ||
+          role === "central_supply_ops" ||
+          role === "central_kitchen_lead"),
+    });
+  }
+
+  if (module === "finance") {
+    const flags = opts?.finance;
+    if (!flags) return [];
+    return resolveFinanceNav(flags);
+  }
+
+  return resolveControlSurfaceCoreDeepNav(
+    role,
+    module as ControlSurfaceCoreModuleId,
+    opts?.branchId,
+  );
 }

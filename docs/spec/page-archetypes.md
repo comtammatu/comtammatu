@@ -179,12 +179,13 @@ rather than staying a near-empty category.
 **Exemplar:** `apps/web/app/(protected)/inventory/grn/page.tsx` +
 `grn-list-client.tsx`.
 
-- Skeleton: an appropriate `AppPage` width → `AppPageHeader` (eyebrow = module
-  name, `actions` = primary create CTA) → a coordinated filter/control region
-  → `DataTable` when values need tabular comparison. Owner management LIST /
-  DETAIL default to `width="xwide"` (see `docs/modules/ui.md` AppPage width
-  defaults); prove any other width in the rendered surface with the reading
-  task that motivates it.
+- Skeleton: an appropriate `AppPage` width → `AppPageHeader` (title = page job
+  name, `actions` = primary create CTA; **no** module-name eyebrow — the
+  control_surface sidebar + deep-nav already own module context) → a coordinated
+  filter/control region → `DataTable` when values need tabular comparison.
+  Owner management LIST / DETAIL default to `width="xwide"` (see
+  `docs/modules/ui.md` AppPage width defaults); prove any other width in the
+  rendered surface with the reading task that motivates it.
 - Data display: `DataTable` with `mobileCardRender` for the phone card list
   and the `Table` primitive for desktop — same fields, status colors, and
   actions at both breakpoints. Cursor pagination through the shared
@@ -301,7 +302,8 @@ density="compact"` already owns width/padding. Return a bare flex
   branch-scope mismatch, and fetches `fetchEntityAuditLogs(entity, id)` for
   the history tab.
 - Skeleton: `AppPage` → `AppPageHeader` (title = entity display code,
-  `StatusBadge`, back link to the family's list `basePath`) → `DescriptionList`
+  `StatusBadge`, back link to the family's list `basePath`; **no** module-name
+  eyebrow — the back link owns hierarchy) → `DescriptionList`
   metadata → lines/items via `DataTable` (`desktopFooter`/`mobileFooter` for
   totals) → a `Lịch sử` tab sourced from `audit_logs` filtered by
   `entity_type`/`entity_id` → `AppDetailFooter` for stage-transition actions.

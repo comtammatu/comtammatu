@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
-import { AppEmptyState, AppPageHeader } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppListFrame,
+  AppPageHeader,
+} from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { UNITS_MASTER_PERMISSIONS } from "../../_lib/catalog-permissions";
 import { messages } from "@lib/messages";
 import { fetchUnits, type UnitRow } from "./units-actions";
 import { UnitsClient } from "./units-client";
-import { InventoryListFrame } from "../../_components/inventory-list-frame";
 
 const copy = messages.inventoryMaster.units;
 
@@ -24,7 +27,6 @@ export default async function InventoryUnitsPage() {
   return (
     <div className="flex flex-col gap-4">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={copy.page.title}
         description={copy.page.description}
       />
@@ -32,12 +34,12 @@ export default async function InventoryUnitsPage() {
       {res.success ? (
         <UnitsClient rows={rows} />
       ) : (
-        <InventoryListFrame>
+        <AppListFrame>
           <AppEmptyState
             mode="error"
             title={messages.inventory.settings.units.loadFailed}
           />
-        </InventoryListFrame>
+        </AppListFrame>
       )}
     </div>
   );

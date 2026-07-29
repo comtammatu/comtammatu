@@ -120,7 +120,6 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     <Tabs defaultValue={defaultTab} className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
         <AppPageHeader
-          eyebrow={messages.inventory.value.eyebrow}
           title={messages.inventory.value.title}
           description={messages.inventory.value.description}
           actions={

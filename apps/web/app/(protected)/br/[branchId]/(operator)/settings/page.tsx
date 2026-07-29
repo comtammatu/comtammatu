@@ -50,21 +50,16 @@ export default async function BranchSettingsPage({
   const hasContent = visibleLinks.length > 0;
 
   return (
-    <BranchOperatorPage
-      title={copy.landingTitle}
-      description={copy.landingDescription(branch.name)}
-    >
+    <BranchOperatorPage title={copy.landingTitle} hideHeaderOnMobile>
       {hasContent ? (
         <BranchOperatorActionSection
-          title={copy.setupEssentialsTitle}
-          description={copy.setupLaneDescription}
+          presentation="plain"
           mobileColumns={2}
           links={visibleLinks.map((link) => ({
             key: `${link.moduleKey}-${link.href}`,
             href: link.href,
             icon: link.icon,
             title: link.title,
-            description: link.description,
           }))}
         />
       ) : (

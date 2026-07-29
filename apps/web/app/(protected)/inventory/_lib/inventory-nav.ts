@@ -54,20 +54,26 @@ function canShowRecipes(
   return false;
 }
 
+export type InventoryNavFlags = {
+  showProcurement: boolean;
+  showProduction: boolean;
+  showCatalogManagement: boolean;
+  /** Browse `/inventory/ingredients` without write rights. */
+  showCatalogRead?: boolean;
+  showSettings: boolean;
+  showStockRequestInbox?: boolean;
+};
+
 export function resolveInventoryNav({
   userRole,
   showProcurement,
   showProduction,
   showCatalogManagement,
+  showCatalogRead = false,
   showSettings,
   showStockRequestInbox = false,
-}: {
+}: InventoryNavFlags & {
   userRole: StaffRole;
-  showProcurement: boolean;
-  showProduction: boolean;
-  showCatalogManagement: boolean;
-  showSettings: boolean;
-  showStockRequestInbox?: boolean;
 }): ShellNavGroup[] {
   if (userRole === "accountant") {
     return showProcurement
@@ -192,7 +198,7 @@ export function resolveInventoryNav({
       icon: IconUsers,
     });
   }
-  if (showCatalogManagement) {
+  if (showCatalogManagement || showCatalogRead) {
     catalogItems.push({
       href: "/inventory/ingredients",
       label: tNav("ingredients", "navigation"),

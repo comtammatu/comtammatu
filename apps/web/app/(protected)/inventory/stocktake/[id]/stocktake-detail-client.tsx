@@ -55,7 +55,6 @@ const stocktakeDetailCopy = stocktakeCopy.detail;
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 const inventoryCommon = messages.inventory.common;
 
-const eyebrowLabel = "Kho hàng";
 const historySectionTitle = "Lịch sử chỉnh sửa";
 const documentTabLabel = "Phiếu kiểm kê";
 const historyTabLabel = "Lịch sử";
@@ -462,7 +461,6 @@ export function StocktakeDetailClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={eyebrowLabel}
         title={stocktakeCode(session)}
         description={headerDescription}
         badge={{

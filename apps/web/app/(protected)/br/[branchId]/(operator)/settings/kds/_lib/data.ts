@@ -1,7 +1,7 @@
 import type {
   CategoryOption,
   StationRow,
-} from "@/(protected)/branch-settings/_shared/kds/stations-client";
+} from "@/(protected)/br/_shared/settings/kds/stations-client";
 
 /** Raw shape of the kds_stations select with the joined category rows. */
 export interface KdsStationQueryRow {

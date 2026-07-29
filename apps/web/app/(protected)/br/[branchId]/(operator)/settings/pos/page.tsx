@@ -10,8 +10,8 @@ import {
   TerminalsClient,
   type BranchOption,
   type TerminalRow,
-} from "@/(protected)/branch-settings/_shared/pos/terminals-client";
-import { StockControlCard } from "@/(protected)/branch-settings/_shared/pos/stock-control-card";
+} from "@/(protected)/br/_shared/settings/pos/terminals-client";
+import { StockControlCard } from "@/(protected)/br/_shared/settings/pos/stock-control-card";
 import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
@@ -62,7 +62,7 @@ export default async function BranchPosSettingsPage({
       title={messages.settings.pages.posTitle}
       description={`${branchRes.data.name} · ${messages.settings.branch.posSetupDescription}`}
     >
-      <BranchOperatorPanel>
+      <BranchOperatorPanel title={messages.settings.pos.registrationSectionTitle}>
         <TerminalsClient
           branches={[branchRes.data] as BranchOption[]}
           terminals={(terminalsRes.data ?? []) as TerminalRow[]}

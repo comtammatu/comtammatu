@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
-import { OwnerModuleShell } from "@/components/owner-module-shell";
+import { ControlSurfaceShell } from "@/components/control-surface-shell";
 
 export default async function SettingsLayout({
   children,
@@ -10,7 +10,7 @@ export default async function SettingsLayout({
   const { session, claims } = await loadAuthState();
 
   return (
-    <OwnerModuleShell
+    <ControlSurfaceShell
       module="settings"
       user={{
         name:
@@ -19,9 +19,9 @@ export default async function SettingsLayout({
           "",
       }}
       role={claims.user_role}
-      branchId={claims.branch_id}
+      homeBranchId={claims.branch_id}
     >
       {children}
-    </OwnerModuleShell>
+    </ControlSurfaceShell>
   );
 }

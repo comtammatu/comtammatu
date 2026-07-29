@@ -28,8 +28,9 @@ import { cn } from "@comtammatu/ui";
 import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
 import {
-  AppPageHeader,
+  AppListFrame,
   AppPage,
+  AppPageHeader,
   AppToolbar,
 } from "@/components/surface";
 import {
@@ -68,7 +69,6 @@ import {
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
 import {
-  InventoryListFrame,
   inventoryListFilterSelectClassName,
 } from "../_components/inventory-list-frame";
 import {
@@ -134,23 +134,30 @@ function IngredientMobileCard({
   item: IngredientRow;
   toneMap: Map<string, string>;
   actions: RowActionItem[];
-  onOpen: (item: IngredientRow) => void;
+  onOpen?: (item: IngredientRow) => void;
 }) {
   const category = categoryLabel(item);
   const referenceCost = getDisplayReferenceCost(item);
   return (
     <InteractiveCard
       minHeight="tap"
-      className="flex-col items-stretch gap-1 p-0 cursor-pointer"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(item)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onOpen(item);
-        }
-      }}
+      className={cn(
+        "flex-col items-stretch gap-1 p-0",
+        onOpen ? "cursor-pointer" : undefined,
+      )}
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={onOpen ? () => onOpen(item) : undefined}
+      onKeyDown={
+        onOpen
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onOpen(item);
+              }
+            }
+          : undefined
+      }
     >
       <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
         <div className="min-w-0 flex-1">
@@ -180,11 +187,13 @@ function IngredientMobileCard({
           onClick={(event) => event.stopPropagation()}
           onKeyDown={(event) => event.stopPropagation()}
         >
-          <RowActionsMenu
-            items={actions}
-            label={ingredientListCopy.rowActionsAria(item.name)}
-            triggerSize="icon-touch"
-          />
+          {actions.length > 0 ? (
+            <RowActionsMenu
+              items={actions}
+              label={ingredientListCopy.rowActionsAria(item.name)}
+              triggerSize="icon-touch"
+            />
+          ) : null}
         </div>
       </div>
       <div className="flex flex-col gap-2 px-4 py-2 text-sm">
@@ -212,10 +221,12 @@ export function IngredientsClient({
   initial,
   unitOptions,
   categoryOptions,
+  canManage = false,
 }: {
   initial: IngredientRow[];
   unitOptions: UnitOption[];
   categoryOptions: CategoryOption[];
+  canManage?: boolean;
 }) {
   const [rows, setRows] = useState(initial);
   const [searchQuery, setSearchQuery] = useState("");
@@ -364,24 +375,27 @@ export function IngredientsClient({
     });
   }
 
-  const getIngredientRowActions = (item: IngredientRow): RowActionItem[] => [
-    {
-      key: "edit",
-      label: ACTIONS_VI.edit,
-      icon: <IconPencil />,
-      onSelect: () => openEdit(item),
-    },
-    {
-      key: "toggle-active",
-      label: item.is_active
-        ? ingredientListCopy.hideAction
-        : ingredientListCopy.showAction,
-      icon: item.is_active ? <IconEyeOff /> : <IconEye />,
-      disabled: isPending,
-      separatorBefore: true,
-      onSelect: () => handleToggleActive(item),
-    },
-  ];
+  const getIngredientRowActions = (item: IngredientRow): RowActionItem[] => {
+    if (!canManage) return [];
+    return [
+      {
+        key: "edit",
+        label: ACTIONS_VI.edit,
+        icon: <IconPencil />,
+        onSelect: () => openEdit(item),
+      },
+      {
+        key: "toggle-active",
+        label: item.is_active
+          ? ingredientListCopy.hideAction
+          : ingredientListCopy.showAction,
+        icon: item.is_active ? <IconEyeOff /> : <IconEye />,
+        disabled: isPending,
+        separatorBefore: true,
+        onSelect: () => handleToggleActive(item),
+      },
+    ];
+  };
 
   const filterBar = (
     <AppToolbar
@@ -592,46 +606,51 @@ export function IngredientsClient({
           },
         ]
       : []),
-    {
-      key: "actions",
-      header: <span className="sr-only">{FORM_VI.action}</span>,
-      className: "w-12 text-right",
-      render: (item) => {
-        const items = getIngredientRowActions(item);
-        return (
-          <div
-            className="flex justify-end"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <RowActionsMenu
-              items={items}
-              label={ingredientListCopy.rowActionsAria(item.name)}
-              triggerSize="icon-sm"
-              open={openActionRowId === item.id}
-              onOpenChange={(open) =>
-                setOpenActionRowId(open ? item.id : null)
-              }
-            />
-          </div>
-        );
-      },
-    },
+    ...(canManage
+      ? [
+          {
+            key: "actions",
+            header: <span className="sr-only">{FORM_VI.action}</span>,
+            className: "w-12 text-right",
+            render: (item: IngredientRow) => {
+              const items = getIngredientRowActions(item);
+              return (
+                <div
+                  className="flex justify-end"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <RowActionsMenu
+                    items={items}
+                    label={ingredientListCopy.rowActionsAria(item.name)}
+                    triggerSize="icon-sm"
+                    open={openActionRowId === item.id}
+                    onOpenChange={(open) =>
+                      setOpenActionRowId(open ? item.id : null)
+                    }
+                  />
+                </div>
+              );
+            },
+          } satisfies DataTableColumn<IngredientRow>,
+        ]
+      : []),
   ];
 
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={PRODUCT_VI.rawIngredient}
         actions={
-          <Button type="button" size="lg" onClick={openCreate}>
-            <IconPlus data-icon="inline-start" />
-            {INVENTORY_VI.createRawIngredient}
-          </Button>
+          canManage ? (
+            <Button type="button" size="lg" onClick={openCreate}>
+              <IconPlus data-icon="inline-start" />
+              {INVENTORY_VI.createRawIngredient}
+            </Button>
+          ) : undefined
         }
       />
 
-      <InventoryListFrame toolbar={filterBar}>
+      <AppListFrame toolbar={filterBar}>
         <DataTable
           columns={columns}
           data={filtered}
@@ -647,35 +666,43 @@ export function IngredientsClient({
               : ingredientListCopy.emptyDescription
           }
           emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
-          onRowClick={openEdit}
+          onRowClick={canManage ? openEdit : undefined}
           getRowDataState={(item) =>
             openActionRowId === item.id ? "selected" : undefined
           }
-          renderRowContextMenu={(item) => (
-            <RowActionsContextMenuItems items={getIngredientRowActions(item)} />
-          )}
+          renderRowContextMenu={
+            canManage
+              ? (item) => (
+                  <RowActionsContextMenuItems
+                    items={getIngredientRowActions(item)}
+                  />
+                )
+              : undefined
+          }
           mobileCardRender={(item) => (
             <IngredientMobileCard
               item={item}
               toneMap={toneMap}
               actions={getIngredientRowActions(item)}
-              onOpen={openEdit}
+              onOpen={canManage ? openEdit : undefined}
             />
           )}
           pageSize={25}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
         />
-      </InventoryListFrame>
+      </AppListFrame>
 
-      <IngredientDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        ingredient={editingIngredient}
-        unitOptions={unitOptions}
-        categoryOptions={categoryOptions}
-        onSaved={reload}
-      />
+      {canManage ? (
+        <IngredientDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          ingredient={editingIngredient}
+          unitOptions={unitOptions}
+          categoryOptions={categoryOptions}
+          onSaved={reload}
+        />
+      ) : null}
     </AppPage>
   );
 }

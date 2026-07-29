@@ -86,7 +86,6 @@ export async function ProductionPageContent({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={INVENTORY_VI.productionTitle}
         description={INVENTORY_VI.productionOrdersCardDescription}
         actions={

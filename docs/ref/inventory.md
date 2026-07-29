@@ -471,6 +471,7 @@ Tóm tắt (D093):
 - `accountant`: GRN đọc (trung tâm) + PO/giá + Finance; không QC/tồn/SX/yêu cầu CN.
 - `central_supply_ops` / `central_kitchen_lead`: GRN tại site ghim; inbox yêu cầu
   theo nguồn; fulfill→DC (`transfer_create`); Bếp TT thêm production. Không PO.
+  Được **xem** danh mục nguyên liệu (`/inventory/ingredients`); Owner CRUD.
 - `branch_manager`: yêu cầu hàng + tồn/tiêu hao/kiểm kê/hao hụt/nhận DC; **không**
   GRN, PO, production, giá mua chuỗi.
 - `cashier` / `chef` / `branch_staff`: chỉ đếm khi được gán.

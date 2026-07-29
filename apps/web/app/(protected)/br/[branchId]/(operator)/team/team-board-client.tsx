@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  CalendarCheck,
   ChevronRight as IconChevronRight,
+  ClipboardCheck,
   Clock as IconClock,
   Users as IconUsers,
 } from "lucide-react";
+import { formatCount } from "@comtammatu/shared/format";
 import { formatVNTime } from "@comtammatu/shared/time";
 import type { StaffRole } from "@comtammatu/shared/auth";
 
@@ -14,6 +18,14 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 
 import {
   Drawer,
@@ -23,6 +35,7 @@ import {
   DrawerDescription,
 } from "@comtammatu/ui/components/drawer";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
+import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
@@ -36,6 +49,13 @@ import type {
 } from "./data";
 
 const copy = messages.operator.teamBoard;
+const branchCopy = messages.settings.branch;
+
+type TeamBoardApprovalCounts = {
+  checkoutPending?: number;
+  leavePending?: number;
+  countSlipsPending?: number;
+};
 
 type AttendanceState = "not_started" | "working" | "checkout_pending" | "done";
 type TeamBoardFilter = "all" | "working" | "needs_action" | "count_missing";
@@ -434,22 +454,138 @@ function TeamBoardMobileGroups({
   );
 }
 
+function TeamApprovalsStrip({
+  checkoutApprovalsHref,
+  leaveApprovalsHref,
+  countSlipsHref,
+  canApproveCheckout,
+  canApproveCount,
+  approvalCounts,
+}: {
+  checkoutApprovalsHref: string;
+  leaveApprovalsHref?: string;
+  countSlipsHref: string;
+  canApproveCheckout: boolean;
+  canApproveCount: boolean;
+  approvalCounts?: TeamBoardApprovalCounts;
+}) {
+  type ApprovalRow = {
+    key: string;
+    href: string;
+    icon: typeof ClipboardCheck;
+    title: string;
+    count: number | undefined;
+  };
+
+  const rows: ApprovalRow[] = [];
+  if (canApproveCheckout) {
+    rows.push({
+      key: "checkout",
+      href: checkoutApprovalsHref,
+      icon: ClipboardCheck,
+      title: branchCopy.readinessCheckoutTitle,
+      count: approvalCounts?.checkoutPending,
+    });
+  }
+  if (leaveApprovalsHref) {
+    rows.push({
+      key: "leave",
+      href: leaveApprovalsHref,
+      icon: CalendarCheck,
+      title: branchCopy.queueLeaveTitle,
+      count: approvalCounts?.leavePending,
+    });
+  }
+  if (canApproveCount) {
+    rows.push({
+      key: "count-slips",
+      href: countSlipsHref,
+      icon: ClipboardCheck,
+      title: branchCopy.queueCountSlipsTitle,
+      count: approvalCounts?.countSlipsPending,
+    });
+  }
+
+  if (rows.length === 0) return null;
+
+  const pendingTotal = rows.reduce(
+    (sum, row) => sum + (row.count != null && row.count > 0 ? row.count : 0),
+    0,
+  );
+
+  return (
+    <BranchOperatorPanel
+      title={copy.approvalsStripTitle}
+      tone={pendingTotal > 0 ? "warning" : "default"}
+      size="sm"
+      headingLevel="h2"
+      badge={
+        pendingTotal > 0
+          ? { children: String(pendingTotal), variant: "warning" }
+          : undefined
+      }
+      className="mb-3"
+    >
+      <ItemGroup className="gap-2">
+        {rows.map((row) => {
+          const hasPending = row.count != null && row.count > 0;
+          return (
+            <Item
+              key={row.key}
+              variant={hasPending ? "outline" : "muted"}
+              size="sm"
+              className="chrome-tap min-h-12 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
+              render={<Link href={row.href} />}
+            >
+              <ItemMedia
+                variant="icon"
+                className={
+                  hasPending
+                    ? "rounded-md bg-warning/10 p-2 text-warning"
+                    : "rounded-md bg-muted p-2 text-muted-foreground"
+                }
+              >
+                <row.icon aria-hidden="true" />
+              </ItemMedia>
+              <ItemContent className="min-w-0">
+                <ItemTitle size="heading" className="line-clamp-none w-full">
+                  {row.title}
+                </ItemTitle>
+              </ItemContent>
+              <ItemActions className="shrink-0 text-muted-foreground">
+                {hasPending ? (
+                  <Badge variant="warning">{formatCount(row.count!)}</Badge>
+                ) : null}
+                <IconChevronRight aria-hidden="true" className="size-4" />
+              </ItemActions>
+            </Item>
+          );
+        })}
+      </ItemGroup>
+    </BranchOperatorPanel>
+  );
+}
+
 export function TeamBoardClient({
   rows,
   branchId,
   countSlipsHref,
   checkoutApprovalsHref,
+  leaveApprovalsHref,
   canApproveCheckout,
   canApproveCount,
   approverRole,
+  approvalCounts,
 }: {
   rows: TeamBoardRow[];
   branchId: number;
   countSlipsHref: string;
   checkoutApprovalsHref: string;
+  leaveApprovalsHref?: string;
   canApproveCheckout: boolean;
   canApproveCount: boolean;
   approverRole: StaffRole;
+  approvalCounts?: TeamBoardApprovalCounts;
 }) {
   const displayRows = buildDisplayRows(rows);
   const capabilities = {
@@ -513,6 +649,14 @@ export function TeamBoardClient({
 
   return (
     <>
+      <TeamApprovalsStrip
+        checkoutApprovalsHref={checkoutApprovalsHref}
+        leaveApprovalsHref={leaveApprovalsHref}
+        countSlipsHref={countSlipsHref}
+        canApproveCheckout={canApproveCheckout}
+        canApproveCount={canApproveCount}
+        approvalCounts={approvalCounts}
+      />
       <section
         className="flex flex-col gap-2"
         aria-label={copy.boardSectionTitle}

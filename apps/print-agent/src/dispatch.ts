@@ -8,7 +8,7 @@ import { sendRawLAN } from "./lan.js";
 export type PrinterRow = {
   id: number;
   branch_id: number;
-  role: "receipt" | "kitchen_1" | "kitchen_2";
+  role: string;
   connection_type: string;
   lan_host: string | null;
   lan_port: number | null;

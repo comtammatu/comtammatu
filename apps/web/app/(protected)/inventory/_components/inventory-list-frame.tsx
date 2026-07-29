@@ -13,7 +13,7 @@ export const inventoryListFilterSelectWideClassName = "w-56 shrink-0";
 
 export type InventoryListFrameProps = AppListFrameProps;
 
-/** Inventory domain alias for the shared Owner LIST frame. */
+/** Compatibility alias — prefer AppListFrame for new LIST pages. */
 export function InventoryListFrame({
   children,
   ...props

@@ -152,6 +152,9 @@ test("operator home label is today, not an old branch title", () => {
 
   assert.match(labels, /branchHome: "Hôm nay"/);
   assert.match(labels, /branch_home: "Nay"/);
+  assert.match(labels, /operatorOpsActions: "Thiết lập chi nhánh"/);
+  assert.match(labels, /branch_settings: "Thiết lập chi nhánh"/);
+  assert.match(labels, /branchOperationsKds: "Bếp \(KDS\)"/);
   assert.doesNotMatch(labels, /branchHome: "Branch home"/);
   assert.doesNotMatch(labels, /Branch Runtime|Branch Ops/);
 });
@@ -166,6 +169,12 @@ test("operator home keeps visible mobile identity while detail pages may compact
   const stock = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
   );
+  const settings = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
+  );
+  const dashboard = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
+  );
   const surface = read("apps/web/app/components/surface.tsx");
 
   assert.match(adapter, /hideHeaderOnMobile\?: boolean/);
@@ -175,8 +184,10 @@ test("operator home keeps visible mobile identity while detail pages may compact
   assert.match(surface, /compactOnMobile\?: boolean/);
   assert.match(surface, /compactOnMobile && "max-sm:text-base"/);
   assert.match(surface, /compactOnMobile && "max-sm:hidden"/);
-  assert.doesNotMatch(home, /hideHeaderOnMobile/);
+  assert.match(home, /hideHeaderOnMobile/);
   assert.match(stock, /hideHeaderOnMobile/);
+  assert.match(settings, /hideHeaderOnMobile/);
+  assert.match(dashboard, /hideHeaderOnMobile/);
 });
 
 test("operator home renders MODULE_ACL-backed capability tiles", () => {
@@ -320,7 +331,11 @@ test("branch home owns branch workflow entry tiles", () => {
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer\?queue=receive"/,
   );
-  assert.doesNotMatch(
+  assert.match(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/receive"/,
+  );
+  assert.match(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
   );
@@ -506,9 +521,9 @@ test("branch settings landing stays a setup-only Branch operator surface", () =>
     /branch_dashboard|branch_pos_sessions|moduleKey: "hr"|\/hr/,
   );
 
-  assert.match(settingsMessages, /landingTitle: "Thiết lập vận hành chi nhánh"/);
-  assert.match(settingsMessages, /`\$\{branchName\} · Bàn, POS, bếp và in`/);
-  assert.match(settingsMessages, /posSetupTitle: "Máy POS & tồn kho"/);
+  assert.match(settingsMessages, /landingTitle: "Thiết lập chi nhánh"/);
+  assert.match(settingsMessages, /landingDescription: \(_branchName: string\) => ""/);
+  assert.match(settingsMessages, /posSetupTitle: "Đăng ký POS"/);
   assert.doesNotMatch(
     settingsMessages,
     /attendanceChecklistDescription:\s*"Checklist template và phân công công việc/,
@@ -536,7 +551,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
     assert.match(source, /redirect\(`\/br\/\$\{branchId\}\/settings`\)/);
     assert.doesNotMatch(
       source,
-      /<AppPage\b|AppPageHeader|BranchManagementShell|OwnerModuleShell|ManagementShell|KpiCard/,
+      /<AppPage\b|AppPageHeader|BranchManagementShell|OwnerModuleShell|ControlSurfaceShell|ManagementShell|KpiCard/,
       path,
     );
   }
@@ -623,7 +638,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
   );
 });
 
-test("operator home renders the unified Cần xử lý queue before domain tile rows (V2, D059)", () => {
+test("operator home renders the unified Cần duyệt queue before domain tile rows (V2, D059)", () => {
   const home = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );

@@ -10,9 +10,15 @@
 - **Operating track:** production đang vận hành in-place trên repo `comtammatu`.
   Current work lives in `tasks/todo.md`; durable architecture choices live in
   active ADRs or the owning spec/ref/rule doc.
-- **Current surface:** Auth, Owner, Master Data, Inventory, Orders, POS, KDS,
-  Print, Payments (Cash + VietQR), Finance Basic, HR/payroll basics, and
-  HĐĐT via Viettel S-invoice are the current production surface.
+- **Product Dual Thesis:** hai nửa — **Quản lý hệ thống** (`control_surface`) và
+  **Vận hành bán hàng** (`branch_surface` + `station_chrome`). Map SSOT:
+  `docs/spec/architecture.md` § Product Dual Thesis; vocabulary:
+  `docs/ref/glossary.md`. Branch settings shared UI:
+  `apps/web/app/(protected)/br/_shared/settings/`. Stitch mirror:
+  `.stitch/DESIGN.md` (not root `DESIGN.md`).
+- **Current surface:** Auth, control_surface (Quản trị), Master Data, Inventory,
+  Orders, POS, KDS, Print, Payments (Cash + VietQR), Finance Basic, HR/payroll
+  basics, and HĐĐT via Viettel S-invoice are the current production surface.
 - **Tech stack:** Next.js, React, TypeScript, Tailwind, Zod, Supabase, and
   Turborepo. Package manifests own exact versions.
 

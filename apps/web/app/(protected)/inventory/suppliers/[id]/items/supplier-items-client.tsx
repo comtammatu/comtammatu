@@ -36,11 +36,11 @@ import {
 } from "@/components/row-actions-menu";
 import {
   AppBackLink,
+  AppListFrame,
   AppPage,
   AppPageHeader,
   AppToolbar,
 } from "@/components/surface";
-import { InventoryListFrame } from "../../../_components/inventory-list-frame";
 import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
@@ -250,7 +250,6 @@ export function SupplierItemsClient({
               {messages.inventory.suppliers.title}
             </AppBackLink>
           }
-          eyebrow={copy.eyebrow}
           title={supplier.name}
           description={copy.description}
           actions={
@@ -267,7 +266,7 @@ export function SupplierItemsClient({
             ) : null
           }
         />
-        <InventoryListFrame
+        <AppListFrame
           toolbar={
             <AppToolbar
               variant="inline"
@@ -348,7 +347,7 @@ export function SupplierItemsClient({
               </Item>
             )}
           />
-        </InventoryListFrame>
+        </AppListFrame>
       </AppPage>
 
       <FormDialog

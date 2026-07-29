@@ -25,7 +25,7 @@ test("public QR surfaces use the shared web QR renderer", () => {
     "app/q/[token]/self-order/payment-panel.tsx",
   );
   const tableQr = readWeb(
-    "app/(protected)/branch-settings/_shared/tables/table-table.tsx",
+    "app/(protected)/br/_shared/settings/tables/table-table.tsx",
   );
 
   assert.match(sharedQr, /import QRCode from "qrcode"/);

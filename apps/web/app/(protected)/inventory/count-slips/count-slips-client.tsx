@@ -37,10 +37,12 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { AppDialog } from "@/components/form";
-import { AppPage, AppPageHeader } from "@/components/surface";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
+import {
+  AppListFrame,
+  AppPage,
+  AppPageHeader,
+} from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
-import { messages } from "@lib/messages";
 import type {
   CountSlipLineView as CountSlipLine,
   CountSlipRow,
@@ -338,7 +340,6 @@ export function CountSlipsClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={INVENTORY_VI.countSlipTitle}
         description={INVENTORY_VI.countSlipDescription}
         actions={
@@ -357,14 +358,14 @@ export function CountSlipsClient({
         }}
       />
 
-      <InventoryListFrame title="Chờ duyệt">
+      <AppListFrame title="Chờ duyệt">
         {renderTable(pending)}
-      </InventoryListFrame>
+      </AppListFrame>
 
       {history.length > 0 ? (
-        <InventoryListFrame title={INVENTORY_VI.countSlipHistoryTitle}>
+        <AppListFrame title={INVENTORY_VI.countSlipHistoryTitle}>
           {renderTable(history, true)}
-        </InventoryListFrame>
+        </AppListFrame>
       ) : null}
 
       <CountSlipReviewDialog

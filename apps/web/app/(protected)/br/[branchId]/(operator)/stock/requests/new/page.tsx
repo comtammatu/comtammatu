@@ -9,7 +9,7 @@ export default async function BranchStockRequestNewPage({
 }) {
   const { branchId: raw } = await params;
   const branchId = parseOperatorBranchId(raw);
-  if (branchId == null) redirect("/");
+  if (branchId == null) redirect("/br");
 
   const result = await createStockRequestDraft({ branchId });
   if (result.success && result.data) {

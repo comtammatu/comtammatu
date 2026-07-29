@@ -51,7 +51,6 @@ export default async function InvoicesPage({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
       />

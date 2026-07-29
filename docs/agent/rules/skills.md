@@ -93,7 +93,13 @@ or MCP state for project behavior.
   those docs; if law, domain docs, and code disagree, stop for owner/accountant
   resolution instead of silently choosing one.
 - Complete the UI Advisor Gate before external design advice. External UI output
-  cannot replace Má Tư DS or create tool-specific context/design files.
+  cannot replace Má Tư Design System as runtime SSOT. Allowed Stitch/agent
+  mirror only: `.stitch/DESIGN.md` (seeded from `docs/spec/design-system.md`).
+  Root `DESIGN.md` and `design-systems/` remain forbidden. Stitch skills are
+  external adapters (allow: `extract-design-md`, `generate-design`,
+  `manage-design-system`, `upload-to-stitch`, `enhance-prompt`; deny as
+  authority: `shadcn-ui`, `stitch-loop`, `taste-design`). Do not add stitch
+  skills to the locked `.agents/skills` bundle without T3 governance.
 - Unregistered external runtimes use read-only/plan/ask/sandbox mode for review.
   Never use force, yolo, skip-permissions, or accept-edits for a review lane.
 
@@ -102,5 +108,6 @@ or MCP state for project behavior.
 - Choosing a tool because it is installed.
 - Stacking overlapping skills or reviewers.
 - Creating a second design system, DB policy, task board, memory store, rule tree,
-  or architecture record.
+  or architecture record (`.stitch/DESIGN.md` is a mirror of Má Tư DS, not a
+  second product DS).
 - Claiming a tool was used when its instructions or output did not affect work.

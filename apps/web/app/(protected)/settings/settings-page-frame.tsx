@@ -4,6 +4,7 @@ import { AppPage, AppPageHeader, type AppPageProps } from "@/components/surface"
 import { messages } from "@lib/messages";
 
 interface SettingsPageFrameProps {
+  /** Optional non-module context only; do not pass sidebar/"Cài đặt" synonyms. */
   eyebrow?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
@@ -15,7 +16,7 @@ interface SettingsPageFrameProps {
 }
 
 export function SettingsPageFrame({
-  eyebrow = messages.settings.pages.settingsEyebrow,
+  eyebrow,
   title,
   description,
   actions,

@@ -194,6 +194,30 @@ const setTableSelfOrderQrEnabledSchema = z.object({
   enabled: z.boolean(),
 });
 
+const BULK_CREATE_TABLES_MAX = 100;
+
+const bulkCreateTablesSchema = z
+  .object({
+    branch_id: z.coerce.number().int().positive({ error: "Chọn chi nhánh" }),
+    from_number: z.coerce
+      .number()
+      .int()
+      .positive({ error: "Số bàn bắt đầu không hợp lệ" }),
+    to_number: z.coerce
+      .number()
+      .int()
+      .positive({ error: "Số bàn kết thúc không hợp lệ" }),
+    zone_id: z.coerce.number().int().positive().optional(),
+  })
+  .refine((data) => data.to_number >= data.from_number, {
+    error: "Số kết thúc phải lớn hơn hoặc bằng số bắt đầu",
+    path: ["to_number"],
+  });
+
+const bulkCreateTableSelfOrderQrSchema = z.object({
+  branch_id: z.coerce.number().int().positive({ error: "Chọn chi nhánh" }),
+});
+
 /* ─── Zone Actions ─── */
 
 export const createZone = withFormAction(
@@ -317,6 +341,126 @@ export const deleteZone = withAction(
 );
 
 /* ─── Table Actions ─── */
+
+export const bulkCreateTables = withAction<
+  typeof bulkCreateTablesSchema,
+  { created: number }
+>(
+  {
+    roles: SETTINGS_ROLES,
+    schema: bulkCreateTablesSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    permissionBranchId: (data) => data.branch_id,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    if (!canOperateBranch(claims.branch_id, data.branch_id)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
+
+    if (
+      !(await verifyBranchOwnership(supabase, data.branch_id, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
+
+    const count = data.to_number - data.from_number + 1;
+    if (count > BULK_CREATE_TABLES_MAX) {
+      return {
+        success: false,
+        error: `Chỉ tạo tối đa ${BULK_CREATE_TABLES_MAX} bàn mỗi lần`,
+      };
+    }
+
+    const rows = Array.from({ length: count }, (_, index) => ({
+      tenant_id: claims.tenant_id,
+      branch_id: data.branch_id,
+      zone_id: data.zone_id ?? null,
+      number: data.from_number + index,
+    }));
+
+    const { error } = await supabase.from("tables").insert(rows);
+
+    if (error) {
+      console.error(
+        "[branch-settings/tables:bulkCreateTables] Insert tables error:",
+        error,
+      );
+      return { success: false, error: mapTableDbError(error.code) };
+    }
+
+    revalidateTableSettings(data.branch_id);
+    return { success: true, data: { created: count } };
+  },
+);
+
+export const bulkCreateTableSelfOrderQr = withAction<
+  typeof bulkCreateTableSelfOrderQrSchema,
+  { created: number }
+>(
+  {
+    roles: SETTINGS_ROLES,
+    schema: bulkCreateTableSelfOrderQrSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    permissionBranchId: (data) => data.branch_id,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    if (!canOperateBranch(claims.branch_id, data.branch_id)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
+
+    if (
+      !(await verifyBranchOwnership(supabase, data.branch_id, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
+
+    const query = supabase
+      .from("tables")
+      .select(SELF_ORDER_QR_SELECT)
+      .eq("branch_id", data.branch_id)
+      .eq("tenant_id", claims.tenant_id)
+      .is("self_order_token", null);
+
+    const { data: missingTokenTables, error } = await query;
+
+    if (error) {
+      console.error(
+        "[branch-settings/tables:bulkCreateTableSelfOrderQr] Load tables error:",
+        error,
+      );
+      return { success: false, error: mapSelfOrderQrDbError(error.code) };
+    }
+
+    const tables = (missingTokenTables ?? []) as SelfOrderTableRow[];
+    if (tables.length === 0) {
+      return { success: true, data: { created: 0 } };
+    }
+
+    const now = new Date().toISOString();
+    let created = 0;
+
+    for (const table of tables) {
+      const updated = await updateSelfOrderTable({
+        supabase,
+        tenantId: claims.tenant_id,
+        table,
+        values: {
+          self_order_token: generateSelfOrderToken(),
+          self_order_enabled: true,
+          self_order_token_rotated_at: now,
+        },
+      });
+      if (!updated.success) {
+        return { success: false, error: updated.error };
+      }
+      created += 1;
+    }
+
+    return { success: true, data: { created } };
+  },
+);
 
 export const createTable = withFormAction(
   {

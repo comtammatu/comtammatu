@@ -3,11 +3,14 @@ import { MODULE_ACL, type ModuleKey } from "./module-acl";
 import { isPublicAppPath, resolveModuleFromPath } from "./route-resolution";
 
 export type RouteSurface =
-  | "owner"
+  | "owner" // code alias for product plane `control_surface` (Quản lý hệ thống)
   | "branch_management"
   | "branch_operation"
   | "utility"
   | "public";
+
+/** Product Dual Thesis: docs plane `control_surface` === RouteSurface "owner". */
+export const CONTROL_SURFACE_ROUTE_SURFACE: RouteSurface = "owner";
 
 export type RoutePrimaryNav =
   | "owner-sidebar"

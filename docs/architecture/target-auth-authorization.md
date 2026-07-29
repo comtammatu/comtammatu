@@ -1,5 +1,10 @@
 # Auth và Authorization mục tiêu cho Greenfield
 
+> **TARGET ONLY — not current runtime.** Auth callers and ACL today are owned by
+> `docs/modules/auth.md` and `packages/shared/src/auth/*` until Greenfield
+> cutover. Product Dual Thesis (Hệ thống + Vận hành) for surfaces:
+> `docs/spec/architecture.md`.
+>
 > Trạng thái: kiến trúc mục tiêu đã được owner chấp nhận qua ADR 0015; chưa phải
 > contract của hệ thống đang chạy và chưa được triển khai.
 >

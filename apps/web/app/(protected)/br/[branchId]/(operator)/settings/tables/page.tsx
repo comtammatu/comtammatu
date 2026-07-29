@@ -6,7 +6,7 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
-import { TablesClient } from "@/(protected)/branch-settings/_shared/tables/tables-client";
+import { TablesClient } from "@/(protected)/br/_shared/settings/tables/tables-client";
 import { shapeTableRows } from "./_lib/data";
 
 export default async function BranchTablesSettingsPage({

@@ -447,7 +447,7 @@ test("isOperatorShellPath matches the operator entry/root and excludes POS/KDS/R
 test("self-order QR preview keeps staff inside the PWA scope", () => {
   const tableSettingsSource = readFileSync(
     new URL(
-      "../app/(protected)/branch-settings/_shared/tables/table-table.tsx",
+      "../app/(protected)/br/_shared/settings/tables/table-table.tsx",
       import.meta.url,
     ),
     "utf8",

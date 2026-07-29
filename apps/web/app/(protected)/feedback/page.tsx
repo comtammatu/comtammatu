@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { getModuleLabelVi } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { AppEmptyState, AppPageHeader } from "@/components/surface";
 import { listFeedbackInbox } from "./actions";
@@ -43,7 +42,6 @@ export default async function FeedbackInboxPage({
   return (
     <>
       <AppPageHeader
-        eyebrow={getModuleLabelVi("feedback")}
         title={feedbackCopy.pageTitle}
       />
       {!inbox.success || !inbox.data ? (

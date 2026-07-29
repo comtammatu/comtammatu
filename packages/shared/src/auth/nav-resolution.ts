@@ -1,7 +1,7 @@
 import type { StaffRole } from "./types";
 import { canAccess, type ModuleKey, MODULE_ACL } from "./module-acl";
 import {
-  resolveOwnerDiscoveryGroups,
+  resolveControlSurfaceDiscoveryGroups,
   resolveBranchManagementDiscoveryGroup,
   resolveBranchOperationDiscoveryGroup,
 } from "./app-discovery";
@@ -88,8 +88,10 @@ export function resolveNavLink(
   };
 }
 
-export function resolveOwnerNavGroups(role: StaffRole): ResolvedNavGroup[] {
-  return resolveOwnerDiscoveryGroups(role).map((group) => ({
+export function resolveControlSurfaceNavGroups(
+  role: StaffRole,
+): ResolvedNavGroup[] {
+  return resolveControlSurfaceDiscoveryGroups(role).map((group) => ({
     title: group.title,
     items: group.items.map((item) =>
       resolveNavLink(item, item.href ?? undefined),
@@ -131,12 +133,12 @@ export function resolveQuickLaunchGroups(
   role: StaffRole,
   branchId?: number | null,
 ): QuickLaunchGroup[] {
-  const ownerGroups = resolveOwnerNavGroups(role);
+  const controlSurfaceGroups = resolveControlSurfaceNavGroups(role);
   const branchManagementItems = resolveBranchManagementItems(role, branchId);
   const branchOperationItems = resolveBranchOperationItems(role, branchId);
 
   return [
-    ...ownerGroups,
+    ...controlSurfaceGroups,
     {
       title: NAV_GROUP_LABELS_VI.branchManagement,
       items: branchManagementItems,

@@ -44,7 +44,7 @@ import {
 } from "@/lib/shell-primitives";
 import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
-import { OwnerBottomNav } from "@/components/owner-bottom-nav";
+import { ControlSurfaceBottomNav } from "@/components/control-surface-bottom-nav";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
@@ -58,8 +58,8 @@ export interface AppShellProps {
   tier2: ShellNavGroup[];
   sidebarHeaderAccessory?: ReactNode;
   /**
-   * Mobile-only Owner bottom navbar (same nav model as the sidebar + drawer
-   * trigger). Default true for all Owner shells.
+   * Mobile-only control_surface bottom navbar (same nav model as the sidebar +
+   * drawer trigger). Default true for control_surface shells.
    */
   bottomNav?: boolean;
 }
@@ -270,7 +270,9 @@ export function AppShell({
           </AppShellPaddingBoundary>
         </div>
       </SidebarInset>
-      {showBottomNav ? <OwnerBottomNav tier1={tier1} tier2={tier2} /> : null}
+      {showBottomNav ? (
+        <ControlSurfaceBottomNav tier1={tier1} tier2={tier2} />
+      ) : null}
     </SidebarProvider>
   );
 }

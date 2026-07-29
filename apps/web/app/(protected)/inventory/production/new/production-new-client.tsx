@@ -702,7 +702,6 @@ export function ProductionNewClient({
     <DocumentFormFrame
       header={
         <AppPageHeader
-          eyebrow={INVENTORY_VI.warehouse}
           title={INVENTORY_VI.createProductionOrder}
           description={INVENTORY_VI.productionOrdersCardDescription}
           breadcrumb={

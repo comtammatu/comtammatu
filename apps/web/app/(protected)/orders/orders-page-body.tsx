@@ -74,7 +74,6 @@ export function OrdersPageBody({
   return (
     <AppPage width="xwide">
       <AppPageHeader
-        eyebrow={ORDERS_COPY.eyebrow}
         title={ORDER_VI.long}
         description={ORDERS_COPY.description}
         actions={

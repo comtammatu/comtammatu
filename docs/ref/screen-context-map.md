@@ -128,14 +128,16 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`, `/shift`, `/team`
 
-- **Archetype:** `/br/[branchId]` dùng `LANDING`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` workspace ba tab.
+- **Archetype:** `/br/[branchId]` dùng `LANDING`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` workspace **hai tab** (`Theo dõi ca`, `Nhân sự`). Phân công đếm nằm dưới Kho (`/stock/count-assignments`), không phải tab Team.
 - **Đối tượng sử dụng chính:** Nhân viên trong ca, Quản lý chi nhánh (`branch_manager`), Chủ cửa hàng (`owner`) theo đúng phạm vi từng tab.
-- **Mục tiêu Nghiệp vụ (Why?):** Cho người vận hành đi từ việc cần xử lý đến đúng trạm hoặc đúng workspace trong một viewport ngắn, không lặp lại các thư mục đã có ở bottom nav.
+- **Mục tiêu Nghiệp vụ (Why?):** Cho người vận hành đi từ việc cần xử lý đến đúng trạm hoặc đúng workspace trong một viewport ngắn.
 - **Quy chuẩn UX/UI:**
-  - `Nay` chỉ hiển thị các hàng chờ có số lượng lớn hơn 0, sau đó là điểm vào bán hàng/bếp/đơn hàng và lối tắt quản lý. Không lặp lại thư mục `Đội`, `Kho` hoặc lệnh vào Branch Dashboard đã có ở header.
-  - `Ca` sở hữu ngày làm việc cá nhân. Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`. Các route duyệt và chi tiết vẫn giữ nguyên ACL riêng.
-  - `Đội` mở trực tiếp ba tab `Theo dõi ca`, `Nhân sự`, `Phân công`. Tab theo dõi ưu tiên `Cần xử lý`, rồi `Đang làm`, rồi toàn bộ; không hiển thị bộ lọc có kết quả bằng 0.
-  - `Nhân sự` giữ đủ danh sách nhưng bỏ chip lọc bằng 0. `Phân công` đưa nhân sự đã có mục kiểm kê lên trước, không ẩn người chưa được phân công.
+  - Bottom nav Operate: `Hôm nay` · `Ca` · `Đội` · `Kho` · `Phản hồi`. `Điều hành` và `Thiết lập` nằm trong overflow header — không phải peer home thứ hai/ba cạnh `Hôm nay`.
+  - `Hôm nay` chỉ hiển thị hàng chờ có số lượng > 0, rồi điểm vào bán hàng/bếp và lối tắt quản lý. Queue **không** còn GRN/SX (D093).
+  - **Exception hẹp (manager-like):** trên `/br/[branchId]` (không phải Dashboard), `owner` và `branch_manager` được một strip hai tín hiệu `Doanh thu` (thuần MTD) + `Chỉ tiêu` (target + Progress + %) theo `finance.revenue.monthly_target_progress` cho đúng chi nhánh URL. Không Lợi nhuận gộp, chi phí, quỹ, biểu đồ, so sánh chuỗi, CSV, chỉnh chỉ tiêu, hay dùng “Tổng tiền đã thu” làm số chính. Cashier/chef/staff không thấy strip. Branch Dashboard vẫn cấm `KpiRow`/finance mosaic.
+  - `Ca` sở hữu ngày làm việc cá nhân. Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`.
+  - `Đội` mở hai tab `Theo dõi ca` và `Nhân sự`. Tab theo dõi ưu tiên `Cần xử lý`, rồi `Đang làm`; không hiển thị bộ lọc kết quả 0.
+  - `Nhân sự` giữ đủ danh sách nhưng bỏ chip lọc bằng 0.
 
 ---
 
@@ -291,7 +293,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   5. **Xem tồn kho:** Đọc giá trị tồn kho cuối kỳ theo bộ lọc.
   6. **Xử lý ngoại lệ:** Mở đúng route cho ca lệch, đối soát ngân hàng, thiếu giá vốn, chi phí chưa ghi nhận hoặc chứng từ cần xử lý.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Năm KPI kết quả theo kỳ, số dư hiện có, giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
+  - **Nên hiển thị:** Năm KPI kết quả theo kỳ, số dư hiện có, giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Khi kỳ là tháng/`mtd` và đã có chỉ tiêu, KPI Doanh thu thuần được kèm tín hiệu tiến độ chỉ tiêu (Progress/%); đua chi nhánh, pace chart và editor chỉ tiêu thuộc `/finance/revenue` và `/finance/targets`. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
   - **Không lặp:** Finance chỉ hiển thị card Giá trị tồn kho cuối kỳ; bảng chi tiết tồn kho thuộc Inventory.
   - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì không tính Lợi nhuận gộp và Kết quả vận hành; chưa ghi nhận chi phí thì không tính Kết quả vận hành.
   - **KHÔNG hiển thị:** `Lợi nhuận sau thuế TNDN` khi chưa đủ sổ kế toán và khóa sổ, nút tạo order, hoặc các bước chế biến món ăn.

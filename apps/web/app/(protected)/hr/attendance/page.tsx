@@ -75,7 +75,6 @@ export default async function HrAttendancePage({
   return (
     <AppPage width="xwide">
       <AppPageHeader
-        eyebrow={messages.hr.workspace.eyebrow}
         title={copy.tabs.attendance}
         description={copy.attendanceDescription}
         actions={

@@ -23,7 +23,7 @@
 @source "../**/*.{ts,tsx}";
 
 /* ============================================================
- * ZONE A — PRESET TOKEN SURFACE + MA TU CONCEPT 01 SEMANTIC TOKENS
+ * ZONE A — PRESET TOKEN SURFACE + MÁ TƯ DESIGN SYSTEM SEMANTIC TOKENS
  * Keep the primitive token surface stable; the Custom Theme owns semantic values.
  * ============================================================ */
 
@@ -75,7 +75,9 @@
   --card-foreground: oklch(0.218 0.036 251.3);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.218 0.036 251.3);
-  --primary: oklch(0.56 0.18 33);
+  /* Override: Dual Thesis contrast — slightly deeper primary for
+     primary-on-cream headroom; stronger border/input/ring for WCAG 1.4.11. */
+  --primary: oklch(0.52 0.18 33);
   --primary-foreground: oklch(0.978 0.014 64.3);
   --secondary: oklch(0.945 0.014 64.7);
   --secondary-foreground: oklch(0.218 0.036 251.3);
@@ -84,23 +86,23 @@
   --accent: oklch(0.936 0.018 70.2);
   --accent-foreground: oklch(0.218 0.036 251.3);
   --destructive: oklch(0.466 0.147 33.3);
-  --border: oklch(0.903 0.021 72.1);
-  --input: oklch(0.903 0.021 72.1);
-  --ring: oklch(0.77 0.164 73.2);
-  --chart-1: oklch(0.56 0.18 33);
-  --chart-2: oklch(0.77 0.164 73.2);
+  --border: oklch(0.86 0.025 72);
+  --input: oklch(0.86 0.025 72);
+  --ring: oklch(0.62 0.14 55);
+  --chart-1: oklch(0.52 0.18 33);
+  --chart-2: oklch(0.62 0.14 55);
   --chart-3: oklch(0.609 0.086 137);
   --chart-4: oklch(0.218 0.036 251.3);
   --chart-5: oklch(0.512 0.09 62.2);
   --radius: 0.625rem;
   --sidebar: oklch(0.994 0.006 84.6);
   --sidebar-foreground: oklch(0.218 0.036 251.3);
-  --sidebar-primary: oklch(0.56 0.18 33);
+  --sidebar-primary: oklch(0.52 0.18 33);
   --sidebar-primary-foreground: oklch(0.978 0.014 64.3);
   --sidebar-accent: oklch(0.956 0.014 67.7);
   --sidebar-accent-foreground: oklch(0.218 0.036 251.3);
-  --sidebar-border: oklch(0.903 0.021 72.1);
-  --sidebar-ring: oklch(0.77 0.164 73.2);
+  --sidebar-border: oklch(0.86 0.025 72);
+  --sidebar-ring: oklch(0.62 0.14 55);
 }
 
 .dark {
@@ -108,9 +110,11 @@
      See design-system.md → Token Contract → Theme runtime. */
   --background: oklch(0.155 0.016 50);
   --foreground: oklch(0.94 0.018 75);
-  --card: oklch(0.195 0.016 48);
+  /* Override: Dual Thesis night surface lift — card/popover ΔL vs background
+     for WCAG 1.4.11 hierarchy (warm-dark gạo cháy). */
+  --card: oklch(0.23 0.018 48);
   --card-foreground: oklch(0.94 0.018 75);
-  --popover: oklch(0.195 0.016 48);
+  --popover: oklch(0.23 0.018 48);
   --popover-foreground: oklch(0.94 0.018 75);
   --primary: oklch(0.63 0.155 36);
   --primary-foreground: oklch(0.155 0.016 50);
@@ -129,7 +133,7 @@
   --chart-3: oklch(0.67 0.1 140);
   --chart-4: oklch(0.94 0.018 75);
   --chart-5: oklch(0.74 0.028 70);
-  --sidebar: oklch(0.195 0.016 48);
+  --sidebar: oklch(0.23 0.018 48);
   --sidebar-foreground: oklch(0.94 0.018 75);
   --sidebar-primary: oklch(0.63 0.155 36);
   --sidebar-primary-foreground: oklch(0.155 0.016 50);

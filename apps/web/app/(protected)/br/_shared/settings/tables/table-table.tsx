@@ -444,6 +444,8 @@ function SelfOrderQrDialog({
         value={url}
         alt={tableMessages.qrAlt(table.number)}
         errorMessage={tableMessages.qrRenderFailed}
+        downloadLabel={tableMessages.downloadQr}
+        downloadName={`ma-qr-goi-mon-ban-${table.number}.png`}
       />
       <div className="text-xs break-all text-muted-foreground">{url}</div>
       <div className="grid gap-2 sm:grid-cols-2">

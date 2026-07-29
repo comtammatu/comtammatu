@@ -9,7 +9,9 @@
 - [Artifact Ladder And Delivery Flow](#artifact-ladder-and-delivery-flow)
 - [Product UX Thesis](#product-ux-thesis)
 - [Token Contract](#token-contract)
+- [Contrast Targets (WCAG)](#contrast-targets-wcag)
 - [Typography Contract](#typography-contract)
+- [Component Naming Convention](#component-naming-convention)
 - [Rhythm Contract (Spacing, Heading, Icon, Height, Radius, Motion)](#rhythm-contract)
 - [Elevation / Shadow](#elevation--shadow)
 - [Component Authority & Roles](#component-authority)
@@ -34,23 +36,27 @@ copy an exception into a new route and do not create a second visual language.
 
 ## Decision
 
-The design system is the Com Tam Ma Tu Custom Theme implemented through Má Tư
-shared components in `@comtammatu/ui`. Base UI supplies headless primitive
-behavior; lucide, Tailwind, and class-variance-authority are implementation
-dependencies. They do not own Má Tư visual decisions.
+The design system is the **Má Tư Design System**, implemented as the Com Tam Ma
+Tu Custom Theme through shared components in `@comtammatu/ui`. Base UI supplies
+headless primitive behavior; lucide, Tailwind, and class-variance-authority are
+implementation dependencies. They do not own Má Tư visual decisions.
+
+Do not use the retired label “Concept 01” / “Ma Tu Concept 01” in new docs,
+comments, or Stitch briefs. The single product name is **Má Tư Design System**.
 
 Shadcn and Web Interface Guidelines are explicit comparison inputs. They may
 identify missing component anatomy, accessibility, states, UX, or CSS motion.
 They never create a preset, token source, or visual authority for this repo.
 
-Custom Theme means the established Ma Tu Concept 01 semantic tokens, typography,
-spacing rhythm, component roles, brand components, and app surface adapters
-documented here. It does not mean a route-local theme layer, a new component
-library outside `@comtammatu/ui`, or a parallel visual language.
+Custom Theme means the established Má Tư Design System semantic tokens,
+typography, spacing rhythm, component roles, brand components, and app surface
+adapters documented here. It does not mean a route-local theme layer, a new
+component library outside `@comtammatu/ui`, or a parallel visual language.
 
 Active runtime:
 
-- custom theme: Com Tam Ma Tu Custom Theme / Ma Tu Concept 01
+- design system name: Má Tư Design System
+- custom theme: Com Tam Ma Tu Custom Theme (implementation label under Má Tư DS)
 - token source: `packages/ui/src/styles/globals.css`
 - shared component source: `packages/ui/src/components/*`
 - headless primitive behavior: Base UI
@@ -58,6 +64,7 @@ Active runtime:
 - brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`, `/brand/mascot/be-suon-tuoi-runner.png`, `/brand/mascot/cotlet.png`, `/brand/mascot/cotlet.spritesheet.webp`, `/brand/mascot/cotlet.pet.json`, `/brand/symbols/*.svg`
 - web brand component: `apps/web/app/components/brand.tsx`
 - web app surface adapters: `apps/web/app/components/surface.tsx`
+- Stitch/agent mirror (non-SSOT): `.stitch/DESIGN.md`
 
 Agents must preserve this decision unless the task explicitly asks to change the design system itself.
 
@@ -78,6 +85,7 @@ before adding anything new.
 | Layer          | Owner                                                            | Job                                                                                          |
 | -------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | Guideline      | this file + `docs/ref/screen-context-map.md`                     | lock visual language, actor, job, information boundary, and reusable rules                   |
+| Stitch mirror  | `.stitch/DESIGN.md` (optional)                                   | agent/Stitch semantic mirror of Má Tư DS; never overrides this file alone                    |
 | Primitive      | Base UI                                                          | provide headless behavior, semantics, focus, keyboard, and layering                          |
 | Component      | `packages/ui/src/components/*`                                   | provide one styled, reusable Má Tư UI unit                                                   |
 | Adapter        | `apps/web/app/components/*` and approved domain adapter families | translate components into an app or plane-specific semantic role                             |
@@ -93,7 +101,7 @@ Screen context and user job
 → page archetype
 → registered UI block when one fits
 → registered adapters and components
-→ optional Stitch prototype
+→ optional Stitch prototype (seed from this file; sync `.stitch/DESIGN.md`)
 → route implementation
 → responsive, accessibility, and runtime verification
 ```
@@ -103,18 +111,19 @@ importable `*Block` component layer (D086). Add a block recipe only when at
 least two real consumers share the composition, or when a named critical
 workflow needs one approved exemplar. When a composition becomes reusable code,
 promote it to a registered **Adapter** (app or domain) — for example
-`InventoryListFrame`, `DocumentFormFrame`, `SettingsPageFrame` — and keep the
+`AppListFrame`, `DocumentFormFrame`, `SettingsPageFrame` — and keep the
 UI block entry as the named recipe that points agents at that adapter chain. If
 no block fits, follow the archetype and compose existing adapters behind a
 route-scoped owner; do not add a speculative block or invent `apps/web/.../blocks/`.
 
 Stitch is an optional design adapter and mirror. Seed it from the current
-guideline, archetype, block, and semantic roles; use it to compare hierarchy,
-states, and responsive composition. Stitch output never changes tokens,
-typography, component APIs, route authority, or business behavior by itself.
-Generated code is reference material until it is rebuilt from registered Má Tư
-components and verified in the runtime. Do not upload secrets, customer data,
-employee data, or production records.
+guideline, archetype, block, and semantic roles; keep `.stitch/DESIGN.md` as the
+agent/Stitch mirror of **Má Tư Design System**. Stitch output never changes
+tokens, typography, component APIs, route authority, or business behavior by
+itself. Generated code is reference material until it is rebuilt from registered
+Má Tư components and verified in the runtime. Root `DESIGN.md` is forbidden
+(guarded); only `.stitch/DESIGN.md` is allowed. Do not upload secrets, customer
+data, employee data, or production records.
 
 Lookup before composition:
 
@@ -124,7 +133,15 @@ corepack pnpm audit:ui-components --component <component-or-block>
 
 ## Product UX Thesis
 
-Com Tam Ma Tu is an operational restaurant system. The UI should feel calm, fast, touch-safe, and business-specific.
+Com Tam Ma Tu is an operational restaurant system with **two product halves**
+(see `docs/spec/architecture.md` § Product Dual Thesis):
+
+- **Quản lý hệ thống** (`control_surface`): dense management — tables, filters,
+  documents, review states. Adapters: `App*`.
+- **Vận hành bán hàng** (`branch_surface` + `station_chrome`): touch-first shift
+  work and live queues (POS/KDS/Runner). Adapters: `BranchOperator*` / station.
+
+Same Má Tư Design System tokens; different density and chrome per half.
 
 - POS and KDS are frontline tools. The first viewport must expose the next safe action or live queue.
 - control_surface routes are dense management workspaces. They should prioritize tables, filters, forms, and review states over decorative summary chrome.
@@ -208,6 +225,30 @@ Approved project utilities:
 - New utilities require a design-system update first; prefer shared-component props
   or app surface adapters when the pattern is reusable.
 
+## Contrast Targets (WCAG)
+
+Dual Thesis keeps **one token set**; density differs by half. Non-text UI
+components (borders, cards, focus rings) must meet **WCAG 1.4.11** (≥3:1 vs
+adjacent background). Text stays AA (≥4.5:1 for body).
+
+| Pair (light) | Target | Notes |
+| ------------ | ------ | ----- |
+| `foreground` / `background` | ≥4.5:1 | Primary reading |
+| `muted-foreground` / `background` and `/muted` | ≥4.5:1 | Secondary copy |
+| `border`/`input` / `background` | ≥3:1 | Tables, fields, card edges |
+| `ring` / `background` | ≥3:1 | Focus visibility |
+| `card` / `background` | Visible hierarchy | Prefer border when ΔL is small |
+
+| Pair (night `.dark`) | Target | Notes |
+| -------------------- | ------ | ----- |
+| `card`/`popover`/`sidebar` / `background` | Clear lift | Raise card L before decorative shadow |
+| Borders (alpha on cream) | Readable hairlines | Prefer stronger alpha if cards merge |
+
+Audit 2026-07-29 (pre-tune): light border ~1.25:1, card ~1.07:1, ring ~2:1;
+night card ~1.07:1. Token tune deepens light border/ring/primary and lifts night
+card/sidebar — re-check screenshots after change. Prefer contrast fixes over
+spacing-only “fixes”.
+
 Forbidden for new app UI:
 
 - Parallel Tailwind token namespaces outside the current semantic contract.
@@ -215,7 +256,7 @@ Forbidden for new app UI:
 - Custom radius or spacing variable namespaces outside the current semantic contract.
 - External DS token names copied from outside this repo.
 
-Brand Concept 01 runtime mapping:
+Brand Má Tư Design System runtime mapping:
 
 - `background`: kem gao foundation.
 - `foreground` / dark mode foundation: xanh dam.
@@ -255,7 +296,7 @@ Any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N
 
 ### Sanctioned inline-style exception
 
-`apps/web/app/global-error.tsx` is the single file allowed to use inline `style` for presentation, because Tailwind / semantic tokens are unavailable there by Next.js necessity (root CSS may not have loaded when it renders). Its hex literals should align to Concept 01 — background = kem gạo, text = xanh đậm, and a muted-foreground tone — not neutral greys. This is a named exception, not license for inline styles anywhere else (see § Loading / Error / Not-found Frame).
+`apps/web/app/global-error.tsx` is the single file allowed to use inline `style` for presentation, because Tailwind / semantic tokens are unavailable there by Next.js necessity (root CSS may not have loaded when it renders). Its hex literals should align to Má Tư Design System — background = kem gạo, text = xanh đậm, and a muted-foreground tone — not neutral greys. This is a named exception, not license for inline styles anywhere else (see § Loading / Error / Not-found Frame).
 
 ## Typography Contract
 
@@ -286,7 +327,7 @@ Rules:
 
 - Use semantic Tailwind token classes (`bg-background`, `text-muted-foreground`, `border-border`, `bg-success`, etc.).
 - Use `BrandMark` / `BrandLockup` for web runtime logo rendering; do not reference `/brand/logo-*` directly from route components.
-- Use `BrandSymbol` for Concept 01 symbol assets and `BrandMascot` for the Cốt Lết mascot; do not reference `/brand/symbols/*` or `/brand/mascot/cotlet*` directly from route components.
+- Use `BrandSymbol` for Má Tư brand symbol assets and `BrandMascot` for the Cốt Lết mascot; do not reference `/brand/symbols/*` or `/brand/mascot/cotlet*` directly from route components.
 - Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content.
 - `BrandSymbol` is approved as decorative, static `EmptyMedia` content for any `AppEmptyState` (any surface, ERP included) via the adapter's `symbol` prop; it is not a mascot and carries no motion.
 - The three brand patterns (`ke-caro`, `hat-gao`, `vong-to`) ship as tileable SVG under `/brand/patterns` with the `brand-pattern-caro` / `brand-pattern-hat-gao` / `brand-pattern-vong-to` and `brand-strip` utilities in `globals.css`. Use them only as decorative footer strips, packaging trim, or section separators — never as a background behind body text. Sanctioned placements: the login brand panel footer and the Runner display footer.
@@ -373,7 +414,11 @@ Runner/KDS customer boards must use one responsive semantic grid, not duplicate 
 Heading-weight lock: the default heading weight is `font-semibold`. `font-bold` is reserved for receipt totals and print-mode page headers ONLY. One owner-approved named exception: **POS menu item-name over photo → `font-bold` permitted** (legibility over the `pos-text-overlay` drop-shadow). Emphasis inside body copy may still use `font-bold` inline. `font-black` is not allowed in the app.
 
 Prefer `tracking-wide` for the page-header eyebrow and `tracking-wider` for
-repeated dense/table/grid eyebrows. `AppPageHeader` is the default management
+repeated dense/table/grid eyebrows. On control_surface routes that mount
+`AppShell`, `AppPageHeader.eyebrow` MUST NOT repeat the primary sidebar module
+label or a marketing synonym of it — the sidebar and deep-nav already own that
+context. Reserve the eyebrow for real non-module context (site kind, drill-down
+parent when a back link is absent). `AppPageHeader` is the default management
 page H1 because it keeps context and actions coordinated; a bespoke header must
 keep one semantic H1, a clear hierarchy, and responsive action behavior.
 For a standalone public/GATE page whose visible `AppSection` title is the
@@ -510,6 +555,35 @@ Avoid elevation that implies a false interactive or floating state. Use the
 named recipes before adding a custom value; a custom shadow needs a component
 reason and visual review. Dialog, drawer, popover and tooltip keep their own
 layering semantics rather than borrowing a heavier role only to add emphasis.
+
+## Component Naming Convention
+
+Product Dual Thesis drives adapter prefixes (`docs/spec/architecture.md`):
+
+| Prefix | Product half | Examples |
+| ------ | ------------ | -------- |
+| `App*` | Quản lý hệ thống (`control_surface`) | `AppPage`, `AppListFrame`, `AppToolbar` |
+| `BranchOperator*` | Vận hành bán hàng (ca) | `BranchOperatorPage`, `BranchOperatorPanel` |
+| (no prefix) | Shared primitives | `Button`, `Card`, `Frame` (inset) |
+
+Suffix meanings (one job each):
+
+| Suffix | Job |
+| ------ | --- |
+| `Shell` | Owns navigation chrome only (sidebar / header / bottom-nav) |
+| `Page` | Route content rhythm (width, padding, scroll) — not chrome |
+| `Section` | Card-backed region on `control_surface` (`AppSection`) |
+| `Panel` | Same job inside `BranchOperator*` / `Employee*` families only |
+| `Frame` | (a) `packages/ui` inset box **or** (b) registered workflow wrapper (`AppListFrame`, `DocumentFormFrame`) — never chrome |
+| `Toolbar` / `Footer` / `Grid` / `Row` | Slots, not page roots |
+| `Client` / `Presenter` | Route-local binding; promote to Adapter before registry |
+
+Rules:
+
+- New code must not invent `Owner*` / `Ops*` / `Management*` as product-plane prefixes for chrome. L0 chrome wiring is `ControlSurfaceShell` only (Wave2).
+- Domain aliases (e.g. historic `InventoryListFrame`) must delegate 100% to a canonical adapter, stay registered, and prefer converging consumers onto `AppListFrame`.
+- Do not add a third parallel page-kit family beside `App*` and `BranchOperator*` / `Employee*` without an ADR.
+- UI block recipe ids stay kebab-case metadata; never ship importable `*Block` components (D086).
 
 ## Component Authority
 
@@ -872,14 +946,16 @@ contract change; route-local chrome outside this list is drift.
    region scrolls (`data-owner-shell-scroll`). `AppPageHeader` scrolls with page
    content (do not sticky/freeze it outside the scrollport — that reserves empty
    body chrome and crushes dashboard aesthetics). control_surface LIST filters stick at
-   the top of the shell scrollport via `AppListFrame`/`InventoryListFrame`
+   the top of the shell scrollport via `AppListFrame`
    toolbar (automatic stuck-state shell bleed), `AppToolbar sticky`, or
-   `AppPageStickyChrome` / `AppStickyFilterChrome` /
-   `APP_PAGE_STICKY_FILTER_CLASSNAME`. While stuck, the filter cancels Owner shell
-   horizontal pad so it flushes to the inset panel edges; scrolling back to the
-   top restores the LIST card inset. Do not sticky a page-level filter that
-   sits above KPI/dashboard cards (e.g. Finance `FilterBar`) — stuck chrome
-   will crush the next section while scrolling.
+   `AppStickyFilterChrome` /
+   `APP_PAGE_STICKY_FILTER_CLASSNAME` (`AppPageStickyChrome` is a compatibility alias). Negative sticky `top` cancels Owner shell
+   top pad so the filter pins flush to the inset panel top (not below `pt-3` /
+   `pt-4`). While stuck, the filter also cancels horizontal pad so it flushes to
+   the inset panel edges; scrolling back to the top restores the LIST card
+   inset. Do not sticky a page-level filter that sits above KPI/dashboard cards
+   (e.g. Finance `FilterBar`) — stuck chrome will crush the next section while
+   scrolling.
 2. Branch runtime chrome — the branch-scoped operator layout
    (`apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx`). Covers the
    branch home, staff daily work under `/br/[branchId]/shift/*`, stock action
@@ -920,9 +996,8 @@ frames are the reference implementations, not a frozen filename registry.
   another shared chrome composition only when its job cannot be expressed by an
   existing frame and its navigation owner is explicit.
 - Branch runtime, Operations, and employee-lib surfaces MUST NOT import or render
-  control_surface chrome (`AppShell`, `OwnerModuleShell`,
-  `resolveOwner*`, `owner-nav`, `finance-shell`,
-  `inventory-shell`). They must
+  control_surface chrome (`AppShell`, `ControlSurfaceShell`,
+  `resolveControlSurface*`, `control-surface-nav`, retired `owner-nav`). They must
   use the approved operator/operations chrome, shared `AppHeader` /
   `AppBottomNav`, `EmployeePage`, or an `embedded` branch of the canonical
   `PageContent`.
@@ -1009,13 +1084,12 @@ drift.
 ### D. Navigation Single-Source
 
 - Navigation is data, not per-shell code. Every control_surface route renders
-  the same Owner-filtered primary tabs from `resolveOwnerPrimaryTabs`
-  (`apps/web/app/lib/owner-nav.ts`, projected from
-  `packages/shared/src/auth/nav-config.ts` via `resolveOwnerNavGroups`). Deep nav
-  comes from `resolveOwnerDeepNav`, `resolveBranchDeepNav`, or module-local
-  resolvers (`finance/components/finance-nav.ts`, `inventory/_lib/inventory-nav.ts`).
-  Inline `ShellNavGroup[]` literals inside a shell are forbidden (gate
-  `nav-shell-inline-literal`).
+  the same primary tabs from `resolveControlSurfacePrimaryTabs`
+  (`apps/web/app/lib/control-surface-nav.ts`, projected from
+  `packages/shared/src/auth/nav-config.ts` via `resolveControlSurfaceNavGroups`). Deep nav
+  comes from `resolveControlSurfaceDeepNav` (core / inventory / finance
+  resolvers). Inline `ShellNavGroup[]` literals inside a shell are forbidden
+  (gate `nav-shell-inline-literal`).
 - Tablet/desktop sidebar and mobile bottom-nav render from the same resolved
   model for a role; they may differ in density and item count, never in
   membership source.

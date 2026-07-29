@@ -33,6 +33,7 @@ export { getInventoryValueVisibility } from "./inventory-value";
 export type { InventoryValueVisibility } from "./inventory-value";
 export {
   INVENTORY_CATALOG_ROLES,
+  INVENTORY_CATALOG_VIEW_ROLES,
   INVENTORY_OPS_ROLES,
   PROCUREMENT_ROLES,
   STOCK_REQUEST_ROLES,
@@ -52,7 +53,7 @@ export type {
   OperatorTileGroupId,
 } from "./nav-config";
 export {
-  OWNER_NAV_GROUPS,
+  CONTROL_SURFACE_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
   BRANCH_OPERATION_ITEMS,
   OPERATOR_TILE_GROUP_ORDER,
@@ -71,7 +72,7 @@ export type {
   ResolvedNavLink,
 } from "./nav-resolution";
 export {
-  resolveOwnerNavGroups,
+  resolveControlSurfaceNavGroups,
   resolveBranchManagementItems,
   resolveBranchOperationItems,
   resolveNavLink,
@@ -86,7 +87,7 @@ export type {
   DiscoveredAppLink,
 } from "./app-discovery";
 export {
-  resolveOwnerDiscoveryGroups,
+  resolveControlSurfaceDiscoveryGroups,
   resolveBranchManagementDiscoveryGroup,
   resolveBranchOperationDiscoveryGroup,
   resolveDiscoveredAppGroups,

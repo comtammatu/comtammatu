@@ -14,7 +14,6 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
     <DocumentFormFrame
       header={
         <AppPageHeader
-          eyebrow={copy.eyebrow}
           title={copy.title}
           description={context.branch.name}
         />

@@ -7,7 +7,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("Owner bottom nav fits one module action and four destinations", () => {
-  const source = read("apps/web/app/components/owner-bottom-nav.tsx");
+  const source = read("apps/web/app/components/control-surface-bottom-nav.tsx");
 
   assert.match(source, /const MAX_VISIBLE_ITEMS = 4/);
   assert.equal(source.match(/min-w-14/g)?.length, 2);
@@ -25,7 +25,7 @@ test("Owner mobile shell keeps the module drawer available on the root landing",
   assert.doesNotMatch(source, /pathname !== "\/"/);
   assert.match(
     source,
-    /\{showBottomNav \? <OwnerBottomNav tier1=\{tier1\} tier2=\{tier2\} \/> : null\}/,
+    /\{showBottomNav \? \(\s*<ControlSurfaceBottomNav tier1=\{tier1\} tier2=\{tier2\} \/>\s*\) : null\}/,
   );
   assert.match(source, /<ThemeMenuItem className="min-h-12 text-sm" \/>/);
   assert.match(source, /useIsMobile\(1024\)/);
@@ -76,6 +76,12 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
     /function AppListFrame\([\s\S]*?AppStickyFilterChrome/,
   );
   assert.match(surface, /data-stuck/);
+  // Negative top cancels Owner shell pt-3/md:pt-4 so stuck filters flush to
+  // the inset panel top (top-0 leaves a pad gap where list rows peek above).
+  assert.match(
+    surface,
+    /sticky top-\[-0\.75rem\] z-20 bg-background md:top-\[-1rem\]/,
+  );
   assert.match(surface, /sticky\?: boolean/);
   assert.match(
     surface,
@@ -143,15 +149,15 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
       "dashboard/KPI pages — sticky would crush sections below",
     ],
     [
-      "apps/web/app/(protected)/branch-settings/_shared/pos/terminals-client.tsx",
+      "apps/web/app/(protected)/br/_shared/settings/pos/terminals-client.tsx",
       "Branch settings client (operator chrome), not Owner shell",
     ],
     [
-      "apps/web/app/(protected)/branch-settings/_shared/tables/tables-client.tsx",
+      "apps/web/app/(protected)/br/_shared/settings/tables/tables-client.tsx",
       "Branch settings client (operator chrome), not Owner shell",
     ],
     [
-      "apps/web/app/(protected)/branch-settings/_shared/kds/stations-client.tsx",
+      "apps/web/app/(protected)/br/_shared/settings/kds/stations-client.tsx",
       "Branch settings client (operator chrome), not Owner shell",
     ],
   ]);
@@ -224,7 +230,8 @@ test("Owner shell scroll invariant is documented", () => {
   assert.match(designSystem, /data-owner-shell-scroll/);
   assert.match(designSystem, /AppPageHeader` scrolls with page\s+content/);
   assert.match(uiModule, /data-owner-shell-scroll/);
-  assert.match(uiModule, /AppPageStickyChrome/);
+  assert.match(uiModule, /AppStickyFilterChrome/);
+  assert.match(uiModule, /AppPageStickyChrome.*compatib|compatib.*AppPageStickyChrome|compatibility alias/i);
   assert.match(uiModule, /AppPageHeader` cuộn cùng nội dung/);
 });
 

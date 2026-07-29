@@ -64,7 +64,6 @@ export default async function PurchaseOrdersPage({
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
           title={copy.pageTitle}
         />
         <AppEmptyState

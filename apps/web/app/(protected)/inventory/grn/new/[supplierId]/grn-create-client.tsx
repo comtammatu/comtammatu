@@ -497,7 +497,6 @@ export function GrnCreateClient({
           {GRN_CREATE_COPY.backToList}
         </AppBackLink>
       }
-      eyebrow={GRN_CREATE_COPY.newReceiptEyebrow}
       title={GRN_CREATE_COPY.newReceiptTitle}
       actions={
         controller.lineCount > 0 ? (

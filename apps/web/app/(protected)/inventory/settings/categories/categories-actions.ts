@@ -4,11 +4,14 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { VALIDATION_VI } from "@comtammatu/shared/messages";
-import { INVENTORY_CATALOG_ROLES } from "@comtammatu/shared/auth";
+import { INVENTORY_CATALOG_ROLES, INVENTORY_CATALOG_VIEW_ROLES } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import { getAuthContextWithAnyPermission } from "../../_lib/auth";
-import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
+import {
+  CATALOG_MANAGE_PERMISSIONS,
+  CATALOG_READ_PERMISSIONS,
+} from "../../_lib/catalog-permissions";
 import { PG_ERR } from "../../_lib/constants";
 
 const CATEGORIES_PATH = "/inventory/settings/categories";
@@ -46,8 +49,8 @@ const categoryDeleteSchema = z.object({
 
 export async function fetchCategories(): Promise<ActionResult<CategoryRow[]>> {
   const ctx = await getAuthContextWithAnyPermission(
-    INVENTORY_CATALOG_ROLES,
-    CATALOG_MANAGE_PERMISSIONS,
+    INVENTORY_CATALOG_VIEW_ROLES,
+    CATALOG_READ_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 

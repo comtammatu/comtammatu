@@ -9,7 +9,7 @@ function read(path: string): string {
 
 test("Branch printer dialog has a semantic form and associated touch controls", () => {
   const source = read(
-    "app/(protected)/branch-settings/_shared/printers/printers-client.tsx",
+    "app/(protected)/br/_shared/settings/printers/printers-client.tsx",
   );
 
   assert.match(source, /const PRINTER_FORM_ID = "branch-printer-form"/);
@@ -21,7 +21,6 @@ test("Branch printer dialog has a semantic form and associated touch controls", 
 
   for (const name of [
     "branch_id",
-    "role",
     "name",
     "lan_host",
     "lan_port",
@@ -36,7 +35,6 @@ test("Branch printer dialog has a semantic form and associated touch controls", 
 
   for (const field of [
     "branch",
-    "role",
     "name",
     "lanHost",
     "lanPort",
@@ -59,6 +57,7 @@ test("Branch printer dialog has a semantic form and associated touch controls", 
   assert.match(source, /<Switch[\s\S]*?checked=\{form\.is_active\}/);
   assert.match(source, /size=\{embedded \? "touch" : "default"\}/);
   assert.equal(source.match(/<FieldSet>/g)?.length, 2);
+  assert.doesNotMatch(source, /ROLE_ORDER|Vị trí máy in/);
   assert.match(source, /role="alert"/);
 });
 

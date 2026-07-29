@@ -72,11 +72,11 @@ test("finance deep-nav landing is wired exact, mirroring inventory", () => {
 
 test("mobile Owner surface bottom nav reuses the shell nav model", () => {
   const appShell = read("apps/web/app/components/app-shell.tsx");
-  const bottomNav = read("apps/web/app/components/owner-bottom-nav.tsx");
+  const bottomNav = read("apps/web/app/components/control-surface-bottom-nav.tsx");
 
   assert.match(
     appShell,
-    /<OwnerBottomNav tier1=\{tier1\} tier2=\{tier2\}/,
+    /<ControlSurfaceBottomNav tier1=\{tier1\} tier2=\{tier2\}/,
     "AppShell must pass the shared nav model to the mobile bottom nav",
   );
   assert.match(bottomNav, /tier2: ShellNavGroup\[\]/);

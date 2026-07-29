@@ -72,9 +72,9 @@ test.describe("Owner shell inset scroll model", () => {
           scrollportClientHeight: scrollport?.clientHeight ?? 0,
           scrollportScrollHeight: scrollport?.scrollHeight ?? 0,
           headerSticky: (() => {
-            const header = document.querySelector(
-              "#main-content .sticky.top-0",
-            );
+            // LIST filters use negative sticky top to cancel shell pt-3/md:pt-4;
+            // do not require the literal `top-0` class.
+            const header = document.querySelector("#main-content .sticky");
             return header
               ? getComputedStyle(header).position === "sticky"
               : false;
@@ -130,9 +130,21 @@ test.describe("Owner shell inset scroll model", () => {
         }
         const headerInScroll = scrollport.contains(h1);
         const beforeTop = h1.getBoundingClientRect().top;
-        const maxScroll = Math.max(0, scrollport.scrollHeight - scrollport.clientHeight);
+        const maxScroll = Math.max(
+          0,
+          scrollport.scrollHeight - scrollport.clientHeight,
+        );
         scrollport.scrollTop = Math.min(160, maxScroll);
         const afterTop = h1.getBoundingClientRect().top;
+        const sticky = scrollport.querySelector(".sticky") as HTMLElement | null;
+        const stickyFlush =
+          sticky == null || maxScroll < 80
+            ? null
+            : (() => {
+                const sr = scrollport.getBoundingClientRect();
+                const st = sticky.getBoundingClientRect();
+                return Math.abs(st.top - sr.top) <= 2;
+              })();
         return {
           ok: true as const,
           headerInScroll,
@@ -140,7 +152,9 @@ test.describe("Owner shell inset scroll model", () => {
             maxScroll > 0 ? afterTop < beforeTop - 1 : true,
           scrollTop: scrollport.scrollTop,
           canScroll: maxScroll > 0,
-          noChromeHost: document.querySelector("[data-owner-page-chrome]") == null,
+          noChromeHost:
+            document.querySelector("[data-owner-page-chrome]") == null,
+          stickyFlush,
         };
       });
 
@@ -158,6 +172,12 @@ test.describe("Owner shell inset scroll model", () => {
         expect(
           metrics.headerScrolledAway,
           `${path} h1 must scroll away with content`,
+        ).toBe(true);
+      }
+      if (metrics.stickyFlush != null) {
+        expect(
+          metrics.stickyFlush,
+          `${path} LIST sticky filter must flush to inset panel top`,
         ).toBe(true);
       }
     });

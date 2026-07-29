@@ -31,7 +31,8 @@ import {
 import { messages } from "@lib/messages";
 import { fulfillStockRequestLines } from "@/(protected)/inventory/stock-request-actions";
 
-const copy = messages.inventory.stockRequests.fulfill;
+const stockRequestCopy = messages.inventory.stockRequests;
+const copy = stockRequestCopy.fulfill;
 
 export type StockRequestFulfillLine = {
   id: number;
@@ -139,9 +140,11 @@ export function StockRequestFulfillClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={requestNumber}
-        description={copy.headerDescription(branchLabel, status)}
+        description={copy.headerDescription(
+          branchLabel,
+          stockRequestCopy.statusLabel(status),
+        )}
         actions={
           <Button
             variant="ghost"
@@ -187,7 +190,10 @@ export function StockRequestFulfillClient({
                       <ItemContent>
                         <ItemTitle>{line.ingredientName}</ItemTitle>
                         <ItemDescription>
-                          {copy.lineDescription(line.quantity, line.status)}
+                          {copy.lineDescription(
+                            line.quantity,
+                            stockRequestCopy.statusLabel(line.status),
+                          )}
                         </ItemDescription>
                       </ItemContent>
                     </Item>

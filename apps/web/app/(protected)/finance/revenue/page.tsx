@@ -4,6 +4,11 @@ import {
   parseFinanceParams,
   resolveFinanceRange,
 } from "../_lib/finance-params";
+import {
+  isSingleCalendarMonth,
+  monthStartFromIsoDate,
+} from "../_lib/revenue-target";
+import { listBranchRevenueTargetProgress } from "../targets/actions";
 import { loadRevenueBundle } from "./_lib/revenue-loader";
 import { RevenueClient } from "./revenue-client";
 
@@ -15,11 +20,19 @@ export default async function RevenueReportPage({
   const sp = await searchParams;
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
+  const showTargetMonth = isSingleCalendarMonth(resolved.start, resolved.end);
+  const yearMonth = monthStartFromIsoDate(resolved.start);
 
-  const [bundle, canRefreshFinanceViews] = await Promise.all([
+  const [bundle, canRefreshFinanceViews, targetProgressRes] = await Promise.all([
     loadRevenueBundle(params, resolved),
     currentUserHasPermissionAny(PERMISSION_KEYS.SETTINGS_TENANT),
+    showTargetMonth
+      ? listBranchRevenueTargetProgress(yearMonth)
+      : Promise.resolve(null),
   ]);
+
+  const targetRows =
+    targetProgressRes?.success === true ? (targetProgressRes.data ?? []) : [];
 
   return (
     <RevenueClient
@@ -39,6 +52,8 @@ export default async function RevenueReportPage({
       resolvedStart={resolved.start}
       resolvedEnd={resolved.end}
       canRefreshFinanceViews={canRefreshFinanceViews}
+      targetRows={targetRows}
+      showTargetMonth={showTargetMonth}
     />
   );
 }

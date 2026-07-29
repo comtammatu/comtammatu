@@ -1,9 +1,12 @@
 # Modules, Tech Specs, Infra và Project Structure mục tiêu
 
+> **TARGET ONLY — not current runtime.** Do not use this file as the live route
+> tree, shell map, or Product Dual Thesis source. Current SSOT:
+> `docs/spec/architecture.md` (§ Product Dual Thesis + Routing).
+>
 > Trạng thái: kiến trúc mục tiêu, chưa mô tả hệ thống đang chạy.
 >
-> `docs/spec/architecture.md` tiếp tục là nguồn mô tả hiện trạng. Package
-> manifests và `pnpm-lock.yaml` sở hữu phiên bản dependency chính xác.
+> Package manifests và `pnpm-lock.yaml` sở hữu phiên bản dependency chính xác.
 >
 > Kiến trúc này được triển khai trong repo `comtammatu` sau cutoff
 > `baf3720f8`. Greenfield là database/runtime target mới của cùng codebase, không

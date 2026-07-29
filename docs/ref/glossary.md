@@ -169,16 +169,27 @@ và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán h
 | `blind` / `peer cross` trong UI                  | `đếm mù` / `đếm chéo`                                                                            |
 | `GRN` / `PO` nhúng trong câu UI                  | `phiếu nhập` / `đơn đặt hàng` (acronym chỉ pill/badge)                                           |
 
+## Product Dual Thesis
+
+Sản phẩm có **hai nửa** (SSOT map: `docs/spec/architecture.md` § Product Dual Thesis):
+
+| Nửa (VI) | Plane | Việc |
+| -------- | ----- | ---- |
+| Quản lý hệ thống | `control_surface` | Oversight, master data, finance/HR/settings L0 |
+| Vận hành bán hàng | `branch_surface` + `station_chrome` | Ca chi nhánh, POS/KDS/Runner, stock ca |
+
+Không dùng `Owner` / `Ops` làm tên nửa sản phẩm. Role ACL `owner` ≠ plane.
+
 ### `control_surface` (mặt phẳng L0 / Quản trị)
 
 | Trường               | Giá trị |
 | -------------------- | ------- |
 | `canonical_term`     | `control_surface` |
 | `label_vi`           | `Quản trị` |
-| `definition`         | Chrome quản trị tenant/site trung tâm qua `AppShell`: `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback`. Actor theo `role-route-matrix` (Owner đầy đủ; accountant và central roles chỉ vào slice L0 được cấp). |
+| `definition`         | Nửa **Quản lý hệ thống**: chrome quản trị tenant/site trung tâm qua `ControlSurfaceShell` → `AppShell`: `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback`. Actor theo `role-route-matrix` (Owner đầy đủ; accountant và central roles chỉ vào slice L0 được cấp). Runtime plane alias: `RouteSurface: "owner"`. |
 | `not_this`           | Role ACL `owner`; `station_chrome` (POS/KDS/Runner); nhãn UI `Vận hành` / `Ops surface`; `branch_surface` |
 | `scope`              | cross-module |
-| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes; `docs/modules/ui.md` § control_surface Shell Structure; code IDs lịch sử `OwnerModuleShell` / `data-owner-shell-scroll` implement plane này |
+| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes; `docs/modules/ui.md` § control_surface Shell Structure; runtime `ControlSurfaceShell` + DOM `data-owner-shell-scroll` |
 | `allowed_variants`   | Long UI: `Quản trị`; docs EN: `control_surface`; alias nội bộ cũ trong git history: Owner surface / Owner control |
 | `forbidden_synonyms` | `Ops surface`, `Vận hành` (làm nhãn plane), `Owner` (làm tên plane), `Văn phòng` |
 
@@ -524,13 +535,28 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `menu_item`        | món bán          | Item trong menu.                                               | sản phẩm nếu đang nói F&B order flow     |
 | `table_session`    | phiên bàn        | Lifecycle phục vụ tại bàn.                                     | bàn mở nếu cần phân biệt record          |
 | `takeaway_context` | ngữ cảnh mang về | Context bán mang về; có thể có nhiều order mở như bàn.         | đơn nhanh nếu workflow cần chọn order    |
-| `pos_session`      | ca POS           | Shift mở trên terminal.                                        | ca bán hàng nếu đang nói entity kỹ thuật |
-| `terminal`         | máy POS          | Thiết bị/điểm POS cụ thể.                                      | máy thu ngân                             |
+| `pos_session`      | ca POS           | Phiên bán mở theo **chi nhánh** (D7): một ca mở/chi nhánh; `terminal_id` chỉ metadata audit khi mở ca. | ca bán hàng (UI); “một máy một ca” |
+| `terminal`         | đăng ký POS      | Bản ghi tối thiểu để cho phép mở ca; không phải bind thiết bị vật lý trừ khi có pairing. | máy thu ngân như device management |
 | `kds_ticket`       | phiếu bếp        | Ticket hiển thị trên KDS.                                      | order bếp                                |
+| `printer`          | máy in           | Thiết bị LAN + `printer_print_types` + (bếp) `printer_menu_categories`. Fleet N máy/chi nhánh. | “3 máy cố định”, `kitchen_1`/`kitchen_2` như topology bắt buộc |
 | `ready`            | sẵn sàng         | Món/phiếu bếp đã xong ở bếp.                                   | hoàn thành đơn                           |
 | `served`           | đã phục vụ       | Marker phục vụ/fulfillment, không phải payment close.          | trả bàn, hoàn tất đơn                    |
 | `completed`        | hoàn thành POS   | Đơn đã thanh toán và đóng ở POS; bàn release nếu dine-in.      | bếp xong                                 |
 | `release_table`    | trả bàn          | Hệ thống release bàn khi đơn POS `completed` hoặc `cancelled`. | nút riêng sau thanh toán                 |
+
+### Branch Ops — CTA verbs (UI)
+
+| Việc | Nhãn chuẩn | Không dùng |
+|------|------------|------------|
+| Vào app POS | **Vào POS** | `Mở POS` khi chỉ navigate |
+| Mở phiên bán | **Mở ca** | `Mở POS`, `mở ca bán hàng` |
+| Vào app bếp | **Vào KDS** | `Mở KDS` |
+| Tile bếp | **Bếp (KDS)** | `Bếp/KDS` |
+| Setup station | **Trạm bếp** | `Trạm KDS` (UI) |
+| Setup POS row | **Đăng ký POS** | Gợi ý bind thiết bị khi chưa có pairing |
+| Điều hướng màn khác | **Vào …** | `Mở …` trừ **Mở ca** / **Mở bán** |
+| Hub setup | **Thiết lập chi nhánh** | `Cấu hình chi nhánh`, `Cài đặt chi nhánh` trên Branch |
+| Hub command | **Điều hành** / **Điều hành chi nhánh** | “Command” trong copy |
 
 ### Procurement, kho, và sản xuất
 

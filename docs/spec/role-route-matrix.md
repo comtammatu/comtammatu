@@ -132,18 +132,18 @@ by direct URL or as a redirect target.
 
 | Module key | Route path | Allowed roles | Nav/tile advertisement source |
 | ---------- | ---------- | ------------- | ------------------------------ |
-| `owner` | `/` | Chủ sở hữu | Owner nav |
-| `menu` | `/menu` | Chủ sở hữu | Owner nav |
-| `inventory` | `/inventory` | Chủ sở hữu, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT | Owner nav |
+| `owner` | `/` | Chủ sở hữu | Control surface nav |
+| `menu` | `/menu` | Chủ sở hữu | Control surface nav |
+| `inventory` | `/inventory` | Chủ sở hữu, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT | Control surface nav |
 | `inventory_operations` | `/inventory/stock` | Chủ sở hữu, Quản lý kho Tổng, Bếp trưởng Bếp TT | (not advertised in nav — direct URL / redirect target only) |
-| `orders` | `/orders` | Chủ sở hữu | Owner nav |
-| `feedback` | `/feedback` | Chủ sở hữu | Owner nav |
+| `orders` | `/orders` | Chủ sở hữu | Control surface nav |
+| `feedback` | `/feedback` | Chủ sở hữu | Control surface nav |
 | `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
-| `hr` | `/hr` | Chủ sở hữu | Owner nav |
+| `hr` | `/hr` | Chủ sở hữu | Control surface nav |
 | `hr_payroll` | `/hr/payroll` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
-| `finance` | `/finance` | Chủ sở hữu, Kế toán | Owner nav |
-| `branches` | `/branches` | Chủ sở hữu | Owner nav |
-| `settings` | `/settings` | Chủ sở hữu | Owner nav |
+| `finance` | `/finance` | Chủ sở hữu, Kế toán | Control surface nav |
+| `branches` | `/branches` | Chủ sở hữu | Control surface nav |
+| `settings` | `/settings` | Chủ sở hữu | Control surface nav |
 | `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |

@@ -1,4 +1,4 @@
-import type { TableRow } from "@/(protected)/branch-settings/_shared/tables/table-table";
+import type { TableRow } from "@/(protected)/br/_shared/settings/tables/table-table";
 
 // Shape of a row returned by the tables query in page.tsx. The embedded
 // branch_zones relation can arrive as an object or null depending on PostgREST.

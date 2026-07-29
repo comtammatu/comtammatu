@@ -2,9 +2,14 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js App Router phục vụ control_surface, Branch home, POS/KDS và
-public/auth. Package manifest sở hữu phiên bản framework;
-route runtime và generated matrix sở hữu danh sách route hiện hành.
+Ứng dụng Next.js App Router phục vụ **hai nửa sản phẩm** (Product Dual Thesis —
+`docs/spec/architecture.md`):
+
+1. **Quản lý hệ thống** — `control_surface` (L0 `/…`, `AppShell`, adapters `App*`)
+2. **Vận hành bán hàng** — `branch_surface` + `station_chrome` (`/br/[branchId]/…`)
+
+Plus public/auth. Package manifest sở hữu phiên bản framework; route runtime và
+generated matrix sở hữu danh sách route hiện hành.
 
 **Phạm vi sở hữu:** `apps/web/`
 
@@ -32,7 +37,7 @@ owner; Branch Manager dùng L1 Branch Command dưới
 | ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | Root entry        | `/`                                                                                                          | Single-branch resolver                                 | `getDefaultRedirect(claims)`: branch-pinned staff → `/br/{branchId}`; Owner → `/`, rồi tự mở khi có đúng một active `branch` kind. Central kinds không phải operator scope. | Nhiều operating branch mới hiện picker; route scope sai fail closed.                         |
 | Public / auth     | `/login`, `/access-denied`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login` hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                                                                                              | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.     |
-| control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `OwnerModuleShell`, `FinanceShell`, và `InventoryShell` cùng dùng nav L0. `/` là LANDING; Settings và module con dùng deep-nav tương ứng. Actor theo `role-route-matrix`. | Breadcrumb root là `Quản trị` (`control_surface`); filter/tab state giữ trong URL, không lưu local state. |
+| control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `ControlSurfaceShell` → `AppShell` (nav-as-data). `/` là LANDING; Settings và module con dùng deep-nav tương ứng. Actor theo `role-route-matrix`. | Breadcrumb root là `Quản trị` (`control_surface`); filter/tab state giữ trong URL, không lưu local state. |
 | Utility           | `/notifications/*`                                                                                           | Link kèm `returnTo`                                    | Không là product plane; dùng trang độc lập và quay lại context gọi.                                                                                                         | Không có sidebar riêng.                                                                      |
 | Branch operations | `/br/[branchId]/*`, gồm landing, dashboard, shift, profile, stock, pos, kds, runner, settings                    | `/br/[branchId]`                                       | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Owner. Staff discovery vẫn có thể link sang Runner display public.         | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.       |
 | Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                         | `/br/[branchId]/shift`                                 | Dùng Branch runtime bottom nav và shared Employee components; URL luôn mang `branchId`.                                                                                      | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.      |
@@ -48,11 +53,12 @@ route contract thay đổi.
 
 ## Thành phần chính
 
-### Khung control_surface (`apps/web/app/components/owner-module-shell.tsx`)
+### Khung control_surface (`apps/web/app/components/control-surface-shell.tsx`)
 
-Shell dùng chung cho admin/menu/hr/orders; với route `/*` thành phần này render:
+Shell L0 duy nhất (nav-as-data) cho admin/menu/hr/orders/inventory/finance; render:
 
-- Sidebar Owner-only đọc `OWNER_NAV_GROUPS` từ `@comtammatu/shared/auth`.
+- Sidebar Quản trị đọc `CONTROL_SURFACE_NAV_GROUPS` từ `@comtammatu/shared/auth` qua
+  `resolveControlSurfacePrimaryTabs` + `resolveControlSurfaceDeepNav`.
 - `/` mở landing 1/2/3 cột; không thêm KPI khi chưa có data contract.
 - Header với thông tin user và nút đăng xuất
 - Responsive: sidebar thu gọn trên mobile
@@ -80,8 +86,8 @@ Server action có rate limiting (`loginRateLimit` từ `@comtammatu/security`). 
 
 ### IA theo workflow
 
-`inventory-shell.tsx` gom điều hướng Owner theo các nhóm ổn định (UI sidebar
-vẫn flatMap một list ngắn):
+`resolveInventoryNav` + `flattenInventoryDeepNav` gom điều hướng Kho theo các
+nhóm ổn định (UI sidebar vẫn flatMap một list ngắn):
 
 - `0 · Nay`
 - `1 · Kiểm soát tồn`: `Tồn kho`
@@ -160,7 +166,7 @@ Browser request
 | ---------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- |
 | "use client" barrel import         | Turbopack build crash                    | Use `/supabase/client` import path                                                      |
 | Missing module in route-resolution | 404 or no ACL check                      | Add URL pattern → ModuleKey mapping                                                     |
-| Missing nav entry                  | Page exists but unreachable from sidebar | Add to `OWNER_NAV_GROUPS`, unless the route is an intentional direct-only support route |
+| Missing nav entry                  | Page exists but unreachable from sidebar | Add to `CONTROL_SURFACE_NAV_GROUPS`, unless the route is an intentional direct-only support route |
 | Layout re-checks auth/ACL          | Double redirect or divergent gate        | Remove the duplicate check; proxy owns protected-route auth                             |
 
 ## Lý do thiết kế

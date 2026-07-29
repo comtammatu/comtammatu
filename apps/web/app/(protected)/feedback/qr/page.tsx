@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
-import { getModuleLabelVi } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { AppEmptyState, AppPageHeader } from "@/components/surface";
 import { listFeedbackQrCodes } from "../actions";
@@ -64,7 +63,6 @@ export default async function FeedbackQrPage({
   return (
     <>
       <AppPageHeader
-        eyebrow={getModuleLabelVi("feedback")}
         title={feedbackCopy.qrTitle}
         actions={
           manageBranchId != null ? (

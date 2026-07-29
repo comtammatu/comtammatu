@@ -29,10 +29,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { downloadCsv } from "@/_lib/download-file";
 import { matchesSearch } from "@lib/search";
-import { messages } from "@lib/messages";
 import { FormDialog, SelectField, TextareaField } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
+  AppListFrame,
   AppPage,
   AppPageHeader,
   AppToolbar,
@@ -51,7 +51,6 @@ import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { formatVND } from "@lib/inventory/format";
 import { tNav } from "../_lib/dictionary";
 import {
-  InventoryListFrame,
   inventoryListFilterSelectClassName,
 } from "../_components/inventory-list-frame";
 import { createStockIssueDraft } from "../issue-actions";
@@ -914,14 +913,13 @@ export function IssuesClient({
     <>
       {embedded ? null : (
         <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
           title={pageTitle ?? tNav("consumption", "navigation")}
           actions={issueActions}
         />
       )}
 
       {(recordedConsumptions.length > 0 || showsRecordedConsumption) && (
-        <InventoryListFrame
+        <AppListFrame
           title={INVENTORY_VI.recordedConsumptionTitle}
           headerHint={visibleRecordedConsumptionHint}
           action={
@@ -950,10 +948,10 @@ export function IssuesClient({
             emptyMode="no-data"
             mobileCardRender={renderRecordedConsumptionCard}
           />
-        </InventoryListFrame>
+        </AppListFrame>
       )}
 
-      <InventoryListFrame
+      <AppListFrame
         title={issueListTitle}
         headerHint={INVENTORY_VI.rowRatio(filtered.length, issues.length)}
         toolbar={filterBar}
@@ -979,7 +977,7 @@ export function IssuesClient({
           )}
           mobileCardRender={renderIssueCard}
         />
-      </InventoryListFrame>
+      </AppListFrame>
 
       <FormDialog
         open={createOpen}

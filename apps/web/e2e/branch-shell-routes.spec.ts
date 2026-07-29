@@ -104,7 +104,7 @@ async function expectHealthyRoute(
   expect(state.isOwnerControl).toBe(false);
 }
 
-function expectedOwnerBottomNavCurrentCount(path: string, branchId: number) {
+function expectedControlSurfaceBottomNavCurrentCount(path: string, branchId: number) {
   const base = `/br/${branchId}`;
   if (path === base) return 1;
   if (path.startsWith(`${base}/team`)) return 1;
@@ -252,7 +252,7 @@ test.describe("branch route shell ownership", () => {
       });
       await expect(operatorNav).toBeVisible();
       await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
-        expectedOwnerBottomNavCurrentCount(path, branchId),
+        expectedControlSurfaceBottomNavCurrentCount(path, branchId),
       );
     }
 
@@ -300,7 +300,7 @@ test.describe("branch route shell ownership", () => {
       });
       await expect(operatorNav).toBeVisible();
       await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
-        expectedOwnerBottomNavCurrentCount(path, branchId),
+        expectedControlSurfaceBottomNavCurrentCount(path, branchId),
       );
     }
 
@@ -339,7 +339,7 @@ test.describe("branch route shell ownership", () => {
         });
         await expect(operatorNav).toBeVisible();
         await expect(operatorNav.locator('[aria-current="page"]')).toHaveCount(
-          expectedOwnerBottomNavCurrentCount(path, branchId),
+          expectedControlSurfaceBottomNavCurrentCount(path, branchId),
         );
       }
     }

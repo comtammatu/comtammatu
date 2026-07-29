@@ -345,7 +345,7 @@ test("supplier invoice detail opens in a right Sheet instead of a pinned pane", 
     "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
-  assert.match(source, /InventoryListFrame/);
+  assert.match(source, /AppListFrame/);
   assert.match(source, /SheetFooter/);
   assert.match(source, /sm:max-w-xl/);
   assert.match(source, /outstandingPayable/);

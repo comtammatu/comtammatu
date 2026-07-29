@@ -53,6 +53,7 @@ import {
 } from "@lib/inventory/stock-on-hand-model";
 import {
   AppEmptyState,
+  AppListFrame,
   AppPage,
   AppPageHeader,
   AppSection,
@@ -71,7 +72,6 @@ import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
 import { StockLocationBreakdownLine } from "./stock-location-breakdown";
 import {
-  InventoryListFrame,
   inventoryListFilterSelectClassName,
 } from "../_components/inventory-list-frame";
 import {
@@ -293,7 +293,6 @@ export function StockClient({
         scroll
       >
         <AppPageHeader
-          eyebrow={messages.inventory.shell.moduleName}
           title={stockCopy.title}
         />
         <AppEmptyState
@@ -842,7 +841,6 @@ export function StockClient({
   const content = (
     <>
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={stockCopy.title}
         meta={
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -919,7 +917,7 @@ export function StockClient({
           )}
         </>
       ) : (
-        <InventoryListFrame toolbar={stockToolbar}>
+        <AppListFrame toolbar={stockToolbar}>
           <DataTable
             columns={stockColumns}
             data={filtered}
@@ -950,7 +948,7 @@ export function StockClient({
             }
             mobileCardRender={(item) => renderStockMobileCard(item)}
           />
-        </InventoryListFrame>
+        </AppListFrame>
       )}
 
       {adjustTarget ? (

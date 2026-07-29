@@ -67,7 +67,6 @@ export default async function PayrollPage({
   return (
     <AppPage width="xwide">
       <AppPageHeader
-        eyebrow={copy.eyebrow}
         title={copy.live.title}
         description={copy.live.description}
         actions={

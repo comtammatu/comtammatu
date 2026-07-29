@@ -42,7 +42,7 @@ test("GRN drafts tab matches main list record-depth chrome", () => {
 
   assert.match(draftsTab, /const draftColumns/);
   assert.match(draftsTab, /<DataTable/);
-  assert.match(draftsTab, /<InventoryListFrame/);
+  assert.match(draftsTab, /<AppListFrame/);
   assert.match(draftsTab, /<AppToolbar[\s\S]{0,120}variant="inline"/);
   assert.match(draftsTab, /font-mono text-primary hover:underline/);
   assert.match(draftsTab, /grnDraftHref\(basePath,\s*draft\)/);

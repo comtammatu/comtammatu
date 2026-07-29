@@ -56,7 +56,6 @@ export function WasteApprovalsClient({
   return (
     <AppPage width="xwide">
       <AppPageHeader
-        eyebrow="Kho hàng"
         title={copy.title}
         description={`${copy.principle}${branchFilter !== null ? copy.branchSuffix(branchFilter) : ""}`}
         badge={{ children: copy.count(rows.length) }}

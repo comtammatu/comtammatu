@@ -6,6 +6,7 @@ import { loadAuthState, probePermission } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
+import { fetchBranchQueueCounts } from "../dashboard/data";
 import { fetchTeamBoard, type TeamBoardRow } from "./data";
 import { TeamBoardClient } from "./team-board-client";
 import { TeamMembersContent } from "./members/members-content";
@@ -51,7 +52,7 @@ export default async function TeamBoardPage({
     );
   }
 
-  const [canViewTeam, canApproveCheckout, canApproveCount] =
+  const [canViewTeam, canApproveCheckout, canApproveCount, canApproveLeave] =
     await Promise.all([
       probePermission(
         { supabase, claims },
@@ -68,10 +69,22 @@ export default async function TeamBoardPage({
         PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,
         context.branchId,
       ),
+      probePermission(
+        { supabase, claims },
+        PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
+        context.branchId,
+      ),
     ]);
-  const result = canViewTeam
-    ? await fetchTeamBoard({ branchId: context.branchId })
-    : { success: false as const, error: "Không có quyền" };
+  const canSeeApprovals =
+    canApproveCheckout || canApproveCount || canApproveLeave;
+  const [result, queueCounts] = await Promise.all([
+    canViewTeam
+      ? fetchTeamBoard({ branchId: context.branchId })
+      : Promise.resolve({ success: false as const, error: "Không có quyền" }),
+    canSeeApprovals
+      ? fetchBranchQueueCounts(supabase, claims, context.branchId)
+      : Promise.resolve(null),
+  ]);
   const rows: TeamBoardRow[] = result.success ? (result.data?.rows ?? []) : [];
   const basePath = `/br/${context.branchId}`;
 
@@ -87,9 +100,23 @@ export default async function TeamBoardPage({
             branchId={context.branchId}
             countSlipsHref={`${basePath}/stock/count-slips`}
             checkoutApprovalsHref={`${basePath}/shift/checkout-approvals`}
+            leaveApprovalsHref={
+              canApproveLeave
+                ? `${basePath}/shift/leave-approvals`
+                : undefined
+            }
             canApproveCheckout={canApproveCheckout}
             canApproveCount={canApproveCount}
             approverRole={claims.user_role}
+            approvalCounts={
+              queueCounts
+                ? {
+                    checkoutPending: queueCounts.pendingCheckouts ?? undefined,
+                    leavePending: queueCounts.pendingLeaveRequests ?? undefined,
+                    countSlipsPending: queueCounts.pendingCountSlips ?? undefined,
+                  }
+                : undefined
+            }
           />
         ) : (
           <AppEmptyState mode="error" description={result.error} />
@@ -106,11 +133,7 @@ export default async function TeamBoardPage({
   );
 
   return (
-    <BranchOperatorPage
-      title={copy.title}
-      description={copy.description}
-      hideHeaderOnMobile
-    >
+    <BranchOperatorPage title={copy.title} hideHeaderOnMobile>
       {content}
     </BranchOperatorPage>
   );

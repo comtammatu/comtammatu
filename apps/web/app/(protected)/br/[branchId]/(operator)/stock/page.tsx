@@ -28,7 +28,12 @@ const stockTab = messages.inventory.dashboard;
 type StockGroupId = "onhand" | "count" | "waste" | "catalog";
 
 const STOCK_TAB_SUFFIXES: Record<StockGroupId, readonly string[]> = {
-  onhand: ["/stock/on-hand", "/stock/grn", "/stock/production"],
+  onhand: [
+    "/stock/on-hand",
+    "/stock/requests",
+    "/stock/receive",
+    "/stock/transfer",
+  ],
   count: ["/stock/stocktake", "/stock/count-assignments", "/stock/count-slips"],
   waste: ["/stock/waste", "/stock/consumption"],
   catalog: ["/stock/catalog"],

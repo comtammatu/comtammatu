@@ -47,7 +47,6 @@ export default async function BankTransactionsPage({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
         actions={

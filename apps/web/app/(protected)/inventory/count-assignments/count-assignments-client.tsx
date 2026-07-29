@@ -46,8 +46,12 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { AppDialog } from "@/components/form";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
-import { InventoryListFrame } from "../_components/inventory-list-frame";
+import {
+  AppEmptyState,
+  AppListFrame,
+  AppPage,
+  AppPageHeader,
+} from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import type {
   CountAssignmentEmployee,
@@ -462,7 +466,6 @@ export function CountAssignmentsClient({
   return (
     <AppPage width="xwide" density="compact" scroll>
       <AppPageHeader
-        eyebrow={INVENTORY_VI.countAssignEyebrow}
         title={INVENTORY_VI.countAssignTitle}
         description={INVENTORY_VI.countAssignDescription}
         actions={
@@ -534,16 +537,16 @@ export function CountAssignmentsClient({
       ) : null}
 
       {!scopeReady ? (
-        <InventoryListFrame>
+        <AppListFrame>
           <AppEmptyState
             mode="no-data"
             title={INVENTORY_VI.countAssignNoWarehouseTitle}
             description={INVENTORY_VI.countAssignNoWarehouseDescription}
             symbol="riceGrain"
           />
-        </InventoryListFrame>
+        </AppListFrame>
       ) : (
-        <InventoryListFrame>
+        <AppListFrame>
           <DataTable
             columns={columns}
             data={visibleEmployees}
@@ -597,7 +600,7 @@ export function CountAssignmentsClient({
               );
             }}
           />
-        </InventoryListFrame>
+        </AppListFrame>
       )}
 
       <AppDialog

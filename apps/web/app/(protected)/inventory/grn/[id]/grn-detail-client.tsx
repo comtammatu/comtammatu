@@ -1076,7 +1076,6 @@ export function GRNDetailClient({
   return (
     <AppPage width="xwide" density="compact" footer={footer}>
       <AppPageHeader
-        eyebrow="Kho hàng"
         title={grn.code}
         description={`${grn.supplier} • ${grn.branchName} • ${grn.date}`}
         badge={{

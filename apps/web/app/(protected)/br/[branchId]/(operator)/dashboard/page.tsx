@@ -12,6 +12,7 @@ import { fetchBranchDayStatus } from "./data";
 import {
   buildReadinessItems,
   buildVisibleTileGroups,
+  filterReadinessExceptions,
   type ReadinessHrefs,
 } from "./_lib/command-config";
 import {
@@ -88,18 +89,17 @@ export default async function BranchCommandPage({
   };
 
   return (
-    <BranchOperatorPage
-      title={copy.commandTitle}
-      description={copy.commandDescription(branch.name)}
-    >
+    <BranchOperatorPage title={copy.commandTitle} hideHeaderOnMobile>
       {tileGroups.liveOperations.length > 0 ? (
         <BranchOperatorPanel
           title={copy.liveOperationsTitle}
-          description={copy.liveOperationsDescription}
           headingLevel="h2"
         >
           <BranchCommandTileGrid
-            tiles={tileGroups.liveOperations}
+            tiles={tileGroups.liveOperations.map((tile) => ({
+              ...tile,
+              description: "",
+            }))}
             ctaLabel={copy.openAction}
           />
         </BranchOperatorPanel>
@@ -125,26 +125,12 @@ export default async function BranchCommandPage({
       </Suspense>
 
       {tileGroups.endDay.length > 0 ? (
-        <BranchOperatorPanel
-          title={copy.endDayTitle}
-          description={copy.endDayDescription}
-          headingLevel="h2"
-        >
+        <BranchOperatorPanel title={copy.endDayTitle} headingLevel="h2">
           <BranchCommandTileGrid
-            tiles={tileGroups.endDay}
-            ctaLabel={copy.openAction}
-          />
-        </BranchOperatorPanel>
-      ) : null}
-
-      {tileGroups.drilldown.length > 0 ? (
-        <BranchOperatorPanel
-          title={copy.drilldownTitle}
-          description={copy.drilldownDescription}
-          headingLevel="h2"
-        >
-          <BranchCommandTileGrid
-            tiles={tileGroups.drilldown}
+            tiles={tileGroups.endDay.map((tile) => ({
+              ...tile,
+              description: "",
+            }))}
             ctaLabel={copy.openAction}
           />
         </BranchOperatorPanel>
@@ -179,13 +165,14 @@ async function BranchReadinessSection({
       : day.setupActiveTerminals <= 0
         ? posSettingsHref
         : settingsHref;
-  const readinessItems = buildReadinessItems(day, copy, { ...hrefs, floorHref });
+  const readinessItems = filterReadinessExceptions(
+    buildReadinessItems(day, copy, { ...hrefs, floorHref }),
+  );
+  if (readinessItems.length === 0) {
+    return null;
+  }
   return (
-    <BranchOperatorPanel
-      title={copy.readinessTitle}
-      description={copy.readinessDescription}
-      headingLevel="h2"
-    >
+    <BranchOperatorPanel title={copy.readinessTitle} headingLevel="h2">
       <BranchReadinessList items={readinessItems} />
     </BranchOperatorPanel>
   );

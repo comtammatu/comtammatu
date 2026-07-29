@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
-import { OwnerModuleShell } from "@/components/owner-module-shell";
+import { ControlSurfaceShell } from "@/components/control-surface-shell";
 
 export default async function HRLayout({ children }: { children: ReactNode }) {
   const { session, claims } = await loadAuthState();
 
   return (
-    <OwnerModuleShell
+    <ControlSurfaceShell
       module="hr"
       user={{
         name:
@@ -15,9 +15,9 @@ export default async function HRLayout({ children }: { children: ReactNode }) {
           "",
       }}
       role={claims.user_role}
-      branchId={claims.branch_id}
+      homeBranchId={claims.branch_id}
     >
       {children}
-    </OwnerModuleShell>
+    </ControlSurfaceShell>
   );
 }

@@ -6,7 +6,7 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
-import { StationsClient } from "@/(protected)/branch-settings/_shared/kds/stations-client";
+import { StationsClient } from "@/(protected)/br/_shared/settings/kds/stations-client";
 import {
   mapStationRows,
   type CategoryOption,

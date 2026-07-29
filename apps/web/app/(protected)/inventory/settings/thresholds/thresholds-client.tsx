@@ -19,8 +19,11 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { FormDialog, QuantityField, QuantityInput } from "@/components/form";
-import { AppDetailFooter, AppToolbar } from "@/components/surface";
-import { InventoryListFrame } from "../../_components/inventory-list-frame";
+import {
+  AppDetailFooter,
+  AppListFrame,
+  AppToolbar,
+} from "@/components/surface";
 import { messages } from "@lib/messages";
 import { bulkUpdateIngredientThresholds } from "./actions";
 
@@ -181,7 +184,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
 
   return (
     <>
-    <InventoryListFrame
+    <AppListFrame
       toolbar={
         <AppToolbar variant="inline" className="justify-between">
           <span className="text-xs text-muted-foreground">{copy.hint}</span>
@@ -268,7 +271,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
           </Button>
         }
       />
-    </InventoryListFrame>
+    </AppListFrame>
 
       <FormDialog
         open={bulkOpen}

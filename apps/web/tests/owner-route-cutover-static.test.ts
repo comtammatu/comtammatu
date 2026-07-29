@@ -10,7 +10,7 @@ test("root route owns the Owner overview", () => {
   const rootPage = read("apps/web/app/page.tsx");
   const overview = read("apps/web/app/_components/owner-overview.tsx");
 
-  assert.match(rootPage, /<OwnerModuleShell[\s\S]*module="owner"/);
+  assert.match(rootPage, /<ControlSurfaceShell[\s\S]*module="owner"/);
   assert.match(rootPage, /<OwnerOverview/);
   assert.match(overview, /MODULE_ACL\.finance\.path/);
   assert.match(overview, /MODULE_ACL\.inventory\.path/);

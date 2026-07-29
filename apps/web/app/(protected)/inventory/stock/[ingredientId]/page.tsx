@@ -81,7 +81,6 @@ function OwnerStockIngredientDetail({
     return (
       <AppPage width="wide" scroll>
         <AppPageHeader
-          eyebrow={detailCopy.eyebrow}
           title={ingredient.name}
           description={[ingredient.sku, ingredient.category, ingredient.unit]
             .filter(Boolean)
@@ -116,7 +115,6 @@ function OwnerStockIngredientDetail({
   return (
     <AppPage width="wide" scroll>
       <AppPageHeader
-        eyebrow={detailCopy.eyebrow}
         title={ingredient.name}
         description={[ingredient.sku, ingredient.category, ingredient.unit]
           .filter(Boolean)

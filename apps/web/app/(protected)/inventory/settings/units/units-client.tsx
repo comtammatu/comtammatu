@@ -22,7 +22,11 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
-import { AppSection, AppToolbar } from "@/components/surface";
+import {
+  AppListFrame,
+  AppSection,
+  AppToolbar,
+} from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -35,7 +39,6 @@ import {
 import { FormDialog, TextField } from "@/components/form";
 import { messages } from "@lib/messages";
 import { FORM_VI } from "@comtammatu/shared/messages";
-import { InventoryListFrame } from "../../_components/inventory-list-frame";
 import {
   createUnit,
   deleteUnit,
@@ -284,7 +287,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
         </div>
       </AppSection>
 
-      <InventoryListFrame
+      <AppListFrame
         title={copy.packaging.title}
         description={copy.packaging.description}
         toolbar={
@@ -350,7 +353,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
             </Item>
           )}
         />
-      </InventoryListFrame>
+      </AppListFrame>
 
       <FormDialog
         open={dialogOpen}

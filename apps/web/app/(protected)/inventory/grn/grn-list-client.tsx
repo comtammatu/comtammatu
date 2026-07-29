@@ -39,6 +39,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   AppEmptyState,
+  AppListFrame,
   AppPage,
   AppPageHeader,
   AppSection,
@@ -61,6 +62,7 @@ import { tNav } from "../_lib/dictionary";
 import {
   filterGrnDraftRows,
   filterGrnListRows,
+  GRN_LIST_STATUS_FILTER_VALUES,
   grnDetailHref,
   grnDraftHref,
   grnProcurementStepChip,
@@ -73,7 +75,6 @@ import {
 } from "@lib/inventory/grn-list-model";
 import { messages } from "@lib/messages";
 import {
-  InventoryListFrame,
   inventoryListFilterSelectClassName,
 } from "../_components/inventory-list-frame";
 
@@ -82,13 +83,18 @@ export type { GrnDraftRow, GrnRow } from "@lib/inventory/grn-list-model";
 const grnCopy = messages.inventory.grn;
 const noValue = messages.inventory.common.noValue;
 
-const statusFilterOptions: { value: GrnListStatusFilter; label: string }[] = [
-  { value: "all", label: KDS_VI.filterAll },
-  { value: "review", label: grnCopy.qcQueue },
-  { value: "draft", label: INVENTORY_VI.draft },
-  { value: "confirmed", label: grnCopy.statusConfirmedLong },
-  { value: "cancelled", label: STATES_VI.cancelled },
-];
+const statusFilterLabels: Record<GrnListStatusFilter, string> = {
+  all: KDS_VI.filterAll,
+  review: grnCopy.qcQueue,
+  draft: INVENTORY_VI.draft,
+  confirmed: grnCopy.statusConfirmedLong,
+  cancelled: STATES_VI.cancelled,
+};
+
+const statusFilterOptions = GRN_LIST_STATUS_FILTER_VALUES.map((value) => ({
+  value,
+  label: statusFilterLabels[value],
+}));
 
 export function GrnListClient({
   grns,
@@ -348,9 +354,9 @@ export function GrnListClient({
   );
 
   const listBody = (
-    <InventoryListFrame toolbar={grnsLoadFailed ? undefined : listToolbar}>
+    <AppListFrame toolbar={grnsLoadFailed ? undefined : listToolbar}>
       {listTable}
-    </InventoryListFrame>
+    </AppListFrame>
   );
 
   const draftsContent = draftsLoadFailed ? (
@@ -412,7 +418,6 @@ export function GrnListClient({
   return (
     <AppPage width="xwide" density="compact" contentClassName="max-md:max-w-xl">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={tNav("grn", "navigation")}
         actions={desktopActions}
       />
@@ -609,7 +614,7 @@ function GrnDraftsTab({
   }
 
   return (
-    <InventoryListFrame
+    <AppListFrame
       toolbar={
         <AppToolbar
           variant="inline"
@@ -664,7 +669,7 @@ function GrnDraftsTab({
           />
         )}
       />
-    </InventoryListFrame>
+    </AppListFrame>
   );
 }
 

@@ -36,6 +36,7 @@ import {
 import { matchesSearch } from "@lib/search";
 import type { BranchForTransfer } from "@lib/inventory/transfer-create-model";
 import {
+  AppListFrame,
   AppPage,
   AppPageHeader,
   AppToolbar,
@@ -50,7 +51,6 @@ import {
   type TransferTab,
 } from "./transfer-list-model";
 import {
-  InventoryListFrame,
   inventoryListFilterSelectWideClassName,
 } from "../_components/inventory-list-frame";
 
@@ -324,9 +324,9 @@ export function TransfersListClient({
     />
   );
   const desktopList = (
-    <InventoryListFrame toolbar={desktopToolbar}>
+    <AppListFrame toolbar={desktopToolbar}>
       {desktopTable}
-    </InventoryListFrame>
+    </AppListFrame>
   );
 
   if (embedded) {
@@ -336,7 +336,6 @@ export function TransfersListClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={messages.inventory.shell.moduleName}
         title={pageTitle}
         actions={desktopCreateAction}
       />

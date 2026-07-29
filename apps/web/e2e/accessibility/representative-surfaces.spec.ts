@@ -191,6 +191,106 @@ test("checkout approvals has no serious or critical axe violations", async ({
   }
 });
 
+test("branch settings hub has no serious or critical axe violations", async ({
+  browser,
+}) => {
+  const { branchId } = await getManagerProfile();
+  const context = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    storageState: E2E_AUTH_STORAGE_MANAGER,
+  });
+  const page = await context.newPage();
+  try {
+    await verifyAtRepresentativeViewports(
+      page,
+      `/br/${branchId}/settings`,
+      "branch settings hub",
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("branch stock landing has no serious or critical axe violations", async ({
+  browser,
+}) => {
+  const { branchId } = await getManagerProfile();
+  const context = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    storageState: E2E_AUTH_STORAGE_MANAGER,
+  });
+  const page = await context.newPage();
+  try {
+    await verifyAtRepresentativeViewports(
+      page,
+      `/br/${branchId}/stock`,
+      "branch stock landing",
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("branch command dashboard has no serious or critical axe violations", async ({
+  browser,
+}) => {
+  const { branchId } = await getManagerProfile();
+  const context = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    storageState: E2E_AUTH_STORAGE_MANAGER,
+  });
+  const page = await context.newPage();
+  try {
+    await verifyAtRepresentativeViewports(
+      page,
+      `/br/${branchId}/dashboard`,
+      "branch command dashboard",
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("branch team board has no serious or critical axe violations", async ({
+  browser,
+}) => {
+  const { branchId } = await getManagerProfile();
+  const context = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    storageState: E2E_AUTH_STORAGE_MANAGER,
+  });
+  const page = await context.newPage();
+  try {
+    await verifyAtRepresentativeViewports(
+      page,
+      `/br/${branchId}/team`,
+      "branch team board",
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("branch shift hub has no serious or critical axe violations", async ({
+  browser,
+}) => {
+  const { branchId } = await getManagerProfile();
+  const context = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    storageState: E2E_AUTH_STORAGE_MANAGER,
+  });
+  const page = await context.newPage();
+  try {
+    await verifyAtRepresentativeViewports(
+      page,
+      `/br/${branchId}/shift`,
+      "branch shift hub",
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test("owner inventory list has no serious or critical axe violations", async ({
   browser,
 }) => {

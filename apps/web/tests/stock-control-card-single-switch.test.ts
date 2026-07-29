@@ -7,9 +7,9 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const STOCK_CONTROL_CARD =
-  "apps/web/app/(protected)/branch-settings/_shared/pos/stock-control-card.tsx";
+  "apps/web/app/(protected)/br/_shared/settings/pos/stock-control-card.tsx";
 const ACTIONS =
-  "apps/web/app/(protected)/branch-settings/_shared/pos/actions.ts";
+  "apps/web/app/(protected)/br/_shared/settings/pos/actions.ts";
 const PAGE =
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx";
 const FEATURE_FLAGS = "apps/web/app/(protected)/inventory/_lib/feature-flags.ts";

@@ -214,7 +214,6 @@ export function StocktakeCountClient({
 
   const header = (
     <AppPageHeader
-      eyebrow={messages.inventory.stocktake.title}
       title={`${messages.inventory.stocktake.startCounting} #${sessionId}`}
       description={`CN #${branchId} · Round R${currentRound}`}
     />

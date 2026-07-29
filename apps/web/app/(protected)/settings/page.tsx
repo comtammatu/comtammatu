@@ -27,7 +27,6 @@ export default async function SettingsPage() {
 
   return (
     <SettingsPageFrame
-      eyebrow={copy.settingsHomeEyebrow}
       title={copy.settingsHomeTitle}
       description={copy.settingsHomeDescription}
       showSettingsHomeLink={false}

@@ -199,8 +199,6 @@ export interface BranchQueueCounts {
   pendingLeaveRequests: number | null;
   pendingCountSlips: number | null;
   pendingWaste: number | null;
-  draftGrns: number | null;
-  draftProductionOrders: number | null;
   inboundTransfers: number | null;
 }
 
@@ -221,8 +219,6 @@ export async function fetchBranchQueueCounts(
     leavePermission,
     countPermission,
     wastePermission,
-    grnPermission,
-    productionPermission,
     transferPermission,
   ] = await Promise.all([
     supabase.rpc("has_permission", {
@@ -243,14 +239,6 @@ export async function fetchBranchQueueCounts(
     }),
     supabase.rpc("has_permission", {
       p_branch_id: branchId,
-      p_key: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
-    }),
-    supabase.rpc("has_permission", {
-      p_branch_id: branchId,
-      p_key: PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
-    }),
-    supabase.rpc("has_permission", {
-      p_branch_id: branchId,
       p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
     }),
   ]);
@@ -259,8 +247,6 @@ export async function fetchBranchQueueCounts(
     leaveRes,
     countRes,
     wasteRes,
-    draftGrnRes,
-    draftProductionRes,
     inboundTransferRes,
   ] = await Promise.all([
     checkoutPermission.data === true
@@ -292,22 +278,6 @@ export async function fetchBranchQueueCounts(
           .eq("issue_type", "writeoff")
           .eq("approval_status", "pending")
       : Promise.resolve(null),
-    grnPermission.data === true
-      ? supabase
-          .from("goods_received_notes")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", branchId)
-          .eq("status", "draft")
-      : Promise.resolve(null),
-    productionPermission.data === true
-      ? supabase
-          .from("production_runs")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", claims.tenant_id)
-          .eq("branch_id", branchId)
-          .in("status", ["draft", "in_progress"])
-      : Promise.resolve(null),
     transferPermission.data === true
       ? supabase
           .from("stock_transfers")
@@ -327,10 +297,6 @@ export async function fetchBranchQueueCounts(
       : null,
     pendingCountSlips: countRes ? (countRes.count ?? 0) : null,
     pendingWaste: wasteRes ? (wasteRes.count ?? 0) : null,
-    draftGrns: draftGrnRes ? (draftGrnRes.count ?? 0) : null,
-    draftProductionOrders: draftProductionRes
-      ? (draftProductionRes.count ?? 0)
-      : null,
     inboundTransfers: inboundTransferRes
       ? (inboundTransferRes.count ?? 0)
       : null,

@@ -1106,6 +1106,61 @@ export type Database = {
           },
         ]
       }
+      branch_revenue_targets: {
+        Row: {
+          branch_id: number
+          created_at: string
+          id: number
+          target_amount: number
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+          year_month: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          id?: number
+          target_amount: number
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+          year_month: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          id?: number
+          target_amount?: number
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_revenue_targets_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_revenue_targets_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_revenue_targets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_trusted_egress_ips: {
         Row: {
           branch_id: number
@@ -5103,6 +5158,7 @@ export type Database = {
           name: string
           paper_width_mm: number
           role: string
+          sort_order: number
           tenant_id: number
           updated_at: string
         }
@@ -5118,6 +5174,7 @@ export type Database = {
           name: string
           paper_width_mm?: number
           role: string
+          sort_order?: number
           tenant_id: number
           updated_at?: string
         }
@@ -5133,6 +5190,7 @@ export type Database = {
           name?: string
           paper_width_mm?: number
           role?: string
+          sort_order?: number
           tenant_id?: number
           updated_at?: string
         }
@@ -10272,6 +10330,17 @@ export type Database = {
           stock_capacity: number
         }[]
       }
+      get_branch_revenue_target_progress: {
+        Args: { p_branch_id: number; p_year_month?: string }
+        Returns: {
+          branch_id: number
+          gap_amount: number
+          net_revenue_mtd: number
+          progress_pct: number
+          target_amount: number
+          year_month: string
+        }[]
+      }
       get_cash_ledger_movement_since: {
         Args: { p_since: string }
         Returns: Json
@@ -10834,6 +10903,28 @@ export type Database = {
           pending_unfinalized_demand: number
           sold_today: number
           stock_capacity: number
+        }[]
+      }
+      list_branch_revenue_target_progress: {
+        Args: { p_year_month: string }
+        Returns: {
+          branch_id: number
+          branch_name: string
+          gap_amount: number
+          net_revenue: number
+          progress_pct: number
+          target_amount: number
+          year_month: string
+        }[]
+      }
+      list_branch_revenue_targets: {
+        Args: { p_year_month: string }
+        Returns: {
+          branch_id: number
+          branch_name: string
+          prior_month_net_revenue: number
+          target_amount: number
+          year_month: string
         }[]
       }
       list_notifications: {
@@ -11754,6 +11845,10 @@ export type Database = {
           p_tax_code: string
         }
         Returns: undefined
+      }
+      upsert_branch_revenue_targets: {
+        Args: { p_rows: Json; p_year_month: string }
+        Returns: Json
       }
       upsert_ingredient_catalog: {
         Args: {

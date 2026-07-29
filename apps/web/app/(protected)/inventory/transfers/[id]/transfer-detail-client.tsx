@@ -599,7 +599,6 @@ export function TransferDetailClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow="Kho hàng"
         title={transfer.code}
         description={copy.routeMeta(
           transfer.fromBranch,

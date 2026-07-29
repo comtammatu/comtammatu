@@ -223,6 +223,7 @@ SET is_delegable_to_staff = key = ANY (ARRAY[
   'inventory:stocktake_complete',
   'inventory:stocktake_create',
   'inventory:stocktake_recount',
+  'inventory:transfer_create',
   'inventory:transfer_receive',
   'inventory:waste_approve',
   'inventory:write',

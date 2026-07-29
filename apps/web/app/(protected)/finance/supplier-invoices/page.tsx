@@ -35,7 +35,6 @@ export default async function FinanceSupplierInvoicesPage({
   const renderMissingInvoice = () => (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
       />
@@ -66,7 +65,6 @@ export default async function FinanceSupplierInvoicesPage({
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader
-          eyebrow={copy.eyebrow}
           title={copy.title}
           description={copy.description}
         />
@@ -143,7 +141,6 @@ export default async function FinanceSupplierInvoicesPage({
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader
-          eyebrow={copy.eyebrow}
           title={copy.title}
           description={copy.description}
         />
@@ -237,7 +234,6 @@ export default async function FinanceSupplierInvoicesPage({
       tenantId={authState.claims.tenant_id}
       canPaySupplier={canPaySupplier}
       canAttachVatEvidence={canAttachVatEvidence}
-      eyebrow={copy.eyebrow}
       description={copy.description}
     />
   );

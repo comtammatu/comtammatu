@@ -52,6 +52,7 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   filterGrnListRows,
+  GRN_LIST_STATUS_FILTER_VALUES,
   grnDetailHref,
   grnProcurementStepChip,
   grnProcurementStepChipLabel,
@@ -93,25 +94,18 @@ type BranchGrnDraftRow = Pick<
   | "qcIssueCount"
 >;
 
-const statusFilterOptions: {
-  value: GrnListStatusFilter;
-  label: string;
-}[] = [
-  { value: "all", label: KDS_VI.filterAll },
-  { value: "review", label: messages.inventory.grn.qcQueue },
-  {
-    value: "draft",
-    label: getStatusBadgeMeta("inventory", "draft").label,
-  },
-  {
-    value: "confirmed",
-    label: getStatusBadgeMeta("inventory", "confirmed").label,
-  },
-  {
-    value: "cancelled",
-    label: getStatusBadgeMeta("inventory", "cancelled").label,
-  },
-];
+const statusFilterLabels: Record<GrnListStatusFilter, string> = {
+  all: KDS_VI.filterAll,
+  review: messages.inventory.grn.qcQueue,
+  draft: getStatusBadgeMeta("inventory", "draft").label,
+  confirmed: getStatusBadgeMeta("inventory", "confirmed").label,
+  cancelled: getStatusBadgeMeta("inventory", "cancelled").label,
+};
+
+const statusFilterOptions = GRN_LIST_STATUS_FILTER_VALUES.map((value) => ({
+  value,
+  label: statusFilterLabels[value],
+}));
 
 function BranchGrnDraftItem({
   branchId,

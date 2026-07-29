@@ -9,7 +9,8 @@ import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
 import { createStockRequestDraft } from "@/(protected)/inventory/stock-request-actions";
 import { messages } from "@lib/messages";
 
-const copy = messages.inventory.stockRequests.branch;
+const stockRequestCopy = messages.inventory.stockRequests;
+const copy = stockRequestCopy.branch;
 
 export default async function BranchStockRequestsPage({
   params,
@@ -85,7 +86,9 @@ export default async function BranchStockRequestsPage({
                 }
               >
                 <span>{row.request_number}</span>
-                <span className="text-muted-foreground">{row.status}</span>
+                <span className="text-muted-foreground">
+                  {stockRequestCopy.statusLabel(row.status)}
+                </span>
               </Button>
             </li>
           ))}
