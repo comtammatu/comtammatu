@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
+import { stopRealtimeAuthorizationRejoin } from "../app/_hooks/use-realtime-channel";
 import { normalizePgDumpSql } from "./sql-test-utils";
 
 // The realtime "branch ops bus" is a cross-file contract: the DB trigger
@@ -95,22 +95,11 @@ const baseline = normalizePgDumpSql(
 
 const branchOpsPolicyMigration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260729160000_restore_branch_ops_realtime_policy.sql",
+    "../../../supabase/migrations/20260729250100_restore_branch_ops_realtime_policy.sql",
     import.meta.url,
   ),
   "utf8",
 );
-
-// Active install chain: baseline + every forward migration under
-// supabase/migrations. The archive is NOT the install path, so policy
-// assertions must scan the active chain, not the archive. This guard
-// catches the re-baseline regression that dropped branch_ops_receive.
-const activeMigrationsDir = fileURLToPath(
-  new URL("../../../supabase/migrations/", import.meta.url),
-);
-const activeMigrationSources = readdirSync(activeMigrationsDir)
-  .filter((name) => name.endsWith(".sql"))
-  .map((name) => readFileSync(join(activeMigrationsDir, name), "utf8"));
 
 const posLayout = readFileSync(
   new URL("../app/(protected)/br/[branchId]/pos/layout.tsx", import.meta.url),
@@ -210,47 +199,66 @@ test("realtime.messages receive policy is scoped to branch ops topics", () => {
   );
   assert.match(
     branchOpsPolicyMigration,
-    /realtime\.topic\(\)\s+~\s+'\^branch:\[1-9\]\[0-9\]\*:ops\$'/,
+    /CASE[\s\S]*realtime\.topic\(\)\s+~\s+'\^branch:\[1-9\]\[0-9\]\{0,18\}:ops\$'/,
   );
-  assert.match(branchOpsPolicyMigration, /can_read_branch_ops/);
+  assert.match(
+    branchOpsPolicyMigration,
+    /9223372036854775807::numeric[\s\S]*can_read_branch_ops\([\s\S]*::bigint/,
+  );
 });
 
-test("branch_ops_receive policy exists in the active migration chain, not only the archive", () => {
-  // Regression guard: every re-baseline must re-ship the realtime.messages
-  // receive policy as a forward migration, or the branch ops bus goes dark
-  // and the client floods Unauthorized JOINs.
-  const carriesPolicy = activeMigrationSources.some((source) =>
-    /CREATE POLICY\s+"?branch_ops_receive"?\s+ON realtime\.messages/i.test(
-      source,
-    ),
-  );
+test("authorization rejection stops rejoin while transport errors stay retryable", () => {
+  const channel = {} as RealtimeChannel;
+  let removed = 0;
+  let evicted = 0;
+  const supabase = {
+    removeChannel(candidate: RealtimeChannel) {
+      assert.equal(candidate, channel);
+      removed += 1;
+      return Promise.resolve("ok" as const);
+    },
+    realtime: {
+      _remove(candidate: RealtimeChannel) {
+        assert.equal(candidate, channel);
+        evicted += 1;
+      },
+    },
+  } as unknown as Pick<SupabaseClient, "realtime" | "removeChannel">;
+
   assert.equal(
-    carriesPolicy,
+    stopRealtimeAuthorizationRejoin(
+      supabase,
+      channel,
+      new Error("Unauthorized channel topic"),
+    ),
     true,
-    "branch_ops_receive policy must exist in supabase/migrations (active chain)",
   );
-});
+  assert.equal(removed, 1);
+  assert.equal(evicted, 1);
 
-test("branch ops clients stop the Phoenix rejoin loop on terminal authorization reject", () => {
-  // Without removeChannel on a CHANNEL_ERROR authorization reject, Phoenix's
-  // rejoinTimer stays armed and the client re-JOINs the rejected private
-  // topic forever, flooding the broker with Unauthorized.
-  for (const [label, source] of [
-    ["use-branch-ops-events", branchOpsChannel],
-    ["use-pos-menu-sync", posMenuClient],
-  ] as const) {
-    assert.match(source, /"CHANNEL_ERROR"/, `${label} handles CHANNEL_ERROR`);
-    assert.match(
-      source,
-      /\/unauthorized\|permission\|denied\/i/,
-      `${label} detects authorization reject`,
-    );
-    assert.match(
-      source,
-      /supabase\.removeChannel\(channel\)/,
-      `${label} tears down the channel to stop rejoin`,
-    );
-  }
+  assert.equal(
+    stopRealtimeAuthorizationRejoin(
+      supabase,
+      channel,
+      new Error("channel error", {
+        cause: { reason: "permission denied" },
+      }),
+    ),
+    true,
+  );
+  assert.equal(removed, 2);
+  assert.equal(evicted, 2);
+
+  assert.equal(
+    stopRealtimeAuthorizationRejoin(
+      supabase,
+      channel,
+      new Error("connection lost"),
+    ),
+    false,
+  );
+  assert.equal(removed, 2);
+  assert.equal(evicted, 2);
 });
 
 test("branch ops topics require an active profile and active assigned branch", () => {

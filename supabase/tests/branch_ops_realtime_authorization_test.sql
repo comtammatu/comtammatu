@@ -19,7 +19,43 @@ DECLARE
   v_owner UUID;
   v_permission TEXT;
   v_definition TEXT;
+  v_select_policy_count INTEGER;
+  v_policy_permissive TEXT;
+  v_policy_roles NAME[];
+  v_policy_qual TEXT;
 BEGIN
+  SELECT count(*)
+    INTO v_select_policy_count
+  FROM pg_policies
+  WHERE schemaname = 'realtime'
+    AND tablename = 'messages'
+    AND cmd = 'SELECT';
+
+  IF v_select_policy_count <> 1 THEN
+    RAISE EXCEPTION
+      'TEST FAILED: realtime.messages must have exactly one SELECT policy, found %',
+      v_select_policy_count;
+  END IF;
+
+  SELECT permissive, roles, qual
+    INTO v_policy_permissive, v_policy_roles, v_policy_qual
+  FROM pg_policies
+  WHERE schemaname = 'realtime'
+    AND tablename = 'messages'
+    AND policyname = 'branch_ops_receive'
+    AND cmd = 'SELECT';
+
+  IF NOT FOUND
+     OR v_policy_permissive <> 'PERMISSIVE'
+     OR v_policy_roles <> ARRAY['authenticated']::name[]
+     OR v_policy_qual NOT ILIKE '%CASE%'
+     OR v_policy_qual NOT LIKE '%^branch:[1-9][0-9]{0,18}:ops$%'
+     OR v_policy_qual NOT ILIKE '%9223372036854775807%'
+     OR v_policy_qual NOT ILIKE '%can_read_branch_ops%' THEN
+    RAISE EXCEPTION
+      'TEST FAILED: final branch_ops_receive policy is missing or widened';
+  END IF;
+
   SELECT pr.tenant_id, pr.id, pr.branch_id
     INTO v_tenant, v_staff, v_staff_branch
   FROM public.profiles pr
@@ -206,7 +242,7 @@ BEGIN
   END IF;
 
   RAISE NOTICE
-    'TEST PASSED: Branch Realtime follows active Owner/assigned-branch scope';
+    'TEST PASSED: Branch Realtime policy and active scope are correct';
 END;
 $$;
 

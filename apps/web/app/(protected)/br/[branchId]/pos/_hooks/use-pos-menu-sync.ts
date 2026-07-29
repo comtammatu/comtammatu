@@ -5,7 +5,10 @@ import {
   canSubscribeBranchOpsTopic,
   extractClaimsFromAccessToken,
 } from "@comtammatu/shared/auth";
-import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import {
+  stopRealtimeAuthorizationRejoin,
+  useRealtimeChannel,
+} from "@/_hooks/use-realtime-channel";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import { fetchMenuForPos } from "../actions";
 import type { MenuCategory } from "../pos-menu-types";
@@ -70,16 +73,7 @@ export function usePosMenuSync({ branchId, setCategories }: UsePosMenuSyncArgs) 
       });
       channel.subscribe((status, err) => {
         if (status === "CHANNEL_ERROR") {
-          // Terminal authorization reject (RLS denied read on
-          // realtime.messages) leaves Phoenix's rejoinTimer armed, so the
-          // client re-JOINs forever and floods the broker with Unauthorized.
-          // removeChannel tears the channel down and resets the timer.
-          const text = `${err?.message ?? ""} ${
-            err?.cause ? JSON.stringify(err.cause) : ""
-          }`;
-          if (/unauthorized|permission|denied/i.test(text)) {
-            void supabase.removeChannel(channel);
-          }
+          stopRealtimeAuthorizationRejoin(supabase, channel, err);
           return;
         }
         if (status !== "SUBSCRIBED") return;
