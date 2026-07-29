@@ -73,8 +73,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function getSupplierPayments(row: Record<string, unknown>) {
   const raw = row.supplier_payments;
-  if (Array.isArray(raw)) return raw.filter(isRecord);
-  return isRecord(raw) ? [raw] : [];
+  const direct = Array.isArray(raw)
+    ? raw.filter(isRecord)
+    : isRecord(raw)
+      ? [raw]
+      : [];
+  const allocated = Array.isArray(row.supplier_payment_allocations)
+    ? row.supplier_payment_allocations.flatMap((allocation) => {
+        if (!isRecord(allocation)) return [];
+        const payment = allocation.supplier_payments;
+        if (Array.isArray(payment)) return payment.filter(isRecord);
+        return isRecord(payment) ? [payment] : [];
+      })
+    : [];
+  return [...new Map([...direct, ...allocated].map((item) => [item.id, item])).values()];
 }
 
 function mapSupplierPayment(
@@ -143,6 +155,22 @@ export function mapSupplierInvoiceRow(
       return dateDiff !== 0 ? dateDiff : right.id - left.id;
     });
 
+  const allocatedReceipts = Array.isArray(
+    row.supplier_invoice_receipt_allocations,
+  )
+    ? row.supplier_invoice_receipt_allocations.flatMap((allocation) => {
+        if (!isRecord(allocation)) return [];
+        const receipt = allocation.goods_received_notes;
+        const resolved = Array.isArray(receipt) ? receipt[0] : receipt;
+        return isRecord(resolved) ? [resolved] : [];
+      })
+    : [];
+  const allocatedReceiptCodes = allocatedReceipts
+    .map((receipt) => String(receipt.grn_number ?? ""))
+    .filter(Boolean);
+  const headerReceiptCode =
+    ((row.goods_received_notes as Record<string, unknown>)
+      ?.grn_number as string) ?? null;
   return {
     id: row.id as number,
     supplierId: Number(row.supplier_id ?? 0),
@@ -152,8 +180,9 @@ export function mapSupplierInvoiceRow(
     supplierName:
       ((row.suppliers as Record<string, unknown>)?.name as string) ?? "\u2014",
     grnCode:
-      ((row.goods_received_notes as Record<string, unknown>)
-        ?.grn_number as string) ?? null,
+      allocatedReceiptCodes.length > 1
+        ? `${allocatedReceiptCodes[0]} +${allocatedReceiptCodes.length - 1}`
+        : (allocatedReceiptCodes[0] ?? headerReceiptCode),
     poCode:
       ((row.purchase_orders as Record<string, unknown>)?.po_number as string) ??
       null,

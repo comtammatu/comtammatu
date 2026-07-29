@@ -6,7 +6,11 @@ import { MODULE_ACL } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "@/_lib/auth";
 import { messages } from "@lib/messages";
-import { monthStartFromIsoDate } from "../_lib/revenue-target";
+import {
+  monthStartFromIsoDate,
+  normalizeRevenueRewardTiers,
+  type RevenueRewardTier,
+} from "../_lib/revenue-target";
 
 const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 const targetCopy = messages.finance.revenueTargets;
@@ -16,9 +20,40 @@ const yearMonthSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .transform((value) => monthStartFromIsoDate(value));
 
+const rewardTierSchema = z
+  .object({
+    threshold_pct: z.coerce.number().positive().max(1000),
+    reward_type: z.enum(["fixed_amount", "revenue_percent"]),
+    reward_value: z.coerce.number().positive().max(1_000_000_000_000),
+  })
+  .superRefine((tier, ctx) => {
+    if (
+      (tier.reward_type === "fixed_amount" &&
+        !Number.isInteger(tier.reward_value)) ||
+      (tier.reward_type === "revenue_percent" && tier.reward_value > 100)
+    ) {
+      ctx.addIssue({ code: "custom", message: "invalid_reward_value" });
+    }
+  });
+
+const rewardTiersSchema = z
+  .array(rewardTierSchema)
+  .max(10)
+  .superRefine((tiers, ctx) => {
+    if (
+      new Set(tiers.map((tier) => tier.threshold_pct)).size !== tiers.length
+    ) {
+      ctx.addIssue({ code: "custom", message: "duplicate_reward_threshold" });
+    }
+  })
+  .transform((tiers) =>
+    [...tiers].sort((a, b) => a.threshold_pct - b.threshold_pct),
+  );
+
 const upsertRowSchema = z.object({
   branch_id: z.coerce.number().int().positive(),
   target_amount: z.coerce.number().positive().max(1_000_000_000_000),
+  reward_tiers: rewardTiersSchema.default([]),
 });
 
 const upsertSchema = z.object({
@@ -32,6 +67,7 @@ export type BranchRevenueTargetRow = {
   yearMonth: string;
   targetAmount: number | null;
   priorMonthNetRevenue: number;
+  rewardTiers: RevenueRewardTier[];
 };
 
 export type BranchRevenueTargetProgressRow = {
@@ -79,29 +115,60 @@ export async function listBranchRevenueTargets(
     return { success: false, error: targetCopy.errors.forbidden };
   }
 
-  const { data, error } = await ctx.supabase.rpc("list_branch_revenue_targets", {
-    p_year_month: parsed.data,
-  });
+  const [targetResult, rewardResult] = await Promise.all([
+    ctx.supabase.rpc("list_branch_revenue_targets", {
+      p_year_month: parsed.data,
+    }),
+    ctx.supabase.rpc("list_branch_revenue_target_reward_tiers", {
+      p_year_month: parsed.data,
+    }),
+  ]);
 
-  if (error) {
-    console.error("[finance:targets:list] RPC failed", error.code);
+  if (targetResult.error || rewardResult.error) {
+    console.error(
+      "[finance:targets:list] load failed",
+      targetResult.error?.code ?? rewardResult.error?.code,
+    );
     return { success: false, error: targetCopy.errors.loadFailed };
   }
 
-  const rows = (data ?? []).map((row) => ({
-    branchId: toNumber(row.branch_id),
-    branchName: row.branch_name,
-    yearMonth: row.year_month,
-    targetAmount: toNullableNumber(row.target_amount),
-    priorMonthNetRevenue: toNumber(row.prior_month_net_revenue),
-  }));
+  const rewardsByBranch = new Map<number, RevenueRewardTier[]>();
+  for (const row of rewardResult.data ?? []) {
+    const parsedTiers = rewardTiersSchema.safeParse(row.reward_tiers);
+    if (!parsedTiers.success) {
+      return { success: false, error: targetCopy.errors.loadFailed };
+    }
+    const normalized = normalizeRevenueRewardTiers(
+      parsedTiers.data.map((tier) => ({
+        thresholdPct: tier.threshold_pct,
+        rewardType: tier.reward_type,
+        rewardValue: tier.reward_value,
+      })),
+    );
+    if (!normalized) {
+      return { success: false, error: targetCopy.errors.loadFailed };
+    }
+    rewardsByBranch.set(toNumber(row.branch_id), normalized);
+  }
+
+  const rows = (targetResult.data ?? []).map((row) => {
+    const branchId = toNumber(row.branch_id);
+    return {
+      branchId,
+      branchName: row.branch_name,
+      yearMonth: row.year_month,
+      targetAmount: toNullableNumber(row.target_amount),
+      priorMonthNetRevenue: toNumber(row.prior_month_net_revenue),
+      rewardTiers: rewardsByBranch.get(branchId) ?? [],
+    };
+  });
 
   return { success: true, data: rows };
 }
 
-export async function upsertBranchRevenueTargets(input: unknown): Promise<
-  ActionResult<{ updated: number; yearMonth: string }>
-> {
+export async function upsertBranchRevenueTargets(
+  input: unknown,
+): Promise<ActionResult<{ updated: number; yearMonth: string }>> {
   const parsed = upsertSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: targetCopy.errors.invalidPayload };
@@ -112,10 +179,13 @@ export async function upsertBranchRevenueTargets(input: unknown): Promise<
     return { success: false, error: targetCopy.errors.forbidden };
   }
 
-  const { data, error } = await ctx.supabase.rpc("upsert_branch_revenue_targets", {
-    p_year_month: parsed.data.year_month,
-    p_rows: parsed.data.rows,
-  });
+  const { data, error } = await ctx.supabase.rpc(
+    "upsert_branch_revenue_targets",
+    {
+      p_year_month: parsed.data.year_month,
+      p_rows: parsed.data.rows,
+    },
+  );
 
   if (error) {
     console.error("[finance:targets:upsert] RPC failed", error.code);

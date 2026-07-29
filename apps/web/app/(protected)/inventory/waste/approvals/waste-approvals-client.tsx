@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Textarea } from "@comtammatu/ui/components/textarea";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Check as IconCheck, X as IconX } from "lucide-react";
@@ -97,6 +97,7 @@ function WasteApprovalCard({
 }) {
   const router = useRouter();
   const [note, setNote] = useState("");
+  const [rejectOpen, setRejectOpen] = useState(false);
   const [pending, setPending] = useState<"approved" | "rejected" | null>(null);
   const [, startTransition] = useTransition();
   const copy = messages.inventory.waste.approvals;
@@ -111,7 +112,7 @@ function WasteApprovalCard({
       const res = await approveWaste({
         issueId: row.issueId,
         decision,
-        note: note || undefined,
+        note: decision === "rejected" ? note.trim() : undefined,
       });
       setPending(null);
       if (!res.success) {
@@ -123,6 +124,8 @@ function WasteApprovalCard({
           ? toastApproveSuccess(row.issueNumber)
           : toastRejectSuccess(row.issueNumber),
       );
+      setRejectOpen(false);
+      setNote("");
       onResolved(row.issueId);
       router.refresh();
     });
@@ -201,9 +204,7 @@ function WasteApprovalCard({
                     : ""}
                   {typeof it.monetary?.rolling15MinSum === "number" &&
                   it.monetary.rolling15MinSum > 0
-                    ? copy.rolling15m(
-                        formatVND(it.monetary.rolling15MinSum),
-                      )
+                    ? copy.rolling15m(formatVND(it.monetary.rolling15MinSum))
                     : ""}
                 </div>
               </div>
@@ -241,29 +242,15 @@ function WasteApprovalCard({
         </p>
       ) : null}
 
-      <div>
-        <Textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          disabled={pending !== null || row.isSelfCreated}
-          rows={2}
-          placeholder={copy.reviewNotePlaceholder}
-        />
-      </div>
-
       <div className="flex justify-end gap-2">
         <Button
           variant="outline"
           size="default"
-          onClick={() => handleDecision("rejected")}
+          onClick={() => setRejectOpen(true)}
           disabled={pending !== null || row.isSelfCreated}
           className="text-destructive"
         >
-          {pending === "rejected" ? (
-            <Spinner />
-          ) : (
-            <IconX className="size-4" />
-          )}
+          {pending === "rejected" ? <Spinner /> : <IconX className="size-4" />}
           {copy.reject}
         </Button>
         <Button
@@ -279,6 +266,28 @@ function WasteApprovalCard({
           {copy.approve}
         </Button>
       </div>
+      <ReasonConfirmDialog
+        open={rejectOpen}
+        onOpenChange={(open) => {
+          setRejectOpen(open);
+          if (!open && pending === null) setNote("");
+        }}
+        title={copy.rejectTitle}
+        description={row.issueNumber}
+        reasonId={`waste-reject-reason-${row.issueId}`}
+        reason={note}
+        onReasonChange={setNote}
+        reasonLabel={copy.rejectReason}
+        reasonPlaceholder={copy.reviewNotePlaceholder}
+        reasonMinLength={5}
+        reasonTextareaProps={{ maxLength: 500, autoFocus: true }}
+        cancelLabel={copy.rejectCancel}
+        cancelDisabled={pending !== null}
+        confirmLabel={copy.reject}
+        confirmVariant="destructive"
+        isPending={pending === "rejected"}
+        onConfirm={() => handleDecision("rejected")}
+      />
     </AppSection>
   );
 }

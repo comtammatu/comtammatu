@@ -43,10 +43,10 @@ test("Branch stock has no route or link to retired recipe administration", () =>
   }
 });
 
-test("recipe administration remains reachable from the Owner inventory surface", () => {
+test("menu recipe administration remains reachable from the Owner inventory surface", () => {
   const ownerRecipePage = resolve(
     repoRoot,
-    "apps/web/app/(protected)/inventory/recipes/page.tsx",
+    "apps/web/app/(protected)/inventory/menu-recipes/page.tsx",
   );
   const ownerInventoryNav = readFileSync(
     resolve(
@@ -57,5 +57,5 @@ test("recipe administration remains reachable from the Owner inventory surface",
   );
 
   assert.equal(existsSync(ownerRecipePage), true);
-  assert.match(ownerInventoryNav, /href: "\/inventory\/recipes"/);
+  assert.match(ownerInventoryNav, /href: "\/inventory\/menu-recipes"/);
 });

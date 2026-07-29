@@ -39,7 +39,7 @@ test("Owner surface Inventory entry surfaces use the shared field contract", () 
     "app/(protected)/inventory/stocktake/new/new-session-client.tsx",
   );
   const recipeDialog = readWorkspaceFile(
-    "app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
+    "app/(protected)/inventory/menu-recipes/menu-recipe-line-dialog.tsx",
   );
   const transferDialog = readWorkspaceFile(
     "app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
@@ -54,7 +54,7 @@ test("Owner surface Inventory entry surfaces use the shared field contract", () 
   assert.match(productionRecipe, /<ComboboxField/);
   assert.match(newStocktake, /controlId="stocktake-branch"/);
   assert.match(newStocktake, /size=\{embedded \? "touch" : "field"\}/);
-  assert.match(recipeDialog, /<SelectField[\s\S]*?id="recipe-menu-item"/);
+  assert.match(recipeDialog, /<SelectField[\s\S]*?id="menu-recipe-menu-item"/);
   assert.match(
     transferDialog,
     /<FormField[\s\S]*?controlId="owner-transfer-source-location"/,

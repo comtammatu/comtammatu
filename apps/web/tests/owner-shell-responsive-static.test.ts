@@ -294,7 +294,7 @@ test("Owner page-header actions use named button sizes", () => {
 
   for (const path of [
     "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx",
-    "apps/web/app/(protected)/inventory/recipes/recipes-client.tsx",
+    "apps/web/app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx",
     "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx",
   ]) {
     const source = read(path);

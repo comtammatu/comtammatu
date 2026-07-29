@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { z } from "zod";
-import { FormDialog, TextField, TextareaField } from "@/components/form";
+import { FormDialog, TextField } from "@/components/form";
 import { createSupplier, updateSupplier } from "../procurement-actions";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -14,6 +14,7 @@ export interface SupplierRow {
   address: string | null;
   notes: string | null;
   is_active: boolean;
+  ingredient_count?: number;
 }
 
 const supplierSchema = z.object({
@@ -36,11 +37,6 @@ const supplierSchema = z.object({
     .trim()
     .max(300, { error: "Địa chỉ tối đa 300 ký tự" })
     .optional(),
-  notes: z
-    .string()
-    .trim()
-    .max(500, { error: "Ghi chú tối đa 500 ký tự" })
-    .optional(),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -51,7 +47,6 @@ function toFormValues(supplier: SupplierRow | null): SupplierFormValues {
     tax_code: supplier?.tax_code ?? "",
     phone: supplier?.phone ?? "",
     address: supplier?.address ?? "",
-    notes: supplier?.notes ?? "",
   };
 }
 
@@ -77,7 +72,6 @@ export function SupplierDialog({
       tax_code: values.tax_code || undefined,
       phone: values.phone || undefined,
       address: values.address || undefined,
-      notes: values.notes || undefined,
     };
 
     const result =
@@ -114,15 +108,13 @@ export function SupplierDialog({
             required
             autoFocus
           />
-          <TextField control={form.control} name="tax_code" label="Mã số thuế" />
+          <TextField
+            control={form.control}
+            name="tax_code"
+            label="Mã số thuế"
+          />
           <TextField control={form.control} name="phone" label="Điện thoại" />
           <TextField control={form.control} name="address" label="Địa chỉ" />
-          <TextareaField
-            control={form.control}
-            name="notes"
-            label="Ghi chú"
-            rows={3}
-          />
         </>
       )}
     </FormDialog>

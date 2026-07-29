@@ -2,21 +2,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { getRecipeLineBaseQuantity } from "../app/(protected)/inventory/_lib/recipe-cost";
+import { getMenuRecipeLineBaseQuantity } from "../app/(protected)/inventory/_lib/menu-recipe-cost";
 import type { IngredientUnitRow } from "../lib/inventory/types";
 
 const recipeActionsSource = readFileSync(
-  join(process.cwd(), "app/(protected)/inventory/recipe-actions.ts"),
+  join(process.cwd(), "app/(protected)/inventory/menu-recipe-actions.ts"),
   "utf8",
 );
 const recipesPageSource = readFileSync(
-  join(process.cwd(), "app/(protected)/inventory/recipes/page.tsx"),
+  join(process.cwd(), "app/(protected)/inventory/menu-recipes/page.tsx"),
   "utf8",
 );
 const recipeDialogSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
+    "app/(protected)/inventory/menu-recipes/menu-recipe-line-dialog.tsx",
   ),
   "utf8",
 );
@@ -41,7 +41,7 @@ test("recipe display cost quantity follows inventory base-unit conversion", () =
   ];
 
   assert.equal(
-    getRecipeLineBaseQuantity({
+    getMenuRecipeLineBaseQuantity({
       quantity: 2,
       entryUnitId: 2,
       units,
@@ -52,7 +52,7 @@ test("recipe display cost quantity follows inventory base-unit conversion", () =
 
 test("recipe display cost quantity keeps unitless lines unchanged", () => {
   assert.equal(
-    getRecipeLineBaseQuantity({
+    getMenuRecipeLineBaseQuantity({
       quantity: 3,
       entryUnitId: null,
     }),
@@ -75,7 +75,7 @@ test("recipe WAC reads only active stock-bearing locations", () => {
   assert.match(recipeActionsSource, /fetchStockBearingLocationIds/);
   assert.match(
     recipeActionsSource,
-    /\.in\("location_id", stockBearingLocationIds\)/,
+    /\.in\("location_id", stockBearingLocations\.locationIds\)/,
   );
   assert.doesNotMatch(recipeActionsSource, /branches\.branch_kind/);
 });

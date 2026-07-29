@@ -15,6 +15,7 @@ export const PUBLIC_APP_PATHS = [
 ] as const;
 
 export const INVENTORY_PROCUREMENT_PREFIXES = [
+  "/inventory/purchase-requests",
   "/inventory/purchase-orders",
   "/inventory/grn",
 ] as const;
@@ -27,7 +28,9 @@ export const INVENTORY_ROUTE_PREFIXES = [
   "/inventory/count-slips",
   "/inventory/ingredients",
   "/inventory/issues",
+  "/inventory/menu-recipes",
   "/inventory/production",
+  // Compatibility alias redirects to `/inventory/menu-recipes`.
   "/inventory/recipes",
   "/inventory/reports",
   "/inventory/settings",

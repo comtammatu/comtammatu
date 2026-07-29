@@ -8,12 +8,6 @@ import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
-import {
   Sheet,
   SheetContent,
   SheetFooter,
@@ -36,10 +30,10 @@ import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   AppBackLink,
   AppDetailFooter,
-  AppPage,
   AppPageHeader,
   AppSection,
   DescriptionList,
+  DocumentFormFrame,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
@@ -57,18 +51,14 @@ import { useGrnDetailActions as useGrnLineActions } from "@lib/inventory/use-grn
 import { useGrnDetailLines as useGrnLines } from "@lib/inventory/use-grn-detail-lines";
 import {
   GRN_DETAIL_COPY as grnCopy,
-  INVENTORY_COMMON_COPY as inventoryCommon,
+  hasAcceptedGrnQuantity,
 } from "@lib/inventory/grn-detail-model";
 import { supplierInvoiceHrefForGrn } from "@lib/inventory/grn-list-model";
-import { deriveGrnQualityStatus } from "@lib/inventory/grn-quality";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
-import { createPurchaseOrderFromGrn } from "@/(protected)/inventory/procurement-actions";
-import { notify } from "@comtammatu/ui/lib/notify";
 import { AddGrnLineDialog } from "./views/add-grn-line-dialog";
 import { AmendOwnerDialog } from "./views/amend-owner-dialog";
 import { DraftGrnLineCard } from "./views/draft-grn-line-card";
 import { LineRow } from "./views/grn-line-row";
-import { AppDialog } from "@/components/form/form-dialog";
 import { DraftReceivingSiteDialog } from "./views/draft-receiving-site-dialog";
 
 export type { GrnDetail as GRNDetail } from "@lib/inventory/grn-detail-model";
@@ -88,7 +78,6 @@ export function GRNDetailClient({
   canAmendConfirmed = false,
   canEditDraft = false,
   canConfirm = true,
-  canCreatePoFromGrn = false,
   canManageSupplierInvoice = false,
   receivingLocationOptions = [],
   auditLogs = [],
@@ -103,7 +92,6 @@ export function GRNDetailClient({
   canAmendConfirmed?: boolean;
   canEditDraft?: boolean;
   canConfirm?: boolean;
-  canCreatePoFromGrn?: boolean;
   canManageSupplierInvoice?: boolean;
   receivingLocationOptions?: ReceivingLocationOption[];
   auditLogs?: AuditLogRow[];
@@ -120,21 +108,29 @@ export function GRNDetailClient({
   const isDesktopLineEdit = !useIsMobile(DESK_LINE_EDIT_BREAKPOINT);
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
-  const [isCreatingPo, startCreatePo] = useTransition();
   const [isAmending, startAmend] = useTransition();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [amendingLine, setAmendingLine] = useState<EditableLine | null>(null);
   const [editingLineId, setEditingLineId] = useState<number | null>(null);
-  const [createPoPreviewOpen, setCreatePoPreviewOpen] = useState(false);
 
   const isDraft = grn.status === "draft";
   const isConfirmed = grn.status === "confirmed";
-  const canMutateDraft =
-    canEditDraft && isDraft && grn.poId == null && grn.linkedPos.length === 0;
-  const statusBadge = getStatusBadgeMeta("inventory", grn.status);
+  const canMutateDraft = canEditDraft && isDraft;
+  const canChangeLineSet =
+    canMutateDraft && grn.poId == null && grn.linkedPos.length === 0;
+  const statusBadgeMeta = getStatusBadgeMeta("inventory", grn.status);
+  const statusBadge = {
+    ...statusBadgeMeta,
+    label: isDraft
+      ? "Chờ nhập hàng"
+      : isConfirmed
+        ? "Đã nhập kho"
+        : statusBadgeMeta.label,
+  };
   const showAmendAffordance = canAmendConfirmed && isConfirmed;
 
-  const { lines, setLines, patch, stats, dirtyLines } = useGrnLines(grn.items);
+  const { lines, setLines, patch, dirtyLines } = useGrnLines(grn.items);
+  const hasAcceptedQuantity = hasAcceptedGrnQuantity(lines);
 
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
     useGrnLineActions({
@@ -165,62 +161,6 @@ export function GRNDetailClient({
 
   const closeLineEdit = () => setEditingLineId(null);
 
-  function handleCreatePoFromGrn() {
-    if (isSaving || dirtyLines.length > 0) {
-      notify.error(grnCopy.confirmBlockedByDirty);
-      return;
-    }
-    setCreatePoPreviewOpen(true);
-  }
-
-  function confirmCreatePoFromGrn() {
-    setCreatePoPreviewOpen(false);
-    startCreatePo(async () => {
-      const result = await createPurchaseOrderFromGrn({ grnId: grn.id });
-      if (!result.success) {
-        notify.error(result.error ?? grnCopy.createPoFromGrnFailed);
-        return;
-      }
-      const payload = result.data as
-        | { id?: number; poIds?: number[]; poCount?: number }
-        | undefined;
-      const poCount = payload?.poCount ?? payload?.poIds?.length ?? 1;
-      notify.success(
-        poCount > 1
-          ? grnCopy.createPoFromGrnDoneMulti(poCount)
-          : grnCopy.createPoFromGrnDone,
-      );
-      const poId = payload?.id ?? payload?.poIds?.[0];
-      if (poId != null) {
-        router.push(`/inventory/purchase-orders?poId=${poId}`);
-        return;
-      }
-      router.refresh();
-    });
-  }
-
-  const poPreviewGroups = useMemo(() => {
-    const groups = new Map<
-      number,
-      { supplierName: string; lines: EditableLine[] }
-    >();
-    for (const line of lines) {
-      const existing = groups.get(line.supplierId);
-      if (existing) {
-        existing.lines.push(line);
-      } else {
-        groups.set(line.supplierId, {
-          supplierName: line.supplierName,
-          lines: [line],
-        });
-      }
-    }
-    return [...groups.entries()].map(([supplierId, group]) => ({
-      supplierId,
-      ...group,
-    }));
-  }, [lines]);
-
   const nextStepBanner = (() => {
     if (!isDraft) return null;
     if (dirtyLines.length > 0) {
@@ -228,22 +168,6 @@ export function GRNDetailClient({
         title: grnCopy.nextStepSaveFirstTitle,
         body: grnCopy.nextStepSaveFirstBody,
         action: null as ReactNode,
-      };
-    }
-    if (canCreatePoFromGrn) {
-      return {
-        title: grnCopy.nextStepNeedPoTitle,
-        body: grnCopy.nextStepNeedPoBody,
-        action: (
-          <Button
-            type="button"
-            size="sm"
-            disabled={isCreatingPo || isSaving || lines.length === 0}
-            onClick={handleCreatePoFromGrn}
-          >
-            {grnCopy.createPoFromGrnActionBySupplier}
-          </Button>
-        ),
       };
     }
     if ((grn.poId != null || grn.linkedPos.length > 0) && !canConfirm) {
@@ -281,13 +205,7 @@ export function GRNDetailClient({
           ),
       };
     }
-    if (canConfirm) {
-      return {
-        title: grnCopy.nextStepReadyTitle,
-        body: grnCopy.nextStepReadyBody,
-        action: null,
-      };
-    }
+    if (canConfirm) return null;
     if (grn.poId == null) {
       return {
         title: grnCopy.nextStepNeedPoTitle,
@@ -303,12 +221,10 @@ export function GRNDetailClient({
       {
         key: "name",
         header: grnCopy.lineHeaderName,
+        className: "min-w-64 max-w-80 align-top",
         render: (line) => (
           <div className="min-w-0">
             <p className="min-w-0 truncate font-medium">{line.name}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {line.supplierName}
-            </p>
             {line.dirty ? (
               <Badge variant="outline" className="mt-1 text-2xs">
                 {grnCopy.line.unsaved}
@@ -318,42 +234,84 @@ export function GRNDetailClient({
         ),
       },
       {
-        key: "qty",
-        header: inventoryCommon.quantityShort,
-        className: "w-28 text-right",
+        key: "ordered",
+        header: "Theo đơn",
+        className: "align-top",
         render: (line) => (
-          <span className="font-mono tabular-nums">
-            {formatQty(line.actual)} {line.unit}
-          </span>
+          <div>
+            <p className="font-mono font-medium tabular-nums">
+              {formatQty(line.remainingQuantity)} {line.unit}
+            </p>
+            {line.previouslyReceived > 0 ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {grnCopy.line.receivedBefore(
+                  line.previouslyReceived,
+                  line.unit,
+                )}
+              </p>
+            ) : null}
+          </div>
         ),
       },
       {
-        key: "status",
-        header: grnCopy.lineHeaderStatus,
-        className: "w-28",
-        render: (line) => {
-          const qualityStatus = deriveGrnQualityStatus(
-            line.actual,
-            line.rejected,
-          );
-          const label =
-            qualityStatus === "accepted"
-              ? grnCopy.line.qualityAccepted
-              : qualityStatus === "partial"
-                ? grnCopy.line.qualityPartial
-                : grnCopy.line.qualityRejected;
-          return (
-            <Badge
-              variant={
-                qualityStatus === "accepted"
-                  ? "success"
-                  : qualityStatus === "partial"
-                    ? "warning"
-                    : "destructive"
-              }
+        key: "actual",
+        header: grnCopy.lineHeaderThisReceipt,
+        className: "align-top",
+        render: (line) => (
+          <div>
+            <p
+              className={cn(
+                "font-mono font-medium tabular-nums",
+                line.actual <= 0 && "font-sans text-muted-foreground",
+              )}
             >
-              {label}
-            </Badge>
+              {line.actual > 0
+                ? `${formatQty(line.actual)} ${line.unit}`
+                : grnCopy.line.enterQuantity}
+            </p>
+            {line.rejected > 0 ? (
+              <p className="mt-1 text-xs text-warning">
+                {grnCopy.line.rejectedShort(line.rejected, line.unit)}
+              </p>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: "applied",
+        header: "Kết quả",
+        className: "align-top",
+        render: (line) => {
+          const applied = isDraft
+            ? Math.min(
+                Math.max(line.actual - line.rejected, 0),
+                line.remainingQuantity,
+              )
+            : line.poAppliedQuantity;
+          const excess = Math.max(
+            line.actual - line.rejected - line.remainingQuantity,
+            0,
+          );
+          const shortage = Math.max(line.remainingQuantity - applied, 0);
+          if (line.actual <= 0) {
+            return <Badge variant="outline">{grnCopy.line.notInspected}</Badge>;
+          }
+          return (
+            <div>
+              <p className="font-mono font-medium tabular-nums">
+                {grnCopy.line.acceptedShort(applied, line.unit)}
+              </p>
+              {shortage > 0 ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {grnCopy.line.shortageShort(shortage, line.unit)}
+                </p>
+              ) : null}
+              {excess > 0 ? (
+                <Badge variant="warning" className="mt-1">
+                  {grnCopy.line.excessShort(excess, line.unit)}
+                </Badge>
+              ) : null}
+            </div>
           );
         },
       },
@@ -362,7 +320,7 @@ export function GRNDetailClient({
         header: (
           <span className="sr-only">{GRN_CREATE_COPY.lineActionsAria}</span>
         ),
-        className: "w-24 text-right",
+        className: "w-20 align-top text-right",
         render: (line) =>
           canMutateDraft ? (
             <div
@@ -373,120 +331,33 @@ export function GRNDetailClient({
               <Button
                 type="button"
                 variant="outline"
-                size="icon"
+                size="sm"
                 onClick={() => setEditingLineId(line.lineId)}
                 aria-label={GRN_CREATE_COPY.editLineAria}
               >
                 <IconPencil className="size-4" />
+                {grnCopy.line.enterQuantity}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => void handleDeleteLine(line)}
-                aria-label={grnCopy.line.deleteLineAria}
-              >
-                <IconTrash className="size-4" />
-              </Button>
+              {canChangeLineSet ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => void handleDeleteLine(line)}
+                  aria-label={grnCopy.line.deleteLineAria}
+                >
+                  <IconTrash className="size-4" />
+                </Button>
+              ) : null}
             </div>
           ) : null,
       },
     ],
-    [canMutateDraft, handleDeleteLine],
+    [canChangeLineSet, canMutateDraft, handleDeleteLine, isDraft],
   );
 
-  const confirmedColumns = useMemo<DataTableColumn<EditableLine>[]>(
-    () => [
-      {
-        key: "name",
-        header: grnCopy.lineHeaderName,
-        render: (line) => (
-          <div className="min-w-0">
-            <p className="font-medium">{line.name}</p>
-            <p className="text-xs text-muted-foreground">{line.supplierName}</p>
-          </div>
-        ),
-      },
-      {
-        key: "ordered",
-        header: grnCopy.lineHeaderOrdered,
-        className: "w-24 text-right",
-        render: (line) => (
-          <span className="font-mono tabular-nums">
-            {line.poQuantity ?? line.required} {line.unit}
-          </span>
-        ),
-      },
-      {
-        key: "actual",
-        header: grnCopy.lineHeaderQty,
-        className: "w-24 text-right",
-        render: (line) => (
-          <span className="font-mono tabular-nums">
-            {line.actual} {line.unit}
-          </span>
-        ),
-      },
-      {
-        key: "rejected",
-        header: grnCopy.lineHeaderRejected,
-        className: "w-24 text-right",
-        render: (line) => (
-          <span className="font-mono tabular-nums">
-            {line.rejected} {line.unit}
-          </span>
-        ),
-      },
-      {
-        key: "status",
-        header: grnCopy.lineHeaderStatus,
-        className: "w-28",
-        render: (line) => {
-          const qualityStatus = deriveGrnQualityStatus(
-            line.actual,
-            line.rejected,
-          );
-          const label =
-            qualityStatus === "accepted"
-              ? grnCopy.line.qualityAccepted
-              : qualityStatus === "partial"
-                ? grnCopy.line.qualityPartial
-                : grnCopy.line.qualityRejected;
-          return (
-            <Badge
-              variant={
-                qualityStatus === "accepted"
-                  ? "success"
-                  : qualityStatus === "partial"
-                    ? "warning"
-                    : "destructive"
-              }
-            >
-              {label}
-            </Badge>
-          );
-        },
-      },
-      {
-        key: "actions",
-        header: <span className="sr-only">{grnCopy.amend.action}</span>,
-        className: "w-20 text-right",
-        render: (line) =>
-          showAmendAffordance ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setAmendingLine(line)}
-            >
-              {grnCopy.amend.action}
-            </Button>
-          ) : null,
-      },
-    ],
-    [showAmendAffordance],
-  );
+  const confirmedColumns = draftColumns;
 
   const footer = (
     <AppDetailFooter
@@ -500,20 +371,6 @@ export function GRNDetailClient({
                 <p className="min-w-0 font-mono text-sm font-semibold tabular-nums">
                   {GRN_CREATE_COPY.footerLineSummary(lines.length)}
                 </p>
-              ) : null}
-              {canMutateDraft ? (
-                <DraftReceivingSiteDialog
-                  grnId={grn.id}
-                  grnCode={grn.code}
-                  currentLocationId={grn.locationId}
-                  locationOptions={receivingLocationOptions}
-                  buttonSize={isMobile ? "touch" : "default"}
-                  disabledReason={
-                    dirtyLines.length > 0
-                      ? grnCopy.draftReceiving.saveBeforeSwitch
-                      : undefined
-                  }
-                />
               ) : null}
             </>
           ) : null}
@@ -557,57 +414,31 @@ export function GRNDetailClient({
       }
       trailing={
         isDraft ? (
-          <>
-            {canMutateDraft ? (
-              <Button
-                type="button"
-                variant="outline"
-                size={isMobile ? "touch" : "default"}
-                onClick={handleSave}
-                disabled={isSaving || dirtyLines.length === 0}
-              >
-                <IconDeviceFloppy className="size-5" />
-                {grnCopy.saveChanges(dirtyLines.length)}
-              </Button>
-            ) : null}
-            {canCreatePoFromGrn ? (
-              <Button
-                type="button"
-                variant="outline"
-                size={isMobile ? "touch" : "default"}
-                disabled={
-                  isCreatingPo ||
-                  isSaving ||
-                  dirtyLines.length > 0 ||
-                  lines.length === 0
-                }
-                onClick={handleCreatePoFromGrn}
-              >
-                {grnCopy.createPoFromGrnActionBySupplier}
-              </Button>
-            ) : null}
+          canMutateDraft && dirtyLines.length > 0 ? (
+            <Button
+              type="button"
+              size={isMobile ? "touch-lg" : "default"}
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              <IconDeviceFloppy className="size-5" />
+              {grnCopy.saveChanges(dirtyLines.length)}
+            </Button>
+          ) : (
             <Button
               type="button"
               size={isMobile ? "touch-lg" : "default"}
               className="sm:min-w-80"
-              disabled={
-                !canConfirm ||
-                isConfirming ||
-                dirtyLines.length > 0 ||
-                lines.length === 0
-              }
+              disabled={!canConfirm || isConfirming || !hasAcceptedQuantity}
               aria-disabled={
-                !canConfirm ||
-                isConfirming ||
-                dirtyLines.length > 0 ||
-                lines.length === 0
+                !canConfirm || isConfirming || !hasAcceptedQuantity
               }
               onClick={handleConfirmGrn}
             >
               <IconCircleCheck className="size-5" />
               {grnCopy.confirmGrnAction}
             </Button>
-          </>
+          )
         ) : null
       }
     />
@@ -653,33 +484,55 @@ export function GRNDetailClient({
               ? [
                   {
                     term: grnCopy.linkedPo,
-                    description: grn.poId != null ? (
-                      <Link
-                        href={`/inventory/purchase-orders?poId=${grn.poId}`}
-                        className="font-mono text-primary hover:underline"
-                      >
-                        {grn.poCode}
-                      </Link>
-                    ) : (
-                      <span className="font-mono">{grn.poCode}</span>
-                    ),
+                    description:
+                      grn.poId != null ? (
+                        <Link
+                          href={`/inventory/purchase-orders?poId=${grn.poId}`}
+                          className="font-mono text-primary hover:underline"
+                        >
+                          {grn.poCode}
+                        </Link>
+                      ) : (
+                        <span className="font-mono">{grn.poCode}</span>
+                      ),
                   },
                 ]
               : []),
+          ...(grn.purchaseRequestCode
+            ? [
+                {
+                  term: "Yêu cầu mua",
+                  description: (
+                    <Link
+                      href={`/inventory/purchase-requests?requestId=${grn.purchaseRequestId}`}
+                      className="font-mono text-primary hover:underline"
+                    >
+                      {grn.purchaseRequestCode}
+                    </Link>
+                  ),
+                },
+              ]
+            : []),
+          {
+            term: "Ngày dự kiến",
+            description: grn.expectedReceiveDate ?? "—",
+          },
         ]}
       />
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="success">
-            {grnCopy.acceptedLines} {stats.acceptedLines}/{lines.length}
-          </Badge>
-          {stats.rejectedLines > 0 ? (
-            <Badge variant="warning">
-              {grnCopy.rejectedLines} {stats.rejectedLines}
-            </Badge>
-          ) : null}
-        </div>
-      </div>
+      {canChangeLineSet ? (
+        <DraftReceivingSiteDialog
+          grnId={grn.id}
+          grnCode={grn.code}
+          currentLocationId={grn.locationId}
+          locationOptions={receivingLocationOptions}
+          buttonSize={isMobile ? "touch" : "default"}
+          disabledReason={
+            dirtyLines.length > 0
+              ? grnCopy.draftReceiving.saveBeforeSwitch
+              : undefined
+          }
+        />
+      ) : null}
     </div>
   );
 
@@ -689,7 +542,7 @@ export function GRNDetailClient({
       title={grnCopy.inspectionItemsTitle}
       contentFlush
       action={
-        canMutateDraft ? (
+        canChangeLineSet ? (
           <Button
             type="button"
             variant="outline"
@@ -716,7 +569,9 @@ export function GRNDetailClient({
             <DraftGrnLineCard
               line={line}
               onEdit={() => setEditingLineId(line.lineId)}
-              onRemove={() => void handleDeleteLine(line)}
+              onRemove={
+                canChangeLineSet ? () => void handleDeleteLine(line) : undefined
+              }
             />
           ) : (
             <LineRow
@@ -808,17 +663,19 @@ export function GRNDetailClient({
                 contentClassName="min-h-0 flex-1 gap-3 overflow-y-auto"
                 footer={
                   <div className="flex w-full flex-col gap-2">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => {
-                        void handleDeleteLine(editingLine);
-                        closeLineEdit();
-                      }}
-                      className="w-full"
-                    >
-                      {ACTIONS_VI.delete}
-                    </Button>
+                    {canChangeLineSet ? (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => {
+                          void handleDeleteLine(editingLine);
+                          closeLineEdit();
+                        }}
+                        className="w-full"
+                      >
+                        {ACTIONS_VI.delete}
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       variant="outline"
@@ -839,10 +696,14 @@ export function GRNDetailClient({
                   showAmendAffordance={false}
                   chrome="plain"
                   onChange={(p) => patch(editingIdx, p)}
-                  onDelete={() => {
-                    void handleDeleteLine(editingLine);
-                    closeLineEdit();
-                  }}
+                  onDelete={
+                    canChangeLineSet
+                      ? () => {
+                          void handleDeleteLine(editingLine);
+                          closeLineEdit();
+                        }
+                      : undefined
+                  }
                   onAmend={() => undefined}
                 />
               </AppSection>
@@ -892,26 +753,32 @@ export function GRNDetailClient({
                   showAmendAffordance={false}
                   chrome="plain"
                   onChange={(p) => patch(editingIdx, p)}
-                  onDelete={() => {
-                    void handleDeleteLine(editingLine);
-                    closeLineEdit();
-                  }}
+                  onDelete={
+                    canChangeLineSet
+                      ? () => {
+                          void handleDeleteLine(editingLine);
+                          closeLineEdit();
+                        }
+                      : undefined
+                  }
                   onAmend={() => undefined}
                 />
               </div>
               <SheetFooter>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="touch-lg"
-                  onClick={() => {
-                    void handleDeleteLine(editingLine);
-                    closeLineEdit();
-                  }}
-                  className="w-full"
-                >
-                  {ACTIONS_VI.delete}
-                </Button>
+                {canChangeLineSet ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="touch-lg"
+                    onClick={() => {
+                      void handleDeleteLine(editingLine);
+                      closeLineEdit();
+                    }}
+                    className="w-full"
+                  >
+                    {ACTIONS_VI.delete}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"
@@ -930,7 +797,7 @@ export function GRNDetailClient({
 
   const dialogs = (
     <>
-      {canMutateDraft ? (
+      {canChangeLineSet ? (
         <AddGrnLineDialog
           grn={grn}
           ingredients={ingredients}
@@ -959,62 +826,6 @@ export function GRNDetailClient({
         startTransition={startAmend}
       />
       {draftLineSheet}
-      <AppDialog
-        open={createPoPreviewOpen}
-        onOpenChange={setCreatePoPreviewOpen}
-        title={grnCopy.createPoPreviewTitle}
-        description={grnCopy.createPoPreviewDescription(
-          poPreviewGroups.length,
-        )}
-        contentClassName="sm:max-w-lg"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCreatePoPreviewOpen(false)}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              disabled={isCreatingPo || poPreviewGroups.length === 0}
-              onClick={confirmCreatePoFromGrn}
-            >
-              {grnCopy.createPoFromGrnActionBySupplier}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          {poPreviewGroups.map((group) => (
-            <Item
-              key={group.supplierId}
-              variant="outline"
-              className="flex-col items-stretch gap-1.5"
-            >
-              <ItemContent className="min-w-0 gap-1">
-                <ItemTitle className="text-sm font-semibold">
-                  {group.supplierName}
-                </ItemTitle>
-                <ItemDescription className="text-xs">
-                  {grnCopy.createPoPreviewLineCount(group.lines.length)}
-                </ItemDescription>
-              </ItemContent>
-              <ul className="mt-1 flex flex-col gap-1 text-sm">
-                {group.lines.map((line) => (
-                  <li key={line.lineId} className="flex justify-between gap-2">
-                    <span className="min-w-0 truncate">{line.name}</span>
-                    <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
-                      {formatQty(line.actual)} {line.unit}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Item>
-          ))}
-        </div>
-      </AppDialog>
     </>
   );
 
@@ -1059,7 +870,8 @@ export function GRNDetailClient({
               {grn.code}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {grn.supplier} • {grn.branchName} • {grn.date}
+              {grn.supplier} • {grn.poCode || "—"} •{" "}
+              {grn.purchaseRequestCode || "—"} • {grn.branchName}
             </p>
           </div>
           <Badge variant={statusBadge.variant} className="shrink-0">
@@ -1074,22 +886,27 @@ export function GRNDetailClient({
   }
 
   return (
-    <AppPage width="xwide" density="compact" footer={footer}>
-      <AppPageHeader
-        title={grn.code}
-        description={`${grn.supplier} • ${grn.branchName} • ${grn.date}`}
-        badge={{
-          children: statusBadge.label,
-          variant: statusBadge.variant,
-        }}
-        breadcrumb={
-          <AppBackLink href={backHref}>
-            {isMobile ? grnCopy.back : tRoute("/inventory/grn", "heading")}
-          </AppBackLink>
-        }
-      />
+    <DocumentFormFrame
+      width="xwide"
+      density="compact"
+      footer={footer}
+      header={
+        <AppPageHeader
+          title={grn.code}
+          badge={{
+            children: statusBadge.label,
+            variant: statusBadge.variant,
+          }}
+          breadcrumb={
+            <AppBackLink href={backHref}>
+              {isMobile ? grnCopy.back : tRoute("/inventory/grn", "heading")}
+            </AppBackLink>
+          }
+        />
+      }
+    >
       {tabs}
       {dialogs}
-    </AppPage>
+    </DocumentFormFrame>
   );
 }

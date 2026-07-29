@@ -25,8 +25,7 @@ export const hr = {
       setup: "Thiết lập",
     },
     attendanceTitle: "Chấm công và ngày công theo ca",
-    attendanceDescription:
-      "Theo dõi vào/ra ca, checklist bắt buộc và ca treo.",
+    attendanceDescription: "Theo dõi vào/ra ca, checklist bắt buộc và ca treo.",
     setupTitle: "Thiết lập ca làm và việc trong ca",
     setupDescription: "Khung ca và việc trong ca theo từng vị trí.",
     setupSteps: {
@@ -258,7 +257,8 @@ export const hr = {
       search: "Tìm nhân viên",
       calendar: "Lịch",
       calendarAllTitle: "Lịch công toàn bộ",
-      calendarEmployeeTitle: (employeeName: string) => `Lịch công · ${employeeName}`,
+      calendarEmployeeTitle: (employeeName: string) =>
+        `Lịch công · ${employeeName}`,
       calendarDescription:
         "Ngày công, giờ công và nghỉ phép trong kỳ lương đang chọn.",
       calendarOpenRow: (employeeName: string) =>
@@ -268,7 +268,9 @@ export const hr = {
       monthlyLeave: "Phép tháng",
       annualLeave: "Phép năm",
       compactPosition: (positionLabel: string | null) =>
-        positionLabel === "Thu ngân (kiêm phục vụ)" ? "Thu ngân" : positionLabel,
+        positionLabel === "Thu ngân (kiêm phục vụ)"
+          ? "Thu ngân"
+          : positionLabel,
       salaryStatus: "Tình trạng tính lương",
       salaryStatusAll: "Tất cả",
       salaryStatusCalculable: "Đủ thông tin tính lương",
@@ -334,8 +336,9 @@ export const hr = {
         amount: "Số tiền",
         amountRequired: "Nhập số tiền",
         amountPositive: "Số tiền phải lớn hơn 0",
-        note: "Ghi chú",
+        note: "Lý do điều chỉnh",
         notePlaceholder: "Ví dụ: thưởng hiệu suất tháng",
+        noteRequired: "Lý do điều chỉnh phải có ít nhất 5 ký tự",
       },
       adjustmentTargetMissing: "Không tìm thấy nhân viên cần điều chỉnh.",
       table: {

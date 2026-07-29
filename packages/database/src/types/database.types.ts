@@ -1111,6 +1111,7 @@ export type Database = {
           branch_id: number
           created_at: string
           id: number
+          reward_tiers: Json
           target_amount: number
           tenant_id: number
           updated_at: string
@@ -1121,6 +1122,7 @@ export type Database = {
           branch_id: number
           created_at?: string
           id?: number
+          reward_tiers?: Json
           target_amount: number
           tenant_id: number
           updated_at?: string
@@ -1131,6 +1133,7 @@ export type Database = {
           branch_id?: number
           created_at?: string
           id?: number
+          reward_tiers?: Json
           target_amount?: number
           tenant_id?: number
           updated_at?: string
@@ -1830,13 +1833,15 @@ export type Database = {
           branch_id: number
           created_at: string
           created_by: string
+          creation_idempotency_key: string | null
+          expected_receive_date: string | null
           grn_number: string
           id: number
           location_id: number | null
           notes: string | null
           po_id: number | null
           received_by: string | null
-          received_date: string
+          received_date: string | null
           status: string
           supplier_id: number | null
           tenant_id: number
@@ -1846,13 +1851,15 @@ export type Database = {
           branch_id: number
           created_at?: string
           created_by: string
+          creation_idempotency_key?: string | null
+          expected_receive_date?: string | null
           grn_number: string
           id?: never
           location_id?: number | null
           notes?: string | null
           po_id?: number | null
           received_by?: string | null
-          received_date?: string
+          received_date?: string | null
           status?: string
           supplier_id?: number | null
           tenant_id: number
@@ -1862,13 +1869,15 @@ export type Database = {
           branch_id?: number
           created_at?: string
           created_by?: string
+          creation_idempotency_key?: string | null
+          expected_receive_date?: string | null
           grn_number?: string
           id?: never
           location_id?: number | null
           notes?: string | null
           po_id?: number | null
           received_by?: string | null
-          received_date?: string
+          received_date?: string | null
           status?: string
           supplier_id?: number | null
           tenant_id?: number
@@ -1939,6 +1948,8 @@ export type Database = {
           grn_id: number
           id: number
           ingredient_id: number
+          po_applied_quantity: number
+          purchase_order_item_id: number | null
           received_quantity: number
           rejected_photo_url: string | null
           rejected_quantity: number
@@ -1953,6 +1964,8 @@ export type Database = {
           grn_id: number
           id?: never
           ingredient_id: number
+          po_applied_quantity?: number
+          purchase_order_item_id?: number | null
           received_quantity: number
           rejected_photo_url?: string | null
           rejected_quantity?: number
@@ -1967,6 +1980,8 @@ export type Database = {
           grn_id?: number
           id?: never
           ingredient_id?: number
+          po_applied_quantity?: number
+          purchase_order_item_id?: number | null
           received_quantity?: number
           rejected_photo_url?: string | null
           rejected_quantity?: number
@@ -1997,6 +2012,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ingredients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_items_purchase_order_item_tenant_fkey"
+            columns: ["purchase_order_item_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id", "tenant_id"]
           },
           {
             foreignKeyName: "grn_items_supplier_id_fkey"
@@ -5508,6 +5530,7 @@ export type Database = {
           ingredient_id: number
           line_total: number | null
           po_id: number
+          purchase_request_item_id: number | null
           quantity: number
           tenant_id: number
           unit_price_est: number | null
@@ -5518,6 +5541,7 @@ export type Database = {
           ingredient_id: number
           line_total?: number | null
           po_id: number
+          purchase_request_item_id?: number | null
           quantity: number
           tenant_id: number
           unit_price_est?: number | null
@@ -5528,6 +5552,7 @@ export type Database = {
           ingredient_id?: number
           line_total?: number | null
           po_id?: number
+          purchase_request_item_id?: number | null
           quantity?: number
           tenant_id?: number
           unit_price_est?: number | null
@@ -5555,6 +5580,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_order_items_request_item_tenant_fkey"
+            columns: ["purchase_request_item_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_request_items"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
             foreignKeyName: "purchase_order_items_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -5569,10 +5601,12 @@ export type Database = {
           created_at: string
           created_by: string
           display_id: string | null
+          expected_delivery_date: string | null
           id: number
           notes: string | null
           ordered_at: string
           po_number: string
+          purchase_request_id: number | null
           source_grn_id: number | null
           status: string
           supplier_id: number
@@ -5584,10 +5618,12 @@ export type Database = {
           created_at?: string
           created_by: string
           display_id?: string | null
+          expected_delivery_date?: string | null
           id?: never
           notes?: string | null
           ordered_at?: string
           po_number: string
+          purchase_request_id?: number | null
           source_grn_id?: number | null
           status?: string
           supplier_id: number
@@ -5599,10 +5635,12 @@ export type Database = {
           created_at?: string
           created_by?: string
           display_id?: string | null
+          expected_delivery_date?: string | null
           id?: never
           notes?: string | null
           ordered_at?: string
           po_number?: string
+          purchase_request_id?: number | null
           source_grn_id?: number | null
           status?: string
           supplier_id?: number
@@ -5632,6 +5670,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_orders_purchase_request_tenant_fkey"
+            columns: ["purchase_request_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requests"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
             foreignKeyName: "purchase_orders_source_grn_id_fkey"
             columns: ["source_grn_id"]
             isOneToOne: false
@@ -5647,6 +5692,128 @@ export type Database = {
           },
           {
             foreignKeyName: "purchase_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_request_items: {
+        Row: {
+          created_at: string
+          entry_unit_id: number
+          id: number
+          ingredient_id: number
+          notes: string | null
+          purchase_request_id: number
+          quantity: number
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          entry_unit_id: number
+          id?: never
+          ingredient_id: number
+          notes?: string | null
+          purchase_request_id: number
+          quantity: number
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          entry_unit_id?: number
+          id?: never
+          ingredient_id?: number
+          notes?: string | null
+          purchase_request_id?: number
+          quantity?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_request_items_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_request_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_request_items_purchase_request_id_tenant_id_fkey"
+            columns: ["purchase_request_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requests"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      purchase_requests: {
+        Row: {
+          branch_id: number
+          created_at: string
+          created_by: string
+          id: number
+          needed_by: string | null
+          notes: string | null
+          request_number: string
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          created_by: string
+          id?: never
+          needed_by?: string | null
+          notes?: string | null
+          request_number: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          created_by?: string
+          id?: never
+          needed_by?: string | null
+          notes?: string | null
+          request_number?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -7745,6 +7912,48 @@ export type Database = {
           },
         ]
       }
+      supplier_credit_allocations: {
+        Row: {
+          amount: number
+          created_at: string
+          id: number
+          supplier_credit_note_id: number
+          supplier_invoice_id: number
+          tenant_id: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: never
+          supplier_credit_note_id: number
+          supplier_invoice_id: number
+          tenant_id: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: never
+          supplier_credit_note_id?: number
+          supplier_invoice_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_credit_allocations_supplier_credit_note_id_tenant_fkey"
+            columns: ["supplier_credit_note_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_credit_notes"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_credit_allocations_supplier_invoice_id_tenant_id_fkey"
+            columns: ["supplier_invoice_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoices"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
       supplier_credit_notes: {
         Row: {
           amount: number
@@ -7757,7 +7966,7 @@ export type Database = {
           invoice_id: number | null
           kind: string
           notes: string | null
-          return_id: number
+          return_id: number | null
           status: string
           supplier_id: number
           tenant_id: number
@@ -7773,7 +7982,7 @@ export type Database = {
           invoice_id?: number | null
           kind: string
           notes?: string | null
-          return_id: number
+          return_id?: number | null
           status?: string
           supplier_id: number
           tenant_id: number
@@ -7789,7 +7998,7 @@ export type Database = {
           invoice_id?: number | null
           kind?: string
           notes?: string | null
-          return_id?: number
+          return_id?: number | null
           status?: string
           supplier_id?: number
           tenant_id?: number
@@ -7832,11 +8041,156 @@ export type Database = {
           },
         ]
       }
+      supplier_invoice_lines: {
+        Row: {
+          allocated_document_discount: number
+          created_at: string
+          description: string
+          id: number
+          ingredient_id: number | null
+          line_discount_amount: number
+          line_total: number
+          quantity: number
+          supplier_invoice_id: number
+          tenant_id: number
+          unit_price: number
+        }
+        Insert: {
+          allocated_document_discount?: number
+          created_at?: string
+          description: string
+          id?: never
+          ingredient_id?: number | null
+          line_discount_amount?: number
+          line_total: number
+          quantity: number
+          supplier_invoice_id: number
+          tenant_id: number
+          unit_price: number
+        }
+        Update: {
+          allocated_document_discount?: number
+          created_at?: string
+          description?: string
+          id?: never
+          ingredient_id?: number | null
+          line_discount_amount?: number
+          line_total?: number
+          quantity?: number
+          supplier_invoice_id?: number
+          tenant_id?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_invoice_lines_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_invoice_lines_supplier_invoice_id_tenant_id_fkey"
+            columns: ["supplier_invoice_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoices"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      supplier_invoice_receipt_allocations: {
+        Row: {
+          accepted_discrepancy: boolean
+          billed_quantity: number
+          created_at: string
+          discrepancy_reason: string | null
+          grn_id: number
+          id: number
+          invoice_line_id: number | null
+          matched_quantity: number
+          po_id: number
+          purchase_order_item_id: number | null
+          supplier_invoice_id: number
+          tenant_id: number
+          unplanned_billed_quantity: number
+        }
+        Insert: {
+          accepted_discrepancy?: boolean
+          billed_quantity: number
+          created_at?: string
+          discrepancy_reason?: string | null
+          grn_id: number
+          id?: never
+          invoice_line_id?: number | null
+          matched_quantity: number
+          po_id: number
+          purchase_order_item_id?: number | null
+          supplier_invoice_id: number
+          tenant_id: number
+          unplanned_billed_quantity?: number
+        }
+        Update: {
+          accepted_discrepancy?: boolean
+          billed_quantity?: number
+          created_at?: string
+          discrepancy_reason?: string | null
+          grn_id?: number
+          id?: never
+          invoice_line_id?: number | null
+          matched_quantity?: number
+          po_id?: number
+          purchase_order_item_id?: number | null
+          supplier_invoice_id?: number
+          tenant_id?: number
+          unplanned_billed_quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_invoice_receipt_allo_purchase_order_item_id_tenan_fkey"
+            columns: ["purchase_order_item_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_invoice_receipt_allo_supplier_invoice_id_tenant_i_fkey"
+            columns: ["supplier_invoice_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoices"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_invoice_receipt_allocat_invoice_line_id_tenant_id_fkey"
+            columns: ["invoice_line_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoice_lines"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_invoice_receipt_allocations_grn_id_tenant_id_fkey"
+            columns: ["grn_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "goods_received_notes"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_invoice_receipt_allocations_po_id_tenant_id_fkey"
+            columns: ["po_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
       supplier_invoices: {
         Row: {
           created_at: string
           created_by: string
           credit_applied_amount: number
+          discrepancy_accepted_at: string | null
+          discrepancy_accepted_by: string | null
+          discrepancy_reason: string | null
+          document_discount_amount: number
           due_date: string | null
           grn_id: number | null
           id: number
@@ -7862,6 +8216,10 @@ export type Database = {
           created_at?: string
           created_by: string
           credit_applied_amount?: number
+          discrepancy_accepted_at?: string | null
+          discrepancy_accepted_by?: string | null
+          discrepancy_reason?: string | null
+          document_discount_amount?: number
           due_date?: string | null
           grn_id?: number | null
           id?: never
@@ -7887,6 +8245,10 @@ export type Database = {
           created_at?: string
           created_by?: string
           credit_applied_amount?: number
+          discrepancy_accepted_at?: string | null
+          discrepancy_accepted_by?: string | null
+          discrepancy_reason?: string | null
+          document_discount_amount?: number
           due_date?: string | null
           grn_id?: number | null
           id?: never
@@ -7958,7 +8320,6 @@ export type Database = {
           pack_size: number | null
           pack_uom: string | null
           supplier_id: number
-          supplier_sku_code: string
           tenant_id: number
           updated_at: string
         }
@@ -7973,7 +8334,6 @@ export type Database = {
           pack_size?: number | null
           pack_uom?: string | null
           supplier_id: number
-          supplier_sku_code: string
           tenant_id: number
           updated_at?: string
         }
@@ -7988,7 +8348,6 @@ export type Database = {
           pack_size?: number | null
           pack_uom?: string | null
           supplier_id?: number
-          supplier_sku_code?: string
           tenant_id?: number
           updated_at?: string
         }
@@ -8016,6 +8375,48 @@ export type Database = {
           },
         ]
       }
+      supplier_payment_allocations: {
+        Row: {
+          amount: number
+          created_at: string
+          id: number
+          supplier_invoice_id: number
+          supplier_payment_id: number
+          tenant_id: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: never
+          supplier_invoice_id: number
+          supplier_payment_id: number
+          tenant_id: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: never
+          supplier_invoice_id?: number
+          supplier_payment_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payment_allocations_supplier_invoice_id_tenant_id_fkey"
+            columns: ["supplier_invoice_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoices"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_supplier_payment_id_tenant_id_fkey"
+            columns: ["supplier_payment_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
       supplier_payments: {
         Row: {
           amount: number
@@ -8027,7 +8428,8 @@ export type Database = {
           payment_date: string
           payment_method: string
           reference_note: string | null
-          supplier_invoice_id: number
+          supplier_id: number
+          supplier_invoice_id: number | null
           tenant_id: number
           updated_at: string
           webhook_event_id: number | null
@@ -8042,7 +8444,8 @@ export type Database = {
           payment_date?: string
           payment_method: string
           reference_note?: string | null
-          supplier_invoice_id: number
+          supplier_id: number
+          supplier_invoice_id?: number | null
           tenant_id: number
           updated_at?: string
           webhook_event_id?: number | null
@@ -8057,7 +8460,8 @@ export type Database = {
           payment_date?: string
           payment_method?: string
           reference_note?: string | null
-          supplier_invoice_id?: number
+          supplier_id?: number
+          supplier_invoice_id?: number | null
           tenant_id?: number
           updated_at?: string
           webhook_event_id?: number | null
@@ -8069,6 +8473,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_invoices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_tenant_fkey"
+            columns: ["supplier_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id", "tenant_id"]
           },
           {
             foreignKeyName: "supplier_payments_tenant_id_fkey"
@@ -9525,6 +9936,10 @@ export type Database = {
         Args: { p_issue_id: number }
         Returns: undefined
       }
+      accept_supplier_invoice_discrepancy: {
+        Args: { p_invoice_id: number; p_reason: string }
+        Returns: Json
+      }
       acquire_zone_lock: {
         Args: {
           p_session_id: number
@@ -9718,6 +10133,10 @@ export type Database = {
           stock_capacity: number
         }[]
       }
+      bulk_create_supplier_items: {
+        Args: { p_items: Json; p_supplier_id: number }
+        Returns: number
+      }
       bulk_import_ingredients: { Args: { p_rows: Json }; Returns: Json }
       bulk_import_production_recipes: {
         Args: { p_groups: Json }
@@ -9866,6 +10285,10 @@ export type Database = {
             Returns: Json
           }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
+      confirm_goods_receipt_note_legacy: {
+        Args: { p_grn_id: number }
+        Returns: Json
+      }
       confirm_payment_and_post: {
         Args: {
           p_branch_id: number
@@ -9943,6 +10366,10 @@ export type Database = {
         }
         Returns: Json
       }
+      create_grn_draft_from_po: {
+        Args: { p_idempotency_key: string; p_po_id: number }
+        Returns: Json
+      }
       create_grn_from_approved_po: { Args: { p_po_id: number }; Returns: Json }
       create_order: {
         Args: {
@@ -10003,8 +10430,31 @@ export type Database = {
         Args: { p_grn_id: number }
         Returns: Json
       }
+      create_purchase_order_from_request: {
+        Args: {
+          p_expected_delivery_date: string
+          p_lines: Json
+          p_notes: string
+          p_request_id: number
+          p_supplier_id: number
+        }
+        Returns: Json
+      }
       create_purchase_orders_from_grn: {
         Args: { p_grn_id: number }
+        Returns: Json
+      }
+      create_purchase_orders_from_request: {
+        Args: { p_orders: Json; p_request_id: number }
+        Returns: Json
+      }
+      create_purchase_request: {
+        Args: {
+          p_branch_id: number
+          p_lines: Json
+          p_needed_by: string
+          p_notes: string
+        }
         Returns: Json
       }
       create_refund: {
@@ -10053,6 +10503,29 @@ export type Database = {
       create_stocktake_session: {
         Args: { p_branch_id: number; p_location_id?: number }
         Returns: Json
+      }
+      create_supplier_credit_allocated: {
+        Args: {
+          p_allocations: Json
+          p_amount: number
+          p_credit_number: string
+          p_notes: string
+          p_supplier_id: number
+        }
+        Returns: Json
+      }
+      create_supplier_invoice_with_allocations: {
+        Args: {
+          p_document_discount_amount: number
+          p_due_date: string
+          p_invoice_date: string
+          p_invoice_number: string
+          p_matching_notes: string
+          p_receipts: Json
+          p_supplier_id: number
+          p_vat_breakdown: Json
+        }
+        Returns: number
       }
       create_supplier_invoice_with_vat_breakdown: {
         Args: {
@@ -10917,6 +11390,13 @@ export type Database = {
           year_month: string
         }[]
       }
+      list_branch_revenue_target_reward_tiers: {
+        Args: { p_year_month: string }
+        Returns: {
+          branch_id: number
+          reward_tiers: Json
+        }[]
+      }
       list_branch_revenue_targets: {
         Args: { p_year_month: string }
         Returns: {
@@ -10926,6 +11406,22 @@ export type Database = {
           target_amount: number
           year_month: string
         }[]
+      }
+      list_goods_receipt_notes: {
+        Args: {
+          p_branch_id?: number
+          p_date_field?: string
+          p_date_from?: string
+          p_date_to?: string
+          p_limit?: number
+          p_offset?: number
+          p_po_id?: number
+          p_purchase_request_id?: number
+          p_query?: string
+          p_status?: string
+          p_supplier_id?: number
+        }
+        Returns: Json
       }
       list_notifications: {
         Args: { p_before?: string; p_limit?: number; p_unread_only?: boolean }
@@ -11255,6 +11751,18 @@ export type Database = {
         }
         Returns: Json
       }
+      record_supplier_payment_allocated: {
+        Args: {
+          p_allocations: Json
+          p_amount: number
+          p_idempotency_key: string
+          p_payment_method: string
+          p_reference_note: string
+          p_supplier_id: number
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
       recreate_grn_at_receiving_site: {
         Args: {
           p_grn_id: number
@@ -11434,6 +11942,23 @@ export type Database = {
         Returns: Json
       }
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
+      save_ingredient_catalog: {
+        Args: {
+          p_category_id: number
+          p_default_fulfill_site_kind: string
+          p_ingredient_id: number
+          p_item_kind: string
+          p_max_stock_level: number
+          p_min_stock_level: number
+          p_name: string
+          p_reorder_point: number
+          p_shelf_life_days: number
+          p_sku: string
+          p_storage_type: string
+          p_units: Json
+        }
+        Returns: number
+      }
       save_item_modifiers: {
         Args: { p_item_id: number; p_modifiers: Json }
         Returns: undefined
@@ -11660,7 +12185,7 @@ export type Database = {
         }[]
       }
       stock_request_actor_can_read: {
-        Args: { p_branch_id: number }
+        Args: { p_item_fulfill_site_kind?: string; p_request_id: number }
         Returns: boolean
       }
       stock_transfer_confirm_receive: {
@@ -11725,6 +12250,7 @@ export type Database = {
         }
         Returns: number
       }
+      submit_purchase_request: { Args: { p_request_id: number }; Returns: Json }
       submit_stock_request: { Args: { p_request_id: number }; Returns: Json }
       sync_insurance_base: {
         Args: { p_employee_id: number }

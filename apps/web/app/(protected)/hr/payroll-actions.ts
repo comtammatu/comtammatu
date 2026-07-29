@@ -55,7 +55,11 @@ const payrollAdjustmentSchema = z.object({
   year: z.coerce.number().int().min(2020),
   kind: payrollAdjustmentKindSchema,
   amount: z.coerce.number().positive().max(1_000_000_000),
-  note: z.string().trim().max(500).optional(),
+  note: z
+    .string()
+    .trim()
+    .min(5, "Lý do điều chỉnh phải có ít nhất 5 ký tự")
+    .max(500),
 });
 
 const deletePayrollAdjustmentSchema = z.object({
@@ -574,7 +578,9 @@ async function buildPayrollPreview(
         unpaidLeaveDays: 0,
         annualLeaves: [],
       };
-      const annualEntitlementDays = annualEntitlementByEmployee.get(employee.id);
+      const annualEntitlementDays = annualEntitlementByEmployee.get(
+        employee.id,
+      );
       const annualEntitlementForCalculation = annualEntitlementDays ?? 0;
       const annualLeaveUsedBeforePeriod = calculateAnnualLeaveUsedThroughMonth({
         leaves: leave.annualLeaves,
@@ -703,7 +709,9 @@ async function buildPayrollPreview(
     : entries
         .filter((entry) => entry.salarySource === "missing")
         .map((entry) => entry.employeeId);
-  const previewEmployeeIdSet = new Set(entries.map((entry) => entry.employeeId));
+  const previewEmployeeIdSet = new Set(
+    entries.map((entry) => entry.employeeId),
+  );
   const calendar = {
     records: (attendanceResult.data ?? [])
       .filter((record) => previewEmployeeIdSet.has(record.employee_id))

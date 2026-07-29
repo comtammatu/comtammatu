@@ -16,13 +16,23 @@ export type GrnDetailItem = {
   supplierId: number;
   supplierName: string;
   poQuantity: number | null;
+  previouslyReceived: number;
+  remainingQuantity: number;
   required: number;
   actual: number;
   rejected: number;
+  acceptedQuantity: number;
+  poAppliedQuantity: number;
+  shortageQuantity: number;
+  excessQuantity: number;
   rejectionReason: string;
   rejectedPhotoUrl: string;
   unit: string;
   entryUnitId: number | null;
+  monetary: {
+    unitPrice: number | null;
+    lineTotal: number;
+  } | null;
 };
 
 export type GrnLinkedPo = {
@@ -40,6 +50,9 @@ export type GrnDetail = {
   poCode: string;
   poId: number | null;
   poStatus?: string | null;
+  purchaseRequestId: number | null;
+  purchaseRequestCode: string | null;
+  expectedReceiveDate: string | null;
   linkedPos: GrnLinkedPo[];
   invoiceId: number | null;
   branchId: number;
@@ -64,6 +77,28 @@ export type ReceivingLocationOption = {
 };
 
 export type EditableGrnLine = GrnDetailItem & { dirty: boolean };
+
+export function calculateGrnQuantities(
+  receivedQuantity: number,
+  rejectedQuantity: number,
+  poRemainingQuantity: number,
+) {
+  const acceptedQuantity = Math.max(receivedQuantity - rejectedQuantity, 0);
+  const remainingQuantity = Math.max(poRemainingQuantity, 0);
+  const poAppliedQuantity = Math.min(acceptedQuantity, remainingQuantity);
+  return {
+    acceptedQuantity,
+    poAppliedQuantity,
+    shortageQuantity: remainingQuantity - poAppliedQuantity,
+    excessQuantity: acceptedQuantity - poAppliedQuantity,
+  };
+}
+
+export function hasAcceptedGrnQuantity(
+  lines: readonly Pick<GrnDetailItem, "actual" | "rejected">[],
+): boolean {
+  return lines.some((line) => line.actual - line.rejected > 0);
+}
 
 export function isGrnLookupParam(value: string): boolean {
   if (/^\d+$/.test(value)) {
@@ -98,13 +133,20 @@ export function createEditableGrnLine({
     supplierId,
     supplierName,
     poQuantity: null,
+    previouslyReceived: 0,
+    remainingQuantity: quantity,
     required: quantity,
     actual: quantity,
     rejected: 0,
+    acceptedQuantity: quantity,
+    poAppliedQuantity: quantity,
+    shortageQuantity: 0,
+    excessQuantity: 0,
     rejectionReason: "",
     rejectedPhotoUrl: "",
     unit,
     entryUnitId,
+    monetary: null,
     dirty: false,
   };
 }

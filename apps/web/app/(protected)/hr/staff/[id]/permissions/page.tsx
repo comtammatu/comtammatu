@@ -6,6 +6,7 @@ import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
+import { getStaffPermissionLabelVi } from "@lib/messages/owner";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { PermissionsClient } from "./permissions-client";
@@ -57,9 +58,9 @@ export default async function StaffPermissionsPage({ params }: Props) {
       .order("key"),
     supabase
       .from("role_templates")
-      .select("id, name, position_code, permission_keys")
+      .select("id, position_code, permission_keys")
       .or("position_code.is.null,position_code.neq.owner")
-      .order("name"),
+      .order("position_code"),
     supabase
       .from("staff_permissions")
       .select(
@@ -90,9 +91,9 @@ export default async function StaffPermissionsPage({ params }: Props) {
   const templateList = templates ?? [];
   const grantList = grants ?? [];
   const auditList = recentAudit ?? [];
-  const positionLabel = position
-    ? position.label_vi
-    : messages.owner.staffPermissions.positionUnassigned;
+  const positionLabel =
+    position?.label_vi ??
+    messages.owner.staffPermissions.positionUnassigned;
 
   // Resolve actor names for the "Lịch sử" tab
   const actorIds = Array.from(
@@ -115,7 +116,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
   const permissionLabelByKey = new Map(
     permList.map((permission) => [
       permission.key,
-      permission.description || UNKNOWN_LABEL_VI,
+      getStaffPermissionLabelVi(permission.key, permission.description),
     ]),
   );
 
@@ -168,6 +169,9 @@ export default async function StaffPermissionsPage({ params }: Props) {
           <PermissionsClient
             targetUserId={profile.id}
             targetFullName={profile.full_name}
+            targetPositionCode={position?.code ?? null}
+            targetPositionLabel={positionLabel}
+            targetBranchId={profile.branch_id}
             currentGrants={grantList.map((g) => ({
               id: g.id,
               branchId: g.branch_id,
@@ -193,7 +197,6 @@ export default async function StaffPermissionsPage({ params }: Props) {
             }))}
             templates={templateList.map((t) => ({
               id: t.id,
-              name: t.name,
               positionCode: t.position_code,
               permissionKeys: t.permission_keys,
             }))}

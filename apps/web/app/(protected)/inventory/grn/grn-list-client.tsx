@@ -1,34 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRightToLine as IconArrowBarRight,
+  ExternalLink as IconExternalLink,
   FileText as IconFileText,
-  Pencil as IconPencil,
-  Plus as IconPlus,
   Receipt as IconReceipt,
   Search as IconSearch,
   Trash as IconTrash,
 } from "lucide-react";
-import {
-  ACTIONS_VI,
-  FORM_VI,
-  INVENTORY_VI,
-  KDS_VI,
-  STATES_VI,
-} from "@comtammatu/shared/messages";
-import { formatVNDateTime } from "@comtammatu/shared/time";
+import { formatVND } from "@comtammatu/shared/format";
+import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { useFormControlSize } from "@/components/form/control-size";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { Combobox } from "@comtammatu/ui/components/combobox";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { Input } from "@comtammatu/ui/components/input";
 import {
   Select,
   SelectContent,
@@ -36,13 +29,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { AppDialog } from "@/components/form";
 import {
   AppEmptyState,
   AppListFrame,
   AppPage,
   AppPageHeader,
-  AppSection,
   AppToolbar,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
@@ -57,264 +51,433 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
+import { messages } from "@lib/messages";
 import { discardGrnDraft } from "../grn-actions";
-import { tNav } from "../_lib/dictionary";
 import {
-  filterGrnDraftRows,
-  filterGrnListRows,
-  GRN_LIST_STATUS_FILTER_VALUES,
   grnDetailHref,
-  grnDraftHref,
-  grnProcurementStepChip,
-  grnProcurementStepChipLabel,
   hasGrnListFilters,
   supplierInvoiceHrefForGrn,
-  type GrnDraftRow,
-  type GrnListStatusFilter,
-  type GrnRow,
+  type GrnListFilters,
+  type GrnListRow,
 } from "@lib/inventory/grn-list-model";
-import { messages } from "@lib/messages";
-import {
-  inventoryListFilterSelectClassName,
-} from "../_components/inventory-list-frame";
 
-export type { GrnDraftRow, GrnRow } from "@lib/inventory/grn-list-model";
-
-const grnCopy = messages.inventory.grn;
-const noValue = messages.inventory.common.noValue;
-
-const statusFilterLabels: Record<GrnListStatusFilter, string> = {
-  all: KDS_VI.filterAll,
-  review: grnCopy.qcQueue,
-  draft: INVENTORY_VI.draft,
-  confirmed: grnCopy.statusConfirmedLong,
-  cancelled: STATES_VI.cancelled,
+const statusLabels: Record<string, string> = {
+  draft: "Chờ nhập hàng",
+  confirmed: "Đã nhập kho",
+  cancelled: "Đã hủy",
 };
 
-const statusFilterOptions = GRN_LIST_STATUS_FILTER_VALUES.map((value) => ({
-  value,
-  label: statusFilterLabels[value],
-}));
+const invoiceLabels: Record<string, string> = {
+  pending: "Chưa đối soát",
+  matched: "Đã đối soát",
+  discrepancy: "Có chênh lệch",
+  approved: "Đã chấp nhận",
+};
+const grnCopy = messages.inventory.grn;
+
+const comboFilter = (
+  option: { label: string; keywords?: string[] },
+  query: string,
+) =>
+  [option.label, ...(option.keywords ?? [])].some((value) =>
+    value.toLocaleLowerCase("vi").includes(query.toLocaleLowerCase("vi")),
+  );
+
+export type { GrnListRow } from "@lib/inventory/grn-list-model";
 
 export function GrnListClient({
-  grns,
+  rows,
+  total,
+  page,
+  pageSize,
+  filters,
   basePath = "/inventory/grn",
-  drafts,
-  canCreate,
-  canManageSupplierInvoice = false,
-  draftsLoadFailed = false,
-  grnsLoadFailed = false,
+  canManageSupplierInvoice,
+  canViewMonetary,
+  loadFailed,
   withinOwnerTabs = false,
 }: {
-  grns: GrnRow[];
+  rows: GrnListRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  filters: GrnListFilters;
   basePath?: string;
-  drafts?: GrnDraftRow[];
-  canCreate: boolean;
-  canManageSupplierInvoice?: boolean;
-  draftsLoadFailed?: boolean;
-  grnsLoadFailed?: boolean;
+  canManageSupplierInvoice: boolean;
+  canViewMonetary: boolean;
+  loadFailed: boolean;
   withinOwnerTabs?: boolean;
 }) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<GrnListStatusFilter>("all");
-  const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
-  const controlSize = useFormControlSize();
   const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [query, setQuery] = useState(filters.query);
+  const [supplierId, setSupplierId] = useState(
+    filters.supplierId?.toString() ?? "",
+  );
+  const [dateField, setDateField] = useState(filters.dateField);
+  const [dateFrom, setDateFrom] = useState(filters.dateFrom);
+  const [dateTo, setDateTo] = useState(filters.dateTo);
+  const [poId, setPoId] = useState(filters.poId?.toString() ?? "");
+  const [requestId, setRequestId] = useState(
+    filters.purchaseRequestId?.toString() ?? "",
+  );
+  const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
+  const [cancelRow, setCancelRow] = useState<GrnListRow | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
-  const getGrnRowActions = (grn: GrnRow): RowActionItem[] => {
+  const options = useMemo(() => {
+    const suppliers = new Map<string, string>();
+    const purchaseOrders = new Map<string, string>();
+    const purchaseRequests = new Map<string, string>();
+    for (const row of rows) {
+      suppliers.set(String(row.supplierId), row.supplierName);
+      purchaseOrders.set(String(row.poId), row.poCode);
+      if (row.purchaseRequestId != null && row.purchaseRequestCode) {
+        purchaseRequests.set(
+          String(row.purchaseRequestId),
+          row.purchaseRequestCode,
+        );
+      }
+    }
+    return {
+      suppliers: [...suppliers].map(([value, label]) => ({ value, label })),
+      purchaseOrders: [...purchaseOrders].map(([value, label]) => ({
+        value,
+        label,
+      })),
+      purchaseRequests: [...purchaseRequests].map(([value, label]) => ({
+        value,
+        label,
+      })),
+    };
+  }, [rows]);
+
+  function navigate(next: Record<string, string | null>) {
+    const params = new URLSearchParams();
+    const values = {
+      q: query.trim() || null,
+      status: filters.status,
+      supplierId: supplierId || null,
+      dateField,
+      dateFrom: dateFrom || null,
+      dateTo: dateTo || null,
+      poId: poId || null,
+      requestId: requestId || null,
+      branchId: filters.branchId?.toString() ?? null,
+      ...next,
+    };
+    for (const [key, value] of Object.entries(values)) {
+      if (value) params.set(key, value);
+    }
+    startTransition(() => router.push(`${basePath}?${params.toString()}`));
+  }
+
+  function rowActions(row: GrnListRow): RowActionItem[] {
     const actions: RowActionItem[] = [
       {
-        key: "view",
-        label: ACTIONS_VI.viewDetails,
-        icon: <IconArrowBarRight />,
-        href: grnDetailHref(basePath, grn.id),
+        key: "detail",
+        label:
+          row.status === "draft" ? "Tiếp tục nhập hàng" : ACTIONS_VI.viewDetails,
+        icon: <IconExternalLink />,
+        href: grnDetailHref(basePath, row.id),
+      },
+      {
+        key: "purchase-order",
+        label: "Xem đơn đặt hàng",
+        icon: <IconFileText />,
+        href: `/inventory/purchase-orders?poId=${row.poId}`,
       },
     ];
-    if (canManageSupplierInvoice && grn.status === "confirmed") {
+    if (row.purchaseRequestId != null) {
       actions.push({
-        key: "supplier-invoice",
-        label: grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice,
+        key: "purchase-request",
+        label: "Xem yêu cầu mua",
+        icon: <IconFileText />,
+        href: `/inventory/purchase-requests?requestId=${row.purchaseRequestId}`,
+      });
+    }
+    if (row.status === "confirmed" && canManageSupplierInvoice) {
+      actions.push({
+        key: "invoice",
+        label: row.monetary?.invoiceId ? "Xem hóa đơn" : "Ghi nhận hóa đơn",
         icon: <IconReceipt />,
         href: supplierInvoiceHrefForGrn({
-          grnId: grn.id,
-          invoiceId: grn.invoiceId,
+          grnId: row.id,
+          invoiceId: row.monetary?.invoiceId ?? null,
         }),
       });
     }
+    if (row.status === "draft") {
+      actions.push({
+        key: "cancel",
+        label: "Hủy phiếu",
+        icon: <IconTrash />,
+        destructive: true,
+        separatorBefore: true,
+        onSelect: () => {
+          setCancelRow(row);
+          setCancelReason("");
+        },
+      });
+    }
     return actions;
-  };
+  }
 
-  const openGrnDetail = (grn: GrnRow) => {
-    router.push(grnDetailHref(basePath, grn.id));
-  };
+  async function cancelDraft() {
+    if (!cancelRow || cancelReason.trim().length < 5) return;
+    const result = await discardGrnDraft({
+      grnId: cancelRow.id,
+      reason: cancelReason,
+    });
+    if (!result.success) {
+      toast.error(result.error);
+      return;
+    }
+    setCancelRow(null);
+    toast.success("Đã hủy phiếu nhập.");
+    router.refresh();
+  }
 
-  const grnColumns: DataTableColumn<GrnRow>[] = [
+  const columns: DataTableColumn<GrnListRow>[] = [
     {
       key: "code",
-      header: INVENTORY_VI.grnCode,
-      render: (grn) => (
+      header: "Phiếu nhập",
+      render: (row) => (
         <Link
-          href={grnDetailHref(basePath, grn.id)}
-          className="font-mono text-primary hover:underline"
+          href={grnDetailHref(basePath, row.id)}
+          className="font-mono font-medium text-primary hover:underline"
         >
-          {grn.code}
+          {row.code}
         </Link>
       ),
     },
     {
-      key: "supplier",
-      header: INVENTORY_VI.supplier,
-      render: (grn) => grn.supplierName,
+      key: "status",
+      header: FORM_VI.status,
+      render: (row) => (
+        <StatusBadge
+          domain="inventory"
+          value={row.status}
+          label={statusLabels[row.status] ?? grnCopy.unknownStatus}
+        />
+      ),
     },
     {
-      key: "branch",
-      header: messages.inventory.grn.receivingWarehouse,
-      render: (grn) => grn.branchName,
+      key: "supplier",
+      header: "Nhà cung cấp",
+      render: (row) => row.supplierName,
     },
     {
       key: "po",
-      header: INVENTORY_VI.linkedPo,
-      render: (grn) =>
-        grn.poCount > 0 && grn.poCode ? (
-          <span className="font-mono">{grn.poCode}</span>
-        ) : (
-          noValue
-        ),
+      header: "Đơn đặt hàng",
+      render: (row) => <span className="font-mono">{row.poCode}</span>,
     },
     {
-      key: "date",
-      header: INVENTORY_VI.receiveDate,
-      render: (grn) =>
-        grn.date ? (
-          <span className="font-mono tabular-nums text-muted-foreground">
-            {grn.date}
-          </span>
-        ) : (
-          noValue
-        ),
+      key: "request",
+      header: "Yêu cầu mua",
+      render: (row) => (
+        <span className="font-mono">{row.purchaseRequestCode ?? "—"}</span>
+      ),
     },
     {
-      key: "status",
-      header: FORM_VI.status,
-      render: (grn) => {
-        const step = grnProcurementStepChip(grn);
-        return (
-        <div className="flex flex-wrap items-center gap-1">
-          <StatusBadge domain="inventory" value={grn.status} size="sm" />
-          {step ? (
-            <Badge variant="outline">
-              {grnProcurementStepChipLabel(step, grnCopy)}
-            </Badge>
-          ) : null}
-          {grn.qcIssueCount > 0 ? (
-            <Badge variant="warning">
-              {messages.inventory.grn.qcIssueCount(grn.qcIssueCount)}
-            </Badge>
-          ) : null}
-        </div>
-        );
-      },
+      key: "site",
+      header: "Kho nhận",
+      render: (row) => row.receivingSiteName,
     },
+    {
+      key: "expected",
+      header: "Ngày dự kiến",
+      render: (row) =>
+        row.expectedReceiveDate ? formatVNDate(row.expectedReceiveDate) : "—",
+    },
+    {
+      key: "received",
+      header: "Ngày nhập",
+      render: (row) =>
+        row.receivedDate ? formatVNDate(row.receivedDate) : "—",
+    },
+    {
+      key: "progress",
+      header: "Tiến độ",
+      render: (row) =>
+        `${row.completedLineCount}/${row.lineCount} dòng đã nhập`,
+    },
+    {
+      key: "exceptions",
+      header: "Ngoại lệ",
+      render: (row) => <ExceptionBadges row={row} />,
+    },
+    {
+      key: "updated",
+      header: "Cập nhật",
+      render: (row) => (
+        <span className="font-mono tabular-nums text-muted-foreground">
+          {formatVNDateTime(row.updatedAt)}
+        </span>
+      ),
+    },
+    {
+      key: "handler",
+      header: "Người nhận",
+      render: (row) => row.handledBy ?? "—",
+    },
+    ...(canViewMonetary
+      ? [
+          {
+            key: "value",
+            header: "Giá trị nhập",
+            className: "text-right font-mono tabular-nums",
+            render: (row: GrnListRow) =>
+              row.monetary ? formatVND(row.monetary.receiptValue) : "—",
+          },
+          {
+            key: "invoice",
+            header: "Hóa đơn",
+            render: (row: GrnListRow) =>
+              row.monetary?.invoiceStatus
+                ? (invoiceLabels[row.monetary.invoiceStatus] ??
+                  grnCopy.unknownInvoiceStatus)
+                : "Chưa có",
+          },
+        ]
+      : []),
     {
       key: "actions",
       header: <span className="sr-only">{FORM_VI.action}</span>,
       className: "w-10 text-right",
-      render: (grn) => {
-        const items = getGrnRowActions(grn);
-        return (
-          <div
-            className="flex justify-end"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <RowActionsMenu
-              items={items}
-              label={`${ACTIONS_VI.viewDetails} ${grn.code}`}
-              triggerSize="icon-sm"
-              open={openActionRowId === grn.id}
-              onOpenChange={(open) => setOpenActionRowId(open ? grn.id : null)}
-            />
-          </div>
-        );
-      },
+      render: (row) => (
+        <div
+          className="flex justify-end"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <RowActionsMenu
+            items={rowActions(row)}
+            label={`${FORM_VI.action} ${row.code}`}
+            triggerSize="icon-sm"
+            open={openActionRowId === row.id}
+            onOpenChange={(open) => setOpenActionRowId(open ? row.id : null)}
+          />
+        </div>
+      ),
     },
   ];
 
-  const filters = { query: search, status: statusFilter };
-  const filtered = useMemo(
-    () => filterGrnListRows(grns, filters),
-    [grns, search, statusFilter],
-  );
-  const hasActiveFilters = hasGrnListFilters(filters);
-  const desktopActions = canCreate ? (
-    <Button
-      size={withinOwnerTabs ? "field" : "lg"}
-      render={<Link href={`${basePath}/new`} />}
-    >
-      <IconPlus className="size-4" />
-      {INVENTORY_VI.newGrn}
-    </Button>
-  ) : null;
-
-  const listToolbar = (
+  const toolbar = (
     <AppToolbar
       variant="inline"
-      className="items-stretch max-sm:[&>[data-slot=separator]]:hidden max-sm:[&>[data-slot=toolbar-group]:first-child]:basis-full sm:items-center"
+      className="items-stretch max-lg:flex-col [&>[data-slot=separator]]:hidden [&>[data-slot=toolbar-group]:first-child]:basis-full"
       search={
-        <InputGroup size={controlSize} className="w-full">
+        <InputGroup size="field" className="min-w-64 flex-1">
           <InputGroupAddon>
             <IconSearch />
           </InputGroupAddon>
           <InputGroupInput
             type="search"
-            aria-label={INVENTORY_VI.grnSearchPlaceholder}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={INVENTORY_VI.grnSearchPlaceholder}
-            inputMode="search"
+            aria-label={grnCopy.listSearchAria}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") navigate({ page: null });
+            }}
+            placeholder={grnCopy.listSearchPlaceholder}
           />
         </InputGroup>
       }
       filters={
-        <Select
-          value={statusFilter}
-          onValueChange={(value) =>
-            setStatusFilter(value as GrnListStatusFilter)
-          }
-        >
-          <SelectTrigger
-            size={controlSize}
-            className={
-              controlSize === "touch"
-                ? "w-full"
-                : inventoryListFilterSelectClassName
+        <>
+          <Combobox
+            value={supplierId}
+            onValueChange={setSupplierId}
+            options={options.suppliers}
+            filter={comboFilter}
+            placeholder={grnCopy.supplierFilter}
+            searchPlaceholder={grnCopy.supplierSearchPlaceholder}
+            className="w-44"
+          />
+          <Select
+            value={dateField}
+            onValueChange={(value) =>
+              setDateField(value as GrnListFilters["dateField"])
             }
           >
-            <SelectValue placeholder={FORM_VI.status} />
-          </SelectTrigger>
-          <SelectContent>
-            {statusFilterOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectTrigger size="field" className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="expected">{grnCopy.expectedDate}</SelectItem>
+              <SelectItem value="received">{grnCopy.receivedDate}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            aria-label={grnCopy.dateFrom}
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+            className="w-36"
+          />
+          <Input
+            type="date"
+            aria-label={grnCopy.dateTo}
+            value={dateTo}
+            onChange={(event) => setDateTo(event.target.value)}
+            className="w-36"
+          />
+          <Combobox
+            value={poId}
+            onValueChange={setPoId}
+            options={options.purchaseOrders}
+            filter={comboFilter}
+            placeholder={grnCopy.purchaseOrderFilter}
+            searchPlaceholder={grnCopy.purchaseOrderSearchPlaceholder}
+            className="w-40"
+          />
+          <Combobox
+            value={requestId}
+            onValueChange={setRequestId}
+            options={options.purchaseRequests}
+            filter={comboFilter}
+            placeholder={grnCopy.purchaseRequestFilter}
+            searchPlaceholder={grnCopy.purchaseRequestSearchPlaceholder}
+            className="w-40"
+          />
+        </>
       }
-      bulk={
-        <Badge variant="outline">
-          {INVENTORY_VI.grnListCount(filtered.length)}
-        </Badge>
+      actions={
+        <>
+          <Button
+            type="button"
+            size="field"
+            disabled={pending}
+            onClick={() => navigate({ page: null })}
+          >
+            {grnCopy.applyFilters}
+          </Button>
+          {hasGrnListFilters(filters) ? (
+            <Button
+              variant="ghost"
+              size="field"
+              render={
+                <Link
+                  href={`${basePath}?status=${filters.status}${
+                    filters.branchId ? `&branchId=${filters.branchId}` : ""
+                  }`}
+                />
+              }
+            >
+              {grnCopy.clearFilters}
+            </Button>
+          ) : null}
+        </>
       }
-      actions={withinOwnerTabs ? desktopActions : null}
     />
   );
 
-  const listTable = grnsLoadFailed ? (
+  const table = loadFailed ? (
     <AppEmptyState
       compact
       mode="error"
       icon={<IconReceipt />}
-      title={messages.inventory.grn.loadFailed}
+      title={grnCopy.listLoadFailed}
     >
       <Button type="button" size="sm" onClick={() => router.refresh()}>
         {ACTIONS_VI.retry}
@@ -322,494 +485,211 @@ export function GrnListClient({
     </AppEmptyState>
   ) : (
     <DataTable
-      columns={grnColumns}
-      data={filtered}
-      getRowKey={(grn) => grn.id}
-      pageSize={50}
+      columns={columns}
+      data={rows}
+      getRowKey={(row) => row.id}
+      pageSize={pageSize}
+      totalCount={total}
+      currentPage={page}
+      onPageChange={(nextPage) => navigate({ page: String(nextPage) })}
       emptyTitle={
-        hasActiveFilters
-          ? INVENTORY_VI.grnNotFoundFiltered
-          : INVENTORY_VI.grnEmptyNoData
+        hasGrnListFilters(filters)
+          ? grnCopy.emptyFiltered
+          : filters.status === "draft"
+            ? grnCopy.emptyWaiting
+            : grnCopy.empty
       }
-      emptyMode={hasActiveFilters ? "no-results" : "no-data"}
-      emptyIcon={<IconReceipt className="size-5" />}
-      rowClassName={(grn) =>
-        grn.status === "cancelled" ? "opacity-60" : undefined
+      emptyDescription={
+        filters.status === "draft"
+          ? grnCopy.emptyWaitingDescription
+          : undefined
       }
-      onRowClick={openGrnDetail}
-      getRowDataState={(grn) =>
-        openActionRowId === grn.id ? "selected" : undefined
+      emptyMode={hasGrnListFilters(filters) ? "no-results" : "no-data"}
+      emptyIcon={<IconReceipt />}
+      actions={
+        rows.length === 0 && filters.status === "draft" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            render={<Link href="/inventory/purchase-orders" />}
+          >
+            {grnCopy.viewPendingOrders}
+          </Button>
+        ) : null
       }
-      renderRowContextMenu={(grn) => (
-        <RowActionsContextMenuItems items={getGrnRowActions(grn)} />
+      rowClassName={(row) =>
+        row.status === "cancelled" ? "opacity-60" : undefined
+      }
+      onRowClick={(row) => router.push(grnDetailHref(basePath, row.id))}
+      renderRowContextMenu={(row) => (
+        <RowActionsContextMenuItems items={rowActions(row)} />
       )}
-      mobileCardRender={(grn) => (
+      mobileCardRender={(row) => (
         <GrnMobileCard
-          grn={grn}
-          actions={getGrnRowActions(grn)}
-          onOpen={openGrnDetail}
+          row={row}
+          actions={rowActions(row)}
+          onOpen={() => router.push(grnDetailHref(basePath, row.id))}
         />
       )}
     />
   );
 
-  const listBody = (
-    <AppListFrame toolbar={grnsLoadFailed ? undefined : listToolbar}>
-      {listTable}
-    </AppListFrame>
-  );
-
-  const draftsContent = draftsLoadFailed ? (
-    <AppEmptyState
-      compact
-      mode="error"
-      icon={<IconFileText />}
-      title={messages.inventory.grn.draftListLoadFailed}
-    >
-      <Button type="button" size="sm" onClick={() => router.refresh()}>
-        {ACTIONS_VI.retry}
-      </Button>
-    </AppEmptyState>
-  ) : (
-    <GrnDraftsTab drafts={drafts ?? []} basePath={basePath} />
-  );
-
-  const draftSectionWithinOwnerTabs =
-    withinOwnerTabs && drafts && (drafts.length > 0 || draftsLoadFailed) ? (
-      <AppSection
-        title={INVENTORY_VI.draft}
-        badge={
-          draftsLoadFailed
-            ? undefined
-            : { children: drafts.length, variant: "warning" }
-        }
-      >
-        {draftsContent}
-      </AppSection>
-    ) : null;
-
-  const ownerBody = withinOwnerTabs ? (
-    <>
-      {draftSectionWithinOwnerTabs}
-      {listBody}
-    </>
-  ) : drafts ? (
+  const list = <AppListFrame toolbar={loadFailed ? undefined : toolbar}>{table}</AppListFrame>;
+  const tabs = (
     <AppPageTabs
+      paramKey="status"
+      defaultValue={filters.status}
+      ariaLabel={grnCopy.statusTabsAria}
       items={[
-        { value: "list", label: INVENTORY_VI.grnListTab },
-        {
-          value: "drafts",
-          label: INVENTORY_VI.draft,
-          count: drafts.length,
-        },
+        { value: "draft", label: statusLabels.draft! },
+        { value: "confirmed", label: statusLabels.confirmed! },
+        { value: "cancelled", label: statusLabels.cancelled! },
+        { value: "all", label: grnCopy.allStatuses },
       ]}
     >
-      <TabsContent value="list">{listBody}</TabsContent>
-      <TabsContent value="drafts">{draftsContent}</TabsContent>
+      <TabsContent value={filters.status}>{list}</TabsContent>
     </AppPageTabs>
-  ) : (
-    listBody
   );
 
-  if (withinOwnerTabs) {
-    return <div className="flex w-full flex-col gap-3">{ownerBody}</div>;
-  }
-
-  return (
-    <AppPage width="xwide" density="compact" contentClassName="max-md:max-w-xl">
+  const content = withinOwnerTabs ? (
+    tabs
+  ) : (
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
-        title={tNav("grn", "navigation")}
-        actions={desktopActions}
+        title={grnCopy.listTitle}
+        description={grnCopy.listDescription}
+        actions={
+          <Button variant="outline" render={<Link href="/inventory/purchase-orders" />}>
+            {grnCopy.viewPendingOrders}
+          </Button>
+        }
       />
-      {ownerBody}
+      {tabs}
     </AppPage>
   );
-}
-
-function GrnDraftsTab({
-  drafts,
-  basePath,
-}: {
-  drafts: GrnDraftRow[];
-  basePath: string;
-}) {
-  const router = useRouter();
-  const controlSize = useFormControlSize();
-  const [search, setSearch] = useState("");
-  const [pending, setPending] = useState(false);
-  const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
-
-  const filtered = useMemo(
-    () => filterGrnDraftRows(drafts, search),
-    [drafts, search],
-  );
-  const hasActiveSearch = search.trim() !== "";
-
-  function openDraft(draft: GrnDraftRow) {
-    router.push(grnDraftHref(basePath, draft));
-  }
-
-  async function handleDiscard(draft: GrnDraftRow) {
-    const ok = await confirm({
-      title: grnCopy.discardDraftTitle(draft.supplierName),
-      variant: "destructive",
-    });
-    if (!ok) return;
-
-    setPending(true);
-    try {
-      const result = await discardGrnDraft({ grnId: draft.grnId });
-      if (!result.success) {
-        toast.error(result.error ?? grnCopy.discardDraftFailed);
-        return;
-      }
-      router.refresh();
-    } finally {
-      setPending(false);
-    }
-  }
-
-  const getDraftRowActions = (draft: GrnDraftRow): RowActionItem[] => {
-    const actions: RowActionItem[] = [
-      {
-        key: "continue",
-        label: INVENTORY_VI.grnDraftContinue,
-        icon: <IconPencil />,
-        href: grnDraftHref(basePath, draft),
-        disabled: pending,
-      },
-    ];
-    if (draft.poId == null && draft.poCount === 0) {
-      actions.push({
-        key: "discard",
-        label: ACTIONS_VI.delete,
-        icon: <IconTrash />,
-        destructive: true,
-        disabled: pending,
-        separatorBefore: true,
-        onSelect: () => {
-          void handleDiscard(draft);
-        },
-      });
-    }
-    return actions;
-  };
-
-  const draftColumns: DataTableColumn<GrnDraftRow>[] = [
-    {
-      key: "code",
-      header: INVENTORY_VI.grnCode,
-      render: (draft) => (
-        <Link
-          href={grnDraftHref(basePath, draft)}
-          className="font-mono text-primary hover:underline"
-        >
-          {draft.grnNumber}
-        </Link>
-      ),
-    },
-    {
-      key: "supplier",
-      header: INVENTORY_VI.supplier,
-      render: (draft) => draft.supplierName,
-    },
-    {
-      key: "branch",
-      header: messages.inventory.grn.receivingWarehouse,
-      render: (draft) => draft.branchName,
-    },
-    {
-      key: "po",
-      header: INVENTORY_VI.linkedPo,
-      render: (draft) =>
-        draft.poId != null && draft.poCode ? (
-          <span className="font-mono">
-            {draft.poCode}
-            {draft.poCount > 1 ? ` · ${draft.poCount} PO` : ""}
-          </span>
-        ) : (
-          noValue
-        ),
-    },
-    {
-      key: "updated",
-      header: ACTIONS_VI.update,
-      render: (draft) => (
-        <span className="font-mono tabular-nums text-muted-foreground">
-          {formatVNDateTime(draft.updatedAt)}
-        </span>
-      ),
-    },
-    {
-      key: "lines",
-      header: INVENTORY_VI.lineCountLabel,
-      className: "text-right",
-      render: (draft) => (
-        <span className="font-mono tabular-nums">
-          {INVENTORY_VI.grnDraftLineCount(draft.lineCount)}
-        </span>
-      ),
-    },
-    {
-      key: "status",
-      header: FORM_VI.status,
-      render: (draft) => {
-        const step = grnProcurementStepChip({
-          status: "draft",
-          poId: draft.poId,
-          poStatus: draft.poStatus,
-        });
-        return (
-        <div className="flex flex-wrap items-center gap-1">
-          <StatusBadge domain="inventory" value="draft" size="sm" />
-          {step ? (
-            <Badge variant="outline">
-              {grnProcurementStepChipLabel(step, grnCopy)}
-            </Badge>
-          ) : null}
-          {draft.qcIssueCount > 0 ? (
-            <Badge variant="warning">
-              {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
-            </Badge>
-          ) : null}
-        </div>
-        );
-      },
-    },
-    {
-      key: "actions",
-      header: <span className="sr-only">{FORM_VI.action}</span>,
-      className: "w-10 text-right",
-      render: (draft) => {
-        const items = getDraftRowActions(draft);
-        return (
-          <div
-            className="flex justify-end"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <RowActionsMenu
-              items={items}
-              label={`${INVENTORY_VI.grnDraftContinue} ${draft.grnNumber}`}
-              triggerSize="icon-sm"
-              open={openActionRowId === draft.grnId}
-              onOpenChange={(open) =>
-                setOpenActionRowId(open ? draft.grnId : null)
-              }
-            />
-          </div>
-        );
-      },
-    },
-  ];
-
-  if (drafts.length === 0) {
-    return (
-      <AppEmptyState
-        compact
-        icon={<IconFileText />}
-        title={INVENTORY_VI.grnDraftsEmptyTitle}
-        description={INVENTORY_VI.grnDraftsEmptyDescription}
-      />
-    );
-  }
 
   return (
-    <AppListFrame
-      toolbar={
-        <AppToolbar
-          variant="inline"
-          className="items-stretch max-sm:[&>[data-slot=separator]]:hidden max-sm:[&>[data-slot=toolbar-group]:first-child]:basis-full sm:items-center"
-          search={
-            <InputGroup size={controlSize} className="w-full">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="search"
-                aria-label={INVENTORY_VI.grnSearchPlaceholder}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={INVENTORY_VI.grnSearchPlaceholder}
-                inputMode="search"
-              />
-            </InputGroup>
-          }
-          bulk={
-            <Badge variant="outline">
-              {INVENTORY_VI.grnListCount(filtered.length)}
-            </Badge>
-          }
+    <>
+      {content}
+      <AppDialog
+        open={cancelRow != null}
+        onOpenChange={(open) => {
+          if (!open) setCancelRow(null);
+        }}
+        title={grnCopy.cancelTitle}
+        description={cancelRow?.code}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setCancelRow(null)}>
+              {ACTIONS_VI.close}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={cancelReason.trim().length < 5 || pending}
+              onClick={() => {
+                startTransition(cancelDraft);
+              }}
+            >
+              {grnCopy.cancelAction}
+            </Button>
+          </>
+        }
+      >
+        <Textarea
+          aria-label={grnCopy.cancelReason}
+          value={cancelReason}
+          onChange={(event) => setCancelReason(event.target.value)}
+          placeholder={grnCopy.cancelReasonPlaceholder}
         />
-      }
-    >
-      <DataTable
-        columns={draftColumns}
-        data={filtered}
-        getRowKey={(draft) => draft.grnId}
-        pageSize={50}
-        emptyTitle={
-          hasActiveSearch
-            ? INVENTORY_VI.grnNotFoundFiltered
-            : INVENTORY_VI.grnDraftsEmptyTitle
-        }
-        emptyMode={hasActiveSearch ? "no-results" : "no-data"}
-        emptyIcon={<IconFileText className="size-5" />}
-        onRowClick={openDraft}
-        getRowDataState={(draft) =>
-          openActionRowId === draft.grnId ? "selected" : undefined
-        }
-        renderRowContextMenu={(draft) => (
-          <RowActionsContextMenuItems items={getDraftRowActions(draft)} />
-        )}
-        mobileCardRender={(draft) => (
-          <GrnDraftMobileCard
-            draft={draft}
-            actions={getDraftRowActions(draft)}
-            onOpen={openDraft}
-          />
-        )}
-      />
-    </AppListFrame>
+      </AppDialog>
+    </>
   );
 }
 
-function GrnDraftMobileCard({
-  draft,
+function ExceptionBadges({ row }: { row: GrnListRow }) {
+  if (
+    row.shortageLineCount === 0 &&
+    row.excessLineCount === 0 &&
+    row.rejectedLineCount === 0
+  ) {
+    return <span className="text-muted-foreground">{grnCopy.noExceptions}</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {row.shortageLineCount > 0 ? (
+        <Badge variant="warning">
+          {grnCopy.shortageLines(row.shortageLineCount)}
+        </Badge>
+      ) : null}
+      {row.excessLineCount > 0 ? (
+        <Badge variant="warning">{grnCopy.excessLines(row.excessLineCount)}</Badge>
+      ) : null}
+      {row.rejectedLineCount > 0 ? (
+        <Badge variant="destructive">
+          {grnCopy.rejectedExceptionLines(row.rejectedLineCount)}
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function GrnMobileCard({
+  row,
   actions,
   onOpen,
 }: {
-  draft: GrnDraftRow;
+  row: GrnListRow;
   actions: RowActionItem[];
-  onOpen: (draft: GrnDraftRow) => void;
+  onOpen: () => void;
 }) {
   return (
     <InteractiveCard
       minHeight="mobile"
       padding="default"
-      className="justify-between touch-manipulation cursor-pointer"
       role="button"
       tabIndex={0}
-      onClick={() => onOpen(draft)}
+      className="cursor-pointer touch-manipulation justify-between"
+      onClick={onOpen}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onOpen(draft);
+          onOpen();
         }
       }}
     >
-      <div className="min-w-0 flex flex-1 flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-semibold">
-            {draft.grnNumber}
-          </span>
-          <StatusBadge domain="inventory" value="draft" size="sm" />
-          {(() => {
-            const step = grnProcurementStepChip({
-              status: "draft",
-              poId: draft.poId,
-              poStatus: draft.poStatus,
-            });
-            return step ? (
-              <Badge variant="outline">
-                {grnProcurementStepChipLabel(step, grnCopy)}
-              </Badge>
-            ) : null;
-          })()}
-          {draft.qcIssueCount > 0 ? (
-            <Badge variant="warning">
-              {messages.inventory.grn.qcIssueCount(draft.qcIssueCount)}
-            </Badge>
-          ) : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-sm font-semibold">{row.code}</span>
+          <StatusBadge
+            domain="inventory"
+            value={row.status}
+            label={statusLabels[row.status] ?? grnCopy.unknownStatus}
+          />
         </div>
+        <p className="truncate text-xs">{row.supplierName}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {draft.supplierName}
-          {` • ${draft.branchName}`}
-          {draft.poCount > 0 && draft.poCode ? ` • Đơn ${draft.poCode}` : ""}
+          {row.poCode} · {row.purchaseRequestCode ?? "—"}
         </p>
         <p className="text-xs text-muted-foreground">
-          {INVENTORY_VI.grnDraftUpdatedAt(formatVNDateTime(draft.updatedAt))}
-          {` • ${INVENTORY_VI.grnDraftLineCount(draft.lineCount)}`}
+          {grnCopy.expectedDateLabel}{" "}
+          {row.expectedReceiveDate ? formatVNDate(row.expectedReceiveDate) : "—"}
         </p>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span>
+            {grnCopy.lineProgress(row.completedLineCount, row.lineCount)}
+          </span>
+          <ExceptionBadges row={row} />
+        </div>
       </div>
       <div
-        className="flex shrink-0 items-center"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
       >
         <RowActionsMenu
           items={actions}
-          label={`${INVENTORY_VI.grnDraftContinue} ${draft.grnNumber}`}
+          label={`${FORM_VI.action} ${row.code}`}
           triggerSize="icon-touch"
         />
-      </div>
-    </InteractiveCard>
-  );
-}
-
-function GrnMobileCard({
-  grn,
-  actions,
-  onOpen,
-}: {
-  grn: GrnRow;
-  actions: RowActionItem[];
-  onOpen: (grn: GrnRow) => void;
-}) {
-  return (
-    <InteractiveCard
-      minHeight="mobile"
-      padding="default"
-      className="justify-between touch-manipulation cursor-pointer"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(grn)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onOpen(grn);
-        }
-      }}
-    >
-      <div className="min-w-0 flex flex-1 flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-semibold">{grn.code}</span>
-          <StatusBadge domain="inventory" value={grn.status} size="sm" />
-          {(() => {
-            const step = grnProcurementStepChip(grn);
-            return step ? (
-              <Badge variant="outline">
-                {grnProcurementStepChipLabel(step, grnCopy)}
-              </Badge>
-            ) : null;
-          })()}
-          {grn.qcIssueCount > 0 ? (
-            <Badge variant="warning">
-              {messages.inventory.grn.qcIssueCount(grn.qcIssueCount)}
-            </Badge>
-          ) : null}
-        </div>
-        <p className="truncate text-xs text-muted-foreground">
-          {grn.supplierName}
-          {` • ${grn.branchName}`}
-          {grn.poCount > 0 && grn.poCode ? ` • Đơn ${grn.poCode}` : ""}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <div className="flex flex-col items-end gap-1">
-          <span className="text-xs text-muted-foreground">
-            {grn.date || noValue}
-          </span>
-        </div>
-        <div
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
-          <RowActionsMenu
-            items={actions}
-            label={`${ACTIONS_VI.viewDetails} ${grn.code}`}
-            triggerSize="icon-touch"
-          />
-        </div>
       </div>
     </InteractiveCard>
   );

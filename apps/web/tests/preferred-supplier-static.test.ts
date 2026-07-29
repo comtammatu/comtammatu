@@ -5,16 +5,16 @@ import { test } from "node:test";
 
 const root = join(process.cwd(), "../..");
 const read = (rel: string) => readFileSync(join(root, rel), "utf8");
+const bulkMigration = read(
+  "supabase/migrations/20260729160100_bulk_create_supplier_items.sql",
+);
 
 test("preferred supplier migration adds is_preferred and setter RPC", () => {
   const migration = read(
     "supabase/migrations/20260729140400_supplier_item_preferred.sql",
   );
   assert.match(migration, /ADD COLUMN IF NOT EXISTS is_preferred boolean/);
-  assert.match(
-    migration,
-    /supplier_items_one_preferred_per_ingredient_uidx/,
-  );
+  assert.match(migration, /supplier_items_one_preferred_per_ingredient_uidx/);
   assert.match(migration, /GRANT SELECT \(is_preferred\)/);
   assert.match(migration, /set_supplier_item_preferred/);
 });
@@ -22,7 +22,9 @@ test("preferred supplier migration adds is_preferred and setter RPC", () => {
 test("GRN create auto-selects preferred supplier when multiple mappings", () => {
   const model = read("apps/web/lib/inventory/grn-create-model.ts");
   const data = read("apps/web/lib/inventory/grn-create-data.ts");
-  const controller = read("apps/web/lib/inventory/use-grn-create-controller.ts");
+  const controller = read(
+    "apps/web/lib/inventory/use-grn-create-controller.ts",
+  );
   const actions = read(
     "apps/web/app/(protected)/inventory/suppliers/[id]/items/actions.ts",
   );
@@ -36,7 +38,9 @@ test("GRN create auto-selects preferred supplier when multiple mappings", () => 
   assert.match(data, /isPreferred: item\.is_preferred === true/);
   assert.match(controller, /resolveDefaultGrnSupplier/);
   assert.match(actions, /set_supplier_item_preferred/);
-  assert.match(actions, /is_preferred: \(activeCount \?\? 0\) === 0/);
+  assert.match(actions, /bulk_create_supplier_items/);
+  assert.match(bulkMigration, /NOT EXISTS \(/);
+  assert.match(bulkMigration, /peer\.is_active/);
   assert.match(client, /setSupplierItemPreferred/);
   assert.match(client, /preferredBadge/);
 });

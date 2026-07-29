@@ -1,4 +1,5 @@
 import { formatCount } from "@comtammatu/shared/format";
+import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
 export const owner = {
   dashboard: {
@@ -107,26 +108,37 @@ export const owner = {
     tenantWide: "toàn quán",
     headerDescription: (positionLabel: string, branchName: string) =>
       `Chức vụ: ${positionLabel} · Chi nhánh mặc định: ${branchName}`,
-    templateTitle: "Mẫu quyền theo chức vụ",
+    templateTitle: "Quyền theo chức vụ",
     templateDescription:
-      "Áp dụng mẫu quyền trước. Mẫu chỉ thêm quyền, không tự thu hồi quyền đang có.",
-    currentTitle: "Quyền hiện có",
+      "Dùng bộ quyền công việc đã cấu hình sẵn cho chức vụ và nơi làm việc này.",
+    templateScope: (scope: string) => `Áp dụng tại ${scope}`,
+    templatePreview: (permissionCount: number, groupCount: number) =>
+      `Xem ${formatCount(permissionCount)} quyền trong ${formatCount(groupCount)} nhóm công việc`,
+    templateApply: (positionLabel: string) =>
+      `Cấp quyền cho ${positionLabel}`,
+    templateApplied: (count: number) =>
+      count > 0
+        ? `Đã cấp thêm ${formatCount(count)} quyền`
+        : "Bộ quyền này đã được cấp đầy đủ",
+    templateMissing: (positionLabel: string) =>
+      `Chưa có bộ quyền mặc định cho ${positionLabel}.`,
+    currentTitle: "Quyền đang có",
     currentDescription:
       "Theo dõi quyền theo phạm vi, nguồn cấp và thời hạn trước khi thay đổi.",
-    exceptionTitle: "Quyền ngoại lệ",
+    exceptionTitle: "Quyền cấp riêng",
     exceptionDescription:
       "Chỉ dùng khi quyền theo chức vụ chưa đáp ứng yêu cầu công việc cụ thể.",
-    addException: "Thêm quyền ngoại lệ",
-    grantExceptionTitle: "Thêm quyền ngoại lệ",
+    addException: "Cấp thêm quyền riêng",
+    grantExceptionTitle: "Cấp thêm quyền riêng",
     grantExceptionDescription:
       "Chọn phạm vi, quyền và hạn kết thúc nếu đây là ủy quyền tạm thời.",
-    grantExceptionSuccess: "Đã thêm quyền ngoại lệ",
+    grantExceptionSuccess: "Đã cấp thêm quyền riêng",
     permission: "Quyền",
     scope: "Phạm vi",
     source: "Nguồn",
     expires: "Hạn",
-    sourceTemplate: "Mẫu quyền",
-    sourceException: "Ngoại lệ",
+    sourceTemplate: "Theo chức vụ",
+    sourceException: "Cấp riêng",
     forever: "Vĩnh viễn",
     scopePlaceholder: "Chọn phạm vi",
     permissionPlaceholder: "Chọn quyền",
@@ -134,6 +146,51 @@ export const owner = {
     validUntilDescription: "Để trống = vĩnh viễn.",
     historyTitle: (count: number) =>
       `Lịch sử thay đổi (${formatCount(count)} mục gần nhất)`,
-    branchFallback: (branchId: number) => `branch #${branchId}`,
+    branchFallback: (branchId: number) => `Chi nhánh #${branchId}`,
+    otherWorkArea: "Quyền khác",
+    permissionModuleLabels: {
+      dashboard: "Tổng quan vận hành",
+      feedback: "Phản hồi khách hàng",
+      finance: "Tài chính",
+      hr: "Nhân sự",
+      inventory: "Kho hàng",
+      inventory_procurement: "Mua hàng & nhập kho",
+      kds: "Bếp",
+      menu: "Thực đơn",
+      orders: "Đơn hàng",
+      pos: "Bán hàng",
+      procurement: "Giá mua hàng",
+      reports: "Báo cáo",
+      settings: "Thiết lập",
+      staff: "Tài khoản nhân viên",
+    } as Record<string, string>,
+    permissionLabels: {
+      "dashboard:view": "Xem tổng quan vận hành",
+      "inventory:adjust_approve": "Duyệt điều chỉnh tồn kho",
+      "inventory:grn_express_extend": "Gia hạn thời gian nhập kho nhanh",
+      "inventory:item_review_override_set":
+        "Đặt chế độ kiểm tra riêng cho nguyên liệu",
+      "inventory:request_cancel": "Hủy yêu cầu hàng",
+      "inventory:request_create": "Tạo yêu cầu hàng",
+      "inventory:request_fulfill": "Xuất hàng đáp ứng yêu cầu",
+      "inventory:request_submit": "Gửi yêu cầu hàng",
+      "inventory:stocktake_recount": "Yêu cầu đếm lại kiểm kê",
+      "inventory:waste_approve": "Duyệt hao hụt vượt ngưỡng",
+      "kds:mark_ready": "Đánh dấu món đã làm xong",
+      "kds:recall": "Chuyển món về đang làm",
+      "procurement:override_code_rotate":
+        "Đổi mã duyệt nhập kho ngoại lệ",
+      "procurement:price_list_read": "Xem giá mua hàng",
+    } as Record<string, string>,
   },
 } as const;
+
+export function getStaffPermissionLabelVi(
+  key: string,
+  description: string,
+): string {
+  return (
+    owner.staffPermissions.permissionLabels[key] ??
+    (/[À-ỹĐđ]/u.test(description) ? description : UNKNOWN_LABEL_VI)
+  );
+}

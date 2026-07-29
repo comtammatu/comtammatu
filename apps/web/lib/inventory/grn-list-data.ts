@@ -1,225 +1,169 @@
 import "server-only";
 
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState, probePermission } from "@/_lib/auth";
-import { fetchGrns } from "@/(protected)/inventory/procurement-actions";
-import { listMyGrnDrafts } from "@/(protected)/inventory/grn-actions";
-import { formatDate } from "@lib/inventory/format";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
+import { loadInventoryMonetaryAccess } from "./monetary-access";
 import {
-  formatGrnListPoMeta,
-  formatGrnListSupplierMeta,
-  type GrnDraftRow,
-  type GrnRow,
+  defaultGrnDateField,
+  parseGrnListStatus,
+  parsePositiveId,
+  type GrnListDateField,
+  type GrnListFilters,
+  type GrnListRow,
 } from "./grn-list-model";
-import { messages } from "@lib/messages";
 
-const noValue = messages.inventory.common.noValue;
+const PAGE_SIZE = 50;
 
-type NamedRelation = {
-  id?: number;
-  name?: string | null;
-  po_number?: string | null;
-  status?: string | null;
-};
+const monetarySchema = z
+  .object({
+    receiptValue: z.coerce.number(),
+    invoiceId: z.coerce.number().int().positive().nullable(),
+    invoiceStatus: z.string().nullable(),
+  })
+  .nullable();
 
-type GrnLineRow = {
-  id?: number;
-  rejected_quantity?: number | string | null;
-  supplier_id?: number | null;
-  suppliers?: NamedRelation | NamedRelation[] | null;
-};
+const rowSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  code: z.string(),
+  status: z.string(),
+  supplierId: z.coerce.number().int().positive(),
+  supplierName: z.string(),
+  poId: z.coerce.number().int().positive(),
+  poCode: z.string(),
+  purchaseRequestId: z.coerce.number().int().positive().nullable(),
+  purchaseRequestCode: z.string().nullable(),
+  receivingSiteId: z.coerce.number().int().positive(),
+  receivingSiteName: z.string(),
+  expectedReceiveDate: z.string().nullable(),
+  receivedDate: z.string().nullable(),
+  lineCount: z.coerce.number().int().nonnegative(),
+  completedLineCount: z.coerce.number().int().nonnegative(),
+  shortageLineCount: z.coerce.number().int().nonnegative(),
+  excessLineCount: z.coerce.number().int().nonnegative(),
+  rejectedLineCount: z.coerce.number().int().nonnegative(),
+  updatedAt: z.string(),
+  handledBy: z.string().nullable(),
+  monetary: monetarySchema,
+});
 
-type GrnDbRow = {
-  id: number;
-  grn_number: string | null;
-  status: string | null;
-  received_date: string | null;
-  supplier_id: number | null;
-  branch_id: number;
-  po_id: number | null;
-  updated_at: string;
-  branches: NamedRelation | NamedRelation[] | null;
-  suppliers: NamedRelation | NamedRelation[] | null;
-  purchase_orders: NamedRelation | NamedRelation[] | null;
-  purchase_orders_source?: NamedRelation | NamedRelation[] | null;
-  grn_items: GrnLineRow[] | null;
-  supplier_invoices: Array<{ id?: number | null }> | null;
+const responseSchema = z.object({
+  rows: z.array(rowSchema),
+  total: z.coerce.number().int().nonnegative(),
+});
+
+export type GrnListSearchParams = {
+  q?: string | string[];
+  status?: string | string[];
+  supplierId?: string | string[];
+  dateField?: string | string[];
+  dateFrom?: string | string[];
+  dateTo?: string | string[];
+  poId?: string | string[];
+  requestId?: string | string[];
+  branchId?: string | string[];
+  page?: string | string[];
 };
 
 export type GrnListPageData = {
-  branchId: number | null;
-  canCreate: boolean;
+  rows: GrnListRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  filters: GrnListFilters;
   canManageSupplierInvoice: boolean;
-  drafts: GrnDraftRow[];
-  draftsLoadFailed: boolean;
-  grns: GrnRow[];
-  grnsLoadFailed: boolean;
+  canViewMonetary: boolean;
+  loadFailed: boolean;
 };
 
-type LoadGrnListPageDataOptions = {
-  includeDrafts?: boolean;
-  queryBranchId?: string | string[];
-  routeBranchId?: number;
-};
-
-function countQcIssues(items: GrnLineRow[] | null): number {
-  return (items ?? []).filter((item) => Number(item.rejected_quantity ?? 0) > 0)
-    .length;
+function first(value: string | string[] | undefined): string {
+  return (Array.isArray(value) ? value[0] : value) ?? "";
 }
 
-function relatedOne<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) return null;
-  return Array.isArray(value) ? (value[0] ?? null) : value;
+function dateValue(value: string | string[] | undefined): string {
+  const raw = first(value);
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
 }
 
-function relatedMany<T>(value: T | T[] | null | undefined): T[] {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-function sourcePosFromRow(row: GrnDbRow): NamedRelation[] {
-  // Reverse FK purchase_orders.source_grn_id → may arrive as array under
-  // purchase_orders when both joins are requested with disambiguation.
-  const fromAlias = relatedMany(row.purchase_orders_source);
-  if (fromAlias.length > 0) return fromAlias;
-  if (Array.isArray(row.purchase_orders)) {
-    return row.purchase_orders.filter((po) => po.id != null);
-  }
-  return [];
-}
-
-function mapLineSuppliers(items: GrnLineRow[] | null) {
-  return (items ?? []).flatMap((item) => {
-    const supplier = relatedOne(item.suppliers);
-    if (item.supplier_id == null || !supplier?.name) return [];
-    return [
-      {
-        supplierId: item.supplier_id,
-        supplierName: supplier.name,
-      },
-    ];
-  });
-}
-
-function mapGrnRows(rows: GrnDbRow[]): GrnRow[] {
-  return rows.map((row) => {
-    const supplier = relatedOne(row.suppliers);
-    const branch = relatedOne(row.branches);
-    const legacyPo = relatedOne(
-      Array.isArray(row.purchase_orders) ? null : row.purchase_orders,
-    );
-    const sourcePos = sourcePosFromRow(row);
-    const poMeta = formatGrnListPoMeta({
-      sourcePos,
-      legacyPo: sourcePos.length > 0 ? null : legacyPo,
-      fallback: noValue,
-    });
-    const invoice = relatedOne(row.supplier_invoices);
-    const invoiceId =
-      invoice?.id != null && Number.isSafeInteger(Number(invoice.id))
-        ? Number(invoice.id)
-        : null;
-    return {
-      id: row.id,
-      code: row.grn_number ?? "",
-      supplierName: formatGrnListSupplierMeta(
-        mapLineSuppliers(row.grn_items),
-        supplier?.name,
-        noValue,
-      ),
-      branchName: branch?.name ?? `#${row.branch_id}`,
-      poId: row.po_id != null ? Number(row.po_id) : (sourcePos[0]?.id ?? null),
-      poCode: poMeta.poCode,
-      poCount: poMeta.poCount,
-      poStatus: poMeta.poStatus,
-      invoiceId,
-      date: row.received_date ? formatDate(row.received_date) : noValue,
-      status: row.status ?? "pending",
-      qcIssueCount: countQcIssues(row.grn_items),
-    };
-  });
-}
-
-function mapGrnDraftRows(rows: GrnDbRow[]): GrnDraftRow[] {
-  return rows.map((row) => {
-    const supplier = relatedOne(row.suppliers);
-    const branch = relatedOne(row.branches);
-    const legacyPo = relatedOne(
-      Array.isArray(row.purchase_orders) ? null : row.purchase_orders,
-    );
-    const sourcePos = sourcePosFromRow(row);
-    const poMeta = formatGrnListPoMeta({
-      sourcePos,
-      legacyPo: sourcePos.length > 0 ? null : legacyPo,
-      fallback: noValue,
-    });
-
-    return {
-      grnId: row.id,
-      supplierId: row.supplier_id,
-      branchId: row.branch_id,
-      poId: row.po_id != null ? Number(row.po_id) : (sourcePos[0]?.id ?? null),
-      poCode: poMeta.poCount > 0 ? poMeta.poCode : null,
-      poCount: poMeta.poCount,
-      poStatus: poMeta.poStatus,
-      supplierName: formatGrnListSupplierMeta(
-        mapLineSuppliers(row.grn_items),
-        supplier?.name,
-        noValue,
-      ),
-      branchName: branch?.name ?? `#${row.branch_id}`,
-      grnNumber: row.grn_number ?? "",
-      updatedAt: row.updated_at,
-      lineCount: row.grn_items?.length ?? 0,
-      qcIssueCount: countQcIssues(row.grn_items),
-    };
-  });
-}
-
-export async function loadGrnListPageData({
-  includeDrafts = true,
-  queryBranchId,
-  routeBranchId,
-}: LoadGrnListPageDataOptions = {}): Promise<GrnListPageData> {
+export async function loadGrnListPageData(
+  params: GrnListSearchParams,
+): Promise<GrnListPageData> {
   const auth = await loadAuthState();
   const { supabase, claims } = auth;
   const scope = await resolveInventoryListScope(supabase, claims, {
-    routeBranchId,
-    queryBranchId,
+    queryBranchId: params.branchId,
   });
   if (scope.outOfScope) notFound();
 
-  const branchId = scope.selectedBranchId;
-  const [canCreate, canManageSupplierInvoice] = await Promise.all([
-    probePermission(auth, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE, branchId),
+  const status = parseGrnListStatus(params.status);
+  const requestedDateField = first(params.dateField);
+  const dateField: GrnListDateField =
+    requestedDateField === "expected" || requestedDateField === "received"
+      ? requestedDateField
+      : defaultGrnDateField(status);
+  const rawPage = parsePositiveId(params.page);
+  const page = rawPage ?? 1;
+  const filters: GrnListFilters = {
+    query: first(params.q),
+    status,
+    supplierId: parsePositiveId(params.supplierId),
+    dateField,
+    dateFrom: dateValue(params.dateFrom),
+    dateTo: dateValue(params.dateTo),
+    poId: parsePositiveId(params.poId),
+    purchaseRequestId: parsePositiveId(params.requestId),
+    branchId: scope.selectedBranchId,
+  };
+
+  const [canManageSupplierInvoice, monetaryAccess, result] = await Promise.all([
     probePermission(
       auth,
       PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
-      branchId,
+      scope.selectedBranchId,
     ),
-  ]);
-  const shouldLoadDrafts = includeDrafts && canCreate;
-  const [grnsResult, draftsResult] = await Promise.all([
-    fetchGrns(branchId ?? undefined),
-    shouldLoadDrafts ? listMyGrnDrafts(routeBranchId) : Promise.resolve(null),
+    loadInventoryMonetaryAccess(claims.user_role),
+    supabase.rpc("list_goods_receipt_notes" as never, {
+      p_query: filters.query || null,
+      p_status: filters.status,
+      p_supplier_id: filters.supplierId,
+      p_date_field: filters.dateField,
+      p_date_from: filters.dateFrom || null,
+      p_date_to: filters.dateTo || null,
+      p_po_id: filters.poId,
+      p_purchase_request_id: filters.purchaseRequestId,
+      p_branch_id: filters.branchId,
+      p_limit: PAGE_SIZE,
+      p_offset: (page - 1) * PAGE_SIZE,
+    } as never),
   ]);
 
-  const grnRows = grnsResult.success ? (grnsResult.data as GrnDbRow[]) : [];
-  const draftRows =
-    draftsResult?.success && draftsResult.data
-      ? (draftsResult.data as GrnDbRow[])
-      : [];
+  const parsed = responseSchema.safeParse(result.data);
+  if (result.error || !parsed.success) {
+    return {
+      rows: [],
+      total: 0,
+      page,
+      pageSize: PAGE_SIZE,
+      filters,
+      canManageSupplierInvoice,
+      canViewMonetary: monetaryAccess.purchasePrice,
+      loadFailed: true,
+    };
+  }
 
   return {
-    branchId,
-    canCreate,
+    rows: parsed.data.rows.map((row) => ({
+      ...row,
+      monetary: monetaryAccess.purchasePrice ? row.monetary : null,
+    })),
+    total: parsed.data.total,
+    page,
+    pageSize: PAGE_SIZE,
+    filters,
     canManageSupplierInvoice,
-    drafts: mapGrnDraftRows(draftRows),
-    draftsLoadFailed:
-      shouldLoadDrafts && draftsResult != null && !draftsResult.success,
-    grns: mapGrnRows(grnRows),
-    grnsLoadFailed: !grnsResult.success,
+    canViewMonetary: monetaryAccess.purchasePrice,
+    loadFailed: false,
   };
 }

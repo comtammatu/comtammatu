@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   Check as IconCheck,
   Eye as IconEye,
+  ArrowLeft as IconArrowLeft,
+  PackagePlus as IconPackagePlus,
   Save as IconSave,
   Search as IconSearch,
   ShoppingCart as IconShoppingCart,
@@ -15,7 +17,6 @@ import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,
   ItemActions,
@@ -24,7 +25,6 @@ import {
   ItemFooter,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
@@ -32,7 +32,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { AppDialog, FormattedNumberInput } from "@/components/form";
+import { FormattedNumberInput } from "@/components/form";
 import {
   DataTable,
   type DataTableColumn,
@@ -43,17 +43,21 @@ import {
 } from "@/components/row-actions-menu";
 import {
   AppListFrame,
+  AppDetailFooter,
   AppPage,
   AppPageHeader,
+  AppSection,
   AppToolbar,
   DescriptionList,
+  DocumentFormFrame,
 } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { FORM_VI } from "@comtammatu/shared/messages";
 import {
   approvePurchaseOrder,
+  createGrnDraftFromPurchaseOrder,
   updatePurchaseOrderPrices,
 } from "../purchase-order-actions";
 
@@ -82,25 +86,31 @@ export type PurchaseOrderRow = {
   code: string;
   status: string;
   orderedAt: string;
+  expectedDeliveryDate: string | null;
   notes: string | null;
+  purchaseRequestId: number | null;
+  purchaseRequestCode: string | null;
   supplierName: string;
   branchName: string;
   lineCount: number;
   monetary: { estimatedTotal: number | null } | null;
   lines: PurchaseOrderLineRow[];
   linkedGrns: PurchaseOrderLinkedGrn[];
+  activeDraftGrnId: number | null;
 };
 
 export function PurchaseOrdersClient({
   rows,
   canCreate,
   canApprove,
+  canReceive,
   canViewPrices,
   initialPoId = null,
 }: {
   rows: PurchaseOrderRow[];
   canCreate: boolean;
   canApprove: boolean;
+  canReceive: boolean;
   canViewPrices: boolean;
   initialPoId?: number | null;
 }) {
@@ -164,7 +174,7 @@ export function PurchaseOrdersClient({
   function linePricesMissing(row: PurchaseOrderRow) {
     return row.lines.some(
       (line) =>
-        line.monetary?.unitPriceEst == null || line.monetary.unitPriceEst <= 0,
+        line.monetary?.unitPriceEst == null || line.monetary.unitPriceEst < 0,
     );
   }
 
@@ -175,7 +185,7 @@ export function PurchaseOrdersClient({
     }));
     if (
       lines.some(
-        (line) => !Number.isFinite(line.unitPrice) || line.unitPrice <= 0,
+        (line) => !Number.isFinite(line.unitPrice) || line.unitPrice < 0,
       )
     ) {
       toast.error(poCopy.pricesRequiredToast);
@@ -232,6 +242,27 @@ export function PurchaseOrdersClient({
     });
   }
 
+  function createGrn(row: PurchaseOrderRow) {
+    setPendingId(row.id);
+    startTransition(async () => {
+      try {
+        const result = await createGrnDraftFromPurchaseOrder({
+          poId: row.id,
+          idempotencyKey: crypto.randomUUID(),
+        });
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
+        closeDetail();
+        const grnId = result.data?.id;
+        if (grnId != null) router.push(`/inventory/grn/${grnId}`);
+      } finally {
+        setPendingId(null);
+      }
+    });
+  }
+
   function renderActions(row: PurchaseOrderRow, touch = false) {
     const items: RowActionItem[] = [
       {
@@ -251,6 +282,27 @@ export function PurchaseOrdersClient({
           void approve(row);
         },
       });
+    }
+    if (
+      canReceive &&
+      (row.status === "sent" || row.status === "partially_received")
+    ) {
+      items.push(
+        row.activeDraftGrnId == null
+          ? {
+              key: "create-grn",
+              label: "Tạo phiếu nhập",
+              icon: <IconPackagePlus data-icon="inline-start" />,
+              disabled: isPending || pendingId === row.id,
+              onSelect: () => createGrn(row),
+            }
+          : {
+              key: "continue-grn",
+              label: "Tiếp tục nhập hàng",
+              icon: <IconPackagePlus data-icon="inline-start" />,
+              href: `/inventory/grn/${row.activeDraftGrnId}`,
+            },
+      );
     }
     return (
       <div
@@ -411,51 +463,229 @@ export function PurchaseOrdersClient({
 
   const detailFooter =
     selectedRow == null ? null : (
-      <>
-        {selectedRow.status === "draft" && canApprove ? (
-          pricesDirty ? (
-            <p className="w-full text-sm text-muted-foreground sm:order-first">
-              {poCopy.approveBlockedDirtyPrices}
-            </p>
-          ) : linePricesMissing(selectedRow) ? (
-            <p className="w-full text-sm text-muted-foreground sm:order-first">
+      <AppDetailFooter
+        sticky
+        leading={
+          selectedRow.status === "draft" &&
+          canApprove &&
+          !pricesDirty &&
+          linePricesMissing(selectedRow) ? (
+            <p className="text-sm text-muted-foreground">
               {poCopy.approveBlockedMissingPrices}
             </p>
           ) : null
-        ) : null}
-        {selectedRow.status === "draft" && canCreate ? (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={isPending || !pricesDirty}
-            onClick={() => savePrices(selectedRow)}
-          >
-            <IconSave data-icon="inline-start" />
-            {poCopy.savePricesAction}
-          </Button>
-        ) : null}
-        {selectedRow.status === "draft" && canApprove ? (
-          <Button
-            type="button"
-            disabled={
-              isPending ||
-              pendingId === selectedRow.id ||
-              pricesDirty ||
-              linePricesMissing(selectedRow)
-            }
-            onClick={() => {
-              void approve(selectedRow);
-            }}
-          >
-            <IconCheck data-icon="inline-start" />
-            {poCopy.approveAction}
-          </Button>
-        ) : null}
-        <Button type="button" variant="outline" onClick={closeDetail}>
-          {ACTIONS_VI.close}
-        </Button>
-      </>
+        }
+        trailing={
+          selectedRow.status === "draft" && canCreate && pricesDirty ? (
+            <Button
+              type="button"
+              disabled={isPending}
+              onClick={() => savePrices(selectedRow)}
+            >
+              <IconSave data-icon="inline-start" />
+              {poCopy.savePricesAction}
+            </Button>
+          ) : selectedRow.status === "draft" && canApprove ? (
+            <Button
+              type="button"
+              disabled={
+                isPending ||
+                pendingId === selectedRow.id ||
+                pricesDirty ||
+                linePricesMissing(selectedRow)
+              }
+              onClick={() => {
+                void approve(selectedRow);
+              }}
+            >
+              <IconCheck data-icon="inline-start" />
+              {poCopy.approveAction}
+            </Button>
+          ) : canReceive &&
+            (selectedRow.status === "sent" ||
+              selectedRow.status === "partially_received") ? (
+            selectedRow.activeDraftGrnId == null ? (
+              <Button
+                type="button"
+                disabled={isPending || pendingId === selectedRow.id}
+                onClick={() => createGrn(selectedRow)}
+              >
+                <IconPackagePlus data-icon="inline-start" />
+                {poCopy.createGrn}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                render={
+                  <Link
+                    href={`/inventory/grn/${selectedRow.activeDraftGrnId}`}
+                  />
+                }
+              >
+                <IconPackagePlus data-icon="inline-start" />
+                {poCopy.continueGrn}
+              </Button>
+            )
+          ) : null
+        }
+      />
     );
+
+  if (selectedRow) {
+    return (
+      <DocumentFormFrame
+        width="xwide"
+        density="compact"
+        footer={detailFooter}
+        header={
+          <AppPageHeader
+            title={selectedRow.code}
+            badge={{
+              children: getStatusBadgeMeta("purchase-order", selectedRow.status)
+                .label,
+              variant: getStatusBadgeMeta("purchase-order", selectedRow.status)
+                .variant,
+            }}
+            breadcrumb={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={closeDetail}
+              >
+                <IconArrowLeft data-icon="inline-start" />
+                {poCopy.pageTitle}
+              </Button>
+            }
+          />
+        }
+      >
+        <DescriptionList
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          descriptionClassName="font-semibold"
+          items={[
+            {
+              term: poCopy.supplierRequired,
+              description: selectedRow.supplierName,
+            },
+            {
+              term: poCopy.branchLabel,
+              description: selectedRow.branchName,
+            },
+            {
+              term: "Yêu cầu mua",
+              description: selectedRow.purchaseRequestCode ?? "—",
+            },
+            {
+              term: "Ngày dự kiến",
+              description: selectedRow.expectedDeliveryDate
+                ? formatVNDate(selectedRow.expectedDeliveryDate)
+                : "—",
+            },
+            ...(selectedRow.monetary
+              ? [
+                  {
+                    term: poCopy.estimatedTotal,
+                    description:
+                      selectedRow.monetary.estimatedTotal == null
+                        ? poCopy.noEstimateYet
+                        : formatVND(selectedRow.monetary.estimatedTotal),
+                  },
+                ]
+              : []),
+          ]}
+        />
+
+        <AppSection
+          title={poCopy.detail.overviewLinesTitle}
+          badge={{
+            children: poCopy.lineCount(selectedRow.lineCount),
+            variant: "outline",
+          }}
+          contentFlush
+          className="overflow-hidden"
+        >
+          <DataTable
+            columns={lineColumns}
+            data={selectedRow.lines}
+            getRowKey={(line) => line.id}
+            emptyTitle={poCopy.emptyLinesTitle}
+            emptyDescription={poCopy.emptyLinesDescription}
+            mobileCardRender={(line) => (
+              <Item variant="muted" className="items-start">
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="break-words">
+                    {line.ingredientName}
+                  </ItemTitle>
+                  <ItemDescription>
+                    {line.quantity} {line.unitLabel}
+                    {line.monetary?.unitPriceEst == null
+                      ? ""
+                      : ` · ${formatVND(line.monetary.unitPriceEst)}`}
+                  </ItemDescription>
+                </ItemContent>
+                {line.monetary ? (
+                  <ItemActions>
+                    <span className="font-mono tabular-nums">
+                      {line.monetary.lineTotal == null
+                        ? poCopy.noEstimateYet
+                        : formatVND(line.monetary.lineTotal)}
+                    </span>
+                  </ItemActions>
+                ) : null}
+              </Item>
+            )}
+          />
+        </AppSection>
+
+        {selectedRow.notes ? (
+          <AppSection title={FORM_VI.notes} size="sm">
+            <p className="break-words text-sm text-muted-foreground">
+              {selectedRow.notes}
+            </p>
+          </AppSection>
+        ) : null}
+
+        {selectedRow.linkedGrns.length > 0 ? (
+          <AppSection title={poCopy.detail.linkedGrnsTitle} size="sm">
+            <div className="flex flex-col gap-2">
+              {selectedRow.linkedGrns.map((grn) => (
+                <Item key={grn.id} variant="outline" size="sm">
+                  <ItemContent>
+                    <ItemTitle className="font-mono">{grn.code}</ItemTitle>
+                    <ItemDescription>
+                      {grn.receivedAt
+                        ? formatVNDate(grn.receivedAt)
+                        : poCopy.noReceivedDate}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions className="gap-2">
+                    <StatusBadge
+                      domain="inventory"
+                      value={grn.status}
+                      label={
+                        grn.status === "confirmed"
+                          ? messages.inventory.grn.statusConfirmedLong
+                          : undefined
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      render={<Link href={`/inventory/grn/${grn.id}`} />}
+                    >
+                      {poCopy.openLinkedGrn}
+                    </Button>
+                  </ItemActions>
+                </Item>
+              ))}
+            </div>
+          </AppSection>
+        ) : null}
+      </DocumentFormFrame>
+    );
+  }
 
   return (
     <AppPage width="xwide" density="compact">
@@ -518,163 +748,6 @@ export function PurchaseOrdersClient({
           )}
         />
       </AppListFrame>
-
-      <AppDialog
-        open={selectedRow != null}
-        onOpenChange={(open) => {
-          if (!open) closeDetail();
-        }}
-        title={
-          selectedRow ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono">{selectedRow.code}</span>
-              <StatusBadge domain="purchase-order" value={selectedRow.status} />
-            </div>
-          ) : (
-            poCopy.detail.title
-          )
-        }
-        description={
-          selectedRow
-            ? `${selectedRow.supplierName} · ${selectedRow.branchName} · ${formatVNDate(selectedRow.orderedAt)}`
-            : undefined
-        }
-        contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-5xl"
-        bodyClassName="min-h-0 overflow-hidden"
-        footer={detailFooter}
-      >
-        {selectedRow ? (
-          <>
-            <DescriptionList
-              className="sm:grid sm:grid-cols-3 sm:gap-4"
-              items={[
-                {
-                  term: poCopy.supplierRequired,
-                  description: selectedRow.supplierName,
-                },
-                {
-                  term: poCopy.branchLabel,
-                  description: selectedRow.branchName,
-                },
-                ...(selectedRow.monetary
-                  ? [
-                      {
-                        term: poCopy.estimatedTotal,
-                        description:
-                          selectedRow.monetary.estimatedTotal == null
-                            ? poCopy.noEstimateYet
-                            : formatVND(selectedRow.monetary.estimatedTotal),
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-
-            <div className="flex min-h-0 flex-col gap-2">
-              <p className="text-sm font-medium">
-                {poCopy.detail.overviewLinesTitle}
-              </p>
-              <Frame className="h-72 min-h-0 overflow-hidden sm:h-80">
-                <ScrollArea className="h-full">
-                  <DataTable
-                    columns={lineColumns}
-                    data={selectedRow.lines}
-                    getRowKey={(line) => line.id}
-                    emptyTitle={poCopy.emptyLinesTitle}
-                    emptyDescription={poCopy.emptyLinesDescription}
-                    mobileCardRender={(line) => (
-                      <Item variant="muted" className="items-start">
-                        <ItemContent className="min-w-0">
-                          <ItemTitle className="break-words">
-                            {line.ingredientName}
-                          </ItemTitle>
-                          <ItemDescription>
-                            {line.quantity} {line.unitLabel}
-                            {line.monetary?.unitPriceEst == null
-                              ? ""
-                              : ` · ${formatVND(line.monetary.unitPriceEst)}`}
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions>
-                          <span className="font-mono tabular-nums">
-                            {line.monetary?.lineTotal == null
-                              ? poCopy.noEstimateYet
-                              : formatVND(line.monetary.lineTotal)}
-                          </span>
-                        </ItemActions>
-                      </Item>
-                    )}
-                  />
-                </ScrollArea>
-              </Frame>
-            </div>
-
-            {selectedRow.notes ? (
-              <p className="break-words text-sm italic text-muted-foreground">
-                {selectedRow.notes}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">{poCopy.noNotes}</p>
-            )}
-
-            {selectedRow.linkedGrns.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  {poCopy.detail.linkedGrnsTitle}
-                </p>
-                <div className="flex flex-col gap-2">
-                  {selectedRow.linkedGrns.map((grn) => (
-                    <Item key={grn.id} variant="outline" size="sm">
-                      <ItemContent>
-                        <ItemTitle className="font-mono">{grn.code}</ItemTitle>
-                        <ItemDescription>
-                          {grn.receivedAt
-                            ? formatVNDate(grn.receivedAt)
-                            : poCopy.noReceivedDate}
-                        </ItemDescription>
-                      </ItemContent>
-                      <ItemActions className="gap-2">
-                        <StatusBadge
-                          domain="inventory"
-                          value={grn.status}
-                          label={
-                            grn.status === "confirmed"
-                              ? messages.inventory.grn.statusConfirmedLong
-                              : undefined
-                          }
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          render={<Link href={`/inventory/grn/${grn.id}`} />}
-                        >
-                          {poCopy.openLinkedGrn}
-                        </Button>
-                      </ItemActions>
-                    </Item>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-muted-foreground">
-                  {poCopy.emptyLinkedGrnsHint}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="self-start"
-                  render={<Link href="/inventory/grn" />}
-                >
-                  {poCopy.goToGrnList}
-                </Button>
-              </div>
-            )}
-          </>
-        ) : null}
-      </AppDialog>
     </AppPage>
   );
 }

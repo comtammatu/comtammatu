@@ -44,7 +44,7 @@ const tableSource = readFileSync(
 );
 
 const recipesPageSource = readFileSync(
-  join(process.cwd(), "app/(protected)/inventory/recipes/page.tsx"),
+  join(process.cwd(), "app/(protected)/inventory/menu-recipes/page.tsx"),
   "utf8",
 );
 
@@ -169,7 +169,7 @@ test.skip("stock capacity compute converts recipe entry units to base", () => {
   );
 });
 
-test.skip("Recipes page passes ingredient unit options to recipe editor", () => {
+test.skip("Menu recipes page passes ingredient unit options to menu recipe editor", () => {
   assert.match(recipesPageSource, /units\?: IngredientUnitRow\[\]/);
   assert.match(recipesPageSource, /units: i\.units/);
 });
@@ -258,13 +258,17 @@ test.skip("Menu-Limits availability sells freely when stock-outcome deduction is
     /CREATE OR REPLACE FUNCTION public\.branch_menu_limit_availability/,
   );
 
-  const stockRemaining = unlimitedWhenDeductionOffMigration.match(
-    /CASE\s+WHEN NOT p_stock_outcome_enabled THEN NULL::integer[\s\S]*?END AS stock_remaining,/,
-  )?.[0] ?? "";
+  const stockRemaining =
+    unlimitedWhenDeductionOffMigration.match(
+      /CASE\s+WHEN NOT p_stock_outcome_enabled THEN NULL::integer[\s\S]*?END AS stock_remaining,/,
+    )?.[0] ?? "";
 
   // Deduction OFF: unlimited (NULL) regardless of recipe/live stock — manual
   // cap alone gates sales via manual_remaining.
-  assert.match(stockRemaining, /WHEN NOT p_stock_outcome_enabled THEN NULL::integer/);
+  assert.match(
+    stockRemaining,
+    /WHEN NOT p_stock_outcome_enabled THEN NULL::integer/,
+  );
   // Deduction ON: unchanged stock-capped behavior (no recipe -> 0, else capacity - pending - hold).
   assert.match(stockRemaining, /WHEN r\.stock_capacity_live IS NULL THEN 0/);
   assert.match(

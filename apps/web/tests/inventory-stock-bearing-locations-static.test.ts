@@ -21,7 +21,7 @@ test("stock-bearing locations disambiguate inventory_locations→branches FK and
     "apps/web/app/(protected)/inventory/inventory-value-actions.ts",
   );
   const recipeActions = read(
-    "apps/web/app/(protected)/inventory/recipe-actions.ts",
+    "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
   );
   const financeCockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
@@ -42,14 +42,11 @@ test("stock-bearing locations disambiguate inventory_locations→branches FK and
   assert.match(stockDetailData, /!stockBearingLocations\.ok/);
   assert.match(stockDetailData, /coreDataLoadFailed:/);
   assert.match(inventoryValue, /!stockBearingLocations\.ok/);
-  assert.match(
-    inventoryValue,
-    /messages\.inventory\.value\.stockLoadFailed/,
-  );
+  assert.match(inventoryValue, /messages\.inventory\.value\.stockLoadFailed/);
   assert.match(recipeActions, /!stockBearingLocations\.ok/);
   assert.match(
     recipeActions,
-    /messages\.inventory\.recipes\.branchWacLoadFailed/,
+    /messages\.inventory\.menuRecipes\.branchWacLoadFailed/,
   );
   assert.match(financeCockpit, /!stockBearingLocations\.ok/);
 });

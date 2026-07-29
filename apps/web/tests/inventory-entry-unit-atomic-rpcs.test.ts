@@ -84,7 +84,7 @@ test("active inventory reads do not select dropped unit columns", () => {
       [/\bquantity,\s*unit,\s*entry_unit_id\b/],
     ],
     [
-      "apps/web/app/(protected)/inventory/recipe-actions.ts",
+      "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
       [/\bingredient_id,\s*quantity,\s*unit,\s*entry_unit_id\b/],
     ],
   ]);
@@ -200,7 +200,7 @@ test.skip("server actions do not patch entry units after RPC success", () => {
   for (const path of [
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
     "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
-    "apps/web/app/(protected)/inventory/recipe-actions.ts",
+    "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
     "apps/web/app/(protected)/inventory/transfer-actions.ts",
   ]) {
     const source = read(path);
@@ -220,7 +220,7 @@ test.skip("server action payload keys match the RPC contract", () => {
       "entryUnitId: line.entryUnitId ?? null",
     ],
     [
-      "apps/web/app/(protected)/inventory/recipe-actions.ts",
+      "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
       "entry_unit_id: line.entryUnitId ?? null",
     ],
     [
@@ -241,7 +241,7 @@ test.skip("transaction write callers do not send unit text/code", () => {
     "apps/web/app/(protected)/inventory/waste-actions.ts",
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
     "apps/web/app/(protected)/inventory/transfer-actions.ts",
-    "apps/web/app/(protected)/inventory/recipe-actions.ts",
+    "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
     "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
   ]) {
     assert.doesNotMatch(
@@ -270,8 +270,8 @@ test.skip("transaction write callers do not send unit text/code", () => {
       "upsertProductionRecipeLines",
     ],
     [
-      "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
-      "upsertRecipeLines",
+      "apps/web/app/(protected)/inventory/menu-recipes/menu-recipe-line-dialog.tsx",
+      "upsertMenuRecipeLines",
     ],
     [
       "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
@@ -319,46 +319,46 @@ test.skip("direct table writes derive persisted unit text from the entry unit ca
 
 test("menu recipe editor fixes entry unit to the ingredient output unit", () => {
   const editor = section(
-    "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
-    "<RecipeLinesEditor",
+    "apps/web/app/(protected)/inventory/menu-recipes/menu-recipe-line-dialog.tsx",
+    "<IngredientLinesEditor",
     "/>",
   );
 
   assert.doesNotMatch(editor, /\bunitEditable\b/);
 });
 
-test("recipe runtime DTOs expose unitLabel instead of retired unit text", () => {
+test("menu and production recipe DTOs expose unitLabel", () => {
   const sections = new Map([
     [
-      "RecipeLineIngredient",
+      "IngredientLineOption",
       section(
-        "apps/web/app/(protected)/inventory/_components/recipe-lines-editor.tsx",
-        "export interface RecipeLineIngredient",
-        "export interface RecipeLineRowValue",
+        "apps/web/app/(protected)/inventory/_components/ingredient-lines-editor.tsx",
+        "export interface IngredientLineOption",
+        "export interface IngredientLineRowValue",
       ),
     ],
     [
-      "RecipeLineRowValue",
+      "IngredientLineRowValue",
       section(
-        "apps/web/app/(protected)/inventory/_components/recipe-lines-editor.tsx",
-        "export interface RecipeLineRowValue",
+        "apps/web/app/(protected)/inventory/_components/ingredient-lines-editor.tsx",
+        "export interface IngredientLineRowValue",
         "const GRID_TEMPLATE",
       ),
     ],
     [
-      "RecipeLineDraft",
+      "MenuRecipeLineDraft",
       section(
-        "apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx",
-        "export interface RecipeLineDraft",
-        "const recipeLineRowSchema",
+        "apps/web/app/(protected)/inventory/menu-recipes/menu-recipe-line-dialog.tsx",
+        "export interface MenuRecipeLineDraft",
+        "const menuRecipeLineRowSchema",
       ),
     ],
     [
-      "RecipeItem",
+      "MenuRecipeItem",
       section(
-        "apps/web/app/(protected)/inventory/recipes/recipes-client.tsx",
-        "export type RecipeItem",
-        "export type RecipeRow",
+        "apps/web/app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx",
+        "export type MenuRecipeItem",
+        "export type MenuRecipeRow",
       ),
     ],
     [
@@ -377,11 +377,15 @@ test("recipe runtime DTOs expose unitLabel instead of retired unit text", () => 
   }
 
   assert.doesNotMatch(
-    read("apps/web/app/(protected)/inventory/recipes/recipes-client.tsx"),
+    read(
+      "apps/web/app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx",
+    ),
     /\bitem\.unit\b/,
   );
   assert.doesNotMatch(
-    read("apps/web/app/(protected)/inventory/recipes/recipe-line-dialog.tsx"),
+    read(
+      "apps/web/app/(protected)/inventory/menu-recipes/menu-recipe-line-dialog.tsx",
+    ),
     /\b(?:l|row)\.unit\b/,
   );
   assert.doesNotMatch(
@@ -398,7 +402,7 @@ test.skip("RPC-backed inventory writes let the RPC derive persisted unit text", 
   for (const path of [
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
     "apps/web/app/(protected)/inventory/waste-actions.ts",
-    "apps/web/app/(protected)/inventory/recipe-actions.ts",
+    "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
     "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
   ]) {
     const source = read(path);

@@ -120,11 +120,16 @@ function isInventoryOversightRole(role: StaffRole): boolean {
   return role === "owner";
 }
 
+function isCentralInventoryOperator(role: StaffRole): boolean {
+  return role === "central_supply_ops" || role === "central_kitchen_lead";
+}
+
 function buildFlowCards(props: DashboardProps): FlowCard[] {
   const paths = getInventoryPaths(props.routeBase);
   const openTransfers = props.transfers.filter((t) => isTransferOpen(t.status));
   const inbound = openTransfers.filter((t) => t.toBranch === props.siteName);
   const outbound = openTransfers.filter((t) => t.fromBranch === props.siteName);
+  const isCentralOperator = isCentralInventoryOperator(props.userRole);
 
   if (
     isInventoryOversightRole(props.userRole) &&
@@ -198,8 +203,10 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
           primary: true,
         },
         {
-          label: "Đơn mua hàng",
-          href: paths.purchaseOrders,
+          label: isCentralOperator
+            ? messages.inventory.dashboard.stockRequestsAction
+            : "Đơn mua hàng",
+          href: isCentralOperator ? paths.stockRequests : paths.purchaseOrders,
         },
       ]
     : [
@@ -285,7 +292,9 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
       key: "source",
       title: messages.inventory.dashboard.sourceFlowTitle,
       description: props.showProcurement
-        ? messages.inventory.dashboard.sourceProcurementDescription
+        ? isCentralOperator
+          ? messages.inventory.dashboard.sourceCentralOperationsDescription
+          : messages.inventory.dashboard.sourceProcurementDescription
         : messages.inventory.dashboard.sourceBranchDescription,
       icon: props.showProcurement ? IconReceipt : IconTruck,
       statusLabel: props.showProcurement
@@ -316,10 +325,16 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
 
   cards.push({
     key: "catalog",
-    title: messages.inventory.dashboard.catalogFlowTitle,
-    description: messages.inventory.dashboard.catalogDescription,
+    title: isCentralOperator
+      ? messages.inventory.dashboard.catalogReadTitle
+      : messages.inventory.dashboard.catalogFlowTitle,
+    description: isCentralOperator
+      ? messages.inventory.dashboard.catalogReadDescription
+      : messages.inventory.dashboard.catalogDescription,
     icon: IconSettings,
-    statusLabel: messages.inventory.dashboard.catalogStatusLabel,
+    statusLabel: isCentralOperator
+      ? messages.inventory.dashboard.catalogReadStatusLabel
+      : messages.inventory.dashboard.catalogStatusLabel,
     tone: "default",
     actions: [
       {
@@ -327,10 +342,14 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
         href: paths.ingredients,
         primary: true,
       },
-      {
-        label: messages.inventory.dashboard.unitsAction,
-        href: paths.units,
-      },
+      ...(!isCentralOperator
+        ? [
+            {
+              label: messages.inventory.dashboard.unitsAction,
+              href: paths.units,
+            },
+          ]
+        : []),
       { label: tNav("suppliers", "navigation"), href: paths.suppliers },
     ],
   });
@@ -547,6 +566,7 @@ export function DashboardClient(props: DashboardProps) {
     isInventoryOversightRole(props.userRole) &&
     !showProcurement &&
     !showProduction;
+  const isCentralOperator = isCentralInventoryOperator(props.userRole);
 
   const siteKindLabel = getInventorySiteKindLabelVi(props.siteKind);
   const stockValueLabel = messages.inventory.value.inventoryValue;
@@ -561,7 +581,10 @@ export function DashboardClient(props: DashboardProps) {
     : !canViewStockValue
       ? messages.inventory.dashboard.stockValueMaskedHint
       : null;
-  const degradedItems = dashboardWarnings.map(
+  const visibleDashboardWarnings = isCentralOperator
+    ? dashboardWarnings.filter((warning) => warning !== "stockValue")
+    : dashboardWarnings;
+  const degradedItems = visibleDashboardWarnings.map(
     (warning) => messages.inventory.dashboard.degradedItems[warning],
   );
 
@@ -569,10 +592,18 @@ export function DashboardClient(props: DashboardProps) {
     <AppPage width="full" density="compact">
       <AppPageHeader
         eyebrow={messages.inventory.dashboard.headerEyebrow(siteKindLabel)}
-        title={messages.inventory.dashboard.title}
+        title={
+          isCentralOperator
+            ? messages.inventory.dashboard.operationalTitle(siteKindLabel)
+            : messages.inventory.dashboard.title
+        }
         description={
           isOversight
             ? messages.inventory.dashboard.oversightTagline
+            : isCentralOperator
+              ? showProduction
+                ? messages.inventory.dashboard.centralKitchenTagline
+                : messages.inventory.dashboard.centralSupplyTagline
             : messages.inventory.dashboard.headerTagline
         }
         meta={
@@ -585,20 +616,22 @@ export function DashboardClient(props: DashboardProps) {
                 {formatVNTime(dataAsOf)} ({formatVNDate(dataAsOf)})
               </span>
             ) : null}
-            <span className="inline-flex items-center gap-1.5">
-              <span>{stockValueLabel}</span>
-              <span
-                className="font-mono font-semibold tabular-nums text-foreground"
-                title={stockValueHint ?? undefined}
-              >
-                {stockValueText}
+            {!isCentralOperator ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span>{stockValueLabel}</span>
+                <span
+                  className="font-mono font-semibold tabular-nums text-foreground"
+                  title={stockValueHint ?? undefined}
+                >
+                  {stockValueText}
+                </span>
               </span>
-            </span>
+            ) : null}
           </div>
         }
       />
 
-      {dashboardWarnings.length > 0 ? (
+      {visibleDashboardWarnings.length > 0 ? (
         <NoteCallout
           tone="warning"
           icon={<IconAlertTriangle className="size-4" />}

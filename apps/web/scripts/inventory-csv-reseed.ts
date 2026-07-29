@@ -36,7 +36,7 @@ type IngredientRow = {
   units: UnitRow[];
 };
 
-type RecipeRow = {
+type ProductionRecipeCsvRow = {
   finishedGoodId: number;
   ingredientId: number;
   quantity: number;
@@ -409,7 +409,7 @@ function readIngredients(rows: CsvRow[]): IngredientRow[] {
   });
 }
 
-function readRecipes(rows: CsvRow[]): RecipeRow[] {
+function readProductionRecipes(rows: CsvRow[]): ProductionRecipeCsvRow[] {
   return rows.map((row, index) => {
     const line = index + 2;
     const finishedGoodId = parseNumber(row["thanh_pham_id"] ?? "");
@@ -442,7 +442,7 @@ function readRecipes(rows: CsvRow[]): RecipeRow[] {
 
 function validate(
   ingredients: IngredientRow[],
-  recipes: RecipeRow[],
+  productionRecipes: ProductionRecipeCsvRow[],
 ): { issues: Issue[]; warnings: string[] } {
   const issues: Issue[] = [];
   const warnings: string[] = [];
@@ -482,7 +482,7 @@ function validate(
   }
 
   const recipePairs = new Set<string>();
-  recipes.forEach((row, index) => {
+  productionRecipes.forEach((row, index) => {
     const line = index + 2;
     const finishedGood = byId.get(row.finishedGoodId);
     const ingredient = byId.get(row.ingredientId);
@@ -584,7 +584,7 @@ function setIdentityToMaxSql(table: string): string {
 
 function buildSql(
   ingredients: IngredientRow[],
-  recipes: RecipeRow[],
+  productionRecipes: ProductionRecipeCsvRow[],
   options: { catalogOnly?: boolean } = {},
 ): string {
   const categories = [...new Set(ingredients.map((row) => row.category))].sort(
@@ -624,7 +624,7 @@ function buildSql(
       );
     })
     .join(",\n    ");
-  const recipeValues = recipes
+  const productionRecipeValues = productionRecipes
     .map(
       (row) =>
         `(${row.finishedGoodId}, ${row.ingredientId}, ${row.quantity}, ${sqlString(row.unitCode)}, ${row.yieldFactor}, ${sqlString(row.note)})`,
@@ -634,7 +634,7 @@ function buildSql(
     ? "-- production_recipes intentionally not re-imported in catalog-only mode."
     : `WITH recipe_rows(finished_good_id, ingredient_id, quantity, unit_code, yield_factor, note) AS (
   VALUES
-    ${recipeValues}
+    ${productionRecipeValues}
 )
 INSERT INTO public.production_recipes (
   tenant_id, finished_good_id, ingredient_id, quantity,
@@ -766,8 +766,10 @@ async function run(args: Args) {
       .filter((row) => row.id > sourceMaxIngredientId)
       .map((row) => row.name),
   );
-  const recipes = args.catalogOnly ? [] : readRecipes(recipeRows);
-  const { issues, warnings } = validate(ingredients, recipes);
+  const productionRecipes = args.catalogOnly
+    ? []
+    : readProductionRecipes(recipeRows);
+  const { issues, warnings } = validate(ingredients, productionRecipes);
 
   if (issues.length > 0) {
     throw new Error(
@@ -809,9 +811,9 @@ async function run(args: Args) {
       categories: categories.length,
       units: unitCodes.size,
       source_production_recipe_rows: recipeRows.length,
-      production_recipe_lines: recipes.length,
+      production_recipe_lines: productionRecipes.length,
       production_recipe_groups: new Set(
-        recipes.map((row) => row.finishedGoodId),
+        productionRecipes.map((row) => row.finishedGoodId),
       ).size,
     },
     added_ingredients: ingredients
@@ -831,7 +833,9 @@ async function run(args: Args) {
   );
   await writeFile(
     path.join(outDir, "inventory-reseed.sql"),
-    buildSql(ingredients, recipes, { catalogOnly: args.catalogOnly }),
+    buildSql(ingredients, productionRecipes, {
+      catalogOnly: args.catalogOnly,
+    }),
   );
   console.log(JSON.stringify({ outDir, manifest }, null, 2));
 }

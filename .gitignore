@@ -41,6 +41,7 @@ apps/web/tmp/
 
 # Local scratch / one-shot debug scripts
 scratch/
+.stitch/
 test_output.log
 apps/web/test-fetch.mjs
 

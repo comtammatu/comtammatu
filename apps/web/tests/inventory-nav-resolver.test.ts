@@ -84,7 +84,7 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
     "/inventory/settings",
     "/inventory/suppliers",
     "/inventory/ingredients",
-    "/inventory/recipes",
+    "/inventory/menu-recipes",
   ]) {
     assert.equal(
       visible.has(href),
@@ -309,11 +309,12 @@ test("D093 central_supply_ops nav hides PO and recipes; shows GRN + request inbo
   assert.equal(visible.has("/inventory/stock-requests"), true);
   assert.equal(visible.has("/inventory/ingredients"), true);
   assert.equal(visible.has("/inventory/purchase-orders"), false);
+  assert.equal(visible.has("/inventory/menu-recipes"), false);
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/production"), false);
 });
 
-test("D093 central_kitchen_lead can show production + recipes, not PO", () => {
+test("D093 central_kitchen_lead sees production recipes only inside production", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "central_kitchen_lead",
@@ -327,7 +328,8 @@ test("D093 central_kitchen_lead can show production + recipes, not PO", () => {
   );
 
   assert.equal(visible.has("/inventory/production"), true);
-  assert.equal(visible.has("/inventory/recipes"), true);
+  assert.equal(visible.has("/inventory/menu-recipes"), false);
+  assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
   assert.equal(visible.has("/inventory/purchase-orders"), false);
 });

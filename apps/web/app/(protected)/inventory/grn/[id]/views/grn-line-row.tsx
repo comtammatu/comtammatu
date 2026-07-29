@@ -16,6 +16,7 @@ import {
   GRN_DETAIL_COPY as grnCopy,
   type EditableGrnLine as EditableLine,
 } from "@lib/inventory/grn-detail-model";
+import { formatQty } from "@lib/inventory/format";
 import { deriveGrnQualityStatus } from "@lib/inventory/grn-quality";
 
 export function LineRow({
@@ -37,7 +38,7 @@ export function LineRow({
   isDraft: boolean;
   showAmendAffordance: boolean;
   onChange: (patch: Partial<EditableLine>) => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onAmend: () => void;
   chrome?: "card" | "plain";
 }) {
@@ -48,21 +49,39 @@ export function LineRow({
       : qualityStatus === "partial"
         ? grnCopy.line.qualityPartial
         : grnCopy.line.qualityRejected;
+  const acceptedQuantity = Math.max(line.actual - line.rejected, 0);
+  const excessQuantity = Math.max(
+    acceptedQuantity - line.poAppliedQuantity,
+    0,
+  );
+  const shortageQuantity = Math.max(
+    line.remainingQuantity - line.poAppliedQuantity,
+    0,
+  );
   const content = (
     <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-bold">{line.name}</p>
           {!isDraft ? (
-            <p className="text-xs text-muted-foreground">
-              {grnCopy.line.orderedDeliveredAccepted(
-                line.required,
-                line.actual,
-                line.actual - line.rejected,
-                line.rejected,
-                line.unit,
-              )}
-            </p>
+            <>
+              <p className="text-xs text-muted-foreground">
+                {grnCopy.line.orderedDeliveredAccepted(
+                  line.required,
+                  line.actual,
+                  acceptedQuantity,
+                  line.rejected,
+                  line.unit,
+                )}
+              </p>
+              {excessQuantity > 0 || shortageQuantity > 0 ? (
+                <p className="text-xs text-warning-foreground">
+                  {excessQuantity > 0
+                    ? `Dư ngoài đơn ${formatQty(excessQuantity)} ${line.unit}`
+                    : `Còn thiếu ${formatQty(shortageQuantity)} ${line.unit}`}
+                </p>
+              ) : null}
+            </>
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -87,7 +106,7 @@ export function LineRow({
               {grnCopy.amend.action}
             </Button>
           ) : null}
-          {isDraft ? (
+          {isDraft && onDelete ? (
             <Button
               type="button"
               variant="ghost"
@@ -111,7 +130,7 @@ export function LineRow({
             >
               <FormattedNumberInput
                 id={`received-${idx}`}
-                value={String(line.actual)}
+                value={line.actual > 0 || line.dirty ? String(line.actual) : ""}
                 onValueChange={(value) => {
                   const actual = Math.max(0, Number(value || 0));
                   onChange({

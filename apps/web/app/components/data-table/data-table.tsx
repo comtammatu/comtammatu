@@ -277,7 +277,7 @@ export function DataTable<T>({
 
   if (isMobile && mobileCardRender) {
     return (
-      <div className={cn("flex flex-col gap-3", className)}>
+      <div className={cn("flex flex-col", className)}>
         {toolbar}
         {data.length === 0 ? (
           <AppEmptyState
@@ -288,11 +288,13 @@ export function DataTable<T>({
             icon={emptyIcon}
           />
         ) : (
-          pagedData.map((row, index) => (
-            <div key={getRowKey(row)}>
-              {mobileCardRender(row, index + pageOffset)}
-            </div>
-          ))
+          <div className="flex flex-col gap-2">
+            {pagedData.map((row, index) => (
+              <div key={getRowKey(row)}>
+                {mobileCardRender(row, index + pageOffset)}
+              </div>
+            ))}
+          </div>
         )}
         {data.length > 0 ? mobileFooter : null}
         {showPagination && (
@@ -309,7 +311,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("flex flex-col gap-3", className)}>
+    <div className={cn("flex flex-col", className)}>
       {toolbar}
       <Table>
         <TableHeader>

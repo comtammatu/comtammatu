@@ -56,7 +56,6 @@ import {
   grnDetailHref,
   grnProcurementStepChip,
   grnProcurementStepChipLabel,
-  hasGrnListFilters,
   type GrnDraftRow,
   type GrnListStatusFilter,
   type GrnRow,
@@ -96,7 +95,6 @@ type BranchGrnDraftRow = Pick<
 
 const statusFilterLabels: Record<GrnListStatusFilter, string> = {
   all: KDS_VI.filterAll,
-  review: messages.inventory.grn.qcQueue,
   draft: getStatusBadgeMeta("inventory", "draft").label,
   confirmed: getStatusBadgeMeta("inventory", "confirmed").label,
   cancelled: getStatusBadgeMeta("inventory", "cancelled").label,
@@ -283,7 +281,7 @@ export function BranchGrnListClient({
     () => filterGrnListRows(grns, filters),
     [grns, query, status],
   );
-  const filtersActive = hasGrnListFilters(filters);
+  const filtersActive = query.trim() !== "" || status !== "all";
   const showDraftPanel = draftsLoadFailed || drafts.length > 0;
 
   function resetFilters() {
@@ -300,7 +298,10 @@ export function BranchGrnListClient({
 
     setPendingDraftId(draft.grnId);
     try {
-      const result = await discardGrnDraft({ grnId: draft.grnId });
+      const result = await discardGrnDraft({
+        grnId: draft.grnId,
+        reason: "Người dùng hủy phiếu nháp.",
+      });
       if (!result.success) {
         toast.error(result.error ?? messages.inventory.grn.loadFailed);
         return;

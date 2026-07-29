@@ -44,15 +44,15 @@ import {
   AppToolbar,
 } from "@/components/surface";
 import { formatVND } from "@lib/inventory/format";
-import { RecipeLineDialog } from "./recipe-line-dialog";
+import { MenuRecipeLineDialog } from "./menu-recipe-line-dialog";
 import type {
   MenuItemOption,
   IngredientOption,
-  RecipeLineDraft,
-} from "./recipe-line-dialog";
+  MenuRecipeLineDraft,
+} from "./menu-recipe-line-dialog";
 import { messages } from "@lib/messages";
 
-export type RecipeItem = {
+export type MenuRecipeItem = {
   ingredientId: number;
   ingredientName: string;
   qty: number;
@@ -62,24 +62,24 @@ export type RecipeItem = {
   lineCost: number;
 };
 
-export type RecipeRow = {
+export type MenuRecipeRow = {
   id: number;
   menuItemId: number;
   name: string;
   category: string;
   updatedAt: string;
   estimatedCost: number;
-  items: RecipeItem[];
+  items: MenuRecipeItem[];
 };
 
-export function RecipesClient({
-  recipes,
+export function MenuRecipesClient({
+  menuRecipes,
   menuItems,
   ingredients,
   stockCapacityByMenuItemId = {},
   loadError,
 }: {
-  recipes: RecipeRow[];
+  menuRecipes: MenuRecipeRow[];
   menuItems: MenuItemOption[];
   ingredients: IngredientOption[];
   stockCapacityByMenuItemId?: Record<string, number>;
@@ -91,24 +91,24 @@ export function RecipesClient({
   const [editingMenuItemId, setEditingMenuItemId] = useState<
     number | undefined
   >();
-  const [editingLines, setEditingLines] = useState<RecipeLineDraft[]>([]);
+  const [editingLines, setEditingLines] = useState<MenuRecipeLineDraft[]>([]);
   const [search, setSearch] = useState("");
 
   const existingMenuItemIds = useMemo(
-    () => recipes.map((r) => r.menuItemId),
-    [recipes],
+    () => menuRecipes.map((menuRecipe) => menuRecipe.menuItemId),
+    [menuRecipes],
   );
 
-  const filteredRecipes = useMemo(() => {
+  const filteredMenuRecipes = useMemo(() => {
     const query = search.trim();
-    if (!query) return recipes;
-    return recipes.filter((recipe) =>
-      matchesSearch([recipe.name, recipe.category], query),
+    if (!query) return menuRecipes;
+    return menuRecipes.filter((menuRecipe) =>
+      matchesSearch([menuRecipe.name, menuRecipe.category], query),
     );
-  }, [recipes, search]);
+  }, [menuRecipes, search]);
 
   const showNoResults =
-    filteredRecipes.length === 0 && search.trim().length > 0;
+    filteredMenuRecipes.length === 0 && search.trim().length > 0;
 
   function openCreate() {
     setEditingMenuItemId(undefined);
@@ -116,10 +116,10 @@ export function RecipesClient({
     setDialogOpen(true);
   }
 
-  function openEdit(recipe: RecipeRow) {
-    setEditingMenuItemId(recipe.menuItemId);
+  function openEdit(menuRecipe: MenuRecipeRow) {
+    setEditingMenuItemId(menuRecipe.menuItemId);
     setEditingLines(
-      recipe.items.map((item) => ({
+      menuRecipe.items.map((item) => ({
         ingredientId: item.ingredientId,
         quantity: item.qty,
         unitLabel: item.unitLabel,
@@ -134,27 +134,29 @@ export function RecipesClient({
     router.refresh();
   }
 
-  const getRecipeRowActions = (recipe: RecipeRow): RowActionItem[] => [
+  const getMenuRecipeRowActions = (
+    menuRecipe: MenuRecipeRow,
+  ): RowActionItem[] => [
     {
       key: "edit",
-      label: INVENTORY_VI.recipeEditAction,
+      label: INVENTORY_VI.menuRecipeEditAction,
       icon: <IconPencil />,
-      onSelect: () => openEdit(recipe),
+      onSelect: () => openEdit(menuRecipe),
     },
   ];
 
-  const columns: DataTableColumn<RecipeRow>[] = [
+  const columns: DataTableColumn<MenuRecipeRow>[] = [
     {
       key: "name",
-      header: INVENTORY_VI.recipeColMenuItem,
-      render: (recipe) => <span>{recipe.name}</span>,
+      header: INVENTORY_VI.menuRecipeColMenuItem,
+      render: (menuRecipe) => <span>{menuRecipe.name}</span>,
     },
     {
       key: "category",
-      header: INVENTORY_VI.recipeColCategory,
-      render: (recipe) =>
-        recipe.category ? (
-          <Badge variant="success">{recipe.category}</Badge>
+      header: INVENTORY_VI.menuRecipeColCategory,
+      render: (menuRecipe) =>
+        menuRecipe.category ? (
+          <Badge variant="success">{menuRecipe.category}</Badge>
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
@@ -163,14 +165,14 @@ export function RecipesClient({
       key: "ingredients",
       header: "Định mức",
       className: "min-w-[200px]",
-      render: (recipe) => (
+      render: (menuRecipe) => (
         <div className="flex flex-col gap-1 text-sm">
-          {recipe.items.length === 0 ? (
+          {menuRecipe.items.length === 0 ? (
             <span className="text-muted-foreground italic">
               Chưa có định mức
             </span>
           ) : (
-            recipe.items.map((item, i) => (
+            menuRecipe.items.map((item, i) => (
               <div key={i} className="flex justify-between gap-2">
                 <span className="text-muted-foreground">
                   {item.ingredientName}
@@ -186,17 +188,18 @@ export function RecipesClient({
     },
     {
       key: "cost",
-      header: INVENTORY_VI.recipeColUnitCost,
+      header: INVENTORY_VI.menuRecipeColUnitCost,
       className: "font-mono",
-      render: (recipe) =>
-        INVENTORY_VI.amountDong(formatVND(recipe.estimatedCost)),
+      render: (menuRecipe) =>
+        INVENTORY_VI.amountDong(formatVND(menuRecipe.estimatedCost)),
     },
     {
       key: "stockCapacity",
-      header: INVENTORY_VI.recipeColStockCapacity,
+      header: INVENTORY_VI.menuRecipeColStockCapacity,
       className: "font-mono",
-      render: (recipe) => {
-        const capacity = stockCapacityByMenuItemId[String(recipe.menuItemId)];
+      render: (menuRecipe) => {
+        const capacity =
+          stockCapacityByMenuItemId[String(menuRecipe.menuItemId)];
         return capacity == null ? (
           <span className="text-muted-foreground">—</span>
         ) : (
@@ -208,8 +211,8 @@ export function RecipesClient({
       key: "actions",
       header: FORM_VI.action,
       className: "w-14",
-      render: (recipe) => {
-        const items = getRecipeRowActions(recipe);
+      render: (menuRecipe) => {
+        const items = getMenuRecipeRowActions(menuRecipe);
         return (
           <div
             className="flex justify-end"
@@ -229,12 +232,10 @@ export function RecipesClient({
   if (loadError) {
     return (
       <AppPage width="xwide" density="compact">
-        <AppPageHeader
-          title={INVENTORY_VI.recipesPageTitle}
-        />
+        <AppPageHeader title={INVENTORY_VI.menuRecipesPageTitle} />
         <AppEmptyState
           mode="error"
-          title={messages.inventory.recipes.loadFailedTitle}
+          title={messages.inventory.menuRecipes.loadFailedTitle}
           description={loadError}
         />
       </AppPage>
@@ -251,16 +252,16 @@ export function RecipesClient({
           </InputGroupAddon>
           <InputGroupInput
             type="search"
-            aria-label={INVENTORY_VI.recipeSearchPlaceholder}
+            aria-label={INVENTORY_VI.menuRecipeSearchPlaceholder}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={INVENTORY_VI.recipeSearchPlaceholder}
+            placeholder={INVENTORY_VI.menuRecipeSearchPlaceholder}
           />
         </InputGroup>
       }
       reset={
         <Badge variant="outline">
-          {filteredRecipes.length}/{recipes.length}
+          {filteredMenuRecipes.length}/{menuRecipes.length}
         </Badge>
       }
     />
@@ -269,47 +270,49 @@ export function RecipesClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        title={INVENTORY_VI.recipesPageTitle}
+        title={INVENTORY_VI.menuRecipesPageTitle}
         actions={
           <Button type="button" size="lg" onClick={openCreate}>
             <IconPlus data-icon="inline-start" />
-            {INVENTORY_VI.recipeCreateAction}
+            {INVENTORY_VI.menuRecipeCreateAction}
           </Button>
         }
       />
       <AppListFrame toolbar={listToolbar}>
         <DataTable
           columns={columns}
-          data={filteredRecipes}
+          data={filteredMenuRecipes}
           pageSize={25}
-          getRowKey={(recipe) => recipe.id}
+          getRowKey={(menuRecipe) => menuRecipe.id}
           onRowClick={openEdit}
-          renderRowContextMenu={(recipe) => (
-            <RowActionsContextMenuItems items={getRecipeRowActions(recipe)} />
+          renderRowContextMenu={(menuRecipe) => (
+            <RowActionsContextMenuItems
+              items={getMenuRecipeRowActions(menuRecipe)}
+            />
           )}
           emptyTitle={
             showNoResults
-              ? INVENTORY_VI.recipesEmptyFiltered
-              : INVENTORY_VI.recipesEmptyTitle
+              ? INVENTORY_VI.menuRecipesEmptyFiltered
+              : INVENTORY_VI.menuRecipesEmptyTitle
           }
           emptyDescription={
-            showNoResults ? undefined : INVENTORY_VI.recipesEmptyDescription
+            showNoResults ? undefined : INVENTORY_VI.menuRecipesEmptyDescription
           }
           emptyMode={showNoResults ? "no-results" : "no-data"}
-          mobileCardRender={(recipe) => (
-            <RecipeCard
-              recipe={recipe}
+          mobileCardRender={(menuRecipe) => (
+            <MenuRecipeCard
+              menuRecipe={menuRecipe}
               stockCapacity={
-                stockCapacityByMenuItemId[String(recipe.menuItemId)]
+                stockCapacityByMenuItemId[String(menuRecipe.menuItemId)]
               }
-              actions={getRecipeRowActions(recipe)}
+              actions={getMenuRecipeRowActions(menuRecipe)}
               onOpen={openEdit}
             />
           )}
         />
       </AppListFrame>
 
-      <RecipeLineDialog
+      <MenuRecipeLineDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         menuItems={menuItems}
@@ -323,39 +326,39 @@ export function RecipesClient({
   );
 }
 
-function RecipeCard({
-  recipe,
+function MenuRecipeCard({
+  menuRecipe,
   stockCapacity,
   actions,
   onOpen,
 }: {
-  recipe: RecipeRow;
+  menuRecipe: MenuRecipeRow;
   stockCapacity: number | undefined;
   actions: RowActionItem[];
-  onOpen: (recipe: RecipeRow) => void;
+  onOpen: (menuRecipe: MenuRecipeRow) => void;
 }) {
   return (
-    <Item variant="outline" onClick={() => onOpen(recipe)}>
+    <Item variant="outline" onClick={() => onOpen(menuRecipe)}>
       <ItemHeader>
-        <ItemTitle>{recipe.name}</ItemTitle>
-        {recipe.category ? (
-          <Badge variant="success">{recipe.category}</Badge>
+        <ItemTitle>{menuRecipe.name}</ItemTitle>
+        {menuRecipe.category ? (
+          <Badge variant="success">{menuRecipe.category}</Badge>
         ) : null}
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          {INVENTORY_VI.recipeCardSummary(
-            recipe.items.length,
-            formatVND(recipe.estimatedCost),
+          {INVENTORY_VI.menuRecipeCardSummary(
+            menuRecipe.items.length,
+            formatVND(menuRecipe.estimatedCost),
           )}
         </ItemDescription>
         <div className="flex flex-col gap-1 rounded-md bg-muted/30 p-2 text-sm mt-2 mb-2">
-          {recipe.items.length === 0 ? (
+          {menuRecipe.items.length === 0 ? (
             <span className="text-muted-foreground italic">
               Chưa có định mức
             </span>
           ) : (
-            recipe.items.map((item, i) => (
+            menuRecipe.items.map((item, i) => (
               <div key={i} className="flex justify-between gap-2">
                 <span className="text-muted-foreground">
                   {item.ingredientName}
@@ -368,7 +371,7 @@ function RecipeCard({
           )}
         </div>
         <ItemDescription>
-          {INVENTORY_VI.recipeColStockCapacity}:{" "}
+          {INVENTORY_VI.menuRecipeColStockCapacity}:{" "}
           {stockCapacity == null ? (
             <span className="text-muted-foreground">—</span>
           ) : (

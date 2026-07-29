@@ -1,4 +1,4 @@
-import { getRecipeLineBaseQuantity } from "../(protected)/inventory/_lib/recipe-cost";
+import { getMenuRecipeLineBaseQuantity } from "../(protected)/inventory/_lib/menu-recipe-cost";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 
 export interface FoodCostSaleLine {
@@ -9,7 +9,7 @@ export interface FoodCostSaleLine {
   revenue: number;
 }
 
-export interface FoodCostRecipeLine {
+export interface FoodCostMenuRecipeLine {
   menuItemId: number;
   ingredientId: number;
   quantity: number;
@@ -45,20 +45,20 @@ function round2(value: number): number {
 
 export function buildFoodCostRows({
   saleLines,
-  recipeLines,
+  menuRecipeLines,
   unitCosts,
   periodStart,
 }: {
   saleLines: FoodCostSaleLine[];
-  recipeLines: FoodCostRecipeLine[];
+  menuRecipeLines: FoodCostMenuRecipeLine[];
   unitCosts: ReadonlyMap<string, number>;
   periodStart: string | null;
 }): FoodCostResultRow[] {
-  const recipesByItem = new Map<number, FoodCostRecipeLine[]>();
-  for (const line of recipeLines) {
-    const rows = recipesByItem.get(line.menuItemId) ?? [];
+  const menuRecipesByItem = new Map<number, FoodCostMenuRecipeLine[]>();
+  for (const line of menuRecipeLines) {
+    const rows = menuRecipesByItem.get(line.menuItemId) ?? [];
     rows.push(line);
-    recipesByItem.set(line.menuItemId, rows);
+    menuRecipesByItem.set(line.menuItemId, rows);
   }
 
   const rows = new Map<string, FoodCostResultRow>();
@@ -86,23 +86,26 @@ export function buildFoodCostRows({
   }
 
   for (const row of rows.values()) {
-    const recipeRows = recipesByItem.get(row.menu_item_id) ?? [];
-    const costPerUnit = recipeRows.reduce((sum, recipe) => {
-      const baseQuantity = getRecipeLineBaseQuantity({
-        quantity: recipe.quantity,
-        entryUnitId: recipe.entryUnitId,
-        units: recipe.units,
+    const menuRecipeRows = menuRecipesByItem.get(row.menu_item_id) ?? [];
+    const costPerUnit = menuRecipeRows.reduce((sum, menuRecipe) => {
+      const baseQuantity = getMenuRecipeLineBaseQuantity({
+        quantity: menuRecipe.quantity,
+        entryUnitId: menuRecipe.entryUnitId,
+        units: menuRecipe.units,
       });
       const unitCost =
-        unitCosts.get(foodCostUnitCostKey(row.branch_id, recipe.ingredientId)) ??
-        recipe.fallbackUnitCost;
+        unitCosts.get(
+          foodCostUnitCostKey(row.branch_id, menuRecipe.ingredientId),
+        ) ?? menuRecipe.fallbackUnitCost;
       return sum + baseQuantity * unitCost;
     }, 0);
 
     row.unit_ingredient_cost = round2(costPerUnit);
     row.ingredient_cost = round2(row.quantity_sold * row.unit_ingredient_cost);
     row.food_cost_pct =
-      row.revenue > 0 ? round2((row.ingredient_cost / row.revenue) * 100) : null;
+      row.revenue > 0
+        ? round2((row.ingredient_cost / row.revenue) * 100)
+        : null;
     row.gross_profit = round2(row.revenue - row.ingredient_cost);
     row.gross_margin_pct =
       row.revenue > 0 ? round2((row.gross_profit / row.revenue) * 100) : null;

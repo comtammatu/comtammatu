@@ -40,10 +40,12 @@ test("Wave 1 batch C supplier items wires menu + context when canManage", () => 
   );
 });
 
-test("Wave 1 batch C recipes wires three doors from getRecipeRowActions", () => {
-  const source = read("app/(protected)/inventory/recipes/recipes-client.tsx");
+test("Wave 1 batch C menu recipes wires three doors from getMenuRecipeRowActions", () => {
+  const source = read(
+    "app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx",
+  );
 
-  assert.match(source, /const getRecipeRowActions\s*=/);
+  assert.match(source, /const getMenuRecipeRowActions\s*=/);
   assert.match(source, /<RowActionsMenu/);
   assert.match(source, /renderRowContextMenu=\{/);
   assert.match(source, /onRowClick=\{openEdit\}/);

@@ -2,10 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import {
-  PAGE_ARCHETYPES,
-  PAGE_DISPOSITIONS,
-} from "./page-archetypes.mjs";
+import { PAGE_ARCHETYPES, PAGE_DISPOSITIONS } from "./page-archetypes.mjs";
 import {
   APP_ADAPTER_REGISTRY,
   DOMAIN_ADAPTER_FAMILIES,
@@ -1106,9 +1103,7 @@ const textChecks = [
   {
     id: "owner-page-header-no-module-eyebrow-module-doc",
     file: "docs/modules/ui.md",
-    includes: [
-      "không** dùng `eyebrow` để lặp tên module",
-    ],
+    includes: ["không** dùng `eyebrow` để lặp tên module"],
   },
   {
     id: "app-section-icon-size-contract",
@@ -1494,10 +1489,13 @@ function runLegacyDebtBudgetSelfTest() {
       1 ||
     countMatches("--compatibility-mode: 1;", legacyCssVariableCheck.pattern) !==
       0 ||
-    countMatches("color: var(--surface-legacy);", legacyCssVariableCheck.pattern) !==
-      0 ||
+    countMatches(
+      "color: var(--surface-legacy);",
+      legacyCssVariableCheck.pattern,
+    ) !== 0 ||
     !inputLegacySizeCheck ||
-    countMatches('<Input size="field" />', inputLegacySizeCheck.pattern) !== 1 ||
+    countMatches('<Input size="field" />', inputLegacySizeCheck.pattern) !==
+      1 ||
     countMatches(
       '<FormattedNumberInput size="field" />',
       inputLegacySizeCheck.pattern,
@@ -1516,12 +1514,17 @@ function runLegacyDebtBudgetSelfTest() {
       retiredUtilityCheck.pattern,
     ) !== 0
   ) {
-    throw new Error("legacy Input and CSS variable self-test did not enforce scope");
+    throw new Error(
+      "legacy Input and CSS variable self-test did not enforce scope",
+    );
   }
 
   if (
     !isHistoricalSqlSnapshot(
-      path.join(REPO_ROOT, "supabase/migration-archive/20260101000000_history.sql"),
+      path.join(
+        REPO_ROOT,
+        "supabase/migration-archive/20260101000000_history.sql",
+      ),
     ) ||
     !isHistoricalSqlSnapshot(
       path.join(REPO_ROOT, "supabase/migrations/20260101000000_baseline.sql"),
@@ -1530,7 +1533,9 @@ function runLegacyDebtBudgetSelfTest() {
       path.join(REPO_ROOT, "supabase/migrations/20260101000001_forward.sql"),
     )
   ) {
-    throw new Error("historical SQL snapshot filter self-test did not enforce scope");
+    throw new Error(
+      "historical SQL snapshot filter self-test did not enforce scope",
+    );
   }
 }
 
@@ -1872,7 +1877,7 @@ const LIST_WIDTH_TIER_PINNED_PAGES = [
     .map(([file]) => file),
   "apps/web/app/(protected)/inventory/grn/page.tsx",
   "apps/web/app/(protected)/inventory/ingredients/page.tsx",
-  "apps/web/app/(protected)/inventory/recipes/page.tsx",
+  "apps/web/app/(protected)/inventory/menu-recipes/page.tsx",
   "apps/web/app/(protected)/inventory/stocktake/page.tsx",
   "apps/web/app/(protected)/inventory/transfers/page.tsx",
 ];

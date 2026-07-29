@@ -113,6 +113,11 @@ export const inventory = {
     noActiveTransfers: "Không có điều chuyển đang xử lý",
     headerTagline:
       "Điểm vào: kiểm soát tồn · giao dịch kho · sản xuất · danh mục.",
+    centralSupplyTagline:
+      "Điểm vào: tồn kho · phiếu nhập · yêu cầu hàng · điều chuyển.",
+    centralKitchenTagline:
+      "Điểm vào: tồn kho · phiếu nhập · yêu cầu hàng · sản xuất.",
+    operationalTitle: (siteKind: string) => `Điều hành ${siteKind}`,
     allClearTitle: "Mọi thứ đang ổn",
     allClearHint:
       "Không có việc gấp, yêu cầu chuyển hàng hay kiểm kê đang chờ.",
@@ -186,16 +191,23 @@ export const inventory = {
       "Chi nhánh nhận hàng qua điều chuyển nội bộ và đối soát số thực nhận.",
     sourceProcurementDescription:
       "Phiếu nhập, đơn mua đã duyệt và hóa đơn nhà cung cấp trước khi hàng vào tồn.",
+    sourceCentralOperationsDescription:
+      "Nhận hàng NCC và đáp ứng yêu cầu từ chi nhánh tại đúng nguồn được phân công.",
     inboundSlipsMetricLabel: "phiếu đến",
     draftGrnStatus: (count: number) => `${formatCount(count)} phiếu nhập nháp`,
     inboundNeedReceiveStatus: (count: number) =>
       `${formatCount(count)} yêu cầu cần nhận`,
     catalogDescription:
       "Nguyên liệu, đơn vị tính và nhà cung cấp dùng cho kho.",
+    catalogReadTitle: "4. Danh mục tra cứu",
+    catalogReadDescription:
+      "Tra cứu nguyên liệu và nhà cung cấp phục vụ vận hành.",
     catalogMetricValue: "3",
     catalogMetricLabel: "mục chính",
     catalogStatusLabel: "Nguyên liệu / ĐVT / NCC",
+    catalogReadStatusLabel: "Nguyên liệu / NCC",
     unitsAction: "Đơn vị tính",
+    stockRequestsAction: "Yêu cầu hàng",
     productionFlowDescription:
       "Theo dõi hàng còn giữ tồn sau khi nhận và lệnh sản xuất trung tâm.",
     taskBadgePriority: "Ưu tiên",
@@ -305,11 +317,16 @@ export const inventory = {
       return labels[status] ?? "Không rõ";
     },
     inbox: {
-      title: "Yêu cầu hàng — inbox",
-      description: "Phiếu yêu cầu hàng đã gửi từ chi nhánh.",
+      title: "Yêu cầu hàng cần đáp ứng",
+      description: (sourceLabel: string | null) =>
+        sourceLabel
+          ? `Chỉ hiển thị phiếu còn dòng chờ từ ${sourceLabel}.`
+          : "Phiếu yêu cầu hàng còn dòng chờ từ các chi nhánh.",
       emptyTitle: "Không có phiếu chờ",
-      emptyDescription:
-        "Khi chi nhánh gửi yêu cầu, phiếu sẽ hiện tại đây để đáp ứng bằng điều chuyển.",
+      emptyDescription: (sourceLabel: string | null) =>
+        sourceLabel
+          ? `Không có dòng nào đang chờ ${sourceLabel} đáp ứng.`
+          : "Không có dòng yêu cầu nào đang chờ đáp ứng.",
       openButton: "Mở phiếu",
     },
     fulfill: {
@@ -344,8 +361,7 @@ export const inventory = {
       backToList: "Quay lại danh sách",
       submit: "Gửi yêu cầu",
       cancel: "Hủy phiếu",
-      statusDescription: (statusLabel: string) =>
-        `Trạng thái: ${statusLabel}`,
+      statusDescription: (statusLabel: string) => `Trạng thái: ${statusLabel}`,
       emptyLines:
         "Chưa có dòng. Thêm nguyên liệu đã gán nguồn trên danh mục (Owner).",
       lineDescription: (
@@ -368,6 +384,67 @@ export const inventory = {
       },
     },
   },
+  purchaseRequests: {
+    title: "Yêu cầu mua",
+    description:
+      "Kho đề nghị mua hàng bên ngoài; kế toán tách thành đơn đặt hàng theo từng nhà cung cấp.",
+    createAction: "Tạo yêu cầu mua",
+    createTitle: "Tạo yêu cầu mua",
+    createSuccess: "Đã tạo yêu cầu mua.",
+    createFailed: "Không thể tạo yêu cầu mua.",
+    submitAction: "Gửi yêu cầu",
+    submitSuccess: "Đã gửi yêu cầu mua.",
+    submitFailed: "Không thể gửi yêu cầu mua.",
+    createPoAction: "Tạo đơn đặt hàng",
+    createPoTitle: "Tạo đơn đặt hàng NCC",
+    createPoSuccess: (count: number) =>
+      `Đã tạo ${formatCount(count)} đơn đặt hàng.`,
+    createPoFailed: "Không thể tạo đơn đặt hàng.",
+    searchPlaceholder: "Tìm mã yêu cầu, kho hoặc nguyên liệu...",
+    emptyTitle: "Chưa có yêu cầu mua",
+    emptyDescription: "Tạo yêu cầu khi kho cần mua hàng từ nhà cung cấp.",
+    loadFailed: "Không thể tải danh sách yêu cầu mua.",
+    codeColumn: "Yêu cầu mua",
+    branchColumn: "Kho yêu cầu",
+    statusColumn: "Trạng thái",
+    neededByColumn: "Ngày cần",
+    progressColumn: "Đã đặt",
+    updatedColumn: "Cập nhật",
+    linesTitle: "Nguyên liệu cần mua",
+    purchaseOrdersTitle: "Đơn đặt hàng đã tạo",
+    noPurchaseOrders: "Chưa tạo đơn đặt hàng.",
+    branchRequired: "Kho yêu cầu",
+    neededBy: "Ngày cần hàng",
+    notes: "Ghi chú",
+    addNotes: "Thêm ghi chú",
+    ingredient: "Nguyên liệu",
+    quantity: "Số lượng",
+    unit: "Đơn vị",
+    addLine: "Thêm dòng",
+    splitPriceLine: "Tách thêm dòng giá",
+    supplier: "Nhà cung cấp",
+    expectedDeliveryDate: "Ngày giao dự kiến",
+    unitPrice: "Đơn giá dự kiến",
+    supplierOrderCount: (count: number) =>
+      `${formatCount(count)} đơn theo nhà cung cấp`,
+    noSupplierMappings:
+      "Chưa có nhà cung cấp phù hợp với nguyên liệu còn cần mua.",
+    mappedLines: (mapped: number, total: number) =>
+      `${formatCount(mapped)}/${formatCount(total)} dòng được gán cho NCC`,
+    lineCount: (count: number) => `${formatCount(count)} dòng`,
+    orderedProgress: (ordered: number, total: number) =>
+      `${formatCount(ordered)}/${formatCount(total)} dòng`,
+    statusLabel: (status: string) => {
+      const labels: Record<string, string> = {
+        draft: "Nháp",
+        submitted: "Chờ đặt hàng",
+        partially_ordered: "Đã đặt một phần",
+        ordered: "Đã tạo đủ đơn",
+        cancelled: "Đã hủy",
+      };
+      return labels[status] ?? "Không rõ trạng thái";
+    },
+  },
   value: {
     eyebrow: "Báo cáo",
     title: "Giá trị tồn kho",
@@ -388,7 +465,7 @@ export const inventory = {
     branchesLoadFailed: "Không thể tải danh sách chi nhánh.",
     stockLoadFailed: "Không thể tải tồn kho.",
   },
-  recipes: {
+  menuRecipes: {
     loadFailedTitle: "Không thể tải định mức món bán",
     loadFailed: "Không thể tải định mức món bán.",
     branchWacLoadFailed: "Không thể tải WAC chi nhánh.",
@@ -402,6 +479,45 @@ export const inventory = {
     lookupLoadFailed: "Không thể tải dữ liệu đối chiếu.",
   },
   grn: {
+    unknownStatus: "Không rõ trạng thái",
+    unknownInvoiceStatus: "Chưa xác định",
+    listLoadFailed: "Không thể tải danh sách phiếu nhập",
+    listSearchAria: "Tìm mã phiếu, đơn đặt hàng hoặc yêu cầu mua",
+    listSearchPlaceholder: "Tìm phiếu nhập, đơn đặt hàng, yêu cầu mua...",
+    supplierFilter: "Nhà cung cấp",
+    supplierSearchPlaceholder: "Tìm nhà cung cấp...",
+    expectedDate: "Ngày dự kiến",
+    receivedDate: "Ngày nhập",
+    dateFrom: "Từ ngày",
+    dateTo: "Đến ngày",
+    purchaseOrderFilter: "Đơn đặt hàng",
+    purchaseOrderSearchPlaceholder: "Tìm mã đơn...",
+    purchaseRequestFilter: "Yêu cầu mua",
+    purchaseRequestSearchPlaceholder: "Tìm mã yêu cầu...",
+    applyFilters: "Lọc",
+    clearFilters: "Xóa lọc",
+    emptyFiltered: "Không tìm thấy phiếu phù hợp",
+    emptyWaiting: "Chưa có hàng chờ nhập",
+    empty: "Chưa có phiếu nhập",
+    emptyWaitingDescription:
+      "Mở danh sách đơn đặt hàng để tạo phiếu theo lần giao thực tế.",
+    viewPendingOrders: "Xem đơn chờ nhận",
+    statusTabsAria: "Trạng thái phiếu nhập",
+    allStatuses: "Tất cả",
+    listTitle: "Phiếu nhập kho",
+    listDescription: "Kiểm nhận hàng được tạo từ đơn đặt hàng đã duyệt",
+    cancelTitle: "Hủy phiếu nhập",
+    cancelAction: "Hủy phiếu",
+    cancelReason: "Lý do hủy",
+    cancelReasonPlaceholder: "Nhập lý do hủy...",
+    noExceptions: "Không có",
+    shortageLines: (count: number) => `Thiếu ${formatCount(count)} dòng`,
+    excessLines: (count: number) => `Dư ${formatCount(count)} dòng`,
+    rejectedExceptionLines: (count: number) =>
+      `Từ chối ${formatCount(count)} dòng`,
+    expectedDateLabel: "Dự kiến:",
+    lineProgress: (completed: number, total: number) =>
+      `${formatCount(completed)}/${formatCount(total)} dòng`,
     created: "Tạo phiếu nhập {code} thành công",
     updated: "Cập nhật phiếu nhập {code} thành công",
     approved: "Đã duyệt phiếu nhập {code}",
@@ -445,6 +561,7 @@ export const inventory = {
       "Hàng nhận một phần hoặc từ chối phải có ảnh chứng từ.",
     confirmQcEvidenceRequired: "Hàng từ chối phải có đủ lý do và ảnh chứng từ.",
     confirmBlockedByDirty: "Vui lòng lưu thay đổi trước khi chốt.",
+    confirmNoAcceptedQuantity: "Chưa có số lượng nhận hợp lệ để chốt nhập kho.",
     approveConfirmTitle: "Duyệt phiếu nhập?",
     approveConfirmDesc:
       "Sau khi duyệt, phiếu không thể sửa và tồn kho sẽ cập nhật.",
@@ -470,9 +587,11 @@ export const inventory = {
     nextStepAwaitingPoBranchBody:
       "Đơn mua đã gắn. Chờ kế toán hoặc chủ sở hữu duyệt trước khi chốt nhập kho.",
     nextStepReadyTitle: "Sẵn sàng chốt nhập kho",
-    nextStepReadyBody: "Đơn mua đã duyệt. Kiểm tra số lượng/QC rồi chốt nhập kho.",
+    nextStepReadyBody:
+      "Đơn mua đã duyệt. Kiểm tra số lượng/QC rồi chốt nhập kho.",
     nextStepSaveFirstTitle: "Lưu thay đổi trước khi chốt",
-    nextStepSaveFirstBody: "Có dòng chưa lưu. Lưu thay đổi rồi mới chốt nhập kho.",
+    nextStepSaveFirstBody:
+      "Có dòng chưa lưu. Lưu thay đổi rồi mới chốt nhập kho.",
     nextStepWaitingAccountant: "Chờ kế toán tạo và duyệt đơn mua.",
     openLinkedPo: "Mở đơn mua",
     stepChipNoPo: "Chưa đơn mua",
@@ -495,6 +614,7 @@ export const inventory = {
     lineHeaderName: "Nguyên liệu",
     lineHeaderOrdered: "SL đặt",
     lineHeaderQty: "SL nhận",
+    lineHeaderThisReceipt: "Nhận lần này",
     lineHeaderRejected: "Từ chối",
     lineHeaderStatus: "Trạng thái",
     draftQcHint:
@@ -570,9 +690,27 @@ export const inventory = {
         rejected: number,
         unit: string,
       ) =>
-        rejected > 0
-          ? `${formatQuantity(ordered)} ${unit} đặt → ${formatQuantity(delivered)} ${unit} giao → Nhập kho ${formatQuantity(accepted)} ${unit} (từ chối ${formatQuantity(rejected)} ${unit})`
-          : `${formatQuantity(ordered)} ${unit} đặt → ${formatQuantity(delivered)} ${unit} nhập kho`,
+        delivered <= 0
+          ? `${formatQuantity(ordered)} ${unit} theo đơn → Chưa kiểm nhận`
+          : rejected > 0
+            ? `${formatQuantity(ordered)} ${unit} đặt → ${formatQuantity(delivered)} ${unit} giao → Nhập kho ${formatQuantity(accepted)} ${unit} (từ chối ${formatQuantity(rejected)} ${unit})`
+            : `${formatQuantity(ordered)} ${unit} đặt → ${formatQuantity(delivered)} ${unit} nhập kho`,
+      notInspected: "Chưa kiểm nhận",
+      enterQuantity: "Nhập số lượng",
+      receiptSummary: (remaining: number, actual: number, unit: string) =>
+        actual > 0
+          ? `${formatQuantity(remaining)} ${unit} theo đơn · Nhận lần này ${formatQuantity(actual)} ${unit}`
+          : `${formatQuantity(remaining)} ${unit} theo đơn · Chưa nhập số lượng`,
+      receivedBefore: (quantity: number, unit: string) =>
+        `Đã nhận trước ${formatQuantity(quantity)} ${unit}`,
+      rejectedShort: (quantity: number, unit: string) =>
+        `Từ chối ${formatQuantity(quantity)} ${unit}`,
+      acceptedShort: (quantity: number, unit: string) =>
+        `Nhập kho ${formatQuantity(quantity)} ${unit}`,
+      shortageShort: (quantity: number, unit: string) =>
+        `Còn thiếu ${formatQuantity(quantity)} ${unit}`,
+      excessShort: (quantity: number, unit: string) =>
+        `Dư ${formatQuantity(quantity)} ${unit}`,
       rejectionReason: "Lý do từ chối:",
       unsaved: "chưa lưu",
       deleteLineAria: "Xóa dòng",
@@ -595,7 +733,10 @@ export const inventory = {
     searchPlaceholder: "Tìm theo số đơn mua, nhà cung cấp hoặc ghi chú",
     noNotes: "Không có ghi chú",
     pageTitle: "Đơn mua hàng",
-    pageDescription: "Nhập giá và duyệt đơn mua được tạo từ phiếu nhập nháp.",
+    pageDescription:
+      "Tạo, duyệt và theo dõi đơn đặt hàng nhà cung cấp từ yêu cầu mua.",
+    createGrn: "Tạo phiếu nhập",
+    continueGrn: "Tiếp tục nhập hàng",
     viewDetail: "Xem đơn mua",
     viewDetailAria: (code: string) => `Xem đơn mua ${code}`,
     openLinkedGrn: "Mở phiếu nhập",
@@ -621,18 +762,18 @@ export const inventory = {
     orderedAtColumn: "Ngày lập",
     noPriceYet: "Chưa có giá",
     noEstimateYet: "Chưa có tạm tính",
-    pricesRequiredToast: "Nhập đơn giá lớn hơn 0 cho mọi dòng.",
+    pricesRequiredToast: "Nhập đơn giá từ 0 trở lên cho mọi dòng.",
     pricesSavedToast: "Đã lưu giá mua",
     approveConfirmTitle: (code: string) => `Duyệt ${code}?`,
     approveConfirmDesc:
       "Sau khi duyệt, giá trên đơn mua được khóa cho phiếu nhập liên kết.",
     approvedToast: (code: string) => `Đã duyệt ${code}`,
     approveBlockedMissingPrices:
-      "Nhập đơn giá lớn hơn 0 cho mọi dòng trước khi duyệt.",
+      "Nhập đơn giá từ 0 trở lên cho mọi dòng trước khi duyệt.",
     approveBlockedDirtyPrices: "Lưu giá mua trước khi duyệt.",
     unitPriceAria: (name: string) => `Đơn giá ${name}`,
     emptyLinkedGrnsHint:
-      "Luồng chính: tạo phiếu nhập trước, rồi tạo đơn mua từ phiếu nhập.",
+      "Phiếu nhập được tạo theo từng lần giao từ đơn đặt hàng đã duyệt.",
     goToGrnList: "Mở danh sách phiếu nhập",
     /** PO status `sent` means approved for receive — matches Duyệt mua. */
     statusSentHint: "Đã duyệt",
@@ -1185,6 +1326,24 @@ export const inventory = {
     createAction: "Ghi nhận hóa đơn NCC",
     createDescription:
       "1) Chọn phiếu nhập · 2) Nhập số và ngày hóa đơn · 3) Chọn mức VAT và kiểm tra tiền.",
+    documentDiscount: "Chiết khấu toàn hóa đơn",
+    creditAction: "Giảm công nợ",
+    creditTitle: "Ghi nhận giảm công nợ",
+    creditDescription:
+      "Phân bổ phiếu giảm công nợ cho các hóa đơn cùng nhà cung cấp.",
+    creditReason: "Lý do giảm công nợ",
+    creditReasonPlaceholder: "Nhập căn cứ hoặc lý do giảm công nợ",
+    creditSubmit: "Ghi nhận",
+    creditSuccess: "Đã ghi nhận giảm công nợ.",
+    acceptDiscrepancy: "Chấp nhận chênh lệch",
+    acceptDiscrepancyDescription:
+      "Hóa đơn sẽ được xem là đã đối soát; lịch sử nhập kho và giá vốn không thay đổi.",
+    discrepancyReason: "Lý do chấp nhận",
+    discrepancyReasonPlaceholder: "Nêu rõ nguyên nhân và căn cứ chấp nhận...",
+    missingPoForReceipt:
+      "Phiếu nhập đã chọn chưa liên kết đơn đặt hàng. Hãy xử lý phiếu tương thích trước.",
+    acceptDiscrepancyFailed: "Không thể chấp nhận chênh lệch hóa đơn.",
+    acceptDiscrepancySuccess: "Đã chấp nhận chênh lệch hóa đơn.",
     searchPlaceholder: "Tìm số hóa đơn, NCC, đơn mua hoặc mã phiếu nhập",
     allSuppliers: "Tất cả nhà cung cấp",
     supplierPlaceholder: "Nhà cung cấp",
@@ -1370,18 +1529,21 @@ export const inventory = {
       openAria: (name: string) => `Quản lý nguyên liệu của ${name}`,
       addAction: "Gán nguyên liệu",
       addTitle: "Gán nguyên liệu cho nhà cung cấp",
-      addSubmit: "Gán nguyên liệu",
-      addSuccess: "Đã gán nguyên liệu",
+      addSubmit: "Gán các nguyên liệu",
+      addSuccess: "Đã gán các nguyên liệu",
       ingredient: "Nguyên liệu",
+      ingredientCount: (count: number) => `Nguyên liệu: ${count}`,
+      selectMultiple: "Chọn nhiều nguyên liệu",
+      selectCount: (count: number) => `Chọn ${count} nguyên liệu`,
+      selectSearchPlaceholder: "Tìm tên hoặc mã hàng nội bộ...",
       internalSku: "Mã hàng nội bộ",
-      supplierSku: "Mã hàng NCC",
-      supplierSkuPlaceholder: "Mã trên báo giá hoặc phiếu giao",
-      searchPlaceholder: "Tìm nguyên liệu hoặc mã hàng",
+      removeSelectedAria: (name: string) => `Bỏ ${name}`,
+      searchPlaceholder: "Tìm nguyên liệu hoặc mã hàng nội bộ",
       emptyTitle: "NCC chưa được gán nguyên liệu",
       emptyDescription:
         'Nhấn "Gán nguyên liệu" để dùng trong đơn đặt hàng và phiếu nhập.',
       emptySearchTitle: "Không tìm thấy nguyên liệu phù hợp",
-      emptySearchDescription: "Thử tên hoặc mã hàng khác.",
+      emptySearchDescription: "Thử tên hoặc mã hàng nội bộ khác.",
       removeTitle: "Bỏ gán nguyên liệu?",
       removeDescription: (ingredient: string, supplier: string) =>
         `${ingredient} sẽ không còn được chọn khi mua hoặc nhập hàng từ ${supplier}.`,
@@ -1585,7 +1747,10 @@ export const inventory = {
       rolling15m: (amount: string) => ` • 15 phút gần nhất: ${amount}`,
       viewPhoto: "Xem ảnh",
       notes: (value: string) => `Ghi chú: ${value}`,
-      reviewNotePlaceholder: "Ghi chú khi duyệt/từ chối (tùy chọn)…",
+      rejectTitle: "Từ chối phiếu hao hụt?",
+      rejectReason: "Lý do từ chối",
+      reviewNotePlaceholder: "Nhập lý do từ chối",
+      rejectCancel: "Hủy",
       reject: "Từ chối",
       approve: "Duyệt",
     },

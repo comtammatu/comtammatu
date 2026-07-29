@@ -4,7 +4,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { formatVNDate } from "@comtammatu/shared/time";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   ArrowRightToLine as IconArrowBarRight,
@@ -71,9 +70,7 @@ import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
 import { StockLocationBreakdownLine } from "./stock-location-breakdown";
-import {
-  inventoryListFilterSelectClassName,
-} from "../_components/inventory-list-frame";
+import { inventoryListFilterSelectClassName } from "../_components/inventory-list-frame";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -198,7 +195,9 @@ function StockCategoryKindCell({ item }: { item: StockIngredient }) {
       ) : (
         <span className="text-muted-foreground">{inventoryCommon.noValue}</span>
       )}
-      <span className="truncate text-xs text-muted-foreground">{kindLabel}</span>
+      <span className="truncate text-xs text-muted-foreground">
+        {kindLabel}
+      </span>
     </div>
   );
 }
@@ -292,9 +291,7 @@ export function StockClient({
         density="compact"
         scroll
       >
-        <AppPageHeader
-          title={stockCopy.title}
-        />
+        <AppPageHeader title={stockCopy.title} />
         <AppEmptyState
           mode="error"
           title={stockCopy.loadFailed}
@@ -310,10 +307,10 @@ export function StockClient({
 
   // Never recompute a money total from row costs when branchValue is denied.
   const visibleTotalValue = branchValue;
-  const liveLabel = formatVNDate(new Date());
   const stockDetailHref = (ingredientId: number) =>
     branchHref(branchId, `/inventory/stock/${ingredientId}`);
   const actionHrefs = {
+    request: branchHref(branchId, "/inventory/stock-requests"),
     receive: branchHref(branchId, "/inventory/grn"),
     transfer: branchHref(branchId, "/inventory/transfers"),
     stocktake: branchHref(branchId, "/inventory/stocktake"),
@@ -325,7 +322,6 @@ export function StockClient({
       : "/inventory/issues";
   const actionPermissions = permissions;
   const canReceiveStock = actionPermissions.canReceiveGrn;
-  const receiveActionLabel = stockCopy.actions.receiveGrn;
   const getStockRowActions = (item: StockIngredient): RowActionItem[] => {
     const rowActions: RowActionItem[] = [];
 
@@ -514,7 +510,10 @@ export function StockClient({
   const searchControl = (
     <InputGroup
       size={controlSize}
-      className={cn("w-full min-w-0", controlSize === "field" && "min-w-56 flex-1")}
+      className={cn(
+        "w-full min-w-0",
+        controlSize === "field" && "min-w-56 flex-1",
+      )}
     >
       <InputGroupAddon>
         <IconSearch />
@@ -583,45 +582,19 @@ export function StockClient({
     </div>
   );
 
-  const resultCountBadge = !isFirstLoadEmpty ? (
-    <Badge variant="outline" aria-live="polite">
-      {filtered.length}/{ingredients.length}
-    </Badge>
-  ) : null;
-
-  const primaryReceiveAction = canReceiveStock ? (
+  const primaryRequestAction = actionPermissions.canCreateStockRequest ? (
     <QuickActionButton
-      href={actionHrefs.receive}
+      href={actionHrefs.request}
       icon={IconReceipt}
-      label={receiveActionLabel}
+      label={stockCopy.actions.receiveGrn}
       primary
       size={controlSize}
       className={controlSize === "touch" ? "w-full sm:w-auto" : undefined}
     />
   ) : null;
 
-  const secondaryStockActions = (
-    <>
-      {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
-        <QuickActionButton
-          href={actionHrefs.stocktake}
-          icon={IconClipboardList}
-          label={stockCopy.actions.stocktake}
-          size={controlSize}
-        />
-      ) : null}
-      {actionPermissions.canWriteoff ? (
-        <QuickActionButton
-          href={actionHrefs.waste}
-          icon={IconTrash}
-          label={stockCopy.actions.waste}
-          size={controlSize}
-        />
-      ) : null}
-    </>
-  );
-
   const hasSecondaryActions =
+    canReceiveStock ||
     (actionPermissions.canCreateStocktake && actionHrefs.stocktake) ||
     actionPermissions.canWriteoff;
 
@@ -636,6 +609,19 @@ export function StockClient({
         }
       />
       <DropdownMenuContent align="end" className="w-56">
+        {canReceiveStock ? (
+          <DropdownMenuItem
+            render={
+              <Link
+                href={actionHrefs.receive}
+                className="flex items-center gap-2"
+              >
+                <IconTruck className="size-4 text-muted-foreground" />
+                <span>{stockCopy.actions.receiveGoods}</span>
+              </Link>
+            }
+          />
+        ) : null}
         {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
           <DropdownMenuItem
             render={
@@ -808,17 +794,6 @@ export function StockClient({
           </>
         )
       }
-      actions={
-        isCompactLayout ? (
-          primaryReceiveAction
-        ) : (
-          <>
-            {primaryReceiveAction}
-            {desktopSecondaryActionsDropdown}
-          </>
-        )
-      }
-      reset={resultCountBadge}
     />
   );
 
@@ -829,9 +804,9 @@ export function StockClient({
       description={stockCopy.empty.firstLoadHint}
       symbol="riceGrain"
     >
-      {actionPermissions.canReceiveGrn && actionHrefs.receive ? (
-        <Button size="sm" render={<Link href={actionHrefs.receive} />}>
-          <IconTruck className="size-4" />
+      {actionPermissions.canCreateStockRequest ? (
+        <Button size="sm" render={<Link href={actionHrefs.request} />}>
+          <IconReceipt className="size-4" />
           {stockCopy.actions.receiveGrn}
         </Button>
       ) : null}
@@ -865,11 +840,9 @@ export function StockClient({
           </div>
         }
         actions={
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="hidden sm:inline-flex">
-              {liveLabel}
-            </Badge>
-            <Badge variant="success">Live</Badge>
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+            {desktopSecondaryActionsDropdown}
+            {primaryRequestAction}
           </div>
         }
       />
@@ -889,7 +862,6 @@ export function StockClient({
           >
             {underThresholdButton}
             {filterControls}
-            <div className="flex flex-wrap gap-2">{secondaryStockActions}</div>
           </AppSection>
           {isFirstLoadEmpty ? (
             firstLoadEmptyState
@@ -917,7 +889,18 @@ export function StockClient({
           )}
         </>
       ) : (
-        <AppListFrame toolbar={stockToolbar}>
+        <AppListFrame
+          title={PRODUCT_VI.rawIngredient}
+          badge={
+            isFirstLoadEmpty
+              ? undefined
+              : {
+                  children: `${filtered.length}/${ingredients.length}`,
+                  variant: "outline",
+                }
+          }
+          toolbar={stockToolbar}
+        >
           <DataTable
             columns={stockColumns}
             data={filtered}

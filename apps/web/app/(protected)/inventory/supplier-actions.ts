@@ -24,7 +24,6 @@ const supplierSchema = z.object({
     .string()
     .max(300, { error: "Địa chỉ tối đa 300 ký tự" })
     .optional(),
-  notes: z.string().max(500, { error: "Ghi chú tối đa 500 ký tự" }).optional(),
   paymentTermsDays: z.coerce.number().int().min(0).optional().nullable(),
   paymentTermsNote: z.string().optional(),
 });
@@ -38,13 +37,20 @@ export async function fetchSuppliers(): Promise<ActionResult> {
   const { supabase, claims } = ctx;
   const { data, error } = await supabase
     .from("suppliers")
-    .select("*")
+    .select("*, supplier_items(count)")
     .eq("tenant_id", claims.tenant_id)
+    .eq("supplier_items.is_active", true)
     .order("name");
   if (error) {
     return { success: false, error: messages.inventory.suppliers.loadFailed };
   }
-  return { success: true, data: data ?? [] };
+  return {
+    success: true,
+    data: (data ?? []).map(({ supplier_items, ...supplier }) => ({
+      ...supplier,
+      ingredient_count: supplier_items[0]?.count ?? 0,
+    })),
+  };
 }
 
 export const createSupplier = withAction(

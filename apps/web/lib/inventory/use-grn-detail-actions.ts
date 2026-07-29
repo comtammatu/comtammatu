@@ -12,6 +12,8 @@ import {
 import { confirmGrn } from "@/(protected)/inventory/procurement-actions";
 import {
   GRN_DETAIL_COPY,
+  calculateGrnQuantities,
+  hasAcceptedGrnQuantity,
   type EditableGrnLine,
   type GrnDetail,
 } from "./grn-detail-model";
@@ -60,6 +62,7 @@ export function useGrnDetailActions({
       for (const line of dirtyLines) {
         const result = await upsertGrnLine({
           grnId: grn.id,
+          lineId: line.lineId,
           ingredientId: line.ingredientId,
           supplierId: line.supplierId,
           receivedQuantity: line.actual,
@@ -137,6 +140,9 @@ export function useGrnDetailActions({
   }
 
   function validateBeforeConfirm(): string | null {
+    if (!hasAcceptedGrnQuantity(lines)) {
+      return GRN_DETAIL_COPY.confirmNoAcceptedQuantity;
+    }
     for (const line of lines) {
       if (line.rejected > line.actual) {
         return GRN_DETAIL_COPY.validation.rejectedExceedsDelivered(line.name);
@@ -161,10 +167,35 @@ export function useGrnDetailActions({
       notify.error(validationError);
       return;
     }
+    const summary = lines.reduce(
+      (result, line) => {
+        const quantities = calculateGrnQuantities(
+          line.actual,
+          line.rejected,
+          line.remainingQuantity,
+        );
+        if (quantities.acceptedQuantity > 0) result.acceptedLines += 1;
+        if (quantities.shortageQuantity > 0) result.shortageLines += 1;
+        if (quantities.excessQuantity > 0) result.excessLines += 1;
+        if (line.rejected > 0) result.rejectedLines += 1;
+        return result;
+      },
+      {
+        acceptedLines: 0,
+        shortageLines: 0,
+        excessLines: 0,
+        rejectedLines: 0,
+      },
+    );
     const shouldConfirm = await confirm({
       title: messages.inventory.grn.confirmGrnTitle,
       description: messages.inventory.grn.confirmGrnDesc,
-      variant: "destructive",
+      details: [
+        { label: "Nhận hợp lệ", value: `${summary.acceptedLines} dòng` },
+        { label: "Còn thiếu", value: `${summary.shortageLines} dòng` },
+        { label: "Dư ngoài đơn", value: `${summary.excessLines} dòng` },
+        { label: "Từ chối", value: `${summary.rejectedLines} dòng` },
+      ],
       confirmText: GRN_DETAIL_COPY.confirmGrnAction,
     });
     if (!shouldConfirm) return;

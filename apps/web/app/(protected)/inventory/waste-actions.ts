@@ -53,7 +53,6 @@ const createWasteSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   locationId: z.coerce.number().int().positive(),
   items: z.array(wasteItemSchema).min(1).max(50),
-  notes: z.string().max(1000).optional(),
   sourceType: z.enum(WASTE_SOURCE_TYPES).default("manual"),
   sourceRef: z.record(z.string(), z.unknown()).optional(),
 });
@@ -139,7 +138,10 @@ export async function createWasteEntry(
       .in("unit_id", entryUnitIds);
 
     if (unitError) {
-      return { success: false, error: messages.inventory.waste.unitsLoadFailed };
+      return {
+        success: false,
+        error: messages.inventory.waste.unitsLoadFailed,
+      };
     }
     for (const row of unitRows ?? []) {
       factorByIngredientUnit.set(
@@ -189,7 +191,6 @@ export async function createWasteEntry(
     p_items: items,
     p_source_type: parsed.data.sourceType,
     p_source_ref: (parsed.data.sourceRef ?? undefined) as never,
-    p_notes: parsed.data.notes ?? undefined,
   });
 
   if (error) {
@@ -343,11 +344,21 @@ export async function createExpiryWriteoff(
 
 /* ─── Waste approval (QLV, S11) ─── */
 
-const approveWasteSchema = z.object({
-  issueId: z.coerce.number().int().positive(),
-  decision: z.enum(["approved", "rejected"]),
-  note: z.string().max(500).optional(),
-});
+const approveWasteSchema = z
+  .object({
+    issueId: z.coerce.number().int().positive(),
+    decision: z.enum(["approved", "rejected"]),
+    note: z.string().trim().max(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.decision === "rejected" && (data.note?.length ?? 0) < 5) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["note"],
+        message: "Lý do từ chối phải có ít nhất 5 ký tự",
+      });
+    }
+  });
 
 /**
  * Approve or reject a pending waste. Wraps `approve_waste` RPC.

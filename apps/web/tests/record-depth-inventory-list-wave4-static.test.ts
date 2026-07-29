@@ -76,7 +76,7 @@ const D1_TASK_LISTS = [
   "app/(protected)/inventory/ingredients/ingredients-client.tsx",
   "app/(protected)/inventory/suppliers/suppliers-client.tsx",
   "app/(protected)/inventory/suppliers/[id]/items/supplier-items-client.tsx",
-  "app/(protected)/inventory/recipes/recipes-client.tsx",
+  "app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx",
   "app/(protected)/inventory/settings/categories/categories-client.tsx",
   "app/(protected)/inventory/settings/units/units-client.tsx",
 ] as const;
@@ -118,7 +118,7 @@ const THREE_DOOR_LISTS = [
   "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
   "app/(protected)/inventory/ingredients/ingredients-client.tsx",
   "app/(protected)/inventory/suppliers/suppliers-client.tsx",
-  "app/(protected)/inventory/recipes/recipes-client.tsx",
+  "app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx",
   "app/(protected)/inventory/settings/categories/categories-client.tsx",
   "app/(protected)/inventory/settings/units/units-client.tsx",
   FINANCE_INVOICE_LIST,

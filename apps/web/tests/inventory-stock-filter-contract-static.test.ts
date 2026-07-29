@@ -23,7 +23,7 @@ test("inventory stock status and category filters have one control source", () =
   assert.match(stockClientSource, /header: stockCopy\.table\.stock/);
   assert.doesNotMatch(stockClientSource, /header: stockCopy\.table\.kind/);
   assert.doesNotMatch(stockClientSource, /StockAlertBadges/);
-  assert.match(stockClientSource, /StockStatusBadge/);
+  assert.match(stockClientSource, /StockItemStatus/);
   assert.match(stockClientSource, /StockCategoryKindCell/);
   assert.match(
     stockClientSource,
@@ -32,6 +32,18 @@ test("inventory stock status and category filters have one control source", () =
   assert.match(stockClientSource, /aria-pressed=\{stockFilter === "low"\}/);
   assert.doesNotMatch(stockClientSource, /stockCopy\.metrics\.pending/);
   assert.doesNotMatch(stockClientSource, /pendingWorkCount/);
+  assert.match(
+    stockClientSource,
+    /request: branchHref\(branchId, "\/inventory\/stock-requests"\)/,
+  );
+  assert.match(stockClientSource, /actions=\{[\s\S]*primaryRequestAction/);
+  const toolbarStart = stockClientSource.indexOf("const stockToolbar");
+  const toolbarEnd = stockClientSource.indexOf(
+    "const firstLoadEmptyState",
+    toolbarStart,
+  );
+  const toolbar = stockClientSource.slice(toolbarStart, toolbarEnd);
+  assert.doesNotMatch(toolbar, /actions=|reset=/);
 });
 
 test("inventory stock low filter matches the under-threshold predicate", () => {

@@ -14,7 +14,7 @@ import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
-/* ─── Recipes (branch WAC + menu-item recipes) ─── */
+/* ─── Menu recipes (branch WAC + menu-item ingredient consumption) ─── */
 
 const branchIdSchema = z.coerce.number().int().positive();
 const optionalBranchIdSchema = z.coerce
@@ -24,20 +24,20 @@ const optionalBranchIdSchema = z.coerce
   .nullable()
   .optional();
 
-const recipeLineSchema = z.object({
+const menuRecipeLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   note: z.string().optional().nullable(),
 });
 
-const recipeBatchSchema = z.object({
+const menuRecipeBatchSchema = z.object({
   menuItemId: z.coerce.number().int().positive(),
   oldMenuItemId: z.coerce.number().int().positive().optional().nullable(),
-  lines: z.array(recipeLineSchema).min(1),
+  lines: z.array(menuRecipeLineSchema).min(1),
 });
 
-export async function fetchRecipes(): Promise<ActionResult> {
+export async function fetchMenuRecipes(): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     INVENTORY_CATALOG_ROLES,
     PERMISSION_KEYS.INVENTORY_READ,
@@ -54,7 +54,7 @@ export async function fetchRecipes(): Promise<ActionResult> {
       `
       id, name, updated_at,
       menu_categories ( name ),
-      recipes (
+      menu_recipes:recipes (
         ingredient_id, quantity, entry_unit_id, note,
         ingredients (
           id,
@@ -72,19 +72,19 @@ export async function fetchRecipes(): Promise<ActionResult> {
     .eq("is_active", true)
     .order("name");
   if (error) {
-    console.error("inventory.recipe.fetch_recipes_failed", {
+    console.error("inventory.menu_recipe.fetch_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { success: false, error: messages.inventory.recipes.loadFailed };
+    return { success: false, error: messages.inventory.menuRecipes.loadFailed };
   }
   const rows = (data ?? []).map((menuItem) => ({
     ...menuItem,
-    recipes: (menuItem.recipes ?? []).map((recipe) => {
-      const ingredient = recipe.ingredients;
-      if (!ingredient) return recipe;
+    menu_recipes: (menuItem.menu_recipes ?? []).map((menuRecipe) => {
+      const ingredient = menuRecipe.ingredients;
+      if (!ingredient) return menuRecipe;
       const { unit_cost, ...safeIngredient } = ingredient;
       return {
-        ...recipe,
+        ...menuRecipe,
         ingredients: {
           ...safeIngredient,
           monetary: {
@@ -125,7 +125,7 @@ export async function fetchBranchWacMap(
   if (!stockBearingLocations.ok) {
     return {
       success: false,
-      error: messages.inventory.recipes.branchWacLoadFailed,
+      error: messages.inventory.menuRecipes.branchWacLoadFailed,
     };
   }
   if (stockBearingLocations.locationIds.length === 0) {
@@ -146,12 +146,12 @@ export async function fetchBranchWacMap(
   const { data, error } = await query;
 
   if (error) {
-    console.error("inventory.recipe.fetch_branch_wac_map_failed", {
+    console.error("inventory.menu_recipe.fetch_branch_wac_map_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
     return {
       success: false,
-      error: messages.inventory.recipes.branchWacLoadFailed,
+      error: messages.inventory.menuRecipes.branchWacLoadFailed,
     };
   }
 
@@ -176,7 +176,7 @@ export async function fetchBranchWacMap(
   return { success: true, data: { monetary: map } };
 }
 
-// Live recipe × warehouse-stock sellable portions per dish for one branch.
+// Live menu recipe × warehouse stock = sellable portions per dish.
 export async function fetchBranchMenuStockCapacity(
   branchId: number,
 ): Promise<ActionResult<Record<string, number>>> {
@@ -197,12 +197,12 @@ export async function fetchBranchMenuStockCapacity(
   });
 
   if (error) {
-    console.error("inventory.recipe.fetch_branch_menu_stock_capacity_failed", {
+    console.error("inventory.menu_recipe.fetch_branch_stock_capacity_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
     return {
       success: false,
-      error: messages.inventory.recipes.capacityLoadFailed,
+      error: messages.inventory.menuRecipes.capacityLoadFailed,
     };
   }
 
@@ -218,10 +218,10 @@ export async function fetchBranchMenuStockCapacity(
   return { success: true, data: map };
 }
 
-export const upsertRecipeLines = withAction(
+export const upsertMenuRecipeLines = withAction(
   {
     roles: INVENTORY_CATALOG_ROLES,
-    schema: recipeBatchSchema,
+    schema: menuRecipeBatchSchema,
     anyPermission: [...CATALOG_MANAGE_PERMISSIONS, PERMISSION_KEYS.MENU_WRITE],
   },
   async (data, { supabase, claims }) => {
@@ -236,7 +236,10 @@ export const upsertRecipeLines = withAction(
       .eq("is_active", true)
       .in("ingredient_id", ingredientIds);
     if (outputUnitsError) {
-      return { success: false, error: messages.inventory.recipes.saveFailed };
+      return {
+        success: false,
+        error: messages.inventory.menuRecipes.saveFailed,
+      };
     }
 
     const outputUnitByIngredient = new Map(
@@ -253,7 +256,7 @@ export const upsertRecipeLines = withAction(
     ) {
       return {
         success: false,
-        error: messages.inventory.recipes.outputUnitRequired,
+        error: messages.inventory.menuRecipes.outputUnitRequired,
       };
     }
 
@@ -270,17 +273,20 @@ export const upsertRecipeLines = withAction(
       p_old_menu_item_id: data.oldMenuItemId ?? undefined,
     });
     if (error) {
-      console.error("inventory.recipe.upsert_recipe_lines_failed", {
+      console.error("inventory.menu_recipe.upsert_lines_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
-      return { success: false, error: messages.inventory.recipes.saveFailed };
+      return {
+        success: false,
+        error: messages.inventory.menuRecipes.saveFailed,
+      };
     }
 
     return { success: true };
   },
 );
 
-export async function fetchMenuItemsForRecipes(): Promise<ActionResult> {
+export async function fetchMenuItemsForMenuRecipes(): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     INVENTORY_CATALOG_ROLES,
     PERMISSION_KEYS.INVENTORY_READ,
@@ -295,7 +301,7 @@ export async function fetchMenuItemsForRecipes(): Promise<ActionResult> {
   if (error)
     return {
       success: false,
-      error: messages.inventory.recipes.menuItemsLoadFailed,
+      error: messages.inventory.menuRecipes.menuItemsLoadFailed,
     };
   return { success: true, data: data ?? [] };
 }

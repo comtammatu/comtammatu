@@ -149,6 +149,11 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
   recipe + constant độ rộng filter). Tra cứu: `audit:ui-components --component AppListFrame`
   hoặc `--component InventoryListFrame` / `--component management-list`.
   Inline toolbar không tô nền riêng (`bg-muted/*`); cùng bề mặt card với bảng.
+  `AppListFrame` untitled flush dọc (`py-0`); titled giữ pad trên header
+  và `pb-0` để bảng sát đáy. Toolbar + body nằm trong một cột; cạnh flush
+  bo `rounded-t-lg` / `rounded-b-lg` khớp Card (Card giữ `overflow-visible`
+  cho sticky bleed / Select). Tách bằng `border-b` / `border-t`. Inline
+  toolbar dùng `px-3 py-2` (không `p-3`).
   Desktop empty luôn qua `DataTable` (`TableHeader` + `TableEmptyStateRow`),
   không swap sang `AppEmptyState` thay cả bảng (trừ error/load-failed). Desktop
   filter `Select`/`InputGroup` dùng `size="field"` và độ rộng cố định

@@ -35,9 +35,9 @@ import {
 import { ComboboxField, FormDialog } from "@/components/form";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import {
-  RecipeLinesEditor,
-  type RecipeLineIngredient,
-} from "./_components/recipe-lines-editor";
+  IngredientLinesEditor,
+  type IngredientLineOption,
+} from "./_components/ingredient-lines-editor";
 import {
   deleteProductionRecipeGroup,
   deleteProductionRecipe,
@@ -201,7 +201,7 @@ function RecipeDialogFields({
   finishedGoodsOptions: FinishedGoodOption[];
   unitOptions: UnitOption[];
   groupedRecipes: ProductionRecipeGroup[];
-  recipeLinesEditorIngredients: RecipeLineIngredient[];
+  recipeLinesEditorIngredients: IngredientLineOption[];
   rawIngredientsOptions: RawIngredientOption[];
   onFinishedGoodCreated: (good: FinishedGoodOption) => void;
   onRawIngredientCreated: (ingredient: RawIngredientOption) => void;
@@ -326,7 +326,7 @@ function RecipeDialogFields({
         </div>
       </div>
 
-      <RecipeLinesEditor
+      <IngredientLinesEditor
         control={form.control}
         setValue={form.setValue}
         getValues={form.getValues}

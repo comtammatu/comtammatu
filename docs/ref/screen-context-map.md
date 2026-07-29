@@ -146,7 +146,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Planes (ADR 0012 / 0018):** Owner `/inventory/*` và Branch Stock
   `/br/[branchId]/stock/*` là hai plane tách chrome/IA. Owner filter site mọi
   `branch_kind` ngang hàng. Branch Stock không mirror Owner sidebar/tile.
-- **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/grn`, bước chọn NCC `/br/[branchId]/stock/grn/new`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new`, `/inventory/issues`, `/inventory/issues/[id]`, và `/inventory/supplier-invoices` là `REDIRECT-SHIM` (invoices → `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. `/inventory/purchase-orders` is an Owner sidebar LIST (**Đơn mua hàng**, C1 restore). Detail consumption và issue Branch thuộc `DETAIL`; form dòng GRN và phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
+- **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/purchase-requests`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new`, `/inventory/issues`, `/inventory/issues/[id]`, và `/inventory/supplier-invoices` là `REDIRECT-SHIM` (invoices → `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. Detail GRN, consumption và issue Branch thuộc `DETAIL`; form phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
 - **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`) trên
   mọi site; `/br/[branchId]/stock` dành cho Quản lý chi nhánh (`branch_manager`)
   và thao tác ca — plane riêng, action bị permission + branch scope giới hạn.
@@ -154,12 +154,12 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - Kiểm soát chính xác số lượng nguyên liệu tồn kho thực tế, tính toán giá vốn hàng bán (WAC), giảm thiểu hao hụt/thất thoát nguyên liệu và tối ưu hóa chi phí mua hàng.
 - **Mục tiêu Người dùng (Goal):** Nhìn tồn để quyết định đúng việc cần làm, nhập kho nhanh và tạo lệnh sản xuất không sai lệch.
 - **Luồng thao tác (Workflow):**
-  - **Nhập kho (GRN):** Tạo GRN draft từ nhà cung cấp -> kiểm nhận vật lý ->
-    Owner/Kế toán tạo và duyệt PO từ GRN -> Kho xác nhận nhập (cập nhật tồn và
-    WAC).
-  - **Đơn mua hàng (PO):** entry sidebar Inventory control_surface (**Đơn mua hàng**,
-    ADR 0018 **C1** restore) để xem và duyệt PO đã tạo từ GRN; không tạo PO
-    trực tiếp hoặc tạo GRN từ PO.
+  - **Yêu cầu mua:** Kho trung tâm ghi nhu cầu mua ngoài; một yêu cầu có thể
+    tạo nhiều đơn đặt hàng theo NCC.
+  - **Đơn mua hàng:** Kế toán/Owner tạo từ Yêu cầu mua, nhập giá và duyệt. Mỗi
+    PO thuộc đúng một NCC và tạo GRN theo từng lần giao.
+  - **Nhập kho:** `/inventory/grn` là hàng đợi **Chờ nhập hàng**. Mở GRN được
+    tạo từ PO, kiểm nhận vật lý, lưu nháp rồi xác nhận để cập nhật tồn và WAC.
   - **Sản xuất:** Chọn thành phẩm và sản lượng -> Kiểm tra định mức/nguyên liệu khả dụng -> Tạo lệnh -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành lệnh.
   - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
   - **Điều chuyển (Transfer):** Chỉ chọn warehouse của site nguồn và đích;
@@ -202,24 +202,20 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ---
 
-### 2.6. Lập phiếu nhập kho (GRN) — `/inventory/grn/new` & `/br/[branchId]/stock/grn/new`
+### 2.6. Kiểm nhận phiếu nhập kho (GRN) — `/inventory/grn` & `/inventory/grn/[id]`
 
-- **Archetype:** control_surface dùng `DOC-WORKFLOW`; Branch source selection dùng touch `LIST`, sau đó mở form dòng touch `DOC-WORKFLOW` tại `/br/[branchId]/stock/grn/new/[supplierId]` và review/receipt touch `DETAIL` tại `/br/[branchId]/stock/grn/[id]`.
+- **Archetype:** danh sách là `LIST` theo composition `AppPage → AppPageHeader → AppPageTabs → AppListFrame → DataTable`; chi tiết là `DOC-WORKFLOW`.
 - **Đối tượng sử dụng chính:** Quản lý kho, Nhân viên nhận hàng.
 - **Mục tiêu Nghiệp vụ (Why?):** Ghi nhận chính xác số lượng nguyên liệu thực tế nhận từ nhà cung cấp để cập nhật tồn kho tức thời và xác lập cơ sở tính giá vốn hàng bán chính xác.
-- **Mục tiêu Người dùng (Goal):** Chọn NCC, ghi nhận đúng hàng thực giao và hoàn thành phiếu nhập kho nhanh nhất để giải phóng xe giao hàng.
+- **Mục tiêu Người dùng (Goal):** Mở phiếu **Chờ nhập hàng** đã tạo từ PO, ghi nhận đúng hàng thực giao và hoàn thành nhanh để giải phóng xe giao hàng.
 - **Luồng thao tác (Workflow):**
-  1. **Chọn nguồn:** Chọn nhà cung cấp; phạm vi chi nhánh lấy từ route.
+  1. **Tạo phiếu:** Từ PO đã gửi hoặc nhận một phần, bấm `Tạo phiếu nhập`; hệ thống giữ tối đa một GRN nháp hoạt động cho PO và suy NCC từ PO.
   2. **Kiểm nhận vật lý:** Nhập số lượng thực nhận và số lượng từ chối. Nếu có
      hàng từ chối, bắt buộc lý do + ảnh; trạng thái được suy ra, không nhập tay.
-  3. **Duyệt giá:** Owner/Kế toán tạo PO từ GRN draft, nhập giá và duyệt; Kho
-     không nhập/xem giá mua.
-  4. **Hoàn tất:** Khi PO đã duyệt, bấm "Xác nhận nhập kho" -> ghi tăng tồn kho
-     và cập nhật WAC từ snapshot `grn_items.unit_cost`.
+  3. **Đối chiếu PO:** Hệ thống tính phần áp dụng PO, còn thiếu và dư ngoài đơn; Kho không nhập/xem giá mua.
+  4. **Hoàn tất:** Bấm `Xác nhận nhập kho` để ghi tăng tồn, tính WAC cho phần áp dụng PO theo giá PO và ghi phần dư với giá `0`.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** control_surface dùng khung form dòng (`DocumentFormFrame`);
-    Branch hiển thị NCC/kho nhận, số thực nhận, số từ chối, lý do/ảnh khi cần,
-    đơn vị quy đổi chuẩn và action sticky. Biên nhận Branch sau chốt chỉ đọc.
+  - **Nên hiển thị:** GRN, NCC, PO, YCM, kho nhận, ngày dự kiến, số đã đặt, đã nhận trước, còn phải giao, thực nhận, từ chối, hợp lệ, áp dụng PO, thiếu, dư và đơn vị quy đổi chuẩn. Sau khi chốt, phiếu chỉ đọc.
   - **KHÔNG hiển thị:** Giá mua, price variance, biểu đồ xu hướng giá hoặc thông
     tin quỹ tiền mặt tại bề mặt Kho.
 - **Quy chuẩn UX/UI:**
@@ -240,13 +236,19 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - Đối soát phiếu thực nhập (GRN) với hóa đơn NCC gửi đến. Đảm bảo doanh nghiệp chỉ thanh toán đúng lượng thực nhận và đơn giá trên chứng từ mua hàng, tránh thất thoát tài chính.
 - **Mục tiêu Người dùng (Goal):** Phát hiện nhanh các dòng hóa đơn bị lệch giá hoặc lệch lượng để yêu cầu NCC điều chỉnh trước khi bấm duyệt thanh toán.
 - **Luồng thao tác (Workflow):**
-  1. **Chọn phiếu nhập:** Chọn GRN đã xác nhận và chưa gắn HĐ; hệ thống lấy NCC/PO và gợi ý tiền trước VAT từ giá trị nhận. Escape “Không liên kết phiếu nhập” chỉ dùng khi thiếu GRN. Từ phiếu nhập đã chốt, Owner/Kế toán mở CTA “Ghi nhận hóa đơn NCC” (`?grnId=`).
+  1. **Chọn phiếu nhập:** Chọn một hoặc nhiều GRN đã xác nhận của cùng NCC; hệ
+     thống lấy PO/Yêu cầu mua và gợi ý tiền trước VAT từ phần áp dụng PO.
+     Hóa đơn dịch vụ được phép không liên kết GRN.
   2. **Nhập hóa đơn:** Ghi số hóa đơn và ngày; chọn một mức VAT (0/5/8/10) + tiền trước VAT (tiền VAT tự tính nếu để trống). Thêm mức thuế chỉ khi hóa đơn có nhiều suất. Có thể đính kèm HĐ GTGT ngay khi lưu (tùy chọn).
-  3. **Đối soát:** Sau khi lưu, so giá trị trước VAT với giá trị hàng thực nhận sau từ chối trên GRN và, khi PO đủ giá, với tổng PO. VAT không tham gia so giá trị hàng.
+  3. **Đối soát:** Sau khi lưu, so giá trị trước VAT cộng chiết khấu chứng từ
+     với phần GRN áp dụng PO. Dòng PO giá `0` và phần dư giá `0` được phép không
+     có trên hóa đơn. VAT không tham gia so giá trị hàng.
   4. **Xử lý chênh lệch:** Kế toán kiểm tra chứng từ khi số lượng hoặc giá trị
      không khớp; không dùng ngưỡng price-QC của GRN.
   5. **Đính kèm HĐ GTGT:** Nếu chưa tải lúc tạo, tải lên ít nhất một file PDF/ảnh vào `vat_invoice_attachment_path` (bucket private) trước khi thanh toán. Owner có `procurement:invoice_create` hoặc `finance:ap_pay` được đính kèm.
-  6. **Thanh toán:** Chỉ ghi nhận khi đã có file HĐ GTGT; trả theo tổng gồm VAT; giảm tiền và công nợ, không tạo thêm chi phí.
+  6. **Thanh toán/giảm công nợ:** Một thanh toán hoặc phiếu giảm công nợ có thể
+     phân bổ nhiều hóa đơn cùng NCC. Phần thanh toán chưa phân bổ là ứng trước.
+     Trả hàng không tự giảm công nợ.
 - **Thông tin hiển thị:**
   - **Nên hiển thị:** Tổng trước VAT, VAT, tổng phải trả, liên kết GRN/PO, trạng thái đối soát và công nợ, trạng thái đính kèm HĐ GTGT; khi nhóm có nhiều hóa đơn thì chọn được từng hóa đơn trong nhóm.
   - **KHÔNG hiển thị:** Doanh thu bán cơm tấm, sơ đồ bàn ăn, ca làm việc của nhân viên phục vụ.
@@ -267,13 +269,14 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Luồng thao tác (Workflow):**
   1. **Tạo hồ sơ:** Nhập thông tin cá nhân (Họ tên, SĐT, Số CCCD, Ngày sinh).
   2. **Gán vị trí:** Chọn chức danh (ví dụ: Thu ngân, Đầu bếp) -> Chọn chi nhánh hoạt động chính.
-  3. **Cấp tài khoản:** Nhập email -> Hệ thống tạo tài khoản auth và gán mẫu quyền (`role template`) tương ứng với chức danh.
-  4. **Tùy chỉnh quyền (Chỉ Owner):** Thêm hoặc bớt một vài permission key cụ thể cho nhân sự đó nếu có yêu cầu đặc biệt.
+  3. **Cấp tài khoản:** Nhập email -> Hệ thống tạo tài khoản auth và chuyển thẳng đến bước xác nhận quyền.
+  4. **Xác nhận quyền (Chỉ Owner):** Hệ thống đề xuất bộ quyền theo chức vụ và chi nhánh đã chọn; Owner xác nhận trước khi cấp, sau đó chỉ thêm quyền riêng khi công việc thực tế cần ngoại lệ.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Danh sách tài khoản nhân sự kèm chức danh và chi nhánh; Bảng danh sách các quyền truy cập hệ thống được chia nhóm trực quan kèm hộp kiểm (checkbox) bật/tắt quyền.
+  - **Nên hiển thị:** Danh sách tài khoản nhân sự kèm chức danh và chi nhánh; bộ quyền theo chức vụ được chia theo nhóm công việc bằng tiếng Việt; quyền đang có, nguồn cấp, phạm vi và thời hạn.
   - **KHÔNG hiển thị:** Doanh thu, số lượng tồn kho nguyên liệu, chi tiết công nợ NCC.
 - **Quy chuẩn UX/UI:**
   - Toàn bộ thao tác thay đổi phân quyền phải ghi nhận vào nhật ký phân quyền (`hr/staff/audit`) để phục vụ việc hậu kiểm an ninh hệ thống.
+  - Không dùng `position_code`, `role_templates.name`, `permission_keys.module`, permission key hoặc mô tả kỹ thuật tiếng Anh làm nhãn chính trên UI. Mã kỹ thuật chỉ là dữ liệu nội bộ; quyền cấp riêng vẫn phải hiển thị bằng ngôn ngữ công việc.
   - `/br/[branchId]/shift/leave-approvals` là `LIST` touch-native cố định theo chi nhánh URL: tab trạng thái và full-row item phục vụ quét nhanh; chạm một yêu cầu mở bottom sheet có chi tiết ngày nghỉ, lý do và action duyệt/từ chối sticky. control_surface tiếp tục dùng bảng HR desktop; hai plane chỉ chia sẻ loader/model/action, không chia sẻ presenter.
 
 ---

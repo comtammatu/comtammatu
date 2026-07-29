@@ -33,9 +33,9 @@ test.describe("GRN DETAIL archetype (control_surface)", () => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await requireOwnerSession(page, "/inventory/grn");
 
-      const rowLink = page.locator('a[href^="/inventory/grn/"]').first();
-      await expect(rowLink).toBeVisible({ timeout: 30_000 });
-      await rowLink.click();
+      const rowCode = page.getByText(/^GRN-/).first();
+      await expect(rowCode).toBeVisible({ timeout: 30_000 });
+      await rowCode.click();
       await expect(page).toHaveURL(/\/inventory\/grn\/[^/]+/);
 
       const documentTab = page.getByRole("tab", {

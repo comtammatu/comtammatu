@@ -150,8 +150,10 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
                 )}
                 placeholder={searchPlaceholder}
               />
-              <BaseCombobox.Empty className="py-4 text-center text-xs/relaxed">
-                {emptyMessage}
+              <BaseCombobox.Empty>
+                <div className="py-4 text-center text-xs/relaxed">
+                  {emptyMessage}
+                </div>
               </BaseCombobox.Empty>
               <BaseCombobox.List className="no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none">
                 {(option: ComboboxOption) => (
@@ -307,8 +309,10 @@ function MultiSelectCombobox({
               className="h-8 w-full rounded-md bg-input/20 px-2 text-xs/relaxed outline-hidden placeholder:text-muted-foreground dark:bg-input/30"
               placeholder={searchPlaceholder}
             />
-            <BaseCombobox.Empty className="py-4 text-center text-xs/relaxed">
-              {emptyMessage}
+            <BaseCombobox.Empty>
+              <div className="py-4 text-center text-xs/relaxed">
+                {emptyMessage}
+              </div>
             </BaseCombobox.Empty>
             <BaseCombobox.List className="no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none">
               {(option: MultiSelectComboboxOption) => {

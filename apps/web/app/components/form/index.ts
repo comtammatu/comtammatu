@@ -15,7 +15,7 @@ export {
   QuantityField,
   QuantityInput,
 } from "./domain-number-inputs";
-export { BusinessDateField } from "./business-date-field";
+export { BusinessDateField, BusinessDatePicker } from "./business-date-field";
 export { SelectField } from "./select-field";
 export { TextareaField } from "./textarea-field";
 export { Combobox } from "./combobox";

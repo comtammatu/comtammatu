@@ -4,7 +4,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
 import { Pencil as IconPencil, Trash as IconTrash } from "lucide-react";
-import { formatQty } from "@lib/inventory/format";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import {
   GRN_DETAIL_COPY as grnCopy,
@@ -18,15 +17,17 @@ export function DraftGrnLineCard({
 }: {
   line: EditableLine;
   onEdit: () => void;
-  onRemove: () => void;
+  onRemove?: () => void;
 }) {
   const qualityStatus = deriveGrnQualityStatus(line.actual, line.rejected);
   const qualityLabel =
-    qualityStatus === "accepted"
-      ? grnCopy.line.qualityAccepted
-      : qualityStatus === "partial"
-        ? grnCopy.line.qualityPartial
-        : grnCopy.line.qualityRejected;
+    line.actual <= 0
+      ? grnCopy.line.notInspected
+      : qualityStatus === "accepted"
+        ? grnCopy.line.qualityAccepted
+        : qualityStatus === "partial"
+          ? grnCopy.line.qualityPartial
+          : grnCopy.line.qualityRejected;
 
   return (
     <Item variant="outline" className="items-start gap-3 px-3 py-2.5">
@@ -46,10 +47,14 @@ export function DraftGrnLineCard({
                 {grnCopy.line.unsaved}
               </Badge>
             ) : null}
-            {qualityStatus !== "accepted" ? (
+            {line.actual <= 0 || qualityStatus !== "accepted" ? (
               <Badge
                 variant={
-                  qualityStatus === "partial" ? "warning" : "destructive"
+                  line.actual <= 0
+                    ? "outline"
+                    : qualityStatus === "partial"
+                      ? "warning"
+                      : "destructive"
                 }
                 className="text-2xs"
               >
@@ -57,8 +62,12 @@ export function DraftGrnLineCard({
               </Badge>
             ) : null}
           </div>
-          <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
-            {formatQty(line.actual)} {line.unit}
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {grnCopy.line.receiptSummary(
+              line.remainingQuantity,
+              line.actual,
+              line.unit,
+            )}
           </p>
         </span>
       </Button>
@@ -71,17 +80,20 @@ export function DraftGrnLineCard({
           aria-label={GRN_CREATE_COPY.editLineAria}
         >
           <IconPencil className="size-4" />
+          <span className="sr-only">{grnCopy.line.enterQuantity}</span>
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon-lg"
-          className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={onRemove}
-          aria-label={grnCopy.line.deleteLineAria}
-        >
-          <IconTrash className="size-4" />
-        </Button>
+        {onRemove ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-lg"
+            className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={onRemove}
+            aria-label={grnCopy.line.deleteLineAria}
+          >
+            <IconTrash className="size-4" />
+          </Button>
+        ) : null}
       </div>
     </Item>
   );

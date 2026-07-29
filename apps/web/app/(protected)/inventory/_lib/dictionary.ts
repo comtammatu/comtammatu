@@ -33,7 +33,7 @@ const VI_DICTIONARY = {
     production: { long: "Sản xuất Bếp Trung Tâm" },
     ingredients: { long: "Nguyên liệu" },
     suppliers: { long: "Nhà cung cấp" },
-    recipes: { short: "Định mức", long: "Định mức món bán" },
+    menuRecipes: { short: "Định mức món", long: "Định mức món bán" },
     settings: { long: "Cài đặt" },
   },
 
@@ -45,6 +45,7 @@ const VI_DICTIONARY = {
     "/inventory/stock": { long: "Tồn kho" },
     "/inventory/grn": { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     "/inventory/supplier-invoices": { long: "Hóa đơn NCC" },
+    "/inventory/purchase-requests": { long: "Yêu cầu mua" },
     "/inventory/issues": { short: "Sự cố kho", long: "Sự cố kho" },
     "/inventory/consumption": { long: "Tiêu hao vận hành" },
     "/inventory/transfers": {
@@ -55,7 +56,10 @@ const VI_DICTIONARY = {
     "/inventory/production": { long: "Sản xuất Bếp Trung Tâm" },
     "/inventory/reports": { long: "Báo cáo" },
     "/inventory/ingredients": { long: "Nguyên liệu" },
-    "/inventory/recipes": { short: "Định mức", long: "Định mức món bán" },
+    "/inventory/menu-recipes": {
+      short: "Định mức món",
+      long: "Định mức món bán",
+    },
     "/inventory/suppliers": { long: "Nhà cung cấp" },
     "/inventory/settings": { long: "Cài đặt" },
     "/inventory/settings/units": {

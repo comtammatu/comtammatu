@@ -40,11 +40,11 @@ export default async function SupplierItemsPage({
       .limit(500),
     supabase
       .from("supplier_items")
-      .select("id, ingredient_id, supplier_sku_code, is_preferred")
+      .select("id, ingredient_id, is_preferred")
       .eq("tenant_id", claims.tenant_id)
       .eq("supplier_id", supplierId)
       .eq("is_active", true)
-      .order("supplier_sku_code"),
+      .order("ingredient_id"),
   ]);
 
   if (supplierResult.error || ingredientResult.error || itemResult.error) {
@@ -63,7 +63,6 @@ export default async function SupplierItemsPage({
             ingredientId: ingredient.id,
             ingredientName: ingredient.name,
             ingredientSku: ingredient.sku,
-            supplierSkuCode: item.supplier_sku_code,
             isPreferred: item.is_preferred === true,
           },
         ]

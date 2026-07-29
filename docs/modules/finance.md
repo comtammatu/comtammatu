@@ -223,6 +223,7 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | ---------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
 | `/finance`                   | Four-card basic landing      | Show completed-payment revenue, sales after discount, inventory value, and operating expense |
 | `/finance/revenue`           | Revenue analytics            | Keep, but do not make it the only money-control entry                                        |
+| `/finance/targets`           | Monthly revenue target setup | Owner-only target and non-cumulative reward tiers; no automatic payroll allocation           |
 | `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                                        |
 | `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses                         |
 | `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                                     |

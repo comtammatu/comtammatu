@@ -1,18 +1,171 @@
-import { matchesSearch } from "@lib/search";
-import { formatGrnSupplierSummary } from "./grn-create-model";
+export type GrnListStatusFilter =
+  | "draft"
+  | "confirmed"
+  | "cancelled"
+  | "all";
 
-export type GrnRow = {
+export type GrnListDateField = "expected" | "received";
+
+export type GrnListFilters = {
+  query: string;
+  status: GrnListStatusFilter;
+  supplierId: number | null;
+  dateField: GrnListDateField;
+  dateFrom: string;
+  dateTo: string;
+  poId: number | null;
+  purchaseRequestId: number | null;
+  branchId: number | null;
+};
+
+export type GrnListRow = {
   id: number;
   code: string;
+  status: string;
+  supplierId: number;
   supplierName: string;
-  branchName: string;
-  poId: number | null;
+  poId: number;
   poCode: string;
+  purchaseRequestId: number | null;
+  purchaseRequestCode: string | null;
+  receivingSiteId: number;
+  receivingSiteName: string;
+  expectedReceiveDate: string | null;
+  receivedDate: string | null;
+  lineCount: number;
+  completedLineCount: number;
+  shortageLineCount: number;
+  excessLineCount: number;
+  rejectedLineCount: number;
+  updatedAt: string;
+  handledBy: string | null;
+  monetary: {
+    receiptValue: number;
+    invoiceId: number | null;
+    invoiceStatus: string | null;
+  } | null;
+};
+
+export const GRN_LIST_STATUS_FILTER_VALUES = [
+  "draft",
+  "confirmed",
+  "cancelled",
+  "all",
+] as const satisfies readonly GrnListStatusFilter[];
+
+export function parsePositiveId(
+  value: string | string[] | undefined,
+): number | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function parseGrnListStatus(
+  value: string | string[] | undefined,
+): GrnListStatusFilter {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return GRN_LIST_STATUS_FILTER_VALUES.includes(
+    raw as GrnListStatusFilter,
+  )
+    ? (raw as GrnListStatusFilter)
+    : "draft";
+}
+
+export function defaultGrnDateField(
+  status: GrnListStatusFilter,
+): GrnListDateField {
+  return status === "draft" ? "expected" : "received";
+}
+
+export function grnDetailHref(basePath: string, id: number): string {
+  return `${basePath}/${id}`;
+}
+
+export function filterGrnListRows<
+  T extends Pick<
+    GrnRow,
+    "code" | "supplierName" | "poCode" | "status" | "qcIssueCount"
+  >,
+>(
+  rows: T[],
+  filters: Pick<GrnListFilters, "query" | "status">,
+): T[] {
+  const byStatus =
+    filters.status === "all"
+      ? rows
+      : rows.filter((row) => row.status === filters.status);
+  const query = filters.query.trim();
+  return query
+    ? byStatus.filter((row) =>
+        matchesSearch([row.code, row.supplierName, row.poCode], query),
+      )
+    : byStatus;
+}
+
+export type GrnProcurementStepChip = "no_po" | "awaiting_po" | "ready";
+
+export function grnProcurementStepChip(row: {
+  status: string;
+  poId: number | null;
+  poCount?: number;
+  poStatus?: string | null;
+}): GrnProcurementStepChip | null {
+  if (row.status !== "draft") return null;
+  if (row.poId == null && (row.poCount == null || row.poCount === 0)) {
+    return "no_po";
+  }
+  return ["sent", "partially_received", "received"].includes(
+    row.poStatus ?? "",
+  )
+    ? "ready"
+    : "awaiting_po";
+}
+
+export function grnProcurementStepChipLabel(
+  chip: GrnProcurementStepChip,
+  copy: {
+    stepChipNoPo: string;
+    stepChipAwaitingPo: string;
+    stepChipReadyConfirm: string;
+  },
+): string {
+  if (chip === "no_po") return copy.stepChipNoPo;
+  if (chip === "awaiting_po") return copy.stepChipAwaitingPo;
+  return copy.stepChipReadyConfirm;
+}
+
+export function supplierInvoiceHrefForGrn(opts: {
+  basePath?: string;
+  grnId: number;
+  invoiceId: number | null;
+}) {
+  const base = opts.basePath ?? "/finance/supplier-invoices";
+  return opts.invoiceId == null
+    ? `${base}?grnId=${opts.grnId}`
+    : `${base}?invoiceId=${opts.invoiceId}`;
+}
+
+export function hasGrnListFilters(filters: GrnListFilters): boolean {
+  return (
+    filters.query.trim() !== "" ||
+    filters.supplierId != null ||
+    filters.dateFrom !== "" ||
+    filters.dateTo !== "" ||
+    filters.poId != null ||
+    filters.purchaseRequestId != null
+  );
+}
+
+// Branch GRN is retired by D093; these shapes keep its redirect-era surface
+// compiling without maintaining a second control-surface DataTable model.
+export type GrnRow = GrnListRow & {
+  branchName: string;
   poCount: number;
   poStatus: string | null;
   invoiceId: number | null;
   date: string;
-  status: string;
   qcIssueCount: number;
 };
 
@@ -32,67 +185,24 @@ export type GrnDraftRow = {
   qcIssueCount: number;
 };
 
-export type GrnListStatusFilter =
-  "all" | "review" | "draft" | "confirmed" | "cancelled";
+export function grnDraftHref(
+  basePath: string,
+  draft: Pick<GrnDraftRow, "grnId">,
+): string {
+  return `${basePath}/${draft.grnId}`;
+}
 
-/** Shared status filter values for control_surface + branch_surface GRN lists. */
-export const GRN_LIST_STATUS_FILTER_VALUES = [
-  "all",
-  "review",
-  "draft",
-  "confirmed",
-  "cancelled",
-] as const satisfies readonly GrnListStatusFilter[];
-
-export type GrnListFilters = {
-  query: string;
-  status: GrnListStatusFilter;
-};
-
-type GrnListSearchRow = Pick<
-  GrnRow,
-  "code" | "supplierName" | "poCode" | "status" | "qcIssueCount"
->;
-
-export function filterGrnListRows<T extends GrnListSearchRow>(
+export function filterGrnDraftRows<T extends GrnDraftRow>(
   rows: T[],
-  filters: GrnListFilters,
+  query: string,
 ): T[] {
-  let result = rows;
-  if (filters.status === "review") {
-    result = result.filter(
-      (row) => row.status === "draft" && row.qcIssueCount > 0,
-    );
-  } else if (filters.status !== "all") {
-    result = result.filter((row) => row.status === filters.status);
-  }
-
-  const query = filters.query.trim();
-  if (!query) return result;
-
-  return result.filter((row) =>
-    matchesSearch([row.code, row.supplierName, row.poCode], query),
+  const needle = query.trim().toLocaleLowerCase("vi");
+  if (!needle) return rows;
+  return rows.filter((row) =>
+    [row.grnNumber, row.supplierName, row.branchName, row.poCode ?? ""].some(
+      (value) => value.toLocaleLowerCase("vi").includes(needle),
+    ),
   );
-}
-
-export function hasGrnListFilters(filters: GrnListFilters): boolean {
-  return filters.query.trim() !== "" || filters.status !== "all";
-}
-
-export function grnDetailHref(basePath: string, id: number): string {
-  return `${basePath}/${id}`;
-}
-
-export function supplierInvoiceHrefForGrn(opts: {
-  basePath?: string;
-  grnId: number;
-  invoiceId: number | null;
-}) {
-  const base = opts.basePath ?? "/finance/supplier-invoices";
-  if (opts.invoiceId != null) {
-    return `${base}?invoiceId=${opts.invoiceId}`;
-  }
-  return `${base}?grnId=${opts.grnId}`;
 }
 
 export function newGrnSupplierHref(
@@ -106,109 +216,4 @@ export function newGrnSupplierHref(
   });
   return `${basePath}/new?${params.toString()}`;
 }
-
-/** Existing drafts always resume on their canonical DETAIL route. */
-export function grnDraftHref(
-  basePath: string,
-  draft: Pick<GrnDraftRow, "grnId">,
-): string {
-  return `${basePath}/${draft.grnId}`;
-}
-
-type GrnDraftSearchRow = Pick<
-  GrnDraftRow,
-  "grnNumber" | "supplierName" | "branchName" | "poCode"
->;
-
-export function filterGrnDraftRows<T extends GrnDraftSearchRow>(
-  rows: T[],
-  query: string,
-): T[] {
-  const trimmed = query.trim();
-  if (!trimmed) return rows;
-  return rows.filter((row) =>
-    matchesSearch(
-      [row.grnNumber, row.supplierName, row.branchName, row.poCode ?? ""],
-      trimmed,
-    ),
-  );
-}
-
-export type GrnProcurementStepChip = "no_po" | "awaiting_po" | "ready";
-
-export function grnProcurementStepChip(row: {
-  status: string;
-  poId: number | null;
-  poCount?: number;
-  poStatus?: string | null;
-}): GrnProcurementStepChip | null {
-  if (row.status !== "draft") return null;
-  if (row.poId == null && (row.poCount == null || row.poCount === 0)) {
-    return "no_po";
-  }
-  if (
-    row.poStatus === "sent" ||
-    row.poStatus === "partially_received" ||
-    row.poStatus === "received"
-  ) {
-    return "ready";
-  }
-  return "awaiting_po";
-}
-
-export function grnProcurementStepChipLabel(
-  chip: GrnProcurementStepChip,
-  copy: {
-    stepChipNoPo: string;
-    stepChipAwaitingPo: string;
-    stepChipReadyConfirm: string;
-  },
-): string {
-  if (chip === "no_po") return copy.stepChipNoPo;
-  if (chip === "awaiting_po") return copy.stepChipAwaitingPo;
-  return copy.stepChipReadyConfirm;
-}
-
-export function formatGrnListSupplierMeta(
-  lines: readonly { supplierId?: number | null; supplierName?: string | null }[],
-  headerName: string | null | undefined,
-  fallback: string,
-): string {
-  const mapped = lines.flatMap((line) => {
-    if (line.supplierId == null || !line.supplierName) return [];
-    return [
-      {
-        supplierId: line.supplierId,
-        supplierName: line.supplierName,
-      },
-    ];
-  });
-  if (mapped.length > 0) return formatGrnSupplierSummary(mapped);
-  return headerName?.trim() || fallback;
-}
-
-export function formatGrnListPoMeta(opts: {
-  sourcePos: readonly { po_number?: string | null; status?: string | null }[];
-  legacyPo: { po_number?: string | null; status?: string | null } | null;
-  fallback: string;
-}): { poCode: string; poCount: number; poStatus: string | null } {
-  if (opts.sourcePos.length > 0) {
-    const first = opts.sourcePos[0]!;
-    return {
-      poCode:
-        opts.sourcePos.length === 1
-          ? (first.po_number ?? opts.fallback)
-          : `${first.po_number ?? opts.fallback} +${opts.sourcePos.length - 1}`,
-      poCount: opts.sourcePos.length,
-      poStatus: first.status ?? null,
-    };
-  }
-  if (opts.legacyPo) {
-    return {
-      poCode: opts.legacyPo.po_number ?? opts.fallback,
-      poCount: 1,
-      poStatus: opts.legacyPo.status ?? null,
-    };
-  }
-  return { poCode: opts.fallback, poCount: 0, poStatus: null };
-}
+import { matchesSearch } from "@lib/search";

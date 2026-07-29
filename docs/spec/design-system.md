@@ -355,7 +355,11 @@ A module that needs to deviate must update this contract first, not patch a sing
 | Page outer padding (default) | `p-4`                                | Set by `AppPage` default              |
 | Card inner (default)         | `p-4`                                | Set by `Card` shared component        |
 | Card inner (size="sm")       | `p-3`                                | Set by `Card data-size=sm`            |
-| Toolbar inner                | `p-3`                                | Set by `AppToolbar`                   |
+| LIST flush card              | `py-0` (untitled) / `pb-0` (titled); edge surfaces `rounded-t-lg` / `rounded-b-lg` matching Card | Set by `AppListFrame`; Card stays `overflow-visible` for sticky bleed / Select |
+| Toolbar inner (inline LIST)  | `px-3 py-2`                          | Set by `AppToolbar variant="inline"`  |
+| Toolbar inner (card)         | Card `size="sm"` content pad         | Set by `AppToolbar` default variant   |
+| Table column header height   | `h-8`                                | Set by `TableHead` (matches dense body) |
+| DataTable pagination         | `px-3 py-2`                          | Set by `DataTablePagination`          |
 | Section vertical gap         | `gap-4` (default), `gap-3` (compact) | Set by `AppPage`                      |
 | Within-section element gap   | `gap-2`                              | Default for inline rows / form fields |
 | Compact toolbar chip gap     | `gap-1.5`                            | Filter chips, badge clusters          |

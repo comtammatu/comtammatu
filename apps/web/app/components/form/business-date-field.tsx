@@ -57,6 +57,72 @@ function businessDateToDate(value?: string | null) {
   return date;
 }
 
+export interface BusinessDatePickerProps {
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  id?: string;
+  "aria-label"?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+}
+
+export function BusinessDatePicker({
+  value,
+  onValueChange,
+  placeholder = "Chọn ngày",
+  disabled,
+  className,
+  id,
+  "aria-label": ariaLabel,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
+}: BusinessDatePickerProps) {
+  const [open, setOpen] = React.useState(false);
+  const selectedDate = businessDateToDate(value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            size="field"
+            aria-label={ariaLabel}
+            aria-invalid={ariaInvalid}
+            aria-describedby={ariaDescribedBy}
+            disabled={disabled}
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              !value && "text-muted-foreground",
+              className,
+            )}
+          >
+            <IconCalendarEvent data-icon="inline-start" />
+            {value ? formatVNBusinessDate(value) : placeholder}
+          </Button>
+        }
+      />
+      <PopoverContent align="start" className="w-auto p-0">
+        <Calendar
+          mode="single"
+          locale={vi}
+          selected={selectedDate}
+          onSelect={(date) => {
+            onValueChange(date ? dateToBusinessDate(date) : "");
+            setOpen(false);
+          }}
+          disabled={disabled}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export interface BusinessDateFieldProps<TFieldValues extends FieldValues> {
   control: Control<TFieldValues>;
   name: FieldPath<TFieldValues>;
@@ -82,12 +148,10 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
   id,
   required,
 }: BusinessDateFieldProps<TFieldValues>) {
-  const [open, setOpen] = React.useState(false);
   const { field, fieldState } = useController({ control, name });
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
   const rawValue = typeof field.value === "string" ? field.value : "";
-  const selectedDate = businessDateToDate(rawValue);
 
   return (
     <Field data-disabled={disabled} data-invalid={hasError}>
@@ -95,40 +159,15 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
         {label}
         {required ? " *" : null}
       </FieldLabel>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          render={
-            <Button
-              id={fieldId}
-              type="button"
-              variant="outline"
-              size="field"
-              aria-invalid={hasError}
-              disabled={disabled}
-              className={cn(
-                "justify-start text-left font-normal",
-                !rawValue && "text-muted-foreground",
-                className,
-              )}
-            >
-              <IconCalendarEvent data-icon="inline-start" />
-              {rawValue ? formatVNBusinessDate(rawValue) : placeholder}
-            </Button>
-          }
-        />
-        <PopoverContent align="start" className="w-auto p-0">
-          <Calendar
-            mode="single"
-            locale={vi}
-            selected={selectedDate}
-            onSelect={(date) => {
-              field.onChange(date ? dateToBusinessDate(date) : "");
-              setOpen(false);
-            }}
-            disabled={disabled}
-          />
-        </PopoverContent>
-      </Popover>
+      <BusinessDatePicker
+        id={fieldId}
+        value={rawValue}
+        onValueChange={field.onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={className}
+        aria-invalid={hasError}
+      />
       {description ? <FieldDescription>{description}</FieldDescription> : null}
       {timezoneLabel ? (
         <FieldDescription>

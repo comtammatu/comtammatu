@@ -48,7 +48,7 @@ test("finance food cost uses recipe unit conversion and branch WAC", () => {
         revenue: 60_000,
       },
     ],
-    recipeLines: [
+    menuRecipeLines: [
       {
         menuItemId: 10,
         ingredientId: 7,
@@ -112,7 +112,10 @@ test("paid menu-item sales allocate order discounts before calculating gross pro
     migration,
     /ir\.revenue_before_discount \* \(ir\.subtotal - ir\.discount_amount\) \/ ir\.order_item_subtotal/,
   );
-  assert.match(migration, /CROSS JOIN LATERAL jsonb_array_elements\(pi\.sides\)/);
+  assert.match(
+    migration,
+    /CROSS JOIN LATERAL jsonb_array_elements\(pi\.sides\)/,
+  );
   assert.match(migration, /private\.finance_scope\(v_uid, 'finance:view'\)/);
 });
 
@@ -122,7 +125,10 @@ test("finance food cost keeps the resolved period in its filter, not the header"
     "apps/web/app/(protected)/finance/food-cost/food-cost-client.tsx",
   );
 
-  assert.doesNotMatch(page, /description=\{messages\.finance\.foodCost\.description\}/);
+  assert.doesNotMatch(
+    page,
+    /description=\{messages\.finance\.foodCost\.description\}/,
+  );
   assert.doesNotMatch(page, /meta=\{messages\.finance\.basic\.periodMeta/);
   assert.match(client, /<FilterBar/);
   assert.doesNotMatch(client, /description=\{foodCopy\.tableDescription\}/);

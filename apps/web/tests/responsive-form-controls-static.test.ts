@@ -67,6 +67,13 @@ test("touch Combobox density includes popup search and options", () => {
   );
   assert.match(combobox, /: "h-8 px-2 text-xs\/relaxed"/);
   assert.match(combobox, /: "min-h-7 py-1\.5 text-xs\/relaxed"/);
+  assert.doesNotMatch(combobox, /BaseCombobox\.Empty className=/);
+  assert.equal(
+    combobox.match(
+      /<BaseCombobox\.Empty>\s*<div className="py-4 text-center text-xs\/relaxed">/g,
+    )?.length,
+    2,
+  );
 });
 
 test("supplier invoice toolbar consumes the responsive control contract", () => {

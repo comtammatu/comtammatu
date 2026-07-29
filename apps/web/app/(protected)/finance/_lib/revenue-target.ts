@@ -7,7 +7,11 @@ export function monthStartFromIsoDate(isoDate: string): string {
 
 /** True when start/end fall in the same VN calendar month. */
 export function isSingleCalendarMonth(start: string, end: string): boolean {
-  return start.length >= 7 && end.length >= 7 && start.slice(0, 7) === end.slice(0, 7);
+  return (
+    start.length >= 7 &&
+    end.length >= 7 &&
+    start.slice(0, 7) === end.slice(0, 7)
+  );
 }
 
 export function currentVnMonthStart(now: Date = new Date()): string {
@@ -15,7 +19,43 @@ export function currentVnMonthStart(now: Date = new Date()): string {
   return `${year}-${String(month).padStart(2, "0")}-01`;
 }
 
-export type TargetProgressTone = "success" | "warning" | "destructive" | "neutral";
+export type TargetProgressTone =
+  "success" | "warning" | "destructive" | "neutral";
+
+export type RevenueRewardType = "fixed_amount" | "revenue_percent";
+
+export type RevenueRewardTier = {
+  thresholdPct: number;
+  rewardType: RevenueRewardType;
+  rewardValue: number;
+};
+
+export function normalizeRevenueRewardTiers(
+  tiers: RevenueRewardTier[],
+): RevenueRewardTier[] | null {
+  if (tiers.length > 10) return null;
+
+  const thresholds = new Set<number>();
+  for (const tier of tiers) {
+    if (
+      !Number.isFinite(tier.thresholdPct) ||
+      tier.thresholdPct <= 0 ||
+      tier.thresholdPct > 1000 ||
+      thresholds.has(tier.thresholdPct) ||
+      !Number.isFinite(tier.rewardValue) ||
+      tier.rewardValue <= 0 ||
+      (tier.rewardType === "fixed_amount" &&
+        (!Number.isInteger(tier.rewardValue) ||
+          tier.rewardValue > 1_000_000_000_000)) ||
+      (tier.rewardType === "revenue_percent" && tier.rewardValue > 100)
+    ) {
+      return null;
+    }
+    thresholds.add(tier.thresholdPct);
+  }
+
+  return [...tiers].sort((a, b) => a.thresholdPct - b.thresholdPct);
+}
 
 export function targetProgressTone(
   progressPct: number | null | undefined,
@@ -26,7 +66,9 @@ export function targetProgressTone(
   return "destructive";
 }
 
-export function clampProgressValue(progressPct: number | null | undefined): number {
+export function clampProgressValue(
+  progressPct: number | null | undefined,
+): number {
   if (progressPct == null || !Number.isFinite(progressPct)) return 0;
   return Math.max(0, Math.min(100, progressPct));
 }

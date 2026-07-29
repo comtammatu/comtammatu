@@ -13,7 +13,11 @@ import {
   Trash2 as IconTrash,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
-import { formatCount, formatPercent, formatVND } from "@comtammatu/shared/format";
+import {
+  formatCount,
+  formatPercent,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
@@ -37,11 +41,7 @@ import {
 } from "@/components/row-actions-menu";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  AppSection,
-  DescriptionList,
-  KpiRow,
-} from "@/components/surface";
+import { AppSection, DescriptionList, KpiRow } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -128,7 +128,7 @@ const expenseFormSchema = z
     category: z.string().min(1, { error: "Chọn khoản mục" }),
     paymentMethod: z.string().min(1, { error: "Chọn phương thức" }),
     vendorName: z.string().trim().max(200).optional(),
-    note: z.string().trim().max(500).optional(),
+    note: z.string().trim().min(5, FORM_VI.required).max(500),
     invoiceAttachmentUrl: z.string().optional(),
     vat0Taxable: optionalMoneySchema,
     vat5Taxable: optionalMoneySchema,
@@ -318,7 +318,7 @@ export function ExpensesClient({
       vatBreakdown,
       paymentMethod: values.paymentMethod as ExpensePaymentMethod,
       vendorName: values.vendorName || undefined,
-      note: values.note || undefined,
+      note: values.note,
       invoiceAttachmentUrl: attachment || undefined,
     });
     if (result.success) {
@@ -902,6 +902,7 @@ export function ExpensesClient({
                   name="note"
                   label={copy.form.note}
                   placeholder={copy.form.notePlaceholder}
+                  required
                 />
               </>
             );
@@ -1023,7 +1024,10 @@ export function ExpensesClient({
                 <p className="text-sm font-medium">
                   {copy.detail.transferContent}
                 </p>
-                <Item variant="muted" className="flex-col items-stretch gap-3 p-4">
+                <Item
+                  variant="muted"
+                  className="flex-col items-stretch gap-3 p-4"
+                >
                   <code className="block break-all font-mono text-base font-semibold tabular-nums tracking-wide">
                     {selectedExpense.transfer_content}
                   </code>
@@ -1032,7 +1036,9 @@ export function ExpensesClient({
                     variant="outline"
                     className="w-full"
                     onClick={() =>
-                      void copyTransferContent(selectedExpense.transfer_content!)
+                      void copyTransferContent(
+                        selectedExpense.transfer_content!,
+                      )
                     }
                   >
                     <IconCopy data-icon="inline-start" />
