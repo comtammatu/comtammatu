@@ -144,3 +144,59 @@ test("POS self-order uses a realtime channel plus the 5s poll as a safety net", 
   // 5s poll safety net is still present.
   assert.match(source, /5_000/);
 });
+
+test("floor clock-in returns cashier/chef to branch home (unlocked tiles)", () => {
+  const clockPage = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx",
+  );
+  const actions = read("apps/web/lib/staff-runtime/clock/actions.ts");
+  // Branch home is where POS/KDS tiles unlock after clock-in.
+  assert.match(clockPage, /home: `\/br\/\$\{branchId\}`/);
+  // The RPC clock-in path is reached only by floor roles (manager-simple
+  // returns earlier), so it lands them on branch home.
+  const rpcBlock = actions.slice(
+    actions.indexOf("employee_clock_in_with_checklist"),
+  );
+  assert.match(rpcBlock, /nextPath: "home"/);
+});
+
+test("KDS streams the station shell immediately and fetches the ticket snapshot on the client", () => {
+  const page = read("apps/web/app/(protected)/br/[branchId]/kds/page.tsx");
+  const realtime = read(
+    "apps/web/app/(protected)/br/[branchId]/kds/_hooks/use-kds-realtime.ts",
+  );
+  const board = read("apps/web/app/(protected)/br/[branchId]/kds/kds-board.tsx");
+  // Page renders the board with an empty seed; stations/permissions resolve fast.
+  assert.match(page, /initialTickets=\{\[\]\}/);
+  assert.match(page, /seeded=\{false\}/);
+  assert.match(page, /\.from\("kds_stations"\)/);
+  // The page no longer fetches the ticket chain (it lives in the realtime hook).
+  assert.doesNotMatch(page, /fetchVisibleKdsTickets|fetchKdsOrdersByIds/);
+  // Realtime hook honors seeded=false: the first SUBSCRIBED fetches the snapshot.
+  assert.match(realtime, /seeded\?: boolean/);
+  assert.match(realtime, /seededRef\.current/);
+  assert.match(board, /seeded = true/);
+});
+
+test("POS streams the shell immediately and only the error state gates it", () => {
+  const source = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/_providers/pos-desktop-provider.tsx",
+  );
+  assert.match(source, /ordersBootstrapState === "error" \? \(/);
+  // No full-shell skeleton gate on the loading state.
+  assert.doesNotMatch(
+    source,
+    /ordersBootstrapState === "loading" \? \(\s*<PosPageSkeleton/,
+  );
+});
+
+test("close-session supports a quick single-total count mode alongside denominations", () => {
+  const source = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx",
+  );
+  assert.match(source, /countMode.*"total" \| "denomination"/);
+  assert.match(source, /Nhập tổng/);
+  assert.match(source, /Theo mệnh giá/);
+  assert.match(source, /FormattedNumberInput/);
+  assert.match(source, /aria-pressed=\{countMode === "total"\}/);
+});

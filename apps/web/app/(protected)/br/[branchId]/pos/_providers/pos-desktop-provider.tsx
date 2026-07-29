@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { ACTIONS_VI, POS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
-import { PosPageSkeleton } from "../pos-page-skeleton";
 import { PosStatusPanel } from "../pos-status-panel";
 import type { ActiveSession, BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
@@ -489,9 +488,7 @@ export function PosDesktopProvider({
   );
 
   const content =
-    ordersBootstrapState === "loading" ? (
-      <PosPageSkeleton />
-    ) : ordersBootstrapState === "error" ? (
+    ordersBootstrapState === "error" ? (
       <PosStatusPanel
         icon={<IconReceipt />}
         title={POS_VI.shellOrdersErrorTitle}
@@ -508,6 +505,9 @@ export function PosDesktopProvider({
         </Button>
       </PosStatusPanel>
     ) : (
+      // Render the POS shell immediately on cold-load (orders start empty and
+      // hydrate within ~200ms via the bootstrap read below); the previous full
+      // skeleton gate added a second visible loading layer after the RSC stream.
       children
     );
 

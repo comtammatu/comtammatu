@@ -561,7 +561,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
   );
   assert.match(
     read(
-      "apps/web/app/(protected)/branch-settings/_shared/pos/stock-control-card.tsx",
+      "apps/web/app/(protected)/br/_shared/settings/pos/stock-control-card.tsx",
     ),
     /if \(embedded\) return content/,
   );
@@ -597,13 +597,13 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
   );
 
   const printersClient = read(
-    "apps/web/app/(protected)/branch-settings/_shared/printers/printers-client.tsx",
+    "apps/web/app/(protected)/br/_shared/settings/printers/printers-client.tsx",
   );
   assert.match(printersClient, /<Item[\s\S]*variant="outline"/);
   assert.doesNotMatch(printersClient, /bg-card p-3/);
 
   const kdsStationForm = read(
-    "apps/web/app/(protected)/branch-settings/_shared/kds/station-form-dialog.tsx",
+    "apps/web/app/(protected)/br/_shared/settings/kds/station-form-dialog.tsx",
   );
   assert.match(kdsStationForm, /@comtammatu\/ui\/components\/frame/);
   assert.match(kdsStationForm, /<Frame[\s\S]*max-h-48/);

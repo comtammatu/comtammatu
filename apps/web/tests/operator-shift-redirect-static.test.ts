@@ -213,7 +213,9 @@ test("operator shift clock renders the branch clock plane", () => {
   );
   assert.ok(source.includes('plane="branch"'), path);
   for (const expected of [
-    "home: `/br/${branchId}/shift`",
+    // Clock-in (floor roles) and clock-out both return to branch home, where
+    // POS/KDS tiles unlock after clock-in.
+    "home: `/br/${branchId}`",
     "tasks: `/br/${branchId}/shift`",
     "schedule: `/br/${branchId}/shift/schedule`",
   ]) {

@@ -3,11 +3,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-const kdsPageSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/kds/page.tsx"),
-  "utf8",
-);
-
 const kdsRealtimeSource = readFileSync(
   join(
     process.cwd(),
@@ -25,11 +20,8 @@ function extractVisibleStatuses(source: string): string[] {
 }
 
 test("KDS visible snapshots exclude cancelled tickets", () => {
-  assert.deepEqual(extractVisibleStatuses(kdsPageSource), [
-    "pending",
-    "preparing",
-    "ready",
-  ]);
+  // The page now streams the shell and fetches the ticket snapshot in the
+  // realtime hook, so KDS_VISIBLE_STATUSES lives there (not on the page).
   assert.deepEqual(extractVisibleStatuses(kdsRealtimeSource), [
     "pending",
     "preparing",

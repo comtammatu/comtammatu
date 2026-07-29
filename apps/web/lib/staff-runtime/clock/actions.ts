@@ -411,7 +411,11 @@ export async function clockInWithPhoto(
     data: {
       attendanceId,
       checkInTime,
-      nextPath: "tasks",
+      // This RPC path is only reached by floor roles (cashier/chef/staff) —
+      // manager-simple attendance returns earlier above. Floor roles clock in
+      // to sell/cook, so land them on the unlocked branch home where the
+      // POS/KDS tiles just became tappable.
+      nextPath: "home",
     },
   };
 }

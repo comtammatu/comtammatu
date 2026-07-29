@@ -108,6 +108,12 @@ export interface KdsBoardProps {
   initialOrders: KdsOrderInfo[];
   initialOrderItems: KdsOrderItem[];
   initialKitchenBatches: KdsKitchenSendBatch[];
+  /**
+   * Whether the initial board data was seeded from RSC. When false the shell
+   * (stations + permissions) renders immediately and the ticket snapshot is
+   * fetched on the client once the realtime channel subscribes.
+   */
+  seeded?: boolean;
 }
 
 /** URL query: order type filter */

@@ -143,6 +143,7 @@ export function KdsBoard({
   initialOrders,
   initialOrderItems,
   initialKitchenBatches,
+  seeded = true,
 }: KdsBoardProps) {
   const {
     tickets,
@@ -158,6 +159,7 @@ export function KdsBoard({
     initialOrders,
     initialOrderItems,
     initialKitchenBatches,
+    seeded,
   });
 
   const newTicketSignalIds = useKdsNewTicketSignal({

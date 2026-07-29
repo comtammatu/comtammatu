@@ -10,7 +10,9 @@ export default async function OperatorShiftClockPage({
   return (
     <StaffClockPageContent
       routes={{
-        home: `/br/${branchId}/shift`,
+        // Branch home is where POS/KDS tiles unlock after clock-in, so clock-out
+        // and a successful floor-role clock-in both return there.
+        home: `/br/${branchId}`,
         tasks: `/br/${branchId}/shift`,
         schedule: `/br/${branchId}/shift/schedule`,
         profile: `/br/${branchId}/profile`,

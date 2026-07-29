@@ -16,11 +16,6 @@ import type {
   KdsOrderItem,
 } from "../app/(protected)/br/[branchId]/kds/types";
 
-const kdsPageSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/kds/page.tsx"),
-  "utf8",
-);
-
 const kdsRealtimeSource = readFileSync(
   join(
     process.cwd(),
@@ -306,9 +301,8 @@ test("KDS keeps order note separate from item note", () => {
 });
 
 test("KDS selects and renders order notes in board and focus modes", () => {
-  assert.match(kdsPageSource, /order_type, table_id, is_priority, note,/);
-  assert.match(kdsPageSource, /order_type, table_id, note,/);
-  assert.match(kdsPageSource, /menu_items\(menu_categories\(name,type\)\)/);
+  // The page streams the shell; order/item select strings live in the realtime
+  // hook that fetches the ticket snapshot.
   assert.match(kdsRealtimeSource, /order_type, table_id, is_priority, note,/);
   assert.match(kdsRealtimeSource, /order_type, table_id, note,/);
   assert.match(kdsRealtimeSource, /menu_items\(menu_categories\(name,type\)\)/);

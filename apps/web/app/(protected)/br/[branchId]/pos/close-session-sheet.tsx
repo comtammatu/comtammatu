@@ -5,7 +5,11 @@
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
-import { formatVND } from "@comtammatu/shared/format";
+import {
+  formatVND,
+  parseVietnameseNumericInput,
+} from "@comtammatu/shared/format";
+import { FormattedNumberInput } from "@/components/form";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -71,15 +75,27 @@ export function CloseSessionSheet({
   const router = useRouter();
   const [step, setStep] = useState<Step>("count");
   const [counts, setCounts] = useState<DenominationCounts>({});
+  const [countMode, setCountMode] = useState<"total" | "denomination">("total");
+  const [quickTotal, setQuickTotal] = useState<string>("");
   const [note, setNote] = useState("");
   const [summary, setSummary] = useState<CloseSummary | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const totalCounted = sumDenominations(counts);
+  const totalCounted =
+    countMode === "total"
+      ? (() => {
+          const parsed = parseVietnameseNumericInput(quickTotal);
+          return parsed.state === "valid"
+            ? Number.parseFloat(parsed.canonical) || 0
+            : 0;
+        })()
+      : sumDenominations(counts);
 
   const reset = useCallback(() => {
     setStep("count");
     setCounts({});
+    setCountMode("total");
+    setQuickTotal("");
     setNote("");
     setSummary(null);
   }, []);
@@ -186,11 +202,56 @@ export function CloseSessionSheet({
           <div className="px-3 py-3 sm:px-4 sm:py-4">
             {step === "count" && (
               <div className="flex flex-col gap-4">
-                <DenominationInput
-                  counts={counts}
-                  onCountsChange={setCounts}
-                  disabled={isPending}
-                />
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Chế độ đếm tiền mặt">
+                  <Button
+                    type="button"
+                    variant={countMode === "total" ? "default" : "outline"}
+                    size="touch"
+                    aria-pressed={countMode === "total"}
+                    onClick={() => setCountMode("total")}
+                  >
+                    Nhập tổng
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={countMode === "denomination" ? "default" : "outline"}
+                    size="touch"
+                    aria-pressed={countMode === "denomination"}
+                    onClick={() => setCountMode("denomination")}
+                  >
+                    Theo mệnh giá
+                  </Button>
+                </div>
+                {countMode === "total" ? (
+                  <AppSection
+                    size="sm"
+                    contentClassName="gap-2"
+                    title="Tổng tiền mặt đếm được"
+                  >
+                    <Label htmlFor="quick-total" className="sr-only">
+                      Tổng tiền mặt
+                    </Label>
+                    <FormattedNumberInput
+                      id="quick-total"
+                      value={quickTotal}
+                      onValueChange={setQuickTotal}
+                      disabled={isPending}
+                      placeholder="0"
+                      inputMode="numeric"
+                      className="text-base"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Nhanh nhất: nhập một tổng. Chuyển “Theo mệnh giá” nếu cần
+                      phân loại từng tờ để kiểm toán.
+                    </p>
+                  </AppSection>
+                ) : (
+                  <DenominationInput
+                    counts={counts}
+                    onCountsChange={setCounts}
+                    disabled={isPending}
+                  />
+                )}
                 <div className="flex flex-col gap-2">
                   <Label
                     htmlFor="close-note"

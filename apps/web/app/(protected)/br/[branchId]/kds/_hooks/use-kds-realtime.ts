@@ -304,6 +304,12 @@ export interface UseKdsRealtimeArgs {
   initialOrders: KdsOrderInfo[];
   initialOrderItems: KdsOrderItem[];
   initialKitchenBatches: KdsKitchenSendBatch[];
+  /**
+   * Whether the initial board state was seeded from RSC. When false (cold-load
+   * streaming renders the shell first and fetches the snapshot on the client),
+   * the first SUBSCRIBED triggers a snapshot fetch instead of being skipped.
+   */
+  seeded?: boolean;
 }
 
 export interface KdsRealtimeState {
@@ -329,6 +335,7 @@ export function useKdsRealtime({
   initialOrders,
   initialOrderItems,
   initialKitchenBatches,
+  seeded = true,
 }: UseKdsRealtimeArgs): KdsRealtimeState {
   const [tickets, setTickets] = useState<KdsTicket[]>(initialTickets);
   const [orders, setOrders] = useState<Map<number, KdsOrderInfo>>(
@@ -347,6 +354,7 @@ export function useKdsRealtime({
   const kitchenBatchesRef = useRef(kitchenBatches);
   const lastSnapshotSyncRef = useRef(Date.now());
   const initialSubscribeSeenRef = useRef(false);
+  const seededRef = useRef(seeded);
   // Buffer of ticket ids delivered by realtime INSERT events only. Filled in
   // the INSERT branch below and drained by consumeRealtimeInsertedTicketIds.
   const insertedTicketIdsRef = useRef<number[]>([]);
@@ -669,11 +677,16 @@ export function useKdsRealtime({
           if (status !== "SUBSCRIBED") return;
           // Skip the FIRST SUBSCRIBED — board state is already seeded from
           // RSC props (initialTickets/initialOrders/initialOrderItems).
-          // Every SUBSCRIBED after that is a genuine reconnect: refetch a
-          // fresh snapshot so we don't carry stale state from events that
-          // fired during the disconnect window.
+          // When seeded is false (cold-load shell rendered first, snapshot
+          // fetched on the client), the first SUBSCRIBED must fetch instead of
+          // skip so the empty shell hydrates. Every SUBSCRIBED after that is a
+          // genuine reconnect: refetch a fresh snapshot so we don't carry stale
+          // state from events that fired during the disconnect window.
           if (!initialSubscribeSeenRef.current) {
             initialSubscribeSeenRef.current = true;
+            if (!seededRef.current) {
+              scheduleBoardSnapshotRefreshRef.current();
+            }
             return;
           }
           scheduleBoardSnapshotRefreshRef.current();

@@ -22,7 +22,7 @@ test("POS fails closed when the table snapshot is unavailable", () => {
   assert.match(source, /label: POS_VI\.shellTablesErrorBadge/);
 });
 
-test("POS gates the shell until the first active-order snapshot succeeds", () => {
+test("POS streams the shell while the first active-order snapshot loads", () => {
   const source = read(
     "app/(protected)/br/[branchId]/pos/_providers/pos-desktop-provider.tsx",
   );
@@ -41,10 +41,8 @@ test("POS gates the shell until the first active-order snapshot succeeds", () =>
     /ordersReadyRef\.current = true;[\s\S]*setOrdersBootstrapState\("ready"\)/,
   );
   assert.match(source, /catch \{\s*markOrdersLoadFailure\(\);\s*\}/);
-  assert.match(
-    source,
-    /ordersBootstrapState === "loading" \? \(\s*<PosPageSkeleton/,
-  );
+  // The shell renders immediately on cold-load (orders start empty and hydrate);
+  // only the error state gates the shell behind a retry panel.
   assert.match(
     source,
     /ordersBootstrapState === "error" \? \([\s\S]*ACTIONS_VI\.retry/,
