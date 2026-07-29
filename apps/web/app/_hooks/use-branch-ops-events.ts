@@ -6,7 +6,10 @@ import {
   canSubscribeBranchOpsTopic,
   extractClaimsFromAccessToken,
 } from "@comtammatu/shared/auth";
-import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import {
+  stopRealtimeAuthorizationRejoin,
+  useRealtimeChannel,
+} from "@/_hooks/use-realtime-channel";
 
 export function createBranchOpsChannel(
   supabase: SupabaseClient,
@@ -20,20 +23,24 @@ export function createBranchOpsChannel(
   }
 
   let initialSubscribe = true;
-  return supabase
-    .channel(`branch:${String(branchId)}:ops`, {
-      config: { broadcast: { self: false }, private: true },
-    })
-    .on("broadcast", { event: "ops" }, () => onEvent())
-    .subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        if (initialSubscribe) {
-          initialSubscribe = false;
-          return;
-        }
-        onEvent();
+  const channel = supabase.channel(`branch:${String(branchId)}:ops`, {
+    config: { broadcast: { self: false }, private: true },
+  });
+  channel.on("broadcast", { event: "ops" }, () => onEvent());
+  channel.subscribe((status, err) => {
+    if (status === "CHANNEL_ERROR") {
+      stopRealtimeAuthorizationRejoin(supabase, channel, err);
+      return;
+    }
+    if (status === "SUBSCRIBED") {
+      if (initialSubscribe) {
+        initialSubscribe = false;
+        return;
       }
-    });
+      onEvent();
+    }
+  });
+  return channel;
 }
 
 export function useBranchOpsEvents({

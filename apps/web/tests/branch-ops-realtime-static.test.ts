@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
+import { stopRealtimeAuthorizationRejoin } from "../app/_hooks/use-realtime-channel";
 import { normalizePgDumpSql } from "./sql-test-utils";
 
 // The realtime "branch ops bus" is a cross-file contract: the DB trigger
@@ -89,6 +91,14 @@ const baseline = normalizePgDumpSql(
     ),
     "utf8",
   ),
+);
+
+const branchOpsPolicyMigration = readFileSync(
+  new URL(
+    "../../../supabase/migrations/20260729250100_restore_branch_ops_realtime_policy.sql",
+    import.meta.url,
+  ),
+  "utf8",
 );
 
 const posLayout = readFileSync(
@@ -180,8 +190,75 @@ test("DB trigger broadcasts to the matching topic/event on a private channel", (
 });
 
 test("realtime.messages receive policy is scoped to branch ops topics", () => {
-  assert.match(migration, /realtime\.topic\(\)\s+LIKE\s+'branch:%:ops'/);
-  assert.match(migration, /can_read_branch_ops/);
+  // The active chain is the install path; the archive is history only.
+  // Re-baseline silently drops realtime.messages policies because pg_dump
+  // excludes the extension-managed realtime schema.
+  assert.match(
+    branchOpsPolicyMigration,
+    /CREATE POLICY "branch_ops_receive"\s+ON realtime\.messages/,
+  );
+  assert.match(
+    branchOpsPolicyMigration,
+    /CASE[\s\S]*realtime\.topic\(\)\s+~\s+'\^branch:\[1-9\]\[0-9\]\{0,18\}:ops\$'/,
+  );
+  assert.match(
+    branchOpsPolicyMigration,
+    /9223372036854775807::numeric[\s\S]*can_read_branch_ops\([\s\S]*::bigint/,
+  );
+});
+
+test("authorization rejection stops rejoin while transport errors stay retryable", () => {
+  const channel = {} as RealtimeChannel;
+  let removed = 0;
+  let evicted = 0;
+  const supabase = {
+    removeChannel(candidate: RealtimeChannel) {
+      assert.equal(candidate, channel);
+      removed += 1;
+      return Promise.resolve("ok" as const);
+    },
+    realtime: {
+      _remove(candidate: RealtimeChannel) {
+        assert.equal(candidate, channel);
+        evicted += 1;
+      },
+    },
+  } as unknown as Pick<SupabaseClient, "realtime" | "removeChannel">;
+
+  assert.equal(
+    stopRealtimeAuthorizationRejoin(
+      supabase,
+      channel,
+      new Error("Unauthorized channel topic"),
+    ),
+    true,
+  );
+  assert.equal(removed, 1);
+  assert.equal(evicted, 1);
+
+  assert.equal(
+    stopRealtimeAuthorizationRejoin(
+      supabase,
+      channel,
+      new Error("channel error", {
+        cause: { reason: "permission denied" },
+      }),
+    ),
+    true,
+  );
+  assert.equal(removed, 2);
+  assert.equal(evicted, 2);
+
+  assert.equal(
+    stopRealtimeAuthorizationRejoin(
+      supabase,
+      channel,
+      new Error("connection lost"),
+    ),
+    false,
+  );
+  assert.equal(removed, 2);
+  assert.equal(evicted, 2);
 });
 
 test("branch ops topics require an active profile and active assigned branch", () => {
@@ -213,7 +290,7 @@ test("POS menu sync listens for matching branch ops menu broadcasts", () => {
   assert.match(posMenuClient, /event\?\.domain\s*===\s*"pos"/);
   assert.match(posMenuClient, /event\?\.domain\s*===\s*"inventory"/);
   assert.match(posMenuClient, /event\?\.table\s*===\s*"stock_levels"/);
-  assert.match(posMenuClient, /\.subscribe\(\(status\)\s*=>/);
+  assert.match(posMenuClient, /\.subscribe\(\(status,\s*err\)\s*=>/);
   assert.match(posMenuMigration, /'domain',\s*'pos'/);
   assert.match(
     posMenuMigration,

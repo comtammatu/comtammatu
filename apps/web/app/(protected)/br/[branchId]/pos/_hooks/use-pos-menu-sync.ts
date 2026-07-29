@@ -5,7 +5,10 @@ import {
   canSubscribeBranchOpsTopic,
   extractClaimsFromAccessToken,
 } from "@comtammatu/shared/auth";
-import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import {
+  stopRealtimeAuthorizationRejoin,
+  useRealtimeChannel,
+} from "@/_hooks/use-realtime-channel";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import { fetchMenuForPos } from "../actions";
 import type { MenuCategory } from "../pos-menu-types";
@@ -56,28 +59,32 @@ export function usePosMenuSync({ branchId, setCategories }: UsePosMenuSyncArgs) 
         { metricName: "pos.menu.refresh" },
       );
 
-      return supabase
-        .channel(`branch:${String(branchId)}:ops`, {
-          config: { broadcast: { self: false }, private: true },
-        })
-        .on("broadcast", { event: "ops" }, (payload) => {
-          const event = payload.payload;
-          if (
-            event?.domain === "pos" ||
-            (event?.domain === "inventory" && event?.table === "stock_levels")
-          ) {
-            handleMenuRefetch();
-          }
-        })
-        .subscribe((status) => {
-          if (status !== "SUBSCRIBED") return;
-          if (!didInitialSubscribeRef.current) {
-            didInitialSubscribeRef.current = true;
-            return;
-          }
-          // Reconnect catch-up runs without the toast (silent re-sync).
-          void runMenuRefetch({ notify: false });
-        });
+      const channel = supabase.channel(`branch:${String(branchId)}:ops`, {
+        config: { broadcast: { self: false }, private: true },
+      });
+      channel.on("broadcast", { event: "ops" }, (payload) => {
+        const event = payload.payload;
+        if (
+          event?.domain === "pos" ||
+          (event?.domain === "inventory" && event?.table === "stock_levels")
+        ) {
+          handleMenuRefetch();
+        }
+      });
+      channel.subscribe((status, err) => {
+        if (status === "CHANNEL_ERROR") {
+          stopRealtimeAuthorizationRejoin(supabase, channel, err);
+          return;
+        }
+        if (status !== "SUBSCRIBED") return;
+        if (!didInitialSubscribeRef.current) {
+          didInitialSubscribeRef.current = true;
+          return;
+        }
+        // Reconnect catch-up runs without the toast (silent re-sync).
+        void runMenuRefetch({ notify: false });
+      });
+      return channel;
     },
     [branchId],
   );

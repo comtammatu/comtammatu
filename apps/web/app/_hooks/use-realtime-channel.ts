@@ -4,6 +4,38 @@ import { useEffect, useRef, type DependencyList } from "react";
 import { createClient } from "@comtammatu/database/supabase/client";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
+type RealtimeChannelClient = Pick<SupabaseClient, "realtime" | "removeChannel">;
+type RealtimeInternals = { _remove: (channel: RealtimeChannel) => void };
+
+function evictRealtimeChannel(
+  supabase: RealtimeChannelClient,
+  channel: RealtimeChannel,
+): void {
+  void supabase.removeChannel(channel);
+  (supabase.realtime as unknown as RealtimeInternals)._remove(channel);
+}
+
+function realtimeErrorText(error?: Error): string {
+  if (!error?.cause) return error?.message ?? "";
+  try {
+    return `${error.message} ${JSON.stringify(error.cause)}`;
+  } catch {
+    return error.message;
+  }
+}
+
+export function stopRealtimeAuthorizationRejoin(
+  supabase: RealtimeChannelClient,
+  channel: RealtimeChannel,
+  error?: Error,
+): boolean {
+  if (!/unauthorized|permission|denied/i.test(realtimeErrorText(error))) {
+    return false;
+  }
+  evictRealtimeChannel(supabase, channel);
+  return true;
+}
+
 /**
  * Subscribe to a Supabase Realtime channel safely. Defers `.subscribe()`
  * until `auth.getSession()` resolves so the broker registers the
@@ -72,17 +104,11 @@ export function useRealtimeChannel(
     // channel from `socket.channels` synchronously) so the next
     // `supabase.channel(topic)` builds fresh. The async leave still runs,
     // idempotent.
-    type RealtimeInternals = { _remove: (c: RealtimeChannel) => void };
-    const evict = (stale: RealtimeChannel) => {
-      void supabase.removeChannel(stale);
-      (supabase.realtime as unknown as RealtimeInternals)._remove(stale);
-    };
-
     const teardownChannel = () => {
       if (channel === null) return;
       const stale = channel;
       channel = null;
-      evict(stale);
+      evictRealtimeChannel(supabase, stale);
     };
 
     // `teardownChannel` only evicts the channel THIS effect created. A
@@ -104,7 +130,9 @@ export function useRealtimeChannel(
         ): RealtimeChannel => {
           const topic = `realtime:${name}`;
           for (const existing of target.realtime.getChannels()) {
-            if (existing.topic === topic) evict(existing);
+            if (existing.topic === topic) {
+              evictRealtimeChannel(supabase, existing);
+            }
           }
           return target.channel(name, opts);
         };
