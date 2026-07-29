@@ -10444,6 +10444,10 @@ export type Database = {
         Args: { p_grn_id: number }
         Returns: Json
       }
+      create_purchase_orders_from_request: {
+        Args: { p_orders: Json; p_request_id: number }
+        Returns: Json
+      }
       create_purchase_request: {
         Args: {
           p_branch_id: number
