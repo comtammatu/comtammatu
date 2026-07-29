@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { PRODUCT_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { AppEmptyState, OperationalBoardCard } from "@/components/surface";
@@ -74,10 +74,10 @@ function getOrderElapsedMinutes(order: KdsOrder, now: number): number {
   );
 }
 
-function CompactItemRow({
+const CompactItemRow = memo(function CompactItemRow({
   item,
   ticket,
-  pendingTicketIds,
+  isMutating,
   canMarkReady,
   canRecall,
   onCompleteTickets,
@@ -85,14 +85,13 @@ function CompactItemRow({
 }: {
   item: KdsOrderItem;
   ticket: KdsTicket | undefined;
-  pendingTicketIds: Set<number>;
+  isMutating: boolean;
   canMarkReady: boolean;
   canRecall: boolean;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
 }) {
   const status = ticket?.status ?? item.status;
-  const isMutating = ticket ? pendingTicketIds.has(ticket.id) : false;
   const isCancelled = status === "cancelled";
   const canCompleteByStatus = !isCancelled && isKdsActiveTicketStatus(status);
   const canRecallByStatus = !isCancelled && status === "ready";
@@ -192,24 +191,23 @@ function CompactItemRow({
       </div>
     </Item>
   );
-}
+});
 
-function CompactOrphanRow({
+const CompactOrphanRow = memo(function CompactOrphanRow({
   ticket,
-  pendingTicketIds,
+  isMutating,
   canMarkReady,
   canRecall,
   onCompleteTickets,
   onRecall,
 }: {
   ticket: KdsTicket;
-  pendingTicketIds: Set<number>;
+  isMutating: boolean;
   canMarkReady: boolean;
   canRecall: boolean;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
 }) {
-  const isMutating = pendingTicketIds.has(ticket.id);
   const isCancelled = ticket.status === "cancelled";
   const canCompleteByStatus =
     !isCancelled && isKdsActiveTicketStatus(ticket.status);
@@ -282,7 +280,7 @@ function CompactOrphanRow({
       </div>
     </Item>
   );
-}
+});
 
 function HeatmapCard({
   order,
@@ -402,23 +400,26 @@ function HeatmapCard({
         </div>
       </div>
       <div className="mt-2 min-w-0 rounded-md bg-card/70 p-2 xl:mt-3 xl:p-3">
-        {order.items.map((item) => (
-          <CompactItemRow
-            key={item.id}
-            item={item}
-            ticket={ticketByItemId.get(item.id)}
-            pendingTicketIds={pendingTicketIds}
-            canMarkReady={canMarkReady}
-            canRecall={canRecall}
-            onCompleteTickets={onCompleteTickets}
-            onRecall={onRecall}
-          />
-        ))}
+        {order.items.map((item) => {
+          const ticket = ticketByItemId.get(item.id);
+          return (
+            <CompactItemRow
+              key={item.id}
+              item={item}
+              ticket={ticket}
+              isMutating={ticket ? pendingTicketIds.has(ticket.id) : false}
+              canMarkReady={canMarkReady}
+              canRecall={canRecall}
+              onCompleteTickets={onCompleteTickets}
+              onRecall={onRecall}
+            />
+          );
+        })}
         {orphanTickets.map((ticket) => (
           <CompactOrphanRow
             key={ticket.id}
             ticket={ticket}
-            pendingTicketIds={pendingTicketIds}
+            isMutating={pendingTicketIds.has(ticket.id)}
             canMarkReady={canMarkReady}
             canRecall={canRecall}
             onCompleteTickets={onCompleteTickets}

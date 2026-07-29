@@ -200,3 +200,39 @@ test("close-session supports a quick single-total count mode alongside denominat
   assert.match(source, /FormattedNumberInput/);
   assert.match(source, /aria-pressed=\{countMode === "total"\}/);
 });
+
+test("KDS comprehensive board memoizes item rows with a per-row isMutating flag", () => {
+  const source = read(
+    "apps/web/app/(protected)/br/[branchId]/kds/_components/order-grid.tsx",
+  );
+  // Item/orphan rows are memoized so they skip the 15s board-tick re-render
+  // (the tick only needs to update the card background age color).
+  assert.match(source, /const CompactItemRow = memo\(function CompactItemRow/);
+  assert.match(source, /const CompactOrphanRow = memo\(function CompactOrphanRow/);
+  // Each memoized row takes a per-row boolean, not the recreated
+  // pendingTicketIds Set (which would defeat memo on every mutation).
+  const itemRowBlock = source.slice(
+    source.indexOf("memo(function CompactItemRow"),
+    source.indexOf("memo(function CompactOrphanRow"),
+  );
+  assert.match(itemRowBlock, /isMutating: boolean;/);
+  assert.doesNotMatch(itemRowBlock, /pendingTicketIds/);
+  // HeatmapCard still holds the Set but computes the flag for each row.
+  assert.match(source, /isMutating=\{ticket \? pendingTicketIds\.has\(ticket\.id\) : false\}/);
+});
+
+test("POS self-order ref is synced in the render body, not a one-frame-stale effect", () => {
+  const source = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+  );
+  // Assigning in the render body keeps the ref current on every render, so a
+  // realtime event always invokes the latest closure (current audioMode).
+  assert.match(
+    source,
+    /const refreshSelfOrderPosStateRef = useRef\(refreshSelfOrderPosState\);\s*refreshSelfOrderPosStateRef\.current = refreshSelfOrderPosState;/,
+  );
+  assert.doesNotMatch(
+    source,
+    /useEffect\(\(\) => \{\s*refreshSelfOrderPosStateRef\.current = refreshSelfOrderPosState;/,
+  );
+});

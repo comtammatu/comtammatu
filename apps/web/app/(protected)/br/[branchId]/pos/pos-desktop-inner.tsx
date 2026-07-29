@@ -451,10 +451,11 @@ export function PosDesktopInner({
   // soon as the row lands. The 5s poll stays as a safety net for a silently
   // dropped socket (the loader is idempotent — tone only plays on genuinely new
   // request ids).
+  // Assigning the ref in the render body (not in an effect) keeps it in sync on
+  // every render, so a realtime event always calls the latest closure (with the
+  // current audioMode) instead of a one-frame-stale one.
   const refreshSelfOrderPosStateRef = useRef(refreshSelfOrderPosState);
-  useEffect(() => {
-    refreshSelfOrderPosStateRef.current = refreshSelfOrderPosState;
-  }, [refreshSelfOrderPosState]);
+  refreshSelfOrderPosStateRef.current = refreshSelfOrderPosState;
   useRealtimeChannel(
     (supabase) => {
       const filter = `branch_id=eq.${String(branchId)}`;
