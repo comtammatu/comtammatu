@@ -46,9 +46,11 @@ change type, and authority granted by the task. Complete
 - A row has one canonical view and one address. Legacy DETAIL routes may only
   redirect to that address; they must not render a second view (Record Depth /
   ADR 0018).
-- YCM, PO, GRN, YCH, and Transfer are list-first documents. Owner/Ops uses the
-  URL-addressable `AppDialog variant="document"`; Branch YCH and Transfer use a
-  fullscreen `Sheet`. Keep list filters, pagination, and site scope in the URL.
+- YCM, PO, and GRN are list-first documents opened in a URL-addressable
+  `AppDialog variant="document"` on Owner/Ops. YCH and Transfer share one
+  fulfillment hub and open canonical detail pages in their respective
+  Owner/Ops or Branch route family. Keep queue, filters, pagination, and site
+  scope in the URL.
 - `Popover` is for pickers and compact anchored controls only — never a record
   view, never a multi-step workflow.
 - An overflow affordance (`⋯`) must open a real menu built from the shared

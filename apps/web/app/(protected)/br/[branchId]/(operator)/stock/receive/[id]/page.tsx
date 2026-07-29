@@ -1,4 +1,6 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
+import { TransferReceiveClient } from "./transfer-receive-client";
 
 interface PageProps {
   params: Promise<{ branchId: string; id: string }>;
@@ -19,7 +21,18 @@ export default async function OperatorStockReceiveDetailPage({
     notFound();
   }
 
-  redirect(
-    `/br/${branchId}/stock/transfer?queue=receive&transferId=${transferId}&mode=receive`,
+  const data = await loadTransferDetailPageData({
+    transferId,
+    routeBranchId: branchId,
+    includeAudit: false,
+    includeCorrections: false,
+  });
+
+  return (
+    <TransferReceiveClient
+      transfer={data.transfer}
+      backHref={`/br/${branchId}/stock/transfer?queue=receive`}
+      detailHref={`/br/${branchId}/stock/transfer/${transferId}`}
+    />
   );
 }

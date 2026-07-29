@@ -889,11 +889,10 @@ allowlist.
   (Branch counterpart: bottom `Sheet` at the same depth) only when bounded to
   one employee and one clear/save assignment set; long stocktake or line-heavy
   forms still use Page/`DocumentFormFrame`.
-- YCM, PO, GRN, YCH, and Transfer are approved list-first documents. Owner/Ops
-  opens their canonical view in a URL-addressable
-  `AppDialog variant="document"` while the LIST stays mounted; Branch YCH and
-  Transfer use a fullscreen bottom `Sheet`. A legacy DETAIL route redirects to
-  that canonical query address and never renders a parallel implementation.
+- YCM, PO, and GRN are approved list-first documents. Owner/Ops opens their
+  canonical view in a URL-addressable `AppDialog variant="document"` while the
+  LIST stays mounted. YCH and Transfer share one fulfillment hub and open
+  canonical detail pages in the matching Owner/Ops or Branch route family.
 - Inventory money, quantity, tax-rate, and business-date inputs must use the shared app form wrappers instead of ad hoc parsing or `type="number"`.
 - Hide permanently unauthorized actions. Show disabled controls with explanatory copy only for temporary operational blockers such as missing shift, locked period, or incomplete prerequisite state.
 
@@ -1051,8 +1050,8 @@ Declare each record's depth once per family:
 - **D1 document (addressable overlay)** — a list-first staged document may
   render lines and a state-transition footer in
   `AppDialog variant="document"` when each state exposes exactly one primary
-  action. This named tier applies to YCM, PO, GRN, YCH, and Transfer; it is not a
-  generic exception for long-running authoring.
+  action. This named tier applies to YCM, PO, and GRN; it is not a generic
+  exception for long-running authoring.
 - **D1 task (non-addressable)** — `FormDialog` / short `AppDialog` for master
   CRUD or a single bounded decision that ends.
 - **D3** — line-array authoring only; never a row-open target for an existing

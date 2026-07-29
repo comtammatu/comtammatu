@@ -7246,6 +7246,7 @@ export type Database = {
           created_by: string | null
           creation_idempotency_key: string | null
           id: number
+          needed_at: string | null
           notes: string | null
           request_number: string
           status: string
@@ -7262,6 +7263,7 @@ export type Database = {
           created_by?: string | null
           creation_idempotency_key?: string | null
           id?: number
+          needed_at?: string | null
           notes?: string | null
           request_number: string
           status?: string
@@ -7278,6 +7280,7 @@ export type Database = {
           created_by?: string | null
           creation_idempotency_key?: string | null
           id?: number
+          needed_at?: string | null
           notes?: string | null
           request_number?: string
           status?: string
@@ -7389,6 +7392,7 @@ export type Database = {
           shipped_at: string | null
           status: string
           status_reason: string | null
+          stock_request_id: number | null
           tenant_id: number
           to_branch_id: number
           to_location_id: number | null
@@ -7409,6 +7413,7 @@ export type Database = {
           shipped_at?: string | null
           status?: string
           status_reason?: string | null
+          stock_request_id?: number | null
           tenant_id: number
           to_branch_id: number
           to_location_id?: number | null
@@ -7429,6 +7434,7 @@ export type Database = {
           shipped_at?: string | null
           status?: string
           status_reason?: string | null
+          stock_request_id?: number | null
           tenant_id?: number
           to_branch_id?: number
           to_location_id?: number | null
@@ -7464,6 +7470,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inventory_locations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_request_tenant_fkey"
+            columns: ["stock_request_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "stock_requests"
+            referencedColumns: ["id", "tenant_id"]
           },
           {
             foreignKeyName: "stock_transfers_tenant_id_fkey"
@@ -11887,6 +11900,15 @@ export type Database = {
         Returns: undefined
       }
       reject_refund: { Args: { p_refund_id: number }; Returns: Json }
+      reject_stock_request_lines: {
+        Args: {
+          p_fulfill_site_kind: string
+          p_item_ids: number[]
+          p_reason: string
+          p_request_id: number
+        }
+        Returns: Json
+      }
       release_branch_menu_daily_holds: {
         Args: { p_branch_id: number; p_hold_token: string }
         Returns: Json
@@ -12098,6 +12120,7 @@ export type Database = {
           p_branch_id: number
           p_idempotency_key?: string
           p_lines: Json
+          p_needed_at: string
           p_notes: string
           p_request_id: number
           p_submit?: boolean
@@ -12317,6 +12340,10 @@ export type Database = {
         Args: { p_transfer_id: number }
         Returns: Json
       }
+      stock_transfer_confirm_ship_legacy: {
+        Args: { p_transfer_id: number }
+        Returns: Json
+      }
       stock_transfer_list_branches: {
         Args: never
         Returns: {
@@ -12331,6 +12358,10 @@ export type Database = {
         Returns: Json
       }
       stock_transfer_receive: {
+        Args: { p_items?: Json; p_transfer_id: number }
+        Returns: Json
+      }
+      stock_transfer_receive_legacy: {
         Args: { p_items?: Json; p_transfer_id: number }
         Returns: Json
       }

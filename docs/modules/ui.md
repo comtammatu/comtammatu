@@ -591,7 +591,7 @@ App-local form helpers sống tại `apps/web/app/components/form/`. Dùng cho m
 - `Combobox` — control searchable độc lập; trong data-entry phải đặt trong `FormField` với `id` ổn định
 - `TextareaField` — Textarea + RHF
 - `AppDialog` — generic app Dialog shell; `variant="document"` dành cho chứng
-  từ list-first YCM, PO, GRN, YCH và Transfer
+  từ list-first YCM, PO và GRN
 - `FormDialog` — generic Dialog + `useForm` + `zodResolver` + `useTransition`
 - `valuesToFormData` — adapter để gọi server actions `withFormAction`-wrapped
 
@@ -644,10 +644,10 @@ at the first match.
    `Drawer`. Raw `Dialog` requires an approved exception.
 4. **View home:** phiên độc lập, kéo dài, danh sách không còn là ngữ cảnh làm
    việc → **Page** (DETAIL hoặc DOC-WORKFLOW). List-first view → **addressable
-   overlay** bound to `?<entity>Id=`. YCM, PO, GRN, YCH và Transfer là nhóm
-   chứng từ list-first đã duyệt: Owner/Ops dùng
-   `AppDialog variant="document"`; Branch YCH/Transfer dùng fullscreen bottom
-   `Sheet`. Line array hoặc stage footer không tự động ép sang Page; mỗi state
+   overlay** bound to `?<entity>Id=`. YCM, PO và GRN là nhóm chứng từ list-first
+   đã duyệt và dùng `AppDialog variant="document"` trên Owner/Ops. YCH và
+   Transfer dùng một fulfillment hub với canonical DETAIL Page trong từng route
+   family. Line array hoặc stage footer không tự động ép sang Page; mỗi state
    vẫn chỉ có một primary action.
 
 `Popover` never renders a record view or a multi-step workflow. `Drawer` is a

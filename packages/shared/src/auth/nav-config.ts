@@ -238,26 +238,10 @@ export const OPERATOR_TILE_ITEMS = [
   },
   {
     moduleKey: "branch_stock",
-    icon: "ClipboardList",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/requests",
-    label: "Yêu cầu hàng",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "branch_stock",
-    icon: "Package",
-    group: "stock",
-    hrefTemplate: "/br/{branchId}/stock/receive",
-    label: "Nhận hàng",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "branch_stock",
     icon: "Package",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/transfer",
-    label: "Điều chuyển",
+    label: "Giao nhận hàng",
     kinds: ["branch"],
   },
   {

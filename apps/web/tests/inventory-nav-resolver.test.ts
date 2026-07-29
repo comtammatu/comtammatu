@@ -292,7 +292,7 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   assert.doesNotMatch(settingsLayoutSource, /settings\/qc|icon: "qc"/);
 });
 
-test("D093 central_supply_ops nav hides PO and recipes; shows GRN + request inbox", () => {
+test("central_supply_ops nav hides PO and recipes; shows GRN + fulfillment hub", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "central_supply_ops",
@@ -306,7 +306,8 @@ test("D093 central_supply_ops nav hides PO and recipes; shows GRN + request inbo
   );
 
   assert.equal(visible.has("/inventory/grn"), true);
-  assert.equal(visible.has("/inventory/stock-requests"), true);
+  assert.equal(visible.has("/inventory/transfers"), true);
+  assert.equal(visible.has("/inventory/stock-requests"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
   assert.equal(visible.has("/inventory/purchase-orders"), false);
   assert.equal(visible.has("/inventory/menu-recipes"), false);

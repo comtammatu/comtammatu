@@ -1,6 +1,7 @@
 import "server-only";
 
 import { notFound } from "next/navigation";
+import { STOCK_REQUEST_FULFILL_ROLES } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchBranchesForTransfer } from "@/(protected)/inventory/transfer-actions";
@@ -43,6 +44,13 @@ export async function loadTransferCreatePageData({
   queryBranchId,
 }: LoadTransferCreatePageDataOptions = {}): Promise<TransferCreatePageData> {
   const { supabase, claims } = await loadAuthState();
+  if (
+    !STOCK_REQUEST_FULFILL_ROLES.includes(
+      claims.user_role as (typeof STOCK_REQUEST_FULFILL_ROLES)[number],
+    )
+  ) {
+    notFound();
+  }
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
     queryBranchId,

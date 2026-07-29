@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft as IconArrowLeft,
   MapPin as IconMapPin,
@@ -13,11 +13,10 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { Item } from "@comtammatu/ui/components/item";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
-import { AppDialog } from "@/components/form";
+import { Item } from "@comtammatu/ui/components/item";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
+import { useIsOnline } from "@/components/pwa-runtime";
 import {
   DataTable,
   type DataTableColumn,
@@ -42,10 +41,11 @@ import { TimelineStepper } from "../../_components/timeline-stepper";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatVND } from "@lib/inventory/format";
 import {
+  cancelStockTransfer,
   transferConfirmShip,
+  transferConfirmReceive,
   transferMarkInTransit,
   transferReceive,
-  cancelStockTransfer,
 } from "../../transfer-actions";
 import { messages } from "@lib/messages";
 import {
@@ -65,17 +65,17 @@ const DocumentStockCorrectionDialog = dynamic(
   { ssr: false },
 );
 
-const transferCopy = messages.inventory.transfer;
-const transferDetailTitle = transferCopy.detailTitle;
-const documentTabLabel = transferCopy.documentTabLabel;
-const historyTabLabel = transferCopy.list.tabs.history;
-const historySectionTitle = transferCopy.historySectionTitle;
+const transferDetailTitle = "Chi tiết điều chuyển";
+const documentTabLabel = "Phiếu điều chuyển";
+const historyTabLabel = "Lịch sử";
+const historySectionTitle = "Lịch sử chỉnh sửa";
 type TransferLineItem = TransferDetail["items"][number];
 
 function getTransferActionLabel(kind: TransferActionKind): string {
   const actions = messages.inventory.transfer.actions;
   if (kind === "confirm_ship") return actions.confirmShip;
   if (kind === "mark_in_transit") return actions.markInTransit;
+  if (kind === "confirm_receive") return "Bắt đầu kiểm nhận";
   return actions.receive;
 }
 
@@ -87,7 +87,6 @@ export function TransferDetailClient({
   auditLogs = [],
   embedded = false,
   listHref,
-  presentation = "page",
 }: {
   transfer: TransferDetail;
   userRole: StaffRole;
@@ -96,11 +95,9 @@ export function TransferDetailClient({
   auditLogs?: AuditLogRow[];
   embedded?: boolean;
   listHref?: string;
-  presentation?: "page" | "dialog";
 }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const isOnline = useIsOnline();
   const copy = messages.inventory.transfer;
   const statusBadge = getStatusBadgeMeta("inventory", transfer.status);
   const [isPending, startTransition] = useTransition();
@@ -112,8 +109,8 @@ export function TransferDetailClient({
     return initial;
   });
   const [shortNote, setShortNote] = useState("");
-  const [cancelReason, setCancelReason] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const isReceiveMode = isTransferReceiveReady(transfer.status);
   const transferListHref =
     listHref ??
@@ -130,7 +127,7 @@ export function TransferDetailClient({
     return count;
   }, [isReceiveMode, transfer.items, receiveQty]);
   const hasShort = shortLines > 0;
-  const noteOk = !hasShort || shortNote.trim().length >= 3;
+  const noteOk = !hasShort || shortNote.trim().length >= 5;
   const receivedCount = transfer.items.filter(
     (item) => item.received != null,
   ).length;
@@ -163,49 +160,12 @@ export function TransferDetailClient({
     ? getTransferActionLabel(actionConfig.kind)
     : copy.completedSlip;
 
-  async function closeDialog() {
-    const receiveDirty = transfer.items.some(
-      (item) =>
-        receiveQty[item.ingredientId] !== String(item.received ?? item.qty),
-    );
-    if (
-      (receiveDirty || shortNote.trim()) &&
-      !(await confirm({
-        title: messages.common.unsavedChangesTitle,
-        description: messages.common.unsavedChangesDescription,
-        variant: "destructive",
-      }))
-    ) {
-      return;
-    }
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("transferId");
-    params.delete("mode");
-    router.replace(params.size > 0 ? `${pathname}?${params}` : pathname, {
-      scroll: false,
-    });
-  }
-
-  function handleCancelTransfer() {
-    startTransition(async () => {
-      const result = await cancelStockTransfer({
-        transferId: transfer.id,
-        reason: cancelReason,
-      });
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(transferCopy.cancelledToast);
-      setCancelOpen(false);
-      setCancelReason("");
-      await closeDialog();
-      router.refresh();
-    });
-  }
-
   function handlePrimaryAction() {
     if (!actionConfig) return;
+    if (!isOnline) {
+      toast.error(messages.inventory.stockRequests.journey.offlineMutation);
+      return;
+    }
 
     startTransition(async () => {
       let res: { success: boolean; error?: string | null } | undefined;
@@ -214,9 +174,11 @@ export function TransferDetailClient({
         res = await transferConfirmShip(transfer.id);
       } else if (actionConfig.kind === "mark_in_transit") {
         res = await transferMarkInTransit(transfer.id);
+      } else if (actionConfig.kind === "confirm_receive") {
+        res = await transferConfirmReceive(transfer.id);
       } else {
         if (!noteOk) {
-          toast.error(transferCopy.shortageNoteMinLength);
+          toast.error(copy.shortageNoteMinLength);
           return;
         }
         const trimmedNote = shortNote.trim();
@@ -225,11 +187,13 @@ export function TransferDetailClient({
           const raw = receiveQty[item.ingredientId];
           const qty = Number(raw ?? item.qty);
           if (!Number.isFinite(qty) || qty < 0) {
-            toast.error(transferCopy.receiveInvalidFor(item.name));
+            toast.error(`Số lượng nhận không hợp lệ cho ${item.name}.`);
             return;
           }
           if (qty > item.qty) {
-            toast.error(transferCopy.receiveExceedsSentFor(item.name));
+            toast.error(
+              `Số lượng nhận không được vượt quá số lượng xuất cho ${item.name}.`,
+            );
             return;
           }
           payload[String(item.ingredientId)] =
@@ -241,11 +205,29 @@ export function TransferDetailClient({
       }
 
       if (!res?.success) {
-        toast.error(res?.error ?? transferCopy.updateFailed);
+        toast.error(res?.error ?? "Không thể cập nhật phiếu điều chuyển.");
         return;
       }
 
       toast.success(actionLabel);
+      router.refresh();
+    });
+  }
+
+  function handleCancel() {
+    if (!isOnline) {
+      toast.error(messages.inventory.stockRequests.journey.offlineMutation);
+      return;
+    }
+    startTransition(async () => {
+      const result = await cancelStockTransfer(transfer.id, cancelReason);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(copy.cancelSuccess);
+      setCancelOpen(false);
+      setCancelReason("");
       router.refresh();
     });
   }
@@ -316,69 +298,6 @@ export function TransferDetailClient({
         ),
     },
   ];
-
-  const actionFooter = (
-    <AppDetailFooter
-      sticky={embedded}
-      leading={
-        <>
-          {transfer.status === "draft" && actionConfig?.kind === "confirm_ship" ? (
-            <Button
-              type="button"
-              variant="destructive"
-              size={embedded ? "touch" : "default"}
-              disabled={isPending}
-              onClick={() => setCancelOpen(true)}
-            >
-              {transferCopy.cancelAction}
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            size={embedded ? "touch" : "default"}
-            className="px-4 font-bold text-muted-foreground"
-          >
-            <IconPrinter className="size-5" />
-            {copy.printSlip}
-          </Button>
-          {transfer.status !== "draft" &&
-          correctionBranches.length > 0 &&
-          transfer.items.length > 0 ? (
-            <DocumentStockCorrectionDialog
-              documentType="transfer"
-              documentId={transfer.id}
-              documentCode={transfer.code}
-              branchOptions={correctionBranches}
-              itemOptions={transfer.items.map((item) => ({
-                ingredientId: item.ingredientId,
-                name: item.name,
-                unit: item.unit,
-              }))}
-            />
-          ) : null}
-        </>
-      }
-      trailing={
-        actionConfig ? (
-          <Button
-            type="button"
-            disabled={
-              isPending ||
-              !actionConfig.enabled ||
-              (isReceiveMode && actionConfig.kind === "receive" && !noteOk)
-            }
-            size={embedded ? "touch" : "default"}
-            className="px-4 font-bold"
-            onClick={handlePrimaryAction}
-          >
-            <IconCircleCheck className="size-5" />
-            {actionLabel}
-          </Button>
-        ) : null
-      }
-    />
-  );
 
   const pageLayout = (
     <div className="flex flex-col gap-4">
@@ -596,7 +515,81 @@ export function TransferDetailClient({
         </div>
       </div>
 
-      {presentation !== "dialog" ? actionFooter : null}
+      {/* Footer Action Bar */}
+      <AppDetailFooter
+        sticky={embedded}
+        leading={
+          <>
+            {transfer.status === "draft" ? (
+              <Button
+                type="button"
+                variant="outline"
+                size={embedded ? "touch" : "default"}
+                disabled={isPending || !isOnline}
+                onClick={() => setCancelOpen(true)}
+              >
+                {copy.actions.cancel}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size={embedded ? "touch" : "default"}
+              className="px-4 font-bold text-muted-foreground"
+            >
+              <IconPrinter className="size-5" />
+              {copy.printSlip}
+            </Button>
+            {transfer.status !== "draft" &&
+            correctionBranches.length > 0 &&
+            transfer.items.length > 0 ? (
+              <DocumentStockCorrectionDialog
+                documentType="transfer"
+                documentId={transfer.id}
+                documentCode={transfer.code}
+                branchOptions={correctionBranches}
+                itemOptions={transfer.items.map((item) => ({
+                  ingredientId: item.ingredientId,
+                  name: item.name,
+                  unit: item.unit,
+                }))}
+              />
+            ) : null}
+          </>
+        }
+        trailing={
+          <Button
+            type="button"
+            disabled={
+              isPending ||
+              !isOnline ||
+              !actionConfig?.enabled ||
+              (isReceiveMode && actionConfig?.kind === "receive" && !noteOk)
+            }
+            size={embedded ? "touch" : "default"}
+            className="px-4 font-bold"
+            onClick={handlePrimaryAction}
+          >
+            <IconCircleCheck className="size-5" />
+            {actionLabel}
+          </Button>
+        }
+      />
+      <ReasonConfirmDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title={copy.cancelTitle}
+        description={copy.cancelDescription}
+        reasonId="stock-transfer-cancel-reason"
+        reason={cancelReason}
+        onReasonChange={setCancelReason}
+        reasonLabel={copy.cancelReasonLabel}
+        reasonPlaceholder={copy.cancelReasonPlaceholder}
+        cancelLabel={copy.cancelBack}
+        confirmLabel={copy.actions.cancel}
+        onConfirm={handleCancel}
+        isPending={isPending || !isOnline}
+      />
     </div>
   );
 
@@ -624,116 +617,65 @@ export function TransferDetailClient({
     </AppPageTabs>
   );
 
-  const statusDialogs = (
-    <ReasonConfirmDialog
-      open={cancelOpen}
-      onOpenChange={(open) => {
-        setCancelOpen(open);
-        if (!open) setCancelReason("");
-      }}
-      title={transferCopy.cancelTitle}
-      description={transferCopy.cancelDescription}
-      reasonId="transfer-cancel-reason"
-      reason={cancelReason}
-      onReasonChange={setCancelReason}
-      reasonLabel={transferCopy.cancelReasonLabel}
-      reasonPlaceholder={transferCopy.cancelReasonPlaceholder}
-      cancelLabel={transferCopy.backAction}
-      confirmLabel={transferCopy.cancelAction}
-      onConfirm={handleCancelTransfer}
-      isPending={isPending}
-    />
-  );
-
   if (embedded) {
     return (
-      <>
-        <div className="flex w-full flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0"
-              render={
-                <Link
-                  href={transferListHref}
-                  aria-label={tRoute("/inventory/transfers")}
-                />
-              }
-            >
-              <IconArrowLeft className="size-4" />
-            </Button>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-mono text-sm font-semibold">
-                {transfer.code}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {copy.routeMeta(
-                  transfer.fromBranch,
-                  transfer.toBranch,
-                  transfer.date,
-                )}
-              </p>
-            </div>
-            <Badge variant={statusBadge.variant} className="shrink-0">
-              {statusBadge.label}
-            </Badge>
+      <div className="flex w-full flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            render={
+              <Link
+                href={transferListHref}
+                aria-label={tRoute("/inventory/transfers")}
+              />
+            }
+          >
+            <IconArrowLeft className="size-4" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-mono text-sm font-semibold">
+              {transfer.code}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {copy.routeMeta(
+                transfer.fromBranch,
+                transfer.toBranch,
+                transfer.date,
+              )}
+            </p>
           </div>
-          {tabs}
+          <Badge variant={statusBadge.variant} className="shrink-0">
+            {statusBadge.label}
+          </Badge>
         </div>
-        {statusDialogs}
-      </>
-    );
-  }
-
-  if (presentation === "dialog") {
-    return (
-      <>
-        <AppDialog
-          open
-          onOpenChange={(open) => {
-            if (!open) void closeDialog();
-          }}
-          variant="document"
-          title={transfer.code}
-          description={`${statusBadge.label} · ${copy.routeMeta(
-            transfer.fromBranch,
-            transfer.toBranch,
-            transfer.date,
-          )}`}
-          footer={actionFooter}
-        >
-          {tabs}
-        </AppDialog>
-        {statusDialogs}
-      </>
+        {tabs}
+      </div>
     );
   }
 
   return (
-    <>
-      <AppPage width="xwide" density="compact">
-        <AppPageHeader
-          title={transfer.code}
-          description={copy.routeMeta(
-            transfer.fromBranch,
-            transfer.toBranch,
-            transfer.date,
-          )}
-          badge={{
-            children: statusBadge.label,
-            variant: statusBadge.variant,
-          }}
-          breadcrumb={
-            <AppBackLink href={transferListHref}>
-              {tRoute("/inventory/transfers")}
-            </AppBackLink>
-          }
-        />
-        {tabs}
-      </AppPage>
-      {statusDialogs}
-    </>
+    <AppPage width="xwide" density="compact">
+      <AppPageHeader
+        title={transfer.code}
+        description={copy.routeMeta(
+          transfer.fromBranch,
+          transfer.toBranch,
+          transfer.date,
+        )}
+        badge={{
+          children: statusBadge.label,
+          variant: statusBadge.variant,
+        }}
+        breadcrumb={
+          <AppBackLink href={transferListHref}>
+            {tRoute("/inventory/transfers")}
+          </AppBackLink>
+        }
+      />
+      {tabs}
+    </AppPage>
   );
 }
 

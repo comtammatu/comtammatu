@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
-import type { StaffRole } from "@comtammatu/shared/auth";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  STOCK_REQUEST_FULFILL_ROLES,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
 import { currentUserHasPermission } from "@/_lib/permissions";
@@ -34,6 +37,14 @@ export async function loadTransferDetailPageData({
   includeCorrections = true,
 }: LoadTransferDetailPageDataOptions): Promise<TransferDetailPageData> {
   const { supabase, claims } = await loadAuthState();
+  if (
+    routeBranchId == null &&
+    !STOCK_REQUEST_FULFILL_ROLES.includes(
+      claims.user_role as (typeof STOCK_REQUEST_FULFILL_ROLES)[number],
+    )
+  ) {
+    notFound();
+  }
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
     queryBranchId,

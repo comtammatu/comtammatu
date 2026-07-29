@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
+import { TransferDetailClient } from "./transfer-detail-client";
 
 export default async function TransferDetailPage({
   params,
@@ -9,13 +10,23 @@ export default async function TransferDetailPage({
 }) {
   const { id } = await params;
   const query = await searchParams;
-  const branchId = Array.isArray(query.branchId)
-    ? query.branchId[0]
-    : query.branchId;
-  const next = new URLSearchParams({
-    transferId: id,
-    mode: "view",
+  const data = await loadTransferDetailPageData({
+    transferId: Number(id),
+    queryBranchId: query.branchId,
   });
-  if (branchId) next.set("branchId", branchId);
-  redirect(`/inventory/transfers?${next}`);
+  const listHref =
+    data.userBranchId == null
+      ? "/inventory/transfers"
+      : `/inventory/transfers?branchId=${data.userBranchId}`;
+
+  return (
+    <TransferDetailClient
+      transfer={data.transfer}
+      userRole={data.userRole}
+      userBranchId={data.userBranchId}
+      correctionBranches={data.correctionBranches}
+      auditLogs={data.auditLogs}
+      listHref={listHref}
+    />
+  );
 }

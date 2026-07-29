@@ -11,11 +11,11 @@ interface NotificationActionTarget {
   targetBranchId: number | null;
 }
 
-/** D093: branch GRN routes retired — send operators to stock requests. */
+/** D093: branch GRN routes retired — send operators to the fulfillment hub. */
 function rewriteRetiredBranchGrnPath(url: string): string {
   const match = /^\/br\/(\d+)\/stock\/grn(?:\/\d+)?$/.exec(url);
   if (!match) return url;
-  return `/br/${match[1]}/stock/requests`;
+  return `/br/${match[1]}/stock/transfer`;
 }
 
 /** Keep notification links inside the authenticated user's product plane. */

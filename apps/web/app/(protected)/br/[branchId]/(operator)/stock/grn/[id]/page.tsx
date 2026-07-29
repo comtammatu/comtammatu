@@ -9,5 +9,5 @@ export default async function BranchGrnDetailRetiredPage({
   const { branchId: raw } = await params;
   const branchId = parseOperatorBranchId(raw);
   if (branchId == null) redirect("/br");
-  redirect(`/br/${branchId}/stock/requests`);
+  redirect(`/br/${branchId}/stock/transfer`);
 }

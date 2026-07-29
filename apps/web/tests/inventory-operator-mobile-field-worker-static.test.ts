@@ -36,15 +36,11 @@ test("branch home queue only renders positive pending work", () => {
   assert.match(branchQueueSource, /<Badge variant="warning">/);
 });
 
-test("operator transfer receive requires shortage notes and accepts transit state", () => {
+test("operator transfer receive requires an inspection step and shortage notes", () => {
   assert.match(receiveClientSource, /isTransferReceiveReady/);
   assert.match(
     transferDetailModelSource,
-    /return status === "in_transit" \|\| status === "confirmed_receive";/,
-  );
-  assert.doesNotMatch(
-    receiveClientSource,
-    /transfer\.status === "confirmed_receive"/,
+    /return status === "confirmed_receive";/,
   );
   assert.match(
     receiveClientSource,
@@ -57,7 +53,7 @@ test("operator transfer receive requires shortage notes and accepts transit stat
   );
   assert.match(receiveClientSource, /receiveCopy\.receiveBackToList/);
   assert.match(receiveClientSource, /const \[notes, setNotes\]/);
-  assert.match(receiveClientSource, /qty < item\.qty && note\.length < 3/);
+  assert.match(receiveClientSource, /qty < item\.qty && note\.length < 5/);
   assert.match(receiveClientSource, /copy\.shortageNoteMinLength/);
   assert.match(receiveClientSource, /note \}/);
   assert.match(receiveClientSource, /<Textarea/);
@@ -66,15 +62,13 @@ test("operator transfer receive requires shortage notes and accepts transit stat
 test("transfer receive server action advances valid state machine steps only", () => {
   assert.match(
     transferActionsSource,
-    /authz\.transfer\.status === "confirmed_ship"/,
-  );
-  assert.match(transferActionsSource, /stock_transfer_mark_in_transit/);
-  assert.match(transferActionsSource, /mark_in_transit_auto_receive_failed/);
-  assert.match(
-    transferActionsSource,
-    /authz\.transfer\.status === "confirmed_ship" \|\|\s*authz\.transfer\.status === "in_transit"/,
+    /export async function transferConfirmReceive/,
   );
   assert.match(transferActionsSource, /stock_transfer_confirm_receive/);
+  assert.match(
+    transferActionsSource,
+    /authz\.transfer\.status !== "confirmed_receive"/,
+  );
 });
 
 test("stocktake list uses styled confirm dialog instead of browser confirm", () => {

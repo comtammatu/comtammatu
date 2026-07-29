@@ -6,16 +6,14 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("Owner transfer create route returns to read-only history", () => {
+test("manual transfer remains a secondary Owner workflow", () => {
   const page = read(
     "apps/web/app/(protected)/inventory/transfers/new/page.tsx",
   );
 
-  assert.match(page, /redirect\("\/inventory\/transfers"\)/);
-  assert.doesNotMatch(
-    page,
-    /CreateTransferForm|DocumentFormFrame|loadTransferCreatePageData/,
-  );
+  assert.match(page, /loadTransferCreatePageData/);
+  assert.match(page, /<CreateTransferForm/);
+  assert.match(page, /href="\/inventory\/transfers"/);
 });
 
 test("Owner waste create propagates touch density through route-local controls", () => {

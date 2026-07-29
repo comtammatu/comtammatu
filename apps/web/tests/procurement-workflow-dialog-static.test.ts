@@ -39,7 +39,7 @@ test("procurement documents use atomic direct-send actions", () => {
   }
 });
 
-test("Owner and Ops keep list-first documents in URL-addressable AppDialogs", () => {
+test("Owner and Ops keep procurement documents in URL-addressable AppDialogs", () => {
   const requestClient = read(
     "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
   );
@@ -50,19 +50,6 @@ test("Owner and Ops keep list-first documents in URL-addressable AppDialogs", ()
   const grnClient = read(
     "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
-  const stockRequestPage = read(
-    "apps/web/app/(protected)/inventory/stock-requests/page.tsx",
-  );
-  const stockRequestClient = read(
-    "apps/web/app/(protected)/inventory/stock-requests/[id]/stock-request-fulfill-client.tsx",
-  );
-  const transferPage = read(
-    "apps/web/app/(protected)/inventory/transfers/page.tsx",
-  );
-  const transferClient = read(
-    "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
-  );
-
   assert.match(requestClient, /searchParams\.get\("requestId"\)/);
   assert.match(requestClient, /router\[method\]\(href, \{ scroll: false \}\)/);
   assert.match(requestClient, /saveRequest\(false\)[\s\S]*saveRequest\(true\)/);
@@ -77,43 +64,12 @@ test("Owner and Ops keep list-first documents in URL-addressable AppDialogs", ()
   assert.match(grnPage, /params\.grnId/);
   assert.match(grnPage, /presentation="dialog"/);
   assert.match(grnClient, /variant="document"/);
-  assert.match(stockRequestPage, /params\.stockRequestId/);
-  assert.match(stockRequestClient, /variant="document"/);
-  assert.match(transferPage, /params\.transferId/);
-  assert.match(transferPage, /presentation="dialog"/);
-  assert.match(transferClient, /variant="document"/);
 });
 
-test("compatibility detail routes redirect and Branch workflows stay fullscreen Sheets", () => {
-  const redirectRoutes = [
+test("GRN compatibility detail route remains list-addressed", () => {
+  const source = read(
     "apps/web/app/(protected)/inventory/grn/[id]/page.tsx",
-    "apps/web/app/(protected)/inventory/stock-requests/[id]/page.tsx",
-    "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/[id]/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/new/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/page.tsx",
-  ];
-  for (const path of redirectRoutes) {
-    const source = read(path);
-    assert.match(source, /redirect\(/, path);
-    assert.doesNotMatch(
-      source,
-      /GRNDetailClient|StockRequestFulfillClient|TransferDetailClient|BranchTransferDetailClient|TransferReceiveClient/,
-      path,
-    );
-  }
-
-  const branchRequests = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/branch-stock-requests-client.tsx",
   );
-  const branchTransfers = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/branch-transfer-sheet.tsx",
-  );
-  assert.match(branchRequests, /<SheetContent[\s\S]*fullscreen/);
-  assert.match(branchRequests, /save\(false\)[\s\S]*save\(true\)/);
-  assert.doesNotMatch(branchRequests, /AppDialog/);
-  assert.match(branchTransfers, /<SheetContent[\s\S]*fullscreen/);
-  assert.match(branchTransfers, /presentation="sheet"/);
-  assert.doesNotMatch(branchTransfers, /AppDialog/);
+  assert.match(source, /redirect\(/);
+  assert.doesNotMatch(source, /GRNDetailClient/);
 });

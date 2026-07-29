@@ -333,11 +333,16 @@ test("branch home owns branch workflow entry tiles", () => {
   );
   assert.match(
     operatorTiles,
-    /hrefTemplate: "\/br\/\{branchId\}\/stock\/receive"/,
-  );
-  assert.match(
-    operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
+  );
+  assert.match(operatorTiles, /label: "Giao nhận hàng"/);
+  assert.doesNotMatch(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/requests"/,
+  );
+  assert.doesNotMatch(
+    operatorTiles,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/receive"/,
   );
   assert.match(
     operatorTiles,
@@ -522,7 +527,10 @@ test("branch settings landing stays a setup-only Branch operator surface", () =>
   );
 
   assert.match(settingsMessages, /landingTitle: "Thiết lập chi nhánh"/);
-  assert.match(settingsMessages, /landingDescription: \(_branchName: string\) => ""/);
+  assert.match(
+    settingsMessages,
+    /landingDescription: \(_branchName: string\) => ""/,
+  );
   assert.match(settingsMessages, /posSetupTitle: "Đăng ký POS"/);
   assert.doesNotMatch(
     settingsMessages,

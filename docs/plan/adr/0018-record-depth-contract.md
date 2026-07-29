@@ -91,7 +91,8 @@ Other locked rulings:
 
 | Record | Depth | Notes |
 | --- | --- | --- |
-| YCM, PO, GRN, YCH, Transfer | D1 Document | Owner/Ops `AppDialog variant="document"`; Branch YCH/Transfer fullscreen `Sheet`; legacy DETAIL routes redirect |
+| YCM, PO, GRN | D1 Document | Owner/Ops `AppDialog variant="document"`; legacy DETAIL routes redirect |
+| YCH, Transfer | D2 workflow | Shared fulfillment hub; canonical Owner/Ops and Branch DETAIL pages |
 | Issue/consumption, stocktake session, production, stock card | D2 | Independent DETAIL Page |
 | Supplier invoice | D1 | Finance `Sheet` + `?invoiceId=` |
 | Count slips / assignments | D1 view | Owner `AppDialog` / Branch `Sheet`; Wave 3 `?slipId=` / `?assignmentId=` |
@@ -103,21 +104,21 @@ Other locked rulings:
 
 ### Owner amendment (2026-07-29)
 
-YCM → PO → GRN and YCH → Transfer are list-first operational chains. Their
-canonical record view keeps the list mounted and stores the open record plus
-mode in URL query parameters. Row open uses push so Browser Back closes the
-overlay; view/edit mode changes and explicit close use replace while retaining
-filters, site, tab, pagination, and scroll context.
+YCM → PO → GRN is a list-first operational chain. Its canonical record view
+keeps the list mounted and stores the open record plus mode in URL query
+parameters. Row open uses push so Browser Back closes the overlay; view/edit
+mode changes and explicit close use replace while retaining filters, site, tab,
+pagination, and scroll context.
 
 `AppDialog variant="document"` provides one fixed document frame: a status and
 relationship header, independently scrolling metadata/lines/evidence body, and
 a fixed footer with destructive/close actions separated from the single
-primary action. Branch YCH and Transfer remain a separate touch plane and use a
-fullscreen bottom `Sheet`.
+primary action.
 
-The old `{basePath}/{id}` routes for these records are bookmark shims only and
-redirect to the canonical query URL. They must never retain a parallel rendered
-view.
+YCH → Transfer is a job-based fulfillment chain. Owner/Ops and Branch retain
+separate route families and chrome, but both use one queue model and canonical
+DETAIL pages for YCH and Transfer. The old `{basePath}/{id}` routes for YCM, PO,
+and GRN remain bookmark shims that redirect to the canonical query URL.
 
 ## Consequences
 
@@ -145,9 +146,10 @@ view.
   carve-outs remain: **C4** zero-action LIST, **C1** PO LIST outside Wave 4
   row-open ratchet, Owner `AppDialog` / Branch `Sheet` dual plane for count
   slips/assignments. No new policy — enforces Waves 1–3.
-- **Wave 5 (list-first documents):** YCM, PO, GRN, YCH, and Transfer use the D1
-  Document tier. The ratchet accepts their canonical query overlays and rejects
-  rendered DETAIL implementations behind compatibility routes.
+- **Wave 5 (list-first documents):** YCM, PO, and GRN use the D1 Document tier.
+  YCH and Transfer use the D2 fulfillment workflow with canonical DETAIL pages.
+  The ratchet accepts each family’s single canonical address and rejects
+  parallel implementations.
 
 ## Self-T3 (four lenses)
 

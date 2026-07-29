@@ -391,8 +391,21 @@ export async function createStockTransfer(
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  if (claims.user_role !== "owner") {
+  if (claims.user_role === "branch_manager") {
     return { success: false, error: BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR };
+  }
+  if (
+    claims.user_role !== "owner" &&
+    claims.user_role !== "central_supply_ops" &&
+    claims.user_role !== "central_kitchen_lead"
+  ) {
+    return { success: false, error: "Không có quyền tạo phiếu chuyển." };
+  }
+  if (claims.user_role !== "owner" && claims.branch_id !== fromBranchId) {
+    return {
+      success: false,
+      error: "Bạn chỉ được tạo phiếu xuất từ điểm vận hành của mình.",
+    };
   }
 
   const isIntraBranch = fromBranchId === toBranchId;
@@ -565,50 +578,6 @@ export async function createStockTransfer(
   return { success: true, data: { id: result.id } };
 }
 
-const cancelTransferSchema = z.object({
-  transferId: z.coerce.number().int().positive(),
-  reason: z.string().trim().min(5).max(500),
-});
-
-export async function cancelStockTransfer(input: {
-  transferId: number;
-  reason: string;
-}): Promise<ActionResult> {
-  const parsed = cancelTransferSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ.",
-    };
-  }
-  const authz = await loadTransferForPermission(
-    parsed.data.transferId,
-    PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
-    "from",
-  );
-  if (!authz.success) return { success: false, error: authz.error };
-
-  const { error } = await authz.supabase.rpc(
-    "cancel_stock_transfer" as never,
-    {
-      p_transfer_id: parsed.data.transferId,
-      p_reason: parsed.data.reason,
-    } as never,
-  );
-  if (error) {
-    console.error("inventory.transfer.cancel_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return {
-      success: false,
-      error: "Chỉ hủy được phiếu chuyển nháp chưa xuất kho.",
-    };
-  }
-  revalidatePath("/inventory/transfers");
-  revalidatePath("/inventory/stock-requests");
-  return { success: true };
-}
-
 export async function transferConfirmShip(
   transferId: number,
 ): Promise<ActionResult> {
@@ -634,26 +603,6 @@ export async function transferConfirmShip(
       success: false,
       error: "Không thể xác nhận xuất (kiểm tra tồn kho gửi).",
     };
-  }
-
-  // Inter-site transfers move straight to transit after ship confirmation.
-  if (authz.transfer.from_branch_id !== authz.transfer.to_branch_id) {
-    const { error: transitError } = await authz.supabase.rpc(
-      "stock_transfer_mark_in_transit",
-      {
-        p_transfer_id: id.data,
-      },
-    );
-    if (transitError) {
-      console.error("inventory.transfer.mark_in_transit_auto_failed", {
-        error: transitError,
-      });
-      return {
-        success: false,
-        error:
-          "Đã xác nhận xuất kho nhưng không thể tự động chuyển sang đang vận chuyển.",
-      };
-    }
   }
 
   revalidatePath("/inventory/transfers");
@@ -741,46 +690,11 @@ export async function transferReceive(
   );
   if (!authz.success) return { success: false, error: authz.error };
 
-  if (authz.transfer.status === "confirmed_ship") {
-    const { error: transitError } = await authz.supabase.rpc(
-      "stock_transfer_mark_in_transit",
-      {
-        p_transfer_id: id.data,
-      },
-    );
-    if (transitError) {
-      console.error("inventory.transfer.mark_in_transit_auto_receive_failed", {
-        error:
-          transitError instanceof Error
-            ? transitError.message
-            : String(transitError),
-      });
-      return {
-        success: false,
-        error: "Phiếu đã xuất nhưng chưa chuyển sang đang vận chuyển.",
-      };
-    }
-  }
-
-  if (
-    authz.transfer.status === "confirmed_ship" ||
-    authz.transfer.status === "in_transit"
-  ) {
-    const { error: confirmReceiveError } = await authz.supabase.rpc(
-      "stock_transfer_confirm_receive",
-      {
-        p_transfer_id: id.data,
-      },
-    );
-    if (confirmReceiveError) {
-      console.error("inventory.transfer.confirm_receive_auto_failed", {
-        error:
-          confirmReceiveError instanceof Error
-            ? confirmReceiveError.message
-            : String(confirmReceiveError),
-      });
-      return { success: false, error: "Không thể bắt đầu kiểm nhận hàng." };
-    }
+  if (authz.transfer.status !== "confirmed_receive") {
+    return {
+      success: false,
+      error: "Hãy bắt đầu kiểm nhận trước khi xác nhận số lượng.",
+    };
   }
 
   const { error } = await authz.supabase.rpc("stock_transfer_receive", {
@@ -795,6 +709,43 @@ export async function transferReceive(
   }
   revalidatePath("/inventory/transfers");
   revalidatePath(`/inventory/transfers/${id.data}`);
+  return { success: true };
+}
+
+export async function cancelStockTransfer(
+  transferId: number,
+  reason: string,
+): Promise<ActionResult> {
+  const parsed = z
+    .object({
+      transferId: z.coerce.number().int().positive(),
+      reason: z.string().trim().min(5).max(500),
+    })
+    .safeParse({ transferId, reason });
+  if (!parsed.success) {
+    return { success: false, error: "Vui lòng nhập lý do ít nhất 5 ký tự." };
+  }
+  const authz = await loadTransferForPermission(
+    parsed.data.transferId,
+    PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
+    "from",
+  );
+  if (!authz.success) return { success: false, error: authz.error };
+  const { error } = await authz.supabase.rpc(
+    "cancel_stock_transfer" as never,
+    {
+      p_transfer_id: parsed.data.transferId,
+      p_reason: parsed.data.reason,
+    } as never,
+  );
+  if (error) {
+    return {
+      success: false,
+      error: "Chỉ có thể hủy phiếu điều chuyển đang ở trạng thái nháp.",
+    };
+  }
+  revalidatePath("/inventory/transfers");
+  revalidatePath(`/inventory/transfers/${parsed.data.transferId}`);
   return { success: true };
 }
 

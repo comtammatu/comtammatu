@@ -1,22 +1,47 @@
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
+import { resolveBranchContext } from "@/_lib/branch-context";
+import { StockRequestDetailView } from "@/components/stock-request-detail-view";
+import { loadStockRequestDetail } from "@lib/inventory/stock-request-detail-data";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
+import { StockRequestBranchActions } from "./stock-request-branch-actions";
 
 export default async function BranchStockRequestDetailPage({
   params,
 }: {
   params: Promise<{ branchId: string; id: string }>;
 }) {
-  const { branchId: rawBranchId, id } = await params;
+  const { branchId: rawBranchId, id: rawId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
-  const requestId = Number(id);
-  if (
-    branchId == null ||
-    !Number.isInteger(requestId) ||
-    requestId <= 0
-  ) {
-    redirect("/br");
+  const requestId = Number(rawId);
+  if (branchId == null || !Number.isInteger(requestId) || requestId <= 0) {
+    notFound();
   }
-  redirect(
-    `/br/${branchId}/stock/requests?requestId=${requestId}&mode=view`,
+
+  const { supabase, claims } = await loadAuthState();
+  if (!(await resolveBranchContext(supabase, claims, branchId))) notFound();
+  const data = await loadStockRequestDetail({
+    supabase,
+    tenantId: claims.tenant_id,
+    requestId,
+    branchId,
+  });
+  if (!data) notFound();
+  const editable =
+    ["draft", "submitted"].includes(data.status) &&
+    data.items.every((item) => item.status === "pending");
+
+  return (
+    <StockRequestDetailView
+      data={data}
+      mode="branch"
+      actions={
+        <StockRequestBranchActions
+          branchId={branchId}
+          requestId={requestId}
+          editable={editable}
+        />
+      }
+    />
   );
 }
