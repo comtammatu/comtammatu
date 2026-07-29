@@ -36,8 +36,8 @@ Browser POS ─ Server Action ─▶ Postgres RPC ─▶ print_jobs row
 cp .env.example .env
 # Fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AGENT_TENANT_ID, AGENT_BRANCH_ID
 # Set AGENT_ID and PRINT_AGENT_PRESENCE_TOKEN if WEB_BASE_URL is enabled.
-pnpm install
-pnpm dev
+corepack pnpm install
+corepack pnpm --filter @comtammatu/print-agent dev
 ```
 
 The agent also reads `.env.local` if present. When both `.env` and `.env.local`
@@ -47,7 +47,7 @@ and do not ship `.env.local`.
 ## Build
 
 ```bash
-pnpm build          # esbuild → dist/index.js (single self-contained file)
+corepack pnpm --filter @comtammatu/print-agent build  # esbuild → dist/index.js (single self-contained file)
 ```
 
 `dist/index.js` bundles all dependencies (including `@comtammatu/print-render`
@@ -58,7 +58,7 @@ agent always runs through Node.
 ## Run
 
 ```bash
-pnpm start                 # node dist/index.js
+corepack pnpm --filter @comtammatu/print-agent start  # node dist/index.js
 ```
 
 Or run as a long-lived service via your platform's process manager
@@ -104,11 +104,11 @@ Uninstall:
 Provision or rotate the token from the repo CLI:
 
 ```bash
-pnpm --filter @comtammatu/print-agent presence:provision -- create \
+corepack pnpm --filter @comtammatu/print-agent presence:provision -- create \
   --tenant-id 1 \
   --branch-id 1 \
   --agent-id pos-branch-1 \
-  --confirm-project-ref iexwsuaqqenyjiskawoj
+  --confirm-project-ref enloyfnuerqgaqderbwb
 ```
 
 The command generates a raw token, stores only its SHA-256 hash for the exact
@@ -117,7 +117,7 @@ Use `rotate` to intentionally replace an existing token, `revoke` to disable it,
 and `status` to inspect token/IP state:
 
 ```bash
-pnpm --filter @comtammatu/print-agent presence:provision -- status \
+corepack pnpm --filter @comtammatu/print-agent presence:provision -- status \
   --tenant-id 1 --branch-id 1 --agent-id pos-branch-1
 ```
 
@@ -149,14 +149,14 @@ Layout constraints (576-dot canvas, Roboto Mono @ 20px):
 Smoke-test against a real printer:
 
 ```bash
-PRINTER_HOST=192.168.1.240 pnpm test:print                      # all 5 ticket kinds
-PRINTER_HOST=192.168.1.241 TYPE=kitchen_ticket pnpm test:print  # one kind
+PRINTER_HOST=192.168.1.240 corepack pnpm --filter @comtammatu/print-agent test:print                      # all 5 ticket kinds
+PRINTER_HOST=192.168.1.241 TYPE=kitchen_ticket corepack pnpm --filter @comtammatu/print-agent test:print  # one kind
 ```
 
 Render-only check (no printer needed):
 
 ```bash
-pnpm --filter @comtammatu/print-render test
+corepack pnpm --filter @comtammatu/print-render test
 ```
 
 ## Runtime loops
@@ -174,7 +174,7 @@ self-contained — build it once at the repo, then the device only needs Node:
 
 ```bash
 # At the repo (any machine):
-pnpm --filter @comtammatu/print-agent build
+corepack pnpm --filter @comtammatu/print-agent build
 bash apps/print-agent/scripts/build-bundle.sh
 
 # Termux (Android): install Node 24, copy + unzip the bundle, then:

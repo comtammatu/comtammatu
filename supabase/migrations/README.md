@@ -6,13 +6,13 @@ schemas. `private` is emitted first so public triggers/policies that reference
 `private.*` resolve, and `check_function_bodies` is disabled at the top so the
 private SQL helpers that read public tables create before those tables exist. It
 replays clean from an empty database — the CI `baseline-replay` job
-(`pnpm db:baseline:local-check`) gates this on every change. The historical
+(`corepack pnpm db:baseline:local-check`) gates this on every change. The historical
 incremental chains could not replay from empty (squash-vs-history drop ordering
 plus migrations that self-assert production-only state), which is why this single
 squashed baseline exists.
 
 `../migration-lineage.json` records the baseline file, version, and hash.
-`pnpm lint:migration-lineage` enforces one intact baseline, unique migration
+`corepack pnpm lint:migration-lineage` enforces one intact baseline, unique migration
 versions, and forward versions newer than the baseline. Preview authorization is
 separate: the database guard verifies the requested branch's Production parent
 for every action.
@@ -96,4 +96,4 @@ Full procedure: `docs/runbooks/db/re-baseline.md`. In short — owner dumps
 - classify required bootstrap DML into seed/fold instead of losing it in a schema
   dump,
 - update `../migration-lineage.json`,
-- prove `pnpm db:baseline:local-check` exits 0 and `pnpm db:types` shows no diff.
+- prove `corepack pnpm db:baseline:local-check` exits 0 and `corepack pnpm db:types` shows no diff.

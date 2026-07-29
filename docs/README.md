@@ -20,6 +20,7 @@
 - Onboarding kỹ thuật: [CODEBASE_MAP.md](CODEBASE_MAP.md)
 - Ngôn ngữ chuẩn + thuật ngữ dự án: [ref/glossary.md](ref/glossary.md)
 - Skill/plugin/tool routing cho agent: [agent/rules/skills.md](agent/rules/skills.md)
+- Fresh checkout skill bundle: `corepack pnpm agent:skills`
 - Kiến trúc hệ thống: [architecture/README.md](architecture/README.md)
 - Má Tư visual contract and authority map: [spec/design-system.md](spec/design-system.md)
 - UI implementation and Base UI migration guide: [modules/ui.md](modules/ui.md)
@@ -30,8 +31,9 @@
 - Active planning: `tasks/todo.md`, `docs/plan/decisions.md`,
   `docs/plan/adr/*`
 - Readiness checklist và smoke gates: [runbooks/README.md](runbooks/README.md)
+  (gồm inventory, POS/KDS, finance, và `runbooks/db/*`)
 - Worklog policy: [worklog/README.md](worklog/README.md)
-- Xuất tri thức agent dạng OKF tạm thời: `pnpm docs:okf` -> `.tmp/okf/`
+- Xuất tri thức agent dạng OKF tạm thời: `corepack pnpm docs:okf` -> `.tmp/okf/`
   (generated, không phải SSOT)
 
 ## Inventory nhanh
@@ -50,5 +52,5 @@
 - `spec/design-system.md`: Má Tư visual contract; primitive behavior,
   workflow composition và regression proof có owner riêng trong authority map
 - `plan/`: active decisions and ADRs
-- `runbooks/`: operational verification
+- `runbooks/`: operational verification (gồm `db/` cho Preview branch và re-baseline)
 - `worklog/`: policy only; use PR/task notes for transient implementation artifacts

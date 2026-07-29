@@ -56,10 +56,10 @@ supabase/
   migrations/       # SQL migrations (production: file → PR → merge → owner apply)
 docs/
   plan/             # Decisions log and active ADRs
-  modules/          # Per-module reference (auth, database, web-app, ui, security, infrastructure)
+  modules/          # Per-module reference (auth, database, web-app, ui, security, infrastructure, finance, feedback)
   spec/             # Architecture, database schema, design system
   ref/              # Business domain, inventory SOP, e-invoice, PIT, glossary
-  runbooks/         # Pre-release QA, operator journeys, smoke gates
+  runbooks/         # Pre-release QA, operator journeys, smoke gates, db Preview/re-baseline
   worklog/          # Policy only; no historical worklog archive
 tasks/              # regressions.md, lessons.md, todo.md
 scripts/            # SQL seeds, lint helpers
@@ -98,23 +98,25 @@ corepack pnpm dev                      # Turbopack dev server (http://localhost:
 ## Commands
 
 ```bash
-corepack pnpm dev        # Turbopack dev (all apps)
-corepack pnpm dev:web    # Web only
-corepack pnpm dev:print  # Print agent only
-corepack pnpm build      # Production build (next build + Serwist service worker)
-corepack pnpm typecheck  # TS check across packages
-corepack pnpm lint       # ESLint + repo guards
-corepack pnpm test       # Test suites (turbo test)
-corepack pnpm verify     # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
-corepack pnpm format     # Prettier
-corepack pnpm db:types   # Regenerate Supabase types after a migration
+corepack pnpm agent:skills # Verify required tracked agent skill bundle (run on fresh checkout)
+corepack pnpm dev          # Turbopack dev (all apps)
+corepack pnpm dev:web      # Web only
+corepack pnpm dev:print    # Print agent only
+corepack pnpm build        # Production build (next build + Serwist service worker)
+corepack pnpm typecheck    # TS check across packages
+corepack pnpm lint         # Repo guards (copy, UI, storage, rules, skills, …) + ESLint
+corepack pnpm test         # Test suites (turbo test)
+corepack pnpm verify       # Full gate: deps:security → deps:audit → deps:boundaries → typecheck → lint → build → test
+corepack pnpm format       # Prettier
+corepack pnpm db:types     # Regenerate Supabase types after a migration is applied to the type source
 ```
 
 End-to-end testing (Playwright):
 
 ```bash
 corepack pnpm --filter @comtammatu/web test:e2e
-corepack pnpm --filter @comtammatu/web guides:capture # Capture POS flow screenshots
+corepack pnpm --filter @comtammatu/web guides:capture      # Capture POS flow screenshots → docs/user-guides/
+corepack pnpm --filter @comtammatu/web guides:capture:list # List guide scenarios
 ```
 
 ## Documentation

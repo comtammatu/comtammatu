@@ -1,6 +1,6 @@
 # User-guide capture (Playwright project `guides`)
 
-Sinh ảnh mockup iPhone cho [docs/user-guides/](../../../../docs/user-guides/) bằng cách:
+Sinh ảnh mockup iPhone cho `docs/user-guides/` (thư mục output; tạo khi capture chạy) bằng cách:
 
 1. Login bằng cashier test (reuse [auth.setup.ts](../auth.setup.ts)).
 2. Đặt DB của test branch về state cần thiết qua service-role (`_lib/fixtures.ts`).
@@ -10,17 +10,17 @@ Sinh ảnh mockup iPhone cho [docs/user-guides/](../../../../docs/user-guides/) 
 
 ## Chạy
 
-Yêu cầu: dev server đang chạy (`pnpm dev`) và `.env.test.local` có credentials.
+Yêu cầu: dev server đang chạy (`corepack pnpm dev`) và `.env.test.local` có credentials.
 
 ```bash
 # Tất cả flow
-pnpm --filter @comtammatu/web guides:capture
+corepack pnpm --filter @comtammatu/web guides:capture
 
 # Một flow cụ thể
-pnpm --filter @comtammatu/web guides:capture --grep="POS-01"
+corepack pnpm --filter @comtammatu/web guides:capture -- --grep="POS-01"
 
 # Liệt kê scenario
-pnpm --filter @comtammatu/web guides:capture --list
+corepack pnpm --filter @comtammatu/web guides:capture:list
 ```
 
 ## Cấu trúc
@@ -34,12 +34,19 @@ e2e/guides/
 │   ├── fixtures.ts     — DB state setup helpers (service-role)
 │   └── capture.ts      — captureScenario(test) utility
 ├── pos-01-open-session.guide.ts
+├── pos-02-select-context.guide.ts
+├── pos-03-create-order.guide.ts
+├── pos-04-append-items.guide.ts
+├── pos-05-payment.guide.ts
+├── pos-07-modify-order.guide.ts
+├── pos-08-exceptions.guide.ts
+├── pos-09-close-session.guide.ts
 └── README.md
 ```
 
 ## Thêm flow mới
 
-Copy `pos-01-open-session.guide.ts` thành `pos-XX-{slug}.guide.ts`, thay scenario list. File phải `.guide.ts` (regex match `/guides\/.*\.guide\.ts/`).
+Copy một file `pos-XX-*.guide.ts` thành `pos-XX-{slug}.guide.ts`, thay scenario list. File phải `.guide.ts` (regex match `/guides\/.*\.guide\.ts/`).
 
 ## Lưu ý
 

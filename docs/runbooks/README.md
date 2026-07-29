@@ -20,6 +20,11 @@ Checklist vận hành và readiness gates.
 
 - [finance-financial-truth-rollout.md](finance-financial-truth-rollout.md): rollout DB → Preview → Production cho SePay ledger, tiền theo ca POS và Daily Close
 
+## Database
+
+- [db/preview-branch-setup.md](db/preview-branch-setup.md): Preview Supabase branch setup and guard checks
+- [db/re-baseline.md](db/re-baseline.md): owner procedure to regenerate the squashed baseline
+
 ## Supabase / Schema / Migration
 
 - [../spec/database-schema.md](../spec/database-schema.md): source ladder, migration status vocabulary, and baseline-first layout
