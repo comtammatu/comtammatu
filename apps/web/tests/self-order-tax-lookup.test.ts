@@ -107,3 +107,43 @@ test("public invoice QR flow wires fail-safe lookup with stale-request protectio
   assert.match(invoiceBuyerForm, /role="status"/);
   assert.match(invoiceBuyerForm, /requestRef\.current\?\.abort\(\)/);
 });
+
+test("supplier list opens ingredients and reuses the guarded MST lookup", () => {
+  const suppliersClient = readWeb(
+    "app/(protected)/inventory/suppliers/suppliers-client.tsx",
+  );
+  const supplierDialog = readWeb(
+    "app/(protected)/inventory/suppliers/supplier-dialog.tsx",
+  );
+  const supplierItemsPage = readWeb(
+    "app/(protected)/inventory/suppliers/[id]/items/page.tsx",
+  );
+  const supplierItemsActions = readWeb(
+    "app/(protected)/inventory/suppliers/[id]/items/actions.ts",
+  );
+
+  assert.match(
+    suppliersClient,
+    /onRowClick=\{canReadItems \? openItems : undefined\}/,
+  );
+  assert.match(
+    suppliersClient,
+    /onOpen=\{canReadItems \? openItems : undefined\}/,
+  );
+  assert.match(
+    suppliersClient,
+    /router\.push\(`\/inventory\/suppliers\/\$\{row\.id\}\/items`\)/,
+  );
+  assert.match(supplierDialog, /lookupBusinessTaxCode\(normalized\)/);
+  assert.match(supplierDialog, /form\.setValue\("name", business\.name/);
+  assert.match(supplierDialog, /form\.setValue\("address", business\.address/);
+  assert.match(supplierDialog, /role="status"/);
+  assert.match(
+    supplierItemsPage,
+    /PERMISSION_KEYS\.PROCUREMENT_PRICE_LIST_READ/,
+  );
+  assert.match(
+    supplierItemsActions,
+    /permission: PERMISSION_KEYS\.PROCUREMENT_PRICE_LIST_WRITE/,
+  );
+});

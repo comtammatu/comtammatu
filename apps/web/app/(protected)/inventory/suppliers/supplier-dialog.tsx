@@ -1,9 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { FormDialog, TextField } from "@/components/form";
 import { createSupplier, updateSupplier } from "../procurement-actions";
+import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
+import {
+  isBusinessTaxCode,
+  lookupBusinessTaxCode,
+} from "@lib/hddt/business-tax-lookup";
+import { messages } from "@lib/messages";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export interface SupplierRow {
@@ -40,6 +48,100 @@ const supplierSchema = z.object({
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
+type TaxLookupStatus =
+  "idle" | "loading" | "found" | "not-found" | "unavailable" | "invalid";
+
+const taxLookupCopy = messages.inventory.suppliers.taxLookup;
+
+function SupplierTaxCodeField({
+  form,
+}: {
+  form: UseFormReturn<SupplierFormValues>;
+}) {
+  const taxCode = form.watch("tax_code") ?? "";
+  const [status, setStatus] = useState<TaxLookupStatus>("idle");
+
+  useEffect(() => setStatus("idle"), [taxCode]);
+
+  async function handleLookup() {
+    const normalized = taxCode.trim();
+    if (!isBusinessTaxCode(normalized)) {
+      setStatus("invalid");
+      return;
+    }
+
+    setStatus("loading");
+    try {
+      const business = await lookupBusinessTaxCode(normalized);
+      if ((form.getValues("tax_code") ?? "").trim() !== normalized) return;
+      if (!business) {
+        setStatus("not-found");
+        return;
+      }
+      form.setValue("name", business.name, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      form.setValue("address", business.address, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      setStatus("found");
+    } catch {
+      if ((form.getValues("tax_code") ?? "").trim() === normalized) {
+        setStatus("unavailable");
+      }
+    }
+  }
+
+  const message =
+    status === "loading"
+      ? taxLookupCopy.loading
+      : status === "found"
+        ? taxLookupCopy.found
+        : status === "not-found"
+          ? taxLookupCopy.notFound
+          : status === "unavailable"
+            ? taxLookupCopy.unavailable
+            : status === "invalid"
+              ? taxLookupCopy.invalid
+              : null;
+
+  return (
+    <div className="grid gap-2">
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+        <TextField
+          control={form.control}
+          name="tax_code"
+          label="Mã số thuế"
+          inputMode="numeric"
+          maxLength={14}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="touch"
+          disabled={!taxCode.trim() || status === "loading"}
+          onClick={() => void handleLookup()}
+        >
+          {status === "loading" ? <Spinner /> : null}
+          {taxLookupCopy.action}
+        </Button>
+      </div>
+      {message ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className="text-xs text-muted-foreground"
+        >
+          {message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 function toFormValues(supplier: SupplierRow | null): SupplierFormValues {
   return {
@@ -108,11 +210,7 @@ export function SupplierDialog({
             required
             autoFocus
           />
-          <TextField
-            control={form.control}
-            name="tax_code"
-            label="Mã số thuế"
-          />
+          <SupplierTaxCodeField form={form} />
           <TextField control={form.control} name="phone" label="Điện thoại" />
           <TextField control={form.control} name="address" label="Địa chỉ" />
         </>

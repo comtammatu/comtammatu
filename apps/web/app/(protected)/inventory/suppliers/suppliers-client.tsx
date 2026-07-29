@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   PackageSearch as IconPackageSearch,
   Pencil as IconPencil,
@@ -89,14 +90,14 @@ function SupplierMobileCard({
   supplier: SupplierRow;
   index: number;
   actions: RowActionItem[];
-  onOpen: (row: SupplierRow) => void;
+  onOpen?: (row: SupplierRow) => void;
 }) {
   return (
     <InteractiveCard
       minHeight="mobile"
       padding="default"
       className="flex-col items-stretch gap-2"
-      onClick={() => onOpen(supplier)}
+      onClick={onOpen ? () => onOpen(supplier) : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">
@@ -141,11 +142,12 @@ function SupplierMobileCard({
 
 export function SuppliersClient({
   initial,
-  canManageItems,
+  canReadItems,
 }: {
   initial: SupplierRow[];
-  canManageItems: boolean;
+  canReadItems: boolean;
 }) {
+  const router = useRouter();
   const controlSize = useFormControlSize();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
@@ -176,6 +178,10 @@ export function SuppliersClient({
     setDialogOpen(true);
   }
 
+  function openItems(row: SupplierRow) {
+    router.push(`/inventory/suppliers/${row.id}/items`);
+  }
+
   function handleDelete(id: number) {
     startTransition(async () => {
       const res = await deleteSupplier(id);
@@ -202,7 +208,7 @@ export function SuppliersClient({
   }
 
   const getSupplierRowActions = (s: SupplierRow): RowActionItem[] => [
-    ...(canManageItems
+    ...(canReadItems
       ? [
           {
             key: "items",
@@ -245,7 +251,14 @@ export function SuppliersClient({
       key: "ingredients",
       header: "Nguyên liệu",
       render: (s) => (
-        <span className="tabular-nums">{s.ingredient_count ?? 0}</span>
+        <span
+          className={cn(
+            "font-medium tabular-nums",
+            canReadItems && "text-primary",
+          )}
+        >
+          {s.ingredient_count ?? 0}
+        </span>
       ),
     },
     {
@@ -352,7 +365,7 @@ export function SuppliersClient({
             data={filtered}
             pageSize={25}
             getRowKey={(s) => s.id}
-            onRowClick={openEdit}
+            onRowClick={canReadItems ? openItems : undefined}
             renderRowContextMenu={(s) => (
               <RowActionsContextMenuItems items={getSupplierRowActions(s)} />
             )}
@@ -372,7 +385,7 @@ export function SuppliersClient({
                 supplier={s}
                 index={i}
                 actions={getSupplierRowActions(s)}
-                onOpen={openEdit}
+                onOpen={canReadItems ? openItems : undefined}
               />
             )}
           />

@@ -1654,11 +1654,19 @@ export const inventory = {
     emptySearchDescription: "Thử tên, mã số thuế hoặc số điện thoại khác.",
     emptyInitialDescription: 'Nhấn "Thêm nhà cung cấp" để bắt đầu.',
     loadFailed: "Không thể tải nhà cung cấp.",
+    taxLookup: {
+      action: "Tra cứu MST",
+      loading: "Đang tra cứu thông tin doanh nghiệp…",
+      found: "Đã điền tên và địa chỉ theo mã số thuế.",
+      notFound: "Không tìm thấy mã số thuế. Bạn vẫn có thể nhập thủ công.",
+      unavailable: "Chưa thể tra cứu. Bạn vẫn có thể nhập thủ công.",
+      invalid: "Mã số thuế gồm 10 số hoặc 13 số theo dạng 0123456789-001.",
+    },
     items: {
       eyebrow: "Nguyên liệu theo NCC",
       description:
         "Danh sách nguyên liệu được phép dùng khi lập đơn mua và phiếu nhập.",
-      openAria: (name: string) => `Quản lý nguyên liệu của ${name}`,
+      openAria: (name: string) => `Xem nguyên liệu của ${name}`,
       addAction: "Gán nguyên liệu",
       addTitle: "Gán nguyên liệu cho nhà cung cấp",
       addSubmit: "Gán các nguyên liệu",
