@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  canSubscribeBranchOpsTopic,
   extractClaimsFromAccessToken,
   resolvePostLoginRedirect,
   getSafeInternalReturnTo,
@@ -97,6 +98,27 @@ test("extractClaimsFromAccessToken accepts only canonical, consistent claims", (
       null,
     );
   }
+});
+
+test("canSubscribeBranchOpsTopic mirrors owner vs assigned-branch Realtime scope", () => {
+  assert.equal(canSubscribeBranchOpsTopic(makeClaims("owner", null), 1), true);
+  assert.equal(canSubscribeBranchOpsTopic(makeClaims("owner", 2), 9), true);
+  assert.equal(
+    canSubscribeBranchOpsTopic(makeClaims("branch_manager", 3), 3),
+    true,
+  );
+  assert.equal(
+    canSubscribeBranchOpsTopic(makeClaims("branch_manager", 3), 1),
+    false,
+  );
+  assert.equal(
+    canSubscribeBranchOpsTopic(makeClaims("accountant", null), 1),
+    false,
+  );
+  assert.equal(
+    canSubscribeBranchOpsTopic(makeClaims("central_supply_ops", 5), 1),
+    false,
+  );
 });
 
 test("getDefaultRedirect → owner enters the L0 root", () => {

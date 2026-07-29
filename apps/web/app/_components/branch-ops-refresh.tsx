@@ -20,8 +20,8 @@ export function BranchOpsRefresh({
     deps: [branchId],
     enabled,
     pollMs: false,
-    setupChannel: (supabase, scheduleRefresh) =>
-      createBranchOpsChannel(supabase, branchId, scheduleRefresh),
+    setupChannel: (supabase, scheduleRefresh, token) =>
+      createBranchOpsChannel(supabase, branchId, scheduleRefresh, token),
   });
 
   return null;

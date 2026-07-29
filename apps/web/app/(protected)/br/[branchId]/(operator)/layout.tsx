@@ -9,7 +9,7 @@ import {
   LayoutDashboard as IconLayoutDashboard,
   User as IconUser,
 } from "lucide-react";
-import { canAccess, MODULE_ACL, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
+import { canAccess, MODULE_ACL, ROLE_LABEL_VI, canSubscribeBranchOpsTopic } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -81,10 +81,12 @@ export default async function OperatorLayout({
 
   return (
     <PwaRuntimeProvider>
-      <BranchOpsRefresh
-        branchId={context.branchId}
-        disabledPathPrefixes={[`/br/${context.branchId}/shift/leave-approvals`]}
-      />
+      {canSubscribeBranchOpsTopic(claims, context.branchId) ? (
+        <BranchOpsRefresh
+          branchId={context.branchId}
+          disabledPathPrefixes={[`/br/${context.branchId}/shift/leave-approvals`]}
+        />
+      ) : null}
       <div className="chrome-safe-pt flex h-dvh w-full flex-col overflow-hidden touch-manipulation bg-muted/30">
         <AppHeader
           title={

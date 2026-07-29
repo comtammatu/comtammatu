@@ -10,7 +10,7 @@ import {
   LogOut as IconLogout,
   UserCircle as IconUserCircle,
 } from "lucide-react";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, canSubscribeBranchOpsTopic, type StaffRole } from "@comtammatu/shared/auth";
 import { formatPercent } from "@comtammatu/shared/format";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
@@ -1050,7 +1050,9 @@ export async function StaffWorkdayPageContent({
       description={copy.description}
       hideHeaderOnMobile
     >
-      {enableBranchOpsRefresh && state.branchId !== null ? (
+      {enableBranchOpsRefresh &&
+      state.branchId !== null &&
+      canSubscribeBranchOpsTopic(claims, state.branchId) ? (
         <BranchOpsRefresh branchId={state.branchId} />
       ) : null}
       {pageContent}

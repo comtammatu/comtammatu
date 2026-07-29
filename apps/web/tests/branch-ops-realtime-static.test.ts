@@ -122,6 +122,10 @@ test("client subscribes to the branch:{id}:ops private broadcast, event 'ops'", 
 test("operator layout owns the branch ops subscriber without child duplicates", () => {
   assert.match(
     operatorLayout,
+    /canSubscribeBranchOpsTopic\(claims,\s*context\.branchId\)/,
+  );
+  assert.match(
+    operatorLayout,
     /<BranchOpsRefresh[\s\S]*branchId=\{context\.branchId\}/,
   );
   for (const page of operatorChildPages) {
@@ -130,7 +134,7 @@ test("operator layout owns the branch ops subscriber without child duplicates", 
   assert.match(staffRuntimeHome, /enableBranchOpsRefresh\s*=\s*true/);
   assert.match(
     staffRuntimeHome,
-    /enableBranchOpsRefresh && state\.branchId !== null/,
+    /enableBranchOpsRefresh &&[\s\S]*canSubscribeBranchOpsTopic\(claims,\s*state\.branchId\)/,
   );
   for (const page of operatorChildPages) {
     if (page.includes("EmployeeHomePageContent")) {
@@ -138,6 +142,25 @@ test("operator layout owns the branch ops subscriber without child duplicates", 
     }
   }
   assert.doesNotMatch(branchTodayStatus, /<BranchOpsRefresh/);
+});
+
+test("branch ops client gates subscribe on JWT mirror of can_read_branch_ops", () => {
+  assert.match(branchOpsChannel, /canSubscribeBranchOpsTopic/);
+  assert.match(branchOpsChannel, /extractClaimsFromAccessToken/);
+  assert.match(
+    branchOpsChannel,
+    /createBranchOpsChannel\([\s\S]*token:\s*string \| null/,
+  );
+  assert.match(posMenuClient, /canSubscribeBranchOpsTopic/);
+  assert.match(branchOpsRefresh, /createBranchOpsChannel\([\s\S]*token\)/);
+});
+
+test("useRealtimeChannel skips setup when access token is null", () => {
+  const realtimeChannel = readFileSync(
+    new URL("../app/_hooks/use-realtime-channel.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(realtimeChannel, /if \(token === null\) return;/);
 });
 
 test("operator leave approvals owns its realtime subscriber without layout duplication", () => {
@@ -206,5 +229,16 @@ test("stock_levels changes broadcast branch ops for live menu stock capacity", (
   assert.match(
     baseline,
     /CREATE TRIGGER trg_broadcast_branch_ops AFTER INSERT OR DELETE OR UPDATE ON public\.stock_levels FOR EACH ROW EXECUTE FUNCTION public\.broadcast_branch_ops\(\)/,
+  );
+});
+
+test("inventory layout mounts BranchOpsRefresh only when JWT can subscribe", () => {
+  const inventoryLayout = readFileSync(
+    new URL("../app/(protected)/inventory/layout.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    inventoryLayout,
+    /canSubscribeBranchOpsTopic\(claims,\s*scope\.selectedBranchId\)/,
   );
 });

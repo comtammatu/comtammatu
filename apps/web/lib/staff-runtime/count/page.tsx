@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { UserCircle as IconUserCircle } from "lucide-react";
+import { canSubscribeBranchOpsTopic, type JwtClaims } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -149,6 +150,7 @@ async function buildEmployeeCountSurface({
 }: EmployeeCountSurfaceProps): Promise<{
   branchId: number | null;
   branchName: string | null;
+  claims: JwtClaims | null;
   content: ReactNode;
 }> {
   const ctx = await getEmployeeContext();
@@ -156,6 +158,7 @@ async function buildEmployeeCountSurface({
     return {
       branchId: null,
       branchName: null,
+      claims: null,
       content: renderCountUnavailableState({ plane, profileHref }),
     };
   }
@@ -171,6 +174,7 @@ async function buildEmployeeCountSurface({
     return {
       branchId: null,
       branchName: null,
+      claims,
       content: (
         <CountUnavailableState
           plane={plane}
@@ -231,6 +235,7 @@ async function buildEmployeeCountSurface({
     return {
       branchId,
       branchName,
+      claims,
       content: (
         <CountUnavailableState
           plane={plane}
@@ -379,6 +384,7 @@ async function buildEmployeeCountSurface({
   return {
     branchId,
     branchName,
+    claims,
     content: (
       <CountSlipClient
         branchId={branchId}
@@ -456,7 +462,7 @@ export async function StaffCountPageContent({
   hideHeaderOnMobile,
   ...props
 }: EmployeeCountPageContentProps) {
-  const { branchId, branchName, content } =
+  const { branchId, branchName, claims, content } =
     await buildEmployeeCountSurface(props);
   const PageShell =
     props.plane === "branch" ? BranchOperatorPage : EmployeePage;
@@ -467,7 +473,10 @@ export async function StaffCountPageContent({
       description={branchName ?? undefined}
       hideHeaderOnMobile={hideHeaderOnMobile}
     >
-      {branchId !== null && props.routeBranchId == null ? (
+      {branchId !== null &&
+      props.routeBranchId == null &&
+      claims !== null &&
+      canSubscribeBranchOpsTopic(claims, branchId) ? (
         <BranchOpsRefresh branchId={branchId} />
       ) : null}
       {content}

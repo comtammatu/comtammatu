@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import {
+  canSubscribeBranchOpsTopic,
+  extractClaimsFromAccessToken,
+} from "@comtammatu/shared/auth";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import { fetchMenuForPos } from "../actions";
@@ -25,7 +29,12 @@ export function usePosMenuSync({ branchId, setCategories }: UsePosMenuSyncArgs) 
   }, [branchId]);
 
   useRealtimeChannel(
-    (supabase) => {
+    (supabase, token) => {
+      const claims = extractClaimsFromAccessToken(token);
+      if (!claims || !canSubscribeBranchOpsTopic(claims, branchId)) {
+        return null;
+      }
+
       const runMenuRefetch = async ({ notify = true } = {}) => {
         try {
           const res = await fetchMenuForPos(branchId, true);

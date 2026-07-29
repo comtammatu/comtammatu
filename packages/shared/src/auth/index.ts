@@ -24,6 +24,7 @@ export {
   hasAnyPermission,
 } from "./permissions";
 export {
+  canSubscribeBranchOpsTopic,
   extractClaimsFromAccessToken,
   getDefaultRedirect,
   getSafeInternalReturnTo,

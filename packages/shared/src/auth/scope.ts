@@ -105,6 +105,20 @@ export function extractClaimsFromAccessToken(
   return extractClaims(appMetadata);
 }
 
+/**
+ * JWT mirror of `public.can_read_branch_ops(branch_id)` for private
+ * `branch:{id}:ops` topics. Owner may subscribe across tenant branches;
+ * every non-Owner is limited to `claims.branch_id`. Does not widen via
+ * `staff_permissions` — see REALTIME-BRANCH-OPS-ACTIVE-SCOPE.
+ */
+export function canSubscribeBranchOpsTopic(
+  claims: JwtClaims,
+  branchId: number,
+): boolean {
+  if (claims.user_role === "owner") return true;
+  return claims.branch_id != null && claims.branch_id === branchId;
+}
+
 /** Validate and normalize an internal return path. */
 export function getSafeInternalReturnTo(
   returnTo: string | null | undefined,

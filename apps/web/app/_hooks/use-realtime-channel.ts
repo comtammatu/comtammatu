@@ -116,13 +116,15 @@ export function useRealtimeChannel(
       // Always tear down before re-subscribe — covers the auth-event race
       // where TOKEN_REFRESHED fires while a prior subscribe just landed.
       teardownChannel();
-      if (token !== null) {
-        // Defense-in-depth: pin the JWT onto the realtime client before
-        // subscribe. supabase-js normally does this on the SIGNED_IN
-        // auth event, but on cold mount that event may not have fired
-        // yet — explicit setAuth ensures the JOIN frame carries it.
-        void supabase.realtime.setAuth(token);
-      }
+      // Never JOIN as anon: private-topic RLS (branch ops, etc.) rejects
+      // unauthenticated reads and the client retries forever. Wait for
+      // SIGNED_IN / getSession with a real access token.
+      if (token === null) return;
+      // Defense-in-depth: pin the JWT onto the realtime client before
+      // subscribe. supabase-js normally does this on the SIGNED_IN
+      // auth event, but on cold mount that event may not have fired
+      // yet — explicit setAuth ensures the JOIN frame carries it.
+      void supabase.realtime.setAuth(token);
       channel = setupRef.current(freshChannelClient, token);
     };
 

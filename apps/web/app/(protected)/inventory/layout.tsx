@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, canSubscribeBranchOpsTopic } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import {
   currentUserHasAnyPermissionAny,
@@ -63,9 +63,10 @@ export default async function InventoryLayout({
 
   return (
     <>
-      {scope.selectedBranchId && (
+      {scope.selectedBranchId &&
+      canSubscribeBranchOpsTopic(claims, scope.selectedBranchId) ? (
         <BranchOpsRefresh branchId={scope.selectedBranchId} />
-      )}
+      ) : null}
       <ControlSurfaceShell
         module="inventory"
         user={{
