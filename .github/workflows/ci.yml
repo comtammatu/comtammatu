@@ -40,19 +40,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm deps:audit
-
-      - run: pnpm deps:boundaries
-
-      - run: pnpm lint:baseline
-
-      - run: pnpm typecheck
-
-      - run: pnpm lint
-
-      - run: pnpm test
-
-      - run: pnpm build
+      - run: pnpm verify
 
   # PR-only path filter for the two docker jobs below (each stands up Supabase
   # Local — the slow part of CI). Skip them when the diff can't affect what they

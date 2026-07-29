@@ -49,7 +49,7 @@ comtammatu/
 │   └── print-agent/        # ESC/POS print daemon — chạy thật tại chi nhánh (runbook: docs/runbooks/pos-kds/print-agent-rollout.md)
 ├── packages/
 │   ├── database/           # Supabase clients + generated types
-│   ├── shared/             # Auth types, ACL, utilities
+│   ├── shared/             # Stable runtime-neutral contracts and policies
 │   ├── ui/                 # Má Tư DS shared components + token runtime
 │   ├── print-render/       # Receipt/template renderer SSoT (agent + web preview)
 │   └── security/           # Rate limiting
@@ -59,6 +59,12 @@ comtammatu/
 ├── pnpm-workspace.yaml     # Workspace definition
 └── tsconfig.base.json      # Shared TS config
 ```
+
+This seven-package shape is intentional. The exact dependency graph and code
+placement ladder live in `docs/spec/architecture.md`; folder size alone is not
+a reason to add a workspace package. Applications are deployable leaves.
+Internal packages are just-in-time TypeScript packages consumed through their
+declared export maps.
 
 ## Environment Model
 
@@ -90,16 +96,28 @@ branch-agent catalog is `apps/print-agent/.env.example`.
 
 Turborepo owns task ordering in `turbo.json`:
 
-- `build`, `lint`, `typecheck`, and `test` depend on dependency-package builds.
+- `build` is topological. Only the two applications own build scripts; missing
+  library `build` scripts act as transit nodes so upstream source still affects
+  downstream task hashes.
+- `lint`, `typecheck`, and `test` depend on dependency-package builds and may
+  reuse Turbo cache entries only when all declared source/config inputs match.
 - `dev` is persistent and uncached.
 - Web build outputs include Next.js artifacts and the generated Serwist worker;
   print-agent build outputs `dist/index.js`.
-- `corepack pnpm verify` runs dependency audit (including Node runtime drift),
-  baseline hygiene, typecheck, lint/guards, build, and tests.
+- Typecheck caches package-root `*.tsbuildinfo`; build and test tasks declare
+  root scripts, configs, SQL, and docs that they read outside their package.
+- `corepack pnpm verify` is the CI gate owner. It runs dependency security and
+  graph audits, typecheck, lint/guards, build, and tests.
 
-GitHub Actions runs the standard gates on pull requests and `main`. Conditional
-jobs replay the from-empty database baseline and run the POS → payment → KDS
-smoke against the CI-only isolated Supabase stack.
+GitHub Actions calls that same `verify` command on pull requests and `main`.
+Conditional jobs replay the from-empty database baseline and run the POS →
+payment → KDS smoke against the CI-only isolated Supabase stack.
+
+Some existing `packages/shared` static contract tests inspect web, SQL, and
+documentation files. Their external Turbo inputs are explicitly narrowed to
+source paths so generated `.next` and local environment state never affect the
+cache. New cross-repository guards belong with the consuming app or a root
+guard script; do not add more reverse test dependencies to library packages.
 
 Every Vercel Preview build runs `scripts/check-preview-supabase-env.mjs` before
 Next.js compilation and fails closed. The repository has no persistent

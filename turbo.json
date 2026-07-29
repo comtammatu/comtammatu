@@ -1,23 +1,20 @@
 {
-  "$schema": "https://turbo.build/schema.json",
+  "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "!.next/dev/**",
-        "dist/**",
-        "public/sw.js",
-        "public/sw.js.map",
-        "public/swe-worker-*.js",
-        "public/workbox-*.js"
-      ]
+      "outputs": ["dist/**"]
     },
     "@comtammatu/web#build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.env.local", ".env.local"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/scripts/check-preview-supabase-env.mjs",
+        "$TURBO_ROOT$/.env.local",
+        ".env.local"
+      ],
       "env": [
         "CI",
         "NEXT_PUBLIC_SUPABASE_URL",
@@ -41,6 +38,7 @@
         "SEPAY_WEBHOOK_SECRET",
         "DISABLE_LOGIN_RATE_LIMIT",
         "ENABLE_DEBUG_CLAIMS",
+        "VERCEL_PROJECT_ID",
         "VERCEL_ENV"
       ],
       "outputs": [
@@ -60,21 +58,28 @@
     },
     "typecheck": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"]
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"],
+      "outputs": ["*.tsbuildinfo"]
     },
     "test": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"],
       "outputs": []
     },
     "@comtammatu/shared#test": {
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/supabase/**",
-        "$TURBO_ROOT$/scripts/**",
-        "$TURBO_ROOT$/apps/web/**",
+        "$TURBO_ROOT$/apps/web/app/**",
+        "$TURBO_ROOT$/apps/web/lib/**",
+        "$TURBO_ROOT$/apps/web/proxy.ts",
+        "$TURBO_ROOT$/apps/web/vercel.json",
+        "$TURBO_ROOT$/apps/web/tests/fixtures/supabase-e2e/**",
+        "$TURBO_ROOT$/packages/database/src/types/database.types.ts",
+        "$TURBO_ROOT$/supabase/migrations/**",
+        "$TURBO_ROOT$/supabase/migration-archive/**",
         "$TURBO_ROOT$/docs/**",
-        "$TURBO_ROOT$/tasks/**"
+        "$TURBO_ROOT$/tasks/todo.md"
       ],
       "outputs": []
     },
@@ -82,8 +87,12 @@
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.base.json",
         "$TURBO_ROOT$/supabase/migrations/**",
-        "$TURBO_ROOT$/scripts/**"
+        "$TURBO_ROOT$/supabase/migration-archive/**",
+        "$TURBO_ROOT$/supabase/tests/**",
+        "$TURBO_ROOT$/scripts/**",
+        "$TURBO_ROOT$/docs/**"
       ],
       "outputs": []
     },

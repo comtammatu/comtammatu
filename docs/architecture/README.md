@@ -1,36 +1,40 @@
 # Architecture Landing
 
 Điểm vào chung cho tài liệu kiến trúc cấp hệ thống. `docs/ref/glossary.md` mô tả
-vocabulary của source hiện tại; mô hình pháp nhân cũ runtime `matu-prod + app.comtammatu.com` đã
-tạm ngưng từ commit `baf3720f8`.
+vocabulary của source hiện tại. `docs/spec/architecture.md` là nguồn duy nhất
+cho runtime architecture, package graph và quy tắc đặt code hiện hành. Trạng
+thái triển khai và công việc theo ngày thuộc runbook hoặc `tasks/todo.md`.
 
-Target Greenfield được triển khai tiếp trong chính repo `comtammatu`, dùng
-`matu-greenfield-company + web.comtammatu.com`. Source tiến hóa qua các seam
-hiện hữu trong `apps/*` và `packages/*`; không fork repo hoặc dựng runtime sản
-phẩm song song.
+Source tiến hóa qua các seam hiện hữu trong `apps/*` và `packages/*`; không fork
+repo hoặc dựng runtime sản phẩm song song.
 
 ## Nên đọc trước
 
 - [../spec/architecture.md](../spec/architecture.md) — **current** architecture + Product Dual Thesis (Hệ thống + Vận hành bán hàng)
 - [../ref/glossary.md](../ref/glossary.md) — current-state vocabulary của hệ thống đang chạy
-- [target-modules-tech-stack-project-structure.md](target-modules-tech-stack-project-structure.md) — **TARGET ONLY** (future); not the running route tree
 - [../plan/decisions.md](../plan/decisions.md) — net-effect decisions, gồm D015/D091
 - [../spec/database-schema.md](../spec/database-schema.md) — schema chuẩn và ranh giới dữ liệu
 - [../modules/auth.md](../modules/auth.md) — Auth, JWT claims và ACL của hệ thống hiện tại
 - [../ref/business-context.md](../ref/business-context.md) — business boundary và phạm vi sản phẩm
 - [../ref/inventory.md](../ref/inventory.md) — semantics chuẩn cho procurement, production, stock, và transfer
 
+## Tài liệu định hướng chưa kích hoạt
+
+- [target-modules-tech-stack-project-structure.md](target-modules-tech-stack-project-structure.md)
+  là tập đề xuất tương lai, không phải SSOT và không được dùng để suy ra route,
+  package hoặc runtime hiện hành. Mỗi đề xuất chỉ có hiệu lực sau khi được chốt
+  bằng decision/ADR có điều kiện kích hoạt.
+
 ## Mục tiêu của thư mục này
 
-- Gói các quyết định kiến trúc cấp hệ thống vào một chỗ dễ tìm
-- Dẫn người đọc sang đúng current-state hoặc target vocabulary trước khi viết
-  docs, đặt tên module, hoặc thêm copy mới
+- Dẫn người đọc đến đúng SSOT trước khi viết docs, đặt tên module hoặc thêm copy
 - Giảm drift giữa business docs, specs, UI copy, và code comments
 
 ## Boundary
 
-- `docs/architecture/*`: cross-cutting architecture, decision narrative, và
-  entry points tới đúng current-state hoặc target vocabulary
+- `docs/spec/architecture.md`: current runtime/package/module contract
+- `docs/architecture/*`: index, cross-cutting decision narrative và đề xuất
+  chưa kích hoạt; không lặp lại current contract
 - `docs/ref/glossary.md`: source of truth cho current-state vocabulary và naming
   policy
 - `docs/ref/*`: business rules và semantics chi tiết theo domain

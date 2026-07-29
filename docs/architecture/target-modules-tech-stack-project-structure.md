@@ -8,9 +8,9 @@
 >
 > Package manifests và `pnpm-lock.yaml` sở hữu phiên bản dependency chính xác.
 >
-> Kiến trúc này được triển khai trong repo `comtammatu` sau cutoff
-> `baf3720f8`. Greenfield là database/runtime target mới của cùng codebase, không
-> phải repo fork hoặc sản phẩm song song.
+> Các đề xuất trong tài liệu này không có hiệu lực runtime cho đến khi được
+> chốt bằng decision/ADR có điều kiện kích hoạt. Source và
+> `docs/spec/architecture.md` luôn thắng khi có khác biệt.
 
 ## 1. Bối cảnh
 

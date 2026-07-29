@@ -70,7 +70,7 @@ scripts/            # SQL seeds, lint helpers
 | Path                        | Audience          | Surface                                              |
 | --------------------------- | ----------------- | ---------------------------------------------------- |
 | `/login`                    | Public            | Authentication                                       |
-| `/admin/*`                  | Manager+          | Dashboard, settings, staff, reports                  |
+| `/`                         | Control roles     | Control-surface home and branch picker               |
 | `/menu`                     | Manager+          | Menu CRUD                                            |
 | `/inventory/*`              | Inventory roles   | Canonical inventory hub (PO, GRN, stocktake…)        |
 | `/finance/*`                | Finance roles     | Finance Basic, tiền đã thu, food-cost, chi phí, HĐĐT |

@@ -2,11 +2,18 @@
 
 ## Hierarchy
 
+```text
+Tenant (L0, single operating tenant)
+├── Operating sites persisted in `branches`
+│   ├── `branch`
+│   ├── `central_supply`
+│   └── `central_kitchen`
+└── Staff profiles and site assignments
 ```
-Tenant (L0, single row: doanh nghiệp Cơm Tấm Má Tư)
-  └── Branch (L1, multiple: Chi nhánh Q1, Q3, ...)
-        └── Staff (profiles, role-based)
-```
+
+`branches` remains the current site table and `branch_id` remains the current
+technical scope key. `Company` and `operational_site` are not runtime hierarchy
+levels in the current schema.
 
 ## System Topology
 
@@ -90,19 +97,48 @@ generic role predicate to copy across policies:
 The complete layer contract lives in `docs/modules/auth.md`; database policy
 rules live in `docs/agent/rules/database.md`.
 
-## Package Dependencies
+## Current Package Dependencies
 
-```
+```text
 @comtammatu/web
   ├── @comtammatu/shared    (auth types, ACL, scope helpers)
   ├── @comtammatu/database  (Supabase clients)
   ├── @comtammatu/ui        (Má Tư DS shared components + token runtime)
   ├── @comtammatu/security  (Upstash rate limiting)
-  └── @comtammatu/print-render (receipt/template rendering)
+  └── @comtammatu/print-render
+        └── @comtammatu/shared
 
 @comtammatu/print-agent
-  └── @comtammatu/print-render (same rendering contract as web preview)
+  └── @comtammatu/print-render
+        └── @comtammatu/shared
 ```
+
+The two applications are deployable graph leaves; packages never import an
+application. Internal packages expose source through explicit `exports` and are
+compiled by their consumers. Workspace imports must be declared with
+`workspace:*` and must not bypass an export map through a source-path alias.
+
+Keep this graph small. Create a package only for a second runtime consumer, a
+distinct trust boundary, or an independently built artifact—not for folder
+size or possible future reuse.
+
+## Code Placement
+
+Use the highest row that fits:
+
+| Reuse/correctness boundary          | Location                        |
+| ----------------------------------- | ------------------------------- |
+| One route                           | Beside that route               |
+| Multiple routes in one route family | The route-family `_lib`         |
+| Multiple web route families         | `apps/web/lib/<domain>`         |
+| Multiple runtimes or applications   | An existing `packages/*` export |
+| Correctness across database rows    | Supabase RPC/migration          |
+
+Route-local `_lib`, actions, and components are private to their route family;
+sibling domains must promote shared behavior to `apps/web/lib/<domain>` before
+importing it. `packages/shared` owns stable, runtime-neutral contracts—not
+web-only convenience code. A new package requires a real consumer and a
+declared dependency edge.
 
 ## Operating Planes
 
@@ -158,12 +194,12 @@ Change ownership:
 Cơm Tấm Má Tư is **two product halves**, not one mixed dashboard. Structure,
 naming, chrome, and adapters must make both halves obvious.
 
-| Product half (VI) | Job | Plane ID | Route root | Shell | Adapter prefix |
-| ----------------- | --- | -------- | ---------- | ----- | -------------- |
-| **Quản lý hệ thống** | Tenant/branch oversight, menu, central inventory, finance, HR, settings | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback` | `AppShell` (nav-as-data) | `App*` |
-| **Vận hành bán hàng (ca)** | Shift work, branch stock, team, branch settings | `branch_surface` | `/br/[branchId]/*` (excl. stations) | Branch operator chrome | `BranchOperator*` |
-| **Vận hành bán hàng (station)** | Sell / kitchen / runner queue | `station_chrome` | `/br/[branchId]/{pos,kds,runner}` | Station chrome | station adapters |
-| **Public / khách** | Auth, guest order, runner display | `public` | `/login`, `/q`, `/r`, … | none | — |
+| Product half (VI)               | Job                                                                     | Plane ID          | Route root                                                                                      | Shell                    | Adapter prefix    |
+| ------------------------------- | ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------- | ------------------------ | ----------------- |
+| **Quản lý hệ thống**            | Tenant/branch oversight, menu, central inventory, finance, HR, settings | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback` | `AppShell` (nav-as-data) | `App*`            |
+| **Vận hành bán hàng (ca)**      | Shift work, branch stock, team, branch settings                         | `branch_surface`  | `/br/[branchId]/*` (excl. stations)                                                             | Branch operator chrome   | `BranchOperator*` |
+| **Vận hành bán hàng (station)** | Sell / kitchen / runner queue                                           | `station_chrome`  | `/br/[branchId]/{pos,kds,runner}`                                                               | Station chrome           | station adapters  |
+| **Public / khách**              | Auth, guest order, runner display                                       | `public`          | `/login`, `/q`, `/r`, …                                                                         | none                     | —                 |
 
 - UI copy for the L0 half: **Quản trị** / **Hệ thống**. Role ACL `owner` is not a plane name.
 - Runtime plane id `RouteSurface: "owner"` and DOM `data-owner-shell-scroll` remain
@@ -174,12 +210,12 @@ naming, chrome, and adapters must make both halves obvious.
 
 ### Folder placement (Dual Thesis)
 
-| Concern | Lives under | Notes |
-| ------- | ----------- | ----- |
-| Quản trị L0 routes | `apps/web/app/(protected)/{menu,orders,inventory,finance,hr,…}` | `App*` adapters; shells converge to one `AppShell` + **nav-as-data** (module shells are transitional) |
-| Vận hành branch + stations | `apps/web/app/(protected)/br/[branchId]/…` | `BranchOperator*` / station chrome |
-| Branch settings UI (POS/KDS/tables/printers) | `apps/web/app/(protected)/br/_shared/settings/` | Must not sit as a fake L0 `branch-settings/` tree |
-| Dual-plane shared domain logic | `apps/web/lib/inventory/*` (e.g. `grn-list-model`) | Same core; different route presenters / density |
+| Concern                                      | Lives under                                                     | Notes                                                                                                 |
+| -------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Quản trị L0 routes                           | `apps/web/app/(protected)/{menu,orders,inventory,finance,hr,…}` | `App*` adapters; shells converge to one `AppShell` + **nav-as-data** (module shells are transitional) |
+| Vận hành branch + stations                   | `apps/web/app/(protected)/br/[branchId]/…`                      | `BranchOperator*` / station chrome                                                                    |
+| Branch settings UI (POS/KDS/tables/printers) | `apps/web/app/(protected)/br/_shared/settings/`                 | Must not sit as a fake L0 `branch-settings/` tree                                                     |
+| Dual-plane shared domain logic               | `apps/web/lib/inventory/*` (e.g. `grn-list-model`)              | Same core; different route presenters / density                                                       |
 
 **Nav-as-data:** one `AppShell` is the only L0 chrome. Layouts import
 `ControlSurfaceShell` directly. Deep nav dispatches through
@@ -194,11 +230,11 @@ Route families are grouped into product halves / planes; exact role/module
 mappings are generated in `docs/spec/role-route-matrix.md` and must not be
 copied here:
 
-| Surface (product) | Plane ID | Route families | Boundary |
-| ----------------- | -------- | -------------- | -------- |
-| Quản lý hệ thống | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, `/hr`, `/settings`, `/feedback` | L0 Tenant Command; runtime `RouteSurface: "owner"` is the code alias |
-| Vận hành bán hàng | `branch_surface` + `station_chrome` | `/br/[branchId]/*` | Module ACL + URL/JWT branch scope; PBAC/RLS owns actions and data |
-| Utility | — | `/notifications`, `/access-denied` | Explicit utility/public contracts, not a product plane |
+| Surface (product) | Plane ID                            | Route families                                                                                  | Boundary                                                             |
+| ----------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Quản lý hệ thống  | `control_surface`                   | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, `/hr`, `/settings`, `/feedback` | L0 Tenant Command; runtime `RouteSurface: "owner"` is the code alias |
+| Vận hành bán hàng | `branch_surface` + `station_chrome` | `/br/[branchId]/*`                                                                              | Module ACL + URL/JWT branch scope; PBAC/RLS owns actions and data    |
+| Utility           | —                                   | `/notifications`, `/access-denied`                                                              | Explicit utility/public contracts, not a product plane               |
 
 Branch Manager and Staff daily work stays under `/br/[branchId]/*`; the
 `control_surface` families remain L0-gated per ADR 0012 / D090.

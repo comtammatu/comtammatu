@@ -9,8 +9,7 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./app/*"],
-      "@lib/*": ["./lib/*"],
-      "@comtammatu/ui/*": ["../../packages/ui/src/*"]
+      "@lib/*": ["./lib/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
