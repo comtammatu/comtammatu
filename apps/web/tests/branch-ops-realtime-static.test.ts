@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { normalizePgDumpSql } from "./sql-test-utils";
 
@@ -91,6 +93,25 @@ const baseline = normalizePgDumpSql(
   ),
 );
 
+const branchOpsPolicyMigration = readFileSync(
+  new URL(
+    "../../../supabase/migrations/20260729160000_restore_branch_ops_realtime_policy.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
+// Active install chain: baseline + every forward migration under
+// supabase/migrations. The archive is NOT the install path, so policy
+// assertions must scan the active chain, not the archive. This guard
+// catches the re-baseline regression that dropped branch_ops_receive.
+const activeMigrationsDir = fileURLToPath(
+  new URL("../../../supabase/migrations/", import.meta.url),
+);
+const activeMigrationSources = readdirSync(activeMigrationsDir)
+  .filter((name) => name.endsWith(".sql"))
+  .map((name) => readFileSync(join(activeMigrationsDir, name), "utf8"));
+
 const posLayout = readFileSync(
   new URL("../app/(protected)/br/[branchId]/pos/layout.tsx", import.meta.url),
   "utf8",
@@ -180,8 +201,56 @@ test("DB trigger broadcasts to the matching topic/event on a private channel", (
 });
 
 test("realtime.messages receive policy is scoped to branch ops topics", () => {
-  assert.match(migration, /realtime\.topic\(\)\s+LIKE\s+'branch:%:ops'/);
-  assert.match(migration, /can_read_branch_ops/);
+  // The active chain is the install path; the archive is history only.
+  // Re-baseline silently drops realtime.messages policies because pg_dump
+  // excludes the extension-managed realtime schema.
+  assert.match(
+    branchOpsPolicyMigration,
+    /CREATE POLICY "branch_ops_receive"\s+ON realtime\.messages/,
+  );
+  assert.match(
+    branchOpsPolicyMigration,
+    /realtime\.topic\(\)\s+~\s+'\^branch:\[1-9\]\[0-9\]\*:ops\$'/,
+  );
+  assert.match(branchOpsPolicyMigration, /can_read_branch_ops/);
+});
+
+test("branch_ops_receive policy exists in the active migration chain, not only the archive", () => {
+  // Regression guard: every re-baseline must re-ship the realtime.messages
+  // receive policy as a forward migration, or the branch ops bus goes dark
+  // and the client floods Unauthorized JOINs.
+  const carriesPolicy = activeMigrationSources.some((source) =>
+    /CREATE POLICY\s+"?branch_ops_receive"?\s+ON realtime\.messages/i.test(
+      source,
+    ),
+  );
+  assert.equal(
+    carriesPolicy,
+    true,
+    "branch_ops_receive policy must exist in supabase/migrations (active chain)",
+  );
+});
+
+test("branch ops clients stop the Phoenix rejoin loop on terminal authorization reject", () => {
+  // Without removeChannel on a CHANNEL_ERROR authorization reject, Phoenix's
+  // rejoinTimer stays armed and the client re-JOINs the rejected private
+  // topic forever, flooding the broker with Unauthorized.
+  for (const [label, source] of [
+    ["use-branch-ops-events", branchOpsChannel],
+    ["use-pos-menu-sync", posMenuClient],
+  ] as const) {
+    assert.match(source, /"CHANNEL_ERROR"/, `${label} handles CHANNEL_ERROR`);
+    assert.match(
+      source,
+      /\/unauthorized\|permission\|denied\/i/,
+      `${label} detects authorization reject`,
+    );
+    assert.match(
+      source,
+      /supabase\.removeChannel\(channel\)/,
+      `${label} tears down the channel to stop rejoin`,
+    );
+  }
 });
 
 test("branch ops topics require an active profile and active assigned branch", () => {
@@ -213,7 +282,7 @@ test("POS menu sync listens for matching branch ops menu broadcasts", () => {
   assert.match(posMenuClient, /event\?\.domain\s*===\s*"pos"/);
   assert.match(posMenuClient, /event\?\.domain\s*===\s*"inventory"/);
   assert.match(posMenuClient, /event\?\.table\s*===\s*"stock_levels"/);
-  assert.match(posMenuClient, /\.subscribe\(\(status\)\s*=>/);
+  assert.match(posMenuClient, /\.subscribe\(\(status,\s*err\)\s*=>/);
   assert.match(posMenuMigration, /'domain',\s*'pos'/);
   assert.match(
     posMenuMigration,

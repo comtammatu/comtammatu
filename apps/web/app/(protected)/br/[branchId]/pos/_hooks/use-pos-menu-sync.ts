@@ -56,28 +56,41 @@ export function usePosMenuSync({ branchId, setCategories }: UsePosMenuSyncArgs) 
         { metricName: "pos.menu.refresh" },
       );
 
-      return supabase
-        .channel(`branch:${String(branchId)}:ops`, {
-          config: { broadcast: { self: false }, private: true },
-        })
-        .on("broadcast", { event: "ops" }, (payload) => {
-          const event = payload.payload;
-          if (
-            event?.domain === "pos" ||
-            (event?.domain === "inventory" && event?.table === "stock_levels")
-          ) {
-            handleMenuRefetch();
+      const channel = supabase.channel(`branch:${String(branchId)}:ops`, {
+        config: { broadcast: { self: false }, private: true },
+      });
+      channel.on("broadcast", { event: "ops" }, (payload) => {
+        const event = payload.payload;
+        if (
+          event?.domain === "pos" ||
+          (event?.domain === "inventory" && event?.table === "stock_levels")
+        ) {
+          handleMenuRefetch();
+        }
+      });
+      channel.subscribe((status, err) => {
+        if (status === "CHANNEL_ERROR") {
+          // Terminal authorization reject (RLS denied read on
+          // realtime.messages) leaves Phoenix's rejoinTimer armed, so the
+          // client re-JOINs forever and floods the broker with Unauthorized.
+          // removeChannel tears the channel down and resets the timer.
+          const text = `${err?.message ?? ""} ${
+            err?.cause ? JSON.stringify(err.cause) : ""
+          }`;
+          if (/unauthorized|permission|denied/i.test(text)) {
+            void supabase.removeChannel(channel);
           }
-        })
-        .subscribe((status) => {
-          if (status !== "SUBSCRIBED") return;
-          if (!didInitialSubscribeRef.current) {
-            didInitialSubscribeRef.current = true;
-            return;
-          }
-          // Reconnect catch-up runs without the toast (silent re-sync).
-          void runMenuRefetch({ notify: false });
-        });
+          return;
+        }
+        if (status !== "SUBSCRIBED") return;
+        if (!didInitialSubscribeRef.current) {
+          didInitialSubscribeRef.current = true;
+          return;
+        }
+        // Reconnect catch-up runs without the toast (silent re-sync).
+        void runMenuRefetch({ notify: false });
+      });
+      return channel;
     },
     [branchId],
   );
