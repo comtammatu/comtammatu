@@ -22,6 +22,10 @@ const stockRequestInbox = readFileSync(
   "app/(protected)/inventory/stock-requests/page.tsx",
   "utf8",
 );
+const stockFulfillmentData = readFileSync(
+  "lib/inventory/stock-fulfillment-data.ts",
+  "utf8",
+);
 const navConfig = readFileSync(
   "../../packages/shared/src/auth/nav-config.ts",
   "utf8",
@@ -145,22 +149,30 @@ test("all ingredient save actions use the atomic RPC without direct ingredient u
   assert.doesNotMatch(ingredientActions, /persistDefaultFulfillSiteKind/);
 });
 
-test("D093 nav-config exposes branch stock requests tile", () => {
-  assert.match(navConfig, /hrefTemplate: "\/br\/\{branchId\}\/stock\/requests"/);
-  assert.match(navConfig, /label: "Yêu cầu hàng"/);
+test("D093 nav-config exposes one branch fulfillment hub", () => {
+  assert.match(
+    navConfig,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
+  );
+  assert.match(navConfig, /label: "Giao nhận hàng"/);
+  assert.doesNotMatch(
+    navConfig,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/requests"/,
+  );
 });
 
 test("D093 branch GRN list route redirects to stock requests", () => {
   assert.match(
     branchGrnPage,
-    /redirect\(`\/br\/\$\{branchId\}\/stock\/requests`\)/,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/transfer`\)/,
   );
   assert.doesNotMatch(branchGrnPage, /BranchGrnListClient|loadGrnListPageData/);
 });
 
-test("D093 inventory-nav includes stock-requests inbox", () => {
-  assert.match(inventoryNav, /href: "\/inventory\/stock-requests"/);
-  assert.match(inventoryNav, /label: "Yêu cầu hàng"/);
+test("D093 inventory-nav includes one fulfillment hub", () => {
+  assert.match(inventoryNav, /href: "\/inventory\/transfers"/);
+  assert.match(inventoryNav, /label: "Giao nhận hàng"/);
+  assert.match(inventoryNav, /"\/inventory\/stock-requests"/);
 });
 
 test("D093 central operators do not see owner-only dashboard actions or stock value", () => {
@@ -173,16 +185,16 @@ test("D093 central operators do not see owner-only dashboard actions or stock va
   assert.match(inventoryDashboard, /\{!isCentralOperator \? \(/);
 });
 
-test("D093 stock request inbox only lists pending lines for the actor source", () => {
-  assert.match(stockRequestInbox, /stock_request_items!inner/);
+test("D093 stock request inbox redirects and the hub scopes actor lines", () => {
   assert.match(
     stockRequestInbox,
-    /\.eq\("stock_request_items\.fulfill_site_kind", actorFulfillKind\)/,
+    /redirect\("\/inventory\/transfers\?queue=requests"\)/,
   );
   assert.match(
-    stockRequestInbox,
-    /\.eq\("stock_request_items\.status", "pending"\)/,
+    stockFulfillmentData,
+    /item\.fulfill_site_kind === fulfillSiteKind/,
   );
+  assert.match(stockFulfillmentData, /item\.status === "pending"/);
 });
 
 test("D093 RLS limits fulfill actors to their assigned source lines", () => {

@@ -5598,6 +5598,8 @@ export type Database = {
       purchase_orders: {
         Row: {
           branch_id: number
+          cancelled_at: string | null
+          closed_at: string | null
           created_at: string
           created_by: string
           display_id: string | null
@@ -5607,14 +5609,18 @@ export type Database = {
           ordered_at: string
           po_number: string
           purchase_request_id: number | null
+          save_idempotency_key: string | null
           source_grn_id: number | null
           status: string
+          status_reason: string | null
           supplier_id: number
           tenant_id: number
           updated_at: string
         }
         Insert: {
           branch_id: number
+          cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
           created_by: string
           display_id?: string | null
@@ -5624,14 +5630,18 @@ export type Database = {
           ordered_at?: string
           po_number: string
           purchase_request_id?: number | null
+          save_idempotency_key?: string | null
           source_grn_id?: number | null
           status?: string
+          status_reason?: string | null
           supplier_id: number
           tenant_id: number
           updated_at?: string
         }
         Update: {
           branch_id?: number
+          cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
           created_by?: string
           display_id?: string | null
@@ -5641,8 +5651,10 @@ export type Database = {
           ordered_at?: string
           po_number?: string
           purchase_request_id?: number | null
+          save_idempotency_key?: string | null
           source_grn_id?: number | null
           status?: string
+          status_reason?: string | null
           supplier_id?: number
           tenant_id?: number
           updated_at?: string
@@ -5757,13 +5769,17 @@ export type Database = {
       purchase_requests: {
         Row: {
           branch_id: number
+          cancelled_at: string | null
+          closed_at: string | null
           created_at: string
           created_by: string
+          creation_idempotency_key: string | null
           id: number
           needed_by: string | null
           notes: string | null
           request_number: string
           status: string
+          status_reason: string | null
           submitted_at: string | null
           submitted_by: string | null
           tenant_id: number
@@ -5771,13 +5787,17 @@ export type Database = {
         }
         Insert: {
           branch_id: number
+          cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
           created_by: string
+          creation_idempotency_key?: string | null
           id?: never
           needed_by?: string | null
           notes?: string | null
           request_number: string
           status?: string
+          status_reason?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           tenant_id: number
@@ -5785,13 +5805,17 @@ export type Database = {
         }
         Update: {
           branch_id?: number
+          cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
           created_by?: string
+          creation_idempotency_key?: string | null
           id?: never
           needed_by?: string | null
           notes?: string | null
           request_number?: string
           status?: string
+          status_reason?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           tenant_id?: number
@@ -7217,12 +7241,16 @@ export type Database = {
         Row: {
           branch_id: number
           cancelled_at: string | null
+          closed_at: string | null
           created_at: string
           created_by: string | null
+          creation_idempotency_key: string | null
           id: number
+          needed_at: string | null
           notes: string | null
           request_number: string
           status: string
+          status_reason: string | null
           submitted_at: string | null
           tenant_id: number
           updated_at: string
@@ -7230,12 +7258,16 @@ export type Database = {
         Insert: {
           branch_id: number
           cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
           created_by?: string | null
+          creation_idempotency_key?: string | null
           id?: number
+          needed_at?: string | null
           notes?: string | null
           request_number: string
           status?: string
+          status_reason?: string | null
           submitted_at?: string | null
           tenant_id: number
           updated_at?: string
@@ -7243,12 +7275,16 @@ export type Database = {
         Update: {
           branch_id?: number
           cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
           created_by?: string | null
+          creation_idempotency_key?: string | null
           id?: number
+          needed_at?: string | null
           notes?: string | null
           request_number?: string
           status?: string
+          status_reason?: string | null
           submitted_at?: string | null
           tenant_id?: number
           updated_at?: string
@@ -7344,6 +7380,7 @@ export type Database = {
       }
       stock_transfers: {
         Row: {
+          cancelled_at: string | null
           created_at: string
           created_by: string
           from_branch_id: number
@@ -7354,6 +7391,8 @@ export type Database = {
           received_at: string | null
           shipped_at: string | null
           status: string
+          status_reason: string | null
+          stock_request_id: number | null
           tenant_id: number
           to_branch_id: number
           to_location_id: number | null
@@ -7362,6 +7401,7 @@ export type Database = {
           vehicle_info: string | null
         }
         Insert: {
+          cancelled_at?: string | null
           created_at?: string
           created_by: string
           from_branch_id: number
@@ -7372,6 +7412,8 @@ export type Database = {
           received_at?: string | null
           shipped_at?: string | null
           status?: string
+          status_reason?: string | null
+          stock_request_id?: number | null
           tenant_id: number
           to_branch_id: number
           to_location_id?: number | null
@@ -7380,6 +7422,7 @@ export type Database = {
           vehicle_info?: string | null
         }
         Update: {
+          cancelled_at?: string | null
           created_at?: string
           created_by?: string
           from_branch_id?: number
@@ -7390,6 +7433,8 @@ export type Database = {
           received_at?: string | null
           shipped_at?: string | null
           status?: string
+          status_reason?: string | null
+          stock_request_id?: number | null
           tenant_id?: number
           to_branch_id?: number
           to_location_id?: number | null
@@ -7425,6 +7470,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inventory_locations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_request_tenant_fkey"
+            columns: ["stock_request_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "stock_requests"
+            referencedColumns: ["id", "tenant_id"]
           },
           {
             foreignKeyName: "stock_transfers_tenant_id_fkey"
@@ -10146,6 +10198,10 @@ export type Database = {
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
       can_read_inventory_monetary: { Args: { p_key: string }; Returns: boolean }
       cancel_expense: { Args: { p_expense_id: number }; Returns: Json }
+      cancel_goods_receipt_note: {
+        Args: { p_grn_id: number; p_reason: string }
+        Returns: Json
+      }
       cancel_leave_request: {
         Args: { p_request_id: number }
         Returns: undefined
@@ -10159,7 +10215,21 @@ export type Database = {
         Returns: undefined
       }
       cancel_production_run: { Args: { p_run_id: number }; Returns: Json }
-      cancel_stock_request: { Args: { p_request_id: number }; Returns: Json }
+      cancel_purchase_order: {
+        Args: { p_po_id: number; p_reason: string }
+        Returns: Json
+      }
+      cancel_purchase_request: {
+        Args: { p_reason: string; p_request_id: number }
+        Returns: Json
+      }
+      cancel_stock_request:
+        | { Args: { p_request_id: number }; Returns: Json }
+        | { Args: { p_reason: string; p_request_id: number }; Returns: Json }
+      cancel_stock_transfer: {
+        Args: { p_reason: string; p_transfer_id: number }
+        Returns: Json
+      }
       check_cron_jobs_health: { Args: never; Returns: undefined }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
       claim_print_job: {
@@ -10226,8 +10296,20 @@ export type Database = {
         }
         Returns: Json
       }
+      close_purchase_order: {
+        Args: { p_po_id: number; p_reason: string }
+        Returns: Json
+      }
+      close_purchase_request: {
+        Args: { p_reason: string; p_request_id: number }
+        Returns: Json
+      }
       close_recount_round: {
         Args: { p_round_no: number; p_session_id: number }
+        Returns: Json
+      }
+      close_stock_request: {
+        Args: { p_reason: string; p_request_id: number }
         Returns: Json
       }
       complete_kds_tickets: {
@@ -11818,6 +11900,15 @@ export type Database = {
         Returns: undefined
       }
       reject_refund: { Args: { p_refund_id: number }; Returns: Json }
+      reject_stock_request_lines: {
+        Args: {
+          p_fulfill_site_kind: string
+          p_item_ids: number[]
+          p_reason: string
+          p_request_id: number
+        }
+        Returns: Json
+      }
       release_branch_menu_daily_holds: {
         Args: { p_branch_id: number; p_hold_token: string }
         Returns: Json
@@ -11942,6 +12033,15 @@ export type Database = {
         Returns: Json
       }
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
+      save_goods_receipt_note: {
+        Args: {
+          p_grn_id: number
+          p_lines: Json
+          p_notes: string
+          p_received_date: string
+        }
+        Returns: Json
+      }
       save_ingredient_catalog: {
         Args: {
           p_category_id: number
@@ -11980,9 +12080,52 @@ export type Database = {
         }
         Returns: Json
       }
+      save_purchase_order: {
+        Args: {
+          p_expected_delivery_date: string
+          p_lines: Json
+          p_notes: string
+          p_po_id: number
+          p_send?: boolean
+        }
+        Returns: Json
+      }
+      save_purchase_orders_from_request: {
+        Args: {
+          p_idempotency_key?: string
+          p_orders: Json
+          p_request_id: number
+          p_send?: boolean
+        }
+        Returns: Json
+      }
+      save_purchase_request: {
+        Args: {
+          p_branch_id: number
+          p_idempotency_key?: string
+          p_lines: Json
+          p_needed_by: string
+          p_notes: string
+          p_request_id: number
+          p_submit?: boolean
+        }
+        Returns: Json
+      }
       save_station_categories: {
         Args: { p_category_ids: number[]; p_station_id: number }
         Returns: undefined
+      }
+      save_stock_request: {
+        Args: {
+          p_branch_id: number
+          p_idempotency_key?: string
+          p_lines: Json
+          p_needed_at: string
+          p_notes: string
+          p_request_id: number
+          p_submit?: boolean
+        }
+        Returns: Json
       }
       scan_inventory_alerts: {
         Args: never
@@ -12099,6 +12242,7 @@ export type Database = {
         }
         Returns: number
       }
+      send_purchase_order: { Args: { p_po_id: number }; Returns: Json }
       set_branch_kind: {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
@@ -12196,6 +12340,10 @@ export type Database = {
         Args: { p_transfer_id: number }
         Returns: Json
       }
+      stock_transfer_confirm_ship_legacy: {
+        Args: { p_transfer_id: number }
+        Returns: Json
+      }
       stock_transfer_list_branches: {
         Args: never
         Returns: {
@@ -12210,6 +12358,10 @@ export type Database = {
         Returns: Json
       }
       stock_transfer_receive: {
+        Args: { p_items?: Json; p_transfer_id: number }
+        Returns: Json
+      }
+      stock_transfer_receive_legacy: {
         Args: { p_items?: Json; p_transfer_id: number }
         Returns: Json
       }

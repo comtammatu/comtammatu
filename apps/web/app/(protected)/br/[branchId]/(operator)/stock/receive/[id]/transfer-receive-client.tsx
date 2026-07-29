@@ -17,6 +17,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
+import { useIsOnline } from "@/components/pwa-runtime";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { transferReceive } from "@/(protected)/inventory/transfer-actions";
@@ -42,6 +43,7 @@ export function TransferReceiveClient({
   detailHref,
 }: TransferReceiveClientProps) {
   const router = useRouter();
+  const isOnline = useIsOnline();
   const copy = messages.inventory.transfer;
   const receiveCopy = copy.receiveNative;
   const items = transfer.items;
@@ -94,6 +96,10 @@ export function TransferReceiveClient({
   }
 
   function handleConfirm() {
+    if (!isOnline) {
+      toast.error(messages.inventory.stockRequests.journey.offlineMutation);
+      return;
+    }
     const payload: Record<string, { qty: number; note?: string }> = {};
     for (const item of items) {
       const qty = values[item.ingredientId] ?? item.qty;
@@ -103,7 +109,7 @@ export function TransferReceiveClient({
         return;
       }
       const note = notes[item.ingredientId]?.trim() ?? "";
-      if (qty < item.qty && note.length < 3) {
+      if (qty < item.qty && note.length < 5) {
         toast.error(copy.shortageNoteMinLength);
         return;
       }
@@ -309,7 +315,7 @@ export function TransferReceiveClient({
                       placeholder={copy.shortageNotePlaceholder}
                       className="min-h-20"
                       maxLength={300}
-                      disabled={isPending}
+                      disabled={isPending || !isOnline}
                     />
                   </Item>
                 ) : null}
@@ -335,7 +341,7 @@ export function TransferReceiveClient({
               type="button"
               size="touch-lg"
               variant={remaining > 0 ? "outline" : "default"}
-              disabled={isPending}
+              disabled={isPending || !isOnline}
               onClick={handleConfirm}
             >
               {isPending ? <Spinner className="size-5" /> : null}

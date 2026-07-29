@@ -76,7 +76,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx":
-    "LIST",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/page.tsx":
@@ -84,9 +84,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/new/page.tsx":
-    "REDIRECT-SHIM",
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/page.tsx":
-    "LIST",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx":
@@ -174,7 +174,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/stock/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/stock-requests/[id]/page.tsx": "DETAIL",
-  "apps/web/app/(protected)/inventory/stock-requests/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/stock-requests/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/stocktake/[id]/count/page.tsx":
     "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/stocktake/[id]/page.tsx": "DETAIL",
@@ -185,7 +185,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/suppliers/[id]/items/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/suppliers/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": "DETAIL",
-  "apps/web/app/(protected)/inventory/transfers/new/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/transfers/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/transfers/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/waste/new/page.tsx": "DOC-WORKFLOW",

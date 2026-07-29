@@ -142,26 +142,20 @@ export function resolveInventoryNav({
       icon: IconShoppingCart,
     });
   }
-  if (showStockRequestInbox) {
+  inboundItems.push({
+    href: "/inventory/consumption",
+    label: "Tiêu hao",
+    icon: IconCircleMinus,
+    matchPrefixes: ["/inventory/consumption/", "/inventory/issues"],
+  });
+  if (showStockRequestInbox || userRole === "owner") {
     inboundItems.push({
-      href: "/inventory/stock-requests",
-      label: "Yêu cầu hàng",
-      icon: IconClipboardList,
+      href: "/inventory/transfers",
+      label: "Giao nhận hàng",
+      icon: IconArrowRightLeft,
+      matchPrefixes: ["/inventory/transfers/", "/inventory/stock-requests"],
     });
   }
-  inboundItems.push(
-    {
-      href: "/inventory/consumption",
-      label: "Tiêu hao",
-      icon: IconCircleMinus,
-      matchPrefixes: ["/inventory/consumption/", "/inventory/issues"],
-    },
-    {
-      href: "/inventory/transfers",
-      label: "Điều chuyển",
-      icon: IconArrowRightLeft,
-    },
-  );
 
   groups.push({
     title: "2 · Nhập hàng",

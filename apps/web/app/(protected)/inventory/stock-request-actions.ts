@@ -9,13 +9,25 @@ import {
 } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 
-function mapStockRequestRpcError(code: string | undefined, message?: string): string {
+function mapStockRequestRpcError(
+  code: string | undefined,
+  message?: string,
+): string {
   const msg = message ?? "";
   if (msg.includes("ingredient_fulfill_site_required")) {
     return "Nguyên liệu chưa gán nguồn Kho Tổng / Bếp TT.";
   }
   if (msg.includes("stock_request_empty")) {
     return "Phiếu yêu cầu cần ít nhất một dòng.";
+  }
+  if (msg.includes("stock_request_line_invalid")) {
+    return "Nguyên liệu hoặc đơn vị không còn hợp lệ.";
+  }
+  if (msg.includes("insufficient_stock")) {
+    return "Tồn kho không đủ cho toàn bộ các dòng đã chọn.";
+  }
+  if (msg.includes("reason_required")) {
+    return "Vui lòng nhập lý do ít nhất 5 ký tự.";
   }
   switch (code) {
     case "42501":
@@ -28,118 +40,80 @@ function mapStockRequestRpcError(code: string | undefined, message?: string): st
 }
 
 type RpcJson = {
-  request_id?: number;
-  request_number?: string;
-  item_id?: number;
-  fulfill_site_kind?: string;
   transfer_id?: number;
   id?: number;
 };
 
-export const createStockRequestDraft = withAction(
+const stockRequestLineSchema = z.object({
+  ingredientId: z.coerce.number().int().positive(),
+  entryUnitId: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive(),
+  notes: z.string().trim().max(500).optional(),
+});
+
+export const saveStockRequest = withAction(
   {
     roles: STOCK_REQUEST_ROLES,
     schema: z.object({
       branchId: z.coerce.number().int().positive(),
-      notes: z.string().max(500).optional(),
+      requestId: z.coerce.number().int().positive().nullable().optional(),
+      neededAt: z.string().datetime().nullable().optional(),
+      notes: z.string().trim().max(500).optional(),
+      lines: z.array(stockRequestLineSchema).min(1).max(200),
+      submit: z.boolean().default(true),
+      idempotencyKey: z.string().uuid().optional(),
     }),
     permission: PERMISSION_KEYS.INVENTORY_REQUEST_CREATE,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
   async (data, { supabase }) => {
-    const { data: raw, error } = await supabase.rpc("create_stock_request_draft", {
-      p_branch_id: data.branchId,
-      p_notes: data.notes,
-    });
+    const { data: raw, error } = await supabase.rpc(
+      "save_stock_request" as never,
+      {
+        p_request_id: data.requestId ?? null,
+        p_branch_id: data.branchId,
+        p_needed_at: data.neededAt ?? null,
+        p_notes: data.notes ?? "",
+        p_lines: data.lines.map((line) => ({
+          ingredient_id: line.ingredientId,
+          entry_unit_id: line.entryUnitId,
+          quantity: line.quantity,
+          notes: line.notes ?? "",
+        })),
+        p_submit: data.submit,
+        p_idempotency_key: data.idempotencyKey ?? null,
+      } as never,
+    );
     if (error) {
       return {
         success: false as const,
         error: mapStockRequestRpcError(error.code, error.message),
       };
     }
-    const row = raw as RpcJson | null;
-    if (!row?.request_id || !row.request_number) {
-      return { success: false as const, error: "Không tạo được phiếu yêu cầu." };
+    const parsed = z
+      .object({
+        request_id: z.coerce.number().int().positive(),
+        request_number: z.string(),
+        status: z.enum(["draft", "submitted"]),
+      })
+      .safeParse(raw);
+    if (!parsed.success) {
+      return { success: false as const, error: "Không lưu được yêu cầu hàng." };
     }
-    revalidatePath(`/br/${data.branchId}/stock/requests`);
+    revalidatePath(`/br/${data.branchId}/stock/transfer`);
+    revalidatePath(
+      `/br/${data.branchId}/stock/requests/${parsed.data.request_id}`,
+    );
+    revalidatePath("/inventory/transfers");
     return {
       success: true as const,
       data: {
-        requestId: row.request_id,
-        requestNumber: row.request_number,
+        requestId: parsed.data.request_id,
+        requestNumber: parsed.data.request_number,
+        status: parsed.data.status,
       },
     };
-  },
-);
-
-export const addStockRequestLine = withAction(
-  {
-    roles: STOCK_REQUEST_ROLES,
-    schema: z.object({
-      branchId: z.coerce.number().int().positive(),
-      requestId: z.coerce.number().int().positive(),
-      ingredientId: z.coerce.number().int().positive(),
-      entryUnitId: z.coerce.number().int().positive(),
-      quantity: z.coerce.number().positive(),
-    }),
-    permission: PERMISSION_KEYS.INVENTORY_REQUEST_CREATE,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
-  },
-  async (data, { supabase }) => {
-    const { data: raw, error } = await supabase.rpc("add_stock_request_line", {
-      p_request_id: data.requestId,
-      p_ingredient_id: data.ingredientId,
-      p_entry_unit_id: data.entryUnitId,
-      p_quantity: data.quantity,
-    });
-    if (error) {
-      return {
-        success: false as const,
-        error: mapStockRequestRpcError(error.code, error.message),
-      };
-    }
-    const row = raw as RpcJson | null;
-    if (!row?.item_id || !row.fulfill_site_kind) {
-      return { success: false as const, error: "Không thêm được dòng." };
-    }
-    revalidatePath(`/br/${data.branchId}/stock/requests`);
-    revalidatePath(`/br/${data.branchId}/stock/requests/${data.requestId}`);
-    return {
-      success: true as const,
-      data: {
-        itemId: row.item_id,
-        fulfillSiteKind: row.fulfill_site_kind,
-      },
-    };
-  },
-);
-
-export const submitStockRequest = withAction(
-  {
-    roles: STOCK_REQUEST_ROLES,
-    schema: z.object({
-      branchId: z.coerce.number().int().positive(),
-      requestId: z.coerce.number().int().positive(),
-    }),
-    permission: PERMISSION_KEYS.INVENTORY_REQUEST_SUBMIT,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
-  },
-  async (data, { supabase }) => {
-    const { error } = await supabase.rpc("submit_stock_request", {
-      p_request_id: data.requestId,
-    });
-    if (error) {
-      return {
-        success: false as const,
-        error: mapStockRequestRpcError(error.code, error.message),
-      };
-    }
-    revalidatePath(`/br/${data.branchId}/stock/requests`);
-    revalidatePath(`/inventory/stock-requests`);
-    return { success: true as const };
   },
 );
 
@@ -149,22 +123,91 @@ export const cancelStockRequest = withAction(
     schema: z.object({
       branchId: z.coerce.number().int().positive(),
       requestId: z.coerce.number().int().positive(),
+      reason: z.string().trim().min(5).max(500),
     }),
     permission: PERMISSION_KEYS.INVENTORY_REQUEST_CANCEL,
     permissionBranchId: (data) => data.branchId,
     requireBranchScope: true,
   },
   async (data, { supabase }) => {
-    const { error } = await supabase.rpc("cancel_stock_request", {
-      p_request_id: data.requestId,
-    });
+    const { error } = await supabase.rpc(
+      "cancel_stock_request" as never,
+      {
+        p_request_id: data.requestId,
+        p_reason: data.reason,
+      } as never,
+    );
     if (error) {
       return {
         success: false as const,
         error: mapStockRequestRpcError(error.code, error.message),
       };
     }
-    revalidatePath(`/br/${data.branchId}/stock/requests`);
+    revalidatePath(`/br/${data.branchId}/stock/transfer`);
+    revalidatePath(`/br/${data.branchId}/stock/requests/${data.requestId}`);
+    revalidatePath("/inventory/transfers");
+    return { success: true as const };
+  },
+);
+
+export const closeStockRequest = withAction(
+  {
+    roles: ["owner"] as const,
+    schema: z.object({
+      requestId: z.coerce.number().int().positive(),
+      reason: z.string().trim().min(5).max(500),
+    }),
+    permission: PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc(
+      "close_stock_request" as never,
+      {
+        p_request_id: data.requestId,
+        p_reason: data.reason,
+      } as never,
+    );
+    if (error) {
+      return {
+        success: false as const,
+        error: mapStockRequestRpcError(error.code, error.message),
+      };
+    }
+    revalidatePath("/inventory/transfers");
+    revalidatePath(`/inventory/stock-requests/${data.requestId}`);
+    return { success: true as const };
+  },
+);
+
+export const rejectStockRequestLines = withAction(
+  {
+    roles: STOCK_REQUEST_FULFILL_ROLES,
+    schema: z.object({
+      requestId: z.coerce.number().int().positive(),
+      fulfillSiteKind: z.enum(["central_supply", "central_kitchen"]),
+      itemIds: z.array(z.coerce.number().int().positive()).min(1),
+      reason: z.string().trim().min(5).max(500),
+    }),
+    permission: PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc(
+      "reject_stock_request_lines" as never,
+      {
+        p_request_id: data.requestId,
+        p_fulfill_site_kind: data.fulfillSiteKind,
+        p_item_ids: data.itemIds,
+        p_reason: data.reason,
+      } as never,
+    );
+    if (error) {
+      return {
+        success: false as const,
+        error: mapStockRequestRpcError(error.code, error.message),
+      };
+    }
+    revalidatePath("/inventory/transfers");
+    revalidatePath(`/inventory/stock-requests/${data.requestId}`);
     return { success: true as const };
   },
 );
@@ -207,9 +250,8 @@ export const fulfillStockRequestLines = withAction(
         error: "Không tạo được phiếu điều chuyển.",
       };
     }
-    revalidatePath("/inventory/stock-requests");
-    revalidatePath(`/inventory/stock-requests/${data.requestId}`);
     revalidatePath("/inventory/transfers");
+    revalidatePath(`/inventory/stock-requests/${data.requestId}`);
     return { success: true as const, data: { transferId } };
   },
 );

@@ -49,8 +49,8 @@ const VI_DICTIONARY = {
     "/inventory/issues": { short: "Sự cố kho", long: "Sự cố kho" },
     "/inventory/consumption": { long: "Tiêu hao vận hành" },
     "/inventory/transfers": {
-      short: "Điều chuyển",
-      long: "Điều chuyển nội bộ",
+      short: "Giao nhận",
+      long: "Giao nhận hàng",
     },
     "/inventory/stocktake": { long: "Kiểm kê đối chiếu" },
     "/inventory/production": { long: "Sản xuất Bếp Trung Tâm" },

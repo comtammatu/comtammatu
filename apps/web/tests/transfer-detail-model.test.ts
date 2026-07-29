@@ -86,7 +86,7 @@ test("receiving action follows the destination branch for branch_manager", () =>
       userRole: "branch_manager",
       userBranchId: 20,
     }),
-    { kind: "receive", enabled: true },
+    { kind: "confirm_receive", enabled: true },
   );
   assert.deepEqual(
     getTransferActionConfig({
@@ -94,7 +94,7 @@ test("receiving action follows the destination branch for branch_manager", () =>
       userRole: "branch_manager",
       userBranchId: 10,
     }),
-    { kind: "receive", enabled: false },
+    { kind: "confirm_receive", enabled: false },
   );
 });
 
@@ -112,7 +112,7 @@ test("terminal transfers expose no primary mutation", () => {
 });
 
 test("receive-ready status contract stays shared by Owner surface and Branch", () => {
-  assert.equal(isTransferReceiveReady("in_transit"), true);
+  assert.equal(isTransferReceiveReady("in_transit"), false);
   assert.equal(isTransferReceiveReady("confirmed_receive"), true);
   assert.equal(isTransferReceiveReady("confirmed_ship"), false);
   assert.equal(isTransferReceiveReady("received"), false);

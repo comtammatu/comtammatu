@@ -36,7 +36,7 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
     home: base,
     stock: joinInventoryPath(base, "/stock"),
     grn: joinInventoryPath(base, "/grn"),
-    stockRequests: joinInventoryPath(base, "/stock-requests"),
+    stockRequests: joinInventoryPath(base, "/transfers?queue=requests"),
     purchaseRequests: joinInventoryPath(base, "/purchase-requests"),
     purchaseOrders: joinInventoryPath(base, "/purchase-orders"),
     supplierInvoices: "/finance/supplier-invoices",

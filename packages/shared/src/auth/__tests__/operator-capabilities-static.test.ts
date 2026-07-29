@@ -37,7 +37,7 @@ test("resolveOperatorTiles -> branch manager sees branch workflows in branch hom
 
   assert.equal(hrefs.includes("/br/3/stock"), true);
   assert.equal(hrefs.includes("/br/3/stock/transfer?queue=receive"), false);
-  assert.equal(hrefs.includes("/br/3/stock/transfer"), false);
+  assert.equal(hrefs.includes("/br/3/stock/transfer"), true);
   assert.equal(hrefs.includes("/br/3/stock/stocktake"), true);
   assert.equal(hrefs.includes("/br/3/stock/waste"), true);
   assert.equal(moduleKeys.includes("branch_dashboard"), false);
@@ -135,7 +135,7 @@ test("resolveOperatorTiles -> branch home does not duplicate Owner surface links
   assert.equal(hrefs.includes("/inventory/production"), false);
 });
 
-test("resolveOperatorTiles -> stock request tile replaces GRN/production (D093)", () => {
+test("resolveOperatorTiles -> fulfillment hub replaces GRN/production", () => {
   for (const role of ["owner", "branch_manager"] as const) {
     const groups = resolveOperatorTiles(role, 3, "branch");
     const stock = groups.find((group) => group.id === "stock");
@@ -150,11 +150,11 @@ test("resolveOperatorTiles -> stock request tile replaces GRN/production (D093)"
       false,
       `${role} must not see GRN tile`,
     );
-    const requestTile = stock?.tiles.find(
-      (tile) => tile.href === "/br/3/stock/requests",
+    const fulfillmentTile = stock?.tiles.find(
+      (tile) => tile.href === "/br/3/stock/transfer",
     );
-    assert.ok(requestTile, `${role} must see stock request tile`);
-    assert.equal(requestTile?.label, "Yêu cầu hàng");
+    assert.ok(fulfillmentTile, `${role} must see fulfillment hub`);
+    assert.equal(fulfillmentTile?.label, "Giao nhận hàng");
   }
 });
 
@@ -166,7 +166,7 @@ test("resolveOperatorTiles -> branch stock group renders the D093 tile set", () 
     branchStock?.tiles.map((tile) => tile.label),
     [
       "Tồn kho",
-      "Yêu cầu hàng",
+      "Giao nhận hàng",
       "Kiểm kê",
       "Giao đếm",
       "Hao hụt",
@@ -176,10 +176,16 @@ test("resolveOperatorTiles -> branch stock group renders the D093 tile set", () 
   );
 });
 
-test("resolveOperatorTiles -> branch kitchen transfer tile is retired", () => {
+test("resolveOperatorTiles -> branch stock exposes one fulfillment tile", () => {
   const groups = resolveOperatorTiles("branch_manager", 3, "branch");
   const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
-  assert.equal(hrefs.includes("/br/3/stock/transfer"), false);
+  assert.equal(hrefs.includes("/br/3/stock/transfer"), true);
+  assert.equal(
+    groups
+      .find((group) => group.id === "stock")
+      ?.tiles.filter((tile) => tile.label === "Giao nhận hàng").length,
+    1,
+  );
   assert.equal(
     groups
       .find((group) => group.id === "stock")
@@ -187,7 +193,6 @@ test("resolveOperatorTiles -> branch kitchen transfer tile is retired", () => {
     false,
   );
 });
-
 
 test("resolveOperatorTiles -> orders tile is branch-native under sales_kitchen", () => {
   const groups = resolveOperatorTiles("owner", 3);

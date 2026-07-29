@@ -22,6 +22,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import { useIsOnline } from "@/components/pwa-runtime";
 import { StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorControlBar,
@@ -35,6 +36,7 @@ import {
   type TransferDetail,
 } from "@lib/inventory/transfer-detail-model";
 import {
+  transferConfirmReceive,
   transferConfirmShip,
   transferMarkInTransit,
 } from "@/(protected)/inventory/transfer-actions";
@@ -51,6 +53,7 @@ function getActionLabel(kind: TransferActionKind): string {
   const actions = messages.inventory.transfer.actions;
   if (kind === "confirm_ship") return actions.confirmShip;
   if (kind === "mark_in_transit") return actions.markInTransit;
+  if (kind === "confirm_receive") return actions.confirmReceive;
   return actions.receive;
 }
 
@@ -61,6 +64,7 @@ export function BranchTransferDetailClient({
   userBranchId,
 }: BranchTransferDetailClientProps) {
   const router = useRouter();
+  const isOnline = useIsOnline();
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.transfer;
   const listHref = `/br/${branchId}/stock/transfer`;
@@ -79,12 +83,18 @@ export function BranchTransferDetailClient({
     ) {
       return;
     }
+    if (!isOnline) {
+      toast.error(messages.inventory.stockRequests.journey.offlineMutation);
+      return;
+    }
 
     startTransition(async () => {
       const result =
         actionConfig.kind === "mark_in_transit"
           ? await transferMarkInTransit(transfer.id)
-          : await transferConfirmShip(transfer.id);
+          : actionConfig.kind === "confirm_receive"
+            ? await transferConfirmReceive(transfer.id)
+            : await transferConfirmShip(transfer.id);
 
       if (!result.success) {
         toast.error(result.error ?? copy.updateFailed);
@@ -114,7 +124,7 @@ export function BranchTransferDetailClient({
         <Button
           type="button"
           size="touch-lg"
-          disabled={isPending || !actionConfig.enabled}
+          disabled={isPending || !isOnline || !actionConfig.enabled}
           onClick={handlePrimaryAction}
         >
           {isPending ? <Spinner className="size-5" /> : null}

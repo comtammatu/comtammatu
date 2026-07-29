@@ -66,7 +66,7 @@ test("D091 central site roles pass the Inventory action gate", () => {
   assert.equal(INVENTORY_OPS_ROLES.includes("central_kitchen_lead"), true);
 });
 
-test("D091 central site templates ship and receive transfers but cannot create them", () => {
+test("central site templates can create, ship, and receive manual transfers", () => {
   const fixture = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
 
   for (const role of ["central_supply_ops", "central_kitchen_lead"]) {
@@ -76,7 +76,7 @@ test("D091 central site templates ship and receive transfers but cannot create t
     assert.ok(template, role);
     assert.match(template, /'inventory:transfer_receive'/);
     assert.match(template, /'inventory:transfer_ship'/);
-    assert.doesNotMatch(template, /'inventory:transfer_create'/);
+    assert.match(template, /'inventory:transfer_create'/);
   }
 });
 

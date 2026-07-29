@@ -9,6 +9,7 @@ import {
 } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { Label } from "@comtammatu/ui/components/label";
+import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import {
   Item,
   ItemContent,
@@ -23,13 +24,19 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsOnline } from "@/components/pwa-runtime";
 import {
+  AppDetailFooter,
   AppPage,
   AppPageHeader,
   AppSection,
 } from "@/components/surface";
 import { messages } from "@lib/messages";
-import { fulfillStockRequestLines } from "@/(protected)/inventory/stock-request-actions";
+import {
+  closeStockRequest,
+  fulfillStockRequestLines,
+  rejectStockRequestLines,
+} from "@/(protected)/inventory/stock-request-actions";
 
 const stockRequestCopy = messages.inventory.stockRequests;
 const copy = stockRequestCopy.fulfill;
@@ -55,6 +62,8 @@ interface StockRequestFulfillClientProps {
   status: string;
   branchLabel: string;
   groups: StockRequestFulfillGroup[];
+  embedded?: boolean;
+  canClose?: boolean;
 }
 
 function siteKindLabel(kind: SiteKind): string {
@@ -67,8 +76,11 @@ export function StockRequestFulfillClient({
   status,
   branchLabel,
   groups,
+  embedded = false,
+  canClose = false,
 }: StockRequestFulfillClientProps) {
   const router = useRouter();
+  const isOnline = useIsOnline();
   const [isPending, startTransition] = useTransition();
   const [selectedByGroup, setSelectedByGroup] = useState<
     Record<string, Set<number>>
@@ -87,6 +99,12 @@ export function StockRequestFulfillClient({
       ]),
     ),
   );
+  const [reasonAction, setReasonAction] = useState<
+    | { kind: "reject"; group: StockRequestFulfillGroup }
+    | { kind: "close" }
+    | null
+  >(null);
+  const [reason, setReason] = useState("");
 
   function toggleLine(groupKind: string, lineId: number, checked: boolean) {
     setSelectedByGroup((current) => {
@@ -105,6 +123,10 @@ export function StockRequestFulfillClient({
   }
 
   function handleFulfill(group: StockRequestFulfillGroup) {
+    if (!isOnline) {
+      toast.error(stockRequestCopy.journey.offlineMutation);
+      return;
+    }
     const selected = [...(selectedByGroup[group.fulfillSiteKind] ?? [])];
     const fromLocationId = Number(locationByGroup[group.fulfillSiteKind]);
 
@@ -137,25 +159,39 @@ export function StockRequestFulfillClient({
     });
   }
 
-  return (
-    <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={requestNumber}
-        description={copy.headerDescription(
-          branchLabel,
-          stockRequestCopy.statusLabel(status),
-        )}
-        actions={
-          <Button
-            variant="ghost"
-            size="sm"
-            render={<Link href="/inventory/stock-requests" />}
-          >
-            {copy.back}
-          </Button>
-        }
-      />
+  function handleReasonAction() {
+    if (!reasonAction) return;
+    if (!isOnline) {
+      toast.error(stockRequestCopy.journey.offlineMutation);
+      return;
+    }
+    startTransition(async () => {
+      const result =
+        reasonAction.kind === "close"
+          ? await closeStockRequest({ requestId, reason })
+          : await rejectStockRequestLines({
+              requestId,
+              fulfillSiteKind: reasonAction.group.fulfillSiteKind,
+              itemIds: [
+                ...(selectedByGroup[reasonAction.group.fulfillSiteKind] ?? []),
+              ],
+              reason,
+            });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        reasonAction.kind === "close" ? copy.closeSuccess : copy.rejectSuccess,
+      );
+      setReasonAction(null);
+      setReason("");
+      router.refresh();
+    });
+  }
 
+  const content = (
+    <>
       {groups.length === 0 ? (
         <p className="text-sm text-muted-foreground">{copy.noLinesInScope}</p>
       ) : (
@@ -222,7 +258,9 @@ export function StockRequestFulfillClient({
 
                   {group.locations.length > 1 ? (
                     <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={`fulfill-location-${group.fulfillSiteKind}`}>
+                      <Label
+                        htmlFor={`fulfill-location-${group.fulfillSiteKind}`}
+                      >
                         {copy.exportLocation}
                       </Label>
                       <Select
@@ -238,7 +276,9 @@ export function StockRequestFulfillClient({
                           id={`fulfill-location-${group.fulfillSiteKind}`}
                           className="w-full"
                         >
-                          <SelectValue placeholder={copy.chooseExportLocation} />
+                          <SelectValue
+                            placeholder={copy.chooseExportLocation}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {group.locations.map((location) => (
@@ -266,6 +306,7 @@ export function StockRequestFulfillClient({
                     type="button"
                     disabled={
                       isPending ||
+                      !isOnline ||
                       group.locations.length === 0 ||
                       !group.lines.some((line) => line.status === "pending")
                     }
@@ -277,12 +318,88 @@ export function StockRequestFulfillClient({
                           siteKindLabel(group.fulfillSiteKind),
                         )}
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      isPending ||
+                      !isOnline ||
+                      (selectedByGroup[group.fulfillSiteKind]?.size ?? 0) === 0
+                    }
+                    onClick={() => setReasonAction({ kind: "reject", group })}
+                  >
+                    {copy.rejectSelected}
+                  </Button>
                 </div>
               ) : null}
             </AppSection>
           ))}
         </div>
       )}
+      {canClose &&
+      status === "submitted" &&
+      groups.some((group) =>
+        group.lines.some((line) => line.status === "pending"),
+      ) ? (
+        <AppDetailFooter
+          leading={
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending || !isOnline}
+              onClick={() => setReasonAction({ kind: "close" })}
+            >
+              {copy.closeRemaining}
+            </Button>
+          }
+        />
+      ) : null}
+      <ReasonConfirmDialog
+        open={reasonAction != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReasonAction(null);
+            setReason("");
+          }
+        }}
+        title={
+          reasonAction?.kind === "close" ? copy.closeTitle : copy.rejectTitle
+        }
+        description={copy.reasonDescription}
+        reasonId="stock-request-source-reason"
+        reason={reason}
+        onReasonChange={setReason}
+        reasonLabel={copy.reasonLabel}
+        reasonPlaceholder={copy.reasonPlaceholder}
+        cancelLabel={copy.reasonCancel}
+        confirmLabel={copy.reasonConfirm}
+        onConfirm={handleReasonAction}
+        isPending={isPending || !isOnline}
+      />
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <AppPage width="xwide" density="compact">
+      <AppPageHeader
+        title={requestNumber}
+        description={copy.headerDescription(
+          branchLabel,
+          stockRequestCopy.statusLabel(status),
+        )}
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
+            render={<Link href="/inventory/transfers?queue=requests" />}
+          >
+            {copy.back}
+          </Button>
+        }
+      />
+      {content}
     </AppPage>
   );
 }

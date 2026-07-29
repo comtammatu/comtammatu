@@ -29,7 +29,8 @@ export interface TransferDetail {
   }>;
 }
 
-export type TransferActionKind = "confirm_ship" | "mark_in_transit" | "receive";
+export type TransferActionKind =
+  "confirm_ship" | "mark_in_transit" | "confirm_receive" | "receive";
 
 export interface TransferActionConfig {
   kind: TransferActionKind;
@@ -37,7 +38,7 @@ export interface TransferActionConfig {
 }
 
 export function isTransferReceiveReady(status: string): boolean {
-  return status === "in_transit" || status === "confirmed_receive";
+  return status === "confirmed_receive";
 }
 
 export function getTransferActionConfig({
@@ -69,6 +70,16 @@ export function getTransferActionConfig({
   if (isTransferReceiveReady(transfer.status)) {
     return {
       kind: "receive",
+      enabled:
+        userRole === "branch_manager"
+          ? userBranchId === transfer.toBranchId
+          : true,
+    };
+  }
+
+  if (transfer.status === "in_transit") {
+    return {
+      kind: "confirm_receive",
       enabled:
         userRole === "branch_manager"
           ? userBranchId === transfer.toBranchId
