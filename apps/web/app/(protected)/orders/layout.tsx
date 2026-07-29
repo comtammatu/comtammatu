@@ -7,15 +7,15 @@ export default async function OrdersLayout({
 }: {
   children: ReactNode;
 }) {
-  const { session, claims } = await loadAuthState();
+  const { user, claims } = await loadAuthState();
 
   return (
     <ControlSurfaceShell
       module="orders"
       user={{
         name:
-          session.user.user_metadata?.["display_name"] ??
-          session.user.email ??
+          user?.user_metadata?.["display_name"] ??
+          user?.email ??
           "",
       }}
       role={claims.user_role}

@@ -71,29 +71,50 @@ test("probeAuthSessionLiveness redirects to signout on revoked Auth session", as
   );
 });
 
-test("probeAuthSessionLiveness no-ops when Auth session is live", async () => {
+test("probeAuthSessionLiveness returns the verified live user", async () => {
+  const user = { id: "user-1" };
   const supabase = {
     auth: {
       getUser: async () => ({
-        data: { user: { id: "user-1" } },
+        data: { user },
         error: null,
       }),
     },
   };
 
-  await assert.doesNotReject(() =>
-    probeAuthSessionLiveness(
+  assert.equal(
+    await probeAuthSessionLiveness(
       supabase as Parameters<typeof probeAuthSessionLiveness>[0],
     ),
+    user,
   );
 });
 
 test("probeAuthSessionLiveness skips incomplete fakes without getUser", async () => {
   const supabase = { auth: {} };
-  await assert.doesNotReject(() =>
-    probeAuthSessionLiveness(
+  assert.equal(
+    await probeAuthSessionLiveness(
       supabase as Parameters<typeof probeAuthSessionLiveness>[0],
     ),
+    null,
+  );
+});
+
+test("probeAuthSessionLiveness preserves non-revoked Auth failures", async () => {
+  const supabase = {
+    auth: {
+      getUser: async () => ({
+        data: { user: null },
+        error: { code: "unexpected_failure" },
+      }),
+    },
+  };
+
+  assert.equal(
+    await probeAuthSessionLiveness(
+      supabase as Parameters<typeof probeAuthSessionLiveness>[0],
+    ),
+    null,
   );
 });
 
@@ -117,7 +138,11 @@ test("loadAuthState probes Auth liveness; getAuthContext stays getSession-only",
 
   const loadAuthBody = codeOnly.slice(loadAuthStart);
   assert.match(loadAuthBody, /await supabase\.auth\.getSession\(\)/);
-  assert.match(loadAuthBody, /await probeAuthSessionLiveness\(supabase\)/);
+  assert.match(
+    loadAuthBody,
+    /const user = await probeAuthSessionLiveness\(supabase\)/,
+  );
+  assert.match(loadAuthBody, /return \{ supabase, session, claims, user \}/);
   assert.doesNotMatch(loadAuthBody, /supabase\.auth\.getUser\(/);
 });
 
@@ -144,6 +169,26 @@ test("POS layout calls loadAuthState for far-from-expiry zombie clear", () => {
     "app/(protected)/br/[branchId]/pos/layout.tsx",
   );
   assert.match(source, /await loadAuthState\(\)/);
+});
+
+test("control-surface layouts never read the unverified session user", () => {
+  const layouts = [
+    "app/page.tsx",
+    "app/(protected)/branches/layout.tsx",
+    "app/(protected)/feedback/layout.tsx",
+    "app/(protected)/finance/layout.tsx",
+    "app/(protected)/hr/layout.tsx",
+    "app/(protected)/inventory/layout.tsx",
+    "app/(protected)/menu/layout.tsx",
+    "app/(protected)/orders/layout.tsx",
+    "app/(protected)/settings/layout.tsx",
+  ];
+
+  for (const layout of layouts) {
+    const source = readWeb(layout);
+    assert.match(source, /const \{[^}]*\buser\b[^}]*\} = await loadAuthState\(\)/);
+    assert.doesNotMatch(source, /session\.user\./);
+  }
 });
 
 test("proxy and middleware still never call getUser", () => {

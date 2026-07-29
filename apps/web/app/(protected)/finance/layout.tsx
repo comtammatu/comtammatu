@@ -9,7 +9,7 @@ export default async function FinanceLayout({
 }: {
   children: ReactNode;
 }) {
-  const { session, claims } = await loadAuthState();
+  const { user, claims } = await loadAuthState();
   const [showInvoices, showSupplierPayables] = await Promise.all([
     currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
@@ -20,8 +20,8 @@ export default async function FinanceLayout({
       module="finance"
       user={{
         name:
-          session.user.user_metadata?.["display_name"] ??
-          session.user.email ??
+          user?.user_metadata?.["display_name"] ??
+          user?.email ??
           "",
       }}
       role={claims.user_role}

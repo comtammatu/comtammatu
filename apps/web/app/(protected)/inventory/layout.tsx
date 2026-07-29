@@ -29,7 +29,7 @@ export default async function InventoryLayout({
 }: {
   children: ReactNode;
 }) {
-  const { supabase, session, claims } = await loadAuthState();
+  const { supabase, user, claims } = await loadAuthState();
   const scope = await resolveInventoryBranchScope(supabase, claims, null);
   const [
     hasProcurementRead,
@@ -71,8 +71,8 @@ export default async function InventoryLayout({
         module="inventory"
         user={{
           name:
-            session.user.user_metadata?.["display_name"] ??
-            session.user.email ??
+            user?.user_metadata?.["display_name"] ??
+            user?.email ??
             "",
         }}
         role={claims.user_role}

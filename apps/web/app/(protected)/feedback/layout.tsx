@@ -11,7 +11,7 @@ export default async function FeedbackLayout({
 }: {
   children: ReactNode;
 }) {
-  const { session, claims } = await loadAuthState();
+  const { user, claims } = await loadAuthState();
   if (!canAccess(claims.user_role, "feedback")) {
     redirect("/access-denied?reason=module");
   }
@@ -21,8 +21,8 @@ export default async function FeedbackLayout({
       module="feedback"
       user={{
         name:
-          session.user.user_metadata?.["display_name"] ??
-          session.user.email ??
+          user?.user_metadata?.["display_name"] ??
+          user?.email ??
           "",
       }}
       role={claims.user_role}

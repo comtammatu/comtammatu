@@ -6,7 +6,7 @@ import type {
   PermissionKey,
   StaffRole,
 } from "@comtammatu/shared/auth";
-import type { Session } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import { probeAuthSessionLiveness } from "./auth-session-liveness";
 
 /**
@@ -159,6 +159,7 @@ type LoadedAuthState = {
   supabase: Awaited<ReturnType<typeof createClient>>;
   session: Session;
   claims: JwtClaims;
+  user: User | null;
 };
 
 /**
@@ -172,10 +173,11 @@ type LoadedAuthState = {
  * signout instead of serving authenticated UI. That is Auth liveness, not a
  * second ACL gate — `getAuthContext` stays getSession-only (GRN false-deny).
  *
- * Returns the Supabase client so callers can avoid creating a second one.
+ * Returns the Supabase client and verified Auth user so callers can avoid a
+ * second client or reading the unverified `session.user` cookie payload.
  *
  * Wrapped in React `cache()` so repeated calls within ONE RSC render share
- * the same `{supabase, session, claims}` snapshot — eliminates duplicate
+ * the same `{supabase, session, claims, user}` snapshot — eliminates duplicate
  * `getSession()` / liveness probe when both a layout and its page (or multiple
  * helpers like `getEmployeeContext`) read auth state. Cache scope is
  * per-request; production safety unchanged.
@@ -186,7 +188,7 @@ export const loadAuthState = cache(async (): Promise<LoadedAuthState> => {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session?.user) {
+  if (!session?.access_token) {
     throw new Error(
       "loadAuthState: session missing — proxy (apps/web/proxy.ts) should have redirected to /login before reaching this layout.",
     );
@@ -201,7 +203,7 @@ export const loadAuthState = cache(async (): Promise<LoadedAuthState> => {
 
   // Far-from-expiry zombie: cookie JWT still valid, Auth session revoked.
   // Redirect (not throw) so recovery clears cookies via Route Handler.
-  await probeAuthSessionLiveness(supabase);
+  const user = await probeAuthSessionLiveness(supabase);
 
-  return { supabase, session, claims };
+  return { supabase, session, claims, user };
 });

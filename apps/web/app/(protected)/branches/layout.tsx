@@ -9,7 +9,7 @@ export default async function BranchesLayout({
 }: {
   children: ReactNode;
 }) {
-  const { session, claims } = await loadAuthState();
+  const { user, claims } = await loadAuthState();
 
   if (!canAccess(claims.user_role, "branches")) {
     redirect("/access-denied?reason=insufficient-permission");
@@ -20,8 +20,8 @@ export default async function BranchesLayout({
       module="branches"
       user={{
         name:
-          session.user.user_metadata?.["display_name"] ??
-          session.user.email ??
+          user?.user_metadata?.["display_name"] ??
+          user?.email ??
           "",
       }}
       role={claims.user_role}
