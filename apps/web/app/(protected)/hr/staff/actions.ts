@@ -275,13 +275,16 @@ export async function updateStaff(
   return { success: true };
 }
 
-const staffIdSchema = z.string().uuid({ error: "ID nhân viên không hợp lệ" });
+const staffIdSchema = z
+  .string()
+  .uuid({ error: "Mã nhân viên không hợp lệ" });
 
 export async function toggleStaffActive(
   staffId: string,
 ): Promise<ActionResult> {
   const parsedId = staffIdSchema.safeParse(staffId);
-  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
+  if (!parsedId.success)
+    return { success: false, error: "Mã nhân viên không hợp lệ" };
 
   const ctx = await getAuthContextWithPermission(
     MANAGER_ROLES,

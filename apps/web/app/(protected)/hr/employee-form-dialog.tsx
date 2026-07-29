@@ -264,7 +264,7 @@ export function EmployeeFormDialog({
 
               <FormGroupBlock
                 title="Hồ sơ làm việc"
-                description="Thông tin dùng cho phân quyền, chi nhánh, checklist và trạng thái đi làm."
+                description="Thông tin dùng cho phân quyền, chi nhánh, việc trong ca và trạng thái đi làm."
               >
                 <TextField
                   control={form.control}
@@ -371,7 +371,7 @@ export function EmployeeFormDialog({
 
               <FormGroupBlock
                 title="Định danh và thanh toán"
-                description="Thông tin nhạy cảm chỉ owner được nhập và xem."
+                description="Thông tin nhạy cảm chỉ chủ sở hữu được nhập và xem."
               >
                 <TextField
                   control={form.control}
@@ -459,7 +459,7 @@ export function EmployeeFormDialog({
 
             <FormGroupBlock
               title="Tài khoản đăng nhập"
-              description="Tạo tài khoản app và gắn vai trò vận hành ban đầu."
+              description="Tạo tài khoản ứng dụng và gắn vai trò vận hành ban đầu."
             >
               <TextField
                 control={form.control}
@@ -495,7 +495,7 @@ export function EmployeeFormDialog({
 
             <FormGroupBlock
               title="Hồ sơ làm việc"
-              description="Thông tin dùng cho chi nhánh, checklist, mã nhân viên và ngày bắt đầu."
+              description="Thông tin dùng cho chi nhánh, việc trong ca, mã nhân viên và ngày bắt đầu."
             >
               <SelectField
                 control={form.control}

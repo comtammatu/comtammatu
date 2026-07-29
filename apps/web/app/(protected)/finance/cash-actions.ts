@@ -47,7 +47,7 @@ function financeFundError(
   const message = error.message?.toLowerCase() ?? "";
 
   if (error.code === "42501" || message.includes("forbidden_owner_only")) {
-    return "Chỉ Owner mới được ghi nhận số dư theo sổ.";
+  return "Chỉ chủ sở hữu mới được ghi nhận số dư theo sổ.";
   }
   if (message.includes("finance_fund_idempotency_conflict")) {
     return "Yêu cầu này đã được dùng với dữ liệu khác. Hãy đóng và mở lại biểu mẫu.";

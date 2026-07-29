@@ -217,7 +217,7 @@ export const DEFAULT_TEMPLATE_CONTENT: Record<PrintKind, TemplateContent> = {
       },
       {
         type: "text",
-        text: "Người order: {{cashier_name}}",
+        text: "Người nhận đơn: {{cashier_name}}",
         when_field: "cashier_name",
         when_not_empty: true,
       },

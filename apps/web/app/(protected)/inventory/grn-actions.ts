@@ -435,7 +435,7 @@ export async function fetchGrnDetail(
   grnKey: number | string,
 ): Promise<ActionResult> {
   const lookup = parseGrnLookup(grnKey);
-  if (!lookup) return { success: false, error: "ID không hợp lệ" };
+  if (!lookup) return { success: false, error: "Mã phiếu nhập không hợp lệ" };
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
@@ -1244,7 +1244,8 @@ export const deleteGrnLine = withAction(
 
 export async function confirmGrn(grnId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(grnId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã phiếu nhập không hợp lệ" };
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_GRN_CONFIRM,
@@ -1396,7 +1397,10 @@ export const amendGrnLine = withAction(
       // Map known PG error codes to friendly messages.
       const msg = error.message || "";
       if (msg.includes("forbidden_owner_only")) {
-        return { success: false, error: "Chỉ Owner được sửa phiếu đã chốt." };
+        return {
+          success: false,
+          error: "Chỉ chủ sở hữu được sửa phiếu đã chốt.",
+        };
       }
       if (msg.includes("grn_not_confirmed_use_upsert")) {
         return {

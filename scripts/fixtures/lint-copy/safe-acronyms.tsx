@@ -1,1 +1,1 @@
-const labels = ["POS", "KDS", "PO", "QR", "HĐĐT"];
+const labels = ["POS", "KDS", "PO", "GRN", "WAC", "QR", "HĐĐT", "GTGT"];

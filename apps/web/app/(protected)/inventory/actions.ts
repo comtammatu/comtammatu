@@ -215,7 +215,7 @@ export async function fetchStocktakeDetail(
 ): Promise<ActionResult> {
   const parsedId = stocktakeSessionIdSchema.safeParse(sessionId);
   if (!parsedId.success) {
-    return { success: false, error: "ID không hợp lệ" };
+    return { success: false, error: "Mã phiên kiểm kê không hợp lệ" };
   }
 
   const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
@@ -357,7 +357,7 @@ export async function completeStocktake(
 ): Promise<ActionResult> {
   const parsedId = stocktakeSessionIdSchema.safeParse(sessionId);
   if (!parsedId.success) {
-    return { success: false, error: "ID không hợp lệ" };
+    return { success: false, error: "Mã phiên kiểm kê không hợp lệ" };
   }
 
   const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
@@ -432,7 +432,7 @@ export async function cancelStocktake(
 ): Promise<ActionResult> {
   const parsedId = stocktakeSessionIdSchema.safeParse(sessionId);
   if (!parsedId.success) {
-    return { success: false, error: "ID không hợp lệ" };
+    return { success: false, error: "Mã phiên kiểm kê không hợp lệ" };
   }
 
   const ctx = await getAuthContext(INVENTORY_OPS_ROLES);

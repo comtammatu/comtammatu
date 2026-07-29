@@ -27,7 +27,7 @@ export const feedbackCopy = {
   rating: "Sao",
   comment: "Nội dung",
   createdAt: "Thời gian",
-  copyUrl: "Sao chép link",
+  copyUrl: "Sao chép đường dẫn",
   downloadQr: "Tải QR",
   copied: "Đã sao chép",
   downloadOk: "Đã tải mã QR.",
@@ -41,6 +41,6 @@ export const feedbackCopy = {
   toastRotateFailed: "Không xoay được.",
   toastDeactivateOk: "Đã tắt mã QR.",
   toastDeactivateFailed: "Không tắt được.",
-  placeholderBranchWide: "VD: Cổng vào",
-  placeholderWithTable: "VD: Bàn 5 / Cổng vào",
+  placeholderBranchWide: "Ví dụ: Cổng vào",
+  placeholderWithTable: "Ví dụ: Bàn 5 / Cổng vào",
 } as const;

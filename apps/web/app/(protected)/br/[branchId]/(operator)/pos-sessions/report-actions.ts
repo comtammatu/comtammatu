@@ -168,7 +168,7 @@ export async function getPosSessionReport(
 ): Promise<ActionResult<PosSessionReport>> {
   const parsed = inputSchema.safeParse({ sessionId });
   if (!parsed.success) {
-    return { success: false, error: "Session ID không hợp lệ" };
+    return { success: false, error: "Mã ca không hợp lệ" };
   }
 
   const { supabase, claims } = await loadAuthState();

@@ -137,19 +137,19 @@ function mapRpcError(msg: string): string {
   if (msg.includes("cannot_manage_owner_permissions"))
     return "Không thể thay đổi quyền của chủ sở hữu.";
   if (msg.includes("target_not_in_tenant"))
-    return "Người dùng không thuộc tenant.";
+    return "Người dùng không thuộc hệ thống.";
   if (msg.includes("branch_not_in_tenant"))
-    return "Chi nhánh không thuộc tenant.";
+    return "Chi nhánh không thuộc hệ thống.";
   if (msg.includes("unknown_permission_key_in_template"))
     return "Mẫu có khóa quyền không hợp lệ.";
   if (msg.includes("unknown_permission_key"))
-    return "Permission key không hợp lệ.";
+    return "Quyền không hợp lệ.";
   if (msg.includes("template_not_in_tenant"))
     return "Mẫu không thuộc doanh nghiệp.";
   if (msg.includes("owner_template_cannot_be_applied_to_staff"))
-    return "Không thể áp mẫu Owner cho nhân sự.";
+    return "Không thể áp mẫu chủ sở hữu cho nhân sự.";
   if (msg.includes("owner_only_permission_cannot_be_delegated"))
-    return "Quyền này chỉ dành cho Owner.";
+    return "Quyền này chỉ dành cho chủ sở hữu.";
   if (msg.includes("permission_scope_requires_branch"))
     return "Quyền này cần chọn chi nhánh.";
   if (msg.includes("permission_scope_requires_tenant"))

@@ -339,7 +339,7 @@ export async function retryPrintJob(jobId: number): Promise<ActionResult> {
   if (data !== true) {
     return {
       success: false,
-      error: "Job không ở trạng thái failed/expired hoặc không tồn tại.",
+      error: "Lệnh in không ở trạng thái lỗi, hết hạn hoặc không tồn tại.",
     };
   }
 

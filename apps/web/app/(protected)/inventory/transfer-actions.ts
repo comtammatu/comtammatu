@@ -163,7 +163,8 @@ export async function fetchStockTransferDetail(
   branchId?: number,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã phiếu chuyển không hợp lệ" };
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.INVENTORY_READ,
@@ -582,7 +583,8 @@ export async function transferConfirmShip(
   transferId: number,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã phiếu chuyển không hợp lệ" };
   const authz = await loadTransferForPermission(
     id.data,
     (transfer) =>
@@ -614,7 +616,8 @@ export async function transferMarkInTransit(
   transferId: number,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã phiếu chuyển không hợp lệ" };
   const authz = await loadTransferForPermission(
     id.data,
     PERMISSION_KEYS.INVENTORY_TRANSFER_SHIP,
@@ -639,7 +642,8 @@ export async function transferConfirmReceive(
   transferId: number,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã phiếu chuyển không hợp lệ" };
   const authz = await loadTransferForPermission(
     id.data,
     PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
@@ -668,7 +672,8 @@ export async function transferReceive(
   items: Record<string, number | { qty: number; note?: string }> | null,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã phiếu chuyển không hợp lệ" };
 
   // Validate items shape
   if (items) {

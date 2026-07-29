@@ -72,7 +72,7 @@ function readHrmConsumptionTrace(sourceRef: unknown): string | null {
   if (ref?.source !== "attendance_consumption_report") return null;
   return typeof ref.source_label === "string"
     ? ref.source_label
-    : "HRM - Tiêu hao bếp trong ngày";
+    : "Nhân sự - Tiêu hao bếp trong ngày";
 }
 
 async function loadGrnSource(

@@ -914,7 +914,8 @@ export async function deleteProductionRecipe(
   recipeId: number,
 ): Promise<ActionResult> {
   const parsed = idSchema.safeParse(recipeId);
-  if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
+  if (!parsed.success)
+    return { success: false, error: "Mã công thức không hợp lệ" };
 
   const ctx = await getAuthContextWithAnyPermission(
     PRODUCTION_RECIPE_MANAGER_ROLES,
@@ -947,7 +948,7 @@ export async function deleteProductionRecipeGroup(
 ): Promise<ActionResult> {
   const parsed = idSchema.safeParse(finishedGoodId);
   if (!parsed.success)
-    return { success: false, error: "ID thành phẩm không hợp lệ" };
+    return { success: false, error: "Mã thành phẩm không hợp lệ" };
 
   const ctx = await getAuthContextWithAnyPermission(
     PRODUCTION_RECIPE_MANAGER_ROLES,

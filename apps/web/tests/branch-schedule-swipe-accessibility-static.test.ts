@@ -63,7 +63,7 @@ test("checkout approval details keep one scroll body and semantic checklist role
   assert.match(source, /className="min-h-0 flex-1 overflow-y-auto px-4"/);
   assert.match(
     source,
-    /<SectionLabel as="h3">Checklist công việc<\/SectionLabel>/,
+    /<SectionLabel as="h3">Việc trong ca<\/SectionLabel>/,
   );
   assert.match(source, /<ItemGroup className="gap-2">/);
   assert.match(source, /role="listitem"/);

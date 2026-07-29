@@ -206,7 +206,8 @@ export async function fetchStockIssueDetail(
   issueId: number,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(issueId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã phiếu xuất không hợp lệ" };
 
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -429,7 +430,8 @@ export async function confirmStockIssue(
   issueId: number,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(issueId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã phiếu xuất không hợp lệ" };
 
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -472,7 +474,8 @@ export async function confirmStockIssue(
 
 export async function cancelStockIssue(issueId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(issueId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã phiếu xuất không hợp lệ" };
 
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };

@@ -226,7 +226,7 @@ function ApprovalRow({
                 </Badge>
                 {item.checklist && item.checklist.length > 0 ? (
                   <span className="text-xs font-semibold text-muted-foreground">
-                    Checklist:{" "}
+                    Việc trong ca:{" "}
                     <span className="font-mono text-foreground font-bold">
                       {item.checklist.filter((c) => c.isDone).length}/
                       {item.checklist.length}
@@ -286,7 +286,7 @@ export function CheckoutApprovalsClient({
         ...(checklistTotal > 0
           ? [
               {
-                label: "Checklist",
+                label: "Việc trong ca",
                 value: `${checklistDone}/${checklistTotal} xong`,
               },
             ]
@@ -398,7 +398,7 @@ export function CheckoutApprovalsClient({
               {detailsTarget?.checklist &&
               detailsTarget.checklist.length > 0 ? (
                 <div className="flex flex-col gap-3">
-                  <SectionLabel as="h3">Checklist công việc</SectionLabel>
+                  <SectionLabel as="h3">Việc trong ca</SectionLabel>
                   <ItemGroup className="gap-2">
                     {detailsTarget.checklist.map((c) => (
                       <Item
@@ -434,7 +434,7 @@ export function CheckoutApprovalsClient({
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground italic">
-                  Không có checklist công việc.
+                  Không có việc trong ca.
                 </p>
               )}
             </div>

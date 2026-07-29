@@ -33,7 +33,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { matchesSearch } from "@lib/search";
 import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
@@ -41,7 +40,6 @@ import { NetworkConfigDialog } from "./network-config-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppDialog } from "@/components/form";
 import { AppEmptyState } from "@/components/surface";
 import { RowActionsMenu } from "@/components/row-actions-menu";
 
@@ -63,7 +61,6 @@ interface BranchTableProps {
 export function BranchTable({ branches }: BranchTableProps) {
   const [editBranch, setEditBranch] = useState<BranchRow | null>(null);
   const [networkBranch, setNetworkBranch] = useState<BranchRow | null>(null);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const copy = messages.settings.branchTable;
@@ -249,7 +246,12 @@ export function BranchTable({ branches }: BranchTableProps) {
                     variant="outline"
                     size="touch"
                     className="w-full"
-                    onClick={() => setFeedbackOpen(true)}
+                    disabled={!isActive}
+                    render={
+                      isActive ? (
+                        <Link href={`/br/${branch.id}/feedback`} />
+                      ) : undefined
+                    }
                   >
                     <IconMessageCircle data-icon="inline-start" />
                     {copy.feedback}
@@ -275,17 +277,6 @@ export function BranchTable({ branches }: BranchTableProps) {
         />
       )}
 
-      <AppDialog
-        open={feedbackOpen}
-        onOpenChange={setFeedbackOpen}
-        title={copy.feedbackComingSoonTitle}
-        description={copy.feedbackComingSoonDescription}
-        footer={
-          <Button size="touch" onClick={() => setFeedbackOpen(false)}>
-            {ACTIONS_VI.close}
-          </Button>
-        }
-      />
     </>
   );
 }

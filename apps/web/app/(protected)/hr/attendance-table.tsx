@@ -899,7 +899,7 @@ function DetailView({
     },
     {
       key: "template",
-      header: "Template",
+      header: "Mẫu",
       className: "text-sm",
       render: (record) =>
         record.shift_checklist_templates?.name ?? (
@@ -908,7 +908,7 @@ function DetailView({
     },
     {
       key: "checklist",
-      header: "Checklist",
+      header: "Việc trong ca",
       render: (record) => (
         <ChecklistProgressButton
           record={record}
@@ -1031,7 +1031,7 @@ function DetailView({
         onOpenChange={(open) => {
           if (!open) setChecklistRecord(null);
         }}
-        title="Checklist ca làm"
+        title="Việc trong ca"
         description={
           checklistRecord
             ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${formatVNBusinessDate(checklistRecord.date)}`

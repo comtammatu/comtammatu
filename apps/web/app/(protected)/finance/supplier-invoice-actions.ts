@@ -424,7 +424,7 @@ export const attachSupplierInvoiceVatEvidence = withAction(
     if (!data.storagePath.startsWith(tenantPrefix)) {
       return {
         success: false,
-        error: "File HĐ GTGT không thuộc tenant hiện tại.",
+      error: "File HĐ GTGT không thuộc hệ thống hiện tại.",
       };
     }
 
@@ -659,7 +659,8 @@ export async function recomputeInvoiceMatching(
   invoiceId: number,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(invoiceId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  if (!id.success)
+    return { success: false, error: "Mã hóa đơn không hợp lệ" };
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,

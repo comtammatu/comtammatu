@@ -2,10 +2,11 @@
 export const POS_VI = {
   serviceChargeTitle: "Phụ phí",
   serviceChargeAmountLabel: "Số tiền phụ phí",
-  serviceChargeAmountPlaceholder: "Vd: 10000",
+  serviceChargeAmountPlaceholder: "Ví dụ: 10000",
   serviceChargeHint:
-    "Dùng cho phí ship, đóng gói hoặc phụ phí khác trước khi thanh toán.",
-  serviceChargeNotePlaceholder: "Vd: phí ship nội bộ, hộp mang về...",
+    "Dùng cho phí giao hàng, đóng gói hoặc phụ phí khác trước khi thanh toán.",
+  serviceChargeNotePlaceholder:
+    "Ví dụ: phí giao hàng nội bộ, hộp mang về...",
   newTotal: "Tổng mới",
   clearServiceChargeReasonTitle: "Nhập lý do bỏ phụ phí (tối thiểu 3 ký tự).",
   clearServiceCharge: "Bỏ phụ phí",
@@ -30,11 +31,12 @@ export const POS_VI = {
   discountVndTab: "Theo VNĐ",
   discountPctLabel: "Phần trăm giảm",
   discountVndLabel: "Số tiền giảm (VNĐ)",
-  discountPctPlaceholder: "Vd: 10",
-  discountVndPlaceholder: "Vd: 20000",
+  discountPctPlaceholder: "Ví dụ: 10",
+  discountVndPlaceholder: "Ví dụ: 20000",
   discountPctMaxHint: "Tối đa 100% (tự giới hạn nếu nhập quá).",
   discountReasonLabel: "Ghi chú lý do",
-  discountReasonPlaceholder: "Vd: khách quen, voucher giấy, đền khiếu nại...",
+  discountReasonPlaceholder:
+    "Ví dụ: khách quen, voucher giấy, đền khiếu nại…",
   clearDiscountReasonTitle:
     "Nhập lý do bỏ chiết khấu (≥3 ký tự) — sẽ lưu vào nhật ký kiểm toán.",
   splitCannotKeepOne:
@@ -115,10 +117,10 @@ export const POS_VI = {
   hotkeyToggleServiceMode: "Đổi mang về / tại bàn",
   hotkeyPayOpenOrder: "Thanh toán đơn đang mở",
   hotkeyGroupSearchTable: "Tìm kiếm & chọn bàn",
-  hotkeyFocusSearch: "Focus ô tìm món",
+  hotkeyFocusSearch: "Chọn ô tìm món",
   hotkeyGroupShift: "Ca làm",
-  hotkeyOpenCloseShift: "Mở sheet đóng ca",
-  hotkeyCloseSheet: "Đóng sheet đang mở",
+  hotkeyOpenCloseShift: "Mở màn hình đóng ca",
+  hotkeyCloseSheet: "Đóng màn hình đang mở",
   hotkeyGroupHelp: "Trợ giúp",
   hotkeyToggleOverlay: "Mở / đóng bảng phím tắt",
   hotkeyOverlayTitle: "Phím tắt",

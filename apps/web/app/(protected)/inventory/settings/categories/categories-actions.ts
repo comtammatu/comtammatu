@@ -34,7 +34,7 @@ const categoryCreateSchema = z.object({
 });
 
 const categoryUpdateSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  id: z.coerce.number().int().positive({ error: "Mã nhóm không hợp lệ" }),
   name: z
     .string()
     .trim()
@@ -44,7 +44,7 @@ const categoryUpdateSchema = z.object({
 });
 
 const categoryDeleteSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  id: z.coerce.number().int().positive({ error: "Mã nhóm không hợp lệ" }),
 });
 
 export async function fetchCategories(): Promise<ActionResult<CategoryRow[]>> {

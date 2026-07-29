@@ -317,7 +317,9 @@ export function InvoiceList({
     startTransition(async () => {
       const result = await requeueTaxInvoiceIssueJob(job.id);
       if (!result.success) {
-        toast.error(result.error ?? "Không thể đưa job HĐĐT vào hàng chờ.");
+        toast.error(
+          result.error ?? "Không thể đưa yêu cầu phát hành HĐĐT vào hàng chờ.",
+        );
         return;
       }
       setIssueAttention((current) =>
@@ -350,7 +352,10 @@ export function InvoiceList({
     values: ReconcileInvoiceValues,
   ): Promise<ActionResult> {
     if (!reconcileTarget) {
-      return { success: false, error: "Thiếu định danh provider để đối soát." };
+      return {
+        success: false,
+        error: "Thiếu mã đối soát của nhà cung cấp dịch vụ.",
+      };
     }
     const result = await reconcileTaxInvoiceProviderIssued({
       taxInvoiceId: reconcileTarget.taxInvoiceId,
@@ -557,7 +562,7 @@ export function InvoiceList({
               <ItemContent>
                 <p className="font-semibold">HĐĐT cần kiểm tra trên Viettel</p>
                 <p className="text-sm text-muted-foreground">
-                  Đối chiếu đúng mã đơn, ID HĐĐT và mã giao dịch Viettel. Chỉ
+                  Đối chiếu đúng mã đơn, mã HĐĐT và mã giao dịch Viettel. Chỉ
                   ghi số HĐ sau khi xác minh; không phát hành lại.
                 </p>
               </ItemContent>
@@ -576,9 +581,9 @@ export function InvoiceList({
                     </span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    ID đơn <span className="font-mono">#{job.order_id}</span>
+                    Mã đơn <span className="font-mono">#{job.order_id}</span>
                     {" · "}
-                    ID HĐĐT{" "}
+                    Mã HĐĐT{" "}
                     <span className="font-mono">
                       {job.tax_invoice_id
                         ? `#${job.tax_invoice_id}`
@@ -923,7 +928,7 @@ export function InvoiceList({
           if (!open) setReconcileTarget(null);
         }}
         title="Đối soát HĐĐT đã phát hành"
-        description={`Chỉ ghi khi đã xác minh trên Viettel: provider_ref ${reconcileTarget?.providerRef ?? "—"}. Thao tác này không phát hành lại hóa đơn.`}
+        description={`Chỉ ghi khi đã xác minh trên Viettel: mã giao dịch ${reconcileTarget?.providerRef ?? "—"}. Thao tác này không phát hành lại hóa đơn.`}
         schema={reconcileInvoiceSchema}
         defaultValues={{ invoiceNumber: "", cqtCode: "" }}
         entityKey={reconcileTarget?.key ?? "tax-invoice-reconcile"}

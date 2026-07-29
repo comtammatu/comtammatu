@@ -170,7 +170,7 @@ const updateZoneSchema = z.object({
 });
 
 const deleteIdSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  id: z.coerce.number().int().positive({ error: "Mã bàn không hợp lệ" }),
 });
 
 /* ─── Table Schemas ─── */
@@ -190,7 +190,7 @@ const updateTableSchema = z.object({
 });
 
 const setTableSelfOrderQrEnabledSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  id: z.coerce.number().int().positive({ error: "Mã bàn không hợp lệ" }),
   enabled: z.boolean(),
 });
 

@@ -41,13 +41,13 @@ const unitCreateSchema = z.object({
 });
 
 const unitUpdateSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  id: z.coerce.number().int().positive({ error: "Mã đơn vị không hợp lệ" }),
   code: unitCode,
   is_active: z.boolean().default(true),
 });
 
 const unitDeleteSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  id: z.coerce.number().int().positive({ error: "Mã đơn vị không hợp lệ" }),
 });
 
 export async function fetchUnits(): Promise<ActionResult<UnitRow[]>> {

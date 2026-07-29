@@ -611,7 +611,7 @@ const splitInputSchema = z.object({
         itemId: z.coerce
           .number()
           .int()
-          .positive({ error: "Item ID không hợp lệ" }),
+          .positive({ error: "Mã món không hợp lệ" }),
         quantity: z.coerce
           .number()
           .int()

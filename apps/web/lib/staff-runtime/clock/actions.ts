@@ -461,13 +461,13 @@ export async function toggleChecklistItem(input: {
   if (record.check_out) {
     return {
       success: false,
-      error: "Ca đã kết thúc, không thể sửa checklist.",
+      error: "Ca đã kết thúc, không thể sửa việc trong ca.",
     };
   }
   if (record.checkout_requested_at) {
     return {
       success: false,
-      error: "Yêu cầu kết ca đã gửi, không thể sửa checklist.",
+      error: "Yêu cầu kết ca đã gửi, không thể sửa việc trong ca.",
     };
   }
 

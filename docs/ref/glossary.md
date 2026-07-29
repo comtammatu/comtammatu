@@ -79,6 +79,20 @@ chỉ khóa thuật ngữ; số luật cụ thể phải lấy từ `legal-frame
 | Code, DB schema, type, RPC, file path | Tiếng Anh           | Không đặt identifier bằng tiếng Việt hoặc tiếng Việt không dấu                                   |
 | Comment kỹ thuật                      | Tiếng Anh           | Chỉ ghi constraint không hiển nhiên; không ghi lịch sử thay đổi                                  |
 
+### Viết hoa trên UI
+
+- Nội dung nguồn dùng **sentence case**: chỉ viết hoa chữ đầu câu, tên riêng,
+  tên nhà cung cấp và acronym đã duyệt. Không dùng English Title Case.
+- Tiêu đề, tab, nút, nhãn trường và badge không thêm dấu chấm cuối. Mô tả,
+  trạng thái rỗng, cảnh báo, lỗi và toast viết thành câu đầy đủ, có dấu câu.
+- Không lưu chuỗi tiếng Việt IN HOA TOÀN BỘ trong source để tạo nhấn mạnh. Nếu
+  thiết kế yêu cầu chữ hoa, dùng style của design system. Ngoại lệ là chứng từ
+  in có hợp đồng trình bày riêng.
+- Acronym phải đúng dạng chuẩn: `POS`, `KDS`, `QR`, `HĐĐT`, `GTGT`, `PIT`,
+  `AOV`, `COGS`; không viết `Pos`, `Qr`, `Hđđt`, `Vat`, `Kpi`.
+- Danh từ chung giữa câu viết thường. Role `owner` trong code hiển thị là
+  `chủ sở hữu`; tên khu vực quản trị hiển thị là `Quản trị`.
+
 Persisted identifiers gồm table/column/function/RPC name, enum value, permission
 key, position code, role template name, feature flag key, URL query token,
 payload field, và storage bucket/object contract. Các identifier này dùng
@@ -163,6 +177,13 @@ và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán h
 | `webhook`, `drill-down`, `hover` trong UI thường | `lỗi đồng bộ`, `xem chi tiết`, `rê chuột` hoặc hướng dẫn thao tác phù hợp                        |
 | `Yield` / `yield` trong UI                       | `tỷ lệ thu hồi`                                                                                  |
 | `template` trong UI                              | `mẫu`                                                                                            |
+| `checklist` trong UI                             | `việc trong ca` hoặc `danh sách việc` theo ngữ cảnh                                              |
+| `inbox` trong UI                                 | Bỏ nếu không mang nghĩa nghiệp vụ; nếu là hàng chờ thì gọi đúng tên hàng chờ                      |
+| `ID` trong UI                                    | `mã` + tên đối tượng, ví dụ `Mã ca`, `Mã món`, `Mã phiếu nhập`                                  |
+| `draft` trong UI                                 | `bản nháp`                                                                                       |
+| `job` trong UI                                   | Tên công việc nghiệp vụ, ví dụ `lệnh in`, `yêu cầu phát hành HĐĐT`                              |
+| `sheet` trong UI                                 | `trang tính` cho file bảng tính; `màn hình` cho panel giao diện                                  |
+| `tenant`, `grant`, `permission key` trong UI     | `hệ thống`, `quyền`, hoặc mô tả phạm vi quyền bằng tiếng Việt theo ngữ cảnh                      |
 | `ad-hoc`                                         | `nhập thẳng` / `không theo đơn` tùy ngữ cảnh                                                     |
 | `Online` / `Offline` trong UI                    | `Đang kết nối` / `Mất kết nối`                                                                   |
 | `Topping`                                        | `Món thêm`                                                                                       |

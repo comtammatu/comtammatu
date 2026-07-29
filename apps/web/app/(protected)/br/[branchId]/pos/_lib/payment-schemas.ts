@@ -68,7 +68,7 @@ export const branchOnlyReadSchema = z.object({
  * the latest non-failed payment row for an order so the bill sheet can
  * decide whether to resume an in-flight VietQR session or start fresh.
  *
- * `orderId` carries the explicit "Order ID không hợp lệ" error message;
+ * `orderId` carries the explicit invalid-order error message;
  * field order is branchId first so the first-issue message stays identical
  * when both fields are invalid.
  */
@@ -88,5 +88,5 @@ export const cancelPendingPaymentSchema = z.object({
   paymentId: z.coerce
     .number()
     .int()
-    .positive({ error: "Payment ID không hợp lệ" }),
+    .positive({ error: "Mã thanh toán không hợp lệ" }),
 });

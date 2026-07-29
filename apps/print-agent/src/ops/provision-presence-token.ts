@@ -338,7 +338,7 @@ async function main(): Promise<void> {
       "Presence token revoked. Existing trusted IP rows are not re-enabled or deleted.",
     );
     console.log(
-      "For immediate POS/KDS cutoff, revoke the trusted IP row from Owner > Cài đặt > Chi nhánh.",
+      "Để ngắt POS/KDS ngay lập tức, hãy thu hồi địa chỉ IP tin cậy tại Chủ sở hữu > Cài đặt > Chi nhánh.",
     );
     return;
   }

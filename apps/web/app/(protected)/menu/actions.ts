@@ -126,16 +126,16 @@ const sideItemSchema = z.object({
 });
 
 const toggleIdSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  id: z.coerce.number().int().positive({ error: "Mã món không hợp lệ" }),
 });
 
 const saveVariantsSchema = z.object({
-  itemId: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  itemId: z.coerce.number().int().positive({ error: "Mã món không hợp lệ" }),
   variants: z.array(variantEntrySchema),
 });
 
 const saveModifiersSchema = z.object({
-  itemId: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  itemId: z.coerce.number().int().positive({ error: "Mã món không hợp lệ" }),
   modifiers: z.array(modifierEntrySchema),
 });
 
@@ -922,7 +922,7 @@ export async function importMenu(
     return {
       success: false,
       error:
-        "Không tìm thấy sheet nào phù hợp. Vui lòng tải mẫu để xem định dạng.",
+        "Không tìm thấy trang tính phù hợp. Vui lòng tải mẫu để xem định dạng.",
     };
   }
 
@@ -1114,7 +1114,7 @@ export async function importMenu(
           sheet: itemSheet.name,
           row: rowNumber,
           field: "Danh mục",
-          message: `Danh mục "${parsedRow.data.category_name}" không tồn tại. Thêm vào sheet "Danh muc" trước.`,
+          message: `Danh mục "${parsedRow.data.category_name}" không tồn tại. Thêm vào trang tính "Danh muc" trước.`,
         });
         return;
       }

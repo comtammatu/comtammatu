@@ -276,7 +276,7 @@ function printErrorToWarning(message: string | null | undefined): string {
     return "Đã hủy món. Không có quyền in phiếu hủy — báo bếp thủ công.";
   }
   if (msg.includes("tenant mismatch")) {
-    return "Đã hủy món. Lỗi quyền tenant khi in phiếu hủy.";
+    return "Đã hủy món nhưng không thể in phiếu do phạm vi tài khoản không hợp lệ.";
   }
   return "Đã hủy món. Không in được phiếu hủy — kiểm tra máy in bếp.";
 }
@@ -416,7 +416,7 @@ function reducePrintErrorToWarning(message: string | null | undefined): string {
     return "Đã giảm SL. Không có quyền in phiếu báo bếp — báo bếp thủ công.";
   }
   if (msg.includes("tenant mismatch")) {
-    return "Đã giảm SL. Lỗi quyền tenant khi in phiếu báo bếp.";
+    return "Đã giảm số lượng nhưng không thể in phiếu báo bếp do phạm vi tài khoản không hợp lệ.";
   }
   return "Đã giảm SL. Không in được phiếu báo bếp — kiểm tra máy in bếp.";
 }
@@ -624,7 +624,7 @@ export function editPrintErrorToWarning(
     return "Đã cập nhật món. Không có quyền in phiếu báo bếp — báo bếp thủ công.";
   }
   if (msg.includes("tenant mismatch")) {
-    return "Đã cập nhật món. Lỗi quyền tenant khi in phiếu báo bếp.";
+    return "Đã cập nhật món nhưng không thể in phiếu báo bếp do phạm vi tài khoản không hợp lệ.";
   }
   return "Đã cập nhật món. Không in được phiếu báo bếp — kiểm tra máy in.";
 }

@@ -81,15 +81,13 @@ export const createSupplier = withAction(
   },
 );
 
-// id-first merged shape: the hand-rolled version validated `id` BEFORE the
-// supplier body and returned the hard-coded "ID không hợp lệ" for ANY id
-// failure — so the id field carries that copy at every level to keep the
-// wrapped helper's `issues[0]?.message` identical.
+// Preserve id-first validation so every invalid supplier id returns the same
+// user-facing error.
 const updateSupplierSchema = z.object({
   id: z.coerce
-    .number({ error: "ID không hợp lệ" })
-    .int({ error: "ID không hợp lệ" })
-    .positive({ error: "ID không hợp lệ" }),
+    .number({ error: "Mã nhà cung cấp không hợp lệ" })
+    .int({ error: "Mã nhà cung cấp không hợp lệ" })
+    .positive({ error: "Mã nhà cung cấp không hợp lệ" }),
   ...supplierSchema.shape,
 });
 
@@ -128,7 +126,8 @@ export const updateSupplier = withActionPositional(
 
 export async function deleteSupplier(id: number): Promise<ActionResult> {
   const parsedId = z.coerce.number().int().positive().safeParse(id);
-  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
+  if (!parsedId.success)
+    return { success: false, error: "Mã nhà cung cấp không hợp lệ" };
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,

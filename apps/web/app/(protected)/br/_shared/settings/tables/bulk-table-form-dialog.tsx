@@ -103,7 +103,7 @@ export function BulkTableFormDialog({
             control={form.control}
             name="from_number"
             label={copy.fromNumber}
-            placeholder="VD: 1"
+            placeholder={copy.fromNumberPlaceholder}
             allowNegative={false}
             required
           />
@@ -111,7 +111,7 @@ export function BulkTableFormDialog({
             control={form.control}
             name="to_number"
             label={copy.toNumber}
-            placeholder="VD: 20"
+            placeholder={copy.toNumberPlaceholder}
             allowNegative={false}
             required
           />

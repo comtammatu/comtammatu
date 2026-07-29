@@ -95,7 +95,7 @@ export function StationFormDialog({
             control={form.control}
             name="name"
             label="Tên trạm"
-            placeholder="VD: Bếp chính, Bếp phụ, Nước"
+            placeholder="Ví dụ: Bếp chính, Bếp phụ, Nước"
             required
           />
 

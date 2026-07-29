@@ -102,7 +102,7 @@ export const APP_COPY_VI = {
   noScopedBranches: "Không có nơi làm việc trong phạm vi",
   ownerTitle: "Quản trị",
   ownerDescription:
-    "Điều hành, kiểm soát và thiết lập toàn hệ thống dành cho Owner",
+    "Điều hành, kiểm soát và thiết lập toàn hệ thống dành cho chủ sở hữu",
   ownerCta: "Mở Quản trị",
 } as const;
 

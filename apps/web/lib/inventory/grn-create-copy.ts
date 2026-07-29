@@ -15,7 +15,7 @@ export const GRN_CREATE_COPY = {
   editLineAria: "Sửa dòng",
   deleteLineAria: "Xóa dòng",
   lineActionsAria: "Thao tác dòng",
-  searchPlaceholder: "Tìm theo tên hoặc mã SKU",
+  searchPlaceholder: "Tìm theo tên hoặc mã hàng",
   emptyTitle: "Không thấy nguyên liệu",
   emptyDescription: "Thử từ khóa khác hoặc kiểm tra lại danh mục.",
   emptySupplierTitle: "Chưa có nguyên liệu gắn NCC",

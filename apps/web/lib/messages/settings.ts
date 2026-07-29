@@ -25,13 +25,13 @@ export const settings = {
     created: "Đã tạo điểm vận hành mới",
     updated: "Đã cập nhật điểm vận hành",
     nameLabel: "Tên điểm vận hành",
-    namePlaceholder: "VD: Chi nhánh Quận 1",
+    namePlaceholder: "Ví dụ: Chi nhánh Quận 1",
     codeLabel: "Mã điểm vận hành",
-    codePlaceholder: "VD: DD",
+    codePlaceholder: "Ví dụ: DD",
     addressLabel: "Địa chỉ",
-    addressPlaceholder: "VD: 123 Nguyễn Huệ, Quận 1",
+    addressPlaceholder: "Ví dụ: 123 Nguyễn Huệ, Quận 1",
     phoneLabel: "Điện thoại",
-    phonePlaceholder: "VD: 028 1234 5678",
+    phonePlaceholder: "Ví dụ: 028 1234 5678",
   },
   pages: {
     branchesTitle: "Điểm vận hành",
@@ -68,7 +68,7 @@ export const settings = {
     printJobsTitle: "Giám sát in",
     printJobsDescription: "Trạng thái hàng đợi in và máy in đang kết nối",
     printLandingDescription:
-      "Mẫu phiếu, giám sát job in, và cấu hình máy in theo từng chi nhánh.",
+      "Mẫu phiếu, theo dõi lệnh in và cấu hình máy in theo từng chi nhánh.",
     printBranchConfigTitle: "Cấu hình theo chi nhánh",
     tablesTitle: "Sơ đồ bàn",
     posTitle: "Đăng ký POS",
@@ -165,10 +165,10 @@ export const settings = {
     qrGenerating: "Đang tạo mã QR…",
     qrRenderFailed: "Không tạo được ảnh QR",
     qrAlt: (tableNumber: number | string) => `QR gọi món bàn ${tableNumber}`,
-    copyLink: "Copy link",
+    copyLink: "Sao chép đường dẫn",
     openLink: "Mở trang",
-    qrCopied: "Đã copy link QR",
-    qrCopyFailed: "Không copy được link QR",
+    qrCopied: "Đã sao chép đường dẫn QR",
+    qrCopyFailed: "Không thể sao chép đường dẫn QR",
     rotateQrTitle: "Đổi mã QR?",
     rotateQrDescription:
       "Mã QR cũ sẽ không mở được trang gọi món nữa. Chỉ đổi khi mã đã lộ.",
@@ -181,7 +181,10 @@ export const settings = {
     bulkCreateTitle: "Tạo nhiều bàn",
     bulkCreateDescription: "Nhập dải số bàn cần tạo (từ–đến).",
     fromNumber: "Từ số",
+    fromNumberPlaceholder: "Ví dụ: 1",
     toNumber: "Đến số",
+    toNumberPlaceholder: "Ví dụ: 20",
+    tableNumberPlaceholder: "Ví dụ: 1, 2, 3…",
     bulkCreateSubmit: "Tạo bàn",
     bulkCreated: (count: number) => `Đã tạo ${formatCount(count)} bàn`,
     bulkCreateFailed: "Không tạo được bàn hàng loạt",
@@ -206,7 +209,7 @@ export const settings = {
     zoneCreated: "Đã tạo khu vực mới",
     zoneUpdated: "Đã cập nhật khu vực",
     zoneDeleted: "Đã xóa khu vực",
-    zoneNamePlaceholder: "VD: Tầng 1, Sân vườn, VIP",
+    zoneNamePlaceholder: "Ví dụ: Tầng 1, Sân vườn, VIP",
     zoneOrderLabel: "Thứ tự hiển thị",
     deleteZoneTitle: "Xóa khu vực?",
     deleteZoneDescription:
@@ -214,18 +217,19 @@ export const settings = {
   },
   attendance: {
     title: (branchName: string) => `Cấu hình ca làm — ${branchName}`,
-    checklistTitle: "Checklist ca làm",
+    checklistTitle: "Việc trong ca",
     checklistLabel: (roleLabel: string) =>
       `Mỗi dòng là một việc cho ${roleLabel}`,
     checklistDescription:
-      "Checklist được chụp lại khi nhân viên vào ca. Để trống nếu không cần.",
-    saveChecklist: "Lưu checklist",
-    checklistSaved: (roleLabel: string) => `Đã lưu checklist cho ${roleLabel}`,
+      "Danh sách việc được chụp lại khi nhân viên vào ca. Để trống nếu không cần.",
+    saveChecklist: "Lưu việc trong ca",
+    checklistSaved: (roleLabel: string) =>
+      `Đã lưu việc trong ca cho ${roleLabel}`,
   },
   network: {
     title: (branchName: string) => `Cổng mạng POS/KDS — ${branchName}`,
     description:
-      "POS và KDS chỉ mở từ thiết bị dùng chung wifi với máy in agent của chi nhánh.",
+      "POS và KDS chỉ mở từ thiết bị dùng chung wifi với dịch vụ in của chi nhánh.",
     trustedIp: (ip?: string) =>
       ip ? `Đã tin cậy IP ${ip}` : "Đã tin cậy IP hiện tại",
     revokedIp: "Đã thu hồi IP",
@@ -234,7 +238,7 @@ export const settings = {
       'Đứng trên wifi cửa hàng, bấm "Tin cậy IP hiện tại" để mở POS/KDS.',
     staleTitle: "Tất cả IP đã quá 30 phút",
     staleDescription:
-      "Thu ngân đang bị chặn POS. Kiểm tra agent hoặc tin cậy lại IP.",
+      "Thu ngân đang bị chặn POS. Kiểm tra dịch vụ in hoặc tin cậy lại địa chỉ IP.",
     trustCurrentTitle: "Tin cậy IP hiện tại",
     trustCurrentDescription:
       "Ghi nhận IP thiết bị bạn đang dùng. Phải đứng trên wifi cửa hàng.",
@@ -309,7 +313,7 @@ export const settings = {
       "POS ghép phần này với mã đối soát của từng đơn rồi đưa vào QR.",
     codePrefixHelp:
       "Hệ thống tự thêm 12 ký tự đối soát. Chỉ chữ, số và khoảng trắng.",
-    codeModelOwnerLabel: "Owner lưu",
+    codeModelOwnerLabel: "Chủ sở hữu lưu",
     codeModelSuffixLabel: "Hệ thống tự thêm",
     codeModelFinalLabel: "Nội dung QR POS",
     codePreviewEmpty: "Nhập nội dung cố định để xem ví dụ.",
@@ -319,7 +323,7 @@ export const settings = {
     sepayLabel: "SePay tự động xác nhận",
     sepayDescription:
       "SePay chỉ xác nhận tiền vào, không phải phương thức thanh toán riêng.",
-    sepayEndpoint: "Webhook: /api/webhooks/sepay",
+    sepayEndpoint: "Địa chỉ nhận dữ liệu tự động: /api/webhooks/sepay",
     envStatus: "Trạng thái env:",
     envConfigured: "✓ Đã cấu hình",
     envMissing: "Chưa đủ biến môi trường",
@@ -355,7 +359,7 @@ export const settings = {
     editTerminalTitle: "Chỉnh sửa đăng ký POS",
     terminalCreated: "Đã thêm đăng ký POS",
     terminalUpdated: "Đã cập nhật đăng ký POS",
-    terminalNamePlaceholder: "VD: Quầy 1, Ca sáng",
+    terminalNamePlaceholder: "Ví dụ: Quầy 1, Ca sáng",
     terminalActive: "Hoạt động",
     stockControlTitle: "Ghi nhận tồn từ POS",
     stockOutcomePostingLabel: "Trừ tồn khi bán",
@@ -370,7 +374,7 @@ export const settings = {
     statPending: "Đang chờ",
     statFailed24h: "Lỗi 24h",
     statPrintedToday: "Đã in hôm nay",
-    statAgentOnline: "Agent đang kết nối",
+    statAgentOnline: "Dịch vụ in đang kết nối",
     statusPlaceholder: "Trạng thái",
     allStatuses: "Tất cả trạng thái",
     attentionStatus: "Cần xử lý",
@@ -382,13 +386,15 @@ export const settings = {
     printedAtColumn: "In lúc",
     errorColumn: "Lỗi",
     actionColumn: "Hành động",
-    emptyJobs: "Chưa có job in nào khớp bộ lọc",
+    emptyJobs: "Chưa có lệnh in nào khớp bộ lọc",
     loadPrintersFailed: "Không thể tải máy in",
-    loadAgentStatusFailed: "Không thể tải trạng thái agent in",
+    loadAgentStatusFailed: "Không thể tải trạng thái dịch vụ in",
     loadPrintTypesFailed: "Không thể tải loại phiếu in",
-    loadCategoryRoutesFailed: "Không thể tải routing danh mục",
+    loadCategoryRoutesFailed:
+      "Không thể tải cấu hình máy in theo danh mục",
     loadCategoriesFailed: "Không thể tải danh mục",
-    retrySuccess: (id: number) => `Đã đẩy lại job #${id} vào hàng đợi`,
+    retrySuccess: (id: number) =>
+      `Đã đưa lại lệnh in #${id} vào hàng đợi`,
     retryFailed: "Không thể thử lại",
     jobTypes: {
       kitchen_ticket: "Phiếu bếp",
@@ -552,7 +558,7 @@ export const settings = {
       "Giới hạn theo ngày vận hành; hủy món trước khi bếp làm thì trả lại số.",
     menuLimitsLoadFailed: "Không tải được dữ liệu giới hạn bán.",
     printersDescription: (branchName: string) =>
-      `Máy in và routing phiếu của ${branchName}.`,
+      `Máy in và cấu hình nhận phiếu của ${branchName}.`,
   },
   branchTable: {
     operationPoint: "Điểm vận hành",
@@ -569,10 +575,8 @@ export const settings = {
     networkGateway: "Cổng mạng POS/KDS",
     openBranch: "Mở",
     openSettings: "Thiết lập",
-    selfOrder: "Self-Order",
-    feedback: "Feedback",
-    feedbackComingSoonTitle: "Comming Soon",
-    feedbackComingSoonDescription: "Tính năng Feedback sẽ sớm có mặt.",
+    selfOrder: "Mã QR gọi món",
+    feedback: "Phản hồi khách hàng",
     openPos: "Vào POS",
     openKds: "Vào KDS",
     openRunner: "Mở màn gọi số",
@@ -629,7 +633,7 @@ export const settings = {
       `Kết quả: đã ghi nhận lệch ca ${difference}; số dư theo sổ không thay đổi.`,
     varianceResolutionLabel: "Hướng xử lý",
     varianceResolutionPlaceholder:
-      "VD: Thu ngân đã bù đủ tiền thiếu, quản lý đã nhận.",
+      "Ví dụ: Thu ngân đã bù đủ tiền thiếu, quản lý đã nhận.",
     varianceResolutionCount: (count: number) => `${formatCount(count)}/500`,
     resolveVariance: "Ghi nhận đã xử lý",
     resolving: "Đang lưu",
@@ -671,12 +675,12 @@ export const settings = {
     peakHour: "Giờ cao điểm",
     peakHourValue: (range: string, count: number) =>
       `${range} · ${formatCount(count)} đơn`,
-    topItems: "Top món bán chạy",
+    topItems: "Món bán chạy nhất",
     itemName: "Tên",
     itemType: "Loại",
     quantityShort: "SL",
     revenue: "Doanh thu",
-    topItemsEmptyTitle: "Top món",
+    topItemsEmptyTitle: "Món bán chạy",
     topItemsEmptyDescription: "Ca chưa có món bán ra.",
     revenueByCategory: "Doanh thu theo danh mục",
     categoryLine: (quantity: number, revenue: string) =>

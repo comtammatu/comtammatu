@@ -273,7 +273,7 @@ export async function saveStocktakeDraft(
   );
 
   if (error) {
-    return { success: false, error: "Không lưu draft được" };
+    return { success: false, error: "Không thể lưu bản nháp" };
   }
 
   return { success: true, data: { lastSavedAt: now } };

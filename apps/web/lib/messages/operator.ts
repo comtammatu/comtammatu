@@ -89,8 +89,8 @@ export const operator = {
     shiftNotStarted: "Chưa vào",
   },
   shiftTasks: {
-    checklistTitle: "Checklist",
-    noChecklistTitle: "Chưa có checklist",
+    checklistTitle: "Việc trong ca",
+    noChecklistTitle: "Chưa có việc trong ca",
     noChecklistDescription: "Ca này chưa có việc cần đánh dấu.",
     requiredRemaining: "việc bắt buộc còn lại",
   },
@@ -102,13 +102,14 @@ export const operator = {
     iosInstallHint:
       "iPhone/iPad: dùng Chia sẻ để thêm Cổng Má Tư vào Màn hình chính.",
     iosInstallHintShort: "iOS: thêm vào Màn hình",
-    installButton: "Cài app",
+    installButton: "Cài ứng dụng",
     installButtonShort: "Cài",
     installPending: "Đang mở...",
     installButtonAria: "Cài Cổng Má Tư lên thiết bị",
     dismissLabel: "Tạm ẩn lời nhắc cài đặt",
     iosDialogTitle: "Cài Cổng Má Tư trên iPhone/iPad",
-    iosDialogDescription: "iOS cần thêm app từ menu Chia sẻ của Safari.",
+    iosDialogDescription:
+      "iOS cần thêm ứng dụng từ menu Chia sẻ của Safari.",
     iosSteps: [
       "Mở Cổng Má Tư bằng Safari.",
       "Bấm nút Chia sẻ của trình duyệt.",

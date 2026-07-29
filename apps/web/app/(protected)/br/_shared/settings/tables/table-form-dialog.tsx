@@ -13,6 +13,7 @@ import type { ZoneRow } from "./zone-table";
 import type { TableRow } from "./table-table";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 const NO_ZONE = "none";
 
 const tableSchema = z.object({
@@ -51,6 +52,7 @@ export function TableFormDialog({
   table,
 }: TableFormDialogProps) {
   const isEdit = !!table;
+  const copy = messages.settings.tables;
 
   const zoneOptions = [
     { value: NO_ZONE, label: "Không có khu vực" },
@@ -92,7 +94,7 @@ export function TableFormDialog({
             control={form.control}
             name="number"
             label="Số bàn"
-            placeholder="VD: 1, 2, 3..."
+            placeholder={copy.tableNumberPlaceholder}
             allowNegative={false}
             required
           />

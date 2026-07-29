@@ -47,7 +47,7 @@ const saveStationCategoriesSchema = z.object({
   stationId: z.coerce
     .number()
     .int()
-    .positive({ error: "Station ID không hợp lệ" }),
+    .positive({ error: "Mã trạm không hợp lệ" }),
   categoryIds: z.array(z.coerce.number().int().positive()),
 });
 

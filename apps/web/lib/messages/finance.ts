@@ -6,14 +6,14 @@ export const finance = {
     loadTaxInvoicesFailed: "Không thể tải danh sách hóa đơn.",
     loadTaxInvoiceIssueAttentionFailed: "Không thể tải hàng chờ HĐĐT.",
     loadRevenueRollupFailed: "Không thể tải dữ liệu doanh thu.",
-    loadRevenueKpisFailed: "Không thể tải chỉ số KPI.",
+    loadRevenueKpisFailed: "Không thể tải các chỉ số doanh thu.",
     loadDashboardSummaryFailed: "Không thể tải chỉ số tổng quan.",
     loadOrdersFailed: "Không thể tải danh sách đơn.",
     loadCashVarianceFailed: "Không thể tải dữ liệu lệch tiền.",
     loadRevenueByHourFailed: "Không thể tải dữ liệu doanh thu theo giờ.",
     loadRevenueByCashierFailed: "Không thể tải dữ liệu thu ngân.",
     loadBranchesFailed: "Không thể tải danh sách chi nhánh.",
-    loadTopItemsFailed: "Không thể tải dữ liệu top món.",
+    loadTopItemsFailed: "Không thể tải dữ liệu món bán chạy.",
   },
   invoiceList: {
     refund: "Hoàn tiền",
@@ -197,7 +197,7 @@ export const finance = {
     },
     kpis: {
       netRevenue: "Doanh thu thuần",
-      netRevenueHint: "Giá món − giảm giá · chưa VAT",
+      netRevenueHint: "Giá món − giảm giá · chưa thuế GTGT",
       ingredientCost: "Giá vốn món",
       ingredientCostHint: (covered: string, total: string) =>
         `${covered}/${total} đơn có giá vốn`,
@@ -232,8 +232,8 @@ export const finance = {
       revenue: "Doanh thu",
       bankTransactions: "Đối soát ngân hàng",
       expenses: "Chi phí vận hành",
-      supplierPayables: "VAT đầu vào & NCC",
-      invoices: "VAT đầu ra & HĐĐT",
+      supplierPayables: "Thuế GTGT đầu vào & NCC",
+      invoices: "Thuế GTGT đầu ra & HĐĐT",
       foodCost: "Giá vốn món",
       revenueTargets: "Chỉ tiêu doanh thu",
     },
@@ -257,7 +257,7 @@ export const finance = {
       configure: "Thiết lập",
       edit: "Chỉnh mốc thưởng",
       count: (count: number) => `${count} mốc`,
-      highest: (threshold: string) => `cao nhất ${threshold} KPI`,
+      highest: (threshold: string) => `cao nhất ${threshold} chỉ số`,
       title: (branch: string) => `Mốc thưởng · ${branch}`,
       description:
         "Mốc cao nhất đạt được là mức áp dụng, không cộng dồn. Lưu chỉ tiêu để ghi nhận thay đổi.",
@@ -265,7 +265,7 @@ export const finance = {
       add: "Thêm mốc",
       remove: "Xóa",
       done: "Xong",
-      threshold: "Mốc KPI (%)",
+      threshold: "Mốc chỉ số (%)",
       rewardType: "Hình thức",
       rewardValue: "Mức thưởng",
       fixedAmount: "Số tiền",
@@ -457,8 +457,9 @@ export const finance = {
   },
   supplierInvoicesPage: {
     eyebrow: "Tài chính",
-    title: "VAT đầu vào | Thanh toán NCC",
-    description: "VAT theo chứng từ · chưa mặc định được khấu trừ.",
+    title: "Thuế GTGT đầu vào | Thanh toán NCC",
+    description:
+      "Thuế GTGT theo chứng từ · chưa mặc định được khấu trừ.",
     noAccessTitle: "Không có quyền xem hóa đơn NCC",
     noAccessDescription: "Cần quyền xem đơn mua và NCC.",
     loadErrorTitle: "Không thể tải hóa đơn NCC",
@@ -780,7 +781,7 @@ export const finance = {
     todayPayments: "Thanh toán hôm nay",
     cash: "Tiền mặt",
     vietqr: "VietQR",
-    topItemsTitle: "Top món trong tháng",
+    topItemsTitle: "Món bán chạy trong tháng",
     dateRange: (start: string, end: string) => `Từ ${start} đến ${end}`,
     noItemData: "Chưa có dữ liệu món.",
     portions: (count: string) => `${count} phần`,
@@ -886,7 +887,7 @@ export const finance = {
     },
     kpi: {
       netRevenue: "Doanh thu thuần",
-      netRevenueHint: "Giá món − giảm giá · chưa VAT",
+      netRevenueHint: "Giá món − giảm giá · chưa thuế GTGT",
       orderCount: "Số đơn hoàn thành",
       orderCountHint: "Đơn đã thanh toán trong kỳ",
       aovOrder: "Bình quân/đơn",
@@ -931,7 +932,8 @@ export const finance = {
     },
     cashierTable: {
       title: "Năng suất thu ngân",
-      description: "Top thu ngân theo doanh thu thuần · đối chiếu lệch quỹ.",
+      description:
+        "Thu ngân có doanh thu thuần cao nhất · đối chiếu lệch quỹ.",
       tooLargeRange: "Khoảng > 90 ngày — chọn nhỏ hơn để xem theo thu ngân.",
       empty: "Chưa có dữ liệu thu ngân.",
       tooLargeEmpty: "Chọn khoảng ≤ 90 ngày để xem theo thu ngân.",
@@ -941,7 +943,7 @@ export const finance = {
       colCash: "Tiền mặt",
     },
     topItems: {
-      title: "Top món bán chạy",
+      title: "Món bán chạy nhất",
       description: "Món chính và kèm theo kỳ và chi nhánh đang lọc.",
       empty: "Chưa có dữ liệu món.",
       colName: "Tên món",
@@ -998,13 +1000,13 @@ export const finance = {
     netVariance: "Lệch ròng",
     short: (count: number) => `Thiếu ${formatCount(count)} ca`,
     over: (count: number) => `Thừa ${formatCount(count)} ca`,
-    topVariance: "Top thu ngân còn lệch",
+    topVariance: "Thu ngân còn lệch nhiều nhất",
     sessionCount: (count: number) => `${formatCount(count)} ca`,
     noVariance: "Không còn ca lệch quỹ cần xử lý trong kỳ.",
   },
   invoicesPage: {
     eyebrow: "HĐĐT",
-    title: "VAT đầu ra & HĐĐT",
+    title: "Thuế GTGT đầu ra & HĐĐT",
     description: "HĐĐT bán ra, hủy, điều chỉnh · chưa phải GTGT phải nộp.",
     loadError: "Không thể tải danh sách hóa đơn điện tử",
   },
@@ -1015,7 +1017,7 @@ export const finance = {
     },
     foodCost: {
       label: "Giá vốn món",
-      description: "WAC, giá vốn và biên lãi món bán.",
+      description: "Giá vốn bình quân và biên lãi món bán.",
     },
     overview: {
       label: "Tổng quan tài chính",
@@ -1042,6 +1044,6 @@ export const finance = {
     emptyDescription: "Đổi khoảng ngày để kiểm tra món đã bán và giá vốn.",
     loadSalesFailed: "Không thể tải dữ liệu giá vốn món.",
     loadRecipeFailed: "Không thể tải định mức giá vốn món.",
-    loadWacFailed: "Không thể tải WAC giá vốn món.",
+    loadWacFailed: "Không thể tải giá vốn bình quân của món.",
   },
 } as const;

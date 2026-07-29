@@ -18,26 +18,27 @@ export const employee = {
     profileShort: "Hồ sơ",
   },
   pwa: {
-    regionLabel: "Cài đặt và trạng thái kết nối app nhân viên",
+    regionLabel: "Cài đặt và trạng thái kết nối ứng dụng nhân viên",
     offline: "Mất kết nối - chấm công và việc trong ca cần mạng để ghi nhận.",
-    installHint: "Cài app nhân viên để mở nhanh mỗi ca.",
-    installHintShort: "Cài app nhân viên",
+    installHint: "Cài ứng dụng nhân viên để mở nhanh mỗi ca.",
+    installHintShort: "Cài ứng dụng nhân viên",
     iosInstallHint:
-      "iPhone/iPad: dùng Chia sẻ để thêm app nhân viên vào Màn hình chính.",
+      "iPhone/iPad: dùng Chia sẻ để thêm ứng dụng nhân viên vào Màn hình chính.",
     iosInstallHintShort: "iOS: thêm vào Màn hình",
-    installButton: "Cài app",
+    installButton: "Cài ứng dụng",
     installButtonShort: "Cài",
     installPending: "Đang mở...",
-    installButtonAria: "Cài app nhân viên lên thiết bị",
+    installButtonAria: "Cài ứng dụng nhân viên lên thiết bị",
     dismissLabel: "Tạm ẩn lời nhắc cài đặt",
-    iosDialogTitle: "Cài app nhân viên trên iPhone/iPad",
-    iosDialogDescription: "iOS cần thêm app từ menu Chia sẻ của Safari.",
+    iosDialogTitle: "Cài ứng dụng nhân viên trên iPhone/iPad",
+    iosDialogDescription:
+      "iOS cần thêm ứng dụng từ menu Chia sẻ của Safari.",
     iosSteps: [
       "Mở Má Tư NV bằng Safari.",
       "Bấm nút Chia sẻ của trình duyệt.",
       "Chọn Thêm vào Màn hình chính, rồi bấm Thêm.",
     ],
-    browserDialogTitle: "Cài app nhân viên trên thiết bị này",
+    browserDialogTitle: "Cài ứng dụng nhân viên trên thiết bị này",
     browserDialogDescription:
       "Nếu trình duyệt không mở hộp thoại cài đặt, dùng menu của trình duyệt.",
     browserSteps: [
@@ -61,8 +62,9 @@ export const employee = {
     statusNotStarted: "Chưa chấm công",
     statusNoProfile: "Thiếu hồ sơ nhân viên",
     statusNoBranch: "Thiếu chi nhánh",
-    descriptionWorking: "Hoàn thành checklist trong ca, sau đó gửi kết ca.",
-    descriptionReadyToCheckout: "Checklist đã xong, gửi quản lý duyệt kết ca.",
+    descriptionWorking: "Hoàn thành việc trong ca, sau đó gửi kết ca.",
+    descriptionReadyToCheckout:
+      "Đã hoàn thành việc trong ca, gửi quản lý duyệt kết ca.",
     descriptionCheckoutPending: "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     descriptionDone: "Chấm công hôm nay đã đủ giờ vào và giờ ra.",
@@ -87,7 +89,7 @@ export const employee = {
     clockTodayTitle: "Chấm công hôm nay",
     clockLongDescription: "Chấm công vào bằng ảnh; kết ca gửi quản lý duyệt.",
     managerClockLongDescription:
-      "Quản lý chỉ ghi giờ vào và giờ ra ca, không cần checklist hoặc duyệt.",
+      "Quản lý chỉ ghi giờ vào và giờ ra ca, không cần danh sách việc hoặc duyệt.",
     managerAttendanceTitle: "Đang trong ca quản lý",
     managerAttendanceDescription:
       "Khi rời ca, chấm công ra trực tiếp rồi quay lại điều hành chi nhánh.",
@@ -205,7 +207,7 @@ export const employee = {
     managerCheckoutTitle: "Chấm công ra",
     staffCheckoutTitle: "Kết ca làm",
     managerCheckoutDescription:
-      "Ghi giờ ra ca trực tiếp, không cần checklist hoặc duyệt.",
+      "Ghi giờ ra ca trực tiếp, không cần danh sách việc hoặc duyệt.",
     staffCheckoutDescriptionPrefix: "Gửi yêu cầu kết ca cho",
     staffCheckoutDescriptionSuffix: "duyệt.",
     managerCheckoutBadge: "Sẵn sàng ra ca",
@@ -235,7 +237,7 @@ export const employee = {
     cameraNotOpen: "Sẵn sàng chụp ảnh",
   },
   managerTasks: {
-    noTaskTitle: "Không cần checklist",
+    noTaskTitle: "Không có việc cần xác nhận",
     noTaskDescription: "Quản lý chỉ ghi giờ vào/ra.",
   },
   hrAttendance: {
@@ -268,7 +270,7 @@ export const employee = {
     viewPhoto: "Xem ảnh",
     noPhoto: "Chưa có ảnh",
     photoDialogTitle: "Ảnh chấm công",
-    photoDialogDescription: "Link xem ảnh có hiệu lực trong 5 phút.",
+    photoDialogDescription: "Đường dẫn xem ảnh có hiệu lực trong 5 phút.",
     photoLoadError: "Không mở được ảnh chấm công.",
     photoAlt: (employeeName: string, date: string) =>
       `Ảnh chấm công của ${employeeName} ngày ${date}`,
@@ -357,16 +359,16 @@ export const employee = {
     today: "Nay",
   },
   tasks: {
-    description: "Checklist ca làm hôm nay, gồm Kiểm kê tồn nếu được giao",
+    description: "Việc trong ca hôm nay, gồm kiểm kê tồn nếu được giao",
     notStartedTitle: "Chưa vào ca",
     notStartedDescription: "Chấm công vào trước khi mở việc trong ca.",
-    checklistTitle: "Checklist",
+    checklistTitle: "Việc trong ca",
     doneCount: "Xong",
     state: "Trạng thái",
     remaining: "việc còn lại",
     requiredRemaining: "việc bắt buộc còn lại",
     required: "Bắt buộc",
-    noChecklistTitle: "Chưa có checklist",
+    noChecklistTitle: "Chưa có việc trong ca",
     noChecklistDescription: "Ca này chưa có việc cần đánh dấu.",
     todo: "Chưa làm",
     done: "Xong",
@@ -404,7 +406,7 @@ export const employee = {
     identityDescription: "Thông tin dùng để nhận diện và liên hệ nội bộ.",
     profileInfoTitle: "Hồ sơ làm việc",
     profileInfoDescription:
-      "Thông tin nhân viên đang được dùng trong app vận hành.",
+      "Thông tin nhân viên đang được dùng trong ứng dụng vận hành.",
     fullName: "Họ tên",
     birthDate: "Ngày sinh",
     noBirthDate: "Chưa có ngày sinh",
@@ -508,11 +510,13 @@ export const employee = {
     position: "Chức vụ",
     compatibleRole: "Vai trò tương thích",
     notAssigned: "Chưa gắn",
-    tenantPermsTitle: "Quyền cấp tenant",
-    tenantPermsEmptyTitle: "Không có quyền cấp tenant",
-    tenantPermsEmptyDescription: "Tài khoản này không có grant cấp tenant.",
+    tenantPermsTitle: "Quyền toàn quán",
+    tenantPermsEmptyTitle: "Không có quyền toàn quán",
+    tenantPermsEmptyDescription:
+      "Tài khoản này không có quyền áp dụng toàn quán.",
     branchPermsTitle: "Quyền theo chi nhánh",
     branchPermsEmptyTitle: "Không có quyền theo chi nhánh",
-    branchPermsEmptyDescription: "Không có grant cho chi nhánh hiện tại.",
+    branchPermsEmptyDescription:
+      "Không có quyền riêng cho chi nhánh hiện tại.",
   },
 } as const;

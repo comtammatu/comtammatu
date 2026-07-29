@@ -331,7 +331,7 @@ export async function issuePreparedTaxInvoice({
   if (!parsed.success) {
     return {
       success: false,
-      error: "Dữ liệu draft HĐĐT không hợp lệ.",
+      error: "Dữ liệu bản nháp HĐĐT không hợp lệ.",
       errorCode: "invoice_snapshot_invalid",
     };
   }
@@ -359,7 +359,7 @@ export async function issuePreparedTaxInvoice({
     } catch {
       return {
         success: false,
-        error: "Dòng hóa đơn thiếu thuế suất VAT hợp lệ.",
+        error: "Dòng hóa đơn thiếu thuế suất GTGT hợp lệ.",
         errorCode: "invoice_vat_invalid",
       };
     }
@@ -388,7 +388,7 @@ export async function issuePreparedTaxInvoice({
   if (lineMath.totalGross !== parsed.data.draftSnapshot.totalAmount) {
     return {
       success: false,
-      error: "Tổng dòng, VAT và số tiền thanh toán không khớp.",
+      error: "Tổng dòng, thuế GTGT và số tiền thanh toán không khớp.",
       errorCode: "invoice_total_mismatch",
     };
   }
@@ -430,7 +430,7 @@ export async function issuePreparedTaxInvoice({
     );
     return {
       success: false,
-      error: "Không thể khóa draft HĐĐT để phát hành.",
+      error: "Không thể khóa bản nháp HĐĐT để phát hành.",
       errorCode: "invoice_prepare_failed",
     };
   }

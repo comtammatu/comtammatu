@@ -296,7 +296,7 @@ const openPosSessionSchema = z.object({
   terminalId: z.coerce
     .number()
     .int()
-    .positive({ error: "Terminal ID không hợp lệ" })
+    .positive({ error: "Mã thiết bị không hợp lệ" })
     .optional(),
   openingCash: z.coerce.number().min(0, { error: "Tiền mở ca không hợp lệ" }),
 });
@@ -370,7 +370,7 @@ const closeSessionSchema = z.object({
   sessionId: z.coerce
     .number()
     .int()
-    .positive({ error: "Session ID không hợp lệ" }),
+    .positive({ error: "Mã ca không hợp lệ" }),
   closingCash: z.coerce.number().min(0, { error: "Tiền đóng ca không hợp lệ" }),
   note: z.string().optional(),
 });

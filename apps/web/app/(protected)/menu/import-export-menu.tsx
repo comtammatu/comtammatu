@@ -124,7 +124,7 @@ function MenuImportDialog({
       title={MENU_VI.importDialogTitle}
       description={
         <>
-          File .xlsx gồm 2 sheet: <strong>Danh muc</strong> và{" "}
+          File .xlsx gồm 2 trang tính: <strong>Danh muc</strong> và{" "}
           <strong>Mon an</strong>. Tên trùng sẽ được cập nhật.
         </>
       }

@@ -32,7 +32,7 @@ const updateBranchSchema = branchSchema.extend({
 });
 
 const toggleIdSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  id: z.coerce.number().int().positive({ error: "Mã chi nhánh không hợp lệ" }),
 });
 
 /* ─── Actions ─── */
@@ -70,7 +70,7 @@ export const createBranch = withFormAction(
         return {
           success: false,
           error:
-            "Cần áp dụng migration điểm vận hành trước khi tạo hoặc sửa loại điểm vận hành.",
+            "Hệ thống chưa sẵn sàng để tạo hoặc sửa loại điểm vận hành.",
         };
       }
       return {
@@ -117,7 +117,7 @@ export const updateBranch = withFormAction(
         return {
           success: false,
           error:
-            "Cần áp dụng migration điểm vận hành trước khi tạo hoặc sửa loại điểm vận hành.",
+            "Hệ thống chưa sẵn sàng để tạo hoặc sửa loại điểm vận hành.",
         };
       }
       return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };

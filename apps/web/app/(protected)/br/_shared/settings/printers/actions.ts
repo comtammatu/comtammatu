@@ -104,7 +104,7 @@ export async function upsertPrinter(
 export async function deletePrinter(id: number): Promise<ActionResult> {
   const parsed = z.coerce.number().int().positive().safeParse(id);
   if (!parsed.success) {
-    return { success: false, error: "ID không hợp lệ" };
+    return { success: false, error: "Mã máy in không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(

@@ -178,7 +178,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
     },
     {
       key: "vat",
-      header: "VAT",
+      header: "Thuế GTGT",
       className: "hidden text-right font-mono md:table-cell",
       render: (item) => formatPercent(item.vat_rate),
     },

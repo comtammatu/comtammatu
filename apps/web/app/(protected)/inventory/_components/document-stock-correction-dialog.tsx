@@ -42,9 +42,9 @@ type DocumentCorrectionValues = z.infer<typeof documentCorrectionSchema>;
 
 const documentCorrectionCopy = {
   itemPlaceholder: "Chọn mặt hàng",
-  quantityPlaceholder: "VD: 10 hoặc -5",
+  quantityPlaceholder: "Ví dụ: 10 hoặc -5",
   reasonPlaceholder:
-    "VD: Nhân viên nhập sai số lượng thực nhận, điều chỉnh sau kiểm tra ca tối...",
+    "Ví dụ: Nhân viên nhập sai số lượng thực nhận, điều chỉnh sau kiểm tra ca tối…",
 };
 
 export type CorrectionBranchOption = {

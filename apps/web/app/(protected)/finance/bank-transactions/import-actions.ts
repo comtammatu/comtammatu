@@ -89,7 +89,7 @@ export async function importSepayBankTransactions(
       status: "error",
       message:
         error.code === "23505"
-          ? "File có giao dịch trùng ID nhưng khác số tiền, loại hoặc thời gian."
+          ? "File có giao dịch trùng mã nhưng khác số tiền, loại hoặc thời gian."
           : "Không thể nhập giao dịch SePay.",
     };
   }

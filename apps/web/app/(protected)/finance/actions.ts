@@ -190,7 +190,7 @@ export async function requeueTaxInvoiceIssueJob(
 ): Promise<ActionResult> {
   const parsed = taxInvoiceIssueJobIdSchema.safeParse(jobId);
   if (!parsed.success)
-    return { success: false, error: "Job HĐĐT không hợp lệ." };
+    return { success: false, error: "Yêu cầu phát hành HĐĐT không hợp lệ." };
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
     PERMISSION_KEYS.SETTINGS_TENANT,
@@ -208,7 +208,7 @@ export async function requeueTaxInvoiceIssueJob(
   });
   if (error) {
     console.error("[finance/actions:requeueTaxInvoiceIssueJob]", error.code);
-    return { success: false, error: "Job chưa đủ điều kiện phát hành lại." };
+    return { success: false, error: "Yêu cầu chưa đủ điều kiện phát hành lại." };
   }
   revalidatePath("/finance/invoices");
   return { success: true };
@@ -252,7 +252,7 @@ export async function reconcileTaxInvoiceProviderIssued(
     );
     return {
       success: false,
-      error: "Không thể ghi đối soát; kiểm tra lại provider_ref và trạng thái.",
+      error: "Không thể ghi đối soát; kiểm tra lại mã giao dịch và trạng thái.",
     };
   }
   revalidatePath("/finance/invoices");

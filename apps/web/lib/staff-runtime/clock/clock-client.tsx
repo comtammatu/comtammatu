@@ -695,7 +695,7 @@ export function ClockClient({
             muted: !state.branchName,
           },
           {
-            label: "Checklist",
+            label: "Việc trong ca",
             value: `${state.checklist.done}/${state.checklist.total} xong`,
           },
           {

@@ -306,7 +306,7 @@ export async function fetchIngredientUnitLock(
 ): Promise<ActionResult<{ locked: boolean }>> {
   const parsedId = z.coerce.number().int().positive().safeParse(ingredientId);
   if (!parsedId.success) {
-    return { success: false, error: "ID không hợp lệ" };
+    return { success: false, error: "Mã nguyên liệu không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithAnyPermission(
@@ -490,7 +490,7 @@ export async function updateIngredient(
   const idSchema = z.coerce.number().int().positive();
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) {
-    return { success: false, error: "ID không hợp lệ" };
+    return { success: false, error: "Mã nguyên liệu không hợp lệ" };
   }
 
   const parsedInput = ingredientUpdateSchema.safeParse(input);
@@ -557,7 +557,7 @@ export async function updateIngredient(
 /* ─── toggleIngredientActive ─── */
 
 const toggleIngredientIdSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+  id: z.coerce.number().int().positive({ error: "Mã nguyên liệu không hợp lệ" }),
 });
 
 export const toggleIngredientActive = withAction(

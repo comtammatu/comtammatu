@@ -131,17 +131,17 @@ export function StocktakeDraftSaverBadge({
   const label = (() => {
     switch (status) {
       case "saving":
-        return "Đang lưu draft…";
+        return "Đang lưu bản nháp…";
       case "saved":
         return lastSavedAt
           ? `Đã lưu ${formatVNTime(lastSavedAt)}`
-          : "Đã lưu draft";
+          : "Đã lưu bản nháp";
       case "error":
-        return "Lỗi lưu draft — sẽ thử lại";
+        return "Lỗi lưu bản nháp — sẽ thử lại";
       default:
         return lastSavedAt
           ? `Đã lưu ${formatVNTime(lastSavedAt)}`
-          : "Chưa có draft";
+          : "Chưa có bản nháp";
     }
   })();
 

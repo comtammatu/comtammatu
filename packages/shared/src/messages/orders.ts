@@ -7,7 +7,7 @@ export const ORDERS_VI = {
   loadOperationalEvidenceFailed: "Không thể tải dữ liệu đối chiếu",
   invalidOperationalEvidence: "Dữ liệu đối chiếu không hợp lệ",
   noOrders: "Chưa có đơn hàng",
-  orderedBy: "Người order",
+  orderedBy: "Người nhận đơn",
   time: "Thời gian",
   orderType: "Loại đơn",
   payment: "Thanh toán",

@@ -23,7 +23,7 @@ const branchIdSchema = z.coerce
 const sessionIdSchema = z.coerce
   .number()
   .int()
-  .positive({ error: "Session ID không hợp lệ" });
+  .positive({ error: "Mã ca không hợp lệ" });
 
 const orderIdSchema = z.coerce
   .number()

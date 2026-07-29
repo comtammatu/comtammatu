@@ -167,6 +167,7 @@ export const INVENTORY_VI = {
   enterYield: "Nhập tỷ lệ thu hồi",
   yieldPositive: "Tỷ lệ thu hồi phải > 0",
   enterQuantity: "Nhập số lượng",
+  quantityExamplePlaceholder: "Ví dụ: 0.5",
   quantityPositive: "Số lượng phải > 0",
   unitRequired: "Đơn vị không được trống",
   productionBranchRequired: "Vui lòng chọn Bếp Trung Tâm",
@@ -208,9 +209,9 @@ export const INVENTORY_VI = {
     "Cần đội quản trị cấu hình công thức sản xuất trước khi chạy mẻ này.",
   productionReadinessNoBranch: "Chưa có Bếp Trung Tâm nào được cấu hình.",
   productionReadinessNoFinishedGood:
-    "Chưa có thành phẩm nào được gắn `item_kind = finished_good`, nên chưa thể tạo lệnh sản xuất.",
+    "Chưa có thành phẩm nào được thiết lập là hàng sản xuất, nên chưa thể tạo lệnh sản xuất.",
   productionReadinessNoRawMaterial:
-    "Chưa có nguyên liệu nào được gắn `item_kind = raw_material`, nên chưa thể lập công thức.",
+    "Chưa có nguyên liệu nào được thiết lập là nguyên liệu đầu vào, nên chưa thể lập công thức.",
   productionReadinessNoRecipe:
     "Chưa có công thức sản xuất nào được cấu hình, nên chưa thể xác nhận lệnh.",
   createFinishedGood: "Tạo thành phẩm",
@@ -286,7 +287,7 @@ export const INVENTORY_VI = {
   quickFinishedGoodIntro:
     "Tạo thành phẩm mới ở đây để dùng ngay cho công thức sản xuất.",
   finishedGoodNameLabel: "Tên thành phẩm",
-  quickFinishedGoodNamePlaceholder: "VD: Sườn nướng sơ chế",
+  quickFinishedGoodNamePlaceholder: "Ví dụ: Sườn nướng sơ chế",
   quickFinishedGoodUnitPlaceholder: "khay, kg, lít...",
   quickFinishedGoodCategoryDefault: "Sản xuất",
   quickFinishedGoodSuccess: "Đã thêm thành phẩm mới",
@@ -297,7 +298,7 @@ export const INVENTORY_VI = {
   quickRawIngredientIntro:
     "Tạo nhanh nguyên liệu đầu vào cho công thức sản xuất.",
   rawIngredientNameLabel: "Tên nguyên liệu",
-  quickRawIngredientNamePlaceholder: "VD: Nước mắm pha",
+  quickRawIngredientNamePlaceholder: "Ví dụ: Nước mắm pha",
   quickRawIngredientUnitPlaceholder: "kg, lít, chai...",
   quickRawIngredientCategoryDefault: "Nguyên liệu sản xuất",
   quickRawIngredientSuccess: "Đã thêm nguyên liệu mới",
@@ -455,12 +456,12 @@ export const INVENTORY_VI = {
   adjustTypeCount: "Kiểm kho",
   adjustQuantityLabel: (unit: string) =>
     `Số lượng (${unit}) - dương = nhập, âm = xuất`,
-  adjustQuantityPlaceholder: "VD: 10 hoặc -5",
+  adjustQuantityPlaceholder: "Ví dụ: 10 hoặc -5",
   adjustQuantityRequired: "Số lượng điều chỉnh không được trống",
   adjustQuantityNonZero: "Số lượng điều chỉnh không được bằng 0",
   adjustReasonLabel: "Lý do điều chỉnh",
   adjustReasonRequired: "Nhập lý do điều chỉnh tối thiểu 5 ký tự.",
-  adjustReasonPlaceholder: "VD: Sai số nhập liệu sau khi đối chiếu chứng từ",
+  adjustReasonPlaceholder: "Ví dụ: Sai số nhập liệu sau khi đối chiếu chứng từ",
   adjustIngredientLine: (name: string) => `Nguyên liệu: ${name}`,
   adjustStockSuccess: (name: string) => `Đã điều chỉnh tồn kho ${name}`,
   menuRecipesPageTitle: "Định mức món bán",
@@ -507,7 +508,7 @@ export const INVENTORY_VI = {
     "Chỉ Bếp Trung Tâm hoặc chi nhánh mới được phép tạo lệnh sản xuất.",
   productionSiteCheckFailed: "Không thể kiểm tra quyền truy cập điểm sản xuất.",
   productionSiteMigrationRequired:
-    "Cần áp dụng migration điểm vận hành trước khi dùng màn này.",
+    "Hệ thống chưa sẵn sàng cho loại điểm vận hành này. Vui lòng liên hệ quản trị.",
   productionSiteNoneConfigured: "Chưa có điểm sản xuất đang hoạt động.",
 } as const;
 

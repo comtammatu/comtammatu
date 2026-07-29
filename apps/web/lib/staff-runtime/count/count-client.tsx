@@ -391,8 +391,8 @@ export function CountSlipClient({
               (unit) => unit.unitId === entry.entryUnitId,
             ) ?? getDefaultCountUnitChoice(assignment.countUnits));
     const quantityPlaceholder = selectedUnit?.code
-      ? `VD: 5 ${selectedUnit.code}`
-      : "VD: 5";
+      ? `Ví dụ: 5 ${selectedUnit.code}`
+      : "Ví dụ: 5";
     const unitPreview = assignment
       ? buildCountUnitPreview({
           quantity: entry?.quantity ?? "",

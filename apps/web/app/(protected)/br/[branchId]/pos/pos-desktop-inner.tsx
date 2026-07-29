@@ -871,7 +871,7 @@ export function PosDesktopInner({
       }
 
       if (table.status !== "occupied") {
-        toast.message("Bàn này chưa sẵn sàng để nhận order.");
+        toast.message("Bàn này chưa sẵn sàng để nhận đơn.");
         return;
       }
 

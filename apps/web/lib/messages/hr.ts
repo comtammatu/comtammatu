@@ -25,7 +25,8 @@ export const hr = {
       setup: "Thiết lập",
     },
     attendanceTitle: "Chấm công và ngày công theo ca",
-    attendanceDescription: "Theo dõi vào/ra ca, checklist bắt buộc và ca treo.",
+    attendanceDescription:
+      "Theo dõi vào/ra ca, việc bắt buộc và ca treo.",
     setupTitle: "Thiết lập ca làm và việc trong ca",
     setupDescription: "Khung ca và việc trong ca theo từng vị trí.",
     setupSteps: {
@@ -38,7 +39,7 @@ export const hr = {
       shifts: {
         title: "Bước 1: Ca làm",
         description:
-          "Tạo khung ca để checklist và bảng công bám đúng thời điểm.",
+          "Tạo khung ca để việc trong ca và bảng công bám đúng thời điểm.",
         hint: "Nền vận hành",
       },
     },
@@ -48,7 +49,7 @@ export const hr = {
         "Số ngày dùng làm mẫu số khi tính lương tháng.",
       monthlyLeaveDaysLabel: "Phép tháng",
       monthlyLeaveDaysDescription:
-        "Mỗi tháng, số ngày nghỉ có lương được phân bổ trước từ quota này.",
+        "Mỗi tháng, số ngày nghỉ có lương được phân bổ trước từ hạn mức này.",
       allocationHint: "Ví dụ: nghỉ 3 ngày = 2 phép tháng + 1 phép năm.",
       save: "Lưu chính sách",
       saved: "Đã lưu ngày công và phép tháng.",
@@ -71,8 +72,8 @@ export const hr = {
     shiftsEmptyTitle: "Chưa có ca làm việc nào",
     positionTasks: {
       title: "Việc trong ca",
-      description: "Gán checklist nhân viên nhận khi chấm công vào.",
-      hint: "Checklist",
+      description: "Gán danh sách việc nhân viên nhận khi chấm công vào.",
+      hint: "Danh sách việc",
       positionLabel: "Chọn vị trí",
       positionPlaceholder: "Chọn vị trí",
       emptyPosition: "Chọn vị trí để cấu hình việc trong ca.",
@@ -213,7 +214,7 @@ export const hr = {
       periodLoadFailed: "Không thể tải kỳ lương.",
       periodNotFound: "Kỳ lương không tồn tại.",
       leavePolicyLoadFailed:
-        "Không thể tải ngày công và quota nghỉ phép để tính lương.",
+        "Không thể tải ngày công và hạn mức nghỉ phép để tính lương.",
       leaveEntitlementsLoadFailed:
         "Không thể tải hạn mức phép năm của nhân viên.",
       calculate: {

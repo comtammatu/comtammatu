@@ -318,7 +318,7 @@ function IngredientLineRow<T extends FieldValues>({
             name={quantityName}
             render={({ field }) => (
               <FormattedNumberInput
-                placeholder="VD: 0.5"
+                placeholder={INVENTORY_VI.quantityExamplePlaceholder}
                 value={field.value ?? ""}
                 onValueChange={field.onChange}
                 onBlur={field.onBlur}

@@ -6,7 +6,7 @@ const ROOT = process.cwd();
 
 const INCLUDE_DIRS = [
   "apps/web/app",
-  "apps/web/lib/messages",
+  "apps/web/lib",
   "apps/print-agent/src",
   "docs",
   "packages/print-render/src",
@@ -31,7 +31,33 @@ const EXCLUDED_PATH_SEGMENTS = new Set([
 const ALLOWED_EXTENSIONS = new Set([".ts", ".tsx", ".md", ".html"]);
 const VI_DIACRITIC_PATTERN = /[À-ỹ]/;
 const TECHNICAL_UI_TERM_PATTERN =
-  /(?:\b(?:override|fallback|qty|gate|matching|cold-chain|lock|acquire|cap|credit|tier|zone|snapshot|ticket|import|export|dashboard|yield|ad-hoc|template|online|offline|topping|blind|sku)\b|\bpeer\s+cross\b|(?:Branch|Job|Order) ID)/i;
+  /(?:\b(?:override|fallback|qty|gate|matching|cold-chain|lock|acquire|cap|credit|tier|zone|snapshot|ticket|import|export|dashboard|yield|ad-hoc|template|online|offline|topping|blind|sku|inbox|tenant|grant|owner|agent|job|routing|webhook|provider|draft|mobile|checklist|quota|app|link|copy|order|ship|focus|sheet|top)\b|\bpeer\s+cross\b|\bpermission\s+key\b|\b(?:item_kind|provider_ref|tenant_id|branch_id|order_id|tax_invoice_id)\b|\bmigration\b|\bround\s+r\b|\bcận\s+date\b|\b(?:HRM|WAG)\b|\b(?:[A-Za-z][A-Za-z0-9_-]*\s+)?ID\b)/i;
+const PURE_TECHNICAL_UI_COPY_PATTERN =
+  /^(?:Owner|Checklist|Template|Self-Order|Feedback|Comming Soon|VAT|KPI|QC|HRM|WAG|Mobile|Draft|Top|Permission key|(?:Agent|Session|Payment|Item|Terminal|Station|Order|Branch|Job)\s+ID)[:.]?$/;
+const UI_ACRONYM_ALLOWLIST = new Set([
+  "POS",
+  "KDS",
+  "PO",
+  "GRN",
+  "WAC",
+  "QR",
+  "HĐĐT",
+  "GTGT",
+  "PIT",
+  "AOV",
+  "COGS",
+  "PDF",
+  "CSV",
+  "VND",
+  "NCC",
+]);
+const ALL_CAPS_UI_COPY_ALLOWLIST = new Set([
+  "TIỆM CƠM TẤM",
+  "MÁ TƯ",
+  "QUÉT QR THANH TOÁN",
+]);
+const WRONG_ACRONYM_CASING_PATTERN =
+  /\b(?:Vat|Kpi|Qr|Pos|Kds|Hđđt|Gtgt|Vietqr|Sepay)\b/;
 
 const CHECKS = [
   { pattern: /\bEmployee Portal\b/g, replacement: "Cổng nhân viên" },
@@ -111,6 +137,7 @@ const CHECKS = [
 /** Phrase denylist that only applies to operator UI source (not docs). */
 const UI_ONLY_CHECKS = [
   { pattern: /\bad-hoc\b/gi, replacement: "nhập thẳng / không theo đơn" },
+  { pattern: /\b(?:VD|Vd)\s*:/g, replacement: "Ví dụ:" },
   { pattern: /\bTopping\b/g, replacement: "Món thêm" },
   {
     pattern: /["']Online["']/g,
@@ -133,6 +160,19 @@ function isUiCopyPath(relPath) {
   );
 }
 
+function isInteractiveUiCopyPath(relPath) {
+  return (
+    relPath.startsWith("apps/web/") ||
+    relPath.startsWith("packages/shared/src/messages/") ||
+    relPath.startsWith("packages/shared/src/labels/") ||
+    relPath.startsWith("packages/ui/src/")
+  );
+}
+
+function isTestOrFixturePath(relPath) {
+  return /(?:^|\/)(?:__tests__|tests|fixtures)(?:\/|$)/.test(relPath);
+}
+
 const UI_BOUNDARY_CHECKS = [
   {
     pattern:
@@ -150,11 +190,10 @@ const UI_BOUNDARY_CHECKS = [
   },
 ];
 
-/** Vietnamese operator copy must not embed procurement acronyms in a sentence. */
-const EMBEDDED_PROCUREMENT_ACRONYM_PATTERN =
-  /\b(?:PO|GRN)\b/;
+/** Vietnamese operator copy must not embed technical acronyms in a sentence. */
+const EMBEDDED_UI_ACRONYM_PATTERN = /\b(?:PO|GRN|WAC|QC|VAT|KPI)\b/;
 
-function findEmbeddedProcurementAcronymCopy(text, relPath) {
+function findEmbeddedUiAcronymCopy(text, relPath) {
   const sourceFile = ts.createSourceFile(
     relPath,
     text,
@@ -176,8 +215,59 @@ function findEmbeddedProcurementAcronymCopy(text, relPath) {
       const value = "text" in node ? node.text : node.getText(sourceFile);
       if (
         VI_DIACRITIC_PATTERN.test(value) &&
-        EMBEDDED_PROCUREMENT_ACRONYM_PATTERN.test(value)
+        EMBEDDED_UI_ACRONYM_PATTERN.test(value)
       ) {
+        matches.push({
+          line:
+            sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
+              .line + 1,
+          value,
+        });
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return matches;
+}
+
+function findUiCasingDrift(text, relPath) {
+  const sourceFile = ts.createSourceFile(
+    relPath,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    relPath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const matches = [];
+
+  function visit(node) {
+    const isCopyNode =
+      ts.isStringLiteralLike(node) ||
+      node.kind === ts.SyntaxKind.TemplateHead ||
+      node.kind === ts.SyntaxKind.TemplateMiddle ||
+      node.kind === ts.SyntaxKind.TemplateTail ||
+      node.kind === ts.SyntaxKind.JsxText;
+
+    if (isCopyNode) {
+      const value = "text" in node ? node.text : node.getText(sourceFile);
+      const words = value.match(/[A-Za-zÀ-ỹĐđ]+/g) ?? [];
+      const nonAcronymWords = words.filter(
+        (word) => !UI_ACRONYM_ALLOWLIST.has(word),
+      );
+      const isAllCapsVietnamese =
+        VI_DIACRITIC_PATTERN.test(value) &&
+        !ALL_CAPS_UI_COPY_ALLOWLIST.has(value.trim()) &&
+        nonAcronymWords.length >= 2 &&
+        nonAcronymWords.every(
+          (word) =>
+            word === word.toLocaleUpperCase("vi-VN") &&
+            word !== word.toLocaleLowerCase("vi-VN"),
+        );
+
+      if (WRONG_ACRONYM_CASING_PATTERN.test(value) || isAllCapsVietnamese) {
         matches.push({
           line:
             sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
@@ -227,8 +317,9 @@ function findTechnicalUiCopy(text, relPath) {
     if (isCopyNode) {
       const value = "text" in node ? node.text : node.getText(sourceFile);
       if (
-        VI_DIACRITIC_PATTERN.test(value) &&
-        TECHNICAL_UI_TERM_PATTERN.test(value)
+        (VI_DIACRITIC_PATTERN.test(value) &&
+          TECHNICAL_UI_TERM_PATTERN.test(value)) ||
+        PURE_TECHNICAL_UI_COPY_PATTERN.test(value.trim())
       ) {
         matches.push({
           line:
@@ -327,16 +418,26 @@ async function main() {
       }
     }
 
-    if (relPath.endsWith(".ts") || relPath.endsWith(".tsx")) {
+    if (
+      (relPath.endsWith(".ts") || relPath.endsWith(".tsx")) &&
+      !isTestOrFixturePath(relPath)
+    ) {
       for (const match of findTechnicalUiCopy(text, relPath)) {
         failures.push(
           `${relPath}:${match.line} — "${match.value}" → dùng thuật ngữ tiếng Việt trên nội dung hiển thị`,
         );
       }
-      for (const match of findEmbeddedProcurementAcronymCopy(text, relPath)) {
+      for (const match of findEmbeddedUiAcronymCopy(text, relPath)) {
         failures.push(
-          `${relPath}:${match.line} — "${match.value}" → dùng “phiếu nhập” / “đơn đặt hàng” trong câu; acronym chỉ pill/badge`,
+          `${relPath}:${match.line} — "${match.value}" → dùng thuật ngữ tiếng Việt trong câu; acronym chỉ đứng riêng ở pill/badge`,
         );
+      }
+      if (isInteractiveUiCopyPath(relPath)) {
+        for (const match of findUiCasingDrift(text, relPath)) {
+          failures.push(
+            `${relPath}:${match.line} — "${match.value}" → dùng sentence case và viết đúng tên riêng/chữ viết tắt`,
+          );
+        }
       }
       for (const check of UI_BOUNDARY_CHECKS) {
         const matches = [...text.matchAll(check.pattern)];
@@ -369,13 +470,20 @@ async function main() {
   const unsafeAcronymSentence =
     'const copy = "Chọn PO để tạo GRN";\n';
   if (
-    !findEmbeddedProcurementAcronymCopy(
+    !findEmbeddedUiAcronymCopy(
       unsafeAcronymSentence,
       "unsafe-acronym.tsx",
     ).length
   ) {
     failures.push(
       "lint-copy fixture không kích hoạt guard acronym nhúng trong câu Việt",
+    );
+  }
+  const unsafeCasingFixture =
+    'const badAcronym = "Thuế Vat";\nconst allCaps = "YÊU CẦU HÀNG";\n';
+  if (!findUiCasingDrift(unsafeCasingFixture, "unsafe-casing.tsx").length) {
+    failures.push(
+      "lint-copy fixture không kích hoạt guard viết hoa/viết thường trên UI",
     );
   }
   for (const check of UI_BOUNDARY_CHECKS) {
@@ -391,6 +499,15 @@ async function main() {
     if ([...safeFixture.matchAll(check.pattern)].length) {
       failures.push(`lint-copy báo sai với fixture viết tắt hợp lệ: ${check.replacement}`);
     }
+  }
+  if (
+    findTechnicalUiCopy(safeFixture, "safe-acronyms.tsx").length ||
+    findEmbeddedUiAcronymCopy(safeFixture, "safe-acronyms.tsx").length ||
+    findUiCasingDrift(safeFixture, "safe-acronyms.tsx").length
+  ) {
+    failures.push(
+      "lint-copy báo sai với fixture acronym đứng riêng và viết hoa hợp lệ",
+    );
   }
 
   if (failures.length > 0) {

@@ -157,7 +157,7 @@ export const pos = {
     serviceCharge: "Phụ phí",
     discount: "Giảm giá",
     discountReason: "Lý do:",
-    total: "TỔNG CỘNG",
+    total: "Tổng cộng",
     note: "Ghi chú:",
     thanks: "Cảm ơn quý khách!",
     lineUnitPrice: (quantity: number, unitPrice: string) =>
@@ -233,7 +233,7 @@ export const pos = {
     manualLimitOptionalLabel: "Trần bán thủ công",
     manualLimitOptionalHint:
       "Để trống để không đặt trần thủ công; tồn kho vẫn là rào chặn riêng.",
-    manualLimitExample: "VD: 50",
+    manualLimitExample: "Ví dụ: 50",
     manualLimitRequired: "Giới hạn bán là bắt buộc.",
     manualLimitRange: "Giới hạn bán phải là số nguyên từ 0 đến 9999.",
     manualLimitExceedsStock: (stock: number) =>
@@ -261,7 +261,7 @@ export const pos = {
     replenishStockHint: "Chỉ dùng khi kho chi nhánh xác nhận còn phần thực tế.",
     replenishStockReasonLabel: "Lý do bổ sung",
     replenishStockReasonHint: "Lưu vào lịch sử điều chỉnh tồn kho chi nhánh.",
-    replenishStockPlaceholder: "VD: Kho còn 2 phần thực tế",
+    replenishStockPlaceholder: "Ví dụ: Kho còn 2 phần thực tế",
     replenishStockReasonMin: "Nhập lý do bổ sung tối thiểu 5 ký tự.",
     replenishStockFailed: "Không thể bổ sung tồn kho.",
     replenishStockSuccess: (itemName: string, extraPortions: number) =>
@@ -351,7 +351,7 @@ export const pos = {
     srDescription: "Chi tiết đơn hàng, thêm món và cập nhật trạng thái phục vụ",
     loadingItemsAria: "Đang tải danh sách món",
     loadingOrder: "Đang tải đơn hàng",
-    orderedByLabel: "Người order:",
+    orderedByLabel: "Người nhận đơn:",
     itemListAria: "Danh sách món",
     noteLabel: "Ghi chú",
     paymentAmount: (amount: string) => `Thanh toán · ${amount}`,
@@ -433,8 +433,8 @@ export const pos = {
     discountLabel: "Chiết khấu món",
     discountByPercent: "Theo %",
     discountByVnd: "Theo VNĐ",
-    discountValuePlaceholderPct: "Vd: 100 (tặng miễn phí)",
-    discountValuePlaceholderVnd: "Vd: 15000",
+    discountValuePlaceholderPct: "Ví dụ: 100 (tặng miễn phí)",
+    discountValuePlaceholderVnd: "Ví dụ: 15000",
     discountReasonSuggestionsAria: "Gợi ý lý do chiết khấu món",
     discountNotePlaceholder: "Lý do chiết khấu (vd: Đánh giá 5 sao)",
     discountPreview: (amount: string, net: string) =>
