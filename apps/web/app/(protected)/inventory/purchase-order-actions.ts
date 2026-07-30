@@ -177,6 +177,7 @@ function procurementRpcError(
       "supplier_item_mapping_required",
       "Có nguyên liệu chưa được gán cho nhà cung cấp.",
     ],
+    ["receiving_warehouse_required", "Chưa cấu hình kho nhận hàng."],
     ["42501", "Bạn không có quyền thực hiện thao tác này."],
     ["P0002", "Không tìm thấy chứng từ hoặc nhà cung cấp."],
   ];
@@ -351,6 +352,7 @@ export const createPurchaseOrderFromRequest = withAction(
     }
     revalidateSurfacePath("/inventory/purchase-requests");
     revalidateSurfacePath("/inventory/purchase-orders");
+    revalidateSurfacePath("/inventory/grn");
     return {
       success: true,
       data: { id: parsed.data.po_id, code: parsed.data.po_number },
@@ -417,6 +419,7 @@ export const savePurchaseOrdersFromRequest = withAction(
     }
     revalidateSurfacePath("/inventory/purchase-requests");
     revalidateSurfacePath("/inventory/purchase-orders");
+    revalidateSurfacePath("/inventory/grn");
     return {
       success: true,
       data: parsed.data.purchase_orders.map((order) => ({
@@ -601,6 +604,7 @@ export const savePurchaseOrder = withAction(
     }
     revalidateSurfacePath("/inventory/purchase-orders");
     revalidateSurfacePath("/inventory/purchase-requests");
+    revalidateSurfacePath("/inventory/grn");
     return { success: true };
   },
 );
@@ -669,6 +673,7 @@ export const sendPurchaseOrder = withAction(
     }
 
     revalidateSurfacePath("/inventory/purchase-orders");
+    revalidateSurfacePath("/inventory/grn");
     return { success: true };
   },
 );

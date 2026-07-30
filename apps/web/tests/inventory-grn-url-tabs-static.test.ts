@@ -21,41 +21,19 @@ test("GRN is a direct route and /inventory/operations is gone", () => {
     /<GRNListPageContent searchParams=\{searchParams\} \/>/,
   );
 
-  const ownerBodySource = grnListClientSource.slice(
-    grnListClientSource.indexOf("const ownerBody"),
-    grnListClientSource.indexOf(
-      "if (withinOwnerTabs)",
-      grnListClientSource.indexOf("const ownerBody"),
-    ),
-  );
-
-  assert.match(ownerBodySource, /draftSectionWithinOwnerTabs/);
-  assert.match(ownerBodySource, /listBody/);
-  assert.doesNotMatch(ownerBodySource, /paramKey=/);
+  assert.match(grnListClientSource, /<AppListFrame/);
+  assert.doesNotMatch(grnListClientSource, /AppPageTabs|TabsContent/);
 });
 
-test("GRN drafts tab matches main list record-depth chrome", () => {
-  const draftsTab = grnListClientSource.slice(
-    grnListClientSource.indexOf("function GrnDraftsTab"),
-    grnListClientSource.indexOf("function GrnMobileCard"),
+test("GRN status is a filter on the compact operational list", () => {
+  assert.match(grnListClientSource, /value=\{filters\.status\}/);
+  assert.match(
+    grnListClientSource,
+    /navigate\(\{ status: value, page: null \}\)/,
   );
-
-  assert.match(draftsTab, /const draftColumns/);
-  assert.match(draftsTab, /<DataTable/);
-  assert.match(draftsTab, /<AppListFrame/);
-  assert.match(draftsTab, /<AppToolbar[\s\S]{0,120}variant="inline"/);
-  assert.match(draftsTab, /font-mono text-primary hover:underline/);
-  assert.match(draftsTab, /grnDraftHref\(basePath,\s*draft\)/);
-  assert.match(draftsTab, /getDraftRowActions/);
-  assert.match(draftsTab, /<RowActionsMenu/);
-  assert.match(draftsTab, /renderRowContextMenu=\{/);
-  assert.match(draftsTab, /onRowClick=\{openDraft\}/);
-  assert.match(draftsTab, /mobileCardRender=\{/);
-  assert.match(draftsTab, /StatusBadge domain="inventory" value="draft"/);
-  assert.match(draftsTab, /key:\s*"continue"/);
-  assert.match(draftsTab, /key:\s*"discard"/);
-  assert.match(draftsTab, /destructive:\s*true/);
-  assert.doesNotMatch(draftsTab, /from "@comtammatu\/ui\/components\/item"/);
-  assert.doesNotMatch(draftsTab, /<Item[\s>]/);
-  assert.doesNotMatch(draftsTab, /ItemHeader|ItemFooter|ItemTitle/);
+  assert.doesNotMatch(grnListClientSource, /header: "Đơn đặt hàng"/);
+  assert.doesNotMatch(grnListClientSource, /header: "Yêu cầu mua"/);
+  assert.doesNotMatch(grnListClientSource, /header: "Giá trị nhập"/);
+  assert.doesNotMatch(grnListClientSource, /header: "Hóa đơn"/);
+  assert.doesNotMatch(grnListClientSource, /viewPendingOrders/);
 });

@@ -30,6 +30,18 @@ and statutory accounting.
    only after a complete accounting close under ADR 0016.
 8. Central stock and production belong only to `central_kitchen`; branch
    runtime does not regain branch-level production.
+9. Goods supplier invoices may allocate multiple confirmed GRNs/POs from one
+   supplier. Matching compares `subtotal + document_discount_amount` with the
+   sum of `po_applied_quantity * unit_price_est`; the automatic tolerance is
+   `±1 VND`.
+10. Service supplier invoices have no GRN allocation and require a manual,
+    reasoned document verification before payment.
+11. Accountant may create invoices, recompute matching, verify service
+    evidence, and accept discrepancies. Only Owner may record supplier
+    payments or allocate an existing supplier advance.
+12. Any payment amount not allocated to invoices remains visible as a supplier
+    advance. Later allocation is append-only and never creates another cash or
+    bank movement.
 
 ## Delivery boundary
 

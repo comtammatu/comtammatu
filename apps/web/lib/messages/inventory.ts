@@ -393,8 +393,7 @@ export const inventory = {
       unitPlaceholder: "ĐVT",
       removeLineAria: "Xóa dòng",
       addIngredient: "Thêm nguyên liệu",
-      invalidLine:
-        "Chọn nguyên liệu, đơn vị và nhập số lượng lớn hơn 0.",
+      invalidLine: "Chọn nguyên liệu, đơn vị và nhập số lượng lớn hơn 0.",
       duplicateIngredient: "Mỗi nguyên liệu chỉ được xuất hiện một lần.",
       saveFailed: "Không thể lưu yêu cầu hàng.",
       submittedToast: "Đã gửi yêu cầu hàng.",
@@ -509,6 +508,8 @@ export const inventory = {
     createPoTitle: "Tạo đơn đặt hàng NCC",
     createPoSuccess: (count: number) =>
       `Đã tạo ${formatCount(count)} đơn đặt hàng.`,
+    createPoPartialSuccess: (count: number, remainingCount: number) =>
+      `Đã tạo ${formatCount(count)} đơn đặt hàng; còn ${formatCount(remainingCount)} nguyên liệu chờ gán NCC.`,
     createPoFailed: "Không thể tạo đơn đặt hàng.",
     searchPlaceholder: "Tìm mã yêu cầu, kho hoặc nguyên liệu...",
     emptyTitle: "Chưa có yêu cầu mua",
@@ -539,6 +540,16 @@ export const inventory = {
       `${formatCount(count)} đơn theo nhà cung cấp`,
     noSupplierMappings:
       "Chưa có nhà cung cấp phù hợp với nguyên liệu còn cần mua.",
+    missingSupplierMappingsTitle: "Một số nguyên liệu chưa gán NCC",
+    missingSupplierMappings: (names: string[]) => {
+      const visible = names.slice(0, 5).join(", ");
+      const remaining =
+        names.length > 5
+          ? ` và ${formatCount(names.length - 5)} nguyên liệu khác`
+          : "";
+      return `Chưa tạo đơn cho ${visible}${remaining}. Các nguyên liệu đã có NCC vẫn được xử lý; gán NCC sau để tiếp tục phần còn lại.`;
+    },
+    manageSuppliersAction: "Gán NCC",
     mappedLines: (mapped: number, total: number) =>
       `${formatCount(mapped)}/${formatCount(total)} dòng được gán cho NCC`,
     lineCount: (count: number) => `${formatCount(count)} dòng`,
@@ -1102,8 +1113,7 @@ export const inventory = {
     hrmConsumptionSource: "Nhân sự - Tiêu hao bếp trong ngày",
     manualSource: "Thủ công",
     listLoadFailed: "Không thể tải danh sách phiếu xuất.",
-    lineWacLoadFailed:
-      "Không thể tải giá vốn bình quân cho dòng phiếu xuất.",
+    lineWacLoadFailed: "Không thể tải giá vốn bình quân cho dòng phiếu xuất.",
     reloadFailed: "Không thể tải lại phiếu xuất.",
     deleteLineTitle: "Xóa dòng nguyên liệu?",
     deleteLineDescription: "Dòng này sẽ bị xóa khỏi phiếu xuất nháp.",
@@ -1463,7 +1473,16 @@ export const inventory = {
     title: "Hóa đơn NCC",
     createAction: "Ghi nhận hóa đơn NCC",
     createDescription:
-      "1) Chọn phiếu nhập · 2) Nhập số và ngày hóa đơn · 3) Chọn mức thuế GTGT và kiểm tra tiền.",
+      "Chọn loại hóa đơn, nhập thông tin chứng từ và kiểm tra số tiền.",
+    invoiceKind: "Loại hóa đơn",
+    invoiceKinds: {
+      goods: "Hàng hóa",
+      service: "Dịch vụ",
+    },
+    serviceInvoiceHint:
+      "Hóa đơn dịch vụ không liên kết phiếu nhập và phải được xác minh chứng từ trước khi thanh toán.",
+    goodsReceiptRequired:
+      "Hóa đơn hàng hóa phải liên kết ít nhất một phiếu nhập đã xác nhận.",
     documentDiscount: "Chiết khấu toàn hóa đơn",
     creditAction: "Giảm công nợ",
     creditTitle: "Ghi nhận giảm công nợ",
@@ -1589,7 +1608,13 @@ export const inventory = {
     paymentBlockedNoVatAttachment:
       "Cần đính kèm HĐ GTGT trước khi ghi nhận thanh toán.",
     paymentOutstanding: (amount: string) => `Còn phải trả: ${amount}`,
+    paymentTotalPreview: (amount: string) => `Tổng trả: ${amount}`,
+    paymentAllocatedPreview: (amount: string) =>
+      `Phân bổ vào hóa đơn: ${amount}`,
+    paymentAdvancePreview: (amount: string) => `Ứng trước NCC: ${amount}`,
     paymentRecorded: "Đã ghi nhận thanh toán NCC",
+    paymentAdvanceRecorded: (amount: string) =>
+      `Đã ghi nhận ${amount} ứng trước NCC.`,
     paymentTooLarge: "Số tiền trả vượt quá phần còn phải trả.",
     noPaymentInvoice: "Chưa chọn hóa đơn để thanh toán.",
     paymentRetrySameIntent:
@@ -1597,6 +1622,40 @@ export const inventory = {
     linkedGrn: "Phiếu nhập liên kết",
     linkedPo: "Đơn mua liên kết",
     notLinked: "Chưa liên kết",
+    notAvailable: "Chưa có",
+    matchingExpectedAmount: "Giá trị hóa đơn đối soát",
+    matchingReceivedAmount: "Giá trị hàng đã nhận",
+    matchingDifferenceAmount: "Chênh lệch",
+    matchingDifferenceTitle: (amount: string) =>
+      `Chênh lệch đối soát ${amount}`,
+    matchingDifferenceDescription:
+      "Kiểm tra số lượng nhận, đơn giá đặt hàng, chiết khấu hoặc thông tin hóa đơn trước khi chấp nhận.",
+    serviceVerificationRequired: "Chưa xác minh chứng từ dịch vụ",
+    serviceVerificationDescription:
+      "Kế toán cần kiểm tra chứng từ và ghi rõ căn cứ xác minh trước khi Chủ cửa hàng thanh toán.",
+    serviceVerificationReason: "Căn cứ xác minh",
+    serviceVerificationReasonPlaceholder:
+      "Nêu chứng từ, phạm vi dịch vụ và căn cứ xác nhận...",
+    verifyServiceAction: "Xác minh chứng từ",
+    serviceVerificationSuccess: "Đã xác minh chứng từ dịch vụ.",
+    serviceVerificationFailed: "Không thể xác minh chứng từ dịch vụ.",
+    supplierAdvance: "Ứng trước NCC",
+    supplierAdvanceDescription:
+      "Khoản đã trả nhưng chưa phân bổ hết vào hóa đơn.",
+    allocateAdvanceAction: "Phân bổ ứng trước",
+    allocateAdvanceTitle: "Phân bổ ứng trước NCC",
+    allocateAdvanceDescription:
+      "Chọn khoản ứng trước cùng NCC để giảm công nợ hóa đơn. Thao tác này không trừ tiền lần nữa.",
+    allocateAdvanceSuccess: "Đã phân bổ ứng trước vào hóa đơn.",
+    advanceSource: "Khoản ứng trước",
+    advanceSourceOption: (date: string, amount: string) =>
+      `${date} · còn ${amount}`,
+    advanceAllocationAmount: "Số tiền phân bổ",
+    advanceAllocationPreview: (amount: string) =>
+      `Sẽ giảm công nợ hóa đơn: ${amount}`,
+    advanceNotFound: "Không tìm thấy khoản ứng trước phù hợp.",
+    advanceExceedsBalance:
+      "Số tiền phân bổ vượt quá ứng trước còn lại hoặc công nợ hóa đơn.",
     varianceTitle: (percent: string) => `Chênh lệch đối soát ${percent}`,
     varianceDescription:
       "Kiểm tra số lượng, đơn giá hoặc phụ phí trước khi thanh toán.",
@@ -1613,8 +1672,7 @@ export const inventory = {
     chooseGrnPrimary: "Chọn phiếu nhập đã xác nhận",
     noLinkedGrn: "Không liên kết phiếu nhập",
     chooseSupplier: "Chọn nhà cung cấp",
-    grnNetAcceptedLabel:
-      "Giá trị nhận trước thuế GTGT (gợi ý đối soát)",
+    grnNetAcceptedLabel: "Giá trị nhận trước thuế GTGT (gợi ý đối soát)",
     grnNetAcceptedUnavailable:
       "Không xem được giá trị phiếu nhập trên tài khoản này",
     invoiceNumberPlaceholder: "Ví dụ: 0001234",

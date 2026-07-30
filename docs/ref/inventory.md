@@ -24,7 +24,7 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                                                                                | Không chuyển sang FIFO engine                                                                          |
 | Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                                                                                             | Không mở lot-first ledger / batch accounting                                                           |
 | Mô hình site                    | `branches` là site table Greenfield; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
-| YCM / PO / GRN / NCC            | Kho trung tâm lập `purchase_request`; Kế toán/Owner tạo một hoặc nhiều PO, mỗi PO đúng một NCC; từng lần giao tạo một GRN nháp **Chờ nhập hàng** từ PO. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. Hàng tặng biết trước là dòng PO giá `0`; phần nhận dư ngoài đơn nhập tồn giá `0`. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                   |
+| YCM / PO / GRN / NCC            | Kho trung tâm lập `purchase_request`; Kế toán/Owner tạo một hoặc nhiều PO, mỗi PO đúng một NCC; khi PO phát hành hoặc còn thiếu sau một lần nhập, hệ thống tự tạo GRN nháp **Chờ nhập hàng**. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. Hàng tặng biết trước là dòng PO giá `0`; phần nhận dư ngoài đơn nhập tồn giá `0`. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                   |
 | QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                    | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
 | Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                           | Không có target Kho↔Bếp trong cùng branch                                                              |
 | HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                 | Không mở payment proposal engine trong Inventory                                                       |
@@ -283,13 +283,15 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 3. Kế toán hoặc Owner tạo một hay nhiều **PO** từ Yêu cầu mua. Mỗi PO thuộc đúng
    một Yêu cầu mua và một NCC. Có thể giữ nhiều dòng cùng nguyên liệu; hàng tặng
    biết trước là dòng riêng có `unit_price_est = 0`.
-4. Khi NCC giao hàng, người có quyền mở PO `sent | partially_received` và chọn
-   **Tạo phiếu nhập**. RPC tạo đúng một GRN nháp **Chờ nhập hàng**, sao chép các
-   dòng còn thiếu và khóa nháp thứ hai của cùng PO.
+4. Khi PO chuyển sang `sent`, hệ thống tạo ngay đúng một GRN nháp
+   **Chờ nhập hàng**, sao chép các dòng còn thiếu và khóa nháp thứ hai của cùng
+   PO. Người nhận hàng làm việc trực tiếp từ danh sách GRN, không cần quay lại
+   PO để tạo phiếu.
 5. Kho nhập thực nhận và từ chối. Khi xác nhận, RPC khóa PO/GRN/dòng, tính phần
    áp dụng PO và phần dư, cập nhật tồn/WAC đúng một lần. Phần áp dụng dùng giá
    PO; phần dư ngoài đơn dùng giá `0`. PO chuyển `partially_received` hoặc
-   `received` trong cùng transaction.
+   `received` trong cùng transaction; nếu còn thiếu, hệ thống tự tạo GRN nháp
+   kế tiếp.
 6. Finance ghi nhận **Hóa đơn NCC** riêng, có thể đối chiếu nhiều GRN/PO cùng
    NCC; thanh toán và phiếu giảm công nợ phân bổ nhiều-nhiều với hóa đơn.
 

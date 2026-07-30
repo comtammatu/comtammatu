@@ -729,3 +729,24 @@ nội bộ tiếp tục áp dụng.
 
 **Canonical:** `docs/ref/inventory.md`, `docs/ref/inventory-role-ops.md`,
 `docs/ref/glossary.md`, `docs/ref/screen-context-map.md`.
+
+## D097: PO phát hành tự tạo hàng đợi Chờ nhập hàng (2026-07-30)
+
+**Decision (owner):**
+
+1. Khi PO chuyển sang `sent`, hệ thống tạo ngay một GRN nháp **Chờ nhập hàng**
+   trong cùng giao dịch. Người dùng không phải quay lại PO để chọn
+   **Tạo phiếu nhập**.
+2. Khi xác nhận một GRN nhưng PO còn thiếu, hệ thống tạo GRN nháp kế tiếp cho
+   lần giao sau. PO đã nhận đủ không tạo thêm; hủy/đóng PO tiếp tục hủy nháp
+   đang hoạt động. Mỗi PO vẫn tối đa một GRN nháp.
+3. Danh sách phiếu nhập dùng một bộ lọc **Trạng thái** thay cho tab trạng thái
+   và chỉ giữ thông tin vận hành chính. Giá trị nhập và hóa đơn thuộc chi tiết
+   GRN/Finance.
+
+**Supersedes:** D096 §2 trong phạm vi thao tác tạo GRN nháp thủ công. Mô hình
+một PO có nhiều GRN theo lần giao và tối đa một nháp tiếp tục giữ nguyên.
+
+**Canonical:** `docs/ref/inventory.md`,
+`supabase/migrations/20260730100000_auto_grn_draft_queue.sql`,
+`apps/web/app/(protected)/inventory/grn/grn-list-client.tsx`.

@@ -82,11 +82,11 @@ states the exact source, formula, exclusions, confidence, and drilldown.
 Finance grows by reporting maturity, not by exposing enterprise accounting
 screens to every operator from day one.
 
-| Stage | Key                    | Default audience               | Product intent                                                                         |
-| ----- | ---------------------- | ------------------------------ | -------------------------------------------------------------------------------------- |
-| 1     | `operating_basic`      | Owner / operator               | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
-| 2     | `branch_control`       | Multi-branch owner / operator  | Compare branches using the same operating formulas, then drill into outliers           |
-| 3     | `accountant_reporting` | Accountant / reporting owner   | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports       |
+| Stage | Key                    | Default audience              | Product intent                                                                         |
+| ----- | ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------- |
+| 1     | `operating_basic`      | Owner / operator              | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
+| 2     | `branch_control`       | Multi-branch owner / operator | Compare branches using the same operating formulas, then drill into outliers           |
+| 3     | `accountant_reporting` | Accountant / reporting owner  | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports       |
 
 The default `/finance` experience must start at `operating_basic`. It may reveal
 `branch_control` comparison only when the user has more than one accessible
@@ -187,11 +187,11 @@ application role with `/finance` operational authority and an Inventory GRN/PO
 slice. Runtime MODULE_ACL admits `owner` and `accountant` to `/finance`; fund
 initialization and privileged fund adjustments remain Owner-only.
 
-| Actor | System access | Must review or act on |
-| --- | --- | --- |
-| Owner | Tenant-wide `/finance`; oversight plus fund initialization / privileged exceptions | Daily landing metrics; cash/bank; POS cash variances; SePay unmatched; VietQR missing bank evidence; expenses; AP; HĐĐT; inventory opening/closing; exports; staff permission grants |
-| Accountant | `/finance` view + approve + create operating expenses, supplier invoices, AP pay, bank (NH), payment-method correction (PTTT); Inventory GRN/PO view plus PO create/approve (same person may create and approve); no stock/production/catalog/valuation surface | Same operating review set as Owner for money workflows they are granted; create PO(s) from multi-supplier GRN draft (split by NCC) and approve each before warehouse confirm (D083/D091/D092) |
-| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance; no purchase-price / chain-PO visibility | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds. May **read** MTD Doanh thu thuần vs monthly target progress for the assigned branch only on Branch home (`finance.revenue.monthly_target_progress`); cannot edit targets or open `/finance` |
+| Actor          | System access                                                                                                                                                                                                                                                            | Must review or act on                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Owner          | Tenant-wide `/finance`; oversight plus fund initialization / privileged exceptions                                                                                                                                                                                       | Daily landing metrics; cash/bank; POS cash variances; SePay unmatched; VietQR missing bank evidence; expenses; AP; HĐĐT; inventory opening/closing; exports; staff permission grants                                                                                                                                                                                                                      |
+| Accountant     | `/finance` view + approve + create operating expenses, supplier invoices, invoice matching, bank (NH), payment-method correction (PTTT); no supplier payment/advance allocation; Inventory GRN/PO view plus PO management; no stock/production/catalog/valuation surface | Review supplier documents, recompute matching, verify service invoices, and resolve discrepancies; payment remains Owner-only                                                                                                                                                                                                                                                                             |
+| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance; no purchase-price / chain-PO visibility                                                                                                                                                                        | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds. May **read** MTD Doanh thu thuần vs monthly target progress for the assigned branch only on Branch home (`finance.revenue.monthly_target_progress`); cannot edit targets or open `/finance` |
 
 Operators must not silently map `office` or a retired position code to Finance. Period-close
 enterprise accounting remains outside the product (D020). JWT roles added for
@@ -231,18 +231,25 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 Inventory owns the detailed stock-value workspace. Finance displays only the
 current inventory-value card and does not expose a duplicate inventory route.
 
-Supplier invoice matching compares the pre-VAT `subtotal` with confirmed net
-accepted GRN value and a fully priced PO subtotal. AP balance and supplier
-payment use `total_amount = subtotal + vat_amount`. Multi-rate input invoices
+Goods supplier invoice matching compares `subtotal +
+document_discount_amount` with the sum of `po_applied_quantity *
+unit_price_est` across every allocated confirmed GRN/PO from the same supplier.
+The automatic tolerance is `±1 VND`; a larger difference remains
+`discrepancy` until an Accountant accepts it with a reason. Service invoices
+do not allocate GRNs and remain `pending` until an Accountant verifies the
+document with a reason. AP balance and supplier payment use `total_amount =
+subtotal + vat_amount`. Multi-rate input invoices
 store one immutable `vat_breakdown` bucket per rate; database normalization
 derives the header totals and leaves the compatibility `vat_rate` null when
 more than one rate is present. Recording a supplier payment requires at least
 one HĐ GTGT file on `supplier_invoices.vat_invoice_attachment_path` (private
-bucket `supplier-invoice-attachments`); `record_supplier_payment` raises
-`vat_invoice_attachment_required` when missing. Attachment may be uploaded
-optionally during invoice create or later on the detail Sheet; the
+bucket `supplier-invoice-attachments`) and is Owner-only. Payment may exceed
+the current allocation; the remainder is a visible supplier advance that may
+be allocated later without changing cash or bank a second time. Attachment may
+be uploaded optionally during invoice create or later on the detail Sheet; the
 `attach_supplier_invoice_vat_evidence` action allows Owner with
-`finance:ap_pay` or `procurement:invoice_create` (matching the RPC). The legacy
+`finance:ap_pay` or a user with `procurement:invoice_create` (matching the RPC).
+The legacy
 `/inventory/supplier-invoices` route remains a compatibility `REDIRECT-SHIM`
 only (ADR 0018); new GRN and report links use `/finance/supplier-invoices`.
 The LIST client, row mapper, and list model live under

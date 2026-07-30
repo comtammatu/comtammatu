@@ -8247,13 +8247,21 @@ export type Database = {
           grn_id: number | null
           id: number
           invoice_date: string
+          invoice_kind: string
           invoice_number: string
+          matching_difference_amount: number | null
+          matching_expected_amount: number | null
           matching_notes: string | null
+          matching_reason_code: string | null
+          matching_received_amount: number | null
           matching_status: string
           paid_amount: number
           paid_at: string | null
           payment_status: string
           po_id: number | null
+          service_verification_reason: string | null
+          service_verified_at: string | null
+          service_verified_by: string | null
           subtotal: number
           supplier_id: number
           tenant_id: number
@@ -8276,13 +8284,21 @@ export type Database = {
           grn_id?: number | null
           id?: never
           invoice_date: string
+          invoice_kind?: string
           invoice_number: string
+          matching_difference_amount?: number | null
+          matching_expected_amount?: number | null
           matching_notes?: string | null
+          matching_reason_code?: string | null
+          matching_received_amount?: number | null
           matching_status?: string
           paid_amount?: number
           paid_at?: string | null
           payment_status?: string
           po_id?: number | null
+          service_verification_reason?: string | null
+          service_verified_at?: string | null
+          service_verified_by?: string | null
           subtotal: number
           supplier_id: number
           tenant_id: number
@@ -8305,13 +8321,21 @@ export type Database = {
           grn_id?: number | null
           id?: never
           invoice_date?: string
+          invoice_kind?: string
           invoice_number?: string
+          matching_difference_amount?: number | null
+          matching_expected_amount?: number | null
           matching_notes?: string | null
+          matching_reason_code?: string | null
+          matching_received_amount?: number | null
           matching_status?: string
           paid_amount?: number
           paid_at?: string | null
           payment_status?: string
           po_id?: number | null
+          service_verification_reason?: string | null
+          service_verified_at?: string | null
+          service_verified_by?: string | null
           subtotal?: number
           supplier_id?: number
           tenant_id?: number
@@ -8429,6 +8453,7 @@ export type Database = {
       }
       supplier_payment_allocations: {
         Row: {
+          allocation_intent_key: string
           amount: number
           created_at: string
           id: number
@@ -8437,6 +8462,7 @@ export type Database = {
           tenant_id: number
         }
         Insert: {
+          allocation_intent_key: string
           amount: number
           created_at?: string
           id?: never
@@ -8445,6 +8471,7 @@ export type Database = {
           tenant_id: number
         }
         Update: {
+          allocation_intent_key?: string
           amount?: number
           created_at?: string
           id?: never
@@ -10032,6 +10059,14 @@ export type Database = {
         Args: { p_actor?: string; p_branch_id: number; p_summary_date: string }
         Returns: Json
       }
+      allocate_supplier_advance: {
+        Args: {
+          p_allocations: Json
+          p_idempotency_key: string
+          p_payment_id: number
+        }
+        Returns: Json
+      }
       amend_grn_line: {
         Args: {
           p_grn_id: number
@@ -10596,19 +10631,34 @@ export type Database = {
         }
         Returns: Json
       }
-      create_supplier_invoice_with_allocations: {
-        Args: {
-          p_document_discount_amount: number
-          p_due_date: string
-          p_invoice_date: string
-          p_invoice_number: string
-          p_matching_notes: string
-          p_receipts: Json
-          p_supplier_id: number
-          p_vat_breakdown: Json
-        }
-        Returns: number
-      }
+      create_supplier_invoice_with_allocations:
+        | {
+            Args: {
+              p_document_discount_amount: number
+              p_due_date: string
+              p_invoice_date: string
+              p_invoice_number: string
+              p_matching_notes: string
+              p_receipts: Json
+              p_supplier_id: number
+              p_vat_breakdown: Json
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_document_discount_amount: number
+              p_due_date: string
+              p_invoice_date: string
+              p_invoice_kind: string
+              p_invoice_number: string
+              p_matching_notes: string
+              p_receipts: Json
+              p_supplier_id: number
+              p_vat_breakdown: Json
+            }
+            Returns: number
+          }
       create_supplier_invoice_with_vat_breakdown: {
         Args: {
           p_due_date: string
@@ -12616,6 +12666,10 @@ export type Database = {
           p_station_id?: number
         }
         Returns: number
+      }
+      verify_service_supplier_invoice: {
+        Args: { p_invoice_id: number; p_reason: string }
+        Returns: Json
       }
       vietqr_payment_code_prefix: { Args: never; Returns: string }
       void_order_item: {

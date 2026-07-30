@@ -1,5 +1,14 @@
 import fs from "node:fs";
 
+const AUTO_SEED_PATHS = ["supabase/seed.sql", "supabase/_local-dev"];
+const unexpectedAutoSeeds = AUTO_SEED_PATHS.filter((path) => fs.existsSync(path));
+if (unexpectedAutoSeeds.length > 0) {
+  console.error(
+    `[seed-permissions] preview auto-seed inputs are forbidden; keep smoke fixtures CI-only: ${unexpectedAutoSeeds.join(", ")}`,
+  );
+  process.exit(1);
+}
+
 // The dev/e2e seed grants role_templates permission keys that
 // sync_missing_permissions_from_template() materializes into staff_permissions
 // at seed time; staff_permissions FKs to the permission_keys catalog seeded in

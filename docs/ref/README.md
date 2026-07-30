@@ -12,6 +12,7 @@ Tài liệu tham chiếu dài hạn cho nghiệp vụ Cơm Tấm Má Tư. Không
 | Kiến thức nền F&B và tài chính vận hành | `domain-encyclopedia.md` |
 | Metric, KPI, card, workflow data contract | `operational-data-contract.md` |
 | Thuế doanh nghiệp, GTGT, TNDN, HĐĐT, hóa đơn đầu vào/đầu ra | `legal-framework-2026.md` trước, rồi `einvoice-tax.md` |
+| Tài sản, CCDC, khấu hao, luồng GTGT và thang lợi nhuận F&B | `finance-assets-vat-fnb.md` |
 | TNCN từ lương, payroll, BHXH/BHYT/BHTN, HĐLĐ | `legal-framework-2026.md` trước, rồi `payroll-pit.md` và `labor-contracts.md` |
 | Inventory | `inventory.md`, `inventory-sop.md`, `inventory-taxonomy-v1.md` |
 | Tích hợp bên thứ ba | `third-party-integrations.md` |

@@ -22,6 +22,7 @@ export default async function FinanceSupplierInvoicesPage({
     branchId?: string | string[];
     invoiceId?: string | string[];
     grnId?: string | string[];
+    mode?: string | string[];
     q?: string | string[];
     supplierId?: string | string[];
     matchStatus?: string | string[];
@@ -34,10 +35,7 @@ export default async function FinanceSupplierInvoicesPage({
   const copy = messages.finance.supplierInvoicesPage;
   const renderMissingInvoice = () => (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={copy.title}
-        description={copy.description}
-      />
+      <AppPageHeader title={copy.title} description={copy.description} />
       <AppEmptyState
         mode="no-data"
         title={copy.notFoundTitle}
@@ -61,15 +59,12 @@ export default async function FinanceSupplierInvoicesPage({
   const isOwner = authState.claims.user_role === "owner";
   const canPaySupplier = isOwner && hasPayPermission;
   const canAttachVatEvidence =
-    isOwner && (hasPayPermission || hasInvoiceCreatePermission);
+    hasPayPermission || hasInvoiceCreatePermission;
 
   if (!canReadProcurement) {
     return (
       <AppPage width="xwide" density="compact">
-        <AppPageHeader
-          title={copy.title}
-          description={copy.description}
-        />
+        <AppPageHeader title={copy.title} description={copy.description} />
         <AppEmptyState
           mode="no-access"
           title={copy.noAccessTitle}
@@ -107,9 +102,7 @@ export default async function FinanceSupplierInvoicesPage({
       ? Number(rawGrnId)
       : null;
   const includeGrnId =
-    parsedGrnId != null &&
-    Number.isSafeInteger(parsedGrnId) &&
-    parsedGrnId > 0
+    parsedGrnId != null && Number.isSafeInteger(parsedGrnId) && parsedGrnId > 0
       ? parsedGrnId
       : undefined;
 
@@ -142,10 +135,7 @@ export default async function FinanceSupplierInvoicesPage({
   ) {
     return (
       <AppPage width="xwide" density="compact">
-        <AppPageHeader
-          title={copy.title}
-          description={copy.description}
-        />
+        <AppPageHeader title={copy.title} description={copy.description} />
         <AppEmptyState
           mode="error"
           title={copy.loadErrorTitle}
@@ -230,10 +220,12 @@ export default async function FinanceSupplierInvoicesPage({
       initialHasMore={initialHasMore}
       initialNextCursor={initialNextCursor}
       initialGroups={page?.groups ?? []}
+      initialAdvances={page?.advances ?? []}
       initialTotalCount={page?.totalCount ?? 0}
       filters={filters}
       branchId={branchFilter}
       tenantId={authState.claims.tenant_id}
+      canCreateInvoice={hasInvoiceCreatePermission}
       canPaySupplier={canPaySupplier}
       canAttachVatEvidence={canAttachVatEvidence}
       canAcceptDiscrepancy={hasInvoiceMatchPermission}

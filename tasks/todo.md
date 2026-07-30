@@ -5,6 +5,33 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Stabilize supplier invoice matching, payment, and advance
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: finance/procurement-ap
+Exit: Goods invoices match all confirmed receipt allocations through one DB helper with a ±1 VND tolerance; service invoices require reasoned verification; only Owner records payment or allocates visible supplier advances; retry and later allocation never duplicate payment or money movement.
+Evidence: additive migration replay, focused DB tests, permission/static UI tests, repository gates, and authenticated Owner/Accountant responsive smoke after the migration is applied to an authorized target.
+
+### T3 review
+
+- **PM:** Keep supplier AP compact: invoice evidence, matching state, payable state, and visible advances only; no approval engine or general ledger.
+- **BA:** Goods invoices allocate confirmed GRNs/POs from one supplier; service invoices have no receipt allocation. Accountant owns document matching, while Owner owns every payment and advance allocation.
+- **Senior Dev:** Creation and recompute share one locked helper; payment and later advance allocation are append-only, idempotent RPCs. Direct authenticated DML is removed.
+- **QA:** Cover multi-GRN equality, ±1 VND, discrepancy acceptance, unverified service/VAT blocks, Owner-only payment, exact replay, advance reuse, money-once behavior, URL history, and one-overlay behavior.
+
+Synthesis: reuse the current supplier invoice list/Sheet and RPC seams. Persist matching evidence and advance balance; do not create a second AP workflow or routing abstraction.
+
+### UI Advisor Gate
+
+- **Surfaces:** Keep the full-width list as the workspace, the existing right Sheet for document detail, and sequential FormDialogs for create, pay, credit, and advance.
+- **Primary action:** Invoice state and permission decide the single next action; service uses `Xác minh chứng từ`, goods uses matching actions, and only Owner sees money actions.
+- **Responsive:** Keep one overlay open at a time; URL params restore detail/mode through Back, Forward, refresh, and deep links.
+
+- [ ] Run authenticated Owner/Accountant smoke when Greenfield has valid QA credentials.
+- [ ] Run the cleanup migration only after deployed callers no longer use direct DML or old payment/matching RPC signatures.
+
 ## Streamline YCM → PO → GRN and YCH → Transfer
 
 State: verify
@@ -24,6 +51,7 @@ Evidence: additive migration replay, atomic RPC behavior tests, role/static work
 Synthesis: change the four existing state machines and their current list surfaces only; preserve Branch/Owner separation, monetary authority boundaries, and old RPC compatibility until deployed callers are proven migrated.
 
 - [ ] Apply the additive migration to an authorized target, regenerate database types from that schema, and run authenticated persona smoke before cleanup.
+- [ ] Deploy and smoke a mixed-coverage YCM: mapped lines create and send POs, unmapped lines stay outstanding, and the request remains `partially_ordered`.
 
 ## Implement purchase request → PO → GRN → supplier AP
 
@@ -44,6 +72,7 @@ Evidence: additive migration replayed from the current baseline and applied to G
 Synthesis: replace only the active procurement path and keep compatibility columns/functions read-only where existing records still depend on them. Database constraints and RPC locks own invariants; UI reflects the resulting state and does not recreate business rules.
 
 - [ ] Run authenticated `390×844`, `768×1024`, and `1440×900` smoke after the migration is applied to the authorized target.
+- [ ] Smoke supplier invoice URL modes at `390×844` and `1440×900`: create from GRN, Back/Forward detail, view → pay/credit, filter retention, and permission-hidden create action.
 
 ## Prove one money day on Greenfield
 

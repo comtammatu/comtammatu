@@ -86,11 +86,14 @@ import { inventoryListFilterSelectClassName } from "../../inventory/_components/
 import {
   attachSupplierInvoiceVatEvidence,
   acceptSupplierInvoiceDiscrepancy,
+  allocateSupplierAdvance,
   createSupplierCreditAllocated,
   createSupplierInvoice,
   fetchSupplierInvoicesPage,
   recordSupplierPayment,
   recomputeInvoiceMatching,
+  verifyServiceSupplierInvoice,
+  type SupplierAdvanceSummary,
   type SupplierInvoiceCursor,
 } from "../supplier-invoice-actions";
 import { createClient } from "@comtammatu/database/supabase/client";
@@ -146,6 +149,8 @@ type GrnOption = {
   netAcceptedAmount: number | null;
 };
 
+type SupplierInvoiceMode = "view" | "create" | "pay" | "credit" | "advance";
+
 type SupplierInvoiceGroup = SupplierInvoiceAggregateGroup & {
   title: string;
   subtitle: string;
@@ -183,6 +188,7 @@ const optionalMoneySchema = z.string().refine(
 
 const supplierInvoiceSchema = z
   .object({
+    invoiceKind: z.enum(["goods", "service"]),
     grnId: z.string(),
     supplierId: z.string().min(1, { error: FORM_VI.required }),
     invoiceNumber: z.string().trim().min(1, { error: FORM_VI.required }),
@@ -197,6 +203,13 @@ const supplierInvoiceSchema = z
     documentDiscount: optionalMoneySchema,
   })
   .superRefine((data, ctx) => {
+    if (data.invoiceKind === "goods" && data.grnId === "none") {
+      ctx.addIssue({
+        code: "custom",
+        message: messages.inventory.supplierInvoices.goodsReceiptRequired,
+        path: ["grnId"],
+      });
+    }
     const hasTaxableBucket = VAT_BUCKET_FIELDS.some(
       (bucket) => Number(data[bucket.taxableField] || 0) > 0,
     );
@@ -302,6 +315,15 @@ const supplierPaymentSchema = z.object({
 
 type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>;
 
+const supplierAdvanceSchema = z.object({
+  paymentId: z.string().min(1, { error: FORM_VI.required }),
+  amount: z.string().refine((value) => Number(value) > 0, {
+    error: FORM_VI.required,
+  }),
+});
+
+type SupplierAdvanceFormValues = z.infer<typeof supplierAdvanceSchema>;
+
 const supplierCreditSchema = z.object({
   creditNumber: z.string().trim().min(1, FORM_VI.required),
   amount: z.string().refine((value) => Number(value) > 0, {
@@ -320,6 +342,7 @@ function createSupplierInvoiceDefaultValues(
   preselectGrnOptionKey?: string | null,
 ): SupplierInvoiceFormValues {
   return {
+    invoiceKind: "goods",
     grnId: preselectGrnOptionKey ?? "none",
     supplierId: "",
     invoiceNumber: "",
@@ -358,7 +381,9 @@ function getPrimaryInvoice(group: SupplierInvoiceGroup) {
 }
 
 function isMissingMatchingEvidence(invoice: SupplierInvoiceRow) {
-  return invoice.grnId == null;
+  return (
+    invoice.invoiceKind === "goods" && invoice.receiptAllocations.length === 0
+  );
 }
 
 function getInvoiceAgingLabel(
@@ -436,6 +461,7 @@ function SupplierInvoiceCreateFields({
   pendingVatFile: File | null;
   onPendingVatFileChange: (file: File | null) => void;
 }) {
+  const invoiceKind = form.watch("invoiceKind");
   const grnId = form.watch("grnId");
   const formValues = form.watch();
   const selectedGrnKeys =
@@ -457,6 +483,14 @@ function SupplierInvoiceCreateFields({
   const unusedRates = VAT_BUCKET_FIELDS.map((bucket) => bucket.rate).filter(
     (rate) => !visibleRates.includes(rate),
   );
+
+  useEffect(() => {
+    if (invoiceKind !== "service" || form.getValues("grnId") === "none") return;
+    form.setValue("grnId", "none", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [form, invoiceKind]);
 
   useEffect(() => {
     if (!selectedGrn) return;
@@ -561,50 +595,50 @@ function SupplierInvoiceCreateFields({
     <>
       <div className="flex flex-col gap-3">
         <p className="text-sm font-medium">{copy.documentSection}</p>
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">{copy.linkedGrn}</p>
-          <div className="grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2">
-            {grns.map((option) => {
-              const isSelected = selectedGrnKeys.includes(option.optionKey);
-              const disabled =
-                selectedGrn != null &&
-                selectedGrn.supplierId !== option.supplierId;
-              return (
-                <Button
-                  key={option.optionKey}
-                  type="button"
-                  variant={isSelected ? "secondary" : "outline"}
-                  className="h-auto justify-start py-2 text-left"
-                  disabled={disabled}
-                  aria-pressed={isSelected}
-                  onClick={() => toggleGrn(option)}
-                >
-                  <span>
-                    <span className="block font-mono">{option.code}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {option.supplierName}
+        <SelectField
+          control={form.control}
+          name="invoiceKind"
+          label={copy.invoiceKind}
+          options={[
+            { value: "goods", label: copy.invoiceKinds.goods },
+            { value: "service", label: copy.invoiceKinds.service },
+          ]}
+          required
+        />
+        {invoiceKind === "goods" ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">{copy.linkedGrn}</p>
+            <div className="grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2">
+              {grns.map((option) => {
+                const isSelected = selectedGrnKeys.includes(option.optionKey);
+                const disabled =
+                  selectedGrn != null &&
+                  selectedGrn.supplierId !== option.supplierId;
+                return (
+                  <Button
+                    key={option.optionKey}
+                    type="button"
+                    variant={isSelected ? "secondary" : "outline"}
+                    className="h-auto justify-start py-2 text-left"
+                    disabled={disabled}
+                    aria-pressed={isSelected}
+                    onClick={() => toggleGrn(option)}
+                  >
+                    <span>
+                      <span className="block font-mono">{option.code}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {option.supplierName}
+                      </span>
                     </span>
-                  </span>
-                </Button>
-              );
-            })}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="self-start"
-            onClick={() =>
-              form.setValue("grnId", "none", {
-                shouldDirty: true,
-                shouldValidate: true,
-              })
-            }
-          >
-            {copy.noLinkedGrn}
-          </Button>
-        </div>
-        {selectedGrn ? (
+        ) : (
+          <NoteCallout tone="muted">{copy.serviceInvoiceHint}</NoteCallout>
+        )}
+        {invoiceKind === "goods" && selectedGrn ? (
           <NoteCallout tone="muted">
             <div className="flex flex-col gap-1 text-sm">
               <span>
@@ -873,6 +907,9 @@ function SupplierPaymentFields({
   copy: typeof messages.inventory.supplierInvoices;
   outstanding: number;
 }) {
+  const amount = Number(form.watch("amount") || 0);
+  const allocatedAmount = Math.min(amount, outstanding);
+  const advanceAmount = Math.max(amount - outstanding, 0);
   const methodOptions = useMemo(
     () => [
       { value: "bank_transfer", label: copy.paymentMethods.bank_transfer },
@@ -893,6 +930,15 @@ function SupplierPaymentFields({
         placeholder="0"
         required
       />
+      <NoteCallout tone={advanceAmount > 0 ? "warning" : "muted"}>
+        <div className="flex flex-col gap-1 text-sm">
+          <span>{copy.paymentTotalPreview(formatVND(amount))}</span>
+          <span>
+            {copy.paymentAllocatedPreview(formatVND(allocatedAmount))}
+          </span>
+          <span>{copy.paymentAdvancePreview(formatVND(advanceAmount))}</span>
+        </div>
+      </NoteCallout>
       <SelectField
         control={form.control}
         name="paymentMethod"
@@ -911,6 +957,54 @@ function SupplierPaymentFields({
   );
 }
 
+function SupplierAdvanceFields({
+  form,
+  advances,
+  outstanding,
+  copy,
+}: {
+  form: UseFormReturn<
+    SupplierAdvanceFormValues,
+    unknown,
+    SupplierAdvanceFormValues
+  >;
+  advances: SupplierAdvanceSummary[];
+  outstanding: number;
+  copy: typeof messages.inventory.supplierInvoices;
+}) {
+  const paymentId = Number(form.watch("paymentId") || 0);
+  const selected = advances.find((advance) => advance.paymentId === paymentId);
+  const amount = Number(form.watch("amount") || 0);
+  const allocated = Math.min(amount, selected?.advanceAmount ?? 0, outstanding);
+
+  return (
+    <>
+      <SelectField
+        control={form.control}
+        name="paymentId"
+        label={copy.advanceSource}
+        options={advances.map((advance) => ({
+          value: String(advance.paymentId),
+          label: copy.advanceSourceOption(
+            formatDate(advance.paymentDate),
+            formatVND(advance.advanceAmount),
+          ),
+        }))}
+        required
+      />
+      <MoneyVndField
+        control={form.control}
+        name="amount"
+        label={copy.advanceAllocationAmount}
+        required
+      />
+      <NoteCallout tone="muted">
+        {copy.advanceAllocationPreview(formatVND(allocated))}
+      </NoteCallout>
+    </>
+  );
+}
+
 export function SupplierInvoicesClient({
   invoices,
   suppliers,
@@ -918,12 +1012,14 @@ export function SupplierInvoicesClient({
   initialHasMore = false,
   initialNextCursor = null,
   initialGroups,
+  initialAdvances,
   initialTotalCount,
   filters,
   branchId,
   tenantId,
   grnBasePath = "/inventory/grn",
   description,
+  canCreateInvoice = false,
   canPaySupplier = false,
   canAttachVatEvidence = false,
   canAcceptDiscrepancy = false,
@@ -934,12 +1030,14 @@ export function SupplierInvoicesClient({
   initialHasMore?: boolean;
   initialNextCursor?: SupplierInvoiceCursor | null;
   initialGroups: SupplierInvoiceAggregateGroup[];
+  initialAdvances: SupplierAdvanceSummary[];
   initialTotalCount: number;
   filters: SupplierInvoiceListFilters;
   branchId?: number;
   tenantId: number;
   grnBasePath?: string;
   description?: string;
+  canCreateInvoice?: boolean;
   canPaySupplier?: boolean;
   canAttachVatEvidence?: boolean;
   canAcceptDiscrepancy?: boolean;
@@ -949,8 +1047,29 @@ export function SupplierInvoicesClient({
   const router = useRouter();
   const invoiceIdParam = searchParams.get("invoiceId");
   const grnIdParam = searchParams.get("grnId");
+  const modeParam = searchParams.get("mode");
   const preselectInvoiceId = invoiceIdParam ? Number(invoiceIdParam) : null;
   const preselectGrnId = grnIdParam ? Number(grnIdParam) : null;
+  const requestedMode: SupplierInvoiceMode | null =
+    modeParam === "view" ||
+    modeParam === "create" ||
+    modeParam === "pay" ||
+    modeParam === "credit" ||
+    modeParam === "advance"
+      ? modeParam
+      : null;
+  const invoiceMode: SupplierInvoiceMode | null =
+    requestedMode === "create"
+      ? "create"
+      : preselectInvoiceId != null
+        ? requestedMode === "pay" ||
+          requestedMode === "credit" ||
+          requestedMode === "advance"
+          ? requestedMode
+          : "view"
+        : preselectGrnId != null
+          ? "create"
+          : null;
 
   const [rows, setRows] = useState(invoices);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -958,6 +1077,7 @@ export function SupplierInvoicesClient({
     initialNextCursor,
   );
   const [aggregateGroups, setAggregateGroups] = useState(initialGroups);
+  const [advances, setAdvances] = useState(initialAdvances);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState(filters.query);
@@ -968,22 +1088,34 @@ export function SupplierInvoicesClient({
   const viewMode: SupplierInvoiceViewMode = filters.viewMode;
   const showOnlyOverdue = filters.overdueOnly;
   const showOnlyMissingVat = filters.vatEvidence === "missing";
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
-    preselectInvoiceId,
-  );
-  const [detailOpen, setDetailOpen] = useState(preselectInvoiceId != null);
-  const [createOpen, setCreateOpen] = useState(
-    preselectGrnId != null && preselectInvoiceId == null,
-  );
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [creditOpen, setCreditOpen] = useState(false);
+  const selectedInvoiceId = preselectInvoiceId;
+  const detailOpen =
+    selectedInvoiceId != null &&
+    (invoiceMode === "view" ||
+      (invoiceMode === "pay" && !canPaySupplier) ||
+      (invoiceMode === "credit" && !canAcceptDiscrepancy) ||
+      (invoiceMode === "advance" && !canPaySupplier));
+  const createOpen = invoiceMode === "create" && canCreateInvoice;
+  const paymentOpen =
+    invoiceMode === "pay" && selectedInvoiceId != null && canPaySupplier;
+  const creditOpen =
+    invoiceMode === "credit" &&
+    selectedInvoiceId != null &&
+    canAcceptDiscrepancy;
+  const advanceOpen =
+    invoiceMode === "advance" && selectedInvoiceId != null && canPaySupplier;
   const [acceptDiscrepancyOpen, setAcceptDiscrepancyOpen] = useState(false);
   const [acceptDiscrepancyReason, setAcceptDiscrepancyReason] = useState("");
+  const [serviceVerificationOpen, setServiceVerificationOpen] = useState(false);
+  const [serviceVerificationReason, setServiceVerificationReason] =
+    useState("");
   const [vatUploading, setVatUploading] = useState(false);
   const [pendingCreateVatFile, setPendingCreateVatFile] = useState<File | null>(
     null,
   );
   const paymentIntentKeyRef = useRef<string | null>(null);
+  const advanceIntentKeyRef = useRef<string | null>(null);
+  const createdInvoiceIdRef = useRef<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const controlSize = useFormControlSize();
   const copy = messages.inventory.supplierInvoices;
@@ -1014,13 +1146,13 @@ export function SupplierInvoicesClient({
     setHasMore(initialHasMore);
     setNextCursor(initialNextCursor);
     setAggregateGroups(initialGroups);
+    setAdvances(initialAdvances);
     setTotalCount(initialTotalCount);
     setSearch(filters.query);
-    setSelectedInvoiceId(preselectInvoiceId);
-    setDetailOpen(preselectInvoiceId != null);
   }, [
     filters.query,
     initialGroups,
+    initialAdvances,
     initialHasMore,
     initialNextCursor,
     initialTotalCount,
@@ -1029,41 +1161,65 @@ export function SupplierInvoicesClient({
     preselectInvoiceId,
   ]);
 
-  const replaceListParam = useCallback(
-    (key: string, value: string | null) => {
+  const updateListParams = useCallback(
+    (
+      updates: Record<string, string | null>,
+      history: "push" | "replace" = "replace",
+    ) => {
       const next = new URLSearchParams(searchParams.toString());
-      if (key !== "q") {
+      if (!Object.hasOwn(updates, "q")) {
         const pendingQuery = search.trim().slice(0, 200);
         if (pendingQuery) next.set("q", pendingQuery);
         else next.delete("q");
       }
-      if (value == null || value === "") next.delete(key);
-      else next.set(key, value);
+      for (const [key, value] of Object.entries(updates)) {
+        if (value == null || value === "") next.delete(key);
+        else next.set(key, value);
+      }
       const query = next.toString();
       startTransition(() => {
-        router.replace(query ? `${pathname}?${query}` : pathname, {
-          scroll: false,
-        });
+        const href = query ? `${pathname}?${query}` : pathname;
+        if (history === "push") {
+          router.push(href, { scroll: false });
+        } else {
+          router.replace(href, { scroll: false });
+        }
       });
     },
     [pathname, router, search, searchParams, startTransition],
   );
 
-  const openInvoiceDetail = useCallback(
-    (invoiceId: number) => {
-      setSelectedInvoiceId(invoiceId);
-      setDetailOpen(true);
-      replaceListParam("invoiceId", String(invoiceId));
+  const replaceListParam = useCallback(
+    (key: string, value: string | null) => {
+      updateListParams({ [key]: value });
     },
-    [replaceListParam],
+    [updateListParams],
+  );
+
+  const openInvoiceDetail = useCallback(
+    (invoiceId: number, history: "push" | "replace" = "push") => {
+      updateListParams(
+        {
+          mode: "view",
+          invoiceId: String(invoiceId),
+          grnId: null,
+        },
+        history,
+      );
+    },
+    [updateListParams],
   );
 
   function handleDetailOpenChange(open: boolean) {
-    setDetailOpen(open);
     if (!open) {
-      setSelectedInvoiceId(null);
-      replaceListParam("invoiceId", null);
+      updateListParams({ mode: null, invoiceId: null, grnId: null });
     }
+  }
+
+  function openCreateDialog() {
+    if (!canCreateInvoice) return;
+    createdInvoiceIdRef.current = null;
+    updateListParams({ mode: "create", invoiceId: null, grnId: null }, "push");
   }
 
   useEffect(() => {
@@ -1166,6 +1322,32 @@ export function SupplierInvoicesClient({
       ),
     [selectedInvoice?.id, paymentOutstandingAmount],
   );
+  const selectedSupplierAdvances = useMemo(
+    () =>
+      selectedInvoice == null
+        ? []
+        : advances.filter(
+            (advance) => advance.supplierId === selectedInvoice.supplierId,
+          ),
+    [advances, selectedInvoice],
+  );
+  const selectedSupplierAdvanceAmount = selectedSupplierAdvances.reduce(
+    (sum, advance) => sum + advance.advanceAmount,
+    0,
+  );
+  const advanceDefaultValues = useMemo<SupplierAdvanceFormValues>(
+    () => ({
+      paymentId: String(selectedSupplierAdvances[0]?.paymentId ?? ""),
+      amount: String(
+        Math.min(selectedSupplierAdvanceAmount, paymentOutstandingAmount),
+      ),
+    }),
+    [
+      paymentOutstandingAmount,
+      selectedSupplierAdvanceAmount,
+      selectedSupplierAdvances,
+    ],
+  );
   const creditDefaultValues = useMemo(
     () => ({
       creditNumber: "",
@@ -1194,7 +1376,7 @@ export function SupplierInvoicesClient({
           })
         : Promise.resolve(null),
     ]);
-    if (!again.success || !again.data) return;
+    if (!again.success || !again.data) return false;
 
     const {
       items,
@@ -1202,6 +1384,7 @@ export function SupplierInvoicesClient({
       nextCursor: cursor,
       groups: nextGroups,
       totalCount: nextTotalCount,
+      advances: nextAdvances,
     } = again.data;
     let nextRows = (items as Array<Record<string, unknown>>).map(
       mapSupplierInvoiceRow,
@@ -1213,7 +1396,7 @@ export function SupplierInvoicesClient({
       ) as Record<string, unknown> | undefined;
       if (!exactItem || Number(exactItem.id) !== nextSelectedId) {
         toast.error(exactSelected?.error ?? copy.loadFailed);
-        return;
+        return false;
       }
 
       const exactRow = mapSupplierInvoiceRow(exactItem);
@@ -1229,12 +1412,9 @@ export function SupplierInvoicesClient({
     setHasMore(more);
     setNextCursor(cursor);
     setAggregateGroups(nextGroups);
+    setAdvances(nextAdvances);
     setTotalCount(nextTotalCount);
-    if (typeof nextSelectedId === "number") {
-      setSelectedInvoiceId(nextSelectedId);
-      setDetailOpen(true);
-      replaceListParam("invoiceId", String(nextSelectedId));
-    }
+    return true;
   }
 
   function handleLoadMore() {
@@ -1257,6 +1437,7 @@ export function SupplierInvoicesClient({
           nextCursor: cursor,
           groups: nextGroups,
           totalCount: nextTotalCount,
+          advances: nextAdvances,
         } = result.data;
         const mapped = (items as Array<Record<string, unknown>>).map(
           mapSupplierInvoiceRow,
@@ -1269,6 +1450,7 @@ export function SupplierInvoicesClient({
         setHasMore(more);
         setNextCursor(cursor);
         setAggregateGroups(nextGroups);
+        setAdvances(nextAdvances);
         setTotalCount(nextTotalCount);
       } finally {
         setLoadingMore(false);
@@ -1331,13 +1513,17 @@ export function SupplierInvoicesClient({
             values.grnId.split(",").includes(option.optionKey),
           );
     const selectedGrn = selectedGrns[0] ?? null;
-    if (selectedGrns.some((receipt) => receipt.poId == null)) {
+    if (
+      values.invoiceKind === "goods" &&
+      selectedGrns.some((receipt) => receipt.poId == null)
+    ) {
       return { success: false, error: copy.missingPoForReceipt };
     }
     const resolvedSupplierId =
       selectedGrn?.supplierId ?? Number(values.supplierId || 0);
     const pendingFile = pendingCreateVatFile;
     const res = await createSupplierInvoice({
+      invoiceKind: values.invoiceKind,
       supplierId: resolvedSupplierId,
       grnId: selectedGrn?.id ?? null,
       poId: selectedGrn?.poId ?? null,
@@ -1360,17 +1546,17 @@ export function SupplierInvoicesClient({
           created.id,
           pendingFile,
         );
-        await reloadInvoices(created.id);
         if (!attached) {
           toast.error(copy.vatAttachmentCreateFailed);
         } else {
           toast.success(copy.vatAttachmentUploaded);
         }
-      } else {
-        await reloadInvoices(created.id);
-        if (canAttachVatEvidence) {
-          toast.message(copy.vatAttachmentRemindAfterCreate);
-        }
+      } else if (canAttachVatEvidence) {
+        toast.message(copy.vatAttachmentRemindAfterCreate);
+      }
+
+      if (await reloadInvoices(created.id)) {
+        createdInvoiceIdRef.current = created.id;
       }
     }
 
@@ -1419,6 +1605,11 @@ export function SupplierInvoicesClient({
       });
 
       if (res.success) {
+        if ((res.data?.advanceAmount ?? 0) > 0) {
+          toast.message(
+            copy.paymentAdvanceRecorded(formatVND(res.data!.advanceAmount)),
+          );
+        }
         await reloadInvoices(selectedInvoice.id);
       }
 
@@ -1450,6 +1641,49 @@ export function SupplierInvoicesClient({
       creditNumber: values.creditNumber,
       amount: Number(values.amount),
       notes: values.notes,
+      allocations,
+    });
+    if (result.success) await reloadInvoices(selectedInvoice.id);
+    return result;
+  }
+
+  async function handleAllocateAdvance(values: SupplierAdvanceFormValues) {
+    if (!selectedInvoice) {
+      return { success: false, error: copy.noPaymentInvoice };
+    }
+    const selectedAdvance = selectedSupplierAdvances.find(
+      (advance) => advance.paymentId === Number(values.paymentId),
+    );
+    if (!selectedAdvance) {
+      return { success: false, error: copy.advanceNotFound };
+    }
+    const requestedAmount = Number(values.amount);
+    if (requestedAmount > selectedAdvance.advanceAmount) {
+      return { success: false, error: copy.advanceExceedsBalance };
+    }
+
+    let remaining = requestedAmount;
+    const allocations = payableInvoicesInSelectedGroup.flatMap((invoice) => {
+      if (remaining <= 0) return [];
+      const amount = Math.min(
+        remaining,
+        getSupplierInvoiceOutstandingAmount(invoice),
+      );
+      remaining -= amount;
+      return amount > 0 ? [{ invoiceId: invoice.id, amount }] : [];
+    });
+    if (allocations.length === 0) {
+      return { success: false, error: copy.noPaymentInvoice };
+    }
+
+    const idempotencyKey = resolveSupplierPaymentIntentKey(
+      advanceIntentKeyRef.current,
+      () => crypto.randomUUID(),
+    );
+    advanceIntentKeyRef.current = idempotencyKey;
+    const result = await allocateSupplierAdvance({
+      paymentId: selectedAdvance.paymentId,
+      idempotencyKey,
       allocations,
     });
     if (result.success) await reloadInvoices(selectedInvoice.id);
@@ -1495,7 +1729,7 @@ export function SupplierInvoicesClient({
       return;
     }
     paymentIntentKeyRef.current = crypto.randomUUID();
-    setPaymentOpen(true);
+    updateListParams({ mode: "pay" });
   }
 
   function handlePaymentOpenChange(open: boolean) {
@@ -1504,15 +1738,48 @@ export function SupplierInvoicesClient({
     }
     if (!open) {
       paymentIntentKeyRef.current = null;
+      updateListParams({ mode: "view" });
     }
-    setPaymentOpen(open);
   }
 
   function handleCreateOpenChange(open: boolean) {
+    if (open) {
+      openCreateDialog();
+      return;
+    }
     if (!open) {
       setPendingCreateVatFile(null);
     }
-    setCreateOpen(open);
+    const createdInvoiceId = createdInvoiceIdRef.current;
+    createdInvoiceIdRef.current = null;
+    if (createdInvoiceId != null) {
+      openInvoiceDetail(createdInvoiceId, "replace");
+      return;
+    }
+    updateListParams({ mode: null, invoiceId: null, grnId: null });
+  }
+
+  function openSupplierCreditDialog() {
+    updateListParams({ mode: "credit" });
+  }
+
+  function handleCreditOpenChange(open: boolean) {
+    if (!open) updateListParams({ mode: "view" });
+  }
+
+  function openSupplierAdvanceDialog() {
+    advanceIntentKeyRef.current = crypto.randomUUID();
+    updateListParams({ mode: "advance" });
+  }
+
+  function handleAdvanceOpenChange(open: boolean) {
+    if (open && advanceIntentKeyRef.current == null) {
+      advanceIntentKeyRef.current = crypto.randomUUID();
+    }
+    if (!open) {
+      advanceIntentKeyRef.current = null;
+      updateListParams({ mode: "view" });
+    }
   }
 
   function handleRecomputeMatching() {
@@ -1543,6 +1810,24 @@ export function SupplierInvoicesClient({
       toast.success(copy.acceptDiscrepancySuccess);
       setAcceptDiscrepancyOpen(false);
       setAcceptDiscrepancyReason("");
+      await reloadInvoices(selectedInvoice.id);
+    });
+  }
+
+  function handleVerifyServiceInvoice() {
+    if (!selectedInvoice) return;
+    startTransition(async () => {
+      const result = await verifyServiceSupplierInvoice({
+        invoiceId: selectedInvoice.id,
+        reason: serviceVerificationReason,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? copy.serviceVerificationFailed);
+        return;
+      }
+      toast.success(copy.serviceVerificationSuccess);
+      setServiceVerificationOpen(false);
+      setServiceVerificationReason("");
       await reloadInvoices(selectedInvoice.id);
     });
   }
@@ -1880,8 +2165,8 @@ export function SupplierInvoicesClient({
     selectedOutstandingAmount > 0;
   const showMatchProblem =
     selectedInvoice != null &&
-    (selectedMissingMatchingEvidence ||
-      (selectedInvoice.variance !== null && selectedInvoice.variance > 0));
+    (selectedInvoice.matchStatus === "pending" ||
+      selectedInvoice.matchStatus === "discrepancy");
   const vatSummaryLabel =
     selectedInvoice != null && selectedInvoice.vatBreakdown.length > 0
       ? selectedInvoice.vatBreakdown
@@ -1918,13 +2203,11 @@ export function SupplierInvoicesClient({
         title={copy.title}
         description={description}
         actions={
-          <Button
-            type="button"
-            size="touch"
-            onClick={() => setCreateOpen(true)}
-          >
-            {copy.createAction}
-          </Button>
+          canCreateInvoice ? (
+            <Button type="button" size="touch" onClick={openCreateDialog}>
+              {copy.createAction}
+            </Button>
+          ) : undefined
         }
       />
 
@@ -2203,6 +2486,27 @@ export function SupplierInvoicesClient({
                   </ItemContent>
                 </Item>
 
+                {selectedSupplierAdvanceAmount > 0 ? (
+                  <Item variant="outline" size="sm" className="items-start">
+                    <ItemContent className="gap-1">
+                      <ItemDescription className="line-clamp-none">
+                        {copy.supplierAdvance}
+                      </ItemDescription>
+                      <ItemTitle
+                        size="heading"
+                        className="line-clamp-none font-mono tabular-nums"
+                      >
+                        {messages.inventory.common.currencyCompact(
+                          formatVND(selectedSupplierAdvanceAmount),
+                        )}
+                      </ItemTitle>
+                      <ItemDescription className="line-clamp-none">
+                        {copy.supplierAdvanceDescription}
+                      </ItemDescription>
+                    </ItemContent>
+                  </Item>
+                ) : null}
+
                 {missingVatAttachment ? (
                   <Item variant="outline" size="sm" className="items-start">
                     <ItemContent className="gap-1">
@@ -2267,6 +2571,10 @@ export function SupplierInvoicesClient({
 
                 <ItemGroup className="grid grid-cols-2 gap-2">
                   <DetailFact
+                    label={copy.invoiceKind}
+                    value={copy.invoiceKinds[selectedInvoice.invoiceKind]}
+                  />
+                  <DetailFact
                     label={copy.invoiceDate}
                     value={formatDate(selectedInvoice.invoiceDate)}
                   />
@@ -2305,19 +2613,7 @@ export function SupplierInvoicesClient({
                   />
                   <DetailFact
                     label={copy.linkedGrn}
-                    value={
-                      selectedInvoice.grnCode &&
-                      selectedInvoice.grnId != null ? (
-                        <Link
-                          href={`${grnBasePath}/${selectedInvoice.grnId}`}
-                          className="text-primary hover:underline"
-                        >
-                          {selectedInvoice.grnCode}
-                        </Link>
-                      ) : (
-                        copy.notLinked
-                      )
-                    }
+                    value={selectedInvoice.grnCode ?? copy.notLinked}
                   />
                   <DetailFact
                     label={copy.linkedPo}
@@ -2331,6 +2627,46 @@ export function SupplierInvoicesClient({
                       )
                     }
                   />
+                  <DetailFact
+                    label={copy.matchingExpectedAmount}
+                    value={
+                      selectedInvoice.matchingExpectedAmount != null
+                        ? messages.inventory.common.currencyCompact(
+                            formatVND(selectedInvoice.matchingExpectedAmount),
+                          )
+                        : copy.notAvailable
+                    }
+                  />
+                  <DetailFact
+                    label={copy.matchingReceivedAmount}
+                    value={
+                      selectedInvoice.matchingReceivedAmount != null
+                        ? messages.inventory.common.currencyCompact(
+                            formatVND(selectedInvoice.matchingReceivedAmount),
+                          )
+                        : copy.notAvailable
+                    }
+                  />
+                  {selectedInvoice.matchingDifferenceAmount != null ? (
+                    <DetailFact
+                      label={copy.matchingDifferenceAmount}
+                      value={messages.inventory.common.currencyCompact(
+                        formatVND(selectedInvoice.matchingDifferenceAmount),
+                      )}
+                      valueClassName={
+                        Math.abs(selectedInvoice.matchingDifferenceAmount) > 1
+                          ? "text-destructive"
+                          : undefined
+                      }
+                    />
+                  ) : null}
+                  {selectedInvoice.serviceVerificationReason ? (
+                    <DetailFact
+                      className="col-span-2"
+                      label={copy.serviceVerificationReason}
+                      value={selectedInvoice.serviceVerificationReason}
+                    />
+                  ) : null}
                   {selectedLastPayment ? (
                     <DetailFact
                       className="col-span-2"
@@ -2349,8 +2685,54 @@ export function SupplierInvoicesClient({
                   ) : null}
                 </ItemGroup>
 
+                {selectedInvoice.receiptAllocations.length > 0 ? (
+                  <ItemGroup className="grid gap-2">
+                    {selectedInvoice.receiptAllocations.map((allocation) => (
+                      <Item
+                        key={`${allocation.grnId}:${allocation.poId}`}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <ItemContent className="gap-1">
+                          <ItemTitle size="heading" className="font-mono">
+                            {allocation.grnCode}
+                          </ItemTitle>
+                          <ItemDescription className="line-clamp-none">
+                            {allocation.poCode}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemActions>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            render={
+                              <Link
+                                href={`${grnBasePath}?grnId=${allocation.grnId}&mode=view`}
+                              />
+                            }
+                          >
+                            {ACTIONS_VI.view}
+                          </Button>
+                        </ItemActions>
+                      </Item>
+                    ))}
+                  </ItemGroup>
+                ) : null}
+
                 {showMatchProblem ? (
-                  selectedMissingMatchingEvidence ? (
+                  selectedInvoice.invoiceKind === "service" ? (
+                    <Alert className="border-warning/20 bg-warning/10 text-warning">
+                      <IconAlertTriangle />
+                      <AlertTitle>
+                        {copy.serviceVerificationRequired}
+                      </AlertTitle>
+                      <AlertDescription className="text-muted-foreground">
+                        {selectedInvoice.matchingNotes ??
+                          copy.serviceVerificationDescription}
+                      </AlertDescription>
+                    </Alert>
+                  ) : selectedMissingMatchingEvidence ? (
                     <Alert className="border-warning/20 bg-warning/10 text-warning">
                       <IconAlertTriangle />
                       <AlertTitle>{copy.missingGrnTitle}</AlertTitle>
@@ -2362,20 +2744,15 @@ export function SupplierInvoicesClient({
                     <Alert variant="destructive">
                       <IconAlertTriangle />
                       <AlertTitle>
-                        {copy.varianceTitle(
-                          formatPercent(selectedInvoice.variance ?? 0, 3),
+                        {copy.matchingDifferenceTitle(
+                          formatVND(
+                            selectedInvoice.matchingDifferenceAmount ?? 0,
+                          ),
                         )}
                       </AlertTitle>
                       <AlertDescription>
-                        {copy.varianceDescription}
-                        {selectedInvoice.grnId != null ? (
-                          <Link
-                            href={`${grnBasePath}/${selectedInvoice.grnId}`}
-                            className="block font-medium text-primary hover:underline"
-                          >
-                            {copy.viewGrnLine}
-                          </Link>
-                        ) : null}
+                        {selectedInvoice.matchingNotes ??
+                          copy.matchingDifferenceDescription}
                       </AlertDescription>
                     </Alert>
                   )
@@ -2396,7 +2773,34 @@ export function SupplierInvoicesClient({
                       {copy.payAction}
                     </Button>
                   ) : null}
+                  {canPaySupplier &&
+                  selectedSupplierAdvanceAmount > 0 &&
+                  paymentOutstandingAmount > 0 ? (
+                    <Button
+                      type="button"
+                      size="touch"
+                      variant="outline"
+                      onClick={openSupplierAdvanceDialog}
+                      disabled={isPending}
+                    >
+                      {copy.allocateAdvanceAction}
+                    </Button>
+                  ) : null}
                   {canAcceptDiscrepancy &&
+                  selectedInvoice.invoiceKind === "service" &&
+                  selectedInvoice.matchStatus === "pending" ? (
+                    <Button
+                      type="button"
+                      size="touch"
+                      variant="outline"
+                      onClick={() => setServiceVerificationOpen(true)}
+                      disabled={isPending}
+                    >
+                      {copy.verifyServiceAction}
+                    </Button>
+                  ) : null}
+                  {canAcceptDiscrepancy &&
+                  selectedInvoice.invoiceKind === "goods" &&
                   selectedInvoice.matchStatus === "discrepancy" ? (
                     <Button
                       type="button"
@@ -2413,22 +2817,25 @@ export function SupplierInvoicesClient({
                       type="button"
                       size="touch"
                       variant="outline"
-                      onClick={() => setCreditOpen(true)}
+                      onClick={openSupplierCreditDialog}
                       disabled={isPending}
                     >
                       {copy.creditAction}
                     </Button>
                   ) : null}
-                  <Button
-                    type="button"
-                    size="touch"
-                    className={canShowPayAction ? "flex-1" : "w-full"}
-                    variant="outline"
-                    onClick={handleRecomputeMatching}
-                    disabled={isPending}
-                  >
-                    {copy.recomputeMatching}
-                  </Button>
+                  {canAcceptDiscrepancy &&
+                  selectedInvoice.invoiceKind === "goods" ? (
+                    <Button
+                      type="button"
+                      size="touch"
+                      className={canShowPayAction ? "flex-1" : "w-full"}
+                      variant="outline"
+                      onClick={handleRecomputeMatching}
+                      disabled={isPending}
+                    >
+                      {copy.recomputeMatching}
+                    </Button>
+                  ) : null}
                 </div>
               </SheetFooter>
             </>
@@ -2460,6 +2867,24 @@ export function SupplierInvoicesClient({
         canConfirm={acceptDiscrepancyReason.trim().length >= 5}
         isPending={isPending}
         onConfirm={handleAcceptDiscrepancy}
+      />
+
+      <ReasonConfirmDialog
+        open={serviceVerificationOpen}
+        onOpenChange={setServiceVerificationOpen}
+        title={copy.verifyServiceAction}
+        description={copy.serviceVerificationDescription}
+        reasonId="supplier-service-verification-reason"
+        reason={serviceVerificationReason}
+        onReasonChange={setServiceVerificationReason}
+        reasonLabel={copy.serviceVerificationReason}
+        reasonPlaceholder={copy.serviceVerificationReasonPlaceholder}
+        reasonMinLength={5}
+        cancelLabel={ACTIONS_VI.cancel}
+        confirmLabel={copy.verifyServiceAction}
+        canConfirm={serviceVerificationReason.trim().length >= 5}
+        isPending={isPending}
+        onConfirm={handleVerifyServiceInvoice}
       />
 
       <FormDialog
@@ -2515,7 +2940,7 @@ export function SupplierInvoicesClient({
 
       <FormDialog
         open={creditOpen}
-        onOpenChange={setCreditOpen}
+        onOpenChange={handleCreditOpenChange}
         schema={supplierCreditSchema}
         defaultValues={creditDefaultValues}
         entityKey={selectedInvoice?.id ?? "supplier-credit"}
@@ -2550,6 +2975,30 @@ export function SupplierInvoicesClient({
               required
             />
           </>
+        )}
+      </FormDialog>
+
+      <FormDialog
+        open={advanceOpen}
+        onOpenChange={handleAdvanceOpenChange}
+        schema={supplierAdvanceSchema}
+        defaultValues={advanceDefaultValues}
+        entityKey={`${selectedInvoice?.supplierId ?? "supplier"}-advance`}
+        title={copy.allocateAdvanceTitle}
+        description={copy.allocateAdvanceDescription}
+        submitLabel={copy.allocateAdvanceAction}
+        cancelLabel={ACTIONS_VI.cancel}
+        successMessage={copy.allocateAdvanceSuccess}
+        contentClassName="sm:max-w-md"
+        onSubmit={handleAllocateAdvance}
+      >
+        {(form) => (
+          <SupplierAdvanceFields
+            form={form}
+            advances={selectedSupplierAdvances}
+            outstanding={paymentOutstandingAmount}
+            copy={copy}
+          />
         )}
       </FormDialog>
     </AppPage>

@@ -238,24 +238,28 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Luồng thao tác (Workflow):**
   1. **Chọn phiếu nhập:** Chọn một hoặc nhiều GRN đã xác nhận của cùng NCC; hệ
      thống lấy PO/Yêu cầu mua và gợi ý tiền trước VAT từ phần áp dụng PO.
-     Hóa đơn dịch vụ được phép không liên kết GRN.
+     Hóa đơn hàng hóa bắt buộc có GRN; hóa đơn dịch vụ không được liên kết GRN.
   2. **Nhập hóa đơn:** Ghi số hóa đơn và ngày; chọn một mức VAT (0/5/8/10) + tiền trước VAT (tiền VAT tự tính nếu để trống). Thêm mức thuế chỉ khi hóa đơn có nhiều suất. Có thể đính kèm HĐ GTGT ngay khi lưu (tùy chọn).
   3. **Đối soát:** Sau khi lưu, so giá trị trước VAT cộng chiết khấu chứng từ
      với phần GRN áp dụng PO. Dòng PO giá `0` và phần dư giá `0` được phép không
      có trên hóa đơn. VAT không tham gia so giá trị hàng.
   4. **Xử lý chênh lệch:** Kế toán kiểm tra chứng từ khi số lượng hoặc giá trị
-     không khớp; không dùng ngưỡng price-QC của GRN.
+     không khớp; dung sai tự động là `±1đ`, không dùng ngưỡng price-QC của GRN.
+     Hóa đơn dịch vụ dùng `Xác minh chứng từ` kèm lý do, không gọi là đối soát
+     GRN.
   5. **Đính kèm HĐ GTGT:** Nếu chưa tải lúc tạo, tải lên ít nhất một file PDF/ảnh vào `vat_invoice_attachment_path` (bucket private) trước khi thanh toán. Owner có `procurement:invoice_create` hoặc `finance:ap_pay` được đính kèm.
   6. **Thanh toán/giảm công nợ:** Một thanh toán hoặc phiếu giảm công nợ có thể
      phân bổ nhiều hóa đơn cùng NCC. Phần thanh toán chưa phân bổ là ứng trước.
-     Trả hàng không tự giảm công nợ.
+     Owner có thể phân bổ ứng trước về sau mà không trừ tiền lần thứ hai. Trả
+     hàng không tự giảm công nợ.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Tổng trước VAT, VAT, tổng phải trả, liên kết GRN/PO, trạng thái đối soát và công nợ, trạng thái đính kèm HĐ GTGT; khi nhóm có nhiều hóa đơn thì chọn được từng hóa đơn trong nhóm.
+  - **Nên hiển thị:** Loại hóa đơn, tổng trước VAT, VAT, tổng phải trả, toàn bộ liên kết GRN/PO, giá trị hóa đơn dùng đối soát, giá trị nhận theo PO, chênh lệch/lý do, trạng thái đối soát và công nợ, trạng thái đính kèm HĐ GTGT, số dư ứng trước theo NCC; khi nhóm có nhiều hóa đơn thì chọn được từng hóa đơn trong nhóm.
   - **KHÔNG hiển thị:** Doanh thu bán cơm tấm, sơ đồ bàn ăn, ca làm việc của nhân viên phục vụ.
 - **Quy chuẩn UX/UI:**
   - Bố cục màn hình rộng (width `xwide`); danh sách full-width. Chọn nhóm/hóa đơn mở `Sheet` phải (`sm:max-w-xl`) chứa chi tiết công nợ, HĐ GTGT, thanh toán và đối soát — không chiếm cột cố định cạnh bảng.
-  - Popup ghi nhận: phiếu nhập trước, rồi số/ngày HĐ, VAT progressive (một mức mặc định + thêm mức khi cần), đính kèm tùy chọn; không bắt nhập ghi chú đối soát lúc tạo.
-  - Sheet detail: tiêu đề là số HĐ; khối `Item` “còn phải trả” + đính kèm HĐ GTGT; meta ngày/hạn/VAT/tuổi nợ/GRN/PO trong `ItemGroup` lưới 2 cột (`DetailFact`); chỉ `Alert` khi thiếu đối soát hoặc lệch; không dùng raw `Card` / `DescriptionList` / KPI card / công thức / badge “đã khớp”. Footer: Thanh toán (nếu còn nợ) + Tính lại đối soát. Deep-link `?invoiceId=` mở sẵn Sheet.
+  - Popup ghi nhận: chọn loại hóa đơn trước; hàng hóa chọn một hoặc nhiều GRN đã xác nhận, dịch vụ chọn NCC và không hiện GRN; sau đó nhập số/ngày HĐ, VAT progressive (một mức mặc định + thêm mức khi cần), đính kèm tùy chọn.
+  - Sheet detail: tiêu đề là số HĐ; khối `Item` “còn phải trả” + ứng trước NCC + đính kèm HĐ GTGT; meta ngày/hạn/VAT/tuổi nợ và toàn bộ GRN/PO trong `ItemGroup`; chỉ `Alert` khi thiếu xác minh/đối soát hoặc lệch. Footer chỉ hiện `Tính lại đối soát`/`Chấp nhận chênh lệch`/`Xác minh chứng từ` với `procurement:invoice_match`; `Thanh toán`/`Phân bổ ứng trước` chỉ hiện cho Owner có `finance:ap_pay`.
+  - Form thanh toán hiển thị trước tổng trả, tổng phân bổ và phần ứng trước. URL là nguồn trạng thái của thao tác đang mở: `?invoiceId=...&mode=view|pay|credit|advance` và `?mode=create&grnId=...`. Mở hàng dùng history để Back đóng Sheet; chuyển mode dùng replace. Chỉ một overlay nghiệp vụ được mở tại một thời điểm.
 
 ---
 

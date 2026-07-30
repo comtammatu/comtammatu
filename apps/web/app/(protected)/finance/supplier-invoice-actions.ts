@@ -36,6 +36,7 @@ const supplierInvoiceVatLineSchema = z.object({
 
 const invoiceSchema = z
   .object({
+    invoiceKind: z.enum(["goods", "service"]).default("goods"),
     supplierId: z.coerce.number().int().positive(),
     grnId: z.coerce.number().int().positive().optional().nullable(),
     poId: z.coerce.number().int().positive().optional().nullable(),
@@ -60,6 +61,23 @@ const invoiceSchema = z
       .default(0),
   })
   .superRefine((data, ctx) => {
+    const receiptCount =
+      data.receiptAllocations?.length ??
+      (data.grnId != null && data.poId != null ? 1 : 0);
+    if (data.invoiceKind === "goods" && receiptCount === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Hóa đơn hàng hóa phải liên kết ít nhất một phiếu nhập.",
+        path: ["receiptAllocations"],
+      });
+    }
+    if (data.invoiceKind === "service" && receiptCount > 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Hóa đơn dịch vụ không liên kết phiếu nhập.",
+        path: ["receiptAllocations"],
+      });
+    }
     const rates = new Set<number>();
     for (const [index, line] of data.vatBreakdown.entries()) {
       if (rates.has(line.vatRate)) {
@@ -96,6 +114,7 @@ type CreateSupplierInvoiceRpcClient = {
       p_due_date: string | null;
       p_document_discount_amount: number;
       p_receipts: Array<{ grn_id: number; po_id: number }>;
+      p_invoice_kind: "goods" | "service";
     },
   ) => PromiseLike<{
     data: number | null;
@@ -122,6 +141,27 @@ const supplierPaymentSchema = z.object({
     .positive({ error: "Số tiền thanh toán phải lớn hơn 0." }),
   paymentMethod: z.enum(["cash", "bank_transfer"]),
   referenceNote: z.string().trim().max(500).optional(),
+});
+
+const supplierAdvanceSchema = z.object({
+  paymentId: z.coerce.number().int().positive(),
+  idempotencyKey: z.string().uuid(),
+  allocations: z
+    .array(
+      z.object({
+        invoiceId: z.coerce.number().int().positive(),
+        amount: z.coerce.number().positive(),
+      }),
+    )
+    .min(1)
+    .max(200),
+});
+
+const supplierPaymentResultSchema = z.object({
+  payment_id: z.coerce.number().int().positive(),
+  allocated_amount: z.coerce.number().nonnegative(),
+  advance_amount: z.coerce.number().nonnegative(),
+  payment_status: z.string(),
 });
 
 const attachVatEvidenceSchema = z.object({
@@ -161,6 +201,11 @@ const acceptDiscrepancySchema = z.object({
   reason: z.string().trim().min(5).max(500),
 });
 
+const verifyServiceInvoiceSchema = z.object({
+  invoiceId: z.coerce.number().int().positive(),
+  reason: z.string().trim().min(5).max(500),
+});
+
 const SUPPLIER_INVOICE_VAT_BUCKET = "supplier-invoice-attachments";
 
 export const createSupplierInvoice = withAction(
@@ -184,6 +229,7 @@ export const createSupplierInvoice = withAction(
       p_matching_notes: data.matchingNotes ?? null,
       p_due_date: data.dueDate ?? null,
       p_document_discount_amount: data.documentDiscountAmount,
+      p_invoice_kind: data.invoiceKind,
       p_receipts:
         data.receiptAllocations?.map((allocation) => ({
           grn_id: allocation.grnId,
@@ -224,6 +270,18 @@ export const createSupplierInvoice = withAction(
           error: "Các phiếu nhập phải đã xác nhận và thuộc cùng nhà cung cấp.",
         };
       }
+      if (error.message?.includes("goods_invoice_receipts_required")) {
+        return {
+          success: false,
+          error: "Hóa đơn hàng hóa phải liên kết ít nhất một phiếu nhập.",
+        };
+      }
+      if (error.message?.includes("service_invoice_receipts_forbidden")) {
+        return {
+          success: false,
+          error: "Hóa đơn dịch vụ không được liên kết phiếu nhập.",
+        };
+      }
       if (error.message?.includes("po_grn_mismatch")) {
         return {
           success: false,
@@ -251,7 +309,7 @@ export const createSupplierInvoice = withAction(
 
 export const recordSupplierPayment = withAction(
   {
-    roles: MODULE_ACL.finance.allowedRoles,
+    roles: ["owner"] as const,
     schema: supplierPaymentSchema,
     permission: PERMISSION_KEYS.FINANCE_AP_PAY,
     forbiddenError: "Không có quyền thanh toán công nợ NCC.",
@@ -345,7 +403,86 @@ export const recordSupplierPayment = withAction(
       return { success: false, error: "Không thể ghi nhận thanh toán NCC." };
     }
 
-    return { success: true, data: payment };
+    const parsedPayment = supplierPaymentResultSchema.safeParse(payment);
+    if (!parsedPayment.success) {
+      return { success: false, error: "Không thể đọc kết quả thanh toán NCC." };
+    }
+    return {
+      success: true,
+      data: {
+        paymentId: parsedPayment.data.payment_id,
+        allocatedAmount: parsedPayment.data.allocated_amount,
+        advanceAmount: parsedPayment.data.advance_amount,
+        paymentStatus: parsedPayment.data.payment_status,
+      },
+    };
+  },
+);
+
+export const allocateSupplierAdvance = withAction(
+  {
+    roles: ["owner"] as const,
+    schema: supplierAdvanceSchema,
+    permission: PERMISSION_KEYS.FINANCE_AP_PAY,
+    forbiddenError: "Không có quyền phân bổ ứng trước NCC.",
+  },
+  async (data, { supabase }) => {
+    const { data: result, error } = await supabase.rpc(
+      "allocate_supplier_advance" as never,
+      {
+        p_payment_id: data.paymentId,
+        p_idempotency_key: data.idempotencyKey,
+        p_allocations: data.allocations.map((allocation) => ({
+          invoice_id: allocation.invoiceId,
+          amount: allocation.amount,
+        })),
+      } as never,
+    );
+
+    if (error) {
+      const message = error.message ?? "";
+      if (error.code === "42501") {
+        return {
+          success: false,
+          error: "Không có quyền phân bổ ứng trước NCC.",
+        };
+      }
+      if (message.includes("supplier_payment_not_found")) {
+        return { success: false, error: "Không tìm thấy khoản ứng trước NCC." };
+      }
+      if (message.includes("supplier_advance_idempotency_conflict")) {
+        return {
+          success: false,
+          error:
+            "Lần phân bổ này đã được dùng với dữ liệu khác. Hãy đóng và mở lại biểu mẫu.",
+        };
+      }
+      if (message.includes("supplier_advance_allocation_invalid")) {
+        return {
+          success: false,
+          error:
+            "Phân bổ ứng trước vượt số dư hoặc có hóa đơn chưa đủ điều kiện.",
+        };
+      }
+      return { success: false, error: "Không thể phân bổ ứng trước NCC." };
+    }
+
+    const parsedResult = supplierPaymentResultSchema.safeParse(result);
+    if (!parsedResult.success) {
+      return {
+        success: false,
+        error: "Không thể đọc kết quả phân bổ ứng trước.",
+      };
+    }
+    return {
+      success: true,
+      data: {
+        paymentId: parsedResult.data.payment_id,
+        allocatedAmount: parsedResult.data.allocated_amount,
+        advanceAmount: parsedResult.data.advance_amount,
+        paymentStatus: parsedResult.data.payment_status,
+      },
+    };
   },
 );
 
@@ -409,6 +546,37 @@ export const acceptSupplierInvoiceDiscrepancy = withAction(
   },
 );
 
+export const verifyServiceSupplierInvoice = withAction(
+  {
+    roles: ROLES,
+    schema: verifyServiceInvoiceSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc(
+      "verify_service_supplier_invoice" as never,
+      {
+        p_invoice_id: data.invoiceId,
+        p_reason: data.reason,
+      } as never,
+    );
+    if (error) {
+      const message = error.message ?? "";
+      if (message.includes("service_invoice_verification_invalid")) {
+        return {
+          success: false,
+          error: "Hóa đơn dịch vụ không còn ở trạng thái chờ xác minh.",
+        };
+      }
+      return {
+        success: false,
+        error: "Không thể xác minh chứng từ dịch vụ.",
+      };
+    }
+    return { success: true };
+  },
+);
+
 export const attachSupplierInvoiceVatEvidence = withAction(
   {
     roles: MODULE_ACL.finance.allowedRoles,
@@ -424,7 +592,7 @@ export const attachSupplierInvoiceVatEvidence = withAction(
     if (!data.storagePath.startsWith(tenantPrefix)) {
       return {
         success: false,
-      error: "File HĐ GTGT không thuộc hệ thống hiện tại.",
+        error: "File HĐ GTGT không thuộc hệ thống hiện tại.",
       };
     }
 
@@ -472,7 +640,7 @@ const supplierInvoiceSelect = (branchId?: number) => {
     branchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
-  return `id, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, vat_invoice_attachment_path, total_amount, matching_status, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), supplier_payment_allocations ( supplier_payments ( id, amount, payment_method, payment_date, reference_note ) ), supplier_invoice_receipt_allocations ( goods_received_notes ( id, grn_number ) ), ${grnSelect}`;
+  return `id, invoice_kind, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, vat_invoice_attachment_path, total_amount, matching_status, matching_notes, matching_expected_amount, matching_received_amount, matching_difference_amount, matching_reason_code, service_verified_at, service_verification_reason, document_discount_amount, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), supplier_payment_allocations ( supplier_payments ( id, amount, payment_method, payment_date, reference_note ) ), supplier_invoice_receipt_allocations ( grn_id, po_id, goods_received_notes ( id, grn_number, status ), purchase_orders ( id, po_number ) ), ${grnSelect}`;
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;
@@ -489,6 +657,15 @@ export interface SupplierInvoicePage {
   nextCursor: SupplierInvoiceCursor | null;
   totalCount: number;
   groups: SupplierInvoiceGroup[];
+  advances: SupplierAdvanceSummary[];
+}
+
+export interface SupplierAdvanceSummary {
+  paymentId: number;
+  supplierId: number;
+  paymentDate: string;
+  referenceNote: string | null;
+  advanceAmount: number;
 }
 
 const supplierInvoiceCursorSchema = z.object({
@@ -642,6 +819,47 @@ export async function fetchSupplierInvoicesPage(
     hasMore && last?.invoiceDate != null
       ? { invoiceDate: last.invoiceDate, id: last.id }
       : null;
+  const { data: paymentRows, error: paymentError } = await monetary.client
+    .from("supplier_payments")
+    .select(
+      "id, supplier_id, amount, payment_date, reference_note, supplier_payment_allocations ( amount )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("payment_date", { ascending: false });
+  if (paymentError) {
+    return {
+      success: false,
+      error: messages.inventory.supplierInvoices.loadFailed,
+    };
+  }
+  const advances: SupplierAdvanceSummary[] = (paymentRows ?? []).flatMap(
+    (payment) => {
+      const allocated = Array.isArray(payment.supplier_payment_allocations)
+        ? payment.supplier_payment_allocations.reduce(
+            (sum, allocation) => sum + Number(allocation.amount ?? 0),
+            0,
+          )
+        : 0;
+      const advanceAmount = Math.max(
+        Number(payment.amount ?? 0) - allocated,
+        0,
+      );
+      return advanceAmount > 0
+        ? [
+            {
+              paymentId: Number(payment.id),
+              supplierId: Number(payment.supplier_id),
+              paymentDate: String(payment.payment_date),
+              referenceNote:
+                typeof payment.reference_note === "string"
+                  ? payment.reference_note
+                  : null,
+              advanceAmount,
+            },
+          ]
+        : [];
+    },
+  );
 
   return {
     success: true,
@@ -651,6 +869,7 @@ export async function fetchSupplierInvoicesPage(
       nextCursor,
       totalCount: filtered.length,
       groups: groupSupplierInvoices(filtered, viewMode, today),
+      advances,
     },
   };
 }
@@ -659,8 +878,7 @@ export async function recomputeInvoiceMatching(
   invoiceId: number,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(invoiceId);
-  if (!id.success)
-    return { success: false, error: "Mã hóa đơn không hợp lệ" };
+  if (!id.success) return { success: false, error: "Mã hóa đơn không hợp lệ" };
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,

@@ -147,12 +147,17 @@ test("supplier payment retry keeps one intent key after an ambiguous failure", (
 });
 
 test("supplier invoice payment action uses Owner-only idempotent AP RPC", () => {
-  const source = readWeb(
-    "app/(protected)/finance/supplier-invoice-actions.ts",
-  );
+  const source = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
 
   assert.match(source, /recordSupplierPayment/);
-  assert.match(source, /roles: MODULE_ACL\.finance\.allowedRoles/);
+  assert.match(
+    source,
+    /recordSupplierPayment[\s\S]*?roles: \["owner"\] as const/,
+  );
+  assert.match(
+    source,
+    /allocateSupplierAdvance[\s\S]*?roles: \["owner"\] as const/,
+  );
   assert.match(source, /PERMISSION_KEYS\.FINANCE_AP_PAY/);
   assert.match(source, /idempotencyKey: z\.string\(\)\.uuid\(\)/);
   assert.match(source, /"record_supplier_payment_allocated" as never/);
@@ -162,9 +167,7 @@ test("supplier invoice payment action uses Owner-only idempotent AP RPC", () => 
 });
 
 test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
-  const source = readWeb(
-    "app/(protected)/finance/supplier-invoice-actions.ts",
-  );
+  const source = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
   const client = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
@@ -184,10 +187,7 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
     client,
     /viewMode === "supplier" \? \([\s\S]*group\.invoiceCount[\s\S]*\) : \(/,
   );
-  assert.doesNotMatch(
-    client,
-    /key:\s*"aging"[\s\S]*header:\s*copy\.aging/,
-  );
+  assert.doesNotMatch(client, /key:\s*"aging"[\s\S]*header:\s*copy\.aging/);
   assert.doesNotMatch(client, /analyzingShort : copy\.groupDetailAction/);
   assert.match(client, /selectInvoiceInGroup/);
   assert.match(client, /groupByLabel/);
@@ -233,6 +233,7 @@ test("supplier invoice payment visibility is explicitly Owner-only", () => {
   assert.match(financePage, /authState\.claims\.user_role === "owner"/);
   assert.match(financePage, /hasPayPermission/);
   assert.match(financePage, /hasInvoiceCreatePermission/);
+  assert.match(financePage, /canCreateInvoice=\{hasInvoiceCreatePermission\}/);
   assert.match(financePage, /canAttachVatEvidence/);
   // ADR 0018 — Inventory route redirects to Finance home.
   assert.match(inventoryPage, /redirect\(/);
@@ -290,11 +291,54 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
   );
   assert.match(clientSource, /openInvoiceDetail/);
   assert.match(clientSource, /handleDetailOpenChange/);
+  assert.match(clientSource, /router\.push\(/);
+  assert.match(
+    clientSource,
+    /mode:\s*"view"[\s\S]*invoiceId:\s*String\(invoiceId\)/,
+  );
   assert.match(clientSource, /<Sheet[\s\S]*open=\{detailOpen\}/);
   assert.match(clientSource, /SheetContent[\s\S]*side="right"/);
   assert.doesNotMatch(
     clientSource,
     /xl:grid-cols-\[minmax\(0,1\.6fr\)_minmax\(320px,1fr\)\]/,
+  );
+});
+
+test("supplier invoice URL modes keep business overlays sequential", () => {
+  const source = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  );
+
+  assert.match(source, /const invoiceMode:\s*SupplierInvoiceMode \| null =/);
+  assert.match(source, /const detailOpen =[\s\S]*invoiceMode === "view"/);
+  assert.match(
+    source,
+    /const createOpen = invoiceMode === "create" && canCreateInvoice/,
+  );
+  assert.match(
+    source,
+    /const paymentOpen =[\s\S]*invoiceMode === "pay"[\s\S]*canPaySupplier/,
+  );
+  assert.match(
+    source,
+    /const creditOpen =[\s\S]*invoiceMode === "credit"[\s\S]*canAcceptDiscrepancy/,
+  );
+  assert.match(source, /canCreateInvoice/);
+  assert.match(
+    source,
+    /canCreateInvoice\s*\?\s*\([\s\S]*copy\.createAction[\s\S]*\)\s*:\s*undefined/,
+  );
+  assert.doesNotMatch(
+    source,
+    /const \[detailOpen,\s*setDetailOpen\] = useState/,
+  );
+  assert.doesNotMatch(
+    source,
+    /const \[paymentOpen,\s*setPaymentOpen\] = useState/,
+  );
+  assert.doesNotMatch(
+    source,
+    /const \[creditOpen,\s*setCreditOpen\] = useState/,
   );
 });
 
@@ -378,30 +422,26 @@ test("baseline keeps supplier payment ledger and invoice status together", () =>
   assert.match(source, /UPDATE public\.supplier_invoices/);
 });
 
-test("supplier payment RPC requires matched GRN evidence", () => {
+test("supplier payment RPC requires matched invoice evidence by invoice kind", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260715073331_harden_supplier_payment_idempotency.sql",
-  );
-  const vatEvidence = readRoot(
-    "supabase/migrations/20260727190000_central_procurement_and_vat_evidence.sql",
+    "supabase/migrations/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const acceptance = readRoot(
-    "supabase/tests/supplier_payment_idempotency_test.sql",
+    "supabase/tests/supplier_invoice_ap_stability_test.sql",
   );
   const actionSource = readWeb(
     "app/(protected)/finance/supplier-invoice-actions.ts",
   );
 
-  assert.match(migration, /v_invoice\.grn_id IS NULL/);
-  assert.match(migration, /invoice_missing_grn_for_payment/);
-  assert.match(migration, /v_invoice\.matching_status <> 'matched'/);
-  assert.match(migration, /invoice_not_matched_for_payment/);
-  assert.match(vatEvidence, /vat_invoice_attachment_required/);
-  assert.match(actionSource, /invoice_missing_grn_for_payment/);
-  assert.match(actionSource, /invoice_not_matched_for_payment/);
-  assert.match(actionSource, /vat_invoice_attachment_required/);
-  assert.match(acceptance, /missing-GRN payment unexpectedly succeeded/);
-  assert.match(acceptance, /unmatched invoice payment unexpectedly succeeded/);
+  assert.match(migration, /invoice\.matching_status <> 'matched'/);
+  assert.match(migration, /invoice\.vat_invoice_attachment_path IS NULL/);
+  assert.match(migration, /invoice\.invoice_kind = 'service'/);
+  assert.match(migration, /invoice\.service_verified_at IS NULL/);
+  assert.match(migration, /invoice\.invoice_kind = 'goods'/);
+  assert.match(migration, /grn\.status <> 'confirmed'/);
+  assert.match(actionSource, /supplier_payment_allocation_invalid/);
+  assert.match(acceptance, /unverified service payment succeeded/);
+  assert.match(acceptance, /payment without VAT evidence succeeded/);
 });
 
 test("supplier payment migration enforces exact replay, credit-aware cap, and Owner boundary", () => {
@@ -475,10 +515,9 @@ test("supplier returns are unique per active GRN", () => {
   assert.match(migration, /supplier_return_duplicate_grn/);
 });
 
-test("supplier invoice matching requires linked GRN evidence", () => {
-  const baseline = readRoot("supabase/migrations/20260727120000_baseline.sql");
+test("supplier invoice matching separates goods receipts from service verification", () => {
   const migration = readRoot(
-    "supabase/migration-archive/20260708062218_supplier_invoice_missing_grn_pending.sql",
+    "supabase/migrations/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const mapper = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
@@ -487,26 +526,24 @@ test("supplier invoice matching requires linked GRN evidence", () => {
     "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
 
-  assert.match(baseline, /IF v_inv\.grn_id IS NULL THEN/);
-  assert.match(
-    migration,
-    /WHERE grn_id IS NULL\s+AND matching_status = 'matched'/,
-  );
-  assert.match(mapper, /rawMatchStatus === "matched" && grnId == null/);
+  assert.match(migration, /private\.apply_supplier_invoice_matching/);
+  assert.match(migration, /v_invoice\.invoice_kind = 'service'/);
+  assert.match(migration, /service_verified_at IS NULL/);
+  assert.match(migration, /v_receipt_count = 0/);
+  assert.match(migration, /pg_catalog\.abs\(v_difference\) <= 1/);
+  assert.match(mapper, /invoiceKind: row\.invoice_kind === "service"/);
+  assert.doesNotMatch(mapper, /variance_pct/);
   assert.match(client, /missingGrnTitle/);
+  assert.match(client, /serviceVerificationRequired/);
   assert.match(client, /getDisplayMatchStatus/);
 });
 
-test("supplier invoice create dialog supports multiple GRNs and progressive VAT", () => {
+test("supplier invoice create dialog supports goods, services, multiple GRNs and progressive VAT", () => {
   const client = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
-  const page = readWeb(
-    "app/(protected)/finance/supplier-invoices/page.tsx",
-  );
-  const grnActions = readWeb(
-    "app/(protected)/inventory/grn-actions.ts",
-  );
+  const page = readWeb("app/(protected)/finance/supplier-invoices/page.tsx");
+  const grnActions = readWeb("app/(protected)/inventory/grn-actions.ts");
   const messages = readWeb("lib/messages/inventory.ts");
 
   assert.match(client, /DEFAULT_VISIBLE_VAT_RATE/);
@@ -515,13 +552,12 @@ test("supplier invoice create dialog supports multiple GRNs and progressive VAT"
   assert.match(client, /selectedGrnKeys/);
   assert.match(client, /selectedGrns/);
   assert.match(client, /receiptAllocations/);
+  assert.match(client, /invoiceKind/);
+  assert.match(client, /serviceInvoiceHint/);
   assert.match(client, /documentDiscount/);
   assert.match(client, /grnNetAcceptedLabel/);
   assert.match(client, /netAcceptedAmount/);
-  assert.doesNotMatch(
-    client,
-    /name="matchingNotes"/,
-  );
+  assert.doesNotMatch(client, /name="matchingNotes"/);
   assert.match(page, /netAcceptedAmount/);
   assert.match(page, /fetchGrnIdsForDropdown\(branchFilter, includeGrnId\)/);
   assert.match(page, /optionKey/);
@@ -538,12 +574,34 @@ test("supplier invoice create dialog supports multiple GRNs and progressive VAT"
     readWeb("app/(protected)/finance/supplier-invoice-actions.ts"),
     /create_supplier_invoice_with_allocations/,
   );
-  assert.match(
-    messages,
-    /1\) Chọn phiếu nhập · 2\) Nhập số và ngày hóa đơn · 3\) Chọn mức VAT/,
-  );
+  assert.match(messages, /invoiceKinds:/);
+  assert.match(messages, /goods: "Hàng hóa"/);
+  assert.match(messages, /service: "Dịch vụ"/);
   assert.match(messages, /chooseGrnPrimary:/);
   assert.match(messages, /addVatRate:/);
+});
+
+test("supplier invoice payment exposes visible append-only advance allocation", () => {
+  const migration = readRoot(
+    "supabase/migrations/20260730110000_supplier_invoice_ap_stability.sql",
+  );
+  const action = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
+  const client = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  );
+
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.allocate_supplier_advance/,
+  );
+  assert.match(migration, /allocation_intent_key/);
+  assert.match(migration, /advance_amount/);
+  assert.match(action, /export const allocateSupplierAdvance/);
+  assert.match(action, /allocatedAmount/);
+  assert.match(action, /advanceAmount/);
+  assert.match(client, /paymentAdvancePreview/);
+  assert.match(client, /invoiceMode === "advance"/);
+  assert.match(client, /allocateAdvanceAction/);
 });
 
 test("confirmed GRN surfaces link into supplier invoice create or view", () => {
@@ -555,9 +613,7 @@ test("confirmed GRN surfaces link into supplier invoice create or view", () => {
   const detailClient = readWeb(
     "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
-  const grnActions = readWeb(
-    "app/(protected)/inventory/grn-actions.ts",
-  );
+  const grnActions = readWeb("app/(protected)/inventory/grn-actions.ts");
 
   assert.match(listModel, /supplierInvoiceHrefForGrn/);
   assert.match(listModel, /invoiceId: number \| null/);

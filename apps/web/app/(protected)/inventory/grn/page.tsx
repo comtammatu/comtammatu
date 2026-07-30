@@ -40,7 +40,6 @@ export async function GRNListPageContent({
         filters={data.filters}
         basePath={basePath}
         canManageSupplierInvoice={data.canManageSupplierInvoice}
-        canViewMonetary={data.canViewMonetary}
         loadFailed={data.loadFailed}
         withinOwnerTabs={embedded}
         detailError={detailError}

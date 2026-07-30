@@ -1,5 +1,6 @@
 export type SupplierInvoiceRow = {
   id: number;
+  invoiceKind: "goods" | "service";
   supplierId: number;
   grnId: number | null;
   poId: number | null;
@@ -15,12 +16,28 @@ export type SupplierInvoiceRow = {
   amount: number;
   paidAmount: number;
   creditAppliedAmount: number;
-  variance: number | null;
+  documentDiscountAmount: number;
+  matchingExpectedAmount: number | null;
+  matchingReceivedAmount: number | null;
+  matchingDifferenceAmount: number | null;
+  matchingReasonCode: string | null;
+  matchingNotes: string | null;
+  serviceVerifiedAt: string | null;
+  serviceVerificationReason: string | null;
+  receiptAllocations: SupplierInvoiceReceiptSummary[];
   invoiceDate: string | null;
   dueDate: string | null;
   vatInvoiceAttachmentPath: string | null;
   paymentCount: number;
   lastPayment: SupplierInvoicePaymentSummary | null;
+};
+
+export type SupplierInvoiceReceiptSummary = {
+  grnId: number;
+  grnCode: string;
+  grnStatus: string;
+  poId: number;
+  poCode: string;
 };
 
 export type SupplierInvoiceVatBreakdownLine = {
@@ -86,7 +103,11 @@ function getSupplierPayments(row: Record<string, unknown>) {
         return isRecord(payment) ? [payment] : [];
       })
     : [];
-  return [...new Map([...direct, ...allocated].map((item) => [item.id, item])).values()];
+  return [
+    ...new Map(
+      [...direct, ...allocated].map((item) => [item.id, item]),
+    ).values(),
+  ];
 }
 
 function mapSupplierPayment(
@@ -162,17 +183,31 @@ export function mapSupplierInvoiceRow(
         if (!isRecord(allocation)) return [];
         const receipt = allocation.goods_received_notes;
         const resolved = Array.isArray(receipt) ? receipt[0] : receipt;
-        return isRecord(resolved) ? [resolved] : [];
+        const purchaseOrder = allocation.purchase_orders;
+        const resolvedPurchaseOrder = Array.isArray(purchaseOrder)
+          ? purchaseOrder[0]
+          : purchaseOrder;
+        if (!isRecord(resolved) || !isRecord(resolvedPurchaseOrder)) return [];
+        return [
+          {
+            grnId: Number(allocation.grn_id ?? resolved.id ?? 0),
+            grnCode: String(resolved.grn_number ?? "—"),
+            grnStatus: String(resolved.status ?? ""),
+            poId: Number(allocation.po_id ?? resolvedPurchaseOrder.id ?? 0),
+            poCode: String(resolvedPurchaseOrder.po_number ?? "—"),
+          },
+        ];
       })
     : [];
   const allocatedReceiptCodes = allocatedReceipts
-    .map((receipt) => String(receipt.grn_number ?? ""))
+    .map((receipt) => receipt.grnCode)
     .filter(Boolean);
   const headerReceiptCode =
     ((row.goods_received_notes as Record<string, unknown>)
       ?.grn_number as string) ?? null;
   return {
     id: row.id as number,
+    invoiceKind: row.invoice_kind === "service" ? "service" : "goods",
     supplierId: Number(row.supplier_id ?? 0),
     grnId,
     poId,
@@ -186,10 +221,7 @@ export function mapSupplierInvoiceRow(
     poCode:
       ((row.purchase_orders as Record<string, unknown>)?.po_number as string) ??
       null,
-    matchStatus:
-      rawMatchStatus === "matched" && grnId == null
-        ? "pending"
-        : rawMatchStatus,
+    matchStatus: rawMatchStatus,
     paymentStatus: getSupplierInvoiceEffectivePaymentStatus({
       amount,
       paidAmount,
@@ -201,10 +233,34 @@ export function mapSupplierInvoiceRow(
     amount,
     paidAmount,
     creditAppliedAmount,
-    variance:
-      (row.variance_pct as number | null | undefined) != null
-        ? Number(row.variance_pct)
+    documentDiscountAmount: Number(row.document_discount_amount ?? 0),
+    matchingExpectedAmount:
+      row.matching_expected_amount != null
+        ? Number(row.matching_expected_amount)
         : null,
+    matchingReceivedAmount:
+      row.matching_received_amount != null
+        ? Number(row.matching_received_amount)
+        : null,
+    matchingDifferenceAmount:
+      row.matching_difference_amount != null
+        ? Number(row.matching_difference_amount)
+        : null,
+    matchingReasonCode:
+      typeof row.matching_reason_code === "string"
+        ? row.matching_reason_code
+        : null,
+    matchingNotes:
+      typeof row.matching_notes === "string" ? row.matching_notes : null,
+    serviceVerifiedAt:
+      typeof row.service_verified_at === "string"
+        ? row.service_verified_at
+        : null,
+    serviceVerificationReason:
+      typeof row.service_verification_reason === "string"
+        ? row.service_verification_reason
+        : null,
+    receiptAllocations: allocatedReceipts,
     invoiceDate: (row.invoice_date as string) ?? null,
     dueDate: (row.due_date as string) ?? null,
     vatInvoiceAttachmentPath:

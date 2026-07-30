@@ -10,7 +10,6 @@ import {
   Search as IconSearch,
   Trash as IconTrash,
 } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -39,7 +38,6 @@ import {
   AppPageHeader,
   AppToolbar,
 } from "@/components/surface";
-import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   DataTable,
   type DataTableColumn,
@@ -66,12 +64,6 @@ const statusLabels: Record<string, string> = {
   cancelled: "Đã hủy",
 };
 
-const invoiceLabels: Record<string, string> = {
-  pending: "Chưa đối soát",
-  matched: "Đã đối soát",
-  discrepancy: "Có chênh lệch",
-  approved: "Đã chấp nhận",
-};
 const grnCopy = messages.inventory.grn;
 
 const comboFilter = (
@@ -92,7 +84,6 @@ export function GrnListClient({
   filters,
   basePath = "/inventory/grn",
   canManageSupplierInvoice,
-  canViewMonetary,
   loadFailed,
   withinOwnerTabs = false,
   detailError,
@@ -104,7 +95,6 @@ export function GrnListClient({
   filters: GrnListFilters;
   basePath?: string;
   canManageSupplierInvoice: boolean;
-  canViewMonetary: boolean;
   loadFailed: boolean;
   withinOwnerTabs?: boolean;
   detailError?: string | null;
@@ -193,7 +183,9 @@ export function GrnListClient({
       {
         key: "detail",
         label:
-          row.status === "draft" ? "Tiếp tục nhập hàng" : ACTIONS_VI.viewDetails,
+          row.status === "draft"
+            ? "Tiếp tục nhập hàng"
+            : ACTIONS_VI.viewDetails,
         icon: <IconExternalLink />,
         href: detailHref(row),
       },
@@ -259,23 +251,25 @@ export function GrnListClient({
       key: "code",
       header: "Phiếu nhập",
       render: (row) => (
-        <Link
-          href={detailHref(row)}
-          className="font-mono font-medium text-primary hover:underline"
-        >
-          {row.code}
-        </Link>
-      ),
-    },
-    {
-      key: "status",
-      header: FORM_VI.status,
-      render: (row) => (
-        <StatusBadge
-          domain="inventory"
-          value={row.status}
-          label={statusLabels[row.status] ?? grnCopy.unknownStatus}
-        />
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={detailHref(row)}
+              className="font-mono font-medium text-primary hover:underline"
+            >
+              {row.code}
+            </Link>
+            <StatusBadge
+              domain="inventory"
+              value={row.status}
+              label={statusLabels[row.status] ?? grnCopy.unknownStatus}
+            />
+          </div>
+          <div className="font-mono text-xs text-muted-foreground">
+            {row.poCode}
+            {row.purchaseRequestCode ? ` · ${row.purchaseRequestCode}` : ""}
+          </div>
+        </div>
       ),
     },
     {
@@ -284,44 +278,32 @@ export function GrnListClient({
       render: (row) => row.supplierName,
     },
     {
-      key: "po",
-      header: "Đơn đặt hàng",
-      render: (row) => <span className="font-mono">{row.poCode}</span>,
-    },
-    {
-      key: "request",
-      header: "Yêu cầu mua",
-      render: (row) => (
-        <span className="font-mono">{row.purchaseRequestCode ?? "—"}</span>
-      ),
-    },
-    {
       key: "site",
       header: "Kho nhận",
       render: (row) => row.receivingSiteName,
     },
     {
-      key: "expected",
-      header: "Ngày dự kiến",
-      render: (row) =>
-        row.expectedReceiveDate ? formatVNDate(row.expectedReceiveDate) : "—",
+      key: "date",
+      header: "Ngày",
+      render: (row) => {
+        const date =
+          row.status === "confirmed"
+            ? row.receivedDate
+            : row.expectedReceiveDate;
+        return date ? formatVNDate(date) : "—";
+      },
     },
     {
-      key: "received",
-      header: "Ngày nhập",
-      render: (row) =>
-        row.receivedDate ? formatVNDate(row.receivedDate) : "—",
-    },
-    {
-      key: "progress",
-      header: "Tiến độ",
-      render: (row) =>
-        `${row.completedLineCount}/${row.lineCount} dòng đã nhập`,
-    },
-    {
-      key: "exceptions",
-      header: "Ngoại lệ",
-      render: (row) => <ExceptionBadges row={row} />,
+      key: "result",
+      header: "Kết quả",
+      render: (row) => (
+        <div className="flex flex-col gap-1">
+          <div>
+            {grnCopy.lineProgress(row.completedLineCount, row.lineCount)}
+          </div>
+          <ExceptionBadges row={row} />
+        </div>
+      ),
     },
     {
       key: "updated",
@@ -332,31 +314,6 @@ export function GrnListClient({
         </span>
       ),
     },
-    {
-      key: "handler",
-      header: "Người nhận",
-      render: (row) => row.handledBy ?? "—",
-    },
-    ...(canViewMonetary
-      ? [
-          {
-            key: "value",
-            header: "Giá trị nhập",
-            className: "text-right font-mono tabular-nums",
-            render: (row: GrnListRow) =>
-              row.monetary ? formatVND(row.monetary.receiptValue) : "—",
-          },
-          {
-            key: "invoice",
-            header: "Hóa đơn",
-            render: (row: GrnListRow) =>
-              row.monetary?.invoiceStatus
-                ? (invoiceLabels[row.monetary.invoiceStatus] ??
-                  grnCopy.unknownInvoiceStatus)
-                : "Chưa có",
-          },
-        ]
-      : []),
     {
       key: "actions",
       header: <span className="sr-only">{FORM_VI.action}</span>,
@@ -401,6 +358,28 @@ export function GrnListClient({
       }
       filters={
         <>
+          <Select
+            value={filters.status}
+            onValueChange={(value) => navigate({ status: value, page: null })}
+          >
+            <SelectTrigger
+              size="field"
+              className="w-40"
+              aria-label={FORM_VI.status}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">{statusLabels.draft}</SelectItem>
+              <SelectItem value="confirmed">
+                {statusLabels.confirmed}
+              </SelectItem>
+              <SelectItem value="cancelled">
+                {statusLabels.cancelled}
+              </SelectItem>
+              <SelectItem value="all">{grnCopy.allStatuses}</SelectItem>
+            </SelectContent>
+          </Select>
           <Combobox
             value={supplierId}
             onValueChange={setSupplierId}
@@ -516,23 +495,10 @@ export function GrnListClient({
             : grnCopy.empty
       }
       emptyDescription={
-        filters.status === "draft"
-          ? grnCopy.emptyWaitingDescription
-          : undefined
+        filters.status === "draft" ? grnCopy.emptyWaitingDescription : undefined
       }
       emptyMode={hasGrnListFilters(filters) ? "no-results" : "no-data"}
       emptyIcon={<IconReceipt />}
-      actions={
-        rows.length === 0 && filters.status === "draft" ? (
-          <Button
-            size="sm"
-            variant="outline"
-            render={<Link href="/inventory/purchase-orders" />}
-          >
-            {grnCopy.viewPendingOrders}
-          </Button>
-        ) : null
-      }
       rowClassName={(row) =>
         row.status === "cancelled" ? "opacity-60" : undefined
       }
@@ -550,37 +516,21 @@ export function GrnListClient({
     />
   );
 
-  const list = <AppListFrame toolbar={loadFailed ? undefined : toolbar}>{table}</AppListFrame>;
-  const tabs = (
-    <AppPageTabs
-      paramKey="status"
-      defaultValue={filters.status}
-      ariaLabel={grnCopy.statusTabsAria}
-      items={[
-        { value: "draft", label: statusLabels.draft! },
-        { value: "confirmed", label: statusLabels.confirmed! },
-        { value: "cancelled", label: statusLabels.cancelled! },
-        { value: "all", label: grnCopy.allStatuses },
-      ]}
-    >
-      <TabsContent value={filters.status}>{list}</TabsContent>
-    </AppPageTabs>
+  const list = (
+    <AppListFrame toolbar={loadFailed ? undefined : toolbar}>
+      {table}
+    </AppListFrame>
   );
 
   const content = withinOwnerTabs ? (
-    tabs
+    list
   ) : (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={grnCopy.listTitle}
         description={grnCopy.listDescription}
-        actions={
-          <Button variant="outline" render={<Link href="/inventory/purchase-orders" />}>
-            {grnCopy.viewPendingOrders}
-          </Button>
-        }
       />
-      {tabs}
+      {list}
     </AppPage>
   );
 
@@ -657,7 +607,9 @@ function ExceptionBadges({ row }: { row: GrnListRow }) {
     row.excessLineCount === 0 &&
     row.rejectedLineCount === 0
   ) {
-    return <span className="text-muted-foreground">{grnCopy.noExceptions}</span>;
+    return (
+      <span className="text-muted-foreground">{grnCopy.noExceptions}</span>
+    );
   }
   return (
     <div className="flex flex-wrap gap-1">
@@ -667,7 +619,9 @@ function ExceptionBadges({ row }: { row: GrnListRow }) {
         </Badge>
       ) : null}
       {row.excessLineCount > 0 ? (
-        <Badge variant="warning">{grnCopy.excessLines(row.excessLineCount)}</Badge>
+        <Badge variant="warning">
+          {grnCopy.excessLines(row.excessLineCount)}
+        </Badge>
       ) : null}
       {row.rejectedLineCount > 0 ? (
         <Badge variant="destructive">
@@ -715,9 +669,18 @@ function GrnMobileCard({
         <p className="truncate text-xs text-muted-foreground">
           {row.poCode} · {row.purchaseRequestCode ?? "—"}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {grnCopy.expectedDateLabel}{" "}
-          {row.expectedReceiveDate ? formatVNDate(row.expectedReceiveDate) : "—"}
+        <p className="truncate text-xs text-muted-foreground">
+          {row.receivingSiteName} ·{" "}
+          {row.status === "confirmed"
+            ? grnCopy.receivedDate
+            : grnCopy.expectedDate}{" "}
+          {row.status === "confirmed"
+            ? row.receivedDate
+              ? formatVNDate(row.receivedDate)
+              : "—"
+            : row.expectedReceiveDate
+              ? formatVNDate(row.expectedReceiveDate)
+              : "—"}
         </p>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span>

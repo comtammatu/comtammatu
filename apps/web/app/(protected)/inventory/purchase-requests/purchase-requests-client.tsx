@@ -68,6 +68,7 @@ import {
 } from "../purchase-order-actions";
 import {
   buildPurchaseOrderDrafts,
+  findUnassignedPurchaseRequestItemIds,
   type PurchaseOrderDraft,
   type PurchaseOrderDraftLine,
   type PurchaseOrderSupplier,
@@ -185,6 +186,7 @@ export function PurchaseRequestsClient({
     getVNDateString(),
   );
   const [poDrafts, setPoDrafts] = useState<PurchaseOrderDraft[]>([]);
+  const [unassignedPoItemIds, setUnassignedPoItemIds] = useState<number[]>([]);
   const [poPage, setPoPage] = useState(1);
   const [requestIdempotencyKey, setRequestIdempotencyKey] = useState(() =>
     crypto.randomUUID(),
@@ -208,6 +210,8 @@ export function PurchaseRequestsClient({
     selectedId == null
       ? null
       : (rows.find((row) => row.id === selectedId) ?? null);
+  const unassignedPoItems =
+    selected?.items.filter((item) => unassignedPoItemIds.includes(item.id)) ?? [];
   const createOpen = mode === "create" || mode === "edit";
   const poOpen = mode === "create-po" && selected != null;
   const filtered = useMemo(
@@ -367,6 +371,9 @@ export function PurchaseRequestsClient({
   function openPo(row: PurchaseRequestRow) {
     setExpectedDeliveryDate(getVNDateString());
     const drafts = buildPurchaseOrderDrafts(row.items, suppliers);
+    setUnassignedPoItemIds(
+      findUnassignedPurchaseRequestItemIds(row.items, suppliers),
+    );
     setPoDrafts(drafts);
     setPoPage(1);
     setPoBaseline(poFormSnapshot(getVNDateString(), drafts));
@@ -450,6 +457,7 @@ export function PurchaseRequestsClient({
       selected.items.some(
         (item) =>
           item.remainingQuantity > 0 &&
+          !unassignedPoItemIds.includes(item.id) &&
           (totals.get(item.id) ?? 0) !==
             Math.round(item.remainingQuantity * 1000),
       );
@@ -469,7 +477,14 @@ export function PurchaseRequestsClient({
         toast.error(result.error ?? copy.createPoFailed);
         return;
       }
-      toast.success(copy.createPoSuccess(orders.length));
+      toast.success(
+        unassignedPoItems.length > 0
+          ? copy.createPoPartialSuccess(
+              orders.length,
+              unassignedPoItems.length,
+            )
+          : copy.createPoSuccess(orders.length),
+      );
       setPoIdempotencyKey(crypto.randomUUID());
       updateUrl(selected.id, "view", "replace");
       router.refresh();
@@ -1022,10 +1037,36 @@ export function PurchaseRequestsClient({
               aria-label={copy.expectedDeliveryDate}
             />
             <div className="flex flex-col gap-2">
+              {unassignedPoItems.length > 0 ? (
+                <Item
+                  variant="muted"
+                  size="sm"
+                  className="items-start flex-col sm:flex-row"
+                >
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <p className="font-medium">
+                      {copy.missingSupplierMappingsTitle}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {copy.missingSupplierMappings(
+                        unassignedPoItems.map((item) => item.ingredientName),
+                      )}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    render={<Link href="/inventory/suppliers" />}
+                    className="w-full sm:w-auto"
+                  >
+                    {copy.manageSuppliersAction}
+                  </Button>
+                </Item>
+              ) : null}
               <p className="text-xs text-muted-foreground">
                 {copy.supplierOrderCount(poDrafts.length)}
               </p>
-              {poDrafts.length === 0 ? (
+              {poDrafts.length === 0 && unassignedPoItems.length === 0 ? (
                 <Item variant="muted" size="sm">
                   {copy.noSupplierMappings}
                 </Item>

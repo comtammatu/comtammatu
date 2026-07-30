@@ -24,6 +24,22 @@ type RequestItem = {
   remainingQuantity: number;
 };
 
+export function findUnassignedPurchaseRequestItemIds(
+  items: readonly RequestItem[],
+  suppliers: readonly PurchaseOrderSupplier[],
+): number[] {
+  const assignedIngredientIds = new Set(
+    suppliers.flatMap((supplier) => supplier.ingredientIds),
+  );
+  return items
+    .filter(
+      (item) =>
+        item.remainingQuantity > 0 &&
+        !assignedIngredientIds.has(item.ingredientId),
+    )
+    .map((item) => item.id);
+}
+
 export function buildPurchaseOrderDrafts(
   items: readonly RequestItem[],
   suppliers: readonly PurchaseOrderSupplier[],

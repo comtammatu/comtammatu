@@ -66,6 +66,32 @@ test("Owner and Ops keep procurement documents in URL-addressable AppDialogs", (
   assert.match(grnClient, /variant="document"/);
 });
 
+test("PO creation keeps unmapped ingredients outstanding while saving mapped orders", () => {
+  const requestClient = read(
+    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
+  );
+  const purchaseActions = read(
+    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
+  );
+
+  assert.match(requestClient, /findUnassignedPurchaseRequestItemIds/);
+  assert.match(
+    requestClient,
+    /!unassignedPoItemIds\.includes\(item\.id\)[\s\S]*totals\.get\(item\.id\)/,
+  );
+  assert.doesNotMatch(
+    requestClient,
+    /if \(unassignedPoItemIds\.length > 0\) \{[\s\S]{0,300}return;/,
+  );
+  assert.doesNotMatch(
+    requestClient,
+    /poDrafts\.length === 0 \|\|\s*unassignedPoItemIds\.length > 0/,
+  );
+  assert.match(requestClient, /copy\.missingSupplierMappings/);
+  assert.match(requestClient, /href="\/inventory\/suppliers"/);
+  assert.match(purchaseActions, /supplier_item_mapping_required/);
+});
+
 test("GRN compatibility detail route remains list-addressed", () => {
   const source = read(
     "apps/web/app/(protected)/inventory/grn/[id]/page.tsx",

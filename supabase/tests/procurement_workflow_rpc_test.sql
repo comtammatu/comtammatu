@@ -95,11 +95,17 @@ DECLARE
   v_branch bigint;
   v_unit bigint;
   v_ingredient bigint;
+  v_unmapped_ingredient bigint;
+  v_supplier bigint;
+  v_mapped_item bigint;
   v_request_key uuid := gen_random_uuid();
+  v_partial_request_key uuid := gen_random_uuid();
+  v_partial_po_key uuid := gen_random_uuid();
   v_stock_request_key uuid := gen_random_uuid();
   v_first jsonb;
   v_second jsonb;
   v_request_id bigint;
+  v_partial_request_id bigint;
   v_stock_request_id bigint;
 BEGIN
   SELECT profile.id, profile.tenant_id
@@ -176,6 +182,53 @@ BEGIN
   )
   VALUES (v_tenant, v_ingredient, v_unit, 1, TRUE, TRUE);
 
+  INSERT INTO public.ingredients (
+    tenant_id,
+    name,
+    sku,
+    unit_cost,
+    item_kind,
+    default_fulfill_site_kind,
+    is_active
+  )
+  VALUES (
+    v_tenant,
+    '__workflow_unmapped_' || gen_random_uuid()::text,
+    '__WF-U-' || gen_random_uuid()::text,
+    0,
+    'raw_material',
+    'central_supply',
+    TRUE
+  )
+  RETURNING id INTO v_unmapped_ingredient;
+
+  INSERT INTO public.ingredient_units (
+    tenant_id,
+    ingredient_id,
+    unit_id,
+    to_base_factor,
+    is_base,
+    is_active
+  )
+  VALUES (v_tenant, v_unmapped_ingredient, v_unit, 1, TRUE, TRUE);
+
+  INSERT INTO public.suppliers (tenant_id, name, is_active)
+  VALUES (
+    v_tenant,
+    '__workflow_supplier_' || gen_random_uuid()::text,
+    TRUE
+  )
+  RETURNING id INTO v_supplier;
+
+  INSERT INTO public.supplier_items (
+    tenant_id,
+    supplier_id,
+    ingredient_id,
+    is_active,
+    created_by
+  )
+  VALUES (v_tenant, v_supplier, v_ingredient, TRUE, v_owner);
+
   PERFORM set_config('request.jwt.claim.sub', v_owner::text, TRUE);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', TRUE);
   PERFORM set_config(
@@ -232,6 +285,87 @@ BEGIN
   IF (SELECT status FROM public.purchase_requests WHERE id = v_request_id)
      <> 'cancelled' THEN
     RAISE EXCEPTION 'WORKFLOW RPC: YCM cancel failed';
+  END IF;
+
+  v_first := public.save_purchase_request(
+    NULL,
+    v_central_branch,
+    current_date + 1,
+    'Partial PO with an unmapped remainder',
+    jsonb_build_array(
+      jsonb_build_object(
+        'ingredient_id', v_ingredient,
+        'entry_unit_id', v_unit,
+        'quantity', 2
+      ),
+      jsonb_build_object(
+        'ingredient_id', v_unmapped_ingredient,
+        'entry_unit_id', v_unit,
+        'quantity', 4
+      )
+    ),
+    TRUE,
+    v_partial_request_key
+  );
+  v_partial_request_id := (v_first ->> 'request_id')::bigint;
+
+  SELECT item.id
+  INTO v_mapped_item
+  FROM public.purchase_request_items AS item
+  WHERE item.tenant_id = v_tenant
+    AND item.purchase_request_id = v_partial_request_id
+    AND item.ingredient_id = v_ingredient;
+
+  v_first := public.save_purchase_orders_from_request(
+    v_partial_request_id,
+    jsonb_build_array(jsonb_build_object(
+      'supplier_id', v_supplier,
+      'expected_delivery_date', current_date + 1,
+      'notes', '',
+      'lines', jsonb_build_array(jsonb_build_object(
+        'request_item_id', v_mapped_item,
+        'quantity', 2,
+        'unit_price', 0
+      ))
+    )),
+    TRUE,
+    v_partial_po_key
+  );
+  v_second := public.save_purchase_orders_from_request(
+    v_partial_request_id,
+    jsonb_build_array(jsonb_build_object(
+      'supplier_id', v_supplier,
+      'expected_delivery_date', current_date + 1,
+      'notes', '',
+      'lines', jsonb_build_array(jsonb_build_object(
+        'request_item_id', v_mapped_item,
+        'quantity', 2,
+        'unit_price', 0
+      ))
+    )),
+    TRUE,
+    v_partial_po_key
+  );
+
+  IF jsonb_array_length(v_first -> 'purchase_orders') <> 1
+     OR v_second #>> '{purchase_orders,0,po_id}'
+        <> v_first #>> '{purchase_orders,0,po_id}'
+     OR (SELECT status FROM public.purchase_requests
+         WHERE id = v_partial_request_id) <> 'partially_ordered'
+     OR (SELECT count(*) FROM public.purchase_orders
+         WHERE tenant_id = v_tenant
+           AND purchase_request_id = v_partial_request_id) <> 1
+     OR EXISTS (
+       SELECT 1
+       FROM public.purchase_order_items AS po_item
+       JOIN public.purchase_request_items AS request_item
+         ON request_item.id = po_item.purchase_request_item_id
+        AND request_item.tenant_id = po_item.tenant_id
+       WHERE po_item.tenant_id = v_tenant
+         AND request_item.purchase_request_id = v_partial_request_id
+         AND request_item.ingredient_id = v_unmapped_ingredient
+     ) THEN
+    RAISE EXCEPTION 'WORKFLOW RPC: mixed supplier coverage partial PO failed';
   END IF;
 
   v_first := public.save_stock_request(

@@ -40,7 +40,11 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
 6. Trước mọi mutation, để guard xác minh Preview ref qua parent Production.
    File replay chỉ được phép vào Preview đã xác minh; merge/reset/rebase bị chặn.
    Nếu tra cứu thất bại, dừng và báo blocker.
-7. Chỉ seed bằng dữ liệu non-production, không secret và không customer data.
+7. Repo chủ ý không có `supabase/seed.sql` hoặc `supabase/_local-dev`; Preview
+   mặc định chỉ nhận schema. Không copy hai fixture CI trong
+   `apps/web/tests/fixtures/supabase-e2e/` lên Preview vì chúng có tài khoản và
+   mật khẩu cố định. Nếu smoke cần dữ liệu, tạo fixture riêng cho đúng Preview
+   đã xác minh, không dùng dữ liệu production, rồi xóa cả branch sau smoke.
 8. Chạy schema/RLS/RPC tests, smoke flow cần thiết và security advisors trên
    Preview đã được phép mutation.
 9. Sau khi migration được apply lên Greenfield type source theo quyền hiện hành,
@@ -54,7 +58,8 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
 
 - Migration chain replay được từ empty DB.
 - `corepack pnpm lint:migration-lineage` pass cho active migration layout.
-- `supabase/seed.sql` đã được kiểm tra không mang production data hoặc secret.
+- `corepack pnpm lint:seed-permissions` xác nhận không có auto-seed path cho
+  Preview và fixture local vẫn nằm trong harness CI riêng.
 - Caller có tooling/credential đủ để tạo và xóa branch.
 - Mọi URL/service-role key trong session được đối chiếu với ref đã ghi.
 - Agent-side Preview mutation gọi MCP với `project_id` tường minh và CLI có thể

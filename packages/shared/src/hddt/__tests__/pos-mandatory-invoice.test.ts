@@ -198,7 +198,7 @@ test("finance handles HĐĐT jobs instead of scanning SePay webhooks", () => {
   );
   assert.match(
     listSrc,
-    /ID đơn[\s\S]*job\.order_id[\s\S]*ID HĐĐT[\s\S]*job\.tax_invoice_id[\s\S]*Số HĐ Viettel[\s\S]*job\.invoice_number[\s\S]*Mã giao dịch Viettel[\s\S]*job\.provider_ref/,
+    /Mã đơn[\s\S]*job\.order_id[\s\S]*Mã HĐĐT[\s\S]*job\.tax_invoice_id[\s\S]*Số HĐ Viettel[\s\S]*job\.invoice_number[\s\S]*Mã giao dịch Viettel[\s\S]*job\.provider_ref/,
     "attention rows must label each operational identifier",
   );
   assert.doesNotMatch(
