@@ -20,6 +20,9 @@ BEGIN
   FROM pg_catalog.pg_proc AS procedure
   WHERE procedure.oid =
     'public.prepare_inventory_valuation_cutover(uuid)'::pg_catalog.regprocedure;
+  v_definition := v_definition || pg_catalog.pg_get_functiondef(
+    'private.prepare_inventory_valuation_cutover_prebootstrap(uuid)'::pg_catalog.regprocedure
+  );
   IF v_definition !~ 'inventory_valuation_negative_stock'
      OR v_definition !~ 'inventory_valuation_zero_cost_stock'
      OR v_definition !~ 'inventory_valuation_quantity_drift'
