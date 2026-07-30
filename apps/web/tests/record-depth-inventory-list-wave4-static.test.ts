@@ -269,8 +269,8 @@ test("Wave 5 purchase-orders uses one query-addressed document view", () => {
   const client = read(
     "app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
-  assert.match(client, /params\.set\("poId", String\(row\.id\)\)/);
-  assert.match(client, /params\.set\("mode", "view"\)/);
+  assert.match(client, /params\.set\("poId", String\(poId\)\)/);
+  assert.match(client, /params\.set\("mode", nextMode\)/);
   assert.match(client, /variant="document"/);
   assert.doesNotMatch(client, /DocumentFormFrame/);
 });

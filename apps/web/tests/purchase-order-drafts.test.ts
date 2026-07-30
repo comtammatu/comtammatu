@@ -5,7 +5,7 @@ import {
   findUnassignedPurchaseRequestItemIds,
 } from "../app/(protected)/inventory/purchase-requests/purchase-order-drafts";
 
-test("purchase request shows every matching supplier without duplicating ambiguous quantities", () => {
+test("purchase demand shows every matching supplier without auto-allocating quantities", () => {
   const drafts = buildPurchaseOrderDrafts(
     [
       { id: 11, ingredientId: 101, remainingQuantity: 5 },
@@ -37,10 +37,37 @@ test("purchase request shows every matching supplier without duplicating ambiguo
     drafts.map((draft) => draft.supplierName),
     ["NCC A", "NCC B", "NCC C"],
   );
-  assert.equal(drafts[0]?.lines[0]?.quantity, "5");
+  assert.equal(drafts[0]?.lines[0]?.quantity, "");
   assert.equal(drafts[1]?.lines[0]?.quantity, "");
   assert.equal(drafts[0]?.lines[1]?.quantity, "");
   assert.equal(drafts[2]?.lines[0]?.quantity, "");
+});
+
+test("saved supplier allocations are restored by demand item and supplier", () => {
+  const drafts = buildPurchaseOrderDrafts(
+    [{ id: 11, ingredientId: 101, remainingQuantity: 5 }],
+    [
+      {
+        id: 1,
+        name: "NCC A",
+        ingredientIds: [101],
+        preferredIngredientIds: [101],
+      },
+      {
+        id: 2,
+        name: "NCC B",
+        ingredientIds: [101],
+        preferredIngredientIds: [],
+      },
+    ],
+    [
+      { requestItemId: 11, supplierId: 1, quantity: 2 },
+      { requestItemId: 11, supplierId: 2, quantity: 3 },
+    ],
+  );
+
+  assert.equal(drafts[0]?.lines[0]?.quantity, "2");
+  assert.equal(drafts[1]?.lines[0]?.quantity, "3");
 });
 
 test("purchase request reports remaining ingredients without an active supplier mapping", () => {

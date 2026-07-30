@@ -443,12 +443,11 @@ Branch stock workflow áp dụng cùng ranh giới này:
   four-eye rule và xác nhận mutation; phiếu tự tạo chỉ đọc. Không import
   `WasteApprovalsPageContent`, `WasteApprovalsClient`, `DocumentFormFrame`,
   `DataTable`, hoặc chrome control_surface.
-- Purchase orders trở lại Inventory sidebar control_surface theo ADR 0018 **C1**
-  (Owner restore 2026-07-28): `/inventory/purchase-orders` là LIST **Đơn mua hàng**
-  cho PO được tạo từ GRN. Mỗi hàng mở read-only detail; action chỉ sửa giá và
-  duyệt theo quyền. Không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO. Supplier
-  returns vẫn ngoài daily UI; hàng NCC bị từ chối được ghi ngay trên dòng GRN
-  bằng số lượng, lý do và ảnh.
+- `/inventory/purchase-orders` là workspace **Mua hàng** duy nhất, gồm tab
+  `Nhu cầu mua` và `Đơn mua`. Kho tạo nhu cầu không NCC/giá; Kế toán phân bổ
+  đủ số lượng cho các NCC rồi duyệt một lần để tạo PO và GRN nháp. Nhu cầu,
+  PO và GRN mở bằng URL-addressable `AppDialog variant="document"`; route
+  `/inventory/purchase-requests` chỉ redirect tương thích.
 - `/br/[branchId]/stock/reports` là Branch-native touch `REPORT`: cố định đúng
   chi nhánh URL và tháng hiện tại, ưu tiên chênh lệch tiêu hao warning/critical
   rồi biến động của từng nguyên liệu có drill-in vào tồn thực. Mỗi số lượng luôn
@@ -591,7 +590,7 @@ App-local form helpers sống tại `apps/web/app/components/form/`. Dùng cho m
 - `Combobox` — control searchable độc lập; trong data-entry phải đặt trong `FormField` với `id` ổn định
 - `TextareaField` — Textarea + RHF
 - `AppDialog` — generic app Dialog shell; `variant="document"` dành cho chứng
-  từ list-first YCM, PO và GRN
+  từ list-first PO và GRN
 - `FormDialog` — generic Dialog + `useForm` + `zodResolver` + `useTransition`
 - `valuesToFormData` — adapter để gọi server actions `withFormAction`-wrapped
 
@@ -616,15 +615,15 @@ Schema: luôn dùng Zod 4 với `{ error: "..." }` (không dùng `{ message }`).
 
 Inventory IA bám ba luồng hiện hành:
 
-1. `Nhập hàng` — gửi YCM → Kế toán tạo và gửi PO → Kho lưu GRN nháp rồi xác
-   nhận nhập kho; chỉ bước xác nhận GRN làm phát sinh tồn/WAC. Hóa đơn NCC
-   handoff sang Finance/AP.
+1. `Nhập hàng` — Kho lập PO không giá, hệ thống tách theo NCC → Kế toán duyệt
+   hoặc trả lại → Kho xác nhận GRN → Kế toán nhập giá theo dòng Hóa đơn NCC;
+   chỉ xác nhận GRN làm phát sinh tồn/WAC.
 2. `Kiểm soát tồn` — đúng một warehouse cho mỗi site active, kiểm kê, hao
    hụt/điều chỉnh và báo cáo.
 3. `Sản xuất/tiêu hao` — workflow/RPC đang có tại branch, sale-consumption và
    write-off có nguồn rõ.
 
-Không có bước duyệt PO bắt buộc. Không đưa supplier return, lot/expiry,
+Kế toán duyệt PO trước khi Kho nhận hàng. Không đưa supplier return, lot/expiry,
 production order hoặc same-branch Kho↔Bếp transfer vào daily IA.
 
 Sidebar labels phải ngắn và scan được trong sidebar cố định. Tên đầy đủ của luồng đặt trong page title, breadcrumb, tab, hoặc empty state thay vì ép vào group label dài.
@@ -644,8 +643,8 @@ at the first match.
    `Drawer`. Raw `Dialog` requires an approved exception.
 4. **View home:** phiên độc lập, kéo dài, danh sách không còn là ngữ cảnh làm
    việc → **Page** (DETAIL hoặc DOC-WORKFLOW). List-first view → **addressable
-   overlay** bound to `?<entity>Id=`. YCM, PO và GRN là nhóm chứng từ list-first
-   đã duyệt và dùng `AppDialog variant="document"` trên Owner/Ops. YCH và
+   overlay** bound to `?<entity>Id=`. Nhu cầu mua, PO và GRN là nhóm chứng từ
+   list-first và dùng `AppDialog variant="document"` trên Owner/Ops. YCH và
    Transfer dùng một fulfillment hub với canonical DETAIL Page trong từng route
    family. Line array hoặc stage footer không tự động ép sang Page; mỗi state
    vẫn chỉ có một primary action.

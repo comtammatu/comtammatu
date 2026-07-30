@@ -1,6 +1,6 @@
 # ADR 0017 — AP and central operations
 
-**Status:** Accepted, 2026-07-27
+**Status:** Accepted, amended by D098 on 2026-07-30
 
 **Scope:** Greenfield roadmap in `comtammatu` after cutoff `baf3720f8`.
 
@@ -31,9 +31,9 @@ and statutory accounting.
 8. Central stock and production belong only to `central_kitchen`; branch
    runtime does not regain branch-level production.
 9. Goods supplier invoices may allocate multiple confirmed GRNs/POs from one
-   supplier. Matching compares `subtotal + document_discount_amount` with the
-   sum of `po_applied_quantity * unit_price_est`; the automatic tolerance is
-   `±1 VND`.
+   supplier. Matching uses allocated receipt quantities and the invoice-line
+   price/discount. PO and GRN prices are not commercial price sources; header
+   subtotal, document discount, VAT, and total reconcile within `±1 VND`.
 10. Service supplier invoices have no GRN allocation and require a manual,
     reasoned document verification before payment.
 11. Accountant may create invoices, recompute matching, verify service

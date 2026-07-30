@@ -102,7 +102,7 @@ test("generated database types match the final D091 catalog", () => {
   assert.match(generated, /\bcreate_grn_from_approved_po\b/);
 });
 
-test("app authority uses request to PO to GRN and omits retired QC permissions", () => {
+test("app authority uses PO approval to GRN and omits retired QC permissions", () => {
   const permissions = read("packages/shared/src/auth/permissions.ts");
   const fixture = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
   const roleMatrix = read("docs/spec/role-route-matrix.md");
@@ -140,16 +140,12 @@ test("app authority uses request to PO to GRN and omits retired QC permissions",
     assert.doesNotMatch(roleMatrix, pattern);
   }
 
-  assert.match(purchaseOrderActions, /createPurchaseOrderFromRequest/);
-  assert.match(purchaseOrderActions, /createGrnDraftFromPurchaseOrder/);
+  assert.match(purchaseOrderActions, /savePurchaseDemand/);
+  assert.match(purchaseOrderActions, /reviewPurchaseDemand/);
   assert.doesNotMatch(purchaseOrderActions, /createPurchaseOrderFromGrn/);
-  assert.match(purchaseOrderClient, /Tạo phiếu nhập/);
-  assert.match(purchaseOrderClient, /Tiếp tục nhập hàng/);
-  assert.match(inventoryMessages, /đơn giá từ 0 trở lên/);
-  assert.match(
-    inventoryMessages,
-    /Phiếu nhập được tạo theo từng lần giao từ đơn đặt hàng đã gửi/,
-  );
+  assert.doesNotMatch(purchaseOrderClient, /Duyệt mua|Gửi lại Kho/);
+  assert.match(purchaseOrderClient, /copy\.receiveMoreAction/);
+  assert.doesNotMatch(purchaseOrderClient, /unit_price|unitPrice/);
   assert.doesNotMatch(inventoryMessages, /tạo phiếu nhập trước/);
   assert.doesNotMatch(transferModel, /branch_kitchen|["']kitchen["']/);
   assert.doesNotMatch(stockData, /\bkitchen\b/);

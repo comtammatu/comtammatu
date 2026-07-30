@@ -67,13 +67,18 @@ export function isProcurementBranchInScope(
   return effectiveBranchId === targetBranchId;
 }
 
-/**
- * Roles allowed to create/approve purchase orders (D091/D093).
- */
-export const PO_MUTATE_ROLES: readonly StaffRole[] = [
+export const PO_CREATE_ROLES: readonly StaffRole[] = [
+  "owner",
+  "central_supply_ops",
+  "central_kitchen_lead",
+] as const;
+
+export const PO_REVIEW_ROLES: readonly StaffRole[] = [
   "owner",
   "accountant",
 ] as const;
+
+export const PO_MUTATE_ROLES = PO_REVIEW_ROLES;
 
 export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
   "owner",

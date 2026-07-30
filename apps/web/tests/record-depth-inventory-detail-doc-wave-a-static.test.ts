@@ -22,12 +22,6 @@ const AUTHOR_DOC = [
       "app/(protected)/inventory/production/new/production-new-client.tsx",
   },
   {
-    name: "grn/new/[supplierId]",
-    page: "app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
-    client:
-      "app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
-  },
-  {
     name: "waste/new",
     page: "app/(protected)/inventory/waste/new/page.tsx",
     client: "app/(protected)/inventory/waste/new/waste-create-client.tsx",
@@ -93,17 +87,7 @@ test("Wave A production/new page delegates chrome to DocumentFormFrame client", 
   );
 });
 
-test("Wave A GRN create opens DocumentFormFrame without supplier picker", () => {
+test("Wave A GRN creation redirects to the canonical queue", () => {
   const page = read("app/(protected)/inventory/grn/new/page.tsx");
-  const client = read(
-    "app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
-  );
-
-  assert.match(page, /loadGrnCreatePageData/);
-  assert.match(page, /GrnCreateClient/);
-  assert.doesNotMatch(page, /SupplierPicker/);
-  assert.match(client, /DocumentFormFrame/);
-  assert.match(client, /width="wide"/);
-  assert.match(client, /density="compact"/);
-  assert.match(client, /GRN_CREATE_COPY\.newReceiptTitle/);
+  assert.match(page, /redirect\("\/inventory\/grn"\)/);
 });

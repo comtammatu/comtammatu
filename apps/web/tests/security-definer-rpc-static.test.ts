@@ -18,6 +18,7 @@ const AUTH_BOUNDARY_TOKENS = [
   "auth.uid()",
   "auth.role()",
   "auth_is_owner(",
+  "can_read_inventory_monetary(",
 ] as const;
 
 const BROAD_GRANT_ALLOWLIST = new Set([
@@ -39,13 +40,54 @@ const BROAD_GRANT_ALLOWLIST = new Set([
   "inv_catalog_unit_to_base",
 ]);
 
-// REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC | anon | authenticated
-const REVOKE_BROWSER_ROLE = /REVOKE\s[\s\S]*?\bFROM\s+(PUBLIC|anon|authenticated)/i;
 const BROWSER_EXECUTE_GRANT =
   /GRANT\s+(?:EXECUTE|ALL)\s+ON\s+FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([^;]*?\)\s+TO\s+[^;]*\b(?:PUBLIC|anon|authenticated)\b[^;]*;/gi;
 const FUNCTION_BODY =
   /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)[\s\S]*?\bAS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
+const DEFINER_FUNCTION =
+  /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([\s\S]*?\)[\s\S]*?SECURITY\s+DEFINER[\s\S]*?AS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
 const FUNCTION_CALL = /\b(?:public\.)?([a-zA-Z_][\w]*)\s*\(/g;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function browserGrantPattern(functionName: string): RegExp {
+  return new RegExp(
+    `GRANT\\s+(?:EXECUTE|ALL)\\s+ON\\s+FUNCTION\\s+(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)\\s+TO\\s+[^;]*(?:PUBLIC|anon|authenticated)`,
+    "i",
+  );
+}
+
+function browserRevokePattern(functionName: string, role: string): RegExp {
+  return new RegExp(
+    `REVOKE\\s+(?:ALL|EXECUTE)\\s+ON\\s+FUNCTION\\s+(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)\\s+FROM\\s+[^;]*\\b${escapeRegExp(role)}\\b`,
+    "i",
+  );
+}
+
+function lastMatchIndex(source: string, pattern: RegExp): number {
+  const flags = pattern.flags.includes("g")
+    ? pattern.flags
+    : `${pattern.flags}g`;
+  let last = -1;
+  for (const match of source.matchAll(new RegExp(pattern.source, flags))) {
+    last = match.index;
+  }
+  return last;
+}
+
+function browserRolesAreFinallyRevoked(
+  source: string,
+  functionName: string,
+): boolean {
+  const lastGrant = lastMatchIndex(source, browserGrantPattern(functionName));
+  return ["PUBLIC", "anon", "authenticated"].every(
+    (role) =>
+      lastMatchIndex(source, browserRevokePattern(functionName, role)) >
+      lastGrant,
+  );
+}
 
 function forwardMigrationFiles(): string[] {
   return readdirSync(migrationsDir)
@@ -65,17 +107,28 @@ test("forward SECURITY DEFINER migrations carry an auth boundary or a browser-ro
 
   const violations: string[] = [];
 
-  for (const name of files) {
-    const sql = readFileSync(resolve(migrationsDir, name), "utf8");
-    if (!sql.includes("SECURITY DEFINER")) continue;
+  const migrations = files.map((name) => ({
+    name,
+    sql: readFileSync(resolve(migrationsDir, name), "utf8"),
+  }));
 
-    const hasAuthBoundary = AUTH_BOUNDARY_TOKENS.some((token) =>
-      sql.includes(token),
-    );
-    const hasRevoke = REVOKE_BROWSER_ROLE.test(sql);
-
-    if (!hasAuthBoundary && !hasRevoke) {
-      violations.push(name);
+  for (const [index, migration] of migrations.entries()) {
+    const finalSource = migrations
+      .slice(index)
+      .map(({ sql }) => sql)
+      .join("\n");
+    for (const match of migration.sql.matchAll(DEFINER_FUNCTION)) {
+      const functionName = match[1]!;
+      const body = match[3] ?? "";
+      const hasAuthBoundary = AUTH_BOUNDARY_TOKENS.some((token) =>
+        body.includes(token),
+      );
+      if (
+        !hasAuthBoundary &&
+        !browserRolesAreFinallyRevoked(finalSource, functionName)
+      ) {
+        violations.push(`${migration.name}: ${functionName}`);
+      }
     }
   }
 
@@ -94,6 +147,11 @@ test("browser-executable RPC grants have an auth boundary or an explicit allowli
 
   const violations: string[] = [];
   const functionBodies = new Map<string, string[]>();
+  const migrations = files.map((name) => ({
+    name,
+    sql: readFileSync(resolve(migrationsDir, name), "utf8"),
+  }));
+  const finalSource = migrations.map(({ sql }) => sql).join("\n");
 
   function bodyHasAuthBoundary(
     functionName: string,
@@ -116,17 +174,26 @@ test("browser-executable RPC grants have an auth boundary or an explicit allowli
     return false;
   }
 
-  for (const name of files) {
-    const sql = readFileSync(resolve(migrationsDir, name), "utf8");
+  for (const { sql } of migrations) {
     for (const match of sql.matchAll(FUNCTION_BODY)) {
       const functionName = match[1];
       const body = match[3] ?? "";
-      if (functionName) functionBodies.set(functionName, [body]);
+      if (functionName) {
+        functionBodies.set(functionName, [
+          ...(functionBodies.get(functionName) ?? []),
+          body,
+        ]);
+      }
     }
 
+  }
+
+  for (const { name, sql } of migrations) {
     for (const match of sql.matchAll(BROWSER_EXECUTE_GRANT)) {
       const functionName = match[1];
+      if (!functionName) continue;
       if (BROAD_GRANT_ALLOWLIST.has(functionName)) continue;
+      if (browserRolesAreFinallyRevoked(finalSource, functionName)) continue;
 
       if (!bodyHasAuthBoundary(functionName)) {
         violations.push(`${name}: ${functionName}`);

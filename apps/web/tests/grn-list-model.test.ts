@@ -46,16 +46,27 @@ test("GRN list filters combine status with document, supplier, and PO search", (
     [2],
   );
   assert.deepEqual(
-    filterGrnListRows(rows, { query: "", status: "review" }).map(
+    filterGrnListRows(rows, { query: "", status: "cancelled" }).map(
       (row) => row.id,
     ),
-    [1],
+    [],
   );
 });
 
 test("GRN list filter state and supplier draft href keep route scope explicit", () => {
-  assert.equal(hasGrnListFilters({ query: "", status: "all" }), false);
-  assert.equal(hasGrnListFilters({ query: "rice", status: "all" }), true);
+  const emptyFilters = {
+    query: "",
+    status: "all" as const,
+    supplierId: null,
+    dateField: "received" as const,
+    dateFrom: "",
+    dateTo: "",
+    poId: null,
+    purchaseRequestId: null,
+    branchId: null,
+  };
+  assert.equal(hasGrnListFilters(emptyFilters), false);
+  assert.equal(hasGrnListFilters({ ...emptyFilters, query: "rice" }), true);
   assert.equal(
     newGrnSupplierHref("/br/12/stock/grn", 44, 12),
     "/br/12/stock/grn/new?supplierId=44&branchId=12",

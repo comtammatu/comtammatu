@@ -173,7 +173,11 @@ export function uniqueGrnSuppliers(
 }
 
 export function isLinkedPoApproved(status: string | null | undefined): boolean {
-  return status === "sent" || status === "partially_received";
+  return (
+    status === "approved" ||
+    status === "sent" ||
+    status === "partially_received"
+  );
 }
 
 export function allLinkedPosApproved(

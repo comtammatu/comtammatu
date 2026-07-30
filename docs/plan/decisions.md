@@ -750,3 +750,59 @@ một PO có nhiều GRN theo lần giao và tối đa một nháp tiếp tục 
 **Canonical:** `docs/ref/inventory.md`,
 `supabase/migrations/20260730100000_auto_grn_draft_queue.sql`,
 `apps/web/app/(protected)/inventory/grn/grn-list-client.tsx`.
+
+## D098: PO-first và giá mua chỉ từ Hóa đơn NCC (2026-07-30)
+
+**Decision (owner):**
+
+1. Luồng mua ngoài bắt đầu tại PO do Kho lập; không tạo YCM hoặc thực thể cha
+   thay thế. Hệ thống lấy NCC ưu tiên của nguyên liệu, chặn nguyên tử nếu thiếu
+   cấu hình và tách một PO cho mỗi NCC.
+2. Một lần gửi dùng chung `purchase_group_key` và mã nhóm. Mọi PO đều có hậu
+   tố hai chữ số `-01`, `-02`, …; hậu tố đã cấp không tái sử dụng.
+3. PO đi qua `draft → pending_approval → approved`; Kế toán có thể trả chính
+   PO đó về `changes_requested` hoặc từ chối thành `cancelled`, đều kèm lý do.
+   Duyệt tạo đúng một GRN nháp trong cùng giao dịch.
+4. PO và GRN không có giá do Kho nhập. GRN dùng giá vận hành nội bộ theo thứ
+   tự: giá Hóa đơn NCC đã xác nhận gần nhất của NCC–nguyên liệu, WAC, giá tham
+   chiếu, rồi `cost_pending`.
+5. Kế toán nhập đơn giá, chiết khấu và VAT theo từng dòng Hóa đơn NCC, phân bổ
+   tới dòng GRN đã xác nhận cùng NCC. Hóa đơn nháp được sửa; hóa đơn đã xác
+   nhận là bất biến. Không có thao tác sửa giá ngoài chứng từ hóa đơn.
+6. Owner giữ quyền thanh toán và phân bổ ứng trước. Không hồi tố stock
+   movement/WAC và không tự ghi chênh lệch vào chi phí.
+
+**Supersedes:** D096, D097 và các quyết định YCM/direct-send trước đó trong
+phạm vi mua ngoài. D093 và luồng Yêu cầu hàng/Transfer nội bộ không đổi.
+
+**Canonical:** `supabase/migrations/20260730140000_po_first_purchase_workflow.sql`,
+`supabase/migrations/20260730150000_supplier_invoice_line_pricing.sql`,
+`apps/web/app/(protected)/inventory/purchase-orders`,
+`apps/web/app/(protected)/finance/supplier-invoices`.
+
+## D099: Nhu cầu mua và phân bổ NCC trước PO (2026-07-30)
+
+**Decision (owner):**
+
+1. Tái sử dụng `purchase_requests` làm **Nhu cầu mua** trước PO. Kho chỉ nhập
+   nguyên liệu, số lượng, đơn vị và ngày cần; không chọn hoặc nhận payload NCC,
+   giá mua hay WAC.
+2. Một nguyên liệu có thể có nhiều NCC. NCC ưu tiên chỉ xếp trước để tham khảo;
+   Kế toán phải tự phân bổ và tổng phân bổ phải đúng bằng phần nhu cầu còn lại.
+   Kho vẫn gửi được nguyên liệu chưa có NCC, nhưng Kế toán không thể duyệt.
+3. `review_purchase_demand(..., approve, ...)` khóa nhu cầu và allocations,
+   tạo một PO `approved` cho mỗi NCC cùng mã nhóm/hậu tố không tái sử dụng, đồng
+   thời tạo đúng một GRN nháp/PO. Không có bước duyệt PO thứ hai.
+4. Hủy PO trước GRN xác nhận trả phần lượng đó về chính nhu cầu, chuyển nhu cầu
+   sang `partially_ordered` hoặc `pending_allocation` và dùng hậu tố mới khi
+   phân bổ lại.
+5. Canonical UI là `/inventory/purchase-orders` với hai tab `needs|orders`.
+   `demandId`, `poId`, `grnId`, `invoiceId` là URL state của overlay; các route
+   cũ chỉ redirect.
+
+**Supersedes:** D098 mục 1–3. D098 mục 4–6 về GRN, Hóa đơn NCC, giá và thanh
+toán tiếp tục giữ nguyên. D093 và Yêu cầu hàng/Transfer nội bộ không đổi.
+
+**Canonical:** `supabase/migrations/20260730190000_purchase_demand_supplier_allocation.sql`,
+`apps/web/app/(protected)/inventory/purchase-orders`,
+`apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx`.

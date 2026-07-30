@@ -231,14 +231,17 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 Inventory owns the detailed stock-value workspace. Finance displays only the
 current inventory-value card and does not expose a duplicate inventory route.
 
-Goods supplier invoice matching compares `subtotal +
-document_discount_amount` with the sum of `po_applied_quantity *
-unit_price_est` across every allocated confirmed GRN/PO from the same supplier.
-The automatic tolerance is `±1 VND`; a larger difference remains
+Goods supplier invoice matching validates line quantities against allocated
+confirmed GRN/PO lines from the same supplier and values each allocation with
+the supplier invoice line `unit_price` and line discount. PO and GRN prices are
+not commercial price sources. Header subtotal, document discount, VAT, and
+total must reconcile within `±1 VND`; a larger difference remains
 `discrepancy` until an Accountant accepts it with a reason. Service invoices
 do not allocate GRNs and remain `pending` until an Accountant verifies the
-document with a reason. AP balance and supplier payment use `total_amount =
-subtotal + vat_amount`. Multi-rate input invoices
+document with a reason. A draft remains editable; confirmation seals its
+financial lines and publishes supplier-ingredient price history. AP balance
+and supplier payment use `total_amount = subtotal -
+document_discount_amount + vat_amount`. Multi-rate input invoices
 store one immutable `vat_breakdown` bucket per rate; database normalization
 derives the header totals and leaves the compatibility `vat_rate` null when
 more than one rate is present. Recording a supplier payment requires at least

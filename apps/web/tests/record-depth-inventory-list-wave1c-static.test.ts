@@ -16,7 +16,8 @@ test("Wave 1 batch C suppliers wires three doors from getSupplierRowActions", ()
   assert.match(source, /<RowActionsMenu/);
   assert.match(source, /renderRowContextMenu=\{/);
   assert.match(source, /RowActionsContextMenuItems\s+items=\{/);
-  assert.match(source, /onRowClick=\{openEdit\}/);
+  assert.match(source, /onRowClick=\{canReadItems \? openItems : undefined\}/);
+  assert.match(source, /key:\s*"items"/);
   assert.match(source, /key:\s*"edit"/);
   assert.match(source, /key:\s*"delete"/);
   assert.doesNotMatch(

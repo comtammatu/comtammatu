@@ -32,34 +32,33 @@ Synthesis: reuse the current supplier invoice list/Sheet and RPC seams. Persist 
 - [ ] Run authenticated Owner/Accountant smoke when Greenfield has valid QA credentials.
 - [ ] Run the cleanup migration only after deployed callers no longer use direct DML or old payment/matching RPC signatures.
 
-## Streamline YCM → PO → GRN and YCH → Transfer
+## Implement purchase demand allocation → PO → GRN → supplier invoice
 
 State: verify
 Kind: feature
 Tier: T3
 Lane: inventory/procurement
-Exit: YCM, PO, and YCH submit in one primary action; GRN alone keeps a final confirmation; editable/cancellable/closable states are database-enforced; Owner/Ops records open in URL-addressable document dialogs while Branch Stock keeps fullscreen sheets.
+Exit: Warehouse submits purchase demand without supplier or price; Accountant allocates the exact quantity across active suppliers and atomically creates supplier-specific approved POs plus one GRN draft per PO; supplier invoice lines remain the only commercial purchase-price input; Owner-only payment and advances remain idempotent.
 Evidence: additive migration replay, atomic RPC behavior tests, role/static workflow contracts, repository gates, and authenticated responsive smoke after the migration is applied to an authorized target.
 
 ### T3 review
 
-- **PM:** Remove redundant internal handoffs without adding a general workflow engine; keep draft only as a secondary escape hatch.
-- **BA:** `cancelled` is valid only before downstream work, while `closed` abandons the unprocessed remainder after partial work; confirmed GRNs remain immutable.
-- **Senior Dev:** Database locks and RPCs own multi-row transitions and idempotency; URL params own the open record; compatibility RPCs remain during the additive rollout.
-- **QA:** Cover invalid transitions, retries, partial PO/GRN and YCH/Transfer flows, persona payload boundaries, Back/Forward/deep links, dirty close, and responsive overlays.
+- **PM:** Reuse `purchase_requests` as the operator-facing Nhu cầu mua record and keep one `Mua hàng` workspace with `needs` and `orders` tabs; do not add a workflow engine.
+- **BA:** Warehouse records quantity only. Accountant must allocate every demand line exactly across active suppliers; approval creates one PO and one GRN draft per supplier. Cancelling an unreceived PO returns its quantity to the original demand.
+- **Senior Dev:** Existing purchase request, PO, GRN, supplier mapping, AppDialog, and URL-param seams are reused. Locked RPCs own allocation, grouping, idempotency, and recovery; compatibility RPCs remain during additive rollout.
+- **QA:** Cover missing suppliers at submit versus approve, exact allocation, invalid mappings, retries, PO cancellation recovery, one-GRN-per-PO, price payload absence, Back/Forward/deep links, dirty close, and responsive overlays.
 
-Synthesis: change the four existing state machines and their current list surfaces only; preserve Branch/Owner separation, monetary authority boundaries, and old RPC compatibility until deployed callers are proven migrated.
+Synthesis: keep demand, supplier allocation, receiving, invoice evidence, and payment as explicit boundaries. Preserve YCH/Transfer, Branch/Owner separation, monetary authority, and old RPC compatibility until deployed callers are proven migrated.
 
-- [ ] Apply the additive migration to an authorized target, regenerate database types from that schema, and run authenticated persona smoke before cleanup.
-- [ ] Deploy and smoke a mixed-coverage YCM: mapped lines create and send POs, unmapped lines stay outstanding, and the request remains `partially_ordered`.
+- [ ] Apply the additive migrations to the authorized Greenfield target, regenerate database types, and run authenticated Warehouse/Accountant/Owner smoke before cleanup.
 
-## Implement purchase request → PO → GRN → supplier AP
+## Retire purchase request → PO compatibility
 
 State: verify
 Kind: feature
 Tier: T3
 Lane: inventory/procurement-finance
-Exit: External purchase requests create supplier-specific POs; each delivery creates one active GRN draft from its PO; confirmation applies only remaining PO quantity, values excess at zero, and updates stock/PO atomically; supplier invoices, payments, and credits support explicit many-to-many allocations without exposing monetary data to warehouse roles.
+Exit: No new application caller, navigation item, or canonical route creates YCM; legacy RPCs/columns remain only through additive rollout and are removed after deployed-caller and data cleanup proof.
 Evidence: additive migration replayed from the current baseline and applied to Greenfield; 38 focused PO/GRN/Finance acceptance tests; URL-filtered unified GRN list; regenerated Greenfield database types; post-apply RLS, RPC grants, and advisor checks.
 
 ### T3 review

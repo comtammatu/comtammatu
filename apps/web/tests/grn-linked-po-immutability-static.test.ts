@@ -42,7 +42,7 @@ test("linked PO freezes GRN line and receiving-location mutations", () => {
   );
 });
 
-test("personal draft queues and discard exclude linked drafts", () => {
+test("free-draft lookup stays isolated while PO drafts cancel through the RPC", () => {
   const actions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const listDrafts = between(
     actions,
@@ -54,45 +54,31 @@ test("personal draft queues and discard exclude linked drafts", () => {
     "export const discardGrnDraft",
     "const updateDraftGrnReceivingSiteSchema",
   );
-  const ownerList = read(
-    "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
-  );
   const branchList = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
   );
 
   assert.match(listDrafts, /\.is\("po_id", null\)/);
-  assert.match(discardDraft, /\.is\("po_id", null\)/);
-  assert.match(ownerList, /draft\.poId == null/);
+  assert.match(
+    actions,
+    /reason:\s*z\s*\.string\(\)[\s\S]*?\.trim\(\)[\s\S]*?\.min\(5\)/,
+  );
+  assert.match(discardDraft, /\.rpc\(\s*"cancel_goods_receipt_note"/);
   assert.match(branchList, /draft\.poId == null/);
 });
 
-test("fully rejected free drafts remain discardable", () => {
+test("draft cancellation does not infer eligibility from receipt quantities", () => {
   const actions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const discardDraft = between(
     actions,
     "export const discardGrnDraft",
     "const updateDraftGrnReceivingSiteSchema",
   );
-  const ownerList = read(
-    "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
-  );
-  const branchList = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
-  );
-
   assert.doesNotMatch(
     discardDraft,
     /rejected_quantity|received_quantity|grn_items/,
   );
-  assert.match(
-    ownerList,
-    /if \(draft\.poId == null && draft\.poCount === 0\) \{/,
-  );
-  assert.match(
-    branchList,
-    /\{draft\.poId == null && draft\.poCount === 0 \? \(/,
-  );
+  assert.match(discardDraft, /draft\.status !== "draft"/);
 });
 
 test("existing GRN drafts always resume on canonical DETAIL", () => {
@@ -109,9 +95,9 @@ test("existing GRN drafts always resume on canonical DETAIL", () => {
   );
 
   assert.match(model, /return `\$\{basePath\}\/\$\{draft\.grnId\}`;/);
-  assert.doesNotMatch(
-    between(model, "export function grnDraftHref", "type GrnDraftSearchRow"),
-    /newGrnSupplierHref|draft\.poId/,
+  assert.match(
+    model,
+    /export function grnDraftHref\([\s\S]*?return `\$\{basePath\}\/\$\{draft\.grnId\}`;/,
   );
   assert.match(
     branchList,
@@ -123,8 +109,11 @@ test("existing GRN drafts always resume on canonical DETAIL", () => {
     /if \(draftRow\?\.id\) \{\s*redirect\(`\$\{grnBasePath\}\/\$\{draftRow\.id\}`\);\s*\}/,
   );
   assert.doesNotMatch(createData, /fetchGrnDetail|existingDraft/);
-  assert.match(ownerCreateRoute, /redirect\("\/inventory\/grn\/new"\)/);
-  assert.match(branchCreateRoute, /redirect\(`\/br\/\$\{branchId\}\/stock\/grn\/new`\)/);
+  assert.match(ownerCreateRoute, /redirect\("\/inventory\/grn"\)/);
+  assert.match(
+    branchCreateRoute,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
+  );
 });
 
 test("GRN detail derives mutation and supplier-invoice authority", () => {
@@ -138,42 +127,37 @@ test("GRN detail derives mutation and supplier-invoice authority", () => {
   assert.match(data, /PERMISSION_KEYS\.PROCUREMENT_INVOICE_CREATE/);
   assert.match(
     data,
-    /canEditDraft && data\.grn\.status === "draft" && !hasPoLink/,
+    /const canEditDraftLines = canEditDraft && data\.grn\.status === "draft"/,
   );
+  assert.match(data, /const canEditUnlinkedDraft = canEditDraftLines && !hasPoLink/);
   assert.match(data, /\.from\("inventory_locations"\)/);
   assert.match(data, /locationName:/);
-  assert.match(page, /canEditDraft=\{result\.data\.canEditDraft\}/);
   assert.match(
     page,
-    /canManageSupplierInvoice=\{result\.data\.canManageSupplierInvoice\}/,
+    /redirect\(`\/inventory\/grn\?grnId=\$\{encodeURIComponent\(id\)\}&mode=view`\)/,
   );
   assert.match(
     client,
-    /const canMutateDraft =\s*canEditDraft && isDraft && grn\.poId == null && grn\.linkedPos\.length === 0;/,
+    /const canMutateDraft = canEditDraft && isDraft;/,
+  );
+  assert.match(
+    client,
+    /const canChangeLineSet =\s*canMutateDraft && grn\.poId == null && grn\.linkedPos\.length === 0;/,
   );
   assert.match(client, /!isDraft && canManageSupplierInvoice/);
   assert.match(client, /const receivingLocationName = grn\.locationName;/);
   assert.doesNotMatch(client, /receivingLocationOptions\.find/);
 });
 
-test("Create PO only snapshots clean persisted GRN lines", () => {
+test("GRN detail cannot create a PO retrospectively", () => {
   const client = read(
     "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
-  const handler = between(
-    client,
-    "function handleCreatePoFromGrn",
-    "const draftColumns",
+  const newPage = read(
+    "apps/web/app/(protected)/inventory/grn/new/page.tsx",
   );
-  const buttonStart = client.indexOf("{canCreatePoFromGrn ? (");
-  assert.ok(buttonStart >= 0, "Create PO button not found");
-  const button = client.slice(buttonStart, buttonStart + 700);
-
-  assert.match(handler, /if \(isSaving \|\| dirtyLines\.length > 0\) \{/);
-  assert.match(
-    button,
-    /disabled=\{\s*isCreatingPo \|\|\s*isSaving \|\|\s*dirtyLines\.length > 0 \|\|\s*lines\.length === 0\s*\}/,
-  );
+  assert.doesNotMatch(client, /handleCreatePoFromGrn|canCreatePoFromGrn/);
+  assert.match(newPage, /redirect\("\/inventory\/grn"\)/);
 });
 
 test("confirm delegates approved-PO and physical QC checks to the final RPC", () => {

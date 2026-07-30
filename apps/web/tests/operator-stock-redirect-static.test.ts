@@ -708,7 +708,7 @@ test("GRN create routes into streamlined procurement entrypoints", () => {
     /loadGrnCreatePageData|BranchGrnCreateClient/,
   );
 
-  assert.match(grnNewPage, /redirect\("\/inventory\/purchase-orders"\)/);
+  assert.match(grnNewPage, /redirect\("\/inventory\/grn"\)/);
 });
 
 test("transfer receive requires inspection and keeps the atomic receive action", () => {

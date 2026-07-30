@@ -91,7 +91,7 @@ Other locked rulings:
 
 | Record | Depth | Notes |
 | --- | --- | --- |
-| YCM, PO, GRN | D1 Document | Owner/Ops `AppDialog variant="document"`; legacy DETAIL routes redirect |
+| PO, GRN | D1 Document | Owner/Ops `AppDialog variant="document"`; legacy DETAIL routes redirect |
 | YCH, Transfer | D2 workflow | Shared fulfillment hub; canonical Owner/Ops and Branch DETAIL pages |
 | Issue/consumption, stocktake session, production, stock card | D2 | Independent DETAIL Page |
 | Supplier invoice | D1 | Finance `Sheet` + `?invoiceId=` |
@@ -104,7 +104,7 @@ Other locked rulings:
 
 ### Owner amendment (2026-07-29)
 
-YCM → PO → GRN is a list-first operational chain. Its canonical record view
+PO → GRN is a list-first operational chain. Its canonical record view
 keeps the list mounted and stores the open record plus mode in URL query
 parameters. Row open uses push so Browser Back closes the overlay; view/edit
 mode changes and explicit close use replace while retaining filters, site, tab,
@@ -117,7 +117,7 @@ primary action.
 
 YCH → Transfer is a job-based fulfillment chain. Owner/Ops and Branch retain
 separate route families and chrome, but both use one queue model and canonical
-DETAIL pages for YCH and Transfer. The old `{basePath}/{id}` routes for YCM, PO,
+DETAIL pages for YCH and Transfer. The old `{basePath}/{id}` routes for PO,
 and GRN remain bookmark shims that redirect to the canonical query URL.
 
 ## Consequences
@@ -146,7 +146,7 @@ and GRN remain bookmark shims that redirect to the canonical query URL.
   carve-outs remain: **C4** zero-action LIST, **C1** PO LIST outside Wave 4
   row-open ratchet, Owner `AppDialog` / Branch `Sheet` dual plane for count
   slips/assignments. No new policy — enforces Waves 1–3.
-- **Wave 5 (list-first documents):** YCM, PO, and GRN use the D1 Document tier.
+- **Wave 5 (list-first documents):** PO and GRN use the D1 Document tier.
   YCH and Transfer use the D2 fulfillment workflow with canonical DETAIL pages.
   The ratchet accepts each family’s single canonical address and rejects
   parallel implementations.

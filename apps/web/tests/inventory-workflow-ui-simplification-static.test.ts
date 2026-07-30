@@ -204,11 +204,8 @@ test("operations tabs use the same sectioned list chrome", () => {
     );
   }
 
-  assert.match(grn, /actions=\{withinOwnerTabs \? desktopActions : null\}/);
-  assert.match(grn, /const listTable = grnsLoadFailed \? \(/);
-  assert.match(grn, /title=\{messages\.inventory\.grn\.loadFailed\}/);
-  assert.match(grn, /const draftsContent = draftsLoadFailed \? \(/);
-  assert.match(grn, /title=\{messages\.inventory\.grn\.draftListLoadFailed\}/);
+  assert.match(grn, /<AppListFrame toolbar=\{loadFailed \? undefined : toolbar\}>/);
+  assert.match(grn, /loadFailed/);
   assert.match(issues, /actions=\{embedded \? issueActions : null\}/);
   assert.match(transfers, /actions=\{embedded \? desktopCreateAction : null\}/);
 
@@ -387,7 +384,7 @@ test("migrated inventory lists use AppListFrame toolbar slot", () => {
 
   assert.match(
     grn,
-    /<AppListFrame toolbar=\{grnsLoadFailed \? undefined : listToolbar\}>/,
+    /<AppListFrame toolbar=\{loadFailed \? undefined : toolbar\}>/,
   );
   assert.match(countSlips, /<AppListFrame title=/);
   assert.match(countAssignments, /<AppListFrame>/);
@@ -456,13 +453,13 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
     /search=\{\s*isCompactLayout \? \(\s*searchControl/,
   );
 
-  for (const source of [stock, grn, ingredients, issues, stocktake, invoices]) {
+  for (const source of [stock, ingredients, issues, stocktake, invoices]) {
     assert.match(source, /inventoryListFilterSelectClassName/);
   }
+  assert.match(grn, /className="w-44"/);
   assert.match(transfers, /inventoryListFilterSelectWideClassName/);
   assert.match(stock, /useFormControlSize\(\)/);
   assert.match(stock, /size=\{controlSize\}/);
-  assert.match(grn, /useFormControlSize\(\)/);
   assert.match(ingredients, /useFormControlSize\(\)/);
   assert.match(
     issues,

@@ -224,7 +224,7 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
     [
       "/inventory",
       "/inventory/stock",
-      "/inventory/grn",
+      "/inventory/purchase-orders",
       "/inventory/production",
       "/inventory/settings",
     ],
@@ -292,7 +292,7 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   assert.doesNotMatch(settingsLayoutSource, /settings\/qc|icon: "qc"/);
 });
 
-test("central_supply_ops nav hides PO and recipes; shows GRN + fulfillment hub", () => {
+test("central_supply_ops nav shows PO, GRN and fulfillment while hiding recipes", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "central_supply_ops",
@@ -309,13 +309,13 @@ test("central_supply_ops nav hides PO and recipes; shows GRN + fulfillment hub",
   assert.equal(visible.has("/inventory/transfers"), true);
   assert.equal(visible.has("/inventory/stock-requests"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
-  assert.equal(visible.has("/inventory/purchase-orders"), false);
+  assert.equal(visible.has("/inventory/purchase-orders"), true);
   assert.equal(visible.has("/inventory/menu-recipes"), false);
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/production"), false);
 });
 
-test("D093 central_kitchen_lead sees production recipes only inside production", () => {
+test("D098 central_kitchen_lead sees PO and production without catalog recipes", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "central_kitchen_lead",
@@ -332,5 +332,5 @@ test("D093 central_kitchen_lead sees production recipes only inside production",
   assert.equal(visible.has("/inventory/menu-recipes"), false);
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
-  assert.equal(visible.has("/inventory/purchase-orders"), false);
+  assert.equal(visible.has("/inventory/purchase-orders"), true);
 });

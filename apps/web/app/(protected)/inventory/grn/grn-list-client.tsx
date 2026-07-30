@@ -109,9 +109,6 @@ export function GrnListClient({
   const [dateFrom, setDateFrom] = useState(filters.dateFrom);
   const [dateTo, setDateTo] = useState(filters.dateTo);
   const [poId, setPoId] = useState(filters.poId?.toString() ?? "");
-  const [requestId, setRequestId] = useState(
-    filters.purchaseRequestId?.toString() ?? "",
-  );
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const [cancelRow, setCancelRow] = useState<GrnListRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");
@@ -119,24 +116,13 @@ export function GrnListClient({
   const options = useMemo(() => {
     const suppliers = new Map<string, string>();
     const purchaseOrders = new Map<string, string>();
-    const purchaseRequests = new Map<string, string>();
     for (const row of rows) {
       suppliers.set(String(row.supplierId), row.supplierName);
       purchaseOrders.set(String(row.poId), row.poCode);
-      if (row.purchaseRequestId != null && row.purchaseRequestCode) {
-        purchaseRequests.set(
-          String(row.purchaseRequestId),
-          row.purchaseRequestCode,
-        );
-      }
     }
     return {
       suppliers: [...suppliers].map(([value, label]) => ({ value, label })),
       purchaseOrders: [...purchaseOrders].map(([value, label]) => ({
-        value,
-        label,
-      })),
-      purchaseRequests: [...purchaseRequests].map(([value, label]) => ({
         value,
         label,
       })),
@@ -153,7 +139,6 @@ export function GrnListClient({
       dateFrom: dateFrom || null,
       dateTo: dateTo || null,
       poId: poId || null,
-      requestId: requestId || null,
       branchId: filters.branchId?.toString() ?? null,
       ...next,
     };
@@ -196,14 +181,6 @@ export function GrnListClient({
         href: `/inventory/purchase-orders?poId=${row.poId}&mode=view`,
       },
     ];
-    if (row.purchaseRequestId != null) {
-      actions.push({
-        key: "purchase-request",
-        label: "Xem yêu cầu mua",
-        icon: <IconFileText />,
-        href: `/inventory/purchase-requests?requestId=${row.purchaseRequestId}&mode=view`,
-      });
-    }
     if (row.status === "confirmed" && canManageSupplierInvoice) {
       actions.push({
         key: "invoice",
@@ -267,7 +244,6 @@ export function GrnListClient({
           </div>
           <div className="font-mono text-xs text-muted-foreground">
             {row.poCode}
-            {row.purchaseRequestCode ? ` · ${row.purchaseRequestCode}` : ""}
           </div>
         </div>
       ),
@@ -424,15 +400,6 @@ export function GrnListClient({
             filter={comboFilter}
             placeholder={grnCopy.purchaseOrderFilter}
             searchPlaceholder={grnCopy.purchaseOrderSearchPlaceholder}
-            className="w-40"
-          />
-          <Combobox
-            value={requestId}
-            onValueChange={setRequestId}
-            options={options.purchaseRequests}
-            filter={comboFilter}
-            placeholder={grnCopy.purchaseRequestFilter}
-            searchPlaceholder={grnCopy.purchaseRequestSearchPlaceholder}
             className="w-40"
           />
         </>
@@ -667,7 +634,7 @@ function GrnMobileCard({
         </div>
         <p className="truncate text-xs">{row.supplierName}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {row.poCode} · {row.purchaseRequestCode ?? "—"}
+          {row.poCode}
         </p>
         <p className="truncate text-xs text-muted-foreground">
           {row.receivingSiteName} ·{" "}

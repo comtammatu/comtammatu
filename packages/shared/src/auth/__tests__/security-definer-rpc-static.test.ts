@@ -44,11 +44,11 @@ const definerFunctionPattern =
   /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([\s\S]*?\)[\s\S]*?SECURITY\s+DEFINER[\s\S]*?AS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
 
 const authzPrimitivePattern =
-  /\bpublic\.(?:has_permission|has_permission_any|auth_tenant_id|auth_is_owner)\s*\(|\bauth\.(?:uid|role)\s*\(/i;
+  /\bpublic\.(?:has_permission|has_permission_any|auth_tenant_id|auth_is_owner|can_read_inventory_monetary)\s*\(|\bauth\.(?:uid|role)\s*\(/i;
 
 function browserGrantPattern(functionName: string): RegExp {
   return new RegExp(
-    `GRANT\\s+EXECUTE\\s+ON\\s+FUNCTION\\s+(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)\\s+TO\\s+[^;]*(?:anon|authenticated)`,
+    `GRANT\\s+EXECUTE\\s+ON\\s+FUNCTION\\s+(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)\\s+TO\\s+[^;]*(?:PUBLIC|anon|authenticated)`,
     "i",
   );
 }
@@ -60,9 +60,25 @@ function browserRevokePattern(functionName: string, role: string): RegExp {
   );
 }
 
-function revokesAllBrowserRoles(source: string, functionName: string): boolean {
-  return ["PUBLIC", "anon", "authenticated"].every((role) =>
-    browserRevokePattern(functionName, role).test(source),
+function lastMatchIndex(source: string, pattern: RegExp): number {
+  const flags = pattern.flags.includes("g")
+    ? pattern.flags
+    : `${pattern.flags}g`;
+  const matches = source.matchAll(new RegExp(pattern.source, flags));
+  let last = -1;
+  for (const match of matches) last = match.index;
+  return last;
+}
+
+function browserRolesAreFinallyRevoked(
+  source: string,
+  functionName: string,
+): boolean {
+  const lastGrant = lastMatchIndex(source, browserGrantPattern(functionName));
+  return ["PUBLIC", "anon", "authenticated"].every(
+    (role) =>
+      lastMatchIndex(source, browserRevokePattern(functionName, role)) >
+      lastGrant,
   );
 }
 
@@ -153,8 +169,13 @@ function assertSqlOrder(
 
 test("forward SECURITY DEFINER migrations include an auth boundary or browser-role revoke", () => {
   const failures: string[] = [];
+  const migrations = readForwardMigrations();
 
-  for (const migration of readForwardMigrations()) {
+  for (const [migrationIndex, migration] of migrations.entries()) {
+    const finalSource = migrations
+      .slice(migrationIndex)
+      .map(({ source }) => source)
+      .join("\n");
     for (const match of migration.source.matchAll(definerFunctionPattern)) {
       const functionName = match[1]!;
       const headerEnd = match[0].search(/\bAS\s+\$[A-Za-z0-9_]*\$/i);
@@ -169,8 +190,8 @@ test("forward SECURITY DEFINER migrations include an auth boundary or browser-ro
       const grantsBrowserRole = browserGrantPattern(functionName).test(
         migration.source,
       );
-      const revokesBrowserRoles = revokesAllBrowserRoles(
-        migration.source,
+      const revokesBrowserRoles = browserRolesAreFinallyRevoked(
+        finalSource,
         functionName,
       );
       const isServiceRoleOnly =
@@ -178,15 +199,15 @@ test("forward SECURITY DEFINER migrations include an auth boundary or browser-ro
 
       if (!hasAuthBoundary && !revokesBrowserRoles) {
         failures.push(
-          `${migration.path}: public.${functionName} lacks an in-body auth boundary and does not revoke PUBLIC/anon/authenticated in the same migration`,
+          `${migration.path}: public.${functionName} lacks an in-body auth boundary and remains executable by a browser role`,
         );
       }
-      if (!hasAuthBoundary && grantsBrowserRole) {
+      if (!hasAuthBoundary && grantsBrowserRole && !revokesBrowserRoles) {
         failures.push(
           `${migration.path}: public.${functionName} grants a browser role without an in-body auth boundary`,
         );
       }
-      if (isServiceRoleOnly && grantsBrowserRole) {
+      if (isServiceRoleOnly && grantsBrowserRole && !revokesBrowserRoles) {
         failures.push(
           `${migration.path}: public.${functionName} is service-role-only but grants a browser role`,
         );

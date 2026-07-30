@@ -17,20 +17,13 @@ const leaveSource = read("app/(protected)/hr/leave-requests-table.tsx");
 const attendanceSource = read("app/(protected)/hr/attendance-table.tsx");
 
 test("HR permission and audit selects expose persistent accessible names", () => {
-  const permissionTriggers =
-    permissionsSource.match(/<SelectTrigger\b[\s\S]*?>/g) ?? [];
-  assert.equal(permissionTriggers.length, 2);
-  assert.equal(
-    permissionTriggers.every((tag) => /aria-label=/.test(tag)),
-    true,
+  assert.match(
+    permissionsSource,
+    /<SelectField[\s\S]*?name="scope"[\s\S]*?label=\{copy\.scope\}/,
   );
   assert.match(
     permissionsSource,
-    /name="scope"[\s\S]*?label=\{copy\.scope\}/,
-  );
-  assert.match(
-    permissionsSource,
-    /name="permissionKey"[\s\S]*?label=\{copy\.permission\}/,
+    /<SelectField[\s\S]*?name="permissionKey"[\s\S]*?label=\{copy\.permission\}/,
   );
   assert.match(auditFiltersSource, /const filterIdPrefix = useId\(\)/);
   assert.match(auditFiltersSource, /htmlFor=\{actionFilterId\}/);

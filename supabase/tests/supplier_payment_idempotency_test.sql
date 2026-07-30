@@ -6,6 +6,88 @@ BEGIN;
 
 DO $$
 DECLARE
+  v_owner uuid := pg_catalog.gen_random_uuid();
+  v_tenant bigint;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.profiles AS profile
+    JOIN public.positions AS position
+      ON position.id = profile.position_id
+     AND position.tenant_id = profile.tenant_id
+    WHERE position.code = 'owner'
+      AND coalesce(profile.is_active, TRUE)
+  ) THEN
+    RETURN;
+  END IF;
+
+  ALTER TABLE public.tenants
+    ALTER CONSTRAINT tenants_owner_user_id_fkey
+    DEFERRABLE INITIALLY DEFERRED;
+  SET CONSTRAINTS tenants_owner_user_id_fkey DEFERRED;
+
+  INSERT INTO public.tenants (name, slug, owner_user_id)
+  VALUES (
+    '__supplier_payment_' || v_owner::text,
+    '__supplier_payment_' || v_owner::text,
+    v_owner
+  )
+  RETURNING id INTO v_tenant;
+
+  INSERT INTO public.positions (
+    tenant_id,
+    code,
+    label_vi,
+    label_en,
+    is_active,
+    is_system
+  )
+  VALUES (v_tenant, 'owner', 'Chủ', 'Owner', TRUE, TRUE);
+
+  INSERT INTO public.role_templates (
+    tenant_id,
+    name,
+    position_code,
+    permission_keys,
+    is_system
+  )
+  VALUES (v_tenant, 'owner', 'owner', '{}'::text[], TRUE);
+
+  INSERT INTO public.branches (
+    tenant_id,
+    name,
+    branch_kind,
+    is_active,
+    code
+  )
+  VALUES (
+    v_tenant,
+    '__supplier_payment_central_' || v_owner::text,
+    'central_supply',
+    TRUE,
+    NULL
+  );
+
+  INSERT INTO auth.users (
+    id,
+    email,
+    raw_app_meta_data,
+    raw_user_meta_data
+  )
+  VALUES (
+    v_owner,
+    'supplier-payment-owner-' || v_owner::text || '@example.invalid',
+    pg_catalog.jsonb_build_object(
+      'tenant_id', v_tenant,
+      'position_code', 'owner'
+    ),
+    pg_catalog.jsonb_build_object('full_name', 'Supplier payment owner')
+  );
+END;
+$$;
+
+DO $$
+DECLARE
   v_tenant bigint;
   v_branch bigint;
   v_owner uuid;

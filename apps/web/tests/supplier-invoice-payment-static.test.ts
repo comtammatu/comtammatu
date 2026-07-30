@@ -179,7 +179,7 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
   );
   assert.match(client, /pendingCreateVatFile/);
   assert.match(client, /uploadAndAttachVatEvidence/);
-  assert.match(client, /vatSection/);
+  assert.match(client, /copy\.invoiceLines/);
   assert.match(client, /invoiceCountHeader/);
   assert.match(client, /invoiceCodesPreview/);
   assert.match(client, /RowActionsMenu/);
@@ -313,7 +313,7 @@ test("supplier invoice URL modes keep business overlays sequential", () => {
   assert.match(source, /const detailOpen =[\s\S]*invoiceMode === "view"/);
   assert.match(
     source,
-    /const createOpen = invoiceMode === "create" && canCreateInvoice/,
+    /const createOpen =[\s\S]*invoiceMode === "create"[\s\S]*invoiceMode === "edit"[\s\S]*canCreateInvoice/,
   );
   assert.match(
     source,
@@ -538,7 +538,7 @@ test("supplier invoice matching separates goods receipts from service verificati
   assert.match(client, /getDisplayMatchStatus/);
 });
 
-test("supplier invoice create dialog supports goods, services, multiple GRNs and progressive VAT", () => {
+test("supplier invoice form supports goods, services, multiple GRNs and line VAT", () => {
   const client = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
@@ -546,12 +546,14 @@ test("supplier invoice create dialog supports goods, services, multiple GRNs and
   const grnActions = readWeb("app/(protected)/inventory/grn-actions.ts");
   const messages = readWeb("lib/messages/inventory.ts");
 
-  assert.match(client, /DEFAULT_VISIBLE_VAT_RATE/);
-  assert.match(client, /visibleRates/);
-  assert.match(client, /addVatRate/);
+  assert.match(client, /copy\.invoiceLines/);
+  assert.match(messages, /invoiceLines: "Dòng hóa đơn"/);
+  assert.match(client, /unitPrice/);
+  assert.match(client, /lineDiscount/);
+  assert.match(client, /vatAmount/);
   assert.match(client, /selectedGrnKeys/);
   assert.match(client, /selectedGrns/);
-  assert.match(client, /receiptAllocations/);
+  assert.match(client, /allocations/);
   assert.match(client, /invoiceKind/);
   assert.match(client, /serviceInvoiceHint/);
   assert.match(client, /documentDiscount/);
@@ -559,26 +561,23 @@ test("supplier invoice create dialog supports goods, services, multiple GRNs and
   assert.match(client, /netAcceptedAmount/);
   assert.doesNotMatch(client, /name="matchingNotes"/);
   assert.match(page, /netAcceptedAmount/);
-  assert.match(page, /fetchGrnIdsForDropdown\(branchFilter, includeGrnId\)/);
+  assert.match(page, /fetchGrnIdsForDropdown\(/);
+  assert.match(page, /requestedInvoiceId \?\? undefined/);
   assert.match(page, /optionKey/);
   assert.match(grnActions, /net_accepted_amount/);
   assert.match(grnActions, /from\("supplier_invoices"\)/);
   assert.match(grnActions, /expandGrnDropdownOptions/);
-  assert.match(
-    grnActions,
-    /grn_items \( received_quantity, rejected_quantity, unit_cost, supplier_id/,
-  );
+  assert.match(grnActions, /purchase_order_item_id/);
   assert.match(client, /option\.optionKey/);
-  assert.match(client, /poId: selectedGrn\?\.poId/);
+  assert.match(client, /purchaseOrderItemId/);
   assert.match(
     readWeb("app/(protected)/finance/supplier-invoice-actions.ts"),
-    /create_supplier_invoice_with_allocations/,
+    /save_supplier_invoice_draft/,
   );
   assert.match(messages, /invoiceKinds:/);
   assert.match(messages, /goods: "Hàng hóa"/);
   assert.match(messages, /service: "Dịch vụ"/);
   assert.match(messages, /chooseGrnPrimary:/);
-  assert.match(messages, /addVatRate:/);
 });
 
 test("supplier invoice payment exposes visible append-only advance allocation", () => {

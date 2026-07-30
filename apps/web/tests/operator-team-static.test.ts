@@ -225,7 +225,7 @@ test("operator team can force-close a shift only after its scheduled end", () =>
   );
   assert.match(
     teamBoardSource,
-    /forceCloseStaleAttendance\(\{\s*attendanceId: shift\.attendanceId,\s*branchId,\s*\}\)/,
+    /forceCloseStaleAttendance\(\{\s*attendanceId: shift\.attendanceId,\s*branchId,\s*note: forceCloseReason\.trim\(\),\s*\}\)/,
   );
   assert.match(operatorMessagesSource, /drawerActionForceClose/);
   assert.match(operatorMessagesSource, /forceCloseNoWorkday/);

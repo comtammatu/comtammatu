@@ -171,7 +171,7 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
   assert.doesNotMatch(qr, /AppListFrame[\s\S]*?\baction=\{/);
 
   const feedbackCopy = readWeb("lib/messages/feedback.ts");
-  assert.match(feedbackCopy, /copyUrl:\s*"Sao chép link"/);
+  assert.match(feedbackCopy, /copyUrl:\s*"Sao chép đường dẫn"/);
   assert.match(feedbackCopy, /downloadQr:\s*"Tải QR"/);
 
   const createButton = readWeb(
@@ -186,8 +186,8 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
   assert.doesNotMatch(ownerQr, /<AppPage\b/);
   assert.doesNotMatch(ownerInbox, /FeedbackSubNav/);
   assert.doesNotMatch(ownerQr, /FeedbackSubNav/);
-  assert.match(ownerInbox, /getModuleLabelVi\("feedback"\)/);
-  assert.match(ownerQr, /getModuleLabelVi\("feedback"\)/);
+  assert.match(ownerInbox, /feedbackCopy\.pageTitle/);
+  assert.match(ownerQr, /feedbackCopy\.qrTitle/);
   assert.match(ownerQr, /CreateFeedbackQrButton/);
   assert.match(ownerQr, /actions=\{/);
 

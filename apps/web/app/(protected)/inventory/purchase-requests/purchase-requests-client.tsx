@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -14,7 +8,6 @@ import {
   Pencil as IconPencil,
   Plus as IconPlus,
   Search as IconSearch,
-  ShoppingCart as IconShoppingCart,
   Trash as IconTrash,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -33,7 +26,6 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Item, ItemHeader, ItemTitle } from "@comtammatu/ui/components/item";
-import { Pagination } from "@comtammatu/ui/components/pagination";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import {
   Select,
@@ -69,8 +61,9 @@ import { messages } from "@lib/messages";
 import {
   cancelPurchaseRequest,
   closePurchaseRequest,
-  savePurchaseOrdersFromRequest,
-  savePurchaseRequest,
+  reviewPurchaseDemand,
+  savePurchaseDemand,
+  savePurchaseDemandAllocations,
 } from "../purchase-order-actions";
 import {
   buildPurchaseOrderDrafts,
@@ -81,7 +74,6 @@ import {
 } from "./purchase-order-drafts";
 
 const copy = messages.inventory.purchaseRequests;
-const PO_PAGE_SIZE = 3;
 const comboFilter = (
   option: { label: string; keywords?: string[] },
   query: string,
@@ -108,6 +100,7 @@ export type PurchaseRequestRow = {
   branchId: number;
   branchName: string;
   status: string;
+  statusReason: string | null;
   neededBy: string | null;
   notes: string | null;
   createdAt: string;
@@ -115,6 +108,11 @@ export type PurchaseRequestRow = {
   lineCount: number;
   orderedLineCount: number;
   items: PurchaseRequestItemRow[];
+  allocations: Array<{
+    requestItemId: number;
+    supplierId: number;
+    quantity: number;
+  }>;
   purchaseOrders: Array<{
     id: number;
     code: string;
@@ -136,9 +134,18 @@ type RequestDraftLine = {
   entryUnitId: string;
 };
 
+type ReasonAction = {
+  kind: "cancel" | "close" | "request_changes" | "reject";
+  row: PurchaseRequestRow;
+};
+
 function statusVariant(status: string) {
   if (status === "ordered") return "success" as const;
-  if (status === "partially_ordered" || status === "submitted") {
+  if (
+    status === "pending_allocation" ||
+    status === "partially_ordered" ||
+    status === "changes_requested"
+  ) {
     return "warning" as const;
   }
   if (status === "cancelled") return "destructive" as const;
@@ -169,114 +176,118 @@ export function PurchaseRequestsClient({
   branches,
   ingredients,
   suppliers,
+  mappedIngredientIds,
   canCreateRequest,
-  canCreatePo,
+  canAllocate,
+  embedded = false,
 }: {
   rows: PurchaseRequestRow[];
   branches: Array<{ id: number; name: string }>;
   ingredients: PurchaseRequestIngredientOption[];
   suppliers: PurchaseOrderSupplier[];
+  mappedIngredientIds: number[];
   canCreateRequest: boolean;
-  canCreatePo: boolean;
+  canAllocate: boolean;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(
+    () => searchParams.get("needsQ") ?? "",
+  );
   const [branchId, setBranchId] = useState(String(branches[0]?.id ?? ""));
   const [neededBy, setNeededBy] = useState(() => getVNDateString());
   const [requestLines, setRequestLines] = useState<RequestDraftLine[]>([
     blankRequestLine(),
   ]);
-  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState(() =>
-    getVNDateString(),
-  );
-  const [poDrafts, setPoDrafts] = useState<PurchaseOrderDraft[]>([]);
-  const [unassignedPoItemIds, setUnassignedPoItemIds] = useState<number[]>([]);
-  const [poPage, setPoPage] = useState(1);
+  const [allocationDrafts, setAllocationDrafts] = useState<
+    PurchaseOrderDraft[]
+  >([]);
   const [requestIdempotencyKey, setRequestIdempotencyKey] = useState(() =>
     crypto.randomUUID(),
   );
-  const [poIdempotencyKey, setPoIdempotencyKey] = useState(() =>
-    crypto.randomUUID(),
+  const [allocationIdempotencyKey, setAllocationIdempotencyKey] = useState(
+    () => crypto.randomUUID(),
   );
   const [requestBaseline, setRequestBaseline] = useState("");
-  const [poBaseline, setPoBaseline] = useState("");
+  const [allocationBaseline, setAllocationBaseline] = useState("");
   const [reason, setReason] = useState("");
-  const [reasonAction, setReasonAction] = useState<
-    { kind: "cancel" | "close"; row: PurchaseRequestRow } | undefined
-  >();
+  const [reasonAction, setReasonAction] = useState<ReasonAction>();
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+
   const mode = searchParams.get("mode");
-  const requestId = Number(searchParams.get("requestId"));
+  const statusFilter = searchParams.get("needsStatus") ?? "all";
+  const siteFilter = searchParams.get("needsSite") ?? "all";
+  const currentPage = Math.max(
+    Number(searchParams.get("needsPage")) || 1,
+    1,
+  );
+  const demandId = Number(searchParams.get("demandId"));
   const selectedId =
-    Number.isInteger(requestId) && requestId > 0 ? requestId : null;
+    Number.isInteger(demandId) && demandId > 0 ? demandId : null;
   const selected =
     selectedId == null
       ? null
       : (rows.find((row) => row.id === selectedId) ?? null);
-  const unassignedPoItems =
-    selected?.items.filter((item) => unassignedPoItemIds.includes(item.id)) ?? [];
   const createOpen =
     mode === "create" || (mode === "edit" && selected != null);
-  const poOpen = mode === "create-po" && selected != null;
+  const allocateOpen = mode === "allocate" && selected != null;
   const recordMode =
-    mode === "view" || mode === "edit" || mode === "create-po";
+    mode === "view" || mode === "edit" || mode === "allocate";
   const filtered = useMemo(
     () =>
-      rows.filter((row) =>
-        matchesSearch(
-          [
-            row.code,
-            row.branchName,
-            copy.statusLabel(row.status),
-            ...row.items.map((item) => item.ingredientName),
-          ],
-          search,
-        ),
+      rows.filter(
+        (row) =>
+          (statusFilter === "all" || row.status === statusFilter) &&
+          (siteFilter === "all" || row.branchId === Number(siteFilter)) &&
+          matchesSearch(
+            [
+              row.code,
+              row.branchName,
+              copy.statusLabel(row.status),
+              ...row.items.map((item) => item.ingredientName),
+            ],
+            search,
+          ),
       ),
-    [rows, search],
+    [rows, search, siteFilter, statusFilter],
   );
 
-  function resetCreate() {
-    setBranchId(String(branches[0]?.id ?? ""));
-    setNeededBy(getVNDateString());
-    setRequestLines([blankRequestLine()]);
-    setRequestBaseline("");
-  }
-
-  function requestFormSnapshot(
-    nextBranchId = branchId,
-    nextNeededBy = neededBy,
-    nextLines = requestLines,
-  ) {
-    return JSON.stringify([nextBranchId, nextNeededBy, nextLines]);
-  }
-
-  function poFormSnapshot(
-    nextDate = expectedDeliveryDate,
-    nextDrafts = poDrafts,
-  ) {
-    return JSON.stringify([nextDate, nextDrafts]);
-  }
-
+  const requestSnapshot = useCallback(
+    (
+      nextBranchId = branchId,
+      nextNeededBy = neededBy,
+      nextLines = requestLines,
+    ) => JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
+    [branchId, neededBy, requestLines],
+  );
+  const allocationSnapshot = useCallback(
+    (drafts = allocationDrafts) => JSON.stringify(drafts),
+    [allocationDrafts],
+  );
   const updateUrl = useCallback(
     (
-      nextRequestId: number | null,
-      nextMode: "view" | "edit" | "create" | "create-po" | null,
+      nextDemandId: number | null,
+      nextMode: "view" | "edit" | "create" | "allocate" | null,
       method: "push" | "replace" = "push",
     ) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (nextRequestId == null) params.delete("requestId");
-      else params.set("requestId", String(nextRequestId));
+      params.set("tab", "needs");
+      params.delete("poId");
+      if (nextDemandId == null) params.delete("demandId");
+      else params.set("demandId", String(nextDemandId));
       if (nextMode == null) params.delete("mode");
       else params.set("mode", nextMode);
-      const href = params.size > 0 ? `${pathname}?${params}` : pathname;
-      router[method](href, { scroll: false });
+      router[method](`${pathname}?${params}`, { scroll: false });
     },
     [pathname, router, searchParams],
   );
+
+  useEffect(() => {
+    setSearch(searchParams.get("needsQ") ?? "");
+  }, [searchParams]);
 
   useEffect(() => {
     if (!recordMode || selectedId == null || selected != null) return;
@@ -297,13 +308,34 @@ export function PurchaseRequestsClient({
     setBranchId(nextBranchId);
     setNeededBy(nextNeededBy);
     setRequestLines(nextLines);
-    setRequestBaseline(JSON.stringify([nextBranchId, nextNeededBy, nextLines]));
+    setRequestBaseline(
+      JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
+    );
   }, [mode, selected]);
+
+  useEffect(() => {
+    if (mode !== "allocate" || !selected) return;
+    const drafts = buildPurchaseOrderDrafts(
+      selected.items,
+      suppliers,
+      selected.allocations,
+    );
+    setAllocationDrafts(drafts);
+    setAllocationBaseline(JSON.stringify(drafts));
+    setAllocationIdempotencyKey(crypto.randomUUID());
+  }, [mode, selected, suppliers]);
+
+  function resetCreate() {
+    setBranchId(String(branches[0]?.id ?? ""));
+    setNeededBy(getVNDateString());
+    setRequestLines([blankRequestLine()]);
+    setRequestBaseline("");
+  }
 
   async function closeRequestForm() {
     if (
       requestBaseline &&
-      requestFormSnapshot() !== requestBaseline &&
+      requestSnapshot() !== requestBaseline &&
       !(await confirm({
         title: messages.common.unsavedChangesTitle,
         description: messages.common.unsavedChangesDescription,
@@ -316,10 +348,10 @@ export function PurchaseRequestsClient({
     resetCreate();
   }
 
-  async function closePoForm() {
+  async function closeAllocation() {
     if (
-      poBaseline &&
-      poFormSnapshot() !== poBaseline &&
+      allocationBaseline &&
+      allocationSnapshot() !== allocationBaseline &&
       !(await confirm({
         title: messages.common.unsavedChangesTitle,
         description: messages.common.unsavedChangesDescription,
@@ -365,8 +397,8 @@ export function PurchaseRequestsClient({
       return;
     }
     startTransition(async () => {
-      const result = await savePurchaseRequest({
-        requestId: mode === "edit" ? selected?.id : null,
+      const result = await savePurchaseDemand({
+        demandId: mode === "edit" ? selected?.id : null,
         branchId: Number(branchId),
         neededBy: neededBy || null,
         lines,
@@ -379,31 +411,31 @@ export function PurchaseRequestsClient({
         return;
       }
       toast.success(submit ? copy.submitSuccess : copy.createSuccess);
-      updateUrl(result.data.id, "view", "replace");
       setRequestIdempotencyKey(crypto.randomUUID());
       resetCreate();
+      updateUrl(result.data.id, "view", "replace");
       router.refresh();
     });
   }
 
-  function openPo(row: PurchaseRequestRow) {
-    setExpectedDeliveryDate(getVNDateString());
-    const drafts = buildPurchaseOrderDrafts(row.items, suppliers);
-    setUnassignedPoItemIds(
-      findUnassignedPurchaseRequestItemIds(row.items, suppliers),
+  function openAllocation(row: PurchaseRequestRow) {
+    const drafts = buildPurchaseOrderDrafts(
+      row.items,
+      suppliers,
+      row.allocations,
     );
-    setPoDrafts(drafts);
-    setPoPage(1);
-    setPoBaseline(poFormSnapshot(getVNDateString(), drafts));
-    updateUrl(row.id, "create-po");
+    setAllocationDrafts(drafts);
+    setAllocationBaseline(JSON.stringify(drafts));
+    setAllocationIdempotencyKey(crypto.randomUUID());
+    updateUrl(row.id, "allocate", mode === "view" ? "replace" : "push");
   }
 
-  function patchPoLine(
+  function patchAllocation(
     supplierId: number,
     key: string,
     patch: Partial<PurchaseOrderDraftLine>,
   ) {
-    setPoDrafts((current) =>
+    setAllocationDrafts((current) =>
       current.map((draft) =>
         draft.supplierId === supplierId
           ? {
@@ -417,94 +449,100 @@ export function PurchaseRequestsClient({
     );
   }
 
-  function splitPoLine(supplierId: number, line: PurchaseOrderDraftLine) {
-    setPoDrafts((current) =>
-      current.map((draft) =>
-        draft.supplierId === supplierId
-          ? {
-              ...draft,
-              lines: [
-                ...draft.lines,
-                {
-                  key: crypto.randomUUID(),
-                  requestItemId: line.requestItemId,
-                  quantity: "",
-                  unitPrice: "0",
-                },
-              ],
-            }
-          : draft,
-      ),
+  function normalizedAllocations() {
+    return allocationDrafts.flatMap((draft) =>
+      draft.lines.flatMap((line) => {
+        const quantity = Number(line.quantity);
+        return line.quantity.trim() !== "" &&
+          Number.isFinite(quantity) &&
+          quantity > 0
+          ? [
+              {
+                requestItemId: line.requestItemId,
+                supplierId: draft.supplierId,
+                quantity,
+              },
+            ]
+          : [];
+      }),
     );
   }
 
-  function savePo(send: boolean) {
-    if (!selected) return;
-    const orders = poDrafts
-      .map((draft) => ({
-        supplierId: draft.supplierId,
-        expectedDeliveryDate: expectedDeliveryDate || null,
-        lines: draft.lines
-          .filter((line) => line.quantity.trim() !== "")
-          .map((line) => ({
-            requestItemId: line.requestItemId,
-            quantity: Number(line.quantity),
-            unitPrice: Number(line.unitPrice),
-          })),
-      }))
-      .filter((order) => order.lines.length > 0);
-    const lines = orders.flatMap((order) => order.lines);
+  function allocationTotals() {
     const totals = new Map<number, number>();
-    for (const line of lines) {
+    for (const allocation of normalizedAllocations()) {
       totals.set(
-        line.requestItemId,
-        (totals.get(line.requestItemId) ?? 0) +
-          Math.round(line.quantity * 1000),
+        allocation.requestItemId,
+        (totals.get(allocation.requestItemId) ?? 0) + allocation.quantity,
       );
     }
+    return totals;
+  }
+
+  function saveAllocations(approve: boolean) {
+    if (!selected) return;
+    const allocations = normalizedAllocations();
+    const totals = allocationTotals();
     const invalid =
-      orders.length === 0 ||
-      lines.length === 0 ||
-      lines.some(
-        (line) =>
-          !Number.isFinite(line.quantity) ||
-          line.quantity <= 0 ||
-          !Number.isFinite(line.unitPrice) ||
-          line.unitPrice < 0,
-      ) ||
-      selected.items.some(
-        (item) =>
-          item.remainingQuantity > 0 &&
-          !unassignedPoItemIds.includes(item.id) &&
-          (totals.get(item.id) ?? 0) !==
-            Math.round(item.remainingQuantity * 1000),
-      );
-    if (invalid) {
-      toast.error(copy.createPoFailed);
+      allocations.some((allocation) => allocation.quantity <= 0) ||
+      selected.items.some((item) => {
+        const allocated = totals.get(item.id) ?? 0;
+        return approve
+          ? Math.abs(allocated - item.remainingQuantity) > 0.0005
+          : allocated - item.remainingQuantity > 0.0005;
+      });
+    if (invalid || (approve && allocations.length === 0)) {
+      toast.error(copy.allocationInvalid);
       return;
     }
 
     startTransition(async () => {
-      const result = await savePurchaseOrdersFromRequest({
-        requestId: selected.id,
-        orders,
-        send,
-        idempotencyKey: poIdempotencyKey,
-      });
+      const result = approve
+        ? await reviewPurchaseDemand({
+            demandId: selected.id,
+            action: "approve",
+            allocations,
+            idempotencyKey: allocationIdempotencyKey,
+          })
+        : await savePurchaseDemandAllocations({
+            demandId: selected.id,
+            allocations,
+            idempotencyKey: allocationIdempotencyKey,
+          });
       if (!result.success) {
-        toast.error(result.error ?? copy.createPoFailed);
+        toast.error(result.error ?? copy.allocationFailed);
         return;
       }
-      toast.success(
-        unassignedPoItems.length > 0
-          ? copy.createPoPartialSuccess(
-              orders.length,
-              unassignedPoItems.length,
-            )
-          : copy.createPoSuccess(orders.length),
-      );
-      setPoIdempotencyKey(crypto.randomUUID());
-      updateUrl(selected.id, "view", "replace");
+      if (!approve) {
+        toast.success(copy.allocationSaved);
+        setAllocationBaseline(allocationSnapshot());
+        setAllocationIdempotencyKey(crypto.randomUUID());
+        router.refresh();
+        return;
+      }
+      const purchaseOrders =
+        "data" in result
+          ? ((
+              result.data as
+                | {
+                    purchaseOrders?: Array<{
+                      id: number;
+                      code: string;
+                      supplierId: number;
+                      status: string;
+                    }>;
+                  }
+                | undefined
+            )?.purchaseOrders ?? [])
+          : [];
+      toast.success(copy.approveSuccess(purchaseOrders.map((po) => po.code)));
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", "orders");
+      params.delete("demandId");
+      if (purchaseOrders[0]) params.set("poId", String(purchaseOrders[0].id));
+      else params.delete("poId");
+      params.set("mode", "view");
+      router.replace(`${pathname}?${params}`, { scroll: false });
       router.refresh();
     });
   }
@@ -520,10 +558,16 @@ export function PurchaseRequestsClient({
                 requestId: reasonAction.row.id,
                 reason,
               })
-            : await closePurchaseRequest({
-                requestId: reasonAction.row.id,
-                reason,
-              });
+            : reasonAction.kind === "close"
+              ? await closePurchaseRequest({
+                  requestId: reasonAction.row.id,
+                  reason,
+                })
+              : await reviewPurchaseDemand({
+                  demandId: reasonAction.row.id,
+                  action: reasonAction.kind,
+                  reason,
+                });
         if (!result.success) {
           toast.error(result.error ?? copy.loadFailed);
           return;
@@ -548,8 +592,7 @@ export function PurchaseRequestsClient({
     ];
     if (
       canCreateRequest &&
-      (row.status === "draft" || row.status === "submitted") &&
-      row.purchaseOrders.length === 0
+      (row.status === "draft" || row.status === "changes_requested")
     ) {
       actions.push({
         key: "edit",
@@ -559,29 +602,27 @@ export function PurchaseRequestsClient({
       });
       actions.push({
         key: "cancel",
-        label: ACTIONS_VI.cancel,
+        label: "Bỏ phiếu",
         icon: <IconTrash data-icon="inline-start" />,
         disabled: isPending || pendingId === row.id,
         onSelect: () => setReasonAction({ kind: "cancel", row }),
       });
     }
     if (
-      canCreatePo &&
-      (row.status === "submitted" || row.status === "partially_ordered") &&
-      row.items.some((item) => item.remainingQuantity > 0)
+      canAllocate &&
+      (row.status === "pending_allocation" ||
+        row.status === "partially_ordered")
     ) {
       actions.push({
-        key: "create-po",
-        label: copy.createPoAction,
-        icon: <IconShoppingCart data-icon="inline-start" />,
-        onSelect: () => openPo(row),
+        key: "allocate",
+        label: copy.allocateAction,
+        onSelect: () => openAllocation(row),
       });
     }
-    if (row.status === "partially_ordered" && canCreateRequest) {
+    if (row.status === "partially_ordered" && canAllocate) {
       actions.push({
         key: "close",
-        label: ACTIONS_VI.close,
-        disabled: isPending || pendingId === row.id,
+        label: "Đóng phần còn lại",
         onSelect: () => setReasonAction({ kind: "close", row }),
       });
     }
@@ -596,11 +637,7 @@ export function PurchaseRequestsClient({
         <span className="font-mono font-medium">{row.code}</span>
       ),
     },
-    {
-      key: "branch",
-      header: copy.branchColumn,
-      render: (row) => row.branchName,
-    },
+    { key: "branch", header: copy.branchColumn, render: (row) => row.branchName },
     {
       key: "status",
       header: copy.statusColumn,
@@ -653,11 +690,69 @@ export function PurchaseRequestsClient({
           <InputGroupInput
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              const value = event.target.value;
+              setSearch(value);
+              const params = new URLSearchParams(searchParams.toString());
+              if (value) params.set("needsQ", value);
+              else params.delete("needsQ");
+              params.delete("needsPage");
+              router.replace(`${pathname}?${params}`, { scroll: false });
+            }}
             placeholder={copy.searchPlaceholder}
             aria-label={copy.searchPlaceholder}
           />
         </InputGroup>
+      }
+      filters={
+        <>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              const params = new URLSearchParams(searchParams.toString());
+              if (value === "all") params.delete("needsStatus");
+              else params.set("needsStatus", value);
+              params.delete("needsPage");
+              router.replace(`${pathname}?${params}`, { scroll: false });
+            }}
+          >
+            <SelectTrigger size="field" aria-label={copy.statusFilterAria}>
+              <SelectValue placeholder={copy.statusFilterPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{copy.allStatuses}</SelectItem>
+              {[...new Set(rows.map((row) => row.status))].map((status) => (
+                <SelectItem key={status} value={status}>
+                  {copy.statusLabel(status)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {branches.length > 1 ? (
+            <Select
+              value={siteFilter}
+              onValueChange={(value) => {
+                const params = new URLSearchParams(searchParams.toString());
+                if (value === "all") params.delete("needsSite");
+                else params.set("needsSite", value);
+                params.delete("needsPage");
+                router.replace(`${pathname}?${params}`, { scroll: false });
+              }}
+            >
+              <SelectTrigger size="field" aria-label={copy.warehouseFilterAria}>
+                <SelectValue placeholder={copy.warehouseFilterPlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{copy.allWarehouses}</SelectItem>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={String(branch.id)}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+        </>
       }
       actions={
         canCreateRequest ? (
@@ -671,11 +766,7 @@ export function PurchaseRequestsClient({
               setNeededBy(nextNeededBy);
               setRequestLines(nextLines);
               setRequestBaseline(
-                requestFormSnapshot(
-                  nextBranchId,
-                  nextNeededBy,
-                  nextLines,
-                ),
+                JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
               );
               updateUrl(null, "create");
             }}
@@ -688,44 +779,81 @@ export function PurchaseRequestsClient({
     />
   );
 
-  return (
+  const list = (
+    <AppListFrame toolbar={toolbar}>
+      <DataTable
+        columns={columns}
+        data={filtered}
+        getRowKey={(row) => row.id}
+        pageSize={50}
+        currentPage={currentPage}
+        onPageChange={(page) => {
+          const params = new URLSearchParams(searchParams.toString());
+          if (page <= 1) params.delete("needsPage");
+          else params.set("needsPage", String(page));
+          router.replace(`${pathname}?${params}`, { scroll: false });
+        }}
+        onRowClick={(row) => updateUrl(row.id, "view")}
+        emptyTitle={copy.emptyTitle}
+        emptyDescription={copy.emptyDescription}
+        emptyIcon={
+          <IconClipboardList className="size-8 text-muted-foreground" />
+        }
+        mobileCardRender={(row) => (
+          <InteractiveCard
+            minHeight="mobile"
+            padding="default"
+            className="w-full flex-col items-stretch gap-2 text-left"
+            render={<button type="button" />}
+            onClick={() => updateUrl(row.id, "view")}
+          >
+            <span className="flex items-center justify-between gap-2">
+              <span className="font-mono font-semibold">{row.code}</span>
+              <Badge variant={statusVariant(row.status)}>
+                {copy.statusLabel(row.status)}
+              </Badge>
+            </span>
+            <span className="text-sm">{row.branchName}</span>
+            <span className="text-xs text-muted-foreground">
+              {copy.lineCount(row.lineCount)} ·{" "}
+              {copy.orderedProgress(row.orderedLineCount, row.lineCount)}
+            </span>
+          </InteractiveCard>
+        )}
+      />
+    </AppListFrame>
+  );
+
+  const content = embedded ? (
+    list
+  ) : (
     <AppPage width="xwide" density="compact">
       <AppPageHeader title={copy.title} description={copy.description} />
-      <AppListFrame toolbar={toolbar}>
-        <DataTable
-          columns={columns}
-          data={filtered}
-          getRowKey={(row) => row.id}
-          pageSize={50}
-          onRowClick={(row) => updateUrl(row.id, "view")}
-          emptyTitle={copy.emptyTitle}
-          emptyDescription={copy.emptyDescription}
-          emptyIcon={
-            <IconClipboardList className="size-8 text-muted-foreground" />
-          }
-          mobileCardRender={(row) => (
-            <InteractiveCard
-              minHeight="mobile"
-              padding="default"
-              className="w-full flex-col items-stretch gap-2 text-left"
-              render={<button type="button" />}
-              onClick={() => updateUrl(row.id, "view")}
-            >
-              <span className="flex items-center justify-between gap-2">
-                <span className="font-mono font-semibold">{row.code}</span>
-                <Badge variant={statusVariant(row.status)}>
-                  {copy.statusLabel(row.status)}
-                </Badge>
-              </span>
-              <span className="text-sm">{row.branchName}</span>
-              <span className="text-xs text-muted-foreground">
-                {copy.lineCount(row.lineCount)} ·{" "}
-                {copy.orderedProgress(row.orderedLineCount, row.lineCount)}
-              </span>
-            </InteractiveCard>
-          )}
-        />
-      </AppListFrame>
+      {list}
+    </AppPage>
+  );
+
+  const totals = allocationTotals();
+  const missingSupplierItems =
+    selected == null
+      ? []
+      : selected.items.filter((item) =>
+          findUnassignedPurchaseRequestItemIds([item], suppliers).includes(
+            item.id,
+          ),
+        );
+  const allocationComplete =
+    selected != null &&
+    missingSupplierItems.length === 0 &&
+    selected.items.every(
+      (item) =>
+        Math.abs((totals.get(item.id) ?? 0) - item.remainingQuantity) <=
+        0.0005,
+    );
+
+  return (
+    <>
+      {content}
 
       <AppDialog
         open={createOpen}
@@ -766,6 +894,13 @@ export function PurchaseRequestsClient({
           </>
         }
       >
+        {selected?.status === "changes_requested" &&
+        selected.statusReason ? (
+          <Item variant="muted" size="sm">
+            <span className="font-medium">{copy.returnedReasonLabel}</span>{" "}
+            {selected.statusReason}
+          </Item>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <Select value={branchId} onValueChange={setBranchId}>
             <SelectTrigger
@@ -794,6 +929,9 @@ export function PurchaseRequestsClient({
             const ingredient = ingredients.find(
               (item) => item.id === Number(line.ingredientId),
             );
+            const hasSupplier = mappedIngredientIds.includes(
+              Number(line.ingredientId),
+            );
             return (
               <Item
                 key={line.key}
@@ -801,18 +939,25 @@ export function PurchaseRequestsClient({
                 size="sm"
                 className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_8rem_10rem_auto]"
               >
-                <Combobox
-                  filter={comboFilter}
-                  size="field"
-                  value={line.ingredientId}
-                  onValueChange={(value) => chooseIngredient(line, value)}
-                  options={ingredients.map((item) => ({
-                    value: String(item.id),
-                    label: item.name,
-                  }))}
-                  placeholder={copy.ingredient}
-                  searchPlaceholder={copy.searchPlaceholder}
-                />
+                <div className="min-w-0">
+                  <Combobox
+                    filter={comboFilter}
+                    size="field"
+                    value={line.ingredientId}
+                    onValueChange={(value) => chooseIngredient(line, value)}
+                    options={ingredients.map((item) => ({
+                      value: String(item.id),
+                      label: item.name,
+                    }))}
+                    placeholder={copy.ingredient}
+                    searchPlaceholder={copy.searchPlaceholder}
+                  />
+                  {line.ingredientId && !hasSupplier ? (
+                    <span className="mt-1 block text-xs text-warning-foreground">
+                      {copy.missingSupplierShort}
+                    </span>
+                  ) : null}
+                </div>
                 <FormattedNumberInput
                   controlSize="field"
                   value={line.quantity}
@@ -888,34 +1033,7 @@ export function PurchaseRequestsClient({
             <>
               {canCreateRequest &&
               (selected.status === "draft" ||
-                selected.status === "submitted") &&
-              selected.purchaseOrders.length === 0 ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() =>
-                    setReasonAction({ kind: "cancel", row: selected })
-                  }
-                >
-                  {ACTIONS_VI.cancel}
-                </Button>
-              ) : null}
-              {canCreateRequest &&
-              selected.status === "partially_ordered" ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() =>
-                    setReasonAction({ kind: "close", row: selected })
-                  }
-                >
-                  {ACTIONS_VI.close}
-                </Button>
-              ) : null}
-              {canCreateRequest &&
-              (selected.status === "draft" ||
-                selected.status === "submitted") &&
-              selected.purchaseOrders.length === 0 ? (
+                selected.status === "changes_requested") ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -924,12 +1042,11 @@ export function PurchaseRequestsClient({
                   {ACTIONS_VI.edit}
                 </Button>
               ) : null}
-              {canCreatePo &&
-              (selected.status === "submitted" ||
-                selected.status === "partially_ordered") &&
-              selected.items.some((item) => item.remainingQuantity > 0) ? (
-                <Button type="button" onClick={() => openPo(selected)}>
-                  {copy.createPoAction}
+              {canAllocate &&
+              (selected.status === "pending_allocation" ||
+                selected.status === "partially_ordered") ? (
+                <Button type="button" onClick={() => openAllocation(selected)}>
+                  {copy.allocateAction}
                 </Button>
               ) : null}
               <Button
@@ -945,6 +1062,11 @@ export function PurchaseRequestsClient({
       >
         {selected ? (
           <div className="flex flex-col gap-4">
+            {selected.statusReason ? (
+              <Item variant="muted" size="sm">
+                {selected.statusReason}
+              </Item>
+            ) : null}
             <DescriptionList
               className="sm:grid sm:grid-cols-3 sm:gap-4"
               items={[
@@ -998,7 +1120,7 @@ export function PurchaseRequestsClient({
                     className="justify-between"
                     render={
                       <Link
-                        href={`/inventory/purchase-orders?poId=${po.id}&mode=view`}
+                        href={`/inventory/purchase-orders?tab=orders&poId=${po.id}&mode=view`}
                       />
                     }
                   >
@@ -1013,188 +1135,166 @@ export function PurchaseRequestsClient({
       </AppDialog>
 
       <AppDialog
-        open={poOpen && selected != null}
+        open={allocateOpen}
         onOpenChange={(open) => {
-          if (!open) void closePoForm();
+          if (!open) void closeAllocation();
         }}
         variant="document"
-        title={copy.createPoTitle}
-        description={selected?.code}
+        title={copy.allocateTitle}
+        description={
+          selected
+            ? `${selected.code} · ${selected.branchName}${
+                selected.neededBy
+                  ? ` · Cần ${formatVNDate(selected.neededBy)}`
+                  : ""
+              }`
+            : undefined
+        }
         footer={
           <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void closePoForm()}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
+            <div className="mr-auto flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() =>
+                  selected &&
+                  setReasonAction({
+                    kind: "request_changes",
+                    row: selected,
+                  })
+                }
+              >
+                {copy.requestChangesAction}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isPending}
+                onClick={() =>
+                  selected &&
+                  setReasonAction({ kind: "reject", row: selected })
+                }
+              >
+                {copy.rejectAction}
+              </Button>
+            </div>
             <Button
               type="button"
               variant="secondary"
-              disabled={isPending || poDrafts.length === 0}
-              onClick={() => savePo(false)}
+              disabled={isPending}
+              onClick={() => saveAllocations(false)}
             >
-              {copy.saveDraft}
+              {copy.saveAllocationAction}
             </Button>
             <Button
               type="button"
-              disabled={isPending || poDrafts.length === 0}
-              onClick={() => savePo(true)}
+              disabled={isPending || !allocationComplete}
+              onClick={() => saveAllocations(true)}
             >
-              {copy.createPoAction}
+              {copy.approveAllocationAction}
             </Button>
           </>
         }
       >
-        {selected ? (
-          <>
-            <BusinessDatePicker
-              value={expectedDeliveryDate}
-              onValueChange={setExpectedDeliveryDate}
-              aria-label={copy.expectedDeliveryDate}
-            />
-            <div className="flex flex-col gap-2">
-              {unassignedPoItems.length > 0 ? (
-                <Item
-                  variant="muted"
-                  size="sm"
-                  className="items-start flex-col sm:flex-row"
-                >
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="font-medium">
-                      {copy.missingSupplierMappingsTitle}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {copy.missingSupplierMappings(
-                        unassignedPoItems.map((item) => item.ingredientName),
-                      )}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    render={<Link href="/inventory/suppliers" />}
-                    className="w-full sm:w-auto"
-                  >
-                    {copy.manageSuppliersAction}
-                  </Button>
-                </Item>
-              ) : null}
-              <p className="text-xs text-muted-foreground">
-                {copy.supplierOrderCount(poDrafts.length)}
+        {missingSupplierItems.length > 0 ? (
+          <Item
+            variant="muted"
+            size="sm"
+            className="items-start flex-col sm:flex-row"
+          >
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <p className="font-medium">
+                {copy.missingSupplierMappingsTitle}
               </p>
-              {poDrafts.length === 0 && unassignedPoItems.length === 0 ? (
-                <Item variant="muted" size="sm">
-                  {copy.noSupplierMappings}
-                </Item>
-              ) : null}
-              {poDrafts
-                .slice((poPage - 1) * PO_PAGE_SIZE, poPage * PO_PAGE_SIZE)
-                .map((draft) => (
-                  <Item
-                    key={draft.supplierId}
-                    variant="outline"
-                    size="sm"
-                    className="items-stretch"
-                  >
-                    <ItemHeader>
-                      <ItemTitle size="heading">{draft.supplierName}</ItemTitle>
-                      <Badge variant="secondary">
-                        {copy.lineCount(draft.lines.length)}
-                      </Badge>
-                    </ItemHeader>
-                    <div className="flex basis-full flex-col gap-2">
-                      {draft.lines.map((line) => {
-                        const item = selected.items.find(
-                          (candidate) => candidate.id === line.requestItemId,
-                        );
-                        return (
-                          <div
-                            key={line.key}
-                            className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_10rem_auto_auto]"
-                          >
-                            <span className="self-center text-sm">
-                              {item?.ingredientName}
-                              <span className="block text-xs text-muted-foreground">
-                                {item?.unitLabel}
-                              </span>
-                            </span>
-                            <FormattedNumberInput
-                              controlSize="field"
-                              value={line.quantity}
-                              onValueChange={(value) =>
-                                patchPoLine(draft.supplierId, line.key, {
-                                  quantity: value,
-                                })
-                              }
-                              maxFractionDigits={3}
-                              placeholder={copy.quantity}
-                              aria-label={copy.quantity}
-                            />
-                            <FormattedNumberInput
-                              controlSize="field"
-                              value={line.unitPrice}
-                              onValueChange={(value) =>
-                                patchPoLine(draft.supplierId, line.key, {
-                                  unitPrice: value,
-                                })
-                              }
-                              maxFractionDigits={0}
-                              placeholder={copy.unitPrice}
-                              aria-label={copy.unitPrice}
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon-lg"
-                              onClick={() =>
-                                splitPoLine(draft.supplierId, line)
-                              }
-                              aria-label={copy.splitPriceLine}
-                            >
-                              <IconPlus />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-lg"
-                              onClick={() =>
-                                setPoDrafts((current) =>
-                                  current.map((candidate) =>
-                                    candidate.supplierId === draft.supplierId
-                                      ? {
-                                          ...candidate,
-                                          lines: candidate.lines.filter(
-                                            (candidateLine) =>
-                                              candidateLine.key !== line.key,
-                                          ),
-                                        }
-                                      : candidate,
-                                  ),
-                                )
-                              }
-                              aria-label={ACTIONS_VI.delete}
-                            >
-                              <IconTrash />
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Item>
-                ))}
-              {poDrafts.length > PO_PAGE_SIZE ? (
-                <Pagination
-                  page={poPage}
-                  pageCount={Math.ceil(poDrafts.length / PO_PAGE_SIZE)}
-                  onPageChange={setPoPage}
-                  totalLabel={copy.supplierOrderCount(poDrafts.length)}
-                />
-              ) : null}
+              <p className="text-sm text-muted-foreground">
+                {missingSupplierItems
+                  .map((item) => item.ingredientName)
+                  .join(", ")}
+              </p>
             </div>
-          </>
+            <Button
+              type="button"
+              variant="outline"
+              render={<Link href="/inventory/suppliers" />}
+            >
+              {copy.manageSuppliersAction}
+            </Button>
+          </Item>
         ) : null}
+        <div className="flex flex-col gap-3">
+          {selected?.items.map((item) => {
+            const supplierDrafts = allocationDrafts
+              .map((draft) => ({
+                ...draft,
+                lines: draft.lines.filter(
+                  (line) => line.requestItemId === item.id,
+                ),
+              }))
+              .filter((draft) => draft.lines.length > 0);
+            const allocated = totals.get(item.id) ?? 0;
+            const remaining = item.remainingQuantity - allocated;
+            return (
+              <Item
+                key={item.id}
+                variant="outline"
+                className="items-stretch"
+              >
+                <ItemHeader>
+                  <ItemTitle size="heading">{item.ingredientName}</ItemTitle>
+                  <Badge
+                    variant={
+                      Math.abs(remaining) <= 0.0005 ? "success" : "warning"
+                    }
+                  >
+                    {allocated}/{item.remainingQuantity} {item.unitLabel}
+                  </Badge>
+                </ItemHeader>
+                <div className="flex basis-full flex-col gap-2">
+                  {supplierDrafts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {copy.noActiveSuppliers}
+                    </p>
+                  ) : (
+                    supplierDrafts.map((draft) => {
+                      const line = draft.lines[0];
+                      if (!line) return null;
+                      return (
+                        <div
+                          key={draft.supplierId}
+                          className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]"
+                        >
+                          <span className="text-sm">{draft.supplierName}</span>
+                          <FormattedNumberInput
+                            controlSize="field"
+                            value={line.quantity}
+                            onValueChange={(value) =>
+                              patchAllocation(
+                                draft.supplierId,
+                                line.key,
+                                { quantity: value },
+                              )
+                            }
+                            maxFractionDigits={3}
+                            placeholder={copy.quantity}
+                            aria-label={`${draft.supplierName}: ${copy.quantity}`}
+                          />
+                        </div>
+                      );
+                    })
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {copy.allocationProgress(
+                      allocated,
+                      remaining,
+                      item.unitLabel,
+                    )}
+                  </p>
+                </div>
+              </Item>
+            );
+          })}
+        </div>
       </AppDialog>
 
       <ReasonConfirmDialog
@@ -1206,24 +1306,26 @@ export function PurchaseRequestsClient({
           }
         }}
         title={
-          reasonAction?.kind === "close"
-            ? "Đóng phần còn lại của yêu cầu mua?"
-            : "Hủy yêu cầu mua?"
+          reasonAction?.kind === "request_changes"
+            ? "Gửi lại Kho để chỉnh sửa nhu cầu?"
+            : reasonAction?.kind === "reject"
+              ? "Từ chối nhu cầu mua?"
+              : reasonAction?.kind === "close"
+                ? "Đóng phần nhu cầu còn lại?"
+                : "Bỏ nhu cầu mua?"
         }
         description={reasonAction?.row.code}
-        reasonId="purchase-request-status-reason"
+        reasonId="purchase-demand-status-reason"
         reason={reason}
         onReasonChange={setReason}
         reasonLabel="Lý do"
         reasonPlaceholder="Nhập lý do để lưu vết"
         cancelLabel={ACTIONS_VI.cancel}
-        confirmLabel={
-          reasonAction?.kind === "close" ? ACTIONS_VI.close : ACTIONS_VI.cancel
-        }
+        confirmLabel="Xác nhận"
         confirmVariant="destructive"
         isPending={isPending}
         onConfirm={runReasonAction}
       />
-    </AppPage>
+    </>
   );
 }

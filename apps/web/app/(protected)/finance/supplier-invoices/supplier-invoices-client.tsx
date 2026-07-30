@@ -53,6 +53,7 @@ import {
   BusinessDateField,
   Combobox,
   FormDialog,
+  FormattedNumberInput,
   MoneyVndField,
   SelectField,
   TextareaField,
@@ -89,6 +90,7 @@ import {
   allocateSupplierAdvance,
   createSupplierCreditAllocated,
   createSupplierInvoice,
+  confirmSupplierInvoice,
   fetchSupplierInvoicesPage,
   recordSupplierPayment,
   recomputeInvoiceMatching,
@@ -147,9 +149,24 @@ type GrnOption = {
   supplierName: string;
   poId: number | null;
   netAcceptedAmount: number | null;
+  lines: Array<{
+    grnItemId: number;
+    purchaseOrderItemId: number;
+    ingredientId: number;
+    ingredientName: string;
+    unitId: number;
+    unitLabel: string;
+    availableQuantity: number;
+  }>;
 };
 
-type SupplierInvoiceMode = "view" | "create" | "pay" | "credit" | "advance";
+type SupplierInvoiceMode =
+  | "view"
+  | "create"
+  | "edit"
+  | "pay"
+  | "credit"
+  | "advance";
 
 type SupplierInvoiceGroup = SupplierInvoiceAggregateGroup & {
   title: string;
@@ -170,13 +187,6 @@ const PAYMENT_FILTER_OPTIONS = SUPPLIER_INVOICE_PAYMENT_STATUSES.map(
   }),
 );
 
-const VAT_BUCKET_FIELDS = [
-  { rate: 0, taxableField: "vat0Taxable", vatField: null },
-  { rate: 5, taxableField: "vat5Taxable", vatField: "vat5Amount" },
-  { rate: 8, taxableField: "vat8Taxable", vatField: "vat8Amount" },
-  { rate: 10, taxableField: "vat10Taxable", vatField: "vat10Amount" },
-] as const;
-
 const optionalMoneySchema = z.string().refine(
   (value) => {
     if (!value.trim()) return true;
@@ -193,14 +203,31 @@ const supplierInvoiceSchema = z
     supplierId: z.string().min(1, { error: FORM_VI.required }),
     invoiceNumber: z.string().trim().min(1, { error: FORM_VI.required }),
     invoiceDate: z.string().min(1, { error: FORM_VI.required }),
-    vat0Taxable: optionalMoneySchema,
-    vat5Taxable: optionalMoneySchema,
-    vat5Amount: optionalMoneySchema,
-    vat8Taxable: optionalMoneySchema,
-    vat8Amount: optionalMoneySchema,
-    vat10Taxable: optionalMoneySchema,
-    vat10Amount: optionalMoneySchema,
     documentDiscount: optionalMoneySchema,
+    lines: z
+      .array(
+        z.object({
+          key: z.string(),
+          ingredientId: z.number().int().positive().nullable(),
+          description: z.string().trim().min(1),
+          quantity: z.number().positive(),
+          unitId: z.number().int().positive().nullable(),
+          unitLabel: z.string(),
+          unitPrice: optionalMoneySchema,
+          lineDiscount: optionalMoneySchema,
+          vatRate: z.number().refine((value) => [0, 5, 8, 10].includes(value)),
+          vatAmount: optionalMoneySchema,
+          allocations: z.array(
+            z.object({
+              grnId: z.number().int().positive(),
+              poId: z.number().int().positive(),
+              purchaseOrderItemId: z.number().int().positive(),
+              quantity: z.number().positive(),
+            }),
+          ),
+        }),
+      )
+      .min(1, FORM_VI.required),
   })
   .superRefine((data, ctx) => {
     if (data.invoiceKind === "goods" && data.grnId === "none") {
@@ -210,100 +237,25 @@ const supplierInvoiceSchema = z
         path: ["grnId"],
       });
     }
-    const hasTaxableBucket = VAT_BUCKET_FIELDS.some(
-      (bucket) => Number(data[bucket.taxableField] || 0) > 0,
-    );
-    if (hasTaxableBucket) return;
-
-    const firstEmptyBucket = VAT_BUCKET_FIELDS.find(
-      (bucket) => !(Number(data[bucket.taxableField] || 0) > 0),
-    );
-    ctx.addIssue({
-      code: "custom",
-      message: messages.inventory.supplierInvoices.vatBreakdownRequired,
-      path: [firstEmptyBucket?.taxableField ?? "vat0Taxable"],
+    data.lines.forEach((line, index) => {
+      if (data.invoiceKind === "goods" && line.allocations.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Dòng hàng hóa chưa được phân bổ tới phiếu nhập.",
+          path: ["lines", index],
+        });
+      }
+      if (!(Number(line.unitPrice) >= 0)) {
+        ctx.addIssue({
+          code: "custom",
+          message: FORM_VI.required,
+          path: ["lines", index, "unitPrice"],
+        });
+      }
     });
   });
 
 type SupplierInvoiceFormValues = z.infer<typeof supplierInvoiceSchema>;
-
-type VatRate = (typeof VAT_BUCKET_FIELDS)[number]["rate"];
-
-const DEFAULT_VISIBLE_VAT_RATE: VatRate = 8;
-
-function getVatBucket(rate: VatRate) {
-  const bucket = VAT_BUCKET_FIELDS.find((entry) => entry.rate === rate);
-  if (!bucket) {
-    throw new Error(`Unsupported VAT rate: ${rate}`);
-  }
-  return bucket;
-}
-
-function clearVatBucketFields(
-  form: UseFormReturn<
-    SupplierInvoiceFormValues,
-    unknown,
-    SupplierInvoiceFormValues
-  >,
-  rate: VatRate,
-) {
-  const bucket = getVatBucket(rate);
-  form.setValue(bucket.taxableField, "", {
-    shouldDirty: true,
-    shouldValidate: true,
-  });
-  if (bucket.vatField != null) {
-    form.setValue(bucket.vatField, "", {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  }
-}
-
-function moveVatBucketFields(
-  form: UseFormReturn<
-    SupplierInvoiceFormValues,
-    unknown,
-    SupplierInvoiceFormValues
-  >,
-  fromRate: VatRate,
-  toRate: VatRate,
-) {
-  if (fromRate === toRate) return;
-  const from = getVatBucket(fromRate);
-  const to = getVatBucket(toRate);
-  const taxable = form.getValues(from.taxableField);
-  const vatAmount = from.vatField != null ? form.getValues(from.vatField) : "";
-  form.setValue(to.taxableField, taxable, {
-    shouldDirty: true,
-    shouldValidate: true,
-  });
-  if (to.vatField != null) {
-    form.setValue(to.vatField, typeof vatAmount === "string" ? vatAmount : "", {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  }
-  clearVatBucketFields(form, fromRate);
-}
-
-function buildSupplierInvoiceVatBreakdown(values: SupplierInvoiceFormValues) {
-  return VAT_BUCKET_FIELDS.flatMap((bucket) => {
-    const taxableAmount = Number(values[bucket.taxableField] || 0);
-    if (taxableAmount <= 0) return [];
-
-    const enteredVat =
-      bucket.vatField != null ? values[bucket.vatField].trim() : "";
-    const vatAmount =
-      bucket.rate === 0
-        ? 0
-        : enteredVat
-          ? Number(enteredVat)
-          : Math.round(taxableAmount * bucket.rate) / 100;
-
-    return [{ vatRate: bucket.rate, taxableAmount, vatAmount }];
-  });
-}
 
 const supplierPaymentSchema = z.object({
   amount: z.string().refine((value) => Number(value) > 0, {
@@ -347,14 +299,53 @@ function createSupplierInvoiceDefaultValues(
     supplierId: "",
     invoiceNumber: "",
     invoiceDate: getVNDateString(),
-    vat0Taxable: "",
-    vat5Taxable: "",
-    vat5Amount: "",
-    vat8Taxable: "",
-    vat8Amount: "",
-    vat10Taxable: "",
-    vat10Amount: "",
     documentDiscount: "",
+    lines: [],
+  };
+}
+
+function editSupplierInvoiceDefaultValues(
+  invoice: SupplierInvoiceRow,
+  grns: GrnOption[],
+): SupplierInvoiceFormValues {
+  const selectedGrnKeys = [
+    ...new Set(
+      invoice.receiptAllocations.flatMap((allocation) => {
+        const option = grns.find(
+          (candidate) =>
+            candidate.id === allocation.grnId &&
+            candidate.supplierId === invoice.supplierId,
+        );
+        return option ? [option.optionKey] : [];
+      }),
+    ),
+  ];
+  return {
+    invoiceKind: invoice.invoiceKind,
+    grnId: selectedGrnKeys.length > 0 ? selectedGrnKeys.join(",") : "none",
+    supplierId: String(invoice.supplierId),
+    invoiceNumber: invoice.code,
+    invoiceDate: invoice.invoiceDate ?? getVNDateString(),
+    documentDiscount:
+      invoice.documentDiscountAmount > 0
+        ? String(invoice.documentDiscountAmount)
+        : "",
+    lines: invoice.invoiceLines.map((line) => ({
+      key:
+        line.ingredientId != null && line.unitId != null
+          ? `${line.ingredientId}:${line.unitId}`
+          : `service:${line.id}`,
+      ingredientId: line.ingredientId,
+      description: line.description,
+      quantity: line.quantity,
+      unitId: line.unitId,
+      unitLabel: line.unitLabel,
+      unitPrice: String(line.unitPrice),
+      lineDiscount: line.lineDiscount > 0 ? String(line.lineDiscount) : "",
+      vatRate: line.vatRate,
+      vatAmount: line.vatAmount > 0 ? String(line.vatAmount) : "",
+      allocations: line.allocations,
+    })),
   };
 }
 
@@ -470,30 +461,57 @@ function SupplierInvoiceCreateFields({
     selectedGrnKeys.includes(option.optionKey),
   );
   const selectedGrn = selectedGrns[0] ?? null;
-  const [visibleRates, setVisibleRates] = useState<VatRate[]>([
-    DEFAULT_VISIBLE_VAT_RATE,
-  ]);
-  const vatBreakdown = buildSupplierInvoiceVatBreakdown(formValues);
-  const subtotal = vatBreakdown.reduce(
-    (sum, line) => sum + line.taxableAmount,
+  const invoiceLines = formValues.lines ?? [];
+  const subtotal = invoiceLines.reduce(
+    (sum, line) =>
+      sum +
+      Math.max(
+        line.quantity * Number(line.unitPrice || 0) -
+          Number(line.lineDiscount || 0),
+        0,
+      ),
     0,
   );
-  const vatAmount = vatBreakdown.reduce((sum, line) => sum + line.vatAmount, 0);
-  const totalAmount = subtotal + vatAmount;
-  const unusedRates = VAT_BUCKET_FIELDS.map((bucket) => bucket.rate).filter(
-    (rate) => !visibleRates.includes(rate),
+  const vatAmount = invoiceLines.reduce(
+    (sum, line) => sum + Number(line.vatAmount || 0),
+    0,
   );
+  const totalAmount =
+    subtotal - Number(formValues.documentDiscount || 0) + vatAmount;
 
   useEffect(() => {
-    if (invoiceKind !== "service" || form.getValues("grnId") === "none") return;
-    form.setValue("grnId", "none", {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
+    if (invoiceKind !== "service") return;
+    if (form.getValues("grnId") !== "none") {
+      form.setValue("grnId", "none", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    const current = form.getValues("lines");
+    if (current.length === 1 && current[0]?.ingredientId == null) return;
+    form.setValue(
+      "lines",
+      [
+        {
+          key: crypto.randomUUID(),
+          ingredientId: null,
+          description: "Dịch vụ",
+          quantity: 1,
+          unitId: null,
+          unitLabel: "Lần",
+          unitPrice: "",
+          lineDiscount: "",
+          vatRate: 8,
+          vatAmount: "",
+          allocations: [],
+        },
+      ],
+      { shouldDirty: true, shouldValidate: true },
+    );
   }, [form, invoiceKind]);
 
   useEffect(() => {
-    if (!selectedGrn) return;
+    if (!selectedGrn || invoiceKind !== "goods") return;
 
     const nextSupplierId = String(selectedGrn.supplierId);
     if (form.getValues("supplierId") !== nextSupplierId) {
@@ -502,39 +520,50 @@ function SupplierInvoiceCreateFields({
         shouldValidate: true,
       });
     }
-
-    setVisibleRates([DEFAULT_VISIBLE_VAT_RATE]);
-    for (const bucket of VAT_BUCKET_FIELDS) {
-      if (bucket.rate === DEFAULT_VISIBLE_VAT_RATE) continue;
-      clearVatBucketFields(form, bucket.rate);
-    }
-
-    const bucket = getVatBucket(DEFAULT_VISIBLE_VAT_RATE);
-    const selectedReceiptValue = selectedGrns.reduce(
-      (sum, receipt) => sum + (receipt.netAcceptedAmount ?? 0),
-      0,
+    const currentByKey = new Map(
+      form.getValues("lines").map((line) => [line.key, line]),
     );
-    if (
-      selectedGrns.length > 0 &&
-      selectedGrns.every((receipt) => receipt.netAcceptedAmount != null)
-    ) {
-      form.setValue(bucket.taxableField, String(selectedReceiptValue), {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-    } else {
-      form.setValue(bucket.taxableField, "", {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
+    const grouped = new Map<
+      string,
+      SupplierInvoiceFormValues["lines"][number]
+    >();
+    for (const receipt of selectedGrns) {
+      if (receipt.poId == null) continue;
+      for (const line of receipt.lines) {
+        const key = `${line.ingredientId}:${line.unitId}`;
+        const existing = grouped.get(key);
+        const preserved = currentByKey.get(key);
+        const allocation = {
+          grnId: receipt.id,
+          poId: receipt.poId,
+          purchaseOrderItemId: line.purchaseOrderItemId,
+          quantity: line.availableQuantity,
+        };
+        if (existing) {
+          existing.quantity += line.availableQuantity;
+          existing.allocations.push(allocation);
+        } else {
+          grouped.set(key, {
+            key,
+            ingredientId: line.ingredientId,
+            description: line.ingredientName,
+            quantity: line.availableQuantity,
+            unitId: line.unitId,
+            unitLabel: line.unitLabel,
+            unitPrice: preserved?.unitPrice ?? "",
+            lineDiscount: preserved?.lineDiscount ?? "",
+            vatRate: preserved?.vatRate ?? 8,
+            vatAmount: preserved?.vatAmount ?? "",
+            allocations: [allocation],
+          });
+        }
+      }
     }
-    if (bucket.vatField != null) {
-      form.setValue(bucket.vatField, "", {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-    }
-  }, [form, grnId, selectedGrn?.supplierId]);
+    form.setValue("lines", [...grouped.values()], {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [form, grnId, invoiceKind, selectedGrn?.supplierId]);
 
   const supplierOptions = useMemo(
     () =>
@@ -564,31 +593,19 @@ function SupplierInvoiceCreateFields({
     });
   }
 
-  function handleRateChange(index: number, nextRate: VatRate) {
-    const currentRate = visibleRates[index];
-    if (currentRate == null || currentRate === nextRate) return;
-    if (visibleRates.includes(nextRate)) return;
-
-    moveVatBucketFields(form, currentRate, nextRate);
-    setVisibleRates((current) =>
-      current.map((rate, rateIndex) => (rateIndex === index ? nextRate : rate)),
-    );
-  }
-
-  function handleAddVatRate() {
-    const nextRate = unusedRates[0];
-    if (nextRate == null) return;
-    setVisibleRates((current) => [...current, nextRate]);
-  }
-
-  function handleRemoveVatRate(index: number) {
-    if (visibleRates.length <= 1) return;
-    const rate = visibleRates[index];
-    if (rate == null) return;
-    clearVatBucketFields(form, rate);
-    setVisibleRates((current) =>
-      current.filter((_, rateIndex) => rateIndex !== index),
-    );
+  function patchInvoiceLine(
+    index: number,
+    patch: Partial<SupplierInvoiceFormValues["lines"][number]>,
+  ) {
+    const next = form
+      .getValues("lines")
+      .map((line, lineIndex) =>
+        lineIndex === index ? { ...line, ...patch } : line,
+      );
+    form.setValue("lines", next, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   }
 
   return (
@@ -694,101 +711,125 @@ function SupplierInvoiceCreateFields({
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium">{copy.vatSection}</p>
-        <p className="text-xs text-muted-foreground">{copy.vatSectionHint}</p>
-        <div className="flex flex-col gap-3">
-          {visibleRates.map((rate, index) => {
-            const bucket = getVatBucket(rate);
-            const rateOptions = VAT_BUCKET_FIELDS.filter(
-              (entry) =>
-                entry.rate === rate || !visibleRates.includes(entry.rate),
-            ).map((entry) => ({
-              value: String(entry.rate),
-              label: formatPercent(entry.rate, 0),
-            }));
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium">{copy.invoiceLines}</p>
+        {invoiceLines.length === 0 ? (
+          <NoteCallout tone="muted">
+            {copy.chooseReceiptsForLines}
+          </NoteCallout>
+        ) : (
+          invoiceLines.map((line, index) => {
+            const lineTotal = Math.max(
+              line.quantity * Number(line.unitPrice || 0) -
+                Number(line.lineDiscount || 0),
+              0,
+            );
             return (
-              <div key={`${rate}-${index}`} className="flex flex-col gap-3">
-                <div className="flex items-end gap-2">
-                  <div className="flex min-w-0 flex-1 flex-col gap-2">
-                    <p className="text-sm font-medium">{copy.vatRateLabel}</p>
-                    <Select
-                      value={String(rate)}
+              <Item
+                key={line.key}
+                variant="outline"
+                className="flex-col items-stretch p-3"
+              >
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{line.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {line.quantity} {line.unitLabel}
+                    </p>
+                  </div>
+                  <span className="font-mono font-semibold tabular-nums">
+                    {messages.inventory.common.currencyCompact(
+                      formatVND(lineTotal),
+                    )}
+                  </span>
+                </div>
+                {invoiceKind === "service" ? (
+                  <TextField
+                    control={form.control}
+                    name={`lines.${index}.description`}
+                    label={copy.serviceDescription}
+                    required
+                  />
+                ) : null}
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    {copy.unitPriceLabel}
+                    <FormattedNumberInput
+                      controlSize="field"
+                      value={line.unitPrice}
                       onValueChange={(value) => {
-                        const nextRate = Number(value) as VatRate;
-                        if (![0, 5, 8, 10].includes(nextRate)) return;
-                        handleRateChange(index, nextRate);
+                        const rate = line.vatRate;
+                        const nextTotal = Math.max(
+                          line.quantity * Number(value || 0) -
+                            Number(line.lineDiscount || 0),
+                          0,
+                        );
+                        patchInvoiceLine(index, {
+                          unitPrice: value,
+                          vatAmount: String(
+                            Math.round(nextTotal * rate) / 100,
+                          ),
+                        });
+                      }}
+                      maxFractionDigits={0}
+                      aria-label={copy.unitPriceAria(line.description)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    {copy.lineDiscountLabel}
+                    <FormattedNumberInput
+                      controlSize="field"
+                      value={line.lineDiscount}
+                      onValueChange={(value) =>
+                        patchInvoiceLine(index, { lineDiscount: value })
+                      }
+                      maxFractionDigits={0}
+                      aria-label={copy.lineDiscountAria(line.description)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    {copy.taxRateLabel}
+                    <Select
+                      value={String(line.vatRate)}
+                      onValueChange={(value) => {
+                        const rate = Number(value);
+                        patchInvoiceLine(index, {
+                          vatRate: rate,
+                          vatAmount: String(
+                            Math.round(lineTotal * rate) / 100,
+                          ),
+                        });
                       }}
                     >
-                      <SelectTrigger
-                        size="touch"
-                        aria-label={copy.vatRateLabel}
-                      >
+                      <SelectTrigger size="field">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {rateOptions.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                            size="touch"
-                          >
-                            {option.label}
+                        {[0, 5, 8, 10].map((rate) => (
+                          <SelectItem key={rate} value={String(rate)}>
+                            {formatPercent(rate, 0)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  {visibleRates.length > 1 ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 text-destructive"
-                      onClick={() => handleRemoveVatRate(index)}
-                      aria-label={copy.removeVatRate}
-                    >
-                      <IconTrash className="size-4" />
-                    </Button>
-                  ) : null}
-                </div>
-                <div
-                  className={
-                    bucket.vatField != null
-                      ? "grid gap-3 sm:grid-cols-2"
-                      : "grid gap-3"
-                  }
-                >
-                  <MoneyVndField
-                    control={form.control}
-                    name={bucket.taxableField}
-                    label={copy.taxableAmountLabel}
-                    placeholder={copy.subtotalPlaceholder}
-                  />
-                  {bucket.vatField != null ? (
-                    <MoneyVndField
-                      control={form.control}
-                      name={bucket.vatField}
-                      label={copy.vatAmountLabel}
-                      placeholder={copy.vatAutoPlaceholder}
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    {copy.vatAmountLabel}
+                    <FormattedNumberInput
+                      controlSize="field"
+                      value={line.vatAmount}
+                      onValueChange={(value) =>
+                        patchInvoiceLine(index, { vatAmount: value })
+                      }
+                      maxFractionDigits={0}
+                      aria-label={copy.vatAmountAria(line.description)}
                     />
-                  ) : null}
+                  </label>
                 </div>
-              </div>
+              </Item>
             );
-          })}
-        </div>
-        {unusedRates.length > 0 ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="w-full sm:w-auto"
-            onClick={handleAddVatRate}
-          >
-            {copy.addVatRate}
-          </Button>
-        ) : null}
+          })
+        )}
         <MoneyVndField
           control={form.control}
           name="documentDiscount"
@@ -796,26 +837,12 @@ function SupplierInvoiceCreateFields({
           placeholder="0"
         />
         <NoteCallout tone="muted">
-          {vatBreakdown.map((line) => (
-            <div
-              key={line.vatRate}
-              className="mb-2 flex items-center justify-between gap-3"
-            >
-              <span className="text-muted-foreground">
-                {copy.vatBucketSummary(
-                  formatPercent(line.vatRate, 0),
-                  messages.inventory.common.currencyCompact(
-                    formatVND(line.taxableAmount),
-                  ),
-                )}
-              </span>
-              <span className="font-mono tabular-nums">
-                {messages.inventory.common.currencyCompact(
-                  formatVND(line.vatAmount),
-                )}
-              </span>
-            </div>
-          ))}
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{copy.beforeVat}</span>
+            <span className="font-mono tabular-nums">
+              {messages.inventory.common.currencyCompact(formatVND(subtotal))}
+            </span>
+          </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">{copy.vat}</span>
             <span className="font-mono tabular-nums">
@@ -1053,6 +1080,7 @@ export function SupplierInvoicesClient({
   const requestedMode: SupplierInvoiceMode | null =
     modeParam === "view" ||
     modeParam === "create" ||
+    modeParam === "edit" ||
     modeParam === "pay" ||
     modeParam === "credit" ||
     modeParam === "advance"
@@ -1062,7 +1090,8 @@ export function SupplierInvoicesClient({
     requestedMode === "create"
       ? "create"
       : preselectInvoiceId != null
-        ? requestedMode === "pay" ||
+        ? requestedMode === "edit" ||
+          requestedMode === "pay" ||
           requestedMode === "credit" ||
           requestedMode === "advance"
           ? requestedMode
@@ -1095,7 +1124,8 @@ export function SupplierInvoicesClient({
       (invoiceMode === "pay" && !canPaySupplier) ||
       (invoiceMode === "credit" && !canAcceptDiscrepancy) ||
       (invoiceMode === "advance" && !canPaySupplier));
-  const createOpen = invoiceMode === "create" && canCreateInvoice;
+  const createOpen =
+    (invoiceMode === "create" || invoiceMode === "edit") && canCreateInvoice;
   const paymentOpen =
     invoiceMode === "pay" && selectedInvoiceId != null && canPaySupplier;
   const creditOpen =
@@ -1115,6 +1145,8 @@ export function SupplierInvoicesClient({
   );
   const paymentIntentKeyRef = useRef<string | null>(null);
   const advanceIntentKeyRef = useRef<string | null>(null);
+  const invoiceSaveIntentKeyRef = useRef<string | null>(null);
+  const invoiceConfirmIntentKeyRef = useRef<string | null>(null);
   const createdInvoiceIdRef = useRef<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const controlSize = useFormControlSize();
@@ -1127,6 +1159,10 @@ export function SupplierInvoicesClient({
     () => createSupplierInvoiceDefaultValues(preselectGrnOptionKey),
     [createOpen, preselectGrnOptionKey],
   );
+
+  useEffect(() => {
+    invoiceConfirmIntentKeyRef.current = null;
+  }, [selectedInvoiceId]);
   const listKey = supplierInvoiceFiltersKey(filters);
   const actionFilters = useMemo(
     () => ({
@@ -1219,6 +1255,7 @@ export function SupplierInvoicesClient({
   function openCreateDialog() {
     if (!canCreateInvoice) return;
     createdInvoiceIdRef.current = null;
+    invoiceSaveIntentKeyRef.current = null;
     updateListParams({ mode: "create", invoiceId: null, grnId: null }, "push");
   }
 
@@ -1279,6 +1316,13 @@ export function SupplierInvoicesClient({
           (group) => group.primaryInvoice.id === selectedInvoiceId,
         )?.primaryInvoice)
       : null) ?? null;
+  const invoiceFormDefaultValues = useMemo(
+    () =>
+      invoiceMode === "edit" && selectedInvoice
+        ? editSupplierInvoiceDefaultValues(selectedInvoice, grns)
+        : createDefaultValues,
+    [createDefaultValues, grns, invoiceMode, selectedInvoice],
+  );
   const selectedOutstandingAmount = selectedInvoice
     ? getSupplierInvoiceOutstandingAmount(selectedInvoice)
     : 0;
@@ -1304,6 +1348,7 @@ export function SupplierInvoicesClient({
     () =>
       invoicesInSelectedGroup.filter(
         (invoice) =>
+          invoice.documentStatus === "confirmed" &&
           invoice.matchStatus === "matched" &&
           invoice.vatInvoiceAttachmentPath != null &&
           getSupplierInvoiceOutstandingAmount(invoice) > 0,
@@ -1522,23 +1567,42 @@ export function SupplierInvoicesClient({
     const resolvedSupplierId =
       selectedGrn?.supplierId ?? Number(values.supplierId || 0);
     const pendingFile = pendingCreateVatFile;
+    invoiceSaveIntentKeyRef.current ??= crypto.randomUUID();
     const res = await createSupplierInvoice({
+      invoiceId:
+        invoiceMode === "edit" ? (selectedInvoice?.id ?? undefined) : undefined,
       invoiceKind: values.invoiceKind,
       supplierId: resolvedSupplierId,
-      grnId: selectedGrn?.id ?? null,
-      poId: selectedGrn?.poId ?? null,
-      receiptAllocations: selectedGrns.map((receipt) => ({
-        grnId: receipt.id,
-        poId: receipt.poId!,
-      })),
       invoiceNumber: values.invoiceNumber.trim(),
       invoiceDate: values.invoiceDate,
-      vatBreakdown: buildSupplierInvoiceVatBreakdown(values),
       documentDiscountAmount: Number(values.documentDiscount || 0),
+      idempotencyKey: invoiceSaveIntentKeyRef.current,
+      lines: values.lines.map((line) => {
+        const unitPrice = Number(line.unitPrice || 0);
+        const lineDiscount = Number(line.lineDiscount || 0);
+        const lineTotal = Math.max(
+          line.quantity * unitPrice - lineDiscount,
+          0,
+        );
+        return {
+          lineKey: line.key,
+          ingredientId: line.ingredientId,
+          description: line.description,
+          quantity: line.quantity,
+          unitId: line.unitId,
+          unitPrice,
+          lineDiscount,
+          vatRate: line.vatRate,
+          vatAmount: Number(line.vatAmount || 0),
+          lineTotal,
+          allocations: line.allocations,
+        };
+      }),
     });
 
     if (res.success && res.data) {
       const created = res.data as { id: number };
+      invoiceSaveIntentKeyRef.current = null;
       setPendingCreateVatFile(null);
 
       if (pendingFile && canAttachVatEvidence) {
@@ -1561,6 +1625,22 @@ export function SupplierInvoicesClient({
     }
 
     return res;
+  }
+
+  async function handleConfirmInvoice() {
+    if (!selectedInvoice) return;
+    invoiceConfirmIntentKeyRef.current ??= crypto.randomUUID();
+    const result = await confirmSupplierInvoice({
+      invoiceId: selectedInvoice.id,
+      idempotencyKey: invoiceConfirmIntentKeyRef.current,
+    });
+    if (!result.success) {
+      toast.error(result.error);
+      return;
+    }
+    invoiceConfirmIntentKeyRef.current = null;
+    toast.success("Đã xác nhận hóa đơn NCC.");
+    await reloadInvoices(selectedInvoice.id);
   }
 
   async function handleRecordPayment(values: SupplierPaymentFormValues) {
@@ -1743,7 +1823,7 @@ export function SupplierInvoicesClient({
   }
 
   function handleCreateOpenChange(open: boolean) {
-    if (open) {
+    if (open && invoiceMode !== "edit") {
       openCreateDialog();
       return;
     }
@@ -1757,6 +1837,12 @@ export function SupplierInvoicesClient({
       return;
     }
     updateListParams({ mode: null, invoiceId: null, grnId: null });
+  }
+
+  function openEditInvoiceDialog() {
+    if (!selectedInvoice || selectedInvoice.documentStatus !== "draft") return;
+    invoiceSaveIntentKeyRef.current = null;
+    updateListParams({ mode: "edit", invoiceId: String(selectedInvoice.id) });
   }
 
   function openSupplierCreditDialog() {
@@ -2153,6 +2239,7 @@ export function SupplierInvoicesClient({
   const canShowPayAction =
     canPaySupplier &&
     selectedInvoice != null &&
+    selectedInvoice.documentStatus === "confirmed" &&
     selectedInvoice.matchStatus === "matched" &&
     selectedOutstandingAmount > 0;
   const payIsPrimary =
@@ -2685,6 +2772,42 @@ export function SupplierInvoicesClient({
                   ) : null}
                 </ItemGroup>
 
+                {selectedInvoice.invoiceLines.length > 0 ? (
+                  <ItemGroup className="grid gap-2">
+                    {selectedInvoice.invoiceLines.map((line) => (
+                      <Item key={line.id} variant="outline" size="sm">
+                        <ItemContent className="gap-1">
+                          <ItemTitle size="heading">
+                            {line.ingredientName}
+                          </ItemTitle>
+                          <ItemDescription className="line-clamp-none">
+                            {copy.invoiceLineMeta(
+                              String(line.quantity),
+                              line.unitLabel,
+                              messages.inventory.common.currencyCompact(
+                                formatVND(line.unitPrice),
+                              ),
+                              line.lineDiscount > 0
+                                ? messages.inventory.common.currencyCompact(
+                                    formatVND(line.lineDiscount),
+                                  )
+                                : null,
+                              formatPercent(line.vatRate, 0),
+                            )}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemActions>
+                          <span className="font-mono font-semibold tabular-nums">
+                            {messages.inventory.common.currencyCompact(
+                              formatVND(line.lineTotal + line.vatAmount),
+                            )}
+                          </span>
+                        </ItemActions>
+                      </Item>
+                    ))}
+                  </ItemGroup>
+                ) : null}
+
                 {selectedInvoice.receiptAllocations.length > 0 ? (
                   <ItemGroup className="grid gap-2">
                     {selectedInvoice.receiptAllocations.map((allocation) => (
@@ -2761,6 +2884,31 @@ export function SupplierInvoicesClient({
 
               <SheetFooter>
                 <div className="flex flex-wrap gap-2">
+                  {canAcceptDiscrepancy &&
+                  selectedInvoice.documentStatus === "draft" &&
+                  selectedInvoice.matchStatus === "matched" ? (
+                    <Button
+                      type="button"
+                      size="touch"
+                      className="flex-1"
+                      onClick={handleConfirmInvoice}
+                      disabled={isPending}
+                    >
+                      {copy.confirmInvoiceAction}
+                    </Button>
+                  ) : null}
+                  {canCreateInvoice &&
+                  selectedInvoice.documentStatus === "draft" ? (
+                    <Button
+                      type="button"
+                      size="touch"
+                      variant="outline"
+                      onClick={openEditInvoiceDialog}
+                      disabled={isPending}
+                    >
+                      {ACTIONS_VI.edit}
+                    </Button>
+                  ) : null}
                   {canShowPayAction ? (
                     <Button
                       type="button"
@@ -2891,9 +3039,13 @@ export function SupplierInvoicesClient({
         open={createOpen}
         onOpenChange={handleCreateOpenChange}
         schema={supplierInvoiceSchema}
-        defaultValues={createDefaultValues}
-        entityKey="new-supplier-invoice"
-        title={copy.createAction}
+        defaultValues={invoiceFormDefaultValues}
+        entityKey={
+          invoiceMode === "edit"
+            ? `supplier-invoice-${selectedInvoiceId}`
+            : "new-supplier-invoice"
+        }
+        title={invoiceMode === "edit" ? "Sửa hóa đơn NCC" : copy.createAction}
         description={copy.createDescription}
         submitLabel={copy.saveInvoice}
         cancelLabel={ACTIONS_VI.cancel}

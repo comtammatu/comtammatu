@@ -26,32 +26,13 @@ const ROLES = MODULE_ACL.finance.allowedRoles;
 
 /* ─── Supplier Invoices (3-way match: PO ↔ GRN ↔ Invoice) ─── */
 
-const supplierInvoiceVatLineSchema = z.object({
-  vatRate: z.coerce.number().refine((value) => [0, 5, 8, 10].includes(value), {
-    error: "Thuế GTGT không hợp lệ.",
-  }),
-  taxableAmount: z.coerce.number().positive(),
-  vatAmount: z.coerce.number().min(0),
-});
-
 const invoiceSchema = z
   .object({
+    invoiceId: z.coerce.number().int().positive().nullable().optional(),
     invoiceKind: z.enum(["goods", "service"]).default("goods"),
     supplierId: z.coerce.number().int().positive(),
-    grnId: z.coerce.number().int().positive().optional().nullable(),
-    poId: z.coerce.number().int().positive().optional().nullable(),
-    receiptAllocations: z
-      .array(
-        z.object({
-          grnId: z.coerce.number().int().positive(),
-          poId: z.coerce.number().int().positive(),
-        }),
-      )
-      .max(200)
-      .optional(),
     invoiceNumber: z.string().min(1),
     invoiceDate: z.string(),
-    vatBreakdown: z.array(supplierInvoiceVatLineSchema).min(1).max(4),
     matchingNotes: z.string().optional(),
     dueDate: z.string().optional().nullable(),
     documentDiscountAmount: z.coerce
@@ -59,68 +40,92 @@ const invoiceSchema = z
       .nonnegative()
       .optional()
       .default(0),
+    lines: z
+      .array(
+        z.object({
+          lineKey: z.string().trim().min(1).max(100),
+          ingredientId: z.coerce.number().int().positive().nullable(),
+          description: z.string().trim().min(1).max(300),
+          quantity: z.coerce.number().positive(),
+          unitId: z.coerce.number().int().positive().nullable(),
+          unitPrice: z.coerce.number().nonnegative(),
+          lineDiscount: z.coerce.number().nonnegative().default(0),
+          vatRate: z.coerce
+            .number()
+            .refine((value) => [0, 5, 8, 10].includes(value)),
+          vatAmount: z.coerce.number().nonnegative(),
+          lineTotal: z.coerce.number().nonnegative(),
+          allocations: z
+            .array(
+              z.object({
+                grnId: z.coerce.number().int().positive(),
+                poId: z.coerce.number().int().positive(),
+                purchaseOrderItemId: z.coerce.number().int().positive(),
+                quantity: z.coerce.number().positive(),
+              }),
+            )
+            .max(200),
+        }),
+      )
+      .min(1)
+      .max(200),
+    idempotencyKey: z.string().uuid(),
   })
   .superRefine((data, ctx) => {
-    const receiptCount =
-      data.receiptAllocations?.length ??
-      (data.grnId != null && data.poId != null ? 1 : 0);
+    const receiptCount = data.lines.reduce(
+      (sum, line) => sum + line.allocations.length,
+      0,
+    );
     if (data.invoiceKind === "goods" && receiptCount === 0) {
       ctx.addIssue({
         code: "custom",
         message: "Hóa đơn hàng hóa phải liên kết ít nhất một phiếu nhập.",
-        path: ["receiptAllocations"],
+        path: ["lines"],
       });
     }
     if (data.invoiceKind === "service" && receiptCount > 0) {
       ctx.addIssue({
         code: "custom",
         message: "Hóa đơn dịch vụ không liên kết phiếu nhập.",
-        path: ["receiptAllocations"],
+        path: ["lines"],
       });
     }
-    const rates = new Set<number>();
-    for (const [index, line] of data.vatBreakdown.entries()) {
-      if (rates.has(line.vatRate)) {
+    for (const [index, line] of data.lines.entries()) {
+      if (data.invoiceKind === "goods") {
+        if (line.ingredientId == null || line.unitId == null) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Dòng hàng hóa phải có nguyên liệu và đơn vị.",
+            path: ["lines", index],
+          });
+        }
+      }
+      if (
+        Math.abs(
+          line.lineTotal -
+            (line.quantity * line.unitPrice - line.lineDiscount),
+        ) > 1
+      ) {
         ctx.addIssue({
           code: "custom",
-          message: "Mỗi mức thuế GTGT chỉ được nhập một lần.",
-          path: ["vatBreakdown", index, "vatRate"],
+          message: "Thành tiền dòng không khớp số lượng và đơn giá.",
+          path: ["lines", index, "lineTotal"],
         });
       }
       if (line.vatRate === 0 && line.vatAmount !== 0) {
         ctx.addIssue({
           code: "custom",
           message: "Mức thuế 0% phải có tiền thuế bằng 0.",
-          path: ["vatBreakdown", index, "vatAmount"],
+          path: ["lines", index, "vatAmount"],
         });
       }
-      rates.add(line.vatRate);
     }
   });
 
-type CreateSupplierInvoiceRpcClient = {
-  rpc: (
-    fn: "create_supplier_invoice_with_allocations",
-    args: {
-      p_supplier_id: number;
-      p_invoice_number: string;
-      p_invoice_date: string;
-      p_vat_breakdown: Array<{
-        vat_rate: number;
-        taxable_amount: number;
-        vat_amount: number;
-      }>;
-      p_matching_notes: string | null;
-      p_due_date: string | null;
-      p_document_discount_amount: number;
-      p_receipts: Array<{ grn_id: number; po_id: number }>;
-      p_invoice_kind: "goods" | "service";
-    },
-  ) => PromiseLike<{
-    data: number | null;
-    error: { code?: string; message?: string } | null;
-  }>;
-};
+const confirmSupplierInvoiceSchema = z.object({
+  invoiceId: z.coerce.number().int().positive(),
+  idempotencyKey: z.string().uuid(),
+});
 
 const supplierPaymentSchema = z.object({
   invoiceId: z.coerce.number().int().positive(),
@@ -215,30 +220,53 @@ export const createSupplierInvoice = withAction(
     permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
   },
   async (data, { supabase }) => {
-    const { data: invoiceId, error } = await (
-      supabase as unknown as CreateSupplierInvoiceRpcClient
-    ).rpc("create_supplier_invoice_with_allocations", {
-      p_supplier_id: data.supplierId,
-      p_invoice_number: data.invoiceNumber,
-      p_invoice_date: data.invoiceDate,
-      p_vat_breakdown: data.vatBreakdown.map((line) => ({
-        vat_rate: line.vatRate,
-        taxable_amount: line.taxableAmount,
-        vat_amount: line.vatAmount,
-      })),
-      p_matching_notes: data.matchingNotes ?? null,
-      p_due_date: data.dueDate ?? null,
-      p_document_discount_amount: data.documentDiscountAmount,
-      p_invoice_kind: data.invoiceKind,
-      p_receipts:
-        data.receiptAllocations?.map((allocation) => ({
-          grn_id: allocation.grnId,
-          po_id: allocation.poId,
-        })) ??
-        (data.grnId != null && data.poId != null
-          ? [{ grn_id: data.grnId, po_id: data.poId }]
-          : []),
-    });
+    const subtotal = data.lines.reduce((sum, line) => sum + line.lineTotal, 0);
+    const vatAmount = data.lines.reduce(
+      (sum, line) => sum + line.vatAmount,
+      0,
+    );
+    const totalAmount =
+      subtotal - data.documentDiscountAmount + vatAmount;
+    const { data: result, error } = await supabase.rpc(
+      "save_supplier_invoice_draft" as never,
+      {
+        p_invoice_id: data.invoiceId ?? null,
+        p_invoice: {
+          supplier_id: data.supplierId,
+          invoice_kind: data.invoiceKind,
+          invoice_number: data.invoiceNumber,
+          invoice_date: data.invoiceDate,
+          due_date: data.dueDate ?? null,
+          document_discount_amount: data.documentDiscountAmount,
+          subtotal,
+          vat_amount: vatAmount,
+          total_amount: totalAmount,
+          matching_notes: data.matchingNotes ?? null,
+        },
+        p_lines: data.lines.map((line) => ({
+          line_key: line.lineKey,
+          ingredient_id: line.ingredientId,
+          description: line.description,
+          quantity: line.quantity,
+          unit_id: line.unitId,
+          unit_price: line.unitPrice,
+          line_discount: line.lineDiscount,
+          vat_rate: line.vatRate,
+          vat_amount: line.vatAmount,
+          line_total: line.lineTotal,
+        })),
+        p_allocations: data.lines.flatMap((line) =>
+          line.allocations.map((allocation) => ({
+            line_key: line.lineKey,
+            grn_id: allocation.grnId,
+            po_id: allocation.poId,
+            purchase_order_item_id: allocation.purchaseOrderItemId,
+            quantity: allocation.quantity,
+          })),
+        ),
+        p_idempotency_key: data.idempotencyKey,
+      } as never,
+    );
     if (error) {
       if (error.code === PG_ERR.UNIQUE_VIOLATION) {
         return {
@@ -264,7 +292,10 @@ export const createSupplierInvoice = withAction(
           error: "Nhà cung cấp không khớp với phiếu nhập.",
         };
       }
-      if (error.message?.includes("supplier_invoice_receipt_mismatch")) {
+      if (
+        error.message?.includes("supplier_invoice_receipt_line_mismatch") ||
+        error.message?.includes("supplier_invoice_receipt_mismatch")
+      ) {
         return {
           success: false,
           error: "Các phiếu nhập phải đã xác nhận và thuộc cùng nhà cung cấp.",
@@ -300,10 +331,72 @@ export const createSupplierInvoice = withAction(
           error: "Chi tiết thuế GTGT của hóa đơn không hợp lệ.",
         };
       }
+      if (error.message?.includes("supplier_invoice_over_allocation")) {
+        return {
+          success: false,
+          error: "Số lượng lập hóa đơn vượt số lượng thực nhận còn lại.",
+        };
+      }
+      if (error.message?.includes("supplier_invoice_total_mismatch")) {
+        return {
+          success: false,
+      error: "Tổng dòng, chiết khấu, thuế GTGT và tổng hóa đơn không khớp.",
+        };
+      }
       return { success: false, error: "Không thể tạo hóa đơn NCC." };
     }
 
-    return { success: true, data: { id: Number(invoiceId) } };
+    const parsed = z
+      .object({
+        invoice_id: z.coerce.number().int().positive(),
+        document_status: z.literal("draft"),
+        matching_status: z.string(),
+      })
+      .safeParse(result);
+    if (!parsed.success) {
+      return { success: false, error: "Phản hồi lưu hóa đơn không hợp lệ." };
+    }
+    return {
+      success: true,
+      data: {
+        id: parsed.data.invoice_id,
+        documentStatus: parsed.data.document_status,
+        matchingStatus: parsed.data.matching_status,
+      },
+    };
+  },
+);
+
+export const confirmSupplierInvoice = withAction(
+  {
+    roles: ROLES,
+    schema: confirmSupplierInvoiceSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
+  },
+  async ({ invoiceId, idempotencyKey }, { supabase }) => {
+    const { data, error } = await supabase.rpc(
+      "confirm_supplier_invoice" as never,
+      {
+        p_invoice_id: invoiceId,
+        p_idempotency_key: idempotencyKey,
+      } as never,
+    );
+    if (error) {
+      if (error.message.includes("supplier_invoice_not_matched")) {
+        return {
+          success: false,
+          error: "Hóa đơn còn chênh lệch hoặc thiếu phân bổ.",
+        };
+      }
+      if (error.message.includes("service_invoice_not_verified")) {
+        return {
+          success: false,
+          error: "Hóa đơn dịch vụ chưa được xác minh chứng từ.",
+        };
+      }
+      return { success: false, error: "Không thể xác nhận hóa đơn NCC." };
+    }
+    return { success: true, data };
   },
 );
 
@@ -640,7 +733,7 @@ const supplierInvoiceSelect = (branchId?: number) => {
     branchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
-  return `id, invoice_kind, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, vat_invoice_attachment_path, total_amount, matching_status, matching_notes, matching_expected_amount, matching_received_amount, matching_difference_amount, matching_reason_code, service_verified_at, service_verification_reason, document_discount_amount, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), supplier_payment_allocations ( supplier_payments ( id, amount, payment_method, payment_date, reference_note ) ), supplier_invoice_receipt_allocations ( grn_id, po_id, goods_received_notes ( id, grn_number, status ), purchase_orders ( id, po_number ) ), ${grnSelect}`;
+  return `id, document_status, invoice_kind, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, vat_invoice_attachment_path, total_amount, matching_status, matching_notes, matching_expected_amount, matching_received_amount, matching_difference_amount, matching_reason_code, service_verified_at, service_verification_reason, document_discount_amount, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), supplier_payment_allocations ( supplier_payments ( id, amount, payment_method, payment_date, reference_note ) ), supplier_invoice_lines ( id, ingredient_id, description, quantity, unit_id, unit_price, line_discount_amount, vat_rate, vat_amount, line_total, ingredients ( name ), units ( name, code ), supplier_invoice_receipt_allocations ( grn_id, po_id, purchase_order_item_id, billed_quantity ) ), supplier_invoice_receipt_allocations ( grn_id, po_id, goods_received_notes ( id, grn_number, status ), purchase_orders ( id, po_number ) ), ${grnSelect}`;
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;

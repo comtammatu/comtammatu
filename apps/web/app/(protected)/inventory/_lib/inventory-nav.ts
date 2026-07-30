@@ -1,7 +1,6 @@
 import {
   ArrowRightLeft as IconArrowRightLeft,
   CircleMinus as IconCircleMinus,
-  ClipboardList as IconClipboardList,
   FileText as IconFileText,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
@@ -36,9 +35,8 @@ export function withInventoryBranchNavScope(
   }));
 }
 
-/** D093: PO nav only for owner | accountant. */
 function canShowPurchaseOrders(role: StaffRole): boolean {
-  return role === "owner" || role === "accountant";
+  return role !== "branch_manager";
 }
 
 /** Menu-item consumption recipes are owner-managed catalog data. */
@@ -77,19 +75,14 @@ export function resolveInventoryNav({
             title: "Nhập hàng",
             items: [
               {
-                href: "/inventory/purchase-requests",
-                label: "Yêu cầu mua",
-                icon: IconClipboardList,
+                href: "/inventory/purchase-orders",
+                label: "Mua hàng",
+                icon: IconShoppingCart,
               },
               {
                 href: "/inventory/grn",
                 label: "Nhập kho",
                 icon: IconPackagePlus,
-              },
-              {
-                href: "/inventory/purchase-orders",
-                label: "Đơn mua hàng",
-                icon: IconShoppingCart,
               },
             ],
           },
@@ -123,23 +116,18 @@ export function resolveInventoryNav({
   });
 
   const inboundItems: ShellNavGroup["items"] = [];
-  if (showProcurement) {
+  if (showProcurement && canShowPurchaseOrders(userRole)) {
     inboundItems.push({
-      href: "/inventory/purchase-requests",
-      label: "Yêu cầu mua",
-      icon: IconClipboardList,
+      href: "/inventory/purchase-orders",
+      label: "Mua hàng",
+      icon: IconShoppingCart,
     });
+  }
+  if (showProcurement) {
     inboundItems.push({
       href: "/inventory/grn",
       label: "Nhập kho",
       icon: IconPackagePlus,
-    });
-  }
-  if (showProcurement && canShowPurchaseOrders(userRole)) {
-    inboundItems.push({
-      href: "/inventory/purchase-orders",
-      label: "Đơn mua hàng",
-      icon: IconShoppingCart,
     });
   }
   inboundItems.push({

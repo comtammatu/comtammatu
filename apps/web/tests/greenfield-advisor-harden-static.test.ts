@@ -101,17 +101,18 @@ test("post-topology reenforce keeps anon revoke, initplans, and duplicate drop",
   );
 });
 
-test("topology no longer recreates a second branches unique when one exists", () => {
+test("topology security hardening survives the later duplicate-unique cleanup", () => {
   assert.match(
     topology,
-    /IF NOT EXISTS \([\s\S]*UNIQUE \(id, tenant_id\)[\s\S]*ADD CONSTRAINT branches_id_tenant_key/,
+    /ADD CONSTRAINT branches_id_tenant_key\s+UNIQUE \(id, tenant_id\)/,
   );
+  assert.match(postTopology, /DROP CONSTRAINT IF EXISTS branches_id_tenant_key/);
   assert.match(
-    topology,
+    postTopology,
     /REVOKE ALL ON FUNCTION public\.next_inventory_doc_number\(bigint, text\)\s+FROM PUBLIC, anon/,
   );
   assert.match(
-    topology,
+    postTopology,
     /created_by = \(SELECT auth\.uid\(\)\)/,
   );
 });

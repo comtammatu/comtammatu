@@ -28,7 +28,7 @@ test("business-date picker displays and navigates in Vietnamese", () => {
     businessDateFieldSource,
     /import \{ Calendar, vi \} from "@comtammatu\/ui\/components\/calendar"/,
   );
-  assert.match(businessDateFieldSource, /formatVNBusinessDate\(rawValue\)/);
+  assert.match(businessDateFieldSource, /formatVNBusinessDate\(value\)/);
   assert.match(businessDateFieldSource, /<Calendar[\s\S]*locale=\{vi\}/);
 });
 

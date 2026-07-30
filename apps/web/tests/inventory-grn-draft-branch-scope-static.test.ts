@@ -25,9 +25,6 @@ const branchGrnListClient = readRepo(
 const grnNewPage = readRepo(
   "apps/web/app/(protected)/inventory/grn/new/page.tsx",
 );
-const grnCreateController = readRepo(
-  "apps/web/lib/inventory/use-grn-create-controller.ts",
-);
 const poDraftMigration = readRepo(
   "supabase/migration-archive/20260708130514_separate_free_and_po_grn_drafts.sql",
 );
@@ -85,7 +82,8 @@ test("GRN free drafts and PO-linked drafts do not share the same unique slot", (
     multiSupplierMigration,
     /ON public\.goods_received_notes \(tenant_id, created_by, branch_id\)/,
   );
-  assert.match(grnListClient, /grnDraftHref\(basePath,\s*draft\)/);
+  assert.match(grnListClient, /function detailHref\(row: GrnListRow\)/);
+  assert.match(grnListClient, /grnId: String\(row\.id\)/);
   assert.match(grnListModel, /return `\$\{basePath\}\/\$\{draft\.grnId\}`;/);
   assert.match(grnListModel, /export function grnDraftHref/);
   assert.match(grnListModel, /export function newGrnSupplierHref/);
@@ -96,48 +94,29 @@ test("GRN free drafts and PO-linked drafts do not share the same unique slot", (
     /const href = `\$\{basePath\}\/\$\{draft\.grnId\}`;/,
   );
   assert.doesNotMatch(branchGrnListClient, /grnSourceSupplierHref/);
-  assert.match(grnListClient, /draft\.poCount > 0 && draft\.poCode/);
-  assert.match(grnListClient, /grn\.poCount > 0 && grn\.poCode/);
+  assert.match(grnListClient, /\{row\.poCode\}/);
 });
 
-test("GRN new receipt skips supplier picker and opens create directly", () => {
-  assert.match(grnNewPage, /loadGrnCreatePageData/);
-  assert.match(grnNewPage, /GrnCreateClient/);
-  assert.doesNotMatch(grnNewPage, /SupplierPicker/);
-  assert.doesNotMatch(grnNewPage, /parseGrnSupplierIdParam/);
-
-  assert.doesNotMatch(grnCreateController, /confirmGrn|confirmNow/);
-  assert.match(
-    grnCreateController,
-    /router\.push\(`\$\{grnBasePath\}\/\$\{grnId\}`\)/,
-  );
-  assert.match(grnCreateController, /supplierId: null/);
-  assert.match(grnCreateController, /supplierSummary/);
-  assert.doesNotMatch(grnCreateController, /NumberPadSheet/);
-  assert.doesNotMatch(grnCreateController, /onOpenNumpad/);
+test("GRN new receipt redirects to the canonical queue", () => {
+  assert.match(grnNewPage, /redirect\("\/inventory\/grn"\)/);
 });
 
-test("GRN list creation and drafts follow the resolved branch grant", () => {
-  assert.match(grnListData, /PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE/);
+test("GRN list follows resolved scope and exposes only invoice authority", () => {
   assert.match(
     grnListData,
-    /probePermission\(\s*auth,\s*PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE,\s*branchId\s*\)/,
+    /resolveInventoryListScope\(supabase, claims/,
   );
+  assert.match(grnListData, /PERMISSION_KEYS\.PROCUREMENT_INVOICE_CREATE/);
+  assert.match(grnListData, /\.rpc\("list_goods_receipt_notes"/);
+  assert.doesNotMatch(grnListData, /PERMISSION_KEYS\.PROCUREMENT_GRN_CREATE/);
   assert.match(
     grnListData,
-    /const shouldLoadDrafts = includeDrafts && canCreate/,
+    /p_branch_id: filters\.branchId/,
   );
-  assert.match(
-    grnListData,
-    /shouldLoadDrafts \? listMyGrnDrafts\(routeBranchId\) : Promise\.resolve\(null\)/,
-  );
-  assert.match(grnListPage, /canCreate=\{data\.canCreate\}/);
   assert.match(
     grnListPage,
-    /drafts=\{showDrafts && data\.canCreate \? data\.drafts : undefined\}/,
+    /canManageSupplierInvoice=\{data\.canManageSupplierInvoice\}/,
   );
-  assert.match(grnListClient, /canCreate: boolean/);
-  assert.match(grnListClient, /const desktopActions = canCreate \?/);
 });
 
 test("GRN drafts have no retired compatibility route", () => {

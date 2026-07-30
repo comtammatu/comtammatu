@@ -118,7 +118,7 @@ export default async function FinanceSupplierInvoicesPage({
       viewMode: filters.viewMode,
     }),
     fetchSuppliers(),
-    fetchGrnIdsForDropdown(branchFilter, includeGrnId),
+    fetchGrnIdsForDropdown(branchFilter, includeGrnId, requestedInvoiceId ?? undefined),
     requestedInvoiceId != null
       ? fetchSupplierInvoicesPage({
           branchId: branchFilter,
@@ -208,6 +208,17 @@ export default async function FinanceSupplierInvoicesPage({
         ),
         poId,
         netAcceptedAmount,
+        lines: (
+          (row.lines as Array<Record<string, unknown>> | undefined) ?? []
+        ).map((line) => ({
+          grnItemId: Number(line.grn_item_id),
+          purchaseOrderItemId: Number(line.purchase_order_item_id),
+          ingredientId: Number(line.ingredient_id),
+          ingredientName: String(line.ingredient_name ?? "Nguyên liệu"),
+          unitId: Number(line.entry_unit_id),
+          unitLabel: String(line.unit_label ?? "Đơn vị"),
+          availableQuantity: Number(line.available_quantity),
+        })),
       };
     },
   );

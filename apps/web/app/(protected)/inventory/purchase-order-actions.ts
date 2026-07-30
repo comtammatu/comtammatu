@@ -3,7 +3,9 @@
 import { z } from "zod";
 import {
   PERMISSION_KEYS,
+  PO_CREATE_ROLES,
   PO_MUTATE_ROLES,
+  PO_REVIEW_ROLES,
   PROCUREMENT_ROLES,
   isProcurementBranchInScope,
 } from "@comtammatu/shared/auth";
@@ -69,6 +71,12 @@ const savePurchaseRequestSchema = z.object({
   idempotencyKey: z.string().uuid().optional(),
 });
 
+const savePurchaseDemandSchema = savePurchaseRequestSchema
+  .omit({ requestId: true })
+  .extend({
+    demandId: z.coerce.number().int().positive().nullable().optional(),
+  });
+
 const purchaseRequestIdSchema = z.object({
   requestId: z.coerce.number().int().positive(),
 });
@@ -79,6 +87,46 @@ const documentReasonSchema = z.object({
 
 const purchaseRequestReasonSchema =
   purchaseRequestIdSchema.extend(documentReasonSchema.shape);
+
+const purchaseDemandAllocationSchema = z.object({
+  requestItemId: z.coerce.number().int().positive(),
+  supplierId: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive(),
+});
+
+const savePurchaseDemandAllocationsSchema = z.object({
+  demandId: z.coerce.number().int().positive(),
+  allocations: z.array(purchaseDemandAllocationSchema).max(500),
+  idempotencyKey: z.string().uuid(),
+});
+
+const reviewPurchaseDemandSchema = z
+  .object({
+    demandId: z.coerce.number().int().positive(),
+    action: z.enum(["approve", "request_changes", "reject"]),
+    allocations: z.array(purchaseDemandAllocationSchema).max(500).optional(),
+    reason: z.string().trim().max(500).optional(),
+    idempotencyKey: z.string().uuid().optional(),
+  })
+  .superRefine(({ action, reason, idempotencyKey }, context) => {
+    if (action === "approve" && idempotencyKey == null) {
+      context.addIssue({
+        code: "custom",
+        path: ["idempotencyKey"],
+        message: "Thiếu mã chống gửi trùng.",
+      });
+    }
+    if (
+      action !== "approve" &&
+      (reason == null || reason.trim().length < 5)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "Vui lòng nhập lý do tối thiểu 5 ký tự.",
+      });
+    }
+  });
 
 const createPoFromRequestSchema = purchaseRequestIdSchema.extend({
   supplierId: z.coerce.number().int().positive(),
@@ -122,6 +170,54 @@ const savePurchaseOrderSchema = poIdSchema.extend({
 
 const poReasonSchema = poIdSchema.extend(documentReasonSchema.shape);
 
+const savePurchaseOrderGroupSchema = z.object({
+  groupKey: z.string().uuid().nullable().optional(),
+  branchId: z.coerce.number().int().positive(),
+  expectedDeliveryDate: z.iso.date().nullable().optional(),
+  notes: z.string().trim().max(500).optional(),
+  lines: z
+    .array(
+      z.object({
+        ingredientId: z.coerce.number().int().positive(),
+        quantity: z.coerce.number().positive(),
+        entryUnitId: z.coerce.number().int().positive(),
+      }),
+    )
+    .min(1)
+    .max(200),
+  submit: z.boolean().default(true),
+  idempotencyKey: z.string().uuid(),
+});
+
+const reviewPurchaseOrderSchema = poIdSchema
+  .extend({
+    action: z.enum(["approve", "request_changes", "reject"]),
+    reason: z.string().trim().max(500).optional(),
+  })
+  .superRefine(({ action, reason }, context) => {
+    if (
+      action !== "approve" &&
+      (reason == null || reason.trim().length < 5)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "Vui lòng nhập lý do tối thiểu 5 ký tự.",
+      });
+    }
+  });
+
+type PurchaseOrderGroupActionData = {
+  groupKey: string;
+  groupCode: string;
+  purchaseOrders: Array<{
+    id: number;
+    code: string;
+    supplierId: number;
+    status: string;
+  }>;
+};
+
 function procurementRpcError(
   error: { code?: string; message: string },
   fallback: string,
@@ -149,9 +245,38 @@ function procurementRpcError(
       "Yêu cầu mua chưa sẵn sàng tạo đơn đặt hàng.",
     ],
     [
-      "purchase_order_line_invalid",
-      "Số lượng hoặc giá trên đơn đặt hàng không hợp lệ.",
+      "purchase_demand_not_editable",
+      "Nhu cầu mua không còn được phép sửa.",
     ],
+    [
+      "purchase_demand_not_allocatable",
+      "Nhu cầu mua không còn chờ phân bổ nhà cung cấp.",
+    ],
+    [
+      "purchase_demand_not_reviewable",
+      "Nhu cầu mua không còn chờ Kế toán xử lý.",
+    ],
+    [
+      "purchase_demand_allocation_incomplete",
+      "Phải phân bổ đủ số lượng của mọi nguyên liệu trước khi duyệt.",
+    ],
+    [
+      "purchase_demand_allocations_invalid",
+      "Phân bổ nhà cung cấp hoặc số lượng không hợp lệ.",
+    ],
+    [
+      "purchase_demand_idempotency_required",
+      "Không thể chống gửi trùng cho thao tác này.",
+    ],
+    [
+      "purchase_order_line_invalid",
+      "Số lượng hoặc đơn vị trên phiếu mua không hợp lệ.",
+    ],
+    [
+      "purchase_order_group_not_editable",
+      "Nhóm phiếu mua không còn được phép sửa.",
+    ],
+    ["purchase_order_not_reviewable", "Phiếu mua không còn chờ duyệt."],
     [
       "purchase_order_not_sendable",
       "Đơn đặt hàng chưa đủ dữ liệu hoặc không còn được phép gửi.",
@@ -187,6 +312,162 @@ function procurementRpcError(
     )?.[1] ?? fallback
   );
 }
+
+export const savePurchaseOrderGroup = withAction<
+  typeof savePurchaseOrderGroupSchema,
+  PurchaseOrderGroupActionData
+>(
+  {
+    roles: PO_CREATE_ROLES,
+    schema: savePurchaseOrderGroupSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  },
+  async (
+    {
+      groupKey,
+      branchId,
+      expectedDeliveryDate,
+      notes,
+      lines,
+      submit,
+      idempotencyKey,
+    },
+    { supabase },
+  ) => {
+    const { data, error } = await supabase.rpc(
+      "save_purchase_order_group" as never,
+      {
+        p_group_key: groupKey ?? null,
+        p_branch_id: branchId,
+        p_expected_delivery_date: expectedDeliveryDate ?? null,
+        p_notes: notes ?? "",
+        p_lines: lines.map((line) => ({
+          ingredient_id: line.ingredientId,
+          quantity: line.quantity,
+          entry_unit_id: line.entryUnitId,
+        })),
+        p_submit: submit,
+        p_idempotency_key: idempotencyKey,
+      } as never,
+    );
+    if (error) {
+      return {
+        success: false,
+        error: procurementRpcError(error, "Không thể lưu phiếu mua."),
+      };
+    }
+
+    const parsed = z
+      .discriminatedUnion("ok", [
+        z.object({
+          ok: z.literal(false),
+          error_code: z.literal("supplier_default_missing"),
+          missing_supplier_items: z.array(
+            z.object({
+              ingredient_id: z.coerce.number().int().positive(),
+              ingredient_name: z.string(),
+            }),
+          ),
+        }),
+        z.object({
+          ok: z.literal(true),
+          purchase_group_key: z.string().uuid(),
+          purchase_group_code: z.string(),
+          purchase_orders: z
+            .array(
+              z.object({
+                po_id: z.coerce.number().int().positive(),
+                po_number: z.string(),
+                supplier_id: z.coerce.number().int().positive(),
+                group_sequence: z.coerce.number().int().positive(),
+                status: z.string(),
+              }),
+            )
+            .min(1),
+        }),
+      ])
+      .safeParse(data);
+
+    if (!parsed.success) {
+      return { success: false, error: "Phản hồi lưu phiếu mua không hợp lệ." };
+    }
+    if (!parsed.data.ok) {
+      return {
+        success: false,
+        error: `Chưa có NCC mặc định: ${parsed.data.missing_supplier_items
+          .map((item) => item.ingredient_name)
+          .join(", ")}.`,
+      };
+    }
+
+    revalidateSurfacePath("/inventory/purchase-orders");
+    return {
+      success: true,
+      data: {
+        groupKey: parsed.data.purchase_group_key,
+        groupCode: parsed.data.purchase_group_code,
+        purchaseOrders: parsed.data.purchase_orders.map((order) => ({
+          id: order.po_id,
+          code: order.po_number,
+          supplierId: order.supplier_id,
+          status: order.status,
+        })),
+      },
+    };
+  },
+);
+
+export const reviewPurchaseOrder = withAction(
+  {
+    roles: PO_REVIEW_ROLES,
+    schema: reviewPurchaseOrderSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
+  },
+  async ({ poId, action, reason }, { supabase }) => {
+    const { data, error } = await supabase.rpc(
+      "review_purchase_order" as never,
+      {
+        p_po_id: poId,
+        p_action: action,
+        p_reason: reason ?? null,
+      } as never,
+    );
+    if (error) {
+      return {
+        success: false,
+        error: procurementRpcError(error, "Không thể xử lý phiếu mua."),
+      };
+    }
+    const parsed = z
+      .object({
+        po_id: z.coerce.number().int().positive(),
+        status: z.string(),
+        grn: z
+          .object({
+            grn_id: z.coerce.number().int().positive(),
+            grn_number: z.string(),
+            status: z.string(),
+          })
+          .nullable(),
+      })
+      .safeParse(data);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: "Phản hồi xử lý phiếu mua không hợp lệ.",
+      };
+    }
+    revalidateSurfacePath("/inventory/purchase-orders");
+    revalidateSurfacePath("/inventory/grn");
+    return {
+      success: true,
+      data: {
+        status: parsed.data.status,
+        grnId: parsed.data.grn?.grn_id ?? null,
+      },
+    };
+  },
+);
 
 export const savePurchaseRequest = withAction(
   {
@@ -253,6 +534,174 @@ export const savePurchaseRequest = withAction(
   },
 );
 
+export const savePurchaseDemand = withAction(
+  {
+    roles: PROCUREMENT_ROLES,
+    schema: savePurchaseDemandSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE,
+  },
+  async (
+    {
+      demandId,
+      branchId,
+      neededBy,
+      notes,
+      lines,
+      submit,
+      idempotencyKey,
+    },
+    { supabase },
+  ) => {
+    const { data, error } = await supabase.rpc(
+      "save_purchase_demand" as never,
+      {
+        p_demand_id: demandId ?? null,
+        p_branch_id: branchId,
+        p_needed_by: neededBy ?? null,
+        p_notes: notes ?? "",
+        p_lines: lines.map((line) => ({
+          ingredient_id: line.ingredientId,
+          quantity: line.quantity,
+          entry_unit_id: line.entryUnitId,
+          notes: "",
+        })),
+        p_submit: submit,
+        p_idempotency_key: idempotencyKey ?? null,
+      } as never,
+    );
+    if (error) {
+      return {
+        success: false,
+        error: procurementRpcError(error, "Không thể lưu nhu cầu mua."),
+      };
+    }
+    const parsed = z
+      .object({
+        demand_id: z.coerce.number().int().positive(),
+        demand_number: z.string(),
+        status: z.enum(["draft", "pending_allocation"]),
+      })
+      .safeParse(data);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: "Phản hồi lưu nhu cầu mua không hợp lệ.",
+      };
+    }
+    revalidateSurfacePath("/inventory/purchase-orders");
+    return {
+      success: true,
+      data: {
+        id: parsed.data.demand_id,
+        code: parsed.data.demand_number,
+        status: parsed.data.status,
+      },
+    };
+  },
+);
+
+export const savePurchaseDemandAllocations = withAction(
+  {
+    roles: PO_REVIEW_ROLES,
+    schema: savePurchaseDemandAllocationsSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
+  },
+  async ({ demandId, allocations, idempotencyKey }, { supabase }) => {
+    const { error } = await supabase.rpc(
+      "save_purchase_demand_allocations" as never,
+      {
+        p_demand_id: demandId,
+        p_allocations: allocations.map((allocation) => ({
+          request_item_id: allocation.requestItemId,
+          supplier_id: allocation.supplierId,
+          quantity: allocation.quantity,
+        })),
+        p_idempotency_key: idempotencyKey,
+      } as never,
+    );
+    if (error) {
+      return {
+        success: false,
+        error: procurementRpcError(error, "Không thể lưu phân bổ NCC."),
+      };
+    }
+    revalidateSurfacePath("/inventory/purchase-orders");
+    return { success: true };
+  },
+);
+
+export const reviewPurchaseDemand = withAction(
+  {
+    roles: PO_REVIEW_ROLES,
+    schema: reviewPurchaseDemandSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
+  },
+  async (
+    { demandId, action, allocations, reason, idempotencyKey },
+    { supabase },
+  ) => {
+    const { data, error } = await supabase.rpc(
+      "review_purchase_demand" as never,
+      {
+        p_demand_id: demandId,
+        p_action: action,
+        p_allocations:
+          allocations?.map((allocation) => ({
+            request_item_id: allocation.requestItemId,
+            supplier_id: allocation.supplierId,
+            quantity: allocation.quantity,
+          })) ?? null,
+        p_reason: reason ?? null,
+        p_idempotency_key: idempotencyKey ?? null,
+      } as never,
+    );
+    if (error) {
+      return {
+        success: false,
+        error: procurementRpcError(error, "Không thể xử lý nhu cầu mua."),
+      };
+    }
+    const parsed = z
+      .object({
+        demand_id: z.coerce.number().int().positive(),
+        status: z.string(),
+        purchase_group_key: z.string().uuid().optional(),
+        purchase_group_code: z.string().optional(),
+        purchase_orders: z
+          .array(
+            z.object({
+              po_id: z.coerce.number().int().positive(),
+              po_number: z.string(),
+              supplier_id: z.coerce.number().int().positive(),
+              status: z.string(),
+            }),
+          )
+          .optional(),
+      })
+      .safeParse(data);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: "Phản hồi xử lý nhu cầu mua không hợp lệ.",
+      };
+    }
+    revalidateSurfacePath("/inventory/purchase-orders");
+    revalidateSurfacePath("/inventory/grn");
+    return {
+      success: true,
+      data: {
+        status: parsed.data.status,
+        purchaseOrders: (parsed.data.purchase_orders ?? []).map((order) => ({
+          id: order.po_id,
+          code: order.po_number,
+          supplierId: order.supplier_id,
+          status: order.status,
+        })),
+      },
+    };
+  },
+);
+
 export const cancelPurchaseRequest = withAction(
   {
     roles: PROCUREMENT_ROLES,
@@ -273,16 +722,16 @@ export const cancelPurchaseRequest = withAction(
         error: procurementRpcError(error, "Không thể hủy yêu cầu mua."),
       };
     }
-    revalidateSurfacePath("/inventory/purchase-requests");
+    revalidateSurfacePath("/inventory/purchase-orders");
     return { success: true };
   },
 );
 
 export const closePurchaseRequest = withAction(
   {
-    roles: PROCUREMENT_ROLES,
+    roles: PO_REVIEW_ROLES,
     schema: purchaseRequestReasonSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
   },
   async ({ requestId, reason }, { supabase }) => {
     const { error } = await supabase.rpc(
@@ -298,7 +747,7 @@ export const closePurchaseRequest = withAction(
         error: procurementRpcError(error, "Không thể đóng yêu cầu mua."),
       };
     }
-    revalidateSurfacePath("/inventory/purchase-requests");
+    revalidateSurfacePath("/inventory/purchase-orders");
     return { success: true };
   },
 );

@@ -45,7 +45,8 @@ const VI_DICTIONARY = {
     "/inventory/stock": { long: "Tồn kho" },
     "/inventory/grn": { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     "/inventory/supplier-invoices": { long: "Hóa đơn NCC" },
-    "/inventory/purchase-requests": { long: "Yêu cầu mua" },
+    "/inventory/purchase-orders": { long: "Mua hàng" },
+    "/inventory/purchase-requests": { long: "Nhu cầu mua" },
     "/inventory/issues": { short: "Sự cố kho", long: "Sự cố kho" },
     "/inventory/consumption": { long: "Tiêu hao vận hành" },
     "/inventory/transfers": {

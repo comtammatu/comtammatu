@@ -113,15 +113,19 @@ test("D091 dashboard keeps the selected central site kind", () => {
   );
 });
 
-test("D091 accountant can set PO prices before approval", () => {
+test("D098 accountant reviews PO while invoice lines own purchase prices", () => {
   const action = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
   const client = read(
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
+  const invoiceAction = read(
+    "apps/web/app/(protected)/finance/supplier-invoice-actions.ts",
+  );
 
-  assert.match(action, /updatePurchaseOrderPrices/);
-  assert.match(action, /PERMISSION_KEYS\.PROCUREMENT_PO_CREATE/);
-  assert.match(client, /poCopy\.savePricesAction/);
+  assert.match(action, /reviewPurchaseOrder/);
+  assert.match(action, /PERMISSION_KEYS\.PROCUREMENT_PO_APPROVE/);
+  assert.doesNotMatch(client, /unitPrice|savePricesAction/);
+  assert.match(invoiceAction, /save_supplier_invoice_draft/);
 });

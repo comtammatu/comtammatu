@@ -194,7 +194,7 @@ export const inventory = {
     sourceBranchDescription:
       "Chi nhánh nhận hàng qua điều chuyển nội bộ và đối soát số thực nhận.",
     sourceProcurementDescription:
-      "Phiếu nhập, đơn mua đã gửi và hóa đơn nhà cung cấp trước khi hàng vào tồn.",
+      "Phiếu nhập, đơn mua đã duyệt và hóa đơn nhà cung cấp trước khi hàng vào tồn.",
     sourceCentralOperationsDescription:
       "Nhận hàng NCC và đáp ứng yêu cầu từ chi nhánh tại đúng nguồn được phân công.",
     inboundSlipsMetricLabel: "phiếu đến",
@@ -493,17 +493,46 @@ export const inventory = {
     },
   },
   purchaseRequests: {
-    title: "Yêu cầu mua",
+    title: "Nhu cầu mua",
     description:
-      "Kho đề nghị mua hàng bên ngoài; kế toán tách thành đơn đặt hàng theo từng nhà cung cấp.",
-    createAction: "Tạo yêu cầu mua",
-    createTitle: "Tạo yêu cầu mua",
-    createSuccess: "Đã tạo yêu cầu mua.",
-    createFailed: "Không thể tạo yêu cầu mua.",
+      "Kho ghi số lượng cần; Kế toán phân bổ đủ theo nhà cung cấp.",
+    createAction: "Tạo nhu cầu mua",
+    createTitle: "Tạo nhu cầu mua",
+    createSuccess: "Đã lưu nhu cầu mua.",
+    createFailed: "Không thể lưu nhu cầu mua.",
     saveDraft: "Lưu nháp",
-    submitAction: "Gửi yêu cầu mua",
-    submitSuccess: "Đã gửi yêu cầu mua.",
-    submitFailed: "Không thể gửi yêu cầu mua.",
+    submitAction: "Gửi nhu cầu",
+    submitSuccess: "Đã gửi nhu cầu mua.",
+    submitFailed: "Không thể gửi nhu cầu mua.",
+    allocateAction: "Phân bổ NCC",
+    allocateTitle: "Phân bổ nhà cung cấp",
+    allocationSaved: "Đã lưu phân bổ nhà cung cấp.",
+    allocationFailed: "Không thể lưu phân bổ nhà cung cấp.",
+    allocationInvalid:
+      "Phân bổ phải dương, không vượt nhu cầu và phải đủ trước khi duyệt.",
+    statusFilterAria: "Trạng thái nhu cầu",
+    statusFilterPlaceholder: "Trạng thái",
+    allStatuses: "Mọi trạng thái",
+    warehouseFilterAria: "Kho cần hàng",
+    warehouseFilterPlaceholder: "Kho",
+    allWarehouses: "Mọi kho",
+    returnedReasonLabel: "Lý do gửi lại:",
+    missingSupplierShort: "Chưa có NCC",
+    requestChangesAction: "Gửi lại Kho",
+    rejectAction: "Từ chối mua",
+    saveAllocationAction: "Lưu phân bổ",
+    approveAllocationAction: "Duyệt & tạo đơn mua",
+    noActiveSuppliers: "Chưa có NCC đang hoạt động.",
+    allocationProgress: (
+      allocated: number,
+      remaining: number,
+      unit: string,
+    ) =>
+      `Đã phân bổ ${allocated} · Còn thiếu ${Math.max(remaining, 0)} ${unit}`,
+    approveSuccess: (codes: string[]) =>
+      codes.length > 0
+        ? `Đã tạo các đơn mua ${codes.join(", ")}.`
+        : "Đã duyệt nhu cầu mua.",
     createPoAction: "Tạo & gửi đơn đặt hàng",
     createPoTitle: "Tạo đơn đặt hàng NCC",
     createPoSuccess: (count: number) =>
@@ -511,13 +540,13 @@ export const inventory = {
     createPoPartialSuccess: (count: number, remainingCount: number) =>
       `Đã tạo ${formatCount(count)} đơn đặt hàng; còn ${formatCount(remainingCount)} nguyên liệu chờ gán NCC.`,
     createPoFailed: "Không thể tạo đơn đặt hàng.",
-    searchPlaceholder: "Tìm mã yêu cầu, kho hoặc nguyên liệu...",
-    emptyTitle: "Chưa có yêu cầu mua",
-    emptyDescription: "Tạo yêu cầu khi kho cần mua hàng từ nhà cung cấp.",
-    loadFailed: "Không thể tải danh sách yêu cầu mua.",
-    notFound: "Yêu cầu mua không còn tồn tại.",
-    codeColumn: "Yêu cầu mua",
-    branchColumn: "Kho yêu cầu",
+    searchPlaceholder: "Tìm mã nhu cầu, kho hoặc nguyên liệu...",
+    emptyTitle: "Chưa có nhu cầu mua",
+    emptyDescription: "Tạo nhu cầu khi kho cần bổ sung nguyên liệu.",
+    loadFailed: "Không thể tải danh sách nhu cầu mua.",
+    notFound: "Nhu cầu mua không còn tồn tại.",
+    codeColumn: "Nhu cầu mua",
+    branchColumn: "Kho cần hàng",
     statusColumn: "Trạng thái",
     neededByColumn: "Ngày cần",
     progressColumn: "Đã đặt",
@@ -542,14 +571,8 @@ export const inventory = {
     noSupplierMappings:
       "Chưa có nhà cung cấp phù hợp với nguyên liệu còn cần mua.",
     missingSupplierMappingsTitle: "Một số nguyên liệu chưa gán NCC",
-    missingSupplierMappings: (names: string[]) => {
-      const visible = names.slice(0, 5).join(", ");
-      const remaining =
-        names.length > 5
-          ? ` và ${formatCount(names.length - 5)} nguyên liệu khác`
-          : "";
-      return `Chưa tạo đơn cho ${visible}${remaining}. Các nguyên liệu đã có NCC vẫn được xử lý; gán NCC sau để tiếp tục phần còn lại.`;
-    },
+    missingSupplierMappings: (names: string[]) =>
+      `Chưa thể duyệt: ${names.join(", ")} chưa có NCC đang hoạt động.`,
     manageSuppliersAction: "Gán NCC",
     mappedLines: (mapped: number, total: number) =>
       `${formatCount(mapped)}/${formatCount(total)} dòng được gán cho NCC`,
@@ -559,8 +582,10 @@ export const inventory = {
     statusLabel: (status: string) => {
       const labels: Record<string, string> = {
         draft: "Nháp",
-        submitted: "Chờ đặt hàng",
-        partially_ordered: "Đã đặt một phần",
+        submitted: "Chờ phân bổ",
+        pending_allocation: "Chờ phân bổ",
+        changes_requested: "Kho cần chỉnh sửa",
+        partially_ordered: "Cần phân bổ lại",
         ordered: "Đã tạo đủ đơn",
         closed: "Đã đóng phần còn lại",
         cancelled: "Đã hủy",
@@ -628,7 +653,7 @@ export const inventory = {
     statusTabsAria: "Trạng thái phiếu nhập",
     allStatuses: "Tất cả",
     listTitle: "Phiếu nhập kho",
-    listDescription: "Kiểm nhận hàng được tạo từ đơn đặt hàng đã gửi",
+    listDescription: "Kiểm nhận hàng được tạo từ đơn đặt hàng đã duyệt",
     cancelTitle: "Hủy phiếu nhập",
     cancelAction: "Hủy phiếu",
     cancelReason: "Lý do hủy",
@@ -665,7 +690,7 @@ export const inventory = {
     saveLinesOk: "Đã lưu {ok}/{total} dòng.",
     confirmFailed: "Không thể chốt nhập kho.",
     confirmRequiresApprovedPo:
-      "Chưa thể chốt nhập kho. Cần đơn đặt hàng đã gửi gắn với phiếu nhập này.",
+      "Chưa thể chốt nhập kho. Cần đơn đặt hàng đã duyệt gắn với phiếu nhập này.",
     confirmNotDraft: "Chỉ chốt được phiếu nhập ở trạng thái nháp.",
     createPoFromGrnAction: "Tạo đơn đặt hàng từ phiếu nhập",
     createPoFromGrnActionBySupplier: "Tạo đơn đặt hàng theo nhà cung cấp",
@@ -703,25 +728,25 @@ export const inventory = {
     historySectionTitle: "Lịch sử chỉnh sửa",
     back: "Quay lại",
     draftSavedReviewHint:
-      "Đã lưu nháp. Kiểm tra số lượng, chất lượng và đơn mua đã gửi trước khi chốt nhập kho.",
+      "Đã lưu nháp. Kiểm tra số lượng, chất lượng và đơn mua đã duyệt trước khi chốt nhập kho.",
     nextStepNeedPoTitle: "Chưa có đơn đặt hàng",
     nextStepNeedPoBody:
-      "Liên kết phiếu với một đơn mua đã gửi trước khi chốt tồn.",
-    nextStepAwaitingPoTitle: "Đơn mua chưa gửi",
+      "Liên kết phiếu với một đơn mua đã duyệt trước khi chốt tồn.",
+    nextStepAwaitingPoTitle: "Đơn mua chưa được duyệt",
     nextStepAwaitingPoBody:
-      "Đơn mua đã gắn. Nhập giá còn thiếu rồi gửi đơn để mở chốt nhập kho.",
+      "Đơn mua đã gắn. Chờ Kế toán duyệt mua trước khi chốt nhập kho.",
     nextStepAwaitingPoBranchBody:
-      "Đơn mua đã gắn. Chờ kế toán hoặc chủ sở hữu gửi đơn trước khi chốt nhập kho.",
+      "Đơn mua đã gắn. Chờ Kế toán hoặc Chủ sở hữu duyệt mua trước khi chốt nhập kho.",
     nextStepReadyTitle: "Sẵn sàng chốt nhập kho",
     nextStepReadyBody:
-      "Đơn mua đã gửi. Kiểm tra số lượng và chất lượng rồi chốt nhập kho.",
+      "Đơn mua đã duyệt. Kiểm tra số lượng và chất lượng rồi chốt nhập kho.",
     nextStepSaveFirstTitle: "Lưu thay đổi trước khi chốt",
     nextStepSaveFirstBody:
       "Có dòng chưa lưu. Lưu thay đổi rồi mới chốt nhập kho.",
-    nextStepWaitingAccountant: "Chờ kế toán tạo và gửi đơn mua.",
+    nextStepWaitingAccountant: "Chờ Kế toán tạo và duyệt đơn mua.",
     openLinkedPo: "Mở đơn mua",
     stepChipNoPo: "Chưa đơn mua",
-    stepChipAwaitingPo: "Chờ gửi đơn",
+    stepChipAwaitingPo: "Chờ duyệt mua",
     stepChipReadyConfirm: "Sẵn sàng chốt",
     discardDraftFailed: "Không thể hủy phiếu nháp.",
     discardDraftTitle: (supplier: string) => `Xóa nháp của ${supplier}?`,
@@ -857,11 +882,59 @@ export const inventory = {
     qcIssueCount: (count: number) => `${count} dòng có hàng từ chối`,
   },
   po: {
+    workspaceTitle: "Mua hàng",
+    workspaceDescription:
+      "Lập nhu cầu, phân bổ nhà cung cấp và theo dõi nhận hàng.",
     searchPlaceholder: "Tìm theo số đơn mua, nhà cung cấp hoặc ghi chú",
+    statusFilterAria: "Trạng thái đơn mua",
+    statusFilterPlaceholder: "Trạng thái",
+    allStatuses: "Mọi trạng thái",
+    warehouseFilterAria: "Kho nhận",
+    warehouseFilterPlaceholder: "Kho",
+    allWarehouses: "Mọi kho",
+    lineReceiptSummary: (
+      ordered: number,
+      received: number,
+      remaining: number,
+      unit: string,
+    ) => `Đặt ${ordered} · Đã nhận ${received} · Còn ${remaining} ${unit}`,
     noNotes: "Không có ghi chú",
-    pageTitle: "Đơn mua hàng",
+    pageTitle: "Phiếu mua hàng",
     pageDescription:
-      "Tạo, gửi và theo dõi đơn đặt hàng nhà cung cấp từ yêu cầu mua.",
+      "Kho lập phiếu; Kế toán duyệt; Kho xác nhận hàng thực nhận.",
+    createAction: "Lập phiếu mua",
+    discardAction: "Bỏ phiếu",
+    requestChangesAction: "Gửi lại Kho",
+    rejectAction: "Từ chối mua",
+    approveAction: "Duyệt mua",
+    editAction: "Chỉnh sửa",
+    receiveMoreAction: "Nhập tiếp",
+    emptyTitle: "Chưa có phiếu mua",
+    emptyDescription: "Kho lập danh sách nguyên liệu cần mua tại đây.",
+    createTitle: "Lập phiếu mua",
+    editTitle: "Chỉnh sửa phiếu mua",
+    formDescription:
+      "NCC được tự động lấy từ cấu hình mặc định của nguyên liệu.",
+    submitAction: "Gửi duyệt",
+    warehouse: "Kho nhận",
+    expectedDeliveryDate: "Ngày cần hàng",
+    ingredient: "Nguyên liệu",
+    ingredientSearch: "Tìm nguyên liệu",
+    quantity: "Số lượng",
+    unit: "Đơn vị",
+    automaticSupplier: "NCC tự động",
+    missingDefaultSupplier: "Chưa có NCC mặc định",
+    addLine: "Thêm dòng",
+    splitPreviewTitle: "Kết quả tách phiếu",
+    missingSupplierSummary: (count: number) =>
+      `Còn ${formatCount(count)} nguyên liệu chưa có NCC mặc định. Lần gửi sẽ bị chặn toàn bộ.`,
+    splitPreview: (count: number, suppliers: string) =>
+      `Sẽ tạo ${formatCount(count)} phiếu mua: ${suppliers}.`,
+    noValidLines: "chưa có dòng hợp lệ",
+    groupCode: "Mã nhóm",
+    handlingReason: "Lý do xử lý",
+    relatedReceipts: "Phiếu nhập liên quan",
+    unconfirmed: "Chưa xác nhận",
     createGrn: "Tạo phiếu nhập",
     continueGrn: "Tiếp tục nhập hàng",
     viewDetail: "Xem đơn mua",
@@ -910,7 +983,7 @@ export const inventory = {
     backAction: "Quay lại",
     unitPriceAria: (name: string) => `Đơn giá ${name}`,
     emptyLinkedGrnsHint:
-      "Phiếu nhập được tạo theo từng lần giao từ đơn đặt hàng đã gửi.",
+      "Phiếu nhập được tạo theo từng lần giao từ đơn đặt hàng đã duyệt.",
     goToGrnList: "Mở danh sách phiếu nhập",
     statusSentHint: "Đã gửi",
     detail: {
@@ -1485,6 +1558,26 @@ export const inventory = {
     goodsReceiptRequired:
       "Hóa đơn hàng hóa phải liên kết ít nhất một phiếu nhập đã xác nhận.",
     documentDiscount: "Chiết khấu toàn hóa đơn",
+    invoiceLines: "Dòng hóa đơn",
+    chooseReceiptsForLines:
+      "Chọn phiếu nhập để tải nguyên liệu và số lượng còn được lập hóa đơn.",
+    serviceDescription: "Nội dung dịch vụ",
+    unitPriceLabel: "Đơn giá",
+    unitPriceAria: (description: string) => `Đơn giá ${description}`,
+    lineDiscountLabel: "Chiết khấu dòng",
+    lineDiscountAria: (description: string) => `Chiết khấu ${description}`,
+    taxRateLabel: "Thuế suất",
+    vatAmountAria: (description: string) => `Thuế GTGT ${description}`,
+    beforeVat: "Trước thuế GTGT",
+    invoiceLineMeta: (
+      quantity: string,
+      unit: string,
+      unitPrice: string,
+      lineDiscount: string | null,
+      vatRate: string,
+    ) =>
+      `${quantity} ${unit} × ${unitPrice}${lineDiscount ? ` · Chiết khấu ${lineDiscount}` : ""} · Thuế GTGT ${vatRate}`,
+    confirmInvoiceAction: "Xác nhận hóa đơn",
     creditAction: "Giảm công nợ",
     creditTitle: "Ghi nhận giảm công nợ",
     creditDescription:

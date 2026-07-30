@@ -4,6 +4,7 @@ import {
   calculateGrnQuantities,
   createEditableGrnLine,
   hasAcceptedGrnQuantity,
+  isLinkedPoApproved,
   isGrnLookupParam,
 } from "../lib/inventory/grn-detail-model";
 
@@ -89,4 +90,11 @@ test("GRN can only be confirmed after at least one accepted quantity", () => {
     ]),
     true,
   );
+});
+
+test("PO-first approved orders unlock GRN confirmation", () => {
+  assert.equal(isLinkedPoApproved("approved"), true);
+  assert.equal(isLinkedPoApproved("partially_received"), true);
+  assert.equal(isLinkedPoApproved("pending_approval"), false);
+  assert.equal(isLinkedPoApproved("changes_requested"), false);
 });

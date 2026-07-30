@@ -1,5 +1,6 @@
 export type SupplierInvoiceRow = {
   id: number;
+  documentStatus: "draft" | "confirmed" | "cancelled" | "adjusted";
   invoiceKind: "goods" | "service";
   supplierId: number;
   grnId: number | null;
@@ -24,12 +25,34 @@ export type SupplierInvoiceRow = {
   matchingNotes: string | null;
   serviceVerifiedAt: string | null;
   serviceVerificationReason: string | null;
+  invoiceLines: SupplierInvoiceLineSummary[];
   receiptAllocations: SupplierInvoiceReceiptSummary[];
   invoiceDate: string | null;
   dueDate: string | null;
   vatInvoiceAttachmentPath: string | null;
   paymentCount: number;
   lastPayment: SupplierInvoicePaymentSummary | null;
+};
+
+export type SupplierInvoiceLineSummary = {
+  id: number;
+  ingredientId: number | null;
+  ingredientName: string;
+  description: string;
+  quantity: number;
+  unitId: number | null;
+  unitLabel: string;
+  unitPrice: number;
+  lineDiscount: number;
+  vatRate: number;
+  vatAmount: number;
+  lineTotal: number;
+  allocations: Array<{
+    grnId: number;
+    poId: number;
+    purchaseOrderItemId: number;
+    quantity: number;
+  }>;
 };
 
 export type SupplierInvoiceReceiptSummary = {
@@ -205,8 +228,63 @@ export function mapSupplierInvoiceRow(
   const headerReceiptCode =
     ((row.goods_received_notes as Record<string, unknown>)
       ?.grn_number as string) ?? null;
+  const invoiceLines = Array.isArray(row.supplier_invoice_lines)
+    ? row.supplier_invoice_lines.flatMap((line) => {
+        if (!isRecord(line)) return [];
+        const ingredient = Array.isArray(line.ingredients)
+          ? line.ingredients[0]
+          : line.ingredients;
+        const unit = Array.isArray(line.units) ? line.units[0] : line.units;
+        const allocations = Array.isArray(
+          line.supplier_invoice_receipt_allocations,
+        )
+          ? line.supplier_invoice_receipt_allocations.flatMap((allocation) =>
+              isRecord(allocation)
+                ? [
+                    {
+                      grnId: Number(allocation.grn_id ?? 0),
+                      poId: Number(allocation.po_id ?? 0),
+                      purchaseOrderItemId: Number(
+                        allocation.purchase_order_item_id ?? 0,
+                      ),
+                      quantity: Number(allocation.billed_quantity ?? 0),
+                    },
+                  ]
+                : [],
+            )
+          : [];
+        return [
+          {
+            id: Number(line.id ?? 0),
+            ingredientId:
+              line.ingredient_id != null ? Number(line.ingredient_id) : null,
+            ingredientName: isRecord(ingredient)
+              ? String(ingredient.name ?? line.description ?? "Dịch vụ")
+              : String(line.description ?? "Dịch vụ"),
+            description: String(line.description ?? ""),
+            quantity: Number(line.quantity ?? 0),
+            unitId: line.unit_id != null ? Number(line.unit_id) : null,
+            unitLabel: isRecord(unit)
+              ? String(unit.name ?? unit.code ?? "Đơn vị")
+              : "Đơn vị",
+            unitPrice: Number(line.unit_price ?? 0),
+            lineDiscount: Number(line.line_discount_amount ?? 0),
+            vatRate: Number(line.vat_rate ?? 0),
+            vatAmount: Number(line.vat_amount ?? 0),
+            lineTotal: Number(line.line_total ?? 0),
+            allocations,
+          },
+        ];
+      })
+    : [];
   return {
     id: row.id as number,
+    documentStatus:
+      row.document_status === "draft" ||
+      row.document_status === "cancelled" ||
+      row.document_status === "adjusted"
+        ? row.document_status
+        : "confirmed",
     invoiceKind: row.invoice_kind === "service" ? "service" : "goods",
     supplierId: Number(row.supplier_id ?? 0),
     grnId,
@@ -260,6 +338,7 @@ export function mapSupplierInvoiceRow(
       typeof row.service_verification_reason === "string"
         ? row.service_verification_reason
         : null,
+    invoiceLines,
     receiptAllocations: allocatedReceipts,
     invoiceDate: (row.invoice_date as string) ?? null,
     dueDate: (row.due_date as string) ?? null,

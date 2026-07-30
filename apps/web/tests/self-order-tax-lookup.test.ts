@@ -132,7 +132,7 @@ test("supplier list opens ingredients and reuses the guarded MST lookup", () => 
   );
   assert.match(
     suppliersClient,
-    /router\.push\(`\/inventory\/suppliers\/\$\{row\.id\}\/items`\)/,
+    /next\.set\("supplierId", String\(row\.id\)\)[\s\S]*router\.replace\(`\$\{pathname\}\?\$\{next\.toString\(\)\}`/,
   );
   assert.match(supplierDialog, /lookupBusinessTaxCode\(normalized\)/);
   assert.match(supplierDialog, /form\.setValue\("name", business\.name/);

@@ -16,7 +16,7 @@ test("Wave 1 batch B ingredients wires three doors from getIngredientRowActions"
   assert.match(source, /<RowActionsMenu/);
   assert.match(source, /renderRowContextMenu=\{/);
   assert.match(source, /RowActionsContextMenuItems\s+items=\{/);
-  assert.match(source, /onRowClick=\{openEdit\}/);
+  assert.match(source, /onRowClick=\{canManage \? openEdit : undefined\}/);
   assert.match(source, /key:\s*"edit"/);
   assert.match(source, /key:\s*"toggle-active"/);
 

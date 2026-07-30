@@ -1944,11 +1944,13 @@ export type Database = {
       }
       grn_items: {
         Row: {
+          cost_pending: boolean
           entry_unit_id: number | null
           grn_id: number
           id: number
           ingredient_id: number
           po_applied_quantity: number
+          provisional_cost_source: string | null
           purchase_order_item_id: number | null
           received_quantity: number
           rejected_photo_url: string | null
@@ -1960,11 +1962,13 @@ export type Database = {
           unit_cost: number
         }
         Insert: {
+          cost_pending?: boolean
           entry_unit_id?: number | null
           grn_id: number
           id?: never
           ingredient_id: number
           po_applied_quantity?: number
+          provisional_cost_source?: string | null
           purchase_order_item_id?: number | null
           received_quantity: number
           rejected_photo_url?: string | null
@@ -1976,11 +1980,13 @@ export type Database = {
           unit_cost?: number
         }
         Update: {
+          cost_pending?: boolean
           entry_unit_id?: number | null
           grn_id?: number
           id?: never
           ingredient_id?: number
           po_applied_quantity?: number
+          provisional_cost_source?: string | null
           purchase_order_item_id?: number | null
           received_quantity?: number
           rejected_photo_url?: string | null
@@ -5604,15 +5610,23 @@ export type Database = {
           created_by: string
           display_id: string | null
           expected_delivery_date: string | null
+          group_save_idempotency_key: string | null
+          group_sequence: number | null
           id: number
           notes: string | null
           ordered_at: string
           po_number: string
+          purchase_group_code: string | null
+          purchase_group_key: string | null
           purchase_request_id: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           save_idempotency_key: string | null
           source_grn_id: number | null
           status: string
           status_reason: string | null
+          submitted_at: string | null
+          submitted_by: string | null
           supplier_id: number
           tenant_id: number
           updated_at: string
@@ -5625,15 +5639,23 @@ export type Database = {
           created_by: string
           display_id?: string | null
           expected_delivery_date?: string | null
+          group_save_idempotency_key?: string | null
+          group_sequence?: number | null
           id?: never
           notes?: string | null
           ordered_at?: string
           po_number: string
+          purchase_group_code?: string | null
+          purchase_group_key?: string | null
           purchase_request_id?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           save_idempotency_key?: string | null
           source_grn_id?: number | null
           status?: string
           status_reason?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
           supplier_id: number
           tenant_id: number
           updated_at?: string
@@ -5646,15 +5668,23 @@ export type Database = {
           created_by?: string
           display_id?: string | null
           expected_delivery_date?: string | null
+          group_save_idempotency_key?: string | null
+          group_sequence?: number | null
           id?: never
           notes?: string | null
           ordered_at?: string
           po_number?: string
+          purchase_group_code?: string | null
+          purchase_group_key?: string | null
           purchase_request_id?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           save_idempotency_key?: string | null
           source_grn_id?: number | null
           status?: string
           status_reason?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
           supplier_id?: number
           tenant_id?: number
           updated_at?: string
@@ -5708,6 +5738,64 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_request_allocations: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: number
+          purchase_request_id: number
+          purchase_request_item_id: number
+          quantity: number
+          supplier_id: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: never
+          purchase_request_id: number
+          purchase_request_item_id: number
+          quantity: number
+          supplier_id: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: never
+          purchase_request_id?: number
+          purchase_request_item_id?: number
+          quantity?: number
+          supplier_id?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_request_allocations_purchase_request_id_tenant_id_fkey"
+            columns: ["purchase_request_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requests"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "purchase_request_allocations_purchase_request_item_id_tena_fkey"
+            columns: ["purchase_request_item_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_request_items"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "purchase_request_allocations_supplier_id_tenant_id_fkey"
+            columns: ["supplier_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id", "tenant_id"]
           },
         ]
       }
@@ -5768,6 +5856,7 @@ export type Database = {
       }
       purchase_requests: {
         Row: {
+          allocation_save_idempotency_key: string | null
           branch_id: number
           cancelled_at: string | null
           closed_at: string | null
@@ -5786,6 +5875,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allocation_save_idempotency_key?: string | null
           branch_id: number
           cancelled_at?: string | null
           closed_at?: string | null
@@ -5804,6 +5894,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allocation_save_idempotency_key?: string | null
           branch_id?: number
           cancelled_at?: string | null
           closed_at?: string | null
@@ -8093,6 +8184,88 @@ export type Database = {
           },
         ]
       }
+      supplier_ingredient_price_history: {
+        Row: {
+          confirmed_at: string
+          created_by: string
+          id: number
+          ingredient_id: number
+          supplier_id: number
+          supplier_invoice_id: number
+          supplier_invoice_line_id: number
+          tenant_id: number
+          unit_id: number
+          unit_price: number
+        }
+        Insert: {
+          confirmed_at: string
+          created_by: string
+          id?: never
+          ingredient_id: number
+          supplier_id: number
+          supplier_invoice_id: number
+          supplier_invoice_line_id: number
+          tenant_id: number
+          unit_id: number
+          unit_price: number
+        }
+        Update: {
+          confirmed_at?: string
+          created_by?: string
+          id?: never
+          ingredient_id?: number
+          supplier_id?: number
+          supplier_invoice_id?: number
+          supplier_invoice_line_id?: number
+          tenant_id?: number
+          unit_id?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_ingredient_price_his_supplier_invoice_id_tenant_i_fkey"
+            columns: ["supplier_invoice_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoices"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_ingredient_price_his_supplier_invoice_line_id_ten_fkey"
+            columns: ["supplier_invoice_line_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoice_lines"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_ingredient_price_history_ingredient_id_tenant_id_fkey"
+            columns: ["ingredient_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_ingredient_price_history_supplier_id_tenant_id_fkey"
+            columns: ["supplier_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_ingredient_price_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_ingredient_price_history_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_invoice_lines: {
         Row: {
           allocated_document_discount: number
@@ -8103,9 +8276,13 @@ export type Database = {
           line_discount_amount: number
           line_total: number
           quantity: number
+          source_line_key: string | null
           supplier_invoice_id: number
           tenant_id: number
+          unit_id: number | null
           unit_price: number
+          vat_amount: number
+          vat_rate: number
         }
         Insert: {
           allocated_document_discount?: number
@@ -8116,9 +8293,13 @@ export type Database = {
           line_discount_amount?: number
           line_total: number
           quantity: number
+          source_line_key?: string | null
           supplier_invoice_id: number
           tenant_id: number
+          unit_id?: number | null
           unit_price: number
+          vat_amount?: number
+          vat_rate?: number
         }
         Update: {
           allocated_document_discount?: number
@@ -8129,9 +8310,13 @@ export type Database = {
           line_discount_amount?: number
           line_total?: number
           quantity?: number
+          source_line_key?: string | null
           supplier_invoice_id?: number
           tenant_id?: number
+          unit_id?: number | null
           unit_price?: number
+          vat_amount?: number
+          vat_rate?: number
         }
         Relationships: [
           {
@@ -8147,6 +8332,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "supplier_invoices"
             referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_invoice_lines_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -8236,6 +8428,8 @@ export type Database = {
       }
       supplier_invoices: {
         Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           created_by: string
           credit_applied_amount: number
@@ -8243,6 +8437,7 @@ export type Database = {
           discrepancy_accepted_by: string | null
           discrepancy_reason: string | null
           document_discount_amount: number
+          document_status: string
           due_date: string | null
           grn_id: number | null
           id: number
@@ -8259,6 +8454,7 @@ export type Database = {
           paid_at: string | null
           payment_status: string
           po_id: number | null
+          save_idempotency_key: string | null
           service_verification_reason: string | null
           service_verified_at: string | null
           service_verified_by: string | null
@@ -8273,6 +8469,8 @@ export type Database = {
           vat_rate: number | null
         }
         Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by: string
           credit_applied_amount?: number
@@ -8280,6 +8478,7 @@ export type Database = {
           discrepancy_accepted_by?: string | null
           discrepancy_reason?: string | null
           document_discount_amount?: number
+          document_status?: string
           due_date?: string | null
           grn_id?: number | null
           id?: never
@@ -8296,6 +8495,7 @@ export type Database = {
           paid_at?: string | null
           payment_status?: string
           po_id?: number | null
+          save_idempotency_key?: string | null
           service_verification_reason?: string | null
           service_verified_at?: string | null
           service_verified_by?: string | null
@@ -8310,6 +8510,8 @@ export type Database = {
           vat_rate?: number | null
         }
         Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string
           credit_applied_amount?: number
@@ -8317,6 +8519,7 @@ export type Database = {
           discrepancy_accepted_by?: string | null
           discrepancy_reason?: string | null
           document_discount_amount?: number
+          document_status?: string
           due_date?: string | null
           grn_id?: number | null
           id?: never
@@ -8333,6 +8536,7 @@ export type Database = {
           paid_at?: string | null
           payment_status?: string
           po_id?: number | null
+          save_idempotency_key?: string | null
           service_verification_reason?: string | null
           service_verified_at?: string | null
           service_verified_by?: string | null
@@ -10436,6 +10640,10 @@ export type Database = {
         Returns: Json
       }
       confirm_stock_issue: { Args: { p_issue_id: number }; Returns: Json }
+      confirm_supplier_invoice: {
+        Args: { p_idempotency_key: string; p_invoice_id: number }
+        Returns: Json
+      }
       confirm_supplier_return: { Args: { p_return_id: number }; Returns: Json }
       consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
       consume_stock_for_order_service: {
@@ -12070,6 +12278,20 @@ export type Database = {
         Args: { p_payment_id: number; p_status: string }
         Returns: Json
       }
+      review_purchase_demand: {
+        Args: {
+          p_action: string
+          p_allocations?: Json
+          p_demand_id: number
+          p_idempotency_key?: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      review_purchase_order: {
+        Args: { p_action: string; p_po_id: number; p_reason?: string }
+        Returns: Json
+      }
       revoke_permission: {
         Args: {
           p_branch_id: number
@@ -12130,6 +12352,26 @@ export type Database = {
         }
         Returns: Json
       }
+      save_purchase_demand: {
+        Args: {
+          p_branch_id: number
+          p_demand_id: number
+          p_idempotency_key?: string
+          p_lines: Json
+          p_needed_by: string
+          p_notes: string
+          p_submit?: boolean
+        }
+        Returns: Json
+      }
+      save_purchase_demand_allocations: {
+        Args: {
+          p_allocations: Json
+          p_demand_id: number
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
       save_purchase_order: {
         Args: {
           p_expected_delivery_date: string
@@ -12137,6 +12379,18 @@ export type Database = {
           p_notes: string
           p_po_id: number
           p_send?: boolean
+        }
+        Returns: Json
+      }
+      save_purchase_order_group: {
+        Args: {
+          p_branch_id: number
+          p_expected_delivery_date: string
+          p_group_key: string
+          p_idempotency_key?: string
+          p_lines: Json
+          p_notes: string
+          p_submit?: boolean
         }
         Returns: Json
       }
@@ -12174,6 +12428,16 @@ export type Database = {
           p_notes: string
           p_request_id: number
           p_submit?: boolean
+        }
+        Returns: Json
+      }
+      save_supplier_invoice_draft: {
+        Args: {
+          p_allocations: Json
+          p_idempotency_key: string
+          p_invoice: Json
+          p_invoice_id: number
+          p_lines: Json
         }
         Returns: Json
       }

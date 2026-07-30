@@ -98,7 +98,6 @@ test("growth lists opted in", () => {
   for (const rel of [
     "../app/(protected)/orders/orders-client.tsx",
     "../app/(protected)/orders/refunds-client.tsx",
-    "../app/(protected)/inventory/grn/grn-list-client.tsx",
     "../app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
     "../app/(protected)/settings/printers/jobs/print-jobs-client.tsx",
     "../app/(protected)/hr/staff/audit/permission-audit-table.tsx",
@@ -106,6 +105,16 @@ test("growth lists opted in", () => {
     const client = readFileSync(join(import.meta.dirname, rel), "utf8");
     assert.match(client, /pageSize=\{50\}/, rel);
   }
+
+  const grn = readFileSync(
+    join(
+      import.meta.dirname,
+      "../app/(protected)/inventory/grn/grn-list-client.tsx",
+    ),
+    "utf8",
+  );
+  assert.match(grn, /pageSize=\{pageSize\}/);
+  assert.match(grn, /totalCount=\{total\}/);
 
   const ingredients = readFileSync(
     join(

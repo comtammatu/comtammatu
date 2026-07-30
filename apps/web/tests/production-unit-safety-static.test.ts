@@ -86,6 +86,5 @@ test("production UI and actions use base output quantities and surface the revie
   assert.match(detailClient, /recipeContextError/);
   assert.match(detailClient, /actionError/);
   assert.match(detailClient, /Thao tác không thành công/);
-  assert.match(branchDetailPage, /run\.source_location_id \?\? undefined/);
-  assert.match(branchDetailPage, /recipeContextError=\{recipeContextError\}/);
+  assert.match(branchDetailPage, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
 });

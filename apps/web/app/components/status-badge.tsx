@@ -225,8 +225,12 @@ const STATUS_DOMAINS = {
     variants: {
       draft: "secondary",
       sent: "success",
+      pending_approval: "warning",
+      changes_requested: "destructive",
+      approved: "success",
       partially_received: "warning",
       received: "success",
+      closed: "secondary",
       cancelled: "destructive",
     },
   },

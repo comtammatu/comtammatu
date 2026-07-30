@@ -53,6 +53,7 @@ import type { IngredientRow } from "@lib/inventory/types";
 import { useGrnDetailActions as useGrnLineActions } from "@lib/inventory/use-grn-detail-actions";
 import { useGrnDetailLines as useGrnLines } from "@lib/inventory/use-grn-detail-lines";
 import {
+  allLinkedPosApproved,
   GRN_DETAIL_COPY as grnCopy,
   hasAcceptedGrnQuantity,
 } from "@lib/inventory/grn-detail-model";
@@ -195,6 +196,10 @@ export function GRNDetailClient({
   const editingLine = editingIdx >= 0 ? lines[editingIdx] : null;
 
   const receivingLocationName = grn.locationName;
+  const linkedPoApproved = allLinkedPosApproved(
+    grn.linkedPos,
+    grn.poStatus ?? null,
+  );
 
   const closeLineEdit = () => setEditingLineId(null);
 
@@ -207,7 +212,10 @@ export function GRNDetailClient({
         action: null as ReactNode,
       };
     }
-    if ((grn.poId != null || grn.linkedPos.length > 0) && !canConfirm) {
+    if (
+      (grn.poId != null || grn.linkedPos.length > 0) &&
+      !linkedPoApproved
+    ) {
       return {
         title: grnCopy.nextStepAwaitingPoTitle,
         body: grnCopy.nextStepAwaitingPoBody,
@@ -558,21 +566,6 @@ export function GRNDetailClient({
                   },
                 ]
               : []),
-          ...(grn.purchaseRequestCode
-            ? [
-                {
-                  term: "Yêu cầu mua",
-                  description: (
-                    <Link
-                      href={`/inventory/purchase-requests?requestId=${grn.purchaseRequestId}&mode=view`}
-                      className="font-mono text-primary hover:underline"
-                    >
-                      {grn.purchaseRequestCode}
-                    </Link>
-                  ),
-                },
-              ]
-            : []),
           {
             term: "Ngày dự kiến",
             description: grn.expectedReceiveDate ?? "—",
@@ -881,8 +874,7 @@ export function GRNDetailClient({
               {grn.code}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {grn.supplier} • {grn.poCode || "—"} •{" "}
-              {grn.purchaseRequestCode || "—"} • {grn.branchName}
+              {grn.supplier} • {grn.poCode || "—"} • {grn.branchName}
             </p>
           </div>
           <Badge variant={statusBadge.variant} className="shrink-0">

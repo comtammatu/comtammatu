@@ -11,7 +11,7 @@ const BATCH_A = [
   {
     name: "grn",
     path: "app/(protected)/inventory/grn/grn-list-client.tsx",
-    getActions: "getGrnRowActions",
+    getActions: "rowActions",
   },
   {
     name: "issues",
@@ -31,7 +31,7 @@ test("Wave 1 batch A inventory LIST surfaces wire three doors from one RowAction
 
     assert.match(
       source,
-      new RegExp(`const ${surface.getActions}\\s*=`),
+      new RegExp(`(?:const|function) ${surface.getActions}(?:\\s*=|\\s*\\()`),
       `${surface.name}: get*RowActions`,
     );
     assert.match(source, /<RowActionsMenu/, `${surface.name}: RowActionsMenu`);

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import type { PrintDocumentBlock } from "../print-document";
 import type { PrintPayload } from "../payloads";
 import { buildFallbackDocument } from "../fallback-document";
@@ -19,13 +19,17 @@ import { extractOrderSequence, formatOrderHeaderLabel } from "../order-display";
 type TextBlock = Extract<PrintDocumentBlock, { type: "text" }>;
 type RowBlock = Extract<PrintDocumentBlock, { type: "row" }>;
 
-const baselineSql = readFileSync(
-  new URL(
-    "../../../../supabase/migrations/20260727120000_baseline.sql",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const migrationsDir = new URL("../../../../supabase/migrations/", import.meta.url);
+const defaultContentSql = readdirSync(migrationsDir)
+  .filter((name) => name.endsWith(".sql"))
+  .sort()
+  .reverse()
+  .map((name) => readFileSync(new URL(name, migrationsDir), "utf8"))
+  .find((source) =>
+    /FUNCTION public\.print_template_default_content\s*\(/.test(source),
+  ) ?? (() => {
+    throw new Error("missing SQL print template defaults");
+  })();
 
 const blocksOf = (payload: PrintPayload): PrintDocumentBlock[] =>
   buildFallbackDocument(payload).blocks;
@@ -109,12 +113,12 @@ function sqlBlock(block: TemplateBlock): string {
 
 function defaultContentSqlSection(kind: string): string {
   const marker = `WHEN '${kind}' THEN`;
-  const start = baselineSql.indexOf(marker);
+  const start = defaultContentSql.indexOf(marker);
   assert.notEqual(start, -1, `missing SQL default content for ${kind}`);
 
-  const tail = baselineSql.slice(start + marker.length);
+  const tail = defaultContentSql.slice(start + marker.length);
   const next = tail.search(/\n {4}(WHEN '|ELSE)/);
-  return baselineSql.slice(
+  return defaultContentSql.slice(
     start,
     next === -1 ? undefined : start + marker.length + next,
   );
@@ -603,7 +607,7 @@ test("custom template content overrides defaults", () => {
   );
 });
 
-test("TS default templates mirror SQL baseline defaults", () => {
+test("TS default templates mirror current SQL defaults", () => {
   for (const kind of PRINT_KINDS) {
     const section = defaultContentSqlSection(kind);
     const blocks = DEFAULT_TEMPLATE_CONTENT[kind].blocks;

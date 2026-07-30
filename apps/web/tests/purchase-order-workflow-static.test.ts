@@ -6,17 +6,22 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("purchase requests create supplier POs and POs create delivery GRNs", () => {
+test("warehouse creates demand and accountant allocation creates POs with GRN drafts", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
-  const client = read(
-    "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+  const demandClient = read(
+    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
   );
+  const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
   const nav = read("apps/web/app/(protected)/inventory/_lib/inventory-nav.ts");
-  const migration = read(
-    "supabase/migrations/20260729260000_streamline_procurement_workflows.sql",
-  );
+  const migration =
+    read(
+      "supabase/migrations/20260730140000_po_first_purchase_workflow.sql",
+    ) +
+    read(
+      "supabase/migrations/20260730190000_purchase_demand_supplier_allocation.sql",
+    );
 
   assert.equal(
     existsSync(
@@ -28,45 +33,39 @@ test("purchase requests create supplier POs and POs create delivery GRNs", () =>
     true,
   );
   assert.match(nav, /\/inventory\/purchase-orders/);
-  assert.match(nav, /\/inventory\/purchase-requests/);
-  assert.match(nav, /Đơn mua hàng/);
-  assert.match(actions, /savePurchaseRequest/);
-  assert.match(actions, /savePurchaseOrdersFromRequest/);
-  assert.match(actions, /createGrnDraftFromPurchaseOrder/);
-  assert.match(actions, /PROCUREMENT_PO_CREATE/);
-  assert.doesNotMatch(actions, /PROCUREMENT_PO_APPROVE/);
-  assert.match(actions, /save_purchase_request/);
-  assert.match(actions, /save_purchase_orders_from_request/);
-  assert.match(actions, /create_grn_draft_from_po/);
-  assert.match(actions, /send_purchase_order/);
-  assert.doesNotMatch(actions, /approve_purchase_order/);
+  assert.doesNotMatch(nav, /\/inventory\/purchase-requests/);
+  assert.match(nav, /label: "Mua hàng"/);
+  assert.match(actions, /savePurchaseDemand/);
+  assert.match(actions, /savePurchaseDemandAllocations/);
+  assert.match(actions, /reviewPurchaseDemand/);
+  assert.match(actions, /PROCUREMENT_PO_APPROVE/);
+  assert.match(actions, /save_purchase_demand/);
+  assert.match(actions, /review_purchase_demand/);
   assert.doesNotMatch(actions, /createPurchaseOrderFromGrn/);
-  assert.match(client, /sendPurchaseOrder/);
-  assert.match(client, /variant="document"/);
-  assert.match(client, /\/inventory\/grn\?grnId=/);
-  assert.match(migration, /save_purchase_orders_from_request/);
+  assert.match(demandClient, /copy\.submitAction/);
+  assert.match(demandClient, /copy\.approveAllocationAction/);
+  assert.match(inventoryMessages, /approveAllocationAction: "Duyệt & tạo đơn mua"/);
+  assert.match(demandClient, /variant="document"/);
+  assert.match(migration, /save_purchase_demand/);
+  assert.match(migration, /review_purchase_demand/);
   assert.match(migration, /p_idempotency_key/);
   assert.match(migration, /cancel_purchase_order/);
   assert.match(migration, /close_purchase_order/);
 });
 
-test("PO send is the only internal release transition and has no approval step", () => {
+test("demand review keeps approve, return, and reject in one action", () => {
   const client = read(
-    "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
   );
   const actions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
-  const sendStart = client.indexOf("async function send");
-  const createGrnStart = client.indexOf("function createGrn", sendStart);
-  assert.ok(sendStart >= 0 && createGrnStart > sendStart);
-  const sendBlock = client.slice(sendStart, createGrnStart);
-
-  assert.match(sendBlock, /sendPurchaseOrder\(\{ poId: row\.id \}\)/);
-  assert.match(sendBlock, /startTransition\(async \(\) => \{/);
-  assert.match(sendBlock, /finally \{\s*setPendingId\(null\);\s*\}/);
-  assert.doesNotMatch(client, /approvePurchaseOrder|function approve/);
-  assert.doesNotMatch(actions, /approve_purchase_order|PROCUREMENT_PO_APPROVE/);
+  assert.match(client, /reviewPurchaseDemand/);
+  assert.match(client, /action: "approve"/);
+  assert.match(client, /kind: "request_changes"/);
+  assert.match(client, /kind: "reject"/);
+  assert.match(actions, /PROCUREMENT_PO_APPROVE/);
+  assert.match(actions, /review_purchase_demand/);
 });
 
 test("supplier-item remove awaits confirm outside startTransition", () => {
@@ -103,24 +102,18 @@ test("PO list keeps its URL-addressable document dialog and never shows an empty
     "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   );
 
-  assert.match(client, /onRowClick=\{openDetail\}/);
+  assert.match(client, /onRowClick=\{\(row\) => updateUrl\(row\.id, "view"\)\}/);
   assert.match(client, /key:\s*"view"/);
-  assert.match(client, /poCopy\.viewDetail/);
-  // Code cell uses the same primary affordance as GRN list (not plain mono text).
-  assert.match(
-    client,
-    /key:\s*"code"[\s\S]*?variant="link"[\s\S]*?openDetail\(row\)/,
-    "PO code column is a primary open control like GRN list links",
-  );
-  assert.match(client, /params\.set\("poId", String\(row\.id\)\)/);
-  assert.match(client, /params\.set\("mode", "view"\)/);
+  assert.match(client, /<span className="font-mono font-medium">\{row\.code\}<\/span>/);
+  assert.match(client, /params\.set\("poId", String\(poId\)\)/);
+  assert.match(client, /params\.set\("mode", nextMode\)/);
   assert.match(client, /<AppDialog/);
   assert.match(client, /variant="document"/);
   assert.doesNotMatch(client, /DocumentFormFrame/);
   assert.doesNotMatch(client, /h-72|min-h-0 overflow-hidden sm:h-80/);
   assert.doesNotMatch(client, /poCopy\.noNotes/);
-  assert.match(client, /poCopy\.detail\.overviewLinesTitle/);
-  assert.match(client, /poCopy\.detail\.linkedGrnsTitle/);
+  assert.match(client, /copy\.detail\.overviewLinesTitle/);
+  assert.match(client, /copy\.detail\.linkedGrnsTitle/);
   assert.doesNotMatch(
     client,
     /items\.length > 0 \? \([\s\S]*RowActionsMenu[\s\S]*\) : \([\s\S]*text-muted-foreground[\s\S]*—/,
@@ -133,5 +126,5 @@ test("PO list keeps its URL-addressable document dialog and never shows an empty
     page,
     /goods_received_notes!goods_received_notes_po_id_fkey\(id, grn_number, status/,
   );
-  assert.match(page, /purchase_request_id/);
+  assert.match(page, /purchase_group_key/);
 });

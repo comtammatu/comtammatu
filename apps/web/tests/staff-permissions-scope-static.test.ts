@@ -26,7 +26,7 @@ test("staff permission UI can submit tenant-wide grants", () => {
     /\{ value: TENANT_SCOPE_VALUE, label: copy\.tenantWide \}/,
   );
   assert.match(CLIENT_SOURCE, /branch_id: branchIdFromValue\(values\.scope\)/);
-  assert.match(CLIENT_SOURCE, /branch_id: branchIdFromValue\(templateBranch\)/);
+  assert.match(CLIENT_SOURCE, /branch_id: targetBranchId/);
 });
 
 test("staff permission actions do not reject null branch before RPC scope checks", () => {

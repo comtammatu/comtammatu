@@ -170,6 +170,10 @@ export const CONSUMPTION_REPORT_STATUS_LABELS_VI = {
 
 export const INVENTORY_STATUS_LABELS_VI = {
   draft: "Nháp",
+  pending_allocation: "Chờ phân bổ",
+  changes_requested: "Cần chỉnh sửa",
+  partially_ordered: "Cần phân bổ lại",
+  ordered: "Đã tạo đủ đơn",
   confirmed: "Đã xác nhận",
   sent: "Đã gửi",
   credited: "Đã ghi có",
@@ -206,8 +210,12 @@ export const INVENTORY_STATUS_LABELS_VI = {
 export const PURCHASE_ORDER_STATUS_LABELS_VI = {
   draft: "Nháp",
   sent: "Đã duyệt",
+  pending_approval: "Chờ duyệt",
+  changes_requested: "Cần chỉnh sửa",
+  approved: "Đã đặt mua",
   partially_received: "Nhận một phần",
   received: "Đã nhận đủ",
+  closed: "Đã đóng",
   cancelled: "Đã hủy",
 } as const;
 

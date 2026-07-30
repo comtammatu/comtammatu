@@ -232,11 +232,18 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
 /* ─── fetchGrnIdsForDropdown ─── */
 
 type GrnDropdownLine = {
+  id?: number | null;
+  ingredient_id?: number | null;
+  purchase_order_item_id?: number | null;
+  po_applied_quantity?: number | null;
+  entry_unit_id?: number | null;
   received_quantity?: number | null;
   rejected_quantity?: number | null;
   unit_cost?: number | null;
   supplier_id?: number | null;
   suppliers?: { id: number; name: string } | null;
+  ingredients?: { id: number; name: string } | null;
+  units?: { id: number; code: string; name: string | null } | null;
 };
 
 type GrnDropdownSourcePo = {
@@ -270,7 +277,7 @@ function sumGrnNetAcceptedAmount(lines: GrnDropdownLine[] | null | undefined) {
 
 function expandGrnDropdownOptions(
   rows: GrnDropdownRow[],
-  linkedPairs: Set<string>,
+  billedByLine: Map<string, number>,
   includeGrnId: number | undefined,
   withNetAmount: boolean,
 ) {
@@ -281,6 +288,15 @@ function expandGrnDropdownOptions(
     po_id: number | null;
     suppliers: { id: number; name: string } | null;
     net_accepted_amount: number | null;
+    lines: Array<{
+      grn_item_id: number;
+      purchase_order_item_id: number;
+      ingredient_id: number;
+      ingredient_name: string;
+      entry_unit_id: number;
+      unit_label: string;
+      available_quantity: number;
+    }>;
   }> = [];
 
   for (const row of rows) {
@@ -315,14 +331,6 @@ function expandGrnDropdownOptions(
     }
 
     for (const supplierId of supplierIds) {
-      const pairKey = `${row.id}:${supplierId}`;
-      if (
-        linkedPairs.has(pairKey) &&
-        (includeGrnId == null || includeGrnId !== row.id)
-      ) {
-        continue;
-      }
-
       const linesForSupplier = items.filter((line) => {
         const lineSupplierId = Number(line.supplier_id);
         if (Number.isSafeInteger(lineSupplierId) && lineSupplierId > 0) {
@@ -341,6 +349,50 @@ function expandGrnDropdownOptions(
           : null;
       const poId = sourcePo?.id ?? legacyPoId;
       const supplierName = supplierNameById.get(supplierId) ?? null;
+      const availableLines = linesForSupplier.flatMap((line) => {
+        const grnItemId = Number(line.id);
+        const poItemId = Number(line.purchase_order_item_id);
+        const ingredientId = Number(line.ingredient_id);
+        const unitId = Number(line.entry_unit_id);
+        const accepted = Number(
+          line.po_applied_quantity ??
+            Number(line.received_quantity ?? 0) -
+              Number(line.rejected_quantity ?? 0),
+        );
+        const billed = billedByLine.get(`${row.id}:${poItemId}`) ?? 0;
+        const available = Math.max(accepted - billed, 0);
+        if (
+          !Number.isSafeInteger(grnItemId) ||
+          grnItemId <= 0 ||
+          !Number.isSafeInteger(poItemId) ||
+          poItemId <= 0 ||
+          !Number.isSafeInteger(ingredientId) ||
+          ingredientId <= 0 ||
+          !Number.isSafeInteger(unitId) ||
+          unitId <= 0 ||
+          available <= 0
+        ) {
+          return [];
+        }
+        return [
+          {
+            grn_item_id: grnItemId,
+            purchase_order_item_id: poItemId,
+            ingredient_id: ingredientId,
+            ingredient_name: line.ingredients?.name ?? "Nguyên liệu",
+            entry_unit_id: unitId,
+            unit_label:
+              line.units?.name ?? line.units?.code ?? "Đơn vị",
+            available_quantity: available,
+          },
+        ];
+      });
+      if (
+        availableLines.length === 0 &&
+        (includeGrnId == null || includeGrnId !== row.id)
+      ) {
+        continue;
+      }
 
       options.push({
         id: row.id,
@@ -356,6 +408,7 @@ function expandGrnDropdownOptions(
         net_accepted_amount: withNetAmount
           ? sumGrnNetAcceptedAmount(linesForSupplier)
           : null,
+        lines: availableLines,
       });
     }
   }
@@ -366,6 +419,7 @@ function expandGrnDropdownOptions(
 export async function fetchGrnIdsForDropdown(
   branchId?: number,
   includeGrnId?: number,
+  excludeInvoiceId?: number,
 ): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     ROLES,
@@ -379,33 +433,36 @@ export async function fetchGrnIdsForDropdown(
     : supabase;
 
   const { data: linkedRows, error: linkedError } = await supabase
-    .from("supplier_invoices")
-    .select("grn_id, supplier_id")
+    .from("supplier_invoice_receipt_allocations")
+    .select(
+      "supplier_invoice_id, grn_id, purchase_order_item_id, billed_quantity",
+    )
     .eq("tenant_id", claims.tenant_id)
-    .not("grn_id", "is", null);
+    .not("purchase_order_item_id", "is", null);
   if (linkedError) return { success: false, error: grnLoadFailedError };
-  const linkedPairs = new Set(
-    (linkedRows ?? [])
-      .map((row) => {
-        const grnId = Number(row.grn_id);
-        const supplierId = Number(row.supplier_id);
-        if (
-          !Number.isSafeInteger(grnId) ||
-          grnId <= 0 ||
-          !Number.isSafeInteger(supplierId) ||
-          supplierId <= 0
-        ) {
-          return null;
-        }
-        return `${grnId}:${supplierId}`;
-      })
-      .filter((value): value is string => value != null),
-  );
+  const billedByLine = new Map<string, number>();
+  for (const row of linkedRows ?? []) {
+    if (Number(row.supplier_invoice_id) === excludeInvoiceId) continue;
+    const grnId = Number(row.grn_id);
+    const poItemId = Number(row.purchase_order_item_id);
+    const quantity = Number(row.billed_quantity);
+    if (
+      !Number.isSafeInteger(grnId) ||
+      grnId <= 0 ||
+      !Number.isSafeInteger(poItemId) ||
+      poItemId <= 0 ||
+      !Number.isFinite(quantity)
+    ) {
+      continue;
+    }
+    const key = `${grnId}:${poItemId}`;
+    billedByLine.set(key, (billedByLine.get(key) ?? 0) + quantity);
+  }
 
   const selectWithNet =
-    "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id ), grn_items ( received_quantity, rejected_quantity, unit_cost, supplier_id, suppliers ( id, name ) )";
+    "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id ), grn_items ( id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, unit_cost, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name ) )";
   const selectWithoutNet =
-    "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id ), grn_items ( supplier_id, suppliers ( id, name ) )";
+    "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id ), grn_items ( id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name ) )";
 
   let query = readClient
     .from("goods_received_notes")
@@ -422,7 +479,7 @@ export async function fetchGrnIdsForDropdown(
     success: true,
     data: expandGrnDropdownOptions(
       (data ?? []) as GrnDropdownRow[],
-      linkedPairs,
+      billedByLine,
       includeGrnId,
       monetary.purchasePrice,
     ),

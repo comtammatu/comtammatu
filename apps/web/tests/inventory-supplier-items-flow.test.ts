@@ -50,25 +50,23 @@ test("supplier rows open one addressable AppDialog and detail URL redirects", ()
   assert.match(detailPage, /redirect\(`\/inventory\/suppliers\?supplierId=/);
 });
 
-test("retrospective procurement maps active ingredients through the GRN", () => {
+test("accountant allocation loads all active supplier mappings", () => {
   const poPage = readRepo(
     "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   );
   const poClient = readRepo(
     "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
-  const grnLoader = readRepo("apps/web/lib/inventory/grn-create-data.ts");
-
-  assert.doesNotMatch(poPage, /\.from\("supplier_items"\)/);
-  assert.doesNotMatch(poClient, /supplierIds|ingredient options/);
-  assert.match(grnLoader, /\.from\("supplier_items"\)/);
-  assert.match(
-    grnLoader,
-    /suppliersByIngredient\.get\(ingredient\.id\)\?\.length \?\? 0\) > 0/,
+  assert.match(poPage, /\.from\("supplier_items"\)/);
+  assert.match(poPage, /\.eq\("is_active", true\)/);
+  assert.match(poPage, /preferredIngredientIds/);
+  assert.doesNotMatch(
+    poClient,
+    /preferredSupplierByIngredient|missingSupplierLines/,
   );
 });
 
-test("Server Actions reject supplier-mismatched PO and GRN line writes", () => {
+test("PO and GRN mutations delegate supplier integrity to atomic RPCs", () => {
   const poActions = readRepo(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
@@ -76,13 +74,9 @@ test("Server Actions reject supplier-mismatched PO and GRN line writes", () => {
     "apps/web/app/(protected)/inventory/grn-actions.ts",
   );
 
-  assert.match(poActions, /validateSupplierIngredients/);
-  assert.match(poActions, /Có nguyên liệu chưa được gán cho nhà cung cấp\./);
-  assert.match(
-    grnActions,
-    /grn\.supplier_id != null && data\.supplierId !== grn\.supplier_id/,
-  );
-  assert.match(grnActions, /Nguyên liệu chưa được gán cho nhà cung cấp\./);
+  assert.match(poActions, /save_purchase_order_group/);
+  assert.match(poActions, /supplier_default_missing/);
+  assert.match(grnActions, /confirm_goods_receipt_note/);
 });
 
 test("supplier mapping gates draft construction, not GRN confirmation", () => {

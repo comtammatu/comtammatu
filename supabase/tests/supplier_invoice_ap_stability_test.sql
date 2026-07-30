@@ -6,6 +6,103 @@ BEGIN;
 
 DO $$
 DECLARE
+  v_owner uuid := pg_catalog.gen_random_uuid();
+  v_accountant uuid := pg_catalog.gen_random_uuid();
+  v_tenant bigint;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.profiles AS profile
+    JOIN public.positions AS position
+      ON position.id = profile.position_id
+     AND position.tenant_id = profile.tenant_id
+    WHERE position.code = 'owner'
+      AND coalesce(profile.is_active, TRUE)
+  ) THEN
+    RETURN;
+  END IF;
+
+  ALTER TABLE public.tenants
+    ALTER CONSTRAINT tenants_owner_user_id_fkey
+    DEFERRABLE INITIALLY DEFERRED;
+  SET CONSTRAINTS tenants_owner_user_id_fkey DEFERRED;
+
+  INSERT INTO public.tenants (name, slug, owner_user_id)
+  VALUES (
+    '__supplier_ap_' || v_owner::text,
+    '__supplier_ap_' || v_owner::text,
+    v_owner
+  )
+  RETURNING id INTO v_tenant;
+
+  INSERT INTO public.positions (
+    tenant_id,
+    code,
+    label_vi,
+    label_en,
+    is_active,
+    is_system
+  )
+  VALUES
+    (v_tenant, 'owner', 'Chủ', 'Owner', TRUE, TRUE),
+    (v_tenant, 'accountant', 'Kế toán', 'Accountant', TRUE, TRUE);
+
+  INSERT INTO public.role_templates (
+    tenant_id,
+    name,
+    position_code,
+    permission_keys,
+    is_system
+  )
+  VALUES
+    (v_tenant, 'owner', 'owner', '{}'::text[], TRUE),
+    (v_tenant, 'accountant', 'accountant', '{}'::text[], TRUE);
+
+  INSERT INTO public.branches (
+    tenant_id,
+    name,
+    branch_kind,
+    is_active,
+    code
+  )
+  VALUES (
+    v_tenant,
+    '__supplier_ap_central_' || v_owner::text,
+    'central_supply',
+    TRUE,
+    NULL
+  );
+
+  INSERT INTO auth.users (
+    id,
+    email,
+    raw_app_meta_data,
+    raw_user_meta_data
+  )
+  VALUES
+    (
+      v_owner,
+      'supplier-ap-owner-' || v_owner::text || '@example.invalid',
+      pg_catalog.jsonb_build_object(
+        'tenant_id', v_tenant,
+        'position_code', 'owner'
+      ),
+      pg_catalog.jsonb_build_object('full_name', 'Supplier AP owner')
+    ),
+    (
+      v_accountant,
+      'supplier-ap-accountant-' || v_accountant::text || '@example.invalid',
+      pg_catalog.jsonb_build_object(
+        'tenant_id', v_tenant,
+        'position_code', 'accountant'
+      ),
+      pg_catalog.jsonb_build_object('full_name', 'Supplier AP accountant')
+    );
+END;
+$$;
+
+DO $$
+DECLARE
   v_tenant bigint;
   v_branch bigint;
   v_owner uuid;
@@ -375,14 +472,18 @@ BEGIN
 
   v_recomputed := public.recompute_supplier_invoice_matching(v_invoice);
   IF v_result <> v_recomputed - 'invoice_id'
-     OR v_recomputed->>'matching_status' <> 'matched'
-     OR (v_recomputed->>'expected_amount')::numeric <> 1000
-     OR (v_recomputed->>'received_amount')::numeric <> 1000 THEN
+     OR v_recomputed->>'matching_status' <> 'discrepancy'
+     OR (v_recomputed->>'expected_amount')::numeric <> 995
+     OR (v_recomputed->>'received_amount')::numeric <> 0 THEN
     RAISE EXCEPTION
       'SUPPLIER AP: create/recompute matching mismatch create=% recompute=%',
       v_result,
       v_recomputed;
   END IF;
+  PERFORM public.accept_supplier_invoice_discrepancy(
+    v_invoice,
+    'Legacy header allocation accepted for compatibility test'
+  );
 
   v_tolerance_invoice := public.create_supplier_invoice_with_allocations(
     v_supplier,
@@ -407,8 +508,9 @@ BEGIN
     SELECT invoice.matching_status
     FROM public.supplier_invoices invoice
     WHERE invoice.id = v_tolerance_invoice
-  ) <> 'matched' THEN
-    RAISE EXCEPTION 'SUPPLIER AP: +1 VND tolerance failed';
+  ) <> 'discrepancy' THEN
+    RAISE EXCEPTION
+      'SUPPLIER AP: legacy header allocation was not flagged';
   END IF;
 
   v_discrepancy_invoice :=
@@ -553,13 +655,13 @@ BEGIN
     PERFORM public.record_supplier_payment_allocated(
       v_tenant,
       v_supplier,
-      995,
+      990,
       'bank_transfer',
       v_denied_key,
       NULL,
       pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
         'invoice_id', v_invoice,
-        'amount', 995
+        'amount', 990
       ))
     );
     RAISE EXCEPTION 'SUPPLIER AP: non-owner payment succeeded';
@@ -596,13 +698,13 @@ BEGIN
   PERFORM public.record_supplier_payment_allocated(
     v_tenant,
     v_supplier,
-    997,
+    992,
     'bank_transfer',
     v_bank_payment_key,
     'External bank movement is reconciled separately',
     pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
       'invoice_id', v_discrepancy_invoice,
-      'amount', 997
+      'amount', 992
     ))
   );
 
@@ -619,31 +721,31 @@ BEGIN
   v_payment_result := public.record_supplier_payment_allocated(
     v_tenant,
     v_supplier,
-    1195,
+    1190,
     'cash',
     v_payment_key,
     'Goods payment with visible advance',
     pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
       'invoice_id', v_invoice,
-      'amount', 995
+      'amount', 990
     ))
   );
   v_replay := public.record_supplier_payment_allocated(
     v_tenant,
     v_supplier,
-    1195,
+    1190,
     'cash',
     v_payment_key,
     'Goods payment with visible advance',
     pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
       'invoice_id', v_invoice,
-      'amount', 995
+      'amount', 990
     ))
   );
   v_payment_id := (v_payment_result->>'payment_id')::bigint;
 
   IF v_payment_result <> v_replay
-     OR (v_payment_result->>'allocated_amount')::numeric <> 995
+     OR (v_payment_result->>'allocated_amount')::numeric <> 990
      OR (v_payment_result->>'advance_amount')::numeric <> 200 THEN
     RAISE EXCEPTION
       'SUPPLIER AP: payment replay/advance failed %',
@@ -675,7 +777,7 @@ BEGIN
   v_replay := public.record_supplier_payment(
     v_tenant,
     v_invoice,
-    1195,
+    1190,
     'cash',
     v_payment_key,
     'Goods payment with visible advance'
@@ -700,7 +802,7 @@ BEGIN
     AND allocation.tenant_id = v_tenant;
 
   IF v_payment_count <> 1
-     OR v_paid <> 1195
+     OR v_paid <> 1190
      OR v_allocation_count <> 2
      OR (
        SELECT invoice.paid_amount
