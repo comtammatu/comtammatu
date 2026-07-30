@@ -382,7 +382,9 @@ export default async function PurchaseOrdersPage({
       : branches.filter((branch) => branch.id === claims.branch_id);
   const requestedTab = firstParam(params.tab);
   const hasPendingDemand = demandRows.some((row) =>
-    ["pending_allocation", "partially_ordered"].includes(row.status),
+    ["submitted", "pending_allocation", "partially_ordered"].includes(
+      row.status,
+    ),
   );
   const defaultTab =
     requestedTab === "needs" || requestedTab === "orders"
@@ -427,7 +429,9 @@ export default async function PurchaseOrdersPage({
             value: "needs",
             label: "Nhu cầu mua",
             count: demandRows.filter((row) =>
-              ["pending_allocation", "partially_ordered"].includes(row.status),
+              ["submitted", "pending_allocation", "partially_ordered"].includes(
+                row.status,
+              ),
             ).length,
           },
           { value: "orders", label: "Đơn mua", count: poRows.length },

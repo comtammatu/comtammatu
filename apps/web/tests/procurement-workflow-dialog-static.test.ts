@@ -82,6 +82,44 @@ test("warehouse can submit missing suppliers but accountant cannot approve incom
   assert.match(purchaseActions, /purchase_demand_allocation_incomplete/);
 });
 
+test("submitted demands remain allocatable during cutover", () => {
+  const demandClient = read(
+    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
+  );
+  const purchaseActions = read(
+    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
+  );
+  const purchasePage = read(
+    "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
+  );
+  const migration = read(
+    "supabase/migrations/20260730192000_fix_purchase_demand_legacy_cutover.sql",
+  );
+  const compatibilityAction = purchaseActions.slice(
+    purchaseActions.indexOf("export const savePurchaseRequest"),
+    purchaseActions.indexOf("export const savePurchaseDemand"),
+  );
+
+  assert.match(compatibilityAction, /"save_purchase_demand"/);
+  assert.doesNotMatch(compatibilityAction, /"save_purchase_request"/);
+  assert.ok((demandClient.match(/status === "submitted"/g) ?? []).length >= 2);
+  assert.ok(
+    (
+      purchasePage.match(
+        /\["submitted", "pending_allocation", "partially_ordered"\]/g,
+      ) ?? []
+    ).length >= 2,
+  );
+  assert.match(
+    migration,
+    /status = 'submitted'[\s\S]*status <> 'cancelled'[\s\S]*status = 'pending_allocation'/,
+  );
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.save_purchase_request\([\s\S]*FROM PUBLIC, anon, authenticated/,
+  );
+});
+
 test("purchase request URLs redirect to the PO-first workspace", () => {
   const requestPage = read(
     "apps/web/app/(protected)/inventory/purchase-requests/page.tsx",

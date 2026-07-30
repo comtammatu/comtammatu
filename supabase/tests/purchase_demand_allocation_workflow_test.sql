@@ -33,6 +33,14 @@ BEGIN
     RAISE EXCEPTION 'PURCHASE DEMAND: required RPCs are missing';
   END IF;
 
+  IF pg_catalog.has_function_privilege(
+    'authenticated',
+    'public.save_purchase_request(bigint,bigint,date,text,jsonb,boolean,uuid)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'PURCHASE DEMAND: legacy save RPC remains executable';
+  END IF;
+
   SELECT profile.tenant_id, profile.id
   INTO v_tenant, v_owner
   FROM public.profiles AS profile

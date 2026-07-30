@@ -488,9 +488,9 @@ export const savePurchaseRequest = withAction(
     { supabase },
   ) => {
     const { data, error } = await supabase.rpc(
-      "save_purchase_request" as never,
+      "save_purchase_demand" as never,
       {
-        p_request_id: requestId ?? null,
+        p_demand_id: requestId ?? null,
         p_branch_id: branchId,
         p_needed_by: neededBy ?? null,
         p_notes: notes ?? "",
@@ -512,23 +512,24 @@ export const savePurchaseRequest = withAction(
     }
     const parsed = z
       .object({
-        request_id: z.coerce.number().int().positive(),
-        request_number: z.string(),
-        status: z.enum(["draft", "submitted"]),
+        demand_id: z.coerce.number().int().positive(),
+        demand_number: z.string(),
+        status: z.enum(["draft", "pending_allocation"]),
       })
       .safeParse(data);
     if (!parsed.success) {
       return {
         success: false,
-        error: "Phản hồi lưu yêu cầu mua không hợp lệ.",
+        error: "Phản hồi lưu nhu cầu mua không hợp lệ.",
       };
     }
     revalidateSurfacePath("/inventory/purchase-requests");
+    revalidateSurfacePath("/inventory/purchase-orders");
     return {
       success: true,
       data: {
-        id: parsed.data.request_id,
-        code: parsed.data.request_number,
+        id: parsed.data.demand_id,
+        code: parsed.data.demand_number,
       },
     };
   },

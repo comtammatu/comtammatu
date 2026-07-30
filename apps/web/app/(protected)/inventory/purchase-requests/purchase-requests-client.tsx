@@ -610,7 +610,8 @@ export function PurchaseRequestsClient({
     }
     if (
       canAllocate &&
-      (row.status === "pending_allocation" ||
+      (row.status === "submitted" ||
+        row.status === "pending_allocation" ||
         row.status === "partially_ordered")
     ) {
       actions.push({
@@ -1043,7 +1044,8 @@ export function PurchaseRequestsClient({
                 </Button>
               ) : null}
               {canAllocate &&
-              (selected.status === "pending_allocation" ||
+              (selected.status === "submitted" ||
+                selected.status === "pending_allocation" ||
                 selected.status === "partially_ordered") ? (
                 <Button type="button" onClick={() => openAllocation(selected)}>
                   {copy.allocateAction}
