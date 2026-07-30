@@ -2312,6 +2312,141 @@ export type Database = {
           },
         ]
       }
+      inventory_cost_close_snapshots: {
+        Row: {
+          attention_count: number
+          closed_at: string
+          closed_by: string
+          ending_inventory: number
+          food_cost: number
+          id: number
+          idempotency_key: string
+          invoice_revaluation: number
+          month: number
+          opening_inventory: number
+          receipt_value: number
+          tenant_id: number
+          transfer_loss: number
+          waiver_reason: string | null
+          waste_value: number
+          year: number
+        }
+        Insert: {
+          attention_count?: number
+          closed_at?: string
+          closed_by: string
+          ending_inventory: number
+          food_cost: number
+          id?: never
+          idempotency_key: string
+          invoice_revaluation: number
+          month: number
+          opening_inventory: number
+          receipt_value: number
+          tenant_id: number
+          transfer_loss: number
+          waiver_reason?: string | null
+          waste_value: number
+          year: number
+        }
+        Update: {
+          attention_count?: number
+          closed_at?: string
+          closed_by?: string
+          ending_inventory?: number
+          food_cost?: number
+          id?: never
+          idempotency_key?: string
+          invoice_revaluation?: number
+          month?: number
+          opening_inventory?: number
+          receipt_value?: number
+          tenant_id?: number
+          transfer_loss?: number
+          waiver_reason?: string | null
+          waste_value?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_cost_close_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_cost_origins: {
+        Row: {
+          cost_status: string
+          created_at: string
+          effective_at: string
+          finalized_quantity: number
+          finalized_value: number
+          grn_item_id: number | null
+          id: number
+          ingredient_id: number
+          original_quantity: number
+          provisional_value: number
+          source_id: number
+          source_kind: string
+          tenant_id: number
+        }
+        Insert: {
+          cost_status?: string
+          created_at?: string
+          effective_at: string
+          finalized_quantity?: number
+          finalized_value?: number
+          grn_item_id?: number | null
+          id?: never
+          ingredient_id: number
+          original_quantity: number
+          provisional_value: number
+          source_id: number
+          source_kind: string
+          tenant_id: number
+        }
+        Update: {
+          cost_status?: string
+          created_at?: string
+          effective_at?: string
+          finalized_quantity?: number
+          finalized_value?: number
+          grn_item_id?: number | null
+          id?: never
+          ingredient_id?: number
+          original_quantity?: number
+          provisional_value?: number
+          source_id?: number
+          source_kind?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_cost_origins_grn_item_id_fkey"
+            columns: ["grn_item_id"]
+            isOneToOne: false
+            referencedRelation: "grn_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_origins_ingredient_id_tenant_id_fkey"
+            columns: ["ingredient_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_origins_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_count_assignments: {
         Row: {
           assigned_by: string
@@ -2653,6 +2788,445 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_origin_balances: {
+        Row: {
+          book_value: number
+          holder_id: number | null
+          holder_kind: string
+          id: number
+          origin_id: number
+          quantity: number
+          tenant_id: number
+          updated_at: string
+          valuation_account_id: number | null
+        }
+        Insert: {
+          book_value?: number
+          holder_id?: number | null
+          holder_kind: string
+          id?: never
+          origin_id: number
+          quantity?: number
+          tenant_id: number
+          updated_at?: string
+          valuation_account_id?: number | null
+        }
+        Update: {
+          book_value?: number
+          holder_id?: number | null
+          holder_kind?: string
+          id?: never
+          origin_id?: number
+          quantity?: number
+          tenant_id?: number
+          updated_at?: string
+          valuation_account_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_origin_balances_origin_id_tenant_id_fkey"
+            columns: ["origin_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_origins"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_origin_balances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_origin_balances_valuation_account_id_tenant_id_fkey"
+            columns: ["valuation_account_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_accounts"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      inventory_valuation_accounts: {
+        Row: {
+          book_value: number
+          branch_id: number
+          id: number
+          ingredient_id: number
+          location_id: number
+          quantity: number
+          tenant_id: number
+          updated_at: string
+          valuation_version: number
+        }
+        Insert: {
+          book_value?: number
+          branch_id: number
+          id?: never
+          ingredient_id: number
+          location_id: number
+          quantity?: number
+          tenant_id: number
+          updated_at?: string
+          valuation_version?: number
+        }
+        Update: {
+          book_value?: number
+          branch_id?: number
+          id?: never
+          ingredient_id?: number
+          location_id?: number
+          quantity?: number
+          tenant_id?: number
+          updated_at?: string
+          valuation_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_valuation_accounts_branch_id_tenant_id_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_accounts_branch_id_tenant_id_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_accounts_ingredient_id_tenant_id_fkey"
+            columns: ["ingredient_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_accounts_location_id_tenant_id_fkey"
+            columns: ["location_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_accounts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_valuation_cutovers: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          cutoff_at: string | null
+          idempotency_key: string | null
+          opening_quantity: number
+          opening_value: number
+          prepared_at: string | null
+          prepared_by: string | null
+          reconciliation_hash: string | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          cutoff_at?: string | null
+          idempotency_key?: string | null
+          opening_quantity?: number
+          opening_value?: number
+          prepared_at?: string | null
+          prepared_by?: string | null
+          reconciliation_hash?: string | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          cutoff_at?: string | null
+          idempotency_key?: string | null
+          opening_quantity?: number
+          opening_value?: number
+          prepared_at?: string | null
+          prepared_by?: string | null
+          reconciliation_hash?: string | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_valuation_cutovers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_valuation_events: {
+        Row: {
+          created_by: string | null
+          effective_at: string
+          event_type: string
+          from_account_id: number | null
+          grn_item_id: number | null
+          id: number
+          idempotency_key: string
+          ingredient_id: number
+          metadata: Json
+          posted_at: string
+          posting_month: number
+          posting_year: number
+          quantity_delta: number
+          reversal_of_event_id: number | null
+          source_invoice_id: number | null
+          source_invoice_line_id: number | null
+          stock_movement_id: number | null
+          tenant_id: number
+          terminal_bucket: string | null
+          to_account_id: number | null
+          value_delta: number
+        }
+        Insert: {
+          created_by?: string | null
+          effective_at: string
+          event_type: string
+          from_account_id?: number | null
+          grn_item_id?: number | null
+          id?: never
+          idempotency_key: string
+          ingredient_id: number
+          metadata?: Json
+          posted_at?: string
+          posting_month: number
+          posting_year: number
+          quantity_delta?: number
+          reversal_of_event_id?: number | null
+          source_invoice_id?: number | null
+          source_invoice_line_id?: number | null
+          stock_movement_id?: number | null
+          tenant_id: number
+          terminal_bucket?: string | null
+          to_account_id?: number | null
+          value_delta?: number
+        }
+        Update: {
+          created_by?: string | null
+          effective_at?: string
+          event_type?: string
+          from_account_id?: number | null
+          grn_item_id?: number | null
+          id?: never
+          idempotency_key?: string
+          ingredient_id?: number
+          metadata?: Json
+          posted_at?: string
+          posting_month?: number
+          posting_year?: number
+          quantity_delta?: number
+          reversal_of_event_id?: number | null
+          source_invoice_id?: number | null
+          source_invoice_line_id?: number | null
+          stock_movement_id?: number | null
+          tenant_id?: number
+          terminal_bucket?: string | null
+          to_account_id?: number | null
+          value_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_valuation_events_from_account_id_tenant_id_fkey"
+            columns: ["from_account_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_accounts"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_events_grn_item_id_fkey"
+            columns: ["grn_item_id"]
+            isOneToOne: false
+            referencedRelation: "grn_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_events_ingredient_id_tenant_id_fkey"
+            columns: ["ingredient_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_events_reversal_of_event_id_fkey"
+            columns: ["reversal_of_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_events_source_invoice_id_fkey"
+            columns: ["source_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_events_source_invoice_line_id_fkey"
+            columns: ["source_invoice_line_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoice_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_events_stock_movement_id_fkey"
+            columns: ["stock_movement_id"]
+            isOneToOne: false
+            referencedRelation: "stock_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_events_to_account_id_tenant_id_fkey"
+            columns: ["to_account_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_accounts"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      inventory_valuation_settings: {
+        Row: {
+          created_at: string
+          tenant_id: number
+          updated_at: string
+          variance_warning_amount: number
+          variance_warning_percent: number
+        }
+        Insert: {
+          created_at?: string
+          tenant_id: number
+          updated_at?: string
+          variance_warning_amount?: number
+          variance_warning_percent?: number
+        }
+        Update: {
+          created_at?: string
+          tenant_id?: number
+          updated_at?: string
+          variance_warning_amount?: number
+          variance_warning_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_valuation_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_value_allocations: {
+        Row: {
+          allocated_quantity: number
+          allocated_value: number
+          allocation_bucket: string
+          allocation_fraction: number | null
+          created_at: string
+          derived_origin_id: number | null
+          from_balance_id: number | null
+          id: number
+          source_origin_id: number | null
+          tenant_id: number
+          to_balance_id: number | null
+          valuation_event_id: number
+        }
+        Insert: {
+          allocated_quantity?: number
+          allocated_value?: number
+          allocation_bucket?: string
+          allocation_fraction?: number | null
+          created_at?: string
+          derived_origin_id?: number | null
+          from_balance_id?: number | null
+          id?: never
+          source_origin_id?: number | null
+          tenant_id: number
+          to_balance_id?: number | null
+          valuation_event_id: number
+        }
+        Update: {
+          allocated_quantity?: number
+          allocated_value?: number
+          allocation_bucket?: string
+          allocation_fraction?: number | null
+          created_at?: string
+          derived_origin_id?: number | null
+          from_balance_id?: number | null
+          id?: never
+          source_origin_id?: number | null
+          tenant_id?: number
+          to_balance_id?: number | null
+          valuation_event_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_value_allocations_derived_origin_id_tenant_id_fkey"
+            columns: ["derived_origin_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_origins"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_value_allocations_from_balance_id_tenant_id_fkey"
+            columns: ["from_balance_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_origin_balances"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_value_allocations_source_origin_id_tenant_id_fkey"
+            columns: ["source_origin_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_origins"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_value_allocations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_value_allocations_to_balance_id_tenant_id_fkey"
+            columns: ["to_balance_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_origin_balances"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "inventory_value_allocations_valuation_event_id_tenant_id_fkey"
+            columns: ["valuation_event_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_events"
+            referencedColumns: ["id", "tenant_id"]
           },
         ]
       }
@@ -7104,6 +7678,7 @@ export type Database = {
           entry_quantity: number | null
           entry_unit_id: number
           grn_id: number | null
+          grn_item_id: number | null
           id: number
           ingredient_id: number
           issue_id: number | null
@@ -7125,6 +7700,7 @@ export type Database = {
           entry_quantity?: number | null
           entry_unit_id: number
           grn_id?: number | null
+          grn_item_id?: number | null
           id?: never
           ingredient_id: number
           issue_id?: number | null
@@ -7146,6 +7722,7 @@ export type Database = {
           entry_quantity?: number | null
           entry_unit_id?: number
           grn_id?: number | null
+          grn_item_id?: number | null
           id?: never
           ingredient_id?: number
           issue_id?: number | null
@@ -7194,6 +7771,13 @@ export type Database = {
             columns: ["grn_id"]
             isOneToOne: false
             referencedRelation: "goods_received_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_grn_item_id_fkey"
+            columns: ["grn_item_id"]
+            isOneToOne: false
+            referencedRelation: "grn_items"
             referencedColumns: ["id"]
           },
           {
@@ -8188,6 +8772,7 @@ export type Database = {
         Row: {
           confirmed_at: string
           created_by: string
+          effective_net_unit_price: number
           id: number
           ingredient_id: number
           supplier_id: number
@@ -8200,6 +8785,7 @@ export type Database = {
         Insert: {
           confirmed_at: string
           created_by: string
+          effective_net_unit_price: number
           id?: never
           ingredient_id: number
           supplier_id: number
@@ -8212,6 +8798,7 @@ export type Database = {
         Update: {
           confirmed_at?: string
           created_by?: string
+          effective_net_unit_price?: number
           id?: never
           ingredient_id?: number
           supplier_id?: number
@@ -8346,9 +8933,11 @@ export type Database = {
         Row: {
           accepted_discrepancy: boolean
           billed_quantity: number
+          confirmed_net_inventory_amount: number | null
           created_at: string
           discrepancy_reason: string | null
           grn_id: number
+          grn_item_id: number | null
           id: number
           invoice_line_id: number | null
           matched_quantity: number
@@ -8357,13 +8946,17 @@ export type Database = {
           supplier_invoice_id: number
           tenant_id: number
           unplanned_billed_quantity: number
+          valuation_event_id: number | null
+          valuation_status: string
         }
         Insert: {
           accepted_discrepancy?: boolean
           billed_quantity: number
+          confirmed_net_inventory_amount?: number | null
           created_at?: string
           discrepancy_reason?: string | null
           grn_id: number
+          grn_item_id?: number | null
           id?: never
           invoice_line_id?: number | null
           matched_quantity: number
@@ -8372,13 +8965,17 @@ export type Database = {
           supplier_invoice_id: number
           tenant_id: number
           unplanned_billed_quantity?: number
+          valuation_event_id?: number | null
+          valuation_status?: string
         }
         Update: {
           accepted_discrepancy?: boolean
           billed_quantity?: number
+          confirmed_net_inventory_amount?: number | null
           created_at?: string
           discrepancy_reason?: string | null
           grn_id?: number
+          grn_item_id?: number | null
           id?: never
           invoice_line_id?: number | null
           matched_quantity?: number
@@ -8387,6 +8984,8 @@ export type Database = {
           supplier_invoice_id?: number
           tenant_id?: number
           unplanned_billed_quantity?: number
+          valuation_event_id?: number | null
+          valuation_status?: string
         }
         Relationships: [
           {
@@ -8418,11 +9017,25 @@ export type Database = {
             referencedColumns: ["id", "tenant_id"]
           },
           {
+            foreignKeyName: "supplier_invoice_receipt_allocations_grn_item_id_fkey"
+            columns: ["grn_item_id"]
+            isOneToOne: false
+            referencedRelation: "grn_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "supplier_invoice_receipt_allocations_po_id_tenant_id_fkey"
             columns: ["po_id", "tenant_id"]
             isOneToOne: false
             referencedRelation: "purchase_orders"
             referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "supplier_invoice_receipt_allocations_valuation_event_fkey"
+            columns: ["valuation_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_events"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -10231,6 +10844,10 @@ export type Database = {
         }
         Returns: Json
       }
+      activate_inventory_valuation_cutover: {
+        Args: { p_idempotency_key: string }
+        Returns: Json
+      }
       activate_invoice_profile: { Args: never; Returns: number }
       add_menu_item_stock_exception: {
         Args: {
@@ -10516,6 +11133,15 @@ export type Database = {
       clear_order_discount: { Args: { p_order_id: number }; Returns: Json }
       clear_order_item_discount: {
         Args: { p_order_item_id: number; p_reason: string }
+        Returns: Json
+      }
+      close_inventory_cost_period: {
+        Args: {
+          p_idempotency_key: string
+          p_month: number
+          p_waiver_reason: string
+          p_year: number
+        }
         Returns: Json
       }
       close_period_hard: {
@@ -11271,6 +11897,18 @@ export type Database = {
         }[]
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
+      get_inventory_valuation_reconciliation: {
+        Args: { p_branch_id?: number; p_month: number; p_year: number }
+        Returns: Json
+      }
+      get_inventory_valuation_period_value: {
+        Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
+        Returns: {
+          branch_id: number
+          closing_value: number
+          opening_value: number
+        }[]
+      }
       get_inventory_value_period: {
         Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
         Returns: {
@@ -11569,6 +12207,10 @@ export type Database = {
           round_no: number
           unit: string
         }[]
+      }
+      get_supplier_invoice_valuation_summary: {
+        Args: { p_invoice_id: number }
+        Returns: Json
       }
       get_tax_invoice_submission_snapshot_as_system: {
         Args: { p_job_id: number }
@@ -11893,6 +12535,10 @@ export type Database = {
       }
       post_pos_sale_refund_restore: {
         Args: { p_actor_id?: string; p_order_id: number }
+        Returns: Json
+      }
+      prepare_inventory_valuation_cutover: {
+        Args: { p_idempotency_key: string }
         Returns: Json
       }
       prepare_tax_invoice_issue_job_as_system:
@@ -12313,6 +12959,7 @@ export type Database = {
         Returns: Json
       }
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
+      run_inventory_valuation_reconciliation: { Args: never; Returns: Json }
       save_goods_receipt_note: {
         Args: {
           p_grn_id: number

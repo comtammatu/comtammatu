@@ -321,4 +321,3 @@ REVOKE ALL ON FUNCTION public.run_inventory_valuation_reconciliation()
 FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.run_inventory_valuation_reconciliation()
 TO authenticated, service_role;
-
