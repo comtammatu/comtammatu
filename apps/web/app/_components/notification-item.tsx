@@ -48,6 +48,8 @@ function iconFor(kind: string) {
       return IconAlertTriangle;
     case "inventory.stock_low":
     case "inventory.expiry_soon":
+    case "inventory.valuation_variance":
+    case "inventory.valuation_reconciliation_failed":
     case "pos.kds_out_of_stock":
     case "pos.payment_stock_failed":
     case "pos.shift_variance":
