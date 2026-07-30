@@ -12,6 +12,7 @@ DECLARE
   v_supplier_a bigint;
   v_supplier_b bigint;
   v_demand_id bigint;
+  v_rejected_demand_id bigint;
   v_item_id bigint;
   v_key uuid := pg_catalog.gen_random_uuid();
   v_result jsonb;
@@ -19,6 +20,8 @@ DECLARE
   v_po_id bigint;
   v_po_count integer;
   v_grn_count integer;
+  v_submitted_by uuid;
+  v_submitted_at timestamptz;
   v_failed boolean := FALSE;
 BEGIN
   IF pg_catalog.to_regprocedure(
@@ -181,12 +184,157 @@ BEGIN
   );
   v_demand_id := (v_result ->> 'demand_id')::bigint;
 
+  SELECT demand.submitted_by, demand.submitted_at
+  INTO v_submitted_by, v_submitted_at
+  FROM public.purchase_requests AS demand
+  WHERE demand.id = v_demand_id
+    AND demand.tenant_id = v_tenant;
+
+  v_result := public.save_purchase_demand(
+    v_demand_id,
+    v_branch,
+    CURRENT_DATE + 2,
+    'Warehouse updates demand before supplier allocation',
+    pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object(
+        'ingredient_id', v_ingredient,
+        'quantity', 12,
+        'entry_unit_id', v_unit,
+        'notes', ''
+      )
+    ),
+    FALSE,
+    NULL
+  );
+
+  IF v_result ->> 'status' <> 'pending_allocation'
+     OR EXISTS (
+       SELECT 1
+       FROM public.purchase_requests AS demand
+       WHERE demand.id = v_demand_id
+         AND demand.tenant_id = v_tenant
+         AND (
+           demand.status <> 'pending_allocation'
+           OR demand.submitted_by IS DISTINCT FROM v_submitted_by
+           OR demand.submitted_at IS DISTINCT FROM v_submitted_at
+           OR demand.needed_by <> CURRENT_DATE + 2
+         )
+     )
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.purchase_request_items AS item
+       WHERE item.tenant_id = v_tenant
+         AND item.purchase_request_id = v_demand_id
+         AND item.quantity = 12
+     ) THEN
+    RAISE EXCEPTION
+      'PURCHASE DEMAND: pending edit changed submission state';
+  END IF;
+
   SELECT item.id
   INTO v_item_id
   FROM public.purchase_request_items AS item
   WHERE item.tenant_id = v_tenant
     AND item.purchase_request_id = v_demand_id;
 
+  PERFORM public.save_purchase_demand_allocations(
+    v_demand_id,
+    pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object(
+        'request_item_id', v_item_id,
+        'supplier_id', v_supplier_a,
+        'quantity', 4
+      )
+    ),
+    pg_catalog.gen_random_uuid()
+  );
+
+  v_failed := FALSE;
+  BEGIN
+    PERFORM public.save_purchase_demand(
+      v_demand_id,
+      v_branch,
+      CURRENT_DATE + 3,
+      'This edit must be blocked after allocation starts',
+      pg_catalog.jsonb_build_array(
+        pg_catalog.jsonb_build_object(
+          'ingredient_id', v_ingredient,
+          'quantity', 11,
+          'entry_unit_id', v_unit,
+          'notes', ''
+        )
+      ),
+      TRUE,
+      NULL
+    );
+  EXCEPTION
+    WHEN check_violation THEN
+      v_failed := SQLERRM LIKE '%purchase_demand_allocation_started%';
+  END;
+  IF NOT v_failed
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.purchase_request_items AS item
+       WHERE item.tenant_id = v_tenant
+         AND item.purchase_request_id = v_demand_id
+         AND item.quantity = 12
+     )
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.purchase_request_allocations AS allocation
+       WHERE allocation.tenant_id = v_tenant
+         AND allocation.purchase_request_id = v_demand_id
+         AND allocation.quantity = 4
+     ) THEN
+    RAISE EXCEPTION
+      'PURCHASE DEMAND: allocation did not lock warehouse editing';
+  END IF;
+
+  v_result := public.review_purchase_demand(
+    v_demand_id,
+    'request_changes',
+    NULL,
+    'Adjust the requested quantity',
+    NULL
+  );
+  IF v_result ->> 'status' <> 'changes_requested' THEN
+    RAISE EXCEPTION 'PURCHASE DEMAND: request changes did not return demand';
+  END IF;
+
+  v_result := public.save_purchase_demand(
+    v_demand_id,
+    v_branch,
+    CURRENT_DATE + 1,
+    'Warehouse resubmits the returned demand',
+    pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object(
+        'ingredient_id', v_ingredient,
+        'quantity', 10,
+        'entry_unit_id', v_unit,
+        'notes', ''
+      )
+    ),
+    TRUE,
+    NULL
+  );
+  IF v_result ->> 'status' <> 'pending_allocation'
+     OR EXISTS (
+       SELECT 1
+       FROM public.purchase_request_allocations AS allocation
+       WHERE allocation.tenant_id = v_tenant
+         AND allocation.purchase_request_id = v_demand_id
+     ) THEN
+    RAISE EXCEPTION
+      'PURCHASE DEMAND: returned edit did not clear stale allocation';
+  END IF;
+
+  SELECT item.id
+  INTO v_item_id
+  FROM public.purchase_request_items AS item
+  WHERE item.tenant_id = v_tenant
+    AND item.purchase_request_id = v_demand_id;
+
+  v_failed := FALSE;
   BEGIN
     PERFORM public.review_purchase_demand(
       v_demand_id,
@@ -238,6 +386,32 @@ BEGIN
   IF v_result <> v_replay
      OR pg_catalog.jsonb_array_length(v_result -> 'purchase_orders') <> 2 THEN
     RAISE EXCEPTION 'PURCHASE DEMAND: approve replay contract failed';
+  END IF;
+
+  v_failed := FALSE;
+  BEGIN
+    PERFORM public.save_purchase_demand(
+      v_demand_id,
+      v_branch,
+      CURRENT_DATE + 4,
+      'This edit must be blocked after PO creation',
+      pg_catalog.jsonb_build_array(
+        pg_catalog.jsonb_build_object(
+          'ingredient_id', v_ingredient,
+          'quantity', 10,
+          'entry_unit_id', v_unit,
+          'notes', ''
+        )
+      ),
+      TRUE,
+      NULL
+    );
+  EXCEPTION
+    WHEN check_violation THEN
+      v_failed := SQLERRM LIKE '%purchase_demand_not_editable%';
+  END;
+  IF NOT v_failed THEN
+    RAISE EXCEPTION 'PURCHASE DEMAND: active PO did not lock demand editing';
   END IF;
 
   SELECT pg_catalog.count(*)
@@ -296,6 +470,42 @@ BEGIN
       AND allocation.purchase_request_id = v_demand_id
   ) THEN
     RAISE EXCEPTION 'PURCHASE DEMAND: cancelled PO did not reopen demand';
+  END IF;
+
+  v_result := public.save_purchase_demand(
+    NULL,
+    v_branch,
+    CURRENT_DATE + 1,
+    'Demand rejected by accounting',
+    pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object(
+        'ingredient_id', v_ingredient,
+        'quantity', 1,
+        'entry_unit_id', v_unit,
+        'notes', ''
+      )
+    ),
+    TRUE,
+    pg_catalog.gen_random_uuid()
+  );
+  v_rejected_demand_id := (v_result ->> 'demand_id')::bigint;
+  v_result := public.review_purchase_demand(
+    v_rejected_demand_id,
+    'reject',
+    NULL,
+    'Purchase is no longer needed',
+    NULL
+  );
+  IF v_result ->> 'status' <> 'cancelled'
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.purchase_requests AS demand
+       WHERE demand.id = v_rejected_demand_id
+         AND demand.tenant_id = v_tenant
+         AND demand.status = 'cancelled'
+         AND demand.status_reason = 'Purchase is no longer needed'
+     ) THEN
+    RAISE EXCEPTION 'PURCHASE DEMAND: reject did not cancel demand';
   END IF;
 END;
 $$;

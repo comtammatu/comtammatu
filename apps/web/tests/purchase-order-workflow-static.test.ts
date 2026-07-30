@@ -33,7 +33,7 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
     true,
   );
   assert.match(nav, /\/inventory\/purchase-orders/);
-  assert.doesNotMatch(nav, /\/inventory\/purchase-requests/);
+  assert.doesNotMatch(nav, /href: "\/inventory\/purchase-requests"/);
   assert.match(nav, /label: "Mua hàng"/);
   assert.match(actions, /savePurchaseDemand/);
   assert.match(actions, /savePurchaseDemandAllocations/);
@@ -60,12 +60,68 @@ test("demand review keeps approve, return, and reject in one action", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
+  const viewStart = client.indexOf(
+    'open={selected != null && mode === "view"}',
+  );
+  const allocationStart = client.indexOf("open={allocateOpen}", viewStart);
+  const viewDialog = client.slice(viewStart, allocationStart);
+
+  assert.ok(viewStart >= 0 && allocationStart > viewStart);
   assert.match(client, /reviewPurchaseDemand/);
   assert.match(client, /action: "approve"/);
-  assert.match(client, /kind: "request_changes"/);
-  assert.match(client, /kind: "reject"/);
+  assert.match(viewDialog, /kind: "request_changes"/);
+  assert.match(viewDialog, /kind: "reject"/);
+  assert.match(viewDialog, /copy\.allocateAction/);
+  assert.match(viewDialog, /canAllocate/);
   assert.match(actions, /PROCUREMENT_PO_APPROVE/);
   assert.match(actions, /review_purchase_demand/);
+});
+
+test("warehouse can edit an unallocated pending demand without reopening draft", () => {
+  const client = read(
+    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
+  );
+  const actions = read(
+    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
+  );
+  const migration = read(
+    "supabase/migrations/20260730196000_allow_pending_demand_edit_before_allocation.sql",
+  );
+
+  assert.match(
+    client,
+    /row\.status === "pending_allocation"[\s\S]*key: "edit"/,
+  );
+  assert.match(
+    client,
+    /\(row\.status === "draft" \|\| row\.status === "changes_requested"\)[\s\S]*key: "cancel"/,
+  );
+  assert.match(client, /editingPendingDemand/);
+  assert.match(
+    client,
+    /editingPendingDemand[\s\S]*ACTIONS_VI\.saveChanges/,
+  );
+  assert.match(actions, /purchase_demand_allocation_started/);
+  assert.match(
+    migration,
+    /status NOT IN \([\s\S]*?'draft',[\s\S]*?'submitted',[\s\S]*?'pending_allocation'[\s\S]*?\)/,
+  );
+  assert.match(
+    migration,
+    /purchase_demand_allocation_started/,
+  );
+  assert.match(
+    migration,
+    /WHEN v_was_pending THEN v_demand\.submitted_by/,
+  );
+  assert.match(
+    migration,
+    /WHEN v_was_pending THEN v_demand\.submitted_at/,
+  );
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.save_purchase_request\([\s\S]*FROM PUBLIC, anon, authenticated/,
+  );
 });
 
 test("supplier-item remove awaits confirm outside startTransition", () => {

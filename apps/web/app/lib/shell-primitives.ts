@@ -30,9 +30,11 @@ const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
   "inventory.stock_low": "/inventory/stock",
   "inventory.stock_request_submitted": "/inventory/transfers",
   "pos.shift_variance": "/finance",
-  "procurement.purchase_request_submitted": "/inventory/purchase-requests",
+  "procurement.purchase_request_submitted": "/inventory/purchase-orders",
+  "procurement.po_pending_approval": "/inventory/purchase-orders",
   "workflow.grn_pending": "/inventory/grn",
-  "workflow.po_sent": "/inventory/grn",
+  "workflow.po_approved": "/inventory/purchase-orders",
+  "workflow.po_sent": "/inventory/purchase-orders",
   "workflow.transfer_in_transit": "/inventory/transfers",
 };
 
@@ -67,7 +69,7 @@ export function findActivePrimaryNavItem(
     .find((item) => isNavItemActive(item, pathname));
 }
 
-function notificationKindFallbackPath(kind: string): string | null {
+function notificationKindTargetPath(kind: string): string | null {
   const targetPath = NOTIFICATION_KIND_TARGET_PATH[kind];
   if (targetPath) return targetPath;
   if (
@@ -91,12 +93,10 @@ export function getNavNotificationCount(
 ): number {
   return targets.reduce((total, target) => {
     const actionPath = target.actionUrl?.split(/[?#]/, 1)[0] ?? null;
-    const fallbackPath = notificationKindFallbackPath(target.kind);
-    return actionPath && isNavItemActive(item, actionPath)
+    const targetPath = notificationKindTargetPath(target.kind) ?? actionPath;
+    return targetPath && isNavItemActive(item, targetPath)
       ? total + target.unreadCount
-      : fallbackPath && isNavItemActive(item, fallbackPath)
-        ? total + target.unreadCount
-        : total;
+      : total;
   }, 0);
 }
 
