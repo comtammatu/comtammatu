@@ -15,6 +15,7 @@
 
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const TYPE_SOURCE_PROJECT_ID = "enloyfnuerqgaqderbwb";
 const requestedProjectId = process.env["SUPABASE_PROJECT_ID"]?.trim();
@@ -25,6 +26,12 @@ if (requestedProjectId !== TYPE_SOURCE_PROJECT_ID) {
   process.exit(1);
 }
 const outPath = "packages/database/src/types/database.types.ts";
+const supabaseCliPath = resolve(
+  "node_modules",
+  "supabase",
+  "dist",
+  "supabase.js",
+);
 
 function sanitizeTypes(raw) {
   return String(raw)
@@ -53,9 +60,8 @@ function runTypegen(command, args) {
   }
 }
 
-let types = runTypegen("pnpm", [
-  "exec",
-  "supabase",
+let types = runTypegen(process.execPath, [
+  supabaseCliPath,
   "gen",
   "types",
   "typescript",
@@ -65,7 +71,9 @@ let types = runTypegen("pnpm", [
 
 types = sanitizeTypes(types);
 if (!isValidTypes(types)) {
-  console.error("gen-types: CLI output is not a TypeScript types payload — refusing to write.");
+  console.error(
+    "gen-types: CLI output is not a TypeScript types payload — refusing to write.",
+  );
   process.exit(1);
 }
 
