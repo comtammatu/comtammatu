@@ -4,11 +4,13 @@ import { Fragment, useMemo, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell as IconBell,
   ChevronsUpDown as IconChevronsUpDown,
   LogOut as IconLogout,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   DropdownMenu,
@@ -25,6 +27,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -37,17 +40,19 @@ import {
 } from "@comtammatu/ui/components/sidebar";
 import {
   findActivePrimaryNavItem,
+  getNavNotificationCount,
   getInitials,
   isNavItemActive,
   type ShellNavGroup,
   type ShellNavItem,
 } from "@/lib/shell-primitives";
+import { useNotificationBadges } from "@/_hooks/use-notification-badges";
 import { AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
 import { ControlSurfaceBottomNav } from "@/components/control-surface-bottom-nav";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { messages } from "@lib/messages";
+import { m, messages } from "@lib/messages";
 
 export interface AppShellProps {
   children: ReactNode;
@@ -76,6 +81,24 @@ function getSidebarSubNavGroups(
     .filter((group) => group.items.length > 0);
 }
 
+function UnreadBadge({ count = 0 }: { count?: number }) {
+  if (count <= 0) return null;
+  return (
+    <>
+      <Badge
+        aria-hidden
+        variant="secondary"
+        className="ml-auto min-w-5 justify-center rounded-full px-1.5 tabular-nums"
+      >
+        {count > 99 ? "99+" : count}
+      </Badge>
+      <span className="sr-only">
+        {m(messages.notifications.unreadBadge, { count })}
+      </span>
+    </>
+  );
+}
+
 export function AppShell({
   children,
   user,
@@ -87,11 +110,36 @@ export function AppShell({
   const pathname = usePathname();
   const isTouchLayout = useIsMobile(1024);
   const copy = messages.common;
+  const ownerCopy = messages.owner;
+  const notificationSummary = useNotificationBadges();
+  const tier1WithBadges = useMemo(
+    () =>
+      tier1.map((item) => ({
+        ...item,
+        badgeCount: getNavNotificationCount(item, notificationSummary.targets),
+      })),
+    [notificationSummary.targets, tier1],
+  );
+  const tier2WithBadges = useMemo(
+    () =>
+      tier2.map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({
+          ...item,
+          badgeCount: getNavNotificationCount(
+            item,
+            notificationSummary.targets,
+          ),
+        })),
+      })),
+    [notificationSummary.targets, tier2],
+  );
   const activePrimaryItem = useMemo(
-    () => findActivePrimaryNavItem(tier1, pathname),
-    [tier1, pathname],
+    () => findActivePrimaryNavItem(tier1WithBadges, pathname),
+    [pathname, tier1WithBadges],
   );
   const showBottomNav = bottomNav;
+  const notificationsHref = `/notifications?returnTo=${encodeURIComponent(pathname)}`;
 
   return (
     <SidebarProvider
@@ -108,128 +156,167 @@ export function AppShell({
       }
     >
       <Sidebar variant="inset" collapsible="offcanvas">
-        <SidebarHeader className="relative overflow-hidden border-b bg-gradient-to-br from-sidebar via-sidebar/50 to-sidebar/10 px-4 py-2">
-          <div className="relative z-10 flex items-center gap-2">
-            <BrandLogoBox tone="sidebar" className="size-8 p-0.5">
-              <BrandMark
-                variant="seal"
-                alt={copy.brandName}
-                className="size-full"
-              />
+        <SidebarHeader className="border-b border-sidebar-border px-3 py-3">
+          <div className="flex items-center gap-3 rounded-xl bg-sidebar-accent p-2 ring-1 ring-sidebar-border/70">
+            <BrandLogoBox tone="sidebar" className="bg-sidebar">
+              <BrandMark variant="seal" decorative className="size-full" />
             </BrandLogoBox>
-            <p className="min-w-0 flex-1 font-heading text-sm font-semibold leading-tight">
-              {copy.brandShortName}
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-heading text-sm font-semibold leading-tight">
+                {copy.brandShortName}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-sidebar-foreground/70">
+                {ownerCopy.dashboard.title}
+              </p>
+            </div>
           </div>
           {sidebarHeaderAccessory ? (
-            <div className="relative z-10 mt-1">{sidebarHeaderAccessory}</div>
+            <div className="mt-2">{sidebarHeaderAccessory}</div>
           ) : null}
         </SidebarHeader>
 
-        <SidebarContent className="px-2 py-2">
+        <SidebarContent className="px-2 py-3">
           <SidebarGroup className="px-0 py-0">
+            <SidebarGroupLabel className="px-2 font-medium">
+              {ownerCopy.nav.modules}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {tier1.map((item) => {
-                  const Icon = item.icon;
-                  const active = item === activePrimaryItem;
-                  const subNavGroups = active
-                    ? getSidebarSubNavGroups(tier2, item.href)
-                    : [];
+              <nav aria-label={ownerCopy.nav.ariaLabel}>
+                <SidebarMenu className="gap-1">
+                  {tier1WithBadges.map((item) => {
+                    const Icon = item.icon;
+                    const active = item === activePrimaryItem;
+                    const subNavGroups = active
+                      ? getSidebarSubNavGroups(tier2WithBadges, item.href)
+                      : [];
 
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        isActive={active}
-                        size={isTouchLayout ? "lg" : "default"}
-                        tooltip={item.label}
-                        className="relative rounded-md data-active:bg-primary/10 data-active:text-primary font-medium dark:data-active:bg-primary/15 before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-r-sm before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
-                        render={
-                          <Link
-                            href={item.href}
-                            aria-current={active ? "page" : undefined}
-                          >
-                            <Icon />
-                            <span>{item.label}</span>
-                          </Link>
-                        }
-                      />
-                      {subNavGroups.length > 0 ? (
-                        <SidebarMenuSub>
-                          {subNavGroups.map((group) => (
-                            <Fragment key={group.title}>
-                              {subNavGroups.length > 1 ? (
-                                <SidebarMenuSubItem>
-                                  <SectionLabel
-                                    density="dense"
-                                    className="px-2 py-1 text-sidebar-foreground/70"
-                                  >
-                                    {group.title}
-                                  </SectionLabel>
-                                </SidebarMenuSubItem>
-                              ) : null}
-                              {group.items.map((subItem) => {
-                                const SubIcon = subItem.icon;
-                                const subActive = isNavItemActive(
-                                  subItem,
-                                  pathname,
-                                );
-                                return (
-                                  <SidebarMenuSubItem key={subItem.href}>
-                                    <SidebarMenuSubButton
-                                      isActive={subActive}
-                                      size={isTouchLayout ? "touch" : "md"}
-                                      className="relative data-active:bg-transparent data-active:text-primary data-active:font-semibold dark:data-active:text-primary-foreground before:absolute before:-left-2.5 before:top-3 before:size-1.5 before:rounded-full before:bg-primary before:opacity-0 data-active:before:opacity-100 before:transition-opacity"
-                                      render={
-                                        <Link
-                                          href={subItem.linkHref ?? subItem.href}
-                                          aria-current={
-                                            subActive ? "page" : undefined
-                                          }
-                                        >
-                                          <SubIcon />
-                                          <span>{subItem.label}</span>
-                                        </Link>
-                                      }
-                                    />
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          isActive={active}
+                          size={isTouchLayout ? "lg" : "default"}
+                          tooltip={item.label}
+                          className="rounded-lg font-medium transition-colors data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm hover:bg-sidebar-accent"
+                          render={
+                            <Link
+                              href={item.href}
+                              aria-current={active ? "page" : undefined}
+                            >
+                              <Icon />
+                              <span className="min-w-0 flex-1 truncate">
+                                {item.label}
+                              </span>
+                              <UnreadBadge count={item.badgeCount} />
+                            </Link>
+                          }
+                        />
+                        {subNavGroups.length > 0 ? (
+                          <SidebarMenuSub className="mx-4 my-1 gap-1 border-l-2 border-primary/20 px-2 py-1">
+                            {subNavGroups.map((group) => (
+                              <Fragment key={group.title}>
+                                {subNavGroups.length > 1 ? (
+                                  <SidebarMenuSubItem>
+                                    <SectionLabel
+                                      density="dense"
+                                      className="px-2 py-1 text-sidebar-foreground/70"
+                                    >
+                                      {group.title}
+                                    </SectionLabel>
                                   </SidebarMenuSubItem>
-                                );
-                              })}
-                            </Fragment>
-                          ))}
-                        </SidebarMenuSub>
-                      ) : null}
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
+                                ) : null}
+                                {group.items.map((subItem) => {
+                                  const SubIcon = subItem.icon;
+                                  const subActive = isNavItemActive(
+                                    subItem,
+                                    pathname,
+                                  );
+                                  return (
+                                    <SidebarMenuSubItem key={subItem.href}>
+                                      <SidebarMenuSubButton
+                                        isActive={subActive}
+                                        size={isTouchLayout ? "touch" : "md"}
+                                        className="data-active:bg-primary/10 data-active:font-semibold data-active:text-primary dark:data-active:bg-primary/15 dark:data-active:text-sidebar-foreground"
+                                        render={
+                                          <Link
+                                            href={
+                                              subItem.linkHref ?? subItem.href
+                                            }
+                                            aria-current={
+                                              subActive ? "page" : undefined
+                                            }
+                                          >
+                                            <SubIcon />
+                                            <span className="min-w-0 flex-1 truncate">
+                                              {subItem.label}
+                                            </span>
+                                            <UnreadBadge
+                                              count={subItem.badgeCount}
+                                            />
+                                          </Link>
+                                        }
+                                      />
+                                    </SidebarMenuSubItem>
+                                  );
+                                })}
+                              </Fragment>
+                            ))}
+                          </SidebarMenuSub>
+                        ) : null}
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </nav>
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t px-2 py-1">
+        <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
+          <Button
+            variant="ghost"
+            size="touch"
+            className="w-full justify-start gap-2 rounded-lg px-2.5 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            render={<Link href={notificationsHref} />}
+          >
+            <IconBell />
+            <span className="min-w-0 flex-1 truncate">
+              {messages.notifications.pageTitle}
+            </span>
+            <UnreadBadge count={notificationSummary.unreadCount} />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button
                   type="button"
                   variant="ghost"
-                  size={isTouchLayout ? "touch" : "default"}
-                  className="w-full justify-start gap-2 px-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  size="touch"
+                  className="w-full justify-start gap-2 rounded-xl bg-sidebar-accent px-2.5 text-left text-sidebar-foreground ring-1 ring-sidebar-border/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 />
               }
             >
-              <Avatar size="sm">
-                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+              <Avatar>
+                <AvatarFallback className="bg-primary font-semibold text-primary-foreground">
+                  {getInitials(user.name)}
+                </AvatarFallback>
               </Avatar>
-              <span className="min-w-0 flex-1 truncate text-xs font-medium">
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
                 {user.name}
               </span>
               <IconChevronsUpDown className="ml-auto text-sidebar-foreground/60" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start">
+            <DropdownMenuContent
+              side="top"
+              align="start"
+              sideOffset={8}
+              className="rounded-xl p-1.5"
+            >
               <DropdownMenuGroup>
-                <ThemeMenuItem className="min-h-12 text-sm" />
+                <ThemeMenuItem
+                  className={
+                    isTouchLayout ? "min-h-12 text-sm" : "min-h-10 text-sm"
+                  }
+                />
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
@@ -237,7 +324,10 @@ export function AppShell({
                   <DropdownMenuItem
                     nativeButton
                     variant="destructive"
-                    className="min-h-12 w-full text-sm"
+                    className={cn(
+                      "w-full text-sm",
+                      isTouchLayout ? "min-h-12" : "min-h-10",
+                    )}
                     render={<Button type="submit" variant="ghost" />}
                   >
                     <IconLogout />
@@ -253,7 +343,8 @@ export function AppShell({
       <SidebarInset
         id="main-content"
         tabIndex={-1}
-        className="chrome-safe-pt min-h-0 overflow-hidden lg:max-h-[calc(100svh-1rem)]"
+        data-control-surface=""
+        className="chrome-safe-pt min-h-0 overflow-hidden lg:max-h-[calc(100svh-1rem)] lg:ring-1 lg:ring-sidebar-border/50"
       >
         <div
           data-owner-shell-scroll=""
@@ -271,7 +362,10 @@ export function AppShell({
         </div>
       </SidebarInset>
       {showBottomNav ? (
-        <ControlSurfaceBottomNav tier1={tier1} tier2={tier2} />
+        <ControlSurfaceBottomNav
+          tier1={tier1WithBadges}
+          tier2={tier2WithBadges}
+        />
       ) : null}
     </SidebarProvider>
   );

@@ -5,7 +5,7 @@ import { LayoutGrid as IconLayoutGrid } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { useSidebar } from "@comtammatu/ui/components/sidebar";
-import { messages } from "@lib/messages";
+import { m, messages } from "@lib/messages";
 import {
   AppBottomNav,
   BOTTOM_NAV_ITEM_CLASS,
@@ -79,6 +79,13 @@ export function ControlSurfaceBottomNav({
         label: item.label,
         icon: item.icon,
         active: isNavItemActive(item, pathname),
+        badgeCount: item.badgeCount,
+        badgeLabel:
+          item.badgeCount && item.badgeCount > 0
+            ? m(messages.notifications.unreadBadge, {
+                count: item.badgeCount,
+              })
+            : undefined,
       }))}
       leading={
         <Button

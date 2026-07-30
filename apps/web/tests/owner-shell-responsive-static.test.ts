@@ -25,11 +25,33 @@ test("Owner mobile shell keeps the module drawer available on the root landing",
   assert.doesNotMatch(source, /pathname !== "\/"/);
   assert.match(
     source,
-    /\{showBottomNav \? \(\s*<ControlSurfaceBottomNav tier1=\{tier1\} tier2=\{tier2\} \/>\s*\) : null\}/,
+    /\{showBottomNav \? \(\s*<ControlSurfaceBottomNav\s+tier1=\{tier1WithBadges\}\s+tier2=\{tier2WithBadges\}\s*\/>\s*\) : null\}/,
   );
-  assert.match(source, /<ThemeMenuItem className="min-h-12 text-sm" \/>/);
+  assert.match(
+    source,
+    /isTouchLayout \? "min-h-12 text-sm" : "min-h-10 text-sm"/,
+  );
   assert.match(source, /useIsMobile\(1024\)/);
-  assert.match(source, /className="min-h-12 w-full text-sm"/);
+  assert.match(source, /isTouchLayout \? "min-h-12" : "min-h-10"/);
+  assert.match(
+    source,
+    /rounded-xl bg-sidebar-accent p-2 ring-1 ring-sidebar-border\/70/,
+  );
+  assert.match(source, /<BrandMark[\s\S]*?decorative/);
+  assert.match(source, /sideOffset=\{8\}/);
+  assert.match(
+    source,
+    /<Avatar>[\s\S]*?bg-primary font-semibold text-primary-foreground/,
+  );
+  assert.match(source, /<nav aria-label=\{ownerCopy\.nav\.ariaLabel\}>/);
+  assert.match(
+    source,
+    /data-active:bg-primary data-active:text-primary-foreground/,
+  );
+  assert.doesNotMatch(
+    source,
+    /<SidebarMenuButton\b[\s\S]{0,300}data-active:(?:before|after)/,
+  );
   assert.match(
     source,
     /calc\(3\.5rem \+ max\(0\.5rem, env\(safe-area-inset-bottom\)\)\)/,
@@ -45,6 +67,8 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
     source,
     /chrome-safe-pt min-h-0 overflow-hidden lg:max-h-\[calc\(100svh-1rem\)\]/,
   );
+  assert.match(source, /data-control-surface=""/);
+  assert.match(source, /lg:ring-1 lg:ring-sidebar-border\/50/);
   assert.match(
     source,
     /flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3 md:px-4 md:pt-4/,
@@ -65,16 +89,19 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
     surface,
     /function AppPageHeader\([\s\S]*?sticky top-0 z-10 bg-background/,
   );
-  assert.doesNotMatch(surface, /createPortal|OwnerPageChromeHostContext|ownsOwnerScroll/);
-  assert.doesNotMatch(surface, /APP_PAGE_HEADER_OFFSET_VAR|data-owner-page-chrome/);
+  assert.doesNotMatch(
+    surface,
+    /createPortal|OwnerPageChromeHostContext|ownsOwnerScroll/,
+  );
+  assert.doesNotMatch(
+    surface,
+    /APP_PAGE_HEADER_OFFSET_VAR|data-owner-page-chrome/,
+  );
   assert.match(surface, /APP_PAGE_STICKY_FILTER_CLASSNAME/);
   assert.match(surface, /APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME/);
   assert.match(surface, /function AppStickyFilterChrome\(/);
   assert.match(surface, /function AppPageStickyChrome\(/);
-  assert.match(
-    surface,
-    /function AppListFrame\([\s\S]*?AppStickyFilterChrome/,
-  );
+  assert.match(surface, /function AppListFrame\([\s\S]*?AppStickyFilterChrome/);
   assert.match(surface, /data-stuck/);
   // Negative top cancels Owner shell pt-3/md:pt-4 so stuck filters flush to
   // the inset panel top (top-0 leaves a pad gap where list rows peek above).
@@ -83,10 +110,7 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
     /sticky top-\[-0\.75rem\] z-20 bg-background md:top-\[-1rem\]/,
   );
   assert.match(surface, /sticky\?: boolean/);
-  assert.match(
-    surface,
-    /const applyInnerScroll = scroll && !nesting\.padded/,
-  );
+  assert.match(surface, /const applyInnerScroll = scroll && !nesting\.padded/);
 });
 
 test("Owner sibling LIST filter bars opt into sticky stack", () => {
@@ -114,7 +138,11 @@ test("Owner sibling LIST filter bars opt into sticky stack", () => {
   ] as const;
 
   for (const [path, pattern] of wired) {
-    assert.match(read(path), pattern, `${path} must sticky its page filter bar`);
+    assert.match(
+      read(path),
+      pattern,
+      `${path} must sticky its page filter bar`,
+    );
   }
 
   // Finance FilterBar sits above KPI/dashboard cards — sticky crushes the
@@ -178,8 +206,7 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
   };
   walk(protectedRoot);
 
-  const filterSlotToolbar =
-    /<AppToolbar\b[\s\S]{0,400}?\b(?:filters|search)=/;
+  const filterSlotToolbar = /<AppToolbar\b[\s\S]{0,400}?\b(?:filters|search)=/;
   const stickyToolbar = /<AppToolbar\b[^>]*\bsticky\b|<AppToolbar\s+sticky\b/;
   const listFrame = /\b(?:AppListFrame|InventoryListFrame)\b/;
   const toolbarSlot = /\btoolbar=\{/;
@@ -219,7 +246,7 @@ test("Owner AppPageHeader tabs slot must not embed full AppPageTabs bodies", () 
     assert.doesNotMatch(
       source,
       /tabs=\{\s*<AppPageTabs[\s\S]*?<TabsContent/,
-          `${path} must keep TabsContent outside AppPageHeader chrome`,
+      `${path} must keep TabsContent outside AppPageHeader chrome`,
     );
   }
 });
@@ -231,7 +258,10 @@ test("Owner shell scroll invariant is documented", () => {
   assert.match(designSystem, /AppPageHeader` scrolls with page\s+content/);
   assert.match(uiModule, /data-owner-shell-scroll/);
   assert.match(uiModule, /AppStickyFilterChrome/);
-  assert.match(uiModule, /AppPageStickyChrome.*compatib|compatib.*AppPageStickyChrome|compatibility alias/i);
+  assert.match(
+    uiModule,
+    /AppPageStickyChrome.*compatib|compatib.*AppPageStickyChrome|compatibility alias/i,
+  );
   assert.match(uiModule, /AppPageHeader` cuộn cùng nội dung/);
 });
 
@@ -260,7 +290,10 @@ test("Inventory ingredient editor keeps two operational unit roles", () => {
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   );
   assert.match(issueDetail, /useIsMobile\(1024\)/);
-  assert.match(issueDetail, /isTouchLayout \? <div className="min-w-0">\{pageLayout\}<\/div> : pageLayout/);
+  assert.match(
+    issueDetail,
+    /isTouchLayout \? <div className="min-w-0">\{pageLayout\}<\/div> : pageLayout/,
+  );
   assert.doesNotMatch(issueDetail, /lg:hidden">\{mobileLayout\}/);
   assert.doesNotMatch(issueDetail, /hidden lg:block">\{pageLayout\}/);
 });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ElementType, ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 
 /**
@@ -20,6 +21,8 @@ export type AppBottomNavItem = {
   label: string;
   icon: ElementType;
   active: boolean;
+  badgeCount?: number;
+  badgeLabel?: string;
 };
 
 export function AppBottomNav({
@@ -55,6 +58,8 @@ export function AppBottomNav({
         {leading}
         {items.map((item) => {
           const Icon = item.icon;
+          const badgeCount = item.badgeCount ?? 0;
+          const hasBadge = badgeCount > 0;
           return (
             <Button
               key={item.href}
@@ -73,11 +78,25 @@ export function AppBottomNav({
                 />
               }
             >
-              <Icon
-                data-icon="inline-start"
-                strokeWidth={item.active ? 2.4 : 2}
-              />
+              <span className="relative inline-flex">
+                <Icon
+                  data-icon="inline-start"
+                  strokeWidth={item.active ? 2.4 : 2}
+                />
+                {hasBadge ? (
+                  <Badge
+                    aria-hidden
+                    variant="secondary"
+                    className="absolute -right-3 -top-2 h-4 min-w-4 justify-center rounded-full px-1 text-[10px] leading-none"
+                  >
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </Badge>
+                ) : null}
+              </span>
               <span className="max-w-full truncate">{item.label}</span>
+              {hasBadge && item.badgeLabel ? (
+                <span className="sr-only">{item.badgeLabel}</span>
+              ) : null}
             </Button>
           );
         })}

@@ -2,7 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { isRunnerPublicDisplayPath, extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
+import {
+  extractClaimsFromAccessToken,
+  isRunnerPublicDisplayPath,
+  resolveRouteFamilyContract,
+} from "@comtammatu/shared/auth";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { listNotifications } from "@/(protected)/notifications/actions";
 import { areNotificationPopupsEnabled } from "@lib/notifications/popup-preference";
@@ -13,11 +18,9 @@ const MAX_POPUPS = 3;
 async function showPopupsForNewNotifications(
   highWaterRef: { current: number | null },
   inFlightRef: { current: boolean },
+  showInAppToast: boolean,
 ): Promise<void> {
   if (typeof window === "undefined") return;
-  if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-  if (Notification.permission !== "granted") return;
-  if (!areNotificationPopupsEnabled()) return;
   // Not seeded yet — skip until the high-water mark is known so we never
   // replay the backlog as a burst of popups.
   if (highWaterRef.current === null) return;
@@ -39,6 +42,24 @@ async function showPopupsForNewNotifications(
 
     highWaterRef.current = Math.max(seen, ...fresh.map((item) => item.id));
 
+    if (showInAppToast && document.visibilityState === "visible") {
+      for (const item of fresh.slice(-MAX_POPUPS)) {
+        const options = {
+          description: item.body ?? undefined,
+          id: `notification:${String(item.id)}`,
+        };
+        if (item.severity === "critical") toast.error(item.title, options);
+        else if (item.severity === "warning")
+          toast.warning(item.title, options);
+        else toast.info(item.title, options);
+      }
+      return;
+    }
+
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+    if (Notification.permission !== "granted") return;
+    if (!areNotificationPopupsEnabled()) return;
+
     // Cap simultaneous popups — a reconnect after offline can surface a
     // backlog at once. The in-app bell badge carries the full count.
     const registration = await navigator.serviceWorker.ready;
@@ -57,18 +78,18 @@ async function showPopupsForNewNotifications(
 }
 
 /**
- * Foreground OS notification popups while the PWA is open — the client-side
- * replacement for server Web Push. A Realtime INSERT on `notifications`
- * triggers a refetch (RLS scopes the rows this user may see) and fires a
- * popup for each genuinely-new unread item via the registered service worker.
- * Gated by browser permission + the device mute preference. The SW's
- * `notificationclick` handler routes taps to the notification's action_url.
+ * Foreground notification attention while the PWA is open. A Realtime INSERT
+ * triggers an RLS-scoped refetch. Visible control-surface routes use Sonner;
+ * other states keep the permission-gated service-worker popup whose click
+ * handler routes to the notification's action_url.
  */
 export function useForegroundNotifications(): void {
   const highWaterRef = useRef<number | null>(null);
   const inFlightRef = useRef(false);
   const pathname = usePathname();
   const disabled = isRunnerPublicDisplayPath(pathname ?? "");
+  const showInAppToast =
+    resolveRouteFamilyContract(pathname ?? "")?.surface === "owner";
 
   // Seed the high-water mark from the newest visible notification so a fresh
   // mount does not popup notifications that arrived before the app opened.
@@ -90,12 +111,10 @@ export function useForegroundNotifications(): void {
       if (disabled) return null;
 
       let tenantId: number | null = null;
-      let branchId: number | null = null;
       if (token) {
         const claims = extractClaimsFromAccessToken(token);
         if (claims) {
           tenantId = claims.tenant_id;
-          branchId = claims.branch_id;
         }
       }
       if (tenantId === null) return null;
@@ -110,17 +129,12 @@ export function useForegroundNotifications(): void {
             table: "notifications",
             filter: `tenant_id=eq.${String(tenantId)}`,
           },
-          (payload: { new: { target_branch_id?: number | null } }) => {
-            // Client-side branch scoping
-            if (
-              branchId !== null &&
-              payload.new.target_branch_id != null &&
-              payload.new.target_branch_id !== branchId
-            ) {
-              return;
-            }
-            void showPopupsForNewNotifications(highWaterRef, inFlightRef);
-          },
+          () =>
+            void showPopupsForNewNotifications(
+              highWaterRef,
+              inFlightRef,
+              showInAppToast,
+            ),
         )
         .subscribe((status) => {
           if (status !== "SUBSCRIBED") return;
@@ -128,10 +142,14 @@ export function useForegroundNotifications(): void {
             initialSubscribeSeenRef.current = true;
             return;
           }
-          void showPopupsForNewNotifications(highWaterRef, inFlightRef);
+          void showPopupsForNewNotifications(
+            highWaterRef,
+            inFlightRef,
+            showInAppToast,
+          );
         });
     },
-    [disabled],
+    [disabled, showInAppToast],
   );
 
   // Re-fetch when tab returns to foreground
@@ -139,12 +157,16 @@ export function useForegroundNotifications(): void {
     if (disabled) return;
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        void showPopupsForNewNotifications(highWaterRef, inFlightRef);
+        void showPopupsForNewNotifications(
+          highWaterRef,
+          inFlightRef,
+          showInAppToast,
+        );
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [disabled]);
+  }, [disabled, showInAppToast]);
 }

@@ -1,6 +1,6 @@
 # Toast And Notification System
 
-> Status: design and producer contract | Updated: 2026-07-11 | Scope: app-wide transient toast, durable in-app notifications, foreground PWA popup, external notification outbox, and boundary vs operational audio
+> Status: design and producer contract | Updated: 2026-07-30 | Scope: app-wide transient toast, durable in-app notifications, foreground PWA popup, external notification outbox, and boundary vs operational audio
 
 ## UI Scope Declaration
 
@@ -14,13 +14,14 @@
 
 The system has these feedback channels with different durability:
 
-- Toast: short-lived client feedback for the action currently happening on screen. Use `toast` from `@comtammatu/ui/components/sonner`.
+- Toast: short-lived client feedback for the action currently happening on screen. On a visible control-surface route, it is also the transient attention layer for a newly arrived durable notification; the durable row remains the source of truth. Use `toast` from `@comtammatu/ui/components/sonner`.
 - In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, Cổng nhân viên, or an approved bell/entry point.
 - Foreground popup: device-level OS notification fired by the open PWA via the
   `Notification` API for every new unread durable notification the user can see,
-  across `info`, `warning`, and `critical`. It links back to `/notifications` or
-  the action URL and fires only while the app is open; there is no closed-app
-  delivery.
+  across `info`, `warning`, and `critical`. A visible control-surface route uses
+  Sonner instead to avoid duplicate foreground alerts. The OS popup links back
+  to `/notifications` or the action URL and fires only while the app is open;
+  there is no closed-app delivery.
 - External outbox: delivery attempt queue in `public.notification_outbox` for configured webhook-style workers.
 - Operational audio (POS/KDS): device-local beep and optional pre-recorded voice on the open board/terminal. Not durable, not role-feed, not Telegram. Contract: `docs/spec/operational-audio-alerts.md`.
 
@@ -54,10 +55,11 @@ Workflow event
   -> useNotifications refreshes list + unread count
   -> /notifications, Cổng nhân viên, shell entry point, or approved bell
 
-Foreground popup (PWA open)
+Foreground attention (PWA open)
   -> user grants Notification permission
   -> Realtime INSERT on notifications triggers an RLS-scoped refetch
-  -> Notification API popup via the service worker for new unread rows
+  -> visible control surface: Sonner toast
+  -> otherwise: Notification API popup via the service worker
   -> notification click focuses or opens the action URL
 
 External delivery
@@ -89,6 +91,7 @@ Out of scope for the current contract:
 ### Use Toast For
 
 - The current user completed a direct action: save, submit, print, export, copy, open shift, close shift.
+- A new durable notification arrives while the control surface is visible; the toast is attention only and does not replace unread state.
 - Client-side validation caught a correctable issue before calling the server.
 - A server action returns a non-critical, user-actionable error message.
 - A background side effect soft-failed while the parent action succeeded.
@@ -119,7 +122,7 @@ Out of scope for the current contract:
 | Auto-waste soft-fails after POS void succeeds | Warning toast                             | Optional task for admin if follow-up is required | Optional                             |
 | Stock low recurring alert                     | No unless user triggered check            | Yes with dedup key                               | Optional                             |
 | KDS ticket received                           | Usually no toast if visible in live queue | Optional only for cross-station handoff          | No                                   |
-| Print job retry failed                        | Error toast for operator                  | Yes for settings/ if repeated               | Optional                             |
+| Print job retry failed                        | Error toast for operator                  | Yes for settings/ if repeated                    | Optional                             |
 
 ## Severity Contract
 
@@ -250,12 +253,12 @@ Use `dedup_key` for noisy events.
 
 Recommended patterns:
 
-| Event              | Dedup key                                                 |
-| ------------------ | --------------------------------------------------------- |
-| Stock low          | `inventory.stock_low:{branch_id}:{ingredient_id}`         |
-| Stocktake conflict | `stocktake.conflict:{session_id}:{line_id}`               |
-| Integration failed | `system.integration_failed:{integration}:{date}`          |
-| SLA breach         | `workflow.sla:{entity_type}:{entity_id}:{sla_name}`       |
+| Event              | Dedup key                                           |
+| ------------------ | --------------------------------------------------- |
+| Stock low          | `inventory.stock_low:{branch_id}:{ingredient_id}`   |
+| Stocktake conflict | `stocktake.conflict:{session_id}:{line_id}`         |
+| Integration failed | `system.integration_failed:{integration}:{date}`    |
+| SLA breach         | `workflow.sla:{entity_type}:{entity_id}:{sla_name}` |
 
 If an event can occur multiple times legitimately, include the domain event id. If repeated rows add no value, keep the dedup key stable and update metadata or rely on `ON CONFLICT`.
 
@@ -265,6 +268,7 @@ Toast path:
 
 ```text
 Client event -> local validation / Server Action -> ActionResult -> toast.*
+Durable notification INSERT -> RLS-scoped refetch -> visible control surface -> toast.*
 ```
 
 Rules:
@@ -333,12 +337,13 @@ Current runtime pieces:
 
 - `apps/web/app/(protected)/notifications/actions.ts`: list, unread count, mark one read, mark all read.
 - `apps/web/app/_hooks/use-notifications.ts`: realtime subscription and refetch.
+- `apps/web/app/_hooks/use-notification-badges.ts`: grouped unread counts for shell tabs and footer.
 - `apps/web/app/_components/notification-list.tsx`: feed composition.
 - `apps/web/app/_components/notification-item.tsx`: item row and action URL navigation.
 - `apps/web/app/(protected)/notifications/page.tsx`: full feed route.
-- Desktop notification chrome is not part of the current approved shell. Mobile
-  uses the bell entry point in the mobile header; restoring a desktop shortcut
-  requires approved shell placement first.
+- Control-surface desktop and drawer chrome use the notification entry in
+  `AppShell` footer. Module and deep-navigation tabs show grouped unread counts;
+  the full feed remains the reliable source.
 
 UI rules:
 
@@ -366,6 +371,8 @@ UI rules:
 ### Owner
 
 - Full notification feed and badge/entry point are appropriate.
+- The footer badge shows total unread; module and deep-navigation badges show
+  unread work whose kind or action URL belongs to that destination.
 - Owner notifications should link to review queues, settings, audit, finance, staff, or inventory exception pages.
 
 ### Inventory
@@ -373,6 +380,10 @@ UI rules:
 - Durable notifications are expected for stock low, stocktake conflicts,
   period-close issues, and real approval queues. D091 does not create a
   price-review obligation from GRN.
+- A submitted branch stock request targets the responsible Kho Tổng or Bếp
+  Trung tâm role. A submitted purchase request targets Owner and Kế toán.
+- A purchase order awaiting approval targets Owner and Kế toán. Once approved,
+  it targets the receiving central-site role and opens the Nhập kho queue.
 - Toasts confirm the local action only; durable rows carry cross-role obligations.
 
 ### Employee
@@ -490,7 +501,7 @@ Toast:
 
 Notification feed:
 
-- Bell/entry buttons need accessible labels and visible unread count.
+- Notification entry buttons and tab badges need accessible labels and visible unread count.
 - Rows must be keyboard reachable.
 - Unread state must not rely only on color; use font weight, dot, label, or count.
 - `action_url` navigation must be predictable and authorized.
@@ -527,6 +538,7 @@ Before marking runtime implementation complete:
 - Toasts are not used for durable workflow obligations.
 - Durable notifications have RLS-covered visibility and do not leak cross-tenant or cross-branch data.
 - Unread count updates after insert, mark-read, mark-all-read, visibility change, and page reload.
+- Module/tab counts group every visible unread notification exactly once per matching destination.
 - `action_url` is authorized by proxy/ACL and lands on the next safe action.
 - Repeated events respect `dedup_key` or rate limits.
 - User-facing copy is Vietnamese, safe, and does not expose raw database messages.
@@ -559,7 +571,7 @@ Documentation-only verification:
 2. Standardize new client actions on `ActionResult -> toast` handling.
 3. Add durable notification producers only at workflow boundaries.
 4. Use RPC-based producers for atomic multi-item workflows.
-5. Re-enable or redesign notification bell placement only per route shell, starting with admin/inventory, not POS/KDS.
+5. Keep notification footer and tab badges in control-surface chrome; do not add them to POS/KDS.
 6. Add regression tests around visibility, unread count, and producer dedup for each new notification family.
 
 ## Implementation Checklist

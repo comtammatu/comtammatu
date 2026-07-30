@@ -5,6 +5,7 @@ export interface ShellNavItem {
   linkHref?: string;
   label: string;
   icon: ElementType;
+  badgeCount?: number;
   exact?: boolean;
   matchPrefixes?: string[];
 }
@@ -13,6 +14,27 @@ export interface ShellNavGroup {
   title: string;
   items: ShellNavItem[];
 }
+
+export interface ShellNotificationTarget {
+  kind: string;
+  actionUrl: string | null;
+  unreadCount: number;
+}
+
+const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
+  "attendance.checkout_requested": "/hr/attendance",
+  "hr.leave_approved": "/hr/attendance",
+  "hr.leave_rejected": "/hr/attendance",
+  "hr.leave_requested": "/hr/attendance",
+  "inventory.expiry_soon": "/inventory/stock",
+  "inventory.stock_low": "/inventory/stock",
+  "inventory.stock_request_submitted": "/inventory/transfers",
+  "pos.shift_variance": "/finance",
+  "procurement.purchase_request_submitted": "/inventory/purchase-requests",
+  "workflow.grn_pending": "/inventory/grn",
+  "workflow.po_sent": "/inventory/grn",
+  "workflow.transfer_in_transit": "/inventory/transfers",
+};
 
 // Only the match-relevant fields are read here, so the parameter is the
 // `Pick` of those — letting icon-less navs (settings tabs) route their
@@ -43,6 +65,39 @@ export function findActivePrimaryNavItem(
   return [...tier1]
     .sort((a, b) => b.href.length - a.href.length)
     .find((item) => isNavItemActive(item, pathname));
+}
+
+function notificationKindFallbackPath(kind: string): string | null {
+  const targetPath = NOTIFICATION_KIND_TARGET_PATH[kind];
+  if (targetPath) return targetPath;
+  if (
+    kind.startsWith("inventory.") ||
+    kind.startsWith("procurement.") ||
+    kind.startsWith("workflow.")
+  ) {
+    return "/inventory";
+  }
+  if (kind.startsWith("hr.") || kind.startsWith("attendance.")) return "/hr";
+  if (kind.startsWith("pos.")) return "/orders";
+  if (kind.startsWith("feedback.")) return "/feedback";
+  if (kind.startsWith("menu.")) return "/menu";
+  if (kind.startsWith("system.")) return "/settings";
+  return null;
+}
+
+export function getNavNotificationCount(
+  item: NavMatchTarget,
+  targets: readonly ShellNotificationTarget[],
+): number {
+  return targets.reduce((total, target) => {
+    const actionPath = target.actionUrl?.split(/[?#]/, 1)[0] ?? null;
+    const fallbackPath = notificationKindFallbackPath(target.kind);
+    return actionPath && isNavItemActive(item, actionPath)
+      ? total + target.unreadCount
+      : fallbackPath && isNavItemActive(item, fallbackPath)
+        ? total + target.unreadCount
+        : total;
+  }, 0);
 }
 
 export function getInitials(name: string): string {

@@ -22,11 +22,16 @@ function iconFor(kind: string) {
     case "pos.order_new":
       return IconShoppingBag;
     case "workflow.po_sent":
+    case "workflow.po_approved":
       return IconPackageExport;
     case "workflow.grn_pending":
+    case "procurement.purchase_request_submitted":
+    case "procurement.po_pending_approval":
       return IconClipboardList;
     case "workflow.transfer_in_transit":
       return IconTruck;
+    case "inventory.stock_request_submitted":
+      return IconPackageExport;
     case "workflow.stocktake_submitted":
       return IconCircleCheck;
     case "hr.leave_approved":

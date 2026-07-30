@@ -29,10 +29,27 @@ export interface ListNotificationsResult {
   hasMore: boolean;
 }
 
+export interface NotificationBadgeTarget {
+  kind: string;
+  actionUrl: string | null;
+  unreadCount: number;
+}
+
+export interface NotificationBadgeSummary {
+  unreadCount: number;
+  targets: NotificationBadgeTarget[];
+}
+
 const listSchema = z.object({
   limit: z.number().int().min(1).max(50).default(20),
   before: z.string().datetime().optional(),
   unreadOnly: z.boolean().default(false),
+});
+
+const badgeTargetSchema = z.object({
+  kind: z.string(),
+  action_url: z.string().nullable(),
+  unread_count: z.coerce.number().int().nonnegative(),
 });
 
 /**
@@ -101,6 +118,41 @@ export async function getUnreadCount(): Promise<
   const { data, error } = await supabase.rpc("count_unread_notifications");
   if (error) return { success: false, error: "Không thể đếm thông báo" };
   return { success: true, data: { count: Number(data ?? 0) } };
+}
+
+export async function getNotificationBadgeSummary(): Promise<
+  ActionResult<NotificationBadgeSummary>
+> {
+  const { supabase } = await loadAuthState();
+  const { data, error } = await supabase.rpc(
+    "count_unread_notifications_by_target" as never,
+    {} as never,
+  );
+  if (error) {
+    return { success: false, error: messages.notifications.loadFailed };
+  }
+
+  const parsed = z.array(badgeTargetSchema).safeParse(data ?? []);
+  if (!parsed.success) {
+    return { success: false, error: messages.notifications.loadFailed };
+  }
+
+  const targets = parsed.data.map((row) => ({
+    kind: row.kind,
+    actionUrl: row.action_url,
+    unreadCount: row.unread_count,
+  }));
+
+  return {
+    success: true,
+    data: {
+      unreadCount: targets.reduce(
+        (total, target) => total + target.unreadCount,
+        0,
+      ),
+      targets,
+    },
+  };
 }
 
 const markReadSchema = z.object({ id: z.number().int().positive() });
