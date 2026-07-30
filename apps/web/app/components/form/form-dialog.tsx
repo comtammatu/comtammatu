@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   useTransition,
@@ -54,6 +55,7 @@ import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
 export interface FormDialogProps<TValues extends FieldValues> {
+  variant?: "default" | "document";
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -107,6 +109,7 @@ export interface FileImportDialogProps<
 }
 
 export function FormDialog<TValues extends FieldValues>({
+  variant = "default",
   open,
   onOpenChange,
   title,
@@ -124,6 +127,7 @@ export function FormDialog<TValues extends FieldValues>({
   contentClassName,
   children,
 }: FormDialogProps<TValues>) {
+  const formId = useId();
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
@@ -199,61 +203,57 @@ export function FormDialog<TValues extends FieldValues>({
 
   return (
     <>
-      <Dialog
+      <AppDialog
+        variant={variant}
         open={open}
         onOpenChange={handleOpenChange}
+        title={title}
+        description={description}
+        contentClassName={contentClassName}
         disablePointerDismissal={isPending}
+        showCloseButton={!isPending}
+        key={entityKey ?? "new"}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size={actionSize}
+              onClick={requestClose}
+              disabled={isPending}
+            >
+              {cancelLabel}
+            </Button>
+            <Button
+              type="submit"
+              form={formId}
+              variant={submitVariant}
+              size={actionSize}
+              disabled={isPending}
+            >
+              {isPending && <Spinner />}
+              {submitLabel}
+            </Button>
+          </>
+        }
       >
-        <DialogContent
-          className={cn("sm:max-w-lg", contentClassName)}
-          key={entityKey ?? "new"}
-          showCloseButton={!isPending}
+        <form
+          id={formId}
+          onSubmit={form.handleSubmit(handleValid)}
+          noValidate
+          className="min-w-0"
+          aria-busy={isPending}
         >
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription className={description ? undefined : "sr-only"}>
-              {description ?? title}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form
-            onSubmit={form.handleSubmit(handleValid)}
-            noValidate
-            className="flex flex-col gap-4"
-            aria-busy={isPending}
-          >
-            <FieldGroup>
-              {children(form)}
-              {serverError && (
-                <p className="text-sm text-destructive" role="alert">
-                  {serverError}
-                </p>
-              )}
-            </FieldGroup>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                size={actionSize}
-                onClick={requestClose}
-                disabled={isPending}
-              >
-                {cancelLabel}
-              </Button>
-              <Button
-                type="submit"
-                variant={submitVariant}
-                size={actionSize}
-                disabled={isPending}
-              >
-                {isPending && <Spinner />}
-                {submitLabel}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          <FieldGroup>
+            {children(form)}
+            {serverError && (
+              <p className="text-sm text-destructive" role="alert">
+                {serverError}
+              </p>
+            )}
+          </FieldGroup>
+        </form>
+      </AppDialog>
       <ConfirmDialog
         open={discardConfirmationOpen}
         onOpenChange={setDiscardConfirmationOpen}
@@ -272,6 +272,8 @@ export interface AppDialogProps {
   variant?: "default" | "document";
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  disablePointerDismissal?: boolean;
+  showCloseButton?: boolean;
   title: ReactNode;
   description?: ReactNode;
   children?: ReactNode;
@@ -285,6 +287,8 @@ export function AppDialog({
   variant = "default",
   open,
   onOpenChange,
+  disablePointerDismissal,
+  showCloseButton,
   title,
   description,
   children,
@@ -295,8 +299,13 @@ export function AppDialog({
 }: AppDialogProps) {
   const document = variant === "document";
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      disablePointerDismissal={disablePointerDismissal}
+    >
       <DialogContent
+        showCloseButton={showCloseButton}
         className={cn(
           document
             ? "h-dvh max-h-dvh max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-[0px] overflow-hidden rounded-none p-0 sm:h-[min(900px,95dvh)] sm:max-h-[95dvh] sm:w-[min(1120px,96vw)] sm:max-w-[min(1120px,96vw)] sm:rounded-lg"
@@ -316,7 +325,8 @@ export function AppDialog({
           <div
             className={cn(
               "flex flex-col gap-4",
-              document && "min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6",
+              document &&
+                "min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6",
               bodyClassName,
             )}
           >

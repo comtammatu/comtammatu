@@ -97,10 +97,13 @@ test("FormDialog resets only on open or entity transitions and confirms dirty di
   assert.match(source, /setDiscardConfirmationOpen\(true\)/);
   assert.match(
     source,
-    /<Dialog\s+open=\{open\}\s+onOpenChange=\{handleOpenChange\}\s+disablePointerDismissal=\{isPending\}\s*>[\s\S]*?<ConfirmDialog\s+open=\{discardConfirmationOpen\}/,
+    /<AppDialog[\s\S]*?open=\{open\}[\s\S]*?onOpenChange=\{handleOpenChange\}[\s\S]*?disablePointerDismissal=\{isPending\}[\s\S]*?showCloseButton=\{!isPending\}[\s\S]*?<ConfirmDialog\s+open=\{discardConfirmationOpen\}/,
   );
-  assert.match(source, /<\/Dialog>\s*<ConfirmDialog/);
-  assert.match(source, /<DialogContent[\s\S]*?showCloseButton=\{!isPending\}/);
+  assert.match(source, /<\/AppDialog>\s*<ConfirmDialog/);
+  assert.match(
+    source,
+    /<Dialog[\s\S]*?disablePointerDismissal=\{disablePointerDismissal\}[\s\S]*?<DialogContent[\s\S]*?showCloseButton=\{showCloseButton\}/,
+  );
   assert.match(source, /<form[\s\S]*?aria-busy=\{isPending\}/);
   assert.match(source, /onClick=\{requestClose\}/);
   assert.match(source, /actionSize = "touch"/);
