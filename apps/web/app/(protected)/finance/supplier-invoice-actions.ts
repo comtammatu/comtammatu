@@ -4,6 +4,12 @@ import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
+import {
+  addMoney,
+  minorUnitsToCanonical,
+  parseMoneyToMinorUnits,
+  subtractMoney,
+} from "@comtammatu/shared/money";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "@/_lib/auth";
@@ -21,10 +27,47 @@ import {
   type SupplierInvoiceListFilters,
 } from "./supplier-invoices/supplier-invoice-list-model";
 import { mapSupplierInvoiceRow } from "./supplier-invoices/supplier-invoice-row";
+import {
+  calculateSupplierInvoiceLineTotal,
+  summarizeSupplierInvoiceMoney,
+} from "./_lib/supplier-invoice-money";
 
 const ROLES = MODULE_ACL.finance.allowedRoles;
 
 /* ─── Supplier Invoices (3-way match: PO ↔ GRN ↔ Invoice) ─── */
+
+const invoiceMoneySchema = z.string().regex(
+  /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/,
+  "Số tiền phải có tối đa 2 chữ số thập phân.",
+);
+const positiveInvoiceMoneySchema = invoiceMoneySchema.refine(
+  (value) => {
+    try {
+      return parseMoneyToMinorUnits(value) > 0n;
+    } catch {
+      return false;
+    }
+  },
+  { error: "Số tiền phải lớn hơn 0." },
+);
+const invoiceQuantitySchema = z
+  .string()
+  .regex(
+    /^(?:0|[1-9]\d{0,10})(?:\.\d{1,3})?$/,
+    "Số lượng phải có tối đa 3 chữ số thập phân.",
+  )
+  .refine((value) => !/^0(?:\.0+)?$/.test(value), {
+    error: "Số lượng phải lớn hơn 0.",
+  });
+const invoiceVatRateSchema = z.preprocess(
+  Number,
+  z.union([z.literal(0), z.literal(5), z.literal(8), z.literal(10)]),
+);
+const rpcMoneyResultSchema = z
+  .union([z.string(), z.number()])
+  .transform((value) =>
+    minorUnitsToCanonical(parseMoneyToMinorUnits(String(value))),
+  );
 
 const invoiceSchema = z
   .object({
@@ -35,33 +78,27 @@ const invoiceSchema = z
     invoiceDate: z.string(),
     matchingNotes: z.string().optional(),
     dueDate: z.string().optional().nullable(),
-    documentDiscountAmount: z.coerce
-      .number()
-      .nonnegative()
-      .optional()
-      .default(0),
+    documentDiscountAmount: invoiceMoneySchema.optional().default("0.00"),
     lines: z
       .array(
         z.object({
           lineKey: z.string().trim().min(1).max(100),
           ingredientId: z.coerce.number().int().positive().nullable(),
           description: z.string().trim().min(1).max(300),
-          quantity: z.coerce.number().positive(),
+          quantity: invoiceQuantitySchema,
           unitId: z.coerce.number().int().positive().nullable(),
-          unitPrice: z.coerce.number().nonnegative(),
-          lineDiscount: z.coerce.number().nonnegative().default(0),
-          vatRate: z.coerce
-            .number()
-            .refine((value) => [0, 5, 8, 10].includes(value)),
-          vatAmount: z.coerce.number().nonnegative(),
-          lineTotal: z.coerce.number().nonnegative(),
+          unitPrice: invoiceMoneySchema,
+          lineDiscount: invoiceMoneySchema.default("0.00"),
+          vatRate: invoiceVatRateSchema,
+          vatAmount: invoiceMoneySchema,
+          lineTotal: invoiceMoneySchema,
           allocations: z
             .array(
               z.object({
                 grnId: z.coerce.number().int().positive(),
                 poId: z.coerce.number().int().positive(),
                 purchaseOrderItemId: z.coerce.number().int().positive(),
-                quantity: z.coerce.number().positive(),
+                quantity: invoiceQuantitySchema,
               }),
             )
             .max(200),
@@ -101,10 +138,12 @@ const invoiceSchema = z
         }
       }
       if (
-        Math.abs(
-          line.lineTotal -
-            (line.quantity * line.unitPrice - line.lineDiscount),
-        ) > 1
+        line.lineTotal !==
+        calculateSupplierInvoiceLineTotal(
+          line.quantity,
+          line.unitPrice,
+          line.lineDiscount,
+        )
       ) {
         ctx.addIssue({
           code: "custom",
@@ -112,7 +151,10 @@ const invoiceSchema = z
           path: ["lines", index, "lineTotal"],
         });
       }
-      if (line.vatRate === 0 && line.vatAmount !== 0) {
+      if (
+        line.vatRate === 0 &&
+        parseMoneyToMinorUnits(line.vatAmount) !== 0n
+      ) {
         ctx.addIssue({
           code: "custom",
           message: "Mức thuế 0% phải có tiền thuế bằng 0.",
@@ -134,16 +176,14 @@ const supplierPaymentSchema = z.object({
     .array(
       z.object({
         invoiceId: z.coerce.number().int().positive(),
-        amount: z.coerce.number().positive(),
+        amount: positiveInvoiceMoneySchema,
       }),
     )
     .min(1)
     .max(200)
     .optional(),
   idempotencyKey: z.string().uuid(),
-  amount: z.coerce
-    .number()
-    .positive({ error: "Số tiền thanh toán phải lớn hơn 0." }),
+  amount: positiveInvoiceMoneySchema,
   paymentMethod: z.enum(["cash", "bank_transfer"]),
   referenceNote: z.string().trim().max(500).optional(),
 });
@@ -155,7 +195,7 @@ const supplierAdvanceSchema = z.object({
     .array(
       z.object({
         invoiceId: z.coerce.number().int().positive(),
-        amount: z.coerce.number().positive(),
+        amount: positiveInvoiceMoneySchema,
       }),
     )
     .min(1)
@@ -164,8 +204,8 @@ const supplierAdvanceSchema = z.object({
 
 const supplierPaymentResultSchema = z.object({
   payment_id: z.coerce.number().int().positive(),
-  allocated_amount: z.coerce.number().nonnegative(),
-  advance_amount: z.coerce.number().nonnegative(),
+  allocated_amount: rpcMoneyResultSchema,
+  advance_amount: rpcMoneyResultSchema,
   payment_status: z.string(),
 });
 
@@ -184,7 +224,7 @@ const attachVatEvidenceSchema = z.object({
 const supplierCreditSchema = z.object({
   supplierId: z.coerce.number().int().positive(),
   creditNumber: z.string().trim().min(1).max(100),
-  amount: z.coerce.number().positive(),
+  amount: positiveInvoiceMoneySchema,
   notes: z
     .string()
     .trim()
@@ -194,7 +234,7 @@ const supplierCreditSchema = z.object({
     .array(
       z.object({
         invoiceId: z.coerce.number().int().positive(),
-        amount: z.coerce.number().positive(),
+        amount: positiveInvoiceMoneySchema,
       }),
     )
     .min(1)
@@ -220,13 +260,22 @@ export const createSupplierInvoice = withAction(
     permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
   },
   async (data, { supabase }) => {
-    const subtotal = data.lines.reduce((sum, line) => sum + line.lineTotal, 0);
-    const vatAmount = data.lines.reduce(
-      (sum, line) => sum + line.vatAmount,
-      0,
-    );
-    const totalAmount =
-      subtotal - data.documentDiscountAmount + vatAmount;
+    const { subtotal, vatAmount, totalAmount } =
+      summarizeSupplierInvoiceMoney(
+        data.lines,
+        data.documentDiscountAmount,
+      );
+    if (
+      parseMoneyToMinorUnits(subtotal) <= 0n ||
+      parseMoneyToMinorUnits(data.documentDiscountAmount) >
+        parseMoneyToMinorUnits(subtotal) ||
+      parseMoneyToMinorUnits(totalAmount) < 0n
+    ) {
+      return {
+        success: false,
+        error: "Tổng tiền hóa đơn không hợp lệ.",
+      };
+    }
     const { data: result, error } = await supabase.rpc(
       "save_supplier_invoice_draft" as never,
       {
@@ -758,7 +807,7 @@ export interface SupplierAdvanceSummary {
   supplierId: number;
   paymentDate: string;
   referenceNote: string | null;
-  advanceAmount: number;
+  advanceAmount: string;
 }
 
 const supplierInvoiceCursorSchema = z.object({
@@ -928,16 +977,23 @@ export async function fetchSupplierInvoicesPage(
   const advances: SupplierAdvanceSummary[] = (paymentRows ?? []).flatMap(
     (payment) => {
       const allocated = Array.isArray(payment.supplier_payment_allocations)
-        ? payment.supplier_payment_allocations.reduce(
-            (sum, allocation) => sum + Number(allocation.amount ?? 0),
-            0,
+        ? addMoney(
+            payment.supplier_payment_allocations.map((allocation) =>
+              minorUnitsToCanonical(
+                parseMoneyToMinorUnits(String(allocation.amount ?? 0)),
+              ),
+            ),
           )
-        : 0;
-      const advanceAmount = Math.max(
-        Number(payment.amount ?? 0) - allocated,
-        0,
+        : "0.00";
+      const paymentAmount = minorUnitsToCanonical(
+        parseMoneyToMinorUnits(String(payment.amount ?? 0)),
       );
-      return advanceAmount > 0
+      const rawAdvanceAmount = subtractMoney(paymentAmount, allocated);
+      const advanceAmount =
+        parseMoneyToMinorUnits(rawAdvanceAmount) > 0n
+          ? rawAdvanceAmount
+          : "0.00";
+      return parseMoneyToMinorUnits(advanceAmount) > 0n
         ? [
             {
               paymentId: Number(payment.id),

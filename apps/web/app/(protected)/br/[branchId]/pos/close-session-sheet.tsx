@@ -9,7 +9,7 @@ import {
   formatVND,
   parseVietnameseNumericInput,
 } from "@comtammatu/shared/format";
-import { FormattedNumberInput } from "@/components/form";
+import { WholeVndInput } from "@/components/form";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -231,13 +231,12 @@ export function CloseSessionSheet({
                     <Label htmlFor="quick-total" className="sr-only">
                       Tổng tiền mặt
                     </Label>
-                    <FormattedNumberInput
+                    <WholeVndInput
                       id="quick-total"
                       value={quickTotal}
                       onValueChange={setQuickTotal}
                       disabled={isPending}
                       placeholder="0"
-                      inputMode="numeric"
                       className="text-base"
                     />
                     <p className="text-sm text-muted-foreground">

@@ -29,7 +29,7 @@ import { createClient } from "@comtammatu/database/supabase/client";
 import type { ItemRow } from "./item-table";
 import { AppEmptyState } from "@/components/surface";
 import { AppDialog } from "@/components/form/form-dialog";
-import { FormattedNumberInput } from "@/components/form";
+import { WholeVndInput } from "@/components/form";
 
 import { FORM_VI, MENU_VI } from "@comtammatu/shared/messages";
 
@@ -302,10 +302,9 @@ export function ItemDetailDialog({
                   <FieldLabel className="text-xs">
                     {MENU_VI.priceDeltaLabel}
                   </FieldLabel>
-                  <FormattedNumberInput
+                  <WholeVndInput
                     defaultValue={String(v.price_adjustment)}
                     allowNegative
-                    maxFractionDigits={0}
                     key={v.id ?? `price-${idx}`}
                     onValueBlur={(value) => {
                       const num = Number(value);
@@ -364,9 +363,8 @@ export function ItemDetailDialog({
                 </Field>
                 <Field className="w-28 shrink-0 gap-1">
                   <FieldLabel className="text-xs">{FORM_VI.price}</FieldLabel>
-                  <FormattedNumberInput
+                  <WholeVndInput
                     defaultValue={String(m.price)}
-                    maxFractionDigits={0}
                     key={m.id ?? `mod-price-${idx}`}
                     onValueBlur={(value) => {
                       const num = Number(value);

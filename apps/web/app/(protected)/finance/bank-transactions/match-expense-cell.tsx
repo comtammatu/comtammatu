@@ -19,7 +19,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@comtammatu/ui/components/sheet";
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatAccountingVND as formatVND,
+  formatCount,
+} from "@comtammatu/shared/format";
 import {
   formatVNBusinessDate,
   formatVNDateTime,

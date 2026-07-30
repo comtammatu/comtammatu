@@ -298,7 +298,10 @@ const openPosSessionSchema = z.object({
     .int()
     .positive({ error: "Mã thiết bị không hợp lệ" })
     .optional(),
-  openingCash: z.coerce.number().min(0, { error: "Tiền mở ca không hợp lệ" }),
+  openingCash: z.coerce
+    .number()
+    .int()
+    .min(0, { error: "Tiền mở ca không hợp lệ" }),
 });
 
 // Opening a shift writes opening cash → requires cashbox permission,
@@ -371,7 +374,10 @@ const closeSessionSchema = z.object({
     .number()
     .int()
     .positive({ error: "Mã ca không hợp lệ" }),
-  closingCash: z.coerce.number().min(0, { error: "Tiền đóng ca không hợp lệ" }),
+  closingCash: z.coerce
+    .number()
+    .int()
+    .min(0, { error: "Tiền đóng ca không hợp lệ" }),
   note: z.string().optional(),
 });
 

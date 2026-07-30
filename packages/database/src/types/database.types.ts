@@ -12449,6 +12449,16 @@ export type Database = {
         }
         Returns: Json
       }
+      save_supplier_invoice_draft_unchecked: {
+        Args: {
+          p_allocations: Json
+          p_idempotency_key: string
+          p_invoice: Json
+          p_invoice_id: number
+          p_lines: Json
+        }
+        Returns: Json
+      }
       scan_inventory_alerts: {
         Args: never
         Returns: {

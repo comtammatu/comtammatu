@@ -9,7 +9,7 @@ import {
   YAxis,
   type ChartConfig,
 } from "@comtammatu/ui/components/chart";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import { ChartCard } from "../components/chart-card";
 

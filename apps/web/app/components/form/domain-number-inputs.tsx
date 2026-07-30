@@ -10,12 +10,12 @@ type FormattedNumberInputProps = React.ComponentProps<
   typeof FormattedNumberInput
 >;
 
-type LockedIntegerInputProps = Omit<
+type LockedMoneyInputProps = Omit<
   FormattedNumberInputProps,
   "inputMode" | "maxFractionDigits"
 >;
 
-export type MoneyVndInputProps = LockedIntegerInputProps;
+export type MoneyVndInputProps = LockedMoneyInputProps;
 
 export const MoneyVndInput = React.forwardRef<
   HTMLInputElement,
@@ -25,8 +25,8 @@ export const MoneyVndInput = React.forwardRef<
     <FormattedNumberInput
       {...props}
       ref={ref}
-      inputMode="numeric"
-      maxFractionDigits={0}
+      inputMode="decimal"
+      maxFractionDigits={2}
     />
   );
 });
@@ -62,6 +62,34 @@ export type MoneyVndFieldProps<TFieldValues extends FieldValues> = Omit<
 
 export function MoneyVndField<TFieldValues extends FieldValues>(
   props: MoneyVndFieldProps<TFieldValues>,
+) {
+  return <NumberField {...props} maxFractionDigits={2} />;
+}
+
+export type WholeVndInputProps = LockedMoneyInputProps;
+
+export const WholeVndInput = React.forwardRef<
+  HTMLInputElement,
+  WholeVndInputProps
+>(function WholeVndInput(props, ref) {
+  return (
+    <FormattedNumberInput
+      {...props}
+      ref={ref}
+      inputMode="numeric"
+      maxFractionDigits={0}
+    />
+  );
+});
+WholeVndInput.displayName = "WholeVndInput";
+
+export type WholeVndFieldProps<TFieldValues extends FieldValues> = Omit<
+  NumberFieldProps<TFieldValues>,
+  "maxFractionDigits"
+>;
+
+export function WholeVndField<TFieldValues extends FieldValues>(
+  props: WholeVndFieldProps<TFieldValues>,
 ) {
   return <NumberField {...props} maxFractionDigits={0} />;
 }

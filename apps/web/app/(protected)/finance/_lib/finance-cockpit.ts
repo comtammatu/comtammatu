@@ -1,7 +1,7 @@
 import {
+  formatAccountingVND as formatVND,
   formatCount,
   formatPercent,
-  formatVND,
 } from "@comtammatu/shared/format";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";

@@ -4,10 +4,10 @@ import { Controller } from "react-hook-form";
 import { z } from "zod";
 import {
   FormDialog,
-  NumberField,
   SelectField,
   TextField,
   TextareaField,
+  WholeVndField,
   valuesToFormData,
 } from "@/components/form";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
@@ -116,11 +116,10 @@ export function ItemFormDialog({
             placeholder={MENU_VI.selectCategoryPlaceholder}
             required
           />
-          <NumberField
+          <WholeVndField
             control={form.control}
             name="base_price"
             label={MENU_VI.basePriceLabel}
-            maxFractionDigits={0}
             placeholder="35.000"
             required
           />

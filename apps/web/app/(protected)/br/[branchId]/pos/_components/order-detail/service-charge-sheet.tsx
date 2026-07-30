@@ -19,7 +19,7 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { FormattedNumberInput } from "@/components/form";
+import { WholeVndInput } from "@/components/form";
 
 interface ServiceChargeSheetProps {
   open: boolean;
@@ -106,9 +106,8 @@ export function ServiceChargeSheet({
               <FieldLabel htmlFor="service-charge-amount">
                 {POS_VI.serviceChargeAmountLabel}
               </FieldLabel>
-              <FormattedNumberInput
+              <WholeVndInput
                 id="service-charge-amount"
-                maxFractionDigits={0}
                 value={amountText}
                 onValueChange={setAmountText}
                 placeholder={POS_VI.serviceChargeAmountPlaceholder}

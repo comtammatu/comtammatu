@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatAccountingVND as formatVND,
+  formatCount,
+} from "@comtammatu/shared/format";
 import {
   AppEmptyState,
   AppPage,

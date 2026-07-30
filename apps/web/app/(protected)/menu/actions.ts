@@ -67,7 +67,7 @@ const createItemSchema = z.object({
     .min(1, { error: "Tên món không được để trống" })
     .max(100, { error: "Tên món tối đa 100 ký tự" }),
   category_id: z.coerce.number().int().positive({ error: "Chọn danh mục" }),
-  base_price: z.coerce.number().min(0, { error: "Giá không hợp lệ" }),
+  base_price: z.coerce.number().int().min(0, { error: "Giá không hợp lệ" }),
   vat_rate: z.coerce
     .number()
     .refine(
@@ -89,7 +89,7 @@ const updateItemSchema = z.object({
     .min(1, { error: "Tên món không được để trống" })
     .max(100, { error: "Tên món tối đa 100 ký tự" }),
   category_id: z.coerce.number().int().positive({ error: "Chọn danh mục" }),
-  base_price: z.coerce.number().min(0, { error: "Giá không hợp lệ" }),
+  base_price: z.coerce.number().int().min(0, { error: "Giá không hợp lệ" }),
   vat_rate: z.coerce
     .number()
     .refine(
@@ -109,14 +109,14 @@ const updateItemSchema = z.object({
 const variantEntrySchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1),
-  price_adjustment: z.number(),
+  price_adjustment: z.number().int(),
   sort_order: z.number().int().min(0).default(0),
 });
 
 const modifierEntrySchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1),
-  price: z.number().min(0),
+  price: z.number().int().min(0),
   sort_order: z.number().int().min(0).default(0),
 });
 
@@ -719,7 +719,7 @@ const importCategoryRowSchema = z.object({
 const importItemRowSchema = z.object({
   name: z.string().trim().min(1, { error: "Thiếu tên món" }),
   category_name: z.string().trim().min(1, { error: "Thiếu danh mục" }),
-  base_price: z.number().min(0, { error: "Giá không hợp lệ" }),
+  base_price: z.number().int().min(0, { error: "Giá không hợp lệ" }),
   vat_rate: z.union([
     z.literal(0),
     z.literal(5),
@@ -817,14 +817,14 @@ export interface ImportMenuSummary {
 const importVariantRowSchema = z.object({
   item_name: z.string().trim().min(1, { error: "Thiếu tên món" }),
   name: z.string().trim().min(1, { error: "Thiếu tên biến thể" }),
-  price_adjustment: z.number(),
+  price_adjustment: z.number().int(),
   sort_order: z.number().int().min(0).default(0),
 });
 
 const importModifierRowSchema = z.object({
   item_name: z.string().trim().min(1, { error: "Thiếu tên món" }),
   name: z.string().trim().min(1, { error: "Thiếu tên món thêm" }),
-  price: z.number().min(0, { error: "Giá món thêm phải ≥ 0" }),
+  price: z.number().int().min(0, { error: "Giá món thêm phải ≥ 0" }),
   sort_order: z.number().int().min(0).default(0),
 });
 

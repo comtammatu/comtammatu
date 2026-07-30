@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 import { FINANCE_VI, POS_VI } from "@comtammatu/shared/messages";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { createTaxInvoice, resolveOrderForManualInvoice } from "./actions";

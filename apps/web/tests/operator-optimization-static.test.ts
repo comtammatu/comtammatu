@@ -197,7 +197,7 @@ test("close-session supports a quick single-total count mode alongside denominat
   assert.match(source, /countMode.*"total" \| "denomination"/);
   assert.match(source, /Nhập tổng/);
   assert.match(source, /Theo mệnh giá/);
-  assert.match(source, /FormattedNumberInput/);
+  assert.match(source, /WholeVndInput/);
   assert.match(source, /aria-pressed=\{countMode === "total"\}/);
 });
 

@@ -1,5 +1,5 @@
 import { cn } from "@comtammatu/ui/lib/utils";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 
 // Pure SVG 7×24 heatmap (dow × hour). No chart library — the data shape
 // is too simple to justify Recharts' overhead, and we get full control

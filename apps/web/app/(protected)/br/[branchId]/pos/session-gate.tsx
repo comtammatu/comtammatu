@@ -17,7 +17,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppHeaderBrand } from "@/components/app-header";
-import { FormattedNumberInput } from "@/components/form";
+import { WholeVndInput } from "@/components/form";
 import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { TriangleAlert as IconAlertTriangle } from "lucide-react";
@@ -132,9 +132,8 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
               <FieldLabel htmlFor="opening-cash">
                 {messages.pos.sessionGate.openingCashLabel}
               </FieldLabel>
-              <FormattedNumberInput
+              <WholeVndInput
                 id="opening-cash"
-                maxFractionDigits={0}
                 value={openingCash}
                 onValueChange={setOpeningCash}
                 placeholder="0"

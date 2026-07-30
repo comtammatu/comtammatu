@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { MODULE_ACL } from "@comtammatu/shared/auth";
+import { hasMaximumScale } from "@comtammatu/shared/money";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "@/_lib/auth";
 import { messages } from "@lib/messages";
@@ -14,6 +15,13 @@ import {
 
 const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 const targetCopy = messages.finance.revenueTargets;
+function scaleTwoAmount(maximum: number) {
+  return z
+    .union([z.string().trim().min(1), z.number()])
+    .refine((value) => hasMaximumScale(String(value), 2), "invalid_money_scale")
+    .transform((value) => Number(value))
+    .pipe(z.number().finite().positive().max(maximum));
+}
 
 const yearMonthSchema = z
   .string()
@@ -24,13 +32,12 @@ const rewardTierSchema = z
   .object({
     threshold_pct: z.coerce.number().positive().max(1000),
     reward_type: z.enum(["fixed_amount", "revenue_percent"]),
-    reward_value: z.coerce.number().positive().max(1_000_000_000_000),
+    reward_value: scaleTwoAmount(1_000_000_000_000),
   })
   .superRefine((tier, ctx) => {
     if (
-      (tier.reward_type === "fixed_amount" &&
-        !Number.isInteger(tier.reward_value)) ||
-      (tier.reward_type === "revenue_percent" && tier.reward_value > 100)
+      tier.reward_type === "revenue_percent" &&
+      tier.reward_value > 100
     ) {
       ctx.addIssue({ code: "custom", message: "invalid_reward_value" });
     }
@@ -52,7 +59,7 @@ const rewardTiersSchema = z
 
 const upsertRowSchema = z.object({
   branch_id: z.coerce.number().int().positive(),
-  target_amount: z.coerce.number().positive().max(1_000_000_000_000),
+  target_amount: scaleTwoAmount(1_000_000_000_000),
   reward_tiers: rewardTiersSchema.default([]),
 });
 

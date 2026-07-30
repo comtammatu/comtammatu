@@ -3,6 +3,7 @@ import test from "node:test";
 import { INVENTORY_VI } from "../../messages/inventory";
 import {
   formatCount,
+  formatAccountingVND,
   formatPercent,
   formatQuantity,
   formatVND,
@@ -11,7 +12,10 @@ import {
 
 test("vi-VN display formatters use dot grouping and comma fractions", () => {
   assert.equal(formatVND(45_000), "45.000đ");
-  assert.equal(formatVND(1_234.5), "1.235đ");
+  assert.equal(formatVND(1_234.5), "1.234,5đ");
+  assert.equal(formatVND("1234.50"), "1.234,5đ");
+  assert.equal(formatAccountingVND(1_234.5), "1.234,50đ");
+  assert.equal(formatAccountingVND("invalid"), "0,00đ");
   assert.equal(formatCount(1_234), "1.234");
   assert.equal(formatQuantity(1_234.5), "1.234,5");
   assert.equal(formatPercent(12.5), "12,5%");

@@ -2,9 +2,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowRight as IconArrowRight } from "lucide-react";
 import {
+  formatAccountingVND as formatVND,
   formatCount,
   formatPercent,
-  formatVND,
 } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {

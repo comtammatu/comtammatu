@@ -89,6 +89,45 @@ function browserRolesAreFinallyRevoked(
   );
 }
 
+function bodyHasDirectAuthBoundary(body: string): boolean {
+  return AUTH_BOUNDARY_TOKENS.some((token) => body.includes(token));
+}
+
+function delegatesToPrivateAuthorizedFunction(
+  body: string,
+  allSource: string,
+): boolean {
+  const delegatedNames = Array.from(
+    body.matchAll(/\bRETURN\s+public\.([a-zA-Z_][\w]*)\s*\(/gi),
+    (match) => match[1]!,
+  );
+
+  return delegatedNames.some((delegatedName) => {
+    if (!browserRolesAreFinallyRevoked(allSource, delegatedName)) return false;
+
+    let delegatedBody = "";
+    for (const match of allSource.matchAll(DEFINER_FUNCTION)) {
+      if (match[1] === delegatedName) delegatedBody = match[3] ?? "";
+    }
+
+    if (!delegatedBody) {
+      const renamePattern = new RegExp(
+        `ALTER\\s+FUNCTION\\s+(?:public\\.)?([a-zA-Z_][\\w]*)\\s*\\([^;]*?\\)\\s+RENAME\\s+TO\\s+${escapeRegExp(delegatedName)}\\s*;`,
+        "gi",
+      );
+      const rename = Array.from(allSource.matchAll(renamePattern)).at(-1);
+      if (rename?.index !== undefined) {
+        const sourceBeforeRename = allSource.slice(0, rename.index);
+        for (const match of sourceBeforeRename.matchAll(DEFINER_FUNCTION)) {
+          if (match[1] === rename[1]) delegatedBody = match[3] ?? "";
+        }
+      }
+    }
+
+    return bodyHasDirectAuthBoundary(delegatedBody);
+  });
+}
+
 function forwardMigrationFiles(): string[] {
   return readdirSync(migrationsDir)
     .filter(
@@ -111,6 +150,7 @@ test("forward SECURITY DEFINER migrations carry an auth boundary or a browser-ro
     name,
     sql: readFileSync(resolve(migrationsDir, name), "utf8"),
   }));
+  const allSource = migrations.map(({ sql }) => sql).join("\n");
 
   for (const [index, migration] of migrations.entries()) {
     const finalSource = migrations
@@ -120,9 +160,9 @@ test("forward SECURITY DEFINER migrations carry an auth boundary or a browser-ro
     for (const match of migration.sql.matchAll(DEFINER_FUNCTION)) {
       const functionName = match[1]!;
       const body = match[3] ?? "";
-      const hasAuthBoundary = AUTH_BOUNDARY_TOKENS.some((token) =>
-        body.includes(token),
-      );
+      const hasAuthBoundary =
+        bodyHasDirectAuthBoundary(body) ||
+        delegatesToPrivateAuthorizedFunction(body, allSource);
       if (
         !hasAuthBoundary &&
         !browserRolesAreFinallyRevoked(finalSource, functionName)
