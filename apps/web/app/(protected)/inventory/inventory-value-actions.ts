@@ -22,18 +22,24 @@ const inventoryPeriodValueSchema = z.object({
 function computeLineValue(
   qty: number,
   avgUnitCost: number | null | undefined,
-  ingredientUnitCost: number | null | undefined,
 ): number {
-  const unit =
-    avgUnitCost != null
-      ? Number(avgUnitCost)
-      : ingredientUnitCost != null
-        ? Number(ingredientUnitCost)
-        : 0;
+  const unit = avgUnitCost != null ? Number(avgUnitCost) : 0;
   return Number(qty) * unit;
 }
 
-type IngredientCost = { unit_cost: number | null } | null;
+async function isValuationActive(
+  supabase: NonNullable<
+    Awaited<ReturnType<typeof loadInventoryMonetaryAccess>>["client"]
+  >,
+  tenantId: number,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("inventory_valuation_cutovers")
+    .select("status")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  return !error && data?.status === "active";
+}
 
 export async function fetchInventoryValueSystem(
   branchId?: number,
@@ -67,17 +73,21 @@ export async function fetchInventoryValueSystem(
     return { success: true, data: { totalValue: 0 } };
   }
 
-  let query = supabase
-    .from("stock_levels")
-    .select(
-      `
-      current_quantity,
-      avg_unit_cost,
-      ingredients ( unit_cost )
-    `,
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .in("location_id", stockBearingLocations.locationIds);
+  const valuationActive = await isValuationActive(
+    supabase,
+    claims.tenant_id,
+  );
+  let query = valuationActive
+    ? supabase
+        .from("inventory_valuation_accounts")
+        .select("branch_id, location_id, quantity, book_value")
+        .eq("tenant_id", claims.tenant_id)
+        .in("location_id", stockBearingLocations.locationIds)
+    : supabase
+        .from("stock_levels")
+        .select("branch_id, location_id, current_quantity, avg_unit_cost")
+        .eq("tenant_id", claims.tenant_id)
+        .in("location_id", stockBearingLocations.locationIds);
 
   if (branchId != null) {
     query = query.eq("branch_id", branchId);
@@ -94,12 +104,13 @@ export async function fetchInventoryValueSystem(
 
   let totalValue = 0;
   for (const row of data ?? []) {
-    const ing = row.ingredients as IngredientCost;
-    totalValue += computeLineValue(
-      Number(row.current_quantity),
-      row.avg_unit_cost != null ? Number(row.avg_unit_cost) : null,
-      ing?.unit_cost != null ? Number(ing.unit_cost) : null,
-    );
+    totalValue +=
+      "book_value" in row
+        ? Number(row.book_value)
+        : computeLineValue(
+            Number(row.current_quantity),
+            row.avg_unit_cost != null ? Number(row.avg_unit_cost) : null,
+          );
   }
 
   return { success: true, data: { totalValue } };
@@ -119,7 +130,9 @@ interface InventoryPeriodValueRpcRow {
 
 type InventoryPeriodValueRpcClient = {
   rpc: (
-    fn: "get_inventory_value_period",
+    fn:
+      | "get_inventory_value_period"
+      | "get_inventory_valuation_period_value",
     args: {
       p_start_date: string;
       p_end_date: string;
@@ -151,9 +164,25 @@ export async function fetchInventoryPeriodValue(input: {
     return { success: false, error: "Không có quyền" };
   }
 
+  const { data: cutover, error: cutoverError } = await ctx.supabase
+    .from("inventory_valuation_cutovers")
+    .select("status")
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .maybeSingle();
+  if (cutoverError) {
+    console.error("[inventory:value-period] cutover lookup failed", cutoverError.code);
+    return {
+      success: false,
+      error: messages.inventory.value.calculateFailed,
+    };
+  }
+  const rpcName =
+    cutover?.status === "active"
+      ? "get_inventory_valuation_period_value"
+      : "get_inventory_value_period";
   const { data, error } = await (
     ctx.supabase as unknown as InventoryPeriodValueRpcClient
-  ).rpc("get_inventory_value_period", {
+  ).rpc(rpcName, {
     p_start_date: parsed.data.startDate,
     p_end_date: parsed.data.endDate,
     p_branch_id: parsed.data.branchId ?? null,
@@ -228,21 +257,27 @@ export async function fetchInventoryValueByBranch(): Promise<
 
   const stockBearingLocationIds = stockBearingLocations.locationIds;
 
+  const valuationActive = await isValuationActive(
+    supabase,
+    claims.tenant_id,
+  );
   const { data: stockRows, error: stockError } =
     stockBearingLocationIds.length > 0
-      ? await supabase
-          .from("stock_levels")
-          .select(
-            `
-            branch_id,
-            current_quantity,
-            avg_unit_cost,
-            ingredients ( unit_cost )
-          `,
-          )
-          .eq("tenant_id", claims.tenant_id)
-          .in("branch_id", branchIds)
-          .in("location_id", stockBearingLocationIds)
+      ? valuationActive
+        ? await supabase
+            .from("inventory_valuation_accounts")
+            .select("branch_id, location_id, quantity, book_value")
+            .eq("tenant_id", claims.tenant_id)
+            .in("branch_id", branchIds)
+            .in("location_id", stockBearingLocationIds)
+        : await supabase
+            .from("stock_levels")
+            .select(
+              "branch_id, location_id, current_quantity, avg_unit_cost",
+            )
+            .eq("tenant_id", claims.tenant_id)
+            .in("branch_id", branchIds)
+            .in("location_id", stockBearingLocationIds)
       : { data: [], error: null };
 
   if (stockError) {
@@ -259,13 +294,13 @@ export async function fetchInventoryValueByBranch(): Promise<
 
   for (const row of stockRows ?? []) {
     const bid = row.branch_id;
-    const line = computeLineValue(
-      Number(row.current_quantity),
-      row.avg_unit_cost != null ? Number(row.avg_unit_cost) : null,
-      (row.ingredients as IngredientCost)?.unit_cost != null
-        ? Number((row.ingredients as IngredientCost)?.unit_cost)
-        : null,
-    );
+    const line =
+      "book_value" in row
+        ? Number(row.book_value)
+        : computeLineValue(
+            Number(row.current_quantity),
+            row.avg_unit_cost != null ? Number(row.avg_unit_cost) : null,
+          );
     totals.set(bid, (totals.get(bid) ?? 0) + line);
   }
 

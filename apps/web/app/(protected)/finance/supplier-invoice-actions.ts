@@ -169,6 +169,23 @@ const confirmSupplierInvoiceSchema = z.object({
   idempotencyKey: z.string().uuid(),
 });
 
+const supplierInvoiceValuationSummarySchema = z.object({
+  status: z.enum(["not_applicable", "settled", "settled_current_period"]),
+  provisionalValue: z.coerce.number().default(0),
+  finalNetValue: z.coerce.number().default(0),
+  inventoryAdjustment: z.coerce.number().default(0),
+  productionInventoryAdjustment: z.coerce.number().default(0),
+  foodCostVariance: z.coerce.number().default(0),
+  wasteVariance: z.coerce.number().default(0),
+  supplierReturnVariance: z.coerce.number().default(0),
+  currentPeriodVariance: z.coerce.number().default(0),
+  warning: z.boolean().default(false),
+});
+
+export type SupplierInvoiceValuationSummary = z.infer<
+  typeof supplierInvoiceValuationSummarySchema
+>;
+
 const supplierPaymentSchema = z.object({
   invoiceId: z.coerce.number().int().positive(),
   supplierId: z.coerce.number().int().positive().optional(),
@@ -445,9 +462,54 @@ export const confirmSupplierInvoice = withAction(
       }
       return { success: false, error: "Không thể xác nhận hóa đơn NCC." };
     }
-    return { success: true, data };
+    const parsed = z
+      .object({ valuation: supplierInvoiceValuationSummarySchema })
+      .safeParse(data);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: "Phản hồi quyết toán giá hóa đơn không hợp lệ.",
+      };
+    }
+    return { success: true, data: parsed.data };
   },
 );
+
+export async function getSupplierInvoiceValuationSummary(
+  invoiceId: number,
+): Promise<ActionResult<SupplierInvoiceValuationSummary>> {
+  const parsedInvoiceId = z.coerce.number().int().positive().safeParse(invoiceId);
+  if (!parsedInvoiceId.success) {
+    return { success: false, error: "Mã hóa đơn không hợp lệ." };
+  }
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền." };
+
+  const { data, error } = await ctx.supabase.rpc(
+    "get_supplier_invoice_valuation_summary",
+    { p_invoice_id: parsedInvoiceId.data },
+  );
+  if (error) {
+    console.error("finance.supplier_invoice.valuation_summary_failed", {
+      code: error.code,
+    });
+    return {
+      success: false,
+      error: messages.inventory.supplierInvoices.valuation.loadFailed,
+    };
+  }
+  const summary = supplierInvoiceValuationSummarySchema.safeParse(data);
+  if (!summary.success) {
+    return {
+      success: false,
+      error: "Dữ liệu quyết toán giá của hóa đơn không hợp lệ.",
+    };
+  }
+  return { success: true, data: summary.data };
+}
 
 export const recordSupplierPayment = withAction(
   {

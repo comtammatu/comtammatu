@@ -120,8 +120,12 @@ test("Finance expenses actual food cost follows the VN business-day window", () 
   );
 
   assert.match(expenseActions, /getVNDayUtcRange/);
-  assert.match(expenseActions, /\.gte\("created_at",\s*startIso\)/);
-  assert.match(expenseActions, /\.lt\("created_at",\s*endIso\)/);
+  assert.match(expenseActions, /\.gte\("effective_at",\s*startIso\)/);
+  assert.match(expenseActions, /\.lt\("effective_at",\s*endIso\)/);
+  assert.match(
+    expenseActions,
+    /\.gte\("inventory_valuation_events\.effective_at",\s*startIso\)/,
+  );
   assert.doesNotMatch(expenseActions, /function nextDate/);
 });
 
@@ -224,9 +228,10 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.doesNotMatch(client, /const estimatedFoodCost = rows\.reduce/);
   assert.match(
     expenseActions,
-    /select\("order_id, quantity_change, unit_cost"\)/,
+    /\.from\("inventory_valuation_events"\)/,
   );
-  assert.match(expenseActions, /orderIds\.add\(r\.order_id\)/);
+  assert.match(expenseActions, /orderIds\.add\(movement\.order_id\)/);
+  assert.match(expenseActions, /allocation_bucket", "food_cost"/);
   assert.match(financeMessages, /actualFoodCost: "Giá vốn đã ghi nhận"/);
 });
 

@@ -1588,7 +1588,7 @@ export const inventory = {
     creditSuccess: "Đã ghi nhận giảm công nợ.",
     acceptDiscrepancy: "Chấp nhận chênh lệch",
     acceptDiscrepancyDescription:
-      "Hóa đơn sẽ được xem là đã đối soát; lịch sử nhập kho và giá vốn không thay đổi.",
+      "Hóa đơn sẽ được xem là đã đối soát; khi xác nhận, chênh lệch giá được quyết toán vào sổ giá trị.",
     discrepancyReason: "Lý do chấp nhận",
     discrepancyReasonPlaceholder: "Nêu rõ nguyên nhân và căn cứ chấp nhận...",
     missingPoForReceipt:
@@ -1797,6 +1797,27 @@ export const inventory = {
     loadMoreFailed: "Không thể tải thêm hóa đơn",
     recomputeMatchingSuccess: "Đã tính lại đối soát 3-way.",
     recomputeMatchingFailed: "Không thể tính lại đối soát.",
+    valuation: {
+      title: "Quyết toán giá mua",
+      loading: "Đang tải phân bổ chênh lệch giá…",
+      loadFailed: "Không thể tải quyết toán giá của hóa đơn.",
+      confirmedToast: "Đã xác nhận và quyết toán giá hóa đơn NCC.",
+      warningToast:
+        "Đã xác nhận hóa đơn. Chênh lệch giá lớn đã được ghi sổ và gửi cảnh báo hậu kiểm.",
+      status: {
+        not_applicable: "Không áp dụng",
+        settled: "Đã quyết toán vào kỳ nghiệp vụ",
+        settled_current_period: "Đã quyết toán vào kỳ hiện tại",
+      },
+      provisionalValue: "Giá tạm tại phiếu nhập",
+      finalNetValue: "Giá mua thực tế",
+      inventoryAdjustment: "Điều chỉnh tồn nguyên liệu",
+      productionInventoryAdjustment: "Điều chỉnh thành phẩm",
+      foodCostVariance: "Chênh lệch giá vốn món",
+      wasteVariance: "Hao hụt / kiểm kê / vận chuyển",
+      supplierReturnVariance: "Hàng trả nhà cung cấp",
+      currentPeriodVariance: "Chênh lệch kỳ hiện tại",
+    },
   },
   suppliers: {
     title: "Nhà cung cấp",

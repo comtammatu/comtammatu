@@ -63,6 +63,7 @@ export const PERMISSION_KEYS = {
   PROCUREMENT_PRICE_LIST_WRITE: "procurement:price_list_write",
 
   // accounting
+  ACCOUNTING_PERIOD_CLOSE: "accounting:period_close",
   ACCOUNTING_PERIOD_REOPEN: "accounting:period_reopen",
 
   // supplier returns (QC at receiving + post-receipt returns)
@@ -145,7 +146,7 @@ export type PermissionKey =
  * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
  * by a string-match test; bump when a migration adds/removes a catalog key.
  */
-export const PERMISSION_KEY_COUNT = 92;
+export const PERMISSION_KEY_COUNT = 93;
 
 /**
  * Pure function: check if a permission set contains a given key.

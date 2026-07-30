@@ -1,0 +1,86 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { test } from "node:test";
+
+const readWeb = (path: string) =>
+  readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
+const readRoot = (path: string) =>
+  readFileSync(resolve(import.meta.dirname, "../../..", path), "utf8");
+
+test("supplier invoice confirmation exposes valuation settlement", () => {
+  const actions = readWeb(
+    "app/(protected)/finance/supplier-invoice-actions.ts",
+  );
+  const client = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  );
+
+  assert.match(actions, /get_supplier_invoice_valuation_summary/);
+  assert.match(actions, /SupplierInvoiceValuationSummary/);
+  assert.match(actions, /provisionalValue: z\.coerce\.number\(\)\.default\(0\)/);
+  assert.match(actions, /warning: z\.boolean\(\)\.default\(false\)/);
+  assert.match(client, /productionInventoryAdjustment/);
+  assert.match(client, /foodCostVariance/);
+  assert.match(client, /wasteVariance/);
+  assert.match(client, /valuation\?\.warning/);
+});
+
+test("cost close is an owner finance workflow with no reopen control", () => {
+  const page = readWeb("app/(protected)/finance/cost-close/page.tsx");
+  const actions = readWeb("app/(protected)/finance/cost-close/actions.ts");
+  const client = readWeb(
+    "app/(protected)/finance/cost-close/cost-close-client.tsx",
+  );
+  const archetypes = readRoot("scripts/page-archetypes.mjs");
+
+  assert.match(page, /user_role !== "owner"/);
+  assert.match(actions, /ACCOUNTING_PERIOD_CLOSE/);
+  assert.match(actions, /close_inventory_cost_period/);
+  assert.match(page, /year\?: string \| string\[\]/);
+  assert.match(client, /\/finance\/cost-close\?year=/);
+  assert.match(client, /copy\.blocked/);
+  assert.match(client, /copy\.attention/);
+  assert.match(client, /copy\.reconciled/);
+  assert.doesNotMatch(`${page}\n${client}`, /reopen|Mở lại kỳ/i);
+  assert.match(
+    archetypes,
+    /finance\/cost-close\/page\.tsx": "DOC-WORKFLOW"/,
+  );
+});
+
+test("finance valuation surfaces do not fall back to mutable reference cost", () => {
+  const cockpit = readWeb(
+    "app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
+  const foodCost = readWeb("app/_lib/food-cost-actions.ts");
+  const actualFoodCost = readWeb(
+    "app/(protected)/finance/expense-actions.ts",
+  );
+
+  assert.match(cockpit, /\.from\("inventory_valuation_accounts"\)/);
+  assert.match(cockpit, /data\?\.status === "active"/);
+  assert.match(cockpit, /\.from\("stock_levels"\)/);
+  assert.doesNotMatch(cockpit, /ingredient\?\.unit_cost/);
+  assert.equal(
+    foodCost.includes("fallbackUnitCost: Number(ingredient?.unit_cost"),
+    false,
+  );
+  assert.match(actualFoodCost, /\.from\("inventory_valuation_events"\)/);
+  assert.match(actualFoodCost, /allocation_bucket", "food_cost"/);
+  assert.match(actualFoodCost, /cutover\?\.status !== "active"/);
+  assert.match(actualFoodCost, /\.from\("stock_movements"\)/);
+});
+
+test("valuation warning kinds have durable notification copy and icon mapping", () => {
+  const copy = readWeb("lib/messages/notifications.ts");
+  const item = readWeb("app/_components/notification-item.tsx");
+
+  for (const kind of [
+    "inventory.valuation_variance",
+    "inventory.valuation_reconciliation_failed",
+  ]) {
+    assert.match(copy, new RegExp(kind.replaceAll(".", "\\.")));
+    assert.match(item, new RegExp(kind.replaceAll(".", "\\.")));
+  }
+});

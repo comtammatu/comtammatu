@@ -21,8 +21,8 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Nội dung                        | Current contract                                                                                                                                                                                                                                                                | Boundary                                                                                               |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ GRN, tồn kho, production recipe và menu recipe                                                                                                                                                                                                  | Không mở item master ERP nhiều lớp                                                                     |
-| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation đọc theo giá vốn BQ khi có dữ liệu, fallback giá nhập tham chiếu khi cần hiển thị                                                                                                                                                | Không chuyển sang FIFO engine                                                                          |
-| Biến động `stock_movements`     | Append-only ledger cho `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*`                                                                                                                                                             | Không mở lot-first ledger / batch accounting                                                           |
+| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                         | Không chuyển sang FIFO engine                                                                          |
+| Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                    | Không mở lot-first ledger / batch accounting                                                           |
 | Mô hình site                    | `branches` là site table Greenfield; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
 | Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm lập `purchase_request` chỉ gồm nguyên liệu, số lượng, đơn vị và ngày cần. Kế toán phân bổ đúng đủ số lượng cho một hay nhiều NCC đang cung cấp nguyên liệu, rồi một RPC tạo một PO/NCC và một GRN nháp/PO. PO/GRN không chứa giá nhập từ Kho; giá thương mại chỉ đến từ Hóa đơn NCC. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                   |
 | QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                    | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
@@ -288,10 +288,9 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
    PO. Người nhận hàng làm việc trực tiếp từ danh sách GRN, không cần quay lại
    PO để tạo phiếu.
 5. Kho nhập thực nhận và từ chối. Khi xác nhận, RPC khóa PO/GRN/dòng, tính phần
-   áp dụng PO và phần dư, cập nhật tồn/WAC đúng một lần. Phần áp dụng dùng giá
-   PO; phần dư ngoài đơn dùng giá `0`. PO chuyển `partially_received` hoặc
-   `received` trong cùng transaction; nếu còn thiếu, hệ thống tự tạo GRN nháp
-   kế tiếp.
+   áp dụng PO, ghi tăng số lượng đúng một lần và tạo receipt cost origin theo
+   giá vận hành tạm tính. PO chuyển `partially_received` hoặc `received` trong
+   cùng transaction; nếu còn thiếu, hệ thống tự tạo GRN nháp kế tiếp.
 6. Finance ghi nhận **Hóa đơn NCC** riêng, có thể đối chiếu nhiều GRN/PO cùng
    NCC; thanh toán và phiếu giảm công nợ phân bổ nhiều-nhiều với hóa đơn.
 
@@ -360,8 +359,11 @@ GRN. Finance có thể đối soát PO/GRN/HĐ NCC sau đó; kết quả đối 
 
 Áp dụng cho **hàng mua về chi nhánh** (đầu vào VAT). Điều kiện thanh toán / kê khai: tham chiếu [einvoice-tax.md](einvoice-tax.md) §4.
 
-Đây là Finance handoff. Inventory vẫn đóng ngày được nếu GRN/WAC/stock ledger
-đã đúng nhưng supplier invoice/payment/AP chưa hoàn tất.
+Đây là Finance handoff. Inventory vẫn đóng ngày được khi Hóa đơn NCC chưa về.
+Khi hóa đơn được xác nhận, valuation settlement phân bổ chênh lệch giữa tồn
+còn lại, thành phẩm và các variance bucket mà không thay đổi số lượng. Late
+invoice của kỳ đã đóng được ghi vào kỳ hiện tại; payment không thay đổi giá trị
+tồn hoặc food cost.
 
 | Bước     | Kiểm tra       | Boundary             |
 | -------- | -------------- | -------------------- |

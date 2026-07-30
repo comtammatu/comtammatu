@@ -42,6 +42,7 @@ export type FinanceNavFlags = {
   showInvoices: boolean;
   showSupplierPayables: boolean;
   showRevenueTargets?: boolean;
+  showCostClose?: boolean;
 };
 
 // control_surface primary + deep nav. Every L0 route shares the same primary
