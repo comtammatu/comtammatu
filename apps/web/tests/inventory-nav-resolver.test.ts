@@ -111,6 +111,20 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
   }
 });
 
+test("Mua hàng owns the redirected YCM route family", () => {
+  const item = resolveInventoryNav({
+    userRole: "owner",
+    showProcurement: true,
+    showProduction: true,
+    showCatalogManagement: true,
+    showSettings: true,
+  })
+    .flatMap((group) => group.items)
+    .find((candidate) => candidate.href === "/inventory/purchase-orders");
+
+  assert.deepEqual(item?.matchPrefixes, ["/inventory/purchase-requests"]);
+});
+
 test("inventory sidebar removes duplicate stock-control and finance entries", () => {
   const groups = resolveInventoryNav({
     userRole: "owner",

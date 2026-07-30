@@ -385,8 +385,10 @@ UI rules:
   price-review obligation from GRN.
 - A submitted branch stock request targets the responsible Kho Tổng or Bếp
   Trung tâm role. A submitted purchase request targets Owner and Kế toán.
-- A purchase order awaiting approval targets Owner and Kế toán. Once approved,
-  it targets the receiving central-site role and opens the Nhập kho queue.
+- Purchase-request and purchase-order notifications open the matching
+  `Nhu cầu mua` or `Đơn mua` queue inside `Mua hàng`.
+- Only GRN work opens `Nhập kho`; an approved purchase order may still target
+  the receiving central-site role without moving its badge to the GRN queue.
 - Toasts confirm the local action only; durable rows carry cross-role obligations.
 
 ### Employee

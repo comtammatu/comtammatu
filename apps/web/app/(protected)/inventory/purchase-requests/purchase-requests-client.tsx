@@ -231,6 +231,8 @@ export function PurchaseRequestsClient({
     selectedId == null
       ? null
       : (rows.find((row) => row.id === selectedId) ?? null);
+  const editingPendingDemand =
+    mode === "edit" && selected?.status === "pending_allocation";
   const createOpen =
     mode === "create" || (mode === "edit" && selected != null);
   const allocateOpen = mode === "allocate" && selected != null;
@@ -592,7 +594,9 @@ export function PurchaseRequestsClient({
     ];
     if (
       canCreateRequest &&
-      (row.status === "draft" || row.status === "changes_requested")
+      (row.status === "draft" ||
+        row.status === "changes_requested" ||
+        row.status === "pending_allocation")
     ) {
       actions.push({
         key: "edit",
@@ -600,6 +604,11 @@ export function PurchaseRequestsClient({
         icon: <IconPencil data-icon="inline-start" />,
         onSelect: () => updateUrl(row.id, "edit"),
       });
+    }
+    if (
+      canCreateRequest &&
+      (row.status === "draft" || row.status === "changes_requested")
+    ) {
       actions.push({
         key: "cancel",
         label: "Bỏ phiếu",
@@ -851,6 +860,11 @@ export function PurchaseRequestsClient({
         Math.abs((totals.get(item.id) ?? 0) - item.remainingQuantity) <=
         0.0005,
     );
+  const canReviewSelected =
+    canAllocate &&
+    selected != null &&
+    (selected.status === "submitted" ||
+      selected.status === "pending_allocation");
 
   return (
     <>
@@ -877,21 +891,33 @@ export function PurchaseRequestsClient({
             >
               {ACTIONS_VI.cancel}
             </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={isPending}
-              onClick={() => saveRequest(false)}
-            >
-              {copy.saveDraft}
-            </Button>
-            <Button
-              type="button"
-              disabled={isPending}
-              onClick={() => saveRequest(true)}
-            >
-              {copy.submitAction}
-            </Button>
+            {editingPendingDemand ? (
+              <Button
+                type="button"
+                disabled={isPending}
+                onClick={() => saveRequest(true)}
+              >
+                {ACTIONS_VI.saveChanges}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isPending}
+                  onClick={() => saveRequest(false)}
+                >
+                  {copy.saveDraft}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => saveRequest(true)}
+                >
+                  {copy.submitAction}
+                </Button>
+              </>
+            )}
           </>
         }
       >
@@ -1032,23 +1058,43 @@ export function PurchaseRequestsClient({
         footer={
           selected ? (
             <>
+              {canReviewSelected ? (
+                <div className="mr-auto flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={() =>
+                      setReasonAction({
+                        kind: "request_changes",
+                        row: selected,
+                      })
+                    }
+                  >
+                    {copy.requestChangesAction}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={isPending}
+                    onClick={() =>
+                      setReasonAction({ kind: "reject", row: selected })
+                    }
+                  >
+                    {copy.rejectAction}
+                  </Button>
+                </div>
+              ) : null}
               {canCreateRequest &&
               (selected.status === "draft" ||
-                selected.status === "changes_requested") ? (
+                selected.status === "changes_requested" ||
+                selected.status === "pending_allocation") ? (
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => updateUrl(selected.id, "edit", "replace")}
                 >
                   {ACTIONS_VI.edit}
-                </Button>
-              ) : null}
-              {canAllocate &&
-              (selected.status === "submitted" ||
-                selected.status === "pending_allocation" ||
-                selected.status === "partially_ordered") ? (
-                <Button type="button" onClick={() => openAllocation(selected)}>
-                  {copy.allocateAction}
                 </Button>
               ) : null}
               <Button
@@ -1058,6 +1104,14 @@ export function PurchaseRequestsClient({
               >
                 {ACTIONS_VI.close}
               </Button>
+              {canAllocate &&
+              (selected.status === "submitted" ||
+                selected.status === "pending_allocation" ||
+                selected.status === "partially_ordered") ? (
+                <Button type="button" onClick={() => openAllocation(selected)}>
+                  {copy.allocateAction}
+                </Button>
+              ) : null}
             </>
           ) : null
         }

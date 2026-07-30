@@ -249,6 +249,10 @@ function procurementRpcError(
       "Nhu cầu mua không còn được phép sửa.",
     ],
     [
+      "purchase_demand_allocation_started",
+      "Kế toán đã lưu phân bổ NCC. Cần gửi lại Kho trước khi sửa.",
+    ],
+    [
       "purchase_demand_not_allocatable",
       "Nhu cầu mua không còn chờ phân bổ nhà cung cấp.",
     ],

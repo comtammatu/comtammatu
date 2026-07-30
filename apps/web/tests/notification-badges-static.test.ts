@@ -43,6 +43,11 @@ const targets: ShellNotificationTarget[] = [
     unreadCount: 2,
   },
   {
+    kind: "workflow.po_sent",
+    actionUrl: "/inventory/grn",
+    unreadCount: 1,
+  },
+  {
     kind: "pos.shift_variance",
     actionUrl: "/br/7/pos-sessions?session=30",
     unreadCount: 1,
@@ -59,8 +64,8 @@ const targets: ShellNotificationTarget[] = [
   },
 ];
 
-test("notification counts roll up to modules and matching deep tabs", () => {
-  assert.equal(getNavNotificationCount(navItem("/inventory"), targets), 13);
+test("notification counts roll up to modules and matching work queues", () => {
+  assert.equal(getNavNotificationCount(navItem("/inventory"), targets), 14);
   assert.equal(getNavNotificationCount(navItem("/finance"), targets), 1);
   assert.equal(getNavNotificationCount(navItem("/hr"), targets), 5);
   assert.equal(
@@ -73,14 +78,14 @@ test("notification counts roll up to modules and matching deep tabs", () => {
     2,
   );
   assert.equal(
-    getNavNotificationCount(navItem("/inventory/purchase-requests"), targets),
-    3,
+    getNavNotificationCount(navItem("/inventory/purchase-orders"), targets),
+    8,
   );
   assert.equal(
-    getNavNotificationCount(navItem("/inventory/purchase-orders"), targets),
-    2,
+    getNavNotificationCount(navItem("/inventory/purchase-requests"), targets),
+    0,
   );
-  assert.equal(getNavNotificationCount(navItem("/inventory/grn"), targets), 6);
+  assert.equal(getNavNotificationCount(navItem("/inventory/grn"), targets), 4);
   assert.equal(getNavNotificationCount(navItem("/hr/attendance"), targets), 5);
 });
 
@@ -178,4 +183,42 @@ test("resolved or deleted GRNs expire receiving notifications in realtime", () =
     /AFTER UPDATE OF status OR DELETE[\s\S]*ON public\.goods_received_notes/,
   );
   assert.match(hook, /event: "\*"/);
+});
+
+test("procurement notifications route to Mua hàng and GRNs route to Nhập kho", () => {
+  const shell = read("apps/web/app/lib/shell-primitives.ts");
+  const migration = read(
+    "supabase/migrations/20260730195000_route_procurement_notifications.sql",
+  );
+
+  for (const kind of [
+    "procurement.purchase_request_submitted",
+    "procurement.po_pending_approval",
+    "workflow.po_approved",
+    "workflow.po_sent",
+  ]) {
+    assert.match(
+      shell,
+      new RegExp(
+        `"${kind.replaceAll(".", "\\.")}": "/inventory/purchase-orders"`,
+      ),
+    );
+  }
+  assert.match(shell, /"workflow\.grn_pending": "\/inventory\/grn"/);
+  assert.match(
+    shell,
+    /const targetPath = notificationKindTargetPath\(target\.kind\) \?\? actionPath/,
+  );
+  assert.match(
+    migration,
+    /WHEN 'procurement\.purchase_request_submitted'[\s\S]*tab=needs&demandId=%s&mode=view/,
+  );
+  assert.match(
+    migration,
+    /WHEN 'workflow\.po_approved'[\s\S]*WHEN 'workflow\.po_sent'[\s\S]*tab=orders&poId=%s&mode=view/,
+  );
+  assert.match(
+    migration,
+    /UPDATE public\.notifications[\s\S]*procurement\.purchase_request_submitted[\s\S]*workflow\.po_approved[\s\S]*workflow\.po_sent/,
+  );
 });

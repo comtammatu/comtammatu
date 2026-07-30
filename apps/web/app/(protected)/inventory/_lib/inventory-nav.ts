@@ -78,6 +78,7 @@ export function resolveInventoryNav({
                 href: "/inventory/purchase-orders",
                 label: "Mua hàng",
                 icon: IconShoppingCart,
+                matchPrefixes: ["/inventory/purchase-requests"],
               },
               {
                 href: "/inventory/grn",
@@ -121,6 +122,7 @@ export function resolveInventoryNav({
       href: "/inventory/purchase-orders",
       label: "Mua hàng",
       icon: IconShoppingCart,
+      matchPrefixes: ["/inventory/purchase-requests"],
     });
   }
   if (showProcurement) {
