@@ -638,25 +638,6 @@ BEGIN
     v_tenant::text || '/supplier-ap-test/discrepancy.pdf'
   WHERE id = v_discrepancy_invoice;
 
-  UPDATE public.supplier_invoices
-  SET vat_invoice_attachment_path =
-    v_tenant::text || '/supplier-ap-test/accountant.pdf'
-  WHERE id = v_tolerance_invoice;
-
-  INSERT INTO public.staff_permissions (
-    user_id,
-    tenant_id,
-    branch_id,
-    permission_key
-  )
-  VALUES (
-    v_accountant,
-    v_tenant,
-    NULL,
-    'finance:ap_pay'
-  )
-  ON CONFLICT DO NOTHING;
-
   PERFORM pg_catalog.set_config(
     'request.jwt.claim.sub',
     v_accountant::text,
@@ -674,6 +655,59 @@ BEGIN
     )::text,
     TRUE
   );
+
+  BEGIN
+    PERFORM public.attach_supplier_invoice_vat_evidence(
+      v_tolerance_invoice,
+      v_tenant::text || '/supplier-ap-test/forbidden.pdf'
+    );
+    RAISE EXCEPTION 'SUPPLIER AP: Accountant VAT evidence without permission succeeded';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      IF SQLERRM <> 'forbidden' THEN
+        RAISE;
+      END IF;
+  END;
+
+  INSERT INTO public.staff_permissions (
+    user_id,
+    tenant_id,
+    branch_id,
+    permission_key
+  )
+  VALUES (
+    v_accountant,
+    v_tenant,
+    NULL,
+    'finance:ap_pay'
+  )
+  ON CONFLICT DO NOTHING;
+
+  BEGIN
+    PERFORM public.attach_supplier_invoice_vat_evidence(
+      v_tolerance_invoice,
+      (v_tenant + 1)::text || '/supplier-ap-test/wrong-tenant.pdf'
+    );
+    RAISE EXCEPTION 'SUPPLIER AP: cross-tenant VAT evidence path succeeded';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      IF SQLERRM <> 'vat_invoice_attachment_tenant_mismatch' THEN
+        RAISE;
+      END IF;
+  END;
+
+  PERFORM public.attach_supplier_invoice_vat_evidence(
+    v_tolerance_invoice,
+    v_tenant::text || '/supplier-ap-test/accountant.pdf'
+  );
+
+  IF (
+    SELECT invoice.vat_invoice_attachment_path
+    FROM public.supplier_invoices invoice
+    WHERE invoice.id = v_tolerance_invoice
+  ) IS DISTINCT FROM v_tenant::text || '/supplier-ap-test/accountant.pdf' THEN
+    RAISE EXCEPTION 'SUPPLIER AP: Accountant VAT evidence path was not attached';
+  END IF;
 
   BEGIN
     PERFORM public.record_supplier_payment_allocated(

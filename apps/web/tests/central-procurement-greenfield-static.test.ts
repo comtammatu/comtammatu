@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 
@@ -8,6 +8,19 @@ const readWeb = (path: string) =>
 
 const readRoot = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "../../..", path), "utf8");
+
+const readMigrationChain = () => {
+  const migrationDir = resolve(
+    import.meta.dirname,
+    "../../../supabase/migrations",
+  );
+
+  return readdirSync(migrationDir)
+    .filter((file) => /^\d+.*\.sql$/.test(file))
+    .sort()
+    .map((file) => readFileSync(resolve(migrationDir, file), "utf8"))
+    .join("\n");
+};
 
 test("procurement destinations include central_supply and central_kitchen", () => {
   const source = readWeb(
@@ -74,6 +87,26 @@ test("supplier payment action maps vat_invoice_attachment_required", () => {
   assert.match(client, /supplier-invoice-attachments/);
   assert.match(client, /canAttachVatEvidence/);
   assert.match(client, /vatAttachmentOptionalHint/);
+});
+
+test("VAT evidence RPC authorizes Accountant with a delegated invoice permission", () => {
+  const migrationChain = readMigrationChain();
+  const definitions = [
+    ...migrationChain.matchAll(
+      /CREATE OR REPLACE FUNCTION public\.attach_supplier_invoice_vat_evidence\([\s\S]*?\n\$\$;/g,
+    ),
+  ];
+  const effectiveDefinition = definitions.at(-1)?.[0];
+
+  assert.ok(effectiveDefinition);
+  assert.match(
+    effectiveDefinition,
+    /public\.auth_is_owner\(v_uid\)[\s\S]*OR public\.has_position\('accountant'\)/,
+  );
+  assert.match(
+    effectiveDefinition,
+    /public\.has_permission_any\('finance:ap_pay'\)[\s\S]*OR public\.has_permission_any\('procurement:invoice_create'\)/,
+  );
 });
 
 test("getAuthContext uses getSession only (no getUser gate; GRN false-deny)", () => {
