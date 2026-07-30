@@ -51,7 +51,7 @@ test("Wave 1 permission catalog is branch-scoped and delegable with BM backfill"
 
   assert.match(permissions, /FEEDBACK_VIEW: "feedback:view"/);
   assert.match(permissions, /FEEDBACK_MANAGE_QR: "feedback:manage_qr"/);
-  assert.match(permissions, /PERMISSION_KEY_COUNT = 92/);
+  assert.match(permissions, /PERMISSION_KEY_COUNT = 93/);
 
   assert.match(
     migration,

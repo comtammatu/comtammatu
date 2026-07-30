@@ -231,6 +231,22 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+async function isInventoryValuationActive(
+  supabase: SupabaseClient,
+  tenantId: number,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("inventory_valuation_cutovers")
+    .select("status")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (error) {
+    console.error("[finance:valuation-mode] cutover lookup failed", error.code);
+    return false;
+  }
+  return data?.status === "active";
+}
+
 function buildKpis({
   kpis,
   actualFoodCost,
@@ -432,44 +448,52 @@ async function fetchInventoryCashTiedItems({
     return [];
   }
 
-  let query = supabase
-    .from("stock_levels")
-    .select(
-      `
-      branch_id,
-      current_quantity,
-      avg_unit_cost,
-      ingredients ( name, unit_cost )
-    `,
-    )
-    .eq("tenant_id", tenantId)
-    .in("location_id", stockBearingLocations.locationIds);
-
-  if (branchId != null) {
-    query = query.eq("branch_id", branchId);
-  }
-
-  const { data, error } = await query;
-  if (error) return [];
-
-  return (data ?? [])
-    .map((row) => {
-      const ingredient = row.ingredients as {
-        name: string | null;
-        unit_cost: number | string | null;
-      } | null;
-      const unitCost =
-        row.avg_unit_cost != null
-          ? toNumber(row.avg_unit_cost)
-          : toNumber(ingredient?.unit_cost);
+  const valuationActive = await isInventoryValuationActive(supabase, tenantId);
+  let rows: FinanceInventoryItem[];
+  if (valuationActive) {
+    let query = supabase
+      .from("inventory_valuation_accounts")
+      .select("branch_id, location_id, quantity, book_value, ingredients ( name )")
+      .eq("tenant_id", tenantId)
+      .in("location_id", stockBearingLocations.locationIds);
+    if (branchId != null) query = query.eq("branch_id", branchId);
+    const { data, error } = await query;
+    if (error) return [];
+    rows = (data ?? []).map((row) => {
+      const ingredient = row.ingredients as { name: string | null } | null;
       return {
         branchName:
           branchNames.get(row.branch_id) ?? copy.branchFallback(row.branch_id),
         ingredientName: ingredient?.name ?? copy.ingredientFallback,
-        quantity: toNumber(row.current_quantity),
-        value: toNumber(row.current_quantity) * unitCost,
+        quantity: toNumber(row.quantity),
+        value: toNumber(row.book_value),
       };
-    })
+    });
+  } else {
+    let query = supabase
+      .from("stock_levels")
+      .select(
+        "branch_id, location_id, current_quantity, avg_unit_cost, ingredients ( name )",
+      )
+      .eq("tenant_id", tenantId)
+      .in("location_id", stockBearingLocations.locationIds);
+    if (branchId != null) query = query.eq("branch_id", branchId);
+    const { data, error } = await query;
+    if (error) return [];
+    rows = (data ?? []).map((row) => {
+      const ingredient = row.ingredients as { name: string | null } | null;
+      const quantity = toNumber(row.current_quantity);
+      return {
+        branchName:
+          branchNames.get(row.branch_id) ?? copy.branchFallback(row.branch_id),
+        ingredientName: ingredient?.name ?? copy.ingredientFallback,
+        quantity,
+        value: quantity * toNumber(row.avg_unit_cost),
+      };
+    });
+  }
+
+  return rows
     .filter((row) => row.value > 0)
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
@@ -496,6 +520,139 @@ async function fetchActualFoodCostSnapshot({
 }): Promise<ActualFoodCostSnapshot> {
   if (!supabase) return { rows: [], orderCount: 0 };
   const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
+  const valuationActive = await isInventoryValuationActive(supabase, tenantId);
+  if (valuationActive) {
+    const { data, error } = await supabase
+      .from("inventory_value_allocations")
+      .select(
+        `
+        source_origin_id,
+        allocated_value,
+        inventory_valuation_events!inner (
+          event_type,
+          effective_at,
+          terminal_bucket,
+          stock_movements ( branch_id, order_id )
+        )
+      `,
+      )
+      .eq("tenant_id", tenantId)
+      .eq("allocation_bucket", "food_cost")
+      .gte("inventory_valuation_events.effective_at", startIso)
+      .lt("inventory_valuation_events.effective_at", endIso);
+    if (error) return { rows: [], orderCount: 0 };
+
+    const repriceRows = (data ?? []).filter((row) => {
+      const event = Array.isArray(row.inventory_valuation_events)
+        ? row.inventory_valuation_events[0]
+        : row.inventory_valuation_events;
+      return (
+        event?.event_type === "invoice_reprice" ||
+        event?.event_type === "credit_reprice"
+      );
+    });
+    const branchWeights = new Map<
+      number,
+      { total: number; byBranch: Map<number, number> }
+    >();
+    if (repriceRows.length > 0) {
+      const originIds = [
+        ...new Set(
+          repriceRows
+            .map((row) => row.source_origin_id)
+            .filter((id): id is number => id != null),
+        ),
+      ];
+      const { data: lineage, error: lineageError } = await supabase
+        .from("inventory_value_allocations")
+        .select(
+          `
+          source_origin_id,
+          allocated_quantity,
+          inventory_valuation_events!inner (
+            terminal_bucket,
+            stock_movements!inner ( branch_id )
+          )
+        `,
+        )
+        .eq("tenant_id", tenantId)
+        .in("source_origin_id", originIds)
+        .eq("inventory_valuation_events.terminal_bucket", "food_cost");
+      if (lineageError) return { rows: [], orderCount: 0 };
+      for (const allocation of lineage ?? []) {
+        if (allocation.source_origin_id == null) continue;
+        const event = Array.isArray(allocation.inventory_valuation_events)
+          ? allocation.inventory_valuation_events[0]
+          : allocation.inventory_valuation_events;
+        const movement = Array.isArray(event?.stock_movements)
+          ? event.stock_movements[0]
+          : event?.stock_movements;
+        if (movement?.branch_id == null) continue;
+        const weight =
+          branchWeights.get(allocation.source_origin_id) ?? {
+            total: 0,
+            byBranch: new Map<number, number>(),
+          };
+        const quantity = toNumber(allocation.allocated_quantity);
+        weight.total += quantity;
+        weight.byBranch.set(
+          movement.branch_id,
+          (weight.byBranch.get(movement.branch_id) ?? 0) + quantity,
+        );
+        branchWeights.set(allocation.source_origin_id, weight);
+      }
+    }
+
+    const rows = new Map<string, FoodCostRow>();
+    const orderIds = new Set<number>();
+    const addCost = (period: string, rowBranchId: number, value: number) => {
+      if (branchId != null && rowBranchId !== branchId) return;
+      const key = `${period}:${rowBranchId}`;
+      const current =
+        rows.get(key) ??
+        ({
+          period_start: period,
+          branch_id: rowBranchId,
+          item_name: "Actual consumption",
+          revenue: null,
+          ingredient_cost: 0,
+          food_cost_pct: null,
+        } satisfies FoodCostRow);
+      current.ingredient_cost = toNumber(current.ingredient_cost) + value;
+      rows.set(key, current);
+    };
+    for (const allocation of data ?? []) {
+      const event = Array.isArray(allocation.inventory_valuation_events)
+        ? allocation.inventory_valuation_events[0]
+        : allocation.inventory_valuation_events;
+      if (!event?.effective_at) continue;
+      const period = getVNDateString(event.effective_at);
+      const movement = Array.isArray(event.stock_movements)
+        ? event.stock_movements[0]
+        : event.stock_movements;
+      if (
+        event.event_type !== "invoice_reprice" &&
+        event.event_type !== "credit_reprice"
+      ) {
+        if (movement?.branch_id == null) continue;
+        if (movement.order_id != null) orderIds.add(movement.order_id);
+        addCost(period, movement.branch_id, toNumber(allocation.allocated_value));
+        continue;
+      }
+      if (allocation.source_origin_id == null) continue;
+      const weight = branchWeights.get(allocation.source_origin_id);
+      if (!weight || weight.total <= 0) continue;
+      for (const [rowBranchId, quantity] of weight.byBranch) {
+        addCost(
+          period,
+          rowBranchId,
+          (toNumber(allocation.allocated_value) * quantity) / weight.total,
+        );
+      }
+    }
+    return { rows: Array.from(rows.values()), orderCount: orderIds.size };
+  }
+
   let query = supabase
     .from("stock_movements")
     .select("branch_id, order_id, quantity_change, unit_cost, created_at")

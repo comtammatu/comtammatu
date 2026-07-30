@@ -500,30 +500,138 @@ export async function fetchActualFoodCostSummary(params: {
     params.startDate,
     params.endDate,
   );
-
-  let query = monetary.client
-    .from("stock_movements")
-    .select("order_id, quantity_change, unit_cost")
+  const { data: cutover, error: cutoverError } = await monetary.client
+    .from("inventory_valuation_cutovers")
+    .select("status")
     .eq("tenant_id", claims.tenant_id)
-    .eq("type", "consumption")
-    .eq("movement_subtype", "sale_consumption")
-    .gte("created_at", startIso)
-    .lt("created_at", endIso);
-
-  if (params.branchId != null) {
-    query = query.eq("branch_id", params.branchId);
+    .maybeSingle();
+  if (cutoverError) {
+    return { success: false, error: "Không tải được giá vốn món." };
+  }
+  if (cutover?.status !== "active") {
+    let movementQuery = monetary.client
+      .from("stock_movements")
+      .select("order_id, quantity_change, unit_cost")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("type", "consumption")
+      .eq("movement_subtype", "sale_consumption")
+      .gte("created_at", startIso)
+      .lt("created_at", endIso);
+    if (params.branchId != null) {
+      movementQuery = movementQuery.eq("branch_id", params.branchId);
+    }
+    const { data, error } = await movementQuery;
+    if (error) {
+      return { success: false, error: "Không tải được giá vốn món." };
+    }
+    const orderIds = new Set<number>();
+    const total = (data ?? []).reduce((sum, row) => {
+      if (row.order_id != null) orderIds.add(row.order_id);
+      return (
+        sum +
+        Math.abs(Number(row.quantity_change)) * Number(row.unit_cost ?? 0)
+      );
+    }, 0);
+    return { success: true, data: { total, orderCount: orderIds.size } };
   }
 
-  const { data, error } = await query;
-  if (error) {
+  let eventQuery = monetary.client
+    .from("inventory_valuation_events")
+    .select("value_delta, stock_movements!inner ( order_id, branch_id )")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("terminal_bucket", "food_cost")
+    .gte("effective_at", startIso)
+    .lt("effective_at", endIso);
+
+  if (params.branchId != null) {
+    eventQuery = eventQuery.eq("stock_movements.branch_id", params.branchId);
+  }
+
+  const repriceQuery = monetary.client
+    .from("inventory_value_allocations")
+    .select(
+      "source_origin_id, allocated_value, inventory_valuation_events!inner ( effective_at, event_type )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .eq("allocation_bucket", "food_cost")
+    .in("inventory_valuation_events.event_type", [
+      "invoice_reprice",
+      "credit_reprice",
+    ])
+    .gte("inventory_valuation_events.effective_at", startIso)
+    .lt("inventory_valuation_events.effective_at", endIso);
+  const [eventsResult, repriceResult] = await Promise.all([
+    eventQuery,
+    repriceQuery,
+  ]);
+  if (eventsResult.error || repriceResult.error) {
     return { success: false, error: "Không tải được giá vốn món." };
   }
 
   const orderIds = new Set<number>();
-  const total = (data ?? []).reduce((sum, r) => {
-    if (r.order_id != null) orderIds.add(r.order_id);
-    return sum + Math.abs(Number(r.quantity_change)) * Number(r.unit_cost);
+  const issueTotal = (eventsResult.data ?? []).reduce((sum, row) => {
+    const movement = Array.isArray(row.stock_movements)
+      ? row.stock_movements[0]
+      : row.stock_movements;
+    if (movement?.order_id != null) orderIds.add(movement.order_id);
+    return sum + Math.abs(Number(row.value_delta));
   }, 0);
+  const repriceTotal = (repriceResult.data ?? []).reduce(
+    (sum, row) => sum + Number(row.allocated_value),
+    0,
+  );
+  let scopedRepriceTotal = repriceTotal;
+  if (params.branchId != null && (repriceResult.data?.length ?? 0) > 0) {
+    const originIds = [
+      ...new Set(
+        (repriceResult.data ?? []).map((row) => row.source_origin_id),
+      ),
+    ];
+    const { data: lineageRows, error: lineageError } = await monetary.client
+      .from("inventory_value_allocations")
+      .select(
+        "source_origin_id, allocated_quantity, inventory_valuation_events!inner ( terminal_bucket, stock_movements!inner ( branch_id ) )",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .in("source_origin_id", originIds)
+      .eq("inventory_valuation_events.terminal_bucket", "food_cost");
+    if (lineageError) {
+      return { success: false, error: "Không tải được giá vốn món." };
+    }
+    const quantities = new Map<
+      number,
+      { total: number; selectedBranch: number }
+    >();
+    for (const row of lineageRows ?? []) {
+      const originId = Number(row.source_origin_id);
+      const event = Array.isArray(row.inventory_valuation_events)
+        ? row.inventory_valuation_events[0]
+        : row.inventory_valuation_events;
+      const movement = Array.isArray(event?.stock_movements)
+        ? event.stock_movements[0]
+        : event?.stock_movements;
+      const current = quantities.get(originId) ?? {
+        total: 0,
+        selectedBranch: 0,
+      };
+      const quantity = Number(row.allocated_quantity);
+      current.total += quantity;
+      if (movement?.branch_id === params.branchId) {
+        current.selectedBranch += quantity;
+      }
+      quantities.set(originId, current);
+    }
+    scopedRepriceTotal = (repriceResult.data ?? []).reduce((sum, row) => {
+      const quantity = quantities.get(Number(row.source_origin_id));
+      if (!quantity || quantity.total <= 0) return sum;
+      return (
+        sum +
+        (Number(row.allocated_value) * quantity.selectedBranch) /
+          quantity.total
+      );
+    }, 0);
+  }
+  const total = issueTotal + scopedRepriceTotal;
   return { success: true, data: { total, orderCount: orderIds.size } };
 }
 

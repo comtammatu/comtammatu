@@ -92,11 +92,13 @@ import {
   createSupplierInvoice,
   confirmSupplierInvoice,
   fetchSupplierInvoicesPage,
+  getSupplierInvoiceValuationSummary,
   recordSupplierPayment,
   recomputeInvoiceMatching,
   verifyServiceSupplierInvoice,
   type SupplierAdvanceSummary,
   type SupplierInvoiceCursor,
+  type SupplierInvoiceValuationSummary,
 } from "../supplier-invoice-actions";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -1457,6 +1459,32 @@ export function SupplierInvoicesClient({
           (group) => group.primaryInvoice.id === selectedInvoiceId,
         )?.primaryInvoice)
       : null) ?? null;
+  const [valuationSummary, setValuationSummary] =
+    useState<SupplierInvoiceValuationSummary | null>(null);
+  const [valuationSummaryLoading, setValuationSummaryLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setValuationSummary(null);
+    if (
+      selectedInvoice == null ||
+      selectedInvoice.documentStatus !== "confirmed"
+    ) {
+      setValuationSummaryLoading(false);
+      return;
+    }
+    setValuationSummaryLoading(true);
+    void getSupplierInvoiceValuationSummary(selectedInvoice.id).then(
+      (result) => {
+        if (cancelled) return;
+        setValuationSummary(result.success ? (result.data ?? null) : null);
+        setValuationSummaryLoading(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedInvoice?.documentStatus, selectedInvoice?.id]);
   const invoiceFormDefaultValues = useMemo(
     () =>
       invoiceMode === "edit" && selectedInvoice
@@ -1793,7 +1821,13 @@ export function SupplierInvoicesClient({
       return;
     }
     invoiceConfirmIntentKeyRef.current = null;
-    toast.success("Đã xác nhận hóa đơn NCC.");
+    const valuation = result.data?.valuation;
+    if (valuation?.warning) {
+      toast.warning(copy.valuation.warningToast);
+    } else {
+      toast.success(copy.valuation.confirmedToast);
+    }
+    setValuationSummary(valuation ?? null);
     await reloadInvoices(selectedInvoice.id);
   }
 
@@ -2983,6 +3017,68 @@ export function SupplierInvoicesClient({
                         </ItemActions>
                       </Item>
                     ))}
+                  </ItemGroup>
+                ) : null}
+
+                {valuationSummaryLoading ? (
+                  <Item variant="outline" size="sm">
+                    <ItemContent>
+                      <ItemTitle size="heading">
+                        {copy.valuation.title}
+                      </ItemTitle>
+                      <ItemDescription>
+                        {copy.valuation.loading}
+                      </ItemDescription>
+                    </ItemContent>
+                  </Item>
+                ) : valuationSummary ? (
+                  <ItemGroup className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <DetailFact
+                      className="sm:col-span-2"
+                      label={copy.valuation.title}
+                      value={copy.valuation.status[valuationSummary.status]}
+                      valueClassName={
+                        valuationSummary.warning ? "text-warning" : undefined
+                      }
+                    />
+                    <DetailFact
+                      label={copy.valuation.provisionalValue}
+                      value={formatVND(valuationSummary.provisionalValue)}
+                    />
+                    <DetailFact
+                      label={copy.valuation.finalNetValue}
+                      value={formatVND(valuationSummary.finalNetValue)}
+                    />
+                    <DetailFact
+                      label={copy.valuation.inventoryAdjustment}
+                      value={formatVND(valuationSummary.inventoryAdjustment)}
+                    />
+                    <DetailFact
+                      label={copy.valuation.productionInventoryAdjustment}
+                      value={formatVND(
+                        valuationSummary.productionInventoryAdjustment,
+                      )}
+                    />
+                    <DetailFact
+                      label={copy.valuation.foodCostVariance}
+                      value={formatVND(valuationSummary.foodCostVariance)}
+                    />
+                    <DetailFact
+                      label={copy.valuation.wasteVariance}
+                      value={formatVND(valuationSummary.wasteVariance)}
+                    />
+                    <DetailFact
+                      label={copy.valuation.supplierReturnVariance}
+                      value={formatVND(
+                        valuationSummary.supplierReturnVariance,
+                      )}
+                    />
+                    <DetailFact
+                      label={copy.valuation.currentPeriodVariance}
+                      value={formatVND(
+                        valuationSummary.currentPeriodVariance,
+                      )}
+                    />
                   </ItemGroup>
                 ) : null}
 

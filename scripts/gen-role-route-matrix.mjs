@@ -464,6 +464,9 @@ function renderActionGateTable(
       // prefix and falls through to the module-level-only gate note, which is
       // the accurate statement.
       const namespaceCandidates = new Set([...f.moduleKeys, f.id]);
+      if (f.id === "finance") {
+        namespaceCandidates.add("accounting");
+      }
       return `| ${f.id} | ${formatPrefixes(f.matchPrefixes)} | ${formatRoles(f.moduleKeys)} | ${formatKeys(namespaceCandidates)} |`;
     });
   return [header, ...rows].join("\n");
