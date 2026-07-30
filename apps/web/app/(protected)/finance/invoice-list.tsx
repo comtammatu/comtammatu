@@ -17,7 +17,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
 import {
   cancelTaxInvoice,

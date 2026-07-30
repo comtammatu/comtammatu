@@ -214,7 +214,12 @@ test("POS price adjustments rely on the shared numeric input canonical value", (
 
   for (const path of paths) {
     const source = readFileSync(path, "utf8");
-    assert.match(source, /FormattedNumberInput/);
+    assert.match(
+      source,
+      path.includes("service-charge")
+        ? /WholeVndInput/
+        : /FormattedNumberInput/,
+    );
     assert.doesNotMatch(source, /\.replace\(",", "\."\)/);
   }
 });

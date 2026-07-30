@@ -8,9 +8,9 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
+  formatAccountingVND as formatVND,
   formatCount,
   formatPercent,
-  formatVND,
 } from "@comtammatu/shared/format";
 import { PRODUCT_VI } from "@comtammatu/shared/messages";
 import { AppSection, KpiRow } from "@/components/surface";

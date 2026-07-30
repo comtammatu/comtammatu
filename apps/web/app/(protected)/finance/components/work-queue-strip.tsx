@@ -1,7 +1,7 @@
 import {
+  formatAccountingVND as formatVND,
   formatCount,
   formatPercent,
-  formatVND,
 } from "@comtammatu/shared/format";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { AppSection, KpiRow } from "@/components/surface";

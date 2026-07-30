@@ -53,8 +53,8 @@ import {
   BusinessDateField,
   Combobox,
   FormDialog,
-  FormattedNumberInput,
   MoneyVndField,
+  MoneyVndInput,
   SelectField,
   TextareaField,
   TextField,
@@ -126,8 +126,16 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 
-import { formatPercent } from "@comtammatu/shared/format";
-import { formatVND } from "@lib/inventory/format";
+import {
+  formatAccountingVND as formatVND,
+  formatPercent,
+} from "@comtammatu/shared/format";
+import {
+  addMoney,
+  hasMaximumScale,
+  minorUnitsToCanonical,
+  parseMoneyToMinorUnits,
+} from "@comtammatu/shared/money";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
@@ -136,6 +144,13 @@ import {
   formatVNDate,
   getVNDateString,
 } from "@comtammatu/shared/time";
+import {
+  calculateSupplierInvoiceLineTotal,
+  resolveSupplierInvoiceVatAmount,
+  summarizeSupplierInvoiceMoney,
+  type SupplierInvoiceVatMode,
+  type SupplierInvoiceVatRate,
+} from "../_lib/supplier-invoice-money";
 type SupplierOption = {
   id: number;
   name: string;
@@ -190,11 +205,54 @@ const PAYMENT_FILTER_OPTIONS = SUPPLIER_INVOICE_PAYMENT_STATUSES.map(
 const optionalMoneySchema = z.string().refine(
   (value) => {
     if (!value.trim()) return true;
-    const amount = Number(value);
-    return Number.isFinite(amount) && amount >= 0;
+    return (
+      /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/.test(value) &&
+      hasMaximumScale(value, 2) &&
+      parseMoneyToMinorUnits(value) >= 0n
+    );
   },
   { error: messages.inventory.supplierInvoices.invalidAmount },
 );
+
+const positiveMoneySchema = optionalMoneySchema.refine(
+  (value) => {
+    try {
+      return !!value && parseMoneyToMinorUnits(value) > 0n;
+    } catch {
+      return false;
+    }
+  },
+  { error: FORM_VI.required },
+);
+
+function canonicalMoney(value: string | number): string {
+  return minorUnitsToCanonical(parseMoneyToMinorUnits(String(value || 0)));
+}
+
+function minimumMinorUnits(values: readonly bigint[]): bigint {
+  return values.reduce(
+    (minimum, value) => (value < minimum ? value : minimum),
+    values[0] ?? 0n,
+  );
+}
+
+function allocateSupplierMoney(
+  requestedAmount: string,
+  invoices: readonly SupplierInvoiceRow[],
+) {
+  let remaining = parseMoneyToMinorUnits(canonicalMoney(requestedAmount));
+  return invoices.flatMap((invoice) => {
+    if (remaining <= 0n) return [];
+    const outstanding = parseMoneyToMinorUnits(
+      canonicalMoney(getSupplierInvoiceOutstandingAmount(invoice)),
+    );
+    const allocated = minimumMinorUnits([remaining, outstanding]);
+    remaining -= allocated;
+    return allocated > 0n
+      ? [{ invoiceId: invoice.id, amount: minorUnitsToCanonical(allocated) }]
+      : [];
+  });
+}
 
 const supplierInvoiceSchema = z
   .object({
@@ -215,8 +273,17 @@ const supplierInvoiceSchema = z
           unitLabel: z.string(),
           unitPrice: optionalMoneySchema,
           lineDiscount: optionalMoneySchema,
-          vatRate: z.number().refine((value) => [0, 5, 8, 10].includes(value)),
+          vatRate: z.preprocess(
+            Number,
+            z.union([
+              z.literal(0),
+              z.literal(5),
+              z.literal(8),
+              z.literal(10),
+            ]),
+          ),
           vatAmount: optionalMoneySchema,
+          vatMode: z.enum(["auto", "manual"]),
           allocations: z.array(
             z.object({
               grnId: z.number().int().positive(),
@@ -245,11 +312,18 @@ const supplierInvoiceSchema = z
           path: ["lines", index],
         });
       }
-      if (!(Number(line.unitPrice) >= 0)) {
+      if (!line.unitPrice) {
         ctx.addIssue({
           code: "custom",
           message: FORM_VI.required,
           path: ["lines", index, "unitPrice"],
+        });
+      }
+      if (!line.vatAmount) {
+        ctx.addIssue({
+          code: "custom",
+          message: FORM_VI.required,
+          path: ["lines", index, "vatAmount"],
         });
       }
     });
@@ -258,9 +332,7 @@ const supplierInvoiceSchema = z
 type SupplierInvoiceFormValues = z.infer<typeof supplierInvoiceSchema>;
 
 const supplierPaymentSchema = z.object({
-  amount: z.string().refine((value) => Number(value) > 0, {
-    error: FORM_VI.required,
-  }),
+  amount: positiveMoneySchema,
   paymentMethod: z.enum(["cash", "bank_transfer"]),
   referenceNote: z.string().trim().optional(),
 });
@@ -269,18 +341,14 @@ type SupplierPaymentFormValues = z.infer<typeof supplierPaymentSchema>;
 
 const supplierAdvanceSchema = z.object({
   paymentId: z.string().min(1, { error: FORM_VI.required }),
-  amount: z.string().refine((value) => Number(value) > 0, {
-    error: FORM_VI.required,
-  }),
+  amount: positiveMoneySchema,
 });
 
 type SupplierAdvanceFormValues = z.infer<typeof supplierAdvanceSchema>;
 
 const supplierCreditSchema = z.object({
   creditNumber: z.string().trim().min(1, FORM_VI.required),
-  amount: z.string().refine((value) => Number(value) > 0, {
-    error: FORM_VI.required,
-  }),
+  amount: positiveMoneySchema,
   notes: z
     .string()
     .trim()
@@ -326,10 +394,7 @@ function editSupplierInvoiceDefaultValues(
     supplierId: String(invoice.supplierId),
     invoiceNumber: invoice.code,
     invoiceDate: invoice.invoiceDate ?? getVNDateString(),
-    documentDiscount:
-      invoice.documentDiscountAmount > 0
-        ? String(invoice.documentDiscountAmount)
-        : "",
+    documentDiscount: canonicalMoney(invoice.documentDiscountAmount),
     lines: invoice.invoiceLines.map((line) => ({
       key:
         line.ingredientId != null && line.unitId != null
@@ -340,10 +405,11 @@ function editSupplierInvoiceDefaultValues(
       quantity: line.quantity,
       unitId: line.unitId,
       unitLabel: line.unitLabel,
-      unitPrice: String(line.unitPrice),
-      lineDiscount: line.lineDiscount > 0 ? String(line.lineDiscount) : "",
-      vatRate: line.vatRate,
-      vatAmount: line.vatAmount > 0 ? String(line.vatAmount) : "",
+      unitPrice: canonicalMoney(line.unitPrice),
+      lineDiscount: canonicalMoney(line.lineDiscount),
+      vatRate: line.vatRate as SupplierInvoiceVatRate,
+      vatAmount: canonicalMoney(line.vatAmount),
+      vatMode: "manual" as SupplierInvoiceVatMode,
       allocations: line.allocations,
     })),
   };
@@ -351,11 +417,12 @@ function editSupplierInvoiceDefaultValues(
 
 function createSupplierPaymentDefaultValues(
   invoice?: SupplierInvoiceRow | null,
-  outstanding?: number,
+  outstanding?: string,
 ): SupplierPaymentFormValues {
   return {
     amount: invoice
-      ? String(outstanding ?? getSupplierInvoiceOutstandingAmount(invoice))
+      ? (outstanding ??
+        canonicalMoney(getSupplierInvoiceOutstandingAmount(invoice)))
       : "",
     paymentMethod: "bank_transfer",
     referenceNote: "",
@@ -462,22 +529,26 @@ function SupplierInvoiceCreateFields({
   );
   const selectedGrn = selectedGrns[0] ?? null;
   const invoiceLines = formValues.lines ?? [];
-  const subtotal = invoiceLines.reduce(
-    (sum, line) =>
-      sum +
-      Math.max(
-        line.quantity * Number(line.unitPrice || 0) -
-          Number(line.lineDiscount || 0),
-        0,
+  const calculatedLines = invoiceLines.map((line) => {
+    const lineTotal = calculateSupplierInvoiceLineTotal(
+      String(line.quantity),
+      line.unitPrice,
+      line.lineDiscount,
+    );
+    return {
+      lineTotal,
+      vatAmount: resolveSupplierInvoiceVatAmount(
+        lineTotal,
+        line.vatRate as SupplierInvoiceVatRate,
+        line.vatMode,
+        line.vatAmount,
       ),
-    0,
+    };
+  });
+  const { subtotal, vatAmount, totalAmount } = summarizeSupplierInvoiceMoney(
+    calculatedLines,
+    formValues.documentDiscount,
   );
-  const vatAmount = invoiceLines.reduce(
-    (sum, line) => sum + Number(line.vatAmount || 0),
-    0,
-  );
-  const totalAmount =
-    subtotal - Number(formValues.documentDiscount || 0) + vatAmount;
 
   useEffect(() => {
     if (invoiceKind !== "service") return;
@@ -502,7 +573,8 @@ function SupplierInvoiceCreateFields({
           unitPrice: "",
           lineDiscount: "",
           vatRate: 8,
-          vatAmount: "",
+          vatAmount: "0.00",
+          vatMode: "auto",
           allocations: [],
         },
       ],
@@ -553,7 +625,8 @@ function SupplierInvoiceCreateFields({
             unitPrice: preserved?.unitPrice ?? "",
             lineDiscount: preserved?.lineDiscount ?? "",
             vatRate: preserved?.vatRate ?? 8,
-            vatAmount: preserved?.vatAmount ?? "",
+            vatAmount: preserved?.vatAmount ?? "0.00",
+            vatMode: preserved?.vatMode ?? "auto",
             allocations: [allocation],
           });
         }
@@ -719,11 +792,7 @@ function SupplierInvoiceCreateFields({
           </NoteCallout>
         ) : (
           invoiceLines.map((line, index) => {
-            const lineTotal = Math.max(
-              line.quantity * Number(line.unitPrice || 0) -
-                Number(line.lineDiscount || 0),
-              0,
-            );
+            const lineTotal = calculatedLines[index]?.lineTotal ?? "0.00";
             return (
               <Item
                 key={line.key}
@@ -754,36 +823,57 @@ function SupplierInvoiceCreateFields({
                 <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <label className="flex flex-col gap-2 text-sm font-medium">
                     {copy.unitPriceLabel}
-                    <FormattedNumberInput
+                    <MoneyVndInput
                       controlSize="field"
                       value={line.unitPrice}
                       onValueChange={(value) => {
-                        const rate = line.vatRate;
-                        const nextTotal = Math.max(
-                          line.quantity * Number(value || 0) -
-                            Number(line.lineDiscount || 0),
-                          0,
+                        const nextTotal = calculateSupplierInvoiceLineTotal(
+                          String(line.quantity),
+                          value,
+                          line.lineDiscount,
                         );
                         patchInvoiceLine(index, {
                           unitPrice: value,
-                          vatAmount: String(
-                            Math.round(nextTotal * rate) / 100,
-                          ),
+                          ...(line.vatMode === "auto"
+                            ? {
+                                vatAmount: resolveSupplierInvoiceVatAmount(
+                                  nextTotal,
+                                  line.vatRate as SupplierInvoiceVatRate,
+                                  "auto",
+                                  "",
+                                ),
+                              }
+                            : {}),
                         });
                       }}
-                      maxFractionDigits={0}
                       aria-label={copy.unitPriceAria(line.description)}
                     />
                   </label>
                   <label className="flex flex-col gap-2 text-sm font-medium">
                     {copy.lineDiscountLabel}
-                    <FormattedNumberInput
+                    <MoneyVndInput
                       controlSize="field"
                       value={line.lineDiscount}
-                      onValueChange={(value) =>
-                        patchInvoiceLine(index, { lineDiscount: value })
-                      }
-                      maxFractionDigits={0}
+                      onValueChange={(value) => {
+                        const nextTotal = calculateSupplierInvoiceLineTotal(
+                          String(line.quantity),
+                          line.unitPrice,
+                          value,
+                        );
+                        patchInvoiceLine(index, {
+                          lineDiscount: value,
+                          ...(line.vatMode === "auto"
+                            ? {
+                                vatAmount: resolveSupplierInvoiceVatAmount(
+                                  nextTotal,
+                                  line.vatRate as SupplierInvoiceVatRate,
+                                  "auto",
+                                  "",
+                                ),
+                              }
+                            : {}),
+                        });
+                      }}
                       aria-label={copy.lineDiscountAria(line.description)}
                     />
                   </label>
@@ -792,12 +882,19 @@ function SupplierInvoiceCreateFields({
                     <Select
                       value={String(line.vatRate)}
                       onValueChange={(value) => {
-                        const rate = Number(value);
+                        const rate = Number(value) as SupplierInvoiceVatRate;
                         patchInvoiceLine(index, {
                           vatRate: rate,
-                          vatAmount: String(
-                            Math.round(lineTotal * rate) / 100,
-                          ),
+                          ...(line.vatMode === "auto"
+                            ? {
+                                vatAmount: resolveSupplierInvoiceVatAmount(
+                                  lineTotal,
+                                  rate,
+                                  "auto",
+                                  "",
+                                ),
+                              }
+                            : {}),
                         });
                       }}
                     >
@@ -815,15 +912,39 @@ function SupplierInvoiceCreateFields({
                   </label>
                   <label className="flex flex-col gap-2 text-sm font-medium">
                     {copy.vatAmountLabel}
-                    <FormattedNumberInput
-                      controlSize="field"
-                      value={line.vatAmount}
-                      onValueChange={(value) =>
-                        patchInvoiceLine(index, { vatAmount: value })
-                      }
-                      maxFractionDigits={0}
-                      aria-label={copy.vatAmountAria(line.description)}
-                    />
+                    <div className="flex items-center gap-2">
+                      <MoneyVndInput
+                        controlSize="field"
+                        value={line.vatAmount}
+                        onValueChange={(value) =>
+                          patchInvoiceLine(index, {
+                            vatAmount: value,
+                            vatMode: "manual",
+                          })
+                        }
+                        aria-label={copy.vatAmountAria(line.description)}
+                      />
+                      {line.vatMode === "manual" ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            patchInvoiceLine(index, {
+                              vatMode: "auto",
+                              vatAmount: resolveSupplierInvoiceVatAmount(
+                                lineTotal,
+                                line.vatRate as SupplierInvoiceVatRate,
+                                "auto",
+                                "",
+                              ),
+                            })
+                          }
+                        >
+                          {copy.recalculateVat}
+                        </Button>
+                      ) : null}
+                    </div>
                   </label>
                 </div>
               </Item>
@@ -932,11 +1053,19 @@ function SupplierPaymentFields({
     SupplierPaymentFormValues
   >;
   copy: typeof messages.inventory.supplierInvoices;
-  outstanding: number;
+  outstanding: string;
 }) {
-  const amount = Number(form.watch("amount") || 0);
-  const allocatedAmount = Math.min(amount, outstanding);
-  const advanceAmount = Math.max(amount - outstanding, 0);
+  const amount = canonicalMoney(form.watch("amount"));
+  const amountMinorUnits = parseMoneyToMinorUnits(amount);
+  const outstandingMinorUnits = parseMoneyToMinorUnits(outstanding);
+  const allocatedAmount = minorUnitsToCanonical(
+    minimumMinorUnits([amountMinorUnits, outstandingMinorUnits]),
+  );
+  const advanceAmount = minorUnitsToCanonical(
+    amountMinorUnits > outstandingMinorUnits
+      ? amountMinorUnits - outstandingMinorUnits
+      : 0n,
+  );
   const methodOptions = useMemo(
     () => [
       { value: "bank_transfer", label: copy.paymentMethods.bank_transfer },
@@ -957,7 +1086,11 @@ function SupplierPaymentFields({
         placeholder="0"
         required
       />
-      <NoteCallout tone={advanceAmount > 0 ? "warning" : "muted"}>
+      <NoteCallout
+        tone={
+          parseMoneyToMinorUnits(advanceAmount) > 0n ? "warning" : "muted"
+        }
+      >
         <div className="flex flex-col gap-1 text-sm">
           <span>{copy.paymentTotalPreview(formatVND(amount))}</span>
           <span>
@@ -996,13 +1129,21 @@ function SupplierAdvanceFields({
     SupplierAdvanceFormValues
   >;
   advances: SupplierAdvanceSummary[];
-  outstanding: number;
+  outstanding: string;
   copy: typeof messages.inventory.supplierInvoices;
 }) {
   const paymentId = Number(form.watch("paymentId") || 0);
   const selected = advances.find((advance) => advance.paymentId === paymentId);
-  const amount = Number(form.watch("amount") || 0);
-  const allocated = Math.min(amount, selected?.advanceAmount ?? 0, outstanding);
+  const amount = parseMoneyToMinorUnits(
+    canonicalMoney(form.watch("amount")),
+  );
+  const allocated = minorUnitsToCanonical(
+    minimumMinorUnits([
+      amount,
+      parseMoneyToMinorUnits(canonicalMoney(selected?.advanceAmount ?? 0)),
+      parseMoneyToMinorUnits(outstanding),
+    ]),
+  );
 
   return (
     <>
@@ -1355,9 +1496,10 @@ export function SupplierInvoicesClient({
       ),
     [invoicesInSelectedGroup],
   );
-  const paymentOutstandingAmount = payableInvoicesInSelectedGroup.reduce(
-    (sum, invoice) => sum + getSupplierInvoiceOutstandingAmount(invoice),
-    0,
+  const paymentOutstandingAmount = addMoney(
+    payableInvoicesInSelectedGroup.map((invoice) =>
+      canonicalMoney(getSupplierInvoiceOutstandingAmount(invoice)),
+    ),
   );
   const paymentDefaultValues = useMemo(
     () =>
@@ -1376,15 +1518,17 @@ export function SupplierInvoicesClient({
           ),
     [advances, selectedInvoice],
   );
-  const selectedSupplierAdvanceAmount = selectedSupplierAdvances.reduce(
-    (sum, advance) => sum + advance.advanceAmount,
-    0,
+  const selectedSupplierAdvanceAmount = addMoney(
+    selectedSupplierAdvances.map((advance) => advance.advanceAmount),
   );
   const advanceDefaultValues = useMemo<SupplierAdvanceFormValues>(
     () => ({
       paymentId: String(selectedSupplierAdvances[0]?.paymentId ?? ""),
-      amount: String(
-        Math.min(selectedSupplierAdvanceAmount, paymentOutstandingAmount),
+      amount: minorUnitsToCanonical(
+        minimumMinorUnits([
+          parseMoneyToMinorUnits(selectedSupplierAdvanceAmount),
+          parseMoneyToMinorUnits(paymentOutstandingAmount),
+        ]),
       ),
     }),
     [
@@ -1396,10 +1540,9 @@ export function SupplierInvoicesClient({
   const creditDefaultValues = useMemo(
     () => ({
       creditNumber: "",
-      amount: String(
-        invoicesInSelectedGroup.reduce(
-          (sum, invoice) => sum + getSupplierInvoiceOutstandingAmount(invoice),
-          0,
+      amount: addMoney(
+        invoicesInSelectedGroup.map((invoice) =>
+          canonicalMoney(getSupplierInvoiceOutstandingAmount(invoice)),
         ),
       ),
       notes: "",
@@ -1575,27 +1718,38 @@ export function SupplierInvoicesClient({
       supplierId: resolvedSupplierId,
       invoiceNumber: values.invoiceNumber.trim(),
       invoiceDate: values.invoiceDate,
-      documentDiscountAmount: Number(values.documentDiscount || 0),
+      documentDiscountAmount: canonicalMoney(values.documentDiscount),
       idempotencyKey: invoiceSaveIntentKeyRef.current,
       lines: values.lines.map((line) => {
-        const unitPrice = Number(line.unitPrice || 0);
-        const lineDiscount = Number(line.lineDiscount || 0);
-        const lineTotal = Math.max(
-          line.quantity * unitPrice - lineDiscount,
-          0,
+        const quantity = String(line.quantity);
+        const unitPrice = canonicalMoney(line.unitPrice);
+        const lineDiscount = canonicalMoney(line.lineDiscount);
+        const lineTotal = calculateSupplierInvoiceLineTotal(
+          quantity,
+          unitPrice,
+          lineDiscount,
+        );
+        const vatAmount = resolveSupplierInvoiceVatAmount(
+          lineTotal,
+          line.vatRate as SupplierInvoiceVatRate,
+          line.vatMode,
+          line.vatAmount,
         );
         return {
           lineKey: line.key,
           ingredientId: line.ingredientId,
           description: line.description,
-          quantity: line.quantity,
+          quantity,
           unitId: line.unitId,
           unitPrice,
           lineDiscount,
           vatRate: line.vatRate,
-          vatAmount: Number(line.vatAmount || 0),
+          vatAmount,
           lineTotal,
-          allocations: line.allocations,
+          allocations: line.allocations.map((allocation) => ({
+            ...allocation,
+            quantity: String(allocation.quantity),
+          })),
         };
       }),
     });
@@ -1652,17 +1806,11 @@ export function SupplierInvoicesClient({
       return { success: false, error: copy.paymentBlockedNoVatAttachment };
     }
 
-    const amount = Number(values.amount || 0);
-    let remaining = amount;
-    const allocations = payableInvoicesInSelectedGroup.flatMap((invoice) => {
-      if (remaining <= 0) return [];
-      const allocated = Math.min(
-        remaining,
-        getSupplierInvoiceOutstandingAmount(invoice),
-      );
-      remaining -= allocated;
-      return [{ invoiceId: invoice.id, amount: allocated }];
-    });
+    const amount = canonicalMoney(values.amount);
+    const allocations = allocateSupplierMoney(
+      amount,
+      payableInvoicesInSelectedGroup,
+    );
     if (allocations.length === 0) {
       return { success: false, error: copy.noPaymentInvoice };
     }
@@ -1685,7 +1833,10 @@ export function SupplierInvoicesClient({
       });
 
       if (res.success) {
-        if ((res.data?.advanceAmount ?? 0) > 0) {
+        if (
+          res.data?.advanceAmount &&
+          parseMoneyToMinorUnits(res.data.advanceAmount) > 0n
+        ) {
           toast.message(
             copy.paymentAdvanceRecorded(formatVND(res.data!.advanceAmount)),
           );
@@ -1703,23 +1854,18 @@ export function SupplierInvoicesClient({
     if (!selectedInvoice) {
       return { success: false, error: "Không tìm thấy hóa đơn NCC." };
     }
-    let remaining = Number(values.amount);
-    const allocations = invoicesInSelectedGroup.flatMap((invoice) => {
-      if (remaining <= 0) return [];
-      const amount = Math.min(
-        remaining,
-        getSupplierInvoiceOutstandingAmount(invoice),
-      );
-      remaining -= amount;
-      return amount > 0 ? [{ invoiceId: invoice.id, amount }] : [];
-    });
+    const amount = canonicalMoney(values.amount);
+    const allocations = allocateSupplierMoney(
+      amount,
+      invoicesInSelectedGroup,
+    );
     if (allocations.length === 0) {
       return { success: false, error: "Không còn công nợ để phân bổ." };
     }
     const result = await createSupplierCreditAllocated({
       supplierId: selectedInvoice.supplierId,
       creditNumber: values.creditNumber,
-      amount: Number(values.amount),
+      amount,
       notes: values.notes,
       allocations,
     });
@@ -1737,21 +1883,18 @@ export function SupplierInvoicesClient({
     if (!selectedAdvance) {
       return { success: false, error: copy.advanceNotFound };
     }
-    const requestedAmount = Number(values.amount);
-    if (requestedAmount > selectedAdvance.advanceAmount) {
+    const requestedAmount = canonicalMoney(values.amount);
+    if (
+      parseMoneyToMinorUnits(requestedAmount) >
+      parseMoneyToMinorUnits(canonicalMoney(selectedAdvance.advanceAmount))
+    ) {
       return { success: false, error: copy.advanceExceedsBalance };
     }
 
-    let remaining = requestedAmount;
-    const allocations = payableInvoicesInSelectedGroup.flatMap((invoice) => {
-      if (remaining <= 0) return [];
-      const amount = Math.min(
-        remaining,
-        getSupplierInvoiceOutstandingAmount(invoice),
-      );
-      remaining -= amount;
-      return amount > 0 ? [{ invoiceId: invoice.id, amount }] : [];
-    });
+    const allocations = allocateSupplierMoney(
+      requestedAmount,
+      payableInvoicesInSelectedGroup,
+    );
     if (allocations.length === 0) {
       return { success: false, error: copy.noPaymentInvoice };
     }
@@ -2573,7 +2716,7 @@ export function SupplierInvoicesClient({
                   </ItemContent>
                 </Item>
 
-                {selectedSupplierAdvanceAmount > 0 ? (
+                {parseMoneyToMinorUnits(selectedSupplierAdvanceAmount) > 0n ? (
                   <Item variant="outline" size="sm" className="items-start">
                     <ItemContent className="gap-1">
                       <ItemDescription className="line-clamp-none">
@@ -2922,8 +3065,8 @@ export function SupplierInvoicesClient({
                     </Button>
                   ) : null}
                   {canPaySupplier &&
-                  selectedSupplierAdvanceAmount > 0 &&
-                  paymentOutstandingAmount > 0 ? (
+                  parseMoneyToMinorUnits(selectedSupplierAdvanceAmount) > 0n &&
+                  parseMoneyToMinorUnits(paymentOutstandingAmount) > 0n ? (
                     <Button
                       type="button"
                       size="touch"

@@ -24,6 +24,7 @@ const serviceChargeInputSchema = z.object({
   orderId: orderIdSchema,
   amount: z.coerce
     .number({ error: "Số tiền phụ phí không hợp lệ" })
+    .int({ error: "Số tiền phụ phí phải là đồng nguyên" })
     .min(0, { error: "Phụ phí không được âm" })
     .max(50000000, { error: "Phụ phí vượt ngưỡng hợp lệ" }),
   note: z

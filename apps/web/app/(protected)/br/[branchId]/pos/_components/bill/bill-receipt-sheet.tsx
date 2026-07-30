@@ -41,7 +41,7 @@ import {
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
 import { AppSection } from "@/components/surface";
 import { AppDialog } from "@/components/form/form-dialog";
-import { FormattedNumberInput } from "@/components/form";
+import { WholeVndInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import { fetchOrderForBill } from "../../actions";
 import type { SessionOrder } from "../../order-history";
@@ -1151,11 +1151,10 @@ export function BillReceipt({
                       <InputGroupAddon>
                         {messages.pos.payment.cashReceived}
                       </InputGroupAddon>
-                      <FormattedNumberInput
+                      <WholeVndInput
                         id="cash-received"
                         data-testid="bill-cash-received"
                         data-slot="input-group-control"
-                        maxFractionDigits={0}
                         value={cashInput}
                         onValueChange={setCashInput}
                         onFocus={(event) => event.currentTarget.select()}

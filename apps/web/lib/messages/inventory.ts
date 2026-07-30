@@ -1567,6 +1567,7 @@ export const inventory = {
     lineDiscountAria: (description: string) => `Chiết khấu ${description}`,
     taxRateLabel: "Thuế suất",
     vatAmountAria: (description: string) => `Thuế GTGT ${description}`,
+    recalculateVat: "Tính lại theo thuế suất",
     beforeVat: "Trước thuế GTGT",
     invoiceLineMeta: (
       quantity: string,

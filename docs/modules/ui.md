@@ -580,8 +580,12 @@ Contract. Không thêm theme context, toggle hoặc browser-storage key thứ ha
 App-local form helpers sống tại `apps/web/app/components/form/`. Dùng cho mọi dialog/form mới:
 
 - `TextField` — text Input + RHF useController
-- `NumberField` — `FormattedNumberInput` (VND format) + RHF
-- `MoneyVndInput` / `MoneyVndField` — VND integer amount, grouped display, raw numeric-string submit
+- `NumberField` — `FormattedNumberInput` tổng quát + RHF; không dùng thay cho
+  semantic adapter khi trường đã thuộc miền tiền hoặc số lượng
+- `MoneyVndInput` / `MoneyVndField` — tiền kế toán tối đa 2 chữ số thập phân,
+  hiển thị nhóm theo `vi-VN`, submit chuỗi canonical dùng dấu `.`
+- `WholeVndInput` / `WholeVndField` — tiền nguyên đồng cho menu/POS, tiền mặt,
+  VietQR và kiểm đếm ca; không chấp nhận phần thập phân
 - `QuantityInput` / `QuantityField` — inventory quantity, default 3 decimal places, grouped display
 - `BusinessDateField` — RHF date picker, displays `dd/mm/yyyy`, stores `yyyy-mm-dd`, optional branch timezone note
 - `SelectField` — Select voi `options={[{value, label}]}`

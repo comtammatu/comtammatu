@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
 import { Landmark as IconBank, Wallet as IconWallet } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
+import { parseMoneyToMinorUnits } from "@comtammatu/shared/money";
 import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -29,25 +30,32 @@ import {
 import type { CashSummary } from "../_lib/cash-cockpit";
 
 const copy = messages.finance;
-const MAX_FUND_AMOUNT = 100_000_000_000;
+const FUND_AMOUNT = /^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
+const SIGNED_FUND_AMOUNT = /^-?(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
+const MAX_FUND_MINOR_UNITS = 10_000_000_000_000n;
 const requiredFundAmount = z
   .string()
   .trim()
   .min(1, copy.cash.openingAmountRequired)
-  .refine((value) => {
-    const amount = Number(value);
-    return Number.isFinite(amount) && amount >= 0 && amount <= MAX_FUND_AMOUNT;
-  }, copy.cash.openingAmountInvalid);
+  .refine(
+    (value) =>
+      FUND_AMOUNT.test(value) &&
+      parseMoneyToMinorUnits(value) <= MAX_FUND_MINOR_UNITS,
+    copy.cash.openingAmountInvalid,
+  );
 const optionalFundDelta = z
   .string()
   .trim()
   .refine((value) => {
     if (value === "") return true;
-    const amount = Number(value);
     return (
-      Number.isFinite(amount) &&
-      amount >= -MAX_FUND_AMOUNT &&
-      amount <= MAX_FUND_AMOUNT
+      SIGNED_FUND_AMOUNT.test(value) &&
+      (() => {
+        const amount = parseMoneyToMinorUnits(value);
+        return (
+          amount >= -MAX_FUND_MINOR_UNITS && amount <= MAX_FUND_MINOR_UNITS
+        );
+      })()
     );
   }, copy.cash.adjustmentAmountInvalid);
 
@@ -81,7 +89,8 @@ const adjustmentSchema = z
   })
   .refine(
     ({ cashDelta, bankDelta }) =>
-      Number(cashDelta || 0) !== 0 || Number(bankDelta || 0) !== 0,
+      parseMoneyToMinorUnits(cashDelta || "0") !== 0n ||
+      parseMoneyToMinorUnits(bankDelta || "0") !== 0n,
     {
       message: copy.cash.adjustmentZero,
       path: ["cashDelta"],

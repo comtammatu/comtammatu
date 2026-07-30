@@ -5,6 +5,12 @@ export {
   type NumericInputOptions,
   type NumericInputParseResult,
 } from "./numeric-input";
+import {
+  minorUnitsToCanonical,
+  parseMoneyToMinorUnits,
+} from "../money/index";
+
+export type DecimalLike = string | number;
 
 /**
  * Format a number as Vietnamese Dong (VND).
@@ -15,10 +21,40 @@ export {
  *   formatVND(0)         → "0đ"
  *   formatVND(-30000)    → "-30.000đ"
  */
-export function formatVND(amount: number): string {
-  if (!Number.isFinite(amount)) return "0đ";
-  const rounded = Math.round(amount);
-  return `${formatDecimal(rounded, 0)}đ`;
+export function formatVND(amount: DecimalLike): string {
+  const canonical = toCanonicalMoney(amount);
+  if (canonical == null) return "0đ";
+  const [whole, fraction] = canonical.split(".");
+  const trimmedFraction = fraction?.replace(/0+$/, "");
+  return `${formatCanonicalDecimal(
+    trimmedFraction ? `${whole}.${trimmedFraction}` : (whole ?? "0"),
+  )}đ`;
+}
+
+export function formatAccountingVND(amount: DecimalLike): string {
+  const canonical = toCanonicalMoney(amount);
+  if (canonical == null) return "0,00đ";
+  return `${formatCanonicalDecimal(canonical, true)}đ`;
+}
+
+function toCanonicalMoney(value: DecimalLike): string | null {
+  if (typeof value === "number" && !Number.isFinite(value)) return null;
+
+  try {
+    return minorUnitsToCanonical(parseMoneyToMinorUnits(String(value)));
+  } catch {
+    return null;
+  }
+}
+
+function formatCanonicalDecimal(value: string, fixedFraction = false): string {
+  const sign = value.startsWith("-") ? "-" : "";
+  const unsigned = sign ? value.slice(1) : value;
+  const [whole = "0", fraction] = unsigned.split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (fraction == null) return `${sign}${grouped}`;
+  const displayFraction = fixedFraction ? fraction.padEnd(2, "0") : fraction;
+  return `${sign}${grouped},${displayFraction}`;
 }
 
 export function formatDecimalInputValue(

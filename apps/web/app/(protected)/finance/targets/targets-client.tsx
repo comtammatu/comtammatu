@@ -16,7 +16,10 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { formatPercent, formatVND } from "@comtammatu/shared/format";
+import {
+  formatAccountingVND as formatVND,
+  formatPercent,
+} from "@comtammatu/shared/format";
 import {
   AppDialog,
   FormattedNumberInput,
@@ -87,7 +90,7 @@ export function RevenueTargetsClient({
     initialRows.map((row) => ({
       ...row,
       draft:
-        row.targetAmount == null ? "" : String(Math.round(row.targetAmount)),
+        row.targetAmount == null ? "" : String(row.targetAmount),
       tierDrafts: row.rewardTiers.map((tier, index) =>
         toEditableRewardTier(tier, `${row.branchId}-${index}`),
       ),
@@ -281,7 +284,7 @@ export function RevenueTargetsClient({
           return {
             ...row,
             targetAmount: saved.target_amount,
-            draft: String(Math.round(saved.target_amount)),
+            draft: String(saved.target_amount),
             rewardTiers: saved.reward_tiers.map((tier) => ({
               thresholdPct: tier.threshold_pct,
               rewardType: tier.reward_type,

@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { formatPercent, formatVND } from "@comtammatu/shared/format";
+import {
+  formatAccountingVND as formatVND,
+  formatPercent,
+} from "@comtammatu/shared/format";
 import { Progress } from "@comtammatu/ui/components/progress";
 import {
   Item,

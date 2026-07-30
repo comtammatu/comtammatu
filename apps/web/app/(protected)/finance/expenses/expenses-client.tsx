@@ -15,9 +15,15 @@ import {
 } from "lucide-react";
 import {
   formatCount,
+  formatAccountingVND,
   formatPercent,
-  formatVND,
 } from "@comtammatu/shared/format";
+import {
+  addMoney,
+  hasMaximumScale,
+  minorUnitsToCanonical,
+  parseMoneyToMinorUnits,
+} from "@comtammatu/shared/money";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
@@ -68,6 +74,7 @@ import {
   type ExpensePaymentMethod,
 } from "../_lib/expense-categories";
 import type { FinanceParams } from "../_lib/finance-params";
+import { resolveExpenseVatAmount } from "../_lib/expense-vat";
 import {
   EXPENSE_LIST_STATE_PARAM,
   type ExpenseListStateFilter,
@@ -92,8 +99,11 @@ const VAT_BUCKET_FIELDS = [
 const optionalMoneySchema = z.string().refine(
   (value) => {
     if (!value.trim()) return true;
-    const amount = Number(value);
-    return Number.isFinite(amount) && amount >= 0;
+    return (
+      /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/.test(value) &&
+      hasMaximumScale(value, 2) &&
+      parseMoneyToMinorUnits(value) >= 0n
+    );
   },
   { error: FORM_VI.required },
 );
@@ -141,7 +151,9 @@ const expenseFormSchema = z
   .refine(
     (data) =>
       VAT_BUCKET_FIELDS.some(
-        (bucket) => Number(data[bucket.taxableField] || 0) > 0,
+        (bucket) =>
+          !!data[bucket.taxableField] &&
+          parseMoneyToMinorUnits(data[bucket.taxableField]) > 0n,
       ),
     {
       error: FORM_VI.required,
@@ -153,17 +165,24 @@ type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 function buildExpenseVatBreakdown(values: ExpenseFormValues) {
   return VAT_BUCKET_FIELDS.flatMap((bucket) => {
-    const taxableAmount = Number(values[bucket.taxableField] || 0);
-    if (taxableAmount <= 0) return [];
+    const rawTaxableAmount = values[bucket.taxableField];
+    if (
+      !rawTaxableAmount ||
+      parseMoneyToMinorUnits(rawTaxableAmount) <= 0n
+    ) {
+      return [];
+    }
+    const taxableAmount = minorUnitsToCanonical(
+      parseMoneyToMinorUnits(rawTaxableAmount),
+    );
 
     const enteredVat =
       bucket.vatField != null ? values[bucket.vatField].trim() : "";
-    const vatAmount =
-      bucket.rate === 0
-        ? 0
-        : enteredVat
-          ? Number(enteredVat)
-          : Math.round(taxableAmount * bucket.rate) / 100;
+    const vatAmount = resolveExpenseVatAmount(
+      taxableAmount,
+      bucket.rate,
+      enteredVat,
+    );
 
     return [{ vatRate: bucket.rate, taxableAmount, vatAmount }];
   });
@@ -349,7 +368,7 @@ export function ExpensesClient({
   async function onDelete(row: ExpenseRow) {
     const ok = await confirm({
       title: copy.table.deleteTitle,
-      description: copy.table.deleteConfirm(formatVND(row.amount)),
+      description: copy.table.deleteConfirm(formatAccountingVND(row.amount)),
       confirmText: copy.table.deleteCta,
       cancelText: copy.table.deleteCancel,
       variant: "destructive",
@@ -400,7 +419,7 @@ export function ExpensesClient({
   async function onPayCash(row: ExpenseRow) {
     const ok = await confirm({
       title: copy.actions.cashTitle,
-      description: copy.actions.cashConfirm(formatVND(row.amount)),
+      description: copy.actions.cashConfirm(formatAccountingVND(row.amount)),
       confirmText: copy.actions.cashCta,
       cancelText: copy.actions.keepUnpaid,
     });
@@ -530,13 +549,13 @@ export function ExpensesClient({
       key: "amount",
       header: copy.table.amount,
       className: "text-right font-mono tabular-nums",
-      render: (row) => formatVND(row.amount),
+      render: (row) => formatAccountingVND(row.amount),
     },
     {
       key: "vat",
       header: copy.table.vat,
       className: "text-right font-mono tabular-nums text-muted-foreground",
-      render: (row) => formatVND(row.vat_amount),
+      render: (row) => formatAccountingVND(row.vat_amount),
     },
     {
       key: "attachment",
@@ -602,14 +621,14 @@ export function ExpensesClient({
       <KpiRow density="compact">
         <KpiCard
           label={copy.totalLabel}
-          value={formatVND(summary.operatingTotal)}
+          value={formatAccountingVND(summary.operatingTotal)}
           hint={copy.totalHint(formatCount(summary.operatingCount))}
           tone="primary"
           density="compact"
         />
         <KpiCard
           label={copy.needsActionLabel}
-          value={formatVND(summary.needsActionTotal)}
+          value={formatAccountingVND(summary.needsActionTotal)}
           hint={copy.needsActionHint(formatCount(summary.needsActionCount))}
           tone={summary.needsActionCount > 0 ? "warning" : "neutral"}
           density="compact"
@@ -712,14 +731,14 @@ export function ExpensesClient({
                       value={classifyExpensePaymentState(row)}
                     />
                     <span className="font-mono text-sm font-semibold tabular-nums">
-                      {formatVND(row.amount)}
+                      {formatAccountingVND(row.amount)}
                     </span>
                   </div>
                 </ItemFooter>
                 {row.vat_amount > 0 || row.invoice_attachment_url ? (
                   <ItemDescription className="px-4 pb-3">
                     {row.vat_amount > 0
-                      ? `${copy.table.vat}: ${formatVND(row.vat_amount)}`
+                      ? `${copy.table.vat}: ${formatAccountingVND(row.vat_amount)}`
                       : null}
                     {row.vat_amount > 0 && row.invoice_attachment_url
                       ? " · "
@@ -758,15 +777,13 @@ export function ExpensesClient({
           {(form) => {
             const formValues = form.watch();
             const vatBreakdown = buildExpenseVatBreakdown(formValues);
-            const subtotal = vatBreakdown.reduce(
-              (sum, line) => sum + line.taxableAmount,
-              0,
+            const subtotal = addMoney(
+              vatBreakdown.map((line) => line.taxableAmount),
             );
-            const vatAmount = vatBreakdown.reduce(
-              (sum, line) => sum + line.vatAmount,
-              0,
+            const vatAmount = addMoney(
+              vatBreakdown.map((line) => line.vatAmount),
             );
-            const totalAmount = subtotal + vatAmount;
+            const totalAmount = addMoney([subtotal, vatAmount]);
 
             return (
               <>
@@ -841,11 +858,11 @@ export function ExpensesClient({
                         <span className="text-muted-foreground">
                           {copy.form.vatBucketSummary(
                             formatPercent(line.vatRate, 0),
-                            formatVND(line.taxableAmount),
+                            formatAccountingVND(line.taxableAmount),
                           )}
                         </span>
                         <span className="font-mono tabular-nums">
-                          {formatVND(line.vatAmount)}
+                          {formatAccountingVND(line.vatAmount)}
                         </span>
                       </div>
                     ))}
@@ -854,7 +871,7 @@ export function ExpensesClient({
                         {copy.form.subtotalLabel}
                       </span>
                       <span className="font-mono tabular-nums">
-                        {formatVND(subtotal)}
+                        {formatAccountingVND(subtotal)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
@@ -862,13 +879,13 @@ export function ExpensesClient({
                         {copy.form.vatTotalLabel}
                       </span>
                       <span className="font-mono tabular-nums">
-                        {formatVND(vatAmount)}
+                        {formatAccountingVND(vatAmount)}
                       </span>
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-3 border-t pt-2 font-medium">
                       <span>{copy.form.grossLabel}</span>
                       <span className="font-mono tabular-nums">
-                        {formatVND(totalAmount)}
+                        {formatAccountingVND(totalAmount)}
                       </span>
                     </div>
                   </NoteCallout>
@@ -949,7 +966,7 @@ export function ExpensesClient({
                   term: copy.table.amount,
                   description: (
                     <span className="font-mono tabular-nums font-semibold">
-                      {formatVND(selectedExpense.amount)}
+                      {formatAccountingVND(selectedExpense.amount)}
                     </span>
                   ),
                 },
@@ -957,7 +974,7 @@ export function ExpensesClient({
                   term: copy.detail.subtotal,
                   description: (
                     <span className="font-mono tabular-nums">
-                      {formatVND(selectedExpense.subtotal)}
+                      {formatAccountingVND(selectedExpense.subtotal)}
                     </span>
                   ),
                 },
@@ -965,7 +982,7 @@ export function ExpensesClient({
                   term: copy.table.vat,
                   description: (
                     <span className="font-mono tabular-nums">
-                      {formatVND(selectedExpense.vat_amount)}
+                      {formatAccountingVND(selectedExpense.vat_amount)}
                     </span>
                   ),
                 },
@@ -1010,8 +1027,8 @@ export function ExpensesClient({
                     <span className="text-muted-foreground">
                       {copy.detail.vatLine(
                         formatPercent(line.vatRate, 0),
-                        formatVND(line.taxableAmount),
-                        formatVND(line.vatAmount),
+                        formatAccountingVND(line.taxableAmount),
+                        formatAccountingVND(line.vatAmount),
                       )}
                     </span>
                   </div>

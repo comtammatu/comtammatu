@@ -82,6 +82,46 @@ function browserRolesAreFinallyRevoked(
   );
 }
 
+function delegatesToPrivateAuthorizedFunction(
+  body: string,
+  finalSource: string,
+): boolean {
+  const delegatedNames = Array.from(
+    body.matchAll(/\bRETURN\s+public\.([a-zA-Z_][\w]*)\s*\(/gi),
+    (match) => match[1]!,
+  );
+
+  return delegatedNames.some((delegatedName) => {
+    const delegateIsPrivate = browserRolesAreFinallyRevoked(
+      finalSource,
+      delegatedName,
+    );
+    if (!delegateIsPrivate) {
+      return false;
+    }
+
+    let delegatedBody = "";
+    for (const match of finalSource.matchAll(definerFunctionPattern)) {
+      if (match[1] === delegatedName) delegatedBody = match[3]!;
+    }
+
+    if (!delegatedBody) {
+      const renamePattern = new RegExp(
+        `ALTER\\s+FUNCTION\\s+(?:public\\.)?([a-zA-Z_][\\w]*)\\s*\\([^;]*?\\)\\s+RENAME\\s+TO\\s+${escapeRegExp(delegatedName)}\\s*;`,
+        "gi",
+      );
+      const rename = Array.from(finalSource.matchAll(renamePattern)).at(-1);
+      if (rename?.index !== undefined) {
+        const sourceBeforeRename = finalSource.slice(0, rename.index);
+        for (const match of sourceBeforeRename.matchAll(definerFunctionPattern)) {
+          if (match[1] === rename[1]) delegatedBody = match[3]!;
+        }
+      }
+    }
+    return authzPrimitivePattern.test(delegatedBody);
+  });
+}
+
 const migration = readRepoFile(
   "supabase/migration-archive/20260601860000_security_definer_rpc_hardening.sql",
 );
@@ -170,6 +210,7 @@ function assertSqlOrder(
 test("forward SECURITY DEFINER migrations include an auth boundary or browser-role revoke", () => {
   const failures: string[] = [];
   const migrations = readForwardMigrations();
+  const allSource = migrations.map(({ source }) => source).join("\n");
 
   for (const [migrationIndex, migration] of migrations.entries()) {
     const finalSource = migrations
@@ -186,7 +227,9 @@ test("forward SECURITY DEFINER migrations include an auth boundary or browser-ro
         continue;
       }
       const body = match[3]!;
-      const hasAuthBoundary = authzPrimitivePattern.test(body);
+      const hasAuthBoundary =
+        authzPrimitivePattern.test(body) ||
+        delegatesToPrivateAuthorizedFunction(body, allSource);
       const grantsBrowserRole = browserGrantPattern(functionName).test(
         migration.source,
       );

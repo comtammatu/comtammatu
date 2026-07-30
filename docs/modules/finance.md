@@ -265,6 +265,22 @@ There is no current `/accounting/*` app surface.
 
 ## VAT And Equipment Boundary
 
+### Monetary precision contract
+
+| Finance value | Storage/application scale |
+| --- | ---: |
+| Money total, VAT, discount, supplier unit price, payment, credit, advance, fund balance, fixed reward | 2 |
+| Supplier quantity | 3 |
+| VAT rate | enum `0`, `5`, `8`, `10` |
+| POS settlement, menu price, cash, VietQR | 0 |
+
+Canonical decimal strings cross the browser, Server Action, and RPC boundaries.
+Financial aggregation uses scaled integer arithmetic rather than JavaScript
+floating point. Supplier line totals and automatically calculated VAT use
+round-half-up at two decimal places. A VAT amount entered from a source document
+is authoritative and remains unchanged until the operator explicitly requests a
+recalculation. Finance and tax details always render two decimal places.
+
 Supplier invoice VAT and operating-expense `expenses.vat_breakdown` are only
 `input_vat_recorded`. Optional `expenses.invoice_attachment_url` is supporting
 evidence for that recorded snapshot. The current schema does not store deduction

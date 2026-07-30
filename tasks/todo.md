@@ -5,6 +5,35 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Standardize vi-VN money and VAT precision
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: finance/tax-money
+Exit: Finance, expense VAT, and supplier invoice amounts preserve scale-2 values from input through PostgreSQL while POS, menu, cash, VietQR, and shift settlement remain whole-VND.
+Evidence: shared fixed-point and formatter tests, form/static contracts, expense and supplier-invoice SQL regressions, data audits, repository gates, and authenticated Preview smoke.
+
+### T3 review
+
+- **PM:** Limit the correction to accounting money and VAT accuracy; keep POS settlement and payment-provider boundaries whole-VND.
+- **BA:** Accept at most two money decimals, retain manual document VAT over auto calculation, reject excess scale before persistence, and never rewrite historical values without accounting approval.
+- **Senior Dev:** Put deterministic decimal parsing and half-up arithmetic in shared fixed-point utilities, mirror scale constraints in Zod and PostgreSQL, and derive persisted headers from normalized lines.
+- **QA:** Prove vi-VN round trips, exact VAT and addition examples, manual VAT persistence, many-line reconciliation, excess-scale rejection, and unchanged VietQR/Viettel/POS behavior.
+
+Synthesis: canonical decimal strings cross application boundaries; scaled integers own arithmetic; RPCs and triggers reject rather than silently round; fixed-2 display is reserved for Finance, tax, and document detail.
+
+- [x] Implement the scale-2 formatter/fixed-point contract, Finance and supplier
+  form boundaries, whole-VND POS/menu adapters, fail-closed migration, and SQL
+  regression.
+- [x] Run the registered Greenfield read-only anomaly audit; every expense,
+  supplier invoice, menu/POS/payment, and shift-settlement group returned zero.
+- [x] Apply the migration and its runtime `COALESCE` correction to the
+  owner-authorized Greenfield target, regenerate database types, and verify the
+  catalog guards, RPC grants, excess-scale rejection, and zero-anomaly audit.
+- [ ] Run DB tests in the CI database container and complete the authenticated
+  expense/supplier-invoice smoke before Production consideration.
+
 ## Stabilize supplier invoice matching, payment, and advance
 
 State: verify

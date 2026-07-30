@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { parseMoneyToMinorUnits } from "@comtammatu/shared/money";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
@@ -10,11 +11,31 @@ import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 /** Fund bootstrap / privileged ledger writes stay Owner-only. */
 const OWNER_FUND_ROLES = ["owner"] as const;
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_FUND_AMOUNT = 100_000_000_000;
+const MAX_FUND_MINOR_UNITS = 10_000_000_000_000n;
+const MONEY = /^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
+const SIGNED_MONEY = /^-?(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
 const requiredFundAmount = z.preprocess(
   (value) =>
     typeof value === "string" && value.trim() === "" ? undefined : value,
-  z.coerce.number().min(0).max(MAX_FUND_AMOUNT),
+  z
+    .string()
+    .trim()
+    .regex(MONEY, "Số tiền không hợp lệ")
+    .refine(
+      (value) => parseMoneyToMinorUnits(value) <= MAX_FUND_MINOR_UNITS,
+      "Số tiền vượt ngưỡng hợp lệ",
+    ),
+);
+const fundDelta = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? "0" : value),
+  z
+    .string()
+    .trim()
+    .regex(SIGNED_MONEY, "Số tiền điều chỉnh không hợp lệ")
+    .refine((value) => {
+      const amount = parseMoneyToMinorUnits(value);
+      return amount >= -MAX_FUND_MINOR_UNITS && amount <= MAX_FUND_MINOR_UNITS;
+    }, "Số tiền điều chỉnh vượt ngưỡng hợp lệ"),
 );
 
 const initializeFinanceFundsSchema = z.object({
@@ -29,16 +50,21 @@ const initializeFinanceFundsSchema = z.object({
 
 const createFinanceFundAdjustmentSchema = z
   .object({
-    cashDelta: z.coerce.number().min(-MAX_FUND_AMOUNT).max(MAX_FUND_AMOUNT),
-    bankDelta: z.coerce.number().min(-MAX_FUND_AMOUNT).max(MAX_FUND_AMOUNT),
+    cashDelta: fundDelta,
+    bankDelta: fundDelta,
     reason: z.string().trim().min(5, "Cần ghi rõ lý do và bằng chứng").max(500),
     confirmed: z.boolean().refine(Boolean, "Cần xác nhận bút toán điều chỉnh"),
     idempotencyKey: z.string().uuid(),
   })
-  .refine(({ cashDelta, bankDelta }) => cashDelta !== 0 || bankDelta !== 0, {
-    message: "Cần nhập ít nhất một khoản điều chỉnh khác 0",
-    path: ["cashDelta"],
-  });
+  .refine(
+    ({ cashDelta, bankDelta }) =>
+      parseMoneyToMinorUnits(cashDelta) !== 0n ||
+      parseMoneyToMinorUnits(bankDelta) !== 0n,
+    {
+      message: "Cần nhập ít nhất một khoản điều chỉnh khác 0",
+      path: ["cashDelta"],
+    },
+  );
 
 function financeFundError(
   error: { code?: string; message?: string },
@@ -93,8 +119,8 @@ export async function initializeFinanceFunds(
   if (!ctx) return { success: false, error: "Không có quyền." };
 
   const { error } = await ctx.supabase.rpc("initialize_finance_funds", {
-    p_bank_opening: parsed.data.bankBalance,
-    p_cash_opening: parsed.data.balance,
+    p_bank_opening: parsed.data.bankBalance as unknown as number,
+    p_cash_opening: parsed.data.balance as unknown as number,
     p_effective_at: (parsed.data.boundaryMode === "project_start_day"
       ? getVNDayUtcRange(parsed.data.date).startIso
       : null) as string,
@@ -127,8 +153,8 @@ export async function createFinanceFundAdjustment(
   if (!ctx) return { success: false, error: "Không có quyền." };
 
   const { error } = await ctx.supabase.rpc("create_finance_fund_adjustment", {
-    p_bank_delta: parsed.data.bankDelta,
-    p_cash_delta: parsed.data.cashDelta,
+    p_bank_delta: parsed.data.bankDelta as unknown as number,
+    p_cash_delta: parsed.data.cashDelta as unknown as number,
     p_idempotency_key: parsed.data.idempotencyKey,
     p_reason: parsed.data.reason,
   });

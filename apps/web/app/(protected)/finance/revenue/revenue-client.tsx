@@ -14,9 +14,9 @@ import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
+  formatAccountingVND as formatVND,
   formatCount,
   formatPercent,
-  formatVND,
 } from "@comtammatu/shared/format";
 import {
   AppEmptyState,

@@ -14,6 +14,8 @@ export {
   MoneyVndInput,
   QuantityField,
   QuantityInput,
+  WholeVndField,
+  WholeVndInput,
 } from "./domain-number-inputs";
 export { BusinessDateField, BusinessDatePicker } from "./business-date-field";
 export { SelectField } from "./select-field";

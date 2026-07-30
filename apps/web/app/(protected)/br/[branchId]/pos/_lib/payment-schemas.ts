@@ -20,6 +20,7 @@ export const cashConfirmSchema = z.object({
   orderId: z.coerce.number().int().positive({ error: "Mã đơn hàng không hợp lệ" }),
   cashReceived: z.coerce
     .number()
+    .int({ error: "Số tiền nhận phải là đồng nguyên" })
     .nonnegative({ error: "Số tiền nhận không được âm" }),
 });
 
@@ -43,7 +44,7 @@ export const createPaymentSchema = z.object({
     .positive({ error: "Mã chi nhánh không hợp lệ" }),
   orderId: z.coerce.number().int().positive(),
   method: z.enum(["vietqr"]),
-  amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
+  amount: z.coerce.number().int().positive({ error: "Số tiền không hợp lệ" }),
 });
 
 /**

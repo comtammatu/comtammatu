@@ -7,7 +7,10 @@ import {
   ArrowDownLeft as IconMoneyIn,
   ArrowUpRight as IconMoneyOut,
 } from "lucide-react";
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatAccountingVND as formatVND,
+  formatCount,
+} from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";

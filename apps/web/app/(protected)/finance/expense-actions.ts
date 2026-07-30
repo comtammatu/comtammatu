@@ -12,6 +12,7 @@
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
+import { parseMoneyToMinorUnits } from "@comtammatu/shared/money";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -131,7 +132,8 @@ export async function createExpense(
   const branchId = parsed.data.branchId ?? null;
   const vatBreakdown = toExpenseVatBreakdownPayload(parsed.data.vatBreakdown);
   const amount = expenseGrossFromBreakdown(parsed.data.vatBreakdown);
-  if (!(amount > 0) || amount > 10_000_000_000) {
+  const amountMinorUnits = parseMoneyToMinorUnits(amount);
+  if (amountMinorUnits <= 0n || amountMinorUnits > 1_000_000_000_000n) {
     return { success: false, error: "Số tiền không hợp lệ" };
   }
 

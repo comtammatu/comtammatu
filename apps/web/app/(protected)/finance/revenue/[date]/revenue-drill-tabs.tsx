@@ -12,7 +12,10 @@ import {
 import Link from "next/link";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { Progress } from "@comtammatu/ui/components/progress";
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatAccountingVND as formatVND,
+  formatCount,
+} from "@comtammatu/shared/format";
 import {
   getOrderTypeLabelVi,
   getPaymentMethodLabelVi,
