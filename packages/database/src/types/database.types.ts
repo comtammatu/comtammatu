@@ -8858,10 +8858,13 @@ export type Database = {
           allocated_document_discount: number
           created_at: string
           description: string
+          gross_line_total: number | null
+          gross_unit_price: number | null
           id: number
           ingredient_id: number | null
           line_discount_amount: number
           line_total: number
+          pricing_mode: string | null
           quantity: number
           source_line_key: string | null
           supplier_invoice_id: number
@@ -8875,10 +8878,13 @@ export type Database = {
           allocated_document_discount?: number
           created_at?: string
           description: string
+          gross_line_total?: number | null
+          gross_unit_price?: number | null
           id?: never
           ingredient_id?: number | null
           line_discount_amount?: number
           line_total: number
+          pricing_mode?: string | null
           quantity: number
           source_line_key?: string | null
           supplier_invoice_id: number
@@ -8892,10 +8898,13 @@ export type Database = {
           allocated_document_discount?: number
           created_at?: string
           description?: string
+          gross_line_total?: number | null
+          gross_unit_price?: number | null
           id?: never
           ingredient_id?: number | null
           line_discount_amount?: number
           line_total?: number
+          pricing_mode?: string | null
           quantity?: number
           source_line_key?: string | null
           supplier_invoice_id?: number
@@ -11897,10 +11906,6 @@ export type Database = {
         }[]
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
-      get_inventory_valuation_reconciliation: {
-        Args: { p_branch_id?: number; p_month: number; p_year: number }
-        Returns: Json
-      }
       get_inventory_valuation_period_value: {
         Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
         Returns: {
@@ -11908,6 +11913,10 @@ export type Database = {
           closing_value: number
           opening_value: number
         }[]
+      }
+      get_inventory_valuation_reconciliation: {
+        Args: { p_branch_id?: number; p_month: number; p_year: number }
+        Returns: Json
       }
       get_inventory_value_period: {
         Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }

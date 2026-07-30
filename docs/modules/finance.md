@@ -234,10 +234,16 @@ current inventory-value card and does not expose a duplicate inventory route.
 
 Goods supplier invoice matching validates line quantities against allocated
 confirmed GRN/PO lines from the same supplier and values each allocation with
-the effective net line value after line and document discounts. VAT is excluded
-from inventory cost. PO and GRN prices are not commercial price sources.
-Header subtotal, document discount, VAT, and total must reconcile within `±1
-VND`; a larger difference remains
+the supplier invoice line's effective net value after line and document
+discounts, allocated proportionally by billed quantity. VAT is excluded from
+inventory cost. PO and GRN prices are not commercial price sources. Supplier
+invoice entry treats `gross_unit_price` and `gross_line_total` as VAT-inclusive
+document evidence. Automatic VAT is reverse-calculated from the gross line;
+manual VAT remains authoritative, and every line must satisfy
+`line_total + vat_amount = gross_line_total`. The legacy `unit_price` remains
+the effective pre-VAT unit price used by supplier price history. Header
+subtotal, document discount, VAT, and total must reconcile within `±1 VND`; a
+larger difference remains
 `discrepancy` until an Accountant accepts it with a reason. Service invoices
 do not allocate GRNs and remain `pending` until an Accountant verifies the
 document with a reason. A draft remains editable; confirmation seals its

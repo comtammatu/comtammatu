@@ -42,7 +42,9 @@ export type SupplierInvoiceLineSummary = {
   quantity: number;
   unitId: number | null;
   unitLabel: string;
+  pricingMode: "gross_total" | "unit_price";
   unitPrice: number;
+  grossLineTotal: number;
   lineDiscount: number;
   vatRate: number;
   vatAmount: number;
@@ -228,7 +230,9 @@ export function mapSupplierInvoiceRow(
   const headerReceiptCode =
     ((row.goods_received_notes as Record<string, unknown>)
       ?.grn_number as string) ?? null;
-  const invoiceLines = Array.isArray(row.supplier_invoice_lines)
+  const invoiceLines: SupplierInvoiceLineSummary[] = Array.isArray(
+    row.supplier_invoice_lines,
+  )
     ? row.supplier_invoice_lines.flatMap((line) => {
         if (!isRecord(line)) return [];
         const ingredient = Array.isArray(line.ingredients)
@@ -267,7 +271,15 @@ export function mapSupplierInvoiceRow(
             unitLabel: isRecord(unit)
               ? String(unit.name ?? unit.code ?? "Đơn vị")
               : "Đơn vị",
-            unitPrice: Number(line.unit_price ?? 0),
+            pricingMode:
+              line.pricing_mode === "gross_total"
+                ? "gross_total"
+                : "unit_price",
+            unitPrice: Number(line.gross_unit_price ?? line.unit_price ?? 0),
+            grossLineTotal: Number(
+              line.gross_line_total ??
+                Number(line.line_total ?? 0) + Number(line.vat_amount ?? 0),
+            ),
             lineDiscount: Number(line.line_discount_amount ?? 0),
             vatRate: Number(line.vat_rate ?? 0),
             vatAmount: Number(line.vat_amount ?? 0),

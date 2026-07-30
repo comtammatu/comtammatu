@@ -42,6 +42,10 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import {
   DataTable,
@@ -147,9 +151,12 @@ import {
   getVNDateString,
 } from "@comtammatu/shared/time";
 import {
-  calculateSupplierInvoiceLineTotal,
+  calculateSupplierInvoiceGrossLineTotal,
+  calculateSupplierInvoiceNetLineTotal,
+  deriveSupplierInvoiceGrossUnitPrice,
   resolveSupplierInvoiceVatAmount,
   summarizeSupplierInvoiceMoney,
+  type SupplierInvoicePricingMode,
   type SupplierInvoiceVatMode,
   type SupplierInvoiceVatRate,
 } from "../_lib/supplier-invoice-money";
@@ -273,7 +280,9 @@ const supplierInvoiceSchema = z
           quantity: z.number().positive(),
           unitId: z.number().int().positive().nullable(),
           unitLabel: z.string(),
+          pricingMode: z.enum(["gross_total", "unit_price"]),
           unitPrice: optionalMoneySchema,
+          grossLineTotal: optionalMoneySchema,
           lineDiscount: optionalMoneySchema,
           vatRate: z.preprocess(
             Number,
@@ -314,17 +323,43 @@ const supplierInvoiceSchema = z
           path: ["lines", index],
         });
       }
-      if (!line.unitPrice) {
+      if (line.pricingMode === "unit_price" && !line.unitPrice) {
         ctx.addIssue({
           code: "custom",
           message: FORM_VI.required,
           path: ["lines", index, "unitPrice"],
         });
       }
+      if (line.pricingMode === "gross_total" && !line.grossLineTotal) {
+        ctx.addIssue({
+          code: "custom",
+          message: FORM_VI.required,
+          path: ["lines", index, "grossLineTotal"],
+        });
+      }
       if (!line.vatAmount) {
         ctx.addIssue({
           code: "custom",
           message: FORM_VI.required,
+          path: ["lines", index, "vatAmount"],
+        });
+      }
+      const grossLineTotal =
+        line.pricingMode === "gross_total"
+          ? canonicalMoney(line.grossLineTotal)
+          : calculateSupplierInvoiceGrossLineTotal(
+              String(line.quantity),
+              line.unitPrice,
+              line.lineDiscount,
+            );
+      if (
+        line.vatAmount &&
+        parseMoneyToMinorUnits(canonicalMoney(line.vatAmount)) >
+          parseMoneyToMinorUnits(grossLineTotal)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: messages.inventory.supplierInvoices.vatExceedsGross,
           path: ["lines", index, "vatAmount"],
         });
       }
@@ -407,7 +442,9 @@ function editSupplierInvoiceDefaultValues(
       quantity: line.quantity,
       unitId: line.unitId,
       unitLabel: line.unitLabel,
+      pricingMode: line.pricingMode,
       unitPrice: canonicalMoney(line.unitPrice),
+      grossLineTotal: canonicalMoney(line.grossLineTotal),
       lineDiscount: canonicalMoney(line.lineDiscount),
       vatRate: line.vatRate as SupplierInvoiceVatRate,
       vatAmount: canonicalMoney(line.vatAmount),
@@ -532,18 +569,35 @@ function SupplierInvoiceCreateFields({
   const selectedGrn = selectedGrns[0] ?? null;
   const invoiceLines = formValues.lines ?? [];
   const calculatedLines = invoiceLines.map((line) => {
-    const lineTotal = calculateSupplierInvoiceLineTotal(
-      String(line.quantity),
-      line.unitPrice,
-      line.lineDiscount,
+    const grossLineTotal =
+      line.pricingMode === "gross_total"
+        ? canonicalMoney(line.grossLineTotal)
+        : calculateSupplierInvoiceGrossLineTotal(
+            String(line.quantity),
+            line.unitPrice,
+            line.lineDiscount,
+          );
+    const unitPrice =
+      line.pricingMode === "gross_total"
+        ? deriveSupplierInvoiceGrossUnitPrice(
+            String(line.quantity),
+            grossLineTotal,
+            line.lineDiscount,
+          )
+        : canonicalMoney(line.unitPrice);
+    const resolvedVatAmount = resolveSupplierInvoiceVatAmount(
+      grossLineTotal,
+      line.vatRate as SupplierInvoiceVatRate,
+      line.vatMode,
+      line.vatAmount,
     );
     return {
-      lineTotal,
-      vatAmount: resolveSupplierInvoiceVatAmount(
-        lineTotal,
-        line.vatRate as SupplierInvoiceVatRate,
-        line.vatMode,
-        line.vatAmount,
+      grossLineTotal,
+      unitPrice,
+      vatAmount: resolvedVatAmount,
+      netLineTotal: calculateSupplierInvoiceNetLineTotal(
+        grossLineTotal,
+        resolvedVatAmount,
       ),
     };
   });
@@ -572,7 +626,9 @@ function SupplierInvoiceCreateFields({
           quantity: 1,
           unitId: null,
           unitLabel: "Lần",
+          pricingMode: "unit_price",
           unitPrice: "",
+          grossLineTotal: "",
           lineDiscount: "",
           vatRate: 8,
           vatAmount: "0.00",
@@ -624,7 +680,9 @@ function SupplierInvoiceCreateFields({
             quantity: line.availableQuantity,
             unitId: line.unitId,
             unitLabel: line.unitLabel,
+            pricingMode: preserved?.pricingMode ?? "unit_price",
             unitPrice: preserved?.unitPrice ?? "",
+            grossLineTotal: preserved?.grossLineTotal ?? "",
             lineDiscount: preserved?.lineDiscount ?? "",
             vatRate: preserved?.vatRate ?? 8,
             vatAmount: preserved?.vatAmount ?? "0.00",
@@ -794,7 +852,12 @@ function SupplierInvoiceCreateFields({
           </NoteCallout>
         ) : (
           invoiceLines.map((line, index) => {
-            const lineTotal = calculatedLines[index]?.lineTotal ?? "0.00";
+            const calculatedLine = calculatedLines[index] ?? {
+              grossLineTotal: "0.00",
+              unitPrice: "0.00",
+              vatAmount: "0.00",
+              netLineTotal: "0.00",
+            };
             return (
               <Item
                 key={line.key}
@@ -810,7 +873,7 @@ function SupplierInvoiceCreateFields({
                   </div>
                   <span className="font-mono font-semibold tabular-nums">
                     {messages.inventory.common.currencyCompact(
-                      formatVND(lineTotal),
+                      formatVND(calculatedLine.grossLineTotal),
                     )}
                   </span>
                 </div>
@@ -822,24 +885,62 @@ function SupplierInvoiceCreateFields({
                     required
                   />
                 ) : null}
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-3 flex flex-col gap-2">
+                  <span className="text-sm font-medium">
+                    {copy.pricingModeLabel}
+                  </span>
+                  <ToggleGroup
+                    type="single"
+                    variant="outline"
+                    size="sm"
+                    value={line.pricingMode}
+                    aria-label={copy.pricingModeLabel}
+                    onValueChange={(value) => {
+                      if (!value) return;
+                      patchInvoiceLine(index, {
+                        pricingMode: value as SupplierInvoicePricingMode,
+                        grossLineTotal: calculatedLine.grossLineTotal,
+                        unitPrice: deriveSupplierInvoiceGrossUnitPrice(
+                          String(line.quantity),
+                          calculatedLine.grossLineTotal,
+                          line.lineDiscount,
+                        ),
+                      });
+                    }}
+                  >
+                    <ToggleGroupItem value="gross_total">
+                      {copy.pricingModes.grossTotal}
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="unit_price">
+                      {copy.pricingModes.unitPrice}
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   <label className="flex flex-col gap-2 text-sm font-medium">
                     {copy.unitPriceLabel}
                     <MoneyVndInput
                       controlSize="field"
-                      value={line.unitPrice}
+                      value={
+                        line.pricingMode === "gross_total"
+                          ? calculatedLine.unitPrice
+                          : line.unitPrice
+                      }
+                      readOnly={line.pricingMode === "gross_total"}
                       onValueChange={(value) => {
-                        const nextTotal = calculateSupplierInvoiceLineTotal(
-                          String(line.quantity),
-                          value,
-                          line.lineDiscount,
-                        );
+                        const grossLineTotal =
+                          calculateSupplierInvoiceGrossLineTotal(
+                            String(line.quantity),
+                            value,
+                            line.lineDiscount,
+                          );
                         patchInvoiceLine(index, {
                           unitPrice: value,
+                          grossLineTotal,
                           ...(line.vatMode === "auto"
                             ? {
                                 vatAmount: resolveSupplierInvoiceVatAmount(
-                                  nextTotal,
+                                  grossLineTotal,
                                   line.vatRate as SupplierInvoiceVatRate,
                                   "auto",
                                   "",
@@ -852,26 +953,72 @@ function SupplierInvoiceCreateFields({
                     />
                   </label>
                   <label className="flex flex-col gap-2 text-sm font-medium">
+                    {copy.grossLineTotalLabel}
+                    <MoneyVndInput
+                      controlSize="field"
+                      value={calculatedLine.grossLineTotal}
+                      readOnly={line.pricingMode === "unit_price"}
+                      onValueChange={(value) => {
+                        const grossLineTotal = canonicalMoney(value);
+                        patchInvoiceLine(index, {
+                          grossLineTotal: value,
+                          unitPrice: deriveSupplierInvoiceGrossUnitPrice(
+                            String(line.quantity),
+                            grossLineTotal,
+                            line.lineDiscount,
+                          ),
+                          ...(line.vatMode === "auto"
+                            ? {
+                                vatAmount: resolveSupplierInvoiceVatAmount(
+                                  grossLineTotal,
+                                  line.vatRate as SupplierInvoiceVatRate,
+                                  "auto",
+                                  "",
+                                ),
+                              }
+                            : {}),
+                        });
+                      }}
+                      aria-label={copy.grossLineTotalAria(line.description)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium">
                     {copy.lineDiscountLabel}
                     <MoneyVndInput
                       controlSize="field"
                       value={line.lineDiscount}
                       onValueChange={(value) => {
-                        const nextTotal = calculateSupplierInvoiceLineTotal(
-                          String(line.quantity),
-                          line.unitPrice,
-                          value,
-                        );
+                        const grossLineTotal =
+                          line.pricingMode === "gross_total"
+                            ? calculatedLine.grossLineTotal
+                            : calculateSupplierInvoiceGrossLineTotal(
+                                String(line.quantity),
+                                line.unitPrice,
+                                value,
+                              );
                         patchInvoiceLine(index, {
                           lineDiscount: value,
-                          ...(line.vatMode === "auto"
+                          grossLineTotal,
+                          ...(line.pricingMode === "gross_total"
                             ? {
-                                vatAmount: resolveSupplierInvoiceVatAmount(
-                                  nextTotal,
-                                  line.vatRate as SupplierInvoiceVatRate,
-                                  "auto",
-                                  "",
-                                ),
+                                unitPrice:
+                                  deriveSupplierInvoiceGrossUnitPrice(
+                                    String(line.quantity),
+                                    grossLineTotal,
+                                    value,
+                                  ),
+                              }
+                            : {}),
+                          ...(line.vatMode === "auto" &&
+                          line.pricingMode === "unit_price"
+                            ? {
+                                vatAmount:
+                                  resolveSupplierInvoiceVatAmount(
+                                    grossLineTotal,
+                                    line.vatRate as SupplierInvoiceVatRate,
+                                    "auto",
+                                    "",
+                                  ),
                               }
                             : {}),
                         });
@@ -887,10 +1034,12 @@ function SupplierInvoiceCreateFields({
                         const rate = Number(value) as SupplierInvoiceVatRate;
                         patchInvoiceLine(index, {
                           vatRate: rate,
-                          ...(line.vatMode === "auto"
+                          ...(rate === 0
+                            ? { vatAmount: "0.00", vatMode: "auto" as const }
+                            : line.vatMode === "auto"
                             ? {
                                 vatAmount: resolveSupplierInvoiceVatAmount(
-                                  lineTotal,
+                                  calculatedLine.grossLineTotal,
                                   rate,
                                   "auto",
                                   "",
@@ -918,6 +1067,7 @@ function SupplierInvoiceCreateFields({
                       <MoneyVndInput
                         controlSize="field"
                         value={line.vatAmount}
+                        readOnly={line.vatRate === 0}
                         onValueChange={(value) =>
                           patchInvoiceLine(index, {
                             vatAmount: value,
@@ -926,7 +1076,7 @@ function SupplierInvoiceCreateFields({
                         }
                         aria-label={copy.vatAmountAria(line.description)}
                       />
-                      {line.vatMode === "manual" ? (
+                      {line.vatMode === "manual" && line.vatRate !== 0 ? (
                         <Button
                           type="button"
                           variant="ghost"
@@ -935,7 +1085,7 @@ function SupplierInvoiceCreateFields({
                             patchInvoiceLine(index, {
                               vatMode: "auto",
                               vatAmount: resolveSupplierInvoiceVatAmount(
-                                lineTotal,
+                                calculatedLine.grossLineTotal,
                                 line.vatRate as SupplierInvoiceVatRate,
                                 "auto",
                                 "",
@@ -947,6 +1097,14 @@ function SupplierInvoiceCreateFields({
                         </Button>
                       ) : null}
                     </div>
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    {copy.netLineTotal}
+                    <MoneyVndInput
+                      controlSize="field"
+                      value={calculatedLine.netLineTotal}
+                      readOnly
+                    />
                   </label>
                 </div>
               </Item>
@@ -1750,18 +1908,32 @@ export function SupplierInvoicesClient({
       idempotencyKey: invoiceSaveIntentKeyRef.current,
       lines: values.lines.map((line) => {
         const quantity = String(line.quantity);
-        const unitPrice = canonicalMoney(line.unitPrice);
         const lineDiscount = canonicalMoney(line.lineDiscount);
-        const lineTotal = calculateSupplierInvoiceLineTotal(
-          quantity,
-          unitPrice,
-          lineDiscount,
-        );
+        const grossLineTotal =
+          line.pricingMode === "gross_total"
+            ? canonicalMoney(line.grossLineTotal)
+            : calculateSupplierInvoiceGrossLineTotal(
+                quantity,
+                line.unitPrice,
+                lineDiscount,
+              );
+        const unitPrice =
+          line.pricingMode === "gross_total"
+            ? deriveSupplierInvoiceGrossUnitPrice(
+                quantity,
+                grossLineTotal,
+                lineDiscount,
+              )
+            : canonicalMoney(line.unitPrice);
         const vatAmount = resolveSupplierInvoiceVatAmount(
-          lineTotal,
+          grossLineTotal,
           line.vatRate as SupplierInvoiceVatRate,
           line.vatMode,
           line.vatAmount,
+        );
+        const netLineTotal = calculateSupplierInvoiceNetLineTotal(
+          grossLineTotal,
+          vatAmount,
         );
         return {
           lineKey: line.key,
@@ -1769,11 +1941,13 @@ export function SupplierInvoicesClient({
           description: line.description,
           quantity,
           unitId: line.unitId,
+          pricingMode: line.pricingMode,
           unitPrice,
+          grossLineTotal,
           lineDiscount,
           vatRate: line.vatRate,
           vatAmount,
-          lineTotal,
+          lineTotal: netLineTotal,
           allocations: line.allocations.map((allocation) => ({
             ...allocation,
             quantity: String(allocation.quantity),
@@ -2976,7 +3150,7 @@ export function SupplierInvoicesClient({
                         <ItemActions>
                           <span className="font-mono font-semibold tabular-nums">
                             {messages.inventory.common.currencyCompact(
-                              formatVND(line.lineTotal + line.vatAmount),
+                              formatVND(line.grossLineTotal),
                             )}
                           </span>
                         </ItemActions>
