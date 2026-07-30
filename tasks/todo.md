@@ -11,22 +11,22 @@ State: verify
 Kind: feature
 Tier: T3
 Lane: finance/procurement-ap
-Exit: Goods invoices match all confirmed receipt allocations through one DB helper with a ±1 VND tolerance; service invoices require reasoned verification; only Owner records payment or allocates visible supplier advances; retry and later allocation never duplicate payment or money movement.
+Exit: Goods invoices match all confirmed receipt allocations through one DB helper with a ±1 VND tolerance; service invoices require reasoned verification; Owner and Accountant record invoice-bound payments while only Owner allocates visible supplier advances; retry and later allocation never duplicate payment or money movement.
 Evidence: additive migration replay, focused DB tests, permission/static UI tests, repository gates, and authenticated Owner/Accountant responsive smoke after the migration is applied to an authorized target.
 
 ### T3 review
 
 - **PM:** Keep supplier AP compact: invoice evidence, matching state, payable state, and visible advances only; no approval engine or general ledger.
-- **BA:** Goods invoices allocate confirmed GRNs/POs from one supplier; service invoices have no receipt allocation. Accountant owns document matching, while Owner owns every payment and advance allocation.
+- **BA:** Goods invoices allocate confirmed GRNs/POs from one supplier; service invoices have no receipt allocation. Accountant owns document matching and invoice-bound payment, while Owner alone owns advance creation and allocation.
 - **Senior Dev:** Creation and recompute share one locked helper; payment and later advance allocation are append-only, idempotent RPCs. Direct authenticated DML is removed.
-- **QA:** Cover multi-GRN equality, ±1 VND, discrepancy acceptance, unverified service/VAT blocks, Owner-only payment, exact replay, advance reuse, money-once behavior, URL history, and one-overlay behavior.
+- **QA:** Cover multi-GRN equality, ±1 VND, discrepancy acceptance, unverified service/VAT blocks, Owner/Accountant payment, Accountant advance rejection, exact replay, advance reuse, money-once behavior, URL history, and one-overlay behavior.
 
 Synthesis: reuse the current supplier invoice list/Sheet and RPC seams. Persist matching evidence and advance balance; do not create a second AP workflow or routing abstraction.
 
 ### UI Advisor Gate
 
 - **Surfaces:** Keep the full-width list as the workspace, the existing right Sheet for document detail, and sequential FormDialogs for create, pay, credit, and advance.
-- **Primary action:** Invoice state and permission decide the single next action; service uses `Xác minh chứng từ`, goods uses matching actions, and only Owner sees money actions.
+- **Primary action:** Invoice state and permission decide the single next action; service uses `Xác minh chứng từ`, goods uses matching actions, Owner and Accountant see invoice payment, and only Owner sees advance allocation.
 - **Responsive:** Keep one overlay open at a time; URL params restore detail/mode through Back, Forward, refresh, and deep links.
 
 - [ ] Run authenticated Owner/Accountant smoke when Greenfield has valid QA credentials.
@@ -38,7 +38,7 @@ State: verify
 Kind: feature
 Tier: T3
 Lane: inventory/procurement
-Exit: Warehouse submits purchase demand without supplier or price; Accountant allocates the exact quantity across active suppliers and atomically creates supplier-specific approved POs plus one GRN draft per PO; supplier invoice lines remain the only commercial purchase-price input; Owner-only payment and advances remain idempotent.
+Exit: Warehouse submits purchase demand without supplier or price; Accountant allocates the exact quantity across active suppliers and atomically creates supplier-specific approved POs plus one GRN draft per PO; supplier invoice lines remain the only commercial purchase-price input; Owner/Accountant invoice payment and Owner-only advances remain idempotent.
 Evidence: additive migration replay, atomic RPC behavior tests, role/static workflow contracts, repository gates, and authenticated responsive smoke after the migration is applied to an authorized target.
 
 ### T3 review

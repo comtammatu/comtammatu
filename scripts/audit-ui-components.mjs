@@ -17,7 +17,7 @@ const ROUTE_FAMILIES = [
   [
     "owner",
     (file) =>
-      file === "apps/web/app/page.tsx" ||
+      file === "apps/web/app/(protected)/page.tsx" ||
       file.includes("/(protected)/settings/") ||
       file.includes("/(protected)/branches/") ||
       file.includes("/(protected)/finance/") ||
@@ -64,7 +64,7 @@ const ROUTE_FAMILIES = [
   [
     "public-system",
     (file) =>
-      file === "apps/web/app/page.tsx" ||
+      file === "apps/web/app/(protected)/page.tsx" ||
       file.includes("/app/offline/") ||
       file === "apps/web/app/error.tsx" ||
       file === "apps/web/app/global-error.tsx" ||

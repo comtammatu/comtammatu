@@ -514,5 +514,5 @@ test("Inventory sidebar keeps workflow labels out of the visible sub-navigation"
   assert.match(nav, /title:\s*""/);
   assert.match(nav, /\.flatMap\(\(group\) => group\.items\)/);
   assert.match(shell, /flattenInventoryDeepNav/);
-  assert.match(shell, /module="inventory"|module === "inventory"/);
+  assert.match(shell, /activeModule === "inventory"/);
 });

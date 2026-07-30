@@ -98,7 +98,7 @@ test("notification shell uses one realtime summary for footer and tab badges", (
     appShell,
     /<UnreadBadge count=\{notificationSummary\.unreadCount\}/,
   );
-  assert.match(hook, /event: "INSERT"[\s\S]*table: "notifications"/);
+  assert.match(hook, /event: "\*"[\s\S]*table: "notifications"/);
   assert.match(hook, /status === "SUBSCRIBED"[\s\S]*refreshRef\.current/);
   assert.doesNotMatch(hook, /target_branch_id/);
   assert.match(foreground, /showInAppToast[\s\S]*toast\.info/);
@@ -148,4 +148,34 @@ test("migration targets each handoff role and exposes exact grouped counts", () 
     migration,
     /REVOKE ALL[\s\S]*count_unread_notifications_by_target\(\)[\s\S]*FROM PUBLIC, anon/,
   );
+});
+
+test("resolved or deleted GRNs expire receiving notifications in realtime", () => {
+  const migration = read(
+    "supabase/migrations/20260730193000_expire_stale_grn_notifications.sql",
+  );
+  const hook = read("apps/web/app/_hooks/use-notification-badges.ts");
+
+  assert.match(
+    migration,
+    /FUNCTION private\.expire_grn_pending_notification\(\)[\s\S]*SECURITY DEFINER[\s\S]*SET search_path TO ''/,
+  );
+  assert.match(
+    migration,
+    /UPDATE public\.notifications[\s\S]*SET expires_at = now\(\)[\s\S]*kind = 'workflow\.grn_pending'[\s\S]*entity_type = 'grn'/,
+  );
+  assert.match(
+    migration,
+    /kind IN \('workflow\.po_approved', 'workflow\.po_sent'\)[\s\S]*entity_type = 'purchase_order'[\s\S]*entity_id = v_po_id/,
+  );
+  assert.match(migration, /v_po_id bigint := OLD\.po_id/);
+  assert.match(
+    migration,
+    /NOT EXISTS[\s\S]*FROM public\.goods_received_notes[\s\S]*status = 'draft'/,
+  );
+  assert.match(
+    migration,
+    /AFTER UPDATE OF status OR DELETE[\s\S]*ON public\.goods_received_notes/,
+  );
+  assert.match(hook, /event: "\*"/);
 });

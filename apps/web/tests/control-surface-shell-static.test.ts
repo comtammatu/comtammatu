@@ -6,17 +6,20 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("control_surface layouts use ControlSurfaceShell only (Wave2)", () => {
+test("control_surface routes share one persistent protected shell", () => {
   const shell = read("apps/web/app/components/control-surface-shell.tsx");
   const nav = read("apps/web/app/lib/control-surface-nav.ts");
-  const rootPage = read("apps/web/app/page.tsx");
-  const inventoryLayout = read(
-    "apps/web/app/(protected)/inventory/layout.tsx",
-  );
-  const financeLayout = read("apps/web/app/(protected)/finance/layout.tsx");
+  const protectedLayout = read("apps/web/app/(protected)/layout.tsx");
+  const rootPage = read("apps/web/app/(protected)/page.tsx");
+  const inventoryLayout = read("apps/web/app/(protected)/inventory/layout.tsx");
+  const branchesLayout = read("apps/web/app/(protected)/branches/layout.tsx");
+  const feedbackLayout = read("apps/web/app/(protected)/feedback/layout.tsx");
 
   assert.match(shell, /export function ControlSurfaceShell/);
   assert.match(shell, /<AppShell/);
+  assert.match(shell, /usePathname/);
+  assert.match(shell, /resolveActiveModule/);
+  assert.match(shell, /if \(!activeModule\) return children/);
   assert.match(shell, /resolveControlSurfacePrimaryTabs/);
   assert.match(shell, /flattenInventoryDeepNav/);
   assert.match(nav, /export function resolveControlSurfacePrimaryTabs/);
@@ -38,25 +41,30 @@ test("control_surface layouts use ControlSurfaceShell only (Wave2)", () => {
     "owner-bottom-nav.tsx must be renamed to control-surface-bottom-nav.tsx",
   );
 
-  assert.match(rootPage, /<ControlSurfaceShell[\s\S]*module="owner"/);
-  assert.match(inventoryLayout, /module="inventory"/);
-  assert.match(financeLayout, /module="finance"/);
+  assert.match(protectedLayout, /<ControlSurfaceShell/);
+  assert.match(protectedLayout, /resolveInventoryBranchScope/);
+  assert.match(protectedLayout, /showSupplierPayables/);
+  assert.doesNotMatch(rootPage, /ControlSurfaceShell|loadAuthState/);
+  assert.doesNotMatch(inventoryLayout, /ControlSurfaceShell/);
+  assert.doesNotMatch(branchesLayout, /ControlSurfaceShell/);
+  assert.doesNotMatch(feedbackLayout, /ControlSurfaceShell/);
   assert.doesNotMatch(rootPage, /OwnerModuleShell|InventoryShell|FinanceShell/);
-  assert.doesNotMatch(
-    inventoryLayout,
-    /\bInventoryShell\b/,
-  );
-  assert.doesNotMatch(financeLayout, /\bFinanceShell\b/);
+  assert.doesNotMatch(inventoryLayout, /\bInventoryShell\b/);
 
   for (const removed of [
     "apps/web/app/components/owner-module-shell.tsx",
     "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx",
     "apps/web/app/(protected)/finance/components/finance-shell.tsx",
+    "apps/web/app/(protected)/finance/layout.tsx",
+    "apps/web/app/(protected)/hr/layout.tsx",
+    "apps/web/app/(protected)/menu/layout.tsx",
+    "apps/web/app/(protected)/orders/layout.tsx",
+    "apps/web/app/(protected)/settings/layout.tsx",
   ]) {
     assert.equal(
       existsSync(resolve(repoRoot, removed)),
       false,
-      `${removed} must be removed after Wave2`,
+      `${removed} must stay removed so the protected shell can persist`,
     );
   }
 });

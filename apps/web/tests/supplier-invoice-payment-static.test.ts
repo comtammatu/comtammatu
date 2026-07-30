@@ -146,13 +146,16 @@ test("supplier payment retry keeps one intent key after an ambiguous failure", (
   assert.equal(created, 1);
 });
 
-test("supplier invoice payment action uses Owner-only idempotent AP RPC", () => {
+test("supplier invoice payment action allows Finance roles but keeps advances Owner-only", () => {
   const source = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
+  const migration = readRoot(
+    "supabase/migrations/20260730112426_accountant_supplier_invoice_payment_access.sql",
+  );
 
   assert.match(source, /recordSupplierPayment/);
   assert.match(
     source,
-    /recordSupplierPayment[\s\S]*?roles: \["owner"\] as const/,
+    /recordSupplierPayment[\s\S]*?roles: ROLES/,
   );
   assert.match(
     source,
@@ -164,6 +167,12 @@ test("supplier invoice payment action uses Owner-only idempotent AP RPC", () => 
   assert.match(source, /p_supplier_id: data\.supplierId/);
   assert.match(source, /p_allocations: allocations\.map/);
   assert.match(source, /p_idempotency_key: data\.idempotencyKey/);
+  assert.match(migration, /public\.has_position\('accountant'\)/);
+  assert.match(migration, /accountant_supplier_advance_forbidden/);
+  assert.doesNotMatch(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.allocate_supplier_advance/,
+  );
 });
 
 test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
@@ -221,7 +230,7 @@ test("supplier invoice client exposes payment only behind server permission", ()
   assert.doesNotMatch(source, /formatVNBusinessDate/);
 });
 
-test("supplier invoice payment visibility is explicitly Owner-only", () => {
+test("supplier invoice payment visibility follows the AP payment grant", () => {
   const financePage = readWeb(
     "app/(protected)/finance/supplier-invoices/page.tsx",
   );
@@ -230,8 +239,9 @@ test("supplier invoice payment visibility is explicitly Owner-only", () => {
   );
 
   assert.match(financePage, /loadAuthState\(\)/);
-  assert.match(financePage, /authState\.claims\.user_role === "owner"/);
   assert.match(financePage, /hasPayPermission/);
+  assert.match(financePage, /canPaySupplier=\{hasPayPermission\}/);
+  assert.doesNotMatch(financePage, /user_role === "owner"/);
   assert.match(financePage, /hasInvoiceCreatePermission/);
   assert.match(financePage, /canCreateInvoice=\{hasInvoiceCreatePermission\}/);
   assert.match(financePage, /canAttachVatEvidence/);

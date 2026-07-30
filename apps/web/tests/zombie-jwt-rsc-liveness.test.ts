@@ -29,7 +29,10 @@ test("isRevokedAuthSessionError recognizes Auth session revoke codes", () => {
     isRevokedAuthSessionError({ code: "refresh_token_already_used" }),
     true,
   );
-  assert.equal(isRevokedAuthSessionError({ code: "unexpected_failure" }), false);
+  assert.equal(
+    isRevokedAuthSessionError({ code: "unexpected_failure" }),
+    false,
+  );
   assert.equal(isRevokedAuthSessionError(null), false);
   assert.equal(isRevokedAuthSessionError("boom"), false);
 });
@@ -165,28 +168,24 @@ test("signout Route Handler supports GET for RSC zombie recovery", () => {
 });
 
 test("POS layout calls loadAuthState for far-from-expiry zombie clear", () => {
-  const source = readWeb(
-    "app/(protected)/br/[branchId]/pos/layout.tsx",
-  );
+  const source = readWeb("app/(protected)/br/[branchId]/pos/layout.tsx");
   assert.match(source, /await loadAuthState\(\)/);
 });
 
-test("control-surface layouts never read the unverified session user", () => {
-  const layouts = [
-    "app/page.tsx",
+test("persistent control-surface shell never reads the unverified session user", () => {
+  const protectedLayout = readWeb("app/(protected)/layout.tsx");
+  assert.match(
+    protectedLayout,
+    /const \{[^}]*\buser\b[^}]*\} = await loadAuthState\(\)/,
+  );
+  assert.doesNotMatch(protectedLayout, /session\.user\./);
+
+  for (const layout of [
     "app/(protected)/branches/layout.tsx",
     "app/(protected)/feedback/layout.tsx",
-    "app/(protected)/finance/layout.tsx",
-    "app/(protected)/hr/layout.tsx",
     "app/(protected)/inventory/layout.tsx",
-    "app/(protected)/menu/layout.tsx",
-    "app/(protected)/orders/layout.tsx",
-    "app/(protected)/settings/layout.tsx",
-  ];
-
-  for (const layout of layouts) {
+  ]) {
     const source = readWeb(layout);
-    assert.match(source, /const \{[^}]*\buser\b[^}]*\} = await loadAuthState\(\)/);
     assert.doesNotMatch(source, /session\.user\./);
   }
 });

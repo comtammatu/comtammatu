@@ -7,18 +7,18 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("root route renders the Owner overview", () => {
-  const rootPage = read("apps/web/app/page.tsx");
+  const rootPage = read("apps/web/app/(protected)/page.tsx");
+  const protectedLayout = read("apps/web/app/(protected)/layout.tsx");
   const overview = read("apps/web/app/_components/owner-overview.tsx");
   const appShell = read("apps/web/app/components/app-shell.tsx");
   const controlSurfaceShell = read(
     "apps/web/app/components/control-surface-shell.tsx",
   );
-  const inventoryLayout = read(
-    "apps/web/app/(protected)/inventory/layout.tsx",
-  );
+  const inventoryLayout = read("apps/web/app/(protected)/inventory/layout.tsx");
 
-  assert.match(rootPage, /loadAuthState/);
-  assert.match(rootPage, /<ControlSurfaceShell[\s\S]*module="owner"/);
+  assert.doesNotMatch(rootPage, /loadAuthState|ControlSurfaceShell/);
+  assert.match(protectedLayout, /loadAuthState/);
+  assert.match(protectedLayout, /<ControlSurfaceShell/);
   assert.match(rootPage, /<OwnerOverview/);
   assert.match(overview, /<AppPageHeader/);
   assert.match(overview, /<AppSection/);
@@ -30,8 +30,7 @@ test("root route renders the Owner overview", () => {
   );
   assert.match(overview, /chrome-tap/);
   assert.doesNotMatch(appShell, /<header/);
-  assert.match(inventoryLayout, /ControlSurfaceShell/);
-  assert.match(inventoryLayout, /module="inventory"/);
+  assert.doesNotMatch(inventoryLayout, /ControlSurfaceShell/);
   assert.match(
     controlSurfaceShell,
     /sidebarHeaderAccessory=\{sidebarHeaderAccessory\}/,

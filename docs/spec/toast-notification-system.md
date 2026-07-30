@@ -189,6 +189,9 @@ Conditionally required fields:
 - `expires_at`: required for time-boxed alerts.
 - `meta`: structured details for diagnostics, formatting, or future delivery.
 
+Actionable notifications must set `expires_at` when their entity is resolved or
+deleted; unread attention must not survive after the work item stops existing.
+
 Recommended `meta` shape:
 
 ```ts

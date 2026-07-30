@@ -7,10 +7,12 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("root route owns the Owner overview", () => {
-  const rootPage = read("apps/web/app/page.tsx");
+  const rootPage = read("apps/web/app/(protected)/page.tsx");
+  const protectedLayout = read("apps/web/app/(protected)/layout.tsx");
   const overview = read("apps/web/app/_components/owner-overview.tsx");
 
-  assert.match(rootPage, /<ControlSurfaceShell[\s\S]*module="owner"/);
+  assert.doesNotMatch(rootPage, /ControlSurfaceShell/);
+  assert.match(protectedLayout, /<ControlSurfaceShell/);
   assert.match(rootPage, /<OwnerOverview/);
   assert.match(overview, /MODULE_ACL\.finance\.path/);
   assert.match(overview, /MODULE_ACL\.inventory\.path/);

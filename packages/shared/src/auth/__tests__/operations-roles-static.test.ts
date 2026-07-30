@@ -82,7 +82,7 @@ test("central site templates can create, ship, and receive manual transfers", ()
 
 test("D091 procurement surfaces are permission-driven", () => {
   const files = [
-    "apps/web/app/(protected)/inventory/layout.tsx",
+    "apps/web/app/(protected)/layout.tsx",
     "apps/web/app/(protected)/inventory/_lib/dashboard-data.ts",
     "apps/web/lib/inventory/grn-source-data.ts",
     "apps/web/lib/inventory/grn-create-data.ts",

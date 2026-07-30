@@ -3,7 +3,7 @@
 // docs/spec/page-archetypes.md. Pure data — the enforcement gate lives in
 // scripts/check-ui-contract.mjs, which imports this map.
 export const PAGE_ARCHETYPES = {
-  "apps/web/app/page.tsx": "LANDING",
+  "apps/web/app/(protected)/page.tsx": "LANDING",
   "apps/web/app/(protected)/settings/(tenant)/general/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/settings/(tenant)/payments/page.tsx":

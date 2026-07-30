@@ -53,7 +53,7 @@ export function useNotificationBadges(): NotificationBadgeSummary {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "notifications",
           filter: `tenant_id=eq.${String(claims.tenant_id)}`,

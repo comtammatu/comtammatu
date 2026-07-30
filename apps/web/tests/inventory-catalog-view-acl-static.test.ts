@@ -10,15 +10,12 @@ const client = readFileSync(
   "app/(protected)/inventory/ingredients/ingredients-client.tsx",
   "utf8",
 );
-const layout = readFileSync("app/(protected)/inventory/layout.tsx", "utf8");
+const protectedLayout = readFileSync("app/(protected)/layout.tsx", "utf8");
 const nav = readFileSync(
   "app/(protected)/inventory/_lib/inventory-nav.ts",
   "utf8",
 );
-const stockData = readFileSync(
-  "lib/inventory/stock-on-hand-data.ts",
-  "utf8",
-);
+const stockData = readFileSync("lib/inventory/stock-on-hand-data.ts", "utf8");
 
 test("ingredients page allows catalog view roles and gates CRUD to owner manage", () => {
   assert.match(page, /INVENTORY_CATALOG_VIEW_ROLES/);
@@ -35,9 +32,9 @@ test("ingredients client hides create/edit when canManage is false", () => {
   assert.match(client, /onRowClick=\{canManage \? openEdit : undefined\}/);
 });
 
-test("inventory layout exposes catalog read nav for central ops without manage", () => {
-  assert.match(layout, /showCatalogRead/);
-  assert.match(layout, /isCentralCatalogViewer/);
+test("persistent shell exposes catalog read nav for central ops without manage", () => {
+  assert.match(protectedLayout, /showCatalogRead/);
+  assert.match(protectedLayout, /isCentralCatalogViewer/);
   assert.match(nav, /showCatalogManagement \|\| showCatalogRead/);
 });
 

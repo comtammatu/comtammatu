@@ -189,7 +189,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.trg_notify_po_sent() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trg_notify_po_sent() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.trg_notify_po_sent() TO service_role;
 
 CREATE OR REPLACE FUNCTION private.notify_stock_request_submitted()

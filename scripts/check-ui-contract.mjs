@@ -1650,10 +1650,7 @@ function resolveFamilyPath(route) {
 const protectedPages = walkFiles("apps/web/app/(protected)", [".tsx"])
   .map(toPosix)
   .filter((file) => file.endsWith("/page.tsx"));
-const rootPage = "apps/web/app/page.tsx";
-const routeManifestPages = fs.existsSync(path.join(REPO_ROOT, rootPage))
-  ? [...protectedPages, rootPage]
-  : protectedPages;
+const routeManifestPages = protectedPages;
 const landingRouteSet = new Set(routeManifestPages.map(routePathFromPageFile));
 
 for (const file of protectedPages) {

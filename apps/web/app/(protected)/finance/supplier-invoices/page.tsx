@@ -56,8 +56,6 @@ export default async function FinanceSupplierInvoicesPage({
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH),
   ]);
-  const isOwner = authState.claims.user_role === "owner";
-  const canPaySupplier = isOwner && hasPayPermission;
   const canAttachVatEvidence =
     hasPayPermission || hasInvoiceCreatePermission;
 
@@ -237,7 +235,7 @@ export default async function FinanceSupplierInvoicesPage({
       branchId={branchFilter}
       tenantId={authState.claims.tenant_id}
       canCreateInvoice={hasInvoiceCreatePermission}
-      canPaySupplier={canPaySupplier}
+      canPaySupplier={hasPayPermission}
       canAttachVatEvidence={canAttachVatEvidence}
       canAcceptDiscrepancy={hasInvoiceMatchPermission}
       description={copy.description}

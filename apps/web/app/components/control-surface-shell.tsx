@@ -8,10 +8,8 @@ import { InventoryBranchFilter } from "@/(protected)/inventory/_components/inven
 import { withInventoryBranchNavScope } from "@/(protected)/inventory/_lib/inventory-nav";
 import type { InventoryBranchOption } from "@/(protected)/inventory/_lib/inventory-scope";
 import { useFinanceRealtimeRefresh } from "@/(protected)/finance/use-finance-realtime-refresh";
-import type {
-  ControlSurfaceCoreModuleId,
-  ControlSurfaceModuleId,
-} from "@/lib/control-surface-module";
+import type { ControlSurfaceModuleId } from "@/lib/control-surface-module";
+import { CONTROL_SURFACE_MODULE_IDS } from "@/lib/control-surface-module";
 import {
   flattenInventoryDeepNav,
   resolveControlSurfaceDeepNav,
@@ -26,33 +24,27 @@ type BaseProps = {
   /** Home / JWT branch for primary-tab resolution — not URL inventory scope. */
   homeBranchId?: number | null;
   children: ReactNode;
-};
-
-type CoreModuleProps = BaseProps & {
-  module: ControlSurfaceCoreModuleId;
-  inventory?: never;
-  finance?: never;
-};
-
-type InventoryModuleProps = BaseProps & {
-  module: "inventory";
   inventory: InventoryNavFlags & {
     allowedBranches: InventoryBranchOption[];
     defaultBranchId: number | null;
   };
-  finance?: never;
-};
-
-type FinanceModuleProps = BaseProps & {
-  module: "finance";
   finance: FinanceNavFlags;
-  inventory?: never;
 };
 
-export type ControlSurfaceShellProps =
-  | CoreModuleProps
-  | InventoryModuleProps
-  | FinanceModuleProps;
+export type ControlSurfaceShellProps = BaseProps;
+
+type ActiveControlSurfaceModule = ControlSurfaceModuleId | "notifications";
+
+function resolveActiveModule(
+  pathname: string | null,
+): ActiveControlSurfaceModule | null {
+  if (pathname === "/") return "owner";
+  const segment = pathname?.split("/")[1];
+  if (segment === "notifications") return segment;
+  return (
+    CONTROL_SURFACE_MODULE_IDS.find((moduleId) => moduleId === segment) ?? null
+  );
+}
 
 function isStocktakeSessionPath(pathname: string | null): boolean {
   const stocktakeMatch = pathname?.match(/^\/inventory\/stocktake\/([^/]+)/);
@@ -73,16 +65,13 @@ function FinanceRealtimeBridge() {
 }
 
 /**
- * Single control_surface chrome wrapper: one AppShell + nav-as-data.
- * L0 layouts import this directly (Wave2 — no OwnerModule/Inventory/Finance
- * shell aliases).
+ * Persistent control_surface chrome for every protected management route.
  */
 export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
-  const { user, role, homeBranchId, children, module } = props;
+  const { user, role, homeBranchId, children, inventory, finance } = props;
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const inventory = module === "inventory" ? props.inventory : null;
-  const finance = module === "finance" ? props.finance : null;
+  const activeModule = resolveActiveModule(pathname);
 
   const tier1 = useMemo(
     () => resolveControlSurfacePrimaryTabs(role, homeBranchId),
@@ -103,7 +92,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
   }, [inventory, inventoryBranchKey]);
 
   const tier2 = useMemo(() => {
-    if (module === "inventory" && inventory) {
+    if (activeModule === "inventory") {
       const {
         allowedBranches: _branches,
         defaultBranchId: _default,
@@ -117,11 +106,13 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       );
     }
 
-    if (module === "finance" && finance) {
+    if (activeModule === "finance") {
       return resolveControlSurfaceDeepNav(role, "finance", { finance });
     }
 
-    return resolveControlSurfaceDeepNav(role, module, {
+    if (!activeModule || activeModule === "notifications") return [];
+
+    return resolveControlSurfaceDeepNav(role, activeModule, {
       branchId: homeBranchId,
     });
   }, [
@@ -129,12 +120,12 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
     homeBranchId,
     inventory,
     inventoryCurrentBranchId,
-    module,
+    activeModule,
     role,
   ]);
 
   const sidebarHeaderAccessory =
-    inventory &&
+    activeModule === "inventory" &&
     inventory.allowedBranches.length > 1 &&
     !isStocktakeSessionPath(pathname) ? (
       <InventoryBranchFilter
@@ -143,6 +134,8 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       />
     ) : null;
 
+  if (!activeModule) return children;
+
   return (
     <AppShell
       user={user}
@@ -150,7 +143,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       tier2={tier2}
       sidebarHeaderAccessory={sidebarHeaderAccessory}
     >
-      {module === "finance" ? <FinanceRealtimeBridge /> : null}
+      {activeModule === "finance" ? <FinanceRealtimeBridge /> : null}
       {children}
     </AppShell>
   );

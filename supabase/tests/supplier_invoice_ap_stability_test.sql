@@ -106,7 +106,7 @@ DECLARE
   v_tenant bigint;
   v_branch bigint;
   v_owner uuid;
-  v_non_owner uuid;
+  v_accountant uuid;
   v_unit bigint;
   v_ingredient_a bigint;
   v_ingredient_b bigint;
@@ -193,13 +193,13 @@ BEGIN
   LIMIT 1;
 
   SELECT profile.id
-  INTO v_non_owner
+  INTO v_accountant
   FROM public.profiles profile
   JOIN public.positions position
     ON position.id = profile.position_id
    AND position.tenant_id = profile.tenant_id
   WHERE profile.tenant_id = v_tenant
-    AND position.code <> 'owner'
+    AND position.code = 'accountant'
     AND COALESCE(profile.is_active, TRUE)
   ORDER BY profile.id
   LIMIT 1;
@@ -207,8 +207,8 @@ BEGIN
   IF v_tenant IS NULL
      OR v_owner IS NULL
      OR v_branch IS NULL
-     OR v_non_owner IS NULL THEN
-    RAISE EXCEPTION 'SUPPLIER AP: seeded owner/site fixture missing';
+     OR v_accountant IS NULL THEN
+    RAISE EXCEPTION 'SUPPLIER AP: seeded owner/accountant/site fixture missing';
   END IF;
 
   INSERT INTO public.units (tenant_id, code, name)
@@ -546,6 +546,11 @@ BEGIN
     'Accepted by AP stability test'
   );
 
+  PERFORM public.accept_supplier_invoice_discrepancy(
+    v_tolerance_invoice,
+    'Accepted for Accountant payment test'
+  );
+
   v_service_invoice := public.create_supplier_invoice_with_allocations(
     v_supplier,
     '__SAP-SERVICE-' || pg_catalog.gen_random_uuid()::text,
@@ -633,15 +638,34 @@ BEGIN
     v_tenant::text || '/supplier-ap-test/discrepancy.pdf'
   WHERE id = v_discrepancy_invoice;
 
+  UPDATE public.supplier_invoices
+  SET vat_invoice_attachment_path =
+    v_tenant::text || '/supplier-ap-test/accountant.pdf'
+  WHERE id = v_tolerance_invoice;
+
+  INSERT INTO public.staff_permissions (
+    user_id,
+    tenant_id,
+    branch_id,
+    permission_key
+  )
+  VALUES (
+    v_accountant,
+    v_tenant,
+    NULL,
+    'finance:ap_pay'
+  )
+  ON CONFLICT DO NOTHING;
+
   PERFORM pg_catalog.set_config(
     'request.jwt.claim.sub',
-    v_non_owner::text,
+    v_accountant::text,
     TRUE
   );
   PERFORM pg_catalog.set_config(
     'request.jwt.claims',
     pg_catalog.jsonb_build_object(
-      'sub', v_non_owner::text,
+      'sub', v_accountant::text,
       'role', 'authenticated',
       'app_metadata', pg_catalog.jsonb_build_object(
         'tenant_id', v_tenant,
@@ -655,22 +679,45 @@ BEGIN
     PERFORM public.record_supplier_payment_allocated(
       v_tenant,
       v_supplier,
-      990,
+      992,
       'bank_transfer',
       v_denied_key,
       NULL,
       pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
-        'invoice_id', v_invoice,
-        'amount', 990
+        'invoice_id', v_tolerance_invoice,
+        'amount', 991
       ))
     );
-    RAISE EXCEPTION 'SUPPLIER AP: non-owner payment succeeded';
+    RAISE EXCEPTION 'SUPPLIER AP: Accountant advance creation succeeded';
   EXCEPTION
     WHEN insufficient_privilege THEN
-      IF SQLERRM <> 'forbidden_owner_only' THEN
+      IF SQLERRM <> 'accountant_supplier_advance_forbidden' THEN
         RAISE;
       END IF;
   END;
+
+  v_result := public.record_supplier_payment_allocated(
+    v_tenant,
+    v_supplier,
+    991,
+    'bank_transfer',
+    v_denied_key,
+    NULL,
+    pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
+      'invoice_id', v_tolerance_invoice,
+      'amount', 991
+    ))
+  );
+  IF (v_result->>'advance_amount')::numeric <> 0
+     OR (
+       SELECT invoice.payment_status
+       FROM public.supplier_invoices invoice
+       WHERE invoice.id = v_tolerance_invoice
+     ) <> 'paid' THEN
+    RAISE EXCEPTION
+      'SUPPLIER AP: Accountant invoice-bound payment failed %',
+      v_result;
+  END IF;
 
   PERFORM pg_catalog.set_config(
     'request.jwt.claim.sub',

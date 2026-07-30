@@ -358,7 +358,7 @@ density="compact"` already owns width/padding. Return a bare flex
 
 ### LANDING
 
-**Exemplars:** `apps/web/app/page.tsx` and
+**Exemplars:** `apps/web/app/(protected)/page.tsx` and
 `apps/web/app/(protected)/settings/printers/page.tsx`.
 
 - Skeleton: `AppPage width="wide"` → `AppPageHeader` → `AppSection` per group
@@ -412,7 +412,7 @@ badge}`).
 
 ### GATE/AUTH
 
-**Exemplars:** `apps/web/app/page.tsx` (work-location picker:
+**Exemplars:** `apps/web/app/(protected)/page.tsx` (work-location picker:
 `AppPage` + `LinkCardGrid`) and `apps/web/app/(public)/access-denied/page.tsx`
 (`?reason=` contract).
 

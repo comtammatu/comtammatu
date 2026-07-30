@@ -402,7 +402,7 @@ export const confirmSupplierInvoice = withAction(
 
 export const recordSupplierPayment = withAction(
   {
-    roles: ["owner"] as const,
+    roles: ROLES,
     schema: supplierPaymentSchema,
     permission: PERMISSION_KEYS.FINANCE_AP_PAY,
     forbiddenError: "Không có quyền thanh toán công nợ NCC.",

@@ -10655,6 +10655,14 @@ export type Database = {
         Returns: Json
       }
       count_unread_notifications: { Args: never; Returns: number }
+      count_unread_notifications_by_target: {
+        Args: never
+        Returns: {
+          action_url: string
+          kind: string
+          unread_count: number
+        }[]
+      }
       create_expense_transfer_intent: {
         Args: {
           p_branch_id: number
