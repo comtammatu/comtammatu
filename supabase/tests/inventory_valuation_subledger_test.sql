@@ -104,6 +104,24 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'anonymous valuation report execution must stay revoked';
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'inventory_valuation_events_invoice_idx'
+      AND indexdef ~ '\(source_invoice_id\)'
+      AND indexdef !~ '\(tenant_id, source_invoice_id\)'
+  ) OR NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'stock_movements_grn_item_idx'
+      AND indexdef ~ '\(grn_item_id\)'
+      AND indexdef !~ '\(tenant_id, grn_item_id\)'
+  ) THEN
+    RAISE EXCEPTION 'valuation foreign-key indexes must lead with their FK columns';
+  END IF;
 END;
 $$;
 
