@@ -1561,13 +1561,24 @@ export const inventory = {
     chooseReceiptsForLines:
       "Chọn phiếu nhập để tải nguyên liệu và số lượng còn được lập hóa đơn.",
     serviceDescription: "Nội dung dịch vụ",
-    unitPriceLabel: "Đơn giá",
-    unitPriceAria: (description: string) => `Đơn giá ${description}`,
+    pricingModeLabel: "Cách nhập giá",
+    pricingModes: {
+      grossTotal: "Nhập theo tổng giá",
+      unitPrice: "Nhập theo đơn giá",
+    },
+    unitPriceLabel: "Đơn giá đã gồm GTGT",
+    unitPriceAria: (description: string) =>
+      `Đơn giá đã gồm GTGT ${description}`,
+    grossLineTotalLabel: "Tổng giá đã gồm GTGT",
+    grossLineTotalAria: (description: string) =>
+      `Tổng giá đã gồm GTGT ${description}`,
     lineDiscountLabel: "Chiết khấu dòng",
     lineDiscountAria: (description: string) => `Chiết khấu ${description}`,
     taxRateLabel: "Thuế suất",
     vatAmountAria: (description: string) => `Thuế GTGT ${description}`,
+    vatExceedsGross: "Tiền thuế GTGT không được lớn hơn tổng giá.",
     recalculateVat: "Tính lại theo thuế suất",
+    netLineTotal: "Tiền trước thuế GTGT",
     beforeVat: "Trước thuế GTGT",
     invoiceLineMeta: (
       quantity: string,
