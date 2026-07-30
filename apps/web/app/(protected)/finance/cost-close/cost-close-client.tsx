@@ -17,19 +17,15 @@ import {
 import { Item, ItemContent, ItemTitle } from "@comtammatu/ui/components/item";
 import { messages } from "@lib/messages";
 import {
+  activateInventoryValuationCutover,
   closeInventoryCostPeriod,
+  prepareInventoryValuationCutover,
   type InventoryCostCloseStatus,
 } from "./actions";
 
 const copy = messages.finance.costClose;
 
-function StatusItems({
-  items,
-  empty,
-}: {
-  items: string[];
-  empty: string;
-}) {
+function StatusItems({ items, empty }: { items: string[]; empty: string }) {
   const rows = items.length > 0 ? items : [empty];
   return (
     <div className="grid gap-2">
@@ -59,26 +55,71 @@ export function CostCloseClient({
   const [isPending, startTransition] = useTransition();
   const intentKey = useRef<string | null>(null);
   const needsWaiver = status.attentionCount > 0;
+  const canPrepare = status.cutoverStatus === "inactive" && status.canPrepare;
+  const canActivate =
+    status.cutoverStatus === "shadow" &&
+    status.shadowRemainingDays === 0 &&
+    status.blockers.length === 0;
   const canClose =
+    status.cutoverStatus === "active" &&
     !status.closed &&
     status.blockers.length === 0 &&
     (!needsWaiver || waiverReason.trim().length >= 5);
+  const canSubmit =
+    status.cutoverStatus === "inactive"
+      ? canPrepare
+      : status.cutoverStatus === "shadow"
+        ? canActivate
+        : canClose;
+  const primaryLabel =
+    status.cutoverStatus === "inactive"
+      ? isPending
+        ? copy.preparing
+        : copy.prepare
+      : status.cutoverStatus === "shadow"
+        ? isPending
+          ? copy.activating
+          : copy.activate
+        : isPending
+          ? copy.closing
+          : copy.close;
 
-  function handleClose() {
+  function handlePrimaryAction() {
     intentKey.current ??= crypto.randomUUID();
     startTransition(async () => {
-      const result = await closeInventoryCostPeriod({
-        year: status.year,
-        month: status.month,
-        waiverReason: needsWaiver ? waiverReason : null,
-        idempotencyKey: intentKey.current!,
-      });
+      const result =
+        status.cutoverStatus === "inactive"
+          ? await prepareInventoryValuationCutover({
+              idempotencyKey: intentKey.current!,
+            })
+          : status.cutoverStatus === "shadow"
+            ? await activateInventoryValuationCutover({
+                idempotencyKey: intentKey.current!,
+              })
+            : await closeInventoryCostPeriod({
+                year: status.year,
+                month: status.month,
+                waiverReason: needsWaiver ? waiverReason : null,
+                idempotencyKey: intentKey.current!,
+              });
       if (!result.success) {
-        toast.error(result.error ?? copy.closeFailed);
+        const fallback =
+          status.cutoverStatus === "inactive"
+            ? copy.prepareFailed
+            : status.cutoverStatus === "shadow"
+              ? copy.activateFailed
+              : copy.closeFailed;
+        toast.error(result.error ?? fallback);
         return;
       }
       intentKey.current = null;
-      toast.success(copy.closeSuccess);
+      toast.success(
+        status.cutoverStatus === "inactive"
+          ? copy.prepareSuccess
+          : status.cutoverStatus === "shadow"
+            ? copy.activateSuccess
+            : copy.closeSuccess,
+      );
       router.refresh();
     });
   }
@@ -104,10 +145,10 @@ export function CostCloseClient({
           <Button
             type="button"
             size="touch"
-            onClick={handleClose}
-            disabled={!canClose || isPending}
+            onClick={handlePrimaryAction}
+            disabled={!canSubmit || isPending}
           >
-            {isPending ? copy.closing : copy.close}
+            {primaryLabel}
           </Button>
         </div>
       }
@@ -136,23 +177,15 @@ export function CostCloseClient({
         tone={status.blockers.length > 0 ? "destructive" : "default"}
         icon={status.blockers.length > 0 ? <XCircle /> : <CircleCheck />}
       >
-        <StatusItems
-          items={status.blockers}
-          empty={copy.noBlockers}
-        />
+        <StatusItems items={status.blockers} empty={copy.noBlockers} />
       </AppSection>
 
       <AppSection
         title={copy.attention}
         tone={status.attention.length > 0 ? "warning" : "default"}
-        icon={
-          status.attention.length > 0 ? <TriangleAlert /> : <CircleCheck />
-        }
+        icon={status.attention.length > 0 ? <TriangleAlert /> : <CircleCheck />}
       >
-        <StatusItems
-          items={status.attention}
-          empty={copy.noWaiverNeeded}
-        />
+        <StatusItems items={status.attention} empty={copy.noWaiverNeeded} />
         {needsWaiver ? (
           <div className="grid gap-1.5">
             <Label htmlFor="cost-close-waiver">{copy.waiverLabel}</Label>
@@ -170,9 +203,16 @@ export function CostCloseClient({
       <AppSection title={copy.reconciled} icon={<CircleCheck />}>
         <StatusItems items={status.reconciled} empty={copy.noReconciliation} />
         <p className="text-sm text-muted-foreground">
-          {copy.currentInventoryValue}:{" "}
+          {status.cutoverStatus === "inactive"
+            ? copy.confirmedPurchaseValue
+            : copy.currentInventoryValue}
+          :{" "}
           <span className="font-mono font-medium text-foreground">
-            {formatVND(status.totalValue)}
+            {formatVND(
+              status.cutoverStatus === "inactive"
+                ? status.confirmedNetInventoryValue
+                : status.totalValue,
+            )}
           </span>
         </p>
       </AppSection>

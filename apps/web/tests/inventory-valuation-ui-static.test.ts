@@ -18,7 +18,10 @@ test("supplier invoice confirmation exposes valuation settlement", () => {
 
   assert.match(actions, /get_supplier_invoice_valuation_summary/);
   assert.match(actions, /SupplierInvoiceValuationSummary/);
-  assert.match(actions, /provisionalValue: z\.coerce\.number\(\)\.default\(0\)/);
+  assert.match(
+    actions,
+    /provisionalValue: z\.coerce\.number\(\)\.default\(0\)/,
+  );
   assert.match(actions, /warning: z\.boolean\(\)\.default\(false\)/);
   assert.match(client, /productionInventoryAdjustment/);
   assert.match(client, /foodCostVariance/);
@@ -36,27 +39,31 @@ test("cost close is an owner finance workflow with no reopen control", () => {
 
   assert.match(page, /user_role !== "owner"/);
   assert.match(actions, /ACCOUNTING_PERIOD_CLOSE/);
+  assert.match(actions, /get_inventory_valuation_bootstrap_readiness/);
+  assert.match(actions, /prepare_inventory_valuation_cutover/);
+  assert.match(actions, /activate_inventory_valuation_cutover/);
+  assert.match(actions, /bootstrapReadinessSchema/);
+  assert.match(actions, /shadowRemainingDays/);
   assert.match(actions, /close_inventory_cost_period/);
   assert.match(page, /year\?: string \| string\[\]/);
   assert.match(client, /\/finance\/cost-close\?year=/);
+  assert.match(client, /prepareInventoryValuationCutover/);
+  assert.match(client, /activateInventoryValuationCutover/);
+  assert.match(client, /copy\.prepare/);
+  assert.match(client, /copy\.activate/);
+  assert.match(client, /status\.canPrepare/);
+  assert.match(client, /status\.shadowRemainingDays/);
   assert.match(client, /copy\.blocked/);
   assert.match(client, /copy\.attention/);
   assert.match(client, /copy\.reconciled/);
   assert.doesNotMatch(`${page}\n${client}`, /reopen|Mở lại kỳ/i);
-  assert.match(
-    archetypes,
-    /finance\/cost-close\/page\.tsx": "DOC-WORKFLOW"/,
-  );
+  assert.match(archetypes, /finance\/cost-close\/page\.tsx": "DOC-WORKFLOW"/);
 });
 
 test("finance valuation surfaces do not fall back to mutable reference cost", () => {
-  const cockpit = readWeb(
-    "app/(protected)/finance/_lib/finance-cockpit.ts",
-  );
+  const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
   const foodCost = readWeb("app/_lib/food-cost-actions.ts");
-  const actualFoodCost = readWeb(
-    "app/(protected)/finance/expense-actions.ts",
-  );
+  const actualFoodCost = readWeb("app/(protected)/finance/expense-actions.ts");
 
   assert.match(cockpit, /\.from\("inventory_valuation_accounts"\)/);
   assert.match(cockpit, /data\?\.status === "active"/);
