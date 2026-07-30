@@ -257,7 +257,7 @@ export function SupplierItemsClient({
         ]),
     {
       key: "remove",
-      label: copy.removeAria(row.ingredientName),
+      label: copy.removeAction,
       icon: <IconTrash />,
       destructive: true,
       disabled: isPending,
@@ -272,21 +272,17 @@ export function SupplierItemsClient({
       key: "ingredient",
       header: copy.ingredient,
       render: (row) => (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">{row.ingredientName}</span>
-          {row.isPreferred ? (
-            <Badge variant="secondary">{copy.preferredBadge}</Badge>
-          ) : null}
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{row.ingredientName}</span>
+            {row.isPreferred ? (
+              <Badge variant="secondary">{copy.preferredBadge}</Badge>
+            ) : null}
+          </div>
+          <p className="mt-1 font-mono text-xs text-muted-foreground">
+            {copy.internalSku}: {row.ingredientSku ?? "—"}
+          </p>
         </div>
-      ),
-    },
-    {
-      key: "ingredientSku",
-      header: copy.internalSku,
-      render: (row) => (
-        <span className="font-mono text-sm text-muted-foreground">
-          {row.ingredientSku ?? "—"}
-        </span>
       ),
     },
     ...(canManage
@@ -294,7 +290,7 @@ export function SupplierItemsClient({
           {
             key: "actions",
             header: FORM_VI.action,
-            className: "w-14",
+            className: "w-24 text-right",
             render: (row: SupplierItemRow) => {
               const items = getSupplierItemRowActions(row);
               return (
@@ -317,15 +313,16 @@ export function SupplierItemsClient({
 
   return (
     <>
-      <AppDialog
-        open={open}
-        onOpenChange={onOpenChange}
-        title={supplier.name}
-        description={copy.description}
-        contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-4xl"
-        bodyClassName="min-h-0 overflow-y-auto p-0"
-      >
-        <AppListFrame
+      {dialogOpen ? null : (
+        <AppDialog
+          open={open}
+          onOpenChange={onOpenChange}
+          title={supplier.name}
+          description={`${copy.description} ${copy.multiSupplierHint}`}
+          contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-3xl"
+          bodyClassName="min-h-0 overflow-y-auto p-0"
+        >
+          <AppListFrame
           toolbar={
             <AppToolbar
               variant="inline"
@@ -416,8 +413,9 @@ export function SupplierItemsClient({
               </Item>
             )}
           />
-        </AppListFrame>
-      </AppDialog>
+          </AppListFrame>
+        </AppDialog>
+      )}
 
       <FormDialog
         open={dialogOpen}

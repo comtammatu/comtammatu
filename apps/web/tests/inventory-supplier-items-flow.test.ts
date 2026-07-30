@@ -42,6 +42,23 @@ test("supplier rows open one addressable AppDialog and detail URL redirects", ()
   assert.match(suppliersClient, /next\.set\("supplierId", String\(row\.id\)\)/);
   assert.match(suppliersClient, /onRowClick=\{canReadItems \? openItems/);
   assert.match(suppliersClient, /<SupplierItemsClient/);
+  const supplierColumns = suppliersClient.slice(
+    suppliersClient.indexOf("const columns"),
+    suppliersClient.indexOf("return (", suppliersClient.indexOf("const columns")),
+  );
+  assert.deepEqual(
+    [...supplierColumns.matchAll(/key: "([^"]+)"/g)].map((match) => match[1]),
+    ["name", "tax_code", "ingredients", "actions"],
+  );
+  const itemColumns = itemsClient.slice(
+    itemsClient.indexOf("const columns"),
+    itemsClient.indexOf("return (", itemsClient.indexOf("const columns")),
+  );
+  assert.deepEqual(
+    [...itemColumns.matchAll(/key: "([^"]+)"/g)].map((match) => match[1]),
+    ["ingredient", "actions"],
+  );
+  assert.match(itemsClient, /copy\.internalSku}: \{row\.ingredientSku/);
   assert.doesNotMatch(
     suppliersClient,
     /router\.push\(`\/inventory\/suppliers\/\$\{row\.id\}\/items`\)/,

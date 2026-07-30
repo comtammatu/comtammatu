@@ -9,6 +9,9 @@ test("GRN list and detail keep controls inside one coherent workflow", () => {
   const detail = read(
     "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
+  const lineRow = read(
+    "app/(protected)/inventory/grn/[id]/views/grn-line-row.tsx",
+  );
   const operatorDetail = read(
     "app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx",
   );
@@ -20,7 +23,11 @@ test("GRN list and detail keep controls inside one coherent workflow", () => {
   );
   assert.doesNotMatch(detail, /function LineMetrics/);
   assert.match(detail, /header: "Theo đơn"/);
-  assert.match(detail, /header: grnCopy\.lineHeaderThisReceipt/);
+  assert.match(detail, /header: grnCopy\.lineHeaderQty/);
+  assert.doesNotMatch(detail, /key: "rejected"/);
+  assert.match(detail, /showHeader=\{false\}/);
+  assert.match(lineRow, /grnCopy\.line\.acceptedLabel/);
+  assert.match(lineRow, /<details/);
   assert.match(detail, /header: "Kết quả"/);
   assert.match(detail, /hasAcceptedGrnQuantity\(lines\)/);
   assert.match(detail, /grnCopy\.line\.notInspected/);

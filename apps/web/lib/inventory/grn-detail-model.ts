@@ -78,12 +78,29 @@ export type ReceivingLocationOption = {
 
 export type EditableGrnLine = GrnDetailItem & { dirty: boolean };
 
+export function acceptedGrnQuantity(
+  receivedQuantity: number,
+  rejectedQuantity: number,
+): number {
+  return Math.max(receivedQuantity - rejectedQuantity, 0);
+}
+
+export function deliveredGrnQuantity(
+  acceptedQuantity: number,
+  rejectedQuantity: number,
+): number {
+  return Math.max(acceptedQuantity, 0) + Math.max(rejectedQuantity, 0);
+}
+
 export function calculateGrnQuantities(
   receivedQuantity: number,
   rejectedQuantity: number,
   poRemainingQuantity: number,
 ) {
-  const acceptedQuantity = Math.max(receivedQuantity - rejectedQuantity, 0);
+  const acceptedQuantity = acceptedGrnQuantity(
+    receivedQuantity,
+    rejectedQuantity,
+  );
   const remainingQuantity = Math.max(poRemainingQuantity, 0);
   const poAppliedQuantity = Math.min(acceptedQuantity, remainingQuantity);
   return {
@@ -97,7 +114,9 @@ export function calculateGrnQuantities(
 export function hasAcceptedGrnQuantity(
   lines: readonly Pick<GrnDetailItem, "actual" | "rejected">[],
 ): boolean {
-  return lines.some((line) => line.actual - line.rejected > 0);
+  return lines.some(
+    (line) => acceptedGrnQuantity(line.actual, line.rejected) > 0,
+  );
 }
 
 export function isGrnLookupParam(value: string): boolean {

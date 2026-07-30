@@ -18,7 +18,7 @@ test("DataTable owns header and body typography after column layout classes", ()
   assert.match(dataTableSource, /const DATA_TABLE_CELL_TYPOGRAPHY = "text-xs font-normal"/);
   assert.match(
     dataTableSource,
-    /className=\{cn\(col\.className, DATA_TABLE_HEADER_TYPOGRAPHY\)\}/,
+    /className=\{cn\(\s*col\.className,\s*DATA_TABLE_HEADER_TYPOGRAPHY,\s*"align-middle",\s*\)\}/,
   );
   assert.match(
     dataTableSource,

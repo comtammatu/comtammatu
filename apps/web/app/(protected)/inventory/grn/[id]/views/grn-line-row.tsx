@@ -14,6 +14,8 @@ import {
 import { FormattedNumberInput, PhotoUploadInput } from "@/components/form";
 import {
   GRN_DETAIL_COPY as grnCopy,
+  acceptedGrnQuantity,
+  deliveredGrnQuantity,
   type EditableGrnLine as EditableLine,
 } from "@lib/inventory/grn-detail-model";
 import { formatQty } from "@lib/inventory/format";
@@ -51,7 +53,7 @@ export function LineRow({
       : qualityStatus === "partial"
         ? grnCopy.line.qualityPartial
         : grnCopy.line.qualityRejected;
-  const acceptedQuantity = Math.max(line.actual - line.rejected, 0);
+  const acceptedQuantity = acceptedGrnQuantity(line.actual, line.rejected);
   const excessQuantity = Math.max(acceptedQuantity - line.poAppliedQuantity, 0);
   const shortageQuantity = Math.max(
     line.remainingQuantity - line.poAppliedQuantity,
@@ -129,75 +131,89 @@ export function LineRow({
 
       {isDraft ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field
+          <Field
+            id={`received-${idx}`}
+            label={grnCopy.line.acceptedLabel(line.unit)}
+            showLabel={showHeader}
+          >
+            <FormattedNumberInput
               id={`received-${idx}`}
-              label={grnCopy.line.actualLabel(line.unit)}
-            >
-              <FormattedNumberInput
-                id={`received-${idx}`}
-                value={line.actual > 0 || line.dirty ? String(line.actual) : ""}
-                onValueChange={(value) => {
-                  const actual = Math.max(0, Number(value || 0));
-                  onChange({
-                    actual,
-                    rejected: Math.min(line.rejected, actual),
-                  });
-                }}
-                maxFractionDigits={3}
-              />
-            </Field>
-            <Field
-              id={`rejected-${idx}`}
-              label={grnCopy.line.rejectedLabel(line.unit)}
-            >
-              <FormattedNumberInput
-                id={`rejected-${idx}`}
-                value={String(line.rejected)}
-                onValueChange={(value) =>
-                  onChange({
-                    rejected: Math.min(
-                      line.actual,
-                      Math.max(0, Number(value || 0)),
-                    ),
-                  })
-                }
-                maxFractionDigits={3}
-              />
-            </Field>
-          </div>
+              value={
+                line.actual > 0 || line.dirty ? String(acceptedQuantity) : ""
+              }
+              onValueChange={(value) =>
+                onChange({
+                  actual: deliveredGrnQuantity(
+                    Math.max(0, Number(value || 0)),
+                    line.rejected,
+                  ),
+                })
+              }
+              maxFractionDigits={3}
+            />
+          </Field>
 
-          {line.rejected > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2">
+          <details open={line.rejected > 0 ? true : undefined}>
+            <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+              {grnCopy.qcQueue}
+            </summary>
+            <div className="mt-3 flex flex-col gap-3">
               <Field
-                id={`reason-${idx}`}
-                label={grnCopy.line.rejectReasonRequired}
+                id={`rejected-${idx}`}
+                label={grnCopy.line.rejectedLabel(line.unit)}
               >
-                <Textarea
-                  id={`reason-${idx}`}
-                  rows={2}
-                  value={line.rejectionReason}
-                  placeholder={grnCopy.line.rejectReasonPlaceholder}
-                  onChange={(event) =>
-                    onChange({ rejectionReason: event.target.value })
-                  }
+                <FormattedNumberInput
+                  id={`rejected-${idx}`}
+                  value={String(line.rejected)}
+                  onValueChange={(value) => {
+                    const rejected = Math.max(0, Number(value || 0));
+                    onChange({
+                      actual: deliveredGrnQuantity(
+                        acceptedQuantity,
+                        rejected,
+                      ),
+                      rejected,
+                    });
+                  }}
+                  maxFractionDigits={3}
                 />
               </Field>
-              <Field
-                id={`reject-photo-${idx}`}
-                label={grnCopy.line.proofPhotoLabel(true)}
-              >
-                <PhotoUploadInput
-                  tenantId={tenantId}
-                  folder={`grn/${grnId}/rejected/${line.lineId}`}
-                  value={line.rejectedPhotoUrl || null}
-                  onChange={(url) => onChange({ rejectedPhotoUrl: url ?? "" })}
-                  acceptTypes="image"
-                  allowPaste={false}
-                />
-              </Field>
+
+              {line.rejected > 0 ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field
+                    id={`reason-${idx}`}
+                    label={grnCopy.line.rejectReasonRequired}
+                  >
+                    <Textarea
+                      id={`reason-${idx}`}
+                      rows={2}
+                      value={line.rejectionReason}
+                      placeholder={grnCopy.line.rejectReasonPlaceholder}
+                      onChange={(event) =>
+                        onChange({ rejectionReason: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field
+                    id={`reject-photo-${idx}`}
+                    label={grnCopy.line.proofPhotoLabel(true)}
+                  >
+                    <PhotoUploadInput
+                      tenantId={tenantId}
+                      folder={`grn/${grnId}/rejected/${line.lineId}`}
+                      value={line.rejectedPhotoUrl || null}
+                      onChange={(url) =>
+                        onChange({ rejectedPhotoUrl: url ?? "" })
+                      }
+                      acceptTypes="image"
+                      allowPaste={false}
+                    />
+                  </Field>
+                </div>
+              ) : null}
             </div>
-          ) : null}
+          </details>
         </>
       ) : line.rejected > 0 ? (
         <div className="grid gap-2 text-sm">
@@ -236,14 +252,18 @@ function Field({
   id,
   label,
   children,
+  showLabel = true,
 }: {
   id: string;
   label: string;
   children: ReactNode;
+  showLabel?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className={showLabel ? undefined : "sr-only"}>
+        {label}
+      </Label>
       {children}
     </div>
   );

@@ -7,6 +7,7 @@ import { Pencil as IconPencil, Trash as IconTrash } from "lucide-react";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import {
   GRN_DETAIL_COPY as grnCopy,
+  acceptedGrnQuantity,
   type EditableGrnLine as EditableLine,
 } from "@lib/inventory/grn-detail-model";
 import { deriveGrnQualityStatus } from "@lib/inventory/grn-quality";
@@ -65,7 +66,7 @@ export function DraftGrnLineCard({
           <p className="mt-0.5 text-xs text-muted-foreground">
             {grnCopy.line.receiptSummary(
               line.remainingQuantity,
-              line.actual,
+              acceptedGrnQuantity(line.actual, line.rejected),
               line.unit,
             )}
           </p>

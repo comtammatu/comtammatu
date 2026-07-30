@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  acceptedGrnQuantity,
   calculateGrnQuantities,
   createEditableGrnLine,
+  deliveredGrnQuantity,
   hasAcceptedGrnQuantity,
   isLinkedPoApproved,
   isGrnLookupParam,
 } from "../lib/inventory/grn-detail-model";
+
+test("GRN quantity helpers preserve one accepted input plus rejected exception", () => {
+  assert.equal(acceptedGrnQuantity(100, 20), 80);
+  assert.equal(deliveredGrnQuantity(80, 20), 100);
+});
 
 test("GRN detail lookup accepts safe numeric IDs and GRN document numbers", () => {
   assert.equal(isGrnLookupParam("42"), true);

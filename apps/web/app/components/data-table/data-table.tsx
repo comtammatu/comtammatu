@@ -319,7 +319,11 @@ export function DataTable<T>({
             {columns.map((col) => (
               <TableHead
                 key={col.key}
-                className={cn(col.className, DATA_TABLE_HEADER_TYPOGRAPHY)}
+                className={cn(
+                  col.className,
+                  DATA_TABLE_HEADER_TYPOGRAPHY,
+                  "align-middle",
+                )}
               >
                 {col.header === "" ? (
                   <span className="sr-only">{FORM_VI.action}</span>

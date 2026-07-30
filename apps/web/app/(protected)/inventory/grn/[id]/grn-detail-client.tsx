@@ -3,7 +3,6 @@
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -55,6 +54,7 @@ import { useGrnDetailLines as useGrnLines } from "@lib/inventory/use-grn-detail-
 import {
   allLinkedPosApproved,
   GRN_DETAIL_COPY as grnCopy,
+  acceptedGrnQuantity,
   hasAcceptedGrnQuantity,
 } from "@lib/inventory/grn-detail-model";
 import { supplierInvoiceHrefForGrn } from "@lib/inventory/grn-list-model";
@@ -304,7 +304,7 @@ export function GRNDetailClient({
       },
       {
         key: "actual",
-        header: grnCopy.lineHeaderThisReceipt,
+        header: grnCopy.lineHeaderQty,
         className: "min-w-80 align-top",
         render: (line, idx) =>
           canMutateDraft && isDesktopLineEdit ? (
@@ -321,23 +321,17 @@ export function GRNDetailClient({
               onAmend={() => undefined}
             />
           ) : (
-            <div>
-              <p
-                className={cn(
-                  "font-mono font-medium tabular-nums",
-                  line.actual <= 0 && "font-sans text-muted-foreground",
-                )}
-              >
-                {line.actual > 0
-                  ? `${formatQty(line.actual)} ${line.unit}`
-                  : grnCopy.line.enterQuantity}
-              </p>
-              {line.rejected > 0 ? (
-                <p className="mt-1 text-xs text-warning">
-                  {grnCopy.line.rejectedShort(line.rejected, line.unit)}
-                </p>
-              ) : null}
-            </div>
+            <p
+              className={
+                acceptedGrnQuantity(line.actual, line.rejected) > 0
+                  ? "font-mono font-medium tabular-nums"
+                  : "text-muted-foreground"
+              }
+            >
+              {acceptedGrnQuantity(line.actual, line.rejected) > 0
+                ? `${formatQty(acceptedGrnQuantity(line.actual, line.rejected))} ${line.unit}`
+                : grnCopy.line.enterQuantity}
+            </p>
           ),
       },
       {

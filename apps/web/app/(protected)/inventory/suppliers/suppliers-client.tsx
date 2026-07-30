@@ -213,7 +213,7 @@ export function SuppliersClient({
   function openItems(row: SupplierRow) {
     const next = new URLSearchParams(searchParams.toString());
     next.set("supplierId", String(row.id));
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    router.push(`${pathname}?${next.toString()}`, { scroll: false });
   }
 
   function closeItems() {
@@ -255,7 +255,7 @@ export function SuppliersClient({
       ? [
           {
             key: "items",
-            label: suppliersCopy.items.openAria(s.name),
+            label: suppliersCopy.items.openAction,
             icon: <IconPackageSearch />,
             onSelect: () => openItems(s),
           } satisfies RowActionItem,
@@ -282,17 +282,29 @@ export function SuppliersClient({
   const columns: DataTableColumn<SupplierRow>[] = [
     {
       key: "name",
-      header: suppliersCopy.title,
+      header: suppliersCopy.nameColumn,
+      className: "min-w-64",
       render: (s, i) => (
         <div className="flex items-center gap-3">
           <SupplierAvatar name={s.name} colorIndex={i} />
-          <p className="text-sm">{s.name}</p>
+          <p className="font-medium">{s.name}</p>
         </div>
       ),
     },
     {
+      key: "tax_code",
+      header: suppliersCopy.taxCodeColumn,
+      className: "w-44",
+      render: (s) => (
+        <span className="font-mono text-sm text-muted-foreground">
+          {s.tax_code ?? "—"}
+        </span>
+      ),
+    },
+    {
       key: "ingredients",
-      header: "Nguyên liệu",
+      header: suppliersCopy.items.ingredient,
+      className: "w-32",
       render: (s) => (
         <span
           className={cn(
@@ -305,45 +317,9 @@ export function SuppliersClient({
       ),
     },
     {
-      key: "tax_code",
-      header: "Mã số thuế",
-      render: (s) => (
-        <span className="font-mono text-sm text-muted-foreground">
-          {s.tax_code ?? "—"}
-        </span>
-      ),
-    },
-    {
-      key: "phone",
-      header: "Điện thoại",
-      render: (s) => (
-        <span className="font-mono text-sm">{s.phone ?? "—"}</span>
-      ),
-    },
-    {
-      key: "address",
-      header: "Địa chỉ",
-      render: (s) => (
-        <p className="max-w-44 truncate text-sm text-muted-foreground">
-          {s.address ?? "—"}
-        </p>
-      ),
-    },
-    {
-      key: "status",
-      header: FORM_VI.status,
-      render: (s) => (
-        <StatusBadge
-          domain="inventory"
-          value={s.is_active ? "active" : "suspended"}
-          size="sm"
-        />
-      ),
-    },
-    {
       key: "actions",
       header: FORM_VI.action,
-      className: "w-14 text-right",
+      className: "w-24 text-right",
       render: (s) => {
         const items = getSupplierRowActions(s);
         return (

@@ -50,6 +50,6 @@ test("supplier UI supports bulk selection and displays active ingredient counts"
   assert.match(itemsClient, /useFieldArray/);
   assert.match(itemsClient, /createSupplierItems/);
   assert.doesNotMatch(itemsClient, /supplierSku|Mã hàng NCC/);
-  assert.match(suppliersClient, /header: "Nguyên liệu"/);
+  assert.match(suppliersClient, /header: suppliersCopy\.items\.ingredient/);
   assert.match(suppliersClient, /ingredient_count/);
 });

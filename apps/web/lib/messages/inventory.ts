@@ -764,9 +764,7 @@ export const inventory = {
     overviewLinesEmpty: "Phiếu chưa có dòng nào.",
     lineHeaderName: "Nguyên liệu",
     lineHeaderOrdered: "SL đặt",
-    lineHeaderQty: "SL nhận",
-    lineHeaderThisReceipt: "Nhận lần này",
-    lineHeaderRejected: "Từ chối",
+    lineHeaderQty: "Thực nhận",
     lineHeaderStatus: "Trạng thái",
     draftQcHint:
       "Ghi số lượng giao thực tế. Hàng từ chối cần số lượng, lý do và ảnh.",
@@ -851,7 +849,7 @@ export const inventory = {
       enterQuantity: "Nhập số lượng",
       receiptSummary: (remaining: number, actual: number, unit: string) =>
         actual > 0
-          ? `${formatQuantity(remaining)} ${unit} theo đơn · Nhận lần này ${formatQuantity(actual)} ${unit}`
+          ? `${formatQuantity(remaining)} ${unit} theo đơn · Thực nhận ${formatQuantity(actual)} ${unit}`
           : `${formatQuantity(remaining)} ${unit} theo đơn · Chưa nhập số lượng`,
       receivedBefore: (quantity: number, unit: string) =>
         `Đã nhận trước ${formatQuantity(quantity)} ${unit}`,
@@ -867,6 +865,7 @@ export const inventory = {
       unsaved: "chưa lưu",
       deleteLineAria: "Xóa dòng",
       actualLabel: (unit: string) => `Số đã giao (${unit})`,
+      acceptedLabel: (unit: string) => `Thực nhận (${unit})`,
       rejectedLabel: (unit: string) => `Từ chối nhận (${unit})`,
       qualityAccepted: "Đạt — nhập toàn bộ",
       qualityPartial: "Nhận một phần",
@@ -1800,6 +1799,8 @@ export const inventory = {
   },
   suppliers: {
     title: "Nhà cung cấp",
+    nameColumn: "Tên NCC",
+    taxCodeColumn: "MST",
     createAction: "Thêm nhà cung cấp",
     searchPlaceholder: "Tìm tên, mã số thuế, điện thoại...",
     deleteFailed: "Không xóa được",
@@ -1825,7 +1826,9 @@ export const inventory = {
       eyebrow: "Nguyên liệu theo NCC",
       description:
         "Danh sách nguyên liệu được phép dùng khi lập đơn mua và phiếu nhập.",
-      openAria: (name: string) => `Xem nguyên liệu của ${name}`,
+      multiSupplierHint:
+        "Một nguyên liệu có thể thuộc nhiều NCC; chỉ một NCC được đặt ưu tiên.",
+      openAction: "Xem nguyên liệu",
       addAction: "Gán nguyên liệu",
       addTitle: "Gán nguyên liệu cho nhà cung cấp",
       addSubmit: "Gán các nguyên liệu",
@@ -1848,9 +1851,8 @@ export const inventory = {
         `${ingredient} sẽ không còn được chọn khi mua hoặc nhập hàng từ ${supplier}.`,
       removeAction: "Bỏ gán",
       removeSuccess: "Đã bỏ gán nguyên liệu",
-      removeAria: (name: string) => `Bỏ gán ${name}`,
       preferredBadge: "Ưu tiên",
-      setPreferredAction: "Đặt làm NCC ưu tiên",
+      setPreferredAction: "Gán ưu tiên",
       clearPreferredAction: "Bỏ ưu tiên",
       setPreferredSuccess: "Đã đặt NCC ưu tiên cho nguyên liệu",
       clearPreferredSuccess: "Đã bỏ ưu tiên NCC",

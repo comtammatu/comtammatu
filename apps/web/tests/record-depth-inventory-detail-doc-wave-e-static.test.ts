@@ -222,8 +222,13 @@ test("Wave E GRN DETAIL draft aligns with create DOC density", () => {
   );
   assert.match(
     client,
-    /render: \(line, idx\) =>[\s\S]*canMutateDraft && isDesktopLineEdit \? \([\s\S]*<LineRow[\s\S]*showHeader=\{false\}[\s\S]*onChange=\{\(p\) => patch\(idx, p\)\}/,
-    "draft desktop table edits delivered and rejected quantities inline",
+    /key: "actual"[\s\S]*header: grnCopy\.lineHeaderQty[\s\S]*<LineRow[\s\S]*showHeader=\{false\}/,
+    "draft desktop table edits accepted quantity in its own column",
+  );
+  assert.doesNotMatch(
+    client,
+    /key: "rejected"/,
+    "draft desktop table keeps rejected goods inside the exception disclosure",
   );
   assert.doesNotMatch(
     client,
