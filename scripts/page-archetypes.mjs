@@ -175,6 +175,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/stock/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/stock-requests/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/stock-requests/new/page.tsx":
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/stock-requests/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/stocktake/[id]/count/page.tsx":
     "DOC-WORKFLOW",

@@ -22,8 +22,8 @@ const stockRequestInbox = readFileSync(
   "app/(protected)/inventory/stock-requests/page.tsx",
   "utf8",
 );
-const stockFulfillmentData = readFileSync(
-  "lib/inventory/stock-fulfillment-data.ts",
+const stockFulfillmentProjection = readFileSync(
+  "lib/inventory/stock-fulfillment-projection.ts",
   "utf8",
 );
 const navConfig = readFileSync(
@@ -188,13 +188,13 @@ test("D093 central operators do not see owner-only dashboard actions or stock va
 test("D093 stock request inbox redirects and the hub scopes actor lines", () => {
   assert.match(
     stockRequestInbox,
-    /redirect\("\/inventory\/transfers\?queue=requests"\)/,
+    /redirect\("\/inventory\/transfers\?work=request"\)/,
   );
   assert.match(
-    stockFulfillmentData,
-    /item\.fulfill_site_kind === fulfillSiteKind/,
+    stockFulfillmentProjection,
+    /item\.fulfillSiteKind === viewer\.fulfillSiteKind/,
   );
-  assert.match(stockFulfillmentData, /item\.status === "pending"/);
+  assert.match(stockFulfillmentProjection, /item\.status === "pending"/);
 });
 
 test("D093 RLS limits fulfill actors to their assigned source lines", () => {
@@ -224,10 +224,22 @@ test("D093 RLS limits fulfill actors to their assigned source lines", () => {
   );
 });
 
-test("D093 tenant fixture grants request_create to branch_manager", () => {
-  assert.match(tenantFixture, /inventory:request_create/);
-  assert.match(
-    tenantFixture,
-    /'branch_manager'[\s\S]*inventory:request_create/,
+test("D093 tenant fixture grants stock request permissions to requester roles", () => {
+  const kitchenTemplate = tenantFixture.slice(
+    tenantFixture.indexOf("('central_kitchen_lead', 'central_kitchen_lead'"),
+    tenantFixture.indexOf("('branch_manager', 'branch_manager'"),
   );
+  const branchTemplate = tenantFixture.slice(
+    tenantFixture.indexOf("('branch_manager', 'branch_manager'"),
+    tenantFixture.indexOf("('owner', 'owner'"),
+  );
+
+  for (const permission of [
+    "inventory:request_cancel",
+    "inventory:request_create",
+    "inventory:request_submit",
+  ]) {
+    assert.match(kitchenTemplate, new RegExp(permission));
+    assert.match(branchTemplate, new RegExp(permission));
+  }
 });

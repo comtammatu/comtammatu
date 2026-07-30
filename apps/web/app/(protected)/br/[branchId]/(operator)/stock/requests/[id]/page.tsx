@@ -19,7 +19,10 @@ export default async function BranchStockRequestDetailPage({
   }
 
   const { supabase, claims } = await loadAuthState();
-  if (!(await resolveBranchContext(supabase, claims, branchId))) notFound();
+  const branchContext = await resolveBranchContext(supabase, claims, branchId);
+  if (!branchContext || branchContext.branch.branch_kind !== "branch") {
+    notFound();
+  }
   const data = await loadStockRequestDetail({
     supabase,
     tenantId: claims.tenant_id,

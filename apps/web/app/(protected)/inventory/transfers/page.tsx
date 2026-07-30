@@ -7,6 +7,8 @@ import { AppPage, AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
+import { loadStockRequestFulfillmentDetail } from "@lib/inventory/stock-request-fulfillment-detail-data";
+import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
 import { messages } from "@lib/messages";
 import { StockFulfillmentHubClient } from "./stock-fulfillment-hub-client";
 
@@ -17,6 +19,8 @@ export default async function TransfersPage({
 }: {
   searchParams: Promise<{
     branchId?: string | string[];
+    requestId?: string | string[];
+    transferId?: string | string[];
   }>;
 }) {
   const params = await searchParams;
@@ -38,21 +42,68 @@ export default async function TransfersPage({
         ? "central_kitchen"
         : undefined;
   const branchId = scope.selectedBranchId;
+  const { data: selectedBranch } =
+    branchId == null
+      ? { data: null }
+      : await supabase
+          .from("branches")
+          .select("branch_kind")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("id", branchId)
+          .maybeSingle();
+  const scopeSiteKind =
+    selectedBranch?.branch_kind === "branch" ||
+    selectedBranch?.branch_kind === "central_supply" ||
+    selectedBranch?.branch_kind === "central_kitchen"
+      ? selectedBranch.branch_kind
+      : undefined;
+  const requestId = Number(
+    Array.isArray(params.requestId) ? params.requestId[0] : params.requestId,
+  );
+  const transferId = Number(
+    Array.isArray(params.transferId) ? params.transferId[0] : params.transferId,
+  );
+  const selectedRequestPromise =
+    Number.isInteger(requestId) && requestId > 0
+      ? loadStockRequestFulfillmentDetail({
+          supabase,
+          claims,
+          requestId,
+        })
+      : Promise.resolve(null);
+  const selectedTransferPromise =
+    Number.isInteger(transferId) && transferId > 0
+      ? loadTransferDetailPageData({
+          transferId,
+          queryBranchId: params.branchId,
+        })
+      : Promise.resolve(null);
   let rows;
   try {
     rows = await loadStockFulfillmentRows({
       supabase,
       tenantId: claims.tenant_id,
+      mode: "central",
       branchId: branchId ?? undefined,
       fulfillSiteKind: actorKind,
+      scopeSiteKind,
+      seeAllSources: claims.user_role === "owner",
     });
   } catch {
     throw new Error("inventory.transfers.load_failed");
   }
+  const [selectedRequest, selectedTransfer] = await Promise.all([
+    selectedRequestPromise,
+    selectedTransferPromise,
+  ]);
   const canCreateManualTransfer =
     claims.user_role === "owner" ||
     claims.user_role === "central_supply_ops" ||
     claims.user_role === "central_kitchen_lead";
+  const canRequestCentralSupply =
+    selectedBranch?.branch_kind === "central_kitchen" &&
+    (claims.user_role === "owner" ||
+      claims.user_role === "central_kitchen_lead");
 
   return (
     <AppPage width="xwide" density="compact">
@@ -60,18 +111,34 @@ export default async function TransfersPage({
         title={copy.hubTitle}
         description={copy.centralHubDescription}
         actions={
-          canCreateManualTransfer ? (
-            <Button
-              variant="outline"
-              render={
-                <Link
-                  href={`/inventory/transfers/new${branchId == null ? "" : `?branchId=${branchId}`}`}
-                />
-              }
-            >
-              <IconPlus data-icon="inline-start" />
-              {copy.manualTransferAction}
-            </Button>
+          canRequestCentralSupply || canCreateManualTransfer ? (
+            <div className="flex flex-wrap gap-2">
+              {canRequestCentralSupply ? (
+                <Button
+                  render={
+                    <Link
+                      href={`/inventory/stock-requests/new?branchId=${branchId}`}
+                    />
+                  }
+                >
+                  <IconPlus data-icon="inline-start" />
+                  {copy.centralSupplyRequestAction}
+                </Button>
+              ) : null}
+              {canCreateManualTransfer ? (
+                <Button
+                  variant="outline"
+                  render={
+                    <Link
+                      href={`/inventory/transfers/new${branchId == null ? "" : `?branchId=${branchId}`}`}
+                    />
+                  }
+                >
+                  <IconPlus data-icon="inline-start" />
+                  {copy.manualTransferAction}
+                </Button>
+              ) : null}
+            </div>
           ) : null
         }
       />
@@ -79,6 +146,8 @@ export default async function TransfersPage({
         rows={rows}
         mode="central"
         branchId={branchId}
+        selectedRequest={selectedRequest}
+        selectedTransfer={selectedTransfer}
       />
     </AppPage>
   );

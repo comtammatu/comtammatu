@@ -17,10 +17,12 @@ export function StockRequestBranchActions({
   branchId,
   requestId,
   editable,
+  editHref,
 }: {
   branchId: number;
   requestId: number;
   editable: boolean;
+  editHref?: string;
 }) {
   const router = useRouter();
   const isOnline = useIsOnline();
@@ -71,7 +73,10 @@ export function StockRequestBranchActions({
             size="touch"
             render={
               <Link
-                href={`/br/${branchId}/stock/requests/new?requestId=${requestId}`}
+                href={
+                  editHref ??
+                  `/br/${branchId}/stock/requests/new?requestId=${requestId}`
+                }
               />
             }
           >

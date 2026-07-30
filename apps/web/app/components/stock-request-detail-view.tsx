@@ -17,11 +17,11 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { AuditHistoryList } from "@/components/audit-history-list";
-import { StatusBadge } from "@/components/status-badge";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import type { StockRequestDetailData } from "@lib/inventory/stock-request-detail-data";
 import {
+  getStockJourney,
   STOCK_JOURNEY_OUTCOME_LABELS,
   STOCK_JOURNEY_STAGE_LABELS,
   type StockJourneyStage,
@@ -46,22 +46,31 @@ export function StockRequestDetailView({
   data,
   mode,
   actions,
+  embedded = false,
+  onTransferOpen,
 }: {
   data: StockRequestDetailData;
   mode: "branch" | "central";
   actions?: ReactNode;
+  embedded?: boolean;
+  onTransferOpen?: (transferId: number) => void;
 }) {
   const stageIndex = STAGES.indexOf(data.journey.stage);
   const backHref =
     mode === "branch"
       ? `/br/${data.branchId}/stock/transfer`
-      : "/inventory/transfers?queue=requests";
+      : "/inventory/transfers?work=request";
   const nextAction =
     mode === "branch" && data.journey.nextAction === "prepare"
       ? "Chờ chuẩn bị hàng"
       : NEXT_ACTION_LABELS[data.journey.nextAction];
   const description = `${data.branchName} · ${STOCK_JOURNEY_STAGE_LABELS[data.journey.stage]} · ${nextAction}`;
   const statusLabel = messages.inventory.stockRequests.statusLabel(data.status);
+  const sourceKinds = (["central_supply", "central_kitchen"] as const).filter(
+    (siteKind) => data.items.some((item) => item.fulfillSiteKind === siteKind),
+  );
+  const sourceLabel = (siteKind: (typeof sourceKinds)[number]) =>
+    siteKind === "central_supply" ? copy.centralSupply : copy.centralKitchen;
   const content = (
     <>
       {data.submittedAt ? (
@@ -116,70 +125,108 @@ export function StockRequestDetailView({
         ) : null}
       </AppSection>
 
-      <AppSection
-        title={copy.transfersTitle}
-        description={copy.transferProgress(
-          data.journey.receivedTransfers,
-          data.journey.activeTransfers,
-        )}
-      >
-        {data.transfers.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{copy.noTransfer}</p>
-        ) : (
-          <ItemGroup>
-            {data.transfers.map((transfer) => (
-              <Item
-                key={transfer.id}
-                variant="outline"
-                render={
-                  <Link
-                    href={
-                      mode === "branch"
-                        ? `/br/${data.branchId}/stock/transfer/${transfer.id}`
-                        : `/inventory/transfers/${transfer.id}`
-                    }
-                  />
-                }
-              >
+      <AppSection title={copy.sourceProgressTitle}>
+        <ItemGroup>
+          {sourceKinds.map((siteKind) => {
+            const sourceItems = data.items.filter(
+              (item) => item.fulfillSiteKind === siteKind,
+            );
+            const linkedIds = new Set(
+              sourceItems.flatMap((item) =>
+                item.transferId == null ? [] : [item.transferId],
+              ),
+            );
+            const transfers = data.transfers.filter(
+              (transfer) =>
+                linkedIds.has(transfer.id) ||
+                (!data.items.some((item) => item.transferId === transfer.id) &&
+                  transfer.fromBranchKind === siteKind),
+            );
+            const sourceJourney = getStockJourney({
+              requestStatus: data.status,
+              items: sourceItems,
+              transfers,
+            });
+            return (
+              <Item key={siteKind} variant="outline">
                 <ItemContent>
                   <ItemTitle>
-                    {transfer.fromBranchName} → {transfer.toBranchName}
+                    {copy.sourceItemSummary(
+                      sourceLabel(siteKind),
+                      sourceItems.length,
+                    )}
                   </ItemTitle>
-                  <ItemDescription className="font-mono tabular-nums">
-                    {transfer.transferNumber}
+                  <ItemDescription>
+                    {STOCK_JOURNEY_STAGE_LABELS[sourceJourney.stage]}
                   </ItemDescription>
+                  {transfers.map((transfer) =>
+                    onTransferOpen ? (
+                      <Button
+                        key={transfer.id}
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto px-0 font-mono"
+                        onClick={() => onTransferOpen(transfer.id)}
+                      >
+                        {transfer.transferNumber}
+                      </Button>
+                    ) : (
+                      <Button
+                        key={transfer.id}
+                        variant="link"
+                        size="sm"
+                        className="h-auto px-0 font-mono"
+                        render={
+                          <Link
+                            href={
+                              mode === "branch"
+                                ? `/br/${data.branchId}/stock/transfer/${transfer.id}`
+                                : `/inventory/transfers/${transfer.id}`
+                            }
+                          />
+                        }
+                      >
+                        {transfer.transferNumber}
+                      </Button>
+                    ),
+                  )}
                 </ItemContent>
-                <StatusBadge
-                  domain="inventory"
-                  value={transfer.status}
-                  size="sm"
-                />
+                <Badge variant="secondary">
+                  {copy.transferCount(
+                    sourceJourney.activeTransfers || transfers.length,
+                  )}
+                </Badge>
               </Item>
-            ))}
-          </ItemGroup>
-        )}
-      </AppSection>
-
-      <AppSection title={copy.ingredientsTitle}>
-        <ItemGroup>
-          {data.items.map((item) => (
-            <Item key={item.id} variant="outline">
-              <ItemContent>
-                <ItemTitle>{item.ingredientName}</ItemTitle>
-                <ItemDescription>
-                  {item.quantity} {item.unitLabel} ·{" "}
-                  {item.fulfillSiteKind === "central_supply"
-                    ? copy.centralSupply
-                    : copy.centralKitchen}
-                </ItemDescription>
-              </ItemContent>
-              <Badge variant="secondary">
-                {messages.inventory.stockRequests.statusLabel(item.status)}
-              </Badge>
-            </Item>
-          ))}
+            );
+          })}
         </ItemGroup>
       </AppSection>
+
+      {sourceKinds.map((siteKind) => (
+        <AppSection
+          key={siteKind}
+          title={`${copy.ingredientsTitle} · ${sourceLabel(siteKind)}`}
+        >
+          <ItemGroup>
+            {data.items
+              .filter((item) => item.fulfillSiteKind === siteKind)
+              .map((item) => (
+                <Item key={item.id} variant="outline">
+                  <ItemContent>
+                    <ItemTitle>{item.ingredientName}</ItemTitle>
+                    <ItemDescription>
+                      {item.quantity} {item.unitLabel}
+                    </ItemDescription>
+                  </ItemContent>
+                  <Badge variant="secondary">
+                    {messages.inventory.stockRequests.statusLabel(item.status)}
+                  </Badge>
+                </Item>
+              ))}
+          </ItemGroup>
+        </AppSection>
+      ))}
 
       <AppSection title={copy.infoTitle}>
         <DescriptionList
@@ -213,6 +260,8 @@ export function StockRequestDetailView({
       {actions}
     </>
   );
+
+  if (embedded) return content;
 
   if (mode === "branch") {
     return (

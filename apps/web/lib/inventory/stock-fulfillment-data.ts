@@ -2,39 +2,15 @@ import "server-only";
 
 import type { TenantSupabase } from "@lib/inventory/types";
 import {
-  getStockJourney,
-  type StockJourneyNextAction,
-  type StockJourneyOutcome,
-  type StockJourneyStage,
-} from "./stock-journey-model";
+  projectStockFulfillmentRows,
+  type StockFulfillmentJourneyRow,
+  type StockFulfillmentRequestItemRecord,
+  type StockFulfillmentRequestRecord,
+  type StockFulfillmentSiteKind,
+  type StockFulfillmentTransferRecord,
+} from "./stock-fulfillment-projection";
 
-export type StockFulfillmentRow =
-  | {
-      kind: "request";
-      id: number;
-      documentNumber: string;
-      title: string;
-      status: string;
-      createdAt: string;
-      neededAt: string | null;
-      stage: StockJourneyStage;
-      outcome: StockJourneyOutcome;
-      nextAction: StockJourneyNextAction;
-      receivedTransfers: number;
-      activeTransfers: number;
-      hasPendingLines: boolean;
-    }
-  | {
-      kind: "transfer";
-      id: number;
-      documentNumber: string;
-      title: string;
-      status: string;
-      createdAt: string;
-      fromBranchId: number;
-      toBranchId: number;
-      stockRequestId: number | null;
-    };
+export type StockFulfillmentRow = StockFulfillmentJourneyRow;
 
 type RequestRecord = {
   id: number;
@@ -46,9 +22,11 @@ type RequestRecord = {
 };
 
 type RequestItemRecord = {
+  id: number;
   request_id: number;
   status: string;
-  fulfill_site_kind: string;
+  fulfill_site_kind: "central_supply" | "central_kitchen";
+  transfer_id: number | null;
 };
 
 type TransferRecord = {
@@ -61,22 +39,34 @@ type TransferRecord = {
   created_at: string;
 };
 
+type BranchRecord = {
+  id: number;
+  name: string;
+  branch_kind: StockFulfillmentSiteKind;
+};
+
 export async function loadStockFulfillmentRows({
   supabase,
   tenantId,
+  mode,
   branchId,
   fulfillSiteKind,
+  scopeSiteKind,
+  seeAllSources = false,
 }: {
   supabase: TenantSupabase;
   tenantId: number;
+  mode: "branch" | "central";
   branchId?: number;
   fulfillSiteKind?: "central_supply" | "central_kitchen";
+  scopeSiteKind?: StockFulfillmentSiteKind;
+  seeAllSources?: boolean;
 }): Promise<StockFulfillmentRow[]> {
   let requestsQuery = supabase
     .from("stock_requests")
     .select("id, request_number, status, branch_id, needed_at, created_at")
     .eq("tenant_id", tenantId);
-  if (branchId != null && fulfillSiteKind == null) {
+  if (branchId != null && (mode === "branch" || scopeSiteKind === "branch")) {
     requestsQuery = requestsQuery.eq("branch_id", branchId);
   }
 
@@ -95,24 +85,81 @@ export async function loadStockFulfillmentRows({
   const [requestsResult, transfersResult, branchesResult] = await Promise.all([
     requestsQuery.order("created_at", { ascending: false }).limit(100),
     transfersQuery.order("created_at", { ascending: false }).limit(200),
-    supabase.from("branches").select("id, name").eq("tenant_id", tenantId),
+    supabase
+      .from("branches")
+      .select("id, name, branch_kind")
+      .eq("tenant_id", tenantId),
   ]);
 
   if (requestsResult.error || transfersResult.error || branchesResult.error) {
     throw new Error("inventory.stock_fulfillment.load_failed");
   }
 
-  const requests = (requestsResult.data ?? []) as unknown as RequestRecord[];
-  const transfers = (transfersResult.data ?? []) as unknown as TransferRecord[];
-  const requestIds = requests.map((request) => request.id);
-  const transferIds = transfers.map((transfer) => transfer.id);
+  const initialRequests = (requestsResult.data ??
+    []) as unknown as RequestRecord[];
+  const initialTransfers = (transfersResult.data ??
+    []) as unknown as TransferRecord[];
+  const initialRequestIds = new Set(
+    initialRequests.map((request) => request.id),
+  );
+  const missingParentIds = [
+    ...new Set(
+      initialTransfers.flatMap((transfer) =>
+        transfer.stock_request_id != null &&
+        !initialRequestIds.has(transfer.stock_request_id)
+          ? [transfer.stock_request_id]
+          : [],
+      ),
+    ),
+  ];
+  const missingParentsResult =
+    missingParentIds.length === 0
+      ? { data: [], error: null }
+      : await supabase
+          .from("stock_requests")
+          .select(
+            "id, request_number, status, branch_id, needed_at, created_at",
+          )
+          .eq("tenant_id", tenantId)
+          .in("id", missingParentIds);
+  if (missingParentsResult.error) {
+    throw new Error("inventory.stock_fulfillment.load_failed");
+  }
 
+  const rawRequests = [
+    ...initialRequests,
+    ...((missingParentsResult.data ?? []) as unknown as RequestRecord[]),
+  ];
+  const requestIds = rawRequests.map((request) => request.id);
+  const siblingTransfersResult =
+    requestIds.length === 0
+      ? { data: [], error: null }
+      : await supabase
+          .from("stock_transfers")
+          .select(
+            "id, transfer_number, status, stock_request_id, from_branch_id, to_branch_id, created_at",
+          )
+          .eq("tenant_id", tenantId)
+          .in("stock_request_id", requestIds)
+          .limit(400);
+  if (siblingTransfersResult.error) {
+    throw new Error("inventory.stock_fulfillment.load_failed");
+  }
+  const transfers = [
+    ...new Map(
+      [
+        ...initialTransfers,
+        ...((siblingTransfersResult.data ?? []) as unknown as TransferRecord[]),
+      ].map((transfer) => [transfer.id, transfer]),
+    ).values(),
+  ];
+  const transferIds = transfers.map((transfer) => transfer.id);
   const [itemsResult, transferLinesResult] = await Promise.all([
     requestIds.length === 0
       ? Promise.resolve({ data: [], error: null })
       : supabase
           .from("stock_request_items")
-          .select("request_id, status, fulfill_site_kind")
+          .select("id, request_id, status, fulfill_site_kind, transfer_id")
           .eq("tenant_id", tenantId)
           .in("request_id", requestIds),
     transferIds.length === 0
@@ -123,15 +170,20 @@ export async function loadStockFulfillmentRows({
           .eq("tenant_id", tenantId)
           .in("transfer_id", transferIds),
   ]);
-
   if (itemsResult.error || transferLinesResult.error) {
     throw new Error("inventory.stock_fulfillment.load_failed");
   }
 
-  const items = (itemsResult.data ?? []) as RequestItemRecord[];
-  const branchNames = new Map(
-    (branchesResult.data ?? []).map((branch) => [branch.id, branch.name]),
-  );
+  const branches = (branchesResult.data ?? []) as unknown as BranchRecord[];
+  const branchById = new Map(branches.map((branch) => [branch.id, branch]));
+  const site = (id: number) => {
+    const branch = branchById.get(id);
+    return {
+      id,
+      name: branch?.name ?? `Điểm #${id}`,
+      kind: branch?.branch_kind ?? ("branch" as const),
+    };
+  };
   const transferLines = new Map<
     number,
     Array<{ quantity: number; quantityReceived: number | null }>
@@ -146,54 +198,49 @@ export async function loadStockFulfillmentRows({
     transferLines.set(line.transfer_id, lines);
   }
 
-  const requestRows = requests.flatMap<StockFulfillmentRow>((request) => {
-    const requestItems = items.filter(
-      (item) =>
-        item.request_id === request.id &&
-        (fulfillSiteKind == null || item.fulfill_site_kind === fulfillSiteKind),
-    );
-    if (fulfillSiteKind != null && requestItems.length === 0) return [];
+  const requests: StockFulfillmentRequestRecord[] = rawRequests.map(
+    (request) => ({
+      id: request.id,
+      requestNumber: request.request_number,
+      status: request.status,
+      requesterSite: site(request.branch_id),
+      neededAt: request.needed_at,
+      createdAt: request.created_at,
+    }),
+  );
+  const items = (itemsResult.data ?? []) as unknown as RequestItemRecord[];
+  const requestItems: StockFulfillmentRequestItemRecord[] = items.map(
+    (item) => ({
+      id: item.id,
+      requestId: item.request_id,
+      status: item.status,
+      fulfillSiteKind: item.fulfill_site_kind,
+      transferId: item.transfer_id,
+    }),
+  );
+  const transferRows: StockFulfillmentTransferRecord[] = transfers.map(
+    (transfer) => ({
+      id: transfer.id,
+      transferNumber: transfer.transfer_number,
+      status: transfer.status,
+      stockRequestId: transfer.stock_request_id,
+      fromSite: site(transfer.from_branch_id),
+      toSite: site(transfer.to_branch_id),
+      createdAt: transfer.created_at,
+      lines: transferLines.get(transfer.id) ?? [],
+    }),
+  );
 
-    const requestTransfers = transfers.filter(
-      (transfer) => transfer.stock_request_id === request.id,
-    );
-    const journey = getStockJourney({
-      requestStatus: request.status,
-      items: requestItems,
-      transfers: requestTransfers.map((transfer) => ({
-        status: transfer.status,
-        lines: transferLines.get(transfer.id),
-      })),
-    });
-
-    return [
-      {
-        kind: "request",
-        id: request.id,
-        documentNumber: request.request_number,
-        title:
-          branchNames.get(request.branch_id) ??
-          `Chi nhánh #${request.branch_id}`,
-        status: request.status,
-        createdAt: request.created_at,
-        neededAt: request.needed_at,
-        ...journey,
-        hasPendingLines: requestItems.some((item) => item.status === "pending"),
-      },
-    ];
+  return projectStockFulfillmentRows({
+    requests,
+    items: requestItems,
+    transfers: transferRows,
+    viewer: {
+      mode,
+      branchId: branchId ?? null,
+      fulfillSiteKind,
+      scopeSiteKind,
+      seeAllSources,
+    },
   });
-
-  const transferRows: StockFulfillmentRow[] = transfers.map((transfer) => ({
-    kind: "transfer",
-    id: transfer.id,
-    documentNumber: transfer.transfer_number,
-    title: `${branchNames.get(transfer.from_branch_id) ?? `Điểm #${transfer.from_branch_id}`} → ${branchNames.get(transfer.to_branch_id) ?? `Điểm #${transfer.to_branch_id}`}`,
-    status: transfer.status,
-    createdAt: transfer.created_at,
-    fromBranchId: transfer.from_branch_id,
-    toBranchId: transfer.to_branch_id,
-    stockRequestId: transfer.stock_request_id,
-  }));
-
-  return [...requestRows, ...transferRows];
 }

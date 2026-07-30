@@ -86,6 +86,7 @@ export function TransferDetailClient({
   correctionBranches,
   auditLogs = [],
   embedded = false,
+  embeddedHeader = true,
   listHref,
 }: {
   transfer: TransferDetail;
@@ -94,6 +95,7 @@ export function TransferDetailClient({
   correctionBranches: CorrectionBranchOption[];
   auditLogs?: AuditLogRow[];
   embedded?: boolean;
+  embeddedHeader?: boolean;
   listHref?: string;
 }) {
   const router = useRouter();
@@ -617,6 +619,7 @@ export function TransferDetailClient({
   );
 
   if (embedded) {
+    if (!embeddedHeader) return tabs;
     return (
       <div className="flex w-full flex-col gap-3">
         <div className="flex items-center gap-2">

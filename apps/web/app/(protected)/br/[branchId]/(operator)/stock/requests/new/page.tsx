@@ -34,7 +34,10 @@ export default async function BranchStockRequestNewPage({
   if (branchId == null) notFound();
 
   const { supabase, claims } = await loadAuthState();
-  if (!(await resolveBranchContext(supabase, claims, branchId))) notFound();
+  const branchContext = await resolveBranchContext(supabase, claims, branchId);
+  if (!branchContext || branchContext.branch.branch_kind !== "branch") {
+    notFound();
+  }
 
   const requestId = Number(query.requestId);
   const editing =

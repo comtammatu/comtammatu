@@ -891,9 +891,10 @@ allowlist.
   forms still use Page/`DocumentFormFrame`.
 - Purchase demand, PO, and GRN are approved list-first documents. Owner/Ops
   opens their canonical view in a URL-addressable
-  `AppDialog variant="document"` while the LIST stays mounted. YCH and
-  Transfer share one fulfillment hub and open
-  canonical detail pages in the matching Owner/Ops or Branch route family.
+  `AppDialog variant="document"` while the LIST stays mounted. YCH and linked
+  Transfers share one fulfillment journey and one URL-addressable document
+  dialog on Owner/Ops. Branch keeps its canonical Page/fullscreen touch
+  workflow. A linked Transfer never creates a second LIST row or overlay.
 - Inventory money, quantity, tax-rate, and business-date inputs must use the shared app form wrappers instead of ad hoc parsing or `type="number"`.
 - Hide permanently unauthorized actions. Show disabled controls with explanatory copy only for temporary operational blockers such as missing shift, locked period, or incomplete prerequisite state.
 
@@ -1051,8 +1052,9 @@ Declare each record's depth once per family:
 - **D1 document (addressable overlay)** — a list-first staged document may
   render lines and a state-transition footer in
   `AppDialog variant="document"` when each state exposes exactly one primary
-  action. This named tier applies to purchase demand, PO, and GRN; it is not a generic
-  exception for long-running authoring.
+  action. This named tier applies to purchase demand, PO, GRN, and the
+  Owner/Ops YCH/Transfer fulfillment journey; it is not a generic exception
+  for long-running authoring.
 - **D1 task (non-addressable)** — `FormDialog` / short `AppDialog` for master
   CRUD or a single bounded decision that ends.
 - **D3** — line-array authoring only; never a row-open target for an existing

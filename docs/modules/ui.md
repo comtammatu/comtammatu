@@ -448,6 +448,12 @@ Branch stock workflow áp dụng cùng ranh giới này:
   đủ số lượng cho các NCC rồi duyệt một lần để tạo PO và GRN nháp. Nhu cầu,
   PO và GRN mở bằng URL-addressable `AppDialog variant="document"`; route
   `/inventory/purchase-requests` chỉ redirect tương thích.
+- `/inventory/transfers` là workspace **Giao nhận hàng** duy nhất. Một YCH là
+  một dòng; DC có `stock_request_id` nằm trong lane nguồn của YCH và không tạo
+  dòng riêng, còn DC thủ công vẫn là một dòng. Không dùng tabs hàng đợi; dùng
+  filter URL `work`, `state`, `branchId`, `q`, `page`. Owner/Ops mở YCH/DC bằng
+  một `AppDialog variant="document"` với `requestId`/`transferId`; chọn DC con
+  thay nội dung trong cùng dialog. Branch giữ Page/fullscreen touch workflow.
 - `/br/[branchId]/stock/reports` là Branch-native touch `REPORT`: cố định đúng
   chi nhánh URL và tháng hiện tại, ưu tiên chênh lệch tiêu hao warning/critical
   rồi biến động của từng nguyên liệu có drill-in vào tồn thực. Mỗi số lượng luôn
@@ -649,9 +655,9 @@ at the first match.
    việc → **Page** (DETAIL hoặc DOC-WORKFLOW). List-first view → **addressable
    overlay** bound to `?<entity>Id=`. Nhu cầu mua, PO và GRN là nhóm chứng từ
    list-first và dùng `AppDialog variant="document"` trên Owner/Ops. YCH và
-   Transfer dùng một fulfillment hub với canonical DETAIL Page trong từng route
-   family. Line array hoặc stage footer không tự động ép sang Page; mỗi state
-   vẫn chỉ có một primary action.
+   Transfer dùng một fulfillment hub; Owner/Ops mở cùng một document dialog,
+   Branch giữ canonical Page/fullscreen touch workflow. Line array hoặc stage
+   footer không tự động ép sang Page; mỗi state vẫn chỉ có một primary action.
 
 `Popover` never renders a record view or a multi-step workflow. `Drawer` is a
 touch-plane frame, not a second Owner overlay tier.

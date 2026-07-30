@@ -76,6 +76,7 @@ export function StockRequestEditor({
   initialStatus,
   initialNeededAt,
   initialNotes,
+  returnHref,
 }: {
   branchId: number;
   requestId: number | null;
@@ -84,6 +85,7 @@ export function StockRequestEditor({
   initialStatus: string | null;
   initialNeededAt: string | null;
   initialNotes: string | null;
+  returnHref?: string;
 }) {
   const router = useRouter();
   const isOnline = useIsOnline();
@@ -163,7 +165,11 @@ export function StockRequestEditor({
         return;
       }
       toast.success(shouldSubmit ? copy.submitSuccess : copy.draftSuccess);
-      router.replace(`/br/${branchId}/stock/requests/${result.data.requestId}`);
+      router.replace(
+        returnHref
+          ? returnHref.replace(":requestId", String(result.data.requestId))
+          : `/br/${branchId}/stock/requests/${result.data.requestId}`,
+      );
       router.refresh();
     });
   }

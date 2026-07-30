@@ -92,7 +92,7 @@ Other locked rulings:
 | Record | Depth | Notes |
 | --- | --- | --- |
 | PO, GRN | D1 Document | Owner/Ops `AppDialog variant="document"`; legacy DETAIL routes redirect |
-| YCH, Transfer | D2 workflow | Shared fulfillment hub; canonical Owner/Ops and Branch DETAIL pages |
+| YCH, Transfer | D1 Document Owner/Ops; D2 Branch | One fulfillment row/dialog on Owner/Ops; linked Transfer is an internal document view. Branch keeps canonical Page/fullscreen touch detail. |
 | Issue/consumption, stocktake session, production, stock card | D2 | Independent DETAIL Page |
 | Supplier invoice | D1 | Finance `Sheet` + `?invoiceId=` |
 | Count slips / assignments | D1 view | Owner `AppDialog` / Branch `Sheet`; Wave 3 `?slipId=` / `?assignmentId=` |

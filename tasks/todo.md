@@ -5,6 +5,26 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Unify stock request and transfer fulfillment journey
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/fulfillment
+Exit: One stock request renders as one fulfillment row and one Owner/Ops document dialog across Central Supply and Central Kitchen lanes; only manual transfers render independently; Central Kitchen can request Central Supply ingredients at its pinned site while Branch keeps its Page/fullscreen touch workflow.
+Evidence: pure projection and static UI tests, stock fulfillment rollback SQL test, repository gates, and authenticated Owner/Central Supply/Central Kitchen/Branch responsive smoke after the additive migration is applied to an authorized target.
+
+### T3 review
+
+- **PM:** Keep one operator task from request through dispatch and receipt without merging the two legal stock documents.
+- **BA:** Source lanes retain separate authority; Central Kitchen may request only Central Supply ingredients, while mixed Branch requests retain both sources.
+- **Senior Dev:** Reuse the current request/transfer tables, RPCs, detail loaders, presenters, and AppDialog URL pattern; projection owns row deduplication.
+- **QA:** Prove one row, one dialog, two-source progress, deep links, filter retention, pinned-site authority, idempotency, notification expiry, and real-role receive actions.
+
+Synthesis: no journey table, workflow engine, availability query, feature flag, or parallel detail implementation.
+
+- [ ] Apply the migration to an owner-authorized Greenfield target, regenerate types, run the rollback SQL test, and complete authenticated responsive smoke at `390×844`, `768×1024`, and `1440×900`.
+
 ## Standardize vi-VN money and VAT precision
 
 State: verify

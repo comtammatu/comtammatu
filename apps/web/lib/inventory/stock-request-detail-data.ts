@@ -21,6 +21,7 @@ export type StockRequestDetailTransfer = {
   id: number;
   transferNumber: string;
   status: string;
+  fromBranchKind: "central_supply" | "central_kitchen" | "branch";
   fromBranchName: string;
   toBranchName: string;
 };
@@ -101,7 +102,10 @@ export async function loadStockRequestDetail({
         .eq("tenant_id", tenantId)
         .or(`stock_request_id.eq.${requestId}`)
         .order("created_at"),
-      supabase.from("branches").select("id, name").eq("tenant_id", tenantId),
+      supabase
+        .from("branches")
+        .select("id, name, branch_kind")
+        .eq("tenant_id", tenantId),
       supabase.from("units").select("id, name, code").eq("tenant_id", tenantId),
       fetchEntityAuditLogs("stock_request", requestId),
     ]);
@@ -117,6 +121,12 @@ export async function loadStockRequestDetail({
 
   const branchNames = new Map(
     (branchesResult.data ?? []).map((branch) => [branch.id, branch.name]),
+  );
+  const branchKinds = new Map(
+    (branchesResult.data ?? []).map((branch) => [
+      branch.id,
+      branch.branch_kind as "central_supply" | "central_kitchen" | "branch",
+    ]),
   );
   const unitLabels = new Map(
     (unitsResult.data ?? []).map((unit) => [unit.id, unit.name || unit.code]),
@@ -192,6 +202,7 @@ export async function loadStockRequestDetail({
       id: transfer.id,
       transferNumber: transfer.transfer_number,
       status: transfer.status,
+      fromBranchKind: branchKinds.get(transfer.from_branch_id) ?? "branch",
       fromBranchName:
         branchNames.get(transfer.from_branch_id) ??
         `Điểm #${transfer.from_branch_id}`,

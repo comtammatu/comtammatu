@@ -468,4 +468,589 @@ BEGIN
 END;
 $$;
 
+DO $$
+DECLARE
+  v_tenant bigint;
+  v_owner_user uuid;
+  v_kitchen_user uuid;
+  v_supply_user uuid;
+  v_kitchen bigint;
+  v_supply bigint;
+  v_other_branch bigint;
+  v_kitchen_position bigint;
+  v_supply_position bigint;
+  v_supply_location bigint;
+  v_kitchen_location bigint;
+  v_unit bigint;
+  v_supply_ingredient bigint;
+  v_kitchen_ingredient bigint;
+  v_request_key uuid := gen_random_uuid();
+  v_request_id bigint;
+  v_lane_request_id bigint;
+  v_item_id bigint;
+  v_transfer_id bigint;
+  v_result jsonb;
+  v_rejected boolean;
+BEGIN
+  SELECT profile.tenant_id, profile.id
+  INTO v_tenant, v_owner_user
+  FROM public.profiles AS profile
+  JOIN public.positions AS position
+    ON position.id = profile.position_id
+   AND position.tenant_id = profile.tenant_id
+  WHERE position.code = 'owner'
+    AND profile.is_active
+  ORDER BY profile.id
+  LIMIT 1;
+
+  SELECT branch.id
+  INTO v_kitchen
+  FROM public.branches AS branch
+  WHERE branch.tenant_id = v_tenant
+    AND branch.branch_kind = 'central_kitchen'
+    AND branch.is_active
+  ORDER BY branch.id
+  LIMIT 1;
+
+  SELECT branch.id
+  INTO v_supply
+  FROM public.branches AS branch
+  WHERE branch.tenant_id = v_tenant
+    AND branch.branch_kind = 'central_supply'
+    AND branch.is_active
+  ORDER BY branch.id
+  LIMIT 1;
+
+  SELECT branch.id
+  INTO v_other_branch
+  FROM public.branches AS branch
+  WHERE branch.tenant_id = v_tenant
+    AND branch.branch_kind = 'branch'
+    AND branch.is_active
+  ORDER BY branch.id
+  LIMIT 1;
+
+  SELECT position.id
+  INTO v_kitchen_position
+  FROM public.positions AS position
+  WHERE position.tenant_id = v_tenant
+    AND position.code = 'central_kitchen_lead';
+
+  SELECT position.id
+  INTO v_supply_position
+  FROM public.positions AS position
+  WHERE position.tenant_id = v_tenant
+    AND position.code = 'central_supply_ops';
+
+  IF v_owner_user IS NULL
+     OR v_kitchen IS NULL
+     OR v_supply IS NULL
+     OR v_other_branch IS NULL
+     OR v_kitchen_position IS NULL
+     OR v_supply_position IS NULL THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: central role fixture missing';
+  END IF;
+
+  SELECT profile.id
+  INTO v_kitchen_user
+  FROM public.profiles AS profile
+  JOIN public.positions AS position
+    ON position.id = profile.position_id
+   AND position.tenant_id = profile.tenant_id
+  WHERE profile.tenant_id = v_tenant
+    AND profile.is_active
+    AND position.code <> 'owner'
+  ORDER BY profile.id
+  LIMIT 1;
+
+  SELECT profile.id
+  INTO v_supply_user
+  FROM public.profiles AS profile
+  JOIN public.positions AS position
+    ON position.id = profile.position_id
+   AND position.tenant_id = profile.tenant_id
+  WHERE profile.tenant_id = v_tenant
+    AND profile.is_active
+    AND position.code <> 'owner'
+    AND profile.id <> v_kitchen_user
+  ORDER BY profile.id
+  LIMIT 1;
+
+  IF v_kitchen_user IS NULL OR v_supply_user IS NULL THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: central actor fixture missing';
+  END IF;
+
+  UPDATE public.profiles
+  SET position_id = v_kitchen_position,
+      branch_id = v_kitchen,
+      updated_at = now()
+  WHERE id = v_kitchen_user;
+
+  UPDATE public.profiles
+  SET position_id = v_supply_position,
+      branch_id = v_supply,
+      updated_at = now()
+  WHERE id = v_supply_user;
+
+  DELETE FROM public.staff_permissions
+  WHERE user_id IN (v_kitchen_user, v_supply_user);
+
+  PERFORM public.sync_missing_permissions_from_template();
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.role_templates AS template
+    WHERE template.tenant_id = v_tenant
+      AND template.position_code = 'central_kitchen_lead'
+      AND template.permission_keys @> ARRAY[
+        'inventory:request_create',
+        'inventory:request_submit',
+        'inventory:request_cancel'
+      ]::text[]
+  ) THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: kitchen request template is invalid';
+  END IF;
+
+  SELECT location.id
+  INTO v_supply_location
+  FROM public.inventory_locations AS location
+  WHERE location.tenant_id = v_tenant
+    AND location.branch_id = v_supply
+    AND location.location_kind = 'warehouse'
+    AND location.is_active
+  ORDER BY location.id
+  LIMIT 1;
+
+  IF v_supply_location IS NULL THEN
+    INSERT INTO public.inventory_locations (
+      tenant_id, branch_id, code, name, location_kind, is_active
+    )
+    VALUES (
+      v_tenant,
+      v_supply,
+      '__sf_supply_' || substr(gen_random_uuid()::text, 1, 8),
+      'Supply test warehouse',
+      'warehouse',
+      TRUE
+    )
+    RETURNING id INTO v_supply_location;
+  END IF;
+
+  SELECT location.id
+  INTO v_kitchen_location
+  FROM public.inventory_locations AS location
+  WHERE location.tenant_id = v_tenant
+    AND location.branch_id = v_kitchen
+    AND location.location_kind = 'warehouse'
+    AND location.is_active
+  ORDER BY location.id
+  LIMIT 1;
+
+  IF v_kitchen_location IS NULL THEN
+    INSERT INTO public.inventory_locations (
+      tenant_id, branch_id, code, name, location_kind, is_active
+    )
+    VALUES (
+      v_tenant,
+      v_kitchen,
+      '__sf_kitchen_' || substr(gen_random_uuid()::text, 1, 8),
+      'Kitchen test warehouse',
+      'warehouse',
+      TRUE
+    )
+    RETURNING id INTO v_kitchen_location;
+  END IF;
+
+  INSERT INTO public.units (tenant_id, code, name)
+  VALUES (
+    v_tenant,
+    '__sf_kitchen_' || substr(gen_random_uuid()::text, 1, 8),
+    'Kitchen request test unit'
+  )
+  RETURNING id INTO v_unit;
+
+  INSERT INTO public.ingredients (
+    tenant_id,
+    name,
+    sku,
+    unit_cost,
+    item_kind,
+    default_fulfill_site_kind,
+    is_active
+  )
+  VALUES (
+    v_tenant,
+    '__sf_supply_' || gen_random_uuid()::text,
+    '__SFS-' || gen_random_uuid()::text,
+    0,
+    'raw_material',
+    'central_supply',
+    TRUE
+  )
+  RETURNING id INTO v_supply_ingredient;
+
+  INSERT INTO public.ingredients (
+    tenant_id,
+    name,
+    sku,
+    unit_cost,
+    item_kind,
+    default_fulfill_site_kind,
+    is_active
+  )
+  VALUES (
+    v_tenant,
+    '__sf_kitchen_' || gen_random_uuid()::text,
+    '__SFK-' || gen_random_uuid()::text,
+    0,
+    'raw_material',
+    'central_kitchen',
+    TRUE
+  )
+  RETURNING id INTO v_kitchen_ingredient;
+
+  INSERT INTO public.ingredient_units (
+    tenant_id,
+    ingredient_id,
+    unit_id,
+    to_base_factor,
+    is_base,
+    is_active
+  )
+  VALUES
+    (v_tenant, v_supply_ingredient, v_unit, 1, TRUE, TRUE),
+    (v_tenant, v_kitchen_ingredient, v_unit, 1, TRUE, TRUE);
+
+  PERFORM set_config('request.jwt.claim.sub', v_kitchen_user::text, TRUE);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', TRUE);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_kitchen_user::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object(
+        'tenant_id', v_tenant,
+        'user_role', 'central_kitchen_lead',
+        'branch_id', v_kitchen
+      )
+    )::text,
+    TRUE
+  );
+
+  v_result := public.save_stock_request(
+    NULL,
+    v_kitchen,
+    now() + interval '1 day',
+    'Kitchen requests central supply',
+    jsonb_build_array(jsonb_build_object(
+      'ingredient_id', v_supply_ingredient,
+      'entry_unit_id', v_unit,
+      'quantity', 3
+    )),
+    TRUE,
+    v_request_key
+  );
+  v_request_id := (v_result ->> 'request_id')::bigint;
+
+  IF (
+    public.save_stock_request(
+      NULL,
+      v_kitchen,
+      NULL,
+      'Kitchen request retry',
+      jsonb_build_array(jsonb_build_object(
+        'ingredient_id', v_supply_ingredient,
+        'entry_unit_id', v_unit,
+        'quantity', 9
+      )),
+      TRUE,
+      v_request_key
+    ) ->> 'request_id'
+  )::bigint <> v_request_id THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: kitchen idempotency failed';
+  END IF;
+
+  v_rejected := FALSE;
+  BEGIN
+    PERFORM public.save_stock_request(
+      NULL,
+      v_kitchen,
+      NULL,
+      'Kitchen self-source request',
+      jsonb_build_array(jsonb_build_object(
+        'ingredient_id', v_kitchen_ingredient,
+        'entry_unit_id', v_unit,
+        'quantity', 1
+      )),
+      TRUE,
+      gen_random_uuid()
+    );
+  EXCEPTION
+    WHEN SQLSTATE '23514' THEN
+      v_rejected := TRUE;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: kitchen self-source was accepted';
+  END IF;
+
+  v_rejected := FALSE;
+  BEGIN
+    PERFORM public.save_stock_request(
+      NULL,
+      v_other_branch,
+      NULL,
+      'Wrong branch request',
+      jsonb_build_array(jsonb_build_object(
+        'ingredient_id', v_supply_ingredient,
+        'entry_unit_id', v_unit,
+        'quantity', 1
+      )),
+      TRUE,
+      gen_random_uuid()
+    );
+  EXCEPTION
+    WHEN SQLSTATE '42501' THEN
+      v_rejected := TRUE;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: wrong-branch request was accepted';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.notifications AS notification
+    WHERE notification.kind = 'inventory.stock_request_submitted'
+      AND notification.entity_type = 'stock_request'
+      AND notification.entity_id = v_request_id
+      AND notification.target_branch_id = v_supply
+      AND notification.action_url =
+        '/inventory/transfers?requestId=' || v_request_id
+      AND notification.expires_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: supply notification is invalid';
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_owner_user::text, TRUE);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_owner_user::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object(
+        'tenant_id', v_tenant,
+        'user_role', 'owner',
+        'branch_id', NULL
+      )
+    )::text,
+    TRUE
+  );
+
+  v_result := public.save_stock_request(
+    NULL,
+    v_other_branch,
+    NULL,
+    'Submitted request gains another source',
+    jsonb_build_array(jsonb_build_object(
+      'ingredient_id', v_supply_ingredient,
+      'entry_unit_id', v_unit,
+      'quantity', 1
+    )),
+    TRUE,
+    gen_random_uuid()
+  );
+  v_lane_request_id := (v_result ->> 'request_id')::bigint;
+
+  PERFORM public.save_stock_request(
+    v_lane_request_id,
+    v_other_branch,
+    NULL,
+    'Submitted request now has two sources',
+    jsonb_build_array(
+      jsonb_build_object(
+        'ingredient_id', v_supply_ingredient,
+        'entry_unit_id', v_unit,
+        'quantity', 2
+      ),
+      jsonb_build_object(
+        'ingredient_id', v_kitchen_ingredient,
+        'entry_unit_id', v_unit,
+        'quantity', 2
+      )
+    ),
+    TRUE,
+    NULL
+  );
+
+  IF (
+    SELECT count(*)
+    FROM public.notifications AS notification
+    WHERE notification.kind = 'inventory.stock_request_submitted'
+      AND notification.entity_type = 'stock_request'
+      AND notification.entity_id = v_lane_request_id
+      AND notification.action_url =
+        '/inventory/transfers?requestId=' || v_lane_request_id
+      AND notification.expires_at IS NULL
+  ) <> 2 THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: added source notification is invalid';
+  END IF;
+
+  PERFORM public.save_stock_request(
+    v_lane_request_id,
+    v_other_branch,
+    NULL,
+    'Submitted request removes supply source',
+    jsonb_build_array(jsonb_build_object(
+      'ingredient_id', v_kitchen_ingredient,
+      'entry_unit_id', v_unit,
+      'quantity', 2
+    )),
+    TRUE,
+    NULL
+  );
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.notifications AS notification
+    WHERE notification.kind = 'inventory.stock_request_submitted'
+      AND notification.entity_id = v_lane_request_id
+      AND notification.meta ->> 'fulfill_site_kind' = 'central_supply'
+      AND (notification.expires_at IS NULL OR notification.expires_at > now())
+  )
+  OR NOT EXISTS (
+    SELECT 1
+    FROM public.notifications AS notification
+    WHERE notification.kind = 'inventory.stock_request_submitted'
+      AND notification.entity_id = v_lane_request_id
+      AND notification.meta ->> 'fulfill_site_kind' = 'central_kitchen'
+      AND notification.action_url =
+        '/inventory/transfers?requestId=' || v_lane_request_id
+      AND notification.expires_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: removed source notification is invalid';
+  END IF;
+
+  SELECT item.id
+  INTO v_item_id
+  FROM public.stock_request_items AS item
+  WHERE item.request_id = v_request_id;
+
+  INSERT INTO public.stock_levels (
+    tenant_id,
+    branch_id,
+    location_id,
+    ingredient_id,
+    current_quantity
+  )
+  VALUES (
+    v_tenant,
+    v_supply,
+    v_supply_location,
+    v_supply_ingredient,
+    10
+  );
+
+  PERFORM set_config('request.jwt.claim.sub', v_supply_user::text, TRUE);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_supply_user::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object(
+        'tenant_id', v_tenant,
+        'user_role', 'central_supply_ops',
+        'branch_id', v_supply
+      )
+    )::text,
+    TRUE
+  );
+
+  v_rejected := FALSE;
+  BEGIN
+    PERFORM public.save_stock_request(
+      NULL,
+      v_kitchen,
+      NULL,
+      'Supply actor creates for kitchen',
+      jsonb_build_array(jsonb_build_object(
+        'ingredient_id', v_supply_ingredient,
+        'entry_unit_id', v_unit,
+        'quantity', 1
+      )),
+      TRUE,
+      gen_random_uuid()
+    );
+  EXCEPTION
+    WHEN SQLSTATE '42501' THEN
+      v_rejected := TRUE;
+  END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: supply actor created kitchen request';
+  END IF;
+
+  v_result := public.fulfill_stock_request_lines(
+    v_request_id,
+    'central_supply',
+    v_supply,
+    v_supply_location,
+    ARRAY[v_item_id]
+  );
+  v_transfer_id := (v_result ->> 'transfer_id')::bigint;
+
+  IF (
+    SELECT transfer.to_branch_id
+    FROM public.stock_transfers AS transfer
+    WHERE transfer.id = v_transfer_id
+  ) <> v_kitchen
+  OR (
+    SELECT transfer.to_location_id
+    FROM public.stock_transfers AS transfer
+    WHERE transfer.id = v_transfer_id
+  ) <> v_kitchen_location THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: kitchen destination is invalid';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.notifications AS notification
+    WHERE notification.kind = 'inventory.stock_request_submitted'
+      AND notification.entity_id = v_request_id
+      AND (notification.expires_at IS NULL OR notification.expires_at > now())
+  ) THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: completed source notification is live';
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_kitchen_user::text, TRUE);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_kitchen_user::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object(
+        'tenant_id', v_tenant,
+        'user_role', 'central_kitchen_lead',
+        'branch_id', v_kitchen
+      )
+    )::text,
+    TRUE
+  );
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.stock_requests AS request
+    JOIN public.stock_request_items AS item
+      ON item.request_id = request.id
+     AND item.tenant_id = request.tenant_id
+    JOIN public.stock_transfers AS transfer
+      ON transfer.stock_request_id = request.id
+     AND transfer.tenant_id = request.tenant_id
+    WHERE request.id = v_request_id
+      AND request.branch_id = v_kitchen
+      AND item.fulfill_site_kind = 'central_supply'
+      AND transfer.id = v_transfer_id
+  ) THEN
+    RAISE EXCEPTION 'STOCK FULFILLMENT: kitchen cannot read own journey';
+  END IF;
+END;
+$$;
+
 ROLLBACK;

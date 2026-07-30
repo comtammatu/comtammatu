@@ -338,6 +338,7 @@ export const inventory = {
     },
     fulfill: {
       back: "Quay lại danh sách yêu cầu",
+      sourceSelectorAria: "Nguồn xử lý yêu cầu",
       noLinesInScope: "Không có dòng trong phạm vi nguồn của bạn.",
       sourceTitle: (label: string) => `Nguồn: ${label}`,
       selectAllPending: "Chọn tất cả chờ xử lý",
@@ -459,6 +460,9 @@ export const inventory = {
         "Xử lý yêu cầu, giao hàng và kiểm nhận theo từng hàng đợi.",
       branchHubDescription: "Theo dõi yêu cầu và kiểm nhận hàng về chi nhánh.",
       requestAction: "Yêu cầu hàng",
+      centralSupplyRequestAction: "Yêu cầu Kho Tổng",
+      centralSupplyRequestDescription: (siteName: string) =>
+        `${siteName} bổ sung nguyên liệu phục vụ sản xuất.`,
       manualTransferAction: "Điều chuyển thủ công",
       manualTransferDescription:
         "Tạo phiếu ngoài luồng yêu cầu hàng khi có nghiệp vụ phát sinh.",
@@ -468,6 +472,12 @@ export const inventory = {
       submittedDescription:
         "Kho Tổng / Bếp Trung Tâm tiếp nhận theo từng nguyên liệu.",
       progressTitle: "Tiến độ giao nhận",
+      sourceProgressTitle: "Nguồn và tiến độ",
+      sourceItemSummary: (source: string, count: number) =>
+        `${source} · ${count} nguyên liệu`,
+      transferCount: (count: number) => `${count} chuyến`,
+      ingredientCount: (count: number) => `${count} nguyên liệu`,
+      backToRequestAria: "Quay lại yêu cầu hàng",
       completed: "Đã hoàn tất",
       active: "Đang xử lý",
       upcoming: "Chưa tới",
@@ -494,8 +504,7 @@ export const inventory = {
   },
   purchaseRequests: {
     title: "Nhu cầu mua",
-    description:
-      "Kho ghi số lượng cần; Kế toán phân bổ đủ theo nhà cung cấp.",
+    description: "Kho ghi số lượng cần; Kế toán phân bổ đủ theo nhà cung cấp.",
     createAction: "Tạo nhu cầu mua",
     createTitle: "Tạo nhu cầu mua",
     createSuccess: "Đã lưu nhu cầu mua.",
@@ -523,11 +532,7 @@ export const inventory = {
     saveAllocationAction: "Lưu phân bổ",
     approveAllocationAction: "Duyệt & tạo đơn mua",
     noActiveSuppliers: "Chưa có NCC đang hoạt động.",
-    allocationProgress: (
-      allocated: number,
-      remaining: number,
-      unit: string,
-    ) =>
+    allocationProgress: (allocated: number, remaining: number, unit: string) =>
       `Đã phân bổ ${allocated} · Còn thiếu ${Math.max(remaining, 0)} ${unit}`,
     approveSuccess: (codes: string[]) =>
       codes.length > 0
@@ -1611,6 +1616,9 @@ export const inventory = {
     supplierPlaceholder: "Nhà cung cấp",
     supplierSearchPlaceholder: "Tìm nhà cung cấp...",
     supplierFilterAria: "Lọc theo nhà cung cấp",
+    filterAction: "Bộ lọc",
+    filterHint: "Chọn điều kiện cần xử lý.",
+    clearFilters: "Xóa bộ lọc",
     matchingPlaceholder: "Đối soát",
     allMatching: "Tất cả đối soát",
     paymentPlaceholder: "Thanh toán",
@@ -1627,9 +1635,10 @@ export const inventory = {
     viewBySupplier: "Theo NCC",
     viewByPo: "Theo đơn mua",
     supplierGroup: "Nhà cung cấp",
-    poGroup: "Đơn mua",
+    poGroup: "Đơn mua / NCC",
     noLinkedPo: "Chưa liên kết đơn mua",
     invoiceCountHeader: "Số hóa đơn",
+    relatedInvoicesHeader: "Hóa đơn",
     invoiceGroupSummary: (count: number) => `${formatCount(count)} hóa đơn`,
     invoiceCodesPreview: (codes: readonly string[]) => {
       if (codes.length === 0) return "—";

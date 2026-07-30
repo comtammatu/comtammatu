@@ -197,9 +197,10 @@ rather than staying a near-empty category.
   (`design-system.md` § C.1 / ADR 0018): D2 independent workspace →
   `{basePath}/{id}`; D1 view/document → addressable overlay
   (`?<entity>Id=`); D1 task → `FormDialog` / short `AppDialog` without a URL.
-  Purchase demand, PO, and GRN are the named D1 document set and use
-  `AppDialog variant="document"` on Owner/Ops. YCH and Transfer use one
-  fulfillment hub with canonical detail pages in each route family.
+  Purchase demand, PO, GRN, and the YCH/Transfer journey are the named D1
+  document set on Owner/Ops and use `AppDialog variant="document"`. YCH and
+  linked Transfers render once in the fulfillment hub. Branch retains its
+  Page/fullscreen touch detail workflow.
 - **Row actions.** Build one `RowActionItem[]` per row
   (`apps/web/app/components/row-actions-menu.tsx`). Feed it to `RowActionsMenu`
   for the visible action cell and to `RowActionsContextMenuItems` through

@@ -146,7 +146,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Planes (ADR 0012 / 0018):** Owner `/inventory/*` và Branch Stock
   `/br/[branchId]/stock/*` là hai plane tách chrome/IA. Owner filter site mọi
   `branch_kind` ngang hàng. Branch Stock không mirror Owner sidebar/tile.
-- **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/purchase-requests`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new`, `/inventory/issues`, `/inventory/issues/[id]`, và `/inventory/supplier-invoices` là `REDIRECT-SHIM` (invoices → `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. Detail GRN, consumption và issue Branch thuộc `DETAIL`; form phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
+- **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/purchase-requests`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new` và `/inventory/stock-requests/new` là `DOC-WORKFLOW`; `/inventory/issues`, `/inventory/issues/[id]`, và `/inventory/supplier-invoices` là `REDIRECT-SHIM` (invoices → `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. Detail GRN, consumption và issue Branch thuộc `DETAIL`; form phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
 - **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`) trên
   mọi site; `/br/[branchId]/stock` dành cho Quản lý chi nhánh (`branch_manager`)
   và thao tác ca — plane riêng, action bị permission + branch scope giới hạn.
@@ -164,6 +164,9 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
   - **Điều chuyển (Transfer):** Chỉ chọn warehouse của site nguồn và đích;
     không có same-branch Kho↔Bếp. Quyền tạo/giao/nhận tiếp tục theo role matrix.
+    Hub Giao nhận hiển thị một YCH thành một dòng với lane Kho Tổng/Bếp TT;
+    DC liên kết không thành dòng độc lập. Bếp TT có CTA `Yêu cầu Kho Tổng` khi
+    đúng site và chỉ chọn nguyên liệu nguồn Kho Tổng.
   - **Xuất nội bộ (Issue):** Mở phiếu hủy hỏng hoặc xuất khác tại chi nhánh -> thêm từng nguyên liệu với đơn vị, số lượng và lý do -> rà soát phiếu nháp -> xác nhận để ghi giảm tồn hoặc hủy trước khi chốt.
   - **Hao hụt thủ công (Waste):** Chọn đúng vị trí kho của chi nhánh -> thêm từng nguyên liệu trong một dòng chạm riêng -> nhập số lượng không vượt tồn, lý do và ảnh khi được yêu cầu -> xem cảnh báo cap theo ca/ngày -> tạo phiếu để ghi giảm hoặc chờ quản lý duyệt theo tier. WAC, đơn vị và bằng chứng được server kiểm tra lại khi submit.
   - **Hàng NCC bị từ chối:** Ghi trực tiếp trên dòng GRN bằng số lượng từ chối,

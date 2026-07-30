@@ -5,13 +5,13 @@ import { createServiceClient, resolveUserByEmail } from "./helpers";
 const VIEWPORTS = [
   { width: 390, height: 844 },
   { width: 768, height: 1024 },
-  { width: 1280, height: 900 },
+  { width: 1440, height: 900 },
 ] as const;
 
 async function expectHub(
   page: Page,
   path: string,
-  tabs: string[],
+  actionLabel: RegExp,
   ctaHref: RegExp,
 ) {
   for (const viewport of VIEWPORTS) {
@@ -20,17 +20,14 @@ async function expectHub(
     await expect(
       page.getByRole("heading", { name: "Giao nhận hàng" }),
     ).toBeVisible();
-    for (const tab of tabs) {
-      await expect(
-        page.getByRole("tab", { name: new RegExp(tab) }),
-      ).toBeVisible();
-    }
-    const cta = page
-      .locator("a:visible")
-      .filter({ has: page.locator("svg") })
-      .filter({
-        hasText: /Yêu cầu hàng|Điều chuyển thủ công/,
-      });
+    await expect(
+      page.getByRole("combobox", { name: "Phân loại" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Trạng thái" }),
+    ).toBeVisible();
+    await expect(page.getByRole("tab")).toHaveCount(0);
+    const cta = page.getByRole("link", { name: actionLabel });
     await expect(cta).toHaveAttribute("href", ctaHref);
     const bounds = await cta.boundingBox();
     expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44);
@@ -62,7 +59,7 @@ test("owner sees the central fulfillment queues at required viewports", async ({
     await expectHub(
       page,
       "/inventory/transfers",
-      ["Yêu cầu", "Cần giao", "Cần nhận", "Lịch sử"],
+      /Điều chuyển thủ công/,
       /^\/inventory\/transfers\/new/,
     );
   } finally {
@@ -94,7 +91,7 @@ test("branch and central operators see only their fulfillment workspace", async 
       code: "branch_manager",
       branchKind: "branch",
       path: (branchId: number) => `/br/${branchId}/stock/transfer`,
-      tabs: ["Đang xử lý", "Cần kiểm nhận", "Lịch sử"],
+      actionLabel: /Yêu cầu hàng/,
       cta: (branchId: number) =>
         new RegExp(`^/br/${branchId}/stock/requests/new$`),
     },
@@ -102,15 +99,19 @@ test("branch and central operators see only their fulfillment workspace", async 
       code: "central_supply_ops",
       branchKind: "central_supply",
       path: () => "/inventory/transfers",
-      tabs: ["Yêu cầu", "Cần giao", "Cần nhận", "Lịch sử"],
-      cta: () => /^\/inventory\/transfers\/new/,
+      actionLabel: /Điều chuyển thủ công/,
+      cta: (branchId: number) =>
+        new RegExp(`^/inventory/transfers/new\\?branchId=${branchId}$`),
     },
     {
       code: "central_kitchen_lead",
       branchKind: "central_kitchen",
       path: () => "/inventory/transfers",
-      tabs: ["Yêu cầu", "Cần giao", "Cần nhận", "Lịch sử"],
-      cta: () => /^\/inventory\/transfers\/new/,
+      actionLabel: /Yêu cầu Kho Tổng/,
+      cta: (branchId: number) =>
+        new RegExp(
+          `^/inventory/stock-requests/new\\?branchId=${branchId}$`,
+        ),
     },
   ] as const;
 
@@ -145,7 +146,7 @@ test("branch and central operators see only their fulfillment workspace", async 
         await expectHub(
           page,
           role.path(branch.id),
-          [...role.tabs],
+          role.actionLabel,
           role.cta(branch.id),
         );
       } finally {

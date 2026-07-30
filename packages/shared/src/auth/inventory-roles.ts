@@ -39,6 +39,7 @@ export const PROCUREMENT_ROLES: readonly StaffRole[] = [
 export const STOCK_REQUEST_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
+  "central_kitchen_lead",
 ] as const;
 
 export const STOCK_REQUEST_FULFILL_ROLES: readonly StaffRole[] = [
@@ -53,9 +54,7 @@ export const STOCK_REQUEST_FULFILL_ROLES: readonly StaffRole[] = [
  * `effectiveBranchId === targetBranchId` for strict own-branch writes.
  */
 export function isBranchScopedProcurementRole(role: string): boolean {
-  return (
-    role === "central_supply_ops" || role === "central_kitchen_lead"
-  );
+  return role === "central_supply_ops" || role === "central_kitchen_lead";
 }
 
 export function isProcurementBranchInScope(

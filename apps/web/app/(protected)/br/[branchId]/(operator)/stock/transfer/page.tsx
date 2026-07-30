@@ -23,12 +23,17 @@ export default async function OperatorStockTransferPage({
   if (branchId == null) notFound();
 
   const { supabase, claims } = await loadAuthState();
-  if (!(await resolveBranchContext(supabase, claims, branchId))) notFound();
+  const branchContext = await resolveBranchContext(supabase, claims, branchId);
+  if (!branchContext || branchContext.branch.branch_kind !== "branch") {
+    notFound();
+  }
 
   const rows = await loadStockFulfillmentRows({
     supabase,
     tenantId: claims.tenant_id,
+    mode: "branch",
     branchId,
+    scopeSiteKind: "branch",
   });
   const createAction = (
     <Button render={<Link href={`/br/${branchId}/stock/requests/new`} />}>
