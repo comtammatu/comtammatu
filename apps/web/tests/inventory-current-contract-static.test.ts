@@ -48,7 +48,7 @@ test("Inventory references expose one warehouse and physical rejection QC only",
   assert.match(sop, /lý do \+ ảnh là bắt buộc/);
   assert.match(sop, /Yêu cầu mua → PO theo NCC → GRN theo\s+ lần giao/);
   assert.match(inventory, /Chờ nhập hàng/);
-  assert.match(inventory, /phần dư ngoài đơn dùng giá `0`/);
+  assert.match(inventory, /receipt cost origin theo\s+giá vận hành tạm tính/);
 
   for (const source of [inventory, sop, glossary]) {
     assert.doesNotMatch(source, /branch_kitchen|po_unit_price/);
@@ -179,4 +179,21 @@ test("catalog writes cannot bypass PO price authority", () => {
     actions,
     /const sheets = buildIngredientSheets\([\s\S]*?\n {4}false,\n {2}\);/,
   );
+});
+
+test("D101 requires invoice valuation settlement instead of price history only", () => {
+  const decisions = read("docs/plan/decisions.md");
+  const current = decision(decisions, "D101");
+  const migration = read(
+    "supabase/migrations/20260730210000_inventory_valuation_subledger.sql",
+  );
+
+  assert.match(current, /moving WAC/);
+  assert.match(current, /Valuation subledger append-only/);
+  assert.match(current, /không tăng số lượng lần hai/);
+  assert.match(current, /legacy_purchase_price_variance/);
+  assert.match(migration, /CREATE TABLE public\.inventory_valuation_events/);
+  assert.match(migration, /CREATE TABLE public\.inventory_value_allocations/);
+  assert.match(migration, /inventory_valuation_events_immutable/);
+  assert.match(migration, /stock_movements[\s\S]*grn_item_id/);
 });

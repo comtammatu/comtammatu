@@ -42,6 +42,14 @@ and statutory accounting.
 12. Any payment amount not allocated to invoices remains visible as a supplier
     advance. Later allocation is append-only and never creates another cash or
     bank movement.
+13. Confirmed goods invoices settle the difference between provisional receipt
+    value and effective net acquisition value through an append-only valuation
+    subledger. The settlement changes value only, never receipt quantity or
+    historical movement snapshots.
+14. Open periods receive value adjustments at the economic event date.
+    Soft-closed and hard-closed periods remain unchanged; late differences post
+    in the current period. This operational treatment does not create a
+    statutory general ledger or period-reopen UI.
 
 ## Delivery boundary
 

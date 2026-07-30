@@ -226,6 +226,7 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | `/finance/targets`           | Monthly revenue target setup | Owner-only target and non-cumulative reward tiers; no automatic payroll allocation           |
 | `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                                        |
 | `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses                         |
+| `/finance/cost-close`        | Inventory cost close         | Owner-only valuation reconciliation and period close; no statutory GL or period reopen UI    |
 | `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                                     |
 
 Inventory owns the detailed stock-value workspace. Finance displays only the
@@ -233,13 +234,16 @@ current inventory-value card and does not expose a duplicate inventory route.
 
 Goods supplier invoice matching validates line quantities against allocated
 confirmed GRN/PO lines from the same supplier and values each allocation with
-the supplier invoice line `unit_price` and line discount. PO and GRN prices are
-not commercial price sources. Header subtotal, document discount, VAT, and
-total must reconcile within `±1 VND`; a larger difference remains
+the effective net line value after line and document discounts. VAT is excluded
+from inventory cost. PO and GRN prices are not commercial price sources.
+Header subtotal, document discount, VAT, and total must reconcile within `±1
+VND`; a larger difference remains
 `discrepancy` until an Accountant accepts it with a reason. Service invoices
 do not allocate GRNs and remain `pending` until an Accountant verifies the
 document with a reason. A draft remains editable; confirmation seals its
-financial lines and publishes supplier-ingredient price history. AP balance
+financial lines, publishes supplier-ingredient effective price history and
+atomically settles receipt value. Payment remains an AP/cash event and never
+creates inventory value or food cost a second time. AP balance
 and supplier payment use `total_amount = subtotal -
 document_discount_amount + vat_amount`. Multi-rate input invoices
 store one immutable `vat_breakdown` bucket per rate; database normalization

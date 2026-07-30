@@ -806,3 +806,32 @@ toán tiếp tục giữ nguyên. D093 và Yêu cầu hàng/Transfer nội bộ 
 **Canonical:** `supabase/migrations/20260730190000_purchase_demand_supplier_allocation.sql`,
 `apps/web/app/(protected)/inventory/purchase-orders`,
 `apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx`.
+
+## D101: Quyết toán giá Hóa đơn NCC vào tồn kho và giá vốn (2026-07-30)
+
+**Decision (owner — T3 money/inventory):**
+
+1. Tiếp tục dùng moving WAC; không chuyển sang FIFO/FEFO. `stock_movements`
+   giữ vai trò ledger số lượng append-only. Valuation subledger append-only là
+   nguồn giá trị và lineage qua GRN, transfer, production, consumption, waste,
+   stocktake và supplier return.
+2. Giá mua thực tế là giá trị trước VAT sau chiết khấu dòng và chiết khấu chứng
+   từ. Xác nhận Hóa đơn NCC quyết toán chênh lệch giá trong cùng transaction,
+   không tăng số lượng lần hai và không sửa cost snapshot lịch sử.
+3. Chênh lệch thuộc tồn còn lại được vốn hóa; phần đã chuyển hoặc sản xuất đi
+   theo value-flow lineage; phần đã tiêu thụ, hao hụt, thiếu transfer hoặc trả
+   NCC đi vào đúng variance bucket. Tổng phân bổ phải bằng đúng invoice delta.
+4. Kỳ chưa đóng nhận adjustment theo ngày nghiệp vụ. Kỳ soft/hard closed không
+   bị tự động mở lại; late invoice ghi adjustment vào kỳ xác nhận hiện tại.
+5. Cutover tạo opening origin từ số lượng và WAC hiện tại. Dữ liệu trước cutoff
+   không đủ lineage đi vào `legacy_purchase_price_variance`; hệ thống không đoán
+   hoặc tuyên bố truy vết GRN lịch sử.
+6. Hóa đơn post-cutoff chỉ được confirmed khi valuation settlement hoàn tất.
+   Service invoice không tham gia inventory valuation. Payment chỉ giảm cash/AP,
+   không tạo expense hoặc inventory value lần hai.
+
+**Supersedes:** D098 mục 6. D098 mục 4–5 và D099 tiếp tục có hiệu lực.
+
+**Canonical:** `docs/ref/inventory.md`,
+`docs/plan/adr/0017-ap-central-operations.md`,
+`supabase/migrations/20260730210000_inventory_valuation_subledger.sql`.
